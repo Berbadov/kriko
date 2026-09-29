@@ -104,10 +104,10 @@
             <dd>
                 {health.extension_port}
                 {#if !health.port_is_ours}
-                    <span class="state error"
-                        >— not held by this app, so the extension cannot reach
-                        it. Something else on this machine took it.</span
-                    >
+                    <p class="state error">
+                        not held by this app, so the extension cannot reach
+                        it. Something else on this machine took it.
+                    </p>
                 {/if}
             </dd>
         </dl>

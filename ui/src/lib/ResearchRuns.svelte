@@ -1,6 +1,7 @@
 <script lang="ts">
     import Async from "./Async.svelte";
     import { api } from "./api";
+    import { stamp } from "./time";
     import { remedyFor } from "./failure";
     import { follow } from "./jobs";
     import type { Job, ResearchRun } from "./types";
@@ -65,7 +66,7 @@
         }
     }
 
-    const when = (run: ResearchRun) => (run.started_at || "").replace("T", " ").slice(0, 16);
+    const when = (run: ResearchRun) => stamp(run.started_at || "");
 
     /** The plane in the reader's words, with what it used beside it. */
     function planeWord(run: ResearchRun): string {
@@ -94,8 +95,8 @@
         {#snippet children(data)}
             {#if !data.runs.length}
                 <p class="state empty">
-                    No research has run here yet. The two planes are on
-                    <a href="#/agents">Agents → Wiring</a>.
+                    No research has run here yet. The three planes are on
+                    <a href="#/agents">Agents</a>.
                 </p>
             {:else}
                 <ul class="run-list">

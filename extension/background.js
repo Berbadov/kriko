@@ -126,8 +126,65 @@ async function toggleHoverLite(tab) {
 chrome.action.onClicked.addListener((tab) => { void onToolbarClick(tab); });
 
 async function onToolbarClick(tab) {
+  // Asked before anything is awaited: Chrome accepts `permissions.request`
+  // only inside the click's own gesture, and one `await` can spend it.
+  const asking = _askEverySiteOnce(tab);
   if (await toggleHoverLite(tab)) return true;
+  if (await _openPanelHere(tab)) {
+    void asking;
+    return true;
+  }
   return reportUnreadableSite(tab);
+}
+
+// ── any product page (B149) ─────────────────────────────────────────────
+//
+// The reader's words: *"new products aren't recognised, in new sites products
+// can't be grabbed"*, and their choice: grant once, and Kriko reads any
+// product page itself. One grant — `https://*/*`, already the manifest's
+// optional permission — asked for on the first toolbar click anywhere Kriko
+// does not already run. Once given, one registration puts the panel on every
+// https page; the page's own schema.org data and product name are what the
+// app reads, and a page that publishes no product stays silent.
+
+const EVERY_SITE = "https://*/*";
+const ANY_SITE_SCRIPT_ID = "kriko-anysite";
+let everySiteGranted = null;   // unknown until asked; the worker restarts often
+
+if (chrome.permissions && chrome.permissions.contains) {
+  chrome.permissions.contains({ origins: [EVERY_SITE] })
+    .then((yes) => { everySiteGranted = Boolean(yes); })
+    .catch(() => {});
+}
+
+function _askEverySiteOnce(tab) {
+  const url = String((tab && tab.url) || "");
+  if (everySiteGranted === true || !/^https:/i.test(url)) return null;
+  if (!chrome.permissions || !chrome.permissions.request) return null;
+  // Not on a site the package already runs on: the panel works there, and a
+  // prompt on the reader's usual site would be asking for nothing they need.
+  if (staticSiteHosts().has(_hostOf(url))) return null;
+  try {
+    return Promise.resolve(chrome.permissions.request({ origins: [EVERY_SITE] }))
+      .then((yes) => { everySiteGranted = Boolean(yes); return yes; })
+      .catch(() => false);
+  } catch (_) {
+    return null;
+  }
+}
+
+// Put the panel on this one tab, now. `activeTab` makes the click itself the
+// grant for this tab, so this works whether or not the every-site ask was
+// accepted — declining costs the automatic answer, never the button.
+async function _openPanelHere(tab) {
+  const url = String((tab && tab.url) || "");
+  if (!tab || !tab.id || !/^https:/i.test(url) || !chrome.scripting) return false;
+  try {
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: SITE_SCRIPTS });
+  } catch (_) {
+    return false;    // a page Chrome keeps extensions out of (the web store, say)
+  }
+  return toggleHoverLite(tab);
 }
 
 async function reportUnreadableSite(tab) {
@@ -237,10 +294,18 @@ function _normalizeBaseUrl(value) {
   if (!value || typeof value !== "string") return null;
   const trimmed = value.trim().replace(/\/+$/, "");
   if (!trimmed) return null;
-  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-    return `http://${trimmed}`;
+  const candidate = /^https?:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
+  // A prefix and a trim are not validation: "not a url" becomes a syntactically
+  // fine-looking "http://not a url" that then fails every request silently.
+  // Parsing it is the only way to tell "typo" from "an address Kriko can reach".
+  let parsed;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    return null;
   }
-  return trimmed;
+  if (!/^https?:$/.test(parsed.protocol) || !parsed.hostname) return null;
+  return parsed.origin;
 }
 
 async function apiBase() {
@@ -270,13 +335,45 @@ function globToRegExp(pattern) {
   return new RegExp("^" + body + "$", "i");
 }
 
+// Every adapter claiming this page, folded into one scrape request (B150).
+// Several packs may claim one site — a marketplace sells everything — and
+// which of them reads the page is the app's decision, made with the page in
+// hand. So the scrape asks for the union of their labels, and the page's own
+// panel comes from the first adapter that declares one: taking the first
+// match alone let an agent-written phone pack's reader decide what a car
+// listing's scrape looked for.
 function adapterFor(url, adapters) {
-  for (const adapter of adapters || []) {
-    if ((adapter.match || []).some((p) => globToRegExp(p).test(url))) {
-      return adapter;
-    }
+  const matching = (adapters || []).filter((adapter) =>
+    (adapter.match || []).some((p) => globToRegExp(p).test(url)));
+  if (!matching.length) return null;
+  if (matching.length === 1) return matching[0];
+  const labels = [...new Set(matching.flatMap((one) => one.labels || []))];
+  const withPanel = matching.find((one) =>
+    one.local_panel && Object.keys(one.local_panel).length);
+  return { ...matching[0], labels, local_panel: (withPanel || matching[0]).local_panel || {} };
+}
+
+// Whether *some* installed adapter reads this site at all, even though none
+// of its patterns matched this exact page. A pack's match pattern is a glob
+// like `*sahibinden.com/ilan/*` — the domain fragment before the first `/` is
+// as much "which site" as this extension can read without hardcoding a
+// site's own shape (the scalability principle: no site vocabulary here).
+// Distinguishing this from "no pack reads this site" is extension-5/6 (B145
+// audit): a site Kriko does read should never say "nothing installed knows
+// how to read this site".
+function hostHasAnyAdapter(url, adapters) {
+  let hostname;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return false;
   }
-  return null;
+  return (adapters || []).some((adapter) =>
+    (adapter.match || []).some((pattern) => {
+      const domainFragment = pattern.split("/")[0].replace(/\*/g, "");
+      return domainFragment && hostname.includes(domainFragment);
+    })
+  );
 }
 
 // A refused connection and a 500 are different problems with different fixes,
@@ -302,20 +399,43 @@ function _ownVersion() {
   }
 }
 
+// An app that is up but wedged used to hold a request — and the panel's
+// spinner — forever: `fetch` has no timeout of its own. Every call the
+// worker makes is local and answers in well under a second, and long work is
+// a job the app answers for at once, so a request still open after this is a
+// hung app, not a slow one. It says so, rather than "not running".
+const APP_TIMEOUT_MS = 30000;
+
 async function _fetchApp(url, init) {
   const stamped = { ...(init || {}) };
   stamped.headers = { ...(stamped.headers || {}), [VERSION_HEADER]: _ownVersion() };
   if (LOADED_CONTENT_DIGEST) stamped.headers["X-Kriko-Extension-Digest"] = LOADED_CONTENT_DIGEST;
+  const clock = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    clock.abort();
+  }, APP_TIMEOUT_MS);
+  if (stamped.signal) stamped.signal.addEventListener("abort", () => clock.abort(), { once: true });
+  stamped.signal = clock.signal;
   try {
     const response = await fetch(url, stamped);
     void _noteMinimum(response);
+    void _noteStaged(response);
     return response;
   } catch (cause) {
-    const down = new Error(
-      "Kriko is not running. Open the Kriko app, then try again.");
-    down.code = "APP_NOT_RUNNING";
+    // Our own clock, and nothing else: a transport failure that happens to
+    // land after the timer is still "not running".
+    const hung = timedOut && cause && cause.name === "AbortError";
+    const down = hung
+      ? new Error("Kriko is open but did not answer in 30 seconds. Try again; "
+          + "if it keeps happening, quit Kriko from its tray icon and open it again.")
+      : new Error("Kriko is not running. Open the Kriko app, then try again.");
+    down.code = hung ? "APP_NOT_RESPONDING" : "APP_NOT_RUNNING";
     down.cause = cause;
     throw down;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -330,6 +450,62 @@ async function _fetchApp(url, init) {
 // Stored rather than held in a variable: a service worker is killed after
 // about thirty seconds idle, and the options page a reader opens minutes
 // later is a fresh worker with no memory of any of this.
+// ── files on disk newer than the files running (B151) ───────────────────
+//
+// An unpacked extension runs what it read when it loaded, and an app update
+// rewrites the folder under it without telling Chrome. The reader's browser
+// ran a background.js two releases old — one that sent a listing's name and
+// none of its facts — while both ends said 0.3.0. The app now answers every
+// request with the digest of the files on disk; when that is not this
+// worker's own stamp, the worker reloads itself from them. Once per digest
+// per ten minutes, so a folder that cannot be read cannot loop.
+const STAGED_HEADER = "x-kriko-staged-digest";
+const SELF_RELOAD_KEY = "krikoSelfReload";
+const SELF_RELOAD_QUIET_MS = 10 * 60 * 1000;
+
+async function _noteStaged(response) {
+  let staged = "";
+  try {
+    staged = response.headers.get(STAGED_HEADER) || "";
+  } catch (_) {
+    return;
+  }
+  if (!staged || !LOADED_CONTENT_DIGEST || staged === LOADED_CONTENT_DIGEST) return;
+  try {
+    const got = await chrome.storage.local.get(SELF_RELOAD_KEY);
+    const last = got && got[SELF_RELOAD_KEY];
+    if (last && last.digest === staged && Date.now() - last.at < SELF_RELOAD_QUIET_MS) return;
+    await chrome.storage.local.set({
+      [SELF_RELOAD_KEY]: { digest: staged, at: Date.now(), pending: true },
+    });
+    chrome.runtime.reload();
+  } catch (_) {
+    // A worker that cannot reload keeps working on the files it has.
+  }
+}
+
+// After a self-reload the listing tabs still hold the old content script,
+// cut off from this worker. Refresh them so the panel on screen is the new one.
+chrome.runtime.onInstalled.addListener(async (details) => {
+  if (!details || details.reason !== "update") return;
+  try {
+    const got = await chrome.storage.local.get(SELF_RELOAD_KEY);
+    const last = got && got[SELF_RELOAD_KEY];
+    if (!last || !last.pending) return;
+    await chrome.storage.local.set({ [SELF_RELOAD_KEY]: { ...last, pending: false } });
+    const patterns = [];
+    for (const entry of chrome.runtime.getManifest().content_scripts || []) {
+      for (const one of entry.matches || []) if (!patterns.includes(one)) patterns.push(one);
+    }
+    if (!patterns.length) return;
+    for (const tab of await chrome.tabs.query({ url: patterns })) {
+      if (tab && tab.id !== undefined) chrome.tabs.reload(tab.id);
+    }
+  } catch (_) {
+    // Nothing to refresh is the common case.
+  }
+});
+
 function parseVersion(text) {
   const parts = [];
   for (const piece of String(text || "").split(".")) {
@@ -580,6 +756,7 @@ async function syncSites({ fresh = false } = {}) {
       code: error.code || "",
     };
     await _writeSiteStatus(record);
+    await _syncAnySite();     // needs no app: the grant is the browser's
     return record;
   }
 
@@ -653,7 +830,52 @@ async function syncSites({ fresh = false } = {}) {
   };
   await _writeSiteStatus(record);
   await _reportActivation(sites);
+  await _syncAnySite();
   return record;
+}
+
+// The every-site registration (B149), reconciled like the others. It skips
+// every host something else already injects on — the manifest's and each
+// `kriko-site-` registration's — so no page ever runs the panel twice.
+async function _syncAnySite() {
+  if (!chrome.scripting || !chrome.scripting.getRegisteredContentScripts) return;
+  const granted = await _granted(EVERY_SITE);
+  everySiteGranted = granted;
+  let all = [];
+  try {
+    all = (await chrome.scripting.getRegisteredContentScripts()) || [];
+  } catch (_) {
+    return;
+  }
+  const current = all.find((s) => s.id === ANY_SITE_SCRIPT_ID);
+  const exclude = [
+    ...[...staticSiteHosts()].map((host) => `https://*.${host}/*`),
+    ...all.filter((s) => String(s.id).startsWith(SITE_SCRIPT_PREFIX))
+      .flatMap((s) => s.matches || []),
+  ].sort();
+  const same = current
+    && JSON.stringify([...(current.excludeMatches || [])].sort()) === JSON.stringify(exclude);
+  if (current && (!granted || !same)) {
+    try {
+      await chrome.scripting.unregisterContentScripts({ ids: [ANY_SITE_SCRIPT_ID] });
+    } catch (_) {
+      // Already gone.
+    }
+  }
+  if (!granted || same) return;
+  try {
+    await chrome.scripting.registerContentScripts([{
+      id: ANY_SITE_SCRIPT_ID,
+      matches: [EVERY_SITE],
+      excludeMatches: exclude,
+      js: SITE_SCRIPTS,
+      runAt: "document_idle",
+      allFrames: false,
+      persistAcrossSessions: true,
+    }]);
+  } catch (_) {
+    // The next sync tries again; the toolbar button works without it.
+  }
 }
 
 // Tell the app what the browser made of its sites.
@@ -770,6 +992,9 @@ function toViewModel(payload, appBase) {
     // a terminal), and opening a browser tab is then the honest best effort.
     // Sending the reader to a second browser tab while their app sits behind
     // the window was the bug; keeping the tab as a fallback is not.
+    // Which saved answer this is, so the panel can ask for it again when the
+    // knowledge under it moves (B152.4).
+    lookup_id: payload.lookup_id || "",
     app_route: payload.lookup_id ? `result/${payload.lookup_id}` : undefined,
     app_url: payload.lookup_id && appBase
       ? `${appBase}/#/result/${payload.lookup_id}`
@@ -787,17 +1012,22 @@ function toViewModel(payload, appBase) {
       ? {
           result: `result/${payload.lookup_id}`,
           questions: `questions/${payload.lookup_id}`,
-          compare: `compare/${payload.lookup_id}`,
+          // Compare's own empty state already says "needs two saved checks",
+          // so offering the button before there are two is a button that
+          // opens straight into that dead end (extension-16).
+          ...(payload.compare_ready ? { compare: `compare/${payload.lookup_id}` } : {}),
         }
       : undefined,
-    // Same three, as browser URLs, for the same reason `app_url` exists: when
-    // no desktop shell is listening there is nothing to raise, and a tab is
-    // the honest best effort rather than a button that does nothing.
+    // Same, as browser URLs, for the same reason `app_url` exists: when no
+    // desktop shell is listening there is nothing to raise, and a tab is the
+    // honest best effort rather than a button that does nothing.
     app_urls: payload.lookup_id && appBase
       ? {
           result: `${appBase}/#/result/${payload.lookup_id}`,
           questions: `${appBase}/#/questions?id=${payload.lookup_id}`,
-          compare: `${appBase}/#/compare?left=${payload.lookup_id}`,
+          ...(payload.compare_ready
+            ? { compare: `${appBase}/#/compare?left=${payload.lookup_id}` }
+            : {}),
         }
       : undefined,
     // Subjects the listing resolved to, claims or not. The rows with zero
@@ -857,10 +1087,17 @@ function _stableHash(value) {
 // Hashing the scrape itself, rather than a hand-listed set of fields, is what
 // keeps this honest: a page gaining a field the pack has since learned to read
 // changes the hash and re-asks, instead of serving a stale answer forever.
-function _scrapeSignature(scrape) {
+//
+// The adapters' own identity — pack_id and version, already fetched to find
+// this adapter — goes in alongside the scrape (extension-3, B145 audit): a
+// pack update ships new claims for the same listing, and a signature built
+// from the scrape alone can't see that anything changed, so the 6-hour local
+// cache kept serving the pre-update answer regardless.
+function _scrapeSignature(scrape, adapters) {
   return _stableHash({
     title: scrape?.title || "",
     fields: scrape?.fields || {},
+    packs: (adapters || []).map((a) => `${a.pack_id}@${a.version || ""}`).sort(),
   });
 }
 
@@ -961,6 +1198,9 @@ async function requestAnalysis(scrape, timings = {}) {
       title: scrape.title || "",
       description: scrape.description || "",
       fields: scrape.fields || {},
+      // The product's own name (B149): what a page on a site no adapter
+      // covers is recognised by, and what the panel offers to research.
+      product_name: String((scrape.product && scrape.product.name) || "").slice(0, 300),
       // Which door this came in by. The app's history shows it, so a reader
       // can tell an answer their browser produced from one they asked for.
       origin: "extension",
@@ -977,16 +1217,20 @@ async function requestAnalysis(scrape, timings = {}) {
 
 // ── the run ─────────────────────────────────────────────────────────────
 
-async function runAnalysisForTab(tabId, url) {
+async function runAnalysisForTab(tabId, url, { fresh = false, auto = false } = {}) {
   const storageKey = STORAGE_KEY_PREFIX + url;
+  // A press of Refresh while another run for this same URL is already in
+  // flight still waits for that run rather than starting a second one —
+  // `fresh` only means "don't hand back what's already stored", not "don't
+  // share an in-flight request".
   const existingRun = inFlightByStorageKey.get(storageKey);
-  if (existingRun) {
+  if (existingRun && !fresh) {
     const result = await existingRun;
     await _updateBadgeForResult(result, tabId);
     return result;
   }
 
-  const runPromise = _runAnalysisForTab(tabId, url, storageKey);
+  const runPromise = _runAnalysisForTab(tabId, url, storageKey, { fresh, auto });
   inFlightByStorageKey.set(storageKey, runPromise);
   try {
     return await runPromise;
@@ -997,7 +1241,41 @@ async function runAnalysisForTab(tabId, url) {
   }
 }
 
-async function _runAnalysisForTab(tabId, url, storageKey) {
+// B150: "figure it out which more information agents needs by its own from
+// the product page — i may not know which engine code is this". The page's own
+// labelled facts are kept per listing so "Research this product" can send
+// them; the agent settles the exact version from them instead of asking.
+// Trimmed here as well as on the server: session storage is small.
+const PAGE_FACTS_PREFIX = "krikoFacts:";
+const PAGE_FACTS_MAX = 40;
+
+async function _keepPageFacts(url, scrape) {
+  try {
+    const facts = {};
+    for (const [label, value] of Object.entries((scrape && scrape.fields) || {})) {
+      if (Object.keys(facts).length >= PAGE_FACTS_MAX) break;
+      const k = String(label || "").slice(0, 80);
+      const v = String(value == null ? "" : value).slice(0, 200);
+      if (k && v) facts[k] = v;
+    }
+    const description = String((scrape && scrape.description) || "").slice(0, 1500);
+    await chrome.storage.session.set({ [PAGE_FACTS_PREFIX + url]: { facts, description } });
+  } catch (_) {
+    // A listing whose facts could not be kept still gets researched by name.
+  }
+}
+
+async function _pageFacts(url) {
+  try {
+    const key = PAGE_FACTS_PREFIX + url;
+    const got = await chrome.storage.session.get(key);
+    return (got && got[key]) || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto = false } = {}) {
   const timings = {};
   const totalStartedAt = _now();
   const runId = nextRunId++;
@@ -1011,32 +1289,50 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     await _stage(url, "adapters", "");
     const adapters = await fetchAdapters();
     const adapter = adapterFor(url, adapters);
-    if (!adapter) {
-      // Not an error the reader can act on — most pages are not listings —
-      // but not something to answer with an empty result either, which would
-      // read as "nothing is known about this car". Coded so the panel can
-      // fall quiet instead of showing a red banner on every ordinary page.
-      const noAdapter = new Error("No installed pack can read this page.");
-      noAdapter.code = "NO_ADAPTER";
-      throw noAdapter;
-    }
+    // Not an error the reader can act on — most pages are not listings —
+    // but not something to answer with an empty result either, which would
+    // read as "nothing is known about this car". Coded so the panel can
+    // fall quiet instead of showing a red banner on every ordinary page.
+    const noAdapter = () => {
+      const quiet = new Error("No installed pack can read this page.");
+      quiet.code = "NO_ADAPTER";
+      quiet.hostKnown = hostHasAnyAdapter(url, adapters);
+      return quiet;
+    };
 
     // Named after the pack that will read it, not after the mechanism: the
     // reader knows which site they are on, and "reading this page" is the
     // step they can see happening in front of them.
-    await _stage(url, "reading", adapter.pack_id || "");
+    await _stage(url, "reading", (adapter && adapter.pack_id) || "");
     const scrapeStartedAt = _now();
+    // No site adapter is no longer the end (B149): every page is read for
+    // the product it publishes, and the app decides whether a pack knows it.
     const reply = await _requestScrape(
-      tabId, adapter.labels || [], adapter.local_panel || {}
+      tabId, (adapter && adapter.labels) || [], (adapter && adapter.local_panel) || {}
     );
     timings.scrape_ms = _elapsed(scrapeStartedAt);
     if (!reply || !reply.ok) {
+      if (!adapter) throw noAdapter();
       throw new Error("Unable to read this page.");
     }
     scrape = reply.payload;
+    await _keepPageFacts(url, scrape);
+    if (!adapter) {
+      const product = scrape.product || {};
+      // A page load on a site nobody reads is quiet unless the page itself
+      // says it is a product; the reader pressing the button is asking, so
+      // a named page is worth asking about.
+      if (!product.name || (auto && !product.typed)) throw noAdapter();
+    }
 
-    const signature = _scrapeSignature(scrape);
-    const cachedEntry = await _readCachedAnalysis(url, signature);
+    const signature = _scrapeSignature(scrape, adapters);
+    // extension-3 (B145 audit): "Refresh analysis" re-asked nothing — every
+    // press with the same scrape and packs served the 6-hour cache entry, so
+    // there was no way to re-ask the engine short of waiting it out. `fresh`
+    // is the one bit that says "no, actually ask", and it skips only the
+    // cache read; the write below still happens, so the new answer becomes
+    // the cache for the *next*, non-fresh, request.
+    const cachedEntry = fresh ? null : await _readCachedAnalysis(url, signature);
     if (cachedEntry) {
       // Worth saying. An answer that arrives in 30 ms looks like nothing
       // happened, and a reader who pressed Refresh wants to know whether
@@ -1048,8 +1344,17 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     }
 
     await _stage(url, "asking", "");
-    const result = toViewModel(
-      await requestAnalysis(scrape, timings), await apiBase());
+    const raw = await requestAnalysis(scrape, timings);
+    if (raw && raw.readable === false) {
+      if (raw.reason === "unknown_product") {
+        const unknown = new Error("Kriko doesn't know this product yet.");
+        unknown.code = "UNKNOWN_PRODUCT";
+        unknown.productName = (raw.product && raw.product.name) || "";
+        throw unknown;
+      }
+      if (!adapter) throw noAdapter();
+    }
+    const result = toViewModel(raw, await apiBase());
 
     if (latestRunIdByStorageKey.get(storageKey) !== runId) {
       return result;    // a newer run has already answered for this listing
@@ -1058,7 +1363,13 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     const entry = {
       ok: true,
       result,
-      listing: scrape.listing || {},
+      // extension-8/extension-11 (B145 audit): the scrape's own title
+      // (content.js reads it straight off the page, `scrape.title`) never
+      // reached the panel's `listing` object, which is why the header fell
+      // back to joining raw identity values or, with the engine down, to
+      // "Untitled listing" — the page's own h1 was sitting right there in
+      // the same scrape.
+      listing: { ...(scrape.listing || {}), title: scrape.title || "" },
       signature,
       fetchedAt: Date.now(),
     };
@@ -1083,12 +1394,48 @@ async function _runAnalysisForTab(tabId, url, storageKey) {
     };
     await _stage(url, "failed", error.message || "");
     if (error.code) errEntry.code = error.code;
-    if (scrape) errEntry.listing = scrape.listing || {};
+    if (error.hostKnown) errEntry.hostKnown = true;
+    if (error.productName) errEntry.productName = error.productName;
+    if (scrape) errEntry.listing = { ...(scrape.listing || {}), title: scrape.title || "" };
     await chrome.storage.session.set({ [storageKey]: errEntry });
-    await chrome.action.setBadgeText({ text: "!", tabId });
-    await chrome.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
+    // NO_ADAPTER is not a failure — it's most pages on the internet, which is
+    // exactly why the badge used to paint a red "!" on every non-listing page
+    // of the one site Kriko *does* read (extension-5, B145 audit). A page
+    // this extension was never going to have an opinion on gets no badge.
+    if (error.code === "NO_ADAPTER") {
+      await chrome.action.setBadgeText({ text: "", tabId });
+    } else if (error.code === "UNKNOWN_PRODUCT") {
+      // Not a failure either: a product nothing installed covers yet, one
+      // click from being researched. A question, not an alarm.
+      await chrome.action.setBadgeText({ text: "?", tabId });
+      await chrome.action.setBadgeBackgroundColor({ color: "#5b6472", tabId });
+    } else {
+      await chrome.action.setBadgeText({ text: "!", tabId });
+      await chrome.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
+    }
     throw error;
   }
+}
+
+/** The answer this listing already has, asked again of the knowledge as it
+ * is now (B152.4). The app answers the saved question in place — no new
+ * history row — and the entry in session storage is replaced, which is what
+ * repaints an open panel (its `storage.onChanged` listener). `null` when the
+ * app kept the old answer. */
+async function refreshAnswer(tabId, url, lookupId) {
+  const row = await _postApp(`/api/lookup/${encodeURIComponent(lookupId)}/refresh`, {});
+  if (!row || !row.refreshed || !row.response) return null;
+  const result = toViewModel(row.response, await apiBase());
+  const storageKey = STORAGE_KEY_PREFIX + url;
+  const got = await chrome.storage.session.get(storageKey);
+  const entry = got && got[storageKey];
+  if (entry && entry.ok) {
+    const next = { ...entry, result, fetchedAt: Date.now() };
+    await chrome.storage.session.set({ [storageKey]: next });
+    await _writeCachedAnalysis(url, next);
+  }
+  if (tabId) await _updateBadgeForResult(result, tabId);
+  return result;
 }
 
 // ── acting on the app, rather than only asking it ───────────────────────
@@ -1182,7 +1529,21 @@ async function openInApp(route, fallbackUrl) {
       console.warn(`Kriko rejected the route ${route}:`, error.message);
       throw error;
     }
+    if (error.code === "APP_NOT_RESPONDING") return { ok: false, code: error.code, error: error.message };
     delivery = "unreachable";
+  }
+
+  // "unreachable" means the transport itself failed — there is no engine on
+  // the other end, so a fallback tab would only open onto a dead local port
+  // (ERR_CONNECTION_REFUSED) with nothing for the reader to do about it. The
+  // fallback tab stays reserved for "no_shell": the engine answered, it just
+  // has no window to raise.
+  if (delivery === "unreachable") {
+    return {
+      ok: false,
+      code: "APP_NOT_RUNNING",
+      error: "Kriko is not running. Open the Kriko app, then try again.",
+    };
   }
 
   if (fallbackUrl) {
@@ -1212,14 +1573,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         tabId = tabs[0]?.id;
       }
       if (!tabId) throw new Error("No active tab found.");
-      return runAnalysisForTab(tabId, url);
+      return runAnalysisForTab(tabId, url, { fresh: Boolean(request.payload?.fresh) });
     };
 
     run()
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({
-        ok: false, code: error.code, error: error.message }));
+        ok: false, code: error.code, hostKnown: Boolean(error.hostKnown),
+        productName: error.productName || "", error: error.message }));
 
+    return true; // async
+  }
+
+  if (request.type === "REFRESH_ANSWER") {
+    const { url, lookupId } = request.payload || {};
+    if (!url || !lookupId) {
+      sendResponse({ ok: false, error: "Missing answer" });
+      return false;
+    }
+    refreshAnswer(sender.tab?.id, url, lookupId)
+      .then((result) => sendResponse({ ok: true, result }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
     return true; // async
   }
 
@@ -1233,7 +1608,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     // Every page reports in; whether it is worth analysing is the installed
     // packs' answer, resolved inside the run.
-    runAnalysisForTab(tabId, url).catch(() => {});
+    runAnalysisForTab(tabId, url, { auto: true }).catch(() => {});
     sendResponse({ ok: true, message: "Analysis triggered" });
     return false;
   }
@@ -1304,8 +1679,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return false;
     }
     const body = subject_id ? { subject_id } : { q, allow_draft: input.allow_draft === true };
+    // B148: the listing's own address, so the quick look is held to the bar
+    // of the pack whose site this is.
+    if (!subject_id && typeof input.url === "string" && input.url) body.url = input.url.slice(0, 2000);
     if (Number.isFinite(input.cap) && input.cap > 0) body.cap = input.cap;
-    _postApp("/api/extension/research-plane", body)
+    (body.url ? _pageFacts(body.url) : Promise.resolve(null))
+      .then((page) => {
+        // B150: what the listing says travels with its name.
+        if (page && page.facts && Object.keys(page.facts).length) body.facts = page.facts;
+        if (page && page.description) body.description = page.description;
+        return _postApp("/api/extension/research-plane", body);
+      })
       .then((job) => sendResponse({ ok: true, job }))
       .catch((error) => sendResponse({
         ok: false, status: error.status, code: error.code, error: error.message }));
@@ -1320,6 +1704,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     _postApp(`/api/jobs/${encodeURIComponent(jobId)}/cancel`, {})
       .then((job) => sendResponse({ ok: true, job }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  /* A run's question answered from the panel (B147). A live run hears it
+   * through `/say` at once; a finished one is run again with the answer
+   * applied, the same `retry` the app's Runs screen submits. */
+  if (request.type === "JOB_SAY" || request.type === "JOB_RETRY") {
+    const jobId = request.payload?.job_id;
+    if (!jobId) {
+      sendResponse({ ok: false, error: "Missing job_id" });
+      return false;
+    }
+    const say = request.type === "JOB_SAY";
+    const body = say
+      ? { text: String(request.payload.text || "") }
+      : { answers: request.payload.answers || {} };
+    _postApp(`/api/jobs/${encodeURIComponent(jobId)}/${say ? "say" : "retry"}`, body)
+      .then((answer) => sendResponse({ ok: true, ...answer }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
   }

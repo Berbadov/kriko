@@ -3,7 +3,8 @@
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
     import { api } from "../lib/api";
-    import type { Site } from "../lib/types";
+    import { follow, stateWord } from "../lib/jobs";
+    import type { Job, Site } from "../lib/types";
 
     /* Which sites Kriko can read, and how it learns another.
      *
@@ -22,23 +23,51 @@
     let promise = $state(load());
     let busy = $state("");
     let started = $state("");
+    let registerJob = $state<Job | null>(null);
     let failure = $state<unknown>(null);
+    let confirmForget = $state("");
+
+    // Plain words for the states an ask can be in, and what the button says
+    // to do about them — the raw `ask.state`/`ask.detail` used to be printed
+    // verbatim, which is agent-facing shorthand a reader was never meant to
+    // read (knowledge-22).
+    const ASK_WORDS: Record<string, string> = {
+        working: "Working…",
+        refused: "Could not read it",
+    };
 
     async function register(host: string) {
+        if (busy) return;
         busy = host;
         failure = null;
         try {
-            const job = await api.registerSite(host);
+            const { job_id } = await api.registerSite(host);
             started = host;
-            promise = load();
+            registerJob = await api.job(job_id);
+            follow(job_id, async (job) => {
+                registerJob = job;
+                if (job.done) {
+                    promise = load();
+                    started = "";
+                }
+            });
         } catch (thrown) {
             failure = thrown;
+            started = "";
         } finally {
             busy = "";
         }
     }
 
     async function forget(host: string) {
+        if (confirmForget !== host) {
+            // First press asks; forgetting a learned adapter cannot be undone
+            // from here (knowledge-23).
+            confirmForget = host;
+            return;
+        }
+        confirmForget = "";
+        if (busy) return;
         busy = host;
         failure = null;
         try {
@@ -63,8 +92,9 @@
 {#if failure}<Failure error={failure} />{/if}
 {#if started}
     <p class="state">
-        Reading {started} — <a href="#/activity">watch it on Activity</a>. When it
-        finishes, open a listing there and press the extension button.
+        Reading {started}{#if registerJob} — {stateWord(registerJob)}{/if} —
+        <a href="#/activity">watch it on Activity</a>. When it finishes, open a
+        listing there and press the extension button.
     </p>
 {/if}
 
@@ -118,8 +148,16 @@
                                 <button
                                     class="ghost"
                                     onclick={() => forget(site.site)}
-                                    disabled={busy === site.site}>Forget it</button
+                                    disabled={busy === site.site}
+                                    >{confirmForget === site.site
+                                        ? "Really forget it?"
+                                        : "Forget it"}</button
                                 >
+                                {#if confirmForget === site.site}
+                                    <button class="ghost" onclick={() => (confirmForget = "")}>
+                                        Cancel
+                                    </button>
+                                {/if}
                             {/if}
                         </li>
                     {/each}
@@ -146,8 +184,17 @@
                                 <span class="klabel">{ask.host}</span>
                                 <span class="meta">
                                     asked {ask.asks} time{ask.asks === 1 ? "" : "s"}
-                                    {#if ask.state !== "open"}· {ask.state}{/if}
-                                    {#if ask.detail}· {ask.detail}{/if}
+                                    {#if ask.state === "refused"}
+                                        · could not read it
+                                        {#if ask.detail}
+                                            <details>
+                                                <summary>Why</summary>
+                                                {ask.detail}
+                                            </details>
+                                        {/if}
+                                    {:else if ask.state !== "open"}
+                                        · {ASK_WORDS[ask.state] ?? ask.state}
+                                    {/if}
                                 </span>
                             </div>
                             <button
@@ -155,7 +202,9 @@
                                 disabled={busy === ask.host || ask.state === "working"}
                                 >{ask.state === "working"
                                     ? "Working…"
-                                    : "Teach Kriko this site"}</button
+                                    : ask.state === "refused"
+                                      ? "Try again"
+                                      : "Teach Kriko this site"}</button
                             >
                         </li>
                     {/each}

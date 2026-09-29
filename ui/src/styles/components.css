@@ -32,6 +32,13 @@
 .shell {
     display: grid;
     grid-template-columns: var(--rail) minmax(0, 1fr);
+    /* Without an explicit row, the grid's one implicit row is `auto` and
+     * sizes to the rail's own content (its nav plus its foot), not to the
+     * viewport — so at any window shorter than that content the rail grows
+     * past 100dvh and clips the mode switch and the last nav links with no
+     * way to reach them (shell-1). Constraining the row is what lets the
+     * rail's own `minmax(0, 1fr)` nav row (below) actually scroll instead. */
+    grid-template-rows: minmax(0, 1fr);
     grid-template-areas: "rail work";
     height: 100vh;
     height: 100dvh;
@@ -55,6 +62,10 @@
     min-height: 0;
     overflow-y: auto;
     scrollbar-gutter: stable;
+    /* Lets a component's own container query (e.g. .history.page li's,
+     * check-8) key off the space it actually has — the rail's width, not
+     * the whole window — rather than a media query that can't see the rail. */
+    container-type: inline-size;
 }
 /* A content scroller draws the design system's bar, not the platform's.
  *
@@ -130,6 +141,19 @@
  * "darker than the face" in whichever direction that theme's ground runs.
  */
 button,
+.tab,
+[role="tab"],
+th {
+    /* These are labels, not prose: base.css's break-word still lets a
+     * cramped flex/table cell shrink them below their min-content width and
+     * split a word one letter per line (shell-3/settings-9's "Evide/nce",
+     * "Wh/at is/her/e"). A button or a column header never has "somewhere
+     * else" to wrap a word to, so it keeps its label whole and lets the
+     * container scroll or wrap the whole control instead (min-width below,
+     * .lenses's flex-wrap, and each table's own overflow-x). */
+    white-space: nowrap;
+}
+button,
 .tab {
     font: inherit;
     font-weight: 500;
@@ -140,6 +164,7 @@ button,
     border-bottom-color: var(--btn-lo);
     border-radius: var(--radius-sm);
     padding: var(--s-2) var(--s-4);
+    min-width: max-content;
     cursor: pointer;
     box-shadow: var(--shadow-1);
     /* `transform` last and cheapest: the press must not wait on colour. */
@@ -213,18 +238,19 @@ button.ghost:hover {
     color: var(--text);
     box-shadow: var(--shadow-1);
 }
-button.danger:hover {
-    border-color: var(--high);
-    color: var(--high);
-    background: var(--high-soft);
-}
 button.small,
 .tab.small {
     padding: var(--s-1) var(--s-2);
     font-size: var(--t-sm);
     line-height: var(--lh-sm);
 }
-nav a.tab {
+a.tab,
+a.primary,
+a.button {
+    /* Scoped to `nav a.tab` alone, this only undid the underline for the
+     * rail's own links — any a.tab or a.primary drawn as a button anywhere
+     * else (Extension, History, Result) kept the plain-link underline next
+     * to real <button>s that have none (shell-12). */
     text-decoration: none;
     display: inline-block;
 }
@@ -290,6 +316,12 @@ textarea {
     border-radius: var(--radius-sm);
     padding: var(--s-2) var(--s-3);
     min-width: 150px;
+    /* Without this a native select sizes to its longest <option>, and a
+     * model-picker's options carry a full "no {provider} key — add one on
+     * Settings" note — wide enough to push the field, and the page, past
+     * the 620px window (settings-8/m2). The row it sits in already gives it
+     * all the width it can have; capping here keeps that promise. */
+    max-width: 100%;
 }
 input[type="radio"],
 input[type="checkbox"] {
@@ -394,6 +426,7 @@ legend {
 
 .sev {
     display: inline-block;
+    white-space: nowrap;
     padding: 1px var(--s-2);
     border-radius: 999px;
     font-size: var(--t-xs);
@@ -433,6 +466,12 @@ legend {
 .badge.disputed {
     color: var(--medium);
     border-color: var(--medium);
+}
+/* A card an agent added while the answer was open (B152.4). */
+.badge.fresh {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent);
 }
 .badge.state-failed,
 .badge.state-interrupted {
@@ -527,6 +566,17 @@ td.num {
 /* A dismissed row stays on screen, struck through: a row that disappears
    under the cursor gives the reader no way to tell "dismissed" from
    "misclicked", and the delete it stands for is already durable. */
+/* Was scoped CSS inside Knowledge.svelte, so Activity's identical-looking
+ * `class="lenses"` tablist matched nothing there (shell-14/ops-23): no gap
+ * between tabs, no space above the heading below. One rule, every screen.
+ * flex-wrap lets the row wrap to a second line at narrow widths instead of
+ * squeezing each tab below its nowrap label's width (uicode-m1). */
+.lenses {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin-bottom: var(--s-3);
+}
 tr.gone td {
     text-decoration: line-through;
     opacity: 0.5;
@@ -536,7 +586,7 @@ tr.gone td {
 td button.link-ish {
     margin-top: 0;
 }
-tr.concern td {
+tr.concern td:first-child {
     border-left: 3px solid var(--high);
 }
 .signal {
@@ -787,6 +837,13 @@ pre {
     white-space: nowrap;
     cursor: pointer;
 }
+/* Questions.svelte wraps a whole question sentence in `.check` — the
+ * checkbox's own short label is meant to stay on one line, but the nowrap it
+ * inherited reached the question text too, running it a full window's
+ * width past the edge (shell-2). */
+.check .sheet-ask {
+    white-space: normal;
+}
 .ask {
     margin: var(--s-2) 0 var(--s-1);
     padding: var(--s-2) var(--s-3);
@@ -848,6 +905,7 @@ li.gap {
     grid-area: rail;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
+    min-height: 0;
     gap: var(--s-5);
     padding: var(--s-4) var(--s-3);
     border-right: 1px solid var(--line);
@@ -1184,6 +1242,12 @@ li.gap {
     padding-left: 0;
 }
 .history.page li {
+    /* The two `auto` columns (meta, Forget) take their max-content width
+     * first and leave the `1fr` title column whatever is left over — at
+     * 620px, with the rail still holding 240 of it, that was about 10px, so
+     * a URL title wrapped one or two characters per line (check-8). The
+     * container query below drops to a single column and lets the title
+     * take the full row once there truly isn't room for three across. */
     grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: baseline;
     gap: var(--s-3);
@@ -1191,6 +1255,14 @@ li.gap {
     padding: var(--s-2) 0;
     border-bottom: 1px solid var(--line);
     margin-bottom: 0;
+}
+@container (max-width: 32rem) {
+    .history.page li {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .history.page li .meta {
+        grid-column: 1 / -1;
+    }
 }
 
 /* ── the worklist ─────────────────────────────────────────────────── */
@@ -1276,24 +1348,20 @@ li.gap {
 /* Severity reaches the eye before the word does: a 3px rule down the card's
    leading edge, in the same three colours the verdict bar uses. Colour alone
    never carries it — the pill keeps the word for anyone who cannot see the
-   difference. */
+   difference. The card itself stays neutral, as the extension's does (B152.5):
+   a page of eight serious risks washed red read as an alarm, not a list, and
+   looked like a different product from the panel the reader came from. */
 .card.risk {
     border-left: 3px solid var(--line);
 }
 .card.risk:has(.sev.high) {
-    border-color: var(--high-border);
     border-left-color: var(--high);
-    background: var(--high-soft);
 }
 .card.risk:has(.sev.medium) {
-    border-color: var(--medium-border);
     border-left-color: var(--medium);
-    background: var(--medium-soft);
 }
 .card.risk:has(.sev.low) {
-    border-color: var(--low-border);
     border-left-color: var(--low);
-    background: var(--low-soft);
 }
 .card.risk.done {
     opacity: 0.55;
@@ -1393,9 +1461,38 @@ table.compare thead th {
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+/* A link that stands in a row of buttons. B146: this rule used to stop at
+ * the underline, so "Question sheet" and "Compare with another" sat as bare
+ * text on a different baseline beside the real buttons. It wears the button
+ * face now — the same box, so the row lines up. */
 .button-like {
     display: inline-block;
     text-decoration: none;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--btn);
+    border: 1px solid var(--line);
+    border-top-color: var(--btn-hi);
+    border-bottom-color: var(--btn-lo);
+    border-radius: var(--radius-sm);
+    padding: var(--s-2) var(--s-4);
+    white-space: nowrap;
+    box-shadow: var(--shadow-1);
+}
+.button-like:hover {
+    background: var(--btn-hover);
+    border-color: var(--accent);
+}
+.button-like.ghost {
+    background: transparent;
+    box-shadow: none;
+    border-color: var(--line);
+    color: var(--dim);
+}
+.button-like.ghost:hover {
+    background: var(--btn);
+    border-color: var(--accent);
+    color: var(--text);
 }
 
 /* The one suggestion the app makes about itself. Panel-coloured rather than
@@ -1426,6 +1523,22 @@ table.compare thead th {
     gap: var(--s-3);
     align-items: center;
     white-space: nowrap;
+}
+
+/* At a short window (620x520, the extension's popup size) the two-line
+ * title-plus-detail layout above ate a third of the visible height on every
+ * screen (shell-13), pushing the screen's own first result below the fold.
+ * Below this height the detail line is dropped and everything sits on one
+ * row — still a hint, but one that costs a single line rather than three. */
+@media (max-height: 820px) {
+    .nextstep {
+        padding: var(--s-2) var(--s-3);
+        margin-bottom: var(--s-3);
+        flex-wrap: nowrap;
+    }
+    .nextstep .meta {
+        display: none;
+    }
 }
 
 /* ── what the answer was computed against ───────────────────────────────── */
@@ -1579,8 +1692,22 @@ button.link-ish {
 .row.slots {
     flex-wrap: wrap;
 }
+.row.slots .field {
+    flex: 1 1 14rem;
+    min-width: 0;
+    max-width: 100%;
+}
+.row.slots select {
+    /* A native select sizes to its widest <option>, and Compare's options
+     * are full listing URLs — with no cap it pushed the whole row, and the
+     * page, sideways (check-9). */
+    width: 100%;
+    max-width: 100%;
+    text-overflow: ellipsis;
+}
 /* Four columns plus the risk name outgrows a narrow window; the table scrolls
-   inside its own box rather than pushing the page sideways. */
+   inside its own box rather than pushing the page sideways. Also used by the
+   Knowledge claim-health table (knowledge-8), which has the same problem. */
 .table-scroll {
     overflow-x: auto;
 }
@@ -1603,22 +1730,31 @@ button.link-ish {
     gap: var(--s-2);
 }
 
-/* The authoring form, folded. A reader who came to watch a run should not
-   have to scroll past a five-field form to reach the list; a reader starting
-   a pack is doing it deliberately and will open it. */
-details.authoring {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
+/* The authoring form. It was folded while it held five fields; it is one
+   field and a row of dials now, and folding hid exactly the agent, effort and
+   time-limit controls a reader looks for before pressing it (B146). */
+.authoring {
     padding: var(--s-3);
     margin-block: var(--s-4);
 }
-details.authoring summary {
-    cursor: pointer;
-    font-weight: 600;
+.authoring > h3 {
+    margin: 0 0 var(--s-1);
 }
-details.authoring > .meta {
+.authoring > .meta {
     max-width: var(--measure);
     margin-block: var(--s-2);
+}
+/* A live run's clock and last log line: the two signs it is not stuck. */
+.job .clock {
+    font-variant-numeric: tabular-nums;
+    margin-inline-start: auto;
+}
+.job .tail {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 form.ask {
     display: grid;
@@ -1827,6 +1963,69 @@ kbd {
 .asked > .meta {
     margin: 0;
 }
+.asked {
+    background: var(--accent-soft);
+    animation: kriko-enter var(--dur-slow) var(--ease-out) both;
+}
+.asked-lede {
+    margin: 0;
+    display: flex;
+    gap: var(--s-2);
+    align-items: center;
+    font-weight: 600;
+}
+.asked-mark {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 1.5em;
+    block-size: 1.5em;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.85em;
+}
+.asked fieldset.question {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: var(--s-2);
+}
+.asked fieldset.question > legend {
+    padding: 0;
+    margin-block-end: var(--s-2);
+}
+.asked .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+}
+.asked .chip {
+    border-radius: 999px;
+    padding-inline: var(--s-3);
+    transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+        transform var(--dur-fast) var(--ease);
+}
+.asked .chip:hover {
+    transform: translateY(-1px);
+}
+.asked .chip.picked {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+}
+.asked .chip-note {
+    margin-inline-start: var(--s-2);
+    font-size: 0.8em;
+    opacity: 0.7;
+}
+.asked .told {
+    margin: 0;
+    animation: kriko-enter var(--dur-slow) var(--ease-out) both;
+}
+details.raw > summary {
+    cursor: pointer;
+}
 
 /* Saying something to a run that is still going.
  *
@@ -1845,4 +2044,40 @@ form.say {
 form.say > input {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+/* B152.6: the Result actions past the two a buyer uses fold under "More".
+ * The list opens inline in the same row — no floating menu to dismiss, and
+ * print hides the whole row anyway. */
+.more-actions {
+    display: contents;
+}
+.more-actions > summary {
+    list-style: none;
+    cursor: pointer;
+    font-size: var(--t-base);
+    line-height: var(--lh-base);
+}
+.more-actions > summary::after {
+    content: " ▾";
+}
+.more-actions-list {
+    display: contents;
+}
+
+/* B152.6: seven Forget buttons down the Recent rail read as seven things to
+ * do. The rail's Forget shows on the row the pointer or focus is on; it is
+ * still a real, tabbable button, so the keyboard reaches it the same way. */
+.history:not(.page) li .history-forget {
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease);
+}
+.history:not(.page) li:hover .history-forget,
+.history:not(.page) li:focus-within .history-forget {
+    opacity: 1;
+}
+@media (hover: none) {
+    .history:not(.page) li .history-forget {
+        opacity: 1;
+    }
 }

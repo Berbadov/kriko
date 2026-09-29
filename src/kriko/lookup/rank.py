@@ -191,7 +191,10 @@ def explain(*, severity, detection, trust, tier, disputed, condition_reasons,
     why = [f"{severity} severity"]
     if via and via != "direct":
         kind = via.split(":", 1)[0]
-        why.append(f"applies through the {kind.replace('_', ' ')} it shares")
+        if kind == "part_of":
+            why.append("applies through a part it shares")
+        else:
+            why.append(f"applies through its {kind.replace('_', ' ')}")
     if tier and tier != "unknown":
         why.append(f"best source is {tier} (trust {trust:.2f})")
     if detection == "visual":

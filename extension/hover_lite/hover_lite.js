@@ -54,6 +54,10 @@
     openDetailRows: new Set(), // expanded rows inside listing details
     pipeline: "idle",          // idle | analyzing | result | error
     result: null,              // AnalyzeResponse
+    // B152.4: the knowledge clock last seen on the live poll, and the cards
+    // that arrived since this answer was first shown (marked "New").
+    knowledge: null,
+    freshKeys: new Set(),
     errorMsg: null,
     errorCode: null,
     listingMeta: null,         // derived from background metadata response
@@ -67,6 +71,11 @@
     // Set only by an explicit press. The automatic run at page load leaves it
     // alone, because nobody asked it anything.
     noAdapter: false,
+    // Whether some installed pack reads this *site* at all, vs this specific
+    // page just not being one it recognises (a category page, a search
+    // results page). Same NO_ADAPTER code either way — the reader's next
+    // step is completely different, so the panel needs to tell them apart.
+    hostKnown: false,
     // claim_id -> verdict, for cards the reader has judged. Panel-local and
     // deliberately not persisted here: the app owns the marks, this is only
     // what to paint until the next analysis re-reads them.
@@ -89,9 +98,19 @@
     researchOpen: false,
     researchTarget: null,
     researchName: "",
+    // B149: a product page nothing installed knows — the name the page gave
+    // it, which is what the reader would type into Research anyway.
+    unknownProduct: "",
     researchContext: "",
     researchJob: null,
     researchMessage: "",
+    // B147: what the reader picked for the run's own questions, and what
+    // became of saying it — per question id, for the chips to show.
+    researchAnswers: {},
+    researchTold: {},
+    // B148: the quick look's answer, kept while the deeper run goes on.
+    // `{ assumed, risks, dropped }` or null.
+    researchQuick: null,
     researchState: "",
     cancelling: false,
     /* Which step the run in flight has reached.
@@ -207,11 +226,17 @@
       .filter((v) => v !== null && v !== undefined && v !== "")
       .join(" ");
 
+    // extension-11 (B145 audit): every context entry printed as a "fact",
+    // including the seller's own free-text sentence — a unit is the pack's
+    // own signal that a value is a measured fact rather than prose, so only
+    // entries the pack declared a unit for (even "" for a bare count) belong
+    // in this line.
+    //
     // A number with a unit is a magnitude and reads better grouped
     // ("190,000 km"); a number without one is as likely to be a year, where
     // grouping would render 2014 as "2,014".
     const facts = Object.entries(context)
-      .filter(([, v]) => v !== null && v !== undefined && v !== "")
+      .filter(([key, v]) => v !== null && v !== undefined && v !== "" && key in units)
       .map(([key, value]) => {
         const unit = units[key];
         if (typeof value === "number" && unit) {
@@ -398,22 +423,57 @@
     );
   }
 
+  function claimKeyOf(claim) {
+    return `${claim.pack_id || ""}:${claim.claim_id || claim.title || ""}`;
+  }
+
   // Apply entry helper
   function applyEntry(entry) {
-    // An answer of any kind means something read this page after all.
-    state.noAdapter = false;
     if (!entry) return;
     if (entry.listing || (entry.ok && entry.result)) {
       state.listingMeta = deriveListingMeta(entry);
     }
     if (entry.ok && entry.result) {
+      // The same answer, re-answered (B152.4): what it did not have before is
+      // new. A different answer starts with nothing marked.
+      const before = state.result;
+      if (before && before.lookup_id && before.lookup_id === entry.result.lookup_id) {
+        const had = new Set((before.claims || []).map(claimKeyOf));
+        for (const claim of entry.result.claims || []) {
+          if (!had.has(claimKeyOf(claim))) state.freshKeys.add(claimKeyOf(claim));
+        }
+      } else {
+        state.freshKeys = new Set();
+      }
+      // An answer means something read this page after all.
+      state.noAdapter = false;
+      state.unknownProduct = "";
+      state.errorCode = null;
       state.result = entry.result;
       state.errorMsg = null;
       setPipeline("result");
       state.openIds = new Set();
     } else if (entry.ok === false) {
-      state.errorMsg = entry.error || "Analysis failed.";
-      setPipeline("error");
+      // extension-5/extension-8 (B145 audit): the stored-result path (a page
+      // reloaded onto a cached entry, or the panel reopened) used to ignore
+      // `entry.code` entirely, so NO_ADAPTER rendered as a red error and
+      // APP_NOT_RUNNING hid the settings button the live ANALYZE path already
+      // knows to show. Both paths now read the same code.
+      state.errorCode = entry.code || null;
+      state.unknownProduct = "";
+      if (entry.code === "UNKNOWN_PRODUCT") {
+        state.noAdapter = false;
+        state.unknownProduct = entry.productName || document.title || "";
+        setPipeline("idle");
+      } else if (entry.code === "NO_ADAPTER") {
+        state.noAdapter = true;
+        state.hostKnown = Boolean(entry.hostKnown);
+        setPipeline("idle");
+      } else {
+        state.noAdapter = false;
+        state.errorMsg = entry.error || "Analysis failed.";
+        setPipeline("error");
+      }
     }
     if (state.mounted) renderBody();
     if (state.mounted) renderCounts();
@@ -518,19 +578,41 @@
         // feedback when there is no app to raise — so success needs no toast
         // and this panel grows no notification system for it.
         //
-        // A refusal is different: the only way to get one is for this
-        // extension to have built a route the app cannot navigate to, which
-        // is a defect in *our* code and belongs where a developer will find
-        // it rather than in front of the reader.
+        // Two kinds of failure reach here, and only one is for the reader.
+        // APP_NOT_RUNNING is the engine simply not being up — that is not a
+        // defect, it is the current state of the world, and the reader
+        // should see it in place rather than get a silent no-op. Anything
+        // else means this extension built a route the app refused, which is
+        // a defect in *our* code and belongs where a developer will find it.
         if (chrome.runtime.lastError || (response && !response.ok)) {
-          console.warn(
-            "Kriko: could not open the app on",
-            route,
-            chrome.runtime.lastError?.message || response?.error
-          );
+          const message = chrome.runtime.lastError?.message || response?.error;
+          if (response?.code === "APP_NOT_RUNNING" || response?.code === "APP_NOT_RESPONDING") {
+            showFooterStatus(message);
+          } else {
+            console.warn("Kriko: could not open the app on", route, message);
+          }
         }
       }
     );
+  }
+
+  // A one-line status shown next to the footer's app buttons, for a failure
+  // the reader caused nothing wrong to see (the app just isn't running).
+  // Cleared after a few seconds so it doesn't linger past the next action.
+  let footerStatusTimer = null;
+  function showFooterStatus(message) {
+    if (!footerEl) return;
+    let statusEl = footerEl.querySelector(".lite-footer-status");
+    if (!statusEl) {
+      statusEl = document.createElement("span");
+      statusEl.className = "lite-footer-status";
+      footerEl.append(statusEl);
+    }
+    statusEl.textContent = message;
+    clearTimeout(footerStatusTimer);
+    footerStatusTimer = setTimeout(() => {
+      statusEl.remove();
+    }, 4000);
   }
 
   // Which plane this installation is configured for, and what it costs.
@@ -588,25 +670,32 @@
     state.researchContext = "";
     state.researchOpen = true;
     state.researchJob = null;
+    state.researchQuick = null;
     state.researchState = "";
     state.researchMessage = "";
     requestResearchPlane();
     renderResearch();
   }
 
-  function startResearch(allowDraft = false) {
+  /* One button (B148). A name the packs know is researched into them; one
+   * they do not gets a quick look answered here in a minute or two, and the
+   * deeper draft run starts beside it. The reader used to choose between two
+   * buttons whose difference they had no way to know. */
+  function startResearch() {
     if (state.researching || !state.researchPlane) return;
     const subject_id = state.researchTarget?.subject_id;
     const q = [state.researchName.trim(), state.researchContext.trim()].filter(Boolean).join(" — ");
     if (!subject_id && !q) return;
     const cap = Number(state.researchPlane.budget_usd);
-    if (!allowDraft && state.researchPlane.backend === "api" && !(cap > 0)) return;
     state.researching = subject_id || q;
     state.researchState = "starting";
-    state.researchMessage = "Starting…";
+    state.researchMessage = "Looking it up…";
+    state.researchAnswers = {};
+    state.researchTold = {};
+    state.researchQuick = null;
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
-      ...(subject_id ? { subject_id } : { q, allow_draft: allowDraft }),
+      ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
       ...(cap > 0 ? { cap } : {}),
     } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
@@ -618,10 +707,86 @@
       }
       state.researchJob = response.job;
       state.researchState = "queued";
-      state.researchMessage = "Queued";
+      state.researchMessage = response.job.kind === "quick_look" ? "Looking it up…" : "Queued";
       renderResearch();
       pollResearchJob(response.job.job_id);
     });
+  }
+
+  /* The quick look finished — well or not. Keep what it found, then follow
+   * the deeper run it started beside, so the panel keeps saying what is
+   * happening rather than ending on "done" while the real work goes on. */
+  function quickLookDone(job) {
+    const result = job.result || {};
+    state.researchQuick = {
+      assumed: result.assumed || "",
+      risks: Array.isArray(result.risks) ? result.risks : [],
+      dropped: Number(result.dropped) || 0,
+    };
+    const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
+    const found = state.researchQuick.risks.length;
+    const said = job.state === "succeeded"
+      ? (found ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look.`
+        : "The quick look found nothing it could source.")
+      : "The quick look did not finish.";
+    if (!deepen) {
+      state.researching = null;
+      state.researchMessage = said;
+      renderResearch();
+      return;
+    }
+    state.researchJob = { job_id: deepen, kind: "pack_author" };
+    state.researchState = "queued";
+    state.researchMessage = `${said} Digging deeper…`;
+    renderResearch();
+    pollResearchJob(deepen);
+  }
+
+  /* The run's question, answered with one click (B147).
+   *
+   * It used to reach the reader as a JSON dump in the app's log. A live run
+   * hears the answer now, through the same reply pipe as the app's box; a run
+   * that already ended is started again with the answer applied, and the
+   * panel follows the new run the way it followed the first. */
+  function answerQuestion(question, option) {
+    const job = state.researchJob;
+    if (!job?.job_id) return;
+    state.researchAnswers = { ...state.researchAnswers, [question.id]: option };
+    if (state.researching) {
+      state.researchTold = { ...state.researchTold, [question.id]: "Telling it..." };
+      renderResearch();
+      chrome.runtime.sendMessage({ type: "JOB_SAY", payload: {
+        job_id: job.job_id, text: `Answer to "${question.ask}": ${option}`,
+      } }, (response) => {
+        const heard = !chrome.runtime.lastError && response?.ok && response.delivered;
+        state.researchTold = { ...state.researchTold,
+          [question.id]: heard ? "It heard you." : "Not delivered. The run may have ended." };
+        renderResearch();
+      });
+      return;
+    }
+    const answers = state.researchAnswers;
+    state.researching = job.job_id;
+    state.researchState = "starting";
+    state.researchMessage = "Running again with your answer...";
+    renderResearch();
+    chrome.runtime.sendMessage({ type: "JOB_RETRY", payload: { job_id: job.job_id, answers } },
+      (response) => {
+        if (chrome.runtime.lastError || !response?.ok || !response.job_id) {
+          state.researching = null;
+          state.researchState = "failed";
+          state.researchMessage = response?.error || "Could not run it again. Open Kriko and retry.";
+          renderResearch();
+          return;
+        }
+        state.researchJob = { job_id: response.job_id, kind: response.kind || job.kind };
+        state.researchAnswers = {};
+        state.researchTold = {};
+        state.researchState = "queued";
+        state.researchMessage = "Queued";
+        renderResearch();
+        pollResearchJob(response.job_id);
+      });
   }
 
   function cancelResearch() {
@@ -654,6 +819,7 @@
     const target = state.researchTarget;
     const draft = state.researchJob?.kind === "pack_author";
     const cost = costLine();
+    const asked = (state.researchJob?.attention?.questions || []).filter((q) => q && q.id);
     slot.innerHTML = `
       <section class="lite-research" data-state="${escapeHtml(state.researchState)}">
         <strong>Research this product</strong>
@@ -661,10 +827,25 @@
           <label>Product name<input class="lite-research-name" maxlength="350" ${busy ? "disabled" : ""} /></label>
           <label>Context<textarea class="lite-research-context" maxlength="140" ${busy ? "disabled" : ""}></textarea></label>`}
         <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
-        ${!target ? `<p>A product-specific draft is not automatically installed knowledge. Creating a draft uses your coding-agent subscription, not API research.</p>` : ""}
         <p class="lite-research-status" role="status">${escapeHtml(state.researchMessage)}</p>
-        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>Research ${target ? "selected subject" : "in installed packs"}</button>
-          ${!target ? `<button type="button" class="lite-research-draft" ${!state.researchPlane ? "disabled" : ""}>Create product-specific draft</button>` : ""}` : ""}
+        ${state.researchQuick?.risks.length ? `<div class="lite-quick">
+          ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
+          <div class="lite-quick-cards"></div>
+        </div>` : ""}
+        ${asked.length ? `<div class="lite-asked" aria-live="polite">
+          <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
+            ? "Your agent has a question. Pick an answer and it hears it now."
+            : "Your agent had a question and went with its guess. Pick an answer to run it again."}</p>
+          ${asked.map((q, qi) => `<fieldset class="lite-asked-q"><legend>${escapeHtml(q.ask)}</legend>
+            ${(q.options || []).length ? `<div class="lite-chips">${q.options.map((o, oi) => `
+              <button type="button" class="lite-chip" data-q="${qi}" data-o="${oi}"
+                aria-pressed="${state.researchAnswers[q.id] === o}">${escapeHtml(o)}${
+                o === q.default && !state.researchAnswers[q.id] ? ` <span class="lite-chip-note">its guess</span>` : ""}</button>`).join("")}</div>`
+              : `<p class="lite-told">Answer this one in Kriko: open the research job below.</p>`}
+            ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
+          </fieldset>`).join("")}
+        </div>` : ""}
+        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Research again" : "Research this product"}</button>` : ""}
         ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
         ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
         ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
@@ -680,8 +861,39 @@
       context.addEventListener("input", () => { state.researchContext = context.value; });
     }
     slot.querySelector(".lite-research-start")?.addEventListener("click", () => startResearch());
-    slot.querySelector(".lite-research-draft")?.addEventListener("click", () => startResearch(true));
+    const quickCards = slot.querySelector(".lite-quick-cards");
+    (quickCards ? state.researchQuick.risks : []).forEach((risk, i) => {
+      const wrap = document.createElement("div");
+      wrap.className = "lite-claim-anim";
+      wrap.style.animationDelay = (i * 70) + "ms";
+      const card = renderClaimCard(risk, { open: false, compact: state.compact });
+      card.querySelector(".lite-rc-toggle")?.addEventListener("click", () =>
+        updateClaimCard(card, { open: card.dataset.open !== "1" }));
+      // Where the line came from, in its own words: a quick look is not a
+      // stored claim, so the page and its quote are the only warrant it has.
+      const src = (risk.sources || [])[0];
+      const body = card.querySelector(".lite-rc-body");
+      if (src?.url && body) {
+        const cite = document.createElement("blockquote");
+        cite.className = "lite-quick-src";
+        cite.textContent = `\u201c${src.quote}\u201d `;
+        const link = document.createElement("a");
+        link.href = src.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = src.domain || src.url;
+        cite.appendChild(link);
+        body.appendChild(cite);
+      }
+      wrap.appendChild(card);
+      quickCards.appendChild(wrap);
+    });
     slot.querySelector(".lite-research-cancel")?.addEventListener("click", cancelResearch);
+    slot.querySelectorAll(".lite-chip").forEach((chip) => chip.addEventListener("click", () => {
+      const question = asked[Number(chip.dataset.q)];
+      const option = question?.options?.[Number(chip.dataset.o)];
+      if (question && option !== undefined) answerQuestion(question, option);
+    }));
     slot.querySelector(".lite-research-output")?.addEventListener("click", () => {
       const route = `jobs/${encodeURIComponent(state.researchJob.job_id)}`;
       openInApp(route, appUrlFor(route));
@@ -718,21 +930,30 @@
         setTimeout(() => pollResearchJob(jobId), 1000);
         return;
       }
+      if (state.researchJob.kind === "quick_look" && job.state !== "cancelled") {
+        quickLookDone(job);
+        return;
+      }
       state.researching = null;
       state.cancelling = false;
       state.researchMessage = job.state === "cancelled" ? "Research cancelled."
         : job.state === "succeeded" ? (state.researchJob.kind === "pack_author"
-          ? "Product-specific draft ready. It has not been installed. Open the exact draft output below."
+          ? (job.result?.installed
+            ? "Deeper research done and installed. Refreshing this listing…"
+            : `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko — it could not install itself; open it there.`)
           : job.result?.brief && !job.result?.documents
             ? "Brief ready. Open the research job to continue with your agent."
             : "Research completed. Open the research job for findings.")
         : job.state === "interrupted" ? "Research interrupted by an app restart."
         : `Research failed. ${job.error || job.message || "Open the job for details."}`;
       renderResearch();
+      // B148: the pack the deep run installed is knowledge now, so the
+      // listing is asked again and its cards arrive without a press.
+      if (job.state === "succeeded" && job.result?.installed) triggerAnalyze(true);
     });
   }
 
-  function triggerAnalyze() {
+  function triggerAnalyze(fresh) {
     setPipeline("analyzing");
     state.errorMsg = null;
     state.errorCode = null;
@@ -746,8 +967,13 @@
     // background.js asks content.js for a fresh scrape, POSTs it to
     // /api/analyze, writes the full entry (result + the local-only listing
     // extras) to chrome.storage.session, and returns the result here.
+    //
+    // `fresh` (extension-3, B145 audit) is set only when the reader pressed
+    // a "Refresh analysis" control themselves — not on the automatic run at
+    // page load — and tells background.js to skip its own result cache
+    // rather than hand back the same answer for up to 6 hours.
     chrome.runtime.sendMessage(
-      { type: "ANALYZE", payload: { url: window.location.href } },
+      { type: "ANALYZE", payload: { url: window.location.href, fresh: Boolean(fresh) } },
       (response) => {
         if (chrome.runtime.lastError) {
           setPipeline("error");
@@ -757,6 +983,17 @@
           return;
         }
         if (response && !response.ok) {
+          state.unknownProduct = "";
+          if (response.code === "UNKNOWN_PRODUCT") {
+            // A product, read — just not one any installed pack knows. The
+            // answer is the research button with its name already in it.
+            setPipeline("idle");
+            state.errorMsg = null;
+            state.noAdapter = false;
+            state.unknownProduct = response.productName || document.title || "";
+            renderBody();
+            return;
+          }
           if (response.code === "NO_ADAPTER") {
             /* Nothing installed reads this site.
              *
@@ -773,6 +1010,7 @@
             setPipeline("idle");
             state.errorMsg = null;
             state.noAdapter = true;
+            state.hostKnown = Boolean(response.hostKnown);
             renderBody();
             return;
           }
@@ -881,8 +1119,11 @@
     panel.addEventListener("pointerup", onPointerUp);
     panel.addEventListener("pointercancel", onPointerUp);
 
-    ctaBtn.addEventListener("click", triggerAnalyze);
-    densityBtn.addEventListener("click", triggerAnalyze);
+    // A press of either control is the reader asking again on purpose, so
+    // both bypass the cache; the automatic run at page load calls
+    // triggerAnalyze() directly with no argument and gets the cache.
+    ctaBtn.addEventListener("click", () => triggerAnalyze(true));
+    densityBtn.addEventListener("click", () => triggerAnalyze(true));
     searchBtn.addEventListener("click", () =>
       (state.searchOpen ? closeSearch() : openSearch()));
     closeBtn.addEventListener("click", closePanel);
@@ -952,7 +1193,11 @@
   const SNAP_PAD = 14;
 
   function panelHeight() {
-    return Math.max(520, Math.min(window.innerHeight - PAD_DOCK * 2, window.innerHeight - 32));
+    // extension-12 (B145 audit): a 520px floor made the panel taller than a
+    // 620x520 window (the documented minimum), cutting the footer off — the
+    // panel is meant to fit inside the viewport at a 16px inset, at any
+    // height, and .lite-body already scrolls when there isn't room.
+    return Math.max(240, window.innerHeight - PAD_DOCK * 2);
   }
 
   function initialPosition() {
@@ -1120,17 +1365,17 @@
         <span class="lite-count" data-sev="high">
           <span class="dot"></span>
           <span class="num">${c.high}</span>
-          <span class="lbl">HIGH</span>
+          <span class="lbl">serious</span>
         </span>
         <span class="lite-count" data-sev="medium">
           <span class="dot"></span>
           <span class="num">${c.medium}</span>
-          <span class="lbl">MED</span>
+          <span class="lbl">worth checking</span>
         </span>
         <span class="lite-count" data-sev="low">
           <span class="dot"></span>
           <span class="num">${c.low}</span>
-          <span class="lbl">LOW</span>
+          <span class="lbl">minor</span>
         </span>
         <!-- "RISKS", not "CLAIMS", and that is not a leftover.
              The row is a claim everywhere it is *named* — the store, the
@@ -1143,9 +1388,13 @@
              is the case it was written for.
              (And no backticks in here — this comment is inside a template
              literal, which is how it broke the first time.) -->
-        <span class="lite-counts-total">${c.total} RISKS</span>
       </div>
     `;
+  }
+
+  function sameWords(a, b) {
+    const norm = (x) => String(x || "").toLowerCase().split(/\s+/).filter(Boolean).sort().join(" ");
+    return norm(a) === norm(b);
   }
 
   function renderListingHeader() {
@@ -1156,14 +1405,16 @@
 
     const metaLine = lm.facts
       .map((fact) => `<span>${escapeHtml(fact)}</span>`)
-      .join('<span class="sep">·</span>');
+      .join('<span class="sep" aria-hidden="true">·</span>');
 
     slot.innerHTML = `
       <div class="lite-listing">
         <div class="lite-listing-title">${escapeHtml(lm.title || "")}</div>
         ${lm.facts.length ? `<div class="lite-listing-meta">${metaLine}</div>` : ""}
         ${lm.identity_line
-            ? `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`
+            // The title already says it when the engine read the page the way
+            // the page reads; a second line repeating it is noise (B152.5).
+            ? (sameWords(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
             : `<div class="lite-listing-engine" data-unresolved="1">Not recognised — no pack matched this page</div>`}
       </div>
     `;
@@ -1333,6 +1584,11 @@
     iconWrap.classList.toggle("spin", isAnalyzing);
     ctaBtn.querySelector(".lite-cta-label").textContent = label;
     if (densityBtn) densityBtn.dataset.spinning = isAnalyzing ? "1" : "0";
+    // B152.8: once there is an answer the header's refresh icon is the one
+    // way to ask again; a second full-width "Refresh analysis" under it was
+    // the same control twice, pushing the risks down the panel.
+    const wrap = ctaBtn.closest(".lite-cta-wrap");
+    if (wrap) wrap.style.display = hasResult ? "none" : "";
   }
 
   /* The step a run is on, in words that are true.
@@ -1416,10 +1672,16 @@
    * panel holds no open connection to the app, and a content script that did
    * would hold it open on every listing page the reader leaves in a tab. */
   function pollLive() {
-    if (!state.visible) { stopLive(); return; }
+    // A tab left open in the background still counts as "visible" by our own
+    // bookkeeping (the panel is still mounted) — but nobody is looking, so a
+    // request every 2s there is pure cost. document.hidden catches exactly
+    // that case; the visibilitychange listener below resumes polling the
+    // moment the tab is looked at again.
+    if (!state.visible || document.hidden) { stopLive(); return; }
     chrome.runtime.sendMessage({ type: "OPERATIONS", payload: { limit: 6 } }, (response) => {
       if (!state.visible) return;
-      if (chrome.runtime.lastError || !response?.ok) {
+      const ok = !chrome.runtime.lastError && response?.ok;
+      if (!ok) {
         // An unreachable app is not worth a banner here: the analysis path
         // above already says so, loudly, and this section is an aside. It
         // falls quiet instead, which is what "nothing is running" looks like
@@ -1427,16 +1689,56 @@
         state.live = [];
       } else {
         state.live = Array.isArray(response.feed?.items) ? response.feed.items : [];
+        const clock = response.feed?.knowledge;
+        if (clock) {
+          if (state.knowledge && clock !== state.knowledge) knowledgeMoved();
+          state.knowledge = clock;
+        }
       }
       renderLive();
-      if (state.visible) state.liveTimer = setTimeout(pollLive, 2000);
+      // A dead engine does not get asked every 2s until the next Analyze —
+      // that is a request a page load that never answers, forever. Back off
+      // to 30s; a live one keeps its snappier interval.
+      if (state.visible) state.liveTimer = setTimeout(pollLive, ok ? 2000 : 30000);
     });
+  }
+
+  /** Something wrote to the knowledge while this panel was open (B152.4):
+   * an agent's findings, a research run, a pack install. The answer on screen
+   * is asked again in place — background.js writes it to session storage and
+   * the listener below applies it — and a product nobody knew is asked about
+   * again, quietly, in case it is known now. */
+  function knowledgeMoved() {
+    if (state.pipeline === "result" && state.result && state.result.lookup_id) {
+      chrome.runtime.sendMessage({
+        type: "REFRESH_ANSWER",
+        payload: { url: window.location.href, lookupId: state.result.lookup_id },
+      }, () => { void chrome.runtime.lastError; });
+      return;
+    }
+    if (state.pipeline === "idle" && state.unknownProduct) {
+      chrome.runtime.sendMessage(
+        { type: "ANALYZE", payload: { url: window.location.href, fresh: true } },
+        (response) => {
+          if (chrome.runtime.lastError) return;
+          if (response && response.ok && response.result) {
+            state.unknownProduct = "";
+            applyEntry({ ok: true, result: response.result });
+          }
+        });
+    }
   }
 
   function stopLive() {
     if (state.liveTimer) clearTimeout(state.liveTimer);
     state.liveTimer = null;
   }
+
+  // The resume half of the `document.hidden` stop in `pollLive`: the tab
+  // coming back into view asks again at once instead of waiting for Analyze.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && state.visible && !state.liveTimer) pollLive();
+  });
 
   function renderStatus() {
     if (!statusEl) return;
@@ -1667,10 +1969,50 @@
     if (!slot) return;
     slot.innerHTML = "";
 
+    if (state.unknownProduct && state.pipeline !== "result") {
+      const card = document.createElement("div");
+      card.className = "lite-verdict";
+      card.dataset.verdict = "unknown-product";
+      card.innerHTML = `
+        <div class="lite-verdict-head">
+          <span class="lite-verdict-word">New to Kriko</span>
+        </div>
+        <p class="lite-verdict-say">Kriko doesn't know
+          <strong class="lite-unknown-name"></strong> yet. A quick look answers
+          here in a minute or two, and a deeper run keeps going after.</p>
+      `;
+      card.querySelector(".lite-unknown-name").textContent = state.unknownProduct;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-verdict-btn lite-unknown-research";
+      button.textContent = "Research this product";
+      button.addEventListener("click", () =>
+        researchSubject({ label: state.unknownProduct }));
+      card.appendChild(button);
+      slot.appendChild(card);
+      return;
+    }
+
     if (state.noAdapter && state.pipeline !== "result") {
       const card = document.createElement("div");
       card.className = "lite-verdict";
       card.dataset.verdict = "no-adapter";
+      // A site with an installed adapter and a page that adapter doesn't
+      // recognise (a category page, a search page) is not "nothing reads
+      // this site" — that copy, and the offer to go write an adapter, is
+      // only true when no pack has this host at all.
+      if (state.hostKnown) {
+        card.innerHTML = `
+          <div class="lite-verdict-head">
+            <span class="lite-verdict-word">Not a listing</span>
+          </div>
+          <p class="lite-verdict-say">Kriko reads listings on this site, but
+            this page isn't one. Open a specific car's listing and analyze
+            that.</p>
+        `;
+        slot.appendChild(card);
+        return;
+      }
       card.innerHTML = `
         <div class="lite-verdict-head">
           <span class="lite-verdict-word">Not read here</span>
@@ -1811,13 +2153,13 @@
     if (!head) {
       claimsHeadEl.innerHTML = `
         <div class="lite-claims-head">
-          <div class="lite-claims-label">RISKS · ${total}</div>
+          <div class="lite-claims-label">Risks · ${total}</div>
           <div class="lite-chip-group">
             <button type="button" class="lite-chip lite-chip-expand" data-on="${allOpen ? "1" : "0"}">
-              + EXPAND ALL
+              + Expand all
             </button>
             <button type="button" class="lite-chip lite-chip-collapse" data-on="${allClose ? "1" : "0"}">
-              − COLLAPSE ALL
+              − Collapse all
             </button>
           </div>
         </div>
@@ -1829,7 +2171,7 @@
 
     // Update in place
     const label = head.querySelector(".lite-claims-label");
-    if (label) label.textContent = `RISKS · ${total}`;
+    if (label) label.textContent = `Risks · ${total}`;
     const expandBtn   = head.querySelector(".lite-chip-expand");
     const collapseBtn = head.querySelector(".lite-chip-collapse");
     if (expandBtn)   expandBtn.dataset.on   = allOpen  ? "1" : "0";
@@ -1874,12 +2216,16 @@
       return;
     }
 
+    // The no-adapter card above already says everything there is to say;
+    // "hit Analyze" under it reads as Kriko not noticing its own answer.
+    if (state.noAdapter || state.unknownProduct) return;
+
     if (state.pipeline === "idle" || !state.result) {
       const empty = document.createElement("div");
       empty.className = "lite-empty";
       empty.innerHTML = `
         <span class="lite-empty-icon">${iconSvg("search", { size: 18 })}</span>
-        <div>No analysis yet. Hit <b>Analyze current page</b> — typical run is under 2&nbsp;s.</div>
+        <div>No analysis yet. Press <b>Analyze current page</b>.</div>
       `;
       claimsListEl.appendChild(empty);
       return;
@@ -1908,12 +2254,16 @@
 
     // Group for display, by the claim's own domain. Global claim indices into
     // state.result.claims are preserved so toggleOne/setAllOpen keep working.
-    const domainLabels = {
-      engine: "Engine", transmission: "Transmission", emissions: "Emissions",
-      electrical: "Electrical", "fuel system": "Fuel System", cooling: "Cooling",
-      suspension: "Suspension", brakes: "Brakes", exhaust: "Exhaust",
-      interior: "Interior", "body/structure": "Body", steering: "Steering",
-    };
+    // A domain is whatever string the answering pack's claim carries — engine
+    // parts today, drill bits or anything else tomorrow. Title-casing each
+    // word is a generic text transform, not a lookup keyed on car vocabulary
+    // (extension-22, B145 audit): the old fixed map of engine/transmission/
+    // emissions/... only ever covered the cars pack, and silently fell back
+    // to a half-capitalized string for every domain a future pack invented.
+    function titleCaseDomain(domain) {
+      return domain.replace(/[a-z]+/gi, (word) =>
+        word.charAt(0).toUpperCase() + word.slice(1));
+    }
 
     // Grouped by the claim's own domain. There used to be a branch above this
     // one reading a `subsystems` array off the result, with a `display_tr`
@@ -1929,7 +2279,7 @@
       });
       groups = Object.entries(byDomain).map(([domain, items]) => ({
         iconDomain: domain,
-        label: domainLabels[domain] || domain.charAt(0).toUpperCase() + domain.slice(1),
+        label: titleCaseDomain(domain),
         items,
       }));
     }
@@ -1955,7 +2305,7 @@
           <span class="lite-domain-name">${escapeHtml(label)}</span>
           <span class="lite-domain-count">${items.length}</span>
           <span class="lite-domain-sev">${sevHtml.join('')}</span>
-          <span class="lite-domain-toggle">&minus;</span>
+          <span class="lite-domain-toggle" aria-hidden="true">&minus;</span>
         </button>
         <div class="lite-domain-body"></div>
       `;
@@ -1968,6 +2318,15 @@
         wrap.style.animationDelay = (80 + delayCounter * 70) + "ms";
         delayCounter++;
         const card = renderClaimCard(claim, { open: state.openIds.has(idx), compact: state.compact });
+        if (state.freshKeys.has(claimKeyOf(claim))) {
+          const title = card.querySelector(".lite-rc-title");
+          const chip = document.createElement("span");
+          chip.className = "lite-rc-new";
+          chip.title = "Added while this answer was open";
+          chip.textContent = "New";
+          if (title) title.prepend(chip);
+          card.dataset.fresh = "1";
+        }
         const btn = card.querySelector(".lite-rc-toggle");
         btn.addEventListener("click", () => toggleOne(idx, card));
         // Re-assert any verdict this claim already carries: the list is
@@ -2029,7 +2388,14 @@
     // (the backend only resolves subject_ids when something matched), so this
     // filter already excludes it — there is no separate check to remember or
     // forget here.
-    const gaps = (state.result.subjects || []).filter((s) => !s.claims);
+    // A subject with zero *direct* claims is not a gap when claims reached
+    // through its parts are already on screen — extension-4 (B145 audit): the
+    // gap card used to say "no knowledge for this car" directly under 8
+    // risks, because `subject.claims` only ever counts direct hits and never
+    // the claims the panel reached through part expansion.
+    const gaps = (state.result.claims || []).length
+      ? []
+      : (state.result.subjects || []).filter((s) => !s.claims);
     if (!gaps.length) return;
 
     // Ask what this would cost before drawing a single button — the sentence

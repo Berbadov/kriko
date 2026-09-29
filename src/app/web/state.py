@@ -836,6 +836,21 @@ def record_lookup(
     return lookup_id
 
 
+def replace_response(conn: sqlite3.Connection, lookup_id: str, response: dict) -> bool:
+    """Write a fresh answer over a saved one, keeping its id, time and label.
+
+    The re-answer of B152.4: the same question asked of knowledge that has
+    grown since. A new row per re-answer would fill history with copies of
+    one listing, which is what the reader would read as the app misbehaving.
+    """
+    cursor = conn.execute(
+        "UPDATE lookups SET response_json = ? WHERE lookup_id = ?",
+        (json.dumps(response, default=str), lookup_id),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
 def _decode(row: sqlite3.Row) -> dict:
     return {
         "lookup_id": row["lookup_id"],
@@ -873,6 +888,17 @@ def recent(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
             }
         )
     return out
+
+
+def lookup_count(conn: sqlite3.Connection) -> int:
+    """How many saved checks exist — Compare needs at least two of them.
+
+    A plain `COUNT(*)`, kept separate from `recent()` so a caller that only
+    needs the number (extension-16: whether to offer Compare at all) does not
+    pay for decoding every stored response first.
+    """
+    row = conn.execute("SELECT COUNT(*) AS n FROM lookups").fetchone()
+    return int(row["n"])
 
 
 def get_lookup(conn: sqlite3.Connection, lookup_id: str) -> dict | None:
@@ -2016,6 +2042,27 @@ def _job(row: sqlite3.Row) -> dict:
 def get_job(conn: sqlite3.Connection, job_id: str) -> dict | None:
     row = conn.execute("SELECT * FROM jobs WHERE job_id = ?", (job_id,)).fetchone()
     return _job(row) if row else None
+
+
+def live_retry_of(conn: sqlite3.Connection, job_id: str) -> dict | None:
+    """A not-yet-finished job whose `retry_of` names `job_id`, if one exists.
+
+    ops-5/ops-m1: two concurrent `POST /retry` on the same job with no
+    server-side guard both create a child — a double-click with no client
+    guard, or any two automation callers racing the same endpoint, always
+    produces two live retries of one run. `retry_job` checks this before
+    submitting a new one so the endpoint is idempotent regardless of what
+    called it.
+    """
+    for row in conn.execute(
+        "SELECT * FROM jobs WHERE state NOT IN (?, ?, ?, ?)"
+        " ORDER BY created_at DESC, rowid DESC",
+        tuple(TERMINAL),
+    ).fetchall():
+        job = _job(row)
+        if job["params"].get("retry_of") == job_id:
+            return job
+    return None
 
 
 def list_jobs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:

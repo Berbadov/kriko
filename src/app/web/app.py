@@ -14,6 +14,7 @@ endpoint to the network, so the default host is not a preference.
 """
 
 import logging
+import os
 import sys
 import traceback
 from contextlib import asynccontextmanager
@@ -29,6 +30,7 @@ from app import modelcatalogue
 from app.web.settings import KRIKO_HOME
 from app.web import origins, pipeline, schedule
 from app.web.jobs import JobRunner
+from app.web.knowledge_clock import KnowledgeClock
 from app.web.schedule import Scheduler
 from app.web.routers import (
     agenda,
@@ -43,6 +45,7 @@ from app.web.routers import (
     history,
     jobs,
     keys,
+    live,
     marks,
     operations,
     packs,
@@ -94,6 +97,19 @@ async def lifespan(app: FastAPI):
     except Exception:
         app.state.seeded = []
         log.warning("could not install the bundled packs", exc_info=True)
+
+    # The extension the browser loads, brought up to the one this app carries
+    # (B151). The extension reloads itself when the digest below is not its
+    # own, so an app update reaches the browser without the reader's hands.
+    app.state.extension_staged_digest = ""
+    try:
+        target = ext.target_for(app.state.settings.store_path)
+        if ext.refresh(ext.source_dir(), target):
+            log.info("restaged the extension at %s", target)
+        if (target / "manifest.json").is_file():
+            app.state.extension_staged_digest = ext.content_digest(target)
+    except Exception:
+        log.warning("could not refresh the staged extension", exc_info=True)
 
     # The reader's own price list, put where they can edit it. Copied once and
     # never again, so a correction they made survives every update — and
@@ -180,6 +196,7 @@ async def lifespan(app: FastAPI):
     # shutting down.
     app.state.schedule.stop(wait=2.0)
     app.state.jobs.shutdown()
+    app.state.knowledge_clock.close()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -234,6 +251,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         history.router,
         jobs.router,
         keys.router,
+        live.router,
         bench.router,
         marks.router,
         operations.router,
@@ -246,6 +264,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # One runner per app, built here so a test app gets its own pool pointed at
     # its own temporary app.sqlite.
     app.state.jobs = JobRunner(app.state.settings, HANDLERS)
+    # What the open answers watch to know the knowledge moved (B152.4).
+    app.state.knowledge_clock = KnowledgeClock(app.state.settings.store_path)
     # And the timer that presses the agenda button when nobody is here (B98).
     # Constructed for every app and *started* by the lifespan only when the
     # reader has turned it on — a test client, which enters the lifespan, must
@@ -305,7 +325,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # fetches are exempt from CORS via `host_permissions`, but the
         # allowlist is what makes that not a thing to remember.
         response.headers[ext.MINIMUM_HEADER] = ext.MINIMUM_VERSION
-        response.headers["access-control-expose-headers"] = ext.MINIMUM_HEADER
+        staged = getattr(app.state, "extension_staged_digest", "")
+        if staged:
+            response.headers[ext.STAGED_HEADER] = staged
+        response.headers["access-control-expose-headers"] = (
+            f"{ext.MINIMUM_HEADER}, {ext.STAGED_HEADER}")
         return response
 
     # ── who is allowed to ask ────────────────────────────────────────────
@@ -445,6 +469,14 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     overrides = {"store_path": Path(args.store)} if args.store else {}
+    # `KRIKO_EXTENSION_BOUND` is what /api/health's `extension_port_bound`
+    # reads (settings.py:150), and until now only src/app/sidecar.py set it —
+    # a plain `python -m app.web` (this function) never did, so About and
+    # Extension both asserted "something else took port 8787" on a server
+    # that had simply never tried to bind it, because nobody had probed. Set
+    # it honestly: this process holds EXTENSION_PORT exactly when it is the
+    # port it was asked to serve on.
+    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if args.port == EXTENSION_PORT else "0"
     # Each CLI's and each keyed provider's LLM list, asked once in the
     # background: `agy models` takes seconds, and the Agents screen should not
     # be the one that pays for it.

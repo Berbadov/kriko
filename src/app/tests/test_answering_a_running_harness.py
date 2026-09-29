@@ -37,6 +37,16 @@ if MODE == "silent":
 def text(message):
     return message["message"]["content"][0]["text"]
 
+if MODE == "chatty":
+    # `claude`'s real `init` event lists every tool, skill and server — kilobytes,
+    # written before it reads its first message. Larger than a pipe buffer here.
+    print(json.dumps({"type": "system", "subtype": "init", "tools": ["x" * 65536]}),
+          flush=True)
+    brief = text(json.loads(sys.stdin.readline()))
+    print(json.dumps({"type": "result", "result": "read %d" % len(brief)}), flush=True)
+    sys.stdin.read()
+    sys.exit(0)
+
 print(json.dumps({"type": "system", "subtype": "init"}), flush=True)
 brief = text(json.loads(sys.stdin.readline()))
 if MODE == "asks":
@@ -93,6 +103,23 @@ def _answers(*lines):
         return taken
 
     return replies
+
+
+def test_a_brief_larger_than_the_pipe_does_not_deadlock_a_chatty_child(
+    tmp_path, declares_streaming_input
+):
+    # B147: the authoring brief (~10 KB) was written to stdin before anything
+    # read stdout. A child that prints its `init` first filled its stdout pipe
+    # and stopped reading; the write never returned — ten silent minutes, no
+    # heartbeat, no cancel, until the reader closed the app.
+    import time
+
+    researcher = HarnessResearcher(_cli(tmp_path, mode="chatty"), timeout=30)
+    researcher.replies = _answers()  # what `pack_author` wires: a run that can be answered
+    began = time.monotonic()
+    reply = researcher.ask("b" * 200_000)
+    assert "read 200000" in reply
+    assert time.monotonic() - began < 20
 
 
 def test_the_answer_reaches_the_agent_and_changes_what_it_says(

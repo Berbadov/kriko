@@ -108,11 +108,30 @@ def _appdata() -> Path | None:
     Falls back to the conventional location when the variable is unset, which
     is also what makes redirecting `_home` alone enough on a machine that has
     no `%APPDATA%` at all.
+
+    But an unset `%APPDATA%` was never the only way this leaked: on a real
+    Windows machine it is always set, so a caller who redirects `HOME`/
+    `USERPROFILE` alone — every one-click test, `tools/walk.sh`'s isolated
+    runs — still got the *real* `%APPDATA%` back here, because the inherited
+    environment variable was trusted over the redirected home. That made the
+    isolation the docstring above claims true for three targets out of four
+    and silently false for Claude Desktop, whose config a redirected run could
+    still read (or, worse, overwrite). So `%APPDATA%` is honoured only when it
+    is actually consistent with `_home()` — the ordinary case on a real
+    install, where the two always agree — and a `HOME` redirected out from
+    under it falls back to the home-relative path instead of the inherited
+    real one.
     """
+    home = _home()
     base = os.environ.get("APPDATA")
     if base:
-        return Path(base)
-    return _home() / "AppData" / "Roaming"
+        base_path = Path(base)
+        try:
+            base_path.resolve().relative_to(home.resolve())
+            return base_path
+        except ValueError:
+            pass
+    return home / "AppData" / "Roaming"
 
 
 def _claude_desktop_path() -> Path | None:

@@ -5,6 +5,7 @@
     import { compareMany } from "../lib/compare";
     import { severityWord } from "../lib/report";
     import { hashWith, route, setQuery } from "../lib/router";
+    import { ApiError } from "../lib/api";
     import type { HistoryItem } from "../lib/types";
 
     //: Four is the cap, and it is a layout limit rather than a logical one:
@@ -51,14 +52,42 @@
         setQuery("ids", next.filter(Boolean).join(",") || undefined);
     }
 
+    let missingNotice = $state("");
+
     const listed = api.history(50).then((h) => (items = h.items));
+
+    // A compare link can arrive by hash change rather than a fresh mount
+    // (the extension's /api/focus hand-off does exactly this), so `items`
+    // — read once at mount — falls behind the ids the table is about to show
+    // (check-19). Refetch whenever an id the URL names is not one we have.
+    $effect(() => {
+        if (ids.some((id) => !items.some((i) => i.lookup_id === id))) {
+            api.history(50).then((h) => (items = h.items));
+        }
+    });
 
     const lined = $derived(
         ids.length >= 2
-            ? Promise.all(ids.map((id) => api.getLookup(id))).then((answers) => ({
-                  answers,
-                  diff: compareMany(answers),
-              }))
+            ? Promise.allSettled(ids.map((id) => api.getLookup(id))).then((settled) => {
+                  const answers: Awaited<ReturnType<typeof api.getLookup>>[] = [];
+                  const remaining: string[] = [];
+                  let dropped = false;
+                  settled.forEach((r, i) => {
+                      if (r.status === "fulfilled") {
+                          answers.push(r.value);
+                          remaining.push(ids[i]);
+                      } else if (r.reason instanceof ApiError && r.reason.status === 404) {
+                          dropped = true;
+                      } else {
+                          throw r.reason;
+                      }
+                  });
+                  if (dropped) {
+                      missingNotice = "One saved check was forgotten and was removed.";
+                      setQuery("ids", remaining.join(",") || undefined);
+                  }
+                  return { answers, diff: compareMany(answers) };
+              })
             : null,
     );
 </script>
@@ -100,6 +129,7 @@
                 {/each}
             </div>
 
+            {#if missingNotice}<p class="state">{missingNotice}</p>{/if}
             {#if lined}
                 <Async promise={lined} loading="Loading the answers…">
                     {#snippet children(d)}

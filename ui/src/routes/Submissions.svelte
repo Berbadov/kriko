@@ -2,6 +2,7 @@
     import Async from "../lib/Async.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
+    import { stamp } from "../lib/time";
     import type { Submission } from "../lib/types";
 
     /* What a researcher sent, and what the gate did with it.
@@ -124,7 +125,7 @@
                             <span class="badge">{item.door}</span>
                         </h4>
                         <p class="meta">
-                            {item.created_at.slice(0, 16).replace("T", " ")} ·
+                            {stamp(item.created_at)} ·
                             {item.accepted} accepted · {item.refused} refused
                         </p>
                         {#if item.queries?.length}

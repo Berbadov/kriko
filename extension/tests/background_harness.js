@@ -22,8 +22,8 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // between "pending" and "reading" is the whole of B69's consent story — so the
 // test has to be able to set it.
 function loadBackground({
-  routes = {}, tabResponses = {}, offline = false, statuses = {},
-  grantedOrigins = [], responseHeaders = {},
+  routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
+  grantedOrigins = [], responseHeaders = {}, loadedDigest = "",
 } = {}) {
   const state = {
     session: {},
@@ -52,6 +52,8 @@ function loadBackground({
     tabsReloaded: [],
     // Every sentence the worker put in front of the reader, in order.
     notified: [],
+    // Times the worker reloaded itself (B151).
+    selfReloads: 0,
   };
   const messageListeners = [];
   // Keyboard commands fire at the browser, not at a tab, so the worker
@@ -63,6 +65,7 @@ function loadBackground({
   // sync recovers from a failed one: captured so a test can be the alarm.
   const alarmListeners = [];
   const permissionListeners = [];
+  const installedListeners = [];
 
   const area = (bucket) => ({
     async get(keys) {
@@ -81,11 +84,14 @@ function loadBackground({
   const sandbox = {
     console: { log() {}, warn() {}, error() {} },
     setTimeout: (fn) => { fn(); return 0; },
+    clearTimeout() {},
+    AbortController,
     performance: { now: () => 0 },
     URL,
     chrome: {
       runtime: {
-        onInstalled: { addListener() {} },
+        onInstalled: { addListener: (fn) => installedListeners.push(fn) },
+        reload() { state.selfReloads += 1; },
         onStartup: { addListener() {} },
         // The worker reads the packaged manifest to find out which sites it
         // does *not* need to register — so the harness hands it the real
@@ -164,6 +170,15 @@ function loadBackground({
     },
     fetch: async (url, init) => {
       if (offline) throw new TypeError("Failed to fetch");
+      // `hung`: an app that accepted the connection and never answers. Only
+      // the worker's own clock ends it (this harness's timers fire at once).
+      if (hung) {
+        return new Promise((_, reject) => {
+          const fail = () => reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
+          if (init.signal.aborted) fail();
+          else init.signal.addEventListener("abort", fail);
+        });
+      }
       const body = init && init.body ? JSON.parse(init.body) : null;
       // Headers too: what the worker *says about itself* on every request is
       // half the version handshake, and it is only visible here.
@@ -194,11 +209,16 @@ function loadBackground({
   };
   sandbox.self = sandbox;
   vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync(BACKGROUND_JS, "utf8"), sandbox,
+  // Staging stamps the worker with the digest of its own files; the source
+  // carries a blank one. `loadedDigest` is that stamp, for a test that needs it.
+  const source = fs.readFileSync(BACKGROUND_JS, "utf8").replace(
+    'const LOADED_CONTENT_DIGEST = "";',
+    `const LOADED_CONTENT_DIGEST = "${loadedDigest}";`);
+  vm.runInContext(source, sandbox,
                   { filename: "background.js" });
 
   return { sandbox, state, messageListeners, commandListeners, clickListeners,
-           alarmListeners, permissionListeners };
+           alarmListeners, permissionListeners, installedListeners };
 }
 
 // Calling a message listener the way Chrome does: one shot at

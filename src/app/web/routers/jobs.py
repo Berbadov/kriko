@@ -134,10 +134,17 @@ def start_build(body: BuildRequest, runner=Depends(get_jobs)):
 @router.get("/packs/updates")
 def check_pack_updates(
     index_url: str | None = Query(default=None),
+    fresh: bool = Query(default=False),
     runner=Depends(get_jobs),
 ):
-    """Is anything newer? Answered in the request — it is one small fetch."""
-    return tasks.check_updates(runner.settings, index_url or "")
+    """Is anything newer? Answered in the request — it is one small fetch.
+
+    `fresh` is the reader's own "Check for updates" press; every other caller
+    (the hint bar on every screen) leaves it false and gets the server's
+    cached answer instead of paying for a round trip to a remote index on
+    every navigation — see `tasks.check_updates`.
+    """
+    return tasks.check_updates(runner.settings, index_url or "", fresh=fresh)
 
 
 @router.post("/packs/update")
@@ -265,6 +272,11 @@ def retry_job(job_id: str, body: RetryRequest | None = None,
         raise HTTPException(404, f"no such job: {job_id}")
     if not row["done"]:
         raise HTTPException(409, f"job {job_id} is still {row['state']}")
+    # Idempotent regardless of caller (ops-5/ops-m1): a retry already live
+    # for this job is the answer, not a second child of it.
+    existing = state.live_retry_of(app_state, job_id)
+    if existing is not None:
+        return {"job_id": existing["job_id"], "kind": existing["kind"]}
     params = dict(row["params"] or {})
     params["retry_of"] = job_id
     # Merged onto whatever the first run was given, so answering one question
@@ -294,6 +306,17 @@ async def stream_job(job_id: str, request_jobs=Depends(get_jobs)):
                 yield f"event: error\ndata: {json.dumps({'error': 'no such job'})}\n\n"
                 return
             last = None
+            # ops-20: a long harness run's log grows to tens of kilobytes, and
+            # this loop used to put the whole thing on the wire every tick —
+            # the reader's own progress made their connection slower. The
+            # first event still carries the full row (a client that only just
+            # opened the stream has nothing to append to); every one after it
+            # carries only the log bytes this connection has not sent yet, and
+            # `follow()` reassembles the full string client-side. An old,
+            # not-yet-rebuilt bundle reads `job.log` on every event same as
+            # before — it just sees the tail rather than the whole log after
+            # the first tick, which is a shorter log, not a broken one.
+            sent_log = 0
             while True:
                 row = state.get_job(conn, job_id)
                 if row is None:  # forgotten mid-stream
@@ -309,7 +332,13 @@ async def stream_job(job_id: str, request_jobs=Depends(get_jobs)):
                                len(row["log"]), len(str(row["result"])))
                 if fingerprint != last:
                     last = fingerprint
-                    yield f"data: {json.dumps(_with_attention(row))}\n\n"
+                    payload = _with_attention(row)
+                    if sent_log:
+                        payload = dict(payload)
+                        payload["log"] = row["log"][sent_log:]
+                        payload["log_append"] = True
+                    sent_log = len(row["log"])
+                    yield f"data: {json.dumps(payload)}\n\n"
                 if row["done"]:
                     return
                 await asyncio.sleep(POLL_SECONDS)

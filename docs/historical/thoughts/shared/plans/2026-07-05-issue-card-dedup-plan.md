@@ -1,326 +1,41 @@
+> TL;DR (archived 2026-09-25): Implementation plan (2026-07-05) for issue-card dedup+grouping:
+6 phases — shared `title_sim` module, resolver `_deduplicate_results`/`_merge_cluster`,
+post-dedup summary (no change needed), `hover_lite` domain grouping + CSS, `sync.py`
+cross-file warnings, backend tests + manual frontend QA. Dependencies: 1→2→3, 4∥3, 5 after 1, 6 last.
+
 # Implementation Plan: Issue Card Dedup and Grouping
 
 ## Phase 1 — Shared title-similarity module (1 file, no deps)
 
-**Task 1.1:** Create `backend/core/title_sim.py`
-- Extract `_title_tokens()` and `title_similar()` from `knowledge/dedup.py`
-- Both functions are identical — copy them verbatim
-- No dependencies on sqlalchemy, dataclasses, etc.
-- Import re + logging
-
-**Task 1.2:** Update `knowledge/dedup.py` 
-- Change import from local `_title_tokens`/`title_similar` to `from backend.core.title_sim import _title_tokens, title_similar`
-- Keep `same_claim()` as-is (it uses the same tokenizer)
-- Keep `_STOPWORDS` in dedup.py or move it to title_sim.py — either works
-
-**Test 1.3:** Create `tests/test_title_sim.py`
-- Test `_title_tokens()`: empty string, single word, with stopwords
-- Test `title_similar()`: identical strings → 1.0, completely different → 0.0, "Timing belt failure" vs "Timing belt replacement" ≥ 0.4
-- Test edge case: both empty → False
+**Task 1.1:** Create `backend/core/title_sim.py` — verbatim `_title_tokens()` + `title_similar()` from `knowledge/dedup.py` (+ `re`, logging; no sqlalchemy/dataclasses).
+**Task 1.2:** `knowledge/dedup.py` imports from it; `same_claim()` unchanged.
+**Test 1.3:** `tests/test_title_sim.py` — tokens (empty/single/stopwords); similarity (identical 1.0, disjoint 0.0, "Timing belt failure" vs "…replacement" ≥ 0.4); both-empty → False.
 
 ## Phase 2 — Backend dedup (1 file: resolver.py)
 
-**Task 2.1:** Add import in `resolver.py`
-- `from backend.core.title_sim import title_similar`
-
-**Task 2.2:** Add `_deduplicate_results(results: list[ClaimResult]) → list[ClaimResult]` in `resolver.py`
-
-Logic:
-```
-def _deduplicate_results(results: list[ClaimResult]) -> list[ClaimResult]:
-    if len(results) <= 1:
-        return results
-
-    # Group by domain
-    by_domain: dict[str, list[ClaimResult]] = {}
-    for cr in results:
-        by_domain.setdefault(cr.claim.domain or "unknown", []).append(cr)
-
-    merged = []
-    for domain, group in by_domain.items():
-        # Within each domain, group by title similarity
-        clusters: list[list[ClaimResult]] = []
-        for cr in group:
-            placed = False
-            for cluster in clusters:
-                if title_similar(cluster[0].claim.title, cr.claim.title):
-                    cluster.append(cr)
-                    placed = True
-                    break
-            if not placed:
-                clusters.append([cr])
-        
-        for cluster in clusters:
-            if len(cluster) == 1:
-                merged.append(cluster[0])
-                continue
-            merged.append(_merge_cluster(cluster))
-    
-    return merged
-```
-
-**Task 2.3:** Add `_merge_cluster(cluster: list[ClaimResult]) → ClaimResult` in `resolver.py`
-
-Merge strategy:
-- Title: keep the title of the highest-severity claim (ties: most evidence/sources)
-- Severity: max of all (high > medium > low)
-- Strength: strongest wins ("confirmed" > "due" > "due_stated" > "reported")
-- Rationale: join unique sentences, skip near-duplicate content
-- Inspection advice: join unique advice with "; "
-- Confidence: max of all
-- Domain: unchanged (all in cluster share domain)
-- Claim: use the representative Claim object from the merged result
-
-**Task 2.4:** Call dedup at end of `resolve_claims()`:
-```python
-def resolve_claims(match, db, ctx=None):
-    ...
-    results = _apply_context(claims, ctx)
-    return _deduplicate_results(results)  # NEW
-```
-
-Wrap in try/except: if dedup fails, log warning and return original list.
+**Task 2.1:** Import `title_similar`.
+**Task 2.2:** `_deduplicate_results(results)` — ≤1 item passthrough; group by domain; within-domain single-pass clustering on `title_similar(cluster[0], candidate)`; singletons pass, clusters merge. (Full function — see git history.)
+**Task 2.3:** `_merge_cluster` — title from highest-severity (ties: most evidence), max severity, strongest strength (`confirmed`>`due`>`due_stated`>`reported`), deduped rationale/advice joins, max confidence, shared domain, representative `Claim`.
+**Task 2.4:** Call at end of `resolve_claims()`; try/except fail-open (log + original list).
 
 ## Phase 3 — Update summary counts (1 file: main.py)
 
-**Task 3.1:** In `run_analysis()` in `main.py`, ensure `_build_summary()` counts post-dedup risks
-
-Currently the flow is:
-```python
-served = resolve_claims(match, db, ctx)
-risks = [_claim_to_risk(cr, db) for cr in served]
-```
-
-The summary is built from `risks` (the RiskItem list), so it already uses post-dedup counts since dedup happens inside `resolve_claims()`. 
-
-**Verify:** The summary is built from `risks` parameter in `_build_summary(state, match, risks)` — and `risks` comes from the deduped `served` list. No change needed.
+**Task 3.1:** Verify `_build_summary()` counts post-dedup `risks` (built from deduped `served` list) — expected: no change needed.
 
 ## Phase 4 — Frontend domain grouping (2 files: hover_lite.js, hover_lite.css)
 
-**Task 4.1:** Add domain grouping in `hover_lite.js` `renderBody()` function
-
-After "summary-slot" section and before "details-slot", replace the flat `<section class="lite-risks">` with domain-grouped sections.
-
-Logic:
-```javascript
-function renderRisksGrouped(risks) {
-  if (!risks || !risks.length) return '';
-  
-  // Group by domain
-  const grouped = {};
-  for (const r of risks) {
-    const d = r.domain || 'other';
-    if (!grouped[d]) grouped[d] = [];
-    grouped[d].push(r);
-  }
-  
-  const domainLabels = {
-    engine: { label: 'Engine', icon: 'engine' },
-    transmission: { label: 'Transmission', icon: 'transmission' },
-    emissions: { label: 'Emissions', icon: 'emissions' },
-    electrical: { label: 'Electrical', icon: 'electrical' },
-    'fuel system': { label: 'Fuel System', icon: 'fuel' },
-  };
-  
-  let html = '<div class="lite-domain-groups">';
-  for (const [domain, items] of Object.entries(grouped)) {
-    const info = domainLabels[domain] || { label: domain.charAt(0).toUpperCase() + domain.slice(1), icon: null };
-    const high = items.filter(r => r.severity === 'high').length;
-    const med = items.filter(r => r.severity === 'medium').length;
-    const low = items.filter(r => r.severity === 'low').length;
-    
-    html += `
-      <div class="lite-domain-group" data-domain="${domain}">
-        <button type="button" class="lite-domain-head" aria-expanded="true">
-          <span class="lite-domain-icon">${iconSvg(info.icon || 'warning')}</span>
-          <span class="lite-domain-name">${info.label}</span>
-          <span class="lite-domain-count">${items.length}</span>
-          <span class="lite-domain-sev">
-            ${high ? `<span class="lite-domain-sev-dot" data-sev="high"></span>${high}` : ''}
-            ${med ? `<span class="lite-domain-sev-dot" data-sev="medium"></span>${med}` : ''}
-            ${low ? `<span class="lite-domain-sev-dot" data-sev="low"></span>${low}` : ''}
-          </span>
-          <span class="lite-domain-toggle">−</span>
-        </button>
-        <div class="lite-domain-body">
-          ${items.map(r => renderRiskCard(r, { open: false, compact: false }).outerHTML).join('')}
-        </div>
-      </div>
-    `;
-  }
-  html += '</div>';
-  return html;
-}
-```
-
-Wire toggle handler:
-```javascript
-function wireDomainToggles() {
-  const groups = risksListEl.querySelectorAll('.lite-domain-group');
-  for (const g of groups) {
-    const head = g.querySelector('.lite-domain-head');
-    head.addEventListener('click', () => {
-      const isOpen = head.getAttribute('aria-expanded') === 'true';
-      head.setAttribute('aria-expanded', !isOpen);
-      g.dataset.open = isOpen ? '0' : '1';
-      head.querySelector('.lite-domain-toggle').textContent = isOpen ? '+' : '−';
-    });
-  }
-}
-```
-
-Replace the current `risksListEl.innerHTML = risks.map(...).join('')` with grouping.
-
-**Task 4.2:** Add CSS in `hover_lite.css`
-
-Add styles for `.lite-domain-groups`, `.lite-domain-group`, `.lite-domain-head`, `.lite-domain-body`, `.lite-domain-sev-dot`:
-
-```css
-/* Domain groups */
-.lite-domain-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.lite-domain-group {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.lite-domain-group[data-open="0"] .lite-domain-body {
-  display: none;
-}
-
-.lite-domain-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 8px 10px;
-  background: var(--surface-2);
-  border: none;
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: left;
-  transition: background 0.15s;
-}
-
-.lite-domain-head:hover {
-  background: var(--surface-3);
-}
-
-.lite-domain-icon {
-  flex: 0 0 auto;
-  color: var(--text-dim);
-}
-
-.lite-domain-name {
-  flex: 0 0 auto;
-}
-
-.lite-domain-count {
-  margin-left: auto;
-  color: var(--text-dim);
-  font-weight: 500;
-}
-
-.lite-domain-sev {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-dim);
-}
-
-.lite-domain-sev-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.lite-domain-sev-dot[data-sev="high"] { background: var(--high-ink); }
-.lite-domain-sev-dot[data-sev="medium"] { background: var(--med-ink); }
-.lite-domain-sev-dot[data-sev="low"] { background: var(--low-ink); }
-
-.lite-domain-toggle {
-  flex: 0 0 auto;
-  width: 16px;
-  text-align: center;
-  color: var(--text-dim);
-}
-
-.lite-domain-body {
-  border-top: 1px solid var(--border);
-}
-
-.lite-domain-body .lite-rc:last-child {
-  border-bottom: none;
-}
-```
+**Task 4.1:** `renderRisksGrouped(risks)` — group by domain; per group a header (icon + label + count + severity dots + toggle) and body of `renderRiskCard` output; `wireDomainToggles()` flips `aria-expanded`/`data-open`/toggle glyph. Replaces the flat `innerHTML` mapping. (Full snippets — see git history.)
+**Task 4.2:** CSS for `.lite-domain-groups/.lite-domain-group/.lite-domain-head/.lite-domain-body/.lite-domain-sev-dot` (flex rows, hover states, severity colours; full rules — see git history).
 
 ## Phase 5 — Cross-file duplicate warnings (1 file: sync.py)
 
-**Task 5.1:** In `backend/sync.py`, after loading all part YAMLs, add cross-file duplicate detection
-
-- Collect all claim titles grouped by domain across all parts
-- For each domain, compute pairwise Jaccard for cross-file pairs
-- Log warnings for pairs with Jaccard ≥ 0.4
-
-```python
-def warn_cross_file_duplicates(parts: list[dict]) -> None:
-    """Log warnings for near-duplicate claim titles across part files."""
-    from backend.core.title_sim import title_similar
-    claims = []  # list of (part_id, file_path, claim_key, title, domain)
-    for part in parts:
-        part_id = part.get("part_id", "?")
-        file_path = part.get("_source_file", "?")
-        for claim in part.get("claims", []):
-            claims.append((part_id, file_path, claim["claim_key"], claim["title"], claim.get("domain", "")))
-    
-    for i in range(len(claims)):
-        for j in range(i + 1, len(claims)):
-            pi, pj = claims[i], claims[j]
-            if pi[4] != pj[4]:  # different domain → skip
-                continue
-            if pi[0] == pj[0]:  # same part → skip
-                continue
-            if title_similar(pi[3], pj[3]):
-                log.warning(
-                    "Cross-file dup: %s (%s) ~ %s (%s)  |  %s vs %s",
-                    pi[2], pi[1], pj[2], pj[1], pi[3], pj[3],
-                )
-```
-
-Call this after loading all parts, before the DB sync loop.
+**Task 5.1:** `warn_cross_file_duplicates(parts)` post-load, pre-sync: same-domain cross-file pairs with `title_similar` ⇒ `log.warning` with part/file/claim-key/titles. (Full function — see git history.)
 
 ## Phase 6 — Testing
 
-**Task 6.1:** Backend tests for dedup
-- Test `_deduplicate_results()` with: empty, single item, no matches, one merge, multi-domain
-- Test `_merge_cluster()` strength/severity preservation
-- Test with 6 timing belt claims → ~2 groups
-- Location: `backend/tests/test_resolver_dedup.py` or add to existing test file
-
-**Task 6.2:** Manual frontend verification
-- Load extension, open panel on a listing with many risks
-- Verify domain sections appear
-- Verify collapse/expand works
-- Verify count badges are correct
-- Verify individual risk cards render correctly inside sections
+**Task 6.1:** `backend/tests/test_resolver_dedup.py` — `_deduplicate_results` (empty/single/no-match/merge/multi-domain), `_merge_cluster` (strength/severity), 6 timing-belt claims → ~2 groups.
+**Task 6.2:** Manual frontend pass (sections, toggles, counts, cards-in-sections).
 
 ## Dependencies
 
-```
-Phase 1 ──→ Phase 2 ──→ Phase 3
-                │
-                └────────→ Phase 4 (parallel with Phase 3)
-                
-Phase 5 ──→ independent, can run anytime after Phase 1
-
-Phase 6 ──→ after Phase 2 and Phase 4
-```
+`Phase 1 → Phase 2 → Phase 3`, `Phase 4 ∥ Phase 3` (needs Phase 2's output shape only), `Phase 5` anytime after Phase 1, `Phase 6` after Phases 2 + 4.

@@ -10,11 +10,17 @@
     // Five counts and a table that duplicated History did not answer "what
     // should I work on". Everything here is either work waiting or a link to
     // where that work is done.
+    //
+    // Pack updates is deliberately not in this Promise.all. It is the one
+    // call here backed by a remote fetch rather than local data, and joining
+    // it meant the whole screen — packs, jobs, coverage, everything local —
+    // waited on whichever call was slowest, up to the server's own 15s
+    // timeout when the index was unreachable (B145 desktop-2). It resolves
+    // into its own state below and patches the worklist in once it lands.
     const load = async () => {
-        const [status, packs, updates, jobs, weakest, unmapped] = await Promise.all([
+        const [status, packs, jobs, weakest, unmapped] = await Promise.all([
             api.status(),
             api.packs(),
-            api.packUpdates().catch(() => null),
             api.jobs(10).catch(() => ({ items: [] })),
             api.weakest(5).catch(() => ({ claims: [] })),
             api.unmappedLabels(8).catch(() => ({ labels: [] })),
@@ -26,14 +32,27 @@
             status,
             packs,
             gaps: gapLists.flat().length,
-            updatable: (updates?.packs ?? []).filter((p) => p.state === "available")
-                .length,
             live: (jobs.items ?? []).filter(isLive).length,
             weakest: weakest.claims,
             unmapped: unmapped.labels,
         };
     };
     const data = load();
+
+    // "0 pack updates waiting" and "could not check" are different answers
+    // (B145 knowledge-9): the first is a genuine all-clear, the second means
+    // nothing was learned at all and showing a zero would say otherwise.
+    // `updatable` stays null until the check lands, which reads as neither.
+    let updatable = $state<number | null>(null);
+    let updatesFailed = $state(false);
+    api.packUpdates()
+        .then((u) => {
+            updatesFailed = Boolean(u.error);
+            updatable = u.error ? null : u.packs.filter((p) => p.state === "available").length;
+        })
+        .catch(() => {
+            updatesFailed = true;
+        });
 
     const link = (name: string) => hashWith({ mode: $route.query.mode }, name);
 
@@ -95,10 +114,18 @@
                     >
                 </li>
                 <li>
-                    <a href={link("packs")}
-                        >{plural(d.updatable, "pack update", "pack updates")} waiting</a
-                    >
-                    <span class="meta">knowledge moves weekly; the app rarely</span>
+                    {#if updatesFailed}
+                        <a href={link("packs")}>Could not check for pack updates</a>
+                        <span class="meta">installed packs keep working either way</span>
+                    {:else if updatable === null}
+                        <a href={link("packs")}>Checking for pack updates…</a>
+                        <span class="meta">knowledge moves weekly; the app rarely</span>
+                    {:else}
+                        <a href={link("packs")}
+                            >{plural(updatable, "pack update", "pack updates")} waiting</a
+                        >
+                        <span class="meta">knowledge moves weekly; the app rarely</span>
+                    {/if}
                 </li>
                 <li>
                     <a href={link("jobs")}
@@ -109,7 +136,7 @@
             </ul>
 
             <div class="stats">
-                {#each [["Packs", d.status.packs], ["Enabled", d.status.enabled_packs], ["Subjects", d.status.counts.subjects ?? 0], ["Claims", d.status.counts.claims ?? 0]] as [label, value] (label)}
+                {#each [["Packs", d.status.packs], ["Enabled", d.status.enabled_packs], ["Subjects", (d.status.counts_enabled ?? d.status.counts).subjects ?? 0], ["Claims", (d.status.counts_enabled ?? d.status.counts).claims ?? 0]] as [label, value] (label)}
                     <div class="stat"><strong>{value}</strong><span>{label}</span></div>
                 {/each}
             </div>
@@ -184,7 +211,9 @@
                 <ul class="worklist">
                     {#each d.weakest as claim (claim.claim_id)}
                         <li>
-                            <a href={link("health")}>{claim.title}</a>
+                            <a href={hashWith({ mode: $route.query.mode, lens: "weak" }, "knowledge", claim.claim_id)}
+                                >{claim.title}</a
+                            >
                             <span class="meta"
                                 >{claim.subject_label} · {claim.independent_sources}
                                 independent {word(claim.independent_sources, "source")} · best {claim.best_tier}</span

@@ -50,6 +50,24 @@
     $effect.pre(() => {
         lens = asLens(initial);
     });
+    const LENS_IDS: Lens[] = ["all", "gaps", "weak", "marked"];
+
+    // WAI-ARIA tabs: Left/Right/Home/End move both focus and the selection —
+    // the same mechanism ops-21 gave Activity's lens tabs (knowledge-28).
+    function onLensKey(event: KeyboardEvent, index: number) {
+        const move = (to: number) => {
+            const next = LENS_IDS[(to + LENS_IDS.length) % LENS_IDS.length];
+            lens = next;
+            document.getElementById(`knowledge-tab-${next}`)?.focus();
+        };
+        if (event.key === "ArrowRight") move(index + 1);
+        else if (event.key === "ArrowLeft") move(index - 1);
+        else if (event.key === "Home") move(0);
+        else if (event.key === "End") move(LENS_IDS.length - 1);
+        else return;
+        event.preventDefault();
+    }
+
     let query = $state("");
     let packFilter = $state("");
     let shown = $state(25);
@@ -140,7 +158,12 @@
         // a fact about the pack's own contents, not about whether the reader
         // has it switched on.
         const lists = await Promise.all(
-            p.map((pack) => api.gaps(pack.pack_id).catch(() => [] as Gap[])),
+            p.map((pack) =>
+                api
+                    .gaps(pack.pack_id)
+                    .then((rows) => rows.map((row) => ({ ...row, pack_id: pack.pack_id })))
+                    .catch(() => [] as Gap[]),
+            ),
         );
         gaps = lists.flat();
     }
@@ -217,7 +240,13 @@
     $effect(() => {
         if (!subjectId || open[subjectId]) return;
         const row = subjects.find((one) => one.subject_id === subjectId);
-        if (row) void expand(row);
+        if (!row) return;
+        // The row may be past the 25 the list starts collapsed to — raise
+        // `shown` far enough to include it, or the link opens a row the
+        // reader cannot scroll to.
+        const index = filtered.indexOf(row);
+        if (index >= shown) shown = index + 1;
+        void expand(row);
     });
 
     async function expand(subject: Subject) {
@@ -250,6 +279,14 @@
         subjects.filter((s) => !packFilter || s.pack_id === packFilter),
     );
     const visible = $derived(filtered.slice(0, shown));
+
+    // The mark queues carry only a subject id — a key an agent reads, not a
+    // name a reader recognizes. Resolved against the subject list already on
+    // screen rather than shipping a second lookup (knowledge-17).
+    const subjectLabels = $derived(
+        new Map(subjects.map((s) => [s.subject_id, s.label])),
+    );
+    const subjectLabel = (id: string) => subjectLabels.get(id) ?? id;
 
     const gapIds = $derived(new Set(gaps.map((gap) => gap.subject_id)));
     const gapRows = $derived(
@@ -318,16 +355,23 @@
     // involved: the question is "does the quote still appear", which a
     // substring test answers honestly and an LLM would answer confidently.
     let verifyJob = $state("");
+    let verifying = $state(false);
     async function verifyPack(packId: string) {
+        if (verifying) return;
+        verifying = true;
         draftError = null;
         try {
             verifyJob = (await api.verify({ pack_id: packId })).job_id;
         } catch (thrown) {
             draftError = thrown;
+        } finally {
+            verifying = false;
         }
     }
 
+    let confirmDiscard = $state("");
     async function discardDraft(draft: PackDraft) {
+        confirmDiscard = "";
         draftBusy = draft.slug;
         draftError = null;
         try {
@@ -356,9 +400,9 @@
             <strong>{status.enabled_packs}</strong>
             <span class="meta">of {count(status.counts.packs, "pack")} on</span>
         </li>
-        <li><strong>{status.counts.subjects}</strong><span class="meta">subjects</span></li>
-        <li><strong>{status.counts.claims}</strong><span class="meta">claims</span></li>
-        <li><strong>{status.counts.evidence}</strong><span class="meta">sources</span></li>
+        <li><strong>{(status.counts_enabled ?? status.counts).subjects}</strong><span class="meta">subjects</span></li>
+        <li><strong>{(status.counts_enabled ?? status.counts).claims}</strong><span class="meta">claims</span></li>
+        <li><strong>{(status.counts_enabled ?? status.counts).evidence}</strong><span class="meta">sources</span></li>
         <li class={gaps.length ? "warn" : ""}>
             <strong>{gaps.length}</strong><span class="meta">nothing known</span>
         </li>
@@ -402,8 +446,8 @@
                     It does not load yet: {draft.error}. Tell the agent that, and it
                     can fix the file it wrote.
                 {:else}
-                    {draft.pack_id} {draft.version} · {count(draft.files.length, "file")} in
-                    {draft.root}.
+                    {draft.pack_id} {draft.version} · {count(draft.files.length, "file")}
+                    <span title={draft.root}>on disk</span>.
                     {#if draft.installed_as}
                         It is in your store — the draft is kept so you can cover
                         its gaps and install it again.
@@ -443,9 +487,16 @@
             {/if}
             <button
                 class="ghost"
-                onclick={() => discardDraft(draft)}
-                disabled={draftBusy === draft.slug}>Throw it away</button
+                onclick={() =>
+                    confirmDiscard === draft.slug
+                        ? discardDraft(draft)
+                        : (confirmDiscard = draft.slug)}
+                disabled={draftBusy === draft.slug}
+                >{confirmDiscard === draft.slug ? "Really throw it away?" : "Throw it away"}</button
             >
+            {#if confirmDiscard === draft.slug}
+                <button class="ghost" onclick={() => (confirmDiscard = "")}>Cancel</button>
+            {/if}
         </span>
         {#if amending === draft.slug}
             <div class="amend">
@@ -487,39 +538,60 @@
     <Failure error={draftError} />
 {/if}
 
+
+<!-- WAI-ARIA tabs, the same contract Activity's lens tabs now carry
+     (ops-21/knowledge-28): only the selected tab is in the Tab order, and
+     Left/Right/Home/End move both focus and the selection. -->
 <div class="lenses" role="tablist" aria-label="Lens">
     <button
+        id="knowledge-tab-all"
         class="tab"
         role="tab"
         aria-selected={lens === "all"}
+        aria-controls="knowledge-panel"
+        tabindex={lens === "all" ? 0 : -1}
         class:active={lens === "all"}
-        onclick={() => (lens = "all")}>What is here</button
+        onclick={() => (lens = "all")}
+        onkeydown={(event) => onLensKey(event, 0)}>What is here</button
     >
     <button
+        id="knowledge-tab-gaps"
         class="tab"
         role="tab"
         aria-selected={lens === "gaps"}
+        aria-controls="knowledge-panel"
+        tabindex={lens === "gaps" ? 0 : -1}
         class:active={lens === "gaps"}
         onclick={() => (lens = "gaps")}
+        onkeydown={(event) => onLensKey(event, 1)}
         >What is missing{gaps.length ? ` (${gaps.length})` : ""}</button
     >
     <button
+        id="knowledge-tab-weak"
         class="tab"
         role="tab"
         aria-selected={lens === "weak"}
+        aria-controls="knowledge-panel"
+        tabindex={lens === "weak" ? 0 : -1}
         class:active={lens === "weak"}
-        onclick={() => (lens = "weak")}>What is thin</button
+        onclick={() => (lens = "weak")}
+        onkeydown={(event) => onLensKey(event, 2)}>What is thin</button
     >
     <button
+        id="knowledge-tab-marked"
         class="tab"
         role="tab"
         aria-selected={lens === "marked"}
+        aria-controls="knowledge-panel"
+        tabindex={lens === "marked" ? 0 : -1}
         class:active={lens === "marked"}
         onclick={() => (lens = "marked")}
+        onkeydown={(event) => onLensKey(event, 3)}
         >What readers said{marks?.items.length ? ` (${marks.items.length})` : ""}</button
     >
 </div>
 
+<div role="tabpanel" id="knowledge-panel" aria-label="Knowledge">
 {#if lens === "all" || lens === "gaps"}
     <div class="row filters">
         <div class="field">
@@ -534,7 +606,11 @@
         {#if packs.length > 1 && lens === "all"}
             <div class="field">
                 <label for="k-pack">Pack</label>
-                <select id="k-pack" bind:value={packFilter}>
+                <select
+                    id="k-pack"
+                    bind:value={packFilter}
+                    onchange={() => (shown = 25)}
+                >
                     <option value="">Every pack</option>
                     {#each packs as pack (pack.pack_id)}
                         <option value={pack.pack_id}>{pack.name}</option>
@@ -548,9 +624,9 @@
              marks, because pages get rewritten and the engine has no authority
              to remove a claim on the strength of one fetch. -->
         <div class="field">
-            <label for="k-verify">Evidence</label>
-            <button id="k-verify" class="ghost" onclick={() => verifyPack(packFilter)}>
-                Verify the knowledge here
+            <span class="meta">Evidence</span>
+            <button class="ghost" disabled={verifying} onclick={() => verifyPack(packFilter)}>
+                {verifying ? "Starting…" : "Verify the knowledge here"}
             </button>
         </div>
     </div>
@@ -562,7 +638,7 @@
     {#if error}
         <Failure {error} retry={loadList} />
     {:else if lens === "weak"}
-        <Health heading={false} />
+        <Health heading={false} focusClaimId={subjectId} />
     {:else if lens === "marked"}
         {#if markError}
             <Failure error={markError} retry={loadMarks} />
@@ -601,7 +677,7 @@
                         {#each signals.research as item (item.pack_id + item.subject_id)}
                             <li class="krow">
                                 <div class="kmain">
-                                    <span class="klabel">{item.subject_id}</span>
+                                    <span class="klabel">{subjectLabel(item.subject_id)}</span>
                                     <span class="meta"
                                         >{item.pack_id} · {item.count} called wrong</span
                                     >
@@ -623,7 +699,7 @@
                                         <Brief
                                             subjectId={item.subject_id}
                                             packId={item.pack_id}
-                                            label={item.subject_id}
+                                            label={subjectLabel(item.subject_id)}
                                             onClose={() =>
                                                 (researching = {
                                                     ...researching,
@@ -650,7 +726,7 @@
                         {#each signals.matching as item (item.pack_id + item.subject_id)}
                             <li class="krow">
                                 <div class="kmain">
-                                    <span class="klabel">{item.subject_id}</span>
+                                    <span class="klabel">{subjectLabel(item.subject_id)}</span>
                                     <span class="meta"
                                         >{item.pack_id} · {item.count} not theirs</span
                                     >
@@ -735,7 +811,7 @@
                             <div class="kdetail">
                                 <Brief
                                     subjectId={gap.subject_id}
-                                    packId={packs[0]?.pack_id ?? ""}
+                                    packId={gap.pack_id}
                                     label={gap.label}
                                     onClose={() =>
                                         (researching = {
@@ -858,6 +934,7 @@
         {/if}
     {/if}
 {/await}
+</div>
 
 <style>
     .statstrip {
@@ -906,11 +983,6 @@
     .quiet-draft .meta {
         display: block;
         max-width: var(--measure);
-    }
-    .lenses {
-        display: flex;
-        gap: var(--s-2);
-        margin-bottom: var(--s-3);
     }
     .filters {
         margin-bottom: var(--s-3);

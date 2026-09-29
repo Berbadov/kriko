@@ -1,219 +1,89 @@
 # The desktop shell
 
-A Tauri 2 window around the same server the browser talks to. The engine is not
-rewritten in Rust and will not be: `src-tauri/src/main.rs` is a process
-supervisor, ~180 lines, and every one of them is about a failure mode.
+A Tauri 2 window around the same server the browser talks to. No engine logic in Rust, ever (`test_the_shell_holds_no_engine_logic`): `src-tauri/src/main.rs` is a ~180-line supervisor, every line about a failure mode.
 
 ```
 tauri/
-  shell-ui/index.html     boot screen + failure screen (no build step, on purpose)
-  src-tauri/src/main.rs   spawns the sidecar, reads its port, waits for health
+  shell-ui/index.html               boot + failure screen (no build step, on purpose)
+  src-tauri/src/main.rs             spawns sidecar, reads port, waits for health
   src-tauri/tauri.conf.json
   src-tauri/capabilities/default.json   spawn the sidecar; nothing else
 ```
 
 ## How a launch goes
 
-1. The window is created **hidden** and loads `shell-ui/index.html`.
-2. The page invokes `start_engine`; Rust spawns the `kriko-sidecar` sidecar.
-3. The sidecar binds an OS-chosen port and prints `KRIKO_PORT <n>` — see
-   `src/app/sidecar.py`, and `src/app/tests/test_sidecar.py` which pins the
-   handshake.
-4. Rust polls `http://127.0.0.1:<n>/api/health`, then emits `kriko://ready` and
-   shows the window. The page replaces itself with the real UI, served by
-   FastAPI exactly as it is in a browser.
-5. If the sidecar dies or never gets healthy, Rust emits `kriko://failed` with
-   the captured stderr and the window shows it. **A blank window is a bug.**
-6. Closing the window **hides** it; the engine keeps serving. *Quit Kriko* in
-   the tray, or any other app exit, kills the child. An orphaned uvicorn holds
-   `~/.kriko/knowledge.sqlite`'s WAL lock and breaks the *next* launch, which
-   is the worst kind of failure: invisible and later.
+```mermaid
+sequenceDiagram
+    participant R as Rust shell (hidden window)
+    participant S as kriko-sidecar (Python)
+    participant U as UI (FastAPI)
+    R->>S: spawn sidecar
+    S->>R: KRIKO_PORT n (stdout, first line)
+    R->>U: poll 127.0.0.1:n/api/health
+    U-->>R: healthy → emit kriko://ready → show window
+    U-->>R: dead/unhealthy → emit kriko://failed + stderr → failure screen
+```
+
+The window starts hidden on `shell-ui/index.html`, invokes `start_engine`, and only shows on `kriko://ready` — the page then replaces itself with the real UI, served by FastAPI as in a browser. **A blank window is a bug.** Closing hides the window; the engine keeps serving (the extension calls `EXTENSION_PORT` while the reader is on a listing, not in the app). An orphaned uvicorn holds `~/.kriko/knowledge.sqlite`'s WAL lock and breaks the *next* launch — invisible and later.
 
 ## Building locally
 
-Needs a Rust toolchain (`rustup`), Node, and Python. Neither the wheel nor the
-test suite needs any of it — this directory is optional.
+Rust (`rustup`), Node, Python. Neither wheel nor test suite needs any of it.
 
 ```bash
-npm --prefix ui run build                       # the UI the sidecar serves
+npm --prefix ui run build                       # UI the sidecar serves
 pip install pyinstaller
 pyinstaller packaging/kriko-sidecar.spec        # -> dist/kriko-sidecar
-# Tauri wants <name>-<target triple>:
 mkdir -p tauri/src-tauri/binaries
 cp dist/kriko-sidecar "tauri/src-tauri/binaries/kriko-sidecar-$(rustc -Vv | sed -n 's/host: //p')"
 npm --prefix tauri install && npm --prefix tauri run tauri build
 ```
 
-`.github/workflows/desktop.yml` does exactly this on macOS, Windows and Linux —
-**by hand only** since 2026-09-13, when its `push` and `pull_request` triggers
-were removed: this account has no Actions minutes, so those fired only to leave
-a red tick on commits nothing had tested. The recipe is untrimmed and the
-triggers go back the day minutes return. Bundles are **unsigned**; signing is a
-policy decision, not an engineering one, and is deferred.
+`.github/workflows/desktop.yml` does exactly this on macOS/Windows/Linux — **by hand only** since 2026-09-13 (`push`/`pull_request` triggers removed: no Actions minutes, so they only painted false red). Recipe untrimmed; bundles **unsigned** (signing is policy, deferred). On Windows, `pwsh packaging/build_desktop.ps1` runs the whole job (lock install → UI → freeze → smoke → icons → updater config → bundle → smoke). PyInstaller can't cross-compile, so the Windows sidecar freezes on Windows regardless — the script is the same build without the middleman. `test_the_installer_can_be_built_by_hand.py` fails if the script drifts from the workflow's named artifacts.
 
-On Windows, `pwsh packaging/build_desktop.ps1` runs that whole job — install
-from the lock, build the UI, freeze, smoke, place, icons, updater config,
-bundle, smoke again — in one command. It exists because the workflow was the
-*only* path to an installer, and on 2026-09-09 that path was closed: every job
-on the v0.5.0 tag exited in three seconds with no runner assigned. A release
-that depends on a runner being available is a release someone else can cancel.
-PyInstaller cannot cross-compile, so the Windows sidecar has to be frozen on
-Windows either way — the script is not a workaround, it is the same build
-without the middleman. `test_the_installer_can_be_built_by_hand.py` reads the
-artifacts the workflow's bundle job names and fails if the script has not
-caught up, because two copies of one build drift.
+`src-tauri/Cargo.lock` is committed (all targets fold into one file; `cargo generate-lockfile` in `tauri/src-tauri/` regenerates it — own commit, revertable). `cargo metadata --locked` runs before building so a stale lock fails instead of shipping an unreviewed graph (v0.2.4). `tools/bump.py` writes the lock too (`test_the_four_version_strings_agree`).
 
-`src-tauri/Cargo.lock` is committed and every crate in it resolves from
-crates.io. Cargo folds all targets into that one file, so the lock a Linux
-machine generates pins the Windows and macOS graphs too — which is why
-regenerating it needs no Windows box, only `cargo generate-lockfile` in
-`tauri/src-tauri/`. Do that in a commit of its own: a dependency bump should be
-something someone can read and revert. CI runs `cargo metadata --locked` before
-it builds, because cargo will otherwise rewrite a stale lock mid-build and ship
-a graph nobody reviewed — v0.2.4 is what that looks like from the outside
-(`src/app/tests/test_shell_is_locked.py` holds the rest of the invariant).
+## Pre-flight, from non-Windows
 
-## Pre-flight, from a machine that is not Windows
-
-PyInstaller cannot cross-compile, so the Windows installer has to be built on
-Windows. Most of what *breaks* a Windows build is not Windows-specific, though,
-and all of it can be checked from Linux before anyone spends nine minutes on a
-build that was going to fail. This was run on 2026-09-14 for 0.8.0, and every
-step passed:
+Most Windows-build breakage isn't Windows-specific; check from Linux first (run 2026-09-14 for 0.8.0, all green):
 
 ```bash
-tools/setup.sh                                   # the tree itself
-sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
-    librsvg2-dev patchelf libssl-dev xvfb mingw-w64
-
-python -m app.cli build packs/cars  --out dist/cars.kpack   # the bundle needs packs
+tools/setup.sh
+sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev xvfb mingw-w64
+python -m app.cli build packs/cars  --out dist/cars.kpack
 python -m app.cli build packs/drill --out dist/drill.kpack
 packaging/freeze.sh                              # freeze + ten smoke checks
-
-triple=$(rustc -Vv | sed -n 's/host: //p')       # Tauri wants the triple suffix
+triple=$(rustc -Vv | sed -n 's/host: //p')
 cp dist/kriko-sidecar "tauri/src-tauri/binaries/kriko-sidecar-$triple"
 npm --prefix tauri ci && npm --prefix tauri run tauri icon ../packaging/icon-master.png
-
 cd tauri/src-tauri
-cargo metadata --locked --format-version 1 >/dev/null   # the lock is the pin
-cargo check                                             # the shell type-checks
+cargo metadata --locked --format-version 1 >/dev/null
+cargo check
 rustup target add x86_64-pc-windows-gnu
-touch binaries/kriko-sidecar-x86_64-pc-windows-gnu.exe  # the build script only checks it exists
-cargo check --target x86_64-pc-windows-gnu              # …including `#[cfg(windows)]`
+touch binaries/kriko-sidecar-x86_64-pc-windows-gnu.exe  # build script only checks existence
+cargo check --target x86_64-pc-windows-gnu              # covers #[cfg(windows)]
 cd ../..
-
 python packaging/configure_updater.py --repo <owner/name> --version ""
-npm --prefix tauri run tauri build               # a real .deb and .AppImage
+npm --prefix tauri run tauri build               # real .deb + .AppImage
 xvfb-run -a python packaging/smoke_app.py tauri/src-tauri/target/release/kriko
 ```
 
-The Windows-target `cargo check` is the one worth explaining. `kill_tree` is
-`#[cfg(windows)]`, so a Linux check never reads it — and B89 is the case for
-caring: twelve tray tests passed on a `main.rs` that could not be parsed, found
-by the first `cargo` that ever read it, nine minutes into a hand build. `-gnu`
-rather than `-msvc` because it needs only `mingw-w64`; `cfg(windows)` is true
-for both, which is all this is for.
+`-gnu` (not `-msvc`) needs only `mingw-w64`; `cfg(windows)` is true for both, which is all that matters — B89 proved it: twelve tray tests passed on an unparseable `main.rs`, found nine minutes into a hand build by the first real `cargo`.
 
-`cargo metadata --locked` is the other one. On 2026-09-14 the committed
-`Cargo.lock` still said `kriko 0.7.6` against a tree at 0.8.0 — four bumps
-stale — and that step exits 101, so a hand build would have died there.
-`tools/bump.py` now writes the lock too, and
-`test_the_four_version_strings_agree` counts it.
-
-**What none of this proves**, and what only a Windows box can: PyInstaller
-freezing against `pywinpty` (including whether `winpty-agent.exe` comes along —
-the 0.7.4 defect), NSIS bundling, the **Kriko Console** shortcut
-`installer.nsh` writes, the tray and its tree-kill, and WebView2 rendering
-anything at all.
+**Only a Windows box proves:** PyInstaller vs `pywinpty` (is `winpty-agent.exe` along? — the 0.7.4 defect), NSIS bundling, the **Kriko Console** shortcut from `installer.nsh`, tray + tree-kill, WebView2 rendering.
 
 ## Nothing outlives *Quit*
 
-Until 0.5.1 the rule was "nothing outlives the app", and the X button killed
-the engine. That made the browser extension unusable in the situation it
-exists for: the reader is looking at a listing, not at Kriko, and the window
-they closed an hour ago was holding the port the extension calls. So the
-window hides, and the tray icon owns the process — left click reopens, the
-right-click menu has *Open Kriko* and *Quit Kriko*, and Quit is the only thing
-that stops the engine. An engine with no visible way to stop it would be
-malware-shaped, which is why the tray is built in `setup` with `?`: a shell
-that cannot show one refuses to start.
+Since 0.5.1 the window hides and the tray owns the process (left click reopens; menu has *Open Kriko*, *Quit Kriko*) — killing the engine on X made the extension unusable when the reader is on a listing, not in Kriko. The tray is built with `?`: a shell that can't show one refuses to start (an unstoppable engine is malware-shaped). Three belts:
 
-That inversion moved the hazard below rather than removing it, so all three
-belts still matter, and the third one matters *more*:
+1. **`--exit-with-parent`.** Sidecar watches its stdin (write end in the shell); shell gone = EOF = engine stops. Only belt covering a crash.
+2. **`kill_engine` before `app.exit`** (not after — stdin-EOF is too slow for the next installer) *and* on `RunEvent::Exit` + `Destroyed` (dock quit, logout, post-update restart destroy no window).
+3. **Tree kill on Windows.** PyInstaller onefile re-execs: the spawned pid is a bootloader, the child holds the image. `kill_tree` runs `taskkill /F /T /PID`; `child.kill()` alone leaks.
 
-1. **`--exit-with-parent`.** The sidecar watches its own stdin, whose write end
-   lives in the shell. The shell going away — cleanly, killed, or crashed — is
-   an EOF, and the engine stops itself. This is the only one that covers a
-   crash, where no handler in `main.rs` runs at all.
-2. **`kill_engine`** from the tray's *Quit* (before `app.exit`, not after —
-   `--exit-with-parent` would get there eventually, and eventually is long
-   enough for the next installer to fail) *and* on `RunEvent::Exit`, since a
-   quit from the dock, a session logout or a post-update restart destroys no
-   window. The `Destroyed` handler is kept for the same reason.
-3. **A tree kill on Windows.** The sidecar is a PyInstaller *onefile* binary:
-   the process we spawned is a bootloader that re-execs, and the child is what
-   holds the extracted image. `child.kill()` alone leaves it running, so
-   `kill_tree` runs `taskkill /F /T /PID`.
+The failure is the *installer* (`Error opening file for writing: …\kriko-sidecar.exe` — a live sidecar keeps its own `.exe` mapped; Ignore leaves old engine beside new shell). So `src-tauri/installer.nsh` stops both in `PREINSTALL`/`PREUNINSTALL` — `Kriko.exe` first (its exit closes stdin, the designed way out), `kriko-sidecar.exe` second (`test_the_shell_runs_in_the_tray.py` pins ordering). Older build hit the dialog? Close Kriko, `taskkill /F /T /IM kriko-sidecar.exe`, reinstall.
 
-The failure this prevents is not a leak, it is the *installer*:
+## Two ports, one server · one store · self-update
 
-```
-Error opening file for writing:
-C:\Users\<you>\AppData\Local\Kriko\kriko-sidecar.exe
-```
+Window: OS-chosen port it is told about. Extension: fixed `EXTENSION_PORT` (8787, `app/web/settings.py`) — a page has no channel from the shell. `uvicorn` serves both sockets; if 8787 is taken the door is skipped with a stderr line and the app opens anyway.
 
-A live sidecar keeps its own `.exe` mapped, so NSIS cannot overwrite it and
-offers Abort/Retry/Ignore — and Ignore leaves the old engine beside a new shell.
-`src-tauri/installer.nsh` therefore stops both binaries in
-`NSIS_HOOK_PREINSTALL` and `NSIS_HOOK_PREUNINSTALL` — `Kriko.exe` first,
-because its exit closes the sidecar's stdin and that is the engine's own way
-out, then `kriko-sidecar.exe` as the belt. It used to be for the rare machine
-where one leaked; now that a reader can leave Kriko running in the tray for
-days, it is the normal case, and `test_the_shell_runs_in_the_tray.py` pins the
-ordering.
-
-If you hit that dialog on an older build: close Kriko, run
-`taskkill /F /T /IM kriko-sidecar.exe` in a terminal, then run the installer
-again.
-
-## Two ports, one server
-
-The window gets an OS-chosen port it is told about. The Chrome extension gets
-the fixed `EXTENSION_PORT` (8787) from `app/web/settings.py`, because a page
-cannot be told a random number — it has no filesystem and no channel from the
-shell. `uvicorn.Server.run` takes a list of sockets, so both are the same
-server. If 8787 is taken (a second Kriko, a `python -m app.web` in a terminal)
-that door is skipped with a line on stderr and the app opens regardless.
-
-## One store, two front doors
-
-The sidecar resolves `~/.kriko/` the same way the CLI does, so a pack installed
-in the app is visible to `python -m app.cli` and the other way round. An
-app-private store would silently split a reader's knowledge base in half.
-
-## Self-update
-
-The shell checks for a newer release on startup (`offer_update` in `main.rs`),
-asks, and only then downloads, kills the engine and restarts. Killing first is
-not optional: the running sidecar holds `knowledge.sqlite`'s WAL lock, and a
-restart around it makes the *next* launch fail for a reason nobody can see.
-
-The updater config is not in `tauri.conf.json` — it is applied at build time by
-`packaging/configure_updater.py`, from `TAURI_SIGNING_PUBLIC_KEY`. With no key
-configured the build produces plain installers and `app.updater()` returns an
-error the shell ignores. That is deliberate: committing an endpoint and a
-`createUpdaterArtifacts` flag would make every fork's build fail on a missing
-secret, and building updater artifacts with a throwaway key would ship an app
-that downloads its own updates and then rejects them.
-
-To enable it on this repo:
-
-```bash
-npm --prefix tauri run tauri signer generate -w ~/.kriko-updater.key
-```
-
-Then set the repository **secret** `TAURI_SIGNING_PRIVATE_KEY` (the file's
-contents), the secret `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if you gave one, and
-the repository **variable** `TAURI_SIGNING_PUBLIC_KEY`. The next tag publishes
-`latest.json` beside the installers. Keep the private key: rotating it strands
-every already-installed copy, which can then only be updated by hand.
+Store: sidecar resolves `~/.kriko/` as the CLI does — one knowledge base, not an app-private split. Updater: shell checks on startup (`offer_update`), asks, then downloads, kills the engine (running sidecar holds the WAL lock) and restarts. Config applied at build time by `packaging/configure_updater.py` from `TAURI_SIGNING_PUBLIC_KEY`; no key → plain installers, `app.updater()` error the shell ignores (so forks build). Enable: `npm --prefix tauri run tauri signer generate -w ~/.kriko-updater.key`, set secrets `TAURI_SIGNING_PRIVATE_KEY` (+`_PASSWORD`) and variable `TAURI_SIGNING_PUBLIC_KEY`; next tag publishes `latest.json`. Keep the private key — rotation strands installed copies onto manual updates.

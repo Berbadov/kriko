@@ -44,8 +44,16 @@ body {
      * normal wrap algorithm to break on, and one of those in a card narrower
      * than its own text is exactly how "nothing overflowing horizontally"
      * gets broken one screen at a time. `.nav-label`'s own `overflow-wrap:
-     * anywhere` (components.css) predates this and stays consistent with it. */
-    overflow-wrap: anywhere;
+     * anywhere` (components.css) predates this and stays consistent with it.
+     *
+     * `anywhere` (not `break-word`) also shrinks every flex/table child's
+     * min-content width to one character, which is what let button and tab
+     * labels and table headers split mid-word once their box got tight
+     * (shell-3, settings-9, knowledge-25/26, uicode-m1). `break-word` still
+     * breaks a URL that has nowhere else to go, but leaves normal words
+     * whole for layout purposes; the few controls that must never wrap at
+     * all get `white-space: nowrap` below instead of relying on this. */
+    overflow-wrap: break-word;
 }
 
 h1,

@@ -15,8 +15,8 @@ const ROUTES: Record<string, unknown> = {
     ],
     "/api/kinds": [{ kind: "product", pack_id: "tools" }],
     "/api/identity-keys/tools": [
-        { key: "brand", match_json: '{"required": true}' },
-        { key: "model", match_json: "{}" },
+        { key: "brand", match_json: "required: true", required: true },
+        { key: "model", match_json: "{}", required: false },
     ],
     "/api/packs/tools/vocabulary": { context_key: [] },
     "/api/subjects": [],
@@ -41,7 +41,17 @@ describe("Check", () => {
     });
 
     it("names the sites it can read when the pasted host is not one", async () => {
-        stubFetch({ ...ROUTES, "/api/analyze": { status: 404, body: "no adapter" } });
+        // A site nothing reads is a 200 now, not a 404 (check-21): it is an
+        // expected, frequent answer, and `readable_sites` is what lets the
+        // page name what does work instead of a bare pack id.
+        stubFetch({
+            ...ROUTES,
+            "/api/analyze": {
+                readable: false,
+                reason: "no_adapter",
+                readable_sites: [{ site: "example.test", pack_id: "tools" }],
+            },
+        });
         render(Check);
         await fireEvent.input(await screen.findByLabelText(/web address/i), {
             target: { value: "https://unknown.test/x" },
@@ -61,10 +71,14 @@ describe("Check", () => {
         expect(await screen.findByText(/No link\?/)).toBeInTheDocument();
     });
 
-    it("says what the page does, and that nothing leaves the machine", async () => {
+    it("says what the page does, and that the listing never leaves the machine", async () => {
+        // B145 check-22: the old copy said "nothing sent anywhere", which was
+        // false the moment a background pack-update check touched the network
+        // (NextStep mounts on this screen too). The claim this makes is one the
+        // app actually keeps: the listing itself is never transmitted.
         stubFetch(ROUTES);
         render(Check);
-        expect(await screen.findByText(/nothing sent anywhere/)).toBeInTheDocument();
+        expect(await screen.findByText(/never leaves this machine/)).toBeInTheDocument();
     });
 
     it("hosts the staged form rather than owning a flat one", async () => {

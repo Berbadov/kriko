@@ -21,6 +21,7 @@ def install_pack(
     body: bytes = Body(default=b""),
     filename: str | None = Query(default=None),
     filename_header: str | None = Header(default=None, alias="X-Filename"),
+    allow_downgrade: bool = Query(default=False),
     store=Depends(get_store),
 ):
     """Install one uploaded artifact without accepting a filesystem path.
@@ -45,7 +46,24 @@ def install_pack(
             staged.write(body)
             temporary_path = Path(staged.name)
         try:
-            pack_id = packstore.install(store, temporary_path)
+            pack_id = packstore.install(
+                store, temporary_path, allow_downgrade=allow_downgrade
+            )
+        except packstore.DowngradeRefused as exc:
+            # Structured, not just a sentence: the client offers "install
+            # anyway" from these three fields rather than parsing them back
+            # out of prose (knowledge-13).
+            raise HTTPException(
+                409,
+                {
+                    "kind": "downgrade_refused",
+                    "message": (
+                        f"{exc.installed} is installed; {exc.offered} is older."
+                    ),
+                    "installed": exc.installed,
+                    "offered": exc.offered,
+                },
+            ) from exc
         except ValueError as exc:
             raise HTTPException(400, f"invalid pack artifact: {exc}") from exc
         except sqlite3.Error as exc:

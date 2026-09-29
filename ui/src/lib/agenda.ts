@@ -32,7 +32,26 @@ export const kindTone = (kind: string): string => KIND_TONE[kind] ?? "meta";
 /** What to call the thing a row is about. An unknown identity has no label —
  * there is no subject to have named it — so the identity itself is the name. */
 export function rowName(row: AgendaRow): string {
-    return row.label || row.identity || row.subject_id || "Unnamed";
+    return row.label || identityWords(row.identity) || row.subject_id || "Unnamed";
+}
+
+/** An identity arrives as the JSON the lookup stored — `{"a":"X","b":2008}`
+ * printed as-is read like a stack trace. Its values, in order, are the name a
+ * reader would have typed; anything that is not a JSON object stays as given. */
+function identityWords(identity: string | undefined): string {
+    if (!identity) return "";
+    try {
+        const parsed: unknown = JSON.parse(identity);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            const words = Object.values(parsed as Record<string, unknown>)
+                .filter((value) => value !== null && value !== "" && typeof value !== "object")
+                .map(String);
+            if (words.length) return words.join(" ");
+        }
+    } catch {
+        /* not JSON — an identity already in words */
+    }
+    return identity;
 }
 
 /** How often this installation was asked, in words rather than a bare integer.

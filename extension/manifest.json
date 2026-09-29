@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
-    "name": "Kriko.ai",
-    "description": "Shows possible issues for second-hand car listings.",
+    "name": "Kriko",
+    "description": "Shows what is known to go wrong with the product on the page you are reading.",
     "version": "0.3.0",
     "permissions": ["activeTab", "storage", "scripting", "alarms"],
     "optional_host_permissions": ["https://*/*"],
@@ -16,7 +16,7 @@
         "128": "assets/icons/icon-128.png"
     },
     "action": {
-        "default_title": "Kriko.ai",
+        "default_title": "Kriko",
         "default_icon": {
             "16": "assets/icons/icon-16.png",
             "32": "assets/icons/icon-32.png",
@@ -38,16 +38,14 @@
     "content_scripts": [
         {
             "matches": [
-                "https://*.sahibinden.com/*",
-                "https://www.carchecker.pro/*"
+                "https://*.sahibinden.com/*"
             ],
             "js": ["content.js"],
             "run_at": "document_idle"
         },
         {
             "matches": [
-                "https://*.sahibinden.com/*",
-                "https://www.carchecker.pro/*"
+                "https://*.sahibinden.com/*"
             ],
             "js": [
                 "hover_lite/icons.js",
