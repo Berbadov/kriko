@@ -150,15 +150,28 @@ def research_plane(request: Request) -> dict:
     """
     settings = request.app.state.settings
     env_path = keys.env_path(getattr(settings, "app_state_path").parent)
-    if keys.ready(env_path):
+    from app import prefs
+
+    # With the model the run would use: a key saved for the API agent alone
+    # must not route the reader onto a paid plane that fails at its first page.
+    if prefs.paid_plane_ready(getattr(settings, "app_state_path", None), env_path):
         return {
             "backend": ApiResearcher.name,
             "cost_basis": ApiResearcher.cost_basis,
             "budget_usd": EXTENSION_RESEARCH_BUDGET_USD,
         }
-    from app.providers import harness
+    from app.providers import agent_ready, bills_per_token
 
-    if harness.available():
+    path = getattr(settings, "app_state_path", None)
+    if agent_ready(path):
+        # The picked agent may be an API agent (B153), and then the run is
+        # billed like the paid plane and capped by this door like it.
+        if bills_per_token(path):
+            return {
+                "backend": "harness",
+                "cost_basis": "per_token",
+                "budget_usd": EXTENSION_RESEARCH_BUDGET_USD,
+            }
         return {
             "backend": "harness",
             "cost_basis": "subscription",
@@ -231,14 +244,19 @@ def start_research_plane(
     except HTTPException as exc:
         if exc.status_code != 404 or not body.allow_draft or not body.q.strip():
             raise
-        from app.providers import harness
+        from app import prefs
+        from app.providers import apiagent, harness
 
-        available = harness.available()
-        if not available:
+        installed = harness.available()
+        stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
+        # An API agent counts only once picked: it bills per token, and a
+        # key saved for something else is not a yes to that (B153).
+        picked_api = stored in {one.id for one in apiagent.available()}
+        if not installed and not picked_api:
             raise HTTPException(503, (
-                "Product drafts require an available coding-agent CLI. Install or "
-                "connect a supported harness in Agents, then retry. No API research "
-                "was started."
+                "Product drafts need an agent. Install a coding-agent CLI, or pick "
+                "the Mistral API agent in Settings → Agents (it needs a Mistral "
+                "key). No API research was started."
             )) from exc
         # Decided once, here, and then both reported and obeyed.
         #
@@ -255,11 +273,18 @@ def start_research_plane(
         # from two copies of one rule, so the reply can promise one agent while
         # the run uses another the day the two copies drift. Sending `selected`
         # is what this reply already claims happened.
-        from app import pagefacts, prefs
+        from app import pagefacts
 
         page = pagefacts.clean(body.facts, body.description)
-        stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
-        selected = stored if stored in {one.id for one in available} else available[0].id
+        if picked_api or stored in {one.id for one in installed}:
+            selected = stored
+        else:
+            selected = installed[0].id
+        billed = selected in apiagent.BY_ID
+        # Each job carries its own ceiling, because each is a separate bill:
+        # the quick look at this door's cap, the deeper draft at the agent's.
+        quick_budget = EXTENSION_RESEARCH_BUDGET_USD if billed else 0.0
+        deep_budget = apiagent.DEFAULT_BUDGET_USD if billed else 0.0
         params = {
             "category": body.q.strip(), "product_only": True,
             "harness": selected, "backend": "harness",
@@ -268,6 +293,7 @@ def start_research_plane(
             # pack form still leaves the press to the reader.
             "install": True,
             "page": page,
+            "budget_usd": deep_budget,
         }
         # Quick answer, then deepen (B148): the reader's choice. The draft is
         # the deep half and starts first so the quick one can point at it;
@@ -278,7 +304,21 @@ def start_research_plane(
         quick = runner.submit("quick_look", {
             "product": body.q.strip(), "harness": selected,
             "pack_id": pack_id, "deepen_job_id": deepen, "page": page,
+            "budget_usd": quick_budget,
         })
+        if billed:
+            label = apiagent.BY_ID[selected].label
+            return {
+                "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
+                "backend": "harness", "harness": selected,
+                "cost_basis": "per_token",
+                "budget_usd": round(quick_budget + deep_budget, 2),
+                # "About": each ceiling refuses the next request once spent,
+                # and the request in flight can finish a little past it.
+                "note": f"Bills your {label} key: about ${quick_budget:.2f} for the "
+                        f"quick answer and ${deep_budget:.2f} for the deeper draft, "
+                        "which keeps going and installs itself when done.",
+            }
         return {
             "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
             "backend": "harness", "harness": selected,
@@ -292,7 +332,7 @@ def start_research_plane(
     params = {
         **subject, "backend": plane["backend"],
         "model": body.model, "search": body.search,
-        "budget_usd": budget if plane["backend"] == "api" else 0.0,
+        "budget_usd": budget if plane["cost_basis"] == "per_token" else 0.0,
     }
     return {
         "job_id": runner.submit("research", params), "kind": "research",

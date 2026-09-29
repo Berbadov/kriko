@@ -30,3 +30,16 @@
 # would send as `"model"`.
 "gpt-4o"      = { context = 128000, usd_in = 2.50, usd_out = 10.00, speed = "balanced", label = "GPT-4o" }
 "gpt-4o-mini" = { context = 128000, usd_in = 0.15, usd_out = 0.60,  speed = "fast",     label = "GPT-4o mini" }
+
+[mistral]
+# Reached through `MISTRAL_API_KEY`. Prices from mistral.ai/pricing/api on
+# 2026-09-29. Used by the Mistral API agent (Agents) and, as a completion
+# model, by the paid plane. `-latest` names follow Mistral's own aliases.
+"mistral-small-latest"  = { context = 262144, usd_in = 0.15, usd_out = 0.60, speed = "fast",     label = "Mistral Small" }
+"mistral-large-latest"  = { context = 262144, usd_in = 0.50, usd_out = 1.50, speed = "slow",     label = "Mistral Large" }
+"mistral-medium-latest" = { context = 262144, usd_in = 1.50, usd_out = 7.50, speed = "balanced", label = "Mistral Medium" }
+
+# What a tool call costs on top of the tokens its results add. Not a model:
+# `load` skips this table, `tool_price` reads it.
+[tools.mistral]
+web_search = { usd_per_call = 0.03 }

@@ -51,7 +51,7 @@ PLANE_WORDS = {
 
 @router.get("/research-planes")
 def list_planes(
-    llm: str = "", search: str = "", harness: str = "",
+    request: Request, llm: str = "", search: str = "", harness: str = "",
     conn=Depends(get_app_state),
 ) -> dict:
     """The two ways knowledge gets built, and whether each one can run now.
@@ -104,6 +104,9 @@ def list_planes(
             # a text field — the reader asked for Sonnet vs Haiku vs Opus
             # *by name*, and the names live with the CLI, not in Kriko.
             lists = harness_mod.models_for_each(installed)
+            # The API agents (B153) in the same two lists, so the run screen
+            # offers the one the reader keyed in the same picker as a CLI.
+            api_rows, api_missing = prefs.api_agent_rows(conn)
             row["harnesses"] = [
                 {
                     "id": h.id,
@@ -135,7 +138,7 @@ def list_planes(
                     "effort_hint": h.effort_hint,
                 }
                 for h in installed
-            ]
+            ] + api_rows
             row["looked_for"] = [h.executable for h in harness_mod.KNOWN]
             # Missing, with somewhere to go: a name and a command are not
             # actionable, a download page and an install command are. The
@@ -153,7 +156,7 @@ def list_planes(
                 }
                 for h in harness_mod.KNOWN
                 if h.id not in installed_ids and not h.unusable
-            ]
+            ] + api_missing
             # The manual path: where Kriko looked beyond PATH, and the one
             # variable that adds another directory to that search.
             from pathlib import Path as _Path
@@ -177,7 +180,9 @@ def list_planes(
     # mark it rather than making the reader guess which button is the default.
     from app.web.tasks import default_backend
 
-    return {"planes": planes, "default": default_backend()}
+    return {"planes": planes,
+            "default": default_backend(
+                getattr(request.app.state.settings, "app_state_path", None))}
 
 
 def resolve_research_subject(store, *, q: str = "", subject_id: str = "") -> dict:

@@ -98,6 +98,12 @@ NEEDS = {
     "api": "no research keys are set, so the paid plane cannot run",
 }
 
+#: Why a due tick did not run on an API agent (B153).
+UNCAPPED = (
+    "the picked agent bills your key per token and this schedule names no "
+    "ceiling — set one here to let it run unattended"
+)
+
 
 @dataclass(frozen=True)
 class Decision:
@@ -290,6 +296,8 @@ class Scheduler:
                 in_flight=state.work_in_flight(conn),
                 started_at=self._started_at if from_timer else None,
             )
+            if decision.run and self._metered_without_ceiling(schedule):
+                decision = Decision(False, UNCAPPED, decision.due_at)
             self.ticks += 1
             record = {
                 **(history if isinstance(history, dict) else {}),
@@ -327,13 +335,35 @@ class Scheduler:
         answer at import time is not the answer at tick time.
         """
         if plane == "harness":
-            from app.providers import harness
+            # A CLI, or the API agent the reader picked (B153). Picked, not
+            # merely keyed: the agenda then gives it one shared ceiling.
+            from app.providers import agent_ready
 
-            return bool(harness.available())
+            return agent_ready(self._settings.app_state_path)
         if plane == "api":
-            from app import keys
+            from app import prefs
 
-            return bool(keys.ready())
+            return prefs.paid_plane_ready(self._settings.app_state_path)
         # The agent plane is never ready for an unattended run, by definition:
         # its output is a brief for a person who is not here.
         return False
+
+    def _metered_without_ceiling(self, schedule: dict) -> bool:
+        """Whether this tick would bill per token with no ceiling the
+        schedule itself named.
+
+        A schedule turned on while the harness plane meant a free CLI must not
+        start billing because an API agent was picked later, for something
+        else. Picking the agent consents to runs the reader starts. It does
+        not consent to runs nobody starts (B153).
+        """
+        if (schedule.get("plane") or "") != "harness":
+            return False
+        if float(schedule.get("budget_usd") or 0.0) > 0:
+            return False
+        from app.providers import bills_per_token
+
+        try:
+            return bills_per_token(self._settings.app_state_path)
+        except Exception:  # noqa: BLE001 — cannot tell is not a yes to spending
+            return True
