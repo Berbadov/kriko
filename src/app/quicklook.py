@@ -20,6 +20,8 @@ minutes, but we can refuse a line that does not even claim a source.
 
 from urllib.parse import urlparse
 
+from kriko.research.agent import REFUSED_PAGE
+
 #: Enough to be worth reading on a listing, few enough to be done in the time.
 MAX_RISKS = 6
 
@@ -50,6 +52,7 @@ worry about **before** they spend money on it. Answer the way a knowledgeable
 friend would in a chat: fast, specific, sourced.
 
 * Do **two to four** web searches. Open **at most three** pages. Stop there.
+* {REFUSED_PAGE}
 * Be specific to this exact variant. Skip anything true of every product like it.
 * If the name leaves the variant open, pick the most likely one and say which
   in `assumed`. Do not ask; there is no one to answer.
