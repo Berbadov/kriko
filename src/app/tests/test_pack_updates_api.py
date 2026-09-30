@@ -8,6 +8,7 @@ answer instead of a 500. All three are about what actually crosses the wire.
 
 import hashlib
 import json
+from dataclasses import replace
 import textwrap
 import threading
 from functools import partial
@@ -245,3 +246,68 @@ def test_a_non_http_pack_url_is_refused(client, serve, tmp_path):
         job = run(client, index_url=f"{base}/packs.json")
     assert job["state"] == "failed"
     assert "non-http" in job["message"]
+
+
+# ── B166: no Updates block, so the app installs updates itself ───────────
+
+def _version(client):
+    conn = connect(client.store_path)
+    try:
+        return conn.execute("SELECT version FROM packs WHERE pack_id='tools'").fetchone()[0]
+    finally:
+        conn.close()
+
+
+def _wait(client, job_id):
+    for _ in range(600):
+        job = client.get(f"/api/jobs/{job_id}").json()
+        if job["state"] in ("succeeded", "failed", "cancelled"):
+            return job
+        threading.Event().wait(0.05)
+    raise AssertionError("job never finished")
+
+
+def _pointed_at(client, index_url):
+    settings = replace(client.app.state.settings, pack_index_url=index_url)
+    client.app.state.jobs.settings = settings
+    return settings, client.app.state.jobs
+
+
+def test_an_available_update_installs_without_a_click(client, serve, tmp_path):
+    from app import packautoupdate
+
+    published, base = serve
+    newer = build.build(write_pack(tmp_path / "v2", "0.3.0", extra=True), tmp_path / "v2.kpack")
+    settings, runner = _pointed_at(client, publish(published, base, newer, "0.3.0"))
+
+    job_id = packautoupdate.submit_if_due(settings, runner)
+    assert job_id, "a never-checked install is due"
+    assert _wait(client, job_id)["state"] == "succeeded"
+    assert _version(client) == "0.3.0"
+    # A success is remembered, so the next launch inside the week does nothing.
+    assert packautoupdate.submit_if_due(settings, runner) is None
+
+
+def test_the_automatic_pass_does_not_reinstall_an_uninstalled_pack(client, serve, tmp_path):
+    from app import packautoupdate
+
+    published, base = serve
+    newer = build.build(write_pack(tmp_path / "v2", "0.3.0", extra=True), tmp_path / "v2.kpack")
+    settings, runner = _pointed_at(client, publish(published, base, newer, "0.3.0"))
+    assert client.delete("/api/packs/tools").status_code == 200
+
+    assert _wait(client, packautoupdate.submit_if_due(settings, runner))["state"] == "succeeded"
+    conn = connect(client.store_path)
+    try:
+        assert conn.execute("SELECT count(*) FROM packs").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
+def test_an_unreachable_index_is_asked_again_at_the_next_launch(client):
+    from app import packautoupdate
+
+    settings, runner = _pointed_at(client, "http://127.0.0.1:9/packs.json")
+
+    assert _wait(client, packautoupdate.submit_if_due(settings, runner))["state"] == "failed"
+    assert packautoupdate.submit_if_due(settings, runner), "a failed pass must not count as a check"

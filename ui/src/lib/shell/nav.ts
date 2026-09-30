@@ -20,6 +20,10 @@ export type NavGroupSpec = {
     symbol: string;
     items: NavItem[];
     authorOnly: boolean;
+    /** The title is a tab that folds its rows (B167). Two groups only:
+     *  Check and This install are short and the reader's own, and a fold on
+     *  them would hide the first thing they came for. */
+    foldable?: boolean;
 };
 
 /** The destinations, grouped by verb.
@@ -57,6 +61,7 @@ export const NAV: NavGroupSpec[] = [
         title: "Knowledge",
         symbol: "layers",
         authorOnly: true,
+        foldable: true,
         items: [
             { name: "overview", label: "Overview" },
             // One destination where there were three. Subjects, Coverage and
@@ -69,18 +74,19 @@ export const NAV: NavGroupSpec[] = [
             // Labelled "Browse", not "Knowledge": the group is already
             // called Knowledge, and a link whose text repeats its own
             // heading tells the reader nothing about what clicking does.
-            { name: "knowledge", label: "Browse" },
+            // Installed catalogs are the section at its top (B167), so the
+            // words for them find it: "packs" is an alias below.
+            { name: "knowledge", label: "Browse", also: ["catalog", "catalogs", "install"] },
         ],
     },
     {
         title: "System",
         symbol: "server",
         authorOnly: true,
+        foldable: true,
         items: [
-            { name: "packs", label: "Packs" },
-            // Sites, next to Packs, because they are the same kind of thing
-            // from the reader's side: what this installation can read. The
-            // words somebody would type for it are all about the browser.
+            // Sites: what this installation can read. The words somebody
+            // would type for it are all about the browser.
             { name: "sites", label: "Sites",
               also: ["adapter", "adapters", "website", "extension site", "register"] },
             // Three entries where there were three screens — Runs, Knowledge
@@ -149,7 +155,12 @@ export const ALIASES: Record<string, { name: string; lens?: string }> = {
     subject: { name: "knowledge", lens: "all" },
     coverage: { name: "knowledge", lens: "gaps" },
     health: { name: "knowledge", lens: "weak" },
-    marks: { name: "knowledge", lens: "marked" },
+    // What readers said is not a lens any more (B166): the extension still
+    // posts marks, and they still feed research signals, but nothing on
+    // screen lists them. The address lands on Browse rather than on nothing.
+    marks: { name: "knowledge", lens: "all" },
+    // Packs became the section at the top of Browse (B167).
+    packs: { name: "knowledge", lens: "all" },
     // The five names the System group used to spell out. Every one of them is
     // a link something already hands out — `#/jobs` is what a POST's own
     // response points at, `#/connect` is in the first-run hints — so they

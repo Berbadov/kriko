@@ -4,17 +4,15 @@
     import { remedyFor } from "../lib/failure";
     import Brief from "../lib/Brief.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
+    import PacksSection from "../lib/PacksSection.svelte";
     import Health from "./Health.svelte";
     import { api } from "../lib/api";
     import { count } from "../lib/plural";
     import { severityWord } from "../lib/report";
     import type {
         Gap,
-        MarkQueueItem,
-        Marks,
         Pack,
         PackDraft,
-        MarkSignals,
         Status,
         Subject,
         SubjectDetail,
@@ -35,7 +33,7 @@
      * count is an orientation and a table is a demand.
      */
 
-    type Lens = "all" | "gaps" | "weak" | "marked";
+    type Lens = "all" | "gaps" | "weak";
 
     // The lens can arrive from the route: `#/coverage` and `#/health` are
     // links this app has been handing out for versions, and they resolve here
@@ -46,12 +44,12 @@
     }: { lens?: string; subjectId?: string } = $props();
 
     const asLens = (named: string): Lens =>
-        (["all", "gaps", "weak", "marked"].includes(named) ? named : "all") as Lens;
+        (["all", "gaps", "weak"].includes(named) ? named : "all") as Lens;
     let lens = $state<Lens>("all" as Lens);
     $effect.pre(() => {
         lens = asLens(initial);
     });
-    const LENS_IDS: Lens[] = ["all", "gaps", "weak", "marked"];
+    const LENS_IDS: Lens[] = ["all", "gaps", "weak"];
 
     // WAI-ARIA tabs: Left/Right/Home/End move both focus and the selection —
     // the same mechanism ops-21 gave Activity's lens tabs (knowledge-28).
@@ -86,20 +84,6 @@
     let gaps = $state<Gap[]>([]);
     let error = $state<unknown>(null);
     let loading = $state(true);
-
-    // Verdicts readers left, almost all of them from the browser extension —
-    // the panel is where someone is actually looking at the product, so it is
-    // the only place feedback is cheap to collect. They arrive here because
-    // "which claims are getting called wrong" is an authoring question, and
-    // this is the authoring screen.
-    let marks = $state<Marks | null>(null);
-    let markError = $state<unknown>(null);
-
-    // What the marks *add up to*. The raw list answers "what did people say";
-    // these two queues answer the only question an author can act on — which
-    // system has the problem. A mark that feeds nothing is a survey, and this
-    // is the half that makes it a signal (backlog B54).
-    let signals = $state<MarkSignals | null>(null);
 
     // Which row is open, and what was fetched for it. Keyed by subject id
     // rather than held as "the open row" so collapsing and re-expanding does
@@ -169,57 +153,6 @@
         gaps = lists.flat();
     }
 
-    async function loadMarks() {
-        try {
-            // Both in one pass: the queues are derived from the same rows, so
-            // a screen that showed the list and then, a beat later, its
-            // consequences would be describing one fetch as two.
-            [marks, signals] = await Promise.all([api.marks(), api.markSignals()]);
-            markError = null;
-        } catch (cause) {
-            markError = cause;
-        }
-    }
-
-    /** Which door implicates what.
-     *
-     * A `not mine` on a subject only ever reached from a page is an extraction
-     * problem — something on the page was read as an identity it is not. The
-     * same verdict on a typed-in query is a *gate* problem: what was entered
-     * matched more than it should. The distinction is the whole reason the
-     * door is carried through, so the screen says it in words rather than
-     * printing a tally and leaving the reading to the author.
-     */
-    function doorReading(item: MarkQueueItem): string {
-        const doors = Object.keys(item.sources ?? {});
-        if (!doors.length) return "No saved answer here names this subject.";
-        if (doors.length > 1) return "Reached both ways — look at the gate before the reader.";
-        return doors[0] === "url"
-            ? "Only ever reached from a page: suspect what the page was read as."
-            : "Only ever reached from a typed-in query: suspect the gate being too broad.";
-    }
-
-    /** Drop a verdict.
-     *
-     * The author's move after acting on it: a claim they rewrote should stop
-     * being listed as wrong, and there is no other way to retract a mark from
-     * inside the app. It removes the *reader's note*, never the claim.
-     */
-    async function forget(packId: string, claimId: string) {
-        await api.unmark(packId, claimId);
-        await loadMarks();
-    }
-
-    const VERDICT_WORDS: Record<string, string> = {
-        useful: "Useful",
-        // Kept apart on purpose: `wrong` is a claim problem, `not_applicable`
-        // is a *matching* problem — the claim may be perfectly true of the
-        // product it was written for, and this was not that one. Merging them
-        // would hide which half of the system needs the fix.
-        not_applicable: "Not mine",
-        wrong: "Wrong",
-    };
-
     function onInput() {
         clearTimeout(timer);
         shown = 25;
@@ -268,7 +201,7 @@
         }
     }
 
-    const ready = Promise.all([loadList(), loadFrame(), loadMarks()]);
+    const ready = Promise.all([loadList(), loadFrame()]);
 
     // A pack that is installed and switched off is the single most confusing
     // state this app has: `/api/subjects` filters on `enabled = 1`, so every
@@ -280,14 +213,6 @@
         subjects.filter((s) => !packFilter || s.pack_id === packFilter),
     );
     const visible = $derived(filtered.slice(0, shown));
-
-    // The mark queues carry only a subject id — a key an agent reads, not a
-    // name a reader recognizes. Resolved against the subject list already on
-    // screen rather than shipping a second lookup (knowledge-17).
-    const subjectLabels = $derived(
-        new Map(subjects.map((s) => [s.subject_id, s.label])),
-    );
-    const subjectLabel = (id: string) => subjectLabels.get(id) ?? id;
 
     const gapIds = $derived(new Set(gaps.map((gap) => gap.subject_id)));
     const gapRows = $derived(
@@ -392,6 +317,19 @@
 </script>
 
 <h2><Icon name="knowledge" size={22} /> Knowledge</h2>
+
+<!-- The installed catalogs first (B167): what is installed comes before what is
+     known. One heading and the cards, nothing else added; making Browse
+     search-first is B180. `onchange`: an install or a switch-off changes every
+     list below. -->
+<section class="packs-section" aria-label="Catalogs">
+    <PacksSection
+        onchange={() => {
+            void loadFrame();
+            void loadList();
+        }}
+    />
+</section>
 
 <!-- The header is counts, not content: five numbers say where you are
      without asking the reader to read a table to find out. -->
@@ -578,18 +516,6 @@
         onclick={() => (lens = "weak")}
         onkeydown={(event) => onLensKey(event, 2)}>What is thin</button
     >
-    <button
-        id="knowledge-tab-marked"
-        class="tab"
-        role="tab"
-        aria-selected={lens === "marked"}
-        aria-controls="knowledge-panel"
-        tabindex={lens === "marked" ? 0 : -1}
-        class:active={lens === "marked"}
-        onclick={() => (lens = "marked")}
-        onkeydown={(event) => onLensKey(event, 3)}
-        >What readers said{marks?.items.length ? ` (${marks.items.length})` : ""}</button
-    >
 </div>
 
 <div role="tabpanel" id="knowledge-panel" aria-label="Knowledge">
@@ -640,149 +566,6 @@
         <Failure {error} retry={loadList} />
     {:else if lens === "weak"}
         <Health heading={false} focusClaimId={subjectId} />
-    {:else if lens === "marked"}
-        {#if markError}
-            <Failure error={markError} retry={loadMarks} />
-        {:else if !marks}
-            <p class="skeleton" style="height: 4rem">Reading…</p>
-        {:else}
-            <!-- Counts before the list, and every verdict present even at
-                 zero: "three claims called wrong" reads differently against
-                 three marks than against three hundred, and a strip that
-                 changes shape as data arrives is unreadable. -->
-            <ul class="statstrip" aria-label="Verdicts readers left">
-                {#each marks.verdicts as verdict (verdict)}
-                    <li class={verdict === "wrong" && marks.counts[verdict] ? "warn" : ""}>
-                        <strong>{marks.counts[verdict] ?? 0}</strong>
-                        <span class="meta">{VERDICT_WORDS[verdict] ?? verdict}</span>
-                    </li>
-                {/each}
-            </ul>
-
-            <!-- The queues before the list. An author opening this screen is
-                 here to act, and "which subject is getting called wrong most"
-                 is the only ordering that helps them — the raw list is
-                 chronological, which is the ordering of nobody's work.
-                 Both are derived, never curated: no one signs anything off
-                 here, and nothing waits for them to (the automation
-                 principle). -->
-            {#if signals?.research?.length}
-                <section class="queue">
-                    <h3><Icon name="refresh" /> Worth researching again</h3>
-                    <p class="meta">
-                        Readers say these claims are wrong. That is a knowledge problem:
-                        the research below rewrites what is held, it does not touch the
-                        reader's note.
-                    </p>
-                    <ul class="klist">
-                        {#each signals.research as item (item.pack_id + item.subject_id)}
-                            <li class="krow">
-                                <div class="kmain">
-                                    <span class="klabel">{subjectLabel(item.subject_id)}</span>
-                                    <span class="meta"
-                                        >{item.pack_id} · {item.count} called wrong</span
-                                    >
-                                </div>
-                                <button
-                                    onclick={() =>
-                                        (researching = {
-                                            ...researching,
-                                            [item.subject_id]: !researching[item.subject_id],
-                                        })}
-                                >
-                                    {researching[item.subject_id] ? "Hide brief" : "Research"}
-                                </button>
-                                {#each item.notes as note, i (i)}
-                                    <p class="kdetail meta">“{note}”</p>
-                                {/each}
-                                {#if researching[item.subject_id]}
-                                    <div class="kdetail">
-                                        <Brief
-                                            subjectId={item.subject_id}
-                                            packId={item.pack_id}
-                                            label={subjectLabel(item.subject_id)}
-                                            onClose={() =>
-                                                (researching = {
-                                                    ...researching,
-                                                    [item.subject_id]: false,
-                                                })}
-                                        />
-                                    </div>
-                                {/if}
-                            </li>
-                        {/each}
-                    </ul>
-                </section>
-            {/if}
-
-            {#if signals?.matching?.length}
-                <section class="queue">
-                    <h3><Icon name="warn" /> Matched the wrong thing</h3>
-                    <p class="meta">
-                        “Not mine” is not a claim being false — it is this claim reaching
-                        someone it was not written for. Researching it again would fix
-                        nothing; the door it arrived through is the lead.
-                    </p>
-                    <ul class="klist">
-                        {#each signals.matching as item (item.pack_id + item.subject_id)}
-                            <li class="krow">
-                                <div class="kmain">
-                                    <span class="klabel">{subjectLabel(item.subject_id)}</span>
-                                    <span class="meta"
-                                        >{item.pack_id} · {item.count} not theirs</span
-                                    >
-                                </div>
-                                <span class="meta doors">
-                                    {#each Object.entries(item.sources ?? {}) as [door, n] (door)}
-                                        <span class="context-pair"
-                                            ><span class="meta">{door}</span> {n}</span
-                                        >
-                                    {/each}
-                                </span>
-                                <p class="kdetail meta">{doorReading(item)}</p>
-                            </li>
-                        {/each}
-                    </ul>
-                </section>
-            {/if}
-
-            {#if !marks.items.length}
-                <EmptyState
-                    title="No one has marked anything yet"
-                    detail="Every risk card in the browser extension asks “was this any
-                            use?”. Answers land here — which claims readers found worth
-                            having, which ones were wrong, and which ones simply were not
-                            about their product."
-                />
-            {:else}
-                <h3><Icon name="tag" /> Every mark</h3>
-                <ul class="klist">
-                    {#each marks.items as mark (mark.pack_id + mark.claim_id)}
-                        <li class="krow">
-                            <span class="kmain">
-                                <span class="klabel"
-                                    >{mark.title || mark.claim_id}</span
-                                >
-                                <span class="meta"
-                                    >{mark.pack_id} · {mark.updated_at.slice(0, 10)}</span
-                                >
-                            </span>
-                            <span class="verdict {mark.verdict}"
-                                >{VERDICT_WORDS[mark.verdict] ?? mark.verdict}</span
-                            >
-                            <button
-                                class="ghost"
-                                onclick={() => forget(mark.pack_id, mark.claim_id)}
-                                >Forget</button
-                            >
-                            {#if mark.note}
-                                <p class="kdetail meta">{mark.note}</p>
-                            {/if}
-                        </li>
-                    {/each}
-                </ul>
-            {/if}
-        {/if}
     {:else if lens === "gaps"}
         {#if !gapRows.length}
             <EmptyState
@@ -1047,24 +830,5 @@
     }
     .more {
         margin-top: var(--s-3);
-    }
-    /* Borrows the severity vocabulary rather than inventing a second one:
-     * "wrong" is the only verdict that is a problem, so it is the only one
-     * that gets a problem's colour. */
-    .verdict {
-        font-size: var(--t-sm);
-        padding: 0 var(--s-2);
-        border-radius: 999px;
-        border: 1px solid var(--line);
-        color: var(--dim);
-        white-space: nowrap;
-    }
-    .verdict.useful {
-        color: var(--low);
-        border-color: var(--low);
-    }
-    .verdict.wrong {
-        color: var(--high);
-        border-color: var(--high);
     }
 </style>

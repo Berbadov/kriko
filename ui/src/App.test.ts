@@ -34,6 +34,25 @@ describe("App", () => {
         ).toBeInTheDocument();
     });
 
+    it("lands #/packs on Browse, with the installed packs at its top (B167)", async () => {
+        window.location.hash = "#/packs?mode=author";
+        stubFetch({
+            ...EMPTY,
+            "/api/settings": { mode: "author" },
+            "/api/packs": [
+                { pack_id: "tools", name: "Tools", version: "0.2.0", enabled: true,
+                  subjects: 4, claims: 9, evidence: 12, digest: "abc123" },
+            ],
+            "/api/subjects": [],
+            "/api/packs/drafts": { items: [] },
+            "/api/packs/tools/gaps": [],
+        });
+        render(App);
+        expect(await screen.findByRole("tab", { name: /What is here/ })).toBeInTheDocument();
+        expect(await screen.findByText(/4 subjects · 9 claims/)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Install pack" })).toBeInTheDocument();
+    });
+
     it("names an unknown route rather than showing a blank workspace", async () => {
         window.location.hash = "#/nonsense?mode=buyer";
         stubFetch(EMPTY);
