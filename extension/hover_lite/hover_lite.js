@@ -653,6 +653,9 @@
         ? `Costs money — this run is capped at $${cap.toFixed(2)} of your API keys.`
         : "Costs money — spent through your configured API keys.";
     }
+    if (plane.backend === "local") {
+      return "Costs nothing. Runs on the model on this computer.";
+    }
     return "Costs nothing — runs through your coding agent.";
   }
 
