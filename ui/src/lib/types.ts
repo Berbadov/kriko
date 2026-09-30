@@ -885,6 +885,28 @@ export type UnmappedLabel = {
 };
 
 
+/** The local machine plane, as `/api/local-plane` answers. The LLM list is
+ *  the server's own and `line` is the readiness sentence, both from the
+ *  server. `stored` is what the reader has saved (empty means "discover"). */
+export type LocalPlane = {
+    ready: boolean;
+    reason: string;
+    line: string;
+    url: string;
+    name: string;
+    models: string[];
+    servers: { name: string; url: string; up: boolean; models: string[] }[];
+    search_kind: string;
+    search_label: string;
+    timeout: number;
+    stored: {
+        local_url: string;
+        local_model: string;
+        local_search_url: string;
+        local_timeout: string;
+    };
+};
+
 /** One research plane, as `/api/research-planes` describes it.
  *
  * `cost_basis` is the engine's own word (`subscription` / `per_token`) and

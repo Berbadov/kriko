@@ -8,10 +8,46 @@ engine shape and provider sockets is where that boundary is drawn.
 
 Speaks `/v1/chat/completions`, the surface every serious local engine
 exposes, so the plane never learns which binary is behind the port.
+
+**It fails out loud (B171).** The paid sockets return an empty string on any
+failure, which is right for a plane whose outage should cost a document, not a
+run. Here the outage *is* the run: a server that is down, has no model of that
+name, or answers after the timeout made every earlier local run end as "0
+claims kept" with no word of why. So this socket raises `LocalInferenceError`
+whose text names the address and the reason in the reader's terms, and the
+plane says it in the job log.
 """
 
 import json
+import socket
+import urllib.error
 import urllib.request
+
+#: Long enough for a small model on a CPU to read a page and write a JSON
+#: array, which is minutes rather than the 45 seconds a hosted API needs.
+#: The reader can change it (Settings, "Local machine"); this is the default.
+DEFAULT_TIMEOUT = 300.0
+
+#: The reply a findings extraction must produce, as a JSON schema. Sent as the
+#: `json_schema` response format so a server that supports grammar constraint
+#: cannot answer in prose. The keys are the plane's own reply shape
+#: (`kriko.research.local._REPLY_SHAPE`), nothing about any category.
+FINDINGS_SCHEMA = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            key: {"type": "string"}
+            for key in ("source_url", "title", "domain", "severity",
+                        "quote", "body", "advice")
+        },
+        "required": ["source_url", "title", "quote", "body"],
+    },
+}
+
+
+class LocalInferenceError(RuntimeError):
+    """The local server did not produce a completion, and why, in words."""
 
 
 class OpenAICompatSocket:
@@ -19,40 +55,83 @@ class OpenAICompatSocket:
 
     Speaks the OpenAI-compatible `/v1/chat/completions` surface that every
     serious local engine exposes, so the plane never learns which binary
-    is behind the port. `response_json_schema` is honoured through the
-    `json_schema` response-format when the server advertises it — engine-
-    level grammar constraint, the strongest guarantee a small socket can
-    get — and ignored without complaint when it does not.
+    is behind the port. `response_json_schema` is sent as the `json_schema`
+    response format — engine-level grammar constraint, the strongest guarantee
+    a small socket can get — and dropped for one retry when the server
+    refuses it (HTTP 400), since a server that cannot constrain its output
+    can still answer.
 
     Temperature 0 for extraction: creativity in front of a grounding gate
     buys refusals, not findings.
     """
 
     def __init__(self, base_url: str, serving_name: str,
-                 timeout: float = 120.0,
+                 timeout: float = DEFAULT_TIMEOUT,
                  temperature: float = 0.0,
                  context_chars: int = 12000,
-                 response_json_schema: str = ""):
-        self.base_url = base_url.rstrip("/")
+                 response_json_schema: dict | str = ""):
+        self.base_url = base_url.rstrip("/").removesuffix("/v1")
         self.serving_name = serving_name
         self.timeout = timeout
         self.temperature = temperature
         self.context_chars = context_chars
-        self._schema = response_json_schema
-        self.tokens_used = 0
+        if isinstance(response_json_schema, str):
+            response_json_schema = (json.loads(response_json_schema)
+                                    if response_json_schema.strip() else {})
+        self._schema = response_json_schema or {}
+        self.tokens_used: int | None = None
+        #: The two halves, for `app.meter.Meter`, which reads them off any
+        #: completer by attribute.
+        self.tokens_in: int | None = None
+        self.tokens_out: int | None = None
+        self.model = serving_name
         self.calls = 0
+
+    def __call__(self, prompt: str) -> str:
+        return self.complete(prompt)
 
     def complete(self, prompt: str) -> str:
         body = {
             "model": self.serving_name,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": self.temperature,
+            "stream": False,
         }
         if self._schema:
             body["response_format"] = {
                 "type": "json_schema",
                 "json_schema": {"name": "findings", "schema": self._schema},
             }
+        try:
+            payload = self._post(body)
+        except urllib.error.HTTPError as error:
+            if error.code == 400 and "response_format" in body:
+                # The server cannot constrain its output; ask plainly.
+                body.pop("response_format")
+                try:
+                    payload = self._post(body)
+                except urllib.error.HTTPError as again:
+                    raise self._refused(again) from again
+                except Exception as other:  # noqa: BLE001
+                    raise self._failed(other) from other
+            else:
+                raise self._refused(error) from error
+        except Exception as error:  # noqa: BLE001 - named for the reader below
+            raise self._failed(error) from error
+        self.calls += 1
+        self._count(payload)
+        choices = payload.get("choices") if isinstance(payload, dict) else None
+        message = (choices[0].get("message") if choices
+                   and isinstance(choices[0], dict) else None) or {}
+        text = str(message.get("content") or "") if isinstance(message, dict) else ""
+        if not text.strip():
+            raise LocalInferenceError(
+                f"{self.base_url} answered with an empty reply from "
+                f"{self.serving_name!r}: the model produced no text. Try a "
+                "larger model, or check that it is loaded.")
+        return text
+
+    def _post(self, body: dict) -> dict:
         request = urllib.request.Request(
             self.base_url + "/v1/chat/completions",
             data=json.dumps(body).encode("utf-8"),
@@ -60,17 +139,50 @@ class OpenAICompatSocket:
             method="POST",
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
-        self.calls += 1
+            return json.loads(resp.read().decode("utf-8", "replace"))
+
+    def _count(self, payload) -> None:
+        usage = payload.get("usage") if isinstance(payload, dict) else None
+        if not isinstance(usage, dict):
+            return
+        for field, key in (("tokens_in", "prompt_tokens"),
+                           ("tokens_out", "completion_tokens")):
+            value = usage.get(key)
+            if isinstance(value, int) and not isinstance(value, bool):
+                setattr(self, field, (getattr(self, field) or 0) + value)
+        total = usage.get("total_tokens")
+        if isinstance(total, int) and not isinstance(total, bool):
+            self.tokens_used = (self.tokens_used or 0) + total
+
+    def _refused(self, error: urllib.error.HTTPError) -> LocalInferenceError:
+        detail = ""
         try:
-            usage = payload.get("usage", {}) or {}
-            total = usage.get("total_tokens")
-            if isinstance(total, (int, float)):
-                self.tokens_used += int(total)
-        except (AttributeError, TypeError):
+            raw = json.loads(error.read().decode("utf-8", "replace"))
+            found = raw.get("error") if isinstance(raw, dict) else ""
+            detail = (found.get("message") if isinstance(found, dict) else found) or ""
+        except Exception:  # noqa: BLE001 - the status alone is enough
             pass
-        choices = payload.get("choices") or []
-        if not choices:
-            return ""
-        message = choices[0].get("message", {}) or {}
-        return str(message.get("content", "") or "")
+        if error.code == 404:
+            return LocalInferenceError(
+                f"{self.base_url} has no model named {self.serving_name!r}"
+                + (f" ({detail})" if detail else "")
+                + ". Download one in that app, then pick it in Settings, Local machine.")
+        return LocalInferenceError(
+            f"{self.base_url} answered HTTP {error.code}"
+            + (f": {str(detail)[:200]}" if detail else ""))
+
+    def _failed(self, error: Exception) -> LocalInferenceError:
+        if isinstance(error, (TimeoutError, socket.timeout)) or (
+                isinstance(error, urllib.error.URLError)
+                and isinstance(error.reason, (TimeoutError, socket.timeout))):
+            return LocalInferenceError(
+                f"{self.base_url} did not answer within {self.timeout:g} s. A "
+                "model on a CPU can be slow: raise the timeout in Settings, "
+                "Local machine, or use a smaller model.")
+        if isinstance(error, (urllib.error.URLError, OSError)):
+            return LocalInferenceError(
+                f"{self.base_url} is not reachable (server down). Start the "
+                "local model server, or change its address in Settings, Local machine.")
+        return LocalInferenceError(
+            f"{self.base_url} answered something that is not a completion "
+            f"({type(error).__name__}).")
