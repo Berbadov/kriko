@@ -108,8 +108,8 @@
                     detail="Install a pack that ships an adapter, or open a listing page
                             and press the extension button — the site lands below and an
                             agent can work out how to read it."
-                    actionLabel="Packs"
-                    actionHref="#/packs"
+                    actionLabel="Open Catalogs"
+                    actionHref="#/knowledge"
                 />
             {:else}
                 <ul class="klist" aria-label="Readable sites">

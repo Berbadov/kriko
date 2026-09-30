@@ -5,7 +5,8 @@
     import { figures } from "./figures";
     import { readings, watch } from "./instruments";
     import NavGroup from "./NavGroup.svelte";
-    import { groupsFor, resolve } from "./nav";
+    import { api } from "../api";
+    import { groupsFor, resolve, type NavGroupSpec } from "./nav";
 
     let { mode }: { mode: Mode } = $props();
 
@@ -17,6 +18,44 @@
      * `watch` is idempotent and returns its own stop, so a remount does not
      * leave two running. */
     onMount(watch);
+
+    /* Which foldable groups the reader closed (B167), as lower-cased titles.
+     *
+     * Kept in the app's settings like every other UI preference, so it survives
+     * a restart; read once on mount and written on every change. A failed read
+     * leaves every group open and a failed write costs the preference, never
+     * the click.
+     */
+    const FOLDED_KEY = "rail_folded_groups";
+    let folded = $state<string[]>([]);
+    // A click that lands before the stored value arrives is the newer intent.
+    let touched = false;
+    onMount(() => {
+        void api
+            .settings()
+            .then((all) => {
+                if (touched) return;
+                const stored = all?.[FOLDED_KEY];
+                folded =
+                    typeof stored === "string" && stored
+                        ? stored.split(",").filter(Boolean)
+                        : [];
+            })
+            .catch(() => {});
+    });
+    const idOf = (group: NavGroupSpec) => group.title.toLowerCase();
+    /* The group the open screen is in stays open whatever was stored, so a
+     * stored fold can never hide the row the reader is standing on. */
+    const holdsCurrent = (group: NavGroupSpec) =>
+        group.items.some((item) => item.name === current);
+    const isFolded = (group: NavGroupSpec) =>
+        Boolean(group.foldable) && folded.includes(idOf(group)) && !holdsCurrent(group);
+    function toggle(group: NavGroupSpec) {
+        const id = idOf(group);
+        touched = true;
+        folded = folded.includes(id) ? folded.filter((one) => one !== id) : [...folded, id];
+        void api.putSettings({ [FOLDED_KEY]: folded.join(",") }).catch(() => {});
+    }
 
     const reading = $derived(figures($readings));
 
@@ -130,7 +169,16 @@
     <nav class="rail-nav">
         {#each groups as group, index (group.title)}
             <div class="nav-slot" style="--slot: {index}">
-                <NavGroup {group} {current} {href} figures={reading} titled={groups.length > 1} />
+                <NavGroup
+                    {group}
+                    {current}
+                    {href}
+                    figures={reading}
+                    titled={groups.length > 1}
+                    folded={isFolded(group)}
+                    locked={Boolean(group.foldable) && holdsCurrent(group)}
+                    ontoggle={() => toggle(group)}
+                />
             </div>
         {/each}
     </nav>

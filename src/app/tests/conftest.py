@@ -169,3 +169,13 @@ def every_test_finds_the_clis_afresh(monkeypatch):
     from app.providers import harness
 
     monkeypatch.setattr(harness, "_LOCATED", {})
+
+
+@pytest.fixture(autouse=True)
+def the_weekly_pack_update_stays_off(monkeypatch):
+    """Entering a lifespan must not fetch the real pack index (B166).
+
+    `app.packautoupdate` submits a background job at startup. A test that
+    wants to exercise it calls `submit_if_due` itself against a local server.
+    """
+    monkeypatch.setenv("KRIKO_NO_PACK_AUTOUPDATE", "1")

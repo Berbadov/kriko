@@ -68,7 +68,8 @@ describe("the route table", () => {
             "extension",
             "overview",
             "knowledge",
-            "packs",
+            // Packs is a section at the top of Browse now (B167); `#/packs`
+            // still resolves, asserted below.
             // Which listing sites can be read here, and the button that
             // teaches this installation one more.
             "sites",
@@ -115,6 +116,14 @@ describe("the route table", () => {
         for (const name of ["jobs", "pipeline", "submissions", "console", "connect"]) {
             expect(isAuthorOnly(name)).toBe(true);
         }
+    });
+
+    it("lands #/packs and #/marks on Browse, since neither is a screen any more (B166, B167)", () => {
+        expect(resolve("packs")).toEqual({ name: "knowledge", lens: "all" });
+        expect(resolve("marks")).toEqual({ name: "knowledge", lens: "all" });
+        // Both keep Browse's author gate.
+        expect(isAuthorOnly("packs")).toBe(true);
+        expect(isAuthorOnly("marks")).toBe(true);
     });
 
     it("keeps the words a merged screen absorbed searchable", () => {

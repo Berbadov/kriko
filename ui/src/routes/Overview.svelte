@@ -101,8 +101,8 @@
                 title="No packs installed"
                 detail="The engine holds no knowledge yet, so nothing here has anything to
                         report. Install a pack and this page fills in."
-                actionLabel="Open Packs"
-                actionHref={link("packs")}
+                actionLabel="Open Catalogs"
+                actionHref={link("knowledge")}
             />
         {:else}
             <ul class="worklist">
@@ -116,13 +116,13 @@
                 </li>
                 <li>
                     {#if updatesFailed}
-                        <a href={link("packs")}>Could not check for pack updates</a>
+                        <a href={link("knowledge")}>Could not check for pack updates</a>
                         <span class="meta">installed packs keep working either way</span>
                     {:else if updatable === null}
-                        <a href={link("packs")}>Checking for pack updates…</a>
+                        <a href={link("knowledge")}>Checking for pack updates…</a>
                         <span class="meta">knowledge moves weekly; the app rarely</span>
                     {:else}
-                        <a href={link("packs")}
+                        <a href={link("knowledge")}
                             >{plural(updatable, "pack update", "pack updates")} waiting</a
                         >
                         <span class="meta">knowledge moves weekly; the app rarely</span>

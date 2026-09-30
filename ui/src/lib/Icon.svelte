@@ -155,6 +155,8 @@
             "M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6",
             "M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6",
         ],
+        // a chevron: a folded group (rotated by CSS when it is open)
+        chevron: ["M9 6l6 6-6 6"],
         // four cells: a grid of choices
         grid: ["M4 4h6v6H4z", "M14 4h6v6h-6z", "M4 14h6v6H4z", "M14 14h6v6h-6z"],
     };

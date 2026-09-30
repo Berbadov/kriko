@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubFetch } from "../stub-fetch";
 import Jobs from "../../routes/Jobs.svelte";
 import { parseHash } from "../router";
 import Sidebar from "./Sidebar.svelte";
@@ -81,9 +82,9 @@ describe("the rail's current row", () => {
     }
 
     it("marks the row for the route", () => {
-        at("#/packs?mode=author");
+        at("#/sites?mode=author");
         render(Sidebar, { mode: "author" });
-        expect(screen.getByRole("link", { name: "Packs" })).toHaveAttribute(
+        expect(screen.getByRole("link", { name: "Sites" })).toHaveAttribute(
             "aria-current",
             "page",
         );
@@ -218,5 +219,105 @@ describe("the rail's figures", () => {
         // Three figures, fourteen rows. A number on every row is a dashboard.
         expect(screen.getAllByTitle(/claims across|jobs? running|spent on research/))
             .toHaveLength(3);
+    });
+});
+
+describe("the rail folds (B167)", () => {
+    const at = (hash: string) => {
+        window.location.hash = hash;
+    };
+
+    it("has no Packs row: Packs is a section of Browse", () => {
+        at("#/check?mode=author");
+        render(Sidebar, { mode: "author" });
+        expect(screen.queryByRole("link", { name: "Packs" })).toBeNull();
+    });
+
+    it("folds and unfolds Knowledge and System from their titles, and says so", async () => {
+        at("#/check?mode=author");
+        stubFetch({ "/api/settings": {} });
+        render(Sidebar, { mode: "author" });
+        for (const [title, row] of [
+            ["Knowledge", "Overview"],
+            ["System", "Activity"],
+        ]) {
+            const button = screen.getByRole("button", { name: title });
+            expect(button).toHaveAttribute("aria-expanded", "true");
+            expect(screen.getByRole("link", { name: row })).toBeInTheDocument();
+            await fireEvent.click(button);
+            expect(button).toHaveAttribute("aria-expanded", "false");
+            expect(screen.queryByRole("link", { name: row })).toBeNull();
+            await fireEvent.click(button);
+            expect(button).toHaveAttribute("aria-expanded", "true");
+            expect(screen.getByRole("link", { name: row })).toBeInTheDocument();
+        }
+    });
+
+    it("leaves Check and This install as plain titles, not tabs", () => {
+        at("#/check?mode=author");
+        render(Sidebar, { mode: "author" });
+        expect(screen.queryByRole("button", { name: "Check" })).toBeNull();
+        expect(screen.queryByRole("button", { name: "This install" })).toBeNull();
+    });
+
+    it("remembers the fold in settings, and starts folded when it was left folded", async () => {
+        at("#/check?mode=author");
+        stubFetch({ "/api/settings": {} });
+        const first = render(Sidebar, { mode: "author" });
+        await fireEvent.click(screen.getByRole("button", { name: "System" }));
+        const calls = vi.mocked(globalThis.fetch).mock.calls;
+        await waitFor(() =>
+            expect(
+                calls.some(
+                    ([url, init]) =>
+                        String(url).includes("/api/settings") &&
+                        (init as RequestInit)?.method === "POST" &&
+                        String((init as RequestInit)?.body ?? "").includes("system"),
+                ),
+            ).toBe(true),
+        );
+        first.unmount();
+
+        // A restart: the stored value comes back from the server.
+        stubFetch({ "/api/settings": { rail_folded_groups: "system" } });
+        render(Sidebar, { mode: "author" });
+        await waitFor(() =>
+            expect(screen.getByRole("button", { name: "System" })).toHaveAttribute(
+                "aria-expanded",
+                "false",
+            ),
+        );
+        expect(screen.queryByRole("link", { name: "Activity" })).toBeNull();
+        expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
+    });
+
+    it("keeps the group holding the open screen open, whatever was stored", async () => {
+        at("#/knowledge?mode=author");
+        stubFetch({ "/api/settings": { rail_folded_groups: "knowledge,system" } });
+        render(Sidebar, { mode: "author" });
+        await waitFor(() =>
+            expect(screen.getByRole("button", { name: "System" })).toHaveAttribute(
+                "aria-expanded",
+                "false",
+            ),
+        );
+        expect(screen.getByRole("button", { name: "Knowledge" })).toHaveAttribute(
+            "aria-expanded",
+            "true",
+        );
+        expect(screen.getByRole("link", { name: "Browse" })).toHaveAttribute(
+            "aria-current",
+            "page",
+        );
+    });
+
+    it("keeps the group of a retired address open too (#/packs renders Browse)", async () => {
+        at("#/packs?mode=author");
+        stubFetch({ "/api/settings": { rail_folded_groups: "knowledge" } });
+        render(Sidebar, { mode: "author" });
+        expect(screen.getByRole("button", { name: "Knowledge" })).toHaveAttribute(
+            "aria-expanded",
+            "true",
+        );
     });
 });
