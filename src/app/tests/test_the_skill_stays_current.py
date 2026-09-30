@@ -12,10 +12,12 @@ refreshes the copies that are already wired — because a protocol that needs th
 reader to remember to press a button is a protocol that drifts.
 """
 
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app import agentconfig, agentskill
+from app import agenda, agentconfig, agentskill
 from app.web.app import create_app
 from app.web.settings import Settings
 from kriko.store.db import connect
@@ -174,3 +176,155 @@ def test_the_skill_refuses_to_be_a_checklist(settings):
     conn.close()
     assert "gold.yaml" in body
     assert "not a checklist to copy from" in body
+
+
+# ── B157: "Update the skill" clears when pressed and stays clear ────────────
+#
+# *"Fix the Claude Code bug that keeps showing the \"update the skill\" button"*
+# (2026-09-29). Startup rendered the skill without the "What to research next"
+# block, the status check and the button rendered it with the block, and the
+# block's counts move with every analysis. So the digest a file carried was
+# never the digest the status compared it with, and the button came back after
+# every restart and every check. The tests above passed because their store had
+# an empty agenda: nothing to disagree about.
+
+
+def _seed(settings):
+    """A pack with two subjects and no claims: a non-empty agenda, by design."""
+    conn = connect(settings.store_path)
+    conn.execute(
+        "INSERT INTO packs (pack_id, name, version, schema_version, built_at,"
+        " content_digest, enabled, installed_at)"
+        " VALUES ('probe', 'Probe', '1', 1, '2026-09-01', 'd', 1, '2026-09-01')"
+    )
+    conn.execute(
+        "INSERT INTO pack_assets VALUES (?,?,?,?)",
+        (
+            "probe",
+            "research/principle.md",
+            "principle",
+            "Keep what a buyer cannot cheaply learn.",
+        ),
+    )
+    for subject_id, label in (("s-a", "Alpha unit"), ("s-b", "Beta unit")):
+        conn.execute(
+            "INSERT INTO subjects (subject_id, pack_id, kind, label)"
+            " VALUES (?, 'probe', 'unit', ?)",
+            (subject_id, label),
+        )
+    conn.commit()
+    conn.close()
+
+
+def _ask(settings, subject_id, times):
+    """What an analysis leaves behind: the demand the agenda ranks by."""
+    with open(settings.analysis_log_path, "a", encoding="utf-8") as f:
+        for _ in range(times):
+            f.write(
+                json.dumps({"coverage": "MATCHED_NO_DATA", "subjects": [subject_id]})
+                + "\n"
+            )
+
+
+def _claude_skill(client) -> dict:
+    return next(
+        one for one in client.get("/api/agent-targets").json()["targets"]
+        if one["id"] == "claude-code"
+    )["skill"]
+
+
+def _skill_on_disk(target) -> str:
+    return agentconfig.skill_path(target, agentskill.SKILL_NAME).read_text(
+        encoding="utf-8"
+    )
+
+
+def test_the_skill_reads_current_after_startup_press_analysis_and_restart(
+    settings, target
+):
+    _seed(settings)
+    # The premise of the bug: a store whose agenda is not empty.
+    conn = connect(settings.store_path)
+    assert agenda.compute(conn, log_path=settings.analysis_log_path)["rows"]
+    conn.close()
+    agentconfig.write_skill(
+        target, agentskill.SKILL_NAME, agentskill.stamped("# an older protocol")
+    )
+
+    with TestClient(create_app(settings)) as client:
+        # 1. Startup refreshed the old copy. It must read current, not stale.
+        assert _claude_skill(client)["stale"] is False
+
+        # 2. The button. What it answers, and what the screen says next.
+        pressed = client.post("/api/agent-targets/claude-code/skill")
+        assert pressed.status_code == 200, pressed.text
+        assert pressed.json()["status"]["stale"] is False
+        assert _claude_skill(client)["stale"] is False
+
+        # 3. A new analysis moves the agenda's counts and its order.
+        _ask(settings, "s-b", 3)
+        assert _claude_skill(client)["stale"] is False
+
+        # 4. Research lands: a claim on a subject changes what the pack holds.
+        conn = connect(settings.store_path)
+        conn.execute(
+            "INSERT INTO claims (claim_id, pack_id, subject_id, kind, domain,"
+            " severity, created_at) VALUES ('c1', 'probe', 's-a', 'known_issue',"
+            " 'd', 'high', '2026-09-02')"
+        )
+        conn.commit()
+        conn.close()
+        assert _claude_skill(client)["stale"] is False
+
+    written = _skill_on_disk(target)
+
+    # 5. Restarted, with everything above changed underneath the file.
+    with TestClient(create_app(settings)) as client:
+        assert _claude_skill(client)["stale"] is False
+    # And nothing was rewritten on the way: a file that reads current is left
+    # alone, which is what makes "press once" mean once.
+    assert _skill_on_disk(target) == written
+
+
+def test_a_changed_principle_is_still_stale_after_the_counts_stopped_counting(
+    settings, target
+):
+    """The exclusion is the snapshot, not the protocol.
+
+    A pack whose principle changed is exactly what the button exists for; a
+    digest that ignored it would fix the flicker by hiding the reason.
+    """
+    _seed(settings)
+    with TestClient(create_app(settings)) as client:
+        client.post("/api/agent-targets/claude-code/skill")
+        assert _claude_skill(client)["stale"] is False
+
+        conn = connect(settings.store_path)
+        conn.execute(
+            "UPDATE pack_assets SET content = ? WHERE pack_id = 'probe'"
+            " AND name = 'research/principle.md'",
+            ("A different bar, stated after the skill was written.",),
+        )
+        conn.commit()
+        conn.close()
+        assert _claude_skill(client)["stale"] is True
+
+        client.post("/api/agent-targets/claude-code/skill")
+        assert _claude_skill(client)["stale"] is False
+
+
+def test_the_digest_ignores_the_snapshot_and_nothing_else():
+    stable = "# protocol\n\nthe loop\n"
+    with_snapshot = (
+        "# protocol\n\n"
+        + agentskill.snapshot("## What to research next\n\n- Alpha, asked 4 times\n")
+        + "\nthe loop\n"
+    )
+    other_snapshot = (
+        "# protocol\n\n"
+        + agentskill.snapshot("## What to research next\n\n- Beta, asked 9 times\n")
+        + "\nthe loop\n"
+    )
+    assert agentskill.digest(with_snapshot) == agentskill.digest(other_snapshot)
+    assert agentskill.digest(with_snapshot) == agentskill.digest(stable)
+    assert agentskill.digest(stable) != agentskill.digest(stable + "a new step\n")

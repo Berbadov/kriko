@@ -32,6 +32,8 @@ nothing to say what would count, and a skill that fires anyway is worse than
 none.
 """
 
+import re
+
 from kriko.research import pack_asset
 
 SKILL_NAME = "kriko-research"
@@ -46,19 +48,52 @@ SKILL_NAME = "kriko-research"
 #: reads it and the app refreshes it at startup.
 STAMP = "kriko-skill-digest:"
 
+#: Fences around the parts of a skill that describe *this moment* rather than
+#: the protocol: the agenda's ranking, and how many subjects and claims a pack
+#: holds right now. They are worth putting in the file, since a first session
+#: gets a head start without a round trip, and they are wrong within the hour,
+#: since every analysis and every accepted finding moves them.
+#:
+#: The digest leaves them out. It answers "is the protocol on disk the one this
+#: build would write", and a snapshot cannot be part of that answer: it is
+#: computed from the reader's own history, and startup, the status check and
+#: the Update button each saw a different one. So the button came back after
+#: every restart and every analysis, and pressing it changed nothing that lasted
+#: (B157). Comments, like the stamp, so nothing reads them as text.
+SNAPSHOT_OPEN = "<!-- kriko-snapshot:begin -->"
+SNAPSHOT_CLOSE = "<!-- kriko-snapshot:end -->"
+
+_SNAPSHOT = re.compile(
+    re.escape(SNAPSHOT_OPEN) + r".*?" + re.escape(SNAPSHOT_CLOSE), re.DOTALL
+)
+
+
+def snapshot(text: str) -> str:
+    """Fence a passage that describes the moment, so `digest` skips it."""
+    return f"{SNAPSHOT_OPEN}\n{text}{SNAPSHOT_CLOSE}\n"
+
 
 def digest(body: str) -> str:
-    """A short content hash of a rendered skill, minus its own stamp line."""
+    """A short content hash of the *protocol* in a rendered skill.
+
+    Left out: the stamp line itself, and every fenced snapshot. Everything else
+    is in, so a changed loop, tool, pack principle or pack version still reads
+    as stale, which is what the digest exists to say.
+    """
     import hashlib
 
-    # Trailing whitespace is normalised as well as the stamp line removed, so
-    # `digest(body) == digest(stamped(body))`. Without that the stamp a file
-    # carries could never equal the digest of the file it is in, and every copy
-    # would report itself stale forever — a staleness check that is always true
-    # is the same as not having one.
+    # Blank lines and trailing whitespace are normalised as well, so
+    # `digest(body) == digest(stamped(body))` and a skill with a snapshot hashes
+    # like one without. Without the first the stamp a file carries could never
+    # equal the digest of the file it is in, and every copy would report itself
+    # stale forever — a staleness check that is always true is the same as not
+    # having one.
+    text = _SNAPSHOT.sub("", body or "")
     stripped = "\n".join(
-        line for line in (body or "").splitlines() if STAMP not in line
-    ).rstrip()
+        line.rstrip()
+        for line in text.splitlines()
+        if line.strip() and STAMP not in line
+    )
     return hashlib.sha256(stripped.encode("utf-8")).hexdigest()[:12]
 
 
@@ -451,7 +486,8 @@ def _pack_section(conn, pack: dict) -> str:
     pack_id = pack["pack_id"]
     held = _holdings(conn, pack_id)
     out = f"\n### {pack['name']} (`{pack_id}` {pack['version']})\n\n"
-    out += (
+    # A snapshot: the counts move with every accepted finding (see `snapshot`).
+    out += snapshot(
         f"Holds **{held['subjects']} subject(s)** and **{held['claims']} claim(s)**."
         f" **{held['gaps']}** of those subjects have no claim at all"
         + (" — those are the work.\n" if held["gaps"] else ".\n")
@@ -475,18 +511,21 @@ def _pack_section(conn, pack: dict) -> str:
 
     example = _example(conn, pack_id)
     if example:
-        out += "\nA subject that exists right now"
-        out += (
+        # Also a snapshot: the example is the first subject with a gap, so it
+        # changes as soon as that gap is filled.
+        shown = "\nA subject that exists right now"
+        shown += (
             " and has nothing known about it"
             if not example["has_claims"]
             else ""
         )
-        out += " — start here:\n\n```\n"
-        out += f"research_brief(subject_id=\"{example['subject_id']}\", pack_id=\"{pack_id}\")\n```\n"
+        shown += " — start here:\n\n```\n"
+        shown += f"research_brief(subject_id=\"{example['subject_id']}\", pack_id=\"{pack_id}\")\n```\n"
         if example["identity"]:
-            out += f"\nIt is `{example['label']}`, identified as "
-            out += ", ".join(f"{k}={v!r}" for k, v in example["identity"].items())
-            out += ".\n"
+            shown += f"\nIt is `{example['label']}`, identified as "
+            shown += ", ".join(f"{k}={v!r}" for k, v in example["identity"].items())
+            shown += ".\n"
+        out += snapshot(shown)
 
     # Read off the pack's own gate rows, never written here. The number is
     # this category's taste about how much explanation a risk needs, and an
@@ -539,7 +578,9 @@ def _agenda_section(rows: list[dict]) -> str:
         asked = row.get("asked") or 0
         seen = f" — asked about {asked}×" if asked else ""
         lines.append(f"- **{what}** (`{row['kind']}`){seen}. {row['why']}")
-    return _AGENDA_HEADER + "\n".join(lines) + "\n"
+    # A snapshot by its own admission (the header says so), and fenced so the
+    # digest agrees: the ranking is computed from the reader's history.
+    return snapshot(_AGENDA_HEADER + "\n".join(lines) + "\n")
 
 
 def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
@@ -556,7 +597,9 @@ def render(conn, agenda_rows: list[dict] | None = None) -> str | None:
     `agenda_rows` is the caller's, because the agenda needs the interface's own
     database and the analyses log, and this module is handed only the store.
     Omitting them yields a skill with no snapshot — which is the right answer
-    for a caller that has no business reading a reader's history.
+    for a caller that has no business reading a reader's history. It is a
+    shorter skill, not a different one: the snapshot is fenced out of the
+    digest, so the two carry the same stamp.
 
     Disabled packs are excluded: a reader who turned a pack off has said its
     knowledge should not be used, and researching *into* it would be the same

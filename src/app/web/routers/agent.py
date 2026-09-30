@@ -117,7 +117,7 @@ def agent_targets(request: Request):
 
     store = connect(settings.store_path)
     try:
-        body = agentskill.render(store, _agenda_rows(request, store)) or ""
+        body = skill_body(settings, store)
     except Exception:  # noqa: BLE001 — a skill that will not render must not
         # take the screen that would have told the reader why.
         body = ""
@@ -156,7 +156,7 @@ def refresh_target_skill(target_id: str, request: Request, store=Depends(get_sto
     target = agentconfig.by_id(target_id)
     if target is None:
         raise HTTPException(404, f"unknown harness: {target_id}")
-    body = agentskill.render(store, _agenda_rows(request, store)) or ""
+    body = skill_body(request.app.state.settings, store)
     if not body:
         raise HTTPException(409, "there is no skill to write yet")
     try:
@@ -170,7 +170,20 @@ def refresh_target_skill(target_id: str, request: Request, store=Depends(get_sto
     }
 
 
-def _agenda_rows(request: Request, store) -> list[dict]:
+def skill_body(settings, store) -> str:
+    """The skill as this window renders it, for every reader of that word.
+
+    One function because there used to be four call sites and two answers:
+    startup rendered without the agenda snapshot, while the status check and the
+    Update button rendered with it. What the digest hashes no longer depends on
+    the snapshot (`agentskill.snapshot`), but what gets *written* should not
+    depend on the door either, so nothing renders the skill for this app except
+    here (B157).
+    """
+    return agentskill.render(store, _agenda_rows(settings, store)) or ""
+
+
+def _agenda_rows(settings, store) -> list[dict]:
     """The agenda, or nothing, for the skill's snapshot.
 
     Best-effort on purpose: the skill is the protocol and the snapshot is a
@@ -178,7 +191,6 @@ def _agenda_rows(request: Request, store) -> list[dict]:
     `app.sqlite` must cost the reader a head start and never the document.
     """
     try:
-        settings = request.app.state.settings
         app_state = state.connect(settings.app_state_path)
         try:
             return agenda_mod.compute(
@@ -201,7 +213,7 @@ def agent_skill(request: Request, store=Depends(get_store)):
     Served as well as written so a reader on an unsupported harness can still
     read it, and so the UI can show what Connect is about to put on disk.
     """
-    body = agentskill.render(store, _agenda_rows(request, store))
+    body = skill_body(request.app.state.settings, store)
     return {
         "name": agentskill.SKILL_NAME,
         "steps": [{"tool": tool, "why": why} for tool, why in agentskill.STEPS],
@@ -234,7 +246,7 @@ def connect_target(target_id: str, request: Request, store=Depends(get_store)):
     # Best-effort, and after the config: the connection is the thing the reader
     # asked for, and a harness with nowhere to put a skill still gets one.
     skill_written = None
-    body = agentskill.render(store, _agenda_rows(request, store))
+    body = skill_body(settings, store)
     if body:
         try:
             skill_written = agentconfig.write_skill(target, agentskill.SKILL_NAME, body)
