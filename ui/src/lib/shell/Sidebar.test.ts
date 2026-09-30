@@ -65,10 +65,10 @@ describe("Sidebar", () => {
         expect(mark.getAttribute("height")).toBe("32");
     });
 
-    it("links the brand to the landing screen, Activity (B163)", () => {
+    it("links the brand to the landing screen, Home (B174)", () => {
         const { container } = render(Sidebar);
         const brand = container.querySelector("a.brand") as HTMLAnchorElement;
-        expect(brand.getAttribute("href")).toBe("#/activity");
+        expect(brand.getAttribute("href")).toBe("#/home");
     });
 
     it("carries no ?mode= in any link (B165)", () => {
@@ -117,30 +117,23 @@ describe("the rail's current row", () => {
     });
 });
 
-describe("the rail's primary action", () => {
-    it("gives the reader the one action that makes knowledge, outside the list of places", () => {
+describe("the Run destination", () => {
+    it("is one row in the rail and there is no second link to it (B174)", () => {
+        // "Start a new pack" sat above the list and pointed at the same screen
+        // as the Run row. One entry stays: the row.
         render(Sidebar);
-        const action = screen.getByRole("link", { name: /Start a new pack/ });
-        expect(action).toBeInTheDocument();
-        // The Run screen (B175). A plain route: there is no lens to go stale,
-        // which is what shell-4's dead second click was about.
-        expect(parseHash(action.getAttribute("href") ?? "")).toEqual({
+        expect(screen.queryByRole("link", { name: /Start a new pack/ })).toBeNull();
+        const row = screen.getByRole("link", { name: "Run" });
+        expect(parseHash(row.getAttribute("href") ?? "")).toEqual({
             name: "run",
             params: [],
             query: {},
         });
-        // Outside `.rail-nav` on purpose: a rail lists where you are, and this
-        // is a do. Inside it, it reads as the fourteenth destination.
-        expect(action.closest("nav")).toBeNull();
-    });
-
-    it("offers it to everyone, since every screen behind it is open (B165)", () => {
-        render(Sidebar);
-        expect(screen.getByRole("link", { name: /Start a new pack/ })).toBeInTheDocument();
+        expect(screen.getAllByRole("link").filter((l) => l.getAttribute("href") === row.getAttribute("href"))).toHaveLength(1);
     });
 });
 
-describe("the new-pack destination", () => {
+describe("the Run screen from the rail", () => {
     function at(hash: string) {
         window.history.replaceState(null, "", hash);
         window.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -150,20 +143,13 @@ describe("the new-pack destination", () => {
         window.history.replaceState(null, "", "#/activity");
     });
 
-    it("has its own row in the rail, and the action lands on the same screen (B175)", () => {
-        render(Sidebar);
-        const row = screen.getByRole("link", { name: "Run" });
-        const action = screen.getByRole("link", { name: /Start a new pack/ });
-        expect(row.getAttribute("href")).toBe(action.getAttribute("href"));
-    });
-
     it("opens the Run screen on the category field, without starting work", async () => {
         const fetchMock = vi.fn(async (_path: string, _init?: RequestInit) =>
             new Response(JSON.stringify({ items: [], harnesses: [], scales: [] })),
         );
         vi.stubGlobal("fetch", fetchMock);
         render(Sidebar);
-        at(screen.getByRole("link", { name: /Start a new pack/ }).getAttribute("href")!);
+        at(screen.getByRole("link", { name: "Run" }).getAttribute("href")!);
         render(Run);
         const input = screen.getByLabelText("Category");
         await waitFor(() => expect(input).toHaveFocus());
