@@ -56,13 +56,11 @@ function luminance(hex: string): number {
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-const slate = SHEETS["./themes/slate.css"].split("@media");
-const darkSlate = declarations(slate[0]);
+// One palette (B159: "Remove all theme selections, keep only the Panel theme").
+// The contrast floor stays a table so a second palette, if the reader ever asks
+// for one, is one more row rather than a new test.
 const palettes = {
     panel: declarations(SHEETS["./themes/panel.css"]),
-    lemonade: declarations(SHEETS["./themes/lemonade.css"]),
-    "slate dark": darkSlate,
-    "slate light": { ...darkSlate, ...declarations(slate[1]) },
 };
 
 describe.each(Object.entries(palettes))("navigation contrast in %s", (_name, tokens) => {
@@ -120,15 +118,24 @@ describe("the stylesheets", () => {
             "fonts.css",
             "motion.css",
             "print.css",
-            "themes/lemonade.css",
             "themes/panel.css",
-            "themes/slate.css",
             "tokens.css",
         ]);
     });
 
-    it("has more than one theme, or the split bought nothing", () => {
-        expect(Object.keys(THEMES).length).toBeGreaterThan(1);
+    it("has exactly one theme, and it is Panel", () => {
+        // The reader asked for it outright: "Remove all theme selections, keep
+        // only the Panel theme". A second sheet under themes/ is a choice
+        // waiting for a picker, which is the thing that was removed.
+        expect(Object.keys(THEMES)).toEqual(["./themes/panel.css"]);
+    });
+
+    it("paints from the bare root, with no attribute to select it", () => {
+        // A selector keyed on `data-theme` is a theme choice by another name,
+        // and the only thing that ever wrote the attribute was the picker.
+        const all = Object.values(SHEETS).map(stripComments).join("\n");
+        expect(all).not.toMatch(/data-theme/);
+        expect(stripComments(SHEETS["./themes/panel.css"])).toMatch(/^:root\s*\{/m);
     });
 
     // The whole point of the split. A colour alias defined by one theme and
@@ -220,6 +227,71 @@ describe("the stylesheets", () => {
                 `.${name}`,
             );
         }
+    });
+
+    // B159: "Switch the whole app to IBM Plex Mono", with real bold and italic.
+    // A weight or a slope with no face is not missing, it is *faked* by the
+    // browser, and a synthesised bold or oblique is what this rule exists to
+    // stop.
+    it("sets everything in Plex Mono, with a real face for every weight and slope", () => {
+        const fonts = stripComments(SHEETS["./fonts.css"]);
+        const faces = [...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
+        const shipped = new Set<string>();
+        for (const face of faces) {
+            expect(face).toMatch(/font-family:\s*"IBM Plex Mono"/);
+            const style = face.match(/font-style:\s*(\w+)/)![1];
+            const weight = face.match(/font-weight:\s*(\d+)/)![1];
+            shipped.add(`${style} ${weight}`);
+        }
+        expect([...shipped].sort()).toEqual([
+            "italic 400",
+            "italic 600",
+            "normal 400",
+            "normal 500",
+            "normal 600",
+        ]);
+
+        // The body, and so every label, heading, input and paragraph, is the mono stack.
+        expect(stripComments(SHEETS["./tokens.css"])).toMatch(/--font-mono:\s*"IBM Plex Mono"/);
+        expect(stripComments(SHEETS["./base.css"])).toMatch(
+            /font:\s*var\(--t-base\)\s*\/\s*var\(--lh-base\)\s*var\(--font-mono\)/,
+        );
+
+        // No stylesheet reaches for another family, so nothing can quietly
+        // leave the face: no sans token, no display token, no named font.
+        const everything = Object.entries(SHEETS)
+            .filter(([path]) => path !== "./fonts.css")
+            .map(([, css]) => stripComments(css))
+            .join("\n");
+        expect(everything).not.toMatch(/--font-(sans|display)/);
+        const families = [...everything.matchAll(/font-family:\s*([^;]+);/g)].map((m) =>
+            m[1].trim(),
+        );
+        expect(families.filter((family) => family !== "var(--font-mono)")).toEqual([]);
+    });
+
+    it("uses only the weights it ships", () => {
+        const used = new Set<string>();
+        for (const [path, css] of Object.entries(SHEETS)) {
+            if (path === "./fonts.css") continue;
+            for (const m of stripComments(css).matchAll(/font-weight:\s*(\w+)/g)) used.add(m[1]);
+        }
+        // `inherit` and `normal` name no new weight; `bolder` would ask for 700.
+        const named = [...used].filter((weight) => !["inherit", "normal"].includes(weight));
+        expect(named.filter((weight) => !["400", "500", "600"].includes(weight))).toEqual([]);
+    });
+
+    it("marks emphasis with the italic face", () => {
+        expect(stripComments(SHEETS["./base.css"])).toMatch(
+            /em,\s*i,\s*\.emph\s*\{[^}]*font-style:\s*italic/,
+        );
+        // The shared notice classes carry it too, not colour alone.
+        const components = stripComments(SHEETS["./components.css"]);
+        const at = components.indexOf(".state.error,\n.state.warn,");
+        expect(at, "the shared notice rule is gone").toBeGreaterThan(-1);
+        const rule = components.slice(at, components.indexOf("}", at));
+        expect(rule).toMatch(/font-style:\s*italic/);
+        expect(rule).toMatch(/\.state\.warn/);
     });
 
     it("loads no webfont — the app must render styled with no network", () => {

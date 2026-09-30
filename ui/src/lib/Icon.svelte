@@ -12,6 +12,11 @@
      * `NavIcon` is a thin wrapper over this now, so the rail keeps its
      * `.nav-icon` class and the one CSS rule that styles it.
      *
+     * Every `<h2>` and `<h3>` on a screen carries one (B159), drawn by the
+     * heading rule in `styles/components.css`; `lib/headings.test.ts` holds
+     * the screens to it, so a heading added later without a symbol fails the
+     * suite rather than shipping bare.
+     *
      * Stroke-based on `currentColor`, so whatever colours the surrounding
      * text colours the glyph and hover/active states need no second rule.
      * `aria-hidden` throughout: every icon here sits beside a word that
@@ -116,6 +121,42 @@
         warn: ["M12 4 21 19.5H3z", "M12 10v4", "M12 17v.01"],
         // a download arrow: something to go and install
         download: ["M12 4v10", "M8.5 11 12 14.5 15.5 11", "M4.5 18.5h15"],
+
+        // --- section symbols (B159) ---
+        // Headings and rail group titles carry one, and none is a letter: a
+        // letter in a heading reads as part of the word. These are drawn for
+        // the section, not for a destination, so a heading and the row that
+        // opens it can differ.
+        // a shield with a tick: the group about using what is known
+        verify: ["M12 3 5 6v5.5c0 4.2 2.8 7.4 7 9.5 4.2-2.1 7-5.3 7-9.5V6z", "M8.8 12l2.4 2.4 4.2-4.6"],
+        // three sheets: knowledge as a stack
+        layers: ["M12 3.5 3.5 8 12 12.5 20.5 8z", "M3.5 12 12 16.5 20.5 12", "M3.5 16 12 20.5 20.5 16"],
+        // two slabs with a light each: the machinery
+        server: ["M4 4.5h16v6H4z", "M4 13.5h16v6H4z", "M7.5 7.5v.01", "M7.5 16.5v.01"],
+        // a screen on a stand: this installation
+        monitor: ["M3.5 4.5h17v11h-17z", "M9 20h6", "M12 15.5V20"],
+        // a key: what unlocks a provider
+        key: ["M5 14a4 4 0 1 0 8 0a4 4 0 1 0-8 0", "M12 11.5 20 4", "M17 7l2.5 2.5", "M14.5 9.5 16.5 11.5"],
+        // a pencil: describe it by hand
+        edit: ["M4 20l1-4 11-11 3 3-11 11z", "M14 7l3 3"],
+        // a plus: start something new
+        plus: ["M12 5v14", "M5 12h14"],
+        // a circling arrow: do it again
+        refresh: ["M20 12a8 8 0 1 1-2.5-5.8", "M20 4v5h-5"],
+        // a label: the marks a source carries
+        tag: ["M3.5 12.5V4.5h8l9 9-8 8z", "M8 8.5v.01"],
+        // three bars: a measured spread
+        chart: ["M4 20h16", "M6 20v-6", "M11 20V6", "M16 20v-9"],
+        // an eye: what is shown
+        eye: ["M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z", "M9.5 12a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0"],
+        // a drum: what is stored
+        database: [
+            "M5 6c0-1.7 3.1-3 7-3s7 1.3 7 3-3.1 3-7 3-7-1.3-7-3z",
+            "M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6",
+            "M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6",
+        ],
+        // four cells: a grid of choices
+        grid: ["M4 4h6v6H4z", "M14 4h6v6h-6z", "M4 14h6v6H4z", "M14 14h6v6h-6z"],
     };
 
     const paths = $derived(PATHS[name] ?? []);

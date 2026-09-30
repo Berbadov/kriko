@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import { tick } from "svelte";
     import { route, setQuery } from "../lib/router";
     import { api } from "../lib/api";
@@ -324,7 +325,7 @@
      "Jobs" — an implementation word for the row in `app.sqlite` — and now that
      this is a lens under Activity the mismatch is visible in one glance
      instead of across a navigation. -->
-<h2>Runs</h2>
+<h2><Icon name="jobs" size={22} /> Runs</h2>
 <p class="lede">
     Research and pack builds run here, not in a terminal. A job keeps its log and
     saved results. Cancellation stops at a safe checkpoint; an in-flight request
@@ -332,7 +333,7 @@
 </p>
 
 <section class="card authoring">
-    <h3>Start a new pack</h3>
+    <h3><Icon name="plus" /> Start a new pack</h3>
     <p class="meta">
         Name a category in a few words and your own coding agent writes the whole
         pack — what tells two of these apart, the bar a claim has to clear, what

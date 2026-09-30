@@ -12,7 +12,15 @@ import type { Mode } from "../mode";
  * Search-only. It never renders, and it is not a route: an address is
  * `ALIASES`' job. */
 export type NavItem = { name: string; label: string; also?: string[] };
-export type NavGroupSpec = { title: string; items: NavItem[]; authorOnly: boolean };
+/** `symbol` is a name in `lib/Icon.svelte`'s table: every group title in the
+ *  rail carries one (B159, "Use symbols for sections"), and a required field is
+ *  what makes a group added later fail the type check instead of shipping bare. */
+export type NavGroupSpec = {
+    title: string;
+    symbol: string;
+    items: NavItem[];
+    authorOnly: boolean;
+};
 
 /** The destinations, grouped by verb.
  *
@@ -27,6 +35,7 @@ export type NavGroupSpec = { title: string; items: NavItem[]; authorOnly: boolea
 export const NAV: NavGroupSpec[] = [
     {
         title: "Check",
+        symbol: "verify",
         authorOnly: false,
         items: [
             { name: "check", label: "New check" },
@@ -46,6 +55,7 @@ export const NAV: NavGroupSpec[] = [
     },
     {
         title: "Knowledge",
+        symbol: "layers",
         authorOnly: true,
         items: [
             { name: "overview", label: "Overview" },
@@ -64,6 +74,7 @@ export const NAV: NavGroupSpec[] = [
     },
     {
         title: "System",
+        symbol: "server",
         authorOnly: true,
         items: [
             { name: "packs", label: "Packs" },
@@ -97,6 +108,7 @@ export const NAV: NavGroupSpec[] = [
         // reader who cannot open the author screens, and it is the first
         // question any support exchange starts with.
         title: "This install",
+        symbol: "monitor",
         authorOnly: false,
         items: [
             // Preferences before facts: a reader in this group is more often

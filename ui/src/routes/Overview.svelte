@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import { word } from "../lib/plural";
     import Async from "../lib/Async.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
@@ -76,7 +77,7 @@
     }
 </script>
 
-<h2>Overview</h2>
+<h2><Icon name="overview" size={22} /> Overview</h2>
 
 <Async promise={data}>
     <!-- Overview's shape is fixed — three work items, then four counts — so the
@@ -141,7 +142,7 @@
                 {/each}
             </div>
 
-            <h3>Labels no adapter reads</h3>
+            <h3><Icon name="tag" /> Labels no adapter reads</h3>
             <p class="meta">
                 Fields the listing pages carried that no installed adapter maps.
                 Not errors — this is the only warning a site gives when it
@@ -202,7 +203,7 @@
                 </p>
             {/if}
 
-            <h3>Thinnest evidence</h3>
+            <h3><Icon name="chart" /> Thinnest evidence</h3>
             <p class="meta">
                 The claims we ship with the least behind them. Fixing these is worth more
                 than adding new ones.

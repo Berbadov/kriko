@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import { tick } from "svelte";
     import { api } from "../lib/api";
     import { count } from "../lib/plural";
@@ -64,7 +65,7 @@
     });
 </script>
 
-{#if heading}<h2>Claim health</h2>{/if}
+{#if heading}<h2><Icon name="activity" size={22} /> Claim health</h2>{/if}
 <p class="meta">
     The weakest-supported claims we ship, worst first. Contradicted, then fewest
     independent sources, then weakest best source, then stalest. No combined score — each

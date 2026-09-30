@@ -311,9 +311,19 @@ select,
 textarea {
     font: inherit;
     color: var(--text);
-    background: var(--panel);
+    /* The button's own face (B160: "Make all buttons and selections 3D,
+     * button-like"). A field used to be a flat panel-coloured box beside a
+     * raised button, which is most of why the two halves of a form looked like
+     * different applications. Same five values a button spends, from the same
+     * tokens: the face, the lit top edge, the dark bottom edge, the shadow, and
+     * (below) the press. `background-color` rather than the shorthand so the
+     * select's arrow, which is a background image, survives a hover. */
+    background-color: var(--btn);
     border: 1px solid var(--line);
+    border-top-color: var(--btn-hi);
+    border-bottom-color: var(--btn-lo);
     border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-1);
     padding: var(--s-2) var(--s-3);
     min-width: 150px;
     /* Without this a native select sizes to its longest <option>, and a
@@ -322,6 +332,52 @@ textarea {
      * the 620px window (settings-8/m2). The row it sits in already gives it
      * all the width it can have; capping here keeps that promise. */
     max-width: 100%;
+    transition:
+        background-color var(--dur-fast) ease,
+        border-color var(--dur-fast) ease,
+        box-shadow var(--dur-fast) ease,
+        transform var(--dur-fast) ease;
+}
+/* A select is a button that opens a list, so it says so with one arrow.
+ *
+ * `appearance: none` removes the platform's chevron, which is drawn in the
+ * platform's colour and at the platform's size and was the reader's complaint
+ * ("they look ugly everywhere"). The arrow that replaces it is two gradient
+ * triangles laid side by side, which is how a glyph is drawn from *tokens*: a
+ * data-URI SVG cannot read `var(--dim)`, and a hard-coded stroke there is the
+ * literal colour `tokens.test.ts` exists to refuse. It stays a native
+ * `<select>`, so the keyboard, the type-ahead and the `combobox` role are the
+ * platform's own; only its face is ours. */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    /* Room for the arrow, so a long option never runs underneath it. */
+    padding-right: calc(var(--s-3) + 22px);
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--dim) 50%),
+        linear-gradient(135deg, var(--dim) 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 50%,
+        calc(100% - 12px) 50%;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+}
+select:hover:not(:disabled) {
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--accent) 50%),
+        linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+}
+/* The open list is drawn by the platform, but its rows take these two. */
+select option {
+    background-color: var(--panel);
+    color: var(--text);
+}
+/* A hint is a different kind of text from what was typed, so it is italic. */
+::placeholder {
+    color: var(--dim);
+    opacity: 0.7;
+    font-style: italic;
 }
 input[type="radio"],
 input[type="checkbox"] {
@@ -334,14 +390,27 @@ input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
 }
-input:hover:not(:disabled),
+input:not([type="radio"]):not([type="checkbox"]):hover:not(:disabled),
 select:hover:not(:disabled),
 textarea:hover:not(:disabled) {
     /* A field that does not answer the pointer reads as a painted rectangle.
      * Buttons here have had a hover since the port; the fields never did,
      * which is most of why the two halves of a form looked like they came
-     * from different applications. */
+     * from different applications. Lit and lifted, exactly as a button is. */
+    background-color: var(--btn-hover);
     border-color: var(--accent);
+    box-shadow: var(--shadow-2);
+}
+input:not([type="radio"]):not([type="checkbox"]):active:not(:disabled),
+select:active:not(:disabled),
+textarea:active:not(:disabled) {
+    /* The press, the same one pixel a button sinks (`--lift`) with its shadow
+     * gone. A field is pressed when the reader clicks into it or opens the
+     * list, and without this the click was the only control interaction in the
+     * app that did not move. */
+    transform: translateY(var(--lift));
+    box-shadow: none;
+    background-color: var(--btn-active);
 }
 input:focus,
 select:focus,
@@ -359,6 +428,89 @@ textarea:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     border-style: dashed;
+    box-shadow: none;
+    transform: none;
+}
+
+/* A choice among a few, drawn as a card that holds a radio or a checkbox.
+ *
+ * It was two rules scoped to `Settings.svelte`, so the one screen that had
+ * cards drew them flat, with only a border that turned gold when chosen.
+ * Global now and on the button's face (B160): raised, lit on hover, sinking on
+ * the press, and a chosen card takes the accent edge and the accent fill the
+ * primary button uses, so "which one is on" is not a hairline colour change.
+ * The focus ring follows the input inside it, because the input is the thing
+ * the keyboard is on. */
+.choice {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2);
+    padding: var(--s-2) var(--s-3);
+    color: var(--text);
+    background-color: var(--btn);
+    border: 1px solid var(--line);
+    border-top-color: var(--btn-hi);
+    border-bottom-color: var(--btn-lo);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-1);
+    cursor: pointer;
+    transition:
+        background-color var(--dur-fast) ease,
+        border-color var(--dur-fast) ease,
+        box-shadow var(--dur-fast) ease,
+        transform var(--dur-fast) ease;
+}
+.choice:hover {
+    background-color: var(--btn-hover);
+    border-color: var(--accent);
+    box-shadow: var(--shadow-2);
+}
+.choice:active {
+    transform: translateY(var(--lift));
+    box-shadow: none;
+    background-color: var(--btn-active);
+}
+.choice.on {
+    background-color: var(--accent-soft);
+    border-color: var(--accent);
+}
+.choice:has(input:focus-visible) {
+    outline: var(--ring) solid var(--accent);
+    outline-offset: var(--ring);
+}
+.choice input:focus-visible {
+    outline: none;
+}
+
+/* A file is picked through a button, so the native "Choose File / No file
+ * chosen" control is never drawn (B160). `FilePick.svelte` renders the real
+ * input hidden and this row in its place: the button wears the same face as
+ * every other button, and the chosen name sits beside it as plain text. */
+.file-pick {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-width: 0;
+    max-width: 100%;
+}
+.file-pick input[type="file"] {
+    display: none;
+}
+.file-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--dim);
+    font-size: var(--t-sm);
+    line-height: var(--lh-sm);
+}
+/* The press for a link drawn as a button. It had the face and the hover
+ * already; the sink was the missing third. */
+.button-like:active {
+    transform: translateY(var(--lift));
+    box-shadow: none;
+    background: var(--btn-active);
 }
 
 /* A group of controls that answer one question — the benchmark screen's
@@ -422,6 +574,22 @@ legend {
     color: var(--dim);
     font-size: var(--t-xs);
     line-height: var(--lh-xs);
+}
+/* A section symbol (B159: "Use symbols for sections"). Every `<h2>` and `<h3>`
+ * that names a section carries a stroke glyph from `lib/Icon.svelte` ahead of
+ * its words. It sits on the text's own line rather than floating, and takes the
+ * accent so a reader scanning down a long screen finds the sections by colour
+ * before the words. The gap is the space in the markup, or the container's own
+ * `gap` where a heading is a flex row. */
+:is(h2, h3, h4) > .icon {
+    display: inline-block;
+    flex: none;
+    vertical-align: -0.2em;
+    color: var(--accent);
+}
+.nav-title-icon {
+    flex: none;
+    color: var(--accent);
 }
 
 .sev {
@@ -666,6 +834,25 @@ pre {
    extension is doing its job, it is simply older than what ships. */
 .state.warn {
     border-color: var(--medium);
+}
+/* Italic marks anything different or important (B159). These are the shared
+ * places the app says something that is not the answer itself: a notice, a
+ * warning, a gap, a disputed claim, an empty state. Until now each was set
+ * apart by colour or a border alone, which a reader who cannot tell the
+ * colours apart, or who is reading a screenshot in greyscale, does not get.
+ * Italic is the one signal that survives both, and it is the real italic face
+ * (fonts.css), so it costs nothing in width. Kept to the shared classes: a
+ * screen with its own warning line says so with `.emph` (base.css). */
+.state.error,
+.state.warn,
+.state.no-match,
+.state.unknown,
+.empty,
+.empty-title,
+.flag,
+.badge.disputed,
+.badge.fact-warn {
+    font-style: italic;
 }
 
 /* B72 — a failure is a small block, not a line: what happened, what to do,
@@ -929,11 +1116,13 @@ li.gap {
      * rounded to sit beside text, and never squashed by the flex row. */
     display: block;
     flex: none;
-    width: 28px;
-    height: 28px;
+    /* 32px is half the drawing's 64-unit box. The rail used to draw the 16-cell
+     * grid here at 28px with `image-rendering: pixelated`, a 1.75 scale that
+     * cannot be crisp either way (B161). This is the vector drawing, smoothed
+     * as any vector is. */
+    width: 32px;
+    height: 32px;
     border-radius: var(--radius-sm);
-    /* Pixel art. Any smoothing on an integer upscale turns the grid to mush. */
-    image-rendering: pixelated;
 }
 .brand-text {
     display: grid;
@@ -969,7 +1158,6 @@ li.gap {
     border-radius: var(--radius-sm);
     background: var(--accent);
     color: var(--accent-ink);
-    font-family: var(--font-display);
     font-size: var(--t-sm);
     line-height: var(--lh-sm);
     font-weight: 600;
@@ -1095,6 +1283,11 @@ li.gap {
     gap: 1px;
 }
 .nav-title {
+    /* The title is a symbol and a word (B159). Flex so the glyph sits on the
+     * word's midline whatever the mono face's cap height does. */
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
     margin: 0 var(--s-2) var(--s-2);
     font-size: var(--t-xs);
     line-height: var(--lh-xs);
@@ -1495,52 +1688,6 @@ table.compare thead th {
     color: var(--text);
 }
 
-/* The one suggestion the app makes about itself. Panel-coloured rather than
- * accent-coloured: it is a hint standing above the view, not a warning about
- * it, and something that appears on nearly every page cannot also shout. */
-.nextstep {
-    display: flex;
-    gap: var(--s-4);
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    padding: var(--s-3) var(--s-4);
-    margin-bottom: var(--s-5);
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--accent);
-    border-radius: var(--radius-sm);
-    background: var(--panel);
-}
-.nextstep strong {
-    display: block;
-}
-.nextstep .meta {
-    display: block;
-    margin-top: var(--s-1);
-}
-.nextstep-do {
-    display: flex;
-    gap: var(--s-3);
-    align-items: center;
-    white-space: nowrap;
-}
-
-/* At a short window (620x520, the extension's popup size) the two-line
- * title-plus-detail layout above ate a third of the visible height on every
- * screen (shell-13), pushing the screen's own first result below the fold.
- * Below this height the detail line is dropped and everything sits on one
- * row — still a hint, but one that costs a single line rather than three. */
-@media (max-height: 820px) {
-    .nextstep {
-        padding: var(--s-2) var(--s-3);
-        margin-bottom: var(--s-3);
-        flex-wrap: nowrap;
-    }
-    .nextstep .meta {
-        display: none;
-    }
-}
-
 /* ── what the answer was computed against ───────────────────────────────── */
 
 /* A strip, not a table: the reader's question here is "did it even have the
@@ -1569,7 +1716,7 @@ table.compare thead th {
 }
 .handover textarea {
     width: 100%;
-    font-family: ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: var(--t-sm);
     line-height: var(--lh-sm);
 }

@@ -274,6 +274,89 @@ describe("the work column", () => {
         expect(toggle).toMatch(/accent-color:\s*var\(--accent\)/);
     });
 
+    /* B160: "Make all buttons and selections 3D, button-like". Held against the
+     * declarations because jsdom draws nothing: what can be asserted is that
+     * every control spends the button's own tokens, so that a change to the
+     * button's face moves them together and none can drift back to flat. */
+    describe("the raised control kit", () => {
+        const FACE = [
+            /background-color:\s*var\(--btn\)/,
+            /border-top-color:\s*var\(--btn-hi\)/,
+            /border-bottom-color:\s*var\(--btn-lo\)/,
+            /box-shadow:\s*var\(--shadow-1\)/,
+        ];
+        const PRESS = [
+            /transform:\s*translateY\(var\(--lift\)\)/,
+            /box-shadow:\s*none/,
+            /background-color:\s*var\(--btn-active\)/,
+        ];
+
+        it("gives text fields, selects and text areas the button's face", () => {
+            const field = block(
+                'input:not([type="radio"]):not([type="checkbox"]),\nselect,\ntextarea',
+            );
+            for (const part of FACE) expect(field).toMatch(part);
+        });
+
+        it("presses a field one pixel, exactly as a button sinks", () => {
+            const press = ruleContaining(
+                'input:not([type="radio"]):not([type="checkbox"]):active:not(:disabled),',
+            );
+            for (const part of PRESS) expect(press).toMatch(part);
+            const hover = ruleContaining(
+                'input:not([type="radio"]):not([type="checkbox"]):hover:not(:disabled),',
+            );
+            expect(hover).toMatch(/background-color:\s*var\(--btn-hover\)/);
+            expect(hover).toMatch(/border-color:\s*var\(--accent\)/);
+            // A disabled field must stop looking pressable, as a button does.
+            expect(ruleContaining("input:disabled,\nselect:disabled,")).toMatch(/transform:\s*none/);
+        });
+
+        it("draws one arrow on a select, from tokens, and leaves it a native select", () => {
+            const select = block("select");
+            expect(select).toMatch(/appearance:\s*none/);
+            // The arrow is gradients over the dim ink, not a data-URI stroke: a
+            // literal colour there is what tokens.test.ts refuses.
+            expect(select).toMatch(/linear-gradient\([^)]*var\(--dim\)/);
+            // The hover keeps it, so `background-color` (not the shorthand,
+            // which would reset the image) is what a hover changes.
+            expect(ruleContaining("select:hover:not(:disabled) {")).toMatch(
+                /linear-gradient\([^)]*var\(--accent\)/,
+            );
+            // Native semantics stay: no listbox replacement is in the sheet.
+            expect(CSS).not.toMatch(/role="listbox"/);
+        });
+
+        it("draws a radio choice as a raised card with a press of its own", () => {
+            const card = block(".choice");
+            for (const part of FACE) expect(card).toMatch(part);
+            for (const part of PRESS) expect(block(".choice:active")).toMatch(part);
+            // Chosen is a fill and an edge, not only a border hue.
+            expect(block(".choice.on")).toMatch(/background-color:\s*var\(--accent-soft\)/);
+            expect(block(".choice.on")).toMatch(/border-color:\s*var\(--accent\)/);
+        });
+
+        it("never draws the native file control", () => {
+            // The real input is kept and hidden; a button on the button face
+            // takes its place (lib/FilePick.svelte).
+            expect(block(".file-pick input[type=\"file\"]")).toMatch(/display:\s*none/);
+        });
+
+        it("gives a link drawn as a button its press too", () => {
+            for (const part of PRESS.slice(0, 2)) expect(block(".button-like:active")).toMatch(part);
+        });
+    });
+
+    it("draws the rail's mark as a smooth vector at half the drawing's unit", () => {
+        // B161: "Fix the pixelated Kriko logo in the top left". The rail drew a
+        // 16-cell grid at 28px with `image-rendering: pixelated`, a 1.75 scale
+        // that no smoothing setting makes crisp.
+        const mark = block(".brand .mark").replace(/\/\*[\s\S]*?\*\//g, "");
+        expect(mark).not.toMatch(/image-rendering/);
+        expect(mark).toMatch(/width:\s*32px/);
+        expect(mark).toMatch(/height:\s*32px/);
+    });
+
     it("does not draw a focus ring around the whole screen", () => {
         /* `.view` takes focus programmatically on every route change so a
          * screen reader starts at the new screen. Chrome matches

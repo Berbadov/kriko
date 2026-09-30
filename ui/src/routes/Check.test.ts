@@ -73,9 +73,9 @@ describe("Check", () => {
 
     it("says what the page does, and that the listing never leaves the machine", async () => {
         // B145 check-22: the old copy said "nothing sent anywhere", which was
-        // false the moment a background pack-update check touched the network
-        // (NextStep mounts on this screen too). The claim this makes is one the
-        // app actually keeps: the listing itself is never transmitted.
+        // false the moment a background pack-update check touched the network.
+        // The claim this makes is one the app actually keeps: the listing
+        // itself is never transmitted.
         stubFetch(ROUTES);
         render(Check);
         expect(await screen.findByText(/never leaves this machine/)).toBeInTheDocument();

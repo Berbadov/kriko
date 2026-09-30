@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "./Icon.svelte";
     import { api } from "./api";
     import { count } from "./plural";
     import Failure from "./Failure.svelte";
@@ -135,7 +136,7 @@
 <article class="card brief enter" aria-label="Research brief for {label}">
     <header class="brief-head">
         <div>
-            <h3>Research · {label}</h3>
+            <h3><Icon name="search" /> Research · {label}</h3>
             <span class="meta">
                 {#if job && !job.done}
                     <span class="live-dot"></span>
