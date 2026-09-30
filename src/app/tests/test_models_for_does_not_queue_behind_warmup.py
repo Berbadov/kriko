@@ -14,7 +14,7 @@ import time
 from app.providers import harness
 
 
-def _slow_command(executable, *argv):
+def _slow_command(executable, *argv, **kw):
     time.sleep(0.4)
     return "vendor/model-a\nvendor/model-b\n"
 

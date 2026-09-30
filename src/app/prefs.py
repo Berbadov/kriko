@@ -223,7 +223,7 @@ def api_agent_rows(conn) -> tuple[list[dict], list[dict]]:
             "id": one.id, "label": one.label, "path": one.host, "command": "",
             "needs_account": bills(one), "cost_basis": "per_token",
             "llm": for_harness(conn, one.id),
-            "llms": apiagent.models_for(one, KRIKO_HOME),
+            "llms": apiagent.models_for(one, KRIKO_HOME), "llms_note": "",
             "llm_hint": one.model_hint, "llm_selectable": True,
             "effort": "", "efforts": [], "effort_hint": "",
         }
@@ -265,6 +265,7 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
             "id": one.id, "label": one.label, "path": harness.locate(one),
             "llm": for_harness(conn, one.id),
             "llms": lists.get(one.id, []),
+            "llms_note": harness.models_note(one, lists.get(one.id, [])),
             "llm_hint": one.model_hint,
             # `model_env` counts. Mistral Vibe has no `--model` — its switch is
             # an environment variable its own config layer reads — so keying

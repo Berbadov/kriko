@@ -156,6 +156,7 @@
                                 : "no LLM switch on this agent"
                             : "Use preference"}
                         hint={activeHarness?.llm_hint ?? ""}
+                        note={activeHarness?.llms_note ?? ""}
                     />
                 </label>
                 <label>
