@@ -86,12 +86,21 @@ export type AgentTargets = { server_name: string; store: string; targets: AgentT
 
 export type AgentSkill = {
     name: string;
-    steps: { tool: string; why: string }[];
+    steps: { tool: string; input: string; output: string }[];
     /** null when no pack is installed: there is no protocol without knowledge. */
     body: string | null;
 };
 
-export type AgentVerify = { ok: boolean; server?: string; detail?: string };
+export type VerifyStep = { id: string; state: "ok" | "failed" | "skipped" };
+export type AgentVerify = {
+    ok: boolean;
+    server?: string;
+    detail?: string;
+    /** One entry per handshake step, in order (B177). */
+    steps?: VerifyStep[];
+    /** Shown only when the reader asks for it. */
+    log?: string;
+};
 
 export type Kind = { kind: string; pack_id: string };
 export type IdentityKey = { key: string; match_json?: string; required: boolean };
