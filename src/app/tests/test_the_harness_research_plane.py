@@ -29,10 +29,11 @@ arrives on their machine. Their init banner also said
 spawned agent gets no MCP config" was found to mean "gets the reader's own".
 
 The security gate is the one worth reading twice. The spawned agent is granted
-`WebSearch` and `WebFetch` and nothing else, and it is handed no MCP config at
-all: a research plane that can write files or run shell commands is not a
-research plane, and one that could call `submit_findings` would let claims
-arrive by a door the job that started it cannot see.
+`WebSearch` and `WebFetch` and nothing else, and none of Kriko's MCP tools (its
+one server is a page reader, B155, which only reads a page): a research plane
+that can write files or run shell commands is not a research plane, and one
+that could call `submit_findings` would let claims arrive by a door the job
+that started it cannot see.
 """
 
 import json
@@ -286,16 +287,21 @@ def test_the_opencode_agent_profile_denies_bash_and_edit(tmp_path, monkeypatch):
     assert "websearch: allow" in body
 
 
-def test_the_spawned_agent_is_handed_no_mcp_config():
-    """No `--mcp-config`, anywhere, on purpose.
+def test_the_spawned_agent_is_handed_no_krikos_tools_only_a_page_reader():
+    """No Kriko MCP server, anywhere, on purpose (B155 relaxed the rest).
 
     The alternative design — hand the agent Kriko's own tools — was rejected:
     findings would then be written by the agent while the job that started it
     reported zero, and `tasks.py`'s "kept …"/"refused …" lines would still
-    never be written. Findings come back on stdout instead.
+    never be written. Findings come back on stdout instead. What a run may be
+    handed is the per-run page reader (`command_for(reader_config=...)`), whose
+    one tool reads a page: no row's fixed `args` carries a config of its own,
+    and the only server that config names is the reader's.
     """
     for one in harness_mod.KNOWN:
         assert "--mcp-config" not in one.args
+        assert "--mcp-config" not in one.plain_args
+    assert list(harness_mod.reader_config()["mcpServers"]) == [harness_mod.READER_SERVER]
     assert "submit_findings" in CONTRACT  # named, to tell the agent NOT to
     assert "no Kriko tools" in CONTRACT
 
