@@ -682,7 +682,16 @@ def test_a_flag_this_machines_cli_never_heard_of_is_not_passed(monkeypatch):
     # runs, because a reader whose PATH does not carry `claude` still has one
     # on disk and a bare name would not start it.
     found = harness_mod.locate(one) or one.executable
+    # Both caches, or the test answers for a machine rather than for itself:
+    # `_DECLARED` is what drops the hygiene flags, and `_HELP` is what keeps
+    # `--output-format stream-json` — with the real helptext cached (a
+    # machine that has run `claude --help` this session) the vector keeps it,
+    # and with nothing cached (`locate` never found a CLI) `_ask`'s empty
+    # answer silently degrades the assertion to `plain_args`. Pin the help to
+    # the value the assertion names: a build that *does* declare the format.
     monkeypatch.setitem(harness_mod._DECLARED, found, frozenset())
+    monkeypatch.setitem(harness_mod._HELP, found,
+                        "--output-format stream-json json")
 
     assert harness_mod.command_for(one) == [found, *one.args]
 

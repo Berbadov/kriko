@@ -7,7 +7,6 @@ read, what the model is handed, and what happens when a page will not read.
 """
 
 import threading
-import time
 
 import pytest
 
