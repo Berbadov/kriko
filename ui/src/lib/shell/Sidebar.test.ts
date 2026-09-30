@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubFetch } from "../stub-fetch";
-import Jobs from "../../routes/Jobs.svelte";
+import Run from "../../routes/Run.svelte";
 import { parseHash } from "../router";
 import Sidebar from "./Sidebar.svelte";
 import { readings, unwatch, EMPTY } from "./instruments";
@@ -122,15 +122,12 @@ describe("the rail's primary action", () => {
         render(Sidebar);
         const action = screen.getByRole("link", { name: /Start a new pack/ });
         expect(action).toBeInTheDocument();
-        // Spelled out to "activity"/lens:"runs" rather than the "jobs"
-        // alias (shell-4): a link identical to the hash already there does
-        // not fire a hashchange, and a reader who had switched lens tabs
-        // (which now write their own ?lens=) left a hash this action's old,
-        // bare "?author=new" would not have differed from.
+        // The Run screen (B175). A plain route: there is no lens to go stale,
+        // which is what shell-4's dead second click was about.
         expect(parseHash(action.getAttribute("href") ?? "")).toEqual({
-            name: "activity",
+            name: "run",
             params: [],
-            query: { author: "new", lens: "runs" },
+            query: {},
         });
         // Outside `.rail-nav` on purpose: a rail lists where you are, and this
         // is a do. Inside it, it reads as the fourteenth destination.
@@ -153,51 +150,24 @@ describe("the new-pack destination", () => {
         window.history.replaceState(null, "", "#/activity");
     });
 
-    it("opens and focuses authoring on arrival, without starting work", async () => {
+    it("has its own row in the rail, and the action lands on the same screen (B175)", () => {
+        render(Sidebar);
+        const row = screen.getByRole("link", { name: "Run" });
+        const action = screen.getByRole("link", { name: /Start a new pack/ });
+        expect(row.getAttribute("href")).toBe(action.getAttribute("href"));
+    });
+
+    it("opens the Run screen on the category field, without starting work", async () => {
         const fetchMock = vi.fn(async (_path: string, _init?: RequestInit) =>
-            new Response(JSON.stringify({ items: [] })),
+            new Response(JSON.stringify({ items: [], harnesses: [], scales: [] })),
         );
         vi.stubGlobal("fetch", fetchMock);
         render(Sidebar);
         at(screen.getByRole("link", { name: /Start a new pack/ }).getAttribute("href")!);
-        render(Jobs);
-        const input = screen.getByLabelText("What is the category?");
+        render(Run);
+        const input = screen.getByLabelText("Category");
         await waitFor(() => expect(input).toHaveFocus());
-        // B146: the form is a section now, never collapsed.
-        expect(input.closest(".authoring")).not.toBeNull();
-        expect(input.closest("details")).toBeNull();
-        expect(parseHash(window.location.hash).query).toEqual({
-            lens: "runs",
-        });
         expect(fetchMock.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
-    });
-
-    it("still differs from a hash a lens tab switch already changed (shell-4)", () => {
-        // The rail action's href must not equal a hash a reader could
-        // already be on — a tab click that had rewritten ?lens= to
-        // something other than "runs" used to leave the rail action a
-        // no-op, because setting the hash to what it already was fires no
-        // hashchange at all.
-        window.history.replaceState(null, "", "#/activity?lens=live");
-        render(Sidebar);
-        const href = screen.getByRole("link", { name: /Start a new pack/ }).getAttribute("href");
-        expect(href).not.toBe(window.location.hash);
-    });
-
-    it("reopens the form on the same route without clearing a draft", async () => {
-        vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [] }))));
-        at("#/jobs");
-        render(Sidebar);
-        render(Jobs);
-        const input = screen.getByLabelText("What is the category?");
-        const action = screen.getByRole("link", { name: /Start a new pack/ });
-        at(action.getAttribute("href")!);
-        await waitFor(() => expect(input).toHaveFocus());
-        await fireEvent.input(input, { target: { value: "espresso machines" } });
-        action.focus();
-        at(action.getAttribute("href")!);
-        await waitFor(() => expect(input).toHaveFocus());
-        expect(input).toHaveValue("espresso machines");
     });
 });
 

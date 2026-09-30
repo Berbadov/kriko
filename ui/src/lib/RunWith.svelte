@@ -1,18 +1,25 @@
 <script lang="ts">
-    import Pick from "./Pick.svelte";
     import Icon from "./Icon.svelte";
+    import Menu from "./Menu.svelte";
     import { api } from "./api";
     import type { HarnessModel, Prefs } from "./types";
 
-    /* Which agent, which LLM, how hard, how long — one row, beside the button
+    /* Which agent, which LLM, how hard, how long: one row, beside the button
      * that runs it.
      *
      * B146: "im unable to see the options for resource and effort limit". They
-     * existed: the per-agent LLM and effort were a card each on Agents, two
-     * screens below the fold and nowhere near a button that starts a run.
+     * existed on Agents, two screens below the fold and nowhere near a button
+     * that starts a run.
      *
-     * LLM and effort are written as the agent's own preference — the same key
-     * Agents writes — rather than sent with this one run, so a choice made
+     * B175: the row is compact (a caption and a choice each, no paragraph), the
+     * choices carry the provider's mark, and the LLM list is asked of the CLI
+     * when the screen opens (`/api/prefs?fresh=true`) rather than read from a
+     * ten-minute cache, because models change daily. Until that answer lands
+     * the cached list is shown with a spinner, so the row is never empty
+     * while it waits.
+     *
+     * LLM and effort are written as the agent's own preference, the same key
+     * Agents writes, rather than sent with this one run, so a choice made
      * here and one made there can never disagree. Only the agent and the time
      * limit are per-run, bound to the caller.
      */
@@ -20,7 +27,7 @@
         harness = $bindable(""),
         disabled = false,
         /** Seconds, or 0 for the server's own ceiling. Drawn only when the
-         *  caller passes `timeouts` — i.e. its endpoint takes one. */
+         *  caller passes `timeouts`, i.e. its endpoint takes one. */
         timeout = $bindable(0),
         timeouts = [],
     }: {
@@ -31,85 +38,103 @@
     } = $props();
 
     let prefs = $state<Prefs | null>(null);
-    let note = $state("");
+    let refreshing = $state(true);
+    let failed = $state("");
     api.prefs()
         .then((data) => (prefs = data))
         .catch(() => (prefs = null));
+    // Asked of the CLI itself. The cached answer above paints first; this one
+    // replaces it, and a failure keeps what was already on screen.
+    api.prefs(true)
+        .then((data) => (prefs = data))
+        .catch(() => {})
+        .finally(() => (refreshing = false));
 
     const harnesses = $derived<HarnessModel[]>(prefs?.harnesses ?? []);
     const preferred = $derived(prefs?.chosen?.preferred_harness ?? "");
     const active = $derived(
         harnesses.find((one) => one.id === (harness || preferred)) ?? harnesses[0],
     );
-    const labelOf = (id: string) => harnesses.find((one) => one.id === id)?.label ?? id;
     const key = (prefix: string, id: string) => `${prefix}_${id.replace(/-/g, "_")}`;
 
     async function save(values: Record<string, string>) {
+        failed = "";
         try {
             prefs = await api.savePrefs(values);
-            note = `Saved for ${active?.label ?? "this agent"}`;
         } catch (thrown) {
-            note = `Could not save: ${thrown instanceof Error ? thrown.message : String(thrown)}`;
+            failed = `Could not save: ${thrown instanceof Error ? thrown.message : String(thrown)}`;
         }
     }
+
+    const agentOptions = $derived(
+        harnesses.map((one) => ({ value: one.id, label: one.label, mark: one.id })),
+    );
+    const llmOptions = $derived([
+        { value: "", label: "CLI default", mark: active?.id },
+        ...(active?.llms ?? []).map((name) => ({ value: name, mark: name })),
+    ]);
+    const effortOptions = $derived([
+        { value: "", label: "CLI default" },
+        ...(active?.efforts ?? []).map((level) => ({ value: level })),
+    ]);
+    const timeoutOptions = $derived(
+        timeouts.map((one) => ({ value: String(one.seconds), label: one.label })),
+    );
 </script>
 
 {#if harnesses.length}
     <div class="runwith" role="group" aria-label="Run with">
-        <label class="dial">
-            <span><Icon name="agent" size={14} /> Agent</span>
-            <select bind:value={harness} {disabled}>
-                <option value="">
-                    {preferred ? `Preferred — ${labelOf(preferred)}` : `Automatic — ${harnesses[0].label}`}
-                </option>
-                {#each harnesses as one (one.id)}
-                    <option value={one.id}>{one.label}</option>
-                {/each}
-            </select>
-        </label>
-        {#if active?.llm_selectable}
+        <div class="dial">
+            <span class="cap"><Icon name="agent" size={14} /> Agent</span>
+            <Menu
+                label="Agent"
+                {disabled}
+                value={active?.id ?? ""}
+                options={agentOptions}
+                onpick={(picked) => (harness = picked)}
+            />
+        </div>
+        {#if active?.llm_selectable && (active.llms ?? []).length}
             <div class="dial">
-                <span><Icon name="llm" size={14} /> LLM</span>
-                <Pick
-                    value={active.llm ?? ""}
-                    options={(active.llms ?? []).map((name) => ({ value: name }))}
-                    emptyLabel="CLI default"
-                    note={active.llms_note}
+                <span class="cap"><Icon name="llm" size={14} /> LLM</span>
+                <Menu
+                    label="LLM"
                     {disabled}
+                    busy={refreshing}
+                    value={active.llm ?? ""}
+                    options={llmOptions}
                     onpick={(chosen) => save({ [key("harness_model", active.id)]: chosen })}
                 />
             </div>
         {/if}
         {#if (active?.efforts ?? []).length}
-            <label class="dial">
-                <span><Icon name="effort" size={14} /> Effort</span>
-                <select
-                    value={active.effort ?? ""}
+            <div class="dial">
+                <span class="cap"><Icon name="effort" size={14} /> Effort</span>
+                <Menu
+                    label="Effort"
                     {disabled}
-                    onchange={(event) =>
-                        save({ [key("harness_effort", active.id)]: event.currentTarget.value })}
-                >
-                    <option value="">CLI default</option>
-                    {#each active.efforts ?? [] as level (level)}
-                        <option value={level}>{level}</option>
-                    {/each}
-                </select>
-            </label>
+                    value={active.effort ?? ""}
+                    options={effortOptions}
+                    onpick={(chosen) => save({ [key("harness_effort", active.id)]: chosen })}
+                />
+            </div>
         {/if}
         {#if timeouts.length}
-            <label class="dial">
-                <span><Icon name="schedule" size={14} /> Stop after</span>
-                <select bind:value={timeout} {disabled}>
-                    {#each timeouts as one (one.seconds)}
-                        <option value={one.seconds}>{one.label}</option>
-                    {/each}
-                </select>
-            </label>
+            <div class="dial">
+                <span class="cap"><Icon name="schedule" size={14} /> Stop after</span>
+                <Menu
+                    label="Stop after"
+                    {disabled}
+                    value={String(timeout)}
+                    options={timeoutOptions}
+                    onpick={(chosen) => (timeout = Number(chosen))}
+                />
+            </div>
         {/if}
     </div>
-    <p class="meta hint" aria-live="polite">
-        {note || "Lower effort answers sooner and costs less. LLM and effort are remembered per agent."}
-    </p>
+    {#if failed}
+        <p class="state error" role="alert">{failed}</p>
+    {/if}
 {/if}
 
 <style>
@@ -126,15 +151,13 @@
         gap: 0.25rem;
         flex: 1 1 9rem;
         max-width: 14rem;
+        min-width: 0;
     }
-    .dial > span {
+    .cap {
         display: inline-flex;
         align-items: center;
         gap: 0.35rem;
         font-size: 0.8rem;
         color: var(--ink-2);
-    }
-    .hint {
-        margin-block: var(--s-1) var(--s-2);
     }
 </style>

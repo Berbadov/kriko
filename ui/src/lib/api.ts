@@ -219,10 +219,11 @@ export const api = {
      * rather than a request: it spawns an agent that searches for minutes, and
      * the reply is worth outliving the page. Installs nothing.
      */
-    authorPack: (category: string, harness = "", timeoutSeconds = 0) =>
+    authorPack: (category: string, harness = "", timeoutSeconds = 0, maxDocuments = 0) =>
         postJson<{ job_id: string; kind: string }>("/api/packs/author", {
             category,
             ...(harness ? { harness } : {}),
+            ...(maxDocuments > 0 ? { max_documents: maxDocuments } : {}),
             // 0 is the server's own ceiling; only a chosen limit goes on the wire.
             ...(timeoutSeconds > 0 ? { timeout_seconds: timeoutSeconds } : {}),
         }),
