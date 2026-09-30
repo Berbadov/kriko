@@ -292,6 +292,11 @@ def skill_status(target: Target, name: str, body: str) -> dict:
     updated yesterday all reached the code and never reached the agent, and
     from the reader's side the answer to "did the skill change" was correctly
     *no*.
+
+    "Current" compares the protocol only. The agenda snapshot and the pack
+    counts are fenced out of the digest (`agentskill.snapshot`), because they
+    change with every analysis and read as stale again straight after the
+    button cleared them (B157).
     """
     path = skill_path(target, name)
     if path is None:
