@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "./Icon.svelte";
     import Async from "./Async.svelte";
     import { api } from "./api";
     import { stamp } from "./time";
@@ -85,7 +86,7 @@
 </script>
 
 <section class="runs">
-    <h3>Research runs</h3>
+    <h3><Icon name="jobs" /> Research runs</h3>
     <p class="meta">
         Every run that wrote a claim into the store, and what it wrote. Undoing one
         removes only that run's claims — nothing another run or another door added.

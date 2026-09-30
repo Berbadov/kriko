@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import Async from "../lib/Async.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
@@ -92,7 +93,7 @@
     );
 </script>
 
-<h2>Compare saved checks</h2>
+<h2><Icon name="compare" size={22} /> Compare saved checks</h2>
 
 <Async promise={listed} loading="Loading history…">
     {#snippet children()}

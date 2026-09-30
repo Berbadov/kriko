@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../Icon.svelte";
     import { onMount, tick } from "svelte";
     import { api } from "../api";
 
@@ -90,7 +91,7 @@
                 <circle cx="12" cy="12.5" r="1.6" fill="currentColor" />
             </svg>
         </div>
-        <h2 id="close-notice-title">Kriko keeps running</h2>
+        <h2 id="close-notice-title"><Icon name="monitor" size={22} /> Kriko keeps running</h2>
         <p id="close-notice-body">
             The window closes, and Kriko stays in the tray by the clock so the
             browser extension can still reach it. Click the tray icon to come

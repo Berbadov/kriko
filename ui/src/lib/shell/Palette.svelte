@@ -279,12 +279,13 @@
         box-shadow: var(--shadow-2);
         overflow: hidden;
     }
+    /* The palette's search line is a text field like any other, so it wears the
+     * raised face (B160) as a box inset in the panel rather than a bare rule
+     * across its top edge. */
     .palette input {
-        width: 100%;
+        width: calc(100% - var(--s-4));
+        margin: var(--s-2);
         box-sizing: border-box;
-        border: 0;
-        border-block-end: 1px solid var(--line);
-        border-radius: 0;
         font-size: var(--t-md);
         line-height: var(--lh-md);
         padding: var(--s-3);

@@ -1,9 +1,9 @@
 /** Every link this app writes points at a view this app has.
  *
- * The onboarding path is real — `Welcome` on an empty store, `NextStep`
- * afterwards, and an `EmptyState` on most screens whose whole job is to hand
- * the reader the next place to go. What none of that had was a check that the
- * place exists. The audit's F10 names the symptom: the Packs empty state
+ * The onboarding path is real — `Welcome` on an empty store, and an
+ * `EmptyState` on most screens whose whole job is to hand the reader the next
+ * place to go. (A `NextStep` banner used to be the third; B161 removed it.)
+ * What none of that had was a check that the place exists. The audit's F10 names the symptom: the Packs empty state
  * pointed at a route that had to be corrected once already, by hand, after
  * someone clicked it.
  *
@@ -13,9 +13,9 @@
  * which is indistinguishable from a broken install.
  *
  * So this walks the source for every destination anyone writes down and asks
- * whether `App.svelte` would render it. Three spellings, because there are
- * three: a literal `#/name` in markup, a `toHash`/`hashWith` call, and a route
- * name handed to `NextStep`. Nothing here is a list of routes — the renderable
+ * whether `App.svelte` would render it. Two spellings, because there are
+ * two: a literal `#/name` in markup, and a `toHash`/`hashWith` call. Nothing
+ * here is a list of routes — the renderable
  * set is read off `nav.ts` and off `App.svelte`'s own if-chain, so retiring a
  * route turns its links red the moment it goes.
  */
@@ -71,9 +71,6 @@ for (const [path, source] of Object.entries(SOURCES)) {
         links.push({ where, name, how: "a hash built in code" });
     for (const [, name] of body.matchAll(/hashWith\(\{[^}]*\}[^)]*?["']([a-z][a-z0-9-]*)["']/g))
         links.push({ where, name, how: "a hash built in code" });
-    if (path.endsWith("nextStep.ts"))
-        for (const [, name] of body.matchAll(/^\s+route: "([a-z][a-z0-9-]*)",$/gm))
-            links.push({ where, name, how: "a next step" });
 }
 
 describe("the links this app writes", () => {
@@ -83,7 +80,7 @@ describe("the links this app writes", () => {
     it("found the app and the links in it", () => {
         expect(APP.length).toBeGreaterThan(1000);
         expect(links.length).toBeGreaterThan(10);
-        expect(new Set(links.map((l) => l.how)).size).toBe(3);
+        expect(new Set(links.map((l) => l.how)).size).toBe(2);
     });
 
     it.each([...new Set(links.map((l) => l.name))])("#/%s is a view this app renders", (name) => {
@@ -91,16 +88,6 @@ describe("the links this app writes", () => {
         expect(renders(name), `${name} is written as ${written[0].how} in ${written
             .map((l) => l.where)
             .join(", ")} and App.svelte renders no such view`).toBe(true);
-    });
-
-    // The onboarding steps get their own assertion rather than only riding
-    // along above: the reader who meets a dead link there is the one least
-    // equipped to work around it, and "some link somewhere is fine" is not
-    // the claim worth holding.
-    it("every onboarding step names a view", () => {
-        const steps = links.filter((l) => l.how === "a next step");
-        expect(steps.length).toBeGreaterThan(4);
-        expect(steps.filter((s) => !renders(s.name))).toEqual([]);
     });
 });
 

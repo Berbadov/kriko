@@ -14,11 +14,39 @@ afterEach(() => {
 });
 
 describe("Sidebar", () => {
-    it("shows a buyer two group-less destinations and no operator work", () => {
+    it("shows a buyer the two groups they can use and no operator work", () => {
         render(Sidebar, { mode: "buyer" });
         expect(screen.getByRole("link", { name: "New check" })).toBeInTheDocument();
         expect(screen.queryByRole("link", { name: "Browse" })).toBeNull();
         expect(screen.queryByText("Knowledge")).toBeNull();
+        expect(screen.getByText("Check")).toBeInTheDocument();
+        expect(screen.getByText("This install")).toBeInTheDocument();
+    });
+
+    it("gives every group title a symbol, and no title is only letters", () => {
+        // B159: "Use symbols for sections". A group in the rail used to be a
+        // run of rows, or (for the author-only two) a bare word in capitals.
+        for (const shown of ["buyer", "author"] as const) {
+            const { container, unmount } = render(Sidebar, { mode: shown });
+            const titles = container.querySelectorAll(".nav-title");
+            expect(titles.length).toBe(shown === "buyer" ? 2 : 4);
+            for (const title of titles) {
+                const symbol = title.querySelector("svg");
+                expect(symbol, `${title.textContent?.trim()} has no symbol`).not.toBeNull();
+                // A symbol that failed to draw is an empty box, not a glyph.
+                expect(symbol?.querySelectorAll("path").length).toBeGreaterThan(0);
+            }
+            unmount();
+        }
+    });
+
+    it("draws the brand mark from the smooth drawing, not the pixel grid", () => {
+        // B161: the rail drew the 16x16 grid at 28px and it read as pixelated.
+        const { container } = render(Sidebar, { mode: "buyer" });
+        const mark = container.querySelector("img.mark") as HTMLImageElement;
+        expect(mark.getAttribute("src")).toBe("/static/mark-large.svg");
+        expect(mark.getAttribute("width")).toBe("32");
+        expect(mark.getAttribute("height")).toBe("32");
     });
 
     it("shows an author the grouped operator destinations", () => {

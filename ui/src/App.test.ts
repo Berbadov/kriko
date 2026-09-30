@@ -91,6 +91,36 @@ describe("App", () => {
         expect(screen.queryByText(/knows nothing yet/)).not.toBeInTheDocument();
     });
 
+    /* B161: "Remove the 'Open coverage' indicator (annoying)". The banner was
+     * mounted once here and offered the first unmet step on every screen. What
+     * the reader sees now is no suggestion bar at all, however much is unmet:
+     * this store has no check run yet and no agent connected, which is exactly
+     * what used to raise one. */
+    it("shows no next-step banner, even when there is something to suggest", async () => {
+        window.location.hash = "#/about?mode=buyer";
+        stubFetch(EMPTY);
+        render(App);
+        // The screen has rendered (About's heading), so an absent banner is
+        // an absence and not a screen that had not loaded yet.
+        expect(await screen.findByRole("heading", { name: /This install/ })).toBeInTheDocument();
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        expect(screen.queryByRole("complementary", { name: /next step/i })).toBeNull();
+        expect(screen.queryByRole("button", { name: /dismiss this suggestion/i })).toBeNull();
+        expect(document.querySelector(".nextstep")).toBeNull();
+    });
+
+    /* B159: Panel is the only theme. A `theme` row an older install left in the
+     * settings table, and the copy of it the old first-paint script mirrored to
+     * browser storage, are read by nothing, so neither can repaint the app. */
+    it("ignores a theme an older install remembered", async () => {
+        localStorage.setItem("kriko-theme", "lemonade");
+        stubFetch({ ...EMPTY, "/api/settings": { mode: "buyer", theme: "lemonade" } });
+        render(App);
+        expect(await screen.findByRole("link", { name: "New check" })).toBeInTheDocument();
+        expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+        localStorage.removeItem("kriko-theme");
+    });
+
     it("does not block the app when the status call fails", async () => {
         stubFetch({ ...EMPTY, "/api/status": { status: 500, body: "boom" } });
         render(App);

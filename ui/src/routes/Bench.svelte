@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import { count } from "../lib/plural";
     import Async from "../lib/Async.svelte";
     import BenchChart from "../lib/BenchChart.svelte";
@@ -255,7 +256,7 @@
     });
 </script>
 
-<h2>Benchmark</h2>
+<h2><Icon name="bench" size={22} /> Benchmark</h2>
 <p class="lede">
     At what batch size and context does each LLM stay honest, and what does a kept
     claim cost? Every row below is measured against ground truth this pack's author
@@ -266,7 +267,7 @@
 {#if startFailure}<Failure error={startFailure} retry={start} />{/if}
 
 <section class="card" aria-label="Scope the grid">
-    <h3>Scope the grid</h3>
+    <h3><Icon name="grid" /> Scope the grid</h3>
     <p class="meta">Every axis multiplies. Nothing selected means whatever this machine would pick.</p>
     <!-- Two halves, because they are two different decisions and the screen
          used to present eight flat fieldsets in a column that answered
@@ -275,7 +276,7 @@
          thinking about the other. -->
     <div class="grid">
         <div class="group">
-            <h3>What to compare</h3>
+            <h3><Icon name="compare" /> What to compare</h3>
             <p class="meta">Every selection here multiplies the number of
                 measurements. Leaving one empty means "whatever this
                 installation would have chosen anyway".</p>
@@ -360,7 +361,7 @@
         </fieldset>
         </div>
         <div class="group">
-            <h3>How much of it</h3>
+            <h3><Icon name="effort" /> How much of it</h3>
             <p class="meta">How deep each run reads, how many subjects it
                 reads, and where it stops. This is the half that decides the
                 bill.</p>
@@ -511,7 +512,7 @@
                 </tbody>
             </table>
 
-            <h3>Cost vs. hallucination, by protocol</h3>
+            <h3><Icon name="chart" /> Cost vs. hallucination, by protocol</h3>
             <p class="meta">
                 One panel per LLM. Each point is a protocol this install has actually
                 graded against ground truth; the filled point is the protocol that LLM

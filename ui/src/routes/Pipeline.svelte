@@ -13,6 +13,7 @@
      * vocabulary belongs to the pipeline; a second copy in TypeScript is a
      * second place to forget when a stage is added.
      */
+    import Icon from "../lib/Icon.svelte";
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
@@ -80,7 +81,7 @@
     };
 </script>
 
-<h2>Knowledge pipeline</h2>
+<h2><Icon name="pipeline" size={22} /> Knowledge pipeline</h2>
 <p class="meta">
     Four stages turn sources into claims: Discovery finds candidates,
     Extraction pulls grounded findings out of them, Ingestion puts those
@@ -207,7 +208,7 @@
 {/if}
 
 {#if runs.length}
-    <h3>Earlier runs</h3>
+    <h3><Icon name="history" /> Earlier runs</h3>
     <table>
         <thead>
             <tr>
