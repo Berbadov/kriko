@@ -188,6 +188,17 @@ export type Subject = {
     claims: number;
 };
 
+/** One Browse filter, as `/api/subjects/filters` describes it (B180). The
+ * screen renders whatever rows arrive and types none of their words. */
+export type SubjectFilter = {
+    id: string;
+    /** The `/api/subjects` query parameter this filter feeds. */
+    param: string;
+    label: string;
+    description: string;
+    options: { value: string; label: string; count: number; description?: string }[];
+};
+
 export type Gap = { subject_id: string; label: string; kind: string; pack_id: string };
 
 /** One `/api/search` hit — a `Subject` plus the identity that tells two rows
@@ -411,6 +422,9 @@ export type HistoryItem = {
     source: string;
     label: string;
     claim_count: number;
+    /** The name of the pack that answered, or empty when none did (B182). */
+    category: string;
+    packs: { pack_id: string; name: string }[];
 };
 
 /** A comparison the reader named and kept (B183). Which checks, in order. */

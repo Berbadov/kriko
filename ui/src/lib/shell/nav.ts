@@ -126,7 +126,8 @@ export const ALL_ROUTES: string[] = NAV.flatMap((group) =>
  * older `NextStep` hints all point at `#/coverage`. Retiring a tab must not
  * turn those into "No such view" — they land on the lens that absorbed them.
  */
-export const ALIASES: Record<string, { name: string; lens?: string }> = {
+export type Alias = { name: string; lens?: string; catalogs?: boolean };
+export const ALIASES: Record<string, Alias> = {
     subjects: { name: "knowledge", lens: "all" },
     // Singular, and it carries an id: `#/subject/<id>` is what the browser
     // panel's search builds. The plural above is the unfiltered list.
@@ -138,7 +139,9 @@ export const ALIASES: Record<string, { name: string; lens?: string }> = {
     // screen lists them. The address lands on Browse rather than on nothing.
     marks: { name: "knowledge", lens: "all" },
     // Packs became the section at the top of Browse (B167).
-    packs: { name: "knowledge", lens: "all" },
+    // `catalogs` opens the folded line there (B180), so the old address still
+    // lands on the installed packs.
+    packs: { name: "knowledge", lens: "all", catalogs: true },
     // The five names the System group used to spell out. Every one of them is
     // a link something already hands out — `#/jobs` is what a POST's own
     // response points at, `#/connect` is in the first-run hints — so they
@@ -161,7 +164,7 @@ export const ALIASES: Record<string, { name: string; lens?: string }> = {
 };
 
 /** The route a name actually renders, following one alias hop. */
-export const resolve = (name: string): { name: string; lens?: string } =>
+export const resolve = (name: string): Alias =>
     ALIASES[name] ?? { name };
 
 
