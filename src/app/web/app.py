@@ -163,7 +163,10 @@ async def lifespan(app: FastAPI):
             raise FileNotFoundError(app.state.settings.store_path)
         store = connect(app.state.settings.store_path)
         try:
-            body = agentskill.render(store) or ""
+            # Rendered as the status check and the Update button render it, so
+            # what startup writes is what they compare against (B157: it once
+            # left out the agenda snapshot the other two put in).
+            body = agent.skill_body(app.state.settings, store)
         finally:
             store.close()
         refreshed = agentconfig.refresh_skills(agentskill.SKILL_NAME, body)
