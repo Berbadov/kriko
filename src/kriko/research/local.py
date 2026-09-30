@@ -82,6 +82,18 @@ class LocalPlane:
         self.spent_calls = 0
         self._scheduler = scheduler
         self._json_schema = json_schema
+        #: Where the plane narrates, set by the job like the harness plane's.
+        #: A local plane that fails says so here, in words naming the address
+        #: and the reason, instead of ending a run as "0 claims kept" (B171).
+        self.on_action: Callable[[str], None] | None = None
+        #: The last reason a call failed, read by the job when a run gathers
+        #: nothing, beside the plane's general empty-run sentence.
+        self.note = ""
+        self._failed_in_a_row = 0
+
+    def _say(self, line: str) -> None:
+        if self.on_action is not None:
+            self.on_action(line)
 
     @property
     def tokens_used(self) -> int | None:
@@ -176,11 +188,14 @@ class LocalPlane:
                 if delay > 0:
                     _time.sleep(min(delay, 5.0))
                 return attempt()
-            except LocalSearchError:
+            except LocalSearchError as error:
                 self._scheduler.report(source, blocked=True)
+                self.note = f"search failed: {error}"
+                self._say(self.note)
                 return None
-            except Exception:
+            except Exception as error:  # noqa: BLE001 - said, not swallowed
                 self._scheduler.report(source, failed=True)
+                self._say(f"{type(error).__name__} while reading a page: {error}")
                 return None
             finally:
                 self._scheduler.release()
@@ -206,7 +221,21 @@ class LocalPlane:
             "Return [] if the documents support no claim about this subject."
         )
         self.check_cancelled()
-        reply = self._complete(prompt)
+        try:
+            reply = self._complete(prompt)
+        except Exception as error:  # noqa: BLE001 - the reason is the point
+            # Not `{}`: an unreachable server, a missing model and a timeout
+            # used to read as "0 claims kept". The first failure is said and
+            # the run goes on (one document's reply may be the bad one); a
+            # second in a row means the server is the problem, so the run
+            # stops with the reason instead of repeating it per document.
+            self._failed_in_a_row += 1
+            self.note = str(error)
+            self._say(f"the local server did not answer: {error}")
+            if self._failed_in_a_row >= 2:
+                raise
+            return {}
+        self._failed_in_a_row = 0
         self.spent_calls += 1
         return self._parse(task, batch, reply)
 
