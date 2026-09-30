@@ -85,11 +85,7 @@ import pytest
 #: Raised .js from 333,000 to 334,000 on 2026-09-30: B158, no dependency. A
 #: pick whose CLI lists no models now says so (`Pick.svelte`'s `note`, passed
 #: by four screens) and Bench names such a CLI beside the chips. 333,380 bytes.
-#: Raised .js from 334,000 to 338,000 on 2026-09-30: B171, no dependency. The
-#: Settings "Local machine" section (`LocalMachine.svelte`: server address, a
-#: model list the server reports, search address, timeout, the readiness
-#: line). 336,017 bytes.
-BUDGET = {".js": 338_000, ".css": 60_000}
+BUDGET = {".js": 334_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the
@@ -105,10 +101,7 @@ DEFERRED: tuple[str, ...] = ()
 #: gave `Planes.svelte` its own card and readiness probe, with no new
 #: dependency. 332,077 bytes of JS and 56,361 of CSS, 388,438 in all; this
 #: records it rather than trimming the card to fit a number.
-#:
-#: Raised from 392,000 to 396,000 on 2026-09-30 for the same B171 section:
-#: 336,017 bytes of JS and 56,982 of CSS, 392,999 in all.
-FIRST_PAINT_BUDGET = 396_000
+FIRST_PAINT_BUDGET = 392_000
 
 #: The whole payload, gzipped or not, including the index and any asset Vite
 #: emitted beside the two bundles. What the window actually has to read.
