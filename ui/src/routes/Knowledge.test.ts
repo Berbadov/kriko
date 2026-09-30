@@ -15,17 +15,8 @@ const PACK = {
     enabled: true,
     subjects: 2,
     claims: 3,
-};
-
-const MARK = {
-    pack_id: "org.kriko.cars",
-    claim_id: "c1",
-    verdict: "wrong",
-    note: "",
-    subject_id: "s1",
-    title: "Timing chain tensioner wear",
-    created_at: "2026-09-06T10:00:00Z",
-    updated_at: "2026-09-06T10:00:00Z",
+    evidence: 4,
+    digest: "abc123",
 };
 
 function serve(over: Record<string, unknown> = {}) {
@@ -34,8 +25,6 @@ function serve(over: Record<string, unknown> = {}) {
         "/api/packs": [PACK],
         "/api/subjects": [],
         "/api/packs/org.kriko.cars/gaps": [],
-        "/api/marks": { items: [], counts: {}, verdicts: ["useful", "not_applicable", "wrong"] },
-        "/api/marks/signals": { research: [], matching: [] },
         ...over,
     });
 }
@@ -50,41 +39,46 @@ describe("Knowledge", () => {
         expect(screen.getByText("claims")).toBeInTheDocument();
     });
 
-    it("opens on the lens the route named, so an old bookmark still lands right", async () => {
+    it("shows three lenses, and no tab for what readers said (B166)", async () => {
         serve();
+        render(Knowledge, {});
+        await screen.findByRole("tab", { name: /What is here/ });
+        expect(screen.getAllByRole("tab").map((tab) => tab.textContent?.trim())).toEqual([
+            "What is here",
+            "What is missing",
+            "What is thin",
+        ]);
+        expect(screen.queryByText(/What readers said/)).toBeNull();
+        expect(screen.queryByText(/Worth researching again/)).toBeNull();
+    });
+
+    it("opens on the lens the route named, and an old marks bookmark lands on the first", async () => {
+        serve();
+        const first = render(Knowledge, { lens: "gaps" });
+        await waitFor(() =>
+            expect(screen.getByRole("tab", { name: /What is missing/ })).toHaveAttribute(
+                "aria-selected",
+                "true",
+            ),
+        );
+        first.unmount();
+        // `#/marks` resolves to "all" in nav.ts, but a stale `lens=marked`
+        // must not leave the screen with no tab selected either.
         render(Knowledge, { lens: "marked" });
         await waitFor(() =>
-            expect(
-                screen.getByRole("tab", { name: /What readers said/ }),
-            ).toHaveAttribute("aria-selected", "true"),
+            expect(screen.getByRole("tab", { name: /What is here/ })).toHaveAttribute(
+                "aria-selected",
+                "true",
+            ),
         );
     });
 
-    it("names every verdict even at zero, so the strip does not change shape", async () => {
+    it("never asks for the marks any more: the extension posts them, this screen does not read them", async () => {
         serve();
-        render(Knowledge, { lens: "marked" });
-        await waitFor(() => expect(screen.getByText("Useful")).toBeInTheDocument());
-        // "Not mine" and "Wrong" are separate on purpose: one is a matching
-        // problem, the other a knowledge problem.
-        expect(screen.getByText("Not mine")).toBeInTheDocument();
-        expect(screen.getByText("Wrong")).toBeInTheDocument();
-    });
-
-    it("tells an author what a reader called wrong, by the claim's own words", async () => {
-        serve({
-            "/api/marks": {
-                items: [MARK],
-                counts: { useful: 0, not_applicable: 0, wrong: 1 },
-                verdicts: ["useful", "not_applicable", "wrong"],
-            },
-        });
-        render(Knowledge, { lens: "marked" });
-        await waitFor(() =>
-            expect(screen.getByText("Timing chain tensioner wear")).toBeInTheDocument(),
-        );
-        // The title is stored on the mark rather than looked up, so it still
-        // reads after the pack that held the claim is uninstalled.
-        expect(screen.getByRole("button", { name: "Forget" })).toBeInTheDocument();
+        render(Knowledge, {});
+        await screen.findByRole("tab", { name: /What is here/ });
+        const asked = vi.mocked(globalThis.fetch).mock.calls.map(([url]) => String(url));
+        expect(asked.some((url) => url.startsWith("/api/marks"))).toBe(false);
     });
 
     it("moves the lens with arrow keys, the same roving-tabindex contract Activity's tabs carry (knowledge-28)", async () => {
@@ -98,71 +92,40 @@ describe("Knowledge", () => {
         expect(gaps).toHaveAttribute("aria-selected", "true");
         expect(gaps).toHaveAttribute("tabindex", "0");
         expect(gaps).toHaveFocus();
-        const marked = screen.getByRole("tab", { name: /What readers said/ });
+        const thin = screen.getByRole("tab", { name: /What is thin/ });
         await fireEvent.keyDown(gaps, { key: "End" });
-        expect(marked).toHaveAttribute("aria-selected", "true");
-        expect(marked).toHaveFocus();
+        expect(thin).toHaveAttribute("aria-selected", "true");
+        expect(thin).toHaveFocus();
     });
 
-    it("explains where verdicts come from when there are none", async () => {
+    it("puts the installed packs at the top, above the lenses, with the install form", async () => {
         serve();
-        render(Knowledge, { lens: "marked" });
-        await waitFor(() =>
-            expect(screen.getByText(/No one has marked anything yet/)).toBeInTheDocument(),
-        );
-        expect(screen.getByText(/browser extension/)).toBeInTheDocument();
+        render(Knowledge, {});
+        const heading = await screen.findByRole("heading", { name: /Catalogs/ });
+        const tabs = screen.getByRole("tablist");
+        // The section comes first in the page, the lenses after it.
+        expect(
+            heading.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        expect(await screen.findByText("Used cars")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Install pack" })).toBeInTheDocument();
     });
 
-    it("turns a pile of wrong verdicts into something an author can start", async () => {
-        serve({
-            "/api/marks/signals": {
-                research: [
-                    {
-                        subject_id: "s1",
-                        pack_id: "org.kriko.cars",
-                        count: 2,
-                        notes: ["my mechanic says otherwise"],
-                        claim_ids: ["c1", "c2"],
-                    },
-                ],
-                matching: [],
-            },
-        });
-        render(Knowledge, { lens: "marked" });
-        await waitFor(() =>
-            expect(screen.getByText(/Worth researching again/)).toBeInTheDocument(),
-        );
-        expect(screen.getByText(/2 called wrong/)).toBeInTheDocument();
-        // The reader's own words travel with the queue: they are the most
-        // useful thing on a mark and the point of collecting one.
-        expect(screen.getByText(/my mechanic says otherwise/)).toBeInTheDocument();
-        // And a way to act on it, reusing the same brief the gaps lens starts.
-        expect(screen.getAllByRole("button", { name: "Research" }).length).toBe(1);
+    it("has no Updates block: no check button, no Update all, no index table", async () => {
+        serve();
+        render(Knowledge, {});
+        await screen.findByText("Used cars");
+        expect(screen.queryByRole("button", { name: /Check for updates/ })).toBeNull();
+        expect(screen.queryByRole("button", { name: /Update all/ })).toBeNull();
+        expect(screen.queryByRole("heading", { name: /Updates/ })).toBeNull();
+        const asked = vi.mocked(globalThis.fetch).mock.calls.map(([url]) => String(url));
+        expect(asked.some((url) => url.startsWith("/api/packs/updates"))).toBe(false);
     });
 
-    it("keeps a mismatch out of the research queue and names the door instead", async () => {
-        serve({
-            "/api/marks/signals": {
-                research: [],
-                matching: [
-                    {
-                        subject_id: "s2",
-                        pack_id: "org.kriko.cars",
-                        count: 1,
-                        notes: [],
-                        claim_ids: ["c9"],
-                        sources: { url: 3 },
-                    },
-                ],
-            },
-        });
-        render(Knowledge, { lens: "marked" });
-        await waitFor(() =>
-            expect(screen.getByText(/Matched the wrong thing/)).toBeInTheDocument(),
-        );
-        // Researching it again would fix nothing, so it is offered no brief.
-        expect(screen.queryByRole("button", { name: "Research" })).toBeNull();
-        expect(screen.getByText(/suspect what the page was read as/)).toBeInTheDocument();
+    it("keeps the search box reachable: it is still the first control after the lenses", async () => {
+        serve();
+        render(Knowledge, {});
+        expect(await screen.findByLabelText("Search")).toBeInTheDocument();
     });
 });
 
