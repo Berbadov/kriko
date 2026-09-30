@@ -74,6 +74,7 @@
                     value={active.llm ?? ""}
                     options={(active.llms ?? []).map((name) => ({ value: name }))}
                     emptyLabel="CLI default"
+                    note={active.llms_note}
                     {disabled}
                     onpick={(chosen) => save({ [key("harness_model", active.id)]: chosen })}
                 />

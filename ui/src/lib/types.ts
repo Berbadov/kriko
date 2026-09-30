@@ -683,6 +683,9 @@ export type HarnessModel = {
     llm?: string;
     /** What the CLI itself offers, or [] when it named nothing. */
     llms?: string[];
+    /** One line for an empty `llms` ("This CLI does not list its models"),
+     *  or "" when the CLI listed some or has not been asked yet. */
+    llms_note?: string;
     llm_hint?: string;
     /** False where Kriko has no verified per-run switch yet. */
     llm_selectable?: boolean;

@@ -278,6 +278,25 @@ describe("Bench", () => {
         expect(await screen.findByText(/96 measurements/)).toBeInTheDocument();
     });
 
+    it("names a CLI that lists no LLMs instead of leaving it out of the chips (B158)", async () => {
+        stubFetch({
+            "/api/bench": WITH_OPTIONS,
+            "/api/prefs": {
+                ...PREFS,
+                harnesses: [
+                    { id: "opencode", label: "opencode", llm_selectable: true, llms: ["opencode/big-pickle"], llms_note: "" },
+                    { id: "mistral-vibe", label: "Mistral Vibe", llm_selectable: true, llms: [], llms_note: "This CLI does not list its models" },
+                ],
+            },
+            "/api/jobs": { items: [] },
+            "/api/bench/configs": { configs: {} },
+            "/api/scales": SCALES,
+        });
+        render(Bench);
+        expect(await screen.findByRole("button", { name: "opencode/big-pickle" })).toBeInTheDocument();
+        expect(screen.getByText("Mistral Vibe: This CLI does not list its models")).toBeInTheDocument();
+    });
+
     it("loads a saved grid into the choice controls", async () => {
         stubFetch({
             "/api/bench": WITH_OPTIONS,

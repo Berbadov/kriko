@@ -200,6 +200,7 @@
                                 ? `Preference (${chosenHarness.llm})`
                                 : "CLI default"}
                             hint={chosenHarness.llm_hint}
+                            note={chosenHarness.llms_note}
                         />
                     </label>
                 {/if}
