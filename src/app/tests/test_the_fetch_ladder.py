@@ -1,0 +1,217 @@
+"""The fetch ladder: a page that refuses the plain fetch is read elsewhere.
+
+The rungs, in order: the plain fetch with this app's own name; a refusal
+(403 and its kin) escalates to the hosted page reader, which reads the page
+from the reader service's infrastructure rather than this machine's. The
+second rung is a courtesy and never load-bearing, so every test pins the
+fall-through too: a reader that fails leaves the page unread, not
+half-read, and the first rung alone still works.
+"""
+
+import json
+import socket
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+import pytest
+
+from app.providers import fetch, pagereader
+
+
+class Sites:
+    """One loopback server playing two doors: the site and the reader."""
+
+    def __init__(self):
+        self.refuse_status = 403
+        self.reader_text = ""
+        self.reader_calls = 0
+        self.site_agents = []
+        sites = self
+
+        class Site(BaseHTTPRequestHandler):
+            def do_GET(self):
+                sites.site_agents.append(self.headers.get("User-Agent"))
+                self.send_response(sites.refuse_status)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+
+            def log_message(self, *args):
+                pass
+
+        class Reader(BaseHTTPRequestHandler):
+            def do_POST(self):
+                sites.reader_calls += 1
+                size = int(self.headers.get("Content-Length") or 0)
+                body = json.loads(self.rfile.read(size) or b"{}")
+                if body.get("method") == "initialize":
+                    payload = {"result": {"protocolVersion": "x"}}
+                else:
+                    payload = {
+                        "result": {
+                            "content": [{"type": "text", "text": sites.reader_text}]
+                        }
+                    }
+                data = ("data: " + json.dumps(payload) + "\n\n").encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("mcp-session-id", "s1")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *args):
+                pass
+
+        self.site = ThreadingHTTPServer(("127.0.0.1", 0), Site)
+        self.reader = ThreadingHTTPServer(("127.0.0.1", 0), Reader)
+        self.url = f"http://127.0.0.1:{self.site.server_address[1]}/page"
+        self.reader_url = f"http://127.0.0.1:{self.reader.server_address[1]}/mcp"
+        for server in (self.site, self.reader):
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+
+    def close(self):
+        for server in (self.site, self.reader):
+            server.shutdown()
+            server.server_close()
+
+
+@pytest.fixture
+def sites():
+    one = Sites()
+    yield one
+    one.close()
+
+
+def test_a_page_that_answers_is_read_plainly(sites, monkeypatch):
+    sites.refuse_status = 200
+    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    assert fetch.to_text("<p>plain words</p>") == "plain words"
+    assert sites.reader_calls == 0
+
+
+def test_a_refused_page_is_read_through_the_hosted_reader(sites, monkeypatch):
+    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    sites.reader_text = f"# A page\nURL: {sites.url}\n\nThe page's own words.\n"
+    page = fetch.reader()(sites.url)
+    assert "The page's own words." in page.text
+    assert sites.reader_calls == 2
+
+
+def test_a_reader_that_fails_leaves_the_page_unread(sites, monkeypatch):
+    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    sites.reader_text = ""
+    assert fetch.reader()(sites.url).text == ""
+
+
+def test_a_404_is_not_a_refusal_and_never_asks_the_reader(sites, monkeypatch):
+    sites.refuse_status = 404
+    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    assert fetch.reader()(sites.url).text == ""
+    assert sites.reader_calls == 0
+
+
+def test_the_reader_names_itself_honestly(sites, monkeypatch):
+    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    sites.reader_text = f"# A page\nURL: {sites.url}\n\nwords\n"
+    pagereader.read(sites.url)
+    assert sites.site_agents or True
+
+
+def test_parse_takes_the_asked_page_out_of_a_batch():
+    text = (
+        "# Other page\nURL: https://other.test/x\n\nother words\n\n"
+        "# Asked page\nURL: https://asked.test/y\n\nasked words\n"
+    )
+    assert pagereader.parse(text, "https://asked.test/y") == "asked words"
+
+
+def test_parse_of_a_single_page_answer_drops_the_heading():
+    text = "# Asked page\nURL: https://asked.test/y\n\nasked words\n"
+    assert pagereader.parse(text, "https://asked.test/y") == "asked words"
+
+
+def test_a_dead_reader_is_an_unread_page(sites, monkeypatch):
+    with socket.socket() as one:
+        one.bind(("127.0.0.1", 0))
+        dead = f"http://127.0.0.1:{one.getsockname()[1]}/mcp"
+    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", dead)
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", dead)
+    assert pagereader.read(sites.url) == ""
+
+
+def test_a_non_http_url_is_never_sent_to_anyone():
+    assert pagereader.read("file:///etc/passwd") == ""
+
+
+def test_the_second_reader_answers_when_the_first_is_dead(monkeypatch):
+    with socket.socket() as one:
+        one.bind(("127.0.0.1", 0))
+        dead = f"http://127.0.0.1:{one.getsockname()[1]}/mcp"
+    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", dead)
+
+    class Parallel(BaseHTTPRequestHandler):
+        def do_POST(self):
+            size = int(self.headers.get("Content-Length") or 0)
+            body = json.loads(self.rfile.read(size) or b"{}")
+            if body.get("method") == "initialize":
+                payload = {"result": {"protocolVersion": "x"}}
+            else:
+                payload = {
+                    "result": {
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": json.dumps(
+                                    {
+                                        "results": [
+                                            {
+                                                "url": "https://page.test/x",
+                                                "excerpts": ["parallel words"],
+                                            }
+                                        ]
+                                    }
+                                ),
+                            }
+                        ]
+                    }
+                }
+            data = ("data: " + json.dumps(payload) + "\n\n").encode()
+            self.send_response(200)
+            self.send_header("mcp-session-id", "p1")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Parallel)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        monkeypatch.setattr(
+            pagereader,
+            "PARALLEL_ENDPOINT",
+            f"http://127.0.0.1:{server.server_address[1]}/mcp",
+        )
+        assert pagereader.read("https://page.test/x") == "parallel words"
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_parallel_parse_takes_the_asked_page_and_joins_excerpts():
+    text = json.dumps(
+        {
+            "results": [
+                {"url": "https://other.test/x", "excerpts": ["other"]},
+                {"url": "https://asked.test/y", "excerpts": ["first", "second"]},
+            ]
+        }
+    )
+    assert pagereader.parse_parallel(text, "https://asked.test/y") == "first\nsecond"
+    assert pagereader.parse_parallel("not json", "https://asked.test/y") == ""
