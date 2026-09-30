@@ -35,7 +35,8 @@ def test_a_risk_without_a_page_and_a_quote_is_dropped():
 
 def test_an_unreadable_reply_is_an_honest_nothing():
     assert quicklook.parse("I could not find anything.") == {
-        "assumed": "", "category": "", "pack": "", "risks": [], "dropped": 0}
+        "assumed": "", "category": "", "pack": "", "specs": [], "risks": [],
+        "dropped": 0}
 
 
 def test_the_answer_names_the_kind_of_product_and_a_pack_id_in_one_short_line():

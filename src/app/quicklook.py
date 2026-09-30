@@ -25,12 +25,15 @@ from kriko.research.agent import REFUSED_PAGE
 #: Enough to be worth reading on a listing, few enough to be done in the time.
 MAX_RISKS = 6
 
+#: Specifications kept, for the same reason: a line to read, not a datasheet.
+MAX_SPECS = 10
+
 #: What the panel's card knows how to colour. Anything else reads as `medium`.
 SEVERITIES = ("high", "medium", "low")
 
 
 def brief(product: str, principle: str = "", page: dict | None = None,
-          packs: str = "") -> str:
+          packs: str = "", attributes: str = "") -> str:
     """The quick pass, as instructions. Fast on purpose: a few searches, no essay.
 
     `page` is what the listing itself says (`app.pagefacts`, B150): the
@@ -40,6 +43,9 @@ def brief(product: str, principle: str = "", page: dict | None = None,
     (`categorypack.choice_block`). The answer's `pack` is one of their ids or
     empty, and `category` says in a few words what kind of product this is, so
     a product joins a pack for its kind instead of starting its own (B169).
+
+    `attributes` is the specification names the product's pack already uses,
+    one per line, so the figures come back under the pack's own words (B173).
     """
     from app import pagefacts
 
@@ -54,6 +60,11 @@ def brief(product: str, principle: str = "", page: dict | None = None,
         f"product:\n\n{packs.strip()}\n\nIf this product is that kind, give the "
         "pack's id in `pack`. If none of them fits, leave `pack` empty.\n"
         if packs.strip() else ""
+    )
+    named = (
+        "\nUse these names for a specification where they fit:\n\n"
+        f"{attributes.strip()}\n"
+        if attributes.strip() else ""
     )
     return f"""# Quick look: what is known to go wrong with this one?
 
@@ -76,6 +87,12 @@ Each risk must name a page you actually opened (`url`) and a short quote copied
 from it word for word (`quote`). A risk you cannot source that way: leave it
 out. Fewer honest lines beat more guessed ones.
 
+## Specifications
+
+Also give up to {MAX_SPECS} specifications a buyer would compare this product
+on (for example chipset, battery or display for a phone). Each needs the page
+it was read from (`url`). Leave out any figure you cannot source.
+{named}
 ## Reply
 
 At most {MAX_RISKS} risks, as one JSON object in a ```json fence, as the last
@@ -86,6 +103,10 @@ words, with no brand or model in it (for example "wireless earbuds").
 {{"assumed": "one sentence on which variant you took this to be",
   "category": "what kind of product this is",
   "pack": "the id of a listed pack this belongs in, or an empty string",
+  "specs": [
+    {{"name": "what the figure is", "value": "the figure with its unit",
+      "url": "https://the page you read"}}
+  ],
   "risks": [
     {{"title": "short name of the problem",
       "why": "one or two sentences: what fails, when, what it costs",
@@ -111,7 +132,8 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
 
     found = _payload(reply)
     if not isinstance(found, dict):
-        return {"assumed": "", "category": "", "pack": "", "risks": [], "dropped": 0}
+        return {"assumed": "", "category": "", "pack": "", "specs": [],
+                "risks": [], "dropped": 0}
 
     risks: list[dict] = []
     dropped = 0
@@ -156,10 +178,22 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
                          **({"grounded": True} if checked else {})}],
         })
 
+    specs: list[dict] = []
+    for raw in found.get("specs") or []:
+        if not isinstance(raw, dict) or len(specs) == MAX_SPECS:
+            continue
+        name, value = _line(raw.get("name")), _line(raw.get("value"))
+        url = str(raw.get("url") or "").strip()
+        host = urlparse(url).netloc if url.startswith(("http://", "https://")) else ""
+        if name and value and host:
+            specs.append({"name": name, "value": value, "url": url,
+                          "domain": host.removeprefix("www.")})
+
     return {
         "assumed": str(found.get("assumed") or "").strip(),
         "category": _line(found.get("category")),
         "pack": _line(found.get("pack")).lower(),
+        "specs": specs,
         "risks": risks,
         "dropped": dropped,
     }

@@ -81,7 +81,10 @@ def _columns(conn, table) -> list[str]:
 
 def _copy_table(conn, table, pack_id) -> int:
     """Copy one table's rows for ``pack_id`` from the attached pack."""
-    cols = ", ".join(_columns(conn, table))
+    # Only what the pack file has: a file built before a column existed still
+    # installs, and the column takes its default.
+    in_pack = {r[1] for r in conn.execute(f"PRAGMA pack.table_info({table})")}
+    cols = ", ".join(c for c in _columns(conn, table) if c in in_pack)
     cur = conn.execute(
         f"INSERT OR IGNORE INTO main.{table} ({cols})"
         f" SELECT {cols} FROM pack.{table} WHERE pack_id = ?",
