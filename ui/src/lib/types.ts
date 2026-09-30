@@ -91,36 +91,6 @@ export type AgentSkill = {
     body: string | null;
 };
 
-/** One row of what to research next. The signals ride along rather than being
- * fused into a score: "nobody has researched this" and "the source moved" want
- * different work, and a single number cannot tell them apart. */
-export type AgendaRow = {
-    kind: "empty_subject" | "stale_claim" | "thin_subject" | "unknown_subject";
-    subject_id: string;
-    pack_id: string;
-    label: string;
-    why: string;
-    asked: number;
-    /** Only on `unknown_subject`: the identity, as the pack's adapter produced
-     * it. There is no subject to name, which is the content of the row. */
-    identity?: string;
-    claim_id?: string;
-    title?: string;
-    checked_at?: string;
-    independent_sources?: number;
-    refuted_by?: number;
-    subject_kind?: string;
-};
-
-export type Agenda = {
-    rows: AgendaRow[];
-    /** Why the ordering may be worse than usual — a missing or unreadable log.
-     * Empty when nothing is wrong. */
-    note: string;
-    window: number;
-    counts: Record<string, number>;
-};
-
 export type AgentVerify = { ok: boolean; server?: string; detail?: string };
 
 export type Kind = { kind: string; pack_id: string };
@@ -1028,17 +998,6 @@ export type ResearchRunDetail = ResearchRun & {
     undoable: boolean;
 };
 
-export type AgendaRunRequest = RunSelection & {
-    rows?: number;
-    pack_id?: string | null;
-    backend?: string;
-    budget_usd?: number;
-    max_documents?: number;
-    /** See `ResearchRequest.scale`. An agenda run multiplies the per-subject
-     *  cost by the number of rows, so it is the screen that most needs one. */
-    scale?: string;
-};
-
 /* A pack an agent wrote, waiting for the reader to install or throw away.
  *
  * An agent's write surface used to stop at claims: it could add to a pack that
@@ -1102,45 +1061,6 @@ export type UsageAnalyses = {
 };
 
 export type Usage = { research: UsageTotals; analyses: UsageAnalyses };
-
-/* B98 — the agenda, walked with nobody watching.
- *
- * `last` is the record of the most recent tick, and it is deliberately
- * separate from the setting: a tick that declined still wrote a reason, and
- * that reason is the only output an unattended feature has on the days it
- * does nothing. It is `{}` on an installation where no tick has ever run.
- */
-export type ScheduleLast = {
-    checked_at?: string;
-    reason?: string;
-    due_at?: string;
-    run_at?: string;
-    job_id?: string;
-    runs?: number;
-};
-
-export type Schedule = {
-    enabled: boolean;
-    every_hours: number;
-    rows: number;
-    plane: string;
-    budget_usd: number;
-    max_documents: number;
-    last: ScheduleLast;
-    /** Queued plus running. The loop will not add to this. */
-    in_flight: number;
-};
-
-/** Partial by design — see `api.saveSchedule`. */
-export type ScheduleRequest = Partial<
-    Pick<Schedule, "enabled" | "every_hours" | "rows" | "plane" | "budget_usd" | "max_documents">
->;
-
-export type ScheduleCheck = Schedule & {
-    ran: boolean;
-    reason: string;
-    due_at: string;
-};
 
 export type BenchProtocol = {
     name: string;

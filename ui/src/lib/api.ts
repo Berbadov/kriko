@@ -163,8 +163,6 @@ export const api = {
     agentConfig: () => get<T.AgentConfig>("/api/agent-config"),
     agentTargets: () => get<T.AgentTargets>("/api/agent-targets"),
     agentSkill: () => get<T.AgentSkill>("/api/agent-skill"),
-    // What to research next. A GET with no job behind it — see routers/agenda.py.
-    agenda: () => get<T.Agenda>("/api/agenda"),
     verifyAgent: () => postJson<T.AgentVerify>("/api/agent-verify", {}),
     connectAgent: (targetId: string) =>
         postJson<T.AgentTarget>(`/api/agent-targets/${seg(targetId)}/connect`, {}),
@@ -397,22 +395,9 @@ export const api = {
         get<{ planes: T.ResearchPlane[]; default?: string }>(
             `/api/research-planes${Object.keys(selection).length ? `?${new URLSearchParams(selection)}` : ""}`,
         ),
-    /** Walk the agenda unattended. One job for the whole run: `agenda_run`
-     *  calls the research path inline, because the job runner has a single
-     *  worker and a job that submits jobs deadlocks. */
-    runAgenda: (body: T.AgendaRunRequest) =>
-        postJson<{ job_id: string; kind: string }>("/api/agenda/run", body),
     /** The sums. Two halves — what writing claims in cost, and how much
      *  reading them back out this installation has actually done. */
     usage: () => get<T.Usage>("/api/usage"),
-    /** The unattended loop: what it is set to, and what it last decided. */
-    schedule: () => get<T.Schedule>("/api/schedule"),
-    /** A partial save. Every field is optional on the wire so that saving the
-     *  one control the reader touched cannot reset the other five. */
-    saveSchedule: (body: T.ScheduleRequest) => putJson<T.Schedule>("/api/schedule", body),
-    /** One tick, now. The answer is the sentence the loop would have recorded
-     *  — refusals included, which are the ones worth reading. */
-    checkSchedule: () => postJson<T.ScheduleCheck>("/api/schedule/check", {}),
     researchRuns: (limit = 50) =>
         get<{ runs: T.ResearchRun[] }>(`/api/research-runs?limit=${limit}`),
     researchRun: (runId: string) =>

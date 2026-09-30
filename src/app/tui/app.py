@@ -167,15 +167,6 @@ class Tui:
 
     def _agenda_key(self, key: str) -> None:
         state = self.state
-        if key == "a":
-            try:
-                started = self.engine.agenda_run()
-            except EngineError as error:
-                state.error = str(error)
-                return
-            state.status = f"agenda run started: {started.get('job_id', '')[:8]}"
-            self._follow(started.get("job_id", ""))
-            return
         if key != "enter":
             return
         row = self.selected()

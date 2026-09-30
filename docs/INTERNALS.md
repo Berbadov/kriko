@@ -73,7 +73,7 @@ in the docs.
 | query, control, live | `/api/query`, `/api/knowledge/clock`, `/api/packs/{pack_id}/revisions`, `/api/packs/{pack_id}/activate`, `/api/packs/{pack_id}/rollback`, `/api/identity-keys/{pack_id}` | Lookup, pack revisions, identity forms. |
 | jobs | `POST /api/research`, `POST /api/packs/build`, `GET /api/jobs[/{id}]`, `POST /api/jobs/{id}/cancel`, `GET /api/jobs/{id}/stream` | SSE polls the row, so reconnect is safe. |
 | pipeline | `GET /api/pipeline/runs[/{id}]`, `/stream` | What came of a run: sources, kept findings, refusals with reason. |
-| agenda | `GET /api/agenda`, `POST /api/agenda/run`, `GET\|DELETE /api/research-runs[/{id}]` | Computed on read from demand, gaps, thinness; `DELETE` is undo via `retract_claim`. |
+| agenda | `GET /api/agenda`, `GET\|DELETE /api/research-runs[/{id}]` | Computed on read from demand, gaps, thinness; `DELETE` is undo via `retract_claim`. |
 | factcheck | `GET\|POST /api/factcheck`, `GET /api/factcheck/grounding`, `GET /api/factcheck/document`, `POST /api/verify` | Quote comes from the store, never the caller. Verdicts `quoted/missing/unreadable/unreachable`; `missing` means the page changed, not that the claim is false. |
 | sites | `GET /api/sites`, `POST /api/sites/seen`, `POST /api/sites/{host}/register`, `DELETE /api/sites/{host}` | Pack adapters always beat learned ones (`app/sites.py`). |
 | prefs | `GET\|PUT /api/prefs`, `GET /api/costs` | Agent, model, search and measured spend. No credit balance (no vendor exposes one). |
