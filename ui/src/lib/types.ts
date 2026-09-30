@@ -272,6 +272,14 @@ export type Job = {
     /* Set by `_with_attention` in `app/web/routers/jobs.py` when the run put
      * something to the reader. Null is the ordinary case. */
     attention: Attention | null;
+    /* What a live run has done, one event per source read, search, finding or
+     * problem (`app/web/livefeed.py`). Only on a run that is still going. */
+    feed?: FeedEvent[];
+};
+
+export type FeedEvent = {
+    kind: "source" | "search" | "finding" | "problem" | "note";
+    text: string;
 };
 
 /* One thing the identification pass could not settle on its own.

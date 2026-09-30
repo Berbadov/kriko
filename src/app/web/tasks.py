@@ -291,6 +291,21 @@ def _bills_per_token(params: dict, app_state_path=None) -> bool:
         return False
 
 
+def _source_ceiling(params: dict) -> str:
+    """The Run screen's sources slider, as a sentence at the end of the brief.
+
+    A coding-agent CLI has no flag for "read at most N pages", so the ceiling
+    is asked for in the prompt. Empty when the reader set none (B175).
+    """
+    wanted = int(params.get("max_documents") or 0)
+    if wanted <= 0:
+        return ""
+    return (
+        f"\n\nRead at most {wanted} source{'s' if wanted != 1 else ''} in total "
+        f"for this task, then write what they support."
+    )
+
+
 def _cap_agent(researcher, params: dict) -> None:
     """Give a per-token agent the ceiling its caller named.
 
@@ -1648,6 +1663,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     from app import pagefacts
 
     prompt += pagefacts.block(params.get("page"))
+    prompt += _source_ceiling(params)
     reply = researcher.ask(prompt)
     progress.check()
     progress.set(0.7, "writing the draft")

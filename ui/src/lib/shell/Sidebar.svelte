@@ -134,18 +134,12 @@
          reading it, and until 0.10.0 it read as the fourteenth item in a list
          of places. A rail is a list of *where you are*; this is a *do*, so it
          does not live in the list. -->
-        <!-- Spelled out to "activity" with lens:"runs", not the "jobs"
-             alias: the alias resolves to the same lens regardless, but a
-             reader who had switched Activity's lens tab (which now writes
-             its own ?lens=) leaves that value in the hash, and a link
-             identical to the one already there does not fire a
-             hashchange — the rail's own primary action went dead the
-             second time it was clicked from another lens (shell-4). Naming
-             the lens here means this href always differs from a hash that
-             is anywhere but Runs. -->
+        <!-- The Run screen (B175). It pointed at Activity's Runs lens with
+             `?author=new` until the form moved; a plain route has no lens to
+             go stale, so the shell-4 dead-second-click cannot recur. -->
         <a
             class="rail-action"
-            href={hashWith({ author: "new", lens: "runs" }, "activity")}
+            href={href("run")}
         >
             <span class="rail-action-plus" aria-hidden="true">+</span>
             Start a new pack
