@@ -6,9 +6,9 @@ export type Route = {
     query: Record<string, string>;
 };
 
-/** The landing screen. Activity until Home replaces it (B174); New check, which
- *  it used to be, is gone (B163). */
-export const DEFAULT_ROUTE = "activity";
+/** The landing screen: Home, three graphs of recent work (B174). New check,
+ *  which it used to be, is gone (B163). */
+export const DEFAULT_ROUTE = "home";
 
 /** A route segment can be anything a reader pastes into the address bar.
  * decodeURIComponent throws on a malformed %-escape, and an uncaught throw

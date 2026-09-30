@@ -45,11 +45,11 @@ describe("Activity", () => {
             "aria-selected",
             "false",
         );
-        expect(screen.getByRole("tab", { name: /pipeline did/ })).toHaveAttribute(
+        expect(screen.getByRole("tab", { name: /Pipeline/ })).toHaveAttribute(
             "aria-selected",
             "false",
         );
-        expect(screen.getByRole("tab", { name: /researchers sent/ })).toBeInTheDocument();
+        expect(screen.getByRole("tab", { name: /Submissions/ })).toBeInTheDocument();
     });
 
     it("lands on the lens a retired address named", async () => {
@@ -60,7 +60,7 @@ describe("Activity", () => {
         stub();
         render(Activity, { lens: "submissions" });
         expect(
-            await screen.findByRole("tab", { name: /researchers sent/ }),
+            await screen.findByRole("tab", { name: /Submissions/ }),
         ).toHaveAttribute("aria-selected", "true");
     });
 
@@ -81,7 +81,7 @@ describe("Activity", () => {
         // highlights correctly and renders the same screen is the bug this
         // catches.
         expect(await screen.findByRole("heading", { name: /Runs/ })).toBeInTheDocument();
-        await fireEvent.click(screen.getByRole("tab", { name: /pipeline did/ }));
+        await fireEvent.click(screen.getByRole("tab", { name: /Pipeline/ }));
         expect(screen.queryByRole("heading", { name: /^Runs$/ })).toBeNull();
     });
 });

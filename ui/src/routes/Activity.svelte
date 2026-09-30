@@ -39,8 +39,8 @@
         // here entirely (B122).
         { id: "live", label: "Live" },
         { id: "runs", label: "Runs" },
-        { id: "pipeline", label: "What the pipeline did" },
-        { id: "submissions", label: "What researchers sent" },
+        { id: "pipeline", label: "Pipeline" },
+        { id: "submissions", label: "Submissions" },
     ];
 
     // The lens arrives from the route: `#/jobs` is the address a job-starting
