@@ -128,15 +128,18 @@ def _download(url: str, timeout: float) -> str:
     except urllib.error.HTTPError as error:
         if error.code in REFUSED:
             # The site answered, and its answer was a refusal aimed at this
-            # app's own fetcher — the class B155 recorded. The hosted reader
-            # is the next rung: it reads the page from elsewhere, and ""
-            # from it leaves the page unread exactly as before, never
+            # app's own fetcher — the class B155 recorded. The hosted readers
+            # are the next rung: they read the page from elsewhere, and the
+            # browser after them reads it with a genuine fingerprint. "" from
+            # a rung leaves the page unread exactly as before, never
             # half-read.
-            from app.providers import pagereader  # noqa: PLC0415 — optional rung
+            from app.providers import browser, pagereader  # noqa: PLC0415 — optional rungs
 
             page = pagereader.read(url)
+            if not page:
+                page = browser.read(url)
             if page:
-                log.info("a source refused the plain fetch and the reader read it")
+                log.info("a source refused the plain fetch and a later rung read it")
                 return page
         log.info("could not read a source: HTTP %s", error.code)
         return ""
