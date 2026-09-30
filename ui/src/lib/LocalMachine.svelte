@@ -3,15 +3,15 @@
     import { api } from "./api";
     import type { LocalPlane } from "./types";
 
-    /* The local machine plane's settings (B171): where the model server is,
+    /* The local machine plane's settings (B171): where the LLM server is,
      * which of its models to use, where search is, how long to wait. Every
      * list and every sentence comes from `/api/local-plane`; nothing here names
-     * a server or a model. Compact on purpose, B184 polishes it. */
+     * a server or an LLM. Compact on purpose, B184 polishes it. */
     let status = $state<LocalPlane | null>(null);
     let failed = $state("");
     let saved = $state("");
     let url = $state("");
-    let model = $state("");
+    let llm = $state("");
     let searchUrl = $state("");
     let timeout = $state("");
     let busy = $state(false);
@@ -23,7 +23,7 @@
             status = await api.localPlane();
             if (fillForm) {
                 url = status.stored.local_url;
-                model = status.stored.local_model;
+                llm = status.stored.local_model;
                 searchUrl = status.stored.local_search_url;
                 timeout = status.stored.local_timeout;
             }
@@ -38,7 +38,7 @@
         saved = "";
         await api.savePrefs({
             local_url: url,
-            local_model: model,
+            local_model: llm,
             local_search_url: searchUrl,
             local_timeout: timeout,
         });
@@ -54,7 +54,7 @@
 <section>
     <h3><Icon name="monitor" /> Local machine</h3>
     <p class="meta">
-        A model running on this computer reads for Kriko, at no cost and with no key.
+        An LLM running on this computer reads for Kriko, at no cost and with no key.
     </p>
     {#if failed}
         <p class="state" role="status">Could not read the local plane: {failed}</p>
@@ -73,8 +73,8 @@
                 />
             </label>
             <label>
-                Model
-                <select bind:value={model}>
+                LLM
+                <select bind:value={llm}>
                     <option value="">First one the server lists</option>
                     {#each status.models as one (one)}
                         <option value={one}>{one}</option>
