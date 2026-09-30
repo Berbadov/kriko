@@ -144,9 +144,6 @@ class Engine:
             body["pack_id"] = pack_id
         return self.post("/api/research", body)
 
-    def agenda_run(self) -> dict:
-        return self.post("/api/agenda/run")
-
     def cancel(self, job_id: str) -> dict:
         return self.post(f"/api/jobs/{job_id}/cancel")
 
