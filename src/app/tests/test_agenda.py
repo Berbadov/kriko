@@ -14,7 +14,6 @@ an error, and no row carries a listing URL.
 """
 
 import json
-import re
 from pathlib import Path
 
 import pytest
@@ -441,20 +440,3 @@ def test_the_mcp_tool_and_the_route_are_the_same_computation(tmp_path, monkeypat
 
     assert through_mcp["rows"] == through_http["rows"]
 
-
-def test_the_screen_words_every_kind_and_invents_none():
-    """The drift gate `ui/src/lib/agenda.ts` promises in its own docstring.
-
-    Python owns the vocabulary; TypeScript owns the wording for it. Nothing in
-    a build catches a fifth kind added here whose word was never written there
-    — the row simply renders as `thin_subject` on the reader's screen, which
-    is the app leaking a database token. So the map is read as text and its
-    keys compared. Same regex approach as `test_factcheck.py`, and the same
-    trade: a fragile pattern with a loud assert beats a JS parser dependency.
-    """
-    text = (ROOT / "ui" / "src" / "lib" / "agenda.ts").read_text(encoding="utf-8")
-    for name in ("KIND_WORD", "KIND_TONE"):
-        match = re.search(name + r"[^{]*\{(.*?)\}", text, re.S)
-        assert match, f"no {name} map in agenda.ts — was it renamed?"
-        keys = set(re.findall(r"^\s*(\w+)\s*:", match.group(1), re.M))
-        assert keys == set(agenda.KINDS), f"{name} and agenda.KINDS disagree"

@@ -4,7 +4,8 @@
     import Icon from "./Icon.svelte";
     import Failure from "./Failure.svelte";
     import { api } from "./api";
-    import type { Prefs } from "./types";
+    import { remedyFor } from "./failure";
+    import type { AgentTarget, Prefs } from "./types";
 
     /* Which agent drives, and what it drives with — one card per agent.
      *
@@ -83,6 +84,63 @@
         }
     }
 
+    // Connection state, one MCP config per target. A row in this list is an
+    // agent; the target with the same id is how Kriko reaches it, so the state
+    // and the one action sit on that row (B164, D7) and not in a section of
+    // their own. A client that has no CLI here (Cursor, VS Code) still gets a
+    // row below the others, so its Connect did not disappear with the section.
+    let targets = $state<AgentTarget[]>([]);
+    let busy = $state("");
+    // The exception per row, never a string: the sentence is derived from the
+    // status (B72), and one config someone broke by hand must not hide the
+    // rows that are fine.
+    let rowError = $state<Record<string, unknown>>({});
+
+    async function loadTargets() {
+        try {
+            targets = (await api.agentTargets()).targets;
+        } catch (thrown) {
+            failure = thrown;
+        }
+    }
+    loadTargets();
+
+    const targetOf = (id: string) => targets.find((one) => one.id === id);
+    const apartOf = (data: Prefs) =>
+        targets.filter((one) => !harnessesOf(data).some((agent) => agent.id === one.id));
+
+    const WORDS: Record<string, string> = {
+        connected: "Connected",
+        stale: "Points elsewhere",
+        absent: "Not connected",
+        unreadable: "Config unreadable",
+    };
+
+    // One action per row. Whether the *protocol* on disk is current is a
+    // different question from whether the agent is wired: it is generated from
+    // the catalogs and from this app's code, so a wired agent can carry an old
+    // one. Connect writes both, which is why only a wired agent is offered the
+    // skill alone.
+    function actionOf(target: AgentTarget): "Connect" | "Rewrite" | "Update skill" | null {
+        if (target.state === "unreadable") return null;
+        if (target.state !== "connected") return "Connect";
+        return target.skill?.present && target.skill.stale ? "Update skill" : "Rewrite";
+    }
+
+    async function act(target: AgentTarget) {
+        busy = target.id;
+        rowError = { ...rowError, [target.id]: null };
+        try {
+            if (actionOf(target) === "Update skill") await api.refreshAgentSkill(target.id);
+            else await api.connectAgent(target.id);
+            await loadTargets();
+        } catch (thrown) {
+            rowError = { ...rowError, [target.id]: thrown };
+        } finally {
+            busy = "";
+        }
+    }
+
     // Every read of the payload is defended. Not defensive habit: this panel
     // renders whatever `/api/prefs` answered, and an older engine — or a
     // browser that reconnected mid-upgrade — answers with fewer fields than
@@ -97,6 +155,22 @@
     // two picks below would otherwise each carry their own copy of the rule.
     const key = (prefix: string, id: string) => `${prefix}_${id.replace(/-/g, "_")}`;
 </script>
+
+{#snippet connection(target: AgentTarget)}
+    {@const action = actionOf(target)}
+    <div class="conn">
+        <span class="badge state-{target.state}">{WORDS[target.state]}</span>
+        {#if action}
+            <button class="small" disabled={busy === target.id} onclick={() => act(target)}>
+                {action}
+            </button>
+        {/if}
+        {#if target.detail}<span class="meta">{target.detail}</span>{/if}
+        {#if rowError[target.id]}
+            <span class="state error">{remedyFor(rowError[target.id]).headline}</span>
+        {/if}
+    </div>
+{/snippet}
 
 <!-- B146: "agent and settings section are very crowded and ugly". This was
      a 19rem card per agent, each holding a path, two dials and two paragraphs
@@ -150,6 +224,9 @@
                                     <span class="meta">Bills to {one.needs_account}.</span>
                                 {/if}
                             </div>
+                            {#if targetOf(one.id)}
+                                {@render connection(targetOf(one.id)!)}
+                            {/if}
                             <div class="dialbox">
                                 <span class="dial"><Icon name="llm" size={14} /> LLM</span>
                                 {#if one.llm_selectable}
@@ -185,6 +262,15 @@
                                     <span class="meta fixed">not offered by this CLI</span>
                                 {/if}
                             </div>
+                        </li>
+                    {/each}
+                    {#each apartOf(data) as target (target.id)}
+                        <li class="agentrow apart">
+                            <div class="who">
+                                <strong><Icon name="agent" size={16} /> {target.label}</strong>
+                                <span class="meta mono" title={target.path}>{target.path}</span>
+                            </div>
+                            {@render connection(target)}
                         </li>
                     {/each}
                 </ul>
@@ -285,11 +371,30 @@
        when the window is too narrow for three columns. */
     .agentrow {
         display: grid;
-        grid-template-columns: minmax(12rem, 1.4fr) minmax(9rem, 1fr) minmax(9rem, 1fr);
+        grid-template-columns: minmax(12rem, 1.4fr) minmax(10rem, 1fr) minmax(9rem, 1fr) minmax(9rem, 1fr);
         gap: var(--s-2) var(--s-3);
         align-items: start;
         padding-block: var(--s-2);
         border-bottom: 1px solid var(--line);
+    }
+    .apart :global(.conn) {
+        grid-column: 2 / -1;
+    }
+    .conn {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--s-2);
+        min-width: 0;
+    }
+    .state-connected {
+        background: var(--low-soft);
+        color: var(--low);
+    }
+    .state-stale,
+    .state-unreadable {
+        background: var(--high-soft);
+        color: var(--high);
     }
     @media (max-width: 760px) {
         .agentrow {
