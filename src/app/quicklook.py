@@ -51,7 +51,8 @@ Someone is looking at this exact product right now and wants to know what to
 worry about **before** they spend money on it. Answer the way a knowledgeable
 friend would in a chat: fast, specific, sourced.
 
-* Do **two to four** web searches. Open **at most three** pages. Stop there.
+* Do **two to four** web searches. Open **at most three** pages; a page that
+  refuses you does not count toward the three. Stop there.
 * {REFUSED_PAGE}
 * Be specific to this exact variant. Skip anything true of every product like it.
 * If the name leaves the variant open, pick the most likely one and say which

@@ -15,8 +15,8 @@ on stdout. Marginal cost stays zero because it is the reader's own plan.
 
 Three decisions are load-bearing:
 
-* **The spawned agent gets no MCP config, and no write tools.** It could have
-  been handed Kriko's own `submit_findings` — but then claims would arrive by
+* **The spawned agent gets no Kriko MCP tools, and no write tools.** It could
+  have been handed Kriko's own `submit_findings` — but then claims would arrive by
   one door while the job that started it reported nothing, and `tasks.py`'s
   own "kept …" / "refused …" lines would still never be written. Instead the
   findings come back *on stdout*, become `Document`s here, and flow through
@@ -34,9 +34,19 @@ Three decisions are load-bearing:
   `--strict-mcp-config` and `--safe-mode` where the installed CLI declares
   them (`command_for`), which is what "sandboxed spawn" was always supposed
   to mean.
+
+  **The one server it is given is a page reader (B155).** Sites behind
+  Cloudflare's AI-bot blocking answer the CLI's own fetcher with a 403, and
+  Kriko never changes what a CLI fetches with. So a CLI whose row declares a
+  `reader` and whose `--help` declares its config flag is handed a per-run
+  config, written into the run's own folder, naming one keyless hosted server
+  whose only tool reads a page. It reads and writes nothing, so it stays inside
+  the "search and fetch" grant below; `--strict-mcp-config` still keeps every
+  other server out.
 * **`--allowedTools` is an explicit allowlist, never a denylist.** Handing a
   coding agent `Bash` to research a car is a remote-code path with extra
-  steps. `SEARCH_TOOLS` is the whole grant, and it is search and fetch.
+  steps. `SEARCH_TOOLS` is the whole grant, and it is search and fetch (plus,
+  where attached, the page reader's fetch).
 * **This lives in `app/`, not `kriko/`.** The engine owns no sockets and no
   subprocesses, which is the same reason `app/providers/` exists for the paid
   plane's HTTP.
@@ -68,6 +78,26 @@ from kriko.research.base import Document, Finding, ResearchTask
 #: before adding to this: a research plane that can write files or run shell
 #: commands is not a research plane.
 SEARCH_TOOLS = ("WebSearch", "WebFetch")
+
+#: The page reader (B155): a keyless hosted MCP server whose one tool reads a
+#: page for the agent. Exa's, because it is free, needs no key of the reader's,
+#: and read all four pages a Claude Code quick look had been refused in a probe
+#: (2026-09-29; the CLI's own fetcher got a 403 from each). Only its fetch tool
+#: is granted: search was never refused, and a second search tool is only a
+#: second place to spend the run's budget. The tool names are read off the
+#: server's own `tools/list`, not written from memory.
+READER_SERVER = "exa"
+READER_URL = "https://mcp.exa.ai/mcp"
+READER_TOOLS = ("web_fetch_exa",)
+
+#: Where the per-run config is written, inside the run's own folder.
+READER_CONFIG_FILE = "kriko-page-reader.mcp.json"
+
+#: How much of a page one read returns. The server's default is 3,000
+#: characters, which is a lead paragraph; a quote has to come from the part of
+#: the page that names the fault. Measured against the server: it returns as
+#: much as it is asked for, so this is a ceiling the agent is told to pass.
+READER_PAGE_CHARS = 12000
 
 #: How long one subject's research may take before the run is abandoned. A
 #: headless agent doing three searches and reading four pages lands well
@@ -153,6 +183,26 @@ class NoHarness(RuntimeError):
 
 
 @dataclass(frozen=True)
+class PageReader:
+    """How one CLI is handed the page reader (B155): three facts about the CLI.
+
+    A row that carries one says "this CLI takes a per-run MCP config, and this
+    is how its allowlist spells an MCP tool". Whether *this machine's* build
+    does is still asked of its `--help` (`reader_declared`), the rule every
+    other flag here follows: an older build keeps the plane and loses the
+    reader.
+    """
+
+    #: The flag that takes a config file for this run's MCP servers.
+    config_flag: str
+    #: The allowlist flag in the row's `args`, which the reader's tools join.
+    grant_flag: str
+    #: How the allowlist names an MCP server's tool, with `{server}` and
+    #: `{tool}`. Read off the CLI's own documentation, per row.
+    tool: str
+
+
+@dataclass(frozen=True)
 class Harness:
     """One coding-agent CLI, and how to run it non-interactively.
 
@@ -199,6 +249,9 @@ class Harness:
     #: plane over a flag their `claude` has never heard of, and `--help` is
     #: the only honest way to ask. Resolved by `command_for`.
     preferred: tuple[str, ...] = ()
+    #: How this CLI is handed the page reader, or `None` for a CLI that is not
+    #: (yet) verified to take one. See `PageReader`.
+    reader: PageReader | None = None
     #: Why this CLI cannot be used, if it cannot. Non-empty means `available()`
     #: will not offer it, while `/api/research-planes` still reports that it
     #: was found — "your opencode is installed and Kriko will not use it, and
@@ -383,6 +436,19 @@ KNOWN = (
         # auth, the built-in tools and permissions alone. Both are what this
         # spawn already claimed to be.
         preferred=("--strict-mcp-config", "--safe-mode"),
+        # **The page reader (B155).** Sites behind Cloudflare's bot blocking
+        # answer this CLI's own fetcher (`Claude-User`) with a 403, on 2.1.283
+        # and 2.1.284 alike. `--mcp-config <configs...>` "loads MCP servers
+        # from JSON files", and with `--strict-mcp-config` those are the only
+        # servers the run has; an MCP tool is allowed by the name
+        # `mcp__<server>__<tool>` (Claude Code's permission-rule syntax). Its
+        # own docs say a `-p` run waits up to `MCP_TIMEOUT` for the server to
+        # connect before the first turn, so the tool is there when the agent
+        # starts. `--safe-mode`'s help lists "MCP servers" among the
+        # customizations it drops without saying whether an explicit
+        # `--mcp-config` survives it; the run's `system/init` line is logged
+        # ("started ...; exa connected") so a reader can see which it was.
+        reader=PageReader("--mcp-config", "--allowedTools", "mcp__{server}__{tool}"),
         # The reader's Windows CLI is not this machine's. A build whose
         # `--output-format` never listed `stream-json` would refuse the
         # streaming vector outright and the plane would be dead again, with
@@ -558,6 +624,12 @@ KNOWN = (
     # * `--disable-builtin-mcps` drops its GitHub MCP server, and
     #   `--no-custom-instructions` the reader's own instruction files: the
     #   same hygiene `--safe-mode` buys on Claude Code.
+    # * **No `reader` (B155), on purpose.** It declares `--additional-mcp-config`
+    #   ("JSON string or file path (prefix with @)"), but `--available-tools`
+    #   is a whole tool set and nothing in its help says how a tool from an MCP
+    #   server is named inside it. Guessing would either leave the reader
+    #   outside the set or widen it; a row gets a `reader` once a run has shown
+    #   the spelling, and `test_the_page_reader.py` pins which rows have one.
     Harness(
         "github-copilot", "GitHub Copilot CLI", "copilot",
         ("--output-format", "json", "--allow-all-tools", "--no-ask-user",
@@ -1002,6 +1074,79 @@ def with_refused_page(prompt: str) -> str:
     return f"{prompt.rstrip()}\n\n{REFUSED_PAGE}\n"
 
 
+def reader_config() -> dict:
+    """The per-run MCP config that names the page reader and nothing else."""
+    return {"mcpServers": {READER_SERVER: {"type": "http", "url": READER_URL}}}
+
+
+def reader_tools(one: Harness) -> list[str]:
+    """The reader's tools, as this CLI's allowlist spells them."""
+    if one.reader is None:
+        return []
+    return [one.reader.tool.format(server=READER_SERVER, tool=tool) for tool in READER_TOOLS]
+
+
+def _with_grant(args: tuple[str, ...], flag: str, tools: list[str]) -> tuple[str, ...] | None:
+    """`args` with `tools` added to the value of allowlist `flag`, or `None`.
+
+    `None` when the vector carries no such allowlist: a reader with nothing to
+    be granted through would be a config whose every read is a permission
+    prompt a headless run cannot answer, so it is not attached at all.
+    """
+    if flag not in args or args.index(flag) + 1 >= len(args):
+        return None
+    at = args.index(flag) + 1
+    return (*args[:at], ",".join([*args[at].split(","), *tools]), *args[at + 1:])
+
+
+def reader_attachable(one: Harness, supported: frozenset[str] | None = None) -> bool:
+    """Whether this machine's copy of `one` can be handed the page reader.
+
+    Three facts, each asked rather than assumed: the row says it takes a
+    per-run MCP config at all, this build's own `--help` declares the flag, and
+    the row's vector has an allowlist for the reader's tools to join. A reader
+    on an older build keeps the plane and loses the reader (B154's rule for
+    every flag here).
+    """
+    if one.reader is None or one.unusable:
+        return False
+    supported = declared(locate(one) or one.executable) if supported is None else supported
+    return one.reader.config_flag in supported and all(
+        _with_grant(vector, one.reader.grant_flag, []) is not None
+        for vector in (one.args, one.plain_args) if vector
+    )
+
+
+def page_reader_note(tools: list[str]) -> str:
+    """What the agent is told about the page reader, when this run has one.
+
+    Said only for a run the reader is attached to (`_run`): a note about a tool
+    that is not there would send the agent looking for it. It is an exception
+    to `REFUSED_PAGE` and sits beside it, so the two are read together, and it
+    ends on the way out if the reader is refused as well.
+    """
+    names = " or ".join(f"`{name}`" for name in tools)
+    return (
+        f"The one exception is this run's page reader, the {names} tool: when a "
+        "fetch is refused, read that page once through it, passing "
+        f"`maxCharacters` of {READER_PAGE_CHARS}, and quote from what it returns. "
+        "A refused fetch opened nothing, so it does not count toward the pages "
+        "you may read; the read through the reader does. If the reader is "
+        "refused as well, or that tool is not among yours, take the same "
+        "question to another source."
+    )
+
+
+def with_page_reader(prompt: str, tools: list[str]) -> str:
+    """`prompt`, with `page_reader_note` beside its refused-page line, once."""
+    note = page_reader_note(tools)
+    if note in prompt:
+        return prompt
+    if REFUSED_PAGE in prompt:
+        return prompt.replace(REFUSED_PAGE, f"{REFUSED_PAGE} {note}", 1)
+    return f"{prompt.rstrip()}\n\n{note}\n"
+
+
 def _from_models_command(one: Harness, executable: str) -> list[str]:
     # Through `_ask` for the reason `helptext` is: this runs a binary
     # `locate` only *guessed* at, and a wrong guess must cost a dropdown
@@ -1157,7 +1302,8 @@ def scale_args(one: Harness, *, max_documents: int = 0, budget_usd: float = 0.0,
 
 
 def command_for(one: Harness, *, model: str = "", effort: str = "",
-                max_documents: int = 0, budget_usd: float = 0.0) -> list[str]:
+                max_documents: int = 0, budget_usd: float = 0.0,
+                reader_config: str = "") -> list[str]:
     """The vector this machine will actually run — `args` plus what it takes.
 
     A function rather than a line inside `_run` because the gate that matters
@@ -1165,6 +1311,11 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
     shape of `args` and none asserted the CLI would accept them, which is how
     B92 shipped a plane that could not start at all. A test can only judge the
     vector if the vector has a name.
+
+    `reader_config` is the path of this run's page-reader config (B155). It is
+    attached only where the row declares a reader, this machine's `--help`
+    declares the config flag, and the vector has an allowlist to grant the
+    reader's tools through — otherwise the vector is exactly what it was.
     """
     executable = locate(one) or one.executable
     supported = declared(executable)
@@ -1186,7 +1337,13 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
         raise NoHarness(
             f"{one.label} has no per-run effort switch on this machine — "
             f"effort choices for it are refused, never silently run as the default")
+    attach: list[str] = []
+    reader = one.reader
+    if reader_config and reader is not None and reader_attachable(one, supported):
+        args = _with_grant(args, reader.grant_flag, reader_tools(one)) or args
+        attach = [reader.config_flag, reader_config]
     return [executable, *args, *(f for f in one.preferred if f in supported),
+            *attach,
             *([one.model_flag, model] if model and one.model_flag else []),
             *([one.effort_flag, effort] if effort else []),
             *scale_args(one, max_documents=max_documents,
@@ -1546,6 +1703,14 @@ def _tool_line(name: str, args: dict | None) -> str:
     args = args if isinstance(args, dict) else {}
     query = args.get("query") or args.get("q")
     url = args.get("url")
+    # The page reader (B155) takes a list, under whichever server name the
+    # CLI's allowlist spells in front of the tool. The log names it as what it
+    # is, because "read through the page reader" is the line that shows a
+    # refused page was not fetched a second time.
+    if any(name.endswith(tool) for tool in READER_TOOLS):
+        urls = args.get("urls")
+        urls = [str(one) for one in urls] if isinstance(urls, list) else [str(url or "")]
+        return f"read through the page reader {_short(', '.join(u for u in urls if u), 120)}".strip()
     # Folded, because the same two tools are spelled four ways across these
     # CLIs — `WebSearch`/`WebFetch`, `web_search`/`web_fetch` — and a reader
     # watching the log should not be able to tell which CLI is running from
@@ -1736,7 +1901,16 @@ def narrate(event: dict) -> str:
         if event.get("subtype") != "init":
             return ""
         model = str(event.get("model") or "").strip()
-        return f"started {model}".strip() if model else "started"
+        said = f"started {model}".strip() if model else "started"
+        # Which MCP servers came up, from the CLI's own init line. The page
+        # reader that never loaded looks exactly like one that was never
+        # asked, and this is the only place the difference is visible.
+        servers = event.get("mcp_servers")
+        up = [
+            f"{one.get('name')} {one.get('status')}".strip()
+            for one in servers if isinstance(one, dict) and one.get("name")
+        ] if isinstance(servers, list) else []
+        return "; ".join([said, *up])
     if kind == "assistant":
         message = event.get("message")
         blocks = message.get("content") if isinstance(message, dict) else None
@@ -1852,6 +2026,8 @@ class HarnessResearcher(AgentResearcher):
         self.effort_settled = ""
         self._run_env: dict[str, str] = {}
         self._run_cwd: str | None = None
+        #: The path of this run's page-reader config while a run has one (B155).
+        self._reader_config = ""
         self.harness = harness
         self.timeout = timeout
         #: The scale, as the CLI will be told it. Set from the task by
@@ -2044,7 +2220,7 @@ class HarnessResearcher(AgentResearcher):
         need and no interest in findings: it hands the agent a brief about a
         category and reads back a proposed pack. The plane's value is the
         *sandboxed spawn* — the allowlist, the neutral working directory, the
-        absent `--mcp-config` — and that is worth reusing rather than
+        one MCP server that only reads a page — and that is worth reusing rather than
         reimplementing next to it.
         """
         return self._run(prompt)
@@ -2092,7 +2268,26 @@ class HarnessResearcher(AgentResearcher):
         """
         prompt = with_refused_page(prompt)
         with self._workspace():
+            # Said only once the reader is really attached to this run: a note
+            # about a tool that is not there would send the agent looking.
+            if self._reader_config:
+                prompt = with_page_reader(prompt, reader_tools(self.harness))
             return self._invoke(prompt, on_line)
+
+    def _place_reader(self, folder: Path) -> None:
+        """Write this run's page-reader config into its own folder (B155).
+
+        Beside `opencode.json` and the sandbox `HOME`s below, for the same
+        reason: a per-run grant lives in the run's folder and goes with it, and
+        nothing of the reader's own configuration is written. Nothing is
+        written for a CLI that cannot take it.
+        """
+        self._reader_config = ""
+        if not reader_attachable(self.harness):
+            return
+        path = folder / READER_CONFIG_FILE
+        path.write_text(json.dumps(reader_config()), encoding="utf-8")
+        self._reader_config = str(path)
 
     @contextmanager
     def _workspace(self):
@@ -2126,11 +2321,13 @@ class HarnessResearcher(AgentResearcher):
                     (Path(directory) / "opencode.json").write_text(json.dumps({
                         "websearch": {"provider": "exa"},
                     }), encoding="utf-8")
+                self._place_reader(Path(directory))
                 try:
                     yield
                 finally:
                     self._run_env = {}
                     self._run_cwd = None
+                    self._reader_config = ""
             return
         with tempfile.TemporaryDirectory(prefix="kriko-research-") as directory:
             root = Path(directory)
@@ -2204,11 +2401,13 @@ class HarnessResearcher(AgentResearcher):
                     "security": {"auth": {"selectedType": "gemini-api-key"}},
                 }), encoding="utf-8")
                 self._run_env["GEMINI_CLI_HOME"] = str(home)
+            self._place_reader(work)
             try:
                 yield
             finally:
                 self._run_env = {}
                 self._run_cwd = None
+                self._reader_config = ""
 
     def _invoke(self, prompt: str, on_line: Callable[[str], None] | None) -> str:
         if self.harness.id == "opencode":
@@ -2219,6 +2418,7 @@ class HarnessResearcher(AgentResearcher):
             effort=self.requested_effort,
             max_documents=self.max_documents,
             budget_usd=self.budget_usd,
+            reader_config=self._reader_config,
         )
         if self.harness.protocol in ("vibe", "gemini"):
             command.extend(["--prompt", ""])
