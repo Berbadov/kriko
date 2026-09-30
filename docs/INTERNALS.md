@@ -69,6 +69,7 @@ in the docs.
 |---|---|---|
 | history | `GET /api/history`, `GET /api/lookup/{id}`, `POST /api/lookups/{id}/notes`, `GET\|POST /api/lookups/{id}/checked`, `GET /api/lookups/{id}/triage`, `GET\|POST /api/settings` | Backed by `app.sqlite`. |
 | marks | `GET\|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}`, `GET /api/marks/signals` | Author verdicts, pack-keyed. |
+| compare | `GET\|POST /api/compare-drafts`, `PUT\|DELETE /api/compare-drafts/{draft_id}` | Named comparisons of saved checks (B183). |
 | subjects | `GET /api/subjects[/{id}[/brief]]` | Pack knowledge and the $0 brief. |
 | query, control, live | `/api/query`, `/api/knowledge/clock`, `/api/packs/{pack_id}/revisions`, `/api/packs/{pack_id}/activate`, `/api/packs/{pack_id}/rollback`, `/api/identity-keys/{pack_id}` | Lookup, pack revisions, identity forms. |
 | jobs | `POST /api/research`, `POST /api/packs/build`, `GET /api/jobs[/{id}]`, `POST /api/jobs/{id}/cancel`, `GET /api/jobs/{id}/stream` | SSE polls the row, so reconnect is safe. |
@@ -112,6 +113,7 @@ a pack must not drop history, and history must not move `content_digest`.
 | `local_adapters` | Self-taught site readers; never travel or digest. |
 | `site_requests` | Unreadable sites the reader stood on ("which site next"). |
 | `site_activation` | Browser's per-site permission verdict. |
+| `compare_drafts` | Named comparisons (which checks, in order); app state, never knowledge (B183). |
 | `documents` | Quote-proving page text per `source_id`, bounded. |
 | `unmapped_labels` | Labels seen on pages that no adapter reads. |
 

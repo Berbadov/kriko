@@ -255,6 +255,19 @@ export const api = {
         postJson<T.AnalyzeResult | T.UnreadPage>("/api/analyze", body),
     history: (limit = 20) =>
         get<{ items: T.HistoryItem[] }>(`/api/history?limit=${limit}`),
+    compareDrafts: () => get<{ items: T.CompareDraft[]; max: number }>("/api/compare-drafts"),
+    saveCompareDraft: (name: string, lookupIds: string[], draftId = "") =>
+        draftId
+            ? putJson<T.CompareDraft>(`/api/compare-drafts/${seg(draftId)}`, {
+                  name,
+                  lookup_ids: lookupIds,
+              })
+            : postJson<T.CompareDraft>("/api/compare-drafts", {
+                  name,
+                  lookup_ids: lookupIds,
+              }),
+    deleteCompareDraft: (draftId: string) =>
+        del<{ deleted: string }>(`/api/compare-drafts/${seg(draftId)}`),
     getLookup: (lookupId: string) => get<T.StoredLookup>(`/api/lookup/${seg(lookupId)}`),
     /** The saved question asked again of the knowledge as it is now (B152.4). */
     refreshLookup: (lookupId: string) =>

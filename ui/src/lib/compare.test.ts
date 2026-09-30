@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { compareMany } from "./compare";
-import type { Claim, StoredLookup } from "./types";
+import { compareMany, compareSpecs } from "./compare";
+import type { Claim, StoredLookup, SubjectDetail } from "./types";
 
 const claim = (id: string, severity = "medium", title = id): Claim => ({
     claim_id: id,
@@ -76,5 +76,27 @@ describe("compareMany", () => {
         // honest reading — the screen refuses to draw a comparison from it.
         expect(c.shared).toBe(1);
         expect(c.only).toEqual([1]);
+    });
+});
+
+describe("compareSpecs", () => {
+    const subject = (rows: [string, string, number?][]) =>
+        ({
+            subject_id: "s", pack_id: "p", kind: "k", label: "s", relations: [], claims: [],
+            attributes: rows.map(([label, value, identity]) => ({
+                key: label.toLowerCase(), value_text: value, unit: "", is_identity: identity ?? 0, label,
+            })),
+        }) as SubjectDetail;
+
+    it("aligns by the pack label, skips identity and puts differences first", () => {
+        const rows = compareSpecs([
+            subject([["Brand", "a", 1], ["Battery", "10"], ["Chipset", "X"]]),
+            subject([["Battery", "10"], ["Chipset", "Y"]]),
+            null,
+        ]);
+        expect(rows.map((r) => r.label)).toEqual(["Chipset", "Battery"]);
+        expect(rows[0].differs).toBe(true);
+        expect(rows[1].differs).toBe(false);
+        expect(rows[0].cells.map((c) => c?.value ?? null)).toEqual(["X", "Y", null]);
     });
 });
