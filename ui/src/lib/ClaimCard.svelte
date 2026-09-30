@@ -1,6 +1,5 @@
 <script lang="ts">
     import { count } from "./plural";
-    import type { Mode } from "./mode";
     import Grounding from "./Grounding.svelte";
     import {
         askLine,
@@ -15,7 +14,6 @@
 
     let {
         claim,
-        mode = "buyer",
         checked = false,
         note = "",
         onCheck,
@@ -26,7 +24,6 @@
         fresh = false,
     }: {
         claim: Claim;
-        mode?: Mode;
         checked?: boolean;
         note?: string;
         onCheck?: (checked: boolean) => void;
@@ -43,8 +40,6 @@
     // still true" is the question a reader has *while reading the claim*, and
     // a button behind a disclosure triangle is a button they never find.
     const checkable = $derived(Boolean(onCheckFacts) && canCheckFacts(claim));
-
-    const author = $derived(mode === "author");
 
     // The field opens when there is something in it, and stays open once the
     // reader has opened it. A textarea under every card by default turns a
@@ -82,7 +77,7 @@
         {#if fresh}
             <span class="badge fresh" title="Added while this answer was open">New</span>
         {/if}
-        <!-- Out of the provenance fold and out of author mode. A disputed
+        <!-- Out of the provenance fold. A disputed
              claim is exactly the one whose dispute the reader needs to see:
              folded twice, it reached nobody who was not already auditing. -->
         {#if claim.disputed}
@@ -169,8 +164,7 @@
         </p>
     {/if}
 
-    {#if author}
-        <details class="provenance">
+    <details class="provenance">
             <summary class="meta">Why this ranked here</summary>
             <!-- The numbers, but said in words first. A bare 0.72 is not
                  auditable by anyone who does not already know the scale. -->
@@ -188,26 +182,17 @@
                 </ul>
             {/if}
         </details>
-    {/if}
 
     {#if claim.sources?.length}
         <details>
             <summary class="meta">
-                {author
-                    ? count(claim.sources.length, "source")
-                    : `Where this comes from — ${sourceSummary(claim)}`}
+                {count(claim.sources.length, "source")}
             </summary>
             {#each claim.sources as source}
                 <blockquote class={source.stance === "refutes" ? "refutes" : ""}>
                     {source.quote}
                     <footer class="meta">
-                        {#if author}
-                            {source.domain} · {source.tier} · {source.stance}
-                        {:else}
-                            {source.domain}{source.stance === "refutes"
-                                ? " — disagrees"
-                                : ""}
-                        {/if}
+                        {source.domain} · {source.tier} · {source.stance}
                     </footer>
                 </blockquote>
             {/each}

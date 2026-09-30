@@ -1,5 +1,4 @@
 <script lang="ts">
-    import type { Mode } from "./mode";
     import type { LookupResult } from "./types";
     import { handledNote } from "./report";
     import { severityShare, verdictFor } from "./verdict";
@@ -7,8 +6,7 @@
     let {
         result,
         handled = [],
-        mode = "buyer",
-    }: { result: LookupResult; handled?: string[]; mode?: Mode } = $props();
+    }: { result: LookupResult; handled?: string[] } = $props();
 
     const verdict = $derived(verdictFor(result, handled));
     const share = $derived(severityShare(verdict.counts));
@@ -50,7 +48,7 @@
         </p>
     {/if}
     <p class="verdict-note">{verdict.note}</p>
-    {#if mode === "author" && result.flags?.length}
+    {#if result.flags?.length}
         <p class="flag">flags: {result.flags.join(", ")}</p>
     {/if}
 </div>

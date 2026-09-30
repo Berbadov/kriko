@@ -4,38 +4,30 @@
     import { api } from "./lib/api";
     import History from "./lib/History.svelte";
     import Lazy from "./lib/Lazy.svelte";
-    import { asMode, initMode, mode, setMode } from "./lib/mode";
     import { watchFocus } from "./lib/focus";
-    import { hashWith, route } from "./lib/router";
+    import { route, toHash } from "./lib/router";
     import CloseNotice from "./lib/shell/CloseNotice.svelte";
     import Palette from "./lib/shell/Palette.svelte";
     import Sidebar from "./lib/shell/Sidebar.svelte";
-    import { isAuthorOnly, labelOf, resolve } from "./lib/shell/nav";
+    import { labelOf, resolve } from "./lib/shell/nav";
     import About from "./routes/About.svelte";
     import Activity from "./routes/Activity.svelte";
     import Agents from "./routes/Agents.svelte";
     import Bench from "./routes/Bench.svelte";
-    import Check from "./routes/Check.svelte";
     import Compare from "./routes/Compare.svelte";
     import Extension from "./routes/Extension.svelte";
     import Knowledge from "./routes/Knowledge.svelte";
     import Overview from "./routes/Overview.svelte";
-    import Questions from "./routes/Questions.svelte";
     import Settings from "./routes/Settings.svelte";
     import Sites from "./routes/Sites.svelte";
     import Result from "./routes/Result.svelte";
     import Welcome from "./routes/Welcome.svelte";
 
-    // The sidebar panel belongs where a past answer is relevant: beside the
-    // form that produces one and beside a result being read. On the History
-    // *page* it would be the page twice.
-    const WITH_HISTORY = new Set(["check", "result"]);
+    // The sidebar panel belongs beside a result being read (B163: the form
+    // that used to sit beside it is gone). On the History *page* it would be
+    // the page twice.
+    const WITH_HISTORY = new Set(["result"]);
     const showHistory = $derived(WITH_HISTORY.has($route.name));
-
-    // A view only an author has is not hidden from a buyer who has its link —
-    // it is explained, and the switch is one click away in the rail. Silently
-    // rendering nothing would look like a broken link.
-    const authorOnly = $derived($mode !== "author" && isAuthorOnly($route.name));
 
     // Retired route names still resolve. Three screens became three lenses on
     // one, and `#/coverage` is a link the browser extension and this app's own
@@ -57,8 +49,9 @@
     const firstRun = $derived(empty && !dismissed && $route.name !== "welcome");
 
     // There is no theme to wait for: Panel is the only palette and paints from
-    // the stylesheet alone (B159), so the gate is the mode and the store check.
-    const ready = Promise.all([initMode($route.query.mode), checkStore]);
+    // the stylesheet alone (B159), and there is one mode (B165), so the only
+    // gate is the store check.
+    const ready = checkStore;
 
     // The browser extension's "Open in Kriko" arrives here: it posts a route
     // to the engine, the shell raises the window, and this is the half that
@@ -66,9 +59,6 @@
     // screen — a watcher living in one route could only ever hand off to
     // itself. See lib/focus.ts.
     $effect(() => watchFocus());
-
-    $effect(() => {
-    });
 
     /* Saying that the page changed, and putting focus where it changed.
      *
@@ -133,19 +123,6 @@
         const work = document.querySelector("main.work");
         if (work) work.scrollTop = 0;
     });
-
-    // The URL is read once at startup (`ready` above). mode.ts's own comment
-    // says a pasted link opens in the mode it was written for — that has to
-    // hold for a link followed *inside* a running app too, not only on a
-    // fresh load, or `?mode=author` in the address bar becomes a lie the
-    // moment the reader is already here (check-20, knowledge-20, settings-15).
-    $effect(() => {
-        const wanted = $route.query.mode;
-        // `mode.set`, not `setMode`: following a link is not the reader
-        // saying "remember this as my mode" the way clicking the rail's
-        // switch is, so this must not overwrite the stored preference.
-        if (wanted && asMode(wanted) !== $mode) mode.set(asMode(wanted));
-    });
 </script>
 
 <div class="shell">
@@ -164,8 +141,8 @@
         Skip to content
     </button>
 
-    <Sidebar mode={$mode} />
-    <Palette mode={$mode} />
+    <Sidebar />
+    <Palette />
     <CloseNotice />
 
     <!-- Polite, and outside the keyed subtree: a live region that is itself
@@ -192,20 +169,6 @@
                                 void api.status().then((s) => (empty = s.packs === 0));
                             }}
                         />
-                    {:else if authorOnly}
-                        <!-- Named by the rail's own label, not the route id
-                             (shell-11, knowledge-31, settings-15) — "packs is
-                             an author view" tells a reader nothing they can
-                             act on, and at a short window the rail's own mode
-                             switch can be scrolled out of reach, so the way
-                             back has to be right here. -->
-                        <EmptyState
-                            title="{labelOf($route.name)} is for pack authors"
-                            detail="It is real work a pack author does, and none of it helps
-                                    someone deciding whether to go and look at a listing."
-                            actionLabel="Switch to author mode"
-                            onAction={() => setMode("author")}
-                        />
                     {:else if $route.name === "welcome"}
                         <!-- #/welcome is the reopening address for the offer
                              firstRun shows automatically — a reader who
@@ -219,8 +182,6 @@
                                 void api.status().then((s) => (empty = s.packs === 0));
                             }}
                         />
-                    {:else if $route.name === "check"}
-                        <Check mode={$mode} />
                     {:else if $route.name === "overview"}
                         <Overview />
                     {:else if view.name === "knowledge"}
@@ -233,23 +194,6 @@
                         <History page />
                     {:else if $route.name === "compare"}
                         <Compare />
-                    {:else if $route.name === "questions"}
-                        <!-- The id rides in the query rather than the path so
-                             the rail's own entry (no id at all) is the same
-                             route, and resolves to the newest saved answer.
-
-                             A path segment is accepted as well, and only for
-                             one caller: the browser extension hands a route
-                             to `/api/focus`, which refuses a query string on
-                             purpose (a closed route shape is what makes an
-                             address posted by a web page safe to act on). So
-                             `questions/<id>` is the same destination spelled
-                             in the alphabet that handoff allows. -->
-                        {#key $route.params[0] ?? $route.query.id ?? ""}
-                            <Questions
-                                lookupId={$route.params[0] ?? $route.query.id ?? ""}
-                            />
-                        {/key}
                     {:else if $route.name === "extension"}
                         <Extension />
                     {:else if $route.name === "sites"}
@@ -279,14 +223,14 @@
                         <!-- Keyed: Result fetches once on init, so moving between two
                              stored results must remount rather than reuse. -->
                         {#key $route.params[0]}
-                            <Result lookupId={$route.params[0]} mode={$mode} />
+                            <Result lookupId={$route.params[0]} />
                         {/key}
                     {:else}
                         <EmptyState
                             title="No such view: {$route.name}"
                             detail="The link may be from an older version."
-                            actionLabel="Go to New check"
-                            actionHref={hashWith({ mode: $route.query.mode }, "check")}
+                            actionLabel="Go to Activity"
+                            actionHref={toHash("activity")}
                         />
                     {/if}
                     </div>
