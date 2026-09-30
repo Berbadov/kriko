@@ -266,7 +266,7 @@ def header(state, width: int) -> list[str]:
 def footer(state, width: int) -> list[str]:
     keys = {
         "planes": "r refresh · s shell · q quit",
-        "agenda": "enter research · a run whole agenda · r refresh · s shell · q quit",
+        "agenda": "enter research · r refresh · s shell · q quit",
         "jobs": "enter follow · c cancel · R retry · r refresh · s shell · q quit",
         "ops": "r refresh · s shell · q quit",
     }[state.tab]
