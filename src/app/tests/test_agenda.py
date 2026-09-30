@@ -14,7 +14,6 @@ an error, and no row carries a listing URL.
 """
 
 import json
-import re
 from pathlib import Path
 
 import pytest
