@@ -1,6 +1,7 @@
 <script lang="ts">
     import { untrack, type Snippet } from "svelte";
     import Failure from "./Failure.svelte";
+    import { remedyFor } from "./failure";
 
     let {
         promise,
@@ -50,17 +51,47 @@
             live = false;
         };
     });
+
+    /* The exception, for the folded details only: what a bug report needs,
+     * while the sentence above it is the reader's whole remedy. `technical` is
+     * the one spelling `failure.test.ts` allows for turning an exception into
+     * text; the headline is deliberately not used, since it says the engine
+     * stopped answering and here it did answer. */
+    const technical = (error: unknown) => remedyFor(error).technical;
 </script>
 
-{#if outcome?.ok}
-    {@render children(outcome.value)}
-{:else if outcome}
-    <!-- B72: this used to read "Could not load this view: <exception>", which
-         is accurate and useless. A local app has one reader, no terminal and
-         nobody to page — whatever this says is the whole remedy they get. -->
-    <Failure error={outcome.error} {retry} />
-{:else if skeleton}
-    {@render skeleton()}
-{:else}
-    <p class="state loading">{loading}</p>
-{/if}
+<!-- B156: the answer can arrive fine and the markup built from it can still
+     throw while drawing (Sites: several packs shipped an adapter for one site,
+     the each key repeated, `each_key_duplicate`). Nothing caught that, so the
+     loading sentence stayed on screen for good and the reason lived only in the
+     console. A boundary turns any such error, on any screen that uses Async,
+     into a visible one. It is not `Failure`: that component reads a non-API
+     error as "the engine stopped answering", which is the opposite of what
+     happened here. -->
+<svelte:boundary>
+    {#if outcome?.ok}
+        {@render children(outcome.value)}
+    {:else if outcome}
+        <!-- B72: this used to read "Could not load this view: <exception>", which
+             is accurate and useless. A local app has one reader, no terminal and
+             nobody to page — whatever this says is the whole remedy they get. -->
+        <Failure error={outcome.error} {retry} />
+    {:else if skeleton}
+        {@render skeleton()}
+    {:else}
+        <p class="state loading">{loading}</p>
+    {/if}
+    {#snippet failed(error, reset)}
+        <div class="failure" role="alert">
+            <p class="state error">This view could not be drawn.</p>
+            <p>The engine answered, but the screen could not show it. If Try again does not help, restart Kriko.</p>
+            <div class="row">
+                <button onclick={reset}>Try again</button>
+            </div>
+            <details>
+                <summary>Details</summary>
+                <pre>{technical(error)}</pre>
+            </details>
+        </div>
+    {/snippet}
+</svelte:boundary>
