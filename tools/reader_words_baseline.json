@@ -28,7 +28,6 @@
     "ui/src/lib/failure.ts": {"em_dash": 3},
     "ui/src/lib/health.ts": {"em_dash": 2},
     "ui/src/lib/report.ts": {"em_dash": 5},
-    "ui/src/lib/theme.ts": {"em_dash": 3},
     "ui/src/routes/About.svelte": {"em_dash": 6},
     "ui/src/routes/Bench.svelte": {"em_dash": 18},
     "ui/src/routes/Check.svelte": {"em_dash": 2},
@@ -43,7 +42,7 @@
     "ui/src/routes/Packs.svelte": {"em_dash": 4},
     "ui/src/routes/Pipeline.svelte": {"em_dash": 5},
     "ui/src/routes/Questions.svelte": {"em_dash": 1},
-    "ui/src/routes/Settings.svelte": {"em_dash": 7},
+    "ui/src/routes/Settings.svelte": {"em_dash": 5},
     "ui/src/routes/Sites.svelte": {"em_dash": 6},
     "ui/src/routes/Submissions.svelte": {"em_dash": 2}
   }
