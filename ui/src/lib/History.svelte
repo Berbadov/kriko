@@ -4,7 +4,7 @@
     import { ApiError, api } from "./api";
     import { count } from "./plural";
     import { localTime, sourceWord } from "./report";
-    import { hashWith, navigate, route } from "./router";
+    import { navigate, route, toHash } from "./router";
     import type { HistoryItem } from "./types";
 
     let { page = false }: { page?: boolean } = $props();
@@ -20,10 +20,7 @@
     let hasMore = $state(false);
     let notice = $state("");
 
-    // hashWith, not toHash: a bare link dropped ?mode, so an author clicking a
-    // recent result landed in buyer mode with no indication why.
-    const link = (name: string, ...params: string[]) =>
-        hashWith({ mode: $route.query.mode }, name, ...params);
+    const link = (name: string, ...params: string[]) => toHash(name, ...params);
 
     async function refresh() {
         // One extra row is the whole trick: fetch limit+1 and if it comes
@@ -56,7 +53,7 @@
         // row is gone (check-32): its Handled boxes and notes would still
         // post, against a lookup the server no longer has.
         if ($route.name === "result" && $route.params[0] === item.lookup_id) {
-            navigate("check");
+            navigate("history");
             return;
         }
         await refresh();
@@ -109,8 +106,8 @@
                 title="Nothing asked yet"
                 detail="Every check you run is kept here so you can reopen it, link it, or
                         compare two listings."
-                actionLabel="Run a check"
-                actionHref={link("check")}
+                actionLabel="Browser extension"
+                actionHref={link("extension")}
             />
         {/if}
     {/await}

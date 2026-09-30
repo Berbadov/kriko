@@ -1,70 +1,44 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_ROUTE } from "../router";
+import * as navModule from "./nav";
 import {
     ALL_ROUTES,
     NAV,
-    destinationsFor,
-    groupsFor,
-    isAuthorOnly,
+    destinations,
     labelOf,
     resolve,
 } from "./nav";
 
 describe("the route table", () => {
-    it("gives a buyer exactly the group about using knowledge", () => {
-        const groups = groupsFor("buyer");
-        expect(groups.map((g) => g.title)).toEqual(["Check", "This install"]);
-        expect(groups[0].items.map((i) => i.name)).toEqual([
-            "check",
-            "history",
-            "compare",
-            "questions",
-            // The extension is the buyer's half of the product, so it sits
-            // inside the one group they can see rather than behind the author
-            // gate with the other setup screens.
-            "extension",
-        ]);
-    });
-
-    it("gives an author every group", () => {
-        expect(groupsFor("author").map((g) => g.title)).toEqual([
+    it("gives everyone every group, and none of them is gated (B165)", () => {
+        expect(NAV.map((g) => g.title)).toEqual([
             "Check",
             "Knowledge",
             "System",
             "This install",
         ]);
+        // The gate is gone from the type as well as from the rail.
+        for (const group of NAV) expect("authorOnly" in group).toBe(false);
+        expect("isAuthorOnly" in navModule).toBe(false);
+        expect("groupsFor" in navModule).toBe(false);
     });
 
-    it("shows a buyer what version they are running", () => {
-        // The person asked "which version are you on?" is usually the one who
-        // cannot open the author screens, so About is not behind that gate.
-        expect(isAuthorOnly("about")).toBe(false);
+    it("has no New check and no Question sheet (B163)", () => {
+        expect(ALL_ROUTES).not.toContain("check");
+        expect(ALL_ROUTES).not.toContain("questions");
+        expect(NAV[0].items.map((i) => i.name)).toEqual(["history", "compare", "extension"]);
     });
 
-    it("knows which routes a buyer may not open", () => {
-        expect(isAuthorOnly("overview")).toBe(true);
-        expect(isAuthorOnly("knowledge")).toBe(true);
-        expect(isAuthorOnly("console")).toBe(true);
-        expect(isAuthorOnly("bench")).toBe(true);
-        // Retired names keep the gate they had, because they resolve to a
-        // route that has one.
-        expect(isAuthorOnly("health")).toBe(true);
-        expect(isAuthorOnly("coverage")).toBe(true);
-        expect(isAuthorOnly("marks")).toBe(true);
-        expect(isAuthorOnly("submissions")).toBe(true);
-        expect(isAuthorOnly("check")).toBe(false);
-        // A preference is not authoring: the reader who never opens an author
-        // screen is still the one choosing the palette.
-        expect(isAuthorOnly("settings")).toBe(false);
-        expect(isAuthorOnly("compare")).toBe(false);
-        expect(isAuthorOnly("extension")).toBe(false);
+    it("opens on Activity, and the old New check address lands there (B163)", () => {
+        expect(DEFAULT_ROUTE).toBe("activity");
+        expect(resolve("check")).toEqual({ name: "activity" });
+        expect(ALL_ROUTES).toContain(resolve(DEFAULT_ROUTE).name);
     });
 
     it("lists every destination once, so App.svelte and the rail cannot drift", () => {
         expect(ALL_ROUTES).toEqual([
-            "check",
             "history",
             "compare",
-            "questions",
             "extension",
             "overview",
             "knowledge",
@@ -111,19 +85,11 @@ describe("the route table", () => {
         // Agents has one lens now — Connect — so neither name carries one.
         expect(resolve("console")).toEqual({ name: "agents" });
         expect(resolve("connect")).toEqual({ name: "agents" });
-        // And they keep the author gate they had, because the screen that
-        // absorbed them has one.
-        for (const name of ["jobs", "pipeline", "submissions", "console", "connect"]) {
-            expect(isAuthorOnly(name)).toBe(true);
-        }
     });
 
     it("lands #/packs and #/marks on Browse, since neither is a screen any more (B166, B167)", () => {
         expect(resolve("packs")).toEqual({ name: "knowledge", lens: "all" });
         expect(resolve("marks")).toEqual({ name: "knowledge", lens: "all" });
-        // Both keep Browse's author gate.
-        expect(isAuthorOnly("packs")).toBe(true);
-        expect(isAuthorOnly("marks")).toBe(true);
     });
 
     it("keeps the words a merged screen absorbed searchable", () => {
@@ -131,7 +97,7 @@ describe("the route table", () => {
         // more — it named an API-only prompt that a real terminal (reachable
         // from the rail, not through Agents) replaced, and searching it into
         // Agents now would send the reader to the wrong feature.
-        const flat = destinationsFor("author");
+        const flat = destinations();
         const agents = flat.find((d) => d.name === "agents");
         expect(agents?.also).toContain("connect");
         expect(agents?.also).not.toContain("console");
@@ -147,7 +113,7 @@ describe("the route table", () => {
     // alias table is now the source both read from, so a name added there is
     // findable from the day it resolves.
     it("makes every alias the router accepts findable in the palette too", () => {
-        const flat = destinationsFor("author");
+        const flat = destinations();
         const knowledge = flat.find((d) => d.name === "knowledge");
         expect(knowledge?.also).toContain("coverage");
         expect(knowledge?.also).toContain("health");
@@ -159,16 +125,11 @@ describe("the route table", () => {
     // screen added to one is reachable by name in the other on the same day —
     // the failure being prevented is a palette quietly one release behind.
     it("flattens to exactly what the rail offers, with the group kept", () => {
-        for (const mode of ["buyer", "author"] as const) {
-            const flat = destinationsFor(mode);
-            const groups = groupsFor(mode);
-            expect(flat.map((d) => d.name)).toEqual(
-                groups.flatMap((g) => g.items.map((i) => i.name)),
-            );
-            expect(new Set(flat.map((d) => d.group))).toEqual(
-                new Set(groups.map((g) => g.title)),
-            );
-        }
+        const flat = destinations();
+        expect(flat.map((d) => d.name)).toEqual(
+            NAV.flatMap((g) => g.items.map((i) => i.name)),
+        );
+        expect(new Set(flat.map((d) => d.group))).toEqual(new Set(NAV.map((g) => g.title)));
     });
 
     it("names every route, following an alias, and never answers with nothing", () => {

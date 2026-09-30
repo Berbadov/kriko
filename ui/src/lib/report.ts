@@ -327,28 +327,6 @@ export function asMarkdown(
     return lines.join("\n");
 }
 
-/** The question sheet: what to ask, worst first, with nothing else on it.
- *
- * The product principle is "what to worry about before you book the expert",
- * so the artifact that principle implies is a list of questions — and until
- * now `askLine` was readable one card at a time and nowhere as a whole.
- */
-export type Question = {
-    key: string;
-    ask: string;
-    title: string;
-    severity: string;
-    domain: string;
-};
-
-export const questions = (result: LookupResult): Question[] =>
-    orderClaims(result.claims).map((claim) => ({
-        key: claimKey(claim),
-        ask: askLine(claim),
-        title: claim.title,
-        severity: claim.severity,
-        domain: claim.domain || "other",
-    }));
 
 
 /** What a score means, in words, before the number.

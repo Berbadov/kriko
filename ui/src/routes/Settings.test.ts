@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { describe, expect, it } from "vitest";
 import { stubFetch } from "../lib/stub-fetch";
-import { mode } from "../lib/mode";
 import Settings from "./Settings.svelte";
 
 describe("Settings", () => {
@@ -11,31 +10,18 @@ describe("Settings", () => {
         // palette the reader could pick.
         stubFetch({ "/api/settings": {} });
         render(Settings);
-        expect(await screen.findByText("What an answer shows")).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: /Settings/ })).toBeInTheDocument();
         expect(screen.queryByText("Appearance")).toBeNull();
         expect(screen.queryByRole("radio", { name: /lemonade|slate|panel/i })).toBeNull();
         expect(screen.queryByText(/theme/i, { selector: "h3, label, span" })).toBeNull();
     });
 
-    it("switches which half of an answer gets drawn", async () => {
-        stubFetch({ "/api/settings": {} });
-        mode.set("buyer");
+    it("offers no mode choice, because there is one mode (B165)", async () => {
+        stubFetch({ "/api/settings": { mode: "buyer" } });
         render(Settings);
-        await fireEvent.click(await screen.findByRole("radio", { name: /author/i }));
-        let seen = "";
-        mode.subscribe((value) => (seen = value))();
-        expect(seen).toBe("author");
-    });
-
-    it("draws a chosen option as a marked card", async () => {
-        // The card is the shared `.choice` (components.css), raised like a
-        // button; what the screen owes it is the `on` class on the chosen one.
-        stubFetch({ "/api/settings": {} });
-        mode.set("buyer");
-        render(Settings);
-        const buyer = (await screen.findByRole("radio", { name: /buyer/i })).closest("label");
-        expect(buyer).toHaveClass("choice", "on");
-        expect(screen.getByRole("radio", { name: /author/i }).closest("label")).not.toHaveClass("on");
+        expect(await screen.findByRole("heading", { name: /Settings/ })).toBeInTheDocument();
+        expect(screen.queryByText("What an answer shows")).toBeNull();
+        expect(screen.queryByRole("radio", { name: /buyer|author/i })).toBeNull();
     });
 
     it("prints everything it keeps, because a local app owes that answer plainly", async () => {

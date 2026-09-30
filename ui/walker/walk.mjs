@@ -185,7 +185,7 @@ function startDevUi(apiBase) {
 async function openScreen(page, base, name) {
     await page.goto("about:blank");
     const t0 = Date.now();
-    await page.goto(`${PAGE_ROOT}/#/${name}?mode=author`);
+    await page.goto(`${PAGE_ROOT}/#/${name}`);
     const s = await settle(page);
     await page.waitForTimeout(300);
     return { ...s, ms: Date.now() - t0 };
@@ -345,9 +345,9 @@ async function main() {
 
     // Routes come from the rendered rail, so a screen added to nav.ts is walked
     // the day it exists.
-    await openScreen(page, base, "overview");
+    await openScreen(page, base, "activity");
     let routes = await page.$$eval("a[href^='#/']", (as) => [...new Set(as.filter((a) => !a.closest("main")).map((a) => a.getAttribute("href").replace(/^#\//, "").split(/[/?]/)[0]))]);
-    if (!routes.length) routes = ["check"];
+    if (!routes.length) routes = ["activity"];
     if (ONLY) routes = routes.filter((r) => ONLY.includes(r));
     console.log(`walker: ${routes.length} screens: ${routes.join(", ")}`);
 
