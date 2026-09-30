@@ -44,51 +44,38 @@ PLANE_WORDS = {
         "capped by a budget you set, and needs both keys below."
     ),
     "local": (
-        "Kriko searches and reads with services on this machine — a local "
-        "SERP for search and a local inference server for reading. Costs "
-        "nothing and needs no keys; needs OpenSERP on 127.0.0.1:7000 and an "
-        "OpenAI-compatible server (llama-server, Ollama) on 127.0.0.1:8080."
+        "Kriko reads with a model running on this computer (Ollama, LM Studio "
+        "or llama-server, with a model downloaded) and searches through a "
+        "search service on this machine when one answers, otherwise through "
+        "Exa's free hosted search. Costs nothing and needs no keys."
     ),
 }
 
 
-def local_endpoints() -> dict:
-    """Whether this machine's own services answer, and where they were sought.
+def local_endpoints(app_state_path=None) -> dict:
+    """Whether this machine can run the local plane, and how it was found.
 
-    The probe is one HEAD with a one-second timeout per service, in a thread,
-    because the planes screen is not allowed to hang on a service that is
-    down — which is the normal state of a box where OpenSERP has not been
-    started yet. The card stays up either way; `ready` only dims it, and the
-    two rows say which half is missing so the fix is one command.
+    Asked of the machine every time, by `app.localplane.resolve`: the servers
+    at their conventional loopback addresses plus the configured one, each
+    with the model list it reports itself, and which search is in use. The
+    probes are short and side by side because the planes screen is not allowed
+    to hang on a server that is down, which is the normal state of a box where
+    none has been started yet. `ready` is false with a `reason` that says what
+    to do, and the card stays up either way.
     """
-    from concurrent.futures import ThreadPoolExecutor
+    from app import localplane
 
-    import urllib.request
+    return localplane.resolve(app_state_path)
 
-    from app.providers import llm, openserp
 
-    def _answers(url: str) -> bool:
-        try:
-            urllib.request.urlopen(url, timeout=1.0)
-            return True
-        except Exception:  # noqa: BLE001 - a down service is an answer, not an error
-            return False
+@router.get("/local-plane")
+def local_plane(request: Request) -> dict:
+    """The local machine plane's status, for Settings and the planes card,
+    with what the reader has saved so the form can show it."""
+    from app import localplane
 
-    inference = (llm._env("LLM_BASE_URL", "http://127.0.0.1:8080")).rstrip("/")
-    serp = openserp.DEFAULT_BASE_URL
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        inference_up = pool.submit(_answers, inference).result()
-        serp_up = pool.submit(_answers, serp).result()
-    missing = [
-        name for name, up in (("the inference server", inference_up),
-                              ("the SERP", serp_up)) if not up
-    ]
-    return {
-        "ready": inference_up and serp_up,
-        "reason": "" if not missing else "not running: " + " and ".join(missing),
-        "inference_url": inference,
-        "serp_url": serp,
-    }
+    path = getattr(request.app.state.settings, "app_state_path", None)
+    return {**local_endpoints(path), "stored": localplane.stored(path)}
 
 
 @router.get("/research-planes")
@@ -130,7 +117,8 @@ def list_planes(
             row.update(ready=selection["ready"], reason=selection["reason"],
                        llm=selection["llm"], search=selection["search"])
         if cls.name == "local":
-            row.update(local_endpoints())
+            row.update(local_endpoints(
+                getattr(request.app.state.settings, "app_state_path", None)))
         if cls.name == "harness":
             row.update(ready=selection["harness_ready"],
                        selected_harness=selection["harness"],
@@ -221,6 +209,9 @@ def list_planes(
                 for h in harness_mod.found_but_unusable()
             ]
         planes.append(row)
+    # The local plane is listed first while it is ready (B172): it is the one an
+    # unnamed run uses then, and a list should open on what will run.
+    planes.sort(key=lambda one: not (one["id"] == "local" and one.get("ready")))
     # The plane an unnamed run resolves to on this machine, so the screen can
     # mark it rather than making the reader guess which button is the default.
     from app.web.tasks import default_backend

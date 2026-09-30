@@ -395,6 +395,9 @@ export const api = {
         get<{ planes: T.ResearchPlane[]; default?: string }>(
             `/api/research-planes${Object.keys(selection).length ? `?${new URLSearchParams(selection)}` : ""}`,
         ),
+    /** The local machine plane: which LLM server answered, the models it
+     *  reports itself, which search is in use, and whether a run can start. */
+    localPlane: () => get<T.LocalPlane>("/api/local-plane"),
     /** The sums. Two halves — what writing claims in cost, and how much
      *  reading them back out this installation has actually done. */
     usage: () => get<T.Usage>("/api/usage"),

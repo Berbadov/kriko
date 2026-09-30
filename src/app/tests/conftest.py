@@ -179,3 +179,25 @@ def the_weekly_pack_update_stays_off(monkeypatch):
     wants to exercise it calls `submit_if_due` itself against a local server.
     """
     monkeypatch.setenv("KRIKO_NO_PACK_AUTOUPDATE", "1")
+
+
+@pytest.fixture(autouse=True)
+def no_test_finds_the_readers_local_model_server(monkeypatch):
+    """A test may not find the model server the developer has running.
+
+    The same shape as the guards above. `tasks.default_backend()` now asks the
+    machine whether a local model server answers (B172), and a developer who
+    has Ollama or LM Studio up would see every unnamed run go to the local
+    plane instead of the plane the test meant. Nothing answers under test; a
+    test that wants a server stubs `local_discovery.discover` itself, or runs a
+    loopback server of its own.
+    """
+    from app.providers import local_discovery
+
+    monkeypatch.setattr(
+        local_discovery, "discover",
+        lambda configured="", timeout=1.0: [
+            {"name": name, "url": url, "up": False, "models": []}
+            for name, url in local_discovery.CANDIDATES])
+    monkeypatch.setattr(local_discovery, "search_answers",
+                        lambda url="", timeout=1.0: False)
