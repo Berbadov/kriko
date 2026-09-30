@@ -27,6 +27,10 @@
         emptyLabel = "Default",
         /** Why this name may be free-form, shown under the custom field. */
         hint = "",
+        /** Why `options` is empty, said in one line ("This CLI does not list
+         *  its models"). With no options and a note the list is replaced by the
+         *  line and a field for typing a name, since the CLI judges the name. */
+        note = "",
         id = "",
         disabled = false,
         onpick,
@@ -35,6 +39,7 @@
         options?: { value: string; label?: string; note?: string; disabled?: boolean }[];
         emptyLabel?: string;
         hint?: string;
+        note?: string;
         id?: string;
         disabled?: boolean;
         onpick?: (value: string) => void;
@@ -51,6 +56,7 @@
      * "Default" while the run uses something else, which is the class of bug
      * this whole change is about. */
     const custom = $derived(typing || (!!value && !known));
+    const unlisted = $derived(!options.length && !!note);
 
     function choose(next: string) {
         if (next === CUSTOM) {
@@ -68,6 +74,18 @@
     }
 </script>
 
+{#if unlisted}
+    <p class="meta">{note}</p>
+    <input
+        {id}
+        {disabled}
+        value={value ?? ""}
+        placeholder={emptyLabel}
+        aria-label="Custom name"
+        onchange={(event) => type(event.currentTarget.value)}
+    />
+    {#if hint}<p class="meta">{hint}</p>{/if}
+{:else}
 <select
     {id}
     {disabled}
@@ -92,6 +110,7 @@
         onchange={(event) => type(event.currentTarget.value)}
     />
     {#if hint}<p class="meta">{hint}</p>{/if}
+{/if}
 {/if}
 
 <style>

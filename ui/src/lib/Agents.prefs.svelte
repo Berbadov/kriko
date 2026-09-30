@@ -158,6 +158,7 @@
                                         options={(one.llms ?? []).map((name) => ({ value: name }))}
                                         emptyLabel="CLI default"
                                         hint={one.llm_hint}
+                                        note={one.llms_note}
                                         onpick={(chosen) =>
                                             save({ [key("harness_model", one.id)]: chosen })}
                                     />
