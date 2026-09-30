@@ -113,7 +113,12 @@
                 />
             {:else}
                 <ul class="klist" aria-label="Readable sites">
-                    {#each data.registered as site (site.site + site.source)}
+                    <!-- B156: one site is normally shipped by several packs, so
+                         `site + source` repeated (four packs ship the same
+                         host) and the each block threw `each_key_duplicate`.
+                         A row is one adapter of one pack; a learned adapter
+                         has no pack and is told apart by its site. -->
+                    {#each data.registered as site (`${site.pack_id}|${site.id}|${site.site}|${site.source}`)}
                         <li class="krow">
                             <div class="kmain">
                                 <span class="klabel">{site.site}</span>
