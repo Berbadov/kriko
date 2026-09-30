@@ -24,8 +24,8 @@ read and install with one press.
 
 **Nothing here widens the agent's reach.** The authoring run is the research
 plane's spawn, unchanged: the same allowlist, the same neutral working
-directory, and no `--mcp-config` at all. The agent gets no tools that touch the
-disk; it prints one JSON object and Kriko writes the files, through
+directory, and no Kriko MCP tools (its one server reads a page, B155). The agent
+gets no tools that touch the disk; it prints one JSON object and Kriko writes the files, through
 `app/packdraft.py`, which is what enforces the directory, the fixed set of
 names, the data-only rule and the size caps. An authored pack is therefore
 *data an agent proposed*, never code it ran — and it is still not installed

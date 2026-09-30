@@ -81,13 +81,16 @@ def test_every_run_is_told_its_folder_by_pwd_as_well_as_by_cwd():
 
 def test_only_opencode_is_handed_an_opencode_config():
     """A stray `opencode.json` is harmless to another CLI, and still not its
-    business: the per-run folder of every other harness stays empty."""
+    business: the per-run folder of every other harness holds nothing but,
+    where its row declares one and its build takes it, the page reader's
+    config (B155; `test_the_page_reader.py` covers that file)."""
     for one in harness_mod.KNOWN:
         if one.id == "opencode" or one.sandbox_home:
             continue
         researcher = HarnessResearcher(one)
         with researcher._workspace():
-            assert list(Path(researcher._run_cwd).iterdir()) == [], one.id
+            held = {p.name for p in Path(researcher._run_cwd).iterdir()}
+        assert held <= {harness_mod.READER_CONFIG_FILE}, one.id
 
 
 # ── Antigravity: one effort, said once ──────────────────────────────────────
