@@ -141,7 +141,7 @@
                 {#if job && !job.done}
                     <span class="live-dot"></span>
                 {/if}
-                {job ? stateWord(job) : "starting…"}{job?.message ? ` — ${job.message}` : ""}
+                {job ? stateWord(job) : "starting…"}{job?.message ? ` · ${job.message}` : ""}
             </span>
         </div>
         {#if onClose}
@@ -160,7 +160,7 @@
              that under a scroll is how the button came to look broken. -->
         {#if documents === 0}
             <p class="meta">
-                Kriko searched nothing on the <code>{plane || "agent"}</code> plane —
+                Kriko searched nothing on the <code>{plane || "agent"}</code> plane;
                 that is what makes it cost $0: an agent you already pay for does the
                 reading. Either let Kriko start that agent for you with the button
                 below, or hand it the brief yourself. Both end at the same checked

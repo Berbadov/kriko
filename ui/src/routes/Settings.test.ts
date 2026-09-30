@@ -31,6 +31,20 @@ describe("Settings", () => {
         expect(screen.getByText('"author"')).toBeInTheDocument();
     });
 
+    it("offers the one confirmed reset that empties the catalogs (B188)", async () => {
+        stubFetch({
+            "/api/settings": {},
+            "post:/api/packs/reset": { removed: ["probe"], drafts: [], history_kept: true },
+        });
+        render(Settings);
+        const first = await screen.findByRole("button", { name: "Remove every catalog" });
+        await fireEvent.click(first);
+        const confirm = await screen.findByRole("button", { name: /Really remove every catalog/ });
+        await fireEvent.click(confirm);
+        expect(
+            await screen.findByRole("link", { name: "Rebuild them from Browse" }),
+        ).toBeInTheDocument();
+    });
     it("says nothing is stored yet rather than showing an empty list", async () => {
         stubFetch({ "/api/settings": {} });
         render(Settings);

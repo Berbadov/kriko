@@ -650,13 +650,13 @@
     if (plane.backend === "api") {
       const cap = Number(plane.budget_usd || 0);
       return cap > 0
-        ? `Costs money — this run is capped at $${cap.toFixed(2)} of your API keys.`
-        : "Costs money — spent through your configured API keys.";
+        ? `Costs money; this run is capped at $${cap.toFixed(2)} of your API keys.`
+        : "Costs money; spent through your configured API keys.";
     }
     if (plane.backend === "local") {
       return "Costs nothing. Runs on the model on this computer.";
     }
-    return "Costs nothing — runs through your coding agent.";
+    return "Costs nothing; runs through your coding agent.";
   }
 
   // Nothing known about a subject the packs *do* recognise. That is the one
@@ -687,7 +687,7 @@
   function startResearch() {
     if (state.researching || !state.researchPlane) return;
     const subject_id = state.researchTarget?.subject_id;
-    const q = [state.researchName.trim(), state.researchContext.trim()].filter(Boolean).join(" — ");
+    const q = [state.researchName.trim(), state.researchContext.trim()].filter(Boolean).join(" · ");
     if (!subject_id && !q) return;
     const cap = Number(state.researchPlane.budget_usd);
     state.researching = subject_id || q;
@@ -943,7 +943,7 @@
         : job.state === "succeeded" ? (state.researchJob.kind === "pack_author"
           ? (job.result?.installed
             ? "Deeper research done and installed. Refreshing this listing…"
-            : `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko — it could not install itself; open it there.`)
+            : `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko; it could not install itself; open it there.`)
           : job.result?.brief && !job.result?.documents
             ? "Brief ready. Open the research job to continue with your agent."
             : "Research completed. Open the research job for findings.")
@@ -1418,7 +1418,7 @@
             // The title already says it when the engine read the page the way
             // the page reads; a second line repeating it is noise (B152.5).
             ? (sameWords(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
-            : `<div class="lite-listing-engine" data-unresolved="1">Not recognised — no pack matched this page</div>`}
+            : `<div class="lite-listing-engine" data-unresolved="1">Not recognised; no pack matched this page</div>`}
       </div>
     `;
   }
@@ -1794,7 +1794,7 @@
     if (action === "research") {
       return "Research this product";
     }
-    if (action === "confirm") return "Not this one — search";
+    if (action === "confirm") return "Not this one; search";
     return "";
   }
 
@@ -1920,7 +1920,7 @@
     if (state.searchResults === null) {
       box.innerHTML =
         `<p class="lite-search-note">Type at least ${SEARCH_MIN} characters. ` +
-        `Every word has to land somewhere — a name, an alias, or one of the ` +
+        `Every word has to land somewhere: a name, an alias, or one of the ` +
         `values the thing is made of.</p>`;
       return;
     }
@@ -2418,7 +2418,7 @@
       card.innerHTML = `
         <div class="lite-gap-body">
           <div class="lite-gap-title">Couldn't find the knowledge on
-            ${escapeHtml(subject.label)} — research it with your agent?</div>
+            ${escapeHtml(subject.label)} · research it with your agent?</div>
           <div class="lite-gap-note">This is in the catalogue, but no claim has been
             researched for it yet.</div>
           ${cost ? `<div class="lite-gap-cost">${escapeHtml(cost)}</div>` : ""}

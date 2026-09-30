@@ -23,10 +23,10 @@ export const hallucinationSeverity = (rate: number | null): "high" | "medium" | 
 };
 
 export const formatUsd = (value: number | null, digits = 4): string =>
-    value === null ? "—" : `$${value.toFixed(digits)}`;
+    value === null ? "n/a" : `$${value.toFixed(digits)}`;
 
 export const formatPct = (value: number | null, digits = 1): string =>
-    value === null ? "—" : `${(value * 100).toFixed(digits)}%`;
+    value === null ? "n/a" : `${(value * 100).toFixed(digits)}%`;
 
 export const formatInterval = (interval: [number, number] | null): string =>
     interval === null ? "" : `${(interval[0] * 100).toFixed(0)}–${(interval[1] * 100).toFixed(0)}%`;

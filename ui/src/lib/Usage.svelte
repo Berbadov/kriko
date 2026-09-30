@@ -79,7 +79,7 @@
     const unmetered = (row: UsageTotals["planes"][number]) =>
         row.plane === "api"
             ? "not counted"
-            : "no marginal cost — your subscription paid for it";
+            : "no marginal cost; your subscription paid for it";
 </script>
 
 <section class="usage">
@@ -156,7 +156,7 @@
                     <tbody>
                         {#each data.research.planes as row (row.plane)}
                             <tr>
-                                <th scope="row">{PLANE[row.plane] ?? (row.plane || "—")}</th>
+                                <th scope="row">{PLANE[row.plane] ?? (row.plane || "none")}</th>
                                 <td>{row.runs}</td>
                                 <td>{count(row.tokens_used)}</td>
                                 <td
@@ -178,7 +178,7 @@
             {#if data.analyses.malformed}
                 <p class="state warn">
                     {plural(data.analyses.malformed, "line")} of the analyses log could not be
-                    read and were skipped. Nothing else is affected — the log is
+                    read and were skipped. Nothing else is affected; the log is
                     append-only and a bad line costs only itself.
                 </p>
             {/if}

@@ -465,22 +465,6 @@ Each decision has a default, so no work waits on it. An item that depends on one
 **Not this:** filter names typed in `ui/`. They come from API rows.
 **Owner:** free. Depends on B167.
 
-### B181: Sites shows what each site gives, and can be amended
-**Asked:** "Sites: remove unnecessary descriptions", "Sites: show detailed info about what is being seen from the added sites", "Sites: allow amendments to that info" (2026-09-29)
-**Where:** System, Sites.
-**Found:**
-- `/api/sites` returns only site, id, pack, match, source and activation. `/api/adapters` adds the labels and the panel block.
-- A pack's adapters are read-only pack data. Learned ones live in `app.sqlite` `local_adapters`.
-- No edit endpoint exists.
-
-**Done when:**
-- Each site expands to show the fields it reads, the labels it sees but does not map, its match patterns and its last sample page.
-- A learned site's mapping can be changed there, and it is checked before it is saved.
-- A pack's site is marked read-only, and an override for it is kept on this machine.
-
-**Not this:** editing a pack's shipped adapter.
-**Owner:** free. Depends on B156.
-
 ### B182: History, grouped by category and polished
 **Asked:** "History: categorise the products", "History: make it more polished, better look" (2026-09-29)
 **Where:** Check, History, and the short recent list beside a result.
@@ -510,85 +494,7 @@ Each decision has a default, so no work waits on it. An item that depends on one
 **Not this:** keeping drafts in the knowledge store. They are app state, in `app.sqlite`.
 **Owner:** free. Depends on B173.
 
-### B184: Filters on System screens, and a new Settings
-**Asked:** "Add more filters", "Redo Settings: it looks very ugly, remove unnecessary descriptions, polish it" (2026-09-29)
-**Where:**
-- the System screens that hold lists: Packs (in Browse), Sites, the run history, and research submissions;
-- Settings.
-
-**Found:**
-- Only the Live lens in Activity has filters: a door select and "running only".
-- Settings has eight sections, each with a paragraph, including a raw dump of every stored setting.
-
-**Done when:**
-- Each System list has a search box and a state filter.
-- Settings is a short set of sections with one-line labels: keys, provider tests, local machine (B171), and window.
-- The dump of stored settings is gone or folded.
-
-**Not this:** ever showing a key's value.
-**Owner:** free
-
-### B185: Benchmark, rebuilt
-**Asked:** "Make it intuitive, currently info and options are spat out with no structure", "Add more selects, more options, more animations", "Remove unnecessary descriptions", "Explain the planes (they exist but explain nothing)", "Use fixed tests, not the user's installed packs (packs are made with agents anyway)", "Replace informal wording with professional wording", "Make the results section expandable for detail if the user wants it", "Copy the structure of current LLM benchmark systems", "Support results with graphs", "Make models comparable" (2026-09-29)
-**Where:** System, Benchmark (`routes/Bench.svelte`, `src/app/bench.py`).
-**Found:**
-- No pack ships `research/gold.yaml`, so the benchmark runs on the first installed subjects and hallucination reads "not yet measured".
-- The screen meanwhile says it measures "against ground truth this pack's author supplied".
-- About 30 LLM chips sit in one wall, and the plane chips carry no explanation.
-
-**Done when:**
-- The benchmark runs a fixed, versioned test set, identical on every machine.
-- Results read as a leaderboard: one sortable row per model, each expanding to per-case detail.
-- Graphs put models on shared axes.
-- Runs scored on different sets are never ranked together.
-- Each plane has a one-line meaning.
-
-**Not this:** measuring the reader's own packs.
-**Owner:** free. Decision: D6.
-
-### B186: The extension follows the same rules
-**Asked:** "Remove excess wording and phrases like \"one click\"", "Keep only the extension connection, plus logs if the user asks", "Remove the long descriptions, keep only what is needed", "Apply the global design foundations from section 1" (2026-09-29)
-**Where:** the Browser extension screen in the app, plus the extension's in-page panel and its options page.
-**Found:**
-- The app screen has seven cards, one headed "One click", and a site list that duplicates Sites.
-- The panel (`extension/hover_lite/`) uses system fonts first.
-- The options page has five paragraphs for one field.
-- There is no log view.
-
-**Done when:**
-- The Browser extension screen shows its connection status, with folded "Log" and "Files" sections.
-- The panel and options page use Plex Mono, the Panel colours, raised controls and section symbols, with no paragraph longer than a line.
-
-**Not this:** site vocabulary in `extension/`, which `test_the_extension_speaks_no_sites_own_language` forbids.
-**Owner:** free. After B159 and B160.
-
 ## Phase 5: sweep, clean install, release
-
-### B187: The sweep, where every word earns its place
-**Asked:** "Remove every unprofessional phrase (\"what is this\", \"throw it away\", \"cover the gaps\", etc.)", "Cut wording everywhere, there are too many words", "Remove all em dashes" (2026-09-29)
-**Where:** every screen, the extension, and the server messages that reach a screen.
-**Done when:**
-- The check from B162 reports zero.
-- A walk of every screen finds no paragraph under a heading and no informal phrase.
-
-**Owner:** free. After the rest of Phase 4.
-
-### B188: A clean install, rebuilt by the new flow
-**Asked:** "Remove every package so you can rebuild them" (2026-09-29)
-**Where:** Settings (one reset action) and Browse.
-**Found:**
-- No reset exists.
-- Cars and drill come back at the next start after an uninstall, because `app/bundledpacks.py` seeds any missing pack.
-- Drafts persist in `~/.kriko/drafts` and block a new draft of the same name.
-- History rows keep referring to packs.
-
-**Done when:**
-- After one confirmed reset, Browse shows no packs and no drafts, and a restart brings nothing back (D4).
-- History is kept.
-- The packs are rebuilt by checking products through the B168 to B170 flow.
-
-**Not this:** deleting history or settings.
-**Owner:** free. After Phase 3. Decision: D4.
 
 ### B189: 1.0.0
 **Asked:** "okay let's do a stable version to do list" (2026-09-29)

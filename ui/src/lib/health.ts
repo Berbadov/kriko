@@ -31,8 +31,8 @@ export function tieNote(claims: ClaimHealth[]): string {
     const tied = claims.filter((c) => JSON.stringify(c.concern) === top).length;
     if (tied < 2) return "";
     return (
-        `${tied} of the claims shown tie on every signal — contradiction, ` +
-        `independent sources, best-source trust and staleness alike — so their ` +
+        `${tied} of the claims shown tie on every signal: contradiction, ` +
+        `independent sources, best-source trust and staleness alike, so their ` +
         `order relative to each other is arbitrary. This list is not the whole ` +
         `ranking, just the worst ${claims.length}.`
     );

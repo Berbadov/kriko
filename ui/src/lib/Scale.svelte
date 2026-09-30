@@ -134,7 +134,7 @@
                     : ""}.
             {/if}
             {#if chosen && chosen.usd !== null}
-                {money(chosen.usd)} on the paid plane — measured here, not a price
+                {money(chosen.usd)} on the paid plane, measured here, not a price
                 list.
             {:else if chosen}
                 Nothing of this shape has been measured here yet, so there is no
