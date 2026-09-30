@@ -885,7 +885,7 @@ export type UnmappedLabel = {
 };
 
 
-/** The local machine plane, as `/api/local-plane` answers. The model list is
+/** The local machine plane, as `/api/local-plane` answers. The LLM list is
  *  the server's own and `line` is the readiness sentence, both from the
  *  server. `stored` is what the reader has saved (empty means "discover"). */
 export type LocalPlane = {
@@ -894,7 +894,6 @@ export type LocalPlane = {
     line: string;
     url: string;
     name: string;
-    model: string;
     models: string[];
     servers: { name: string; url: string; up: boolean; models: string[] }[];
     search_kind: string;
