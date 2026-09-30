@@ -39,7 +39,8 @@ PACK = {
     "subjects": [
         {"kind": "product", "label": "Makita DHP484",
          "identity": {"brand": "makita", "series": "DHP484"},
-         "aliases": ["DHP484Z"], "attributes": {"voltage_v": 18}},
+         "aliases": ["DHP484Z"],
+         "attributes": {"voltage_v": {"value": 18, "source": "https://example.org/dhp484"}}},
         {"kind": "product", "label": "Bosch GSB 18V-55",
          "identity": {"brand": "bosch", "series": "GSB18V55"}},
     ],

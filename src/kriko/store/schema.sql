@@ -133,6 +133,9 @@ CREATE TABLE IF NOT EXISTS attributes (
   valid_to     TEXT NOT NULL DEFAULT '',
   is_identity  INTEGER NOT NULL DEFAULT 0,  -- participates in subject_id + matching
   confidence   REAL,
+  -- Where the figure was read (B173). '' for identity keys and for packs built
+  -- before the column existed; a spec shown to a reader carries one.
+  source_url   TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (attribute_id, pack_id)
 );
 CREATE INDEX IF NOT EXISTS idx_attr_subject ON attributes(subject_id, key);

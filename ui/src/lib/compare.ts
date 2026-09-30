@@ -1,5 +1,5 @@
 import { claimKey, orderClaims, severityRank } from "./report";
-import type { Claim, StoredLookup } from "./types";
+import type { Claim, StoredLookup, SubjectDetail } from "./types";
 
 /** One risk, and what each answer being compared says about it.
  *
@@ -73,6 +73,48 @@ export function compareMany(answers: StoredLookup[]): Comparison {
                 ordered.filter((row) => present(row) === 1 && row.cells[side]).length,
         ),
     };
+}
+
+/** One specification, and what each answer being compared holds for it.
+ * `cells` is positional like `ComparedRow.cells`, with nulls for a side that
+ * records nothing under that name. */
+export type SpecRow = {
+    label: string;
+    cells: ({ value: string; source: string } | null)[];
+    /** More than one side has it and they do not all read the same. */
+    differs: boolean;
+};
+
+/** Specifications lined up by the label the pack gave them (B173).
+ *
+ * Nothing here names a field: a row exists because some subject's own
+ * attributes carry that label, so a pack for any category lines up the same
+ * way. Identity keys are what make the product itself and are left out.
+ * Rows that differ come first, since they are the reason to compare.
+ */
+export function compareSpecs(subjects: (SubjectDetail | null)[]): SpecRow[] {
+    const rows = new Map<string, SpecRow>();
+    subjects.forEach((subject, side) => {
+        for (const a of subject?.attributes ?? []) {
+            if (a.is_identity) continue;
+            const label = a.label || a.key;
+            const row =
+                rows.get(label) ??
+                { label, cells: Array(subjects.length).fill(null), differs: false };
+            row.cells[side] = {
+                value: a.unit ? `${a.value_text} ${a.unit}` : a.value_text,
+                source: a.source_url ?? "",
+            };
+            rows.set(label, row);
+        }
+    });
+    for (const row of rows.values()) {
+        const held = row.cells.filter((c) => c !== null);
+        row.differs = held.length > 1 && new Set(held.map((c) => c.value)).size > 1;
+    }
+    return [...rows.values()].sort(
+        (a, b) => Number(b.differs) - Number(a.differs) || a.label.localeCompare(b.label),
+    );
 }
 
 /** One side's claims in the report's own order — used to render a column when
