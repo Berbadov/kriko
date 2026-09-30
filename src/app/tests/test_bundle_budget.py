@@ -85,7 +85,11 @@ import pytest
 #: Raised .js from 333,000 to 334,000 on 2026-09-30: B158, no dependency. A
 #: pick whose CLI lists no models now says so (`Pick.svelte`'s `note`, passed
 #: by four screens) and Bench names such a CLI beside the chips. 333,380 bytes.
-BUDGET = {".js": 334_000, ".css": 60_000}
+#: Raised .css from 60,000 to 62,000 on 2026-09-30: B180 and B182, no
+#: dependency. History's category groups and designed cards, Browse's filter
+#: row with its expandable descriptions, and Overview's linked count tiles are
+#: scoped styles in three components. 61,155 bytes (59,107 before).
+BUDGET = {".js": 334_000, ".css": 62_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the
