@@ -1,0 +1,79 @@
+name: ci
+
+# The backbone gate, back on a runner (2026-10-14).
+#
+# History, so the next person does not have to dig: `ci.yml` was deleted on
+# 2026-09-13 (commit c852603) because this account's Actions minutes ran out —
+# every run since 2026-09-08 was a job that never got a runner: red in under
+# fifteen seconds, `runner_id: 0`, no steps, no logs, and GitHub's own
+# annotation saying "recent account payments have failed or your spending
+# limit needs to be increased". A red tick that was never a test result
+# teaches everyone to scroll past red, which is the state you least want to
+# be in on the day a real one lands. So the checks moved to `tools/gate.sh`,
+# run by hand, and that contract stays: this workflow runs THE SAME first
+# gate as `tools/gate.sh py`, no more.
+#
+# This file exists because a hand-run gate is a gate that only fires when
+# somebody remembers. It is written to cost as few minutes as a real CI can:
+#
+#   - ONE job, not the old three (pytest / node / vitest ran as parallel
+#     jobs on the deleted file; a single runner bills one machine's time).
+#   - `pull_request` only, no `push`: a branch's checks and its PR's checks
+#     are the same checks; running both is paying twice for one answer.
+#     `workflow_dispatch` stays so main can be re-checked by hand.
+#   - pip cache keyed on the lock, so the ~90s of installs is ~15s after
+#     the first run of a given lock.
+#   - no Node, no wheel smoke, no tauri: those are `gate.sh node|ui|tauri`
+#     and stay hand-run — they are minutes-heavy and the Python suite is
+#     the backbone the PR actually needs an answer on.
+#   - `concurrency` cancels a superseded run in flight, so a rapid-push
+#     branch does not stack billed runs.
+#
+# The billing failure itself is not something a workflow can fix. If every
+# run dies with "job was not started" again, that is the account's spending
+# limit (Settings → Billing & plans), not this file.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  py:
+    name: gate.sh py
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      # The lock is the environment: `test_dependencies_are_locked` fails
+      # when the installed closure is not what the suite was meant to run
+      # against, so CI installs FROM the lock and never from the loose
+      # `pipeline`/`dev` extras. `-e .` on the same line, for `app.version`
+      # to report the tree's own version (the reason setup.sh installs
+      # that way) — and on the same line because the repo's invariant test
+      # reads every `pip install` line and requires the lock on each.
+      - name: install the locked closure
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock -e "."
+
+      # One command, the same one the Windows host runs before every push:
+      # version strings, ruff, mypy x3, pytest (testpaths pinned in
+      # pytest.ini). PYTHON is explicit because the runner has no .venv.
+      - name: tools/gate.sh py
+        env:
+          PYTHON: python
+        run: tools/gate.sh py

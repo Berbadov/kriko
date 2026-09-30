@@ -778,8 +778,14 @@ def forget_located() -> None:
 
 def locate(one: Harness) -> str:
     """`_locate`, remembered for `LOCATE_TTL_S` (see `_LOCATED`)."""
+    # `expanduser` rather than `Path.home()`: the key only has to *name* the
+    # home directory, and `Path()` picks its flavour from `os.name` at call
+    # time — so a test that flips `os.name` to probe Windows behaviour makes
+    # `Path.home()` build a `WindowsPath`, which cannot be instantiated on a
+    # POSIX runner at all (NotImplementedError, before `_locate` runs).
+    # `expanduser` reads the same env vars and works on both.
     key = (one.executable, one.homes, os.environ.get("PATH", ""),
-           os.environ.get(DIRS_ENV, ""), str(Path.home()))
+           os.environ.get(DIRS_ENV, ""), os.path.expanduser("~"))
     now = time.monotonic()
     hit = _LOCATED.get(key)
     if hit and now - hit[0] < LOCATE_TTL_S:
