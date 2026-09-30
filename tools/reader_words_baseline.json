@@ -25,7 +25,6 @@
     "ui/src/lib/report.ts": {"em_dash": 5},
     "ui/src/routes/About.svelte": {"em_dash": 6},
     "ui/src/routes/Bench.svelte": {"em_dash": 18},
-    "ui/src/routes/Compare.svelte": {"em_dash": 2},
     "ui/src/routes/Extension.svelte": {"em_dash": 12, "informal_phrase": 1},
     "ui/src/routes/Health.svelte": {"em_dash": 4},
     "ui/src/routes/Jobs.svelte": {"em_dash": 2},

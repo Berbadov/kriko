@@ -3,11 +3,12 @@
     import Async from "../lib/Async.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
-    import { compareMany } from "../lib/compare";
+    import { compareMany, compareSpecs } from "../lib/compare";
     import { severityWord } from "../lib/report";
     import { route, setQuery, toHash } from "../lib/router";
     import { ApiError } from "../lib/api";
-    import type { HistoryItem } from "../lib/types";
+    import { remedyFor } from "../lib/failure";
+    import type { CompareDraft, HistoryItem, SubjectDetail } from "../lib/types";
 
     //: Four is the cap, and it is a layout limit rather than a logical one:
     //: `compareMany` takes any number, but a fifth column stops fitting the
@@ -15,6 +16,7 @@
     const MAX = 4;
 
     let items = $state<HistoryItem[]>([]);
+    let drafts = $state<CompareDraft[]>([]);
 
     // The ids live in the URL so a comparison stays a link someone can paste,
     // the same reason mode does. `left`/`right` are still read because every
@@ -53,6 +55,57 @@
         setQuery("ids", next.filter(Boolean).join(",") || undefined);
     }
 
+    // A draft is the same ids under a name (B183). Which one is open rides in
+    // the URL beside them, so a saved comparison is still a link.
+    const draftId = $derived($route.query.draft ?? "");
+    const open = $derived(drafts.find((d) => d.draft_id === draftId));
+    let name = $state("");
+    let saving = $state(false);
+    let saveError = $state("");
+    $effect(() => {
+        name = open?.name ?? "";
+    });
+
+    // Fails open: a comparison works without its drafts, so a list that will
+    // not load is an empty one rather than a broken screen.
+    const loadDrafts = () =>
+        api
+            .compareDrafts()
+            .then((r) => (drafts = r.items))
+            .catch(() => {});
+    loadDrafts();
+
+    function openDraft(d: CompareDraft) {
+        setQuery("draft", d.draft_id);
+        setQuery("ids", d.lookup_ids.join(",") || undefined);
+    }
+
+    function newDraft() {
+        setQuery("draft", undefined);
+        setQuery("ids", undefined);
+    }
+
+    async function save() {
+        saving = true;
+        saveError = "";
+        try {
+            const saved = await api.saveCompareDraft(name, ids, open?.draft_id ?? "");
+            await loadDrafts();
+            setQuery("draft", saved.draft_id);
+        } catch (e) {
+            saveError = remedyFor(e).headline;
+        } finally {
+            saving = false;
+        }
+    }
+
+    async function remove() {
+        if (!open) return;
+        await api.deleteCompareDraft(open.draft_id).catch(() => {});
+        await loadDrafts();
+        setQuery("draft", undefined);
+    }
+
     let missingNotice = $state("");
 
     const listed = api.history(50).then((h) => (items = h.items));
@@ -67,9 +120,15 @@
         }
     });
 
+    // A check's specifications are its subject's own attributes. The first
+    // subject the lookup matched is the product; a subject that cannot be read
+    // leaves its column empty rather than failing the comparison.
+    const subjectOf = (id: string | undefined): Promise<SubjectDetail | null> =>
+        id ? api.subject(id).catch(() => null) : Promise.resolve(null);
+
     const lined = $derived(
         ids.length >= 2
-            ? Promise.allSettled(ids.map((id) => api.getLookup(id))).then((settled) => {
+            ? Promise.allSettled(ids.map((id) => api.getLookup(id))).then(async (settled) => {
                   const answers: Awaited<ReturnType<typeof api.getLookup>>[] = [];
                   const remaining: string[] = [];
                   let dropped = false;
@@ -87,13 +146,31 @@
                       missingNotice = "One saved check was forgotten and was removed.";
                       setQuery("ids", remaining.join(",") || undefined);
                   }
-                  return { answers, diff: compareMany(answers) };
+                  const subjects = await Promise.all(
+                      answers.map((a) => subjectOf(a.response.subjects?.[0])),
+                  );
+                  return {
+                      answers,
+                      diff: compareMany(answers),
+                      specs: compareSpecs(subjects),
+                  };
               })
             : null,
     );
+
+    // Details open on demand and one at a time (B183): a section of the table
+    // and, inside it, one row. Until the reader chooses, the section holding
+    // the most to read is open, and nothing inside it is.
+    let chosenSection = $state<"specs" | "risks" | "">("");
+    let detail = $state("");
+    const toggleSection = (id: "specs" | "risks", current: string) => {
+        chosenSection = current === id ? "" : id;
+        detail = "";
+    };
+    const toggleDetail = (key: string) => (detail = detail === key ? "" : key);
 </script>
 
-<h2><Icon name="compare" size={22} /> Compare saved checks</h2>
+<h2><Icon name="compare" size={22} /> Compare</h2>
 
 <Async promise={listed} loading="Loading history…">
     {#snippet children()}
@@ -106,6 +183,34 @@
                 actionHref={toHash("extension")}
             />
         {:else}
+            <h3><Icon name="history" size={18} /> Drafts</h3>
+            <div class="row drafts">
+                {#each drafts as d (d.draft_id)}
+                    <button
+                        type="button"
+                        class:primary={d.draft_id === draftId}
+                        aria-pressed={d.draft_id === draftId}
+                        onclick={() => openDraft(d)}>{d.name}</button
+                    >
+                {/each}
+                <button type="button" onclick={newDraft}>
+                    <Icon name="plus" size={16} /> New
+                </button>
+            </div>
+            <div class="row drafts">
+                <div class="field grow">
+                    <label for="draft-name">Draft name</label>
+                    <input id="draft-name" bind:value={name} maxlength="80" />
+                </div>
+                <button
+                    type="button"
+                    disabled={saving || !name.trim() || ids.length < 2}
+                    onclick={save}>{open ? "Update" : "Save"}</button
+                >
+                {#if open}<button type="button" onclick={remove}>Delete</button>{/if}
+            </div>
+            {#if saveError}<p class="state" role="alert">{saveError}</p>{/if}
+
             <div class="row slots">
                 {#each slots as id, index (index)}
                     <div class="field">
@@ -134,10 +239,13 @@
             {#if lined}
                 <Async promise={lined} loading="Loading the answers…">
                     {#snippet children(d)}
+                        {@const width = d.answers.length}
+                        {@const section =
+                            chosenSection || (d.specs.length ? "specs" : "risks")}
                         <p class="lede-compare">
-                            {d.diff.shared}{d.answers.length === 2
+                            {d.diff.shared}{width === 2
                                 ? " in both"
-                                : ` in all ${d.answers.length}`} · {d.diff.only
+                                : ` in all ${width}`} · {d.diff.only
                                 .map(
                                     (n: number, i: number) =>
                                         `${n} only in ${d.answers[i].label}`,
@@ -148,34 +256,133 @@
                             <table class="compare">
                                 <thead>
                                     <tr>
-                                        <th scope="col">Known risk</th>
+                                        <th scope="col">Product</th>
                                         {#each d.answers as answer (answer.lookup_id)}
                                             <th scope="col">{answer.label}</th>
                                         {/each}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {#each d.diff.rows as row (row.key)}
-                                        <tr>
-                                            <th scope="row">{row.title}</th>
-                                            {#each row.cells as cell, i (i)}
-                                                <td>
-                                                    {#if cell}
-                                                        <span class="sev {cell.severity}"
-                                                            >{severityWord(cell.severity)}</span
-                                                        >
-                                                    {:else}<span class="meta">—</span>{/if}
-                                                </td>
-                                            {/each}
-                                        </tr>
-                                    {/each}
+                                    <tr class="group">
+                                        <th scope="rowgroup" colspan={width + 1}>
+                                            <button
+                                                type="button"
+                                                aria-expanded={section === "specs"}
+                                                onclick={() => toggleSection("specs", section)}
+                                            >
+                                                <Icon name="tag" size={16} /> Specifications
+                                                <span class="meta">{d.specs.length}</span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                    {#if section === "specs"}
+                                        {#each d.specs as row (row.label)}
+                                            <tr class:differs={row.differs}>
+                                                <th scope="row">
+                                                    <button
+                                                        type="button"
+                                                       
+                                                        aria-expanded={detail === `s:${row.label}`}
+                                                        onclick={() => toggleDetail(`s:${row.label}`)}
+                                                        >{row.label}</button
+                                                    >
+                                                </th>
+                                                {#each row.cells as cell, i (i)}
+                                                    <td>
+                                                        {#if cell}{cell.value}{:else}<span class="meta"
+                                                                >Not recorded</span
+                                                            >{/if}
+                                                    </td>
+                                                {/each}
+                                            </tr>
+                                            {#if detail === `s:${row.label}`}
+                                                <tr class="detail">
+                                                    <td></td>
+                                                    {#each row.cells as cell, i (i)}
+                                                        <td>
+                                                            {#if cell?.source}
+                                                                <a
+                                                                    href={cell.source}
+                                                                    target="_blank"
+                                                                    rel="noreferrer">Source</a
+                                                                >
+                                                            {:else}<span class="meta">No source</span>{/if}
+                                                        </td>
+                                                    {/each}
+                                                </tr>
+                                            {/if}
+                                        {:else}
+                                            <tr>
+                                                <td colspan={width + 1} class="meta"
+                                                    >No specifications recorded.</td
+                                                >
+                                            </tr>
+                                        {/each}
+                                    {/if}
+                                    <tr class="group">
+                                        <th scope="rowgroup" colspan={width + 1}>
+                                            <button
+                                                type="button"
+                                                aria-expanded={section === "risks"}
+                                                onclick={() => toggleSection("risks", section)}
+                                            >
+                                                <Icon name="warn" size={16} /> Known risks
+                                                <span class="meta">{d.diff.rows.length}</span>
+                                            </button>
+                                        </th>
+                                    </tr>
+                                    {#if section === "risks"}
+                                        {#each d.diff.rows as row (row.key)}
+                                            <tr>
+                                                <th scope="row">
+                                                    <button
+                                                        type="button"
+                                                       
+                                                        aria-expanded={detail === `r:${row.key}`}
+                                                        onclick={() => toggleDetail(`r:${row.key}`)}
+                                                        >{row.title}</button
+                                                    >
+                                                </th>
+                                                {#each row.cells as cell, i (i)}
+                                                    <td>
+                                                        {#if cell}
+                                                            <span class="sev {cell.severity}"
+                                                                >{severityWord(cell.severity)}</span
+                                                            >
+                                                        {:else}<span
+                                                                class="meta"
+                                                                title="No installed catalog holds this risk for this product"
+                                                                >None</span
+                                                            >{/if}
+                                                    </td>
+                                                {/each}
+                                            </tr>
+                                            {#if detail === `r:${row.key}`}
+                                                <tr class="detail">
+                                                    <td></td>
+                                                    {#each row.cells as cell, i (i)}
+                                                        <td>
+                                                            {#if cell}
+                                                                {cell.body}
+                                                                {#if cell.advice}<em>{cell.advice}</em>{/if}
+                                                                {#each cell.sources ?? [] as s (s.url ?? s.domain)}
+                                                                    <a
+                                                                        href={s.url ?? "#"}
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        >{s.domain ?? "Source"}</a
+                                                                    >
+                                                                {/each}
+                                                            {/if}
+                                                        </td>
+                                                    {/each}
+                                                </tr>
+                                            {/if}
+                                        {/each}
+                                    {/if}
                                 </tbody>
                             </table>
                         </div>
-                        <p class="meta">
-                            A dash means no installed pack holds that risk for that one —
-                            not that it has been ruled out.
-                        </p>
                     {/snippet}
                 </Async>
             {:else}

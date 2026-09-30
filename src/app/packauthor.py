@@ -203,7 +203,16 @@ you were asked about. If a neighbouring product keeps appearing in your sources
 is not a generous pack, it is a pack whose identity keys no longer mean
 anything.
 
-## Decision 5 — the claims themselves
+## Decision 5 — the specifications
+
+Declare the attributes a buyer would compare this kind of product on (for a
+phone that might be chipset, battery and display; for a drill, voltage and
+chuck size) in `attributes`, and give each subject its values. Name each
+figure's page in `source`. A figure you cannot source is left out. Only what
+the category itself makes comparable: do not list a field every product of it
+shares.
+
+## Decision 6 — the claims themselves
 
 A claim needs a `title`, a `body` in the words a reader would recognise the
 problem by, and `advice` — what to do about it before deciding. Severity is
@@ -257,7 +266,7 @@ nothing you print is executed.
    {"kind": "product", "label": "Makita DHP484",
     "identity": {"brand": "makita", "series": "DHP484"},
     "aliases": ["DHP484Z"],
-    "attributes": {"voltage_v": 18}}
+    "attributes": {"voltage_v": {"value": 18, "source": "https://the page you read"}}}
  ],
  "claims": [
    {"subject": {"kind": "product",
@@ -270,6 +279,8 @@ nothing you print is executed.
 
 Rules the writer enforces, so getting them wrong costs you the run:
 
+* `attributes` on a subject are its specifications, each with the page it was
+  read from. A specification with no `source` is dropped.
 * Every `domain` a claim names must be in `domains`. Every key in a subject's
   `identity` must be one this pack declared for that kind. Every key in
   `attributes` must be in the `attributes` list.
@@ -458,6 +469,24 @@ def _same_thing(one: str, other: str) -> bool:
     return mine <= theirs or theirs <= mine
 
 
+def _specs(raw) -> dict[str, dict]:
+    """A subject's specifications: each `{value, source}`, none without a page.
+
+    A figure with no page is the same defect as a claim with none (B173): the
+    reader cannot tell it from a guess. So an attribute that names no source
+    is left out, and the bare `value` form is read as sourceless.
+    """
+    kept: dict[str, dict] = {}
+    if not isinstance(raw, dict):
+        return kept
+    for key, given in raw.items():
+        value = _text(given.get("value")) if isinstance(given, dict) else ""
+        source = _text(given.get("source")) if isinstance(given, dict) else ""
+        if _text(key) and value and source.startswith(("http://", "https://")):
+            kept[_text(key)] = {"value": value, "source": source}
+    return kept
+
+
 def _subjects(
     table: dict[str, list[str]], payload: dict, lineup: list[str] | None = None,
 ) -> tuple[str, dict, list[dict]]:
@@ -523,11 +552,7 @@ def _subjects(
             "label": label,
             "identity": identity_row,
         }
-        extra = {
-            key: value
-            for key, value in (entry.get("attributes") or {}).items()
-            if _text(key) and _text(value)
-        }
+        extra = _specs(entry.get("attributes"))
         if extra:
             row["attributes"] = extra
         aliases = [_text(alias) for alias in (entry.get("aliases") or [])]
@@ -1219,6 +1244,10 @@ wrong one.
 
 {_bullets(covered) or '(nothing yet)'}
 
+## Specifications
+
+{_bullets(draft_state.get('attributes') or []) or '(none declared yet)'}
+
 ## Not covered yet
 
 {_bullets(uncovered) or '(the line-up records no gap; use the request above)'}
@@ -1230,6 +1259,11 @@ Research the missing ones the way the pack's own templates would, and add
 subject you can name but found nothing solid for is still worth adding with no
 claims: it is an honest gap the research plane fills later, and it stops the
 next reader concluding there is nothing to know.
+
+Give each subject, new or already there, the specifications a buyer would
+compare it on, each with the page it was read from in `source`. Use the
+attributes listed under "Specifications" below, and declare a new one under
+`attributes` when the category needs it. A figure with no source is dropped.
 
 Never invent a claim. Never add something that is not an instance of this
 category — if a neighbouring product keeps appearing, list it under
@@ -1248,8 +1282,10 @@ repeat is ignored rather than duplicated.
 ```json
 {"subjects": [
    {"kind": "product", "label": "The one that was missing",
-    "identity": {"...": "..."}, "aliases": ["..."]}
+    "identity": {"...": "..."}, "aliases": ["..."],
+    "attributes": {"<an attribute id>": {"value": "...", "source": "https://the page you read"}}}
  ],
+ "attributes": [{"id": "<a new attribute id>", "label": "Name", "datatype": "text"}],
  "claims": [
    {"subject": {"kind": "product", "identity": {"...": "..."}},
     "domain": "...", "severity": "medium",
@@ -1393,6 +1429,14 @@ def draft_state(store_path, slug: str) -> dict:
             identity.setdefault(
                 str(row["kind"]), sorted((row.get("identity") or {}).keys())
             )
+    terms = _yaml("vocabulary/terms.yaml", [])
+    identity_keys = {key for keys in identity.values() for key in keys}
+    attributes = [
+        f"`{row['term_id']}`: {((row.get('label') or {}).get('en') or row['term_id'])}"
+        for row in (terms if isinstance(terms, list) else [])
+        if isinstance(row, dict) and row.get("role") == "attribute"
+        and row.get("term_id") and str(row["term_id"]) not in identity_keys
+    ]
     principle = ""
     principle_path = root / "research" / "principle.md"
     if principle_path.exists():
@@ -1402,6 +1446,7 @@ def draft_state(store_path, slug: str) -> dict:
         **manifest,
         "slug": draft.slug,
         "identity": identity,
+        "attributes": attributes,
         "principle": principle,
         "subjects": [
             str(row.get("label") or "")
@@ -1495,6 +1540,13 @@ def amend(store_path, slug: str, reply: str, *, payload: dict | None = None,
     else:
         added_subjects_yaml, known, quarantined = "[]", {}, []
     added_subjects = yaml.safe_load(added_subjects_yaml) or []
+    terms_text, declared_specs = _declare_specs(root, payload, table)
+    for entry in added_subjects:
+        if isinstance(entry, dict) and entry.get("attributes"):
+            entry["attributes"] = {k: v for k, v in entry["attributes"].items()
+                                   if k in declared_specs}
+            if not entry["attributes"]:
+                del entry["attributes"]
     seen = {
         _identity_key(row.get("kind"), row.get("identity"))
         for row in subjects
@@ -1508,6 +1560,7 @@ def amend(store_path, slug: str, reply: str, *, payload: dict | None = None,
     # gains them: a repeat check is how a listing's own spelling becomes
     # something search finds (B169). Labels and identity are never rewritten.
     aliased = _merge_aliases(subjects, added_subjects)
+    aliased += _merge_specs(subjects, added_subjects)
 
     added_claims = yaml.safe_load(_claims(table, payload, known)) or []
     have = {
@@ -1555,6 +1608,9 @@ def amend(store_path, slug: str, reply: str, *, payload: dict | None = None,
         )
 
     written = []
+    if terms_text and (fresh or aliased):
+        written.append(packdraft.write(
+            store_path, slug=slug, path="vocabulary/terms.yaml", text=terms_text))
     if fresh or aliased:
         written.append(packdraft.write(
             store_path, slug=slug, path="data/subjects.yaml",
@@ -1616,6 +1672,69 @@ def amend(store_path, slug: str, reply: str, *, payload: dict | None = None,
         "quarantined": quarantined,
         "notes": _text(payload.get("notes")),
     }
+
+
+def _declare_specs(root: Path, payload: dict, table: dict[str, list[str]]) -> tuple[str, set]:
+    """The vocabulary an amendment may use for specifications (B173).
+
+    Returns the terms file with any newly named attributes appended (`""` when
+    nothing was added) and every attribute id the draft then declares. A
+    subject's specification under any other key is dropped by the caller: the
+    builder refuses a term the vocabulary never declared, so one stray key
+    would fail the whole draft.
+    """
+    path = root / "vocabulary" / "terms.yaml"
+    try:
+        rows = yaml.safe_load(path.read_text(encoding="utf-8")) or []
+    except (OSError, yaml.YAMLError):
+        return "", set()
+    rows = rows if isinstance(rows, list) else []
+    declared = {str(r.get("term_id")) for r in rows
+                if isinstance(r, dict) and r.get("role") == "attribute"}
+    identity = {key for keys in table.values() for key in keys}
+    fresh = []
+    for entry in payload.get("attributes") or []:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            key = _clean_id(entry.get("id") or entry.get("term_id"),
+                            what="attribute id")
+        except PackRefused:
+            continue
+        if key in declared or key in identity:
+            continue
+        datatype = _text(entry.get("datatype")).lower()
+        fresh.append({"term_id": key, "role": "attribute",
+                      "datatype": datatype if datatype in {"text", "number"} else "text",
+                      "label": {"en": _text(entry.get("label")) or key}})
+        declared.add(key)
+    if not fresh:
+        return "", declared
+    return (_preamble(path) + yaml.safe_dump(rows + fresh, allow_unicode=True,
+                                             sort_keys=False)), declared
+
+
+def _merge_specs(subjects: list, added: list[dict]) -> int:
+    """Give each existing subject the sourced specifications it lacks.
+
+    Same matching as `_merge_aliases`. A figure the subject already has is
+    never replaced, on the rule that an amendment adds.
+    """
+    by_identity = {
+        _identity_key(row.get("kind"), row.get("identity")): row
+        for row in subjects if isinstance(row, dict)
+    }
+    changed = 0
+    for entry in added:
+        row = by_identity.get(_identity_key(entry.get("kind"), entry.get("identity")))
+        if row is None or not entry.get("attributes"):
+            continue
+        have = row.get("attributes") or {}
+        more = {k: v for k, v in entry["attributes"].items() if k not in have}
+        if more:
+            row["attributes"] = {**have, **more}
+            changed += 1
+    return changed
 
 
 def _merge_aliases(subjects: list, added: list[dict]) -> int:
