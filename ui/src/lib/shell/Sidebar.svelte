@@ -1,16 +1,11 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { MODES, setMode, type Mode } from "../mode";
     import { hashWith, route } from "../router";
     import { figures } from "./figures";
     import { readings, watch } from "./instruments";
     import NavGroup from "./NavGroup.svelte";
     import { api } from "../api";
-    import { groupsFor, resolve, type NavGroupSpec } from "./nav";
-
-    let { mode }: { mode: Mode } = $props();
-
-    const groups = $derived(groupsFor(mode));
+    import { NAV, resolve, type NavGroupSpec } from "./nav";
 
     /* The rail's own numbers. Started here rather than in App.svelte because
      * the rail is the only thing that reads them — a clock owned by whatever
@@ -67,11 +62,8 @@
      * agreeing with what is actually on screen. */
     const current = $derived(resolve($route.name).name);
 
-    // Every rail link carries the mode, and it comes from the prop rather than
-    // from the URL: the URL may legitimately omit it — a first visit reads the
-    // remembered setting — and a link that drops it looks like the app
-    // switching modes on its own.
-    const href = (name: string) => hashWith({ mode }, name);
+    // Bare links: there is one mode (B165), so nothing rides along.
+    const href = (name: string) => hashWith({}, name);
 
     /* The active row used to carry a second, *measured* indicator — a bar
      * this component positioned in JS from `rowFor(...).offsetTop` after
@@ -114,7 +106,7 @@
 
 <aside class="rail">
   <div class="rail-head">
-    <a class="brand" href={href("check")}>
+    <a class="brand" href={href("activity")}>
         <!-- The extension's toolbar icon, the same drawing the installer's
              app icon is rendered from. The reader met this product in a
              browser toolbar; a different mark here reads as a different
@@ -141,12 +133,7 @@
     <!-- The one action in this product that creates knowledge rather than
          reading it, and until 0.10.0 it read as the fourteenth item in a list
          of places. A rail is a list of *where you are*; this is a *do*, so it
-         does not live in the list.
-
-         Author mode only: a reader in buyer mode has no screens behind it and
-         a primary action that opens a page they cannot use is worse than no
-         action. -->
-    {#if mode === "author"}
+         does not live in the list. -->
         <!-- Spelled out to "activity" with lens:"runs", not the "jobs"
              alias: the alias resolves to the same lens regardless, but a
              reader who had switched Activity's lens tab (which now writes
@@ -158,23 +145,21 @@
              is anywhere but Runs. -->
         <a
             class="rail-action"
-            href={hashWith({ mode, author: "new", lens: "runs" }, "activity")}
+            href={hashWith({ author: "new", lens: "runs" }, "activity")}
         >
             <span class="rail-action-plus" aria-hidden="true">+</span>
             Start a new pack
         </a>
-    {/if}
   </div>
 
     <nav class="rail-nav">
-        {#each groups as group, index (group.title)}
+        {#each NAV as group, index (group.title)}
             <div class="nav-slot" style="--slot: {index}">
                 <NavGroup
                     {group}
                     {current}
                     {href}
                     figures={reading}
-                    titled={groups.length > 1}
                     folded={isFolded(group)}
                     locked={Boolean(group.foldable) && holdsCurrent(group)}
                     ontoggle={() => toggle(group)}
@@ -183,16 +168,4 @@
         {/each}
     </nav>
 
-    <div class="rail-foot">
-        <span class="modes" role="group" aria-label="Mode">
-            {#each MODES as candidate (candidate)}
-                <button
-                    class="tab"
-                    class:active={mode === candidate}
-                    aria-pressed={mode === candidate}
-                    onclick={() => setMode(candidate as Mode)}>{candidate}</button
-                >
-            {/each}
-        </span>
-    </div>
 </aside>

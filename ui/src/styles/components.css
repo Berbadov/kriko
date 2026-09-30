@@ -969,20 +969,6 @@ pre {
     }
 }
 
-.modes {
-    display: inline-flex;
-    gap: var(--s-1);
-    margin-left: var(--s-3);
-    padding-left: var(--s-3);
-    border-left: 1px solid var(--line);
-}
-.modes button {
-    text-transform: capitalize;
-    font-size: var(--t-xs);
-    line-height: var(--lh-xs);
-    padding: var(--s-1) var(--s-2);
-}
-
 /* ── the report ──────────────────────────────────────────────────── */
 .report-head {
     margin-bottom: var(--s-5);
@@ -1023,13 +1009,6 @@ pre {
     color: var(--dim);
     white-space: nowrap;
     cursor: pointer;
-}
-/* Questions.svelte wraps a whole question sentence in `.check` — the
- * checkbox's own short label is meant to stay on one line, but the nowrap it
- * inherited reached the question text too, running it a full window's
- * width past the edge (shell-2). */
-.check .sheet-ask {
-    white-space: normal;
 }
 .ask {
     margin: var(--s-2) 0 var(--s-1);
@@ -1392,14 +1371,6 @@ button.nav-fold[aria-disabled="true"] {
     color: var(--accent);
     font-weight: 600;
 }
-.rail-foot {
-    padding-top: var(--s-3);
-    border-top: 1px solid var(--line);
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--s-2);
-}
 /* Tighten before scrolling. On a laptop the rows fit with less air between
  * the groups, and less air is a far cheaper cost than a scroll region. */
 @media (max-height: 820px) {
@@ -1427,13 +1398,6 @@ button.nav-fold[aria-disabled="true"] {
     .nav-slot {
         animation: none;
     }
-}
-.rail-foot .modes {
-    margin: 0;
-    padding: 0;
-    border-left: 0;
-    display: flex;
-    gap: var(--s-1);
 }
 
 /* ── empty states ─────────────────────────────────────────────────── */
@@ -1799,60 +1763,6 @@ button.link-ish {
     height: 100%;
     background: var(--accent);
     transition: width var(--dur-slow) var(--ease-out);
-}
-
-/* ── the question sheet ─────────────────────────────────────────────────── */
-
-.sheet-head {
-    max-width: var(--measure);
-    margin-bottom: var(--s-5);
-}
-.sheet {
-    max-width: var(--measure);
-    list-style: decimal;
-    padding-left: var(--s-5);
-    margin: 0;
-}
-.sheet li {
-    padding: var(--s-3) 0;
-    border-bottom: 1px solid var(--line);
-}
-.sheet li.done {
-    opacity: 0.5;
-}
-.sheet li.done .sheet-ask {
-    text-decoration: line-through;
-}
-.sheet-ask {
-    font-size: var(--t-md);
-    line-height: var(--lh-md);
-}
-.sheet li textarea {
-    width: 100%;
-    margin-top: var(--s-2);
-}
-
-/* Inspection day: standing up, one hand, bright daylight. Type as large as the
-   measure allows and nothing else competing for the screen. */
-.focus-card {
-    max-width: var(--measure);
-    padding: var(--s-5);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--panel);
-}
-.focus-card.done {
-    opacity: 0.6;
-}
-.focus-ask {
-    font-size: var(--t-xl);
-    line-height: var(--lh-xl);
-    margin: var(--s-3) 0;
-}
-.focus-card textarea {
-    width: 100%;
-    font-size: var(--t-md);
-    margin-bottom: var(--s-3);
 }
 
 /* ── why a report might be short ────────────────────────────────────────── */

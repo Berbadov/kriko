@@ -6,20 +6,19 @@
     import PlanePrefs from "../lib/Planes.prefs.svelte";
     import { api } from "../lib/api";
     import type { ProviderTest } from "../lib/types";
-    import { MODES, mode, setMode } from "../lib/mode";
 
     /* Where a preference lives, and the fact that it lives anywhere.
      *
-     * `/api/settings` has existed since the first week and had no screen: the
-     * mode switch was a rail control that quietly wrote a row, and nothing
-     * anywhere told the reader that it was being remembered on their disk. For
-     * a local-first app that is the wrong silence — "what does it keep about
-     * me" is answerable here in full, because the answer is short and the
+     * `/api/settings` has existed since the first week and had no screen, and
+     * nothing anywhere told the reader what was being remembered on their disk.
+     * For a local-first app that is the wrong silence — "what does it keep
+     * about me" is answerable here in full, because the answer is short and the
      * honest way to say it is to print it.
      *
-     * There is no theme choice (B159: Panel is the only theme). An older
-     * install may still hold a `theme` row, which is listed below like any
-     * other stored value and is never read.
+     * There is no theme choice (B159: Panel is the only theme) and no mode
+     * choice (B165: there is one mode). An older install may still hold a
+     * `theme` or a `mode` row, which is listed below like any other stored
+     * value and is never read.
      */
 
     // null until the reader flips it; the {#await} below holds the stored value.
@@ -28,32 +27,12 @@
         closeNotice = (await api.setCloseNotice(on)).close_notice;
     }
 
-    const MODE_WORDS: Record<string, string> = {
-        buyer: "What to worry about, and what to ask — the default.",
-        author: "The same answer plus why it ranked there, and which pack said so.",
-    };
-
-    // Read once for the raw list. The two controls above it drive the stores
-    // directly, so this is a snapshot of the table rather than the source of
-    // what is on screen — refreshed after a change so the list cannot
-    // disagree with the switch that just moved.
+    // Read once for the raw list.
     let stored = $state<Record<string, unknown> | null>(null);
-    let promise = $state(api.settings());
+    const promise = api.settings();
     $effect(() => {
         void promise.then((values) => (stored = values)).catch(() => {});
     });
-
-    const refresh = () => {
-        promise = api.settings();
-    };
-
-    function pickMode(next: (typeof MODES)[number]) {
-        setMode(next);
-        // A beat behind the write, which is fire-and-forget by design. The
-        // list is a reflection, and a reflection arriving late is fine; a
-        // switch that waits for a disk write is not.
-        setTimeout(refresh, 50);
-    }
 
     type Check = ProviderTest & { busy: boolean };
 
@@ -106,29 +85,6 @@
     catalog, so uninstalling knowledge cannot change how the app behaves.
     Research keys are the exception and are kept in a file of their own, below.
 </p>
-
-<section>
-    <h3><Icon name="eye" /> What an answer shows</h3>
-    <p class="meta">
-        The same lookup, read two ways. Nothing about the request changes — the
-        engine answers once and this picks how much of the answer is drawn, which
-        is why a link can carry a mode of its own and override this.
-    </p>
-    <div class="choices">
-        {#each MODES as id (id)}
-            <label class="choice" class:on={$mode === id}>
-                <input
-                    type="radio"
-                    name="mode"
-                    value={id}
-                    checked={$mode === id}
-                    onchange={() => pickMode(id)}
-                />
-                <span><strong>{id}</strong> — {MODE_WORDS[id]}</span>
-            </label>
-        {/each}
-    </div>
-</section>
 
 <!-- Before "what is remembered", because it is the one thing on this page
      that is *not* in app.sqlite, and the section below says so. -->
@@ -239,12 +195,6 @@
     }
     section > .meta {
         max-width: var(--measure);
-    }
-    .choices {
-        display: flex;
-        flex-direction: column;
-        gap: var(--s-2);
-        margin-block-start: var(--s-3);
     }
     /* `.choice` is global now (components.css): a raised card, like a button. */
     /* Four short rows side by side where they fit (B146). */

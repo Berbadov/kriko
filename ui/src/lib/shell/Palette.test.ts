@@ -12,12 +12,12 @@ describe("Palette", () => {
     });
 
     it("stays out of the way until a key asks for it", () => {
-        render(Palette, { mode: "author" });
+        render(Palette);
         expect(screen.queryByRole("dialog")).toBeNull();
     });
 
     it("opens on ? and on Ctrl+K, because readers reach for different keys", async () => {
-        render(Palette, { mode: "author" });
+        render(Palette);
         await press("?");
         expect(screen.getByRole("dialog", { name: "Go to a screen" })).toBeInTheDocument();
         await press("Escape");
@@ -26,23 +26,22 @@ describe("Palette", () => {
         expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
 
-    it("offers the destinations the rail offers, in this mode", async () => {
-        render(Palette, { mode: "buyer" });
+    it("offers every destination the rail offers, and no New check (B163, B165)", async () => {
+        render(Palette);
         await press("?");
-        expect(screen.getByRole("option", { name: /New check/ })).toBeInTheDocument();
-        // An author screen is not reachable by name from buyer mode either —
-        // the palette is a shortcut through the rail, not a way around it.
-        expect(screen.queryByRole("option", { name: /Agents/ })).toBeNull();
+        expect(screen.getByRole("option", { name: /History/ })).toBeInTheDocument();
+        expect(screen.getByRole("option", { name: /Agents/ })).toBeInTheDocument();
+        expect(screen.queryByRole("option", { name: /New check/ })).toBeNull();
     });
 
     it("filters on the group as well as the label", async () => {
-        render(Palette, { mode: "author" });
+        render(Palette);
         await press("?");
         const input = screen.getByRole("combobox") as HTMLInputElement;
         await fireEvent.input(input, { target: { value: "packs" } });
         // Packs is a section of Browse now; the word still finds it.
         expect(screen.getByRole("option", { name: /Browse/ })).toBeInTheDocument();
-        expect(screen.queryByRole("option", { name: /New check/ })).toBeNull();
+        expect(screen.queryByRole("option", { name: /History/ })).toBeNull();
     });
 
     it("finds a merged screen by the name it absorbed", async () => {
@@ -51,7 +50,7 @@ describe("Palette", () => {
         // otherwise the reorganisation made the app harder to search than it
         // was, and the reader is punished for having learnt it. See
         // `NavItem.also`.
-        render(Palette, { mode: "author" });
+        render(Palette);
         await press("?");
         await fireEvent.input(screen.getByRole("combobox"), {
             target: { value: "connect" },
@@ -59,17 +58,18 @@ describe("Palette", () => {
         expect(screen.getByRole("option", { name: /Agents/ })).toBeInTheDocument();
     });
 
-    it("says so when nothing matches, and says where the rest went", async () => {
-        render(Palette, { mode: "buyer" });
+    it("says so when nothing matches, without pointing at a mode that no longer exists (B165)", async () => {
+        render(Palette);
         await press("?");
         await fireEvent.input(screen.getByRole("combobox"), {
             target: { value: "zzzz" },
         });
-        expect(screen.getByText(/only exist in author mode/)).toBeInTheDocument();
+        expect(screen.getByText(/No screen called that/)).toBeInTheDocument();
+        expect(screen.queryByText(/author/i)).toBeNull();
     });
 
     it("navigates on Enter and closes", async () => {
-        render(Palette, { mode: "author" });
+        render(Palette);
         await press("?");
         await fireEvent.input(screen.getByRole("combobox"), { target: { value: "runs" } });
         await press("Enter");
@@ -83,7 +83,7 @@ describe("Palette", () => {
     // extension" — an unranked filter left them in table order, and Enter
     // opened whichever came first in NAV rather than the exact label match.
     it("ranks an exact label match ahead of one that only starts the same way", async () => {
-        render(Palette, { mode: "author" });
+        render(Palette);
         await press("?");
         await fireEvent.input(screen.getByRole("combobox"), {
             target: { value: "browse" },
@@ -94,20 +94,20 @@ describe("Palette", () => {
 
     // shell-8: go() used to call navigate(), which copies the *entire*
     // current query string into the destination — an id= left over from
-    // Questions followed the reader into whatever screen they picked next.
-    it("carries only the mode into the destination, not the current screen's own query", async () => {
-        window.location.hash = "#/questions?mode=author&id=abc123";
-        render(Palette, { mode: "author" });
+    // History followed the reader into whatever screen they picked next.
+    it("carries nothing from the current screen into the destination, not its own query", async () => {
+        window.location.hash = "#/history?lens=old&id=abc123";
+        render(Palette);
         await press("?");
         await fireEvent.input(screen.getByRole("combobox"), {
             target: { value: "packs" },
         });
         await press("Enter");
-        expect(window.location.hash).toBe("#/knowledge?mode=author");
+        expect(window.location.hash).toBe("#/knowledge");
     });
 
     it("wraps the cursor rather than sticking at the ends", async () => {
-        render(Palette, { mode: "buyer" });
+        render(Palette);
         await press("?");
         const options = screen.getAllByRole("option");
         expect(options[0].getAttribute("aria-selected")).toBe("true");
@@ -125,7 +125,7 @@ describe("Palette", () => {
         // this asserts.
         const spy = vi.fn();
         (HTMLElement.prototype as { scrollIntoView?: () => void }).scrollIntoView = spy;
-        render(Palette, { mode: "author" });
+        render(Palette);
         await press("?");
         spy.mockClear();
         await press("ArrowDown");
@@ -135,7 +135,7 @@ describe("Palette", () => {
     // Without this, `?` typed into any note or search box would open the
     // palette over what the reader was writing.
     it("ignores a shortcut key aimed at a text field", async () => {
-        render(Palette, { mode: "author" });
+        render(Palette);
         const field = document.createElement("input");
         document.body.append(field);
         await fireEvent.keyDown(field, { key: "?", bubbles: true });
@@ -152,7 +152,7 @@ describe("Palette", () => {
      * hold the tab order, or it should not say so.
      */
     it("holds the tab order it claims to hold", async () => {
-        render(Palette, { mode: "author" });
+        render(Palette);
         await press("?");
         const stops = [
             screen.getByRole("combobox"),
@@ -171,7 +171,7 @@ describe("Palette", () => {
         // Trapping means wrapping at the ends, not intercepting every press:
         // a handler that preventDefaults each Tab leaves the middle of the
         // list unwalkable, which is the same bug facing the other way.
-        render(Palette, { mode: "author" });
+        render(Palette);
         await press("?");
         const input = screen.getByRole("combobox");
         input.focus();
