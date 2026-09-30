@@ -106,7 +106,7 @@
 
 <aside class="rail">
   <div class="rail-head">
-    <a class="brand" href={href("activity")}>
+    <a class="brand" href={href("home")}>
         <!-- The extension's toolbar icon, the same drawing the installer's
              app icon is rendered from. The reader met this product in a
              browser toolbar; a different mark here reads as a different
@@ -130,20 +130,6 @@
         </span>
     </a>
 
-    <!-- The one action in this product that creates knowledge rather than
-         reading it, and until 0.10.0 it read as the fourteenth item in a list
-         of places. A rail is a list of *where you are*; this is a *do*, so it
-         does not live in the list. -->
-        <!-- The Run screen (B175). It pointed at Activity's Runs lens with
-             `?author=new` until the form moved; a plain route has no lens to
-             go stale, so the shell-4 dead-second-click cannot recur. -->
-        <a
-            class="rail-action"
-            href={href("run")}
-        >
-            <span class="rail-action-plus" aria-hidden="true">+</span>
-            Start a new pack
-        </a>
   </div>
 
     <nav class="rail-nav">
