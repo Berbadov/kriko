@@ -265,4 +265,4 @@ def test_an_empty_installation_is_told_to_author_rather_than_to_research(store):
     finally:
         conn.close()
     assert skill and "draft_pack" in skill
-    assert "## The loop" not in skill
+    assert "## The five steps" not in skill

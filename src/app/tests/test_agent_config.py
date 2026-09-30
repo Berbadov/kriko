@@ -276,6 +276,40 @@ def test_verify_lists_every_tool_the_server_actually_registers(tmp_path):
     assert set(body["tools"]) == mcp_server.registered_tools()
 
 
+def test_verify_reports_each_step_and_keeps_a_log_for_the_reader_who_asks(tmp_path):
+    """B177: "Improve the 'does it actually run' check and add logs available
+    if the user asks". The steps are the handshake's own: start the command,
+    initialize, list the tools. Each has a state, and the log rides along for a
+    "Show log" the page offers on request."""
+    body = _client(tmp_path).post("/api/agent-verify").json()
+    assert [(s["id"], s["state"]) for s in body["steps"]] == [
+        ("start", "ok"), ("initialize", "ok"), ("tools", "ok"),
+    ]
+    assert body["log"]
+
+
+def test_a_failed_step_marks_the_ones_after_it_as_not_run(tmp_path):
+    from app import agentconfig
+
+    row = agentconfig.handshake({"command": str(tmp_path / "nope"), "args": []})
+    assert [(s["id"], s["state"]) for s in row["steps"]] == [
+        ("start", "failed"), ("initialize", "skipped"), ("tools", "skipped"),
+    ]
+    assert row["log"] and row["detail"]
+
+
+def test_verify_still_takes_no_command_from_the_caller(tmp_path):
+    """The guard that stays (B177 "Not this"): the body of the request is not
+    read, so naming a command in it changes nothing."""
+    client = _client(tmp_path)
+    plain = client.post("/api/agent-verify").json()
+    named = client.post(
+        "/api/agent-verify", json={"command": "definitely-not-a-command", "args": ["x"]}
+    ).json()
+    assert named["ok"] is plain["ok"] is True
+    assert named["server"] == plain["server"]
+
+
 def test_verify_reports_a_command_that_cannot_start_rather_than_raising(tmp_path):
     from app import agentconfig
 
