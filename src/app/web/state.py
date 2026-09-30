@@ -2044,6 +2044,24 @@ def get_job(conn: sqlite3.Connection, job_id: str) -> dict | None:
     return _job(row) if row else None
 
 
+def quick_look_for(conn: sqlite3.Connection, deepen_job_id: str) -> dict | None:
+    """The quick look started beside a deepen job, if it has been created.
+
+    A product check submits the deepen job first and the quick look beside it,
+    naming the deepen job in its params, so this is the only link between the
+    two. The deepen job reads what the quick look concluded (which pack the
+    product belongs in, and its sourced risks) instead of asking again.
+    """
+    for row in conn.execute(
+        "SELECT * FROM jobs WHERE kind = 'quick_look'"
+        " ORDER BY created_at DESC, rowid DESC LIMIT 50"
+    ).fetchall():
+        job = _job(row)
+        if job["params"].get("deepen_job_id") == deepen_job_id:
+            return job
+    return None
+
+
 def live_retry_of(conn: sqlite3.Connection, job_id: str) -> dict | None:
     """A not-yet-finished job whose `retry_of` names `job_id`, if one exists.
 

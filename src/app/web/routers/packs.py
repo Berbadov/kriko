@@ -8,7 +8,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi import Header
 from pydantic import BaseModel, Field
 
-from app import packdraft
+from app import categorypack, packdraft
 from app.web.deps import get_store
 from kriko.pack.scaffold import scaffold
 from kriko.store import packstore
@@ -341,15 +341,20 @@ def install_pack_draft(slug: str, request: Request, store=Depends(get_store)):
     """
     settings = request.app.state.settings
     try:
-        artifact = packdraft.build_artifact(settings.store_path, slug)
+        packdraft.open_draft(settings.store_path, slug)
     except packdraft.DraftRefused as exc:
         raise HTTPException(404, str(exc)) from exc
-    except (ValueError, OSError) as exc:
-        raise HTTPException(400, f"this draft does not build: {exc}") from exc
     try:
-        pack_id = packstore.install(store, artifact)
+        # One path for every install of a draft, so an amended draft is
+        # published at a raised version instead of being refused (B170).
+        done = categorypack.install_draft(settings.store_path, slug, store=store)
+    except packdraft.DraftRefused as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except categorypack.DraftBuildFailed as exc:
+        raise HTTPException(400, f"this draft does not build: {exc}") from exc
     except (ValueError, sqlite3.Error) as exc:
         raise HTTPException(400, f"invalid pack artifact: {exc}") from exc
+    pack_id = done["pack_id"]
     # Marked, not deleted (B129). The reader installed the Samsung draft, saw
     # the pack appear in Knowledge, and the "…was drafted for you" card stayed —
     # which reads as an install that did not take. Deleting the directory
@@ -357,7 +362,28 @@ def install_pack_draft(slug: str, request: Request, store=Depends(get_store)):
     # `Cover the gaps` still works on an installed draft: amend, rebuild,
     # install again.
     packdraft.mark_installed(settings.store_path, slug, pack_id)
-    return {"slug": slug, "pack_id": pack_id, "installed": True}
+    return {"slug": slug, "pack_id": pack_id, "installed": True,
+            "version": done["version"], "digest": done["digest"][:12],
+            "bumped": done["bumped"]}
+
+
+@router.get("/packs/drafts/{slug}/artifact")
+def download_pack_draft(slug: str, request: Request):
+    """The draft as a `.kpack` file, ready to install on another machine (B170).
+
+    Built as the draft stands now, so what is downloaded is what a reader would
+    install here. Nothing is installed or changed by asking.
+    """
+    from fastapi.responses import FileResponse
+
+    try:
+        out = packdraft.build_artifact(request.app.state.settings.store_path, slug)
+    except packdraft.DraftRefused as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, OSError) as exc:
+        raise HTTPException(400, f"this draft does not build: {exc}") from exc
+    return FileResponse(out, media_type="application/octet-stream",
+                        filename=f"{slug}.kpack")
 
 
 @router.delete("/packs/drafts/{slug}")
