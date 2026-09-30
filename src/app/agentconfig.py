@@ -380,7 +380,46 @@ def _launch_environment(extra: dict) -> dict:
     return {**os.environ, **extra}
 
 
+#: The handshake's own steps, in order (B177). Ids, not sentences: the screen
+#: owns the words and draws a state icon per step.
+HANDSHAKE_STEPS = ("start", "initialize", "tools")
+
+
 def handshake(server: dict, *, timeout: float = 30.0) -> dict:
+    """The verdict of `_handshake`, broken into the steps it passed.
+
+    B177: "Improve the 'does it actually run' check and add logs available if
+    the user asks." The bare verdict said it answered or it did not, with a
+    block of detail only on failure. A reader whose agent would not start could
+    not tell a command that never launched from one that launched and listed no
+    tools. Every step now carries a state (`ok`, `failed`, or `skipped` for the
+    ones after the failure) and the verdict carries a `log` the page shows only
+    when asked. The command is still the one the app advertised; nothing here
+    reads a command from a caller.
+    """
+    reached: set[str] = set()
+    result = _handshake(server, timeout=timeout, reached=reached)
+    steps, failed = [], False
+    for step in HANDSHAKE_STEPS:
+        if step in reached:
+            state = "ok"
+        elif not failed and not result.get("ok"):
+            state, failed = "failed", True
+        else:
+            state = "skipped"
+        steps.append({"id": step, "state": state})
+    command = " ".join([str(server.get("command", "")), *map(str, server.get("args", []))])
+    log = [f"$ {command}"]
+    log += [f"{one['id']}: {one['state']}" for one in steps]
+    if result.get("ok"):
+        log.append(f"server: {result.get('server')}")
+        log.append("tools: " + ", ".join(result.get("tools") or []))
+    elif result.get("detail"):
+        log.append(str(result["detail"]))
+    return {**result, "steps": steps, "log": "\n".join(log)}
+
+
+def _handshake(server: dict, *, timeout: float, reached: set[str]) -> dict:
     """Run the advertised command and complete an MCP `initialize` with it.
 
     The reader's real question after Connect is not "was the file written" — it
@@ -432,6 +471,7 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
         )
     except OSError as exc:
         return {"ok": False, "detail": f"could not start the command: {exc}"}
+    reached.add("start")
     assert process.stdin is not None
     assert process.stdout is not None
     assert process.stderr is not None
@@ -453,6 +493,7 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
         name = (answer.get("result") or {}).get("serverInfo", {}).get("name")
         if not name:
             return {"ok": False, "detail": f"answered, but not as an MCP server: {json.dumps(answer)[:200]}"}
+        reached.add("initialize")
 
         # The lifecycle notification a well-behaved client always sends, and
         # the one point where this diagnostic must not itself be the reason
@@ -482,6 +523,7 @@ def handshake(server: dict, *, timeout: float = 30.0) -> dict:
                 "ok": False,
                 "detail": f"initialized, but tools/list named none: {json.dumps(listed)[:200]}",
             }
+        reached.add("tools")
         return {"ok": True, "server": name, "tools": tools}
     except OSError as exc:
         return {"ok": False, "detail": str(exc)}
