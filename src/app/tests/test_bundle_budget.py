@@ -82,7 +82,10 @@ import pytest
 #: files of `ui/src`. It shipped over budget in 0.10.3 (317,327 bytes) because
 #: that installer was built by hand without the gate; this records it rather
 #: than trimming working controls to fit a number. 317,467 bytes.
-BUDGET = {".js": 333_000, ".css": 60_000}
+#: Raised .js from 333,000 to 334,000 on 2026-09-30: B158, no dependency. A
+#: pick whose CLI lists no models now says so (`Pick.svelte`'s `note`, passed
+#: by four screens) and Bench names such a CLI beside the chips. 333,380 bytes.
+BUDGET = {".js": 334_000, ".css": 60_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the
