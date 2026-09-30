@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { hashWith, parseHash, toHash } from "./router";
 
 describe("parseHash", () => {
-    it("defaults to Activity when there is no hash (B163)", () => {
-        expect(parseHash("")).toEqual({ name: "activity", params: [], query: {} });
-        expect(parseHash("#")).toEqual({ name: "activity", params: [], query: {} });
-        expect(parseHash("#/")).toEqual({ name: "activity", params: [], query: {} });
+    it("defaults to Home (B174) when there is no hash (B163)", () => {
+        expect(parseHash("")).toEqual({ name: "home", params: [], query: {} });
+        expect(parseHash("#")).toEqual({ name: "home", params: [], query: {} });
+        expect(parseHash("#/")).toEqual({ name: "home", params: [], query: {} });
     });
 
     it("reads the view name and its params", () => {
