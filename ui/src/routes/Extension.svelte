@@ -380,13 +380,12 @@
                 </ul>
                 <p class="meta">
                     On any other page the extension stays quiet — it has nothing to read
-                    the page with, and guessing would be worse than silence. Describing
-                    the thing by hand on New check works everywhere.
+                    the page with, and guessing would be worse than silence.
                 </p>
             {:else}
                 <p class="state empty">
                     No installed pack ships a site adapter, so the extension has nothing
-                    to read a page with yet. Everything still works by hand on New check.
+                    to read a page with yet.
                 </p>
             {/if}
         </article>

@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { hashWith, parseHash, toHash } from "./router";
 
 describe("parseHash", () => {
-    it("defaults to check when there is no hash", () => {
-        expect(parseHash("")).toEqual({ name: "check", params: [], query: {} });
-        expect(parseHash("#")).toEqual({ name: "check", params: [], query: {} });
-        expect(parseHash("#/")).toEqual({ name: "check", params: [], query: {} });
+    it("defaults to Activity when there is no hash (B163)", () => {
+        expect(parseHash("")).toEqual({ name: "activity", params: [], query: {} });
+        expect(parseHash("#")).toEqual({ name: "activity", params: [], query: {} });
+        expect(parseHash("#/")).toEqual({ name: "activity", params: [], query: {} });
     });
 
     it("reads the view name and its params", () => {
@@ -25,20 +25,34 @@ describe("parseHash", () => {
         });
     });
 
-    it("carries query state, so a pasted link opens in the mode it was written for", () => {
+    it("carries query state other than the retired mode", () => {
+        expect(parseHash("#/activity?lens=runs")).toEqual({
+            name: "activity",
+            params: [],
+            query: { lens: "runs" },
+        });
+        expect(hashWith({ lens: "runs" }, "activity")).toBe("#/activity?lens=runs");
+    });
+
+    it("never reads a mode from an address, so an old link cannot carry one on (B165)", () => {
         expect(parseHash("#/result/abc?mode=author")).toEqual({
             name: "result",
             params: ["abc"],
-            query: { mode: "author" },
+            query: {},
         });
-        expect(hashWith({ mode: "author" }, "result", "abc")).toBe(
-            "#/result/abc?mode=author",
-        );
     });
 
-    it("drops empty query values rather than writing mode= into every link", () => {
-        expect(hashWith({ mode: undefined }, "check")).toBe("#/check");
-        expect(hashWith({ mode: "" }, "check")).toBe("#/check");
+    it("drops empty query values rather than writing lens= into every link", () => {
+        expect(hashWith({ lens: undefined }, "activity")).toBe("#/activity");
+        expect(hashWith({ lens: "" }, "activity")).toBe("#/activity");
+    });
+
+    it("sends the retired question sheet to the result it was for (B163)", () => {
+        // The extension's "Ask the seller" hands over `questions/<id>`.
+        expect(parseHash("#/questions/abc")).toEqual({ name: "result", params: ["abc"], query: {} });
+        expect(parseHash("#/questions?id=abc")).toEqual({ name: "result", params: ["abc"], query: {} });
+        // No id: the newest answer used to open; History is where it is chosen.
+        expect(parseHash("#/questions")).toEqual({ name: "history", params: [], query: {} });
     });
 
     it("keeps a malformed %-escape raw instead of throwing and blanking the app", () => {

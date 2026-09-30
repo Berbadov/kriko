@@ -19,7 +19,7 @@ import App from "./App.svelte";
 import { stubFetch } from "./lib/stub-fetch";
 
 const ROUTES = {
-    "/api/settings": { mode: "author" },
+    "/api/settings": {},
     "/api/status": { ok: true, packs: 1, enabled_packs: 1, counts: {} },
     "/api/packs": [],
     "/api/adapters": [],
@@ -43,9 +43,9 @@ describe("focus after navigation", () => {
     it("still puts focus on the view container for a route with no autofocus", async () => {
         stubFetch(ROUTES);
         const { container } = render(App);
-        await screen.findByRole("link", { name: "New check" });
+        await screen.findByRole("link", { name: "History" });
 
-        await go("#/about?mode=author");
+        await go("#/about");
 
         const view = container.querySelector<HTMLElement>(".view");
         await waitFor(() => expect(document.activeElement).toBe(view));
@@ -54,7 +54,7 @@ describe("focus after navigation", () => {
     it("does not steal focus into the view on first paint", async () => {
         stubFetch(ROUTES);
         const { container } = render(App);
-        await screen.findByRole("link", { name: "New check" });
+        await screen.findByRole("link", { name: "History" });
         const view = container.querySelector<HTMLElement>(".view");
         expect(document.activeElement).not.toBe(view);
     });

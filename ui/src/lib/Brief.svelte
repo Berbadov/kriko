@@ -7,7 +7,7 @@
     import Scale from "./Scale.svelte";
     import { copyText, copyWord } from "./clipboard";
     import { follow, stateWord } from "./jobs";
-    import { hashWith, route } from "./router";
+    import { toHash } from "./router";
     import type { Job, ResearchPlane } from "./types";
 
     /* The half of Research that was computed and thrown away.
@@ -236,7 +236,7 @@
             <button class="ghost" onclick={() => copy("brief", brief)}>
                 {copied === "brief" ? copyWord(true) : copied === "brief:blocked" ? copyWord(false) : "Copy the brief"}
             </button>
-            <a class="tab" href={hashWith({ mode: $route.query.mode }, "connect")}>Connect an agent</a>
+            <a class="tab" href={toHash("connect")}>Connect an agent</a>
             {#if queries.length}
                 <button class="ghost" onclick={() => copy("queries", queries.join("\n"))}>
                     {copied === "queries" ? copyWord(true) : copied === "queries:blocked" ? copyWord(false) : `Copy ${queries.length} queries`}
