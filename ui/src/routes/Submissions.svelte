@@ -34,7 +34,7 @@
     const accepted = (item: Submission) => item.verdicts.accepted ?? [];
 </script>
 
-<h2><Icon name="submissions" size={22} /> What researchers sent</h2>
+<h2><Icon name="submissions" size={22} /> Submissions</h2>
 <p class="lede">
     Every batch that reached the gate, and the reason each finding was turned away.
     Nothing here is waiting for you — the decisions were made when the batch

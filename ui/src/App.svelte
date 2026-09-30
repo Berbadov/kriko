@@ -12,6 +12,7 @@
     import { labelOf, resolve } from "./lib/shell/nav";
     import About from "./routes/About.svelte";
     import Activity from "./routes/Activity.svelte";
+    import Home from "./routes/Home.svelte";
     import Agents from "./routes/Agents.svelte";
     import Bench from "./routes/Bench.svelte";
     import Compare from "./routes/Compare.svelte";
@@ -208,6 +209,8 @@
                         <Settings />
                     {:else if $route.name === "about"}
                         <About />
+                    {:else if view.name === "home"}
+                        <Home />
                     {:else if view.name === "activity"}
                         <!-- Runs, the pipeline and what researchers sent, as
                              three lenses on one screen. `#/jobs`,
