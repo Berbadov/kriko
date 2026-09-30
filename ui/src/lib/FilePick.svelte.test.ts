@@ -69,9 +69,9 @@ describe("file inputs across the app", () => {
             .map(([path]) => path);
         expect(bare).toEqual([]);
         // And the two screens that take a file do so through it.
-        for (const screenName of ["Packs", "Welcome"]) {
-            const source = SOURCES[`../routes/${screenName}.svelte`];
-            expect(source, screenName).toMatch(/<FilePick\b/);
+        for (const file of ["./PacksSection", "../routes/Welcome"]) {
+            const source = SOURCES[`${file}.svelte`];
+            expect(source, file).toMatch(/<FilePick\b/);
         }
     });
 });
