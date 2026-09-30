@@ -1,7 +1,10 @@
 """The unattended run, and the way back out of one.
 
-`POST /api/agenda/run` is the button someone presses and walks away from, so
-every test here is about a way it could go wrong while nobody is watching:
+The `agenda_run` job is a run someone starts and walks away from, so every test
+here is about a way it could go wrong while nobody is watching. No endpoint
+starts one any more (B164, D5: the top-N button and the schedule loop went), and
+the handler stays for jobs already recorded and for the tests that pin its
+contract:
 
 * **It must not deadlock.** `app/web/jobs.py` has a single worker. A job that
   submits jobs and waits for them hangs with a queue that never drains and two
@@ -260,20 +263,15 @@ def test_one_subject_that_cannot_be_researched_does_not_end_the_run(
     assert any("error" in row for row in result["rows"])
 
 
-def test_the_unattended_door_defaults_to_the_plane_that_costs_nothing():
-    """Third time in this codebase, deliberately: the door pressed by somebody
-    who is not watching is the last place a default should start spending."""
-    from app.web.routers.research import AgendaRunRequest
+def test_an_unnamed_plane_never_resolves_to_one_that_spends():
+    """Third time in this codebase, deliberately: a run nobody is watching is
+    the last place a default should start spending."""
     from app.web.tasks import default_backend
 
-    # Empty, not "agent": whether a coding-agent CLI is on PATH is a fact about
-    # the machine at run time, not one this schema can freeze. What the door
-    # must guarantee is that the resolved plane never *spends* — and the reason
-    # it no longer resolves to `agent` by default is that `agent` gathers
-    # nothing itself, which the reader met twice as "run nothing again".
-    assert AgendaRunRequest().backend == ""
+    # Whether a coding-agent CLI is on PATH is a fact about the machine at run
+    # time. What must hold is that the resolved plane never *spends*, and that
+    # it is not `agent`, which gathers nothing itself.
     assert default_backend() in {"harness", "agent"}
-    assert AgendaRunRequest().budget_usd == 0.0
 
 
 # ── undo ─────────────────────────────────────────────────────────────────
@@ -403,13 +401,12 @@ def test_a_real_agenda_run_ends_up_in_the_run_list(tmp_path):
     """
     _seed(tmp_path, subjects=("s1", "s2"))
     with TestClient(create_app(_settings(tmp_path))) as client:
-        job_id = client.post(
-                "/api/agenda/run",
-                # Named, not defaulted: an unnamed plane now resolves to
-                # whichever one this machine can actually gather with, and this
-                # test is about the loop rather than about a gatherer.
-                json={"rows": 2, "backend": "agent"},
-            ).json()["job_id"]
+        # Named, not defaulted: an unnamed plane now resolves to whichever one
+        # this machine can actually gather with, and this test is about the
+        # loop rather than about a gatherer.
+        job_id = client.app.state.jobs.submit(
+            "agenda_run", {"rows": 2, "backend": "agent"}
+        )
         deadline = time.monotonic() + 15
         while time.monotonic() < deadline:
             row = client.get(f"/api/jobs/{job_id}").json()
