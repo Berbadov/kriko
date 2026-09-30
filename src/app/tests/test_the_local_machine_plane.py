@@ -290,6 +290,60 @@ def test_an_empty_completion_is_a_failure_not_silence(stub):
     assert "empty reply" in str(said.value)
 
 
+def test_the_reply_budget_is_sent_and_finish_reason_is_kept(stub):
+    stub.chat = [(200, {
+        "choices": [{"message": {"content": "[]"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2}})]
+    socket_ = local_inference.OpenAICompatSocket(stub.url, "m", max_tokens=64)
+    assert socket_("p") == "[]"
+    assert stub.chat_seen[0]["max_tokens"] == 64
+    assert socket_.last_finish_reason == "stop" and socket_.truncated == 0
+
+
+def test_a_length_finish_reason_marks_the_reply_truncated(stub):
+    stub.chat = [(200, {
+        "choices": [{"message": {"content": "[{\"title\":\"a\""},
+                            "finish_reason": "length"}],
+        "usage": {"prompt_tokens": 1, "completion_tokens": 64, "total_tokens": 65}})]
+    socket_ = local_inference.OpenAICompatSocket(stub.url, "m")
+    assert socket_("p").startswith("[")
+    assert socket_.last_finish_reason == "length" and socket_.truncated == 1
+
+
+def test_max_tokens_none_sends_no_budget(stub):
+    stub.chat = [completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(stub.url, "m", max_tokens=None)
+    socket_("p")
+    assert "max_tokens" not in stub.chat_seen[0]
+
+
+def test_a_transient_failure_is_retried_once_plainly(stub):
+    stub.chat = [(503, {"error": {"message": "loading"}}), completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA)
+    assert socket_("p") == "[]"
+    assert len(stub.chat_seen) == 2
+    assert "response_format" not in stub.chat_seen[1]
+
+
+def test_a_transient_failure_twice_is_said_not_swallowed(stub):
+    stub.chat = [(500, {}), (500, {})]
+    socket_ = local_inference.OpenAICompatSocket(stub.url, "m")
+    with pytest.raises(local_inference.LocalInferenceError) as said:
+        socket_("p")
+    assert "HTTP 500" in str(said.value)
+
+
+def test_a_cut_off_reply_with_no_text_names_the_budget(stub):
+    stub.chat = [(200, {
+        "choices": [{"message": {"content": ""}, "finish_reason": "length"}],
+        "usage": {"prompt_tokens": 1, "completion_tokens": 1024}})]
+    socket_ = local_inference.OpenAICompatSocket(stub.url, "m", max_tokens=128)
+    with pytest.raises(local_inference.LocalInferenceError) as said:
+        socket_("p")
+    assert "128" in str(said.value) and "cut" in str(said.value)
+
+
 # ── the plane says what failed ─────────────────────────────────────────────
 
 
