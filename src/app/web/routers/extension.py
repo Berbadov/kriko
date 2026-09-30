@@ -286,7 +286,10 @@ def start_research_plane(
         quick_budget = EXTENSION_RESEARCH_BUDGET_USD if billed else 0.0
         deep_budget = apiagent.DEFAULT_BUDGET_USD if billed else 0.0
         params = {
-            "category": body.q.strip(), "product_only": True,
+            # The listing's own title is the product. Which category pack it
+            # joins is decided by the run, from the installed packs (B169),
+            # so the title is only the fallback name for a new one.
+            "category": body.q.strip(), "product": body.q.strip(),
             "harness": selected, "backend": "harness",
             # The reader's answer, asked directly: "yes it should install
             # itslef" (B148). Only this door asks for it; the app's own New

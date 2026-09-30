@@ -29,11 +29,17 @@ MAX_RISKS = 6
 SEVERITIES = ("high", "medium", "low")
 
 
-def brief(product: str, principle: str = "", page: dict | None = None) -> str:
+def brief(product: str, principle: str = "", page: dict | None = None,
+          packs: str = "") -> str:
     """The quick pass, as instructions. Fast on purpose: a few searches, no essay.
 
     `page` is what the listing itself says (`app.pagefacts`, B150): the
     variant is settled from it, not from the title alone.
+
+    `packs` is the installed category packs, one per line
+    (`categorypack.choice_block`). The answer's `pack` is one of their ids or
+    empty, and `category` says in a few words what kind of product this is, so
+    a product joins a pack for its kind instead of starting its own (B169).
     """
     from app import pagefacts
 
@@ -42,6 +48,12 @@ def brief(product: str, principle: str = "", page: dict | None = None) -> str:
         f"\n## What is worth saying\n\nThe installed pack's own bar, verbatim:\n\n"
         f"{principle.strip()}\n"
         if principle.strip() else ""
+    )
+    belongs = (
+        "\n## Where it belongs\n\nThese installed packs each hold one kind of "
+        f"product:\n\n{packs.strip()}\n\nIf this product is that kind, give the "
+        "pack's id in `pack`. If none of them fits, leave `pack` empty.\n"
+        if packs.strip() else ""
     )
     return f"""# Quick look: what is known to go wrong with this one?
 
@@ -57,7 +69,7 @@ friend would in a chat: fast, specific, sourced.
 * Be specific to this exact variant. Skip anything true of every product like it.
 * If the name leaves the variant open, pick the most likely one and say which
   in `assumed`. Do not ask; there is no one to answer.
-{bar}
+{bar}{belongs}
 ## Every risk needs its page
 
 Each risk must name a page you actually opened (`url`) and a short quote copied
@@ -67,10 +79,13 @@ out. Fewer honest lines beat more guessed ones.
 ## Reply
 
 At most {MAX_RISKS} risks, as one JSON object in a ```json fence, as the last
-thing you say:
+thing you say. `category` is what kind of product this is, in two to four
+words, with no brand or model in it (for example "wireless earbuds").
 
 ```json
 {{"assumed": "one sentence on which variant you took this to be",
+  "category": "what kind of product this is",
+  "pack": "the id of a listed pack this belongs in, or an empty string",
   "risks": [
     {{"title": "short name of the problem",
       "why": "one or two sentences: what fails, when, what it costs",
@@ -96,7 +111,7 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
 
     found = _payload(reply)
     if not isinstance(found, dict):
-        return {"assumed": "", "risks": [], "dropped": 0}
+        return {"assumed": "", "category": "", "pack": "", "risks": [], "dropped": 0}
 
     risks: list[dict] = []
     dropped = 0
@@ -111,11 +126,13 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         if not title or not host or not quote:
             dropped += 1
             continue
+        checked = False
         if sources is not None:
             quote = loose_span(sources.get(url, ""), quote)
             if not quote:
                 dropped += 1
                 continue
+            checked = True
         if len(risks) == MAX_RISKS:
             break
         severity = str(raw.get("severity") or "").strip().lower()
@@ -132,11 +149,22 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
             "source_count": 1,
             "domain": host,
             "quick": True,
-            "sources": [{"url": url, "domain": host, "quote": quote}],
+            "sources": [{"url": url, "domain": host, "quote": quote,
+                         # Only when the plane kept the text this quote was
+                         # found in. Otherwise the store reads the page again
+                         # before it keeps the quote (`categorypack.ground`).
+                         **({"grounded": True} if checked else {})}],
         })
 
     return {
         "assumed": str(found.get("assumed") or "").strip(),
+        "category": _line(found.get("category")),
+        "pack": _line(found.get("pack")).lower(),
         "risks": risks,
         "dropped": dropped,
     }
+
+
+def _line(value) -> str:
+    """A short single-line answer, or "". Never more than a name's worth."""
+    return " ".join(str(value or "").split())[:80]

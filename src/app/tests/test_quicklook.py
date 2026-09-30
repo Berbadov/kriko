@@ -35,7 +35,28 @@ def test_a_risk_without_a_page_and_a_quote_is_dropped():
 
 def test_an_unreadable_reply_is_an_honest_nothing():
     assert quicklook.parse("I could not find anything.") == {
-        "assumed": "", "risks": [], "dropped": 0}
+        "assumed": "", "category": "", "pack": "", "risks": [], "dropped": 0}
+
+
+def test_the_answer_names_the_kind_of_product_and_a_pack_id_in_one_short_line():
+    found = quicklook.parse(_fenced({
+        "assumed": "x", "category": "  wireless\n earbuds ", "pack": " Audio.Earbuds ",
+        "risks": []}))
+    assert found["category"] == "wireless earbuds"
+    assert found["pack"] == "audio.earbuds"
+    long = quicklook.parse(_fenced({"category": "word " * 60}))
+    assert len(long["category"]) <= 80
+
+
+def test_a_quote_the_plane_saw_is_marked_grounded_and_a_cli_quote_is_not():
+    reply = _fenced({"risks": [{"title": "Gear wear", "url": "https://e.org/a",
+                                "quote": "the gears wear"}]})
+    seen = quicklook.parse(reply, {"https://e.org/a": "Notes: the  gears wear fast."})
+    assert seen["risks"][0]["sources"][0]["grounded"] is True
+    assert seen["risks"][0]["sources"][0]["quote"] in "Notes: the  gears wear fast."
+    unseen = quicklook.parse(reply)
+    assert "grounded" not in unseen["risks"][0]["sources"][0]
+    assert quicklook.parse(reply, {"https://e.org/a": "nothing here"})["dropped"] == 1
 
 
 def test_at_most_max_risks_are_kept():
@@ -48,6 +69,17 @@ def test_the_brief_carries_the_product_and_the_packs_bar():
     assert text.startswith("# Quick look")
     assert "Bosch GSR 18V-55" in text
     assert "Only variant-specific failures." in text
+    # Nothing is installed: there is no "where it belongs" question to ask.
+    assert "Where it belongs" not in text
+
+
+def test_the_brief_lists_the_installed_packs_when_there_are_some():
+    text = quicklook.brief("Scyrox V6", "", None,
+                           "* `gaming.mice`, Gaming mice (holds Scyrox V8): mice")
+    assert "## Where it belongs" in text
+    assert "`gaming.mice`" in text
+    assert "leave `pack` empty" in text
+    assert '"pack":' in text and '"category":' in text
 
 
 def test_a_quick_kind_is_not_queued_behind_a_long_job(tmp_path):

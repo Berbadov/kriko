@@ -50,8 +50,9 @@ import yaml
 from app import packdraft
 from kriko.research.agent import REFUSED_PAGE
 
-__all__ = ["brief", "CONTRACT", "author", "PackRefused",
-           "amend", "amend_brief", "draft_state"]
+__all__ = ["brief", "CONTRACT", "author", "PackRefused", "PackExists",
+           "amend", "amend_brief", "draft_state", "read_payload",
+           "product_note", "category_appendix"]
 
 #: Deliberately the same order of magnitude as a research reply. A pack that
 #: needs more rows than this is a pack an agent should be growing with
@@ -83,6 +84,19 @@ _ID = re.compile(r"[^a-z0-9_.-]+")
 
 class PackRefused(ValueError):
     """The agent's proposal was not a pack. Carries what was wrong with it."""
+
+
+class PackExists(PackRefused):
+    """The id the agent chose already has a draft directory (B169).
+
+    Not a refusal of the proposal so much as a fact about where it goes: the
+    caller merges the reply into that draft instead of scaffolding over it.
+    """
+
+    def __init__(self, pack_id: str, slug: str):
+        self.pack_id = pack_id
+        self.slug = slug
+        super().__init__(f"{pack_id!r} already has a draft ({slug!r})")
 
 
 def brief(category: str, scope: dict | None = None) -> str:
@@ -818,7 +832,8 @@ def _flat(value) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
 
 
-def author(store_path, reply: str, *, category: str = "") -> dict:
+def author(store_path, reply: str, *, category: str = "",
+           payload: dict | None = None) -> dict:
     """Turn what the agent printed into a draft. Returns what was written.
 
     Every write goes through `app/packdraft.py`, which is where the boundary
@@ -826,8 +841,13 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
     name is checked against a fixed list, and nothing may be executed by
     installing it. This function's job is only to decide whether the JSON is a
     pack, and to say what was wrong when it is not.
+
+    `payload` is the reply already read and edited by the caller (a product
+    check takes the agent's claims out to source them first, B168); with none
+    given the reply is read here. An id that already has a draft raises
+    `PackExists` rather than the scaffold's `FileExistsError` (B169).
     """
-    payload = _payload(reply)
+    payload = payload if payload is not None else _payload(reply)
     if not payload:
         raise PackRefused(
             "the agent printed no JSON object. Nothing was written — the run's "
@@ -868,6 +888,9 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
     claims = _claims(table, payload, known)
     gaps = _coverage(payload, known, quarantined)
 
+    slug = packdraft.slug_for(pack_id)
+    if (packdraft.drafts_root(store_path) / slug / "pack.toml").exists():
+        raise PackExists(pack_id, slug)
     draft = packdraft.create(
         store_path, pack_id=pack_id, name=name, identity=table)
     written = [
@@ -921,6 +944,9 @@ def author(store_path, reply: str, *, category: str = "") -> dict:
         "files": sorted(set(written)),
         "subjects": len(yaml.safe_load(subjects) or []),
         "claims": len(yaml.safe_load(claims) or []),
+        # The rows themselves, for a caller that has to say which one is the
+        # product it was asked about (`app/categorypack.attach`).
+        "subject_rows": yaml.safe_load(subjects) or [],
         "identity": table,
         # Which sites this pack can be *seen* on. Reported because a pack with
         # no adapter is knowledge the browser panel can never reach, and that
@@ -1257,6 +1283,69 @@ one it already lists — you are adding rows to a table whose columns are fixed.
 """
 
 
+# ── a product check: one product, in a pack for its category (B168, B169) ────
+#
+# The reader's words: "Singular product searches must not create a new pack
+# each time". A check names one product. What it needs from an agent is that
+# product as a subject, in a pack for the kind of thing it is, and claims that
+# each point at a page. The briefs below say so, and `app/categorypack.py`
+# holds the agent to it: quotes are read against their pages afterwards.
+
+EVIDENCE_RULE = """Every claim needs `evidence`: a list of `{"url": "...", "quote": "..."}`.
+The url is a page you opened and the quote is copied from it word for word.
+Kriko reads that page again and drops a claim whose quote it cannot find there,
+so a claim you cannot source this way is better left out. A claim with no
+evidence is dropped."""
+
+
+def product_note(product: str, scope: dict | None = None) -> str:
+    """What to ask for when a product joins a pack that already exists."""
+    from app import disambiguate
+
+    said = disambiguate.sentence(scope or {})
+    return (
+        f"Add this one product to the pack: {product}\n\n"
+        "* Add exactly one subject for it, using the identity keys above. Take "
+        "the identity from the listing's own facts when they are given below.\n"
+        "* If the product is already under \"Already covered\", repeat its entry "
+        "with the same identity, so what you find is attached to it.\n"
+        "* Name the product in `lineup` as well.\n"
+        "* Add no other product.\n"
+        f"* {EVIDENCE_RULE}"
+        + (f"\n\n{said}" if said else "")
+    )
+
+
+def category_appendix(product: str, category: str, taken: list[str]) -> str:
+    """The changes to the authoring brief when a product starts a category pack.
+
+    Appended to `brief(category)`. It says which parts of that brief this run
+    overrides, because the brief asks for the whole line-up to be researched
+    and a product check must not spend forty minutes on a category to answer
+    one listing.
+    """
+    ids_text = ", ".join(f"`{one}`" for one in taken[:60]) or "(none yet)"
+    return f"""
+
+## This run is a product check
+
+A reader is looking at one product right now: **{product}**
+
+This section overrides the line-up rules above.
+
+* Author the pack for its **category**, "{category}", not for this product.
+  `name` is what the category is called, and `pack_id` is made of the
+  category's words, never of a brand or a model.
+* `subjects` holds this product, with its identity taken from the listing's
+  own facts when they are given below, and nothing you did not research.
+* Name the rest of the category in `lineup` and stop there. Those names become
+  open gaps that later checks fill; do not research them now.
+* These ids belong to other packs. Do not reuse one: {ids_text}.
+* {EVIDENCE_RULE}
+* Do not install anything; Kriko decides that.
+"""
+
+
 def _indent(text: str) -> str:
     return "\n".join(f"    {line}" for line in str(text or "").splitlines()[:40])
 
@@ -1331,7 +1420,8 @@ def draft_state(store_path, slug: str) -> dict:
     }
 
 
-def amend(store_path, slug: str, reply: str) -> dict:
+def amend(store_path, slug: str, reply: str, *, payload: dict | None = None,
+          allow_nothing_new: bool = False) -> dict:
     """Merge an agent's additions into an existing draft. Adds, never replaces.
 
     Deduplicated by identity for subjects and by (subject, title) for claims,
@@ -1342,8 +1432,14 @@ def amend(store_path, slug: str, reply: str) -> dict:
     The whole point is that a *wrong* amendment cannot damage what was already
     right: nothing existing is rewritten, and a refused amendment leaves the
     draft exactly as it was.
+
+    `payload` is the reply already read and edited by the caller, as in
+    `author`. `allow_nothing_new` is for a product check (B169): checking a
+    product that is already in the pack repeats its subject and adds nothing,
+    which is an answer ("already known") and not a refusal. The result then
+    says `changed: False` and no file is written.
     """
-    payload = _payload(reply)
+    payload = payload if payload is not None else _payload(reply)
     if not payload:
         raise PackRefused(
             "the agent printed no JSON object. The draft is unchanged — the "
@@ -1408,6 +1504,10 @@ def amend(store_path, slug: str, reply: str) -> dict:
         row for row in added_subjects
         if _identity_key(row.get("kind"), row.get("identity")) not in seen
     ]
+    # A subject the pack already holds, named again with aliases it lacks,
+    # gains them: a repeat check is how a listing's own spelling becomes
+    # something search finds (B169). Labels and identity are never rewritten.
+    aliased = _merge_aliases(subjects, added_subjects)
 
     added_claims = yaml.safe_load(_claims(table, payload, known)) or []
     have = {
@@ -1423,7 +1523,24 @@ def amend(store_path, slug: str, reply: str) -> dict:
         ) not in have
     ]
 
-    if not fresh and not fresh_claims and not fresh_adapters:
+    if not fresh and not fresh_claims and not fresh_adapters and not aliased:
+        if allow_nothing_new and added_subjects:
+            return {
+                "slug": slug,
+                "pack_id": state.get("pack_id", ""),
+                "name": state.get("name", ""),
+                "files": [],
+                "changed": False,
+                "subject_rows": added_subjects,
+                "subjects_added": 0,
+                "claims_added": 0,
+                "adapters_added": [],
+                "subjects": len(subjects),
+                "claims": len(claims),
+                "uncovered": list(state.get("uncovered") or []),
+                "quarantined": quarantined,
+                "notes": _text(payload.get("notes")),
+            }
         if quarantined and not added_subjects:
             raise PackRefused(
                 "every subject in the reply was quarantined rather than "
@@ -1438,7 +1555,7 @@ def amend(store_path, slug: str, reply: str) -> dict:
         )
 
     written = []
-    if fresh:
+    if fresh or aliased:
         written.append(packdraft.write(
             store_path, slug=slug, path="data/subjects.yaml",
             text=_preamble(root / "data" / "subjects.yaml")
@@ -1488,6 +1605,8 @@ def amend(store_path, slug: str, reply: str) -> dict:
         "pack_id": state.get("pack_id", ""),
         "name": state.get("name", ""),
         "files": written,
+        "changed": True,
+        "subject_rows": added_subjects,
         "subjects_added": len(fresh),
         "claims_added": len(fresh_claims),
         "adapters_added": [one["site"] for one in fresh_adapters],
@@ -1497,6 +1616,31 @@ def amend(store_path, slug: str, reply: str) -> dict:
         "quarantined": quarantined,
         "notes": _text(payload.get("notes")),
     }
+
+
+def _merge_aliases(subjects: list, added: list[dict]) -> int:
+    """Give each existing subject the aliases a repeated entry names and it lacks.
+
+    Edits `subjects` in place and returns how many subjects changed. Matched by
+    identity, never by label, because an identity is what makes two entries the
+    same subject.
+    """
+    by_identity = {
+        _identity_key(row.get("kind"), row.get("identity")): row
+        for row in subjects if isinstance(row, dict)
+    }
+    changed = 0
+    for entry in added:
+        row = by_identity.get(_identity_key(entry.get("kind"), entry.get("identity")))
+        if row is None:
+            continue
+        have = {_flat(one) for one in row.get("aliases") or []} | {_flat(row.get("label"))}
+        more = [one for one in entry.get("aliases") or []
+                if _text(one) and _flat(one) not in have]
+        if more:
+            row["aliases"] = list(row.get("aliases") or []) + more
+            changed += 1
+    return changed
 
 
 def _preamble(path: Path) -> str:
