@@ -195,8 +195,16 @@ export const api = {
     markSignals: (limit = 50) => get<T.MarkSignals>(`/api/marks/signals?limit=${limit}`),
     unmark: (packId: string, claimId: string) =>
         del<{ removed: boolean }>(`/api/marks/${seg(packId)}/${seg(claimId)}`),
-    subjects: (q: string, limit = 60) =>
-        get<T.Subject[]>(`/api/subjects?limit=${limit}&q=${encodeURIComponent(q)}`),
+    subjects: (q: string, limit = 60, filters: Record<string, string> = {}) => {
+        const extra = Object.entries(filters)
+            .filter(([, value]) => value)
+            .map(([key, value]) => `&${seg(key)}=${seg(value)}`)
+            .join("");
+        return get<T.Subject[]>(
+            `/api/subjects?limit=${limit}&q=${encodeURIComponent(q)}${extra}`,
+        );
+    },
+    subjectFilters: () => get<{ filters: T.SubjectFilter[] }>("/api/subjects/filters"),
     search: (q: string, packId: string, limit = 8) =>
         get<{ items: T.SearchHit[] }>(
             `/api/search?limit=${limit}&pack_id=${seg(packId)}&q=${encodeURIComponent(q)}`,
