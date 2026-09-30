@@ -151,7 +151,16 @@ def research_plane(request: Request) -> dict:
     settings = request.app.state.settings
     env_path = keys.env_path(getattr(settings, "app_state_path").parent)
     from app import prefs
+    from app.web.tasks import default_plane
 
+    # The local machine plane goes first when it is ready and the reader has
+    # not picked an agent (B172): a model on this computer costs nothing and
+    # needs no account, so it is what an unnamed run gets. `default_plane` is
+    # the one rule `default_backend` uses too, so the door and the app agree.
+    chosen, why = default_plane(getattr(settings, "app_state_path", None))
+    if chosen == "local":
+        return {"backend": "local", "cost_basis": "self_hosted",
+                "budget_usd": 0.0, "why": why}
     # With the model the run would use: a key saved for the API agent alone
     # must not route the reader onto a paid plane that fails at its first page.
     if prefs.paid_plane_ready(getattr(settings, "app_state_path", None), env_path):
@@ -252,11 +261,44 @@ def start_research_plane(
         # An API agent counts only once picked: it bills per token, and a
         # key saved for something else is not a yes to that (B153).
         picked_api = stored in {one.id for one in apiagent.available()}
+        # The model on this computer (B171, B172): first for a reader who has
+        # picked no agent, and the only door for one who has none at all.
+        from app import localplane
+
+        local = localplane.resolve(
+            getattr(request.app.state.settings, "app_state_path", None),
+            with_search=False)
+        if local["ready"] and (not stored or (not installed and not picked_api)):
+            from app import pagefacts
+
+            page = pagefacts.clean(body.facts, body.description)
+            params = {
+                "category": body.q.strip(), "product": body.q.strip(),
+                "harness": "", "backend": "local", "install": True,
+                "page": page, "budget_usd": 0.0,
+            }
+            deepen = runner.submit("pack_author", params)
+            pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
+            quick = runner.submit("quick_look", {
+                "product": body.q.strip(), "harness": "", "backend": "local",
+                "pack_id": pack_id, "deepen_job_id": deepen, "page": page,
+                "budget_usd": 0.0,
+            })
+            return {
+                "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
+                "backend": "local", "harness": "", "cost_basis": "self_hosted",
+                "budget_usd": None, "why": local["line"],
+                "note": f"Runs on {local['model']} on this computer: no key and "
+                        "no subscription. It can be slow on a CPU. A quick answer "
+                        "first; the deeper research keeps going and installs "
+                        "itself when done.",
+            }
         if not installed and not picked_api:
             raise HTTPException(503, (
-                "Product drafts need an agent. Install a coding-agent CLI, or pick "
+                "Product drafts need an agent. Install a coding-agent CLI, pick "
                 "the Mistral API agent in Settings → Agents (it needs a Mistral "
-                "key). No API research was started."
+                "key), or run a local model server with a model downloaded. "
+                + local["reason"] + " No API research was started."
             )) from exc
         # Decided once, here, and then both reported and obeyed.
         #
