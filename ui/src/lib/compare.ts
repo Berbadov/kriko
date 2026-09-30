@@ -89,7 +89,7 @@ export type SpecRow = {
  *
  * Nothing here names a field: a row exists because some subject's own
  * attributes carry that label, so a pack for any category lines up the same
- * way. Identity keys are what make the product itself and are left out.
+ * way. Identity keys name the product itself and are left out.
  * Rows that differ come first, since they are the reason to compare.
  */
 export function compareSpecs(subjects: (SubjectDetail | null)[]): SpecRow[] {
