@@ -1,11 +1,8 @@
 <script lang="ts">
     import Icon from "../lib/Icon.svelte";
-    import { tick } from "svelte";
-    import { route, setQuery } from "../lib/router";
     import { api } from "../lib/api";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
-    import RunWith from "../lib/RunWith.svelte";
     import { elapsed } from "../lib/time";
     import { canCancel, follow, isLive, kindWord as libKindWord, stateWord } from "../lib/jobs";
     import type { Job, Question } from "../lib/types";
@@ -93,37 +90,6 @@
         };
     });
 
-    // ── starting a pack: one field, and an agent does the rest ──────────
-    //
-    // What was here asked for a directory, an id, a name and an identity
-    // table before it would write anything, and the reader's verdict on that
-    // was "it's gotta be automated with agents". They were right, and not
-    // only about the typing: three of those four are decisions somebody who
-    // has read the category can take well and somebody who has not cannot
-    // take at all. The identity table is the sharp one — too few keys and
-    // unrelated rows collide into one subject, too many and one thing splits
-    // across subjects that never see each other's claims, and neither failure
-    // raises anything. Asking for it first was asking for the one answer the
-    // reader was least equipped to give.
-    //
-    // So: a category in plain words, one press. The agent proposes the data,
-    // the engine writes the files, and the reader installs from Knowledge —
-    // three steps and three different authorities, which is why nothing here
-    // reaches the store.
-    let category = $state("");
-    let categoryInput: HTMLInputElement;
-    /* B146: which agent, and how long it may take. The form used to be a
-     * collapsed <details> with none of these, so "how hard will it try, and
-     * when does it give up" had no answer anywhere near the button. */
-    let harness = $state("");
-    let timeout = $state(0);
-    const TIMEOUTS = [
-        { seconds: 0, label: "40 min (default)" },
-        { seconds: 600, label: "10 min" },
-        { seconds: 1200, label: "20 min" },
-        { seconds: 3600, label: "60 min" },
-    ];
-
     /* A clock for live rows. A harness that is thinking prints nothing for
      * minutes, and "running" with no sense of time read as stuck (B146). */
     let now = $state(Date.now());
@@ -137,43 +103,9 @@
         return last && last !== job.message ? last : "";
     };
 
-    $effect(() => {
-        if ($route.query.author !== "new") return;
-        let active = true;
-        void tick().then(() => {
-            if (!active) return;
-            categoryInput.focus();
-            setQuery("author", undefined);
-        });
-        return () => { active = false; };
-    });
-
-    // The server's own field (`app/web/routers/jobs.py`'s AuthorRequest)
-    // requires two characters — below that, `x` reached the server and came
-    // back a 422 the reader had no way to anticipate (ops-4). Matching the
-    // bound here means the button simply will not fire a request that could
-    // not succeed.
-    const CATEGORY_MIN = 2;
-
-    async function authorPack() {
-        if (category.trim().length < CATEGORY_MIN) return;
-        busy = true;
-        error = null;
-        try {
-            const { job_id } = await api.authorPack(category.trim(), harness, timeout);
-            const job = await api.job(job_id);
-            replace(job);
-            watch(job);
-            // Opened straight away, because this run is worth watching: it is
-            // several minutes of an agent reading, and the log is where the
-            // reader sees that it is reading rather than hung.
-            open = job_id;
-        } catch (cause) {
-            error = cause;
-        } finally {
-            busy = false;
-        }
-    }
+    // Starting a pack moved to the Run screen (B175), with the dark panel that
+    // watches it. This lens keeps every run there has been, and the build from
+    // a directory, which has no agent to choose.
 
     async function build() {
         if (!root.trim()) return;
@@ -332,52 +264,6 @@
     may finish. Only checkpointed results survive a restart.
 </p>
 
-<section class="card authoring">
-    <h3><Icon name="plus" /> Start a new pack</h3>
-    <p class="meta">
-        Name a category in a few words and your own coding agent writes the whole
-        pack — what tells two of these apart, the bar a claim has to clear, what
-        to search for, and a first honest row. It lands as a draft you can read
-        on Knowledge; nothing is installed until you press Install there.
-    </p>
-    <form
-        class="ask"
-        onsubmit={(event) => (event.preventDefault(), authorPack())}
-    >
-        <label class="field grow">
-            <span>What is the category?</span>
-            <!-- svelte-ignore a11y_autofocus -- deliberate: App.svelte's
-                 focusTheView() reads this attribute to decide who gets focus
-                 on navigation, rather than racing its own container-focus
-                 fallback against this component's own tick().then() (shell-4).
-                 It only carries the attribute while ?author=new is present,
-                 which is itself the reader having just asked for this form. -->
-            <input
-                bind:this={categoryInput}
-                bind:value={category}
-                placeholder="cordless drills, espresso machines, e-bikes"
-                autofocus={$route.query.author === "new"}
-            />
-        </label>
-        <button
-            class="primary"
-            type="submit"
-            disabled={busy || category.trim().length < CATEGORY_MIN}
-        >
-            {busy ? "Starting…" : "Have my agent write it"}
-        </button>
-    </form>
-    <RunWith bind:harness bind:timeout timeouts={TIMEOUTS} disabled={busy} />
-    {#if category.trim().length > 0 && category.trim().length < CATEGORY_MIN}
-        <p class="meta">At least {CATEGORY_MIN} characters.</p>
-    {/if}
-    <p class="meta">
-        Uses a coding-agent CLI you already have — no API cost. None installed?
-        Connect your agent under <a href="#/agents">Agents</a> and let it use
-        <code>draft_pack</code>.
-    </p>
-</section>
-
 <form class="ask" onsubmit={(event) => (event.preventDefault(), build())}>
     <label class="field grow">
         <span>Build a pack from a directory</span>
@@ -395,7 +281,7 @@
         title="No runs yet"
         detail="Long work is a row here rather than a request that hangs — research
                 and pack builds both land on this screen, and their log outlives
-                the page. Start one above, or from a gap on Knowledge."
+                the page. Start one from Run, or from a gap on Knowledge."
         actionLabel="Find a gap"
         actionHref="#/knowledge"
     />
