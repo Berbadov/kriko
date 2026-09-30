@@ -76,11 +76,15 @@ def resolve(app_state_path=None, *, url: str = "", model: str = "",
         servers = found.result()
         searching = asked.result() if asked is not None else False
 
+    chosen: dict | None
     if want_url:
         chosen = servers[0]
     else:
-        chosen = next((s for s in servers if s["models"]), None) or next(
-            (s for s in servers if s["up"]), None)
+        chosen = None
+        for wanted in ("models", "up"):
+            chosen = next(iter(s for s in servers if s[wanted]), None)
+            if chosen:
+                break
 
     search = {
         "search_kind": "openserp" if searching else "exa",
@@ -125,7 +129,7 @@ def resolve(app_state_path=None, *, url: str = "", model: str = "",
         # search probe must not say which search is in use.
         out["search_kind"] = out["search_label"] = ""
     out["line"] = (
-        f"Ready: {out['model']} on {chosen['name']} at {chosen['url']}"
+        f"Ready: {out['model']} on {out['name']} at {out['url']}"
         + (f"; search through {search['search_label']}." if with_search else ".")
         if out["ready"] else out["reason"])
     # The keys the planes card has always carried.
