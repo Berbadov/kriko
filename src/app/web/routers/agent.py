@@ -216,7 +216,10 @@ def agent_skill(request: Request, store=Depends(get_store)):
     body = skill_body(request.app.state.settings, store)
     return {
         "name": agentskill.SKILL_NAME,
-        "steps": [{"tool": tool, "why": why} for tool, why in agentskill.STEPS],
+        "steps": [
+            {"tool": tool, "input": given, "output": got}
+            for tool, given, got in agentskill.STEPS
+        ],
         # Always a body now. An empty installation gets the authoring half of
         # the skill rather than nothing: the job for an agent connected to a
         # store with no packs is to write the first one (B96).

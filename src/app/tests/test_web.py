@@ -815,8 +815,23 @@ def test_the_skill_says_what_this_installation_considers_worth_keeping(client):
     `app/` — otherwise the protocol stops versioning with the knowledge.
     """
     body = client.get("/api/agent-skill").json()["body"]
-    assert "Only the expensive." in body
     assert "Tools" in body
+    # B178: the bar is the pack's and reaches the agent per subject, through
+    # `research_brief`; the skill stays the same size whatever a pack says.
+    assert "Only the expensive." not in body
+    brief = _brief(client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"}))
+    assert "Only the expensive." in brief
+
+
+def _brief(client, subject_id: str) -> str:
+    from kriko.research import plan_task
+    from kriko.research.agent import AgentResearcher
+
+    conn = connect(client.app.state.settings.store_path)
+    try:
+        return AgentResearcher().brief(plan_task(conn, subject_id, "tools"))
+    finally:
+        conn.close()
 
 
 def test_the_skill_names_the_loop_in_order(client):
@@ -841,41 +856,33 @@ def test_the_frontmatter_description_is_one_line(client):
     assert len(description) > 40
 
 
-def test_the_skill_states_the_pack_keys_rather_than_letting_an_agent_guess(client):
+def test_the_brief_states_the_pack_keys_and_words_rather_than_letting_an_agent_guess(client):
     """An agent that has to guess an identity key invents a plausible one.
 
-    The keys are read off the rows, per subject kind, so a second category
+    B178 moved these from the skill, where they made its length depend on the
+    packs, to the brief, which is per subject. The identity is read off the
+    rows and the domain words off the pack's vocabulary, so a second category
     gets its own set with no edit here.
     """
-    body = client.get("/api/agent-skill").json()["body"]
-    assert "`product` — `brand`, `model`" in body
-    assert "`platform` — `brand`, `platform`" in body
+    brief = _brief(client, ids.subject_id("product", {"brand": "makita", "model": "DHP484"}))
+    assert "brand=makita" in brief and "model=DHP484" in brief
     # The domain vocabulary is the other invented-value risk: a claim filed
     # under a domain the pack never declared is unfindable.
-    assert "Domains it accepts: `mech`" in body
+    assert "`domain` — one of: " in brief and "mech" in brief
 
 
 def test_the_skill_counts_what_is_held_and_what_is_missing(client):
     """The gap count is what turns a protocol document into a task list."""
     body = client.get("/api/agent-skill").json()["body"]
-    assert "4 subject(s)" in body
-    assert "2 claim(s)" in body
-    assert "**2** of those subjects have no claim at all" in body
+    assert "4 subjects, 2 claims, 2 with none." in body
 
 
-def test_the_worked_example_is_a_real_gap_in_this_very_store(client):
-    """A made-up id in an example teaches an agent to make up ids.
-
-    It also picks a subject with no claims first, so the example doubles as
-    the first genuinely useful task.
-    """
+def test_the_skill_carries_no_worked_example_from_any_category(client):
+    """B178: it names no product. The subject to start on comes from
+    `research_agenda`, which is live, and not from an example that goes stale."""
     body = client.get("/api/agent-skill").json()["body"]
-    # The claim-less subject that sorts first by label — the pack has three
-    # of them, and which one the example names matters far less than that it
-    # is one the store can actually resolve.
-    subject_id = ids.subject_id("product", {"brand": "makita", "model": "DHP484"})
-    assert f'research_brief(subject_id="{subject_id}", pack_id="tools")' in body
-    assert "has nothing known about it" in body
+    assert "research_brief(subject_id=" not in body
+    assert "has nothing known about it" not in body
 
 
 def test_the_skill_teaches_the_refusals_before_they_happen(client):
@@ -930,7 +937,7 @@ def test_a_store_with_no_packs_gets_the_authoring_skill(tmp_path):
     assert "This installation has no packs" in body
     # And not the research loop: an agenda over nothing is a prompt spent on
     # instructions the agent cannot follow.
-    assert "## The loop" not in body
+    assert "## The five steps" not in body
 
 
 def test_connecting_installs_the_skill_next_to_the_config(client, tmp_path, monkeypatch):
@@ -940,7 +947,7 @@ def test_connecting_installs_the_skill_next_to_the_config(client, tmp_path, monk
     written = client.post("/api/agent-targets/claude-code/connect").json()["skill"]
 
     assert written.endswith("SKILL.md")
-    assert "Only the expensive." in (tmp_path / "home" / ".claude/skills"
+    assert "## The five steps" in (tmp_path / "home" / ".claude/skills"
                                      / "kriko-research" / "SKILL.md").read_text(encoding="utf-8")
 
 
