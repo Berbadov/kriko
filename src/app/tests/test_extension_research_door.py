@@ -524,8 +524,15 @@ def test_product_draft_reuses_author_gates_and_cancellation(
         selected.append(kwargs)
         return FakeHarness()
 
+    from app.web import tasks
+    from kriko.research import Fetched
+
     monkeypatch.setattr(harness, "available", lambda: [SimpleNamespace(id="fixture-harness")])
     monkeypatch.setattr(providers, "harness_researcher", create)
+    # B168: the deepen job re-reads the quick look's pages before it keeps a
+    # claim. The page is stubbed here; nothing in this test reaches the network.
+    pages = {"https://example.org/a": "Field notes: the gears wear within a season."}
+    monkeypatch.setattr(tasks, "_page_reader", lambda: (lambda url: Fetched(pages.get(url, ""))))
     response = research_client.post("/api/extension/research-plane", json={
         "q": " Unknown Widget ", "allow_draft": True,
         "model": "paid-model", "search": "paid-search", "cap": 0.01,
@@ -559,8 +566,9 @@ def test_product_draft_reuses_author_gates_and_cancellation(
     row = _wait_research_job(research_client, job_id)
     assert selected[0]["preferred"] == "fixture-harness"
     assert "Unknown Widget" in prompts[1]
-    assert "Product-only scope" in prompts[1]
-    assert "Do not expand to other products" in prompts[1]
+    assert "This run is a product check" in prompts[1]
+    assert 'the pack for its **category**, "Unknown Widget"' in prompts[1]
+    assert "never of a brand or a model" in prompts[1]
     assert "Do not install anything" in prompts[1]
     if outcome == "draft":
         assert row["state"] == "succeeded", row["message"]
@@ -570,6 +578,10 @@ def test_product_draft_reuses_author_gates_and_cancellation(
         draft = packdraft.open_draft(research_client.app.state.settings.store_path,
                                      row["result"]["slug"])
         assert "data/subjects.yaml" in draft.files()
+        # B168: the quick look's sourced risk is on the product; the unsourced
+        # one was never kept.
+        assert row["result"]["claims_added"] == 1
+        assert row["result"]["subject"]["label"] == "Unknown Widget"
     elif outcome == "cancelled":
         assert row["state"] == "cancelled"
         assert row["result"]["partial"] is True
