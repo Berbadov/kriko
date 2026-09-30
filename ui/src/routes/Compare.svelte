@@ -7,6 +7,7 @@
     import { severityWord } from "../lib/report";
     import { route, setQuery, toHash } from "../lib/router";
     import { ApiError } from "../lib/api";
+    import { remedyFor } from "../lib/failure";
     import type { CompareDraft, HistoryItem, SubjectDetail } from "../lib/types";
 
     //: Four is the cap, and it is a layout limit rather than a logical one:
@@ -92,7 +93,7 @@
             await loadDrafts();
             setQuery("draft", saved.draft_id);
         } catch (e) {
-            saveError = e instanceof ApiError ? e.message : "The draft was not saved.";
+            saveError = remedyFor(e).headline;
         } finally {
             saving = false;
         }
