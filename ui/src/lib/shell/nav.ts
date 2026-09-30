@@ -41,6 +41,9 @@ export const NAV: NavGroupSpec[] = [
             // No "New check" and no "Question sheet" (B163): the browser
             // extension is where a check starts, and what it finds is read on
             // the result. History and Compare are what is left of the group.
+            // Run is where a run over a whole category starts and is watched
+            // (B175, B176); it was the top of Activity's Runs lens.
+            { name: "run", label: "Run", also: ["start", "author", "new pack", "agent run"] },
             { name: "history", label: "History" },
             { name: "compare", label: "Compare" },
             { name: "extension", label: "Browser extension" },
