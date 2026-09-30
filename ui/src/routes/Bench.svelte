@@ -13,7 +13,7 @@
 
     type OfferedLlm = { id: string; label: string; provider: string; unusable: string };
     type SearchChoice = { id: string; label: string; ready: boolean };
-    type HarnessLlms = { id: string; label: string; llms?: string[]; llm_selectable?: boolean };
+    type HarnessLlms = { id: string; label: string; llms?: string[]; llms_note?: string; llm_selectable?: boolean };
     type PrefsView = {
         models?: { offered?: OfferedLlm[] };
         search_providers?: SearchChoice[];
@@ -99,6 +99,10 @@
     // that names it (`bench.pairs` on the server).
     const harnessLlms = $derived(
         (prefsView?.harnesses ?? []).filter((one) => one.llm_selectable && (one.llms ?? []).length),
+    );
+    // A CLI that lists no LLMs says so here instead of vanishing from the chips.
+    const unlistedLlms = $derived(
+        (prefsView?.harnesses ?? []).filter((one) => one.llm_selectable && !(one.llms ?? []).length && one.llms_note),
     );
     const searchOptions = $derived(prefsView?.search_providers?.length ? prefsView.search_providers : SEARCH_FALLBACK);
 
@@ -312,6 +316,9 @@
                 {#if !planesSel.includes("harness")}
                     <p class="meta">Select the harness plane above to use these.</p>
                 {/if}
+            {/each}
+            {#each unlistedLlms as one (one.id)}
+                <p class="meta">{one.label}: {one.llms_note}</p>
             {/each}
             {#if offeredLlms.length}
                 {#if harnessLlms.length}<p class="meta">Catalogue — runs on the paid plane</p>{/if}
