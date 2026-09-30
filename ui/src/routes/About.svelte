@@ -43,7 +43,7 @@
 
         <h3><Icon name="download" /> Updating</h3>
         <p class="meta">
-            The app updates itself when a release is signed — it checks on its
+            The app updates itself when a release is signed; it checks on its
             own at startup and asks before installing anything. A release that
             carries no signature cannot be installed that way, and there is no
             in-app version switch: moving between builds means running an
@@ -53,14 +53,14 @@
             >
         </p>
         <p class="meta">
-            Packs update on their own clock, from the Packs screen — knowledge
+            Packs update on their own clock, from the Packs screen; knowledge
             changes far more often than this binary does.
         </p>
 
         <h3><Icon name="console" /> Diagnostics</h3>
         <p class="meta">
             What to send us when something is wrong. Every line here is
-            something this window cannot see for itself — it is reported by
+            something this window cannot see for itself; it is reported by
             the process serving it.
         </p>
         <dl class="facts">
@@ -90,12 +90,12 @@
             <dd>
                 {#if health.shell_attached}
                     Attached <span class="meta"
-                        >— "Open in Kriko" raises this window.</span
+                        >: "Open in Kriko" raises this window.</span
                     >
                 {:else}
                     Not attached
                     <span class="meta"
-                        >— this server is running on its own, so "Open in Kriko"
+                        >: this server is running on its own, so "Open in Kriko"
                         opens a browser tab instead of raising a window. That is
                         the correct behaviour here, not a fault.</span
                     >
@@ -125,7 +125,7 @@
             </table>
             <p class="meta">
                 Rolling a pack back to a retained revision is done on the Packs
-                screen, not here — this view reports, it does not change anything.
+                screen, not here; this view reports, it does not change anything.
             </p>
         {:else}
             <p class="state empty">No packs installed yet.</p>

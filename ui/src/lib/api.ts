@@ -365,6 +365,11 @@ export const api = {
         ),
     forgetSite: (host: string) =>
         del<{ host: string; forgotten: boolean }>(`/api/sites/${seg(host)}`),
+    /** One adapter's rules, its unmapped labels and its sample page (B181). */
+    siteDetail: (host: string) => get<T.SiteDetail>(`/api/sites/${seg(host)}/detail`),
+    /** Amend a learned adapter. Checked before it is stored (B181). */
+    amendSite: (host: string, spec: Record<string, unknown>) =>
+        putJson<{ host: string }>(`/api/sites/${seg(host)}`, { spec }),
     /** What the reader chose: which agent, which LLM, which search. */
     /** `fresh` re-asks every CLI for its LLM list instead of the cached one. */
     prefs: (fresh = false) => get<T.Prefs>(fresh ? "/api/prefs?fresh=true" : "/api/prefs"),
@@ -501,6 +506,13 @@ export const api = {
         }),
     uninstallPack: (packId: string) =>
         request<unknown>(`/api/packs/${seg(packId)}`, { method: "DELETE" }).then((r) => {
+            invalidate("packs");
+            return r;
+        }),
+    /** Remove every pack and draft for a clean rebuild (B188). History kept. */
+    resetPacks: () =>
+        request<{ removed: string[]; drafts: string[]; history_kept: boolean }>(
+            "/api/packs/reset", { method: "POST" }).then((r) => {
             invalidate("packs");
             return r;
         }),

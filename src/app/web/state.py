@@ -582,7 +582,11 @@ CREATE TABLE IF NOT EXISTS bench_runs (
     -- The case kind this row measured: specific | bulk | validation (B126
     -- §3). Each answers a different question and none of them should be
     -- averaged into the others without saying so.
-    kind          TEXT NOT NULL DEFAULT 'specific'
+    kind          TEXT NOT NULL DEFAULT 'specific',
+    -- Which fixed set a `fixed` row measured, and at which version (B185,
+    -- D6). Runs scored on different sets are never ranked together.
+    set_id        TEXT NOT NULL DEFAULT '',
+    set_version   TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS bench_runs_at ON bench_runs (at DESC);
 
@@ -1557,8 +1561,9 @@ def record_bench(conn: sqlite3.Connection, row: dict) -> str:
         "INSERT INTO bench_runs (bench_id, batch_id, at, subject_id, subject,"
         " pack_id, plane, model, protocol, context_chars, batch_size, ms,"
         " tokens, usd, documents, findings, accepted, refused, reasons_json,"
-        " error, note, gold_json, rep, search_provider, kind)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        " error, note, gold_json, rep, search_provider, kind, set_id,"
+        " set_version)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             bench_id,
             str(row.get("batch_id") or ""),
@@ -1585,6 +1590,8 @@ def record_bench(conn: sqlite3.Connection, row: dict) -> str:
             int(row.get("rep") or 1),
             str(row.get("search_provider") or ""),
             str(row.get("kind") or "specific"),
+            str(row.get("set_id") or ""),
+            str(row.get("set_version") or ""),
         ),
     )
     conn.commit()

@@ -76,7 +76,7 @@ const OFFLINE: Omit<Remedy, "technical"> = {
     headline: "Kriko's engine stopped answering",
     next:
         "The app and its engine are two processes, and the engine is the one "
-        + "that went. Close the Kriko window and open it again — nothing is "
+        + "that went. Close the Kriko window and open it again; nothing is "
         + "lost; your history and packs are files on this machine.",
     retryable: true,
 };
@@ -127,7 +127,7 @@ export function remedyFor(error: unknown): Remedy {
             headline: "That is not there any more",
             next:
                 "A pack that was uninstalled, or a saved answer that was "
-                + "cleared. Nothing to fix — go back and pick something that "
+                + "cleared. Nothing to fix; go back and pick something that "
                 + "still exists.",
             retryable: false,
             technical,
@@ -174,7 +174,7 @@ export function remedyFor(error: unknown): Remedy {
             headline: "That is a bug in Kriko, not something you did",
             next:
                 "The details below are the whole of it. Settings names the log "
-                + "file this was also written to — send us that file and this "
+                + "file this was also written to; send us that file and this "
                 + "gets fixed.",
             retryable: true,
             route: "settings",
