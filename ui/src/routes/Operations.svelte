@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import { onDestroy, onMount } from "svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import Failure from "../lib/Failure.svelte";
@@ -172,7 +173,7 @@
     };
 </script>
 
-<h2>Live</h2>
+<h2><Icon name="activity" size={22} /> Live</h2>
 <p class="lede">
     Every operation this installation runs, as it happens — a tool call from your
     own agent, a job you started here, an analysis the extension asked for. It is

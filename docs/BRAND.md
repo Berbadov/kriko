@@ -13,6 +13,7 @@ python packaging/render_lockup.py
 logo-mark.svg (16x16)       -> extension/assets/icons/icon-{16,32,48,128}.png
 logo-mark.svg               -> ui/public/mark.svg
 logo-mark-large.svg (64x64) -> packaging/icon-master.png (1024px)
+logo-mark-large.svg         -> ui/public/mark-large.svg
 logo-mark.svg + KRIKO       -> extension/assets/logo-lockup.svg
 logo-mark.svg + KRIKO       -> extension/assets/logo-lockup-mono.svg
 ```
@@ -24,7 +25,8 @@ logo-mark.svg + KRIKO       -> extension/assets/logo-lockup-mono.svg
 | You want | Use | Source? |
 |---|---|---|
 | Toolbar icon | `extension/assets/icons/icon-*.png` | rendered |
-| Favicon / rail | `ui/public/mark.svg` | rendered |
+| Favicon | `ui/public/mark.svg` | rendered |
+| Rail (32px, smooth) | `ui/public/mark-large.svg` | rendered |
 | App icon master | `packaging/icon-master.png` | rendered |
 | Logo with name | `extension/assets/logo-lockup.svg` | rendered |
 | Logo on foreign ground | `extension/assets/logo-lockup-mono.svg` (`currentColor`, no ground) | rendered |

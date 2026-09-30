@@ -1,13 +1,11 @@
 import { mount } from "svelte";
 import App from "./App.svelte";
-// Cascade order is load-bearing: structure, then a palette, then the reset,
-// then the components that spend both. Themes come after tokens.css because
-// they are the half of the token set that a reader gets to choose.
+// Cascade order is load-bearing: structure, then the palette, then the reset,
+// then the components that spend both. The palette comes after tokens.css
+// because the components' colour aliases are answered there.
 import "./styles/fonts.css";
 import "./styles/tokens.css";
 import "./styles/themes/panel.css";
-import "./styles/themes/slate.css";
-import "./styles/themes/lemonade.css";
 import "./styles/base.css";
 import "./styles/components.css";
 import "./styles/motion.css";

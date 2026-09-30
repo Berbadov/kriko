@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "./Icon.svelte";
     import { count as plural } from "./plural";
     import Async from "./Async.svelte";
     import { api } from "./api";
@@ -82,7 +83,7 @@
 </script>
 
 <section class="usage">
-    <h3>What this has used</h3>
+    <h3><Icon name="cost" /> What this has used</h3>
     <p class="meta">
         Every research run that wrote knowledge in, and every lookup that read it
         back out. A plane that cannot count leaves its column empty rather than

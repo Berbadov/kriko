@@ -1,11 +1,10 @@
 <script lang="ts">
+    import Icon from "./lib/Icon.svelte";
     import EmptyState from "./lib/EmptyState.svelte";
     import { api } from "./lib/api";
     import History from "./lib/History.svelte";
     import Lazy from "./lib/Lazy.svelte";
     import { asMode, initMode, mode, setMode } from "./lib/mode";
-    import NextStep from "./lib/NextStep.svelte";
-    import { initTheme } from "./lib/theme";
     import { watchFocus } from "./lib/focus";
     import { hashWith, route } from "./lib/router";
     import CloseNotice from "./lib/shell/CloseNotice.svelte";
@@ -58,10 +57,9 @@
     let dismissed = $state(false);
     const firstRun = $derived(empty && !dismissed && $route.name !== "welcome");
 
-    // The theme joins the same gate rather than running after it: a first
-    // paint in slate followed by a swap to lemonade is a flash the reader reads
-    // as a bug.
-    const ready = Promise.all([initMode($route.query.mode), initTheme(), checkStore]);
+    // There is no theme to wait for: Panel is the only palette and paints from
+    // the stylesheet alone (B159), so the gate is the mode and the store check.
+    const ready = Promise.all([initMode($route.query.mode), checkStore]);
 
     // The browser extension's "Open in Kriko" arrives here: it posts a route
     // to the engine, the shell raises the window, and this is the half that
@@ -183,12 +181,9 @@
             {:then}
                 <!-- Keyed so a view arrives rather than swapping in place: at a
                      glance, an instant repaint of a same-shaped page is hard to
-                     tell from nothing having happened. NextStep sits outside the
-                     key because it is about the installation, not the page:
-                     re-animating it on every navigation would be nagging. -->
-                {#if !firstRun}
-                    <NextStep mode={$mode} />
-                {/if}
+                     tell from nothing having happened. No banner sits above
+                     it: the "next step" bar that used to (B85, "Open
+                     coverage") was removed in B161 at the reader's request. -->
                 {#key $route.name}
                     <div class="enter">
                     {#if firstRun}
@@ -235,7 +230,7 @@
                             subjectId={$route.params[0] ?? ""}
                         />
                     {:else if $route.name === "history"}
-                        <h2>History</h2>
+                        <h2><Icon name="history" size={22} /> History</h2>
                         <History page />
                     {:else if $route.name === "compare"}
                         <Compare />
