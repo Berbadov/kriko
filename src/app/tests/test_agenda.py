@@ -371,14 +371,16 @@ def test_the_skill_carries_the_agenda_and_says_the_tool_wins(tmp_path):
     assert "the tool is right" in body
 
 
-def test_the_skill_carries_the_pack_s_own_identification_method(tmp_path):
+def test_the_brief_carries_the_pack_s_own_identification_method(tmp_path):
     """The agenda says what to research next; `research/skill.md` says how to
     tell what a subject even is before searching for it. Phase 5 of
-    docs/superpowers/specs/2026-09-09-knowledge-building-design.md composes
-    both into the generated skill, alongside the principle — an agent that
-    only got the ordering would search a label instead of the attribute that
-    actually discriminates."""
-    from app import agentskill
+    docs/superpowers/specs/2026-09-09-knowledge-building-design.md composed
+    it into the generated skill. B178 capped that skill, so the method now
+    arrives through `research_brief`: an agent that only got the ordering
+    would search a label instead of the attribute that actually
+    discriminates."""
+    from kriko.research import plan_task
+    from kriko.research.agent import AgentResearcher
 
     conn = connect(tmp_path / "k.sqlite")
     _pack(conn)
@@ -390,7 +392,7 @@ def test_the_skill_carries_the_pack_s_own_identification_method(tmp_path):
     _subject(conn, "s1", "A thing")
     conn.commit()
 
-    body = agentskill.render(conn)
+    body = AgentResearcher().brief(plan_task(conn, "s1", "p"))
     conn.close()
 
     assert "Search the discriminating attribute, not the label." in body

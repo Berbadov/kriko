@@ -141,10 +141,11 @@ def test_one_harness_can_be_refreshed_on_its_own(settings, target):
     assert answer.json()["status"]["stale"] is False
 
 
-def test_the_skill_names_the_operations_the_app_shows_back(settings):
-    """What an agent does appears on the reader's Activity screen under these
-    names. A protocol that called them something else would make the two
-    unrelatable."""
+def test_the_skill_names_the_steps_and_the_tools_and_no_screen(settings):
+    """B178: the skill used to require screen names ("Verify", "Sites") so the
+    reader's Activity screen and the protocol matched. It is now agent-facing
+    only: it names the five steps and the authoring tools an agent calls, and
+    no screen (`test_the_skill_is_short_and_generic` asserts the absence)."""
     conn = connect(settings.store_path)
     conn.execute(
         "INSERT INTO packs (pack_id, name, version, schema_version, built_at,"
@@ -154,11 +155,11 @@ def test_the_skill_names_the_operations_the_app_shows_back(settings):
     conn.commit()
     body = agentskill.render(conn) or ""
     conn.close()
-    for word in ("research", "agenda", "author", "recheck", "lookup"):
-        assert word in body, word
-    assert "amend_draft" in body
-    # And the two operations an agent does not call but has to know exist.
-    assert "Verify" in body and "Sites" in body
+    for tool, _given, _got in agentskill.STEPS:
+        assert f"`{tool}`" in body, tool
+    for tool in ("draft_pack", "write_draft_file", "build_draft", "amend_draft"):
+        assert tool in body, tool
+    assert "Verify" not in body and "Sites" not in body
 
 
 def test_the_skill_refuses_to_be_a_checklist(settings):
@@ -286,13 +287,15 @@ def test_the_skill_reads_current_after_startup_press_analysis_and_restart(
     assert _skill_on_disk(target) == written
 
 
-def test_a_changed_principle_is_still_stale_after_the_counts_stopped_counting(
+def test_an_updated_pack_is_still_stale_after_the_counts_stopped_counting(
     settings, target
 ):
     """The exclusion is the snapshot, not the protocol.
 
-    A pack whose principle changed is exactly what the button exists for; a
-    digest that ignored it would fix the flicker by hiding the reason.
+    A pack that updated is exactly what the button exists for; a digest that
+    ignored it would fix the flicker by hiding the reason. Since B178 the skill
+    carries a pack's identity and version and no longer its bar (that reaches
+    the agent through `research_brief`), so the version is what moves it.
     """
     _seed(settings)
     with TestClient(create_app(settings)) as client:
@@ -300,11 +303,7 @@ def test_a_changed_principle_is_still_stale_after_the_counts_stopped_counting(
         assert _claude_skill(client)["stale"] is False
 
         conn = connect(settings.store_path)
-        conn.execute(
-            "UPDATE pack_assets SET content = ? WHERE pack_id = 'probe'"
-            " AND name = 'research/principle.md'",
-            ("A different bar, stated after the skill was written.",),
-        )
+        conn.execute("UPDATE packs SET version = '2' WHERE pack_id = 'probe'")
         conn.commit()
         conn.close()
         assert _claude_skill(client)["stale"] is True

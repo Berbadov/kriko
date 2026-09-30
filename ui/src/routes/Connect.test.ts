@@ -57,7 +57,7 @@ describe("the Agents screen", () => {
         routes();
         render(Connect);
         expect(await screen.findByText("Your agents")).toBeInTheDocument();
-        expect(screen.getByText("Does it actually run?")).toBeInTheDocument();
+        expect(screen.getByText("Verify the connection")).toBeInTheDocument();
         for (const gone of [
             "Harnesses on this machine",
             "What to research next",
@@ -152,21 +152,100 @@ describe("the Agents screen", () => {
         expect(screen.getByText(/--mcp/)).toBeInTheDocument();
     });
 
-    it("says what came back when the command is started for real", async () => {
-        routes({ "/api/agent-verify": { ok: true, server: "kriko" } });
+    it("is one row per agent: a mark, a state, a model, an effort and one action", async () => {
+        routes();
         render(Connect);
-        await fireEvent.click(await screen.findByText("Verify"));
-        expect(await screen.findByText("kriko")).toBeInTheDocument();
+        const row = (await screen.findByText("Connected")).closest("li") as HTMLElement;
+        expect(row.querySelector(".mark")).not.toBeNull();
+        expect(within(row).getByText("Connected")).toBeInTheDocument();
+        expect(within(row).getByText("LLM")).toBeInTheDocument();
+        expect(within(row).getByText("Effort")).toBeInTheDocument();
+        expect(within(row).getAllByRole("button")).toHaveLength(1);
     });
 
-    it("shows the command's own stderr when it will not start", async () => {
-        // The diagnosis is always in stderr (a moved venv, a missing module)
-        // and it is the one thing a reader never otherwise sees.
-        routes({ "/api/agent-verify":
-            { ok: false, detail: "ModuleNotFoundError: No module named 'fastapi'" } });
+    it("carries none of the explanatory paragraphs it used to", async () => {
+        routes();
         render(Connect);
-        await fireEvent.click(await screen.findByText("Verify"));
+        await screen.findByText("Your agents");
+        for (const gone of [
+            /Lists are what each CLI reported/,
+            /Starts the command the config names/,
+            /Anything that speaks MCP works/,
+            /used when a run does not name one/,
+        ]) {
+            expect(screen.queryByText(gone)).toBeNull();
+        }
+    });
+
+    const VERIFIED = {
+        ok: true, server: "kriko", tools: ["research_brief"],
+        steps: [
+            { id: "start", state: "ok" },
+            { id: "initialize", state: "ok" },
+            { id: "tools", state: "ok" },
+        ],
+        log: "$ kriko --mcp\nstart: ok\nserver: kriko",
+    };
+
+    it("shows each verify step's result and keeps the log until asked", async () => {
+        routes({ "/api/agent-verify": VERIFIED });
+        render(Connect);
+        await fireEvent.click(await screen.findByRole("button", { name: "Verify" }));
+        const steps = await screen.findByRole("list", { name: "Verify steps" });
+        expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
+        expect(within(steps).getByText("Start the command")).toBeInTheDocument();
+        expect(within(steps).getAllByText("Passed")).toHaveLength(3);
+        // On request only.
+        expect(screen.queryByText(/start: ok/)).toBeNull();
+        await fireEvent.click(screen.getByRole("button", { name: "Show log" }));
+        expect(await screen.findByText(/start: ok/)).toBeInTheDocument();
+        await fireEvent.click(screen.getByRole("button", { name: "Hide log" }));
+        expect(screen.queryByText(/start: ok/)).toBeNull();
+    });
+
+    it("marks the step that failed, and the ones after it as not run", async () => {
+        // The diagnosis is always in stderr (a moved venv, a missing module)
+        // and it is the one thing a reader never otherwise sees, now behind
+        // Show log instead of a block that pushed the page down.
+        routes({ "/api/agent-verify": {
+            ok: false, detail: "ModuleNotFoundError: No module named 'fastapi'",
+            steps: [
+                { id: "start", state: "ok" },
+                { id: "initialize", state: "failed" },
+                { id: "tools", state: "skipped" },
+            ],
+            log: "$ kriko --mcp\nModuleNotFoundError: No module named 'fastapi'",
+        } });
+        render(Connect);
+        await fireEvent.click(await screen.findByRole("button", { name: "Verify" }));
+        const steps = await screen.findByRole("list", { name: "Verify steps" });
+        expect(within(steps).getByText("Failed")).toBeInTheDocument();
+        expect(within(steps).getByText("Not run")).toBeInTheDocument();
+        expect(screen.queryByText(/ModuleNotFoundError/)).toBeNull();
+        await fireEvent.click(screen.getByRole("button", { name: "Show log" }));
         expect(await screen.findByText(/ModuleNotFoundError/)).toBeInTheDocument();
+    });
+
+    it("still says something when the request itself failed", async () => {
+        routes({ "/api/agent-verify": { status: 500, body: "boom" } });
+        render(Connect);
+        await fireEvent.click(await screen.findByRole("button", { name: "Verify" }));
+        expect(await screen.findByText("Failed")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Show log" })).toBeInTheDocument();
+    });
+
+    it("shows how to connect another harness as steps with states, not prose", async () => {
+        routes();
+        render(Connect);
+        const steps = await screen.findByRole("list", { name: "Connect another harness" });
+        const items = within(steps).getAllByRole("listitem");
+        expect(items).toHaveLength(3);
+        expect(within(items[0]).getByText("Copy the config block")).toBeInTheDocument();
+        expect(items[0].querySelector("[data-state]")?.getAttribute("data-state")).toBe("todo");
+        await fireEvent.click(within(items[0]).getByRole("button", { name: "Copy" }));
+        await vi.waitFor(() =>
+            expect(items[0].querySelector("[data-state]")?.getAttribute("data-state")).not.toBe("todo"),
+        );
     });
 
     it("surfaces a failure instead of rendering an empty page", async () => {
