@@ -1,7 +1,6 @@
 <script lang="ts">
     import { hashWith } from "../router";
-    import type { Mode } from "../mode";
-    import { destinationsFor } from "./nav";
+    import { destinations } from "./nav";
 
     /* Getting somewhere without reading the rail.
      *
@@ -17,12 +16,10 @@
      * first, and `?` is what anyone who has used a keyboard-driven web app
      * tries first. They open the same thing rather than two half-features.
      *
-     * The destinations are `destinationsFor(mode)`, not a list of its own —
+     * The destinations are `destinations()`, not a list of its own —
      * see nav.ts. A palette that has to be told about a new screen is a
      * palette that is silently one release behind.
      */
-
-    let { mode }: { mode: Mode } = $props();
 
     let open = $state(false);
     let q = $state("");
@@ -33,7 +30,7 @@
     // dismisses to nowhere leaves a keyboard user at the top of the document.
     let cameFrom: HTMLElement | null = null;
 
-    const all = $derived(destinationsFor(mode));
+    const all = $derived(destinations());
     // A label match ranks ahead of a match buried in `also` or `group`, so
     // typing "browse" and pressing Enter lands on the screen actually called
     // Browse rather than on "Browser extension", which merely starts with
@@ -107,16 +104,15 @@
             ?.scrollIntoView?.({ block: "nearest" });
     }
 
-    // The rail's own links carry only the mode, never the screen's own
-    // filters (a lens, an id, a search term) — a jump from #/questions?id=X
-    // has no business landing on the next screen with ?id=X still attached.
-    // `navigate()` copies the whole current query, which is right for a link
-    // that means "same place, new mode"; the palette means "somewhere else
+    // The rail's own links carry none of the screen's own filters (a lens, an
+    // id, a search term) — a jump from #/result/X?lens=Y has no business
+    // landing on the next screen with ?lens=Y still attached. `navigate()`
+    // copies the whole current query; the palette means "somewhere else
     // entirely", so it builds the hash itself, the way the rail does.
     function go(name: string) {
         open = false;
         cameFrom = null;
-        window.location.hash = hashWith({ mode }, name);
+        window.location.hash = hashWith({}, name);
     }
 
     /** Tab, wrapped at the two ends.
@@ -246,9 +242,7 @@
             </ul>
         {:else}
             <p class="state empty">
-                No screen called that. {mode === "buyer"
-                    ? "Some of them only exist in author mode."
-                    : "Try a word from the rail."}
+                No screen called that. Try a word from the rail.
             </p>
         {/if}
         <p class="keys">

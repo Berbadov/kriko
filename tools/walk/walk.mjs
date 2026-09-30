@@ -192,12 +192,12 @@ async function press(hash, one, row) {
 
 // The destinations are the rail's own, read off the page, so a screen added
 // tomorrow is walked tomorrow without anyone editing this file.
-await page.goto(`${base}/#/check?mode=author`);
+await page.goto(`${base}/#/activity`);
 await quiet();
 let routes = await page.evaluate(() =>
     [...new Set([...document.querySelectorAll("nav a[href^='#/']")].map((a) => a.getAttribute("href")))],
 );
-routes = routes.map((h) => (h.includes("mode=") ? h : `${h}${h.includes("?") ? "&" : "?"}mode=author`));
+
 if (only) routes = routes.filter((h) => h.includes(only));
 
 const report = [];

@@ -22,16 +22,19 @@ describe("ClaimCard", () => {
         expect(screen.getByText("Ask for the receipt.")).toBeInTheDocument();
     });
 
-    it("keeps the author's provenance out of a buyer's card entirely", () => {
-        render(ClaimCard, { claim: CLAIM, mode: "buyer" });
-        expect(screen.queryByText(/relevance/)).not.toBeInTheDocument();
-    });
-
-    it("gives an author the provenance, but folded away", () => {
-        render(ClaimCard, { claim: CLAIM, mode: "author" });
+    it("gives everyone the provenance, folded away (B165)", () => {
+        render(ClaimCard, { claim: CLAIM });
         const summary = screen.getByText(/Why this ranked here/);
         expect(summary).toBeInTheDocument();
         expect(summary.closest("details")).not.toHaveAttribute("open");
+        // The raw values an author audits a rank with are there for all.
+        expect(screen.getByText(/relevance 0.9/)).toBeInTheDocument();
+        expect(screen.getByText("mileage over the interval")).toBeInTheDocument();
+    });
+
+    it("names each source's tier and stance for everyone (B165)", () => {
+        render(ClaimCard, { claim: CLAIM });
+        expect(screen.getByText("d.example · forum · supports")).toBeInTheDocument();
     });
 
     it("marks a handled claim so the eye can skip it", () => {

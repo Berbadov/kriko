@@ -34,9 +34,7 @@ export function watchFocus(every = EVERY_MS): () => void {
             const { route } = await api.focus();
             // `result/abc` → navigate("result", "abc"). Splitting here rather
             // than assigning `location.hash` directly keeps every navigation
-            // in this app going through the one function that preserves the
-            // mode query — a jump that silently dropped it would look like
-            // the app switching modes on its own.
+            // in this app going through the one function that builds hashes.
             if (route) {
                 const [name, ...params] = route.split("/");
                 if (name) navigate(name, ...params);
