@@ -1,45 +1,25 @@
 <script lang="ts">
-    import Agenda from "../lib/Agenda.svelte";
     import AgentPrefs from "../lib/Agents.prefs.svelte";
     import Icon from "../lib/Icon.svelte";
-    import Planes from "../lib/Planes.svelte";
-    import Schedule from "../lib/Schedule.svelte";
     import Failure from "../lib/Failure.svelte";
     import { remedyFor } from "../lib/failure";
     import { api } from "../lib/api";
     import { copyText, copyWord } from "../lib/clipboard";
-    import type {
-        AgentConfig,
-        AgentSkill,
-        AgentTarget,
-        AgentTargets,
-        AgentVerify,
-        Pack,
-    } from "../lib/types";
+    import type { AgentConfig, AgentVerify } from "../lib/types";
 
-    // Both halves are loaded together because they answer one question between
-    // them — "is an agent going to be able to do this?" — and a page that
-    // resolves half of it invites the reader to act on the wrong half.
-    const load = async () =>
-        Promise.all([api.agentTargets(), api.agentConfig(), api.agentSkill()]);
-
-    // Read alongside them, and only used to explain an empty skill. The skill
-    // is generated from *enabled* packs, so an install with one pack switched
-    // off generates an empty one — and "No packs installed" is then a lie
-    // that sends the reader looking for a download instead of a toggle.
-    let packs = $state<Pack[]>([]);
-    const disabled = $derived(packs.filter((pack) => !pack.enabled));
-
-    let data = $state<[AgentTargets, AgentConfig, AgentSkill] | null>(null);
+    // B164: this screen is the agents and nothing else. The harness list, the
+    // top-N agenda, the build-knowledge planes, the schedule and the skill text
+    // used to sit under it. Connecting an agent is an action on its own row in
+    // "Your agents" now; research starts per product, from Run, Browse or the
+    // extension.
+    let data = $state<AgentConfig | null>(null);
     let loadError = $state<unknown>(null);
-    let busy = $state("");
     let showManual = $state(false);
     let copied = $state<"" | "yes" | "blocked">("");
 
     async function refresh() {
         try {
-            data = await load();
-            packs = await api.packs().catch(() => [] as Pack[]);
+            data = await api.agentConfig();
             loadError = null;
         } catch (cause) {
             loadError = cause;
@@ -47,41 +27,7 @@
     }
     refresh();
 
-    // Errors land on the row rather than the page: one harness whose config
-    // someone broke by hand must not hide the three that are fine.
-    //
-    // The exception per row, not a string per row: a row is too small for the
-    // whole Failure block, but the *sentence* still has to be derived from the
-    // status rather than written here (B72), so the row renders the headline
-    // and nothing else.
-    let rowError = $state<Record<string, unknown>>({});
-
-    async function refreshSkill(target: { id: string }) {
-        busy = target.id;
-        try {
-            await api.refreshAgentSkill(target.id);
-            await refresh();
-        } catch (thrown) {
-            rowError[target.id] = thrown;
-        } finally {
-            busy = "";
-        }
-    }
-
-    async function connect(target: AgentTarget) {
-        busy = target.id;
-        rowError = { ...rowError, [target.id]: null };
-        try {
-            await api.connectAgent(target.id);
-            await refresh();
-        } catch (cause) {
-            rowError = { ...rowError, [target.id]: cause };
-        } finally {
-            busy = "";
-        }
-    }
-
-    const snippet = $derived(data ? JSON.stringify(data[1].mcp_json, null, 2) : "");
+    const snippet = $derived(data ? JSON.stringify(data.mcp_json, null, 2) : "");
 
     async function copy() {
         copied = (await copyText(snippet)) ? "yes" : "blocked";
@@ -107,88 +53,15 @@
             verifying = false;
         }
     }
-
-    const WORDS: Record<string, string> = {
-        connected: "Connected",
-        stale: "Points elsewhere",
-        absent: "Not connected",
-        unreadable: "Config unreadable",
-    };
 </script>
 
-<h2><Icon name="connect" size={22} /> Connect an agent</h2>
-
-<p class="lede">
-    Kriko gathers nothing on its own: it hands a coding agent a brief and checks every
-    quote against the page it came from. Connecting writes this app's address into the
-    harness's own config, so the agent works on <em>this</em> window's knowledge.
-</p>
+<h2><Icon name="connect" size={22} /> Agents</h2>
 
 {#if loadError}
     <Failure error={loadError} retry={refresh} />
 {:else if data}
-    <article class="card">
-        <h3><Icon name="plug" /> Harnesses on this machine</h3>
-        <ul>
-            {#each data[0].targets as target (target.id)}
-                <li class="target">
-                    <span>
-                        <strong>{target.label}</strong>
-                        <span class="meta" title={target.path}>{target.path}</span>
-                    </span>
-                    <span class="badge state-{target.state}">{WORDS[target.state]}</span>
-                    {#if target.state !== "unreadable"}
-                        <button disabled={busy === target.id} onclick={() => connect(target)}>
-                            {#if busy === target.id}
-                                Connecting…
-                            {:else if target.state === "connected"}
-                                Rewrite
-                            {:else}
-                                Connect
-                            {/if}
-                        </button>
-                    {/if}
-                    {#if target.detail}<span class="meta">{target.detail}</span>{/if}
-                    <!-- Whether the *protocol* on disk is the current one,
-                         which is a different question from whether the harness
-                         is wired. The skill is generated from the packs and
-                         from this app's code and used to be written exactly
-                         once, at Connect — so an updated pack or an overhauled
-                         protocol reached the app and never the agent. It is
-                         refreshed at startup now; this row is what says so, and
-                         the button is for the copy that could not be. -->
-                    {#if target.skill?.present}
-                        {#if target.skill.stale}
-                            <span class="meta warn">
-                                the skill on disk is older than this install
-                            </span>
-                            <button
-                                class="ghost"
-                                disabled={busy === target.id}
-                                onclick={() => refreshSkill(target)}>Update the skill</button
-                            >
-                        {:else}
-                            <span class="meta">skill up to date</span>
-                        {/if}
-                    {/if}
-                    {#if rowError[target.id]}
-                        <span class="state error"
-                            >{remedyFor(rowError[target.id]).headline}</span
-                        >
-                    {/if}
-                </li>
-            {/each}
-        </ul>
-        <p class="meta">
-            Restart the harness afterwards — none of them re-read their config while
-            running. Connecting points it at <code>{data[0].store}</code>.
-        </p>
-    </article>
-
-    <!-- Straight after the list, because the reader has just read "these
-         are the agents on this machine" and the next question is which one
-         drives and what it drives with. Before Verify, because a preference
-         chosen after the check is a check that tested the other one. -->
+    <!-- Before Verify, because a preference chosen after the check is a check
+         that tested the other one. -->
     <AgentPrefs />
 
     <article class="card">
@@ -199,8 +72,7 @@
             </button>
         </div>
         <p class="meta">
-            Starts the command the config names and waits for it to answer — a moved
-            environment or missing module fails here, not silently inside a harness.
+            Starts the command the config names and waits for it to answer.
         </p>
         {#if verdict?.ok}
             <p class="state ok">Answered as <code>{verdict.server}</code>.</p>
@@ -210,59 +82,10 @@
         {/if}
     </article>
 
-    <!-- Above "what the agent is told", because that is the order the
-         reader's questions arrive in: what will it do, then how does it
-         know how. -->
-    <Agenda />
-
-    <!-- Directly under the agenda, because it works down those exact rows. -->
-    <Planes />
-
-    <!-- After the planes, because the schedule is a choice about which of
-         them runs unattended, and that question only makes sense once the
-         reader can see which ones can run at all. -->
-    <Schedule />
-
-    <article class="card">
-        <h3><Icon name="skill" /> What the agent is told</h3>
-        {#if data[2].body}
-            <p class="meta">
-                Installed alongside the config, and rebuilt from the packs you have
-                installed — so updating a pack updates what counts as a good finding,
-                without updating this app.
-            </p>
-            <details>
-                <summary>The {data[2].steps.length} steps, and the skill itself</summary>
-                <ol>
-                    {#each data[2].steps as step (step.tool)}
-                        <li><code>{step.tool}</code> — {step.why}</li>
-                    {/each}
-                </ol>
-                <pre>{data[2].body}</pre>
-            </details>
-        {:else if disabled.length}
-            <!-- The distinction the reader needs: nothing is missing, something
-                 is switched off. The skill is built from enabled packs only, so
-                 this install generates an empty one while holding knowledge. -->
-            <p class="state empty">
-                {disabled.map((pack) => pack.name).join(", ")}
-                {disabled.length === 1 ? "is installed but switched off" : "are installed but switched off"},
-                and the skill is written from the packs that are on — so there is
-                nothing for it to say yet. Switch it on under Packs and this fills in.
-            </p>
-        {:else}
-            <p class="state empty">
-                No packs installed, so there is nothing to research yet and nothing to say
-                what would count.
-            </p>
-        {/if}
-    </article>
-
     <article class="card">
         <h3><Icon name="agents" /> Another harness</h3>
         <p class="meta">
-            Anything that speaks MCP works — the validation lives in the server, so no
-            client can bypass it. Paste this into its config.
+            Anything that speaks MCP works. Paste this into its config.
         </p>
         {#if showManual}
             <pre>{snippet}</pre>
@@ -289,37 +112,6 @@
         display: flex;
         align-items: center;
         gap: var(--s-2);
-    }
-    .target {
-        display: flex;
-        align-items: center;
-        gap: var(--s-3);
-        flex-wrap: wrap;
-        padding: var(--s-2) 0;
-        border-bottom: 1px solid var(--line);
-    }
-    /* The name and path take the slack and the path truncates, so a long
-       config path (Claude Desktop's is under AppData\Roaming) no longer pushes
-       its Connect button onto a line of its own (B146). */
-    .target > span:first-child {
-        display: flex;
-        flex-direction: column;
-        flex: 1 1 14rem;
-        min-width: 0;
-    }
-    .target > span:first-child > .meta {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .state-connected {
-        background: var(--low-soft);
-        color: var(--low);
-    }
-    .state-stale,
-    .state-unreadable {
-        background: var(--high-soft);
-        color: var(--high);
     }
     pre {
         max-height: 24rem;
