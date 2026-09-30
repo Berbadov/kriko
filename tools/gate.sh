@@ -184,7 +184,13 @@ if [ "$only" = all ] || [ "$only" = tauri ]; then
             status=$?
             printf '%s\n' "$out"
             [ "$status" = 0 ] && return 0
-            if printf '%s' "$out" | grep -qiE "webkit2gtk.*not found|Package .*was not found|glib-2\.0.*not found|appindicator.*not found"; then
+            # The last alternative is the gap the first version had: a machine
+            # with no pkg-config *binary* at all fails with "The pkg-config
+            # command could not be found", which matches none of the
+            # package-name patterns above and used to fail the gate instead
+            # of skipping — the tauri leg was unrunnable on a clean container,
+            # the exact thing the skip exists to prevent.
+            if printf '%s' "$out" | grep -qiE "webkit2gtk.*not found|Package .*was not found|glib-2\.0.*not found|appindicator.*not found|pkg-config command could not be found"; then
                 echo "skipping $desc — a system dev package pkg-config cannot find is missing (see tauri/README.md's pre-flight apt-get line: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev)"
                 return 2
             fi
