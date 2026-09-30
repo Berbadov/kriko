@@ -65,7 +65,7 @@ Each decision has a default, so no work waits on it. An item that depends on one
 - spoofing a browser user agent (ruled out in B154);
 - changing the reader's global Claude Code config.
 
-**Owner:** free
+**Owner:** b155/refused-pages-reader
 
 ### B156: Sites stops hanging on "Reading the adapters"
 **Asked:** "Sites: fix it getting stuck on \"reading the adapters\"" (2026-09-29)
