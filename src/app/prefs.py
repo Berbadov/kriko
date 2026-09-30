@@ -81,8 +81,17 @@ def _harness_ids() -> tuple[str, ...]:
 HARNESS_MODEL_KEYS = tuple(harness_model_key(one) for one in _harness_ids())
 HARNESS_EFFORT_KEYS = tuple(harness_effort_key(one) for one in _harness_ids())
 
+#: The local machine plane (B171). Address of the model server, the model it
+#: should use, the search service's address, and how long one completion may
+#: take, in seconds. All optional: empty means "discover it" (`app/localplane.py`).
+LOCAL_URL = "local_url"
+LOCAL_MODEL = "local_model"
+LOCAL_SEARCH_URL = "local_search_url"
+LOCAL_TIMEOUT = "local_timeout"
+LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT)
+
 KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS,
-        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS)
+        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS)
 
 
 def for_role(conn, role: str, override: str = "") -> str:

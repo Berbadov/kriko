@@ -84,15 +84,114 @@ def default_backend(app_state_path=None) -> str:
     omission — a tool that starts spending money because a key happened to be
     in the environment is a tool people stop trusting, and that reasoning was
     always about the paid plane rather than about defaulting to a no-op.
+
+    **The local machine plane goes first** (B172) when it is ready and the
+    reader has not picked an agent of their own: a model on this machine costs
+    nothing and asks for no account. A reader who picked an agent in Settings
+    made a choice and keeps it; one whose local server is down or has no model
+    falls through to the next plane, and `default_plane` says why.
     """
+    return default_plane(app_state_path)[0]
+
+
+def default_plane(app_state_path=None) -> tuple[str, str]:
+    """`(plane, why)`: what an unnamed run gets, and the reason in words.
+
+    The reason is what the run's log prints, so a reader who expected one plane
+    and got another can see which fact decided it.
+    """
+    from app import localplane
+
+    local = {"ready": False, "reason": ""}
+    try:
+        local = localplane.resolve(app_state_path, with_search=False)
+    except Exception:  # noqa: BLE001 - a probe must never fail a run
+        pass
+    chose = localplane.reader_chose_an_agent(app_state_path)
+    if local["ready"] and not chose:
+        return "local", (
+            f"the local plane is first when it is ready: {local['model']} on "
+            f"{local['name']} at {local['url']}")
+    skipped = ""
+    if local["ready"]:
+        skipped = "an agent is picked in Settings, which goes before the local plane"
+    elif local["reason"]:
+        skipped = f"the local plane is not ready ({local['reason']})"
     try:
         from app.providers import agent_ready
 
         if agent_ready(app_state_path):
-            return "harness"
+            return "harness", (f"{skipped}; using the harness plane" if skipped
+                               else "a coding agent is available")
     except Exception:  # noqa: BLE001 - a missing CLI must never fail a run
         pass
-    return "agent"
+    return "agent", (f"{skipped}; no coding agent either, so the agent plane "
+                     "(a brief, nothing fetched)" if skipped
+                     else "no coding agent is available")
+
+
+class LocalNotReady(RuntimeError):
+    """The local plane was asked for and cannot run; the text says why and
+    what to do. A failed job with that text, never a run of "0 claims"."""
+
+
+def _local_plan(params: dict) -> dict:
+    """What a local run uses, resolved off the running server (B171).
+
+    The run's own `model` counts only when the server lists it: the Run screen
+    carries the paid plane's model name, and a name from another provider's
+    namespace would be a 404 from a server that has perfectly good models.
+    """
+    from app import localplane
+
+    plan = localplane.resolve(
+        params.get("app_state_path"),
+        url=str(params.get("llm_base_url") or ""),
+        search_url=str(params.get("search_base_url") or ""),
+    )
+    if not plan["ready"]:
+        raise LocalNotReady(plan["reason"])
+    asked = str(params.get("model") or "").strip()
+    if asked in plan["models"]:
+        plan["model"] = asked
+    if float(params.get("timeout_seconds") or 0) > 0:
+        plan["timeout"] = float(params["timeout_seconds"])
+    return plan
+
+
+def _use_local_ask(settings, params: dict) -> bool:
+    """Whether a job that `ask`s runs on the local model rather than a CLI.
+
+    When the run names the local plane (the extension door does, for a reader
+    who has no agent of their own), or when no agent could run it and the
+    local model can. An agent that is there keeps the job: local is first only
+    where the door decides so (B172), never by overriding a CLI here.
+    """
+    if str(params.get("backend") or "").lower() == "local":
+        return True
+    from app import localplane
+    from app.providers import agent_ready
+
+    path = getattr(settings, "app_state_path", None)
+    if agent_ready(path, str(params.get("harness") or "")):
+        return False
+    return localplane.is_ready(path)
+
+
+def _local_asker(settings, params: dict, progress: Progress):
+    """The local model as the job's researcher, wired like a harness one."""
+    from app.providers import local_asker
+
+    plan = _local_plan({**params, "app_state_path": settings.app_state_path})
+    researcher = local_asker(
+        base_url=plan["url"], serving_name=plan["model"],
+        search_base_url=plan["search_url"], search_kind=plan["search_kind"],
+        timeout=plan["timeout"])
+    progress.log(f"local plane: {plan['line']}")
+    researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
+    researcher.replies = progress.replies
+    return researcher
 
 
 def _researcher(params: dict):
@@ -128,18 +227,26 @@ def _researcher(params: dict):
         # one-to-one onto what a challenge page rotated away from.
         from app.providers import local_researcher
         from kriko.research.politeness import PolitenessScheduler
-        engines = str(params.get("engines") or "duckduckgo,bing,ecosia")
-        sources = {
-            engine.strip(): float(params.get("min_interval") or 3.5)
-            for engine in engines.split(",") if engine.strip()
-        }
+
+        plan = _local_plan(params)
+        if plan["search_kind"] == "exa":
+            # One hosted source, and a pace kinder than the free endpoint's
+            # own limits need.
+            sources = {"exa": float(params.get("min_interval") or 1.0)}
+        else:
+            engines = str(params.get("engines") or "duckduckgo,bing,ecosia")
+            sources = {
+                engine.strip(): float(params.get("min_interval") or 3.5)
+                for engine in engines.split(",") if engine.strip()
+            }
         return local_researcher(
-            base_url=str(params.get("llm_base_url") or ""),
-            serving_name=str(params.get("model") or ""),
-            search_base_url=str(params.get("search_base_url") or ""),
+            base_url=plan["url"],
+            serving_name=plan["model"],
+            search_base_url=plan["search_url"],
+            search_kind=plan["search_kind"],
+            timeout=plan["timeout"],
             engine=sources and next(iter(sources)) or "",
             scheduler=PolitenessScheduler(sources or {"duckduckgo": 3.5}),
-            model=str(params.get("model") or ""),
         )
     if backend != "api":
         return get_researcher({"backend": backend})
@@ -251,6 +358,11 @@ EMPTY_RUN = {
     "api": (
         "the searches returned nothing this plane could read. Check the "
         "queries above, and Settings → Research for the search key."
+    ),
+    "local": (
+        "the local model read nothing usable. The lines above say whether the "
+        "search, a page, or the model itself failed; Settings, Local machine "
+        "shows which server and model are in use."
     ),
 }
 
@@ -543,6 +655,11 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # The interface's own database, so the plane can read what this
         # installation has measured about the model it is about to use.
         researcher = _researcher({**params, "app_state_path": settings.app_state_path})
+        # Which plane and why (B172): a reader who expected one plane and got
+        # another should be able to read the fact that decided it.
+        why = ("named for this run" if params.get("backend")
+               else default_plane(settings.app_state_path)[1])
+        progress.log(f"plane: {researcher.name}. {why[:1].upper()}{why[1:]}.")
         # What the plane does while it does it (B121). Duck-typed, like
         # `tokens_used` below: a plane that can narrate gets somewhere to
         # narrate to, and one that cannot is unaffected. The job log is the
@@ -1466,39 +1583,45 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
             "name the category in a few words — 'cordless drills', 'espresso "
             "machines'. It is the only thing an agent cannot infer")
 
-    if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
-        # Said in full rather than as "no harness": a reader whose opencode is
-        # installed deserves to know why it is not being driven, and a reader
-        # with neither deserves the other door rather than a dead end.
-        blocked = "; ".join(one.unusable for one in harness.found_but_unusable())
-        raise ValueError(
-            f"{NO_AGENT} Kriko cannot author a pack by itself. Install a coding "
-            "agent, pick the Mistral API agent, or hand the brief to your own "
-            "agent through the MCP server (Agents → Connect) and let it use "
-            "`draft_pack`."
-            + (f" Found but not usable: {blocked}." if blocked else ""))
+    if _use_local_ask(settings, params):
+        # No coding agent, or the door chose the local model (B171): the same
+        # job on a model served from this machine.
+        researcher = _local_asker(settings, params, progress)
+    else:
+        if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
+            # Said in full rather than as "no harness": a reader whose opencode is
+            # installed deserves to know why it is not being driven, and a reader
+            # with neither deserves the other door rather than a dead end.
+            blocked = "; ".join(one.unusable for one in harness.found_but_unusable())
+            raise ValueError(
+                f"{NO_AGENT} Kriko cannot author a pack by itself. Install a coding "
+                "agent, pick the Mistral API agent, run a local model server "
+                "(Ollama or LM Studio, with a model downloaded), or hand the brief "
+                "to your own agent through the MCP server (Agents → Connect) and "
+                "let it use `draft_pack`."
+                + (f" Found but not usable: {blocked}." if blocked else ""))
 
-    researcher = harness_researcher(
-        preferred=str(params.get("harness") or ""),
-        app_state_path=settings.app_state_path,
-        # Not the research ceiling. Authoring a pack is a category read from
-        # scratch plus two or three subjects researched before the first line
-        # is printed, and the real CLI runs past ten minutes doing it -- so
-        # `TIMEOUT_SECONDS` would have killed a healthy run and reported a
-        # hang. (B105)
-        timeout=float(
-            params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
-    )
-    _cap_agent(researcher, params)
-    # The forty-minute silence this job used to be (B121). A pack author is
-    # the longest-running thing in the app and the one whose log most needed
-    # to say something before it finished.
-    researcher.on_action = progress.log
-    researcher.check_cancelled = progress.check
-    # The return path. Same wiring, opposite direction: `check` asks whether
-    # the reader wants this stopped, `replies` asks whether they have said
-    # anything to it. A run that pauses on a question was previously a window.
-    researcher.replies = progress.replies
+        researcher = harness_researcher(
+            preferred=str(params.get("harness") or ""),
+            app_state_path=settings.app_state_path,
+            # Not the research ceiling. Authoring a pack is a category read from
+            # scratch plus two or three subjects researched before the first line
+            # is printed, and the real CLI runs past ten minutes doing it -- so
+            # `TIMEOUT_SECONDS` would have killed a healthy run and reported a
+            # hang. (B105)
+            timeout=float(
+                params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
+        )
+        _cap_agent(researcher, params)
+        # The forty-minute silence this job used to be (B121). A pack author is
+        # the longest-running thing in the app and the one whose log most needed
+        # to say something before it finished.
+        researcher.on_action = progress.log
+        researcher.check_cancelled = progress.check
+        # The return path. Same wiring, opposite direction: `check` asks whether
+        # the reader wants this stopped, `replies` asks whether they have said
+        # anything to it. A run that pauses on a question was previously a window.
+        researcher.replies = progress.replies
     # A product check (B168, B169). `product_only` is the name this mode had
     # when it minted one pack per product; a retried old row still says it, and
     # now takes the same path as a new one.
@@ -1615,18 +1738,21 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         finally:
             store.close()
 
-    researcher = harness_researcher(
-        preferred=str(params.get("harness") or ""),
-        app_state_path=settings.app_state_path,
-        timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
-        # Low, whatever the reader's everyday dial says: this is the chat-speed
-        # pass. A CLI that does not declare `low` has it dropped rather than
-        # refused (`harness_researcher`), so the dial never costs the run.
-        effort="low",
-    )
-    _cap_agent(researcher, params)
-    researcher.on_action = progress.log
-    researcher.check_cancelled = progress.check
+    if _use_local_ask(settings, params):
+        researcher = _local_asker(settings, params, progress)
+    else:
+        researcher = harness_researcher(
+            preferred=str(params.get("harness") or ""),
+            app_state_path=settings.app_state_path,
+            timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
+            # Low, whatever the reader's everyday dial says: this is the chat-speed
+            # pass. A CLI that does not declare `low` has it dropped rather than
+            # refused (`harness_researcher`), so the dial never costs the run.
+            effort="low",
+        )
+        _cap_agent(researcher, params)
+        researcher.on_action = progress.log
+        researcher.check_cancelled = progress.check
 
     try:
         packs = categorypack.choice_block(categorypack.candidates(settings.store_path))
@@ -1925,26 +2051,29 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
     note = str(params.get("note") or "").strip()
 
     state_of = packauthor.draft_state(settings.store_path, slug)
-    if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
-        raise ValueError(
-            f"{NO_AGENT} Kriko cannot extend this draft by itself. Hand the "
-            "brief to your own agent through the MCP server (Agents → Connect) "
-            "— `amend_draft` gives you the same brief."
-        )
+    if _use_local_ask(settings, params):
+        researcher = _local_asker(settings, params, progress)
+    else:
+        if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
+            raise ValueError(
+                f"{NO_AGENT} Kriko cannot extend this draft by itself. Hand the "
+                "brief to your own agent through the MCP server (Agents → Connect) "
+                "— `amend_draft` gives you the same brief."
+            )
 
-    researcher = harness_researcher(
-        preferred=str(params.get("harness") or ""),
-        app_state_path=settings.app_state_path,
-        timeout=float(
-            params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
-    )
-    _cap_agent(researcher, params)
-    researcher.on_action = progress.log
-    researcher.check_cancelled = progress.check
-    # The return path. Same wiring, opposite direction: `check` asks whether
-    # the reader wants this stopped, `replies` asks whether they have said
-    # anything to it. A run that pauses on a question was previously a window.
-    researcher.replies = progress.replies
+        researcher = harness_researcher(
+            preferred=str(params.get("harness") or ""),
+            app_state_path=settings.app_state_path,
+            timeout=float(
+                params.get("timeout_seconds") or harness.AUTHOR_TIMEOUT_SECONDS),
+        )
+        _cap_agent(researcher, params)
+        researcher.on_action = progress.log
+        researcher.check_cancelled = progress.check
+        # The return path. Same wiring, opposite direction: `check` asks whether
+        # the reader wants this stopped, `replies` asks whether they have said
+        # anything to it. A run that pauses on a question was previously a window.
+        researcher.replies = progress.replies
     progress.set(0.1, f"extending {state_of.get('name') or slug}")
     progress.log(
         f"{len(state_of.get('subjects') or [])} subject(s) already; "
