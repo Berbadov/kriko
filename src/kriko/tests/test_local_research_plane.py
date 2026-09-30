@@ -278,6 +278,54 @@ class TestLocalPlaneGrounding:
         assert len(self.make(complete).extract(task(), DOC)) == 1
 
 
+class TestLocalPlaneSalvage:
+    """A reply that is not clean JSON is not thrown away whole.
+
+    The tokens are already spent when the plane sees the text, so a
+    preamble before the array or a cut-off tail must not cost the run its
+    only chance at that document. What is salvaged faces the same
+    grounding and code gates as a clean reply.
+    """
+
+    def make(self, complete):
+        return LocalPlane(search=None, fetch=None, complete=complete)
+
+    def test_prose_before_the_array_is_salvaged(self):
+        payload = __import__("json").dumps(finding_json())
+        reply = "Here are the findings I found:\n" + payload
+        assert len(self.make(RecordingComplete([reply])).extract(
+            task(), DOC)) == 1
+
+    def test_a_cut_off_array_is_closed_and_parsed(self):
+        payload = __import__("json").dumps(finding_json())
+        assert payload.endswith("]")
+        reply = payload[:-1] + ","  # cut mid-array, trailing comma
+        found = self.make(RecordingComplete([reply])).extract(task(), DOC)
+        assert len(found) == 1 and found[0].source_url == DOC.url
+
+    def test_a_closed_but_empty_element_is_dropped_not_the_whole_reply(self):
+        good = __import__("json").dumps(finding_json())[:-1]
+        reply = good + ',{"title": "no url, no quote"}]'
+        found = self.make(RecordingComplete([reply])).extract(task(), DOC)
+        assert len(found) == 1 and found[0].title == finding_json()[0]["title"]
+
+    def test_prose_with_no_array_stays_a_miss(self):
+        assert self.make(RecordingComplete(["no findings here"])).extract(
+            task(), DOC) == []
+
+    def test_an_open_string_at_the_cut_is_not_salvaged(self):
+        payload = __import__("json").dumps(finding_json())
+        reply = payload[:-2] + ',"still in a stri'
+        assert self.make(RecordingComplete([reply])).extract(
+            task(), DOC) == []
+
+    def test_a_reply_that_parses_to_nothing_sets_the_note(self):
+        plane = self.make(RecordingComplete(["[\"just a string\"]"]))
+        plane.on_action = lambda line: None
+        plane.extract(task(), DOC)
+        assert "no grounded finding" in plane.note
+
+
 class TestLocalPlaneCodeGate:
     QUOTE = "the pump seized at 40,000 units without warning"
 
