@@ -18,6 +18,7 @@
     import Extension from "./routes/Extension.svelte";
     import Knowledge from "./routes/Knowledge.svelte";
     import Overview from "./routes/Overview.svelte";
+    import Run from "./routes/Run.svelte";
     import Settings from "./routes/Settings.svelte";
     import Sites from "./routes/Sites.svelte";
     import Result from "./routes/Result.svelte";
@@ -189,6 +190,8 @@
                             lens={view.lens ?? $route.query.lens ?? "all"}
                             subjectId={$route.params[0] ?? ""}
                         />
+                    {:else if $route.name === "run"}
+                        <Run />
                     {:else if $route.name === "history"}
                         <h2><Icon name="history" size={22} /> History</h2>
                         <History page />
