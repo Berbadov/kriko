@@ -25,7 +25,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import agentconfig, agentskill, bundledpacks, extension as ext, logs
+from app import agentconfig, agentskill, bundledpacks, extension as ext, logs, packautoupdate
 from app import modelcatalogue
 from app.web.settings import KRIKO_HOME
 from app.web import origins, pipeline, schedule
@@ -176,6 +176,17 @@ async def lifespan(app: FastAPI):
         pass
     except Exception:
         log.warning("could not refresh the agent skills", exc_info=True)
+
+    # Installed packs follow the index weekly (B166), as a job that never
+    # holds the window back. After `recover()` for the reason below: a job
+    # submitted before it would be marked interrupted by it. Off under test
+    # (KRIKO_NO_PACK_AUTOUPDATE) so entering a lifespan never reaches the
+    # network.
+    if not os.environ.get("KRIKO_NO_PACK_AUTOUPDATE"):
+        try:
+            packautoupdate.submit_if_due(app.state.settings, app.state.jobs)
+        except Exception:
+            log.warning("could not start the weekly pack update", exc_info=True)
 
     # The unattended loop, last: it submits into the runner, so it must not
     # be able to tick before `recover()` has cleared the rows a dead process

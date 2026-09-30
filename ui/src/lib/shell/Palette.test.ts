@@ -40,7 +40,8 @@ describe("Palette", () => {
         await press("?");
         const input = screen.getByRole("combobox") as HTMLInputElement;
         await fireEvent.input(input, { target: { value: "packs" } });
-        expect(screen.getByRole("option", { name: /Packs/ })).toBeInTheDocument();
+        // Packs is a section of Browse now; the word still finds it.
+        expect(screen.getByRole("option", { name: /Browse/ })).toBeInTheDocument();
         expect(screen.queryByRole("option", { name: /New check/ })).toBeNull();
     });
 
@@ -102,7 +103,7 @@ describe("Palette", () => {
             target: { value: "packs" },
         });
         await press("Enter");
-        expect(window.location.hash).toBe("#/packs?mode=author");
+        expect(window.location.hash).toBe("#/knowledge?mode=author");
     });
 
     it("wraps the cursor rather than sticking at the ends", async () => {

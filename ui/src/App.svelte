@@ -20,7 +20,6 @@
     import Extension from "./routes/Extension.svelte";
     import Knowledge from "./routes/Knowledge.svelte";
     import Overview from "./routes/Overview.svelte";
-    import Packs from "./routes/Packs.svelte";
     import Questions from "./routes/Questions.svelte";
     import Settings from "./routes/Settings.svelte";
     import Sites from "./routes/Sites.svelte";
@@ -253,8 +252,6 @@
                         {/key}
                     {:else if $route.name === "extension"}
                         <Extension />
-                    {:else if $route.name === "packs"}
-                        <Packs />
                     {:else if $route.name === "sites"}
                         <!-- Which listing sites can be read here, and the one
                              button that turns "the extension does nothing on
