@@ -154,6 +154,12 @@
     // server reads. Written once here rather than inline twice, because the
     // two picks below would otherwise each carry their own copy of the rule.
     const key = (prefix: string, id: string) => `${prefix}_${id.replace(/-/g, "_")}`;
+
+    // The mark (D2). A vendor's own logo is a trademark, and the app carries
+    // none until the reader supplies the published assets; until then each
+    // agent is a monogram of its name, drawn from the label the CLI list
+    // already gives, so a new CLI needs no entry here.
+    const markOf = (label: string) => (label.trim()[0] ?? "?").toUpperCase();
 </script>
 
 {#snippet connection(target: AgentTarget)}
@@ -202,27 +208,29 @@
                             <option value={one.id}>{one.label}</option>
                         {/each}
                     </select>
-                    <span class="meta">used when a run does not name one</span>
                 </label>
                 {#if reasked}<p class="state" role="status">{reasked}</p>{/if}
 
                 <ul class="agents">
                     {#each harnessesOf(data) as one (one.id)}
                         <li class="agentrow">
-                            <div class="who">
+                            <!-- B177: one row is a mark, a state, an LLM, an effort
+                                 and one action. The path and the billing account
+                                 moved into the tooltip: they are facts to look up,
+                                 not text to read on every visit. -->
+                            <div
+                                class="who"
+                                title={[one.path || one.command, one.needs_account ? `Bills to ${one.needs_account}` : ""]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                            >
                                 <strong>
-                                    <Icon name="agent" size={16} />
+                                    <span class="mark" aria-hidden="true">{markOf(one.label)}</span>
                                     {one.label}
                                     {#if data.chosen?.preferred_harness === one.id}
                                         <span class="badge">preferred</span>
                                     {/if}
                                 </strong>
-                                <span class="meta mono" title={one.path || one.command}
-                                    >{one.path || one.command}</span
-                                >
-                                {#if one.needs_account}
-                                    <span class="meta">Bills to {one.needs_account}.</span>
-                                {/if}
                             </div>
                             {#if targetOf(one.id)}
                                 {@render connection(targetOf(one.id)!)}
@@ -267,24 +275,18 @@
                     {#each apartOf(data) as target (target.id)}
                         <li class="agentrow apart">
                             <div class="who">
-                                <strong><Icon name="agent" size={16} /> {target.label}</strong>
+                                <strong>
+                                    <span class="mark" aria-hidden="true">{markOf(target.label)}</span>
+                                    {target.label}
+                                </strong>
                                 <span class="meta mono" title={target.path}>{target.path}</span>
                             </div>
                             {@render connection(target)}
                         </li>
                     {/each}
                 </ul>
-                <p class="meta legend">
-                    Lists are what each CLI reported itself; "Something else…" passes any
-                    name straight through. Lower effort answers sooner and costs less.
-                    Left on "CLI default", each behaves exactly as it does in a terminal.
-                </p>
             {:else}
-                <p class="state empty">
-                    No coding-agent CLI was found on this machine. The harness plane is
-                    what runs research at no marginal cost, so this is worth fixing
-                    before the paid one.
-                </p>
+                <p class="state empty">No coding agent was found on this machine.</p>
             {/if}
 
             <!-- Not found, each with the way out. A missing CLI is the
@@ -432,9 +434,17 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
-    .legend {
-        margin-block: var(--s-2) var(--s-3);
-        max-width: var(--measure);
+    .mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.4rem;
+        height: 1.4rem;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        flex: none;
     }
     .klabel {
         display: inline-flex;
