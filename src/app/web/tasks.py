@@ -1835,9 +1835,10 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
         # Fail open when the pack already names this product: an agent that
         # returned nothing new for a product that is already there has not
         # failed, and the sourced claims below still have a subject to join.
-        written = categorypack.holds(settings.store_path, slug, product) if slug else None
-        if written is None:
+        held = categorypack.holds(settings.store_path, slug, product) if slug else None
+        if held is None:
             raise ValueError(f"the agent did not produce a usable pack: {exc}") from exc
+        written = held
         progress.log(f"nothing new from the agent; {product} is already in the catalog")
 
     for name in written["files"]:
