@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen } from "@testing-library/svelte";
 import { createRawSnippet } from "svelte";
 import Async from "./Async.svelte";
 
@@ -56,5 +56,47 @@ describe("Async", () => {
 
         await view.rerender({ promise: new Promise(() => {}), children });
         expect(screen.getByText("Loading…")).toBeInTheDocument();
+    });
+
+    // B156: a screen whose answer arrived fine but whose markup threw while
+    // drawing it (a duplicate each key on Sites) used to leave "Reading the
+    // adapters…" on screen for good, with the reason only in the console.
+    it("shows an error, not the loading sentence, when the children throw while drawing", async () => {
+        const throwing = createRawSnippet((value: () => string) => ({
+            render: () => {
+                throw new Error(`cannot draw ${value()}`);
+            },
+        }));
+        render(Async, { promise: Promise.resolve("the answer"), children: throwing });
+
+        const alert = await screen.findByRole("alert");
+        expect(alert).toHaveTextContent(/could not be drawn/i);
+        // The exception is kept for a bug report, folded away under the sentence.
+        expect(alert.querySelector("details")).toHaveTextContent("cannot draw the answer");
+        expect(screen.queryByText("Loading…")).toBeNull();
+        // The reader's writing rule: no em dash.
+        expect(alert.textContent).not.toContain("—");
+    });
+
+    it("lets the reader draw the view again after a render error", async () => {
+        let broken = true;
+        const flaky = createRawSnippet((value: () => string) => ({
+            render: () => {
+                if (broken) throw new Error("not yet");
+                return `<p></p>`;
+            },
+            setup: (node) => {
+                $effect(() => {
+                    node.textContent = value();
+                });
+            },
+        }));
+        render(Async, { promise: Promise.resolve("recovered"), children: flaky });
+        const again = await screen.findByRole("button", { name: "Try again" });
+
+        broken = false;
+        await fireEvent.click(again);
+        expect(await screen.findByText("recovered")).toBeInTheDocument();
+        expect(screen.queryByRole("alert")).toBeNull();
     });
 });
