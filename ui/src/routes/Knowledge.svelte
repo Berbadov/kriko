@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import Failure from "../lib/Failure.svelte";
     import { remedyFor } from "../lib/failure";
     import Brief from "../lib/Brief.svelte";
@@ -390,7 +391,7 @@
     }
 </script>
 
-<h2>Knowledge</h2>
+<h2><Icon name="knowledge" size={22} /> Knowledge</h2>
 
 <!-- The header is counts, not content: five numbers say where you are
      without asking the reader to read a table to find out. -->
@@ -667,7 +668,7 @@
                  principle). -->
             {#if signals?.research?.length}
                 <section class="queue">
-                    <h3>Worth researching again</h3>
+                    <h3><Icon name="refresh" /> Worth researching again</h3>
                     <p class="meta">
                         Readers say these claims are wrong. That is a knowledge problem:
                         the research below rewrites what is held, it does not touch the
@@ -716,7 +717,7 @@
 
             {#if signals?.matching?.length}
                 <section class="queue">
-                    <h3>Matched the wrong thing</h3>
+                    <h3><Icon name="warn" /> Matched the wrong thing</h3>
                     <p class="meta">
                         “Not mine” is not a claim being false — it is this claim reaching
                         someone it was not written for. Researching it again would fix
@@ -754,7 +755,7 @@
                             about their product."
                 />
             {:else}
-                <h3>Every mark</h3>
+                <h3><Icon name="tag" /> Every mark</h3>
                 <ul class="klist">
                     {#each marks.items as mark (mark.pack_id + mark.claim_id)}
                         <li class="krow">

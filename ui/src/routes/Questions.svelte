@@ -12,6 +12,7 @@
      * large, with the answer field and nothing else on screen. Both write to
      * the same two tables the report writes to, so a note left here is on the
      * card there. */
+    import Icon from "../lib/Icon.svelte";
     import Async from "../lib/Async.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
@@ -115,7 +116,7 @@
             />
         {:else}
             <header class="sheet-head">
-                <h2>Questions for {stored.label}</h2>
+                <h2><Icon name="questions" size={22} /> Questions for {stored.label}</h2>
                 <p class="meta">
                     {answered} of {list.length} answered · worst first · every one of
                     these is specific to this one, not general advice

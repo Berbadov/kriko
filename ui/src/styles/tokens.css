@@ -1,15 +1,18 @@
-/* Everything a theme does NOT get to change.
+/* Everything that is structure rather than palette.
  *
- * Spacing, the type ramp, radii, motion and layout are structure: swapping the
- * palette must not move anything. Colour lives in `themes/*.css`, one complete
- * set per theme, and `tokens.test.ts` fails the build if a theme defines only
- * some of it — half a theme paints elements with no colour at all, which is
- * worse than the palette you were trying to replace.
+ * Spacing, the type ramp, radii, motion and layout: repainting must not move
+ * anything. Colour lives in `themes/panel.css`, the app's one palette, and
+ * `tokens.test.ts` fails the build if a component asks for a colour it does
+ * not define.
  *
- * Font *families* are theme-owned (the lemonade theme's pixel display face is
- * half its identity); font *sizes* are not.
+ * The typeface is here too, and it is one (B159). IBM Plex Mono is the face of
+ * every label, heading, control and paragraph; the stack behind it is a real
+ * monospace one so a missing file changes the glyphs and not the layout.
  */
 :root {
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas,
+        monospace;
+
     /* spacing — 4 8 12 16 24 32 48 */
     --s-1: 4px;
     --s-2: 8px;
@@ -19,18 +22,26 @@
     --s-6: 32px;
     --s-7: 48px;
 
-    /* type — size paired with its own line-height, never guessed at call site */
-    --t-xs: 12px;
+    /* type — size paired with its own line-height, never guessed at call site.
+     *
+     * Sized for a monospace face (B159). Plex Mono advances 0.6em a character
+     * against roughly 0.5em for the sans it replaced, so the same pixel size
+     * set a line about a fifth wider: the rail's labels wrapped, tables
+     * overflowed and the last rail group scrolled out of a 900px window. Each
+     * step is about a tenth smaller, which lands a mono line at the width the
+     * sans one had and keeps the smallest text (`--t-xs`, the `.meta` line)
+     * above 11px, where Plex Mono still holds its counters open. */
+    --t-xs: 11.5px;
     --lh-xs: 1.4;
-    --t-sm: 13px;
+    --t-sm: 12.5px;
     --lh-sm: 1.45;
-    --t-base: 15px;
-    --lh-base: 1.55;
-    --t-md: 17px;
+    --t-base: 13.5px;
+    --lh-base: 1.6;
+    --t-md: 15.5px;
     --lh-md: 1.4;
-    --t-lg: 21px;
+    --t-lg: 19px;
     --lh-lg: 1.3;
-    --t-xl: 28px;
+    --t-xl: 25px;
     --lh-xl: 1.2;
 
     /* the report reads rather than operates: wider leading, bounded measure */

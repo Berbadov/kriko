@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import { onDestroy } from "svelte";
     import { api } from "../lib/api";
     import { copyText, copyWord } from "../lib/clipboard";
@@ -122,7 +123,7 @@
         status?.staged_content_digest && loaded.content_digest !== status.staged_content_digest)));
 </script>
 
-<h2>Browser extension</h2>
+<h2><Icon name="extension" size={22} /> Browser extension</h2>
 
 <article class="card">
     <p class="meta">
@@ -149,6 +150,7 @@
     {:else}
         <article class="card">
             <h3>
+                <Icon name="ok" />
                 Status
                 {#if status.connected}
                     <span class="badge state-connected"
@@ -231,7 +233,7 @@
              browser that quietly ignored the extension has to leave the
              reader somewhere other than a dead end. -->
         <article class="card">
-            <h3>One click</h3>
+            <h3><Icon name="plug" /> One click</h3>
             <p class="meta">
                 Opens a listing site your packs can read — in the browser Kriko is
                 already installed in, or, if it has never checked in, in a new Chromium
@@ -268,7 +270,7 @@
         </article>
 
         <article class="card">
-            <h3>1 · Put the files somewhere the browser can keep</h3>
+            <h3><Icon name="download" /> 1 · Put the files somewhere the browser can keep</h3>
             <p class="meta">
                 Written to your Kriko folder rather than the install directory, because a
                 browser remembers an unpacked extension by path and would drop it every
@@ -302,7 +304,7 @@
 
         {#if status.staged}
             <article class="card">
-                <h3>2 · Load it, once</h3>
+                <h3><Icon name="extension" /> 2 · Load it, once</h3>
                 <ol class="steps">
                     <li>
                         Open your browser's extensions page:
@@ -337,7 +339,7 @@
         {/if}
 
         <article class="card">
-            <h3>Once it is loaded</h3>
+            <h3><Icon name="ok" /> Once it is loaded</h3>
             <!-- Two facts a reader can only learn by being told. A keyboard
                  shortcut nobody knows about is a shortcut nobody has, and the
                  extension's own settings page is buried in the browser's
@@ -363,7 +365,7 @@
         </article>
 
         <article class="card">
-            <h3>Sites the installed packs can read</h3>
+            <h3><Icon name="sites" /> Sites the installed packs can read</h3>
             {#if adapters.length}
                 <ul>
                     {#each adapters as adapter (adapter.pack_id + "/" + adapter.id)}
@@ -391,7 +393,7 @@
 
         {#if status.sightings.length}
             <article class="card">
-                <h3>Extensions that have called</h3>
+                <h3><Icon name="connect" /> Extensions that have called</h3>
                 <ul>
                     {#each status.sightings as seen (seen.origin)}
                         <li class="target">
