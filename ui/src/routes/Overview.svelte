@@ -5,7 +5,7 @@
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
     import { isLive } from "../lib/jobs";
-    import { hashWith, route } from "../lib/router";
+    import { hashWith, toHash } from "../lib/router";
     import { SvelteSet } from "svelte/reactivity";
 
     // Five counts and a table that duplicated History did not answer "what
@@ -55,7 +55,7 @@
             updatesFailed = true;
         });
 
-    const link = (name: string) => hashWith({ mode: $route.query.mode }, name);
+    const link = (name: string) => toHash(name);
 
     const plural = (n: number, one: string, many: string) =>
         `${n} ${n === 1 ? one : many}`;
@@ -212,7 +212,7 @@
                 <ul class="worklist">
                     {#each d.weakest as claim (claim.claim_id)}
                         <li>
-                            <a href={hashWith({ mode: $route.query.mode, lens: "weak" }, "knowledge", claim.claim_id)}
+                            <a href={hashWith({ lens: "weak" }, "knowledge", claim.claim_id)}
                                 >{claim.title}</a
                             >
                             <span class="meta"

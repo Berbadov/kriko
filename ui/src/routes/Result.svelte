@@ -3,11 +3,10 @@
     import Report from "../lib/Report.svelte";
     import { ApiError, api } from "../lib/api";
     import { onKnowledgeChange } from "../lib/knowledge";
-    import type { Mode } from "../lib/mode";
     import { claimKey, localTime, sourceWord } from "../lib/report";
     import type { StoredLookup } from "../lib/types";
 
-    let { lookupId, mode = "buyer" }: { lookupId: string; mode?: Mode } = $props();
+    let { lookupId }: { lookupId: string } = $props();
 
     // Derived rather than captured: the App keys this component so a new id
     // remounts it anyway, but a prop that changes must refetch, not go stale.
@@ -63,7 +62,6 @@
     {@const result = live ?? first}
     <Report
         result={result.response}
-        {mode}
         {lookupId}
         heading={result.label}
         {fresh}

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { remedyFor } from "./failure";
-    import { hashWith, route } from "./router";
+    import { toHash } from "./router";
 
     // One component for every failed view, so a new view cannot ship with
     // worse error copy than the rest — it gets this by using Async at all.
@@ -27,7 +27,7 @@
             <button onclick={retry}>Try again</button>
         {/if}
         {#if remedy.route}
-            <a class="tab" href={hashWith({ mode: $route.query.mode }, remedy.route)}>
+            <a class="tab" href={toHash(remedy.route)}>
                 {remedy.routeLabel}
             </a>
         {/if}

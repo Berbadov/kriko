@@ -25,11 +25,9 @@ import App from "./App.svelte";
 import { ALL_ROUTES, NAV, labelOf } from "./lib/shell/nav";
 import { stubFetch } from "./lib/stub-fetch";
 
-// Author mode, because that is the mode in which every rail entry exists.
-// A buyer sees a subset, and a subset would let an unhandled author route
-// through unnoticed.
+// Every rail entry exists for everyone (B165), so the walk covers all of them.
 const ROUTES = {
-    "/api/settings": { mode: "author" },
+    "/api/settings": {},
     "/api/status": { ok: true, packs: 1, enabled_packs: 1, counts: {} },
     "/api/packs": [],
     "/api/adapters": [],
@@ -71,7 +69,7 @@ describe("walking the app with a keyboard", () => {
     it("meets the skip control before anything else", async () => {
         stubFetch(ROUTES);
         const { container } = render(App);
-        await screen.findByRole("link", { name: "New check" });
+        await screen.findByRole("link", { name: "History" });
         // First in the tab order, and it is a real control rather than an
         // `<a href="#main">` — the app is hash-routed, so a fragment is an
         // address and `#main` would navigate to "No such view".
@@ -83,7 +81,7 @@ describe("walking the app with a keyboard", () => {
         // reader sees, and it is also what would invalidate `tabbables` above.
         stubFetch(ROUTES);
         const { container } = render(App);
-        await screen.findByRole("link", { name: "New check" });
+        await screen.findByRole("link", { name: "History" });
         for (const el of container.querySelectorAll("[tabindex]")) {
             expect(Number(el.getAttribute("tabindex"))).toBeLessThanOrEqual(0);
         }
@@ -92,7 +90,7 @@ describe("walking the app with a keyboard", () => {
     it("offers every rail destination as a focusable link", async () => {
         stubFetch(ROUTES);
         const { container } = render(App);
-        await screen.findByRole("link", { name: "New check" });
+        await screen.findByRole("link", { name: "History" });
         const reachable = new Set(
             tabbables(container)
                 .filter((el) => el.tagName === "A")
@@ -117,7 +115,7 @@ describe("every rail destination is a screen", () => {
     for (const group of NAV) {
         for (const item of group.items) {
             it(`${group.title} › ${item.label} renders something`, async () => {
-                window.location.hash = `#/${item.name}?mode=author`;
+                window.location.hash = `#/${item.name}`;
                 stubFetch(ROUTES);
                 render(App);
                 // Waiting for the *positive* signal first, and this is not a
@@ -131,7 +129,7 @@ describe("every rail destination is a screen", () => {
                 // perfectly composed screen, which is why neither shows up in
                 // a render test that only asserts "something appeared".
                 expect(screen.queryByText(/No such view/)).toBeNull();
-                expect(screen.queryByText(/is an author view/)).toBeNull();
+                expect(screen.queryByText(/for pack authors/)).toBeNull();
             });
         }
     }

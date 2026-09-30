@@ -28,10 +28,10 @@ const RESULT: LookupResult = {
 
 const ok = (body: unknown) => new Response(JSON.stringify(body));
 
-describe("Report — one payload, two renderings", () => {
-    it("gives a buyer urgency and what to ask, not the score", async () => {
+describe("Report — one rendering for everyone (B165)", () => {
+    it("gives urgency and what to ask", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [] })));
-        render(Report, { props: { result: RESULT, mode: "buyer" } });
+        render(Report, { props: { result: RESULT } });
         // Twice by design: the section heading carries the worst severity in
         // it as a tile, and the card carries its own.
         expect(await screen.findAllByText("Serious")).not.toHaveLength(0);
@@ -39,13 +39,11 @@ describe("Report — one payload, two renderings", () => {
         // The count appears twice by design: on the claim's meta line and on
         // the collapsed sources summary.
         expect(await screen.findAllByText(/1 source reports this/)).not.toHaveLength(0);
-        expect(screen.queryByText(/relevance/)).not.toBeInTheDocument();
-        expect(screen.queryByText(/forum_ugc/)).not.toBeInTheDocument();
     });
 
-    it("gives an author the score, the pack and the reasons", async () => {
+    it("gives the score, the pack and the reasons as well", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [] })));
-        render(Report, { props: { result: RESULT, mode: "author" } });
+        render(Report, { props: { result: RESULT } });
         expect(await screen.findByText(/relevance 0.2712/)).toBeInTheDocument();
         expect(await screen.findByText(/best source is specialist/)).toBeInTheDocument();
     });
@@ -210,19 +208,23 @@ describe("Report — one payload, two renderings", () => {
         render(Report, {
             props: {
                 result: { ...RESULT, claims: [{ ...RESULT.claims[0], disputed: true }] },
-                mode: "buyer",
             },
         });
         const badge = await screen.findByText("disputed");
         expect(badge.closest("details")).toBeNull();
     });
 
-    it("links to the sheet the reader takes to the seller", async () => {
+    it("has no Question sheet link, and no mode in any link it does draw (B163, B165)", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [], notes: {} })));
-        render(Report, { props: { result: RESULT, lookupId: "L1" } });
-        const link = await screen.findByRole("link", { name: "Question sheet" });
-        expect(link.getAttribute("href")).toContain("questions");
-        expect(link.getAttribute("href")).toContain("id=L1");
+        const { container } = render(Report, {
+            props: { result: RESULT, lookupId: "L1" },
+        });
+        await screen.findByRole("button", { name: "Copy for a mechanic" });
+        expect(screen.queryByRole("link", { name: "Question sheet" })).toBeNull();
+        expect(container.innerHTML).not.toContain("#/questions");
+        for (const a of container.querySelectorAll("a[href]")) {
+            expect(a.getAttribute("href")).not.toContain("mode=");
+        }
     });
 });
 
@@ -281,7 +283,7 @@ describe("Report — what the cited pages say now", () => {
             ),
         );
         vi.stubGlobal("fetch", fetch);
-        render(Report, { props: { result: CITED, mode: "buyer" } });
+        render(Report, { props: { result: CITED } });
         expect(await screen.findByText("Source still says this")).toBeInTheDocument();
         const calls = fetch.mock.calls.filter((c) =>
             String(c[0]).startsWith("/api/factcheck"),
@@ -311,7 +313,7 @@ describe("Report — what the cited pages say now", () => {
             );
         });
         vi.stubGlobal("fetch", fetch);
-        render(Report, { props: { result: CITED, mode: "buyer" } });
+        render(Report, { props: { result: CITED } });
         await fireEvent.click(
             await screen.findByRole("button", { name: "Check every source" }),
         );
@@ -333,14 +335,14 @@ describe("Report — what the cited pages say now", () => {
                 : ok({ checked: [] }),
         );
         vi.stubGlobal("fetch", fetch);
-        render(Report, { props: { result: CITED, mode: "buyer" } });
+        render(Report, { props: { result: CITED } });
         expect(await screen.findByText("Spindle runout")).toBeInTheDocument();
         expect(screen.queryByText(/boom|500/)).toBeNull();
     });
 
     it("offers no sweep at all when nothing carries a link", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => ok({ checked: [] })));
-        render(Report, { props: { result: RESULT, mode: "buyer" } });
+        render(Report, { props: { result: RESULT } });
         expect(await screen.findByText("Spindle runout")).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /Check every source/ })).toBeNull();
     });

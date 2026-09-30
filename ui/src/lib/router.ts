@@ -6,7 +6,9 @@ export type Route = {
     query: Record<string, string>;
 };
 
-export const DEFAULT_ROUTE = "check";
+/** The landing screen. Activity until Home replaces it (B174); New check, which
+ *  it used to be, is gone (B163). */
+export const DEFAULT_ROUTE = "activity";
 
 /** A route segment can be anything a reader pastes into the address bar.
  * decodeURIComponent throws on a malformed %-escape, and an uncaught throw
@@ -24,8 +26,21 @@ const decodeSegment = (segment: string): string => {
 export function parseHash(hash: string): Route {
     const [path, search = ""] = hash.replace(/^#\/?/, "").split("?");
     const query = Object.fromEntries(new URLSearchParams(search));
+    // There is one mode now (B165). A link written while there were two still
+    // opens, and the word is dropped here so nothing downstream carries it on.
+    delete query.mode;
     const parts = path.split("/").filter(Boolean).map(decodeSegment);
     if (!parts.length) return { name: DEFAULT_ROUTE, params: [], query };
+    // The Question sheet is gone (B163) but the extension's "Ask the seller"
+    // still hands over `questions/<id>`, and old reports linked `?id=`. Both
+    // land on that result; with no id the reader picks one in History.
+    if (parts[0] === "questions") {
+        const id = parts[1] ?? query.id;
+        const { id: _dropped, ...rest } = query;
+        return id
+            ? { name: "result", params: [id], query: rest }
+            : { name: "history", params: [], query: rest };
+    }
     return { name: parts[0], params: parts.slice(1), query };
 }
 
@@ -34,10 +49,10 @@ const path = (name: string, params: string[]) =>
 
 export const toHash = (name: string, ...params: string[]) => path(name, params);
 
-/** A link that carries query state — the mode — into the next view.
+/** A link that carries query state (a lens, a focus) into the next view.
  *
  * Kept explicit rather than folded into `toHash`, which would have to read the
- * live route to know what to preserve. A caller that wants the mode carried
+ * live route to know what to preserve. A caller that wants state carried
  * says so; a caller that wants a bare link still gets one.
  */
 export function hashWith(
@@ -57,7 +72,7 @@ export const navigate = (name: string, ...params: string[]) => {
 };
 
 /** Replace one query value without leaving the current view or adding a
- * history entry — a mode switch is not a navigation. */
+ * history entry — switching a lens is not a navigation. */
 export function setQuery(key: string, value: string | undefined): void {
     const current = parseHash(window.location.hash);
     const next = hashWith(
