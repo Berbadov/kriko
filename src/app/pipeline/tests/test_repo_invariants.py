@@ -719,8 +719,8 @@ def test_the_app_wears_the_extension_palette():
     registers. The palette is generated now, so this defers to the generator:
     `tools/tokens.py --check` compares all of them, and the map it compares
     them through is code rather than a comment. What is still asserted here is
-    the part no generator covers — that the app names the same two faces, and
-    that it actually *opens* wearing this theme.
+    the part no generator covers — that the app is set in Plex Mono, and that it
+    actually *opens* wearing this theme, which since B159 is its only one.
     """
     generated = subprocess.run(
         [sys.executable, "tools/tokens.py", "--check"],
@@ -728,18 +728,32 @@ def test_the_app_wears_the_extension_palette():
     )
     assert generated.returncode == 0, generated.stderr or generated.stdout
 
-    theme = (REPO / "ui" / "src" / "styles" / "themes" / "panel.css").read_text(encoding="utf-8")
+    themes = REPO / "ui" / "src" / "styles" / "themes"
 
-    for family in ("ibm plex sans", "ibm plex mono"):
-        assert family in theme.lower(), (
-            f"panel.css no longer names {family}, which hover_lite.css uses"
-        )
+    # Panel is the *only* theme (B159: "Remove all theme selections, keep only
+    # the Panel theme"). A second sheet here is a choice waiting for a picker,
+    # and a picker is how the app used to open looking like a different tool.
+    assert [sheet.name for sheet in themes.glob("*.css")] == ["panel.css"], (
+        "the app has more than one theme sheet; Panel is the only theme"
+    )
 
-    # And the app must actually open in it. A theme nobody selects is a
-    # preference, not an identity.
-    assert 'DEFAULT_THEME: Theme = "panel"' in (
-        REPO / "ui" / "src" / "lib" / "theme.ts"
-    ).read_text(encoding="utf-8"), "the app no longer opens wearing the extension's palette"
+    # The app is set in Plex Mono throughout (fonts.css ships its weights),
+    # the face the panel already uses for its numbers. The extension's own
+    # sheet still names Plex Sans for its text until B186 applies the same
+    # rule there, so this no longer asks the two to agree on it.
+    tokens = (REPO / "ui" / "src" / "styles" / "tokens.css").read_text(encoding="utf-8")
+    assert "ibm plex mono" in tokens.lower(), (
+        "tokens.css no longer names IBM Plex Mono, the app's typeface"
+    )
+
+    # And the app must actually open in it. With no picker there is nothing to
+    # select a palette but the import itself, so the entry point has to load
+    # this sheet and only this one.
+    entry = (REPO / "ui" / "src" / "main.ts").read_text(encoding="utf-8")
+    assert 'import "./styles/themes/panel.css";' in entry, (
+        "the app no longer opens wearing the extension's palette"
+    )
+    assert entry.count("styles/themes/") == 1, "main.ts imports a second theme"
 
 
 def test_both_clients_call_it_the_same_thing_on_screen():

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../Icon.svelte";
     import NavIcon from "./NavIcon.svelte";
     import Sparkline from "./Sparkline.svelte";
     import type { Figure } from "./figures";
@@ -9,6 +10,7 @@
         current,
         href,
         figures = {},
+        titled = true,
     }: {
         group: NavGroupSpec;
         current: string;
@@ -17,14 +19,23 @@
          * entry renders exactly what it rendered before this existed — which
          * is what keeps a failed poll from reshaping the rail. */
         figures?: Record<string, Figure>;
+        /* Whether the group's title is drawn. The rail says yes whenever it
+         * shows more than one group; a lone group has nothing to be told
+         * apart from, so a heading over one list would be noise. */
+        titled?: boolean;
     } = $props();
 </script>
 
 <div class="nav-group">
-    <!-- The buyer's single group is unlabelled: one heading over one list of
-         two is noise, and there is nothing for it to distinguish from. -->
-    {#if group.authorOnly}
-        <p class="nav-title">{group.title}</p>
+    <!-- Every group is titled once the rail shows more than one, and each
+         title carries its symbol (B159). Until then only the author-only
+         groups were, which left "Check" and "This install" as bare runs of
+         rows with nothing to hang a symbol on. -->
+    {#if titled}
+        <p class="nav-title">
+            <Icon name={group.symbol} size={14} class="nav-title-icon" />
+            {group.title}
+        </p>
     {/if}
     <ul>
         {#each group.items as item (item.name)}

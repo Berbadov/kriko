@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "./Icon.svelte";
     import Async from "./Async.svelte";
     import { api } from "./api";
     import { remedyFor } from "./failure";
@@ -81,7 +82,7 @@
 </script>
 
 <section>
-    <h3>Research keys</h3>
+    <h3><Icon name="key" /> Research keys</h3>
     <p class="meta">
         Only the second research plane needs these. Your coding agent researches
         for free through the MCP server and needs nothing here — these are for

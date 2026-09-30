@@ -1,4 +1,6 @@
 <script lang="ts">
+    import FilePick from "../lib/FilePick.svelte";
+    import Icon from "../lib/Icon.svelte";
     import { count } from "../lib/plural";
     import { remedyFor } from "../lib/failure";
     import { api, ApiError } from "../lib/api";
@@ -222,11 +224,11 @@
     const ready = refresh();
 </script>
 
-<h2>Installed packs</h2>
+<h2><Icon name="packs" size={22} /> Installed packs</h2>
 
 <div class="row">
-    <input
-        type="file"
+    <FilePick
+        label="Choose a .kpack file"
         accept=".kpack,application/octet-stream"
         bind:files
         onchange={() => {
@@ -249,7 +251,7 @@
     </p>
 {/if}
 <section class="card">
-    <h3>Updates</h3>
+    <h3><Icon name="download" /> Updates</h3>
     <div class="row">
         <button onclick={check} disabled={checking}>
             {checking ? "Checking…" : "Check for updates"}
