@@ -19,14 +19,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import AliasChoices, BaseModel, Field
 
-from app.web import state, tasks
+from app.web import livefeed, state, tasks
 from app.web.deps import get_app_state, get_jobs
 
 router = APIRouter(prefix="/api", tags=["jobs"])
 
 #: How often `/stream` re-reads the row. Fast enough to feel live, slow enough
 #: that a job logging in a tight loop is not also a busy loop here.
-POLL_SECONDS = 0.5
+POLL_SECONDS = 0.25
 
 
 class ResearchRequest(BaseModel):
@@ -84,6 +84,10 @@ class AuthorRequest(BaseModel):
     #: one Kriko can both start and sandbox.
     harness: str = ""
     timeout_seconds: float = 0.0
+    #: How many sources the agent may read (B175's slider). `0` leaves the
+    #: brief as it was. Carried into the prompt as a ceiling, since a CLI has
+    #: no per-run source flag of its own to set.
+    max_documents: int = Field(0, ge=0, le=50)
     #: Answers to the questions a previous run asked, keyed by their id.
     #:
     #: Supplied at the *start* of a run rather than during one, and that is the
@@ -189,6 +193,11 @@ def _with_attention(row: dict) -> dict:
         ),
         "questions": questions,
     } if isinstance(questions, list) and questions else None
+    # B176: the dark panel's events, only while the run is live. A finished
+    # run's panel is its log, and fifty finished rows should not each carry a
+    # second copy of it.
+    if not row.get("done"):
+        row["feed"] = livefeed.feed_of(row.get("log") or "")
     return row
 
 

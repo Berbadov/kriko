@@ -26,7 +26,9 @@ describe("the route table", () => {
     it("has no New check and no Question sheet (B163)", () => {
         expect(ALL_ROUTES).not.toContain("check");
         expect(ALL_ROUTES).not.toContain("questions");
-        expect(NAV[0].items.map((i) => i.name)).toEqual(["history", "compare", "extension"]);
+        // Run leads the group (B175): a run over a category starts and is
+        // watched there, and the extension is where a single check starts.
+        expect(NAV[0].items.map((i) => i.name)).toEqual(["run", "history", "compare", "extension"]);
     });
 
     it("opens on Activity, and the old New check address lands there (B163)", () => {
@@ -37,6 +39,7 @@ describe("the route table", () => {
 
     it("lists every destination once, so App.svelte and the rail cannot drift", () => {
         expect(ALL_ROUTES).toEqual([
+            "run",
             "history",
             "compare",
             "extension",
