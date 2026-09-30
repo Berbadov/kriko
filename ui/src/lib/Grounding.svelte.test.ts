@@ -9,7 +9,7 @@ const PROPS = { packId: "cars", claimId: "c1" };
 async function openPanel() {
     render(Grounding, PROPS);
     const details = screen
-        .getByText("Retained pages — what was actually kept")
+        .getByText("Retained pages · what was actually kept")
         .closest("details") as HTMLDetailsElement;
     details.open = true;
     await fireEvent(details, new Event("toggle"));

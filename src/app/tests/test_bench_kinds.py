@@ -349,7 +349,7 @@ def test_llm_and_search_axes_sweep_only_the_named_values(settings, store, monkey
         bench, "run_case",
         lambda settings, case, **kw: seen.append(
             (kw["model"], kw["search"])) or {
-            "subject_id": case["subject_id"], "subject": case["label"],
+            "subject_id": case.get("id") or case["subject_id"], "subject": case.get("product") or case["label"],
             "plane": kw["plane"], "model": kw["model"], "accepted": 1,
             "refused": 0, "ms": 10, "documents": 1, "findings": 1,
             "batch_id": kw.get("batch_id", ""),
@@ -406,7 +406,7 @@ def test_a_run_where_every_case_errors_is_marked_failed_not_succeeded(
     monkeypatch.setattr(
         bench, "run_case",
         lambda settings, case, **kw: {
-            "subject_id": case["subject_id"], "subject": case["label"],
+            "subject_id": case.get("id") or case["subject_id"], "subject": case.get("product") or case["label"],
             "plane": kw["plane"], "model": kw["model"], "accepted": 0,
             "refused": 0, "ms": 10, "documents": 0, "findings": 0,
             "batch_id": kw.get("batch_id", ""),
@@ -425,7 +425,7 @@ def test_an_unnamed_llm_axis_is_one_default_run_not_the_catalogue(settings, stor
     monkeypatch.setattr(
         bench, "run_case",
         lambda settings, case, **kw: seen.append(kw["model"]) or {
-            "subject_id": case["subject_id"], "subject": case["label"],
+            "subject_id": case.get("id") or case["subject_id"], "subject": case.get("product") or case["label"],
             "plane": kw["plane"], "model": kw["model"], "accepted": 1,
             "refused": 0, "ms": 10, "documents": 1, "findings": 1,
             "batch_id": kw.get("batch_id", ""),

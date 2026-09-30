@@ -186,7 +186,9 @@ def _local_asker(settings, params: dict, progress: Progress):
     researcher = local_asker(
         base_url=plan["url"], serving_name=plan["model"],
         search_base_url=plan["search_url"], search_kind=plan["search_kind"],
-        timeout=plan["timeout"])
+        timeout=plan["timeout"],
+        given_queries=[str(one).strip() for one in (params.get("queries") or [])
+                       if str(one).strip()])
     progress.log(f"local plane: {plan['line']}")
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
@@ -2536,13 +2538,17 @@ def bench(settings, params: dict, progress: Progress) -> dict:
             )
         limit = int(params.get("cases") or bench_mod.DEFAULT_CASES)
         pack_id = str(params.get("pack_id") or "")
-        # Ground truth where a pack ships it (B126), derived cases otherwise.
-        # A gold case measures correctness — what a competent run should have
-        # found and what it must not claim — and a derived one measures
-        # discipline. Preferring the first whenever it exists is the whole
-        # point of having authored it.
-        found = bench_mod.gold_cases(conn, pack_id=pack_id, limit=limit)
+        # The fixed, versioned set first (B185, D6): a benchmark that reads
+        # the installed packs measures whatever happens to be installed, and
+        # the reader's own packs are drafted by the very agents being judged.
+        # A pack's gold set still runs when named, so an author can measure
+        # their own bar; it is never the default.
+        from app import benchcases
+        found = benchcases.case_rows(limit)
         graded = bool(found)
+        if not found:
+            found = bench_mod.gold_cases(conn, pack_id=pack_id, limit=limit)
+            graded = bool(found)
         if not found:
             found = bench_mod.cases(conn, pack_id=pack_id, limit=limit)
         if not found:
@@ -2609,7 +2615,8 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                     progress.check()
                     progress.set(
                         done / max(1, total),
-                        f"{plane}: {case.get('label') or case['subject_id']}",
+                        f"{plane}: "
+                        f"{case.get('label') or case.get('product') or case.get('subject_id')}",
                     )
                     row = bench_mod.run_case(
                         settings,
@@ -2670,7 +2677,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         raise RuntimeError(f"every case failed — {rows[0]['error']}")
     return {
         "batch_id": batch_id,
-        "cases": [case["subject_id"] for case in found],
+        "cases": [case.get("id") or case.get("subject_id") for case in found],
         "planes": chosen,
         "protocols": protocols_asked,
         "rows": rows,

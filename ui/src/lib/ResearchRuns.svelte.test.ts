@@ -31,7 +31,7 @@ describe("the research runs list", () => {
         // Provenance a reader can weigh: which plane, which completion API,
         // which search provider. "Researched automatically" is not a record.
         expect(
-            await screen.findByText("Kriko itself — a-model via a-provider"),
+            await screen.findByText("Kriko itself · a-model via a-provider"),
         ).toBeTruthy();
         expect(await screen.findByText(/spent \$0\.1134/)).toBeTruthy();
         expect(await screen.findByText(/of \$0\.20/)).toBeTruthy();

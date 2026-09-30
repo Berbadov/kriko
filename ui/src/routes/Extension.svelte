@@ -127,15 +127,8 @@
 
 <article class="card">
     <p class="meta">
-        The extension is what puts Kriko on a listing page — it reads the ad you are
-        looking at and asks this app what is known to go wrong with that one. It talks
-        only to <code>127.0.0.1:{status?.port ?? 8787}</code>; nothing leaves your machine.
-    </p>
-    <p class="meta">
-        No browser lets an application install an extension into a browser that is
-        already running — that is a deliberate rule, not a gap. What it can do is start
-        a fresh Chromium with the extension already loaded, which is the button below.
-        The numbered steps stay for the browser you already have open, and for Firefox.
+        Puts Kriko on a listing page. It talks only to
+        <code>127.0.0.1:{status?.port ?? 8787}</code>; nothing leaves your machine.
     </p>
 </article>
 
@@ -164,23 +157,15 @@
             </h3>
 
             {#if status.connected}
-                <p class="meta">
-                    An extension called this app {ago(status.seconds_since_seen)}. That
-                    is real evidence, not a setting: a browser stamps its own origin on
-                    every request, so nothing but a running extension could have sent it.
-                </p>
+                <p class="meta">Called this app {ago(status.seconds_since_seen)}.</p>
             {:else}
-                <p class="meta">
-                    Nothing has called yet. This flips on its own the first time you open
-                    a listing with the extension loaded — no need to come back and press
-                    anything.
-                </p>
+                <p class="meta">Nothing has called yet; it flips on its own at the first listing.</p>
             {/if}
 
             {#if !status.port_is_ours}
                 <p class="state error">
                     Port {status.port} is not held by this app, so the extension has no way
-                    to reach it. Something else on this machine took it — close that, then
+                    to reach it. Something else on this machine took it; close that, then
                     restart Kriko. Until then the extension will install correctly and
                     still fail on every listing.
                 </p>
@@ -198,7 +183,7 @@
                     <p>Bundled: <code class="path">{status.content_digest}</code></p>
                     <p>Staged: <code class="path">{status.staged_content_digest || "Not staged"}</code></p>
                     {#each status.loaded_files || [] as loaded (loaded.origin)}
-                        <p>{loaded.origin}: <code class="path">{loaded.content_digest || "Loaded digest unknown — reload the staged extension and open a listing"}</code></p>
+                        <p>{loaded.origin}: <code class="path">{loaded.content_digest || "Loaded digest unknown; reload the staged extension and open a listing"}</code></p>
                     {/each}
                     <p class="meta">Loaded hashes describe the worker build, not scripts already running in listing tabs. Reload those tabs after reloading the extension.</p>
                 </details>
@@ -233,13 +218,10 @@
              browser that quietly ignored the extension has to leave the
              reader somewhere other than a dead end. -->
         <article class="card">
-            <h3><Icon name="plug" /> One click</h3>
+            <h3><Icon name="plug" /> Launch</h3>
             <p class="meta">
-                Opens a listing site your packs can read — in the browser Kriko is
-                already installed in, or, if it has never checked in, in a new Chromium
-                window that tries to load it (recent Chrome refuses; the steps below
-                then). Open a listing and Kriko's panel appears on the page; the Status
-                above turns green here while you do it.
+                Opens a readable listing site; recent Chrome may refuse the injection,
+                in which case the steps below apply.
             </p>
             <p>
                 <button class="primary" disabled={busy === "launch"} onclick={launch}>
@@ -256,7 +238,7 @@
                         Started {launched.browser}{launched.landing
                             ? ` on ${launched.landing}`
                             : ""}. If the window opened and Status is still waiting, that
-                        browser declined the extension — the steps below are the install
+                        browser declined the extension; the steps below are the install
                         then.
                     </p>
                 {/if}
@@ -271,11 +253,7 @@
 
         <article class="card">
             <h3><Icon name="download" /> 1 · Put the files somewhere the browser can keep</h3>
-            <p class="meta">
-                Written to your Kriko folder rather than the install directory, because a
-                browser remembers an unpacked extension by path and would drop it every
-                time the app updates.
-            </p>
+            <p class="meta">Written to your Kriko folder, so an app update never drops it.</p>
             <p>
                 <button disabled={busy === "stage"} onclick={add}>
                     {#if busy === "stage"}
@@ -298,7 +276,7 @@
             {#if status.staged}
                 <p><code class="path">{status.path}</code></p>
             {/if}
-            {#if revealNote}<p class="state warn">{revealNote} — the path above can be copied.</p>{/if}
+            {#if revealNote}<p class="state warn">{revealNote}; the path above can be copied.</p>{/if}
             {#if actionError}<Failure error={actionError} />{/if}
         </article>
 
@@ -313,7 +291,7 @@
                                 <button
                                     class="link"
                                     onclick={() => copy(browser.url, browser.id)}
-                                    title="Copy — browsers refuse to open these from an app"
+                                    title="Copy; browsers refuse to open these from an app"
                                 >
                                     {copied === browser.id ? "copied" : copied === `${browser.id}:blocked` ? "clipboard blocked" : browser.url}
                                 </button>
@@ -347,25 +325,19 @@
                  when the panel says nothing is listening. -->
             <ul class="plain">
                 <li>
-                    The panel opens from the toolbar button, or with
-                    <kbd>Alt</kbd> + <kbd>K</kbd> on the listing itself. If
-                    another extension already owns that combination the browser
-                    silently declines it — the toolbar button always works.
+                    Toolbar button, or <kbd>Alt</kbd> + <kbd>K</kbd> on the listing.
                 </li>
                 <li>
                     It looks for this app at <code>{status.port
                         ? `127.0.0.1:${status.port}`
-                        : "127.0.0.1"}</code>. If you run the app somewhere
-                    else, the extension's own options page is where that
-                    address is changed — reachable from
-                    <strong>Details → Extension options</strong> on your
-                    browser's extensions page.
+                        : "127.0.0.1"}</code>; the extension's options page changes it.
                 </li>
             </ul>
         </article>
 
         <article class="card">
-            <h3><Icon name="sites" /> Sites the installed packs can read</h3>
+            <details>
+                <summary><h3 class="inline"><Icon name="sites" /> Sites the installed packs can read</h3></summary>
             {#if adapters.length}
                 <ul>
                     {#each adapters as adapter (adapter.pack_id + "/" + adapter.id)}
@@ -379,15 +351,13 @@
                     {/each}
                 </ul>
                 <p class="meta">
-                    On any other page the extension stays quiet — it has nothing to read
+                    On any other page the extension stays quiet; it has nothing to read
                     the page with, and guessing would be worse than silence.
                 </p>
             {:else}
-                <p class="state empty">
-                    No installed pack ships a site adapter, so the extension has nothing
-                    to read a page with yet.
-                </p>
+                <p class="state empty">No installed pack ships a site adapter yet.</p>
             {/if}
+            </details>
         </article>
 
         {#if status.sightings.length}
@@ -401,10 +371,7 @@
                         </li>
                     {/each}
                 </ul>
-                <p class="meta">
-                    One row per browser profile: each install gets its own id, so two rows
-                    means two browsers wired to this app rather than a duplicate.
-                </p>
+                <p class="meta">One row per browser profile.</p>
             </article>
         {/if}
     {/if}

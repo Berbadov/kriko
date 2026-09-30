@@ -175,7 +175,7 @@
 
 <h2><Icon name="activity" size={22} /> Live</h2>
 <p class="lede">
-    Every operation this installation runs, as it happens — a tool call from your
+    Every operation this installation runs, as it happens: a tool call from your
     own agent, a job you started here, an analysis the extension asked for. It is
     a feed, not a record: what a run <em>produced</em> is under Runs and What
     researchers sent, and outlives this.
@@ -212,7 +212,7 @@
     <EmptyState
         title="Nothing has happened yet"
         detail="Connect your coding agent to Kriko and ask it to research something, or
-                start a research job here. Both land in this feed — the door each came
+                start a research job here. Both land in this feed; the door each came
                 in by is shown on the row."
         actionLabel="Connect an agent"
         actionHref="#/connect"

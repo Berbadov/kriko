@@ -73,7 +73,7 @@
             const data = await api.prefs(true);
             prefs = Promise.resolve(data);
             const listed = harnessesOf(data).filter((one) => (one.llms ?? []).length).length;
-            reasked = `Asked ${harnessesOf(data).length} CLIs — ${listed} listed LLMs`;
+            reasked = `Asked ${harnessesOf(data).length} CLIs; ${listed} listed LLMs`;
             // The "Which LLM, which search" panel above pulls from the same
             // /api/prefs and does not otherwise know this happened.
             onReask();
@@ -248,7 +248,7 @@
                                             save({ [key("harness_model", one.id)]: chosen })}
                                     />
                                 {:else}
-                                    <span class="meta fixed">its own — no per-run switch</span>
+                                    <span class="meta fixed">its own; no per-run switch</span>
                                 {/if}
                             </div>
                             <!-- Drawn only where this machine's CLI declares the
@@ -319,7 +319,7 @@
                     {#if data?.dirs_env}
                         <p class="meta">
                             Installed somewhere unusual? Set <code>{data.dirs_env}</code> to its
-                            folder and reload — Kriko searches PATH, that variable, then the
+                            folder and reload; Kriko searches PATH, that variable, then the
                             usual install folders.
                         </p>
                     {/if}
