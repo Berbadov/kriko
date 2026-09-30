@@ -1646,6 +1646,34 @@ table.compare thead th {
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
+/* Saved comparisons (B183): the drafts and their name field sit as two
+ * rows of controls above the pickers. */
+.row.drafts {
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: var(--s-3);
+}
+/* The table's two sections open one at a time; the group row is the switch. */
+table.compare tr.group th {
+    text-align: left;
+    padding: var(--s-3) var(--s-2) var(--s-1);
+    border-bottom: 0;
+}
+table.compare th[scope="row"] button {
+    text-align: left;
+    font-weight: 400;
+}
+table.compare tr.differs th[scope="row"] button {
+    font-style: italic;
+}
+table.compare tr.detail td {
+    font-size: var(--t-sm);
+    line-height: var(--lh-sm);
+    color: var(--dim);
+}
+table.compare tr.detail td a {
+    display: block;
+}
 /* A link that stands in a row of buttons. B146: this rule used to stop at
  * the underline, so "Question sheet" and "Compare with another" sat as bare
  * text on a different baseline beside the real buttons. It wears the button

@@ -413,6 +413,15 @@ export type HistoryItem = {
     claim_count: number;
 };
 
+/** A comparison the reader named and kept (B183). Which checks, in order. */
+export type CompareDraft = {
+    draft_id: string;
+    name: string;
+    lookup_ids: string[];
+    created_at: string;
+    updated_at: string;
+};
+
 export type StoredLookup = {
     lookup_id: string;
     created_at: string;
@@ -440,6 +449,12 @@ export type SubjectDetail = {
         value_text: string;
         unit: string;
         is_identity: number;
+        /** The pack's own word for the key, so a screen names a
+         * specification without knowing the category (B173). */
+        label?: string;
+        datatype?: string;
+        /** The page the figure was read from; empty when the pack names none. */
+        source_url?: string;
     }[];
     relations: { predicate: string; object_label: string; object_id: string }[];
     claims: { claim_id: string; title: string; severity: string; domain: string }[];
