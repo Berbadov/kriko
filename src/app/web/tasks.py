@@ -14,6 +14,7 @@ the whole point of the jobs layer.
 
 import importlib
 import secrets
+import time
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -1487,6 +1488,13 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     # the reader wants this stopped, `replies` asks whether they have said
     # anything to it. A run that pauses on a question was previously a window.
     researcher.replies = progress.replies
+    # A product check (B168, B169). `product_only` is the name this mode had
+    # when it minted one pack per product; a retried old row still says it, and
+    # now takes the same path as a new one.
+    product = str(params.get("product") or "").strip() or (
+        category if params.get("product_only") else "")
+    if product:
+        return _product_check(settings, researcher, params, progress, product, category)
     # ── the cheap pass, before the expensive one ─────────────────────────
     #
     # "It never asks me anything." A pack built on the wrong variant is worse
@@ -1501,17 +1509,6 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     progress.log(f"category: {category}")
 
     prompt = packauthor.brief(category, scope=scope)
-    if params.get("product_only"):
-        prompt += (
-            "\n\nProduct-only scope: the name above is a specific product, not a "
-            "request to research its whole category. Author a draft only for that "
-            "product and its necessary components. Do not expand to other products, "
-            "a brand catalogue, or a category-wide lineup. Preserve the resolved "
-            "identity and state any variant assumptions explicitly. The product-only "
-            "scope overrides any broader category or lineup instructions above. "
-            "Keep the same output contract and evidence requirements. "
-            "Do not install anything; Kriko decides that."
-        )
     # What the listing says (B150): the reader asked for the agents to
     # settle the exact version from the page, not to ask them for it.
     from app import pagefacts
@@ -1583,10 +1580,14 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     minutes and then showed a draft. This is one short call at the lowest
     effort the CLI takes; the deeper run (`deepen_job_id`) starts beside it.
 
-    Writes nothing to the store. The risks are a job result the panel renders,
-    each with the page and quote it claims — `quicklook.parse` drops the rest.
+    Writes nothing to the store, which is why it may run beside a job that
+    does. The risks are a job result the panel renders, each with the page and
+    quote it claims — `quicklook.parse` drops the rest. The deepen job started
+    beside it reads that result and is what puts the product and its risks in a
+    category pack (B168): this handler only says which pack it thinks the
+    product belongs in, from the installed ones it is shown.
     """
-    from app import quicklook
+    from app import categorypack, quicklook
     from app.providers import harness_researcher
     from kriko.research import pack_asset
 
@@ -1616,8 +1617,13 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
 
+    try:
+        packs = categorypack.choice_block(categorypack.candidates(settings.store_path))
+    except Exception:  # noqa: BLE001 - a list of packs is never why a look fails
+        packs = ""
     progress.set(0.1, f"a quick look at {product}")
-    reply = researcher.ask(quicklook.brief(product, principle, params.get("page")))
+    reply = researcher.ask(
+        quicklook.brief(product, principle, params.get("page"), packs))
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
@@ -1647,28 +1653,242 @@ def _install_draft(settings, written: dict, progress: Progress) -> str:
     Asked for by the reader for the listing's "Research this product" (B148):
     "yes it should install itslef". The same build-then-install path as
     `POST /api/packs/drafts/{slug}/install`, so nothing here is a second
-    definition of a valid pack. A draft that will not build or install stays
-    a draft and the log says why — fail open, never a failed run over work
-    that is still on disk to fix.
+    definition of a valid pack: both go through `categorypack.install_draft`,
+    which raises the draft's version when its content changed (B170). A draft
+    that will not build or install stays a draft and the log says why — fail
+    open, never a failed run over work that is still on disk to fix.
     """
-    from app import packdraft
+    from app import categorypack
 
     slug = written.get("slug") or ""
     try:
-        artifact = packdraft.build_artifact(settings.store_path, slug)
-        store = connect(settings.store_path)
-        try:
-            pack_id = packstore.install(store, artifact)
-        finally:
-            store.close()
-        packdraft.mark_installed(settings.store_path, slug, pack_id)
+        done = categorypack.install_draft(settings.store_path, slug)
     except Exception as exc:  # noqa: BLE001 — the draft is kept either way
         progress.log(f"kept as a draft, not installed: {exc}")
         return ""
     written["installed"] = True
-    written["pack_id"] = pack_id
-    progress.log(f"installed {pack_id}")
-    return pack_id
+    written["pack_id"] = done["pack_id"]
+    written["version"] = done["version"]
+    written["digest"] = done["digest"][:12]
+    if done["bumped"]:
+        progress.log(f"version raised to {done['version']}")
+    if done["absorbed"]:
+        progress.log(f"kept {done['absorbed']} claim(s) from earlier research")
+    progress.log(f"installed {done['pack_id']} {done['version']}")
+    return done["pack_id"]
+
+
+#: How long a deepen job waits for the quick look started beside it. The quick
+#: look has its own ceiling; the extra minute is for it to be queued behind two
+#: others in its lane.
+QUICK_WAIT_SECONDS = QUICK_LOOK_TIMEOUT_SECONDS + 60
+#: How long to wait for that quick look to exist at all. It is submitted a
+#: moment after this job, so a longer silence means there is none (a retry, or
+#: a caller that started this job alone).
+QUICK_APPEAR_SECONDS = 5.0
+QUICK_POLL_SECONDS = 0.2
+
+
+def _await_quick_look(settings, progress: Progress) -> dict:
+    """What the quick look beside this job concluded, or `{}`.
+
+    The deepen job needs the quick look's answer before it can choose a pack:
+    which installed pack the product belongs in, and the sourced risks that
+    become its claims. Waiting is bounded and a missing or failed quick look is
+    an empty answer, never a failed check: the product still joins a pack, just
+    without those risks.
+    """
+    conn = state.connect(settings.app_state_path)
+    try:
+        began = time.monotonic()
+        said = False
+        while True:
+            progress.check()
+            job = state.quick_look_for(conn, progress.job_id)
+            waited = time.monotonic() - began
+            if job is None:
+                if waited > QUICK_APPEAR_SECONDS:
+                    return {}
+            elif job["done"]:
+                return (job["result"] or {}) if job["state"] == state.SUCCEEDED else {}
+            elif waited > QUICK_WAIT_SECONDS:
+                progress.log("the quick look is taking too long; carrying on without it")
+                return {}
+            if not said:
+                progress.set(0.02, "waiting for the quick look")
+                said = True
+            time.sleep(QUICK_POLL_SECONDS)
+    finally:
+        conn.close()
+
+
+def _page_reader():
+    """The reader a quote is checked against. One place, so a test hands it a page."""
+    from app.providers import fetch
+
+    return fetch.reader(15.0)
+
+
+def _sourced_items(quick: dict, proposed) -> tuple[list[dict], int]:
+    """Claims that name a page, from the quick look and from the agent's reply.
+
+    Returns the items for `categorypack.ground` and how many of the agent's
+    claims named no page at all. Those are not carried over: a product check
+    keeps a claim only with a source (B168).
+    """
+    items = [
+        {"title": one.get("title"), "body": one.get("body"),
+         "advice": one.get("advice"), "severity": one.get("severity"),
+         "evidence": list(one.get("sources") or [])}
+        for one in quick.get("risks") or [] if isinstance(one, dict)
+    ]
+    bare = 0
+    for claim in proposed or []:
+        if not isinstance(claim, dict):
+            continue
+        evidence = [
+            {"url": one.get("url"), "quote": one.get("quote")}
+            for one in claim.get("evidence") or [] if isinstance(one, dict)
+        ]
+        if not evidence:
+            bare += 1
+            continue
+        items.append({
+            "title": claim.get("title"), "body": claim.get("body"),
+            "advice": claim.get("advice"), "severity": claim.get("severity"),
+            "domain": claim.get("domain"), "evidence": evidence,
+        })
+    return items, bare
+
+
+def _product_check(settings, researcher, params: dict, progress: Progress,
+                   product: str, category: str) -> dict:
+    """One product, into a pack for its category (B168, B169, B170).
+
+    The reader's words: "Singular product searches must not create a new pack
+    each time". The flow is in `docs/superpowers/specs/2026-09-29-category-
+    packs-design.md`; in short, the quick look beside this job names an
+    installed pack the product belongs in (or none), the agent adds the
+    product to that pack or authors a pack for the category, the quick look's
+    risks are re-read against their pages and attached as sourced claims, and
+    the pack is installed at a raised version.
+
+    Fails open at each step that a person would otherwise be asked about: no
+    quick look, no readable page or no fitting pack each mean less is kept,
+    never that the check stops. Only an agent reply that is not a pack fails.
+    """
+    from app import categorypack, packauthor, pagefacts
+    from kriko.gates import load_gates
+
+    quick = _await_quick_look(settings, progress)
+    said = str(quick.get("category") or "").strip()
+    target = categorypack.resolve(
+        categorypack.candidates(settings.store_path),
+        pack=str(quick.get("pack") or ""), category=said)
+
+    scope, asked, asked_why = _disambiguate(settings, researcher, product, params, progress)
+
+    listing = pagefacts.block(params.get("page"))
+    naming = said or category or product
+    if target:
+        progress.log(f"{product} belongs in {target['name']} ({target['pack_id']})")
+        progress.set(0.15, f"adding {product} to {target['name']}")
+        prompt = packauthor.amend_brief(
+            packauthor.draft_state(settings.store_path, target["slug"]),
+            packauthor.product_note(product, scope)) + listing
+    else:
+        progress.log(f"no installed catalog fits; authoring one for {naming}")
+        progress.set(0.15, f"{researcher.search_provider} is reading up on {naming}")
+        prompt = (
+            packauthor.brief(naming, scope=scope)
+            + packauthor.category_appendix(
+                product, naming, categorypack.taken_ids(settings.store_path))
+            + listing)
+    reply = researcher.ask(prompt)
+    progress.check()
+    progress.set(0.7, "writing the draft")
+    progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
+
+    payload = packauthor.read_payload(reply)[0]
+    proposed = payload.pop("claims", None) if payload else None
+    categorypack.admit(payload, product)
+
+    joined = bool(target)
+    slug = target["slug"] if target else ""
+    try:
+        if target:
+            written = packauthor.amend(
+                settings.store_path, slug, reply, payload=payload,
+                allow_nothing_new=True)
+        else:
+            try:
+                written = packauthor.author(
+                    settings.store_path, reply, category=naming, payload=payload)
+            except packauthor.PackExists as exists:
+                # The id it chose already has a draft: the product goes there.
+                progress.log(f"{exists.pack_id} already has a draft; the product joins it")
+                joined, slug = True, exists.slug
+                written = packauthor.amend(
+                    settings.store_path, slug, reply, payload=payload,
+                    allow_nothing_new=True)
+    except packauthor.PackRefused as exc:
+        # Fail open when the pack already names this product: an agent that
+        # returned nothing new for a product that is already there has not
+        # failed, and the sourced claims below still have a subject to join.
+        written = categorypack.holds(settings.store_path, slug, product) if slug else None
+        if written is None:
+            raise ValueError(f"the agent did not produce a usable pack: {exc}") from exc
+        progress.log(f"nothing new from the agent; {product} is already in the catalog")
+
+    for name in written["files"]:
+        progress.log(f"wrote {name}")
+    if written.get("notes"):
+        progress.log(f"the author noted: {written['notes']}")
+
+    items, bare = _sourced_items(quick, proposed)
+    if bare:
+        progress.log(f"{bare} claim(s) named no page and were left out")
+    progress.set(0.8, f"checking {len(items)} quote(s) against their pages")
+    kept, dropped = categorypack.ground(items, _page_reader())
+    progress.check()
+    for one in dropped:
+        progress.log(f"left out {one['title']!r}: {one['reason']}")
+
+    vocab = None
+    if joined:
+        store = connect(settings.store_path)
+        try:
+            vocab = load_gates(store, written["pack_id"])
+        finally:
+            store.close()
+    attached = categorypack.attach(
+        settings.store_path, written["slug"], product, kept,
+        subject_rows=written.get("subject_rows"), vocab=vocab)
+    for one in attached["refused"]:
+        progress.log(f"left out {one['title']!r}: {one['reason']}")
+
+    installed = _install_draft(settings, written, progress) if params.get("install") else ""
+    where = written["name"]
+    progress.set(
+        1.0,
+        f"{product} is in {where}: {attached['claims_added']} sourced claim(s) added"
+        + (f", version {written['version']}. Installed." if installed
+           else ". Nothing is installed yet."))
+    written.update({
+        "category": said or (target["name"] if target else naming),
+        "scope": scope, "product": product, "joined": joined,
+        "subject": attached["subject"],
+        "claims_added": attached["claims_added"],
+        "evidence_added": attached["evidence_added"],
+        "left_out": dropped,
+    })
+    written["claims"] = int(written.get("claims") or 0) + attached["claims_added"]
+    if getattr(researcher, "cost_basis", "") == "per_token":
+        written["spent_usd"] = getattr(researcher, "spent", None)
+    if asked:
+        written["questions"] = asked
+        written["why"] = asked_why
+    return written
 
 
 def pack_amend(settings, params: dict, progress: Progress) -> dict:
