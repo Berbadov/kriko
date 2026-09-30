@@ -2,7 +2,6 @@
     import { api } from "./api";
     import { copyText } from "./clipboard";
     import ClaimCard from "./ClaimCard.svelte";
-    import type { Mode } from "./mode";
     import {
         absenceNote,
         asMarkdown,
@@ -12,19 +11,17 @@
         groupByDomain,
         severityWord,
     } from "./report";
-    import { hashWith, route } from "./router";
+    import { hashWith } from "./router";
     import type { FactCheck, LookupResult } from "./types";
     import Verdict from "./Verdict.svelte";
 
     let {
         result,
-        mode = "buyer",
         lookupId = "",
         heading = "",
         fresh = [],
     }: {
         result: LookupResult;
-        mode?: Mode;
         lookupId?: string;
         heading?: string;
         /** Claim keys that arrived while this answer was open (B152.4). */
@@ -168,7 +165,7 @@
 
 <header class="report-head">
     {#if heading}<h2>{heading}</h2>{/if}
-    <Verdict {result} {handled} {mode} />
+    <Verdict {result} {handled} />
 
     <!-- What the answer was computed against. The reader's first question
          about a short report is whether it even had the usage figure, and
@@ -185,13 +182,6 @@
     {/if}
 
     <div class="row no-print">
-        {#if lookupId}
-            <a
-                class="button-like"
-                href={hashWith({ mode: $route.query.mode, id: lookupId }, "questions")}
-                >Question sheet</a
-            >
-        {/if}
         <button class="ghost" onclick={handOver}>Copy for a mechanic</button>
         <!-- B152.6, a simpler answer: the two things a reader does with
              an answer stay in sight; the rest folds under More. The sweep
@@ -211,7 +201,7 @@
                 {#if lookupId && hasOthers}
                     <a
                         class="ghost button-like"
-                        href={hashWith({ mode: $route.query.mode, left: lookupId }, "compare")}
+                        href={hashWith({ left: lookupId }, "compare")}
                         >Compare with another</a
                     >
                 {/if}
@@ -249,7 +239,6 @@
                 {#each group.claims as claim (claimKey(claim))}
                     <ClaimCard
                         {claim}
-                        {mode}
                         checked={handled.includes(claimKey(claim))}
                         note={notes[claimKey(claim)] ?? ""}
                         onCheck={(next) => check(claimKey(claim), next)}

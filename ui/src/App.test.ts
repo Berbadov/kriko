@@ -5,7 +5,7 @@ import App from "./App.svelte";
 import { stubFetch } from "./lib/stub-fetch";
 
 const EMPTY = {
-    "/api/settings": { mode: "buyer" },
+    "/api/settings": {},
     "/api/status": { ok: true, packs: 1, enabled_packs: 1, counts: {} },
     "/api/packs": [],
     "/api/adapters": [],
@@ -20,18 +20,55 @@ describe("App", () => {
     it("renders the rail beside the workspace", async () => {
         stubFetch(EMPTY);
         render(App);
-        expect(await screen.findByRole("link", { name: "New check" })).toBeInTheDocument();
+        expect(await screen.findByRole("link", { name: "History" })).toBeInTheDocument();
     });
 
-    it("explains an author route to a buyer instead of rendering nothing", async () => {
-        window.location.hash = "#/coverage?mode=buyer";
+    it("opens on Activity, since New check is gone (B163)", async () => {
         stubFetch(EMPTY);
         render(App);
-        expect(await screen.findByText(/for pack authors/i)).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "author" })).toBeInTheDocument();
-        expect(
-            screen.getByRole("button", { name: "Switch to author mode" }),
-        ).toBeInTheDocument();
+        expect(await screen.findByRole("link", { name: "Activity" })).toHaveAttribute(
+            "aria-current",
+            "page",
+        );
+        expect(screen.queryByRole("link", { name: "New check" })).toBeNull();
+        expect(screen.queryByText("Check one before you buy it")).toBeNull();
+    });
+
+    it("lands the old #/check address on Activity (B163)", async () => {
+        window.location.hash = "#/check";
+        stubFetch(EMPTY);
+        render(App);
+        expect(await screen.findByRole("link", { name: "Activity" })).toHaveAttribute(
+            "aria-current",
+            "page",
+        );
+        expect(screen.queryByText(/No such view/)).toBeNull();
+    });
+
+    it("renders a screen that used to be author-only, with no switch to reach it (B165)", async () => {
+        window.location.hash = "#/coverage";
+        stubFetch(EMPTY);
+        render(App);
+        expect(await screen.findByRole("link", { name: "Browse" })).toHaveAttribute(
+            "aria-current",
+            "page",
+        );
+        expect(screen.queryByText(/for pack authors/i)).toBeNull();
+        expect(screen.queryByRole("button", { name: /switch to author mode/i })).toBeNull();
+        expect(screen.queryByRole("group", { name: "Mode" })).toBeNull();
+    });
+
+    it("ignores a mode a link or an older install carried (B165)", async () => {
+        window.location.hash = "#/about?mode=buyer";
+        stubFetch({ ...EMPTY, "/api/settings": { mode: "buyer" } });
+        render(App);
+        // Knowledge and System are in the rail even though the old setting
+        // and the old link both said buyer.
+        expect(await screen.findByRole("link", { name: "Agents" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Browse" })).toBeInTheDocument();
+        for (const link of document.querySelectorAll("a")) {
+            expect(link.getAttribute("href") ?? "").not.toContain("mode=");
+        }
     });
 
     it("lands #/packs on Browse, with the installed packs at its top (B167)", async () => {
@@ -54,20 +91,17 @@ describe("App", () => {
     });
 
     it("names an unknown route rather than showing a blank workspace", async () => {
-        window.location.hash = "#/nonsense?mode=buyer";
+        window.location.hash = "#/nonsense";
         stubFetch(EMPTY);
         render(App);
         expect(await screen.findByText(/No such view/)).toBeInTheDocument();
     });
 
-    it("opens the question sheet from a path the extension can hand over", async () => {
-        // The panel's "Ask the seller" button posts a route to `/api/focus`,
-        // which refuses a query string on purpose — so the id can only travel
-        // as a path segment. The rail's own entry (`#/questions`, no id) and
-        // the report's link (`?id=`) both still work; this is a third
-        // spelling of the same screen, added for the one caller that cannot
-        // use the other two.
-        window.location.hash = "#/questions/L1?mode=buyer";
+    it("opens the result when the extension hands over the old questions route (B163)", async () => {
+        // The panel's "Ask the seller" button posts `questions/<id>` to
+        // `/api/focus`. The sheet is gone, and the claim with its ask is on
+        // the result, so that route resolves there.
+        window.location.hash = "#/questions/L1";
         stubFetch({
             ...EMPTY,
             "/api/history": {
@@ -88,9 +122,8 @@ describe("App", () => {
             "/api/lookups/L1/triage": { checked: [], notes: {} },
         });
         render(App);
-        expect(
-            await screen.findByText("Ask for the receipt."),
-        ).toBeInTheDocument();
+        expect(await screen.findByText("T-h")).toBeInTheDocument();
+        expect(screen.queryByText(/No such view/)).toBeNull();
     });
 
     it("shows first run when the store is empty", async () => {
@@ -106,7 +139,7 @@ describe("App", () => {
     it("does not show first run once a pack is installed", async () => {
         stubFetch(EMPTY);
         render(App);
-        expect(await screen.findByRole("link", { name: "New check" })).toBeInTheDocument();
+        expect(await screen.findByRole("link", { name: "History" })).toBeInTheDocument();
         expect(screen.queryByText(/knows nothing yet/)).not.toBeInTheDocument();
     });
 
@@ -116,7 +149,7 @@ describe("App", () => {
      * this store has no check run yet and no agent connected, which is exactly
      * what used to raise one. */
     it("shows no next-step banner, even when there is something to suggest", async () => {
-        window.location.hash = "#/about?mode=buyer";
+        window.location.hash = "#/about";
         stubFetch(EMPTY);
         render(App);
         // The screen has rendered (About's heading), so an absent banner is
@@ -133,9 +166,9 @@ describe("App", () => {
      * browser storage, are read by nothing, so neither can repaint the app. */
     it("ignores a theme an older install remembered", async () => {
         localStorage.setItem("kriko-theme", "lemonade");
-        stubFetch({ ...EMPTY, "/api/settings": { mode: "buyer", theme: "lemonade" } });
+        stubFetch({ ...EMPTY, "/api/settings": { theme: "lemonade" } });
         render(App);
-        expect(await screen.findByRole("link", { name: "New check" })).toBeInTheDocument();
+        expect(await screen.findByRole("link", { name: "History" })).toBeInTheDocument();
         expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
         localStorage.removeItem("kriko-theme");
     });
@@ -143,7 +176,7 @@ describe("App", () => {
     it("does not block the app when the status call fails", async () => {
         stubFetch({ ...EMPTY, "/api/status": { status: 500, body: "boom" } });
         render(App);
-        expect(await screen.findByRole("link", { name: "New check" })).toBeInTheDocument();
+        expect(await screen.findByRole("link", { name: "History" })).toBeInTheDocument();
         expect(screen.queryByText(/knows nothing yet/)).not.toBeInTheDocument();
     });
 
@@ -177,7 +210,7 @@ describe("App", () => {
         // top of the document.
         expect(live.textContent?.trim()).toBe("");
 
-        window.location.hash = "#/history?mode=buyer";
+        window.location.hash = "#/history";
         await fireEvent(window, new HashChangeEvent("hashchange"));
         expect((await screen.findByRole("status")).textContent).toContain("History");
         expect(document.activeElement).toBe(document.querySelector(".view"));
