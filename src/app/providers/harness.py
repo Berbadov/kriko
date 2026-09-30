@@ -862,7 +862,7 @@ _HELP: dict[str, str] = {}
 _OPTION = re.compile(r"--[a-z][a-z0-9-]+")
 
 
-def _ask(executable: str, *argv: str) -> str:
+def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
     """Run a CLI's own self-description and come back, whatever it does.
 
     **`subprocess.run(timeout=…)` is not enough on Windows**, and that is not
@@ -880,6 +880,10 @@ def _ask(executable: str, *argv: str) -> str:
 
     `""` on anything going wrong, which reads as "said nothing": a probe is
     never why a plane is unavailable.
+
+    `keep_lines` bounds what is kept, the *last* lines: a `--help` never needs
+    more than the default, and a listing does (B158: `opencode models` prints
+    426 lines on the reader's machine, and the first 27 were dropped).
     """
     out: list[str] = []
     try:
@@ -903,7 +907,7 @@ def _ask(executable: str, *argv: str) -> str:
     timer = threading.Timer(HELP_TIMEOUT_SECONDS, _give_up)
     timer.start()
     reader = threading.Thread(
-        target=HarnessResearcher._drain, args=(proc.stdout, out), daemon=True
+        target=HarnessResearcher._drain, args=(proc.stdout, out, keep_lines), daemon=True
     )
     reader.start()
     try:
@@ -956,9 +960,30 @@ def declared(executable: str) -> frozenset[str]:
     return _DECLARED.get(executable, frozenset())
 
 
-#: `provider/model` lines, the shape `opencode models` prints. Anything else
-#: on a line — headers, counts, blank lines — is not a model and is dropped.
-_MODEL_LINE = re.compile(r"^\s*([^/\s]+/[^/\s#]+?)\s*(?:#.*)?$")
+#: `provider/model` lines, the shape `opencode models` prints. The model part
+#: may hold slashes of its own (`openrouter/anthropic/claude-opus-4.8` is one
+#: id, and `--model` takes it whole) but may not start with one, so a URL in a
+#: status line is not a row. Anything else on a line (headers, counts, blank
+#: lines) is not a model and is dropped.
+_MODEL_LINE = re.compile(r"^\s*([^/\s]+/[^/\s#][^\s#]*?)\s*(?:#.*)?$")
+
+
+def _model_id(line: str) -> str:
+    """The model one line of `<cli> models` names, or `""` when it is not a row.
+
+    Two row shapes exist in the CLIs this asks, and both are read by their
+    structure: `provider/model` (opencode), and `id<TAB>display name` (agy).
+    A status line has neither: `Fetching available models...` is prose with no
+    tab and no slash, and it reaches this parser because `_ask` merges the
+    CLI's stderr into its stdout. No word is listed as "not a model", so the
+    next status line a CLI grows is refused by the same rule.
+    """
+    ident, tab, label = line.strip("\r\n").lstrip().partition("\t")
+    if tab and label.strip() and ident and not any(ch.isspace() for ch in ident):
+        return ident
+    match = _MODEL_LINE.match(line)
+    return match.group(1) if match else ""
+
 
 #: A name quoted in help text: `'opus'`, `"claude-fable-5"`.
 _QUOTED = re.compile(r"""['"`]([A-Za-z0-9][\w.:/\[\]-]*)['"`]""")
@@ -971,6 +996,9 @@ _QUOTED = re.compile(r"""['"`]([A-Za-z0-9][\w.:/\[\]-]*)['"`]""")
 #: is usually "not signed in yet", which the reader is about to fix.
 MODELS_TTL = 600.0
 _MODELS_TTL_EMPTY = 60.0
+#: The most lines of a `models` listing kept. The listing is bounded by the
+#: probe's own timeout; this stops a CLI that never stops printing.
+_LISTING_LINES = 20_000
 _MODELS: dict[tuple[str, str, float], tuple[float, list[str]]] = {}
 _MODELS_LOCK = threading.Lock()
 _ASKING: dict[str, threading.Lock] = {}
@@ -1155,15 +1183,12 @@ def _from_models_command(one: Harness, executable: str) -> list[str]:
     # answered the question, and the line filter below rejects anything that
     # is not a model name.
     out: list[str] = []
-    for line in _ask(executable, "models").splitlines():
-        if one.id == "antigravity-cli":
-            cell = line.split("\t")[0].split()[0] if line.split() else ""
-            if cell and cell.lower() not in ("id", "model", "name") and cell not in out:
-                out.append(cell)
-            continue
-        match = _MODEL_LINE.match(line)
-        if match and match.group(1) not in out:
-            out.append(match.group(1))
+    # The whole listing: it is not `--help`, and a long one lost its head to
+    # the default bound.
+    for line in _ask(executable, "models", keep_lines=_LISTING_LINES).splitlines():
+        name = _model_id(line)
+        if name and name not in out:
+            out.append(name)
     return out
 
 
@@ -1252,6 +1277,25 @@ def models_for(one: Harness, *, fresh: bool = False, behind: bool = False) -> li
         return list(names)
     finally:
         asking.release()
+
+
+def models_note(one: Harness, names: list[str]) -> str:
+    """One line for a pick that has no list to show, or `""` (B158).
+
+    "A CLI that lists no models says so, rather than showing an empty pick."
+    Said only where it is known: a CLI with no listing to read (Vibe) never
+    lists, and one that was asked and named nothing has listed nothing. One
+    not yet asked, because the warm-up is still running, has said nothing
+    either way, so this stays silent rather than claim what nobody checked.
+    """
+    if names or one.unusable:
+        return ""
+    if not one.model_source:
+        return "This CLI does not list its models"
+    executable = locate(one)
+    with _MODELS_LOCK:
+        asked = any(k[:2] == (one.id, executable) for k in _MODELS)
+    return "This CLI listed no models" if asked else ""
 
 
 def models_for_each(harnesses: list[Harness], *, fresh: bool = False) -> dict[str, list[str]]:
@@ -3106,12 +3150,12 @@ class HarnessResearcher(AgentResearcher):
         )
 
     @staticmethod
-    def _drain(pipe, into: list) -> None:
+    def _drain(pipe, into: list, keep: int = 400) -> None:
         try:
             for line in pipe:
                 into.append(line)
-                if len(into) > 400:
-                    del into[: len(into) - 400]
+                if len(into) > keep:
+                    del into[: len(into) - keep]
         except Exception:  # noqa: BLE001 — a closed pipe is how this ends
             pass
 
