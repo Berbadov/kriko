@@ -213,10 +213,6 @@ class FakeEngine:
         self._note("research", subject_id, pack_id)
         return {"job_id": "new-job-id"}
 
-    def agenda_run(self):
-        self._note("agenda_run")
-        return {"job_id": "agenda-job"}
-
     def cancel(self, job_id):
         self._note("cancel", job_id)
         return {"state": "cancelling"}

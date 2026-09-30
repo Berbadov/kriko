@@ -27,10 +27,10 @@ function stub() {
 }
 
 describe("Agents", () => {
-    it("renders Connect and nothing else", async () => {
+    it("renders the agents and nothing else", async () => {
         stub();
         render(Agents, {});
-        expect(await screen.findByRole("heading", { name: /Connect/i })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Agents" })).toBeInTheDocument();
         expect(screen.queryByRole("tablist", { name: "Agents" })).toBeNull();
         expect(screen.queryByRole("heading", { name: "Console" })).toBeNull();
     });
