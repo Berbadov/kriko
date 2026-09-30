@@ -1,13 +1,27 @@
 <script lang="ts">
-    import FilePick from "../lib/FilePick.svelte";
-    import Icon from "../lib/Icon.svelte";
-    import { count } from "../lib/plural";
-    import { remedyFor } from "../lib/failure";
-    import { api, ApiError } from "../lib/api";
-    import EmptyState from "../lib/EmptyState.svelte";
-    import Failure from "../lib/Failure.svelte";
-    import { follow, stateWord } from "../lib/jobs";
-    import type { Job, Pack, PackEvent, PackUpdates, Revision } from "../lib/types";
+    import FilePick from "./FilePick.svelte";
+    import Icon from "./Icon.svelte";
+    import { count } from "./plural";
+    import { remedyFor } from "./failure";
+    import { api, ApiError } from "./api";
+    import EmptyState from "./EmptyState.svelte";
+    import Failure from "./Failure.svelte";
+    import type { Pack, PackEvent, Revision } from "./types";
+
+    /* The installed catalogs, at the top of Browse (B167).
+     *
+     * This was the Packs screen. It is a section of Browse now because what is
+     * installed is the first thing to know before asking what is known, and a
+     * rail row for it only told the reader that the two were apart. `onchange`
+     * is how Browse learns an install, a switch-off or an uninstall happened:
+     * its own lists are read from the same store and would otherwise go stale
+     * under it.
+     *
+     * The Updates block that stood here is gone (B166). Installed packs follow
+     * the index on their own, weekly, in the background (`app/packautoupdate.py`);
+     * `GET /api/packs/updates` stays for Overview and the first-run screen.
+     */
+    let { onchange = () => {} }: { onchange?: () => void } = $props();
 
     let packs = $state<Pack[]>([]);
     // The exception, not its message — see Failure: the remedy comes off
@@ -36,13 +50,14 @@
     let actionError = $state<Record<string, unknown>>({});
     let confirmUninstall = $state("");
 
-    async function refresh() {
+    async function refresh(notify = true) {
         try {
             packs = await api.packs();
             failure = null;
         } catch (e) {
             failure = e;
         }
+        if (notify) onchange();
     }
 
     async function install(allowDowngrade = false) {
@@ -174,57 +189,11 @@
     // characters (knowledge-32).
     const short = (id: string) => (id.length > 10 ? `${id.slice(0, 10)}…` : id);
 
-    // Updating is two operations, deliberately: checking is a cheap request
-    // whose answer is a table, installing is a job whose progress outlives the
-    // page. Collapsing them into one button would mean either a blocking
-    // download or a check nobody can read.
-    let updates = $state<PackUpdates | null>(null);
-    let checking = $state(false);
-    let updateJob = $state<Job | null>(null);
-
-    const WORDS: Record<string, string> = {
-        available: "update available",
-        up_to_date: "up to date",
-        not_installed: "not installed",
-        refused: "refused",
-        unknown: "unknown",
-    };
-
-    async function check() {
-        checking = true;
-        try {
-            updates = await api.packUpdates(true);
-        } catch (e) {
-            updates = { index_url: "", error: remedyFor(e).headline, packs: [] };
-        } finally {
-            checking = false;
-        }
-    }
-
-    async function applyUpdate(packId?: string) {
-        updateJob = null;
-        try {
-            const { job_id } = await api.updatePacks(packId);
-            updateJob = await api.job(job_id);
-            follow(job_id, async (job) => {
-                updateJob = job;
-                if (job.done) {
-                    await refresh();
-                    await check();
-                }
-            });
-        } catch (e) {
-            updateJob = { state: "failed", message: remedyFor(e).headline, done: true } as Job;
-        }
-    }
-
-    const actionable = (u: PackUpdates | null) =>
-        (u?.packs ?? []).filter((p) => p.state === "available" || p.state === "not_installed");
-
-    const ready = refresh();
+    // Not announced: Browse read the same store a moment ago.
+    const ready = refresh(false);
 </script>
 
-<h2><Icon name="packs" size={22} /> Installed packs</h2>
+<h3><Icon name="packs" size={20} /> Catalogs</h3>
 
 <div class="row">
     <FilePick
@@ -250,94 +219,29 @@
         <button class="ghost" onclick={() => (downgradeOffer = null)}>Cancel</button>
     </p>
 {/if}
-<section class="card">
-    <h3><Icon name="download" /> Updates</h3>
-    <div class="row">
-        <button onclick={check} disabled={checking}>
-            {checking ? "Checking…" : "Check for updates"}
-        </button>
-        {#if actionable(updates).length}
-            <button onclick={() => applyUpdate()}>
-                Update all ({actionable(updates).length})
-            </button>
-        {/if}
-        {#if updates?.index_url}<span class="meta">{updates.index_url}</span>{/if}
-    </div>
-    {#if updates?.error}
-        <p class="state error">{updates.error}</p>
-        {#if updates.error_detail}
-            <details>
-                <summary class="meta">Show the details</summary>
-                <p class="meta">{updates.error_detail}</p>
-            </details>
-        {/if}
-    {/if}
-    {#if updates && !updates.error}
-        {#if !updates.packs.length}
-            <p class="state empty">
-                The index answered, and lists no packs at all — so there is nothing
-                to update to yet. Nothing installed has gone stale.
-            </p>
-        {:else}
-            <table>
-                <thead>
-                    <tr><th>Pack</th><th>Installed</th><th>Offered</th><th>State</th><th></th></tr>
-                </thead>
-                <tbody>
-                    {#each updates.packs as row (row.pack_id)}
-                        <tr>
-                            <td>{row.name}</td>
-                            <td class="meta">{row.installed_version || "—"}</td>
-                            <td class="meta">{row.offered_version || "—"}</td>
-                            <td>
-                                {WORDS[row.state] ?? row.state}
-                                <span class="meta">{row.reason}</span>
-                            </td>
-                            <td>
-                                {#if row.state === "available" || row.state === "not_installed"}
-                                    <button onclick={() => applyUpdate(row.pack_id)}>
-                                        {row.state === "available" ? "Update" : "Install"}
-                                    </button>
-                                {/if}
-                            </td>
-                        </tr>
-                    {/each}
-                </tbody>
-            </table>
-        {/if}
-    {/if}
-    {#if updateJob}
-        <p class="state {updateJob.state === 'failed' ? 'error' : 'results'}" aria-live="polite">
-            <span class="badge state-{updateJob.state}">{stateWord(updateJob)}</span>
-            {updateJob.message}
-        </p>
-    {/if}
-</section>
-
 {#if installMessage}
     <p class="state {installState}" aria-live="polite">{installMessage}</p>
 {/if}
 
 {#await ready}
-    <p class="state loading">Loading packs…</p>
+    <p class="state loading">Loading catalogs…</p>
 {:then}
     {#if failure}
-        <Failure error={failure} retry={refresh} />
+        <Failure error={failure} retry={() => refresh()} />
     {:else if !packs.length}
         <!-- Screen-level absence, so it gets the screen-level idiom: a title,
              why it is empty, and the one thing to do about it. The one-line
              "No packs installed." this replaced was the same fact with the
              next step left as an exercise. -->
         <EmptyState
-            title="No packs installed"
-            detail="A pack is the knowledge — with none installed, a lookup succeeds
-                    and finds nothing. The file picker above installs a .kpack, and
-                    Check for updates fetches the index."
+            title="No catalogs installed"
+            detail="A catalog is the knowledge. With none installed, a lookup succeeds
+                    and finds nothing. Choose a .kpack file above to install one."
         />
     {:else}
         {#each packs as pack (pack.pack_id)}
             <article class="card">
-                <h3>{pack.name} <span class="badge">{pack.version}</span></h3>
+                <h4>{pack.name} <span class="badge">{pack.version}</span></h4>
                 <p class="meta">
                     {pack.pack_id} · {pack.subjects} subjects · {pack.claims} claims · {pack.evidence}
                     evidence · digest <span title={pack.digest}>{short(pack.digest)}</span>

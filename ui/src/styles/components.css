@@ -1295,6 +1295,34 @@ li.gap {
     letter-spacing: 0.08em;
     color: var(--dim);
 }
+/* A foldable group's title is a button drawn as the same title (B167). */
+button.nav-fold {
+    width: calc(100% - 2 * var(--s-2));
+    padding: 0;
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: var(--t-xs);
+    line-height: var(--lh-xs);
+    text-align: left;
+    cursor: pointer;
+}
+button.nav-fold:hover:not([aria-disabled="true"]) {
+    color: var(--text);
+}
+button.nav-fold[aria-disabled="true"] {
+    cursor: default;
+}
+.nav-fold .nav-title-text {
+    flex: 1;
+}
+.nav-fold-chevron {
+    flex: none;
+    transition: transform var(--dur-fast) var(--ease);
+}
+.nav-fold[aria-expanded="true"] .nav-fold-chevron {
+    transform: rotate(90deg);
+}
 .nav-link {
     position: relative;
     display: grid;

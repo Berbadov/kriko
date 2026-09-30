@@ -11,6 +11,9 @@
         href,
         figures = {},
         titled = true,
+        folded = false,
+        locked = false,
+        ontoggle = () => {},
     }: {
         group: NavGroupSpec;
         current: string;
@@ -23,6 +26,13 @@
          * shows more than one group; a lone group has nothing to be told
          * apart from, so a heading over one list would be noise. */
         titled?: boolean;
+        /* A foldable group's rows are hidden while this is true (B167). */
+        folded?: boolean;
+        /* The group holds the open screen, so it cannot fold: the reader would
+         * lose the row they are standing on. The title says so rather than
+         * looking dead. */
+        locked?: boolean;
+        ontoggle?: () => void;
     } = $props();
 </script>
 
@@ -31,12 +41,31 @@
          title carries its symbol (B159). Until then only the author-only
          groups were, which left "Check" and "This install" as bare runs of
          rows with nothing to hang a symbol on. -->
-    {#if titled}
+    {#if titled && group.foldable}
+        <!-- A tab for its rows (B167): a real button, so Enter and Space work
+             and it is in the Tab order. `aria-expanded` is what is on screen,
+             which for a locked group is always open. -->
+        <button
+            type="button"
+            class="nav-title nav-fold"
+            aria-expanded={!folded}
+            aria-disabled={locked ? "true" : undefined}
+            title={locked ? "Holds the open screen" : undefined}
+            onclick={() => {
+                if (!locked) ontoggle();
+            }}
+        >
+            <Icon name={group.symbol} size={14} class="nav-title-icon" />
+            <span class="nav-title-text">{group.title}</span>
+            <Icon name="chevron" size={12} class="nav-fold-chevron" />
+        </button>
+    {:else if titled}
         <p class="nav-title">
             <Icon name={group.symbol} size={14} class="nav-title-icon" />
             {group.title}
         </p>
     {/if}
+    {#if !folded}
     <ul>
         {#each group.items as item (item.name)}
             <li>
@@ -72,4 +101,5 @@
             </li>
         {/each}
     </ul>
+    {/if}
 </div>

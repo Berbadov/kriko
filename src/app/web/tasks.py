@@ -19,7 +19,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from app import packsource
+from app import packautoupdate, packsource
 
 from app.findings import accept_findings, log_submission, retract_claim
 from app.web import pipeline, state
@@ -1340,6 +1340,12 @@ def check_updates(settings, index_url: str = "", *, fresh: bool = False) -> dict
     return _updates_payload(url, rows, candidates, error, error_detail, checked_at)
 
 
+def _note_automatic_pass(settings, params: dict) -> None:
+    """Remember that the weekly background pass ended well (B166)."""
+    if params.get("automatic"):
+        packautoupdate.record_success(settings.app_state_path)
+
+
 def pack_update(settings, params: dict, progress: Progress) -> dict:
     """Download and install every pack the index has something newer for.
 
@@ -1367,12 +1373,15 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
 
     known = {row["pack_id"] for row in rows}
     wanted = [d for d in updates.plan(rows, candidates) if d.actionable]
-    wanted += [
-        updates.Decision(c.pack_id, updates.AVAILABLE, "not installed",
-                         "", c.version, c)
-        for c in candidates
-        if c.pack_id not in known
-    ]
+    # The background pass (B166) only follows what is already installed: a
+    # pack the reader removed is not something a clock may bring back.
+    if not params.get("installed_only"):
+        wanted += [
+            updates.Decision(c.pack_id, updates.AVAILABLE, "not installed",
+                             "", c.version, c)
+            for c in candidates
+            if c.pack_id not in known
+        ]
     if only:
         wanted = [d for d in wanted if d.pack_id == only]
         if not wanted:
@@ -1383,6 +1392,7 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
             )
     if not wanted:
         progress.set(1.0, "everything is up to date")
+        _note_automatic_pass(settings, params)
         return {"index_url": index_url, "updated": [], "skipped": len(rows)}
 
     into = Path(settings.store_path).parent / "downloads"
@@ -1422,6 +1432,7 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
         progress.log(f"{pack_id} is now {candidate.version}")
 
     progress.set(1.0, f"updated {len(updated)} pack(s)")
+    _note_automatic_pass(settings, params)
     return {"index_url": index_url, "updated": updated, "skipped": len(rows) - len(updated)}
 
 
