@@ -86,6 +86,13 @@ class AgentResearcher:
                      "(this pack ships no value principle — keep only claims "
                      "specific to this subject and predictable without inspecting it)")
 
+        # The pack's identification method travelled in the generated skill
+        # until B178 capped that document; it arrives here instead, beside the
+        # bar it serves.
+        if task.identification.strip():
+            lines += ["", "## How to identify this subject before searching", "",
+                      task.identification.strip()]
+
         plan = task.rendered_plan()
         lines += ["", "## Searches to run", ""]
         if plan:
@@ -164,7 +171,7 @@ class AgentResearcher:
             "no effect on whether a finding is kept; it is how the pack finds "
             "out which shapes were worth shipping.",
             "",
-            "Each finding is an object, and these six fields are not optional:",
+            "Each finding is an object, and these seven fields are not optional:",
             "",
             "- `quote` — VERBATIM from the page. Never paraphrase, never "
             "reconstruct from memory. The quote is what makes the claim "
@@ -176,6 +183,7 @@ class AgentResearcher:
             "- `title` — one specific line naming the part and the failure.",
             f"- `domain` — one of: {', '.join(task.domains) or '(pack vocabulary)'}",
             "- `severity` — high | medium | low",
+            f"- `rationale` — {task.rationale_rule}",
             "",
             "Worth setting too: `component` or `component_hint` — the concrete "
             "part the finding is about. A risk with nothing to anchor it to is "
