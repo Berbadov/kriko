@@ -434,7 +434,7 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
         base_url, serving_name, timeout=timeout or local_inference.DEFAULT_TIMEOUT,
         response_json_schema=schema)
     if search_kind == "exa":
-        return complete, exa_mcp.searcher(), "exa-mcp"
+        return complete, exa_mcp.search_with_fallback(), "exa-mcp"
     return complete, openserp.searcher(search_base_url), "openserp"
 
 

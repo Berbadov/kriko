@@ -40,6 +40,12 @@ TIMEOUT = 30.0
 #: refused by enough sites that it reads as a bug; a browser's is a lie.
 USER_AGENT = "Kriko/1.0 (+https://github.com/Berbadov/kriko)"
 
+#: The answers a site gives when it has decided it will not be read by this
+#: fetcher. Cloudflare's bot rules answer 403 (sometimes 429, sometimes 503
+#: with a challenge page), and a refusal is not a network failure: the page
+#: exists, only this door is shut. Those are the ones worth one more rung.
+REFUSED = (403, 429, 503)
+
 _DROP = re.compile(
     r"<(script|style|noscript|nav|header|footer|aside|form|svg)\b[^>]*>.*?</\1>",
     re.IGNORECASE | re.DOTALL,
@@ -113,12 +119,34 @@ def _download(url: str, timeout: float) -> str:
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             kind = (response.headers.get_content_type() or "").lower()
-            if kind and not (kind.startswith("text/") or "html" in kind or "xml" in kind):
+            if kind and not (
+                kind.startswith("text/") or "html" in kind or "xml" in kind
+            ):
                 return ""
             charset = response.headers.get_content_charset() or "utf-8"
             return response.read(MAX_BYTES).decode(charset, "replace")
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, OSError,
-            LookupError, ValueError) as error:
+    except urllib.error.HTTPError as error:
+        if error.code in REFUSED:
+            # The site answered, and its answer was a refusal aimed at this
+            # app's own fetcher — the class B155 recorded. The hosted reader
+            # is the next rung: it reads the page from elsewhere, and ""
+            # from it leaves the page unread exactly as before, never
+            # half-read.
+            from app.providers import pagereader  # noqa: PLC0415 — optional rung
+
+            page = pagereader.read(url)
+            if page:
+                log.info("a source refused the plain fetch and the reader read it")
+                return page
+        log.info("could not read a source: HTTP %s", error.code)
+        return ""
+    except (
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,
+        LookupError,
+        ValueError,
+    ) as error:
         log.info("could not read a source: %s", type(error).__name__)
         return ""
 
