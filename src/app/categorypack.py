@@ -29,6 +29,7 @@ keeps an agent inside its own directory is the one already tested.
 
 import re
 import threading
+from typing import Any
 import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
@@ -410,7 +411,7 @@ def attach(store_path, slug: str, product: str, sourced: list[dict], *,
         row = pick_subject(subject_rows or [], product)
         if row is None:
             row = pick_subject(subjects, product, floor=0.75)
-        out = {"subject": None, "claims_added": 0, "evidence_added": 0,
+        out: dict[str, Any] = {"subject": None, "claims_added": 0, "evidence_added": 0,
                "refused": [], "written": []}
         if row is None or not sourced:
             return out
@@ -425,18 +426,18 @@ def attach(store_path, slug: str, product: str, sourced: list[dict], *,
 
         domains = _declared_domains(root)
         claims = _yaml_rows(root, "data/claims.yaml")
-        index = {}
-        for at, existing in enumerate(claims):
+        index: dict[str, int] = {}
+        for pos, existing in enumerate(claims):
             if not isinstance(existing, dict) or not isinstance(existing.get("subject"), dict):
                 continue
             sid = _subject_id(str(existing["subject"].get("kind") or ""),
                               dict(existing["subject"].get("identity") or {}), keys)
             texts = existing.get("text") or {}
-            primary = texts.get("en") or next(iter(texts.values()), {})
+            primary: dict = texts.get("en") or next(iter(texts.values()), {})
             if sid:
                 index[ids.claim_id(sid, existing.get("kind", ""),
                                    existing.get("domain", ""),
-                                   (primary or {}).get("title", ""))] = at
+                                   (primary or {}).get("title", ""))] = pos
 
         changed = False
         for item in sourced:
@@ -502,7 +503,7 @@ def next_version(*seen: str) -> str:
     ".1" rather than being guessed at. Packs are not required to use semver, so
     this only promises a version greater than each of `seen`.
     """
-    seen = [one for one in seen if str(one or "").strip()]
+    seen = tuple(one for one in seen if str(one or "").strip())
     if not seen:
         return "0.1.0"
     top = max(seen, key=_numbers)
@@ -547,7 +548,7 @@ def absorb(store, store_path, slug: str) -> int:
             sid = _subject_id(str(existing["subject"].get("kind") or ""),
                               dict(existing["subject"].get("identity") or {}), keys)
             texts = existing.get("text") or {}
-            primary = texts.get("en") or next(iter(texts.values()), {})
+            primary: dict = texts.get("en") or next(iter(texts.values()), {})
             if sid:
                 have.add(ids.claim_id(sid, existing.get("kind", ""),
                                       existing.get("domain", ""),
