@@ -654,6 +654,18 @@ CREATE TABLE IF NOT EXISTS site_activation (
   pattern TEXT NOT NULL DEFAULT '',
   at      TEXT NOT NULL DEFAULT ''
 );
+
+-- A comparison the reader named and kept (B183): "work like draft papers, each
+-- draft saved and helping the user choose". Which checks, in which order. App
+-- state on purpose: it is the reader's own shortlist, never knowledge, so it
+-- lives here and not in the engine's store (a pack uninstall must not erase it).
+CREATE TABLE IF NOT EXISTS compare_drafts (
+  draft_id   TEXT PRIMARY KEY,
+  name       TEXT NOT NULL DEFAULT '',
+  lookup_ids TEXT NOT NULL DEFAULT '[]',   -- JSON list of lookup ids, in column order
+  created_at TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT ''
+);
 """
 
 
@@ -1365,6 +1377,78 @@ def forget_local_adapter(conn: sqlite3.Connection, host: str) -> bool:
     done = conn.execute("DELETE FROM local_adapters WHERE host = ?", (host,))
     conn.commit()
     return bool(done.rowcount)
+
+
+#: The most checks one comparison holds, and the most drafts one installation
+#: keeps. Layout and sanity limits, like the screen's own cap of four.
+COMPARE_MAX = 4
+COMPARE_DRAFTS_KEPT = 200
+
+
+def _draft(row: sqlite3.Row) -> dict:
+    return {
+        "draft_id": row["draft_id"],
+        "name": row["name"],
+        "lookup_ids": json.loads(row["lookup_ids"] or "[]"),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def compare_drafts(conn: sqlite3.Connection) -> list[dict]:
+    """Every saved comparison, most recently changed first."""
+    return [
+        _draft(r) for r in conn.execute(
+            "SELECT * FROM compare_drafts ORDER BY updated_at DESC, draft_id")
+    ]
+
+
+def _clean_draft(name: str, lookup_ids: list[str]) -> tuple[str, list[str]]:
+    name = " ".join(str(name or "").split())[:80]
+    if not name:
+        raise ValueError("a draft needs a name")
+    kept = [str(i).strip() for i in lookup_ids if str(i).strip()]
+    kept = [i for n, i in enumerate(kept) if i not in kept[:n]][:COMPARE_MAX]
+    return name, kept
+
+
+def save_compare_draft(
+    conn: sqlite3.Connection, name: str, lookup_ids: list[str],
+    draft_id: str = "",
+) -> dict:
+    """Create a draft, or replace the named one's name and checks.
+
+    Raises `KeyError` for a `draft_id` that does not exist, so an edit of a
+    draft deleted in another window says so instead of quietly creating one.
+    """
+    name, kept = _clean_draft(name, lookup_ids)
+    now = _now()
+    if draft_id:
+        if not conn.execute("SELECT 1 FROM compare_drafts WHERE draft_id = ?",
+                            (draft_id,)).fetchone():
+            raise KeyError(draft_id)
+        conn.execute(
+            "UPDATE compare_drafts SET name = ?, lookup_ids = ?, updated_at = ?"
+            " WHERE draft_id = ?", (name, json.dumps(kept), now, draft_id))
+    else:
+        draft_id = secrets.token_hex(8)
+        conn.execute(
+            "INSERT INTO compare_drafts (draft_id, name, lookup_ids, created_at,"
+            " updated_at) VALUES (?,?,?,?,?)",
+            (draft_id, name, json.dumps(kept), now, now))
+        conn.execute(
+            "DELETE FROM compare_drafts WHERE draft_id IN (SELECT draft_id FROM"
+            " compare_drafts ORDER BY updated_at DESC, draft_id LIMIT -1 OFFSET ?)",
+            (COMPARE_DRAFTS_KEPT,))
+    conn.commit()
+    return _draft(conn.execute(
+        "SELECT * FROM compare_drafts WHERE draft_id = ?", (draft_id,)).fetchone())
+
+
+def delete_compare_draft(conn: sqlite3.Connection, draft_id: str) -> bool:
+    cur = conn.execute("DELETE FROM compare_drafts WHERE draft_id = ?", (draft_id,))
+    conn.commit()
+    return cur.rowcount > 0
 
 
 def record_site_request(

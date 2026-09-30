@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from app.termlabel import term_label
 from app.web.deps import get_store
 from kriko.research import get_researcher, plan_task
 
@@ -88,10 +89,20 @@ def get_subject(subject_id: str, store=Depends(get_store)):
         "kind": row["kind"],
         "label": row["label"],
         "attributes": [
-            dict(r)
+            {**{k: v for k, v in dict(r).items() if k != "label_json"},
+             "label": term_label(r["label_json"], r["key"])}
             for r in store.execute(
-                "SELECT key, value_text, unit, valid_from, valid_to, is_identity"
-                " FROM attributes WHERE subject_id = ? ORDER BY is_identity DESC, key",
+                # `label` and `datatype` are the pack's own words for the key
+                # (its `terms` row), so a screen can name a specification
+                # without knowing the category (B173). `source_url` is the
+                # page the figure was read from, '' when the pack names none.
+                "SELECT a.key, a.value_text, a.unit, a.valid_from, a.valid_to,"
+                "       a.is_identity, a.source_url, t.label_json,"
+                "       COALESCE(t.datatype, 'text') AS datatype"
+                " FROM attributes a LEFT JOIN terms t"
+                "   ON t.term_id = a.key AND t.pack_id = a.pack_id"
+                "  AND t.role = 'attribute'"
+                " WHERE a.subject_id = ? ORDER BY a.is_identity DESC, a.key",
                 (subject_id,),
             )
         ],

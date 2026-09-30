@@ -211,7 +211,16 @@ def _emit_subjects(
 
         identity = entry.get("identity") or {}
         declared = set(man.identity_keys[kind])
-        merged = {**identity, **(entry.get("attributes") or {})}
+        # A spec is a bare value or `{value, source}`; the source is the page it
+        # was read from (B173). Identity keys carry none.
+        sources: dict[str, str] = {}
+        specs: dict = {}
+        for key, raw in (entry.get("attributes") or {}).items():
+            if isinstance(raw, dict):
+                sources[key] = str(raw.get("source") or "").strip()
+                raw = raw.get("value")
+            specs[key] = raw
+        merged = {**identity, **specs}
         for key, value in merged.items():
             if key not in term_by_id:
                 raise ValueError(
@@ -222,7 +231,8 @@ def _emit_subjects(
             conn.execute(
                 "INSERT OR IGNORE INTO attributes (attribute_id, pack_id,"
                 " subject_id, key, value_text, value_num, unit, valid_from,"
-                " valid_to, is_identity, confidence) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                " valid_to, is_identity, confidence, source_url)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     attribute_id,
                     pack_id,
@@ -235,6 +245,7 @@ def _emit_subjects(
                     "",
                     1 if key in declared else 0,
                     None,
+                    sources.get(key, ""),
                 ),
             )
             row_ids.append(attribute_id)

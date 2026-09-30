@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/svelte";
-import { beforeEach, describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { stubFetch } from "../lib/stub-fetch";
 import Compare from "./Compare.svelte";
 
@@ -84,7 +84,7 @@ describe("Compare", () => {
         // present there and absent — a dash, not a blank — in the other two.
         const zRow = screen.getByRole("rowheader", { name: "T-z" }).closest("tr")!;
         expect(zRow.querySelectorAll("td")).toHaveLength(3);
-        expect(zRow.textContent).toBe("T-z——Serious");
+        expect(zRow.textContent).toBe("T-zNoneNoneSerious");
     });
 
     it("still honours the report's own two-sided link", async () => {
@@ -118,5 +118,129 @@ describe("Compare", () => {
         stubFetch({ "/api/history": { items: [HISTORY["/api/history"].items[0]] } });
         render(Compare);
         expect(await screen.findByText(/two saved checks/i)).toBeInTheDocument();
+    });
+});
+
+const SUBJECT = (id: string, rows: [string, string, string][]) => ({
+    subject_id: id, pack_id: "p", kind: "k", label: id, relations: [], claims: [],
+    attributes: [
+        { key: "id_key", value_text: "x", unit: "", is_identity: 1, label: "Identity" },
+        ...rows.map(([label, value, source]) => ({
+            key: label.toLowerCase(), value_text: value, unit: "", is_identity: 0,
+            label, source_url: source,
+        })),
+    ],
+});
+
+const WITH_SPECS = {
+    ...BOTH,
+    "/api/lookup/a1": {
+        ...BOTH["/api/lookup/a1"],
+        response: { ...BOTH["/api/lookup/a1"].response, subjects: ["sa"] },
+    },
+    "/api/lookup/b2": {
+        ...BOTH["/api/lookup/b2"],
+        response: { ...BOTH["/api/lookup/b2"].response, subjects: ["sb"] },
+    },
+    "/api/subjects/sa": SUBJECT("sa", [
+        ["Chipset", "A16", "https://e.org/a"], ["Weight", "171 g", ""],
+    ]),
+    "/api/subjects/sb": SUBJECT("sb", [["Chipset", "A17", "https://e.org/b"]]),
+};
+
+describe("Compare specifications (B173)", () => {
+    beforeEach(() => {
+        window.location.hash = "#/compare?left=a1&right=b2";
+    });
+
+    it("lines the specifications up row by row, named by the pack", async () => {
+        stubFetch(WITH_SPECS);
+        render(Compare);
+        const chipset = (await screen.findByRole("rowheader", { name: "Chipset" })).closest("tr")!;
+        expect(chipset.textContent).toBe("ChipsetA16A17");
+        const weight = screen.getByRole("rowheader", { name: "Weight" }).closest("tr")!;
+        expect(weight.textContent).toBe("Weight171 gNot recorded");
+        // Identity keys make the product; they are not specifications.
+        expect(screen.queryByRole("rowheader", { name: "Identity" })).toBeNull();
+    });
+
+    it("shows where each figure came from only when asked, one row at a time", async () => {
+        stubFetch(WITH_SPECS);
+        render(Compare);
+        const chipset = await screen.findByRole("button", { name: "Chipset" });
+        expect(screen.queryByRole("link", { name: "Source" })).toBeNull();
+        await fireEvent.click(chipset);
+        expect(screen.getAllByRole("link", { name: "Source" })).toHaveLength(2);
+        await fireEvent.click(screen.getByRole("button", { name: "Weight" }));
+        // Weight has one sourced cell at most (none), and Chipset's closed.
+        expect(screen.queryAllByRole("link", { name: "Source" })).toHaveLength(0);
+        expect(screen.getAllByText("No source").length).toBeGreaterThan(0);
+    });
+
+    it("opens one section at a time, specifications first when there are some", async () => {
+        stubFetch(WITH_SPECS);
+        render(Compare);
+        await screen.findByRole("rowheader", { name: "Chipset" });
+        expect(screen.queryByRole("rowheader", { name: "T-x" })).toBeNull();
+        await fireEvent.click(screen.getByRole("button", { name: /Known risks/ }));
+        expect(screen.getByRole("rowheader", { name: "T-x" })).toBeInTheDocument();
+        expect(screen.queryByRole("rowheader", { name: "Chipset" })).toBeNull();
+    });
+
+    it("opens a risk's detail on demand", async () => {
+        stubFetch(BOTH);
+        render(Compare);
+        await fireEvent.click(await screen.findByRole("button", { name: "T-x" }));
+        expect(screen.getAllByText("b").length).toBeGreaterThan(0);
+    });
+});
+
+const DRAFT = {
+    draft_id: "d1", name: "Shortlist", lookup_ids: ["a1", "b2"],
+    created_at: "", updated_at: "",
+};
+
+describe("Compare drafts (B183)", () => {
+    beforeEach(() => {
+        window.location.hash = "#/compare";
+    });
+
+    it("lists saved drafts and opens one into the pickers", async () => {
+        stubFetch({ ...BOTH, "/api/compare-drafts": { items: [DRAFT], max: 4 } });
+        render(Compare);
+        await fireEvent.click(await screen.findByRole("button", { name: "Shortlist" }));
+        await waitFor(() =>
+            expect((screen.getByLabelText("First") as HTMLSelectElement).value).toBe("a1"),
+        );
+        expect((screen.getByLabelText("Draft name") as HTMLInputElement).value).toBe(
+            "Shortlist",
+        );
+        expect(window.location.hash).toContain("draft=d1");
+    });
+
+    it("saves the current choice under a name", async () => {
+        window.location.hash = "#/compare?left=a1&right=b2";
+        stubFetch({ ...BOTH, "/api/compare-drafts": { items: [], max: 4 } });
+        render(Compare);
+        const input = await screen.findByLabelText("Draft name");
+        await fireEvent.input(input, { target: { value: "Phones" } });
+        await fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        await waitFor(() => {
+            const call = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+                ([, init]) => init?.method === "POST",
+            );
+            expect(call?.[0]).toBe("/api/compare-drafts");
+            expect(JSON.parse(call?.[1].body)).toEqual({
+                name: "Phones", lookup_ids: ["a1", "b2"],
+            });
+        });
+    });
+
+    it("cannot save without two checks and a name", async () => {
+        window.location.hash = "#/compare";
+        stubFetch({ ...BOTH, "/api/compare-drafts": { items: [], max: 4 } });
+        render(Compare);
+        await screen.findByLabelText("Draft name");
+        expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     });
 });

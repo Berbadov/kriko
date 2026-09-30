@@ -1746,11 +1746,24 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         raise ValueError("name the product — the quick look has nothing else to go on")
 
     principle = ""
+    attributes = ""
     pack_id = str(params.get("pack_id") or "")
     if pack_id:
         store = connect(settings.store_path)
         try:
             principle = pack_asset(store, pack_id, "research/principle.md")
+            # The pack's own names for what it records about a product, minus
+            # the keys that identify it (B173).
+            from app.termlabel import term_label
+
+            attributes = "\n".join(
+                f"* {term_label(row['label_json'], row['term_id'])}"
+                for row in store.execute(
+                    "SELECT term_id, label_json FROM terms"
+                    " WHERE pack_id = ? AND role = 'attribute'"
+                    "   AND term_id NOT IN (SELECT key FROM attributes"
+                    "                        WHERE pack_id = ? AND is_identity = 1)"
+                    " ORDER BY term_id", (pack_id, pack_id)))
         finally:
             store.close()
 
@@ -1776,7 +1789,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         packs = ""
     progress.set(0.1, f"a quick look at {product}")
     reply = researcher.ask(
-        quicklook.brief(product, principle, params.get("page"), packs))
+        quicklook.brief(product, principle, params.get("page"), packs, attributes))
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
