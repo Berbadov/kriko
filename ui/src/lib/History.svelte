@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "./Icon.svelte";
     import EmptyState from "./EmptyState.svelte";
     import { ApiError, api } from "./api";
     import { count } from "./plural";
@@ -68,7 +69,7 @@
     this={page ? "section" : "aside"}
     class={page ? "history page" : "history"}
 >
-    {#if !page}<h3>Recent</h3>{/if}
+    {#if !page}<h3><Icon name="history" /> Recent</h3>{/if}
     {#if notice}<p class="state">{notice}</p>{/if}
     {#await ready then}
         {#if items.length}

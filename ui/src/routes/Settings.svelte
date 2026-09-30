@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import { count } from "../lib/plural";
     import Async from "../lib/Async.svelte";
     import Keys from "../lib/Keys.svelte";
@@ -6,17 +7,19 @@
     import { api } from "../lib/api";
     import type { ProviderTest } from "../lib/types";
     import { MODES, mode, setMode } from "../lib/mode";
-    import { THEMES, THEME_LABELS, setTheme, theme } from "../lib/theme";
 
     /* Where a preference lives, and the fact that it lives anywhere.
      *
      * `/api/settings` has existed since the first week and had no screen: the
-     * theme switcher was a heading down the About page, the mode switch was a
-     * rail control that quietly wrote a row, and nothing anywhere told the
-     * reader that either was being remembered on their disk. For a local-first
-     * app that is the wrong silence — "what does it keep about me" is
-     * answerable here in full, because the answer is short and the honest way
-     * to say it is to print it.
+     * mode switch was a rail control that quietly wrote a row, and nothing
+     * anywhere told the reader that it was being remembered on their disk. For
+     * a local-first app that is the wrong silence — "what does it keep about
+     * me" is answerable here in full, because the answer is short and the
+     * honest way to say it is to print it.
+     *
+     * There is no theme choice (B159: Panel is the only theme). An older
+     * install may still hold a `theme` row, which is listed below like any
+     * other stored value and is never read.
      */
 
     // null until the reader flips it; the {#await} below holds the stored value.
@@ -44,16 +47,11 @@
         promise = api.settings();
     };
 
-    function pickTheme(id: (typeof THEMES)[number]) {
-        setTheme(id);
+    function pickMode(next: (typeof MODES)[number]) {
+        setMode(next);
         // A beat behind the write, which is fire-and-forget by design. The
         // list is a reflection, and a reflection arriving late is fine; a
         // switch that waits for a disk write is not.
-        setTimeout(refresh, 50);
-    }
-
-    function pickMode(next: (typeof MODES)[number]) {
-        setMode(next);
         setTimeout(refresh, 50);
     }
 
@@ -102,37 +100,15 @@
     const checkOf = (providerId: string): Check | undefined => checks[providerId];
 </script>
 
-<h2>Settings</h2>
+<h2><Icon name="settings" size={22} /> Settings</h2>
 <p class="lede">
-    Two preferences, both remembered in this install's own database — never in a
-    pack, so uninstalling knowledge cannot change how the app looks. Research
-    keys are the exception and are kept in a file of their own, below.
+    Preferences are remembered in this install's own database, never in a
+    catalog, so uninstalling knowledge cannot change how the app behaves.
+    Research keys are the exception and are kept in a file of their own, below.
 </p>
 
 <section>
-    <h3>Appearance</h3>
-    <p class="meta">
-        A theme is one complete palette, not a tweak — every colour in the app
-        comes from the one you pick here.
-    </p>
-    <div class="choices">
-        {#each THEMES as id (id)}
-            <label class="choice" class:on={$theme === id}>
-                <input
-                    type="radio"
-                    name="theme"
-                    value={id}
-                    checked={$theme === id}
-                    onchange={() => pickTheme(id)}
-                />
-                <span>{THEME_LABELS[id]}</span>
-            </label>
-        {/each}
-    </div>
-</section>
-
-<section>
-    <h3>What an answer shows</h3>
+    <h3><Icon name="eye" /> What an answer shows</h3>
     <p class="meta">
         The same lookup, read two ways. Nothing about the request changes — the
         engine answers once and this picks how much of the answer is drawn, which
@@ -161,7 +137,7 @@
 {#await api.window() then win}
     {#if win.shell}
         <section>
-            <h3>Closing the window</h3>
+            <h3><Icon name="monitor" /> Closing the window</h3>
             <label class="choice" class:on={closeNotice ?? win.close_notice}>
                 <input
                     type="checkbox"
@@ -177,7 +153,7 @@
 {/await}
 
 <section>
-    <h3>Check a provider key</h3>
+    <h3><Icon name="key" /> Check a provider key</h3>
     <p class="meta">
         Each press sends one small search or one short reply request from the
         server, then reports what the provider answered. Nothing on this screen
@@ -232,7 +208,7 @@
 <PlanePrefs {keysVersion} />
 
 <section>
-    <h3>What is remembered</h3>
+    <h3><Icon name="database" /> What is remembered</h3>
     <p class="meta">
         Everything the interface keeps about you, in full. It lives in this
         install's <code>app.sqlite</code> beside your history — not in the
@@ -270,18 +246,7 @@
         gap: var(--s-2);
         margin-block-start: var(--s-3);
     }
-    .choice {
-        display: flex;
-        align-items: baseline;
-        gap: var(--s-2);
-        padding: var(--s-2);
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
-        cursor: pointer;
-    }
-    .choice.on {
-        border-color: var(--accent);
-    }
+    /* `.choice` is global now (components.css): a raised card, like a button. */
     /* Four short rows side by side where they fit (B146). */
     .checks {
         list-style: none;

@@ -60,6 +60,13 @@ WEB_TARGET = REPO / "ui" / "public" / "mark.svg"
 #: The mark drawn for the sizes the grid cannot serve. See that file's own
 #: comment for why there are two of them.
 LARGE_SOURCE = REPO / "extension" / "assets" / "logo-mark-large.svg"
+#: The large mark, served to the frontend for the rail's brand tile (B161). The
+#: rail drew the 16x16 grid at 28px, a 1.75 scale, which no integer factor
+#: makes crisp and which `image-rendering: pixelated` turned into uneven blocks
+#: ("Fix the pixelated Kriko logo in the top left"). The drawing has real
+#: diagonals and scales smoothly to any size, so the rail uses this. The grid
+#: copy above stays for the favicon, where 16px is exactly one cell per pixel.
+WEB_LARGE_TARGET = REPO / "ui" / "public" / "mark-large.svg"
 
 #: 16 * 64. Kept because the extension icons and the role checks still scale
 #: the grid, and because `test_the_scale_keeps_the_grid_whole` is about the
@@ -449,6 +456,12 @@ def main() -> None:
     print(f"{SOURCE.name} -> {ICO_TARGET} "
           f"({', '.join(f'{side * one}px' for one in ICO_SIZES)})")
     print(f"{SOURCE.name} -> {WEB_TARGET}")
+    # Same newline rule as the copy above, and for the same reason: a test
+    # compares this file with its source as text.
+    WEB_LARGE_TARGET.write_text(
+        LARGE_SOURCE.read_text(encoding="utf-8"), encoding="utf-8", newline=""
+    )
+    print(f"{LARGE_SOURCE.name} -> {WEB_LARGE_TARGET}")
 
     EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
     for size, scale in sorted(EXTENSION_ICONS.items()):
