@@ -15,63 +15,67 @@ afterEach(() => {
 });
 
 describe("Sidebar", () => {
-    it("shows a buyer the two groups they can use and no operator work", () => {
-        render(Sidebar, { mode: "buyer" });
-        expect(screen.getByRole("link", { name: "New check" })).toBeInTheDocument();
-        expect(screen.queryByRole("link", { name: "Browse" })).toBeNull();
-        expect(screen.queryByText("Knowledge")).toBeNull();
-        expect(screen.getByText("Check")).toBeInTheDocument();
-        expect(screen.getByText("This install")).toBeInTheDocument();
+    it("shows every group to everyone, with no operator work hidden (B165)", () => {
+        render(Sidebar);
+        for (const title of ["Check", "Knowledge", "System", "This install"]) {
+            expect(screen.getByText(title)).toBeInTheDocument();
+        }
+        expect(screen.getByRole("link", { name: "Browse" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Activity" })).toBeInTheDocument();
+        expect(screen.getByRole("link", { name: "Agents" })).toBeInTheDocument();
+        // The five rows Activity and Agents replaced stay gone from the rail.
+        expect(screen.queryByRole("link", { name: "Runs" })).toBeNull();
+        expect(screen.queryByRole("link", { name: "Console" })).toBeNull();
+    });
+
+    it("has no New check and no Question sheet (B163)", () => {
+        render(Sidebar);
+        expect(screen.queryByRole("link", { name: "New check" })).toBeNull();
+        expect(screen.queryByRole("link", { name: "Question sheet" })).toBeNull();
+        expect(screen.getByRole("link", { name: "History" })).toBeInTheDocument();
+    });
+
+    it("has no Buyer/Author switch (B165)", () => {
+        render(Sidebar);
+        expect(screen.queryByRole("group", { name: "Mode" })).toBeNull();
+        expect(screen.queryByRole("button", { name: /^(buyer|author)$/i })).toBeNull();
+        expect(document.querySelector(".modes")).toBeNull();
     });
 
     it("gives every group title a symbol, and no title is only letters", () => {
-        // B159: "Use symbols for sections". A group in the rail used to be a
-        // run of rows, or (for the author-only two) a bare word in capitals.
-        for (const shown of ["buyer", "author"] as const) {
-            const { container, unmount } = render(Sidebar, { mode: shown });
-            const titles = container.querySelectorAll(".nav-title");
-            expect(titles.length).toBe(shown === "buyer" ? 2 : 4);
-            for (const title of titles) {
-                const symbol = title.querySelector("svg");
-                expect(symbol, `${title.textContent?.trim()} has no symbol`).not.toBeNull();
-                // A symbol that failed to draw is an empty box, not a glyph.
-                expect(symbol?.querySelectorAll("path").length).toBeGreaterThan(0);
-            }
-            unmount();
+        // B159: "Use symbols for sections".
+        const { container } = render(Sidebar);
+        const titles = container.querySelectorAll(".nav-title");
+        expect(titles.length).toBe(4);
+        for (const title of titles) {
+            const symbol = title.querySelector("svg");
+            expect(symbol, `${title.textContent?.trim()} has no symbol`).not.toBeNull();
+            // A symbol that failed to draw is an empty box, not a glyph.
+            expect(symbol?.querySelectorAll("path").length).toBeGreaterThan(0);
         }
     });
 
     it("draws the brand mark from the smooth drawing, not the pixel grid", () => {
         // B161: the rail drew the 16x16 grid at 28px and it read as pixelated.
-        const { container } = render(Sidebar, { mode: "buyer" });
+        const { container } = render(Sidebar);
         const mark = container.querySelector("img.mark") as HTMLImageElement;
         expect(mark.getAttribute("src")).toBe("/static/mark-large.svg");
         expect(mark.getAttribute("width")).toBe("32");
         expect(mark.getAttribute("height")).toBe("32");
     });
 
-    it("shows an author the grouped operator destinations", () => {
-        render(Sidebar, { mode: "author" });
-        expect(screen.getByText("Knowledge")).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "Overview" })).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "Activity" })).toBeInTheDocument();
-        expect(screen.getByRole("link", { name: "Agents" })).toBeInTheDocument();
-        // The five rows those two replaced are gone from the rail — the point
-        // of the merge was the rail, not the screens.
-        expect(screen.queryByRole("link", { name: "Runs" })).toBeNull();
-        expect(screen.queryByRole("link", { name: "Console" })).toBeNull();
+    it("links the brand to the landing screen, Activity (B163)", () => {
+        const { container } = render(Sidebar);
+        const brand = container.querySelector("a.brand") as HTMLAnchorElement;
+        expect(brand.getAttribute("href")).toBe("#/activity");
     });
 
-    it("carries the mode into every link, so a click does not silently switch it", () => {
-        render(Sidebar, { mode: "author" });
-        const link = screen.getByRole("link", { name: "Browse" }) as HTMLAnchorElement;
-        expect(link.getAttribute("href")).toContain("mode=author");
-    });
-
-    it("offers the mode switch as a labelled group", () => {
-        render(Sidebar, { mode: "buyer" });
-        expect(screen.getByRole("group", { name: "Mode" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "author" })).toBeInTheDocument();
+    it("carries no ?mode= in any link (B165)", () => {
+        const { container } = render(Sidebar);
+        const hrefs = [...container.querySelectorAll("a")].map((a) => a.getAttribute("href") ?? "");
+        expect(hrefs.length).toBeGreaterThan(10);
+        for (const href of hrefs) expect(href).not.toContain("mode=");
     });
 });
 
@@ -82,8 +86,8 @@ describe("the rail's current row", () => {
     }
 
     it("marks the row for the route", () => {
-        at("#/sites?mode=author");
-        render(Sidebar, { mode: "author" });
+        at("#/sites");
+        render(Sidebar);
         expect(screen.getByRole("link", { name: "Sites" })).toHaveAttribute(
             "aria-current",
             "page",
@@ -95,8 +99,8 @@ describe("the rail's current row", () => {
         // Knowledge's gaps lens. The rail used to compare the raw route name
         // against its own rows, match nothing, and light no row at all —
         // arriving from the extension looked like arriving nowhere.
-        at("#/coverage?mode=author");
-        render(Sidebar, { mode: "author" });
+        at("#/coverage");
+        render(Sidebar);
         expect(screen.getByRole("link", { name: "Browse" })).toHaveAttribute(
             "aria-current",
             "page",
@@ -104,18 +108,18 @@ describe("the rail's current row", () => {
     });
 
     it("gives every row its name, which is what the marker is measured from", () => {
-        at("#/check");
-        render(Sidebar, { mode: "buyer" });
-        expect(screen.getByRole("link", { name: "New check" })).toHaveAttribute(
+        at("#/history");
+        render(Sidebar);
+        expect(screen.getByRole("link", { name: "History" })).toHaveAttribute(
             "data-route",
-            "check",
+            "history",
         );
     });
 });
 
 describe("the rail's primary action", () => {
-    it("gives an author the one action that makes knowledge, outside the list of places", () => {
-        render(Sidebar, { mode: "author" });
+    it("gives the reader the one action that makes knowledge, outside the list of places", () => {
+        render(Sidebar);
         const action = screen.getByRole("link", { name: /Start a new pack/ });
         expect(action).toBeInTheDocument();
         // Spelled out to "activity"/lens:"runs" rather than the "jobs"
@@ -126,16 +130,16 @@ describe("the rail's primary action", () => {
         expect(parseHash(action.getAttribute("href") ?? "")).toEqual({
             name: "activity",
             params: [],
-            query: { mode: "author", author: "new", lens: "runs" },
+            query: { author: "new", lens: "runs" },
         });
         // Outside `.rail-nav` on purpose: a rail lists where you are, and this
         // is a do. Inside it, it reads as the fourteenth destination.
         expect(action.closest("nav")).toBeNull();
     });
 
-    it("does not offer it to a buyer, who has no screen behind it", () => {
-        render(Sidebar, { mode: "buyer" });
-        expect(screen.queryByRole("link", { name: /Start a new pack/ })).toBeNull();
+    it("offers it to everyone, since every screen behind it is open (B165)", () => {
+        render(Sidebar);
+        expect(screen.getByRole("link", { name: /Start a new pack/ })).toBeInTheDocument();
     });
 });
 
@@ -146,7 +150,7 @@ describe("the new-pack destination", () => {
     }
 
     afterEach(() => {
-        window.history.replaceState(null, "", "#/check");
+        window.history.replaceState(null, "", "#/activity");
     });
 
     it("opens and focuses authoring on arrival, without starting work", async () => {
@@ -154,7 +158,7 @@ describe("the new-pack destination", () => {
             new Response(JSON.stringify({ items: [] })),
         );
         vi.stubGlobal("fetch", fetchMock);
-        render(Sidebar, { mode: "author" });
+        render(Sidebar);
         at(screen.getByRole("link", { name: /Start a new pack/ }).getAttribute("href")!);
         render(Jobs);
         const input = screen.getByLabelText("What is the category?");
@@ -163,7 +167,6 @@ describe("the new-pack destination", () => {
         expect(input.closest(".authoring")).not.toBeNull();
         expect(input.closest("details")).toBeNull();
         expect(parseHash(window.location.hash).query).toEqual({
-            mode: "author",
             lens: "runs",
         });
         expect(fetchMock.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
@@ -175,16 +178,16 @@ describe("the new-pack destination", () => {
         // something other than "runs" used to leave the rail action a
         // no-op, because setting the hash to what it already was fires no
         // hashchange at all.
-        window.history.replaceState(null, "", "#/activity?mode=author&lens=live");
-        render(Sidebar, { mode: "author" });
+        window.history.replaceState(null, "", "#/activity?lens=live");
+        render(Sidebar);
         const href = screen.getByRole("link", { name: /Start a new pack/ }).getAttribute("href");
         expect(href).not.toBe(window.location.hash);
     });
 
     it("reopens the form on the same route without clearing a draft", async () => {
         vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [] }))));
-        at("#/jobs?mode=author");
-        render(Sidebar, { mode: "author" });
+        at("#/jobs");
+        render(Sidebar);
         render(Jobs);
         const input = screen.getByLabelText("What is the category?");
         const action = screen.getByRole("link", { name: /Start a new pack/ });
@@ -201,12 +204,12 @@ describe("the new-pack destination", () => {
 describe("the rail's figures", () => {
     it("carries the claim count on the row that browses them", () => {
         readings.set({ ...EMPTY, claims: 1620 });
-        render(Sidebar, { mode: "author" });
+        render(Sidebar);
         expect(screen.getByTitle(/1,620 claims/)).toBeInTheDocument();
     });
 
     it("says nothing on any row until something has been read", () => {
-        render(Sidebar, { mode: "author" });
+        render(Sidebar);
         // Not "renders a zero" — an unread figure and a figure that is zero
         // are different claims and the rail may only make the second one.
         expect(screen.queryByTitle(/claims across/)).toBeNull();
@@ -215,7 +218,7 @@ describe("the rail's figures", () => {
 
     it("leaves every other row exactly as it was", () => {
         readings.set({ ...EMPTY, claims: 3, running: 1, spentUsd: 0.5 });
-        render(Sidebar, { mode: "author" });
+        render(Sidebar);
         // Three figures, fourteen rows. A number on every row is a dashboard.
         expect(screen.getAllByTitle(/claims across|jobs? running|spent on research/))
             .toHaveLength(3);
@@ -228,15 +231,15 @@ describe("the rail folds (B167)", () => {
     };
 
     it("has no Packs row: Packs is a section of Browse", () => {
-        at("#/check?mode=author");
-        render(Sidebar, { mode: "author" });
+        at("#/history");
+        render(Sidebar);
         expect(screen.queryByRole("link", { name: "Packs" })).toBeNull();
     });
 
     it("folds and unfolds Knowledge and System from their titles, and says so", async () => {
-        at("#/check?mode=author");
+        at("#/history");
         stubFetch({ "/api/settings": {} });
-        render(Sidebar, { mode: "author" });
+        render(Sidebar);
         for (const [title, row] of [
             ["Knowledge", "Overview"],
             ["System", "Activity"],
@@ -254,16 +257,16 @@ describe("the rail folds (B167)", () => {
     });
 
     it("leaves Check and This install as plain titles, not tabs", () => {
-        at("#/check?mode=author");
-        render(Sidebar, { mode: "author" });
+        at("#/history");
+        render(Sidebar);
         expect(screen.queryByRole("button", { name: "Check" })).toBeNull();
         expect(screen.queryByRole("button", { name: "This install" })).toBeNull();
     });
 
     it("remembers the fold in settings, and starts folded when it was left folded", async () => {
-        at("#/check?mode=author");
+        at("#/history");
         stubFetch({ "/api/settings": {} });
-        const first = render(Sidebar, { mode: "author" });
+        const first = render(Sidebar);
         await fireEvent.click(screen.getByRole("button", { name: "System" }));
         const calls = vi.mocked(globalThis.fetch).mock.calls;
         await waitFor(() =>
@@ -280,7 +283,7 @@ describe("the rail folds (B167)", () => {
 
         // A restart: the stored value comes back from the server.
         stubFetch({ "/api/settings": { rail_folded_groups: "system" } });
-        render(Sidebar, { mode: "author" });
+        render(Sidebar);
         await waitFor(() =>
             expect(screen.getByRole("button", { name: "System" })).toHaveAttribute(
                 "aria-expanded",
@@ -294,7 +297,7 @@ describe("the rail folds (B167)", () => {
     it("keeps the group holding the open screen open, whatever was stored", async () => {
         at("#/knowledge?mode=author");
         stubFetch({ "/api/settings": { rail_folded_groups: "knowledge,system" } });
-        render(Sidebar, { mode: "author" });
+        render(Sidebar);
         await waitFor(() =>
             expect(screen.getByRole("button", { name: "System" })).toHaveAttribute(
                 "aria-expanded",
@@ -314,7 +317,7 @@ describe("the rail folds (B167)", () => {
     it("keeps the group of a retired address open too (#/packs renders Browse)", async () => {
         at("#/packs?mode=author");
         stubFetch({ "/api/settings": { rail_folded_groups: "knowledge" } });
-        render(Sidebar, { mode: "author" });
+        render(Sidebar);
         expect(screen.getByRole("button", { name: "Knowledge" })).toHaveAttribute(
             "aria-expanded",
             "true",

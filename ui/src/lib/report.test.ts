@@ -12,7 +12,6 @@ import {
     groupByDomain,
     handledNote,
     orderClaims,
-    questions,
     rankingNote,
     severityWord,
     sourceSummary,
@@ -172,33 +171,6 @@ describe("contextLines", () => {
 
     it("has nothing to say when the payload carried no context", () => {
         expect(contextLines(undefined)).toEqual([]);
-    });
-});
-
-describe("questions", () => {
-    it("is the asks, worst first, and keyed the way a checkmark is", () => {
-        const list = questions({
-            method: "exact",
-            coverage: "RISKS_FOUND",
-            claims: [
-                claim({ claim_id: "l", severity: "low", advice: "Ask about the tyres." }),
-                claim({ claim_id: "h", severity: "high", advice: "Ask for the receipt." }),
-            ],
-        });
-        expect(list.map((q) => q.ask)).toEqual([
-            "Ask for the receipt.",
-            "Ask about the tyres.",
-        ]);
-        expect(list[0].key).toBe(claimKey(claim({ claim_id: "h" })));
-    });
-
-    it("falls back to a general ask rather than an empty line", () => {
-        const [only] = questions({
-            method: "exact",
-            coverage: "RISKS_FOUND",
-            claims: [claim({ advice: "" })],
-        });
-        expect(only.ask).toMatch(/proof this has been dealt with/);
     });
 });
 

@@ -1,5 +1,3 @@
-import type { Mode } from "../mode";
-
 /** A destination, and the words a reader might reach for that are not its
  *  label.
  *
@@ -19,7 +17,6 @@ export type NavGroupSpec = {
     title: string;
     symbol: string;
     items: NavItem[];
-    authorOnly: boolean;
     /** The title is a tab that folds its rows (B167). Two groups only:
      *  Check and This install are short and the reader's own, and a fold on
      *  them would hide the first thing they came for. */
@@ -40,27 +37,18 @@ export const NAV: NavGroupSpec[] = [
     {
         title: "Check",
         symbol: "verify",
-        authorOnly: false,
         items: [
-            { name: "check", label: "New check" },
+            // No "New check" and no "Question sheet" (B163): the browser
+            // extension is where a check starts, and what it finds is read on
+            // the result. History and Compare are what is left of the group.
             { name: "history", label: "History" },
             { name: "compare", label: "Compare" },
-            // The artifact the reader takes *out* of the app: the asks, in
-            // order, big enough to read standing in front of the thing. It gets a
-            // rail entry rather than living only behind a report link
-            // because on inspection day it is the first screen they want,
-            // and with no id it resolves to the newest saved answer.
-            { name: "questions", label: "Question sheet" },
-            // Not author-only, and in Check rather than System: the extension
-            // is the reader's half of the product — the one who never opens
-            // an author screen is exactly the one who needs it installed.
             { name: "extension", label: "Browser extension" },
         ],
     },
     {
         title: "Knowledge",
         symbol: "layers",
-        authorOnly: true,
         foldable: true,
         items: [
             { name: "overview", label: "Overview" },
@@ -82,7 +70,6 @@ export const NAV: NavGroupSpec[] = [
     {
         title: "System",
         symbol: "server",
-        authorOnly: true,
         foldable: true,
         items: [
             // Sites: what this installation can read. The words somebody
@@ -110,12 +97,8 @@ export const NAV: NavGroupSpec[] = [
         ],
     },
     {
-        // Not author-only: "what version are you running" is asked of the
-        // reader who cannot open the author screens, and it is the first
-        // question any support exchange starts with.
         title: "This install",
         symbol: "monitor",
-        authorOnly: false,
         items: [
             // Preferences before facts: a reader in this group is more often
             // changing something than quoting a version, and the theme
@@ -127,26 +110,15 @@ export const NAV: NavGroupSpec[] = [
     },
 ];
 
-export const groupsFor = (mode: Mode): NavGroupSpec[] =>
-    NAV.filter((group) => mode === "author" || !group.authorOnly);
-
 export const ALL_ROUTES: string[] = NAV.flatMap((group) =>
     group.items.map((item) => item.name),
-);
-
-const AUTHOR_ROUTES = new Set(
-    NAV.filter((group) => group.authorOnly).flatMap((group) =>
-        group.items.map((item) => item.name),
-    ),
 );
 
 /** Routes that no longer have a rail entry but must still resolve.
  *
  * A link is forever: the browser extension, a bookmark, and this app's own
  * older `NextStep` hints all point at `#/coverage`. Retiring a tab must not
- * turn those into "No such view" — they land on the lens that absorbed them,
- * and they keep the author gate they had, which is why this is read *through*
- * `isAuthorOnly` rather than beside it.
+ * turn those into "No such view" — they land on the lens that absorbed them.
  */
 export const ALIASES: Record<string, { name: string; lens?: string }> = {
     subjects: { name: "knowledge", lens: "all" },
@@ -175,14 +147,16 @@ export const ALIASES: Record<string, { name: string; lens?: string }> = {
     // Agents has one lens now — Connect — so neither name needs one.
     console: { name: "agents" },
     connect: { name: "agents" },
+    // New check is gone (B163) and the app opens on Activity until Home
+    // replaces it (B174); an old `#/check` bookmark lands on the same place.
+    // `#/questions` is not here because it can carry an id: router.ts's
+    // `parseHash` sends it to the result or to History.
+    check: { name: "activity" },
 };
 
 /** The route a name actually renders, following one alias hop. */
 export const resolve = (name: string): { name: string; lens?: string } =>
     ALIASES[name] ?? { name };
-
-export const isAuthorOnly = (name: string): boolean =>
-    AUTHOR_ROUTES.has(resolve(name).name);
 
 
 /** Every destination as one flat list, with the group it sits under.
@@ -217,10 +191,13 @@ const aliasWordsFor = (name: string): string[] =>
         .filter(([word, target]) => target.name === name && !NOT_SEARCH_VOCABULARY.has(word))
         .map(([word]) => word);
 
-export const destinationsFor = (
-    mode: Mode,
-): { name: string; label: string; group: string; also?: string[] }[] =>
-    groupsFor(mode).flatMap((group) =>
+export const destinations = (): {
+    name: string;
+    label: string;
+    group: string;
+    also?: string[];
+}[] =>
+    NAV.flatMap((group) =>
         group.items.map((item) => ({
             ...item,
             group: group.title,

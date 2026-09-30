@@ -5,7 +5,7 @@
     import { api } from "../lib/api";
     import { compareMany } from "../lib/compare";
     import { severityWord } from "../lib/report";
-    import { hashWith, route, setQuery } from "../lib/router";
+    import { route, setQuery, toHash } from "../lib/router";
     import { ApiError } from "../lib/api";
     import type { HistoryItem } from "../lib/types";
 
@@ -100,10 +100,10 @@
         {#if items.length < 2}
             <EmptyState
                 title="Compare needs two saved checks"
-                detail="Run a check on each of the ones you are weighing up and they will
-                        all be here — up to four at a time."
-                actionLabel="Run a check"
-                actionHref={hashWith({ mode: $route.query.mode }, "check")}
+                detail="Check each of the ones you are weighing up from the browser extension
+                        and they will all be here, up to four at a time."
+                actionLabel="Browser extension"
+                actionHref={toHash("extension")}
             />
         {:else}
             <div class="row slots">
