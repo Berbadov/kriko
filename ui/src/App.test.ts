@@ -23,10 +23,10 @@ describe("App", () => {
         expect(await screen.findByRole("link", { name: "History" })).toBeInTheDocument();
     });
 
-    it("opens on Activity, since New check is gone (B163)", async () => {
+    it("opens on Home, since New check is gone (B163, B174)", async () => {
         stubFetch(EMPTY);
         render(App);
-        expect(await screen.findByRole("link", { name: "Activity" })).toHaveAttribute(
+        expect(await screen.findByRole("link", { name: "Home" })).toHaveAttribute(
             "aria-current",
             "page",
         );
@@ -34,11 +34,11 @@ describe("App", () => {
         expect(screen.queryByText("Check one before you buy it")).toBeNull();
     });
 
-    it("lands the old #/check address on Activity (B163)", async () => {
+    it("lands the old #/check address on Home (B163, B174)", async () => {
         window.location.hash = "#/check";
         stubFetch(EMPTY);
         render(App);
-        expect(await screen.findByRole("link", { name: "Activity" })).toHaveAttribute(
+        expect(await screen.findByRole("link", { name: "Home" })).toHaveAttribute(
             "aria-current",
             "page",
         );

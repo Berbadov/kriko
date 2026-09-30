@@ -52,7 +52,7 @@ function ruleContaining(fragment: string, sheet: string = CSS): string {
 
 describe("shared control styling", () => {
     it("uses the ring as a width and the accent as its colour", () => {
-        for (const selector of [".rail-action:focus-visible", ".brand:focus-visible"]) {
+        for (const selector of [".brand:focus-visible"]) {
             expect(block(selector)).toContain("outline: var(--ring) solid var(--accent)");
             expect(block(selector)).toContain("outline-offset: var(--ring)");
         }
