@@ -118,3 +118,81 @@ def searcher(endpoint: str = ""):
         return parse(text)[: max(1, int(limit))]
 
     return search
+
+
+#: The second door for `search_with_fallback` below. Parallel's hosted MCP
+#: serves `web_search` keyless, on the same wire, so a courtesy that stops
+#: answering stops the plane rather than the research.
+PARALLEL_ENDPOINT = "https://search.parallel.ai/mcp"
+PARALLEL_TOOL = "web_search"
+
+
+def parse_parallel(text: str, limit: int) -> list[dict]:
+    """`[{"url", "title", "site"}]` from Parallel's JSON-in-text answer."""
+    from urllib.parse import urlsplit
+    try:
+        payload = json.loads(text)
+    except ValueError:
+        return []
+    out = []
+    for entry in payload.get("results") or []:
+        url = str(entry.get("url") or "")
+        if url.startswith(("http://", "https://")):
+            out.append({"url": url, "title": str(entry.get("title") or ""),
+                        "site": urlsplit(url).netloc})
+    return out[: max(1, int(limit))]
+
+
+def parallel_searcher(endpoint: str = ""):
+    """`search(query, limit) -> [{"url", "title", "site"}]`, like every searcher.
+
+    Parallel's tool asks for an `objective` rather than a bare query, and the
+    query itself is a fair objective, so it is passed through unchanged.
+    """
+    target = endpoint or PARALLEL_ENDPOINT
+    state = {"session": ""}
+
+    def search(query: str, limit: int = 5) -> list[dict]:
+        if not state["session"]:
+            _, state["session"] = _rpc(target, {
+                "jsonrpc": "2.0", "id": 1, "method": "initialize",
+                "params": {"protocolVersion": PROTOCOL, "capabilities": {},
+                           "clientInfo": {"name": "kriko", "version": "0"}}})
+        reply, _ = _rpc(target, {
+            "jsonrpc": "2.0", "id": 2, "method": "tools/call",
+            "params": {"name": PARALLEL_TOOL, "arguments": {
+                "objective": query, "search_queries": [query]}}},
+            state["session"])
+        result = reply.get("result") or {}
+        if reply.get("error") or result.get("isError"):
+            state["session"] = ""
+            raise LocalSearchError(f"{target} refused the search")
+        text = "\n".join(
+            str(part.get("text", "")) for part in result.get("content") or []
+            if isinstance(part, dict) and part.get("type") == "text")
+        return parse_parallel(text, limit)
+
+    return search
+
+
+def search_with_fallback():
+    """Exa's searcher, and Parallel's behind it for the failures.
+
+    A refusal from the first door is a rotation, not an error: the plane's
+    scheduler treats `LocalSearchError` as a reason to rotate and this is
+    the rotation. Both doors are courtesies, so neither is allowed to be
+    the single one; the second is a name and a tool away from a third.
+    """
+    first = searcher()
+    second = parallel_searcher()
+
+    def search(query: str, limit: int = 5) -> list[dict]:
+        try:
+            found = first(query, limit)
+        except LocalSearchError:
+            return second(query, limit)
+        if found:
+            return found
+        return second(query, limit)
+
+    return search
