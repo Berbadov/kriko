@@ -90,9 +90,69 @@ describe("Overview", () => {
     it("leads with the work waiting, not with the store's size", async () => {
         stubFetch(ROUTES);
         render(Overview);
-        expect(await screen.findByText(/1 coverage gap/i)).toBeInTheDocument();
-        expect(screen.getByText(/1 pack update/i)).toBeInTheDocument();
+        expect(await screen.findByText(/1 product with nothing known/i)).toBeInTheDocument();
+        expect(screen.getByText(/1 catalog update/i)).toBeInTheDocument();
         expect(screen.getByText(/1 run in flight/i)).toBeInTheDocument();
+        expect(screen.getByText(/1 site label no adapter reads/i)).toBeInTheDocument();
+    });
+
+    // B179: "it currently spits info that connects to nothing". Each row names
+    // where the thing it counted is kept, and the address carries the filter.
+    it("links every attention row to the screen and filter that holds it", async () => {
+        stubFetch({
+            ...ROUTES,
+            "/api/packs": [
+                ...ROUTES["/api/packs"],
+                { ...ROUTES["/api/packs"][0], pack_id: "p2", name: "Off", enabled: 0 },
+            ],
+            "/api/packs/p2/gaps": [],
+        });
+        render(Overview);
+        const href = async (name: RegExp) =>
+            (await screen.findByRole("link", { name })).getAttribute("href");
+        expect(await href(/product with nothing known/)).toBe("#/knowledge?lens=gaps");
+        expect(await href(/catalog update/)).toBe("#/knowledge?catalogs=1");
+        expect(await href(/1 catalog switched off/)).toBe("#/knowledge?catalogs=1");
+        expect(await href(/site label no adapter reads/)).toBe("#/sites");
+        expect(await href(/run in flight/)).toBe("#/jobs");
+    });
+
+    it("links each count tile to the screen that holds what it counts", async () => {
+        stubFetch(ROUTES);
+        render(Overview);
+        const tile = async (label: string) =>
+            (await screen.findByText(label)).closest("a")?.getAttribute("href");
+        expect(await tile("Catalogs")).toBe("#/knowledge?catalogs=1");
+        expect(await tile("On")).toBe("#/knowledge?catalogs=1");
+        expect(await tile("Subjects")).toBe("#/knowledge");
+        expect(await tile("Claims")).toBe("#/knowledge");
+    });
+
+    it("links the site of an unread label to Sites", async () => {
+        stubFetch(ROUTES);
+        render(Overview);
+        const site = await screen.findByRole("link", { name: "a1" });
+        expect(site.getAttribute("href")).toBe("#/sites");
+    });
+
+    it("names a failing update check as something to look at, linked to the catalogs", async () => {
+        stubFetch({ ...ROUTES, "/api/packs/updates": { index_url: "u", error: "down", packs: [] } });
+        render(Overview);
+        const row = await screen.findByRole("link", { name: "Update check failed" });
+        expect(row.getAttribute("href")).toBe("#/knowledge?catalogs=1");
+    });
+
+    it("lists only what needs attention, and says so when nothing does", async () => {
+        stubFetch({
+            ...ROUTES,
+            "/api/packs/p1/gaps": [],
+            "/api/packs/updates": { index_url: "u", error: null, packs: [] },
+            "/api/jobs": { items: [] },
+            "/api/adapters/unmapped": { labels: [] },
+        });
+        render(Overview);
+        expect(await screen.findByText("Nothing needs attention.")).toBeInTheDocument();
+        expect(screen.queryByText(/nothing known/)).toBeNull();
     });
 
     it("still shows the store counts, in a strip rather than as the headline", async () => {

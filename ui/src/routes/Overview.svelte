@@ -8,9 +8,10 @@
     import { hashWith, toHash } from "../lib/router";
     import { SvelteSet } from "svelte/reactivity";
 
-    // Five counts and a table that duplicated History did not answer "what
-    // should I work on". Everything here is either work waiting or a link to
-    // where that work is done.
+    // Everything here is either work waiting or a link to where that work is
+    // done (B179): each number and each row opens the screen, and the filter,
+    // that holds what it counted. A figure that opens nothing is a report, and
+    // the reader asked for a screen that "connects to nothing" to stop.
     //
     // Pack updates is deliberately not in this Promise.all. It is the one
     // call here backed by a remote fetch rather than local data, and joining
@@ -24,7 +25,7 @@
             api.packs(),
             api.jobs(10).catch(() => ({ items: [] })),
             api.weakest(5).catch(() => ({ claims: [] })),
-            api.unmappedLabels(8).catch(() => ({ labels: [] })),
+            api.unmappedLabels(100).catch(() => ({ labels: [] })),
         ]);
         const gapLists = await Promise.all(
             packs.map((pack) => api.gaps(pack.pack_id).catch(() => [])),
@@ -33,6 +34,7 @@
             status,
             packs,
             gaps: gapLists.flat().length,
+            off: packs.filter((pack) => !pack.enabled).length,
             live: (jobs.items ?? []).filter(isLive).length,
             weakest: weakest.claims,
             unmapped: unmapped.labels,
@@ -56,6 +58,9 @@
         });
 
     const link = (name: string) => toHash(name);
+    // The installed catalogs are the folded line at the top of Browse.
+    const catalogs = hashWith({ catalogs: "1" }, "knowledge");
+    const gapsLens = hashWith({ lens: "gaps" }, "knowledge");
 
     const plural = (n: number, one: string, many: string) =>
         `${n} ${n === 1 ? one : many}`;
@@ -75,12 +80,16 @@
             forgotten.delete(key);
         }
     }
+
+    // The labels table shows the first few and says how many there are; the
+    // rest live on Sites, which the count links to.
+    const SHOWN = 8;
 </script>
 
 <h2><Icon name="overview" size={22} /> Overview</h2>
 
 <Async promise={data}>
-    <!-- Overview's shape is fixed — three work items, then four counts — so the
+    <!-- Overview's shape is fixed — a worklist, then four counts — so the
          skeleton is honest here in a way it would not be on a result page whose
          length depends on what came back. -->
     {#snippet skeleton()}
@@ -99,58 +108,83 @@
         {#if !d.packs.length}
             <EmptyState
                 title="No packs installed"
-                detail="The engine holds no knowledge yet, so nothing here has anything to
-                        report. Install a pack and this page fills in."
                 actionLabel="Open Catalogs"
                 actionHref={link("knowledge")}
             />
         {:else}
-            <ul class="worklist">
-                <li>
-                    <a href={link("coverage")}
-                        >{plural(d.gaps, "coverage gap", "coverage gaps")}</a
-                    >
-                    <span class="meta"
-                        >subjects a pack names but knows nothing about</span
-                    >
-                </li>
-                <li>
-                    {#if updatesFailed}
-                        <a href={link("knowledge")}>Could not check for pack updates</a>
-                        <span class="meta">installed packs keep working either way</span>
-                    {:else if updatable === null}
-                        <a href={link("knowledge")}>Checking for pack updates…</a>
-                        <span class="meta">knowledge moves weekly; the app rarely</span>
-                    {:else}
-                        <a href={link("knowledge")}
-                            >{plural(updatable, "pack update", "pack updates")} waiting</a
-                        >
-                        <span class="meta">knowledge moves weekly; the app rarely</span>
+            {@const off = d.off}
+            <h3><Icon name="warn" /> Needs attention</h3>
+            {@const any =
+                d.gaps > 0 || off > 0 || d.unmapped.length > 0 || d.live > 0 ||
+                updatesFailed || (updatable ?? 0) > 0}
+            {#if any}
+                <ul class="worklist">
+                    {#if d.gaps}
+                        <li>
+                            <a href={gapsLens}
+                                >{plural(d.gaps, "product with nothing known", "products with nothing known")}</a
+                            >
+                        </li>
                     {/if}
-                </li>
-                <li>
-                    <a href={link("jobs")}
-                        >{plural(d.live, "run in flight", "runs in flight")}</a
-                    >
-                    <span class="meta">research and pack builds outlive the page</span>
-                </li>
-            </ul>
+                    {#if updatesFailed}
+                        <li><a href={catalogs}>Update check failed</a></li>
+                    {:else if updatable}
+                        <li>
+                            <a href={catalogs}
+                                >{plural(updatable, "catalog update", "catalog updates")} waiting</a
+                            >
+                        </li>
+                    {/if}
+                    {#if off}
+                        <li>
+                            <a href={catalogs}
+                                >{plural(off, "catalog", "catalogs")} switched off</a
+                            >
+                        </li>
+                    {/if}
+                    {#if d.unmapped.length}
+                        <li>
+                            <a href={link("sites")}
+                                >{plural(d.unmapped.length, "site label", "site labels")} no adapter reads</a
+                            >
+                        </li>
+                    {/if}
+                    {#if d.live}
+                        <li>
+                            <a href={link("jobs")}
+                                >{plural(d.live, "run in flight", "runs in flight")}</a
+                            >
+                        </li>
+                    {/if}
+                </ul>
+            {:else}
+                <p class="meta">
+                    {updatable === null && !updatesFailed
+                        ? "Nothing so far. Checking for catalog updates."
+                        : "Nothing needs attention."}
+                </p>
+            {/if}
 
             <div class="stats">
-                {#each [["Packs", d.status.packs], ["Enabled", d.status.enabled_packs], ["Subjects", (d.status.counts_enabled ?? d.status.counts).subjects ?? 0], ["Claims", (d.status.counts_enabled ?? d.status.counts).claims ?? 0]] as [label, value] (label)}
-                    <div class="stat"><strong>{value}</strong><span>{label}</span></div>
-                {/each}
+                <a class="stat" href={catalogs}
+                    ><strong>{d.status.packs}</strong><span>Catalogs</span></a
+                >
+                <a class="stat" href={catalogs}
+                    ><strong>{d.status.enabled_packs}</strong><span>On</span></a
+                >
+                <a class="stat" href={link("knowledge")}
+                    ><strong>{(d.status.counts_enabled ?? d.status.counts).subjects ?? 0}</strong><span
+                        >Subjects</span
+                    ></a
+                >
+                <a class="stat" href={link("knowledge")}
+                    ><strong>{(d.status.counts_enabled ?? d.status.counts).claims ?? 0}</strong><span
+                        >Claims</span
+                    ></a
+                >
             </div>
 
             <h3><Icon name="tag" /> Labels no adapter reads</h3>
-            <p class="meta">
-                Fields the listing pages carried that no installed adapter maps.
-                Not errors — this is the only warning a site gives when it
-                renames a field, because nothing fails when it does: the lookup
-                still succeeds, resolves less precisely and returns fewer
-                claims, which reads as a thin pack rather than a broken
-                adapter.
-            </p>
             {#if d.unmapped.length}
                 <table>
                     <thead>
@@ -163,7 +197,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {#each d.unmapped as row (row.adapter_id + "/" + row.label)}
+                        {#each d.unmapped.slice(0, SHOWN) as row (row.adapter_id + "/" + row.label)}
                             <tr class:gone={forgotten.has(row.adapter_id + "/" + row.label)}>
                                 <td>
                                     {#if row.sample_url}
@@ -174,8 +208,8 @@
                                         {row.label}
                                     {/if}
                                 </td>
-                                <td class="meta">{row.adapter_id}</td>
-                                <td class="num">{row.seen}</td>
+                                <td><a class="meta" href={link("sites")}>{row.adapter_id}</a></td>
+                                <td class="num"><a href={link("sites")}>{row.seen}</a></td>
                                 <td class="meta">{row.last_at.slice(0, 10)}</td>
                                 <td>
                                     <!-- A list that cannot be pruned stops
@@ -196,18 +230,16 @@
                         {/each}
                     </tbody>
                 </table>
+                {#if d.unmapped.length > SHOWN}
+                    <p class="meta">
+                        <a href={link("sites")}>All {d.unmapped.length} on Sites</a>
+                    </p>
+                {/if}
             {:else}
-                <p class="meta">
-                    Nothing unread — every label the pages carried has a rule
-                    behind it. This fills in as listings are checked.
-                </p>
+                <p class="meta">Nothing unread.</p>
             {/if}
 
             <h3><Icon name="chart" /> Thinnest evidence</h3>
-            <p class="meta">
-                The claims we ship with the least behind them. Fixing these is worth more
-                than adding new ones.
-            </p>
             {#if d.weakest.length}
                 <ul class="worklist">
                     {#each d.weakest as claim (claim.claim_id)}
@@ -223,10 +255,20 @@
                     {/each}
                 </ul>
             {:else}
-                <p class="meta">
-                    Nothing reported — every shipped claim has sources behind it.
-                </p>
+                <p class="meta">Nothing reported.</p>
             {/if}
         {/if}
     {/snippet}
 </Async>
+
+<style>
+    /* A count that opens something keeps the tile's look and gains the
+       affordances of a link: no underline, a border that answers the pointer. */
+    a.stat {
+        color: inherit;
+        text-decoration: none;
+    }
+    a.stat:hover {
+        border-color: var(--accent);
+    }
+</style>

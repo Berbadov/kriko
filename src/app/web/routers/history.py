@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.web import state
-from app.web.deps import get_app_state
+from app.web.deps import get_app_state, get_store
 
 router = APIRouter(prefix="/api", tags=["history"])
 
@@ -27,8 +27,41 @@ def label_for(identity: dict, fallback: str = "lookup") -> str:
 
 
 @router.get("/history")
-def history(limit: int = Query(20, ge=1, le=200), app_state=Depends(get_app_state)):
-    return {"items": state.recent(app_state, limit)}
+def history(
+    limit: int = Query(20, ge=1, le=200),
+    app_state=Depends(get_app_state),
+    store=Depends(get_store),
+):
+    """Recent checks, each with the category its pack names (B182).
+
+    The category is the name of the pack that answered, read from the engine
+    store at request time so a renamed or uninstalled pack is reflected
+    rather than frozen into a stored row. A check no pack answered has an
+    empty category, and the screen names that group itself.
+    """
+    items = state.recent(app_state, limit)
+    names = {
+        row["pack_id"]: row["name"]
+        for row in store.execute("SELECT pack_id, name FROM packs")
+    }
+    for item in items:
+        ids = item.pop("pack_ids")
+        subject_ids = item.pop("subject_ids")
+        if not ids and subject_ids:
+            # A check that matched a product but found no risk names no pack
+            # in its claims; the product it matched still belongs to one.
+            marks = ",".join("?" * len(subject_ids))
+            ids = [
+                row["pack_id"]
+                for row in store.execute(
+                    "SELECT DISTINCT pack_id FROM subjects"
+                    f" WHERE subject_id IN ({marks}) ORDER BY pack_id",
+                    subject_ids,
+                )
+            ]
+        item["packs"] = [{"pack_id": i, "name": names[i]} for i in ids if i in names]
+        item["category"] = item["packs"][0]["name"] if item["packs"] else ""
+    return {"items": items}
 
 
 @router.get("/lookup/{lookup_id}")
