@@ -79,16 +79,32 @@ class TestOpenSERPAdapter:
 
 class TestLocalResearcherWiring:
     def test_factory_produces_a_local_plane(self):
-        plane = local_researcher()
+        plane = local_researcher(base_url="http://127.0.0.1:11434",
+                                 serving_name="qwen3-4b")
         assert isinstance(plane, LocalPlane)
         assert plane.name == "local"
         assert plane.cost_basis == "self_hosted"
-        assert plane.model == "local"
+        assert plane.model == "qwen3-4b"
         assert plane.search_provider.startswith("openserp:")
+        # The wire is the protocol's own: `/v1` and the server's model name.
+        assert plane._complete.base_url == "http://127.0.0.1:11434"
+        assert plane._complete.serving_name == "qwen3-4b"
+
+    def test_factory_refuses_to_invent_a_model_name(self):
+        with pytest.raises(ValueError):
+            local_researcher(base_url="http://127.0.0.1:11434")
+        with pytest.raises(ValueError):
+            local_researcher(serving_name="m")
+
+    def test_factory_searches_through_exa_when_told_no_serp_answers(self):
+        plane = local_researcher(base_url="http://127.0.0.1:1",
+                                 serving_name="m", search_kind="exa")
+        assert plane.search_provider == "exa-mcp"
 
     def test_factory_accepts_a_scheduler_and_names(self):
         scheduler = PolitenessScheduler({"duckduckgo": 3.5})
         plane = local_researcher(scheduler=scheduler,
+                                base_url="http://127.0.0.1:11434",
                                 serving_name="qwen3-4b",
                                 engine="duckduckgo")
         assert plane._scheduler is scheduler
@@ -191,40 +207,16 @@ class TestThePlanesEndpoint:
                    if p["id"] == "local")
         assert row["cost_basis"] == "self_hosted"
         assert row["needs_keys"] is False
-        assert "127.0.0.1:7000" in row["what"] and "127.0.0.1:8080" in row["what"]
+        assert "Ollama" in row["what"] and "Exa" in row["what"]
 
-    def test_readiness_names_the_half_that_is_down(self, tmp_path, monkeypatch):
-        pytest.importorskip("fastapi")
-        from app.web.routers.research import local_endpoints
-
-        import urllib.request
-
-        seen = []
-
-        def fake(url, *args, **kwargs):
-            seen.append(str(url))
-
-            class Reply:
-                def __enter__(self):
-                    return self
-
-                def __exit__(self, *exc):
-                    return False
-
-            return Reply()
-
-        monkeypatch.setattr(urllib.request, "urlopen", fake)
-        row = local_endpoints()
-        assert row == {"ready": True, "reason": "",
-                       "inference_url": "http://127.0.0.1:8080",
-                       "serp_url": "http://127.0.0.1:7000"}
-        assert sorted(seen) == ["http://127.0.0.1:7000", "http://127.0.0.1:8080"]
-
-        def down(url, *args, **kwargs):
-            raise OSError("refused")
-
-        monkeypatch.setattr(urllib.request, "urlopen", down)
-        row = local_endpoints()
+    def test_readiness_says_what_is_missing_and_what_to_do(self, tmp_path):
+        # Nothing answers under test (conftest), which is the state of a
+        # machine with no server started: not ready, and the card says so.
+        row = next(p for p in
+                   self._client(tmp_path).get("/api/research-planes").json()["planes"]
+                   if p["id"] == "local")
         assert row["ready"] is False
-        assert row["reason"] == ("not running: the inference server "
-                                "and the SERP")
+        assert "No local model server is running" in row["reason"]
+        assert "Ollama" in row["reason"]
+        assert row["serp_url"] == "http://127.0.0.1:7000"
+        assert row["search_kind"] == "exa"

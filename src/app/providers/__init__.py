@@ -67,7 +67,7 @@ def completer_for(model: str):
 __all__ = [
     "exa", "fetch", "harness", "llm",
     "agent_ready", "agents_available", "api_researcher", "bills_per_token",
-    "harness_researcher", "local_researcher", "resolve_agent",
+    "harness_researcher", "local_asker", "local_researcher", "resolve_agent",
     "MissingKey", "NoHarness",
 ]
 
@@ -419,43 +419,83 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
     )
 
 
+def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
+                 search_kind: str, timeout: float, schema):
+    """The sockets both local doors share: a completion and a search."""
+    from app.providers import exa_mcp, local_inference, openserp
+
+    if not serving_name.strip():
+        raise ValueError(
+            "the local plane needs the name of a model the server serves; "
+            "`app.localplane.resolve` finds it")
+    if not base_url.strip():
+        raise ValueError("the local plane needs the address of a model server")
+    complete = local_inference.OpenAICompatSocket(
+        base_url, serving_name, timeout=timeout or local_inference.DEFAULT_TIMEOUT,
+        response_json_schema=schema)
+    if search_kind == "exa":
+        return complete, exa_mcp.searcher(), "exa-mcp"
+    return complete, openserp.searcher(search_base_url), "openserp"
+
+
 def local_researcher(*, base_url: str = "", serving_name: str = "",
                      search_base_url: str = "", engine: str = "",
-                     scheduler=None, spend=None, model: str = ""):
+                     scheduler=None, spend=None, model: str = "",
+                     search_kind: str = "openserp", timeout: float = 0.0):
     """The free plane that gathers: this machine's own sockets do the work.
 
-    A local inference server completes, a self-hosted SERP searches, the
-    stock reader reads. Nothing here costs a key or a subscription, so
-    unlike `api_researcher` there is no `MissingKey` to raise and no budget
-    to enforce — but there *is* politeness, and the scheduler is passed in
-    by the caller rather than built here, for the same layering reason the
-    paid plane takes its sockets: choosing pace and rotation is a decision
-    about this installation's sources, and `app/web/tasks.py` is where a
-    reader's choices become arguments.
+    A local inference server completes, a search service searches (OpenSERP
+    when it answers, else Exa's free hosted search, decision D3), the stock
+    reader reads. Nothing here costs a key or a subscription, so unlike
+    `api_researcher` there is no `MissingKey` to raise and no budget to
+    enforce — but there *is* politeness, and the scheduler is passed in by the
+    caller rather than built here, for the same layering reason the paid plane
+    takes its sockets: choosing pace and rotation is a decision about this
+    installation's sources, and `app/web/tasks.py` is where a reader's choices
+    become arguments.
 
-    The completion adapter is the OpenAI-shaped one with a local base
-    URL, `llm.completer` with a placeholder key — a local server ignores
-    `Authorization`, and the adapter's `require("openai")` must not fire
-    for a plane that has no vendor. The serving name rides params exactly
-    the way the paid plane's model does, and lands on the instance for the
-    provenance row the same way.
+    The completion socket is `local_inference.OpenAICompatSocket`: the right
+    `/v1` path, the server's own model name (`app.localplane.resolve` reads it
+    off the server; there is no default here, because a name the server does
+    not list is a 404), a timeout for CPU inference, and a failure that says
+    what failed. The name rides the instance for the provenance row.
     """
     from kriko.research import LocalPlane
-    from app.providers import openserp
+    from app.providers import local_inference, openserp
 
-    name = serving_name or (llm.model_name(model) if model else "") or "local"
-    completer = llm.completer(
-        api_key="not-needed-for-a-local-server",
-        base_url=(base_url or llm._env("LLM_BASE_URL", "http://127.0.0.1:8080")),
-        model=name,
-    )
+    name = serving_name or model
+    complete, search, provider = _local_parts(
+        base_url=base_url, serving_name=name, search_base_url=search_base_url,
+        search_kind=search_kind, timeout=timeout,
+        schema=local_inference.FINDINGS_SCHEMA)
     researcher = LocalPlane(
-        openserp.searcher(search_base_url, engine),
-        fetch.reader(),
-        completer,
-        scheduler=scheduler,
-        spend=spend,
+        search, fetch.reader(), complete, scheduler=scheduler, spend=spend,
     )
     researcher.model = name
-    researcher.search_provider = f"openserp:{engine or openserp.DEFAULT_ENGINE}"
+    researcher.search_provider = (
+        f"openserp:{engine or openserp.DEFAULT_ENGINE}" if provider == "openserp"
+        else provider)
     return researcher
+
+
+def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
+                search_kind: str = "openserp", timeout: float = 0.0):
+    """The local model as something that can `ask` (B171): the quick look, the
+    pack author and the pack amend take it when no coding agent is there.
+
+    It searches and reads for itself (`local_agent.LocalAsker`) and keeps the
+    pages it read, so a risk whose quote is on no fetched page is dropped.
+    """
+    from app.providers import local_agent, local_inference
+
+    complete, search, provider = _local_parts(
+        base_url=base_url, serving_name=serving_name,
+        search_base_url=search_base_url, search_kind=search_kind,
+        timeout=timeout, schema="")
+    plan = local_inference.OpenAICompatSocket(
+        base_url, serving_name,
+        timeout=timeout or local_inference.DEFAULT_TIMEOUT,
+        response_json_schema=local_agent.QUERY_SCHEMA)
+    return local_agent.LocalAsker(
+        plan, complete, search, fetch.reader(), model=serving_name,
+        search_provider=provider, url=base_url)
