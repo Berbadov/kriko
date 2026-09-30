@@ -28,6 +28,19 @@ import urllib.request
 #: The reader can change it (Settings, "Local machine"); this is the default.
 DEFAULT_TIMEOUT = 300.0
 
+#: The reply budget, in tokens. A findings reply is a short JSON array; a
+#: model that runs past this is composing prose, and an unbounded reply is
+#: how a small model turns one page into twenty minutes on a CPU. `None`
+#: means the server's own default (nothing sent on the wire).
+DEFAULT_MAX_TOKENS = 1024
+
+#: A second try after these, because a local server's failure modes are
+#: transient in exactly this way: an idle process paged out to disk answers
+#: late and dies mid-reply, then answers fine (Ollama loading a model on its
+#: first call; a proxy closing an idle keep-alive). Only these retry, once;
+#: a 400 or 404 is an answer, not a hiccup.
+_RETRY_STATUS = frozenset((408, 429, 500, 502, 503, 504))
+
 #: The reply a findings extraction must produce, as a JSON schema. Sent as the
 #: `json_schema` response format so a server that supports grammar constraint
 #: cannot answer in prose. The keys are the plane's own reply shape
@@ -69,12 +82,14 @@ class OpenAICompatSocket:
                  timeout: float = DEFAULT_TIMEOUT,
                  temperature: float = 0.0,
                  context_chars: int = 12000,
+                 max_tokens: int | None = DEFAULT_MAX_TOKENS,
                  response_json_schema: dict | str = ""):
         self.base_url = base_url.rstrip("/").removesuffix("/v1")
         self.serving_name = serving_name
         self.timeout = timeout
         self.temperature = temperature
         self.context_chars = context_chars
+        self.max_tokens = max_tokens
         if isinstance(response_json_schema, str):
             response_json_schema = (json.loads(response_json_schema)
                                     if response_json_schema.strip() else {})
@@ -86,6 +101,10 @@ class OpenAICompatSocket:
         self.tokens_out: int | None = None
         self.model = serving_name
         self.calls = 0
+        #: The last reply's `finish_reason` ("stop", "length", ...), for the
+        #: plane to say *why* a reply was short instead of guessing.
+        self.last_finish_reason = ""
+        self.truncated = 0
 
     def __call__(self, prompt: str) -> str:
         return self.complete(prompt)
@@ -97,6 +116,8 @@ class OpenAICompatSocket:
             "temperature": self.temperature,
             "stream": False,
         }
+        if isinstance(self.max_tokens, int) and self.max_tokens > 0:
+            body["max_tokens"] = self.max_tokens
         if self._schema:
             body["response_format"] = {
                 "type": "json_schema",
@@ -105,7 +126,18 @@ class OpenAICompatSocket:
         try:
             payload = self._post(body)
         except urllib.error.HTTPError as error:
-            if error.code == 400 and "response_format" in body:
+            if error.code in _RETRY_STATUS:
+                # Transient: the model was loading, the proxy dropped an
+                # idle connection. One plain retry, schema dropped too,
+                # since a server caught mid-load can refuse it as well.
+                body.pop("response_format", None)
+                try:
+                    payload = self._post(body)
+                except urllib.error.HTTPError as again:
+                    raise self._refused(again) from again
+                except Exception as other:  # noqa: BLE001
+                    raise self._failed(other) from other
+            elif error.code == 400 and "response_format" in body:
                 # The server cannot constrain its output; ask plainly.
                 body.pop("response_format")
                 try:
@@ -121,10 +153,19 @@ class OpenAICompatSocket:
         self.calls += 1
         self._count(payload)
         choices = payload.get("choices") if isinstance(payload, dict) else None
-        message = (choices[0].get("message") if choices
-                   and isinstance(choices[0], dict) else None) or {}
-        text = str(message.get("content") or "") if isinstance(message, dict) else ""
+        first = choices[0] if choices and isinstance(choices[0], dict) else {}
+        message = first.get("message") if isinstance(first, dict) else None
+        finish = str(first.get("finish_reason") or "") if isinstance(first, dict) else ""
+        self.last_finish_reason = finish
+        if finish == "length":
+            self.truncated += 1
+        text = str((message or {}).get("content") or "") if isinstance(message, dict) else ""
         if not text.strip():
+            if finish == "length":
+                raise LocalInferenceError(
+                    f"{self.base_url} cut {self.serving_name!r} off at "
+                    f"{self.max_tokens} tokens before it wrote anything. The "
+                    "page may be too long for this model's context.")
             raise LocalInferenceError(
                 f"{self.base_url} answered with an empty reply from "
                 f"{self.serving_name!r}: the model produced no text. Try a "

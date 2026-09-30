@@ -43,6 +43,10 @@ from kriko.research.politeness import (
 #: hangs — the exact thing fail-fast exists to prevent.
 _MAX_GATE_WAIT = 60.0
 
+#: Briefs kept before the cache empties. A run is one task; this only needs
+#: to survive a multi-task session (the quick look's, the bench's).
+_BRIEF_CACHE_MAX = 8
+
 #: Reply shape the extractor must produce. Mirrors the paid plane's keys
 #: so a finding's provenance never depends on which plane wrote it.
 _REPLY_SHAPE = (
@@ -51,6 +55,59 @@ _REPLY_SHAPE = (
 )
 
 _JSON_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$")
+
+_ARRAY_OPEN = re.compile(r"\[")
+
+
+def _salvage_array(reply: str) -> list | None:
+    """The array inside a reply a small model framed with prose.
+
+    Two ways to lose a whole document's worth of tokens, both common with
+    servers that cannot take a grammar constraint (the schema retry already
+    dropped it): a preamble before the JSON ("Here are the findings: ...")
+    and a reply cut off mid-array (a length or stop token). A complete array
+    is parsed wherever it sits; a cut-off one is closed and parsed, because
+    the grounding gate and the code gate check every element anyway - a bad
+    tail element is dropped by the same rules that check a good one, while
+    dropping the whole reply costs the tokens twice: once spent, once
+    wasted. `None` when there is no array at all, which stays a miss.
+    """
+    first = _ARRAY_OPEN.search(reply)
+    if first is None:
+        return None
+    rest = reply[first.start():]
+    depth = 0
+    in_string = False
+    escaped = False
+    for index, char in enumerate(rest):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char == "[":
+            depth += 1
+        elif char == "]":
+            depth -= 1
+            if depth == 0:
+                try:
+                    parsed = json.loads(rest[: index + 1])
+                except ValueError:
+                    return None
+                return parsed if isinstance(parsed, list) else None
+    tail = rest.rstrip().rstrip(",")
+    if not in_string and depth >= 1:
+        try:
+            parsed = json.loads(tail + "]")
+        except ValueError:
+            return None
+        return parsed if isinstance(parsed, list) else None
+    return None
 
 
 class LocalPlane:
@@ -90,6 +147,12 @@ class LocalPlane:
         #: nothing, beside the plane's general empty-run sentence.
         self.note = ""
         self._failed_in_a_row = 0
+        #: The rendered brief per task, kept by the task's `id` (a task holds
+        #: dicts, so it is not hashable itself) so `extract` - once per
+        #: document with a per-task brief - does not re-render an identical
+        #: string for every document after the first. Pure CPU the server
+        #: never sees.
+        self._brief_cache: dict[int, str] = {}
 
     def _say(self, line: str) -> None:
         if self.on_action is not None:
@@ -104,8 +167,16 @@ class LocalPlane:
 
     def brief(self, task: ResearchTask) -> str:
         """Same brief as the other planes; identical instructions."""
+        key = id(task)
+        cached = self._brief_cache.get(key)
+        if cached is not None:
+            return cached
         from kriko.research.agent import AgentResearcher
-        return AgentResearcher().brief(task)
+        rendered = AgentResearcher().brief(task)
+        if len(self._brief_cache) >= _BRIEF_CACHE_MAX:
+            self._brief_cache.clear()
+        self._brief_cache[key] = rendered
+        return rendered
 
     def gather(self, task: ResearchTask) -> list[Document]:
         """Fetch candidate sources through the politeness gate.
@@ -237,7 +308,15 @@ class LocalPlane:
             return {}
         self._failed_in_a_row = 0
         self.spent_calls += 1
-        return self._parse(task, batch, reply)
+        if str(getattr(self._complete, "last_finish_reason", "")) == "length":
+            self.note = ("the completion was cut off at the token budget; "
+                        "what it finished is kept, the rest is a miss")
+            self._say(self.note)
+        found = self._parse(task, batch, reply)
+        if not any(found.values()) and reply.strip():
+            self.note = ("the reply held no grounded finding "
+                         "(its text may not have been JSON)")
+        return found
 
     def _parse(self, task: ResearchTask, batch: list[Document],
                reply: str) -> dict:
@@ -245,7 +324,7 @@ class LocalPlane:
         try:
             payload = json.loads(self._unfence(reply))
         except (json.JSONDecodeError, TypeError):
-            return {}
+            payload = _salvage_array(self._unfence(reply))
         if not isinstance(payload, list):
             return {}
         by_url: dict[str, list[Finding]] = {}
