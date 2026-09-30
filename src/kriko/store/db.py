@@ -171,8 +171,19 @@ def _prepare(conn: sqlite3.Connection) -> None:
     stamp = schema_stamp(schema)
     if conn.execute("PRAGMA user_version").fetchone()[0] != stamp:
         conn.executescript(schema)
+        _add_missing_columns(conn)
         conn.execute(f"PRAGMA user_version = {stamp}")
         conn.commit()
+
+
+def _add_missing_columns(conn: sqlite3.Connection) -> None:
+    """Columns added to a table after stores already had it (`IF NOT EXISTS`
+    leaves an old table as it was). Each is nullable or defaulted, so adding
+    one touches no row."""
+    have = {row[1] for row in conn.execute("PRAGMA table_info(attributes)")}
+    if "source_url" not in have:
+        conn.execute(
+            "ALTER TABLE attributes ADD COLUMN source_url TEXT NOT NULL DEFAULT ''")
 
 
 def _set_wal(conn: sqlite3.Connection) -> None:
