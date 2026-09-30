@@ -43,6 +43,9 @@ export const NAV: NavGroupSpec[] = [
             // the result. History and Compare are what is left of the group.
             // Run is where a run over a whole category starts and is watched
             // (B175, B176); it was the top of Activity's Runs lens.
+            // Home is where the app opens (B174): graphs of checks, knowledge
+            // gained and research spend. The detail is under Activity.
+            { name: "home", label: "Home", also: ["welcome", "dashboard", "graphs"] },
             { name: "run", label: "Run", also: ["start", "author", "new pack", "agent run"] },
             { name: "history", label: "History" },
             { name: "compare", label: "Compare" },
@@ -150,11 +153,11 @@ export const ALIASES: Record<string, { name: string; lens?: string }> = {
     // Agents has one lens now — Connect — so neither name needs one.
     console: { name: "agents" },
     connect: { name: "agents" },
-    // New check is gone (B163) and the app opens on Activity until Home
-    // replaces it (B174); an old `#/check` bookmark lands on the same place.
+    // New check is gone (B163) and the app opens on Home (B174); an old
+    // `#/check` bookmark lands on the same place.
     // `#/questions` is not here because it can carry an id: router.ts's
     // `parseHash` sends it to the result or to History.
-    check: { name: "activity" },
+    check: { name: "home" },
 };
 
 /** The route a name actually renders, following one alias hop. */
