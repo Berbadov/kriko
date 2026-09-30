@@ -5,24 +5,6 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" type="image/svg+xml" href="/mark.svg" />
         <title>Kriko</title>
-        <script>
-            // Paints the chosen theme before the bundle loads, so a
-            // light-theme reader does not get panel.css's dark default as
-            // the first frame (shell-5) — theme.ts's applyTheme() mirrors
-            // the setting here the moment it is known, so this reads
-            // whatever the last visit left, not a guess.
-            (function () {
-                try {
-                    var stored = localStorage.getItem("kriko-theme");
-                    if (stored === "panel" || stored === "slate" || stored === "lemonade") {
-                        document.documentElement.dataset.theme = stored;
-                    }
-                } catch (e) {
-                    // No stored preference reachable: fall through to
-                    // panel.css's default, same as before this fix.
-                }
-            })();
-        </script>
     </head>
     <body>
         <div id="app"></div>

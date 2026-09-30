@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import Async from "../lib/Async.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
@@ -33,7 +34,7 @@
     const accepted = (item: Submission) => item.verdicts.accepted ?? [];
 </script>
 
-<h2>What researchers sent</h2>
+<h2><Icon name="submissions" size={22} /> What researchers sent</h2>
 <p class="lede">
     Every batch that reached the gate, and the reason each finding was turned away.
     Nothing here is waiting for you — the decisions were made when the batch
@@ -68,7 +69,7 @@
 
             {#if data.reasons.length}
                 <section class="reasons">
-                    <h3>Why findings are refused</h3>
+                    <h3><Icon name="warn" /> Why findings are refused</h3>
                     <p class="meta">
                         Grouped by rule rather than by batch: one rule failing a hundred
                         times is a skill to rewrite, and a hundred one-off reasons is not.
@@ -88,7 +89,7 @@
 
             {#if (data.shapes ?? []).length}
                 <section class="reasons">
-                    <h3>What was actually searched for</h3>
+                    <h3><Icon name="search" /> What was actually searched for</h3>
                     <p class="meta">
                         The pack ships seeds, not a script — an agent adapts them to the
                         subject and the market. These are the searches that came back, and
@@ -112,7 +113,7 @@
             {/if}
 
             <section class="batches">
-                <h3>Batches</h3>
+                <h3><Icon name="submissions" /> Batches</h3>
                 {#each data.items as item (item.submission_id)}
                     <article class="card">
                         <h4>

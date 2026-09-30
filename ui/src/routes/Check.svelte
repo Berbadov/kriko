@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import Describe from "../lib/Describe.svelte";
     import Failure from "../lib/Failure.svelte";
     import Report from "../lib/Report.svelte";
@@ -97,7 +98,7 @@
 </script>
 
 <section class="hero">
-    <h2>Check one before you buy it</h2>
+    <h2><Icon name="check" size={22} /> Check one before you buy it</h2>
     <p class="hero-sub">
         Paste a listing and Kriko reports what is known to go wrong with that exact
         one — from the packs installed on this machine, with no account, and the
@@ -164,7 +165,7 @@
     </div>
 
     <details class="alt-path" open={unreadable || notRead}>
-        <summary><h3>No link? Describe it instead</h3></summary>
+        <summary><h3><Icon name="edit" /> No link? Describe it instead</h3></summary>
         <Describe {onResult} />
     </details>
 

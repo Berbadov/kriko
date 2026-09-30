@@ -1,4 +1,5 @@
 <script lang="ts">
+    import Icon from "../lib/Icon.svelte";
     import { api } from "../lib/api";
     import Failure from "../lib/Failure.svelte";
     import type { Health } from "../lib/types";
@@ -17,7 +18,7 @@
     const ready = load();
 </script>
 
-<h2>This install</h2>
+<h2><Icon name="about" size={22} /> This install</h2>
 <p class="meta">
     Three versions, on three clocks. The app updates itself through its own
     installer; a pack updates through the engine whenever its knowledge changes;
@@ -40,7 +41,7 @@
             <dd class="path">{health.app_state}</dd>
         </dl>
 
-        <h3>Updating</h3>
+        <h3><Icon name="download" /> Updating</h3>
         <p class="meta">
             The app updates itself when a release is signed — it checks on its
             own at startup and asks before installing anything. A release that
@@ -56,7 +57,7 @@
             changes far more often than this binary does.
         </p>
 
-        <h3>Diagnostics</h3>
+        <h3><Icon name="console" /> Diagnostics</h3>
         <p class="meta">
             What to send us when something is wrong. Every line here is
             something this window cannot see for itself — it is reported by
@@ -112,7 +113,7 @@
             </dd>
         </dl>
 
-        <h3>Installed packs</h3>
+        <h3><Icon name="packs" /> Installed packs</h3>
         {#if health.packs.length}
             <table>
                 <thead><tr><th>Pack</th><th>Version</th></tr></thead>

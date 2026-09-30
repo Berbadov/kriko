@@ -110,10 +110,18 @@ FIRST_PAINT_BUDGET = 392_000
 #: red while the number it was watching was fine.
 #:
 #: It is now derived from the per-kind budgets plus the fixed weight of what
-#: is *not* built: the seven committed `fonts/*.woff2` (~160 KB) and
-#: `mark.svg`. That keeps it doing the one job its message claims — catching
-#: an asset that is "neither JS nor CSS — a font, an image, a source map" —
-#: instead of double-counting growth the per-kind budgets already police.
+#: is *not* built: the committed `fonts/*.woff2` and the two marks. That keeps
+#: it doing the one job its message claims — catching an asset that is
+#: "neither JS nor CSS — a font, an image, a source map" — instead of
+#: double-counting growth the per-kind budgets already police.
+#:
+#: Re-measured on 2026-09-29 (B159/B161), and left at 165,000. The seven
+#: files of five families (Plex Sans, Plex Mono 400, Sora, Silkscreen,
+#: JetBrains Mono, 161,043 bytes) became ten files of one (Plex Mono at 400,
+#: 500 and 600 upright and 400 and 600 italic, latin and latin-ext, 150,112
+#: bytes), which the app needs so that bold and italic are real faces and not
+#: the browser's imitation. With `mark.svg` and the new `mark-large.svg` the
+#: unbuilt weight is 157,375 bytes, so the figure did not have to move.
 UNBUILT_ASSETS = 165_000
 TOTAL_BUDGET = sum(BUDGET.values()) + UNBUILT_ASSETS
 
