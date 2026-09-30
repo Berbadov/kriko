@@ -229,6 +229,12 @@ class ResearchTask:
     #: writes a phrase; the gate wants two sentences, and the gap between them
     #: was the entire yield of some runs. 0 means the pack declared none.
     min_rationale_chars: int = 0
+    #: The pack's own method for resolving a subject's identity before a search
+    #: (`research/skill.md`). It used to travel inside the generated skill, which
+    #: made the skill's length depend on what was installed (B178). The brief is
+    #: per subject and per pack, so it is the one document that can carry it
+    #: without growing.
+    identification: str = ""
 
     @property
     def rationale_rule(self) -> str:
