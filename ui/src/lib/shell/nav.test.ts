@@ -92,7 +92,8 @@ describe("the route table", () => {
     });
 
     it("lands #/packs and #/marks on Browse, since neither is a screen any more (B166, B167)", () => {
-        expect(resolve("packs")).toEqual({ name: "knowledge", lens: "all" });
+        // `#/packs` also opens the catalogs line, folded by default since B180.
+        expect(resolve("packs")).toEqual({ name: "knowledge", lens: "all", catalogs: true });
         expect(resolve("marks")).toEqual({ name: "knowledge", lens: "all" });
     });
 

@@ -190,6 +190,7 @@
                         <Knowledge
                             lens={view.lens ?? $route.query.lens ?? "all"}
                             subjectId={$route.params[0] ?? ""}
+                            catalogs={view.catalogs ?? false}
                         />
                     {:else if $route.name === "run"}
                         <Run />

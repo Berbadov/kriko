@@ -880,7 +880,9 @@ def recent(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     `created_at` has second resolution, so two lookups a moment apart tie on
     it; `rowid DESC` breaks the tie by insertion order rather than leaving it
     to SQLite. `claim_count` is computed here so a list view does not have to
-    parse every stored response just to show a number.
+    parse every stored response just to show a number. `pack_ids` are the
+    packs each stored answer records it came from (B182): the router turns
+    them into the category, because pack names live in the other database.
     """
     rows = conn.execute(
         "SELECT lookup_id, created_at, source, label, response_json FROM lookups"
@@ -897,6 +899,19 @@ def recent(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
                 "source": row["source"],
                 "label": row["label"],
                 "claim_count": len(response.get("claims") or []),
+                # The answer's own byline first, then the packs its claims were
+                # written in: the two doors store one or the other.
+                "pack_ids": list(
+                    dict.fromkeys(
+                        p["pack_id"]
+                        for p in (response.get("packs") or [])
+                        + (response.get("claims") or [])
+                        if isinstance(p, dict) and p.get("pack_id")
+                    )
+                ),
+                "subject_ids": [
+                    s for s in response.get("subjects") or [] if isinstance(s, str)
+                ],
             }
         )
     return out
