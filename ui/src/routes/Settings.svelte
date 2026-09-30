@@ -2,6 +2,7 @@
     import Icon from "../lib/Icon.svelte";
     import { count } from "../lib/plural";
     import Async from "../lib/Async.svelte";
+    import Failure from "../lib/Failure.svelte";
     import Keys from "../lib/Keys.svelte";
     import PlanePrefs from "../lib/Planes.prefs.svelte";
     import LocalMachine from "../lib/LocalMachine.svelte";
@@ -36,6 +37,28 @@
     });
 
     type Check = ProviderTest & { busy: boolean };
+    /* B188: one confirmed reset empties the store and stops the bundled
+     * seeder, so nothing returns at the next start. */
+    let confirmReset = $state(false);
+    let resetting = $state(false);
+    let resetDone = $state<{ removed: string[]; drafts: string[] } | null>(null);
+    let resetError = $state<unknown>(null);
+    async function doReset() {
+        if (!confirmReset) {
+            confirmReset = true;
+            return;
+        }
+        resetting = true;
+        resetError = null;
+        try {
+            resetDone = await api.resetPacks();
+            confirmReset = false;
+        } catch (cause) {
+            resetError = cause;
+        } finally {
+            resetting = false;
+        }
+    }
 
     let keysPromise = $state(api.keys());
     let checks = $state<Record<string, Check>>({});
@@ -82,9 +105,8 @@
 
 <h2><Icon name="settings" size={22} /> Settings</h2>
 <p class="lede">
-    Preferences are remembered in this install's own database, never in a
-    catalog, so uninstalling knowledge cannot change how the app behaves.
-    Research keys are the exception and are kept in a file of their own, below.
+    Choices live in this install's own database; keys live in a file of their own.
+    A key's value is never shown.
 </p>
 
 <!-- Before "what is remembered", because it is the one thing on this page
@@ -111,11 +133,7 @@
 
 <section>
     <h3><Icon name="key" /> Check a provider key</h3>
-    <p class="meta">
-        Each press sends one small search or one short reply request from the
-        server, then reports what the provider answered. Nothing on this screen
-        ever shows a key.
-    </p>
+    <p class="meta">One small request per press; the answer is reported, the key never shown.</p>
     <Async promise={keysPromise} loading="Reading...">
         {#snippet children(data)}
             <ul class="checks">
@@ -167,26 +185,47 @@
 <LocalMachine />
 
 <section>
+    <h3><Icon name="layers" /> Start over</h3>
+    <p class="meta">Removes every catalog and draft, for a clean rebuild. History and settings are kept.</p>
+    {#if resetDone}
+        <p class="state fact-ok" role="status">
+            Removed {resetDone.removed.length} catalog{resetDone.removed.length === 1 ? "" : "s"}
+            and {resetDone.drafts.length} draft{resetDone.drafts.length === 1 ? "" : "s"}.
+            <a href="#/knowledge">Rebuild them from Browse</a>.
+        </p>
+    {:else}
+        <p class="row">
+            <button class={confirmReset ? "warn" : "ghost"} onclick={doReset} disabled={resetting}>
+                {resetting
+                    ? "Removing…"
+                    : confirmReset
+                      ? "Really remove every catalog?"
+                      : "Remove every catalog"}
+            </button>
+            {#if confirmReset}
+                <button class="ghost" onclick={() => (confirmReset = false)}>Cancel</button>
+            {/if}
+        </p>
+        {#if resetError}<Failure error={resetError} />{/if}
+    {/if}
+</section>
+<section>
     <h3><Icon name="database" /> What is remembered</h3>
-    <p class="meta">
-        Everything the interface keeps about you, in full. It lives in this
-        install's <code>app.sqlite</code> beside your history — not in the
-        knowledge store, and not anywhere else.
-    </p>
+    <p class="meta">Preferences live in this install's <code>app.sqlite</code>, beside your history.</p>
     <Async {promise} loading="Reading…">
         {#snippet children(values)}
             {#if !Object.keys(values).length}
-                <p class="state empty">
-                    Nothing yet — the defaults are in the code, and a row appears
-                    the first time you change something.
-                </p>
+                <p class="state empty">Nothing yet; a row appears on your first change.</p>
             {:else}
-                <dl class="facts">
-                    {#each Object.entries(values) as [key, value] (key)}
-                        <dt>{key}</dt>
-                        <dd class="path">{JSON.stringify(value)}</dd>
-                    {/each}
-                </dl>
+                <details>
+                    <summary>Stored values</summary>
+                    <dl class="facts">
+                        {#each Object.entries(values) as [key, value] (key)}
+                            <dt>{key}</dt>
+                            <dd class="path">{JSON.stringify(value)}</dd>
+                        {/each}
+                    </dl>
+                </details>
             {/if}
         {/snippet}
     </Async>

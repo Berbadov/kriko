@@ -9,7 +9,7 @@
     import { api } from "../lib/api";
     import { follow } from "../lib/jobs";
     import { formatInterval, formatPct, formatUsd, hallucinationSeverity, pointsByLlm } from "../lib/bench";
-    import type { Bench, BenchEstimate, BenchRequest, Job } from "../lib/types";
+    import type { Bench, BenchEstimate, BenchReadoutRow, BenchRequest, Job } from "../lib/types";
 
     type OfferedLlm = { id: string; label: string; provider: string; unusable: string };
     type SearchChoice = { id: string; label: string; ready: boolean };
@@ -19,7 +19,40 @@
         search_providers?: SearchChoice[];
         harnesses?: HarnessLlms[];
     };
-    const PLANE_CHOICES = ["harness", "agent", "api"];
+    const PLANE_CHOICES = ["local", "harness", "api"];
+    const PLANE_MEANINGS: Record<string, string> = {
+        local: "an LLM on this machine; no key, no account, slower",
+        harness: "a coding-agent CLI (Claude Code and its kind); subscription",
+        api: "a paid per-token API LLM",
+    };
+    let planeMeanings = $state<Record<string, string>>(PLANE_MEANINGS);
+    /* B185: one row per LLM, sortable, expandable for per-case detail. */
+    let sortKey = $state<keyof BenchReadoutRow | "">("hallucination_rate");
+    let sortUp = $state(true);
+    let openModel = $state("");
+    const sorted = (rows: BenchReadoutRow[]) => {
+        const key = sortKey;
+        if (!key) return rows;
+        const value = (row: BenchReadoutRow) => {
+            const raw = row[key];
+            return raw === null || raw === undefined ? -Infinity : Number(raw);
+        };
+        return [...rows].sort((a, b) => (sortUp ? value(a) - value(b) : value(b) - value(a)));
+    };
+    const sortBy = (key: keyof BenchReadoutRow) => {
+        if (sortKey === key) sortUp = !sortUp;
+        else { sortKey = key; sortUp = true; }
+    };
+    const setLabel = (row: { set_id?: string; set_version?: string }) =>
+        row.set_id ? `set ${row.set_id} ${row.set_version}` : "pack-derived cases";
+    const groupBySet = (rows: BenchReadoutRow[]): Record<string, BenchReadoutRow[]> => {
+        const out: Record<string, BenchReadoutRow[]> = {};
+        for (const row of rows) {
+            const key = setLabel(row);
+            (out[key] ?? (out[key] = [])).push(row);
+        }
+        return out;
+    };
     /* The depth presets used to be copied here — three of the four, with
      * their source counts written out. `app/scale.py` owns them, `Scale`
      * fetches them, and this screen keeps only the *number*, which is what
@@ -92,7 +125,7 @@
     const requestKey = $derived(JSON.stringify(requestBody));
     const estimateCurrent = $derived(estimatedKey === requestKey);
     const protocolOptions = $derived(benchData?.protocols ?? []);
-    const packOptions = $derived([...new Set((benchData?.cases ?? []).map((one) => String((one as Record<string, unknown>).pack_id ?? "")).filter(Boolean))]);
+
     const offeredLlms = $derived(prefsView?.models?.offered ?? []);
     // The harness plane's LLMs are its CLIs' own names — `claude --help`,
     // `agy models` — not the paid catalogue's. Each runs only on the plane
@@ -226,7 +259,14 @@
         // ops-15). Deriving it from `promise` keeps the choice-list computeds
         // (`protocolOptions`, `packOptions`) fed without a second request, and
         // still re-derives on a retry because `promise` is reassigned there.
-        promise.then((data) => (benchData = data)).catch(() => {});
+        promise.then((data) => {
+            benchData = data;
+            const meanings = (data as Record<string, unknown>).plane_meanings;
+            if (meanings && typeof meanings === "object") {
+                planeMeanings = { ...planeMeanings,
+                    ...(meanings as Record<string, string>) };
+            }
+        }).catch(() => {});
         api.prefs()
             .then((data) => (prefsView = data as unknown as PrefsView))
             .catch(() => {})
@@ -262,10 +302,8 @@
 
 <h2><Icon name="bench" size={22} /> Benchmark</h2>
 <p class="lede">
-    At what batch size and context does each LLM stay honest, and what does a kept
-    claim cost? Every row below is measured against ground truth this pack's author
-    supplied, never eyeballed — a rate with no interval is a rate nobody has measured
-    enough to trust yet.
+    Every run measures the same <em>versioned test set</em>, so numbers can be compared
+    across models and across machines. Nothing here reads your installed catalogs.
 </p>
 
 {#if startFailure}<Failure error={startFailure} retry={start} />{/if}
@@ -288,26 +326,20 @@
             <legend>Planes</legend>
             <div class="chips">
                 {#each PLANE_CHOICES as plane (plane)}
-                    <button type="button" aria-pressed={planesSel.includes(plane)} onclick={() => (planesSel = toggle(planesSel, plane))}>{plane}</button>
+                    <button type="button" aria-pressed={planesSel.includes(plane)} title={planeMeanings[plane] ?? ""} onclick={() => (planesSel = toggle(planesSel, plane))}>{plane}</button>
                 {/each}
             </div>
-            {#if !planesSel.length}<p class="meta">None selected — whatever this machine can run.</p>{/if}
-        </fieldset>
-        <fieldset>
-            <legend>Pack</legend>
-            <select aria-label="Pack" value={packId} onchange={(event) => { touched = true; packId = event.currentTarget.value; }}>
-                <option value="">Every pack</option>
-                {#each packOptions as pack (pack)}
-                    <option value={pack}>{pack}</option>
-                {/each}
-            </select>
+            {#each PLANE_CHOICES as plane (plane)}
+                <p class="meta"><code>{plane}</code> · {planeMeanings[plane] ?? ""}</p>
+            {/each}
+            {#if !planesSel.length}<p class="meta">None selected; whatever this machine can run.</p>{/if}
         </fieldset>
         <fieldset>
             <legend>LLMs</legend>
             <!-- Each harness CLI's own names, then the paid catalogue. A name
                  runs only on the plane that names it (`bench.pairs`). -->
             {#each harnessLlms as one (one.id)}
-                <p class="meta">{one.label} — named by the CLI, runs on the harness plane</p>
+                <p class="meta">{one.label} · named by the CLI, runs on the harness plane</p>
                 <div class="chips">
                     {#each one.llms ?? [] as name (name)}
                         <button type="button" disabled={!planesSel.includes("harness")} title={planesSel.includes("harness") ? one.label : "select the harness plane"} aria-pressed={llmsSel.includes(name)} onclick={() => (llmsSel = toggle(llmsSel, name))}>{name}</button>
@@ -321,17 +353,17 @@
                 <p class="meta">{one.label}: {one.llms_note}</p>
             {/each}
             {#if offeredLlms.length}
-                {#if harnessLlms.length}<p class="meta">Catalogue — runs on the paid plane</p>{/if}
+                {#if harnessLlms.length}<p class="meta">Catalogue · runs on the paid plane</p>{/if}
                 <div class="chips">
                     {#each offeredLlms as one (one.id)}
                         <button type="button" disabled={!!one.unusable} title={one.unusable || one.provider} aria-pressed={llmsSel.includes(one.id)} onclick={() => (llmsSel = toggle(llmsSel, one.id))}>{one.label}</button>
                     {/each}
                 </div>
-                {#if !llmsSel.length}<p class="meta">None selected — whichever this installation would pick.</p>{/if}
+                {#if !llmsSel.length}<p class="meta">None selected; whichever this installation would pick.</p>{/if}
             {:else if !prefsLoaded}
                 <p class="meta">Reading your providers…</p>
             {:else if !harnessLlms.length}
-                <p class="meta">The catalogue offered nothing — check Settings → Research.</p>
+                <p class="meta">The catalogue offered nothing; check Settings → Research.</p>
             {/if}
         </fieldset>
         <fieldset>
@@ -341,14 +373,13 @@
             {:else}
                 <div class="chips" aria-describedby="search-reasons">
                     {#each searchOptions as one (one.id)}
-                        <button type="button" disabled={!one.ready} title={one.ready ? one.label : `${one.label} — no key set`} aria-pressed={searchesSel.includes(one.id)} onclick={() => (searchesSel = toggle(searchesSel, one.id))}>{one.label}</button>
+                        <button type="button" disabled={!one.ready} title={one.ready ? one.label : `${one.label}: no key set`} aria-pressed={searchesSel.includes(one.id)} onclick={() => (searchesSel = toggle(searchesSel, one.id))}>{one.label}</button>
                     {/each}
                 </div>
-                {#if !searchesSel.length}<p class="meta">None selected — whichever has a key.</p>{/if}
+                {#if !searchesSel.length}<p class="meta">None selected; whichever has a key.</p>{/if}
                 {#if searchOptions.some((one) => !one.ready)}
                     <p class="meta" id="search-reasons">
-                        Needs a key for {searchOptions.filter((one) => !one.ready).map((one) => one.label).join(", ")} —
-                        <a href="#/settings">Settings → Research</a>.
+                        Needs a key for {searchOptions.filter((one) => !one.ready).map((one) => one.label).join(", ")}.                         <a href="#/settings">Settings → Research</a>.
                     </p>
                 {/if}
             {/if}
@@ -361,9 +392,9 @@
                         <button type="button" aria-pressed={protocolsSel.includes(one.name)} onclick={() => (protocolsSel = toggle(protocolsSel, one.name))}>{one.name}</button>
                     {/each}
                 </div>
-                {#if !protocolsSel.length}<p class="meta">None selected — whatever the plane would choose.</p>{/if}
+                {#if !protocolsSel.length}<p class="meta">None selected; whatever the plane would choose.</p>{/if}
             {:else}
-                <p class="meta">No protocols measured yet — the plane chooses.</p>
+                <p class="meta">No protocols measured yet; the plane chooses.</p>
             {/if}
         </fieldset>
         </div>
@@ -414,11 +445,11 @@
     </div>
     {#if estimate && typeof estimate.runs === "number"}
         <p class="meta" class:unmeasured={!estimateCurrent}>
-            {count(estimate.runs, "measurement")}{estimate.usd === null || estimate.usd === undefined ? " — not yet measured here" : `, about $${estimate.usd.toFixed(2)}`}
-            {estimate.note ? ` — ${estimate.note}` : ""}
+            {count(estimate.runs, "measurement")}{estimate.usd === null || estimate.usd === undefined ? "; not yet measured here" : `, about $${estimate.usd.toFixed(2)}`}
+            {estimate.note ? ` · ${estimate.note}` : ""}
         </p>
     {/if}
-    {#if estimateError}<p class="state">The estimate failed — the grid above is unchanged.</p>{/if}
+    {#if estimateError}<p class="state">The estimate failed; the grid above is unchanged.</p>{/if}
     {#if Object.keys(configs).length}
         <details>
             <summary>Saved grids</summary>
@@ -444,7 +475,7 @@
         </details>
     {/if}
     {#if forgetError}
-        <p class="state">Could not forget that grid — it is still listed. {String(forgetError)}</p>
+        <p class="state">Could not forget that grid; it is still listed. {String(forgetError)}</p>
     {/if}
     <label>Save this grid as <input bind:value={gridName} /><button class="ghost" disabled={!gridName} onclick={() => savedGrids(true)}>Save</button></label>
     {#if !gridName}<p class="meta">Name this grid to save it.</p>{/if}
@@ -452,7 +483,7 @@
 
 {#if runningJobId}
     <p class="state loading">
-        A benchmark is running — <a href="#/activity?lens=live">watch it on Activity</a>. The
+        A benchmark is running · <a href="#/activity?lens=live">watch it on Activity</a>. The
         numbers below are from the last completed run.
     </p>
 {/if}
@@ -461,63 +492,90 @@
     {#snippet children(data: Bench)}
         {#if !data.readout.length}
             <EmptyState
-                title="No benchmark runs yet"
-                detail="{data.cases.length} case{data.cases.length === 1
-                    ? ''
-                    : 's'} would run against every configured LLM and protocol — minutes of
-                    work, and real spend on a paid plane. Press Run to measure the first
-                    round."
+                title="No measurements yet"
+                detail="The fixed test set runs against every configured LLM and
+                        protocol. Press Run to measure the first round."
             />
         {:else}
-            <table>
-                <thead>
-                    <tr>
-                        <th scope="col">LLM</th>
-                        <th scope="col">Protocol</th>
-                        <th scope="col">Search</th>
-                        <th scope="col" class="num">Cost / accepted claim</th>
-                        <th scope="col" class="num">Hallucination rate</th>
-                        <th scope="col" class="num">Runs</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {#each data.readout as row (row.llm)}
-                        <tr class={row.note ? "unmeasured" : ""}>
-                            <th scope="row">{row.llm}</th>
-                            <td>
-                                {row.protocol}
-                                <div class="meta">
-                                    batch {row.batch_size} · {row.context_chars.toLocaleString()} chars{row.preamble
-                                        ? ` · ${row.preamble}`
-                                        : ""}
-                                </div>
-                            </td>
-                            <td>{row.search_provider || "—"}</td>
-                            <td class="num">{formatUsd(row.usd_per_accepted_claim)}</td>
-                            <td class="num">
-                                {#if row.hallucination_rate === null}
-                                    <span class="badge">not yet measured</span>
-                                {:else}
-                                    <span class="sev {hallucinationSeverity(row.hallucination_rate)}"
-                                        >{formatPct(row.hallucination_rate)}</span
-                                    >
-                                    {#if row.hallucination_interval}
-                                        <span class="meta">
-                                            ({formatInterval(row.hallucination_interval)})
-                                        </span>
-                                    {/if}
-                                {/if}
-                            </td>
-                            <td class="num">{row.runs}</td>
-                        </tr>
-                        {#if row.note}
-                            <tr class="unmeasured">
-                                <td colspan="6" class="meta">{row.note}</td>
+            {#each Object.entries(groupBySet(data.readout)) as [set, rows] (set)}
+                <section class="leaderboard">
+                    <h3><Icon name="layers" size={16} /> {set}</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th scope="col"><button class="link" onclick={() => sortBy("llm")}>LLM</button></th>
+                                <th scope="col">Protocol</th>
+                                <th scope="col">Search</th>
+                                <th scope="col" class="num"><button class="link" onclick={() => sortBy("usd_per_accepted_claim")}>Cost / kept claim</button></th>
+                                <th scope="col" class="num"><button class="link" onclick={() => sortBy("hallucination_rate")}>Hallucination rate</button></th>
+                                <th scope="col" class="num"><button class="link" onclick={() => sortBy("runs")}>Runs</button></th>
                             </tr>
-                        {/if}
-                    {/each}
-                </tbody>
-            </table>
+                        </thead>
+                        <tbody>
+                            {#each sorted(rows) as row (`${set}|${row.llm}|${row.protocol}`)}
+                                <tr class={row.note ? "unmeasured" : ""}>
+                                    <th scope="row">
+                                        <button class="link" aria-expanded={openModel === `${set}|${row.llm}`}
+                                            onclick={() => (openModel = openModel === `${set}|${row.llm}` ? "" : `${set}|${row.llm}`)}
+                                        >{row.llm}</button>
+                                    </th>
+                                    <td>
+                                        {row.protocol}
+                                        <div class="meta">
+                                            batch {row.batch_size} · {row.context_chars.toLocaleString()} chars{row.preamble
+                                                ? ` · ${row.preamble}`
+                                                : ""}
+                                        </div>
+                                    </td>
+                                    <td>{row.search_provider || "unrecorded"}</td>
+                                    <td class="num">{formatUsd(row.usd_per_accepted_claim)}</td>
+                                    <td class="num">
+                                        {#if row.hallucination_rate === null}
+                                            <span class="badge">not yet measured</span>
+                                        {:else}
+                                            <span class="sev {hallucinationSeverity(row.hallucination_rate)}"
+                                                >{formatPct(row.hallucination_rate)}</span
+                                            >
+                                            {#if row.hallucination_interval}
+                                                <span class="meta">
+                                                    ({formatInterval(row.hallucination_interval)})
+                                                </span>
+                                            {/if}
+                                        {/if}
+                                    </td>
+                                    <td class="num">{row.runs}</td>
+                                </tr>
+                                {#if row.note}
+                                    <tr class="unmeasured">
+                                        <td colspan="6" class="meta">{row.note}</td>
+                                    </tr>
+                                {/if}
+                                {#if openModel === `${set}|${row.llm}`}
+                                    {@const mine = data.runs.filter((run) => run.llm === row.llm
+                                        && setLabel(run) === set)}
+                                    <tr class="detail-row">
+                                        <td colspan="6">
+                                            <details>
+                                                <summary>Per-case detail ({mine.length} runs)</summary>
+                                                <ul>
+                                                    {#each mine as run (run.bench_id)}
+                                                        <li>
+                                                            <span class="klabel">{run.subject || run.subject_id}</span>
+                                                            <span class="meta">
+                                                                {run.plane} · {run.accepted} kept · {run.refused} refused{run.error ? ` · failed: ${run.error}` : ""}
+                                                            </span>
+                                                        </li>
+                                                    {/each}
+                                                </ul>
+                                            </details>
+                                        </td>
+                                    </tr>
+                                {/if}
+                            {/each}
+                        </tbody>
+                    </table>
+                </section>
+            {/each}
 
             <h3><Icon name="chart" /> Cost vs. hallucination, by protocol</h3>
             <p class="meta">
@@ -541,6 +599,26 @@
 </Async>
 
 <style>
+    .leaderboard {
+        margin-block: var(--s-4);
+    }
+    .leaderboard > table {
+        width: 100%;
+    }
+    .detail-row td {
+        padding-block: var(--s-2);
+    }
+    .detail-row ul {
+        list-style: none;
+        padding: 0;
+        margin: var(--s-2) 0 0;
+    }
+    .detail-row li {
+        display: flex;
+        gap: var(--s-3);
+        flex-wrap: wrap;
+        margin-block: var(--s-1);
+    }
     .bench-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

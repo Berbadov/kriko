@@ -130,7 +130,7 @@ export function groupByDomain(claims: Claim[]): Group[] {
 /** What the sources amount to, in a sentence rather than a tier table. */
 export function sourceSummary(claim: Claim): string {
     const sources = claim.sources ?? [];
-    if (!sources.length) return "No source cited — this is a service-interval item.";
+    if (!sources.length) return "No source cited; this is a service-interval item.";
     const against = sources.filter((s) => s.stance === "refutes").length;
     const forCount = sources.length - against;
     const agree =
@@ -161,7 +161,7 @@ export function emptyReason(result: LookupResult): string {
             (n
                 ? `${n} products match these details`
                 : "Several products match these details") +
-            " — add another identifying detail to narrow it down to one."
+            "; add another identifying detail to narrow it down to one."
         );
     }
     return (
@@ -176,7 +176,7 @@ export function emptyReason(result: LookupResult): string {
 const METHOD_WORD: Record<string, string> = {
     exact: "Matched exactly on the details given",
     identity: "Matched exactly on the details given",
-    ambiguous: "Matched loosely — more than one variant fits",
+    ambiguous: "Matched loosely; more than one variant fits",
     near: "Matched closely, but not exactly",
     no_match: "Not matched",
 };
@@ -304,7 +304,7 @@ export function asMarkdown(
         for (const claim of group.claims) {
             const key = claimKey(claim);
             lines.push(
-                `### ${severityWord(claim.severity)} — ${claim.title}`,
+                `### ${severityWord(claim.severity)}: ${claim.title}`,
                 "",
                 claim.body,
                 "",
@@ -365,5 +365,5 @@ export const absenceNote = (result: LookupResult): string =>
     result.claims.length
         ? "This is what the installed packs hold about this one. Anything not " +
           "listed is knowledge nobody has published yet, or has not reached " +
-          "your packs — not a risk that has been ruled out."
+          "your packs, not a risk that has been ruled out."
         : emptyReason(result);

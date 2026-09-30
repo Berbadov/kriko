@@ -229,7 +229,7 @@ describe("adding the browser extension", () => {
         render(Extension);
         expect(await screen.findByText("Alt")).toBeInTheDocument();
         expect(screen.getByText("K")).toBeInTheDocument();
-        expect(screen.getByText(/Extension options/)).toBeInTheDocument();
+        expect(screen.getByText(/options page changes it/)).toBeInTheDocument();
     });
 
     it("says the panel will stay quiet when no pack ships an adapter", async () => {

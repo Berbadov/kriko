@@ -85,7 +85,7 @@
     <h3><Icon name="key" /> Research keys</h3>
     <p class="meta">
         Only the second research plane needs these. Your coding agent researches
-        for free through the MCP server and needs nothing here — these are for
+        for free through the MCP server and needs nothing here; these are for
         letting Kriko search and read by itself, unattended.
     </p>
 
@@ -161,7 +161,7 @@
             <p class="meta">
                 Stored in <code class="path">{data.path}</code>, readable only by
                 you, and loaded into Kriko's environment at startup. Not in
-                <code>app.sqlite</code> — a database that gets copied, backed up
+                <code>app.sqlite</code>, a database that gets copied, backed up
                 and inspected is the wrong place for a secret.
                 {#if !data.ready}
                     Both are needed before the paid plane will run: it searches

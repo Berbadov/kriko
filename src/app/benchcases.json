@@ -1,0 +1,184 @@
+{
+  "id": "kriko-fixed",
+  "version": "2026.10.1",
+  "about": "The benchmark's fixed test set (B185, D6). Versioned here; a run records the set and version it measured. Not a pack, never installed into the knowledge store.",
+  "cases": [
+    {
+      "id": "dyson-v15-detect",
+      "product": "Dyson V15 Detect",
+      "queries": [
+        "Dyson V15 Detect problems",
+        "Dyson V15 battery life complaint",
+        "Dyson V15 vacuum review long term"
+      ],
+      "must_find": [
+        {
+          "claim": "battery runtime drops well below the advertised figure as it ages",
+          "domain": "battery",
+          "quote": "the battery"
+        },
+        {
+          "claim": "the laser dust detection flap can jam or crack",
+          "domain": "build"
+        },
+        {
+          "claim": "the bin emptying mechanism clogs with fine dust",
+          "domain": "maintenance"
+        }
+      ],
+      "must_not_find": [
+        {
+          "claim": "the vacuum catches fire",
+          "why": "no credible report exists"
+        },
+        {
+          "claim": "the vacuum is loud",
+          "why": "true of every cordless vacuum"
+        }
+      ],
+      "known_absent": ["global recall of the V15"]
+    },
+    {
+      "id": "playstation-5-disc",
+      "product": "PlayStation 5 disc edition",
+      "queries": [
+        "PS5 disc drive problems",
+        "PS5 coil whine",
+        "PS5 liquid metal issue"
+      ],
+      "must_find": [
+        {
+          "claim": "the disc drive can fail to ingest or eject discs",
+          "domain": "drive"
+        },
+        {
+          "claim": "some units produce audible coil whine",
+          "domain": "power"
+        },
+        {
+          "claim": "the liquid metal thermal interface can dry out or spill if the console is stored vertically for long periods",
+          "domain": "cooling"
+        }
+      ],
+      "must_not_find": [
+        {
+          "claim": "the console scratches discs on every insert",
+          "why": "not a general fault"
+        }
+      ],
+      "known_absent": ["Sony halting all PS5 sales"]
+    },
+    {
+      "id": "samsung-bespoke-fridge",
+      "product": "Samsung Bespoke refrigerator with ice maker",
+      "queries": [
+        "Samsung Bespoke fridge ice maker problems",
+        "Samsung refrigerator cooling failure class action",
+        "Samsung fridge compressor noise"
+      ],
+      "must_find": [
+        {
+          "claim": "the ice maker can freeze over and stop producing ice",
+          "domain": "ice maker"
+        },
+        {
+          "claim": "some units fail to cool and food spoils",
+          "domain": "cooling"
+        },
+        {
+          "claim": "the compressor can run loudly or fail early",
+          "domain": "compressor"
+        }
+      ],
+      "must_not_find": [
+        {
+          "claim": "the fridge leaks water onto the floor by design",
+          "why": "a defect claim needs a report, not a possibility"
+        }
+      ],
+      "known_absent": ["every Samsung fridge being dangerous"]
+    },
+    {
+      "id": "iphone-15-pro",
+      "product": "iPhone 15 Pro",
+      "queries": [
+        "iPhone 15 Pro overheating",
+        "iPhone 15 Pro battery drain",
+        "iPhone 15 Pro screen burn in"
+      ],
+      "must_find": [
+        {
+          "claim": "the phone can run noticeably hot, especially while charging",
+          "domain": "thermal"
+        },
+        {
+          "claim": "the titanium frame is more prone to visible fingerprints and micro scratches than steel",
+          "domain": "build"
+        }
+      ],
+      "must_not_find": [
+        {
+          "claim": "the phone bends in your pocket",
+          "why": "a fold claim without a credible report is a hallucination"
+        },
+        {
+          "claim": "the battery dies within a year",
+          "why": "stated as certainty, no report supports it"
+        }
+      ],
+      "known_absent": ["an Apple recall of the iPhone 15 Pro"]
+    },
+    {
+      "id": "volkswagen-golf-7-dsg",
+      "product": "Volkswagen Golf 7 with DSG gearbox",
+      "queries": [
+        "Golf 7 DSG mechatronic failure",
+        "Golf 7 1.4 TSI timing chain",
+        "Golf 7 DSG shudder"
+      ],
+      "must_find": [
+        {
+          "claim": "the DSG mechatronic unit can fail, causing harsh or lost shifts",
+          "domain": "gearbox"
+        },
+        {
+          "claim": "the 1.4 TSI timing chain can stretch, and a rattle at cold start is the early signal",
+          "domain": "engine"
+        }
+      ],
+      "must_not_find": [
+        {
+          "claim": "the car brakes by itself",
+          "why": "a ghost braking claim needs a report for this model"
+        }
+      ],
+      "known_absent": ["VW buying back every Golf 7"]
+    },
+    {
+      "id": "logitech-mx-master-3",
+      "product": "Logitech MX Master 3",
+      "queries": [
+        "MX Master 3 double click issue",
+        "MX Master 3 scroll wheel problems",
+        "MX Master 3 battery swelling"
+      ],
+      "must_find": [
+        {
+          "claim": "the left click can develop a double-click fault over time",
+          "domain": "switches"
+        },
+        {
+          "claim": "the smart-shift scroll wheel can become erratic or stuck",
+          "domain": "scroll"
+        }
+      ],
+      "must_not_find": [
+        {
+          "claim": "the mouse overheats",
+          "why": "no credible report exists"
+        }
+      ],
+      "known_absent": ["a Logitech recall"]
+    }
+  ]
+}
