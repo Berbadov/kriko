@@ -9,6 +9,7 @@
     import { api } from "../lib/api";
     import { count } from "../lib/plural";
     import { severityWord } from "../lib/report";
+    import { route } from "../lib/router";
     import type {
         Gap,
         Pack,
@@ -16,6 +17,7 @@
         Status,
         Subject,
         SubjectDetail,
+        SubjectFilter,
     } from "../lib/types";
 
     /* One screen for "what does this install actually know".
@@ -41,7 +43,8 @@
     let {
         lens: initial = "all",
         subjectId = "",
-    }: { lens?: string; subjectId?: string } = $props();
+        catalogs: openCatalogs = false,
+    }: { lens?: string; subjectId?: string; catalogs?: boolean } = $props();
 
     const asLens = (named: string): Lens =>
         (["all", "gaps", "weak"].includes(named) ? named : "all") as Lens;
@@ -68,8 +71,28 @@
     }
 
     let query = $state("");
-    let packFilter = $state("");
     let shown = $state(25);
+
+    // The filters are rows from `/api/subjects/filters` (B180): their names,
+    // descriptions and options are the API's words, so a new kind of subject
+    // gains its option with no edit here. `selected` is keyed by the row's
+    // id, and each row names the query parameter it feeds. A link from
+    // Overview arrives with those parameters in the address and is applied
+    // once the rows are known.
+    let filters = $state<SubjectFilter[]>([]);
+    let selected = $state<Record<string, string>>({});
+    let helpOpen = $state("");
+    const scopeFilter = $derived(filters.find((one) => one.param === "pack_id"));
+    const scoped = $derived(scopeFilter ? (selected[scopeFilter.id] ?? "") : "");
+    const params = () =>
+        Object.fromEntries(
+            filters.map((one) => [one.param, selected[one.id] ?? ""]),
+        );
+
+    // The one line that stands for installed catalogs and drafts. Closed by
+    // default so the search is the first thing on screen; `?catalogs=1` opens
+    // it for a link that points at a catalog.
+    let catalogsOpen = $state(openCatalogs || $route.query.catalogs === "1");
 
     let status = $state<Status | null>(null);
     let packs = $state<Pack[]>([]);
@@ -103,7 +126,7 @@
             // a local SQLite read of one table, so the network is not the cost
             // here — the cost is the reader's attention, and that is what
             // `shown` bounds.
-            subjects = await api.subjects(query.trim(), 500);
+            subjects = await api.subjects(query.trim(), 500, params());
             error = null;
         } catch (cause) {
             error = cause;
@@ -122,7 +145,7 @@
                 ? stored.split(",").filter(Boolean)
                 : [];
         }).catch(() => {});
-        const [s, p, d] = await Promise.all([
+        const [s, p, d, f] = await Promise.all([
             api.status().catch(() => null),
             api.packs().catch(() => [] as Pack[]),
             // Best effort: a reader with no drafts is the common case, and a
@@ -135,7 +158,23 @@
             api.packDrafts()
                 .then((r) => (Array.isArray(r?.items) ? r.items : []))
                 .catch(() => [] as PackDraft[]),
+            api
+                .subjectFilters()
+                .then((r) => (Array.isArray(r?.filters) ? r.filters : []))
+                .catch(() => [] as SubjectFilter[]),
         ]);
+        if (!filters.length && f.length) {
+            // First arrival: take whatever the address named.
+            filters = f;
+            selected = Object.fromEntries(
+                f
+                    .filter((one) => $route.query[one.param])
+                    .map((one) => [one.id, $route.query[one.param]]),
+            );
+            if (Object.keys(selected).length) void loadList();
+        } else {
+            filters = f;
+        }
         status = s;
         packs = p;
         drafts = d;
@@ -209,9 +248,9 @@
     // because this is the screen where the emptiness is loudest.
     const disabled = $derived(packs.filter((pack) => !pack.enabled));
 
-    const filtered = $derived(
-        subjects.filter((s) => !packFilter || s.pack_id === packFilter),
-    );
+    // Filtered by the server, so the count and the rows agree.
+    const filtered = $derived(subjects);
+    const anySelected = $derived(Object.values(selected).some(Boolean));
     const visible = $derived(filtered.slice(0, shown));
 
     const gapIds = $derived(new Set(gaps.map((gap) => gap.subject_id)));
@@ -318,10 +357,34 @@
 
 <h2><Icon name="knowledge" size={22} /> Knowledge</h2>
 
-<!-- The installed catalogs first (B167): what is installed comes before what is
-     known. One heading and the cards, nothing else added; making Browse
-     search-first is B180. `onchange`: an install or a switch-off changes every
-     list below. -->
+<!-- Search first (B180). Installed catalogs, switched-off ones and drafts are
+     one line that unfolds: they change what the lists below can hold, but the
+     reader came to look something up, so the line is shown and its contents
+     wait. The counts sit beside it as a single row. -->
+<div class="topline">
+    {#if status}
+        <ul class="statstrip" aria-label="What this install holds">
+            <li><strong>{(status.counts_enabled ?? status.counts).subjects}</strong><span class="meta">subjects</span></li>
+            <li><strong>{(status.counts_enabled ?? status.counts).claims}</strong><span class="meta">claims</span></li>
+            <li><strong>{(status.counts_enabled ?? status.counts).evidence}</strong><span class="meta">sources</span></li>
+            <li class={gaps.length ? "warn" : ""}>
+                <strong>{gaps.length}</strong><span class="meta">nothing known</span>
+            </li>
+        </ul>
+    {/if}
+    <button
+        class="ghost catalogs-toggle"
+        aria-expanded={catalogsOpen}
+        aria-controls="catalogs-panel"
+        onclick={() => (catalogsOpen = !catalogsOpen)}
+    >
+        {count(packs.length, "catalog")}{#if disabled.length}, {disabled.length} off{/if}{#if visibleDrafts.length}, {count(visibleDrafts.length, "draft")}{/if}
+        <span class="chev" aria-hidden="true">{catalogsOpen ? "–" : "+"}</span>
+    </button>
+</div>
+
+{#if catalogsOpen}
+<div id="catalogs-panel" class="catalogs-panel enter">
 <section class="packs-section" aria-label="Catalogs">
     <PacksSection
         onchange={() => {
@@ -331,69 +394,34 @@
     />
 </section>
 
-<!-- The header is counts, not content: five numbers say where you are
-     without asking the reader to read a table to find out. -->
-{#if status}
-    <ul class="statstrip enter" aria-label="What this install holds">
-        <li>
-            <strong>{status.enabled_packs}</strong>
-            <span class="meta">of {count(status.counts.packs, "pack")} on</span>
-        </li>
-        <li><strong>{(status.counts_enabled ?? status.counts).subjects}</strong><span class="meta">subjects</span></li>
-        <li><strong>{(status.counts_enabled ?? status.counts).claims}</strong><span class="meta">claims</span></li>
-        <li><strong>{(status.counts_enabled ?? status.counts).evidence}</strong><span class="meta">sources</span></li>
-        <li class={gaps.length ? "warn" : ""}>
-            <strong>{gaps.length}</strong><span class="meta">nothing known</span>
-        </li>
-    </ul>
-{/if}
-
 {#each disabled as pack (pack.pack_id)}
     <article class="card notice">
         <div>
-            <strong>{pack.name} is installed but switched off</strong>
+            <strong>{pack.name} is switched off</strong>
             <span class="meta">
-                It holds {count(pack.claims, "claim")} about {count(pack.subjects, "subject")}, and
-                answers none of them while it is off — which is why the lists below are
-                empty rather than broken.
+                {count(pack.claims, "claim")} on {count(pack.subjects, "subject")} are not answered while it is off.
             </span>
         </div>
-        <button onclick={() => enable(pack)}>Switch it on</button>
+        <button onclick={() => enable(pack)}>Switch on</button>
     </article>
 {/each}
 
-<!-- Drafts an agent wrote. Above the lenses because a pack waiting to be
-     installed changes what every list below can possibly contain, and because
-     an agent's proposal that nobody ever sees is the same as no proposal.
-
-     `notice` only while it is still waiting on the reader. B129 made the card
-     say "is installed" and left it looking exactly as it had before — a
-     warning-coloured box, in the alert position, above everything. The reader
-     pressed Install, the pack appeared in their store, and the same alarm was
-     still on the screen: "I click either one and the warning stays there." An
-     installed draft is not an alert, it is a receipt, so it stops being styled
-     as one and drops out of the way. -->
+<!-- Drafts an agent wrote. `notice` only while one still waits on the reader
+     (B129): an installed draft is a receipt, not an alert, so it drops the
+     alarm styling. -->
 {#each visibleDrafts as draft (draft.slug)}
     <article class={draft.installed_as ? "card quiet-draft" : "card notice"}>
         <div>
             <strong>
                 {draft.name || draft.slug}
-                {draft.installed_as ? "is installed" : "was drafted for you"}
+                {draft.installed_as ? "is installed" : "is a draft"}
             </strong>
             <span class="meta">
                 {#if draft.error}
-                    It does not load yet: {draft.error}. Tell the agent that, and it
-                    can fix the file it wrote.
+                    Does not load yet: {draft.error}
                 {:else}
                     {draft.pack_id} {draft.version} · {count(draft.files.length, "file")}
-                    <span title={draft.root}>on disk</span>.
-                    {#if draft.installed_as}
-                        It is in your store — the draft is kept so you can cover
-                        its gaps and install it again.
-                    {:else}
-                        Nothing of it is in your store until you install it, and
-                        nothing in it can run — a drafted pack is data only.
-                    {/if}
+                    <span title={draft.root}>on disk</span>
                 {/if}
             </span>
         </div>
@@ -401,27 +429,23 @@
             <button
                 onclick={() => installDraft(draft)}
                 disabled={draftBusy === draft.slug || !!draft.error}
-                >{draft.installed_as ? "Install it again" : "Install it"}</button
+                >{draft.installed_as ? "Install again" : "Install"}</button
             >
-            <!-- The correction verb. A generator you cannot correct is a slot
-                 machine; a tool you can is worth keeping. -->
             <button
                 class="ghost"
                 onclick={() =>
                     (amending = amending === draft.slug ? null : draft.slug)}
                 aria-expanded={amending === draft.slug}
-                disabled={draftBusy === draft.slug}>Cover the gaps</button
+                disabled={draftBusy === draft.slug}>Extend</button
             >
-            <!-- Two different verbs, and conflating them was the other half
-                 of the complaint. "Throw it away" deletes what the agent
-                 wrote; nobody should have to destroy a proposal to stop being
-                 reminded of it. Hiding is the one an installed draft wants,
-                 and it has to survive a reload or it is not a dismissal. -->
+            <!-- Two verbs on purpose: hiding only stops the reminder, while
+                 discarding deletes what the agent wrote. Hiding persists in
+                 settings or it is not a dismissal. -->
             {#if draft.installed_as}
                 <button
                     class="ghost"
                     onclick={() => hideDraft(draft)}
-                    disabled={draftBusy === draft.slug}>Hide this</button
+                    disabled={draftBusy === draft.slug}>Hide</button
                 >
             {/if}
             <button
@@ -431,7 +455,7 @@
                         ? discardDraft(draft)
                         : (confirmDiscard = draft.slug)}
                 disabled={draftBusy === draft.slug}
-                >{confirmDiscard === draft.slug ? "Really throw it away?" : "Throw it away"}</button
+                >{confirmDiscard === draft.slug ? "Confirm discard" : "Discard"}</button
             >
             {#if confirmDiscard === draft.slug}
                 <button class="ghost" onclick={() => (confirmDiscard = "")}>Cancel</button>
@@ -439,20 +463,13 @@
         </span>
         {#if amending === draft.slug}
             <div class="amend">
-                <label for="amend-{draft.slug}">
-                    What is it missing? Leave this empty and the draft's own list
-                    of uncovered products is the request.
-                </label>
+                <label for="amend-{draft.slug}">What is missing</label>
                 <textarea
                     id="amend-{draft.slug}"
                     bind:value={amendNote}
                     rows="3"
-                    placeholder="It has the Buds Pro and Buds2 Pro but not the Buds3, Buds3 Pro or Buds FE."
+                    placeholder="Leave empty to use the draft's own list of uncovered products."
                 ></textarea>
-                <p class="meta">
-                    Nothing already in the draft is changed. If the agent comes back
-                    with nothing usable, the draft stays exactly as it is.
-                </p>
                 <button
                     onclick={() => amendDraft(draft)}
                     disabled={draftBusy === draft.slug}>Ask an agent</button
@@ -461,16 +478,16 @@
         {/if}
     </article>
 {/each}
+</div>
+{/if}
 {#if amendJob}
     <p class="state">
-        Extending the draft — <a href="#/activity">watch it on Activity</a>. The
-        draft updates when it finishes.
+        Extending the draft. <a href="#/activity">Watch it on Activity</a>.
     </p>
 {/if}
 {#if verifyJob}
     <p class="state">
-        Re-reading the sources — <a href="#/activity">watch it on Activity</a>.
-        Verdicts land beside each claim.
+        Re-reading the sources. <a href="#/activity">Watch it on Activity</a>.
     </p>
 {/if}
 {#if draftError}
@@ -521,42 +538,84 @@
 <div role="tabpanel" id="knowledge-panel" aria-label="Knowledge">
 {#if lens === "all" || lens === "gaps"}
     <div class="row filters">
-        <div class="field">
+        <div class="field grow">
             <label for="k-search">Search</label>
             <input
                 id="k-search"
                 bind:value={query}
                 oninput={onInput}
-                placeholder="a name, as the packs spell it…"
+                placeholder="Name"
             />
         </div>
-        {#if packs.length > 1 && lens === "all"}
-            <div class="field">
-                <label for="k-pack">Pack</label>
-                <select
-                    id="k-pack"
-                    bind:value={packFilter}
-                    onchange={() => (shown = 25)}
-                >
-                    <option value="">Every pack</option>
-                    {#each packs as pack (pack.pack_id)}
-                        <option value={pack.pack_id}>{pack.name}</option>
-                    {/each}
-                </select>
-            </div>
+        {#if lens === "all"}
+            {#each filters as one (one.id)}
+                <!-- Each filter is named and described by its row. The
+                     description is one press away rather than printed, so the
+                     bar stays one line. -->
+                <div class="field">
+                    <span class="flabel">
+                        <label for="k-{one.id}">{one.label}</label>
+                        <button
+                            class="help"
+                            aria-expanded={helpOpen === one.id}
+                            aria-label="About {one.label}"
+                            onclick={() => (helpOpen = helpOpen === one.id ? "" : one.id)}
+                            >?</button
+                        >
+                    </span>
+                    <select
+                        id="k-{one.id}"
+                        value={selected[one.id] ?? ""}
+                        onchange={(event) => {
+                            selected = { ...selected, [one.id]: event.currentTarget.value };
+                            shown = 25;
+                            void loadList();
+                        }}
+                    >
+                        <option value="">All</option>
+                        {#each one.options as option (option.value)}
+                            <option value={option.value}>{option.label} ({option.count})</option>
+                        {/each}
+                    </select>
+                </div>
+            {/each}
+            {#if anySelected}
+                <div class="field">
+                    <span class="meta">&nbsp;</span>
+                    <button
+                        class="ghost"
+                        onclick={() => {
+                            selected = {};
+                            shown = 25;
+                            void loadList();
+                        }}>Clear</button
+                    >
+                </div>
+            {/if}
         {/if}
         <!-- The third operation kind (docs/AGENT_OPERATIONS.md §1): re-read
              the pages behind what is installed here. Free, and it retracts
-             nothing — a `missing` verdict is a signal beside the reader's own
-             marks, because pages get rewritten and the engine has no authority
-             to remove a claim on the strength of one fetch. -->
+             nothing: a `missing` verdict is a signal beside the reader's own
+             marks, because pages get rewritten and the engine has no
+             authority to remove a claim on the strength of one fetch. -->
         <div class="field">
-            <span class="meta">Evidence</span>
-            <button class="ghost" disabled={verifying} onclick={() => verifyPack(packFilter)}>
-                {verifying ? "Starting…" : "Verify the knowledge here"}
+            <span class="meta">&nbsp;</span>
+            <button class="ghost" disabled={verifying} onclick={() => verifyPack(scoped)}>
+                {verifying ? "Starting…" : "Verify sources"}
             </button>
         </div>
     </div>
+    {#each filters as one (one.id)}
+        {#if helpOpen === one.id}
+            <p class="fhelp enter" role="note">
+                <strong>{one.label}.</strong>
+                {one.description}
+                {#each one.options.filter((option) => option.description) as option (option.value)}
+                    <span class="meta"> {option.label}: {option.description}</span>
+                {/each}
+            </p>
+        {/if}
+    {/each}
 {/if}
 
 {#await ready}
@@ -568,12 +627,7 @@
         <Health heading={false} focusClaimId={subjectId} />
     {:else if lens === "gaps"}
         {#if !gapRows.length}
-            <EmptyState
-                title={gaps.length ? "No gap matches that" : "Nothing is missing"}
-                detail="A gap is a subject a pack names but holds no claim for. None
-                        listed means every subject the packs know about has something
-                        written against it."
-            />
+            <EmptyState title={gaps.length ? "No gap matches that" : "Nothing is missing"} />
         {:else}
             <ul class="klist">
                 {#each gapRows as gap (gap.subject_id)}
@@ -612,8 +666,13 @@
     {:else if !filtered.length}
         <EmptyState
             title={query ? `Nothing matches “${query}”` : "No subjects to show"}
-            detail="Search matches a subject's label as the installed packs spell it.
-                    A switched-off pack contributes nothing to this list."
+            actionLabel={anySelected ? "Clear filters" : ""}
+            onAction={anySelected
+                ? () => {
+                      selected = {};
+                      void loadList();
+                  }
+                : undefined}
         />
     {:else}
         <p class="meta count">
@@ -700,10 +759,7 @@
                                         {/each}
                                     </ol>
                                 {:else}
-                                    <p class="state empty">
-                                        Nothing is known about this one yet — that is a gap,
-                                        and Research above writes the brief for it.
-                                    </p>
+                                    <p class="state empty">Nothing is known about this one yet.</p>
                                 {/if}
                             {/if}
                         </div>
@@ -721,21 +777,67 @@
 </div>
 
 <style>
+    /* One row: the counts on the left, the catalogs line on the right. This
+       is what keeps the search within the first screenful (B180). */
+    .topline {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--s-3) var(--s-5);
+        margin: 0 0 var(--s-3);
+    }
+    .catalogs-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
+    .catalogs-panel {
+        margin: 0 0 var(--s-4);
+    }
     .statstrip {
         display: flex;
         flex-wrap: wrap;
         gap: var(--s-5);
-        margin: 0 0 var(--s-4);
+        margin: 0;
         padding: 0;
         list-style: none;
     }
     .statstrip li {
         display: flex;
-        flex-direction: column;
+        align-items: baseline;
+        gap: var(--s-2);
     }
     .statstrip strong {
         font-size: var(--t-lg);
         line-height: var(--lh-lg);
+    }
+    .grow {
+        flex: 1 1 14rem;
+    }
+    .flabel {
+        display: flex;
+        align-items: center;
+        gap: var(--s-1);
+    }
+    .help {
+        width: 1.25rem;
+        height: 1.25rem;
+        padding: 0;
+        border: 1px solid var(--line, currentColor);
+        border-radius: 50%;
+        background: none;
+        color: var(--dim);
+        font-size: var(--t-sm, 0.75rem);
+        line-height: 1;
+        cursor: pointer;
+    }
+    .help[aria-expanded="true"] {
+        color: inherit;
+    }
+    .fhelp {
+        margin: 0 0 var(--s-3);
+        max-width: var(--measure);
     }
     .statstrip li.warn strong {
         color: var(--medium);
