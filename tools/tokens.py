@@ -2,9 +2,9 @@
 
 `ui/src/styles/themes/panel.css` and `extension/hover_lite/hover_lite.css`
 describe the same colours under different names. That is not an accident and it
-is not a mistake: the app's theme system needs a neutral *ramp* (`--n-0` …
-`--n-9`) so three themes can answer the same aliases, and the panel needs names
-for the five surfaces it actually has. Two vocabularies for one palette is the
+is not a mistake: the app's palette is a neutral *ramp* (`--n-0` … `--n-9`)
+that its components speak in aliases, and the panel needs names for the five
+surfaces it actually has. Two vocabularies for one palette is the
 right design.
 
 **What was wrong is that nothing kept them equal.** 38 tokens one side, 28 the
@@ -30,9 +30,11 @@ exactly, so an empty diff proved the map was transcribed correctly. That proof
 was available exactly once.
 
 The app owns the palette, and the arrow points that way for two reasons. It is
-where a theme is *chosen* — `slate` and `lemonade` exist there and have no
-meaning inside a content script — and `docs/BRAND.md` already makes `panel.css`
-the owner of the three colours the mark is drawn in. A second owner would have
+the fuller vocabulary (a ramp, where the panel has five named surfaces), and
+`docs/BRAND.md` already makes `panel.css` the owner of the three colours the
+mark is drawn in. (There was a third reason until B159: the app was where a
+theme was *chosen*, and `slate` and `lemonade` had no meaning inside a content
+script. Panel is the only theme now.) A second owner would have
 the mark answering to one file and the panel to another.
 
 Only colour is generated. Type and motion stay hand-written on both sides:

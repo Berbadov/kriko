@@ -15,6 +15,7 @@ recognising the thing.
 """
 
 import json
+import re
 import struct
 import sys
 from pathlib import Path
@@ -69,6 +70,47 @@ def test_the_frontend_serves_the_same_mark():
     """
     assert render_icon.WEB_TARGET.read_text(encoding="utf-8") == (
         render_icon.SOURCE.read_text(encoding="utf-8")
+    )
+
+
+def test_the_frontend_serves_the_large_mark_too():
+    """The rail draws the 64x64 drawing, and `ui/public/mark-large.svg` is its copy.
+
+    B161: "Fix the pixelated Kriko logo in the top left". The rail drew the 16x16
+    grid at 28px, a 1.75 scale that no rendering mode makes crisp. It draws the
+    drawing now, which has real diagonals and scales smoothly, and the frontend
+    can only reach files under `ui/`, so the drawing is published there by the
+    same script that renders every other size from it. This is what fails when
+    somebody edits the large mark and reruns nothing.
+    """
+    assert render_icon.WEB_LARGE_TARGET.read_text(encoding="utf-8") == (
+        render_icon.LARGE_SOURCE.read_text(encoding="utf-8")
+    )
+
+
+def test_the_rail_draws_the_large_mark_smooth():
+    """Pixel art at a fractional scale is what the reader called pixelated.
+
+    Read off the two files that decide it: the component that names the image,
+    and the stylesheet that says how it is scaled. Either half alone could be
+    reverted quietly, and the source-reading tests above would still pass on a
+    rail that looks exactly as it did.
+    """
+    root = Path(__file__).resolve().parents[3]
+    rail = (root / "ui" / "src" / "lib" / "shell" / "Sidebar.svelte").read_text(encoding="utf-8")
+    assert 'src="/static/mark-large.svg"' in rail, (
+        "the rail no longer draws the large mark"
+    )
+    css = (root / "ui" / "src" / "styles" / "components.css").read_text(encoding="utf-8")
+    at = css.index(".brand .mark {")
+    # Comments stripped: the rule explains what it replaced, and naming the old
+    # declaration in prose is not the declaration coming back.
+    rule = re.sub(r"/\*.*?\*/", "", css[at : css.index("}", at)], flags=re.S)
+    assert "pixelated" not in rule, (
+        "the rail's mark is scaled as pixel art again; the drawing is a vector"
+    )
+    assert "width: 32px" in rule and "height: 32px" in rule, (
+        "32px is half the drawing's 64-unit box; any other size is a fractional scale"
     )
 
 

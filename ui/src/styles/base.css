@@ -37,7 +37,7 @@ body {
     overflow: hidden;
     background: var(--bg);
     color: var(--text);
-    font: var(--t-base) / var(--lh-base) var(--font-sans);
+    font: var(--t-base) / var(--lh-base) var(--font-mono);
     font-variant-numeric: tabular-nums;
     /* Inherited, so every screen gets it without a per-component rule: a
      * listing title, a raw URL or a long source domain has no spaces for the
@@ -56,16 +56,31 @@ body {
     overflow-wrap: break-word;
 }
 
+/* Weights are the faces fonts.css actually ships (400, 500, 600), named here
+ * rather than left to the user agent's `bold`, which asks for 700 and would be
+ * answered by the 600 file only by luck of the matching rules. */
+h1,
+h2,
+h3,
+h4,
+strong,
+b,
+th {
+    font-weight: 600;
+}
 h1,
 h2,
 h3 {
     letter-spacing: -0.01em;
 }
-/* Titles get the theme's display face; body text never does. In slate that
- * alias resolves to --font-sans, so this rule changes nothing there. */
-h1,
-h2 {
-    font-family: var(--font-display);
+/* Italic marks anything different or important (B159: "Use italic text to
+ * mark anything different or important"). It is the real italic face, not a
+ * slant of the upright one; `.emph` is for a span that is not an `<em>`, such
+ * as a notice, a warning or a gap a component prints in its own element. */
+em,
+i,
+.emph {
+    font-style: italic;
 }
 h2 {
     font-size: var(--t-lg);

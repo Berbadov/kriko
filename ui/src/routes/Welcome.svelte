@@ -1,4 +1,6 @@
 <script lang="ts">
+    import FilePick from "../lib/FilePick.svelte";
+    import Icon from "../lib/Icon.svelte";
     import Async from "../lib/Async.svelte";
     import Failure from "../lib/Failure.svelte";
     import { api, ApiError } from "../lib/api";
@@ -74,7 +76,7 @@
 </script>
 
 <section class="welcome">
-    <h2>Kriko is installed. It knows nothing yet.</h2>
+    <h2><Icon name="welcome" size={22} /> Kriko is installed. It knows nothing yet.</h2>
     <p class="hero-sub">
         The engine ships empty on purpose: knowledge changes weekly and the app rarely,
         so they update on separate clocks. Install a knowledge pack and the app has
@@ -120,7 +122,7 @@
 
             <div class="field wide">
                 <label for="kpack">Or install a .kpack file you already have</label>
-                <input id="kpack" type="file" accept=".kpack" onchange={chooseFile} />
+                <FilePick id="kpack" label="Choose a .kpack file" accept=".kpack" onchange={chooseFile} />
             </div>
 
             <div class="row">

@@ -76,15 +76,23 @@
 <aside class="rail">
   <div class="rail-head">
     <a class="brand" href={href("check")}>
-        <!-- The extension's toolbar icon, the same file the installer's
+        <!-- The extension's toolbar icon, the same drawing the installer's
              app icon is rendered from. The reader met this product in a
              browser toolbar; a different mark here reads as a different
-             tool. -->
+             tool.
+
+             The 64x64 drawing, not the 16x16 grid (B161: "Fix the pixelated
+             Kriko logo in the top left"). The grid at 28px is a 1.75 scale, and
+             no smoothing setting makes that crisp: nearest-neighbour gives
+             uneven blocks and any other gives mush. The drawing is vector with
+             real diagonals, and 32px is exactly half its unit, so it is drawn at
+             a whole number of pixels at 100% and lands on the device grid at
+             every scale a display offers above it. -->
         <!-- `/static/`, not `/`: Vite's base is /static/ because FastAPI
              mounts StaticFiles there, so a root-relative path to a
              public/ asset falls through to the SPA catch-all and the mark
              renders as a broken image. Guarded by public-assets.test.ts. -->
-        <img class="mark" src="/static/mark.svg" alt="" width="28" height="28" />
+        <img class="mark" src="/static/mark-large.svg" alt="" width="32" height="32" />
         <span class="brand-text">
             <strong>Kriko</strong>
             <span class="meta">local product knowledge</span>
@@ -122,7 +130,7 @@
     <nav class="rail-nav">
         {#each groups as group, index (group.title)}
             <div class="nav-slot" style="--slot: {index}">
-                <NavGroup {group} {current} {href} figures={reading} />
+                <NavGroup {group} {current} {href} figures={reading} titled={groups.length > 1} />
             </div>
         {/each}
     </nav>
