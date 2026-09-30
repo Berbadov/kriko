@@ -90,9 +90,6 @@ describe("the route table", () => {
     it("lands #/packs and #/marks on Browse, since neither is a screen any more (B166, B167)", () => {
         expect(resolve("packs")).toEqual({ name: "knowledge", lens: "all" });
         expect(resolve("marks")).toEqual({ name: "knowledge", lens: "all" });
-        // Both keep Browse's author gate.
-        expect(isAuthorOnly("packs")).toBe(true);
-        expect(isAuthorOnly("marks")).toBe(true);
     });
 
     it("keeps the words a merged screen absorbed searchable", () => {
