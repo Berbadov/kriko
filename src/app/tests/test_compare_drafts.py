@@ -186,3 +186,40 @@ def test_the_brief_carries_the_table_and_refuses_to_invent():
     assert "none recorded" in brief
     assert "mileage: 120000 km" in brief
     assert "Do not invent risks" in brief
+
+
+def test_a_board_is_saved_read_back_and_refused_for_a_gone_draft(client):
+    http, _ = client
+    made = http.post("/api/compare-drafts",
+                     json={"name": "Shortlist", "lookup_ids": ["a", "b"]}).json()
+    # An unmarked draft reads as an empty board, not a missing one.
+    empty = http.get(f"/api/compare-drafts/{made['draft_id']}/board").json()
+    assert empty == {"draft_id": made["draft_id"], "strokes": [],
+                     "notes": [], "updated_at": ""}
+    saved = http.put(
+        f"/api/compare-drafts/{made['draft_id']}/board",
+        json={"strokes": [[{"x": 1, "y": 2}, {"x": 3, "y": 4}]],
+              "notes": [{"x": 10, "y": 20, "text": "this one"}]}).json()
+    assert len(saved["strokes"]) == 1 and saved["notes"][0]["text"] == "this one"
+    assert saved["updated_at"]
+    back = http.get(f"/api/compare-drafts/{made['draft_id']}/board").json()
+    assert back["strokes"] == saved["strokes"]
+    assert back["notes"] == saved["notes"]
+    assert http.get("/api/compare-drafts/nope/board").status_code == 404
+    assert http.put("/api/compare-drafts/nope/board",
+                    json={}).status_code == 404
+
+
+def test_saving_a_board_replaces_it_wholesale(client):
+    """Erasing is the point of a board: a stroke merged back by the save
+    would resurrect what the reader just rubbed out."""
+    http, _ = client
+    made = http.post("/api/compare-drafts",
+                     json={"name": "Shortlist", "lookup_ids": ["a", "b"]}).json()
+    http.put(f"/api/compare-drafts/{made['draft_id']}/board",
+             json={"strokes": [[{"x": 1}], [{"x": 2}]], "notes": [
+                 {"x": 0, "y": 0, "text": "gone"}]})
+    http.put(f"/api/compare-drafts/{made['draft_id']}/board",
+             json={"strokes": [], "notes": []})
+    back = http.get(f"/api/compare-drafts/{made['draft_id']}/board").json()
+    assert back["strokes"] == [] and back["notes"] == []

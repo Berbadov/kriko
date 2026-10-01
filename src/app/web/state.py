@@ -682,6 +682,20 @@ CREATE TABLE IF NOT EXISTS compare_questions (
   asked_at    TEXT NOT NULL DEFAULT '',
   answered_at TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (draft_id, question_id));
+
+-- One comparison's board: the reader's free marks over the table (B194),
+-- pen strokes and typed notes, saved as one JSON document per draft. A
+-- single row rather than a stroke table: a mark is not a record anyone
+-- queries, it is one drawing, and a normal-form split of it would cost a
+-- write per pixel for nothing. Cleared, not kept, when the draft is saved
+-- over: the board belongs to the comparison as it is now lined up, and a
+-- mark over a column that is gone is a mark about nothing. App state for
+-- the same reason every other comparison row is: never knowledge, and a
+-- pack update or uninstall must not erase it.
+CREATE TABLE IF NOT EXISTS compare_boards (
+  draft_id  TEXT PRIMARY KEY,
+  board     TEXT NOT NULL DEFAULT '{}',
+  updated_at TEXT NOT NULL DEFAULT '');
 """
 
 #: The most operations one installation keeps. A feed, not an archive: the
@@ -1581,6 +1595,72 @@ def answer_compare_question(
     return _question(conn.execute(
         "SELECT * FROM compare_questions WHERE draft_id = ? AND question_id = ?",
         (draft_id, question_id)).fetchone())
+
+
+#: The most one saved board may hold as JSON. A stroke is a list of points
+#: and a note is a short paragraph, so a whole board lives comfortably in a
+#: few kilobytes; this is the runaway guard, not a quota to design against.
+BOARD_MAX_CHARS = 200000
+
+
+def compare_board(conn: sqlite3.Connection, draft_id: str) -> dict:
+    """One comparison's board, or an empty one rather than a missing one.
+
+    A draft with no marks yet is the ordinary case, and the screen must not
+    have to tell "no board" from "board not loaded".
+    """
+    row = conn.execute(
+        "SELECT board, updated_at FROM compare_boards WHERE draft_id = ?",
+        (draft_id,),
+    ).fetchone()
+    if not row:
+        return {"draft_id": draft_id, "strokes": [], "notes": [],
+                "updated_at": ""}
+    try:
+        board = json.loads(row["board"] or "{}")
+    except (TypeError, ValueError):
+        # A document this app cannot read is still the reader's work: hand
+        # back an empty board rather than raising, and let the save below
+        # replace what was unreadable.
+        board = {}
+    return {
+        "draft_id": draft_id,
+        "strokes": board.get("strokes") or [],
+        "notes": board.get("notes") or [],
+        "updated_at": row["updated_at"],
+    }
+
+
+def save_compare_board(
+    conn: sqlite3.Connection, draft_id: str, board: dict,
+) -> dict:
+    """Replace the board, wholesale. The board is one drawing (B194).
+
+    The whole document is written per save rather than merged stroke by
+    stroke: a mark the reader has just erased is a mark they want gone, and
+    a merge would bring it back. The document is only shape-checked (strokes
+    are lists, notes are dicts) because what a stroke means is the screen's
+    business; this layer names no product category and no drawing feature.
+    """
+    strokes = board.get("strokes")
+    notes = board.get("notes")
+    if strokes is None:
+        strokes = []
+    if notes is None:
+        notes = []
+    if not isinstance(strokes, list) or not isinstance(notes, list):
+        raise ValueError("a board is {strokes: [...], notes: [...]}")
+    document = {"strokes": strokes, "notes": notes}
+    text = json.dumps(document, default=str)
+    if len(text) > BOARD_MAX_CHARS:
+        raise ValueError("this board is too large to keep")
+    conn.execute(
+        "INSERT INTO compare_boards (draft_id, board, updated_at) VALUES (?,?,?)"
+        " ON CONFLICT(draft_id) DO UPDATE SET"
+        "   board = excluded.board, updated_at = excluded.updated_at",
+        (draft_id, text, _now()))
+    conn.commit()
+    return compare_board(conn, draft_id)
 
 
 def record_site_request(
