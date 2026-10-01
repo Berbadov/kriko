@@ -431,6 +431,12 @@ def main() -> None:
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_bytes(smooth_png(shapes, units, MASTER))
     print(f"{LARGE_SOURCE.name} ({units}x{units}) -> {TARGET} ({MASTER}px)")
+    # `TARGET` is the master under packaging/, not a file in icons/ — so
+    # nothing above this line has created the directory the ICO lives in,
+    # and on a fresh checkout `ICO_TARGET.write_bytes` was a FileNotFoundError
+    # before this script ever reached its own end. Same fix as TARGET: the
+    # writer owns its directory.
+    ICO_TARGET.parent.mkdir(parents=True, exist_ok=True)
 
     # The ICO holds both marks, split where every other size splits: the grid
     # up to 48px, the drawing from 64 up. A single ICO is the one file that

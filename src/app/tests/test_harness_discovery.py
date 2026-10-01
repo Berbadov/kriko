@@ -89,6 +89,16 @@ def test_a_pathext_match_is_shown_in_lower_case(monkeypatch):
     the one path a reader actually looks at should not be the odd one out.
     """
     monkeypatch.setattr(harness.os, "name", "nt")
+    # Flipping `os.name` to "nt" also flips which `pathlib` class `Path()`
+    # builds, and `locate()` calls `Path.home()` for its cache key: on a
+    # Linux runner the Windows flavour then reads `USERPROFILE`, and with
+    # that unset Python 3.12 raises "Could not determine home directory" —
+    # a platform this test does not otherwise touch (the same pitfall the
+    # harness plane's own docstring names at test_the_cmd_shim_is_actually
+    # _handed_to_popen_with_shell_true). Set the env the flavour reads, or
+    # the test cannot run anywhere but Windows.
+    monkeypatch.setenv("USERPROFILE", r"C:\Users\reader")
+    monkeypatch.delenv("HOME", raising=False)
     monkeypatch.setattr(
         harness.shutil, "which", lambda executable: r"C:\Users\reader\claude.CMD"
     )
