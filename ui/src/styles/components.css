@@ -564,9 +564,18 @@ legend {
 
 /* ── cards, badges, disclosure ────────────────────────────────────── */
 .card {
-    background: var(--panel);
+    /* The design system's glass face (kriko-svelte's .k-card), worn by the
+     * app's own cards: the near-transparent white wash and the blur behind
+     * it, the large radius, the roomy pad. Screens that render `.card` and
+     * screens that render `.k-card` must land on the same surface — two
+     * kinds of card on one screen is the mess the rebuild replaced. The
+     * hairline edge stays: the library's plate sits on the brand wash where
+     * blur alone separates it, while the app's cards stack on the body's
+     * near-black and need the line to read as a thing at all. */
+    background: var(--glass-1);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     padding: var(--s-4);
     margin: var(--s-3) 0;
     /* The library's keys carry their press on `--ease-out` and lift on
@@ -576,6 +585,15 @@ legend {
      * all — a lift on everything is the same as a lift on nothing. */
     transition: border-color var(--dur-quick) var(--ease-out),
         box-shadow var(--dur-quick) var(--ease-out);
+}
+/* Section titles inside a card take the library's display voice — the
+ * tracked, uppercase letters `.k-card h2` carries — so a heading reads as
+ * the card's name rather than a paragraph's first line. */
+.card h2,
+.card h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 .card.interactive:hover {
     border-color: var(--accent);
@@ -589,6 +607,12 @@ legend {
     font-size: var(--t-base);
     line-height: var(--lh-base);
     font-weight: 600;
+}
+/* A card's own name, the `.k-card h2` size: the screen's h2 names the
+ * screen; a card's h2 names the card and must not compete with it. */
+.card h2 {
+    font-size: var(--t-lg);
+    line-height: var(--lh-lg);
 }
 .meta {
     color: var(--dim);
@@ -745,6 +769,23 @@ th {
     font-weight: 500;
     font-size: var(--t-xs);
     line-height: var(--lh-xs);
+    /* The library's eyebrow: a table's head is a column of labels, and
+     * `.k-table th` says a label is tracked uppercase mono — a name for the
+     * column, not a smaller copy of the row. The app's tables and the
+     * design system's must read as one table style, or a screen carrying
+     * both (Compare) shows two eras at once. */
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+td {
+    /* The library's cell: breathing room and a hairline, not a full line —
+     * `.k-table td` uses `inset` so the row's rule never touches the
+     * table's edge, which is what keeps a wide table looking flat rather
+     * than ruled. */
+    padding: var(--s-3) var(--s-2);
+    border-bottom: none;
+    box-shadow: inset 0 -1px 0 var(--hairline);
 }
 th.num,
 td.num {
@@ -815,9 +856,10 @@ pre {
 .stat {
     min-width: 110px;
     padding: var(--s-3) var(--s-4);
-    background: var(--panel);
+    background: var(--glass-1);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
 }
 .stat strong,
 .stat span {
@@ -835,7 +877,8 @@ pre {
     padding: var(--s-3) var(--s-4);
     margin: var(--s-3) 0;
     border-left: 3px solid var(--accent);
-    background: var(--panel);
+    background: var(--glass-1);
+    backdrop-filter: blur(16px);
 }
 .state span {
     color: var(--dim);
