@@ -280,6 +280,21 @@ export const api = {
     compareQuestions: (draftId: string) =>
         get<{ items: T.CompareQuestion[] }>(
             `/api/compare-drafts/${seg(draftId)}/questions`),
+    /** One comparison's marks over its table (B194). Empty, not missing,
+     *  for a draft that has never been drawn on. */
+    compareBoard: (draftId: string) =>
+        get<T.CompareBoard>(`/api/compare-drafts/${seg(draftId)}/board`),
+    /** Save the board whole. A mark erased stays erased: the screen sends
+     *  the document it holds, and the store replaces the one it had. */
+    saveCompareBoard: (
+        draftId: string,
+        strokes: T.BoardStroke[],
+        notes: T.BoardNote[],
+    ) =>
+        putJson<T.CompareBoard>(`/api/compare-drafts/${seg(draftId)}/board`, {
+            strokes,
+            notes,
+        }),
     /** Ask the reader's agent a follow-up question about one comparison.
      *  A job: the agent may search for minutes, and the question row is
      *  written before the job starts so asking is never lost. */
