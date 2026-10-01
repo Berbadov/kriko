@@ -45,6 +45,9 @@ DEFAULT_CASES = 3
 #: And what one benchmark case may spend on the paid plane. Per case, not per
 #: run, so adding a case cannot silently multiply the bill by surprise.
 DEFAULT_BUDGET_USD = 0.20
+#: How long one fixed-set case may run. A quick-look style ask, not a deep
+#: run, so the ceiling is chat-shaped rather than research-shaped (B185).
+FIXED_CASE_TIMEOUT_SECONDS = 240.0
 
 
 def _copy_store(source_path, dest_path) -> None:
@@ -163,6 +166,98 @@ def cases(conn, *, pack_id: str = "", limit: int = DEFAULT_CASES) -> list[dict]:
     ]
 
 
+def _asker(settings, params: dict, progress):
+    """The plane that can `ask`, for the fixed set's cases (B185).
+
+    Only the planes that gather can answer a fixed case, which mirrors the
+    sweep's own rule (`pairs`): `agent` writes a brief nobody read.
+    """
+    from app.web import tasks
+    backend = str(params.get("backend") or "").lower()
+    if backend == "local":
+        return tasks._local_asker(settings, params, progress)
+    return tasks._researcher({**params, "backend": backend})
+
+
+def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
+               max_documents: int, budget_usd: float, batch_id: str,
+               search: str = "", model: str = "",
+               check_cancelled: Callable[[], None] | None = None) -> dict:
+    """One fixed-set case: a product question against versioned ground truth.
+
+    B185, D6. The case names a product, search queries and its own bar
+    (`must_find`, `must_not_find`), so nothing is derived from the installed
+    packs and two machines measure the same thing. A quick-look style ask,
+    judged by `gold.judge` exactly as a gold case is.
+    """
+    from app import gold as gold_mod
+    from app import quicklook
+    row = {
+        "batch_id": batch_id,
+        "subject_id": case["id"],
+        "subject": case.get("product") or case["id"],
+        "pack_id": "",
+        "plane": plane,
+        "protocol": protocol,
+        "search_provider": search,
+        "kind": "fixed",
+        "set_id": case.get("set_id") or "",
+        "set_version": case.get("set_version") or "",
+    }
+    columns, error = _spend_columns(protocol)
+    if error:
+        row["error"] = error
+        return row
+    row.update(columns)
+    silent = _Silent(check_cancelled)
+    silent.check()
+    started = time.perf_counter()
+    try:
+        researcher = _asker(settings, {
+            "backend": plane, "protocol": protocol, "search": search,
+            "model": model, "max_documents": max_documents,
+            "budget_usd": budget_usd,
+            "app_state_path": settings.app_state_path,
+            "timeout_seconds": FIXED_CASE_TIMEOUT_SECONDS,
+            "queries": case.get("queries") or [],
+        }, silent)
+        if hasattr(researcher, "on_action"):
+            researcher.on_action = silent.log
+        if hasattr(researcher, "check_cancelled"):
+            researcher.check_cancelled = silent.check
+        reply = researcher.ask(quicklook.brief(
+            case.get("product") or case["id"], "", None,
+            "", ""))
+        silent.check()
+    except Cancelled:
+        raise
+    except Exception as exc:  # noqa: BLE001 - a failed case is a measurement
+        row["ms"] = int((time.perf_counter() - started) * 1000)
+        row["error"] = f"{type(exc).__name__}: {exc}"
+        return row
+    row["ms"] = int((time.perf_counter() - started) * 1000)
+    found = quicklook.parse(reply, getattr(researcher, "sources", None))
+    produced = [
+        {"title": one.get("title", ""), "domain": one.get("domain", ""),
+         "quote": one.get("quote", "")}
+        for one in (found.get("risks") or [])
+    ]
+    judged = gold_mod.judge(case, produced)
+    row["gold"] = judged
+    row["model"] = str(getattr(researcher, "model", "") or "") or plane
+    row["search_provider"] = (
+        str(getattr(researcher, "search_provider", "") or "") or search
+        or row["search_provider"])
+    row["tokens"] = getattr(researcher, "tokens_used", None)
+    row["usd"] = getattr(researcher, "spent", None) if (
+        getattr(researcher, "cost_basis", "") == "per_token") else None
+    row["accepted"] = len(produced)
+    row["refused"] = int(found.get("dropped") or 0)
+    row["findings"] = row["accepted"] + row["refused"]
+    row["note"] = ""
+    return row
+
+
 def run_case(
     settings,
     case: dict,
@@ -198,6 +293,13 @@ def run_case(
     if check_cancelled is not None:
         check_cancelled()
     kind = str(case.get("kind") or "specific")
+    if kind == "fixed":
+        return _run_fixed(
+            settings, case, plane=plane, protocol=protocol,
+            max_documents=max_documents, budget_usd=budget_usd,
+            batch_id=batch_id, search=search, model=model,
+            check_cancelled=check_cancelled,
+        )
     if kind == "bulk":
         return _run_bulk(
             settings, case, plane=plane, protocol=protocol,
@@ -619,10 +721,12 @@ def scored(rows: list[dict]) -> dict:
         judged = row.get("gold")
         if not judged:
             continue
-        key = (row.get("plane", ""), row.get("model", ""), row.get("protocol", ""))
+        key = (row.get("plane", ""), row.get("model", ""), row.get("protocol", ""),
+               str(row.get("set_id") or ""), str(row.get("set_version") or ""))
         seen = groups.setdefault(key, {
             "plane": key[0], "model": key[1], "protocol": key[2],
             "runs": 0, "found": 0, "wanted": 0, "produced": 0, "hallucinated": 0,
+            "set_id": key[3], "set_version": key[4],
         })
         seen["runs"] += 1
         seen["found"] += len(judged.get("found") or [])
@@ -691,7 +795,7 @@ def verdict(rows: list[dict]) -> dict:
     return {"planes": sorted(planes.values(), key=lambda one: one["plane"])}
 
 
-KNOWN_PLANES = ("harness", "agent", "api")
+KNOWN_PLANES = ("harness", "agent", "api", "local")
 
 
 def split_axis(params: dict, *names: str) -> list[str]:
@@ -864,4 +968,8 @@ def planes_available(settings) -> list[str]:
     # rather than a degraded plane worth measuring.
     if keys.ready():
         found.append("api")
+    from app import localplane
+
+    if localplane.is_ready():
+        found.append("local")
     return found

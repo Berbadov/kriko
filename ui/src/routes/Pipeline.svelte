@@ -86,7 +86,7 @@
     Four stages turn sources into claims: Discovery finds candidates,
     Extraction pulls grounded findings out of them, Ingestion puts those
     through the acceptance check, and Ledgering writes down what was kept and
-    what was refused. The refusals are the point — a run that kept nothing is
+    what was refused. The refusals are the point; a run that kept nothing is
     the one worth reading.
 </p>
 
@@ -199,7 +199,7 @@
 {:else if ready && !runs.length}
     <EmptyState
         title="The pipeline has not run yet"
-        detail="Research a subject and this screen fills in as it goes — stage by stage, source by source."
+        detail="Research a subject and this screen fills in as it goes: stage by stage, source by source."
         actionLabel="Go to Runs"
         actionHref="#/jobs"
     />
@@ -228,10 +228,10 @@
                             class="link pick"
                             aria-pressed={frame?.run.run_id === run.run_id}
                             onclick={() => (picked = run.run_id)}
-                            >{run.subject || run.subject_id || "—"}</button
+                            >{run.subject || run.subject_id || "none"}</button
                         >
                     </td>
-                    <td>{run.plane || "—"}</td>
+                    <td>{run.plane || "none"}</td>
                     <td>{runWord(run.state)}</td>
                     <td>{run.sources}</td>
                     <td>{run.accepted}</td>
@@ -243,7 +243,7 @@
     </table>
     <p class="meta">
         Pick a run to read it. Runs are kept for a while and then
-        dropped whole — events and stages with them, because half an event log
+        dropped whole, events and stages with them, because half an event log
         is more misleading than none.
     </p>
 {/if}

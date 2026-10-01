@@ -192,7 +192,7 @@ grantButton.addEventListener("click", () => {
       return;
     }
     if (!granted) {
-      saySites("Left as it was — Kriko will not read those sites.", "warn");
+      saySites("Left as it was; Kriko will not read those sites.", "warn");
       return;
     }
     // The worker's own `permissions.onAdded` does the registering; this only
@@ -227,7 +227,7 @@ function renderCompat(compat) {
   if (compat.stale) {
     compatEl.textContent =
       `Extension ${compat.running} is older than the ${compat.minimum} this `
-      + "app needs. Open Kriko's Extension page and load the copy it wrote — "
+      + "app needs. Open Kriko's Extension page and load the copy it wrote: "
       + "yours is out of date, not broken.";
     compatEl.dataset.state = "error";
     return;

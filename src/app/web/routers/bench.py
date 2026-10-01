@@ -65,9 +65,26 @@ def read_bench(
 
     from app import protocols
 
+    from app import benchcases
     rows = state.bench_runs(conn, limit=limit)
     summary = state.bench_summary(conn)
     return {
+        # What the fixed set is, so a reader can tell what a number measured
+        # (B185, D6). A run always names its set, so two numbers measured on
+        # two sets never sit in one table silently.
+        "test_set": {
+            "id": benchcases.SET_ID,
+            "version": benchcases.SET_VERSION,
+            "cases": benchcases.case_rows(50),
+        },
+        # What a plane *is*, in one line each (B185): the reader's sentence
+        # was "explain the planes (they exist but explain nothing)".
+        "plane_meanings": {
+            "local": "a model on this machine; no key, no account, slower",
+            "harness": "a coding-agent CLI (Claude Code and its kind); subscription",
+            "api": "a paid per-token API model",
+            "agent": "writes a research brief; gathers nothing (never measured)",
+        },
         "runs": [_served(row) for row in rows],
         # How each plane failed, not only how often (B124). "Four of five
         # harness runs failed, all of them `auth`" is actionable; "four of five

@@ -242,7 +242,7 @@
         const state = told[`${job.job_id}/${question.id}`];
         return state === "sending" ? "Telling it…"
             : state === "sent" ? "It heard you."
-            : state === "late" ? "The run had finished — press Answer and run again."
+            : state === "late" ? "The run had finished; press Answer and run again."
             : "";
     };
 
@@ -251,6 +251,29 @@
         String(job.params?.subject_id ?? job.params?.category ?? job.params?.root ?? "");
 
     const kindWord = (job: Job) => libKindWord(job.kind);
+    /* B184: a search box and a state filter keep a long run history
+     * answerable. Text matches the subject, the kind and the state word. */
+    let filterText = $state("");
+    let filterState = $state("");
+    const STATE_FILTERS: [string, string][] = [
+        ["", "every state"],
+        ["live", "only running"],
+        ["succeeded", "only done"],
+        ["failed", "only failed"],
+        ["cancelled", "only stopped"],
+    ];
+    const isLiveState = (job: Job) =>
+        job.state === "queued" || job.state === "running" || job.state === "cancelling";
+    const shown = $derived(
+        jobs.filter((job) => {
+            if (filterState === "live" ? !isLiveState(job) : filterState && job.state !== filterState)
+                return false;
+            const needle = filterText.trim().toLowerCase();
+            if (!needle) return true;
+            return [subjectOf(job), kindWord(job), stateWord(job), job.message]
+                .some((one) => String(one).toLowerCase().includes(needle));
+        }),
+    );
 </script>
 
 <!-- "Runs", which is what the rail has always called it. The heading said
@@ -275,11 +298,27 @@
 {#if error}
     <Failure {error} retry={load} />
 {/if}
+{#if jobs.length}
+    <form class="filters" onsubmit={(event) => event.preventDefault()}>
+        <label class="field grow">
+            <span>Filter runs</span>
+            <input bind:value={filterText} placeholder="subject, kind or state" />
+        </label>
+        <label class="field">
+            <span>State</span>
+            <select bind:value={filterState}>
+                {#each STATE_FILTERS as [value, label] (value)}
+                    <option {value}>{label}</option>
+                {/each}
+            </select>
+        </label>
+    </form>
+{/if}
 
 {#if !jobs.length}
     <EmptyState
         title="No runs yet"
-        detail="Long work is a row here rather than a request that hangs — research
+        detail="Long work is a row here rather than a request that hangs; research
                 and pack builds both land on this screen, and their log outlives
                 the page. Start one from Run, or from a gap on Knowledge."
         actionLabel="Find a gap"
@@ -287,7 +326,7 @@
     />
 {/if}
 
-{#each jobs as job (job.job_id)}
+{#each shown as job (job.job_id)}
     <article class="card job" class:live={isLive(job)}>
         <h3>
             {kindWord(job)}

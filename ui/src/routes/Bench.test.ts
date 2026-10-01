@@ -116,8 +116,8 @@ describe("Bench", () => {
     it("says how to start the first run, and what it would cost to run", async () => {
         stubFetch({ "/api/bench": EMPTY, "/api/jobs": { items: [] } });
         render(Bench);
-        expect(await screen.findByText("No benchmark runs yet")).toBeInTheDocument();
-        expect(screen.getByText(/2 cases would run/)).toBeInTheDocument();
+        expect(await screen.findByText("No measurements yet")).toBeInTheDocument();
+        expect(screen.getByText(/fixed test set/)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Run benchmark" })).toBeInTheDocument();
     });
 
@@ -150,7 +150,7 @@ describe("Bench", () => {
         // catches is a second, delayed call the first assertion would miss.
         stubFetch({ "/api/bench": WITH_OPTIONS, "/api/jobs": { items: [] } });
         render(Bench);
-        await screen.findByText("No benchmark runs yet");
+        await screen.findByText("No measurements yet");
         await waitFor(() => expect(fetchCalls("/api/bench")).toBeGreaterThanOrEqual(1));
         await new Promise((r) => setTimeout(r, 50));
         expect(fetchCalls("/api/bench")).toBe(1);
@@ -199,7 +199,7 @@ describe("Bench", () => {
             "/api/scales": SCALES,
         });
         render(Bench);
-        for (const plane of ["harness", "agent", "api"]) {
+        for (const plane of ["local", "harness", "api"]) {
             expect(await screen.findByRole("button", { name: plane })).toBeInTheDocument();
         }
         for (const scale of ["Quick", "Standard", "Deep"]) {
@@ -217,7 +217,7 @@ describe("Bench", () => {
         expect(screen.getByRole("button", { name: "Raise ceiling" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Fewer cases" })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: "More cases" })).toBeInTheDocument();
-        expect(screen.getByRole("combobox", { name: "Pack" })).toBeInTheDocument();
+        expect(screen.queryByRole("combobox", { name: "Pack" })).toBeNull();
         expect(screen.queryByRole("spinbutton")).toBeNull();
         const textboxes = screen.queryAllByRole("textbox");
         expect(textboxes).toHaveLength(1);
@@ -255,7 +255,7 @@ describe("Bench", () => {
             }),
         );
         render(Bench);
-        await fireEvent.click(await screen.findByRole("button", { name: "agent" }));
+        await fireEvent.click(await screen.findByRole("button", { name: "api" }));
         await fireEvent.click(await screen.findByRole("button", { name: "Model A" }));
         await fireEvent.click(await screen.findByRole("button", { name: "Model B" }));
         await fireEvent.click(await screen.findByRole("button", { name: "Tavily" }));
@@ -267,7 +267,7 @@ describe("Bench", () => {
         await fireEvent.click(await screen.findByRole("button", { name: "Estimate" }));
         await waitFor(() => expect(seen.length).toBeGreaterThan(0));
         const last = seen[seen.length - 1].body;
-        expect(last["planes"]).toBe("harness, agent");
+        expect(last["planes"]).toBe("harness, api");
         expect(last["llms"]).toBe("model-a, model-b");
         expect(last["searches"]).toBe("tavily");
         expect(last["protocols"]).toBe("wide");

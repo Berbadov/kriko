@@ -32,4 +32,4 @@ export async function copyText(text: string): Promise<boolean> {
 }
 
 /** What a copy button says after it was pressed. */
-export const copyWord = (ok: boolean) => (ok ? "Copied" : "Clipboard blocked — select the text instead");
+export const copyWord = (ok: boolean) => (ok ? "Copied" : "Clipboard blocked; select the text instead");

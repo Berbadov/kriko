@@ -126,7 +126,7 @@
                     <option value="">Whichever has a key</option>
                     {#each searchersOf(data) as one (one.id)}
                         <option value={one.id} disabled={!one.ready}
-                            >{one.label}{one.ready ? "" : " — no key set"}</option
+                            >{one.label}{one.ready ? "" : "; no key set"}</option
                         >
                     {/each}
                 </select>
@@ -142,12 +142,12 @@
                     id="p-llm"
                     value={data.chosen?.llm_model ?? ''}
                     options={llmOptions(data)}
-                    emptyLabel={`Default (${data.models?.default ?? '—'})`}
+                    emptyLabel={`Default (${data.models?.default ?? 'none'})`}
                     hint="Any id the provider accepts. Prices for one Kriko has never seen are unknown, which is not the same as free."
                     onpick={(chosen) => save({ llm_model: chosen })}
                 />
                 <p class="meta">
-                    {data.models?.note ?? ''} Currently: <code>{data.models?.current ?? '—'}</code>.
+                    {data.models?.note ?? ''} Currently: <code>{data.models?.current ?? 'none'}</code>.
                 </p>
             </div>
             {#if data.effective}
@@ -168,12 +168,12 @@
                 </table>
                 {#each data.roles ?? [] as role (role.id)}
                     <label class="field">
-                        {role.id} — {role.note}
+                        {role.id} · {role.note}
                         <Pick
                             value={role.chosen}
                             disabled={!role.active}
                             options={llmOptions(data)}
-                            emptyLabel={`Use the LLM above (${data.models?.current ?? '—'})`}
+                            emptyLabel={`Use the LLM above (${data.models?.current ?? 'none'})`}
                             onpick={(chosen) => save({ [`llm_model_${role.id}`]: chosen })}
                         />
                     </label>
@@ -209,7 +209,7 @@
                     {#each spentOf(data) as row (row.plane + row.llm)}
                         <li class="krow">
                             <div class="kmain">
-                                <span class="klabel">{row.plane} · {row.llm || "—"}</span>
+                                <span class="klabel">{row.plane} · {row.llm || "none"}</span>
                                 <span class="meta">
                                     {count(row.runs, "run")}, {row.priced} of them priced
                                 </span>

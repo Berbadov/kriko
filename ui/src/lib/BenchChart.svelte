@@ -98,7 +98,7 @@
                 {@const cy = yAt(point.usdPerAcceptedClaim ?? 0)}
                 {@const severity = hallucinationSeverity(point.hallucinationRate)}
                 <title>
-                    {point.protocol} — batch {point.batchSize}, {point.contextChars.toLocaleString()}
+                    {point.protocol} · batch {point.batchSize}, {point.contextChars.toLocaleString()}
                     chars{point.preamble ? `, ${point.preamble} preamble` : ""}. {formatPct(
                         point.hallucinationRate,
                     )} hallucinated{point.hallucinationInterval
@@ -125,7 +125,7 @@
         {#if skipped}
             <p class="meta">
                 {skipped} more protocol{skipped === 1 ? "" : "s"} measured for {llm}, without enough
-                priced runs to place on this chart — see the table above.
+                priced runs to place on this chart; see the table above.
             </p>
         {/if}
         <p class="meta legend">
