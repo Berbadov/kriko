@@ -47,6 +47,9 @@ export const NAV: NavGroupSpec[] = [
             // gained and research spend. The detail is under Activity.
             { name: "home", label: "Home", also: ["welcome", "dashboard", "graphs"] },
             { name: "run", label: "Run", also: ["start", "author", "new pack", "agent run"] },
+            // B193: several subjects picked first, then researched one
+            // after another by the one worker every job already shares.
+            { name: "queue", label: "Queue", also: ["queue up", "batch", "several products", "research queue"] },
             { name: "history", label: "History" },
             { name: "compare", label: "Compare" },
             { name: "extension", label: "Browser extension" },
