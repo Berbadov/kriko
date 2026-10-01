@@ -118,6 +118,13 @@
     max-width: 1100px;
 }
 
+/* Board mode (B194): the same column, held in the middle of the window
+ * rather than at its left edge, so marks drawn over the table sit under
+ * the reader's pen instead of a hand's width to the right of it. */
+.work.centred .view {
+    margin-inline: auto;
+}
+
 /* ── controls ─────────────────────────────────────────────────────── */
 /*
  * A button here is a *thing*, not a coloured word. The previous rule drew a

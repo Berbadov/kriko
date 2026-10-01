@@ -63,3 +63,36 @@ def ask_question(
     except KeyError as exc:  # pragma: no cover - the handler is registered
         raise HTTPException(400, str(exc)) from exc
     return {**question, "job_id": job_id, "kind": "compare_ask"}
+
+
+class BoardRequest(BaseModel):
+    """The board as the screen holds it. Shapes, not semantics: `strokes`
+    and `notes` are passed through verbatim, because what a mark means is
+    the reader's to have made and the screen's to render, never this
+    layer's to interpret."""
+    strokes: list = Field(default_factory=list, max_length=500)
+    notes: list = Field(default_factory=list, max_length=100)
+
+
+@router.get("/{draft_id}/board")
+def read_board(draft_id: str, conn=Depends(get_app_state)) -> dict:
+    """The comparison's marks, or an empty board for a draft with none."""
+    if not state.get_compare_draft(conn, draft_id):
+        raise HTTPException(404, f"no draft {draft_id}")
+    return state.compare_board(conn, draft_id)
+
+
+@router.put("/{draft_id}/board")
+def write_board(
+    draft_id: str, body: BoardRequest, conn=Depends(get_app_state),
+) -> dict:
+    """Save the board. The screen saves when the reader stops drawing and
+    when a note is edited, so a crash or a closed window costs the last
+    pen lift at most, never the drawing."""
+    if not state.get_compare_draft(conn, draft_id):
+        raise HTTPException(404, f"no draft {draft_id}")
+    try:
+        return state.save_compare_board(
+            conn, draft_id, {"strokes": body.strokes, "notes": body.notes})
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
