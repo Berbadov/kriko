@@ -244,3 +244,84 @@ describe("Compare drafts (B183)", () => {
         expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     });
 });
+
+
+describe("Compare notes and questions (B193)", () => {
+    beforeEach(() => {
+        window.location.hash = "#/compare?left=a1&right=b2";
+    });
+
+    it("takes a note on one side's risk and sends it to the same store as the report",
+        async () => {
+            stubFetch({
+                ...BOTH,
+                "/api/lookups/a1/triage": { lookup_id: "a1", checked: [], notes: {} },
+                "/api/lookups/b2/triage": { lookup_id: "b2", checked: [], notes: {} },
+                "/api/lookups/a1/notes": {
+                    lookup_id: "a1",
+                    notes: { x: "seller says the belt was done at 90k" },
+                },
+            });
+            render(Compare);
+            await fireEvent.click(await screen.findByRole("button", { name: "T-x" }));
+            // The claim is shared, so both columns carry a note field; the
+            // reader writes against the first side here.
+            const notes = await screen.findAllByLabelText(/Your note on this risk/);
+            const note = notes[0];
+            await fireEvent.input(note, {
+                target: { value: "seller says the belt was done at 90k" },
+            });
+            await fireEvent.blur(note);
+            await waitFor(() => {
+                const call = (fetch as ReturnType<typeof vi.fn>).mock.calls.find(
+                    ([path, init]) =>
+                        path === "/api/lookups/a1/notes" && init?.method === "POST",
+                );
+                expect(call?.[0]).toBe("/api/lookups/a1/notes");
+                expect(JSON.parse(call?.[1].body)).toEqual({
+                    claim_key: "x",
+                    note: "seller says the belt was done at 90k",
+                });
+            });
+        });
+
+    it("offers the ask-a-question box only for a saved draft", async () => {
+        stubFetch({ ...BOTH, "/api/compare-drafts": { items: [], max: 4 } });
+        render(Compare);
+        await screen.findByRole("columnheader", { name: "One" });
+        expect(screen.queryByLabelText("Question")).toBeNull();
+        expect(
+            screen.getByText(/Save this comparison as a draft/i),
+        ).toBeInTheDocument();
+    });
+
+    it("asks the agent a question about an open draft and keeps the answer", async () => {
+        window.location.hash = "#/compare?draft=d1&ids=a1,b2";
+        stubFetch({
+            ...BOTH,
+            "/api/compare-drafts": { items: [DRAFT], max: 4 },
+            "/api/compare-drafts/d1/questions": {
+                items: [
+                    {
+                        draft_id: "d1", question_id: "q9",
+                        question: "which is cheaper to fix?",
+                        answer: "The first one: the chain is a known, cheap fix.",
+                        job_id: "j1", asked_at: "", answered_at: "",
+                    },
+                ],
+            },
+        });
+        render(Compare);
+        expect(
+            await screen.findByText("which is cheaper to fix?"),
+        ).toBeInTheDocument();
+        expect(
+            screen.getByText("The first one: the chain is a known, cheap fix."),
+        ).toBeInTheDocument();
+        const box = screen.getByLabelText("Question");
+        await fireEvent.input(box, { target: { value: "and the second?" } });
+        await waitFor(() =>
+            expect(screen.getByRole("button", { name: "Ask" })).toBeEnabled(),
+        );
+    });
+});

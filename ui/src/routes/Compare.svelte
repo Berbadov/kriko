@@ -8,7 +8,13 @@
     import { route, setQuery, toHash } from "../lib/router";
     import { ApiError } from "../lib/api";
     import { remedyFor } from "../lib/failure";
-    import type { CompareDraft, HistoryItem, SubjectDetail } from "../lib/types";
+    import { follow } from "../lib/jobs";
+    import type {
+        CompareDraft,
+        CompareQuestion,
+        HistoryItem,
+        SubjectDetail,
+    } from "../lib/types";
 
     //: Four is the cap, and it is a layout limit rather than a logical one:
     //: `compareMany` takes any number, but a fifth column stops fitting the
@@ -168,6 +174,87 @@
         detail = "";
     };
     const toggleDetail = (key: string) => (detail = detail === key ? "" : key);
+
+    // Notes (B193): the same per-claim note the Report page holds, editable
+    // from the comparison, because "belt done at 90k per this seller" is
+    // written while deciding, not while reading one report. One store, one
+    // key: the note written here shows on the Report page and vice versa.
+    // Loaded per side, only when a detail row is opened — a table the reader
+    // is scanning should not cost a triage request per column.
+    let triage = $state<Record<string, Record<string, string>>>({});
+    let noteDrafts = $state<Record<string, string>>({});
+    let noteBusy = $state("");
+
+    async function loadTriage(lookupId: string) {
+        if (triage[lookupId]) return;
+        try {
+            const t = await api.triage(lookupId);
+            triage = { ...triage, [lookupId]: t.notes ?? {} };
+        } catch {
+            triage = { ...triage, [lookupId]: {} };
+        }
+    }
+
+    async function saveNote(lookupId: string, claimKey: string, text: string) {
+        noteBusy = `${lookupId}:${claimKey}`;
+        const next = { ...(triage[lookupId] ?? {}), [claimKey]: text };
+        triage = { ...triage, [lookupId]: next };
+        try {
+            const t = await api.setNote(lookupId, claimKey, text);
+            triage = { ...triage, [lookupId]: t.notes ?? next };
+        } catch {
+            // Their sentence stays on screen; the Report page behaves the
+            // same way on the same failure.
+        } finally {
+            noteBusy = "";
+        }
+    }
+
+    const cellNote = (lookupId: string | undefined, key: string) =>
+        lookupId ? (triage[lookupId] ?? {})[key] ?? "" : "";
+
+    // Follow-up questions (B193): the question the table raises, asked of
+    // the reader's own agent with the table attached. Only a saved draft can
+    // be asked about — a question is part of the comparison the reader named
+    // and kept, not of whatever is temporarily picked.
+    let questions = $state<CompareQuestion[]>([]);
+    let questionDraft = $state("");
+    let asking = $state("");
+    let askError = $state("");
+
+    $effect(() => {
+        const id = draftId;
+        questions = [];
+        if (id) {
+            api.compareQuestions(id)
+                .then((r) => (questions = r.items ?? []))
+                .catch(() => {});
+        }
+    });
+
+    async function ask() {
+        const text = questionDraft.trim();
+        if (!open || !text || asking) return;
+        asking = "starting";
+        askError = "";
+        try {
+            const started = await api.askCompareQuestion(
+                open.draft_id, text);
+            asking = started.job_id;
+            questionDraft = "";
+            follow(started.job_id, (job) => {
+                if (job.done) {
+                    asking = "";
+                    void api.compareQuestions(open!.draft_id)
+                        .then((r) => (questions = r.items ?? []))
+                        .catch(() => {});
+                }
+            });
+        } catch (thrown) {
+            asking = "";
+            askError = remedyFor(thrown).headline;
+        }
+    }
 </script>
 
 <h2><Icon name="compare" size={22} /> Compare</h2>
@@ -373,6 +460,23 @@
                                                                         >{s.domain ?? "Source"}</a
                                                                     >
                                                                 {/each}
+                                                                <label class="note-field">
+                                                                    <span class="meta"
+                                                                        >Your note on this risk</span
+                                                                    >
+                                                                    <textarea
+                                                                        rows="2"
+                                                                        value={cellNote(d.answers[i].lookup_id, row.key)}
+                                                                        onfocus={() => loadTriage(d.answers[i].lookup_id)}
+                                                                        onblur={(e) =>
+                                                                            saveNote(
+                                                                                d.answers[i].lookup_id,
+                                                                                row.key,
+                                                                                e.currentTarget.value,
+                                                                            )}
+                                                                        placeholder="e.g. seller says the belt was done at 90k"
+                                                                    ></textarea>
+                                                                </label>
                                                             {/if}
                                                         </td>
                                                     {/each}
@@ -385,9 +489,88 @@
                         </div>
                     {/snippet}
                 </Async>
+                {#if open}
+                    <section class="questions" aria-label="Follow-up questions">
+                        <h3><Icon name="questions" size={18} /> Ask your agent</h3>
+                        <p class="meta">
+                            A question about this shortlist, answered by an agent with
+                            the table above attached. Kept with the draft, so reopening
+                            the comparison reopens the conversation.
+                        </p>
+                        <div class="row">
+                            <div class="field grow">
+                                <label for="compare-question">Question</label>
+                                <input
+                                    id="compare-question"
+                                    bind:value={questionDraft}
+                                    maxlength="2000"
+                                    placeholder="e.g. which of these is cheaper to fix?"
+                                    onkeydown={(e) => e.key === "Enter" && ask()}
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                disabled={asking !== "" || !questionDraft.trim()}
+                                onclick={ask}
+                            >{asking ? "Asking…" : "Ask"}</button>
+                        </div>
+                        {#if askError}<p class="state" role="alert">{askError}</p>{/if}
+                        {#if asking && asking !== "starting"}
+                            <p class="state">Your agent is answering; Activity keeps the run.</p>
+                        {/if}
+                        {#each questions as q (q.question_id)}
+                            <article class="card question">
+                                <h4>{q.question}</h4>
+                                {#if q.answer}
+                                    <p class="answer">{q.answer}</p>
+                                {:else if q.job_id === asking}
+                                    <p class="meta">Asking your agent…</p>
+                                {:else}
+                                    <p class="meta">Asked; no answer was recorded.</p>
+                                {/if}
+                                {#if q.job_id}
+                                    <p class="meta">
+                                        <a href={toHash("activity")}>The run's log</a>
+                                    </p>
+                                {/if}
+                            </article>
+                        {/each}
+                    </section>
+                {:else if ids.length >= 2}
+                    <p class="meta">
+                        Save this comparison as a draft to ask your agent a question
+                        about it.
+                    </p>
+                {/if}
             {:else}
                 <p class="meta">Pick at least two different saved checks to line them up.</p>
             {/if}
         {/if}
     {/snippet}
 </Async>
+
+<style>
+    .note-field {
+        display: block;
+        margin-top: var(--s-2);
+    }
+
+    .questions {
+        margin-top: var(--s-4);
+    }
+
+    .questions h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
+
+    .question h4 {
+        margin: 0 0 var(--s-2);
+    }
+
+    .question .answer {
+        white-space: pre-wrap;
+        line-height: var(--lh-read);
+    }
+</style>

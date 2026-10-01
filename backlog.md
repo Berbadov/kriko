@@ -154,6 +154,41 @@ is on `main`, so all six are open.
 
 ## Phase 1: what 1.0 still needs
 
+### B193: Compare carries the decision, not only the table
+
+**Asked:** "Could you work on Compare screen, lets make that one of the
+features that we can shine. adding multile products side by side add follow
+up questions to agents regarding to that and take specific notes etc. lets go
+and cook" (2026-10-02).
+
+**Where:** Compare (`ui/src/routes/Compare.svelte`), its API
+(`/api/compare-drafts`) and the job kinds the ask-an-agent buttons use.
+
+**Found (2026-10-02):** the screen already lines up to four saved checks by
+claim and by specification (B173, B183), saves a comparison as a named draft,
+and the report's own per-risk notes (`claim_notes`) exist but stop at a single
+saved answer — they are invisible here, so the sentence the reader writes
+while deciding ("seller says the belt was done at 90k") has nowhere to live on
+the screen where the decision is actually made.
+
+**Done when:**
+
+- The reader's own note can be written against any cell of the comparison —
+  one product's risk, or the whole row — and is still there when the screen
+  is reopened, and it is the same note the Report page shows for that check
+  (one store, not two).
+- The reader can ask their agent a follow-up question about the shortlist in
+  front of them ("which of these has the cheapest known fix"), and the answer
+  arrives on the Compare screen, next to the table it is about, with its run
+  log.
+- Notes and questions both work with fewer or more than two columns chosen.
+
+**Not this:** a compare endpoint in the engine, a chat panel, or notes that
+live only in a comparison (a note is about a product's risk, and the Report
+page must show it too).
+
+**Owner:** free.
+
 ### B191: The journey checks the release criterion is written against
 **Asked:** "okay let's do a stable version to do list" (2026-09-29); the 1.0 list's own criterion names a directory that does not exist.
 **Where:** `tools/journeys/`, run by `tools/walk.sh`.

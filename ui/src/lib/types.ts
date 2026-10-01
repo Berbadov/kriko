@@ -436,6 +436,19 @@ export type CompareDraft = {
     updated_at: string;
 };
 
+/* One follow-up question the reader asked about a comparison, and what
+ * their agent answered (B193). `answer` and `job_id` are empty until the
+ * compare_ask job lands. */
+export type CompareQuestion = {
+    draft_id: string;
+    question_id: string;
+    question: string;
+    answer: string;
+    job_id: string;
+    asked_at: string;
+    answered_at: string;
+};
+
 export type StoredLookup = {
     lookup_id: string;
     created_at: string;
