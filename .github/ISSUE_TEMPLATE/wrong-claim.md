@@ -1,32 +1,38 @@
 ---
 name: Wrong or missing claim on a listing
-about: Kriko showed a risk that doesn't apply, missed one that does, or showed noise
+about: Kriko showed a risk that does not apply, missed one that does, or showed noise
 title: '[claim] '
 labels: claim-quality
 ---
 
-### Listing
+### The listing
 
-- URL or listing ID:
-- Make / model / generation:
-- Engine + gearbox as the ad states them:
-- Mileage and year:
+- URL or listing id:
+- The identity fields, exactly as the page stated them (the catalog decides
+  which fields those are; see its `README.md`):
+- Anything the page said that the listing's own context implies, such as age or
+  usage:
 
 ### What Kriko showed
 
-<!-- Paste the risk card text or the /analyze response. Recent analysis activity is
-     available from the local dashboard and `python -m app.pipeline.panel`. -->
+<!-- Paste the risk card text or the /api/analyze response. Recent check
+     activity is on the Home and Activity screens and through
+     `kriko operations`. -->
 
 ### What it should have shown
 
-<!-- And why — a known failure pattern for this engine/gearbox at this mileage,
-     a maintenance interval the ad doesn't address, etc. -->
+<!-- And why: a known failure pattern for this exact configuration, a service
+     interval the listing never addresses, something the ad contradicts. -->
 
 ### Which bar does this fail?
 
-- [ ] **Not config-specific** — the claim is true of any car, not this variant
-- [ ] **Not predictable from the ad** — needs the car inspected to know
-- [ ] **Inspection already covers it** — a normal pre-purchase check finds this anyway
-      (fluid levels, brake pads, compression, injector bench tests)
-- [ ] **Missing** — a real, config-specific, mileage-predictable risk wasn't shown
-- [ ] **Wrong variant** — correct claim, attached to the wrong engine/gearbox
+The bar is the catalog's own, in its `research/principle.md`. Tick the ones
+that apply, and say in one line which of its rules was broken.
+
+- [ ] **Not specific to the configuration** — the claim is true of the whole
+      category, not of this one
+- [ ] **Not predictable from the listing** — it takes an inspection to know
+- [ ] **A standard check already finds it** — the reader would learn this
+      anyway
+- [ ] **Missing** — a real, configuration-specific, predictable risk was not shown
+- [ ] **Wrong subject** — a correct claim attached to the wrong product

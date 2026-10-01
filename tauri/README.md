@@ -50,8 +50,7 @@ Most Windows-build breakage isn't Windows-specific; check from Linux first (run 
 ```bash
 tools/setup.sh
 sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev xvfb mingw-w64
-python -m app.cli build packs/cars  --out dist/cars.kpack
-python -m app.cli build packs/drill --out dist/drill.kpack
+kriko build packs/<name> --out dist/<name>.kpack
 packaging/freeze.sh                              # freeze + ten smoke checks
 triple=$(rustc -Vv | sed -n 's/host: //p')
 cp dist/kriko-sidecar "tauri/src-tauri/binaries/kriko-sidecar-$triple"
@@ -60,21 +59,33 @@ cd tauri/src-tauri
 cargo metadata --locked --format-version 1 >/dev/null
 cargo check
 rustup target add x86_64-pc-windows-gnu
-touch binaries/kriko-sidecar-x86_64-pc-windows-gnu.exe  # build script only checks existence
+touch binaries/kriko-sidecar-x86_64-pc-windows-gnu.exe  # the build script only checks existence
 cargo check --target x86_64-pc-windows-gnu              # covers #[cfg(windows)]
 cd ../..
 python packaging/configure_updater.py --repo <owner/name> --version ""
-npm --prefix tauri run tauri build               # real .deb + .AppImage
+npm --prefix tauri run tauri build               # a real .deb + .AppImage
 xvfb-run -a python packaging/smoke_app.py tauri/src-tauri/target/release/kriko
 ```
 
-`-gnu` (not `-msvc`) needs only `mingw-w64`; `cfg(windows)` is true for both, which is all that matters — B89 proved it: twelve tray tests passed on an unparseable `main.rs`, found nine minutes into a hand build by the first real `cargo`.
+`-gnu` (not `-msvc`) needs only `mingw-w64`; `cfg(windows)` is true for both,
+which is all that matters here. That is the class of defect worth this step: a
+tray test suite once passed twelve tests against a `main.rs` that could not be
+parsed, because nothing had ever run a real compiler over it, and it was found
+nine minutes into a hand build.
 
-**Only a Windows box proves:** PyInstaller vs `pywinpty` (is `winpty-agent.exe` along? — the 0.7.4 defect), NSIS bundling, the **Kriko Console** shortcut from `installer.nsh`, tray + tree-kill, WebView2 rendering.
+**Only a Windows box proves:** PyInstaller against `pywinpty` (does
+`winpty-agent.exe` travel with it? an earlier release shipped without it and
+every terminal feature was dead on arrival), NSIS bundling, the **Kriko
+Console** shortcut from `installer.nsh`, the tray and the tree kill, and
+WebView2 rendering.
 
 ## Nothing outlives *Quit*
 
-Since 0.5.1 the window hides and the tray owns the process (left click reopens; menu has *Open Kriko*, *Quit Kriko*) — killing the engine on X made the extension unusable when the reader is on a listing, not in Kriko. The tray is built with `?`: a shell that can't show one refuses to start (an unstoppable engine is malware-shaped). Three belts:
+The window hides and the tray owns the process (left click reopens, and the menu
+has *Open Kriko* and *Quit Kriko*). Killing the engine when the window closes
+made the extension unusable for the reader standing on a listing rather than in
+the app. The tray is built with `?`, so a shell that cannot show one refuses to
+start: an unstoppable engine is malware-shaped. Three belts:
 
 1. **`--exit-with-parent`.** Sidecar watches its stdin (write end in the shell); shell gone = EOF = engine stops. Only belt covering a crash.
 2. **`kill_engine` before `app.exit`** (not after — stdin-EOF is too slow for the next installer) *and* on `RunEvent::Exit` + `Destroyed` (dock quit, logout, post-update restart destroy no window).

@@ -1,66 +1,78 @@
-# Kriko — the words
+# Kriko, the words
 
-Terms already used across code and docs, collected because *in situ*
-definitions drift between sessions. One line each + owner.
+Terms already used across the code and the documents, collected because
+definitions drift between sessions. One line each, plus its owner.
 
 ## The knowledge
 
 | Word | Definition |
 |---|---|
-| **pack** | One product category as data (subjects, claims, vocabulary, trust, adapters, surfacing bar). Third-party-authored, never engine code. (`packs/<name>/`, `docs/PACK_CONTRACT.md`) |
-| **subject** | One manufactured thing the store answers about (variant, engine, part); what lookups resolve *to*. (`kriko/store/`) |
+| **pack** | One product category as data: subjects, claims, vocabulary, trust tiers, adapters, and its own bar for what is worth surfacing. Third-party authored, never engine code. The screen calls it a **Catalog**. (`packs/<name>/`, `docs/PACK_CONTRACT.md`) |
+| **subject** | One manufactured thing the store answers about. What a lookup resolves *to*. A pack decides what a subject is; the engine does not. (`kriko/store/`) |
 | **claim** | One known failure on a subject, with evidence. (`kriko/store/`) |
-| **evidence** | Verbatim quote + source behind a claim; unfound quotes refused, documents kept in `app.sqlite` for offline re-check. (`app/findings.py`, `app/web/state.py`) |
-| **identity** | `key=value` pairs naming a product. Pack-declared; engine knows no keys. (`kriko/lookup/match.py`) |
-| **adapter** | Reading one site: selectors, label mappings, `local_panel`. **Data, not code** — shippable JS would run on every page the extension sees. (`kriko/adapters.py`) |
-| **agenda** | What to research next, computed on read from four signals. A list, not a queue. (`app/agenda.py`) |
-| **store** | `~/.kriko/knowledge.sqlite`; uninstalling a pack drops its rows. (`kriko/store/db.py`) |
-| **document** | Quote-proving page text, per-install in `app.sqlite` — never the store (one reader's browsing must not move `content_digest`). (`app/web/state.py`) |
+| **evidence** | A verbatim quote plus its source behind a claim. A quote not found in the cited document is refused, and the document is kept in `app.sqlite` so the check can be redone offline. (`app/findings.py`, `app/web/state.py`) |
+| **identity** | `key=value` pairs naming a product. Declared by the pack; the engine knows no key by name. (`kriko/lookup/match.py`) |
+| **adapter** | How to read one site: selectors, label mappings, `local_panel`. **Data, not code**, because shippable JavaScript would run on every page the extension ever sees. (`kriko/adapters.py`) |
+| **lineup** | Every product in a category the agent can name, covered or not, asked for *before* any claim is written. Naming is cheap; research is what costs. Kriko subtracts what it wrote and records the remainder as coverage. (`app/packauthor.py`) |
+| **bar** | What a pack considers worth surfacing, in its own `research/principle.md`. The engine enforces ranking, never taste. |
+| **quarantine** | A draft subject in neither the lineup nor `coverage.out_of_scope`: set aside with its reason, never shipped and never silently dropped. (`app/packauthor.py`) |
+| **store** | `~/.kriko/knowledge.sqlite`. Uninstalling a pack drops its rows. (`kriko/store/db.py`) |
+| **document** | Quote-proving page text, kept per install in `app.sqlite` and never in the store, because one reader's browsing must not move a `content_digest`. (`app/web/state.py`) |
 
 ## The machinery
 
 | Word | Definition |
 |---|---|
-| **engine** | `src/kriko/`: store, lookup, ranking, research interface. Category-free, imports nothing (load-bearing G6 invariant). |
-| **interface** | Anything in `src/app/` a person/agent talks to: CLI, dashboard, MCP server, TUI. |
-| **job** | Long work as a durable row (research, builds, updates): id now, log/result/failure outlive the process. (`app/web/jobs.py`, `app/web/tasks.py`) |
-| **sidecar** | Engine as child process: OS-chosen port, prints `KRIKO_PORT <n>`, shell-supervised. (`app/sidecar.py`) |
-| **interface state** | `~/.kriko/app.sqlite`: history, settings, job rows — never the store (pack uninstall must not drop history). (`app/web/state.py`) |
-| **operation** | Agent-driven work via any door (MCP/job/HTTP); coarser than a job; recorded live, `running` in flight. (`app/operations.py`, `docs/AGENT_OPERATIONS.md`) |
-| **quarantine** | Draft subject neither in `lineup` nor `coverage.out_of_scope`: set aside with reason, never shipped/dropped. (`app/packauthor.py`) |
-| **readout** | Benchmark's per-model row: runnable protocol, cost/accepted claim, hallucination rate + interval. (`app/protocols.py::readout`) |
-| **grounded / ungrounded / not_kept** | Offline per-evidence verdicts of `GET /api/factcheck/grounding` vs kept text; `not_kept` distinct ("never checked" ≠ "fine"). (`app/findings.py::regrounded`) |
+| **engine** | `src/kriko/`: the store, lookup, ranking, and the research interface. It knows no category and imports nothing above it. That is the load-bearing invariant. |
+| **interface** | Anything in `src/app/` a person or an agent talks to: the CLI, the dashboard, the MCP server, the operator console. |
+| **plane** | Who does the reading. See the table below. |
+| **job** | Long work as a durable row (research, builds, updates): the id now, and the log, result and failure outliving the process. (`app/web/jobs.py`, `app/web/tasks.py`) |
+| **sidecar** | The engine as a child process: an OS-chosen port, `KRIKO_PORT <n>` printed first, supervised by the shell. (`app/sidecar.py`) |
+| **interface state** | `~/.kriko/app.sqlite`: history, settings, job rows. Never the store, because uninstalling a pack must not drop history. (`app/web/state.py`) |
+| **operation** | Agent-driven work through any door (MCP, a job, HTTP). Coarser than a job, and recorded live, `running` while in flight. (`app/operations.py`, `docs/AGENT_OPERATIONS.md`) |
+| **readout** | The benchmark's per-model row: the protocol that ran, the cost per accepted claim, and the hallucination rate with its interval. (`app/protocols.py`) |
+| **grounded / ungrounded / not_kept** | The offline per-evidence verdicts of `GET /api/factcheck/grounding` against the kept text. `not_kept` is its own answer, because "never checked" is not "fine". (`app/findings.py`) |
 
-## The three planes
+## The planes
 
-A **plane** turns a question into claims; the choice decides cost.
+A **plane** turns a question into claims. The choice decides what it costs.
 
 | Plane | Who does the work | Cost |
 |---|---|---|
+| **local** | A model server on this machine, addressed in Settings | nothing beyond the machine |
 | **agent** | You, by hand; Kriko writes the brief | nothing |
-| **harness** | Kriko starts your coding-agent CLI headlessly | existing subscription only |
-| **api** | Kriko searches/reads unattended | per token — **never chosen by omission** |
+| **harness** | Kriko starts a coding agent's CLI headlessly | an existing subscription |
+| **api** | Kriko searches and reads unattended, on a metered API | per token, and **never chosen by omission** |
+
+A run that does not name a plane takes the first one that is ready, and says
+which in its log.
 
 ## Words that mean more than one thing
 
-- **"agent" = three things**: the `agent` plane (by-hand); the **harness** (a
-  CLI Kriko *starts*); a **coding agent** on Kriko's source (neither). Prefer
-  "harness plane"/"CLI".
-- **"shell" = two things**: **desktop shell** (`tauri/`, ~180 Rust lines,
-  owns sidecar lifetime, no engine logic) vs **terminal's shell** (PTY on
-  `cmd.exe`/`$SHELL` passed to the operator's terminal).
-- **"ledger" = two things**: **evidence ledger** (`src/kriko/ledger/`,
-  build-time: documents, chunks, extractions, clusters, verdicts) vs job
-  **"ledgering"** stage (verdicts to `app.sqlite` via `log_submission`).
-  Prefer "evidence ledger" / "submissions log".
-- **"risk" retired as a code word**: engine stores/sends/renders **claim**;
-  screen copy still says *risk* ("8 known risks" for a buyer).
-- **"extension"** = `extension/` browser client only. **"reader"** = the buyer
-  reading a listing (not dev/operator).
+- **"agent" is four things**: the **agent** plane (by hand); the **harness**
+  (a CLI Kriko *starts*); a **coding agent** working on Kriko's own source;
+  and the research agent file each pack ships. Prefer "harness plane" or "CLI".
+- **"shell" is two things**: the **desktop shell** (`tauri/`, about 180 lines
+  of Rust that own the sidecar's lifetime and no engine logic) and the
+  terminal's own shell (the PTY handed to the operator's terminal).
+- **"ledger" is two things**: the **evidence ledger** (`src/kriko/ledger/`,
+  build time: documents, chunks, extractions, clusters, verdicts) and the
+  job's **ledgering** stage, which records verdicts into `app.sqlite` through
+  `log_submission`. Prefer "evidence ledger" and "submissions log".
+- **"risk" is retired as a code word.** The engine stores, sends and renders a
+  **claim**; the screen still says *risk*, which is the reader's word.
+- **"extension"** is the browser client in `extension/` and nothing else.
+  **"reader"** is the person reading a listing, not a developer or an operator.
+- **"pack" and "catalog"** are the same thing in two registers: the code says
+  `pack`, the screen says Catalog. Both are in `docs/GLOSSARY.md` on purpose,
+  so the bridge is written down once.
 
 ## Naming rules for new things
 
-1. Name for the user, not the mechanism (`agenda` > `priority_queue`).
-2. One word, one meaning. 3. UI words belong here. 4. Pack vocabulary is never
-   an engine/client identifier (no `make`/`fuel` in `src/kriko/` or `ui/src/`
-   — `test_core_is_domain_free.py`, `test_ui_contains_no_pack_vocabulary`).
+1. Name it for the user, not for the mechanism (`lineup` over `priority_queue`).
+2. One word, one meaning.
+3. A word the UI shows belongs in this table.
+4. A pack's vocabulary is never an engine or client identifier. No category
+   word appears in `src/kriko/` or `ui/src/`, and two tests hold that:
+   `test_core_is_domain_free.py` walks the engine's AST and
+   `test_ui_contains_no_pack_vocabulary` reads the frontend's source.
