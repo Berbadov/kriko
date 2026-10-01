@@ -325,3 +325,61 @@ describe("Compare notes and questions (B193)", () => {
         );
     });
 });
+
+
+describe("Compare board and first glance (B194)", () => {
+    const DRAFTS = { ...BOTH, "/api/compare-drafts": { items: [DRAFT], max: 4 } };
+
+    it("states each side's serious count before anything is opened", async () => {
+        window.location.hash = "#/compare?left=a1&right=b2";
+        stubFetch(BOTH);
+        render(Compare);
+        // Both sides carry one high claim in the fixture. The strip is one
+        // line naming each side, so the assertion is on the line: each
+        // label appears beside its own count.
+        const strip = await screen.findByText(/1 serious/);
+        expect(strip.textContent).toContain("One");
+        expect(strip.textContent).toContain("Two");
+        expect(strip.textContent).not.toContain("undefined");
+    });
+
+    it("offers the board only for a saved draft, and opens it centred", async () => {
+        window.location.hash = "#/compare?draft=d1&ids=a1,b2";
+        stubFetch({
+            ...DRAFTS,
+            "/api/compare-drafts/d1/board": {
+                draft_id: "d1", strokes: [], notes: [], updated_at: "",
+            },
+        });
+        render(Compare);
+        const board = await screen.findByRole("button", { name: /Board/ });
+        await fireEvent.click(board);
+        expect(window.location.hash).toContain("board=1");
+        expect(
+            await screen.findByLabelText("Your marks over the comparison"),
+        ).toBeInTheDocument();
+    });
+
+    it("does not offer the board without a draft", async () => {
+        window.location.hash = "#/compare?left=a1&right=b2";
+        stubFetch({ ...BOTH, "/api/compare-drafts": { items: [], max: 4 } });
+        render(Compare);
+        await screen.findByRole("columnheader", { name: "One" });
+        expect(screen.queryByRole("button", { name: /Board/ })).toBeNull();
+    });
+
+    it("fills the ask box from a suggested question", async () => {
+        window.location.hash = "#/compare?draft=d1&ids=a1,b2";
+        stubFetch({
+            ...DRAFTS,
+            "/api/compare-drafts/d1/questions": { items: [] },
+        });
+        render(Compare);
+        const suggestion = await screen.findByRole("button", {
+            name: /fewest serious risks/,
+        });
+        await fireEvent.click(suggestion);
+        const box = screen.getByLabelText("Question") as HTMLInputElement;
+        expect(box.value).toBe("Which of these has the fewest serious risks?");
+    });
+});

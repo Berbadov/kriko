@@ -1,6 +1,7 @@
 <script lang="ts">
     import Icon from "../lib/Icon.svelte";
     import Async from "../lib/Async.svelte";
+    import Board from "../lib/Board.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
     import { compareMany, compareSpecs } from "../lib/compare";
@@ -232,6 +233,37 @@
         }
     });
 
+    // The board (B194): the reader's free marks over the table. It rides in
+    // the URL beside the ids so a board session is a link like every other
+    // state on this screen, and it needs a saved draft: marks belong to a
+    // named comparison, not to whatever is temporarily picked.
+    const boarding = $derived($route.query.board === "1" && !!open);
+    const toggleBoard = () => setQuery("board", boarding ? undefined : "1");
+
+    // The first glance (B194): each side's serious count, said before any
+    // section is opened. Derived from the lined-up answers only, so no
+    // category word is needed to say it.
+    const serious = (claims: { severity?: string }[]) =>
+        claims.filter((c) => c.severity === "high" || c.severity === "critical").length;
+
+    // The chosen sides' own labels, for the one suggestion that names two
+    // of them. From history (already loaded), not another fetch.
+    const chosenLabels = $derived(
+        ids.map((id) => items.find((i) => i.lookup_id === id)?.label ?? ""),
+    );
+
+    // Suggested questions (B194): pressed straight from the diff the reader
+    // is looking at, one press fills the box. The words name no category
+    // and no product; they are about counts and columns.
+    const suggestions = (labels: string[]) => [
+        "Which of these has the fewest serious risks?",
+        "Which one is the cheapest to fix, and why?",
+        "What is the single biggest difference between them?",
+        labels.length >= 2
+            ? `Between ${labels[0]} and ${labels[1]}, which would you buy and why?`
+            : "",
+    ].filter(Boolean);
+
     async function ask() {
         const text = questionDraft.trim();
         if (!open || !text || asking) return;
@@ -257,7 +289,18 @@
     }
 </script>
 
-<h2><Icon name="compare" size={22} /> Compare</h2>
+<h2>
+    <Icon name="compare" size={22} /> Compare
+    {#if open}
+        <button
+            type="button"
+            class:primary={boarding}
+            aria-pressed={boarding}
+            onclick={toggleBoard}
+            title="Mark up this comparison: draw and drop notes over the table"
+        ><Icon name="edit" size={16} /> Board</button>
+    {/if}
+</h2>
 
 <Async promise={listed} loading="Loading history…">
     {#snippet children()}
@@ -329,6 +372,14 @@
                         {@const width = d.answers.length}
                         {@const section =
                             chosenSection || (d.specs.length ? "specs" : "risks")}
+                        {#if boarding}
+                            <div class="board-wrap">
+                                <Board
+                                    draftId={open!.draft_id}
+                                    onClose={toggleBoard}
+                                />
+                            </div>
+                        {/if}
                         <p class="lede-compare">
                             {d.diff.shared}{width === 2
                                 ? " in both"
@@ -338,6 +389,15 @@
                                         `${n} only in ${d.answers[i].label}`,
                                 )
                                 .join(" · ")}
+                        </p>
+                        <p class="lede-compare">
+                            {#each d.answers as answer (answer.lookup_id)}
+                                {#if answer.lookup_id !== d.answers[0].lookup_id}<span class="meta"> · </span>{/if}{answer.label}:
+                                {@const n = serious(answer.response.claims)}
+                                {n === 0
+                                    ? "no serious risk recorded"
+                                    : `${n} serious${n === 1 ? "" : "s"}`}
+                            {/each}
                         </p>
                         <div class="table-scroll">
                             <table class="compare">
@@ -514,6 +574,16 @@
                                 onclick={ask}
                             >{asking ? "Asking…" : "Ask"}</button>
                         </div>
+                        <div class="row suggestions">
+                            {#each suggestions(chosenLabels) as text (text)}
+                                <button
+                                    type="button"
+                                    class="ghost"
+                                    disabled={asking !== ""}
+                                    onclick={() => (questionDraft = text)}
+                                >{text}</button>
+                            {/each}
+                        </div>
                         {#if askError}<p class="state" role="alert">{askError}</p>{/if}
                         {#if asking && asking !== "starting"}
                             <p class="state">Your agent is answering; Activity keeps the run.</p>
@@ -550,6 +620,19 @@
 </Async>
 
 <style>
+    h2 button {
+        margin-left: var(--s-3);
+        vertical-align: middle;
+    }
+
+    .board-wrap {
+        margin: var(--s-3) 0;
+    }
+
+    .suggestions {
+        margin: var(--s-2) 0;
+    }
+
     .note-field {
         display: block;
         margin-top: var(--s-2);
