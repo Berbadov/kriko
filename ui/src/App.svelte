@@ -32,6 +32,10 @@
     // the page twice.
     const WITH_HISTORY = new Set(["result"]);
     const showHistory = $derived(WITH_HISTORY.has($route.name));
+    /* Board mode (B194) centres the reading column: the comparison is what
+     * the reader is looking at, and a table hugging the left edge of a wide
+     * window while they draw over it reads as a page that forgot itself. */
+    const boarding = $derived($route.name === "compare" && $route.query.board === "1");
 
     // Retired route names still resolve. Three screens became three lenses on
     // one, and `#/coverage` is a link the browser extension and this app's own
@@ -154,7 +158,7 @@
          and the element carrying it arrive in the same paint. -->
     <p class="sr-only" role="status" aria-live="polite">{announced}</p>
 
-    <main class="work" class:with-history={showHistory}>
+    <main class="work" class:with-history={showHistory} class:centred={boarding}>
         <div class="view" bind:this={viewEl} tabindex="-1">
             {#await ready}
                 <p class="state loading">Starting…</p>

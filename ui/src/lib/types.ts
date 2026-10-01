@@ -436,6 +436,39 @@ export type CompareDraft = {
     updated_at: string;
 };
 
+/* One follow-up question the reader asked about a comparison, and what
+ * their agent answered (B193). `answer` and `job_id` are empty until the
+ * compare_ask job lands. */
+export type CompareQuestion = {
+    draft_id: string;
+    question_id: string;
+    question: string;
+    answer: string;
+    job_id: string;
+    asked_at: string;
+    answered_at: string;
+};
+
+/* One pen mark on the board: a polyline of points in board coordinates
+ * (B194). Kept verbatim; what a mark means is the reader's. */
+export type BoardStroke = { x: number; y: number }[] | Record<string, unknown>[];
+
+/* One typed note pinned to a spot on the board (B194). */
+export type BoardNote = {
+    x: number;
+    y: number;
+    text: string;
+};
+
+/* A comparison's marks over its table: strokes and notes as one document
+ * (B194). Saved wholesale, so erasing is real. */
+export type CompareBoard = {
+    draft_id: string;
+    strokes: BoardStroke[];
+    notes: BoardNote[];
+    updated_at: string;
+};
+
 export type StoredLookup = {
     lookup_id: string;
     created_at: string;
