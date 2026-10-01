@@ -110,6 +110,7 @@ export const NAV: NavGroupSpec[] = [
             // changing something than quoting a version, and the theme
             // switcher was previously a heading two thirds of the way down
             // About — findable only by someone who already knew.
+            { name: "local", label: "Local LLM", also: ["ollama", "local plane", "local machine"] },
             { name: "settings", label: "Settings" },
             { name: "about", label: "About" },
         ],
