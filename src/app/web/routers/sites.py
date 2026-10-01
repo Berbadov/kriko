@@ -150,6 +150,32 @@ def register_site(
     return {"job_id": job_id, "kind": "site_register", "host": wanted}
 
 
+class AmendRequest(BaseModel):
+    """A corrected adapter for a site this installation learned (B181)."""
+    spec: dict = Field(default_factory=dict)
+
+
+@router.get("/sites/{host}/detail")
+def site_detail(host: str, store=Depends(get_store),
+                conn=Depends(get_app_state)) -> dict:
+    """What one site's adapter reads, and what it has been missing (B181)."""
+    found = sites.detail(store, conn, host)
+    if found is None:
+        raise HTTPException(404, f"nothing here reads {host}")
+    return found
+
+
+@router.put("/sites/{host}")
+def amend_site(host: str, body: AmendRequest,
+               conn=Depends(get_app_state)) -> dict:
+    """Amend a learned adapter. Checked before it is stored, as registration is."""
+    try:
+        checked = sites.amend(conn, host, body.spec)
+    except sites.SiteRefused as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return {"host": sites.host_of(host), "adapter": checked}
+
+
 @router.delete("/sites/{host}")
 def forget_site(host: str, conn=Depends(get_app_state)) -> dict:
     """Throw away an adapter this installation learned. Packs are untouched."""

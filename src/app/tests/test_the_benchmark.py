@@ -159,15 +159,18 @@ def test_bench_job_retains_finished_cases_when_next_case_stops(settings, store, 
 
     def run_case(settings, case, **kwargs):
         assert kwargs["check_cancelled"] == progress.check
-        calls.append(case["subject_id"])
+        calls.append(case.get("id") or case["subject_id"])
         if len(calls) == 2:
             raise Cancelled()
-        return {"subject_id": case["subject_id"], "subject": case["label"]}
+        return {"subject_id": case.get("id") or case["subject_id"],
+                "subject": case.get("product") or case["label"]}
 
     monkeypatch.setattr(bench, "run_case", run_case)
     with pytest.raises(Cancelled):
         tasks.bench(settings, {"planes": "api", "cases": 3}, progress)
-    assert calls == ["sa", "sb"]
+    from app import benchcases
+
+    assert calls == [benchcases.load()[0]["id"], benchcases.load()[1]["id"]]
     assert progress.result["measurements"] == 1
     assert len(progress.result["rows"]) == 1
     conn = state.connect(settings.app_state_path)
@@ -360,7 +363,7 @@ def test_the_job_measures_every_case_on_every_plane(settings, store, monkeypatch
     monkeypatch.setattr(
         bench, "run_case",
         lambda settings, case, **kw: {
-            "subject_id": case["subject_id"], "subject": case["label"],
+            "subject_id": case["id"], "subject": case["product"],
             "plane": kw["plane"], "model": kw["plane"], "accepted": 1, "refused": 0,
             "ms": 10, "documents": 1, "findings": 1, "batch_id": kw.get("batch_id", ""),
         },
@@ -384,7 +387,7 @@ def test_bench_is_a_command_as_well_as_a_button(settings, store, monkeypatch):
     monkeypatch.setattr(
         bench, "run_case",
         lambda settings, case, **kw: {
-            "subject": case["label"], "plane": kw["plane"], "model": "x",
+            "subject": case["product"], "plane": kw["plane"], "model": "x",
             "accepted": 1, "refused": 2, "ms": 1200, "tokens": 900,
         },
     )

@@ -73,7 +73,7 @@
     function planeWord(run: ResearchRun): string {
         if (run.plane === "agent") return "your agent";
         const parts = [run.llm, run.search_provider].filter(Boolean);
-        return parts.length ? `Kriko itself — ${parts.join(" via ")}` : "Kriko itself";
+        return parts.length ? `Kriko itself · ${parts.join(" via ")}` : "Kriko itself";
     }
 
     const OUTCOME: Record<string, string> = {
@@ -89,7 +89,7 @@
     <h3><Icon name="jobs" /> Research runs</h3>
     <p class="meta">
         Every run that wrote a claim into the store, and what it wrote. Undoing one
-        removes only that run's claims — nothing another run or another door added.
+        removes only that run's claims; nothing another run or another door added.
     </p>
 
     <Async {promise} loading="Reading…" retry={refresh}>

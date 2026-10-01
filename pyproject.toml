@@ -70,7 +70,7 @@ dev = ["pytest>=8.0.0", "ruff>=0.16", "mypy>=2.3"]
 # The default model catalogue, copied to ~/.kriko on first run. Read from disk
 # like the DDL above, so it fails the same way if it is not declared: an
 # editable install finds it in the checkout and a real wheel does not.
-"app" = ["*.toml"]
+"app" = ["*.toml", "*.json"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

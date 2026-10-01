@@ -10,7 +10,9 @@
 }
 body {
   margin: 0;
-  font: 14px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* B186: Plex Mono, named only in case the host has it. This page is
+     rendered by the browser's own manager and never fetches a font. */
+  font: 13px/1.55 "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 main {
   max-width: 34rem;
@@ -38,6 +40,10 @@ input {
   width: 100%;
   box-sizing: border-box;
   padding: 0.55rem 0.65rem;
+  /* Raised, like a button (B186). */
+  border: 1px solid rgba(127, 127, 127, 0.45);
+  border-bottom-width: 2px;
+  border-radius: 6px;
   font: inherit;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   border: 1px solid;

@@ -62,7 +62,10 @@ class LocalAsker:
     cost_basis = "self_hosted"
 
     def __init__(self, plan, complete, search, fetch, *, model: str,
-                 search_provider: str, url: str = ""):
+                 search_provider: str, url: str = "",
+                 given_queries: list[str] | None = None):
+        self.given_queries = [str(one).strip() for one in (given_queries or [])
+                              if str(one).strip()]
         self._plan = plan
         self._complete = complete
         self._search = search
@@ -115,6 +118,11 @@ class LocalAsker:
     def _queries(self, prompt: str) -> list[str]:
         import json
 
+        # A case may name its own queries (B185): the fixed set's queries
+        # are part of its versioned ground truth, and letting the model
+        # invent its own would quietly change what the run measured.
+        if self.given_queries:
+            return list(self.given_queries)[:QUERIES]
         raw = self._plan(_QUERY_ASK.format(n=QUERIES, task=prompt[:4000]))
         try:
             found = json.loads(raw[raw.index("["): raw.rindex("]") + 1])

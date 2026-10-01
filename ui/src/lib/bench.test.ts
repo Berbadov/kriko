@@ -43,9 +43,9 @@ describe("hallucinationSeverity", () => {
 });
 
 describe("formatting", () => {
-    it("shows an em dash for a value nobody measured, never a zero", () => {
-        expect(formatUsd(null)).toBe("—");
-        expect(formatPct(null)).toBe("—");
+    it("shows n/a for a value nobody measured, never a zero", () => {
+        expect(formatUsd(null)).toBe("n/a");
+        expect(formatPct(null)).toBe("n/a");
     });
     it("formats a measured cost and rate", () => {
         expect(formatUsd(0.0123)).toBe("$0.0123");
