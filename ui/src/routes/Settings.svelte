@@ -4,7 +4,6 @@
     import Async from "../lib/Async.svelte";
     import Keys from "../lib/Keys.svelte";
     import PlanePrefs from "../lib/Planes.prefs.svelte";
-    import LocalMachine from "../lib/LocalMachine.svelte";
     import { api } from "../lib/api";
     import type { ProviderTest } from "../lib/types";
 
@@ -164,7 +163,6 @@
      means something once a key exists for one of them. -->
 <PlanePrefs {keysVersion} />
 
-<LocalMachine />
 
 <section>
     <h3><Icon name="database" /> What is remembered</h3>
