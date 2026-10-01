@@ -2691,6 +2691,141 @@ def bench(settings, params: dict, progress: Progress) -> dict:
     }
 
 
+#: How long a follow-up question about a comparison may take. A shortlist
+#: question is a reading task, not an authoring one: it is the same scale as
+#: a quick look, and giving it the authoring timeout would leave the reader
+#: staring at "running" for most of an hour over a question they wanted in
+#: minutes.
+COMPARE_ASK_TIMEOUT_SECONDS = 900
+
+
+def compare_ask(settings, params: dict, progress: Progress) -> dict:
+    """Answer a follow-up question about a comparison, with the table it is
+    about attached (B193).
+
+    * "adding multiple products side by side, add follow up questions to
+    agents regarding to that"*. The Compare screen lines up checks the
+    reader already has; this is the question the table raises ("which of
+    these has the cheaper known fix") asked of their own agent, with each
+    column's claims and specifications passed through verbatim so any
+    category works without this layer knowing one (G6).
+
+    Writes nothing to the knowledge store. The reply is the reader's own
+    decision support, stored on the question row in `app.sqlite` by
+    `answer_compare_question` — never a submission, never a claim.
+    """
+    from app.providers import agent_ready, harness_researcher
+    draft_id = str(params.get("draft_id") or "").strip()
+    question_id = str(params.get("question_id") or "").strip()
+    question = str(params.get("question") or "").strip()
+    if not (draft_id and question_id and question):
+        raise ValueError("which question? `draft_id` and `question_id` are required")
+    app_state = state.connect(settings.app_state_path)
+    try:
+        draft = state.get_compare_draft(app_state, draft_id)
+        if not draft:
+            raise ValueError(f"no draft {draft_id}")
+        answers = []
+        for lookup_id in draft["lookup_ids"]:
+            stored = state.get_lookup(app_state, lookup_id)
+            if stored:
+                answers.append(stored)
+    finally:
+        app_state.close()
+    if len(answers) < 2:
+        raise ValueError("this draft lines up fewer than two saved checks")
+    progress.set(0.05, "lining up the shortlist")
+    for stored in answers:
+        progress.log(f"{stored['label']}: {len(stored['response'].get('claims') or [])} known risk(s)")
+    if _use_local_ask(settings, params):
+        researcher = _local_asker(settings, params, progress)
+    else:
+        if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
+            raise ValueError(
+                f"{NO_AGENT} Kriko cannot answer this by itself. Hand the "
+                "question and the table to your own agent (Agents → "
+                "Connect), or run one of the planes in Settings → Research."
+            )
+        researcher = harness_researcher(
+            preferred=str(params.get("harness") or ""),
+            app_state_path=settings.app_state_path,
+            timeout=float(
+                params.get("timeout_seconds") or COMPARE_ASK_TIMEOUT_SECONDS),
+        )
+        _cap_agent(researcher, params)
+        researcher.on_action = progress.log
+        researcher.check_cancelled = progress.check
+    progress.set(0.2, f"asking: {question[:120]}")
+    reply = researcher.ask(_compare_brief(question, answers)).strip()
+    progress.check()
+    progress.log(reply[:4000] or "(the agent printed nothing)")
+    progress.set(0.9, "writing the answer down")
+    app_state = state.connect(settings.app_state_path)
+    try:
+        row = state.answer_compare_question(
+            app_state, draft_id, question_id, reply, progress.job_id)
+    finally:
+        app_state.close()
+    if not row:
+        raise ValueError("the question is gone — the draft was deleted while it ran")
+    progress.set(1.0, "answered" if reply else "the agent printed nothing")
+    return {"draft_id": draft_id, "question_id": question_id, "answer": reply}
+
+
+def _compare_brief(question: str, answers: list[dict]) -> str:
+    """The table the question is about, as the agent's own reading material.
+
+    Every word of it comes from the stored answers themselves — labels,
+    claim titles, bodies and specifications as the packs wrote them — so the
+    brief works for any category and stays honest about what this install
+    actually knows. No invented fields, no invented risks: a column with no
+    claims says so, which is itself an answer to some questions.
+    """
+    lines = [
+        "The reader has these products side by side and asks:",
+        f"QUESTION: {question}",
+        "",
+        "Answer about the products below, using their recorded risks and "
+        "specifications. Where the records do not answer the question, say "
+        "so plainly rather than guessing. Do not invent risks.",
+        "",
+    ]
+    for stored in answers:
+        response = stored["response"]
+        lines.append(f"## {stored['label']}")
+        claims = response.get("claims") or []
+        if claims:
+            lines.append("Known risks:")
+            for claim in claims:
+                severity = str(claim.get("severity") or "")
+                line = f"- [{severity}] {claim.get('title') or ''}"
+                if claim.get("body"):
+                    line += f": {claim['body']}"
+                if claim.get("advice"):
+                    line += f" (advice: {claim['advice']})"
+                lines.append(line)
+        else:
+            lines.append("Known risks: none recorded.")
+        if response.get("context"):
+            units = _context_units_of(response)
+            for key, value in sorted(response["context"].items()):
+                unit = units.get(key, "")
+                lines.append(f"- {key}: {value}{(' ' + unit) if unit else ''}")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _context_units_of(response: dict) -> dict:
+    """The units a lookup's context was written in, best-effort.
+
+    The stored response carries `context_units` when the answer came from
+    `/api/lookup`; an older or hand-built row does not, and a missing dict
+    must degrade to no units rather than a crash inside a job.
+    """
+    units = response.get("context_units")
+    return units if isinstance(units, dict) else {}
+
+
 HANDLERS = {
     "research": research,
     "bench": bench,
@@ -2703,4 +2838,5 @@ HANDLERS = {
     "verify": verify,
     "site_register": site_register,
     "pack_update": pack_update,
+    "compare_ask": compare_ask,
 }
