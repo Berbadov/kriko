@@ -162,6 +162,79 @@ is on `main`, so all six are open.
 **Not this:** a new job kind, a second worker, or a batch that cannot be taken back out through the existing undo. The Compare step is out of scope until that screen is rebuilt.
 **Owner:** free.
 
+### B195: Compare carries the decision, not only the table
+
+**Asked:** "Could you work on Compare screen, lets make that one of the
+features that we can shine. adding multile products side by side add follow
+up questions to agents regarding to that and take specific notes etc. lets go
+and cook" (2026-10-02).
+
+**Where:** Compare (`ui/src/routes/Compare.svelte`), its API
+(`/api/compare-drafts`) and the job kinds the ask-an-agent buttons use.
+
+**Found (2026-10-02):** the screen already lines up to four saved checks by
+claim and by specification (B173, B183), saves a comparison as a named draft,
+and the report's own per-risk notes (`claim_notes`) exist but stop at a single
+saved answer — they are invisible here, so the sentence the reader writes
+while deciding ("seller says the belt was done at 90k") has nowhere to live on
+the screen where the decision is actually made.
+
+**Done when:**
+
+- The reader's own note can be written against any cell of the comparison —
+  one product's risk, or the whole row — and is still there when the screen
+  is reopened, and it is the same note the Report page shows for that check
+  (one store, not two).
+- The reader can ask their agent a follow-up question about the shortlist in
+  front of them ("which of these has the cheapest known fix"), and the answer
+  arrives on the Compare screen, next to the table it is about, with its run
+  log.
+- Notes and questions both work with fewer or more than two columns chosen.
+
+**Not this:** a compare endpoint in the engine, a chat panel, or notes that
+live only in a comparison (a note is about a product's risk, and the Report
+page must show it too).
+
+**Owner:** free.
+
+### B194: Compare gets a board: pen, notes, and a heavier first glance
+
+**Asked:** "can we add pen and note sections as a drawboard mode in compare?
+the compare screen at the center? and the cooking recommendations of yours;
+yeah do these and cook more" (2026-10-02).
+
+**Where:** Compare (`ui/src/routes/Compare.svelte`), its API
+(`/api/compare-drafts`), and the state file behind it.
+
+**Found (2026-10-02):** B193 put follow-up questions and per-risk notes on
+the screen. What is still missing for the "shine" the reader asked for:
+the free marks a reader actually makes when weighing a shortlist (circle
+the winner, cross out a column, point at the row that decided it) have
+nowhere to go; the table starts at the left edge of the reading column
+while every other screen centres its content; and the first glance still
+needs a scroll before it says anything.
+
+**Done when:**
+
+- A board mode exists on Compare, reachable by one press, that puts the
+  comparison at the centre of the screen and lays a drawing layer over
+  the table: the reader can draw (pen) and drop typed notes, and both
+  survive reopening because they are stored against the draft in
+  `app.sqlite` (never knowledge).
+- The board works with two to four checks and degrades to a message when
+  no draft is open, because a mark without a comparison is nothing.
+- The first glance carries weight: the screen states each side's serious
+  risk count before any section is opened.
+- The ask box offers suggested questions derived from the lined-up
+  answers themselves (nothing typed in from any category), one press to
+  fill the box.
+
+**Not this:** a second note store (the board's notes are board notes, not
+claim notes), shapes and image import, or anything that names a product
+category.
+
+**Owner:** free. After B193.
+
 ### B191: The journey checks the release criterion is written against
 **Asked:** "okay let's do a stable version to do list" (2026-09-29); the 1.0 list's own criterion names a directory that does not exist.
 **Where:** `tools/journeys/`, run by `tools/walk.sh`.
