@@ -276,6 +276,17 @@ export const api = {
               }),
     deleteCompareDraft: (draftId: string) =>
         del<{ deleted: string }>(`/api/compare-drafts/${seg(draftId)}`),
+    /** One comparison's questions, newest first (B193). */
+    compareQuestions: (draftId: string) =>
+        get<{ items: T.CompareQuestion[] }>(
+            `/api/compare-drafts/${seg(draftId)}/questions`),
+    /** Ask the reader's agent a follow-up question about one comparison.
+     *  A job: the agent may search for minutes, and the question row is
+     *  written before the job starts so asking is never lost. */
+    askCompareQuestion: (draftId: string, question: string, harness = "") =>
+        postJson<T.CompareQuestion & { job_id: string; kind: string }>(
+            `/api/compare-drafts/${seg(draftId)}/questions`,
+            harness ? { question, harness } : { question }),
     getLookup: (lookupId: string) => get<T.StoredLookup>(`/api/lookup/${seg(lookupId)}`),
     /** The saved question asked again of the knowledge as it is now (B152.4). */
     refreshLookup: (lookupId: string) =>
