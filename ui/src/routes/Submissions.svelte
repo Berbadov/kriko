@@ -26,6 +26,19 @@
     let promise = $state(load());
 
     let open = $state<string | null>(null);
+    /* B184: search and a door filter over the batches. */
+    let filterText = $state("");
+    let filterDoor = $state("");
+    const doors = (data: { items: Submission[] }) =>
+        [...new Set(data.items.map((item) => item.door))].sort();
+    const shown = (data: { items: Submission[] }) =>
+        data.items.filter((item) => {
+            if (filterDoor && item.door !== filterDoor) return false;
+            const needle = filterText.trim().toLowerCase();
+            if (!needle) return true;
+            return [item.subject_id, item.pack_id, item.door]
+                .some((one) => String(one).toLowerCase().includes(needle));
+        });
 
     const rate = (accepted: number, refused: number) =>
         accepted + refused ? Math.round((100 * accepted) / (accepted + refused)) : 0;
@@ -37,7 +50,7 @@
 <h2><Icon name="submissions" size={22} /> Submissions</h2>
 <p class="lede">
     Every batch that reached the gate, and the reason each finding was turned away.
-    Nothing here is waiting for you — the decisions were made when the batch
+    Nothing here is waiting for you; the decisions were made when the batch
     arrived. Read it to fix the gate or the skill, not to sign anything off.
 </p>
 
@@ -91,7 +104,7 @@
                 <section class="reasons">
                     <h3><Icon name="search" /> What was actually searched for</h3>
                     <p class="meta">
-                        The pack ships seeds, not a script — an agent adapts them to the
+                        The pack ships seeds, not a script; an agent adapts them to the
                         subject and the market. These are the searches that came back, and
                         what each one's batches kept. A shape that keeps nothing is a seed
                         worth rewriting.
@@ -114,7 +127,24 @@
 
             <section class="batches">
                 <h3><Icon name="submissions" /> Batches</h3>
-                {#each data.items as item (item.submission_id)}
+                {#if data.items.length > 1}
+                    <form class="row filters" onsubmit={(event) => event.preventDefault()}>
+                        <label class="field grow">
+                            <span>Filter batches</span>
+                            <input bind:value={filterText} placeholder="subject or catalog" />
+                        </label>
+                        <label class="field">
+                            <span>Door</span>
+                            <select bind:value={filterDoor}>
+                                <option value="">every door</option>
+                                {#each doors(data) as door (door)}
+                                    <option value={door}>{door}</option>
+                                {/each}
+                            </select>
+                        </label>
+                    </form>
+                {/if}
+                {#each shown(data) as item (item.submission_id)}
                     <article class="card">
                         <h4>
                             {item.subject_id || "no subject named"}

@@ -109,7 +109,7 @@
                 <textarea
                     rows="2"
                     bind:value={draft}
-                    placeholder="e.g. done at 140,000 — receipt promised"
+                    placeholder="e.g. done at 140,000, receipt promised"
                     onblur={() => draft !== note && onNote(draft)}
                     use:focusOnMount
                 ></textarea>

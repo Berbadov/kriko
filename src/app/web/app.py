@@ -89,7 +89,9 @@ async def lifespan(app: FastAPI):
     # precondition for one, and a store the reader already filled themselves
     # is a store where this does nothing at all.
     try:
-        app.state.seeded = bundledpacks.seed(app.state.settings.store_path)
+        app.state.seeded = bundledpacks.seed(
+            app.state.settings.store_path,
+            app_state_path=app.state.settings.app_state_path)
         for row in app.state.seeded:
             if row["action"] in ("installed", "upgraded"):
                 log.info("%s bundled pack %s %s",

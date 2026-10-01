@@ -315,7 +315,13 @@ def cmd_bench(args, store) -> int:
     if not planes:
         print("no plane can run here: install a coding-agent CLI, or add API keys")
         return 1
-    found = bench_mod.cases(store, pack_id=args.pack or "", limit=args.cases)
+    # The fixed, versioned set first (B185, D6); a named pack's own cases
+    # still run with --pack, so an author can measure their own bar.
+    from app import benchcases
+
+    found = benchcases.case_rows(args.cases)
+    if not found:
+        found = bench_mod.cases(store, pack_id=args.pack or "", limit=args.cases)
     if not found:
         print("no subjects installed, so there is nothing to measure")
         return 1

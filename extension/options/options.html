@@ -2,17 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Kriko — extension settings</title>
+    <title>Kriko extension settings</title>
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
     <main>
       <h1>Kriko extension</h1>
-      <p class="lede">
-        One setting: where the Kriko app is listening. Everything else the
-        extension does — which sites it reads, what it says about a listing —
-        comes from the packs installed in that app, not from here.
-      </p>
+      <p class="lede">One setting: where the Kriko app is listening.</p>
 
       <form id="form" novalidate>
         <label for="base">The app's address</label>
@@ -26,10 +22,8 @@
         />
         <p class="hint">
           Leave it empty to use the default,
-          <code id="default">http://127.0.0.1:8787</code>. Change it only if
-          you are running the app somewhere else — another port, or another
-          machine on your own network. The extension talks to nothing on the
-          internet.
+          <code id="default">http://127.0.0.1:8787</code>. The extension talks
+          to nothing on the internet.
         </p>
         <div class="row">
           <button type="submit" id="save">Save and test</button>
@@ -44,11 +38,8 @@
       <section class="sites">
         <h2>Sites Kriko reads</h2>
         <p class="hint">
-          Which listing sites are worth reading is the installed packs'
-          answer, not a setting — install a pack for a new site and it shows
-          up here. The one thing this page has to ask for is your permission
-          to read those pages, because that is a decision about somebody
-          else's website and only you can make it.
+          The installed packs decide which sites are worth reading; this page
+          only asks your permission to read them.
         </p>
         <ul id="sites" class="sites-list"></ul>
         <div class="row">
@@ -60,22 +51,15 @@
 
       <section class="version">
         <h2>Versions</h2>
-        <p class="hint">
-          The extension and the app update on their own schedules, which is
-          right — knowledge moves weekly and the browser's copy of this
-          extension is loaded once and stays loaded. It only matters when the
-          two drift far enough apart to stop talking, and this says so.
-        </p>
+        <p class="hint">It matters only when the two drift far enough apart to stop talking.</p>
         <p id="compat" class="status" role="status" aria-live="polite"></p>
       </section>
 
       <section class="about">
         <h2>If nothing answers</h2>
         <p>
-          The address is remembered either way — an app you have not started
-          yet is not a wrong address. Start Kriko, then press
-          <strong>Save and test</strong> again to confirm the two ends can see
-          each other.
+          The address is remembered either way. Start Kriko, then press
+          <strong>Save and test</strong> again.
         </p>
       </section>
     </main>

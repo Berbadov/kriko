@@ -386,6 +386,30 @@ def download_pack_draft(slug: str, request: Request):
                         filename=f"{slug}.kpack")
 
 
+@router.post("/packs/reset")
+def reset_packs(request: Request, store=Depends(get_store)):
+    """Remove every pack and draft, for a clean rebuild (B188, D4).
+
+    History and settings are kept; seeding is refused until the reader
+    installs a pack of their own again, so bundled packs do not quietly
+    return at the next start.
+    """
+    from app import cleaninstall
+    result = cleaninstall.reset(
+        request.app.state.settings.store_path,
+        request.app.state.settings.app_state_path,
+    )
+    return result
+
+
+@router.delete("/packs/reset-marker")
+def clear_reset_marker(request: Request):
+    """Let the bundled seeder run again (B188)."""
+    from app import cleaninstall
+    cleaninstall.clear_reset(request.app.state.settings.app_state_path)
+    return {"cleared": True}
+
+
 @router.delete("/packs/drafts/{slug}")
 def discard_pack_draft(slug: str, request: Request):
     """Throw a draft away. Only ever the reader's call.

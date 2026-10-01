@@ -183,6 +183,27 @@ def readout(raw_rows: list[dict], summary: list[dict]) -> list[dict]:
     as `STANDARD` and `note` saying why — "not yet measured" has to be a row a
     reader sees, not a silent gap.
     """
+    # B185: runs scored on different test sets are never ranked together.
+    # Each set gets its own rows, labelled with the set it measured, and an
+    # empty set id is its own partition (a pack-derived run never mixes with
+    # a fixed-set one).
+    def _set_of(row: dict) -> tuple[str, str]:
+        return (str(row.get("set_id") or ""), str(row.get("set_version") or ""))
+
+    out = []
+    seen_sets: list[tuple[str, str]] = []
+    for row in raw_rows:
+        key = _set_of(row)
+        if key not in seen_sets:
+            seen_sets.append(key)
+    for set_key in seen_sets:
+        out += _readout_one(
+            [row for row in raw_rows if _set_of(row) == set_key], summary, set_key)
+    return out
+
+
+def _readout_one(raw_rows: list[dict], summary: list[dict],
+                 set_key: tuple[str, str] = ("", "")) -> list[dict]:
     models = sorted({row.get("model") or "" for row in raw_rows if row.get("model")})
     out = []
     for model in models:
@@ -205,6 +226,8 @@ def readout(raw_rows: list[dict], summary: list[dict]) -> list[dict]:
         )
         out.append({
             "model": model,
+            "set_id": set_key[0],
+            "set_version": set_key[1],
             "protocol": spend.name,
             "batch_size": spend.batch_size,
             "context_chars": spend.context_chars,

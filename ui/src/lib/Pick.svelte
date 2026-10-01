@@ -95,7 +95,7 @@
     <option value="">{emptyLabel}</option>
     {#each options as one (one.value)}
         <option value={one.value} disabled={one.disabled} title={one.note ?? ""}>
-            {one.label ?? one.value}{one.note ? ` — ${one.note}` : ""}
+            {one.label ?? one.value}{one.note ? ` · ${one.note}` : ""}
         </option>
     {/each}
     <option value={CUSTOM}>Something else…</option>

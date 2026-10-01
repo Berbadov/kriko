@@ -590,3 +590,41 @@ def test_a_research_run_on_the_local_plane_builds_the_plane_from_the_server(
     assert plane.model == "qwen3-4b"          # the server's, not the Run screen's
     assert plane.search_provider == "exa-mcp"
     assert plane._complete.base_url == ready.url
+
+
+# —— the second search door ————————————————————————————————
+
+PARALLEL_TEXT = json.dumps({
+    "results": [
+        {"url": "https://one.test/a", "title": "First page",
+         "excerpts": ["words"]},
+        {"url": "https://two.test/b", "title": "Second page",
+         "excerpts": ["more"]},
+    ]})
+
+
+def test_parallel_search_parses_entries(stub, monkeypatch):
+    monkeypatch.setattr(exa_mcp, "PARALLEL_ENDPOINT", stub.url + "/mcp")
+    stub.mcp_text = PARALLEL_TEXT
+    assert exa_mcp.parallel_searcher()("q", 5) == [
+        {"url": "https://one.test/a", "title": "First page", "site": "one.test"},
+        {"url": "https://two.test/b", "title": "Second page", "site": "two.test"},
+    ]
+
+
+def test_the_fallback_search_rotates_to_parallel_on_a_refusal(stub, monkeypatch):
+    monkeypatch.setattr(exa_mcp, "ENDPOINT", dead_url() + "/mcp")
+    monkeypatch.setattr(exa_mcp, "PARALLEL_ENDPOINT", stub.url + "/mcp")
+    stub.mcp_text = PARALLEL_TEXT
+    assert exa_mcp.search_with_fallback()("q", 2) == [
+        {"url": "https://one.test/a", "title": "First page", "site": "one.test"},
+        {"url": "https://two.test/b", "title": "Second page", "site": "two.test"},
+    ]
+
+
+def test_the_fallback_search_stays_with_exa_while_exa_answers(stub, monkeypatch):
+    monkeypatch.setattr(exa_mcp, "ENDPOINT", stub.url + "/mcp")
+    monkeypatch.setattr(exa_mcp, "PARALLEL_ENDPOINT", dead_url() + "/mcp")
+    stub.mcp_text = EXA_TEXT
+    assert exa_mcp.search_with_fallback()("q", 1) == [
+        {"url": "https://one.test/a", "title": "First page", "site": "one.test"}]

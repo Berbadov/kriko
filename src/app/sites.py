@@ -331,6 +331,86 @@ def activation(store, app_conn, host: str) -> dict:
             "detail": row.get("detail") or "the browser refused this site"}
 
 
+def detail(store, app_conn, host: str) -> dict | None:
+    """What one site's adapter actually reads, and what it has been missing.
+
+    B181: the Sites screen shows, per site, the identity and context rules
+    (the fields it reads and the labels it looks for), the match patterns,
+    the labels pages carried that no rule maps, and the last sample page a
+    reader stood on. A pack's adapter is returned read-only; a local one
+    carries `editable: True` so the screen can offer the amendment.
+    """
+    wanted = host_of(host) or str(host or "").strip().lower()
+    if not wanted:
+        return None
+    from kriko.adapters import declared_labels
+    spec = adapter_for(store, app_conn, f"https://{wanted}/")
+    if spec is None:
+        return None
+    rows = local_rows(app_conn) if app_conn is not None else []
+    local = next((row for row in rows if row["host"] == wanted), None)
+    rules = []
+    for group in ("identity", "context"):
+        for key, rule in (spec.get(group) or {}).items():
+            rules.append({
+                "key": key, "kind": group,
+                "labels": list(rule.get("labels") or []),
+                "from": rule.get("from", ""),
+            })
+    seen_labels = []
+    if app_conn is not None:
+        from app.web import state as _state
+        seen_labels = _state.unmapped_labels(
+            app_conn, 100, adapter_id=str(spec.get("id") or ""))
+    asks = []
+    if app_conn is not None:
+        from app.web import state as _state
+        asks = [row for row in _state.site_requests(app_conn, host=wanted)]
+    return {
+        "site": wanted,
+        "id": str(spec.get("id") or ""),
+        "pack_id": str(spec.get("pack_id") or ""),
+        "source": "local" if local is not None and not spec.get("pack_id") else "pack",
+        "editable": local is not None and not spec.get("pack_id"),
+        "match": list(spec.get("match") or []),
+        "subject_kind": str(spec.get("subject_kind") or "product"),
+        "rules": rules,
+        "labels": declared_labels(spec),
+        "unmapped": [
+            {"label": row["label"], "seen": row["seen"],
+             "last_at": row["last_at"], "sample_url": row["sample_url"]}
+            for row in seen_labels
+        ],
+        "sample_url": asks[0]["sample_url"] if asks else "",
+        "spec": spec if local is not None and not spec.get("pack_id") else None,
+    }
+
+
+def amend(app_conn, host: str, spec: dict) -> dict:
+    """Store a corrected adapter for a host this installation learned.
+
+    `check` runs first, as it does on registration: an adapter's `site` is a
+    browser permission, and an amendment is exactly as trusted as a first
+    draft. A pack's own adapter is refused here; overriding one is a pack
+    author's job, not this machine's.
+    """
+    wanted = host_of(host) or ""
+    if not wanted:
+        raise SiteRefused(f"{host!r} is not a hostname")
+    if app_conn is None:
+        raise SiteRefused("no local state to amend")
+    from app.web import state
+    rows = state.local_adapters(app_conn, enabled_only=False)
+    if not any(row["host"] == wanted for row in rows):
+        raise SiteRefused(
+            f"{wanted} ships with a pack, and a pack's adapter is not edited here"
+        )
+    checked = check(spec, host=wanted)
+    state.save_local_adapter(app_conn, host=wanted, spec=checked,
+                             source="amended")
+    return checked
+
+
 def registered(store, app_conn) -> list[dict]:
     """Every site this installation can read, and where each one came from.
 
