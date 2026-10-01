@@ -174,6 +174,18 @@ licence allows.
 **Not this:** a guess, and not a silent dependency on a service the reader did not install.
 **Owner:** free. Decision: D3.
 
+### B193: The local LLM on its own screen
+
+**Asked:** "Could you prioritise local LLM integration and its usage in the app, have it as a separate page on its own. Don't care about design right now." (2026-10-01)
+
+**Where:** a new Local LLM screen, in the This install group of the rail, and Settings (which loses the Local machine section).
+
+**Done when:** a rail entry opens a page of its own for the local LLM: its readiness, the server address, the LLM it would use, the search service, and the wait, all set and saved there; Settings no longer carries the section; `#/local` and the old addresses that named it still open.
+
+**Not this:** design polish, which the reader said is theirs.
+
+**Owner:** free.
+
 ### B189: 1.0.0
 **Asked:** "okay let's do a stable version to do list" (2026-09-29)
 **Where:** the installer and every screen.
