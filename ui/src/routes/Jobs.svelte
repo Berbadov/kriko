@@ -327,7 +327,7 @@
 {/if}
 
 {#each shown as job (job.job_id)}
-    <article class="card job" class:live={isLive(job)}>
+    <article class="card interactive job" class:live={isLive(job)}>
         <h3>
             {kindWord(job)}
             <span class="meta">{subjectOf(job)}</span>

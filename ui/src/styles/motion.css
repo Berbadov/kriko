@@ -35,6 +35,21 @@
     animation: kriko-enter var(--dur-slow) var(--ease-out) both;
 }
 
+/* A view's own cards, one after another. The view rises as one thing; the
+ * cards inside it follow at a short delay each, so a screen with three or
+ * four blocks reads as an ordered arrival rather than a single block that
+ * happens to have seams. The cap matters: a tenth card lands with the view,
+ * and anything past it is visible without any help. */
+.enter > * {
+    animation: kriko-enter var(--dur-slow) var(--ease-out) both;
+    animation-delay: calc(var(--dur-fast) + var(--i, 0) * 40ms);
+}
+.enter > *:nth-child(1) { --i: 0; }
+.enter > *:nth-child(2) { --i: 1; }
+.enter > *:nth-child(3) { --i: 2; }
+.enter > *:nth-child(4) { --i: 3; }
+.enter > *:nth-child(n + 5) { --i: 4; }
+
 /* ── still working ────────────────────────────────────────────────── */
 /* A skeleton says how much is coming and roughly what shape; a spinner says
  * only "wait". The sweep is what distinguishes it from an empty box. */
@@ -127,6 +142,12 @@
         opacity: 1;
         transform: none;
         background-color: transparent;
+    }
+    /* The stagger's end state too: every child landed, no delay carried. */
+    .enter > * {
+        animation: none;
+        opacity: 1;
+        transform: none;
     }
     .skeleton {
         animation: none;

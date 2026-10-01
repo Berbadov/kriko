@@ -252,7 +252,7 @@ import PageHead from "../lib/kriko/PageHead.svelte";
             {/if}
         </article>
 
-        <article class="card">
+        <article class="card interactive">
             <h3><Icon name="download" /> 1 · Put the files somewhere the browser can keep</h3>
             <p class="meta">Written to your Kriko folder, so an app update never drops it.</p>
             <p>
