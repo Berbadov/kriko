@@ -58,6 +58,7 @@ describe("the route table", () => {
             "activity",
             "agents",
             "bench",
+            "local",
             "settings",
             "about",
         ]);
