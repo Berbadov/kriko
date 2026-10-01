@@ -19,6 +19,7 @@
     import Extension from "./routes/Extension.svelte";
     import Knowledge from "./routes/Knowledge.svelte";
     import Overview from "./routes/Overview.svelte";
+    import Queue from "./routes/Queue.svelte";
     import Run from "./routes/Run.svelte";
     import Settings from "./routes/Settings.svelte";
     import Sites from "./routes/Sites.svelte";
@@ -194,6 +195,8 @@
                         />
                     {:else if $route.name === "run"}
                         <Run />
+                    {:else if $route.name === "queue"}
+                        <Queue />
                     {:else if $route.name === "history"}
                         <h2><Icon name="history" size={22} /> History</h2>
                         <History page />

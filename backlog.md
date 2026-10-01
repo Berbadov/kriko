@@ -154,6 +154,14 @@ is on `main`, so all six are open.
 
 ## Phase 1: what 1.0 still needs
 
+### B193: Queue up several products, and research them one after another
+**Asked:** "A new mod for kriko => queue-up. user choses n amounts of products that he/she is interested in, agent specifically makes research on those products. and then goes to the Compare screen for comparison." (2026-10-01); the Compare hand-off is deliberately left out because that screen is being rebuilt.
+**Where:** a new Queue screen under Check, beside Run.
+**Found (2026-10-01):** research is already one job per subject (`POST /api/research`, `research` in `app/web/tasks.py`), and `app/web/jobs.py` runs one worker, so jobs submitted together already run one at a time in the order submitted. What is missing is a screen where the reader picks the subjects first: on Browse each subject is researched on its own, and nothing collects several into one act.
+**Done when:** on Queue the reader searches the installed catalogs, picks any number of subjects, presses one button, and one research job per subject is submitted in the order picked; the screen lists each job with its state, and says when the whole queue has finished.
+**Not this:** a new job kind, a second worker, or a batch that cannot be taken back out through the existing undo. The Compare step is out of scope until that screen is rebuilt.
+**Owner:** free.
+
 ### B191: The journey checks the release criterion is written against
 **Asked:** "okay let's do a stable version to do list" (2026-09-29); the 1.0 list's own criterion names a directory that does not exist.
 **Where:** `tools/journeys/`, run by `tools/walk.sh`.
