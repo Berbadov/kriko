@@ -666,9 +666,23 @@ CREATE TABLE IF NOT EXISTS compare_drafts (
   created_at TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL DEFAULT ''
 );
+
+-- A follow-up question the reader asked about one comparison, and what their
+-- agent answered (B193). App state for the same reason the draft itself is:
+-- the question is about the reader's own decision, never knowledge, and an
+-- answer here must not look like a submitted finding to any layer. The job
+-- that fills `answer` is named by `job_id`, so its log stays reachable from
+-- Activity after the operations feed trims it.
+CREATE TABLE IF NOT EXISTS compare_questions (
+  draft_id    TEXT NOT NULL,
+  question_id TEXT NOT NULL,
+  question    TEXT NOT NULL,
+  answer      TEXT NOT NULL DEFAULT '',
+  job_id      TEXT NOT NULL DEFAULT '',
+  asked_at    TEXT NOT NULL DEFAULT '',
+  answered_at TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (draft_id, question_id));
 """
-
-
 
 #: The most operations one installation keeps. A feed, not an archive: the
 #: durable record of what research *produced* is `submissions`, `pipeline_runs`
@@ -1464,6 +1478,109 @@ def delete_compare_draft(conn: sqlite3.Connection, draft_id: str) -> bool:
     cur = conn.execute("DELETE FROM compare_drafts WHERE draft_id = ?", (draft_id,))
     conn.commit()
     return cur.rowcount > 0
+
+
+#: How many questions one comparison keeps. A conversation, not a transcript:
+#: an older question drops off when a new one is asked, but its job row and
+#: log stay in Activity until the operations feed trims them.
+QUESTIONS_KEPT = 20
+
+#: The most one answer may hold. The reply comes from an agent and is prose,
+#: so this is a guard against a runaway reply, not an input limit; a useful
+#: answer to a question about a shortlist is a few paragraphs.
+ANSWER_MAX_CHARS = 20000
+
+
+def get_compare_draft(conn: sqlite3.Connection, draft_id: str) -> dict | None:
+    """One draft by id, for the endpoint that needs to know it exists.
+
+    `compare_drafts` reads the list; a question about a draft has to refuse a
+    `draft_id` that is not one rather than storing a question nothing will
+    ever show.
+    """
+    row = conn.execute(
+        "SELECT * FROM compare_drafts WHERE draft_id = ?", (draft_id,)).fetchone()
+    return _draft(row) if row else None
+
+
+def _question(row: sqlite3.Row) -> dict:
+    return {
+        "draft_id": row["draft_id"],
+        "question_id": row["question_id"],
+        "question": row["question"],
+        "answer": row["answer"],
+        "job_id": row["job_id"],
+        "asked_at": row["asked_at"],
+        "answered_at": row["answered_at"],
+    }
+
+
+def compare_questions(conn: sqlite3.Connection, draft_id: str) -> list[dict]:
+    """One comparison's questions, newest first.
+
+    The order a reader who has just asked one reads the list in: their
+    question at the top, the ones before it under it.
+    """
+    return [
+        _question(r) for r in conn.execute(
+            "SELECT * FROM compare_questions WHERE draft_id = ?"
+            " ORDER BY asked_at DESC, rowid DESC", (draft_id,))
+    ]
+
+
+def record_compare_question(
+    conn: sqlite3.Connection, draft_id: str, question: str,
+) -> dict:
+    """Store the question, answered by nothing yet (B193).
+
+    Written before the job starts, so a question asked the moment before a
+    crash is a row that says "asked" rather than a question that never was.
+    `answer` and `job_id` are filled by `answer_compare_question` when the
+    agent replies.
+    """
+    question = " ".join(question.split())[:2000]
+    if not question:
+        raise ValueError("a question needs words")
+    question_id = secrets.token_hex(8)
+    conn.execute(
+        "INSERT INTO compare_questions"
+        " (draft_id, question_id, question, answer, job_id, asked_at, answered_at)"
+        " VALUES (?,?,?,?,?,?,?)",
+        (draft_id, question_id, question, "", "", _now(), ""))
+    conn.execute(
+        "DELETE FROM compare_questions WHERE draft_id = ? AND question_id NOT IN"
+        " (SELECT question_id FROM compare_questions WHERE draft_id = ?"
+        "  ORDER BY asked_at DESC, rowid DESC LIMIT ?)",
+        (draft_id, draft_id, QUESTIONS_KEPT))
+    conn.commit()
+    return _question(conn.execute(
+        "SELECT * FROM compare_questions WHERE draft_id = ? AND question_id = ?",
+        (draft_id, question_id)).fetchone())
+
+
+def answer_compare_question(
+    conn: sqlite3.Connection, draft_id: str, question_id: str,
+    answer: str, job_id: str = "",
+) -> dict | None:
+    """The job's return path: what the agent said, onto the row it was asked on.
+
+    The answer is stored verbatim rather than parsed or graded, for the same
+    reason a mark's note is: the reader asked their own agent a question and
+    what came back is theirs to read, not ours to score. An empty reply is
+    still recorded -- the reader wants to know the run happened, and an empty
+    answer next to a log that says why is more honest than a question that
+    looks like it was never asked.
+    """
+    cur = conn.execute(
+        "UPDATE compare_questions SET answer = ?, job_id = ?, answered_at = ?"
+        " WHERE draft_id = ? AND question_id = ?",
+        (answer.strip()[:ANSWER_MAX_CHARS], job_id, _now(), draft_id, question_id))
+    conn.commit()
+    if cur.rowcount != 1:
+        return None
+    return _question(conn.execute(
+        "SELECT * FROM compare_questions WHERE draft_id = ? AND question_id = ?",
+        (draft_id, question_id)).fetchone())
 
 
 def record_site_request(
