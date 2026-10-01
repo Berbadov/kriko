@@ -212,7 +212,7 @@
     {#if fallback}
         <label class="no-print handover">
             <span class="meta"
-                >This browser would not take it to the clipboard — select and copy:</span
+                >This browser would not take it to the clipboard; select and copy:</span
             >
             <textarea readonly rows="6" value={fallback}></textarea>
         </label>
@@ -281,8 +281,8 @@
     <summary class="meta">Does the browser panel show more than this?</summary>
     <p class="meta">
         On a listing page it does, deliberately. The panel also draws what it
-        reads from that page itself — the seller's own condition and equipment
-        blocks — which never reaches Kriko's store and so cannot appear here.
+        reads from that page itself: the seller's own condition and equipment
+        blocks, which never reaches Kriko's store and so cannot appear here.
         Everything on this screen is what is <em>known</em> about the product:
         that is the part which travels between installations, and the part a
         pack can be held to.

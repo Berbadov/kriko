@@ -68,10 +68,10 @@
 {#if heading}<h2><Icon name="activity" size={22} /> Claim health</h2>{/if}
 <p class="meta">
     The weakest-supported claims we ship, worst first. Contradicted, then fewest
-    independent sources, then weakest best source, then stalest. No combined score — each
+    independent sources, then weakest best source, then stalest. No combined score; each
     signal is its own column.
     <em>Independence and stance are flags the pack author supplied, not verified facts.</em>
-    Claims with no sources at all are not listed here — that is a coverage question, answered
+    Claims with no sources at all are not listed here; that is a coverage question, answered
     by <a href={hashWith({ lens: "gaps" }, "knowledge")}>What is missing</a>, not a weakness one.
 </p>
 {#if tieNote(claims)}<p class="meta">{tieNote(claims)}</p>{/if}
@@ -105,7 +105,7 @@
                             <td class="num signal">
                                 {#if claim.refuted_by > 0}
                                     <span class="badge">{claim.refuted_by} refuting</span>
-                                {:else}—{/if}
+                                {:else}·{/if}
                             </td>
                             <td class="num signal">{claim.independent_sources}</td>
                             <td class="signal">
@@ -160,7 +160,7 @@
                             {/each}
                         {:else}
                             <p class="state empty">
-                                No sources — this claim rests on an interval or a rule, not a
+                                No sources; this claim rests on an interval or a rule, not a
                                 citation.
                             </p>
                         {/if}

@@ -215,7 +215,7 @@ async function reportUnreadableSite(tab) {
         await notify(
           tab,
           "Kriko reads this site, but your browser has not granted it "
-          + "permission yet. Open Kriko's extension options and press Grant — "
+          + "permission yet. Open Kriko's extension options and press Grant: "
           + "only the extension can ask.",
         );
         if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();

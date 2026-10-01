@@ -60,7 +60,7 @@
      wants it, not a request this card fires for every claim on a report of
      forty. -->
 <details ontoggle={open}>
-    <summary class="meta">Retained pages — what was actually kept</summary>
+    <summary class="meta">Retained pages · what was actually kept</summary>
     {#if load === "loading"}
         <p class="meta">Checking what was kept…</p>
     {:else if load === "error"}

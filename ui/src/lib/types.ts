@@ -679,6 +679,35 @@ export type SiteRequest = {
 };
 
 export type Sites = { registered: Site[]; requested: SiteRequest[] };
+/** One adapter's rules, as the Sites detail shows them (B181). */
+export type SiteRule = {
+    key: string;
+    /** identity | context. */
+    kind: string;
+    labels: string[];
+    from: string;
+};
+export type SiteUnmapped = {
+    label: string;
+    seen: number;
+    last_at: string;
+    sample_url: string;
+};
+/** What one site's adapter reads, and what it has been missing (B181). */
+export type SiteDetail = {
+    site: string;
+    id: string;
+    pack_id: string;
+    source: string;
+    editable: boolean;
+    match: string[];
+    subject_kind: string;
+    rules: SiteRule[];
+    labels: string[];
+    unmapped: SiteUnmapped[];
+    sample_url: string;
+    spec: Record<string, unknown> | null;
+};
 
 /** Which agent, which LLM, which search provider — and what could be chosen. */
 export type LlmChoice = {
@@ -1139,6 +1168,9 @@ export type BenchProtocol = {
 
 export type BenchRun = {
     id?: number;
+    bench_id?: string;
+    subject?: string;
+    subject_id?: string;
     at?: string;
     plane: string;
     llm: string;
@@ -1155,6 +1187,8 @@ export type BenchRun = {
     error?: string;
     reasons: string[];
     gold: Record<string, unknown> | null;
+    set_id?: string;
+    set_version?: string;
 };
 
 export type BenchScoredGroup = {
@@ -1190,6 +1224,10 @@ export type BenchSummaryRow = {
 
 export type BenchReadoutRow = {
     llm: string;
+    /** Which versioned test set the row measured (B185). Empty for
+     *  pack-derived rows, which never rank against fixed-set rows. */
+    set_id?: string;
+    set_version?: string;
     protocol: string;
     batch_size: number;
     context_chars: number;
@@ -1202,8 +1240,18 @@ export type BenchReadoutRow = {
     note: string;
 };
 
+export type BenchTestCase = {
+    id: string;
+    product: string;
+    queries: string[];
+    set_id: string;
+    set_version: string;
+};
 export type Bench = {
     runs: BenchRun[];
+    /** The fixed, versioned test set and what each plane is (B185). */
+    test_set?: { id: string; version: string; cases: BenchTestCase[] };
+    plane_meanings?: Record<string, string>;
     verdict: Record<string, unknown>;
     scored: { groups: BenchScoredGroup[] };
     summary: BenchSummaryRow[];

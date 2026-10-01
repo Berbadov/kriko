@@ -137,7 +137,8 @@ def _newer(candidate: str, installed: str) -> bool:
     return updates._parts(candidate) > updates._parts(installed)
 
 
-def seed(store_path, source: Path | None = None) -> list[dict]:
+def seed(store_path, source: Path | None = None,
+         app_state_path=None) -> list[dict]:
     """Install every bundled pack the store is missing or behind on.
 
     Returns one row per artifact considered, each with `pack_id`, `version` and
@@ -145,6 +146,15 @@ def seed(store_path, source: Path | None = None) -> list[dict]:
     `failed`. The list is what makes this testable and what the log prints; a
     silent seeder is one nobody can debug from a reader's screenshot.
     """
+    # B188: a reader who emptied the store on purpose (B188's reset) must not
+    # have it quietly refilled at the next start. The marker lives in
+    # app.sqlite, where seeding never writes; the store itself stays pristine
+    # so a rebuild through the B168-B170 flow lands on a clean floor.
+    from app import cleaninstall
+
+    if cleaninstall.was_reset(app_state_path):
+        log.info("packs were reset on this machine; seeding skipped")
+        return []
     carried = bundled(source)
     if not carried:
         return []

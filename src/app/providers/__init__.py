@@ -434,7 +434,7 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
         base_url, serving_name, timeout=timeout or local_inference.DEFAULT_TIMEOUT,
         response_json_schema=schema)
     if search_kind == "exa":
-        return complete, exa_mcp.searcher(), "exa-mcp"
+        return complete, exa_mcp.search_with_fallback(), "exa-mcp"
     return complete, openserp.searcher(search_base_url), "openserp"
 
 
@@ -479,7 +479,8 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
 
 
 def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
-                search_kind: str = "openserp", timeout: float = 0.0):
+                search_kind: str = "openserp", timeout: float = 0.0,
+                given_queries: list[str] | None = None):
     """The local model as something that can `ask` (B171): the quick look, the
     pack author and the pack amend take it when no coding agent is there.
 
@@ -498,4 +499,4 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
         response_json_schema=local_agent.QUERY_SCHEMA)
     return local_agent.LocalAsker(
         plan, complete, search, fetch.reader(), model=serving_name,
-        search_provider=provider, url=base_url)
+        search_provider=provider, url=base_url, given_queries=given_queries)

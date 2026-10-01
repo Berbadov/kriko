@@ -124,7 +124,7 @@ describe("emptyReason", () => {
                 subjects: ["a", "b", "c"],
             }),
         ).toBe(
-            "3 products match these details — add another identifying detail to narrow it down to one.",
+            "3 products match these details; add another identifying detail to narrow it down to one.",
         );
         expect(emptyReason({ method: "ambiguous", claims: [], coverage: "MATCHED_NO_DATA" }))
             .not.toMatch(/identified/);
