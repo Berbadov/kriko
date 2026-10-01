@@ -30,27 +30,32 @@ B### — "…"
 
 ### Principle checks
 
-Kriko's principles live in `CLAUDE.md`. Tick what applies, delete what doesn't —
-an unticked box is fine if you say why.
+Kriko's principles live in `CLAUDE.md`. Tick what applies, delete what does
+not; an unticked box is fine if you say why.
 
-- [ ] **No hardcoded car data.** No new Python dict/list of makes, models, engine
-      codes or gearbox codes. Anything car-specific is derived from the catalog
-      YAMLs. (Small closed vocabularies — fuel types, transmission technologies —
-      are fine.)
-- [ ] **Systemic, not per-model.** If this fixes a problem found on one car, it
-      ships the mechanism that catches the same class for every car. A per-model
-      patch is not a fix.
-- [ ] **No human in the data path.** No review, sign-off or spot-check step added
-      to extraction or scraping. Where a value can't be derived automatically, the
-      system fails open: no claim, a gap in the coverage report, a logged signal.
-- [ ] **Layering holds.** No new import from `src/kriko/` into `packs/`, `src/app/`, or
-      `src/app/pipeline/`; none from `packs/cars/pipeline/` into `src/app/`; none from
-      `packs/` into `src/app/pipeline/`. If a module needs something from the layer
-      above, it is in the wrong layer — move the module.
+- [ ] **No hardcoded category data.** No new Python list of product names,
+      variants or component codes. Anything category-specific is derived from
+      the catalog's own data files. A small closed vocabulary is fine: the rule
+      covers data that grows with coverage, not fixed engineering categories.
+- [ ] **Systemic, not per-product.** A problem found in one product ships the
+      mechanism that catches that class for every product, present and future. A
+      patch for one product is not a fix.
+- [ ] **No human in the data path.** No review, sign-off or spot-check step
+      added to extraction or scraping. Where a value cannot be derived
+      automatically, the system fails open: no claim, a gap in the coverage
+      report, a logged signal for an automated pass.
+- [ ] **Layering holds.** No new import from `src/kriko/` into `packs/`,
+      `src/app/` or `src/app/pipeline/`; none from a pack's `pipeline/` into
+      `src/app/`; none from `packs/` into `src/app/pipeline/`. A module that
+      needs something from the layer above is in the wrong layer: move it.
       (`src/app/pipeline/tests/test_repo_invariants.py` enforces this.)
-- [ ] **Claim selection clears the bar.** If this touches what gets surfaced: the
-      claim is config-specific, predictable from the listing, and not something a
-      standard pre-purchase inspection already catches.
+- [ ] **Claim selection clears the pack's bar.** If this touches what gets
+      surfaced, the claim is specific to the configuration, predictable from
+      what the listing already says, and not something a standard check already
+      finds. The bar is the pack's own, in its `research/principle.md`.
+- [ ] **No category or vendor in a document or in the UI.** Docs name no
+      product type and no model or agent product; `ui/src` names no catalog
+      vocabulary. Lists are read at runtime, never typed.
 
 ### Verification
 
@@ -58,7 +63,7 @@ an unticked box is fine if you say why.
 
 - [ ] `python -m pytest` — no arguments, so `pytest.ini` picks up every testpath
 - [ ] `npm test`
-- [ ] If this touches `packaging/`, `tauri/`, or `src/app/sidecar.py`, the
+- [ ] If this touches `packaging/`, `tauri/` or `src/app/sidecar.py`, the
       `desktop` workflow ran and all three runners are green.
 
 ```
@@ -69,9 +74,11 @@ paste test output here
 
 - [ ] One request in this PR, and the branch is less than a day old (or rebased on `main`)
 - [ ] `tools/walk.sh` shows no errors on the screens this touches
-- [ ] Its journey check passes, or (until `tools/journeys/` exists, B143) the
+- [ ] Its journey check passes, or (until `tools/journeys/` exists, B191) the
       steps and the end result are walked by hand above (docs/DOCTRINE.md §4)
 
 ### Tracking
 
-- [ ] `backlog.md` / `done.md` updated — they are the single source of truth for status
+- [ ] `backlog.md` updated: the item leaves it, or its "Found" lines record
+      what you measured. The commit message says what was observed, so no
+      document has to carry a second status list.
