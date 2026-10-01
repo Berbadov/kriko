@@ -13,6 +13,7 @@
     import About from "./routes/About.svelte";
     import Activity from "./routes/Activity.svelte";
     import Home from "./routes/Home.svelte";
+    import Local from "./routes/Local.svelte";
     import Agents from "./routes/Agents.svelte";
     import Bench from "./routes/Bench.svelte";
     import Compare from "./routes/Compare.svelte";
@@ -208,6 +209,8 @@
                         <Sites />
                     {:else if $route.name === "settings"}
                         <Settings />
+                    {:else if $route.name === "local"}
+                        <Local />
                     {:else if $route.name === "about"}
                         <About />
                     {:else if view.name === "home"}
