@@ -68,11 +68,18 @@ def current() -> dict[Path, str]:
 
 
 def installed() -> str:
-    """What `/api/health` would report from this environment."""
+    """What `/api/health` would report from this environment.
+
+    The empty string means "not installed here" — a fresh clone, a CI
+    runner before its first `pip install -e .`, any interpreter the app
+    was never installed into. That is absence, not disagreement, and the
+    `--strict` check below reads it as such: it fails a *stale* install
+    (an editable 0.7.11 behind a 0.8.0 tree), never a missing one.
+    """
     try:
         from app.version import app_version
     except ImportError:
-        return "unknown (app is not importable from here)"
+        return ""
     return app_version()
 
 

@@ -191,7 +191,11 @@ describe("the Agents screen", () => {
         routes({ "/api/agent-verify": VERIFIED });
         render(Connect);
         await fireEvent.click(await screen.findByRole("button", { name: "Verify" }));
-        const steps = await screen.findByRole("list", { name: "Verify steps" });
+        // The verdict lands on its own tick, so the step rows exist before
+        // their state words do: wait for the state, not the list. Asserting
+        // on the list alone raced the fetch and flaked.
+        expect((await screen.findAllByText("Passed")).length).toBeGreaterThan(0);
+        const steps = screen.getByRole("list", { name: "Verify steps" });
         expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
         expect(within(steps).getByText("Start the command")).toBeInTheDocument();
         expect(within(steps).getAllByText("Passed")).toHaveLength(3);
@@ -218,8 +222,8 @@ describe("the Agents screen", () => {
         } });
         render(Connect);
         await fireEvent.click(await screen.findByRole("button", { name: "Verify" }));
-        const steps = await screen.findByRole("list", { name: "Verify steps" });
-        expect(within(steps).getByText("Failed")).toBeInTheDocument();
+        expect(await screen.findByText("Failed")).toBeInTheDocument();
+        const steps = screen.getByRole("list", { name: "Verify steps" });
         expect(within(steps).getByText("Not run")).toBeInTheDocument();
         expect(screen.queryByText(/ModuleNotFoundError/)).toBeNull();
         await fireEvent.click(screen.getByRole("button", { name: "Show log" }));

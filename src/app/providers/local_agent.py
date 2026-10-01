@@ -128,8 +128,17 @@ class LocalAsker:
             found = json.loads(raw[raw.index("["): raw.rindex("]") + 1])
         except ValueError:
             found = []
-        queries = [str(one).strip() for one in found
-                   if isinstance(one, str) and one.strip()][:QUERIES]
+        queries: list[str] = []
+        lowered: set[str] = set()
+        for one in found:
+            text = str(one).strip()
+            low = text.casefold()
+            if not text or low in lowered:
+                continue
+            lowered.add(low)
+            queries.append(text)
+            if len(queries) >= QUERIES:
+                break
         if not queries:
             raise LocalInferenceError(
                 f"{self.model!r} at {self.url or 'this machine'} did not "
@@ -138,7 +147,16 @@ class LocalAsker:
         return queries
 
     def _read(self, queries: list[str]) -> list[tuple[str, str]]:
-        pages: list[tuple[str, str]] = []
+        """Search each query, then read the pages side by side.
+
+        The reads are the slow part and they do not depend on each other, so
+        they go out together on a small pool: five pages fetched one after
+        another on a cold connection costs five round trips in sequence,
+        which on a CPU-bound run is the difference the reader feels. The
+        order the pages appear in the prompt is still the order the queries
+        named them, so the model's brief does not change with the fetching.
+        """
+        wanted: list[str] = []
         seen: set[str] = set()
         for query in queries:
             self._check()
@@ -149,12 +167,25 @@ class LocalAsker:
                 continue
             for hit in hits:
                 url = str(hit.get("url", "")).strip()
-                if not url or url in seen or len(pages) >= MAX_PAGES:
+                if not url or url in seen or len(wanted) >= MAX_PAGES:
                     continue
                 seen.add(url)
+                wanted.append(url)
+        if not wanted:
+            return []
+        from concurrent.futures import ThreadPoolExecutor
+
+        def _one(url: str) -> tuple[str, str]:
+            try:
                 got = self._fetch(url)
-                text = getattr(got, "text", got) or ""
-                text = str(text).strip()[:PAGE_CHARS]
+            except Exception:  # noqa: BLE001 - an unreadable page is a miss
+                return url, ""
+            text = getattr(got, "text", got) or ""
+            return url, str(text).strip()[:PAGE_CHARS]
+
+        pages: list[tuple[str, str]] = []
+        with ThreadPoolExecutor(max_workers=min(4, len(wanted))) as pool:
+            for url, text in pool.map(_one, wanted):
                 if text:
                     pages.append((url, text))
                     self.sources[url] = text
