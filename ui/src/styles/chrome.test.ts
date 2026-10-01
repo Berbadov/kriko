@@ -347,14 +347,19 @@ describe("the work column", () => {
         });
     });
 
-    it("draws the rail's mark as a smooth vector at half the drawing's unit", () => {
-        // B161: "Fix the pixelated Kriko logo in the top left". The rail drew a
-        // 16-cell grid at 28px with `image-rendering: pixelated`, a 1.75 scale
-        // that no smoothing setting makes crisp.
+    it("draws the rail's mark as a smooth vector, never a pixelated bitmap", () => {
+        // B161: "Fix the pixelated Kriko logo in the top left". The mark began
+        // as a 16-cell grid drawn at 28px with `image-rendering: pixelated`, a
+        // 1.75 scale that no smoothing setting makes crisp. The rebuild goes
+        // further: the rail now carries the design system's own wordmark SVG
+        // (kriko-svelte/assets), white on the blue brand plate, so the old
+        // 32px square and its fixed width are gone with the bitmap. What must
+        // never come back is a raster mark scaled by the browser.
         const mark = block(".brand .mark").replace(/\/\*[\s\S]*?\*\//g, "");
         expect(mark).not.toMatch(/image-rendering/);
-        expect(mark).toMatch(/width:\s*32px/);
-        expect(mark).toMatch(/height:\s*32px/);
+        // The vector keeps its own aspect: height is drawn, width follows it.
+        expect(mark).toMatch(/height:\s*20px/);
+        expect(mark).toMatch(/width:\s*auto/);
     });
 
     it("does not draw a focus ring around the whole screen", () => {

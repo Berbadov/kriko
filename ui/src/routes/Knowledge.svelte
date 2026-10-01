@@ -11,6 +11,7 @@
     import { severityWord } from "../lib/report";
     import { route } from "../lib/router";
     import type {
+
         Gap,
         Pack,
         PackDraft,
@@ -19,6 +20,7 @@
         SubjectDetail,
         SubjectFilter,
     } from "../lib/types";
+    import PageHead from "../lib/kriko/PageHead.svelte";
 
     /* One screen for "what does this install actually know".
      *
@@ -355,7 +357,7 @@
     }
 </script>
 
-<h2><Icon name="knowledge" size={22} /> Knowledge</h2>
+<PageHead crumb="knowledge / browse" title="Browse" lead="Search every subject, attribute and claim stored on this machine." />
 
 <!-- Search first (B180). Installed catalogs, switched-off ones and drafts are
      one line that unfolds: they change what the lists below can hold, but the

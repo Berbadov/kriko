@@ -22,105 +22,163 @@
  * The alias names (`--n-0` to `--n-9`, `--bg`, `--text`) stay as they were:
  * `tools/tokens.py` derives the extension's names from these, and a component
  * that spends `var(--panel)` needs no idea which sheet answers it.
+ *
+ * The palette is the kriko design system's (kriko-svelte/): a deep blue-black
+ * ground, the blue brand with its bezel gradient, ice for what is live, wells
+ * and hairlines for depth. The reader's reference screens all wear it.
  */
+
 :root {
     /* The OS half of the palette. Without it a `<select>`'s dropdown, a date
      * picker and a scrollbar are drawn by the platform in *light* chrome over
      * this near-black ground — the one part of the app no stylesheet here can
      * reach, and the reason the controls read as raw. It is one line because
      * the browser's own dark defaults are the right answer; what was missing
-     * was telling it which half we are in. */
+     * was telling it which half we are in.
+     */
     color-scheme: dark;
+
     /* neutrals — the panel's own ramp, 0 the ground and 9 the strongest text.
-     * The middle steps are the panel's surfaces rather than an even ramp: this
-     * palette is five hand-chosen greys, not a generated scale. */
-    --n-0: #0a0b0d; /* --bg-base   — the page */
-    --n-1: #13151a; /* --bg-header */
-    --n-2: #15171c; /* --bg-panel  — cards, the rail */
-    --n-3: #1b1e24; /* --bg-surface — sunk surfaces, inputs */
-    --n-4: #2c313a; /* --border    — hairlines */
-    --n-5: #4d5460; /* --fg-faint */
-    --n-6: #858c97; /* --fg-subtle */
-    --n-7: #9199a3; /* --fg-muted  — secondary text */
-    --n-8: #c2c7cf; /* --fg-body */
-    --n-9: #e7e9ed; /* --fg        — headings */
+     * The middle steps are the panel's surfaces rather than an even ramp, and
+     * every one carries the blue cast of the reference's ground: greys here
+     * are desaturated blues, which is what keeps near-black from reading as
+     * a terminal instead of a product.
+     */
+    --n-0: #06070b; /* --bg-base   — the page */
+    --n-1: #0d0f16; /* --bg-header */
+    --n-2: #10131c; /* --bg-panel  — cards, the rail */
+    --n-3: #151926; /* --bg-surface — sunk surfaces, inputs */
+    --n-4: #232941; /* --border    — hairlines */
+    --n-5: #4d5573; /* --fg-faint */
+    --n-6: #858da8; /* --fg-subtle */
+    --n-7: #9199b3; /* --fg-muted  — secondary text */
+    --n-8: #c2c7d8; /* --fg-body */
+    --n-9: #e7eaf4; /* --fg        — headings */
+
     /* Two surfaces beside the ramp rather than in it, because inserting them
      * would renumber every step and every component that names one. The panel
      * has always had both and this app had no word for either: a row inside a
-     * card, and a rule inside a card as opposed to between cards. */
-    --panel-item: #1d2026; /* --bg-item    — a row inside a card */
-    --line-soft: #23272e;  /* --border-soft — a rule inside a card */
-
-    /* Gold, not blue. This is the single most recognisable thing about the
-     * panel and the reason the app did not look like the extension. */
-    --accent: #e8c04b;
-    /* Ink on gold: the panel never fills with accent, so it has no value for
-     * this. Near-black is the only readable choice against #e8c04b — white on
-     * it is 1.7:1. */
-    --accent-ink: #0a0b0d;
-    /* The panel's accent fills are rgba over the ground. Flattened here
-     * because this app puts text on top of them, where a translucent fill
-     * composites against whatever it lands on and stops being predictable. */
-    --accent-soft: #2b2517;
-
-    /* One ink per severity, and the other two derived from it.
-     *
-     * The three fills used to be literals — #2a1719, #2a2015, #14251f — and
-     * measuring them against the ink and the ground says they were all 15%,
-     * to within two units per channel. So they were already a derivation;
-     * nobody had written the rule down, and a fourth severity would have
-     * needed somebody to rediscover it by eye.
-     *
-     * Opaque, not translucent, which is the one place this parts company with
-     * the panel's `rgba(...)`: this app puts text on top of these fills, and a
-     * translucent fill composites against whatever surface it lands on and
-     * stops being predictable. `color-mix` over the ground gives a derived
-     * value that is still a flat colour.
-     *
-     * The light themes keep literal fills. Measured the same way, theirs are
-     * not a linear mix at all — a couple come out *negative*, meaning the fill
-     * is more saturated than any amount of ink over that ground. They are
-     * tuned for text contrast on a light page, and one formula across all
-     * three themes would flatten that into something worse than three values.
+     * card, and a rule inside a card as opposed to between cards.
      */
-    --high: #f0565b;
-    --high-soft: color-mix(in srgb, var(--high) 15%, var(--n-0));
-    --medium: #e2933f;
-    --medium-soft: color-mix(in srgb, var(--medium) 15%, var(--n-0));
-    --low: #46b48c;
-    --low-soft: color-mix(in srgb, var(--low) 15%, var(--n-0));
-    /* The edge, derived rather than picked. The app had no border token at
-     * all — the panel has had one per severity since it was written, and a
-     * card with a tinted fill and no edge reads as a smudge against a card
-     * that has one. 30% of the ink over the ground is visible on a near-black
-     * page and on a cream one, which is why it is a mix rather than an alpha:
-     * a translucent edge composites against whatever it lands on, and this
-     * app puts cards on three different surfaces. */
-    --high-border: color-mix(in srgb, var(--high) 30%, var(--n-0));
-    --medium-border: color-mix(in srgb, var(--medium) 30%, var(--n-0));
-    --low-border: color-mix(in srgb, var(--low) 30%, var(--n-0));
+    --panel-item: #181c2a; /* --bg-item    — a row inside a card */
+    --line-soft: #1e2334;  /* --border-soft — a rule inside a card */
 
+    /* The brand: blue. The design system's whole identity is the blue key
+     * face, the ice it lights and the white wordmark on it; the gold accent
+     * that used to answer `--accent` is retired with it.
+     */
+    --brand-bright: #8ea3ff;
+    --brand: #2c53e0;
+    --brand-hover: #3f63f0;
+    --brand-low: #1c3bad;
+    --on-brand: #f0f3ff;
+    --brand-wash: #0b1229;
+    --brand-night: #101528;
 
-    /* ── control surfaces ─────────────────────────────────────────────
+    /* Ice: what is live. LEDs, the active row, focus rings, meters. */
+    --ice: #a5c3ff;
+    --led-dim: #4d5573;
+    --led-off: #232941;
+    /* The LED's own style tokens, answered here so a dot-matrix with no
+     * per-element overrides paints: the colour it lights, the dot size, the
+     * gaps between them and how far the glow carries. */
+    --led: var(--ice);
+    --dot: 4px;
+    --gap: 2px;
+    --glow: 5px;
+    --cols: 8;
+
+    /* Glass fills, layered over the ground. */
+    --glass-1: rgba(255, 255, 255, 0.03);
+    --glass-2: rgba(255, 255, 255, 0.06);
+    --glass-3: rgba(255, 255, 255, 0.1);
+    --surface-1: #0d0f16;
+
+    /* Bezel: the raised control face, its lit top edge and its bottom rule. */
+    --bezel-hi: #262c42;
+    --bezel-lo: #10131c;
+    --bezel-edge: #2e3654;
+
+    /* One ink per severity, and the fills and edges derived from it over the
+     * ground. Each is the ink at a measured share over the ground, flattened to one
+     * value: this app puts text on top of these fills, and a translucent fill
+     * composites against whatever surface it lands on and stops being
+     * predictable. 15% for the fills, 30% for the edges, the shares the old
+     * palette was already using before it named the rule.
+     */
+    --high: #ff6b70;
+    --high-soft: #2b161a;
+    --medium: #f0b45b;
+    --medium-soft: #292117;
+    --low: #46d0a0;
+    --low-soft: #102521;
+    --high-border: #512529;
+    --medium-border: #4c3b23;
+    --low-border: #194338;
+
+    /* The old danger names keep answering: components say --danger, and the
+     * fills it asks for are the severity ramp's.
+     */
+    --danger: var(--high);
+    --danger-wash: var(--high-soft);
+
+    /* ── control surfaces ──────────────────────────────────────────────
      * A raised face needs three values, not one: the face itself, a hairline
      * along the top that catches light, and a rule under the bottom that
      * reads as its edge. In a dark theme "lighter" means up the ramp and the
-     * bottom edge is the ground itself. */
-    --btn: #1b1e24; /* n-3 — the face at rest */
-    --btn-hover: #232830;
-    --btn-active: #16181d; /* darker than the face: pressed, not lit */
-    --btn-hi: #363c47; /* the lit top edge */
-    --btn-lo: #0a0b0d; /* the ground, as the bottom edge */
-    --accent-hi: #f0cf6c; /* gold, one step up — hover */
-    --accent-lo: #cfa838; /* gold, one step down — pressed */
+     * bottom edge is the ground itself.
+     */
+    --btn: #151926; /* n-3 — the face at rest */
+    --btn-hover: #1c2133;
+    --btn-active: #10131c; /* darker than the face: pressed, not lit */
+    --btn-hi: #262c42; /* the lit top edge */
+    --btn-lo: #06070b; /* the ground, as the bottom edge */
+    --accent: var(--ice);
+    --accent-ink: #0a0d16;
+    --accent-soft: #1f2532;
+    --accent-hi: #c8d9ff;
+    --accent-lo: #7d9ae8;
+    --well: var(--n-3);
+    --hairline: var(--n-4);
+    --border-control: #2e3654;
+
+    /* The three faces of the design system: Barlow Condensed for display,
+     * DM Sans for reading, JetBrains Mono for figures and labels.
+     */
+    --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --font-sans: "DM Sans", system-ui, sans-serif;
+
+    /* Radii of the design system: cards large, controls medium, tags small. */
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+
+    /* Elevation, from the design system's key faces: the ground's own blue
+     * shadow under the primary key, bezel shadows under raised plates, wells
+     * sunk into the page.
+     */
+    --shadow-key: inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        inset 0 -2px 0 rgba(0, 0, 0, 0.3), 0 3px 0 #0f2a9c,
+        0 10px 20px rgba(0, 0, 0, 0.5);
+    --shadow-key-pressed: inset 0 2px 5px rgba(0, 0, 0, 0.45),
+        0 0 0 #0f2a9c, 0 2px 6px rgba(0, 0, 0, 0.5);
+    --shadow-bezel: inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.6), 0 6px 16px rgba(0, 0, 0, 0.55);
+    --shadow-well: inset 0 2px 6px rgba(0, 0, 0, 0.75),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+
     /* Elevation. Near-black shadows on a near-black ground do almost nothing,
      * which is correct: in a dark theme depth comes from the edges above and
-     * the shadow only grounds them. */
+     * the shadow only grounds them.
+     */
     --shadow-1: 0 1px 0 rgba(0, 0, 0, 0.5);
     --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.55);
+
     /* Defined for completeness — the panel theme paints a browser overlay
-     * that has no dialog of its own. */
+     * that has no dialog of its own.
+     */
     --scrim: rgba(0, 0, 0, 0.6);
+
     /* semantic aliases — components speak these, never a ramp step */
     --bg: var(--n-0);
     --panel: var(--n-2);

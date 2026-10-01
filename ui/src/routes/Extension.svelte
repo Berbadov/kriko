@@ -5,6 +5,7 @@
     import { copyText, copyWord } from "../lib/clipboard";
     import Failure from "../lib/Failure.svelte";
     import type { Adapter, ExtensionLaunched, ExtensionStatus } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     type FreshExtensionStatus = ExtensionStatus & {
         content_digest?: string;
@@ -123,7 +124,7 @@
         status?.staged_content_digest && loaded.content_digest !== status.staged_content_digest)));
 </script>
 
-<h2><Icon name="extension" size={22} /> Browser extension</h2>
+<PageHead crumb="check / browser extension" title="Browser extension" lead="The panel that reads a listing, and its connection." />
 
 <article class="card">
     <p class="meta">
