@@ -25,6 +25,7 @@ export const KINDS: Record<string, string> = {
     pack_build: "Build",
     pack_update: "Update",
     bench: "Benchmark",
+    compare_ask: "Compare question",
 };
 
 export const kindWord = (kind: string): string => KINDS[kind] ?? kind;
