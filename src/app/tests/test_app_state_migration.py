@@ -203,4 +203,11 @@ BACK_THEN = {
     # EXISTS`. `taken_at` already carries a default because it is the one
     # column a later reply path would want to add in place.
     "job_messages.job_id", "job_messages.body", "job_messages.created_at",
+    # 2026-10-02, B193's compare board, and the excuse holds: `compare_questions`
+    # arrived as a whole table, so a reader whose file predates it gets all of it
+    # from `CREATE TABLE IF NOT EXISTS` and no `ALTER` is ever asked for. The
+    # columns that carry a default (`answer`, `job_id`, both timestamps) are the
+    # ones a later question path would want to add in place.
+    "compare_questions.draft_id", "compare_questions.question_id",
+    "compare_questions.question",
 }

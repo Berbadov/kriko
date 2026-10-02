@@ -123,6 +123,8 @@ Uninstalling a pack must not drop history, and history must not move a
 | `site_requests` | Unreadable sites the reader stood on, so "which site next" is answerable. |
 | `site_activation` | The browser's per-site permission verdict. |
 | `compare_drafts` | Named comparisons: which checks, in which order. |
+| `compare_questions` | The reader's own questions about a comparison, and the answers their agent gave. |
+| `compare_boards` | One comparison's pen marks and typed notes over the table, one JSON document per draft. Cleared when the draft is saved over, because a mark on a column that is gone is a mark about nothing. |
 
 **Migration.** `connect()` stamps `PRAGMA user_version` with
 `schema_stamp(SCHEMA)`, and `add_missing_columns()` reconciles

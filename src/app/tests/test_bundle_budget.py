@@ -89,7 +89,22 @@ import pytest
 #: dependency. History's category groups and designed cards, Browse's filter
 #: row with its expandable descriptions, and Overview's linked count tiles are
 #: scoped styles in three components. 61,155 bytes (59,107 before).
-BUDGET = {".js": 334_000, ".css": 62_000}
+#:
+#: Raised again on 2026-10-02 for the design-system rebuild (`ui/package.json`
+#: untouched, so still no dependency): `styles/components.css` alone went from
+#: 830 to 2,100 lines as the rail, cards, tables, meters, LEDs, badges, segmented
+#: controls and switches were given designed faces instead of browser defaults,
+#: and `themes/panel.css` gained the brand and ice palettes, the glass and bezel
+#: surfaces, and `motion.css` arrived as a file of its own for the staggered
+#: entrances. The CSS is now the larger half of what this app ships, which is
+#: the point of a design system rather than something to apologise for: 80,329
+#: bytes, up 30%. Raising it *knowingly* is the point; this records it.
+#: Raised .js from 334,000 to 342,000 on the same rebuild: `Board.svelte` (the
+#: compare board's pen and notes), `Queue.svelte` (B193's queue several products
+#: and research them in turn), `Local.svelte` (the local plane's own screen) and
+#: the `kriko/` control kit — 11 components — plus the shared `types.ts` and
+#: `stub-fetch.ts` the new tests stub against. 340,237 bytes.
+BUDGET = {".js": 342_000, ".css": 82_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the
@@ -105,7 +120,14 @@ DEFERRED: tuple[str, ...] = ()
 #: gave `Planes.svelte` its own card and readiness probe, with no new
 #: dependency. 332,077 bytes of JS and 56,361 of CSS, 388,438 in all; this
 #: records it rather than trimming the card to fit a number.
-FIRST_PAINT_BUDGET = 392_000
+#:
+#: Raised to 424,000 on 2026-10-02 with the design-system rebuild, for the same
+#: reason and with the same caveat: the eager payload is 340,237 bytes of JS and
+#: 80,329 of CSS, 420,566 in all. Nothing is deferred — `DEFERRED` is still empty
+#: and the reasoning at the top of this file says why nothing should be — so this
+#: is what every reader waits on before the window draws. That is worth knowing,
+#: which is why the number is written down rather than trimmed.
+FIRST_PAINT_BUDGET = 424_000
 
 #: The whole payload, gzipped or not, including the index and any asset Vite
 #: emitted beside the two bundles. What the window actually has to read.
@@ -129,7 +151,22 @@ FIRST_PAINT_BUDGET = 392_000
 #: bytes), which the app needs so that bold and italic are real faces and not
 #: the browser's imitation. With `mark.svg` and the new `mark-large.svg` the
 #: unbuilt weight is 157,375 bytes, so the figure did not have to move.
-UNBUILT_ASSETS = 165_000
+#:
+#: Raised to 428,000 on 2026-10-02, and this is the number that most deserves
+#: the sentence. The rebuild gave the app a real typeface: Barlow Condensed for
+#: display, DM Sans for body, JetBrains Mono for figures — three families, ten
+#: files with their latin and latin-ext cuts, 270,340 bytes. They are what the
+#: design system is drawn in, and every screen changed shape because of them.
+#:
+#: It also kept all ten IBM Plex Mono files, 150,112 bytes. They are still the
+#: second name in `--font-mono`'s stack, so a reader whose JetBrains Mono fails
+#: to load still gets a real face rather than the platform's — that is a
+#: deliberate fallback and the reason to keep them. But no rule *names* Plex
+#: first, so in practice the fallback almost never fires and 150 KB ships for it.
+#: Dropping them is a one-line change to the stack and a `git rm` on the files;
+#: left in place here because a fallback nobody has measured is still a fallback,
+#: and deleting a face is a design decision rather than a budget one.
+UNBUILT_ASSETS = 428_000
 TOTAL_BUDGET = sum(BUDGET.values()) + UNBUILT_ASSETS
 
 STATIC = Path(__file__).resolve().parents[1] / "web" / "static"
