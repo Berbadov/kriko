@@ -28,7 +28,11 @@ describe("the route table", () => {
         expect(ALL_ROUTES).not.toContain("questions");
         // Run leads the group (B175): a run over a category starts and is
         // watched there, and the extension is where a single check starts.
-        expect(NAV[0].items.map((i) => i.name)).toEqual(["home", "run", "queue", "history", "compare", "extension"]);
+        expect(NAV[0].items.map((i) => i.name)).toEqual(["home", "run", "history", "compare", "extension"]);
+        // B193's queue has no row (the reference rail keeps the group at
+        // five) but stays a destination: Run links to it, the palette finds
+        // it by its old words, and the address resolves below.
+        expect(destinations().find((d) => d.name === "queue")).toBeUndefined();
     });
 
     it("opens on Home, and the old New check address lands there (B174)", () => {
@@ -41,7 +45,6 @@ describe("the route table", () => {
         expect(ALL_ROUTES).toEqual([
             "home",
             "run",
-            "queue",
             "history",
             "compare",
             "extension",

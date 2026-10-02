@@ -35,9 +35,12 @@ body {
     height: 100%;
     margin: 0;
     overflow: hidden;
-    background: var(--bg);
+    /* The design system's ground: the plain near-black washes out the blue
+     * cast of every surface above it, so a radial hint of the brand's own
+     * night blue sits at the top and fades before the fold. */
+    background: radial-gradient(1200px 800px at 70% -10%, var(--brand-night) 0%, var(--bg) 60%);
     color: var(--text);
-    font: var(--t-base) / var(--lh-base) var(--font-mono);
+    font: var(--t-base) / var(--lh-base) var(--font-sans);
     font-variant-numeric: tabular-nums;
     /* Inherited, so every screen gets it without a per-component rule: a
      * listing title, a raw URL or a long source domain has no spaces for the

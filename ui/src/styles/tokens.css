@@ -10,8 +10,10 @@
  * monospace one so a missing file changes the glyphs and not the layout.
  */
 :root {
-    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas,
-        monospace;
+    --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --font-sans: "DM Sans", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SFMono-Regular",
+        Menlo, Consolas, monospace;
 
     /* spacing — 4 8 12 16 24 32 48 */
     --s-1: 4px;
@@ -65,6 +67,18 @@
     --dur-fast: 120ms;
     --dur-slow: 240ms;
     --dur-slower: 400ms;
+    --dur-loop: 1600ms;
+    --dur-scan: 600ms;
+    /* An LED stagger index, written per-dot by Led.svelte; 0 means "first",
+     * which is the right answer for an element rendered without one. */
+    --i: 0;
+    /* The design system's hardware vocabulary (kriko-svelte/): the press of
+     * a key, a quick state change, the base for a part that physically
+     * travels, and the mechanical spring that carries it there. */
+    --dur-press: 90ms;
+    --dur-quick: 160ms;
+    --dur-base: 260ms;
+    --ease-mech: cubic-bezier(0.3, 1.25, 0.5, 1);
     /* Decelerating — for things arriving. Nothing here accelerates away;
      * everything that leaves this UI leaves because the reader navigated. */
     --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

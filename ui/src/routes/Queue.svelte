@@ -8,6 +8,7 @@
     import { count } from "../lib/plural";
     import { hashWith, toHash } from "../lib/router";
     import type { Job, Subject } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     /* Research several products, one after another (B193).
      *
@@ -136,7 +137,7 @@
     );
 </script>
 
-<h2><Icon name="agenda" size={22} /> Queue</h2>
+<PageHead crumb="check / queue" title="Queue" lead="Pick several products first; research runs one after another." />
 
 <div class="card">
     <label class="field grow">

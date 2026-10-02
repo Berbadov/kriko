@@ -10,6 +10,7 @@
     import { follow } from "../lib/jobs";
     import { formatInterval, formatPct, formatUsd, hallucinationSeverity, pointsByLlm } from "../lib/bench";
     import type { Bench, BenchEstimate, BenchReadoutRow, BenchRequest, Job } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     type OfferedLlm = { id: string; label: string; provider: string; unusable: string };
     type SearchChoice = { id: string; label: string; ready: boolean };
@@ -300,7 +301,7 @@
     });
 </script>
 
-<h2><Icon name="bench" size={22} /> Benchmark</h2>
+<PageHead crumb="system / benchmark" title="Benchmark" lead="Models measured on the same fixed set, ranked on shared axes." />
 <p class="lede">
     Every run measures the same <em>versioned test set</em>, so numbers can be compared
     across models and across machines. Nothing here reads your installed catalogs.

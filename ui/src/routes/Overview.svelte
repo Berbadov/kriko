@@ -7,6 +7,7 @@
     import { isLive } from "../lib/jobs";
     import { hashWith, toHash } from "../lib/router";
     import { SvelteSet } from "svelte/reactivity";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     // Everything here is either work waiting or a link to where that work is
     // done (B179): each number and each row opens the screen, and the filter,
@@ -86,7 +87,7 @@
     const SHOWN = 8;
 </script>
 
-<h2><Icon name="overview" size={22} /> Overview</h2>
+<PageHead crumb="knowledge / overview" title="Overview" lead="What needs you now, and where the knowledge is thin." />
 
 <Async promise={data}>
     <!-- Overview's shape is fixed — a worklist, then four counts — so the

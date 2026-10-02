@@ -56,13 +56,13 @@ describe("Sidebar", () => {
         }
     });
 
-    it("draws the brand mark from the smooth drawing, not the pixel grid", () => {
+    it("draws the brand as the design system's wordmark, not the pixel grid", () => {
         // B161: the rail drew the 16x16 grid at 28px and it read as pixelated.
+        // The rebuild replaces the mark outright: the rail opens with the
+        // kriko-svelte wordmark, white on the blue brand plate.
         const { container } = render(Sidebar);
         const mark = container.querySelector("img.mark") as HTMLImageElement;
-        expect(mark.getAttribute("src")).toBe("/static/mark-large.svg");
-        expect(mark.getAttribute("width")).toBe("32");
-        expect(mark.getAttribute("height")).toBe("32");
+        expect(mark.getAttribute("src")).toBe("/static/kriko-wordmark-white.svg");
     });
 
     it("links the brand to the landing screen, Home (B174)", () => {
