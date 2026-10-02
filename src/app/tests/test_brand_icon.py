@@ -88,19 +88,35 @@ def test_the_frontend_serves_the_large_mark_too():
     )
 
 
-def test_the_rail_draws_the_large_mark_smooth():
+def test_the_rail_draws_a_smooth_vector_never_a_scaled_bitmap():
     """Pixel art at a fractional scale is what the reader called pixelated.
 
     Read off the two files that decide it: the component that names the image,
     and the stylesheet that says how it is scaled. Either half alone could be
     reverted quietly, and the source-reading tests above would still pass on a
     rail that looks exactly as it did.
+
+    The rail used to draw the large mark at a fixed 32px. The rebuild replaced
+    it with the design system's own wordmark, which is a vector with its own
+    aspect and no square box to be a fraction of — so the assertion is now the
+    one that actually matters and the specific numbers are gone: the rail's
+    image is an `.svg`, it is not told to scale as pixel art, and its width
+    follows its height rather than being pinned to a square.
     """
     root = Path(__file__).resolve().parents[3]
     rail = (root / "ui" / "src" / "lib" / "shell" / "Sidebar.svelte").read_text(encoding="utf-8")
-    assert 'src="/static/mark-large.svg"' in rail, (
-        "the rail no longer draws the large mark"
+    drawn = re.findall(r'<img[^>]*class="mark"[^>]*src="([^"]+)"', rail)
+    assert drawn, "the rail no longer draws any mark at all"
+    assert drawn[0].endswith(".svg"), (
+        f"the rail's mark is {drawn[0]}, and the reader called the last one "
+        "pixelated: the rail's image has to be a vector"
     )
+    assert "/static/" in drawn[0], (
+        f"the rail draws {drawn[0]}, but Vite's base is /static/ because "
+        "FastAPI mounts StaticFiles there; a root-relative path falls through "
+        "to the SPA catch-all and renders as a broken image"
+    )
+
     css = (root / "ui" / "src" / "styles" / "components.css").read_text(encoding="utf-8")
     at = css.index(".brand .mark {")
     # Comments stripped: the rule explains what it replaced, and naming the old
@@ -109,8 +125,9 @@ def test_the_rail_draws_the_large_mark_smooth():
     assert "pixelated" not in rule, (
         "the rail's mark is scaled as pixel art again; the drawing is a vector"
     )
-    assert "width: 32px" in rule and "height: 32px" in rule, (
-        "32px is half the drawing's 64-unit box; any other size is a fractional scale"
+    assert re.search(r"width:\s*auto", rule) and re.search(r"height:\s*\d+px", rule), (
+        "the wordmark keeps its own aspect: height is drawn and width follows "
+        "it. A fixed width on a vector this shape stretches the letter."
     )
 
 
@@ -195,18 +212,43 @@ def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
         / "ui/src/styles/themes/panel.css"
     ).read_text(encoding="utf-8").lower()
 
+    # `panel.css` answers `--accent` with `var(--ice)` rather than a literal, so
+    # an equality against the text `--accent:` would pass on any value at all,
+    # including none. The rebuild made it an alias, and without resolving it this
+    # test would have stopped watching the one colour it exists to watch.
+    palette = dict(re.findall(r"--([a-z0-9-]+):\s*([^;]+);", theme))
+
+    def resolves(token: str) -> str:
+        """The literal a token settles on, following `var()` aliases.
+
+        A cycle answers "", which no colour is: an alias pointing at itself is
+        not a colour, and the test should say so rather than loop.
+        """
+        seen: set[str] = set()
+        token = token.removeprefix("--")
+        while True:
+            if token in seen:
+                return ""
+            seen.add(token)
+            value = palette.get(token, "").strip()
+            if not value.startswith("var("):
+                return value
+            inner = value.removeprefix("var(").rstrip(")").strip()
+            token = inner.removeprefix("--")
+
     for label, colour, token in (
-        ("the ground", "#15171c", "--n-2"),
-        ("the letter", "#e7e9ed", "--n-9"),
-        ("the joint", "#e8c04b", "--accent"),
+        ("the ground", "#10131c", "--n-2"),
+        ("the letter", "#e7eaf4", "--n-9"),
+        ("the joint", "#a5c3ff", "--accent"),
     ):
         assert svg.count(colour) >= 2, (
             f"{label} is {colour} in one mark and not the other — the tile and "
             f"the app icon have stopped being the same product"
         )
-        assert f"{token}: {colour}" in theme, (
+        assert resolves(token) == colour, (
             f"{label} is {colour} in the mark but the panel theme's {token} "
-            f"has moved — one of the two needs to follow the other"
+            f"resolves to {resolves(token) or 'nothing'} — one of the two "
+            f"needs to follow the other"
         )
 
 

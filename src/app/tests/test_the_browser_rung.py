@@ -9,6 +9,7 @@ an unread page, never a half-read one, and the profile it runs under is
 thrown away with the run.
 """
 
+import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -52,7 +53,15 @@ def page():
 
 
 class FakeBrowser:
-    """A stand-in executable that prints a DOM and records its arguments."""
+    """A stand-in executable that prints a DOM and records its arguments.
+
+    Platform-shaped, because this suite runs on the host the app ships from. The
+    first version of this wrote a `#!/bin/sh` script and chmod'd it 0755, which
+    is a no-op on Windows: `subprocess.run` then failed to exec it, `read()`
+    returned "" for every case, and the two tests below passed for the wrong
+    reason or failed depending on what else they touched. A rung that is the
+    last thing between a reader and a refused page was verified on nothing.
+    """
 
     def __init__(self, tmp_path, dom="<html><body>browser words</body></html>",
                  exit_code=0, hang=False):
@@ -60,9 +69,29 @@ class FakeBrowser:
         self.dom = dom
         self.exit_code = exit_code
         self.hang = hang
-        path = tmp_path / "browser.sh"
-        path.write_text("#!/bin/sh\necho '" + dom + "'\nexit " + str(exit_code) + "\n")
-        path.chmod(0o755)
+        if os.name == "nt":
+            # The DOM goes in a file and `type` writes it, rather than
+            # `echo <html>...`: the shell reads `<` and `>` as redirection and
+            # dies with "< was unexpected at this time", which came back as ""
+            # and looked exactly like a browser that refused to start. `type`
+            # also emits the bytes verbatim, where `echo` would add quotes and
+            # trailing spaces that `trafilatura` then has to survive.
+            (tmp_path / "dom.html").write_text(dom, encoding="utf-8")
+            path = tmp_path / "browser.cmd"
+            path.write_text(
+                "@echo off\r\n"
+                "cd /d \"" + str(tmp_path) + "\"\r\n"
+                + ("" if not dom else "type dom.html\r\n")
+                + "exit /b " + str(exit_code) + "\r\n",
+                encoding="utf-8",
+            )
+        else:
+            path = tmp_path / "browser.sh"
+            path.write_text(
+                "#!/bin/sh\necho '" + dom + "'\nexit " + str(exit_code) + "\n",
+                encoding="utf-8",
+            )
+            path.chmod(0o755)
         self.path = str(path)
 
 
