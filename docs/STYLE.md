@@ -54,9 +54,5 @@ opens.
 
 - **`backlog.md`** — a work log, allowed length, carrying the reasoning that a
   finished item's commit message cannot hold in a table.
-- **`docs/superpowers/specs/`** — frozen dated design records. Never tidy: a
-  rewritten record is not a record.
-- **`docs/audits/`** — a dated audit of a named release, read as the record of
-  what was found at the time.
 - **Code comments** — answer "why is this like this", at whatever length that
   takes.

@@ -221,8 +221,7 @@ existing.
 
 A need from the wrong layer means moving the module (drivers to
 `app/pipeline/`, interfaces to `app/`, category-specific to
-`packs/<name>/`). See `docs/INTERNALS.md` and
-`docs/superpowers/specs/2026-08-21-codebase-organisation-design.md`.
+`packs/<name>/`). See `docs/INTERNALS.md`.
 
 ## Documentation map
 
@@ -244,13 +243,4 @@ A need from the wrong layer means moving the module (drivers to
 | `docs/PACK_CONTRACT.md` | what a catalog contains, must and may | current |
 | `docs/GLOSSARY.md` | one line per word, and the words with two meanings | current |
 | `docs/AGENT_OPERATIONS.md` | operation vocabulary, the harness protocol, open questions | a note, dated 2026-09-14 |
-| `docs/superpowers/specs/2026-09-15-ground-truth-benchmark-design.md` | precision, recall and hallucination, plus the sweep | design only |
-| `docs/superpowers/specs/2026-09-01-standalone-app-ui-design.md` | the UI rewrite and its shell phases | landed |
-| `docs/superpowers/specs/2026-09-03-app-design-and-ia.md` | design system, information architecture, four features | current |
-| `docs/superpowers/specs/2026-09-09-research-agenda-design.md` | research ordering | implemented |
-| `docs/superpowers/specs/2026-09-14-extension-and-app-harmony-design.md` | extension and app: palette fork, the claims rename | design only |
-| `docs/superpowers/specs/2026-09-09-knowledge-building-design.md` | self-growing catalogs: planes, keys, provenance, undo | implemented |
 | `tauri/README.md` | the shell: launch, failures, local build | current, hand-built |
-| `docs/design_flaws.md` | the 2026-07-04 audit; flaws 1 to 4 fixed | reference |
-| `docs/audits/` | dated audits of a named release | record, not a worklist |
-| `docs/historical/` | the pre-pivot era, superseded designs and old roadmaps | historical, do not follow |
