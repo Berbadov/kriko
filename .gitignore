@@ -98,3 +98,14 @@ build/
 # Hand-run build transcripts from packaging/build_desktop.ps1 — the recipe
 # writes one per run on the Windows host, and it is a log, not a source.
 build.log
+
+# GPUI desktop app build artifacts (rebuild with kriko-gpui/package.ps1)
+kriko-gpui/target/
+kriko-gpui/builds/
+
+# Scratch image crops from the design pass
+_c.png
+_crop.png
+
+# Zed editor state
+.zed/
