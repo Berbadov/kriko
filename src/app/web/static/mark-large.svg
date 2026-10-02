@@ -13,11 +13,12 @@
        it has room for a real diagonal. Same letter, same three colours, same
        idea: a slab stem, and the upper arm carrying the accent as it rises.
 
-       **The accent is still the whole mark.** It is the panel's severity
-       colour, and it climbs out of the letter the way a step chart does —
-       the product in a glyph. The lower arm overpaints the upper where they
-       cross at the spine, exactly as the grid version does, because the
-       renderer paints in document order and a K's arms share that corner.
+       **The accent is still the whole mark.** It climbs out of the letter the way a
+       step chart does — the product in a glyph. The lower arm overpaints the
+       upper where they cross at the spine, exactly as the grid version does,
+       because the renderer paints in document order and a K's arms share that
+       corner. The accent was the panel's gold severity colour until the
+       rebuild; it is now the ice, the same value the 16-cell mark uses.
 
        The vocabulary here is `rect` and `polygon` and nothing else.
        `packaging/render_icon.py` rasterises it with a scanline routine written
@@ -32,8 +33,8 @@
        because two hyphens cannot appear inside an XML comment, and an SVG that
        does not parse is a broken image no string-matching test would catch.
        That is how it shipped for one build. -->
-  <rect x="0" y="0" width="64" height="64" fill="#15171C"></rect>
-  <rect x="9" y="7" width="11" height="50" fill="#E7E9ED"></rect>
-  <polygon points="20,24 55,6 55,18 20,36" fill="#E8C04B"></polygon>
-  <polygon points="20,28 55,46 55,58 20,40" fill="#E7E9ED"></polygon>
+  <rect x="0" y="0" width="64" height="64" fill="#10131C"></rect>
+  <rect x="9" y="7" width="11" height="50" fill="#E7EAF4"></rect>
+  <polygon points="20,24 55,6 55,18 20,36" fill="#A5C3FF"></polygon>
+  <polygon points="20,28 55,46 55,58 20,40" fill="#E7EAF4"></polygon>
 </svg>

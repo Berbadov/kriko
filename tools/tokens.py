@@ -123,6 +123,30 @@ def rgb(value: str) -> tuple[int, int, int]:
     return tuple(int(text[i:i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
 
 
+def _resolved(have: dict[str, str], value: str, depth: int = 0) -> str:
+    """The literal a `var(--name)` alias settles on.
+
+    The panel is free to answer a token with another token — `--accent` is
+    `var(--ice)` since the rebuild — and this has to hand the panel's *colour*
+    across, because the panel declares no aliases of its own. `depth` is a
+    guard, not a budget: an alias chain that loops resolves to the value rather
+    than hanging the build, and a chain longer than a couple of hops is a
+    palette nobody could follow by hand anyway.
+    """
+    text = value.strip()
+    if not text.startswith("var(") or depth > 8:
+        return text
+    name = text.removeprefix("var(").removesuffix(")").strip().removeprefix("--")
+    if name not in have:
+        # An alias to something the panel does not declare is a typo, and
+        # emitting it would push the same typo into a second file.
+        raise SystemExit(
+            f"{SOURCE.name} answers {value!r} with a token it never declares: "
+            f"--{name}"
+        )
+    return _resolved(have, have[name], depth + 1)
+
+
 def _line(name: str, value: str) -> str:
     head = f"  --{name}:"
     return f"{head}{' ' * max(1, COLUMN - len(head))}{value};"
@@ -156,8 +180,15 @@ def block(css: str) -> str:
         out.append(_line(f"{prefix}-ink", have[ink]))
 
     out.append("")
-    out.append("  /* Accent */")
-    out.append(_line("accent", have["accent"]))
+    # Accent is resolved rather than copied, because the panel answers it
+    # with an alias. Copying `var(--ice)` across leaves the panel naming a
+    # token it does not declare, and every one of its 23 `var(--accent)` uses
+    # resolves to nothing: the hover card's one accent colour, gone, with
+    # the generated block still matching its source byte for byte. A
+    # generated block that agrees with its generator is not the same as a
+    # working one.
+    out.append("  /* Accent, resolved from the panel's alias */")
+    out.append(_line("accent", _resolved(have, have["accent"])))
     out.append(END)
     return "\n".join(out)
 

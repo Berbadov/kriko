@@ -779,11 +779,29 @@ def declared_columns(sql: str = SCHEMA) -> dict[str, dict[str, str]]:
     to the catalog). The declaration above is already the truth; this reads it.
     """
     tables: dict[str, dict[str, str]] = {}
-    pattern = re.compile(
+    # The closing paren does not have to be on a line of its own. It was `\n\);`
+    # for as long as every table in here happened to close that way, which is
+    # not a property of the format: `compare_questions` ends on
+    # `PRIMARY KEY (draft_id, question_id));` and `compare_boards` on
+    # `updated_at TEXT NOT NULL DEFAULT '');`, so both were skipped and the
+    # migration layer never saw a column either declares.
+    #
+    # `\n\);` alone would still miss them, and the shorter `\);` matches a
+    # paren pair *inside* a column — `DEFAULT (datetime('now'))` would end the
+    # body early. So: same-close wins where it exists, and the inline shape
+    # fills in only the tables the first pattern missed.
+    own_line = re.compile(
         r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\((.*?)\n\);",
         re.DOTALL | re.IGNORECASE,
     )
-    for name, body in pattern.findall(sql):
+    inline = re.compile(
+        r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\((.*?)\);",
+        re.DOTALL | re.IGNORECASE,
+    )
+    for name, body in own_line.findall(sql) + [
+        found for found in inline.findall(sql)
+        if found[0] not in {one for one, _ in own_line.findall(sql)}
+    ]:
         columns: dict[str, str] = {}
         for part in _split_top_level(body):
             # A table constraint is not a column, and `PRIMARY KEY (a, b)`
