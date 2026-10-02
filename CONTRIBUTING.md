@@ -79,7 +79,7 @@ The default run puts instant stand-in CLIs on `PATH`. Buttons named quit, uninst
 
 ## Dead code
 
-`grep` for a dotted path misses `from x import y` and falsely reports live modules as dead. Before deleting on "nothing imports this", re-run the query in `docs/superpowers/plans/2026-08-29-simplification-pass.md` Task 9 (all import styles, entry-point and doc-mention detection), which currently finds no dead modules.
+`grep` for a dotted path misses `from x import y` and falsely reports live modules as dead. Before deleting on "nothing imports this", check all import styles, entry points and doc mentions; the record of past findings is in `git log`.
 
 ## Architecture
 
