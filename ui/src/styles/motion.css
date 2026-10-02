@@ -102,6 +102,55 @@
     animation: kriko-breathe 2s var(--ease) infinite;
 }
 
+/* ── the agent is working ─────────────────────────────────────── */
+/* A scan bar: the design system's LED dot-matrix vocabulary applied to
+ * "an agent is out there reading". Lit dots travel across a dark strip,
+ * the head pulsing like the library's meter head (`.k-meter i.head`), so
+ * a row that is working is distinguishable from one that is merely
+ * present - the difference between "it knows I asked" and "it forgot". */
+@keyframes kriko-blink {
+    50% {
+        opacity: 0.2;
+    }
+}
+
+@keyframes kriko-scan {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(calc(100% + var(--gap, 2px)));
+    }
+}
+.scan {
+    display: inline-flex;
+    gap: var(--gap, 2px);
+    overflow: hidden;
+    border-radius: 3px;
+    padding: 1px;
+    flex: none;
+    vertical-align: middle;
+}
+.scan i {
+    width: var(--dot, 4px);
+    height: var(--dot, 4px);
+    border-radius: 1.5px;
+    background: var(--led-off);
+}
+.scan i.on {
+    background: var(--led, var(--ice));
+    box-shadow: 0 0 var(--glow, 5px) var(--led, var(--ice));
+}
+.scan i.head {
+    animation: kriko-blink var(--dur-loop) steps(1) infinite;
+}
+/* The travelling dot: the head crosses the strip on a 600ms pass -
+ * visible in the corner of the eye, and gone before it can be mistaken
+ * for a decoration. */
+.scan.run i.on {
+    animation: kriko-scan var(--dur-scan) linear infinite;
+}
+
 /* ── what just changed ────────────────────────────────────────────── */
 /* One pass, on the element that changed, when the change was not the reader's
  * own doing — a job finishing, a status arriving. */
@@ -157,6 +206,15 @@
     .live-dot,
     .state.loading,
     .asked-mark {
+        animation: none;
+        opacity: 1;
+    }
+    /* The scan strip lands on its lit frame: the working indicator stays
+     * legible without the travel - three lit dots and a pulsing head. */
+    .scan.run i.on {
+        animation: none;
+    }
+    .scan i.head {
         animation: none;
         opacity: 1;
     }

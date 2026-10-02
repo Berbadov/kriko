@@ -68,6 +68,7 @@
     --dur-slow: 240ms;
     --dur-slower: 400ms;
     --dur-loop: 1600ms;
+    --dur-scan: 600ms;
     /* An LED stagger index, written per-dot by Led.svelte; 0 means "first",
      * which is the right answer for an element rendered without one. */
     --i: 0;

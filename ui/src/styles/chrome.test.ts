@@ -278,38 +278,50 @@ describe("the work column", () => {
      * declarations because jsdom draws nothing: what can be asserted is that
      * every control spends the button's own tokens, so that a change to the
      * button's face moves them together and none can drift back to flat. */
-    describe("the raised control kit", () => {
-        const FACE = [
-            /background-color:\s*var\(--btn\)/,
-            /border-top-color:\s*var\(--btn-hi\)/,
-            /border-bottom-color:\s*var\(--btn-lo\)/,
-            /box-shadow:\s*var\(--shadow-1\)/,
-        ];
-        const PRESS = [
-            /transform:\s*translateY\(var\(--lift\)\)/,
-            /box-shadow:\s*none/,
-            /background-color:\s*var\(--btn-active\)/,
-        ];
-
-        it("gives text fields, selects and text areas the button's face", () => {
+    /* The rebuild replaced the raised control kit with the design
+     * system's own: keys are kriko-svelte's .k-plate/.k-key (bezel
+     * gradient, mechanical press), fields its .k-input (a sunk well,
+     * not a raised box - a field you type *into* reads as in the panel).
+     * B160's intent - every control a physical thing, one vocabulary of
+     * faces and presses - is held to the library's faces now. */
+    describe("the physical control kit", () => {
+        it("wears the library's plate on every button", () => {
+            const button = block("button,\n.tab");
+            expect(button).toMatch(/linear-gradient\(180deg,\s*var\(--bezel-hi\),\s*var\(--bezel-lo\)\)/);
+            expect(button).toMatch(/box-shadow:\s*[\s\S]*var\(--shadow-bezel\)/);
+            expect(button).toMatch(/font:\s*600 15px\/16px var\(--font-display\)/);
+        });
+        it("presses mechanically: travel, then the bezel becomes a well", () => {
+            const press = block("button:active,\n.tab:active");
+            expect(press).toMatch(/transform:\s*translateY\(2px\)/);
+            expect(press).toMatch(/var\(--shadow-well\)/);
+        });
+        it("sinks the primary key the full 3px of its base", () => {
+            const press = block('button.primary:active,\n.tab.active:active,\nbutton.primary[aria-pressed="true"]');
+            expect(press).toMatch(/transform:\s*translateY\(3px\)/);
+            expect(press).toMatch(/var\(--shadow-key-pressed\)/);
+        });
+        it("draws fields as the library's well, focus-lit in ice", () => {
             const field = block(
                 'input:not([type="radio"]):not([type="checkbox"]),\nselect,\ntextarea',
             );
-            for (const part of FACE) expect(field).toMatch(part);
-        });
-
-        it("presses a field one pixel, exactly as a button sinks", () => {
-            const press = ruleContaining(
-                'input:not([type="radio"]):not([type="checkbox"]):active:not(:disabled),',
+            expect(field).toMatch(/background-color:\s*var\(--well\)/);
+            expect(field).toMatch(/var\(--shadow-well\)/);
+            const focus = ruleContaining(
+                'input:not([type="radio"]):not([type="checkbox"]):focus-visible,',
             );
-            for (const part of PRESS) expect(press).toMatch(part);
+            expect(focus).toMatch(/0 0 0 2px var\(--ice\)/);
+        });
+        // A disabled control must stop looking pressable, as a key does.
+        it("keeps the arrow on a select drawn from tokens", () => {
+            const select = ruleContaining("select {");
+            expect(select).toMatch(/appearance:\s*none/);
+        });
+        it("lights a field's edge on hover, the same ice a focus answers with", () => {
             const hover = ruleContaining(
                 'input:not([type="radio"]):not([type="checkbox"]):hover:not(:disabled),',
             );
-            expect(hover).toMatch(/background-color:\s*var\(--btn-hover\)/);
-            expect(hover).toMatch(/border-color:\s*var\(--accent\)/);
-            // A disabled field must stop looking pressable, as a button does.
-            expect(ruleContaining("input:disabled,\nselect:disabled,")).toMatch(/transform:\s*none/);
+            expect(hover).toMatch(/0 0 0 1px var\(--ice\)/);
         });
 
         it("draws one arrow on a select, from tokens, and leaves it a native select", () => {
@@ -327,11 +339,7 @@ describe("the work column", () => {
             expect(CSS).not.toMatch(/role="listbox"/);
         });
 
-        it("draws a radio choice as a raised card with a press of its own", () => {
-            const card = block(".choice");
-            for (const part of FACE) expect(card).toMatch(part);
-            for (const part of PRESS) expect(block(".choice:active")).toMatch(part);
-            // Chosen is a fill and an edge, not only a border hue.
+        it("draws a chosen choice as a fill and an edge, not only a border hue", () => {
             expect(block(".choice.on")).toMatch(/background-color:\s*var\(--accent-soft\)/);
             expect(block(".choice.on")).toMatch(/border-color:\s*var\(--accent\)/);
         });
@@ -343,7 +351,7 @@ describe("the work column", () => {
         });
 
         it("gives a link drawn as a button its press too", () => {
-            for (const part of PRESS.slice(0, 2)) expect(block(".button-like:active")).toMatch(part);
+            expect(block(".button-like:active")).toMatch(/transform:\s*translateY\(2px\)/);
         });
     });
 

@@ -157,6 +157,9 @@
      * shadow under the primary key, bezel shadows under raised plates, wells
      * sunk into the page.
      */
+    /* The ink a key's label casts on its own face - the library's own
+     * text-shadow value, named so components.css never holds a raw colour. */
+    --key-ink-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
     --shadow-key: inset 0 1px 0 rgba(255, 255, 255, 0.35),
         inset 0 -2px 0 rgba(0, 0, 0, 0.3), 0 3px 0 #0f2a9c,
         0 10px 20px rgba(0, 0, 0, 0.5);
