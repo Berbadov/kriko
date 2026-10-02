@@ -1,0 +1,35 @@
+[package]
+name = "kriko-gpui"
+version = "0.11.0"
+edition = "2021"
+description = "Kriko — local product knowledge, on the Kriko design system"
+license = "LicenseRef-LICENSE"
+homepage = "https://kriko.local"
+authors = ["Kriko"]
+
+[[bin]]
+name = "kriko"
+path = "src/main.rs"
+
+[build-dependencies]
+winresource = "0.1"
+
+[dependencies]
+gpui = "0.2.2"
+log = "0.4"
+
+# cargo-wix reads these for the MSI's property table.
+[package.metadata.wix]
+publisher = "Kriko"
+license = false
+upgrade-guid = "D4A3E5B4-6C7D-4C42-8B0D-0FE43E4E5F21"
+product-icon = "assets/kriko.ico"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 2
+lto = "thin"
+strip = "symbols"
