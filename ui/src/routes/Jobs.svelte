@@ -327,7 +327,7 @@
 {/if}
 
 {#each shown as job (job.job_id)}
-    <article class="card job" class:live={isLive(job)}>
+    <article class="card interactive job" class:live={isLive(job)}>
         <h3>
             {kindWord(job)}
             <span class="meta">{subjectOf(job)}</span>
@@ -336,7 +336,7 @@
                      "running" on a page nobody has refreshed says the same
                      thing as one that is stale; the dot is what separates
                      them without the reader having to reload to find out. -->
-                {#if isLive(job)}<span class="live-dot"></span>{/if}
+                {#if isLive(job)}<span class="scan run" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on head"></i><i></i><i></i></span>{/if}
                 {stateWord(job)}
             </span>
             {#if isLive(job)}

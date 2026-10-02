@@ -46,10 +46,12 @@ export const NAV: NavGroupSpec[] = [
             // Home is where the app opens (B174): graphs of checks, knowledge
             // gained and research spend. The detail is under Activity.
             { name: "home", label: "Home", also: ["welcome", "dashboard", "graphs"] },
-            { name: "run", label: "Run", also: ["start", "author", "new pack", "agent run"] },
-            // B193: several subjects picked first, then researched one
-            // after another by the one worker every job already shares.
-            { name: "queue", label: "Queue", also: ["queue up", "batch", "several products", "research queue"] },
+            { name: "run", label: "Run", also: ["start", "author", "new pack", "agent run", "queue up", "batch", "several products", "research queue"] },
+            // B193 has no row of its own: several subjects picked first and
+            // then researched one after another is the same act as a run, and
+            // the reference rail keeps this group at five. `#/queue` still
+            // resolves and Run links to it; the palette finds it by every
+            // word its old label knew.
             { name: "history", label: "History" },
             { name: "compare", label: "Compare" },
             { name: "extension", label: "Browser extension" },
@@ -165,6 +167,9 @@ export const ALIASES: Record<string, Alias> = {
     // `#/questions` is not here because it can carry an id: router.ts's
     // `parseHash` sends it to the result or to History.
     check: { name: "home" },
+    // B193's screen kept its address when its rail row went: a queue link
+    // from Run, or one pasted from an older install, opens the screen.
+    queue: { name: "queue" },
 };
 
 /** The route a name actually renders, following one alias hop. */

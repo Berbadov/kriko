@@ -7,6 +7,7 @@
     import PlanePrefs from "../lib/Planes.prefs.svelte";
     import { api } from "../lib/api";
     import type { ProviderTest } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     /* Where a preference lives, and the fact that it lives anywhere.
      *
@@ -102,7 +103,7 @@
     const checkOf = (providerId: string): Check | undefined => checks[providerId];
 </script>
 
-<h2><Icon name="settings" size={22} /> Settings</h2>
+<PageHead crumb="this install / settings" title="Settings" lead="Preferences for this installation, in short lines." />
 <p class="lede">
     Choices live in this install's own database; keys live in a file of their own.
     A key's value is never shown.

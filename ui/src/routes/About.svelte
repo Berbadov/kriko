@@ -3,6 +3,7 @@
     import { api } from "../lib/api";
     import Failure from "../lib/Failure.svelte";
     import type { Health } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     let health = $state<Health | null>(null);
     let error = $state<unknown>(null);
@@ -18,7 +19,7 @@
     const ready = load();
 </script>
 
-<h2><Icon name="about" size={22} /> This install</h2>
+<PageHead crumb="this install / about" title="This install" lead="What this is, and what it runs on." />
 <p class="meta">
     Three versions, on three clocks. The app updates itself through its own
     installer; a pack updates through the engine whenever its knowledge changes;
