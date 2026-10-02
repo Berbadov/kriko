@@ -5,3 +5,4 @@
 # cmd.exe mis-parses labels and blocks in LF-only batch files; the walk
 # shims are the only .cmd in the tree (tools/walk/bin/).
 *.cmd text eol=crlf
+kriko-gpui/wix/main.wxs -text
