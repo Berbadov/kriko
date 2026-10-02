@@ -10,6 +10,7 @@
     import { agentOf } from "../lib/live";
     import { hashWith } from "../lib/router";
     import type { HarnessModel, Job } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     /* Start a run, and watch it (B175, B176).
      *
@@ -122,7 +123,7 @@
     const finished = $derived(jobs.filter((one) => !isLive(one)));
 </script>
 
-<h2><Icon name="jobs" size={22} /> Run</h2>
+<PageHead crumb="check / run" title="Run" lead="Start a run over a whole category and watch it here." />
 
 <form class="card form" onsubmit={(event) => (event.preventDefault(), start())}>
     <div class="ask">

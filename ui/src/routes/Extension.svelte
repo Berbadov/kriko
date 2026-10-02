@@ -5,6 +5,7 @@
     import { copyText, copyWord } from "../lib/clipboard";
     import Failure from "../lib/Failure.svelte";
     import type { Adapter, ExtensionLaunched, ExtensionStatus } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     type FreshExtensionStatus = ExtensionStatus & {
         content_digest?: string;
@@ -123,7 +124,7 @@
         status?.staged_content_digest && loaded.content_digest !== status.staged_content_digest)));
 </script>
 
-<h2><Icon name="extension" size={22} /> Browser extension</h2>
+<PageHead crumb="check / browser extension" title="Browser extension" lead="The panel that reads a listing, and its connection." />
 
 <article class="card">
     <p class="meta">
@@ -251,7 +252,7 @@
             {/if}
         </article>
 
-        <article class="card">
+        <article class="card interactive">
             <h3><Icon name="download" /> 1 · Put the files somewhere the browser can keep</h3>
             <p class="meta">Written to your Kriko folder, so an app update never drops it.</p>
             <p>

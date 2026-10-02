@@ -162,88 +162,110 @@ th {
 }
 button,
 .tab {
-    font: inherit;
-    font-weight: 500;
+    /* The design system's plate (kriko-svelte's .k-plate), worn by every
+     * button this app draws: the bezel gradient face, the hairline edge,
+     * the lit top and dark bottom, and - the half that makes it a *key*
+     * rather than a labelled rectangle - the mechanical press: 2px of
+     * travel on the same spring curve the library's segmented thumb
+     * rides, with the bezel shadow collapsing to a well. A button and a
+     * Key must be the same object, or every screen carries two eras. */
+    font: 600 15px/16px var(--font-display);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     color: var(--text);
-    background: var(--btn);
-    border: 1px solid var(--line);
-    border-top-color: var(--btn-hi);
-    border-bottom-color: var(--btn-lo);
-    border-radius: var(--radius-sm);
-    padding: var(--s-2) var(--s-4);
+    background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
+    border: 0;
+    border-radius: var(--radius-md);
+    padding: 0 24px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
     min-width: max-content;
     cursor: pointer;
-    box-shadow: var(--shadow-1);
-    /* `transform` last and cheapest: the press must not wait on colour. */
+    box-shadow:
+        0 0 0 1px var(--bezel-edge),
+        var(--shadow-bezel);
     transition:
-        background var(--dur-fast) ease,
-        border-color var(--dur-fast) ease,
-        box-shadow var(--dur-fast) ease,
-        transform var(--dur-fast) ease;
+        transform var(--dur-press) var(--ease-out),
+        box-shadow var(--dur-press) var(--ease-out),
+        filter var(--dur-quick) var(--ease-out),
+        background var(--dur-quick) var(--ease-out),
+        color var(--dur-quick) var(--ease-out);
 }
 button:hover,
 .tab:hover {
-    background: var(--btn-hover);
-    border-color: var(--accent);
-    box-shadow: var(--shadow-2);
+    text-shadow: 0 0 12px var(--brand-bright);
 }
 button:active,
 .tab:active {
-    /* The press. Sunk and unlit — the shadow going away is what sells it. */
-    transform: translateY(var(--lift));
-    box-shadow: none;
-    background: var(--btn-active);
+    transform: translateY(2px);
+    box-shadow:
+        0 0 0 1px var(--bezel-edge),
+        var(--shadow-well);
 }
 button:focus-visible,
 .tab:focus-visible {
-    outline: var(--ring) solid var(--accent);
-    outline-offset: var(--ring);
+    outline: 2px solid var(--ice);
+    outline-offset: 3px;
 }
 button:disabled,
 button[aria-disabled="true"] {
-    /* Not merely faded: a disabled control must also stop looking pressable,
-     * so it loses the lift and the pointer along with the contrast. */
     opacity: 0.5;
-    box-shadow: none;
+    box-shadow: 0 0 0 1px var(--bezel-edge);
     cursor: not-allowed;
     transform: none;
 }
 
-/* The one action a view is about. Gold on near-black is the extension's
- * signature and the reason this app is recognisable as the same product. */
+/* The one action a view is about: the design system's 3D key (kriko-
+ * svelte's .k-key). The blue brand gradient face, the lit top edge, and
+ * the solid base under it - the 0 3px 0 shadow is what makes the key a
+ * physical object that *can* sink. On press it travels the full 3px and
+ * the base collapses: the key goes into the panel. */
 button.primary,
 .tab.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    border-top-color: var(--accent-hi);
-    border-bottom-color: var(--accent-lo);
-    /* was #fff, which printed white-on-light-blue in light mode */
-    color: var(--accent-ink);
+    color: var(--on-brand);
+    text-shadow: var(--key-ink-shadow);
+    background: linear-gradient(
+        180deg,
+        var(--brand-hover) 0%,
+        var(--brand) 55%,
+        var(--brand-low) 100%
+    );
+    border: 0;
+    box-shadow: var(--shadow-key);
     font-weight: 600;
 }
 button.primary:hover,
 .tab.active:hover {
-    background: var(--accent-hi);
-    border-color: var(--accent-hi);
+    filter: brightness(1.12);
 }
 button.primary:active,
-.tab.active:active {
-    background: var(--accent-lo);
+.tab.active:active,
+button.primary[aria-pressed="true"] {
+    transform: translateY(3px);
+    box-shadow: var(--shadow-key-pressed);
 }
-
-/* Everything that is not the action: still a button, still pressable, but it
- * does not compete. It keeps the lift so the press still reads. */
+/* Everything that is not the action: the library's ghost - no face, a
+ * hairline ring, the glass wash arriving on hover. */
 button.ghost {
     background: transparent;
-    box-shadow: none;
-    border-color: var(--line);
+    box-shadow: inset 0 0 0 1px var(--border-control);
     color: var(--dim);
 }
 button.ghost:hover {
-    background: var(--btn);
-    border-color: var(--accent);
+    background: var(--glass-1);
     color: var(--text);
-    box-shadow: var(--shadow-1);
+}
+/* A destructive act carries its ink, on its wash - the library's
+ * .k-danger, for the resets and deletes this app asks for. */
+button.danger {
+    color: var(--danger);
+    background: var(--danger-wash);
+}
+button.danger:hover {
+    filter: brightness(1.2);
 }
 button.small,
 .tab.small {
@@ -316,34 +338,32 @@ a.button {
 input:not([type="radio"]):not([type="checkbox"]),
 select,
 textarea {
-    font: inherit;
+    /* The design system's input (kriko-svelte's .k-input): a sunk well
+     * with a control edge, not a raised box. A field that takes typing
+     * is the one surface that must read as *in* the panel rather than
+     * on it; the raised face here was the "two applications" problem
+     * the old forms had. Height and radius from the library. */
+    font: 400 16px/24px var(--font-sans);
     color: var(--text);
-    /* The button's own face (B160: "Make all buttons and selections 3D,
-     * button-like"). A field used to be a flat panel-coloured box beside a
-     * raised button, which is most of why the two halves of a form looked like
-     * different applications. Same five values a button spends, from the same
-     * tokens: the face, the lit top edge, the dark bottom edge, the shadow, and
-     * (below) the press. `background-color` rather than the shorthand so the
-     * select's arrow, which is a background image, survives a hover. */
-    background-color: var(--btn);
-    border: 1px solid var(--line);
-    border-top-color: var(--btn-hi);
-    border-bottom-color: var(--btn-lo);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-1);
-    padding: var(--s-2) var(--s-3);
+    background-color: var(--well);
+    border: 0;
+    border-radius: var(--radius-md);
+    padding: 0 16px;
+    height: 48px;
     min-width: 150px;
-    /* Without this a native select sizes to its longest <option>, and a
-     * model-picker's options carry a full "no {provider} key — add one on
-     * Settings" note — wide enough to push the field, and the page, past
-     * the 620px window (settings-8/m2). The row it sits in already gives it
-     * all the width it can have; capping here keeps that promise. */
     max-width: 100%;
-    transition:
-        background-color var(--dur-fast) ease,
-        border-color var(--dur-fast) ease,
-        box-shadow var(--dur-fast) ease,
-        transform var(--dur-fast) ease;
+    box-shadow: 0 0 0 1px var(--border-control), var(--shadow-well);
+    transition: box-shadow var(--dur-quick) var(--ease-out);
+}
+input:not([type="radio"]):not([type="checkbox"]):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 2px var(--ice), var(--shadow-well);
+}
+textarea {
+    height: auto;
+    padding: 12px 16px;
 }
 /* A select is a button that opens a list, so it says so with one arrow.
  *
@@ -400,31 +420,12 @@ input[type="checkbox"] {
 input:not([type="radio"]):not([type="checkbox"]):hover:not(:disabled),
 select:hover:not(:disabled),
 textarea:hover:not(:disabled) {
-    /* A field that does not answer the pointer reads as a painted rectangle.
-     * Buttons here have had a hover since the port; the fields never did,
-     * which is most of why the two halves of a form looked like they came
-     * from different applications. Lit and lifted, exactly as a button is. */
-    background-color: var(--btn-hover);
-    border-color: var(--accent);
-    box-shadow: var(--shadow-2);
+    /* A field answers the pointer by lighting its edge, the same ice a
+     * focus answers with - one interaction language across every control. */
+    box-shadow: 0 0 0 1px var(--ice), var(--shadow-well);
 }
-input:not([type="radio"]):not([type="checkbox"]):active:not(:disabled),
-select:active:not(:disabled),
-textarea:active:not(:disabled) {
-    /* The press, the same one pixel a button sinks (`--lift`) with its shadow
-     * gone. A field is pressed when the reader clicks into it or opens the
-     * list, and without this the click was the only control interaction in the
-     * app that did not move. */
-    transform: translateY(var(--lift));
-    box-shadow: none;
-    background-color: var(--btn-active);
-}
-input:focus,
-select:focus,
-textarea:focus {
-    outline: var(--ring) solid var(--accent);
-    outline-offset: -1px;
-}
+
+
 input:disabled,
 select:disabled,
 textarea:disabled {
@@ -462,10 +463,10 @@ textarea:disabled {
     box-shadow: var(--shadow-1);
     cursor: pointer;
     transition:
-        background-color var(--dur-fast) ease,
-        border-color var(--dur-fast) ease,
-        box-shadow var(--dur-fast) ease,
-        transform var(--dur-fast) ease;
+        background-color var(--dur-quick) var(--ease-out),
+        border-color var(--dur-quick) var(--ease-out),
+        box-shadow var(--dur-quick) var(--ease-out),
+        transform var(--dur-quick) var(--ease-out);
 }
 .choice:hover {
     background-color: var(--btn-hover);
@@ -512,12 +513,13 @@ textarea:disabled {
     font-size: var(--t-sm);
     line-height: var(--lh-sm);
 }
-/* The press for a link drawn as a button. It had the face and the hover
- * already; the sink was the missing third. */
+/* The press for a link drawn as a button: the plate's own - travel, then
+ * the bezel shadow becomes a well, exactly as a <button> presses. */
 .button-like:active {
-    transform: translateY(var(--lift));
-    box-shadow: none;
-    background: var(--btn-active);
+    transform: translateY(2px);
+    box-shadow:
+        0 0 0 1px var(--bezel-edge),
+        var(--shadow-well);
 }
 
 /* A group of controls that answer one question — the benchmark screen's
@@ -565,17 +567,55 @@ legend {
 
 /* ── cards, badges, disclosure ────────────────────────────────────── */
 .card {
-    background: var(--panel);
+    /* The design system's glass face (kriko-svelte's .k-card), worn by the
+     * app's own cards: the near-transparent white wash and the blur behind
+     * it, the large radius, the roomy pad. Screens that render `.card` and
+     * screens that render `.k-card` must land on the same surface — two
+     * kinds of card on one screen is the mess the rebuild replaced. The
+     * hairline edge stays: the library's plate sits on the brand wash where
+     * blur alone separates it, while the app's cards stack on the body's
+     * near-black and need the line to read as a thing at all. */
+    background: var(--glass-1);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     padding: var(--s-4);
     margin: var(--s-3) 0;
+    /* The library's keys carry their press on `--ease-out` and lift on
+     * hover; a card a reader can act on gets the same micro-interaction so
+     * the whole surface answers the pointer, not just the buttons on it.
+     * Cards that are pure reading (facts, results) take no hover style at
+     * all — a lift on everything is the same as a lift on nothing. */
+    transition: border-color var(--dur-quick) var(--ease-out),
+        box-shadow var(--dur-quick) var(--ease-out);
+}
+/* Section titles inside a card take the library's display voice — the
+ * tracked, uppercase letters `.k-card h2` carries — so a heading reads as
+ * the card's name rather than a paragraph's first line. */
+.card h2,
+.card h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.card.interactive:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-key);
+}
+.card.interactive:active {
+    transform: translateY(1px);
 }
 .card h3 {
     margin: 0 0 var(--s-1);
     font-size: var(--t-base);
     line-height: var(--lh-base);
     font-weight: 600;
+}
+/* A card's own name, the `.k-card h2` size: the screen's h2 names the
+ * screen; a card's h2 names the card and must not compete with it. */
+.card h2 {
+    font-size: var(--t-lg);
+    line-height: var(--lh-lg);
 }
 .meta {
     color: var(--dim);
@@ -732,6 +772,23 @@ th {
     font-weight: 500;
     font-size: var(--t-xs);
     line-height: var(--lh-xs);
+    /* The library's eyebrow: a table's head is a column of labels, and
+     * `.k-table th` says a label is tracked uppercase mono — a name for the
+     * column, not a smaller copy of the row. The app's tables and the
+     * design system's must read as one table style, or a screen carrying
+     * both (Compare) shows two eras at once. */
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+td {
+    /* The library's cell: breathing room and a hairline, not a full line —
+     * `.k-table td` uses `inset` so the row's rule never touches the
+     * table's edge, which is what keeps a wide table looking flat rather
+     * than ruled. */
+    padding: var(--s-3) var(--s-2);
+    border-bottom: none;
+    box-shadow: inset 0 -1px 0 var(--hairline);
 }
 th.num,
 td.num {
@@ -802,9 +859,10 @@ pre {
 .stat {
     min-width: 110px;
     padding: var(--s-3) var(--s-4);
-    background: var(--panel);
+    background: var(--glass-1);
+    backdrop-filter: blur(16px);
     border: 1px solid var(--line);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
 }
 .stat strong,
 .stat span {
@@ -822,7 +880,8 @@ pre {
     padding: var(--s-3) var(--s-4);
     margin: var(--s-3) 0;
     border-left: 3px solid var(--accent);
-    background: var(--panel);
+    background: var(--glass-1);
+    backdrop-filter: blur(16px);
 }
 .state span {
     color: var(--dim);
@@ -1040,7 +1099,7 @@ pre {
     display: block;
     height: 100%;
     background: var(--accent);
-    transition: width var(--dur-slow) ease;
+    transition: width var(--dur-base) var(--ease);
 }
 .log {
     max-height: 18rem;
@@ -1081,8 +1140,8 @@ li.gap {
     min-height: 0;
     gap: var(--s-5);
     padding: var(--s-4) var(--s-3);
-    border-right: 1px solid var(--line);
-    background: var(--n-1);
+    border-right: 1px solid var(--hairline);
+    background: var(--surface-1);
     /* `100%` of a frame that is now exactly the viewport. It used to be
      * `100vh` plus `position: sticky`, which is what you need when the
      * document scrolls underneath you — and the document no longer does. */
@@ -1093,33 +1152,32 @@ li.gap {
     display: flex;
     gap: var(--s-2);
     align-items: center;
-    padding: 0 var(--s-2);
+    padding: var(--s-2) var(--s-3);
     text-decoration: none;
-    color: var(--text);
+    border-radius: var(--radius-md);
+    /* The design system's brand plate (kriko-svelte's .k-brandblock): the
+     * blue face the white wordmark sits on, one rounded block rather than a
+     * bare mark floating on the rail's ground. */
+    background: linear-gradient(180deg, var(--brand-hover), var(--brand-low));
+    color: var(--on-brand);
+    box-shadow: var(--shadow-key);
 }
 .brand .mark {
-    /* The mark carries its own ground, so it is a tile rather than a glyph:
-     * rounded to sit beside text, and never squashed by the flex row. */
+    /* The wordmark: white strokes on the blue brand plate, sized by height
+     * so the drawing's own aspect carries the width. */
     display: block;
     flex: none;
-    /* 32px is half the drawing's 64-unit box. The rail used to draw the 16-cell
-     * grid here at 28px with `image-rendering: pixelated`, a 1.75 scale that
-     * cannot be crisp either way (B161). This is the vector drawing, smoothed
-     * as any vector is. */
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
+    height: 20px;
+    width: auto;
 }
 .brand-text {
     display: grid;
 }
-.brand-text strong {
-    font-size: var(--t-md);
-    letter-spacing: -0.01em;
-}
 .brand-text .meta {
+    font-family: var(--font-mono);
     font-size: var(--t-xs);
     line-height: var(--lh-xs);
+    color: var(--on-brand);
 }
 /* Brand and primary action share the rail's first row, so `.rail` keeps its
  * three-row grid whether or not the action is rendered — an empty grid row
@@ -1200,7 +1258,7 @@ li.gap {
  * reader flips buyer/author, which is the moment the rail's shape changes and
  * the one moment a stagger is telling them something. */
 .nav-slot {
-    animation: nav-in var(--dur-slow) ease both;
+    animation: nav-in var(--dur-base) var(--ease-out) both;
     animation-delay: calc(var(--slot) * var(--stagger));
 }
 @keyframes nav-in {
@@ -1272,8 +1330,8 @@ button.nav-fold[aria-disabled="true"] {
     text-decoration: none;
     color: var(--dim);
     transition:
-        background var(--dur-fast) ease,
-        color var(--dur-fast) ease;
+        background var(--dur-quick) var(--ease-out),
+        color var(--dur-quick) var(--ease-out);
 }
 /* The active-row marker, drawn where it is worn rather than measured and
  * moved. This used to be a single element this component positioned in JS
@@ -1301,7 +1359,7 @@ button.nav-fold[aria-disabled="true"] {
     /* Quieter than the label until the row matters: an icon at full text
      * contrast competes with the word beside it for the same job. */
     opacity: 0.62;
-    transition: opacity var(--dur-fast) ease;
+    transition: opacity var(--dur-quick) var(--ease-out);
 }
 .nav-label {
     /* A long label wraps rather than widening the rail or being clipped. */
@@ -1309,7 +1367,7 @@ button.nav-fold[aria-disabled="true"] {
     overflow-wrap: anywhere;
 }
 .nav-link:hover {
-    background: var(--panel-2);
+    background: var(--glass-1);
     color: var(--text);
 }
 .nav-link:hover .nav-icon,
@@ -1323,8 +1381,11 @@ button.nav-fold[aria-disabled="true"] {
     outline-offset: var(--ring);
 }
 .nav-link.active {
-    background: var(--accent-soft);
-    color: var(--accent);
+    /* The reference rail's current row: a well sunk into the surface with a
+     * hairline edge and ice ink, not a tinted fill. */
+    background: var(--well);
+    box-shadow: 0 0 0 1px var(--hairline), var(--shadow-well);
+    color: var(--ice);
     font-weight: 600;
 }
 /* Tighten before scrolling. On a laptop the rows fit with less air between
@@ -2149,4 +2210,498 @@ form.say > input {
     .history:not(.page) li .history-forget {
         opacity: 1;
     }
+}
+
+/* ── the kriko design system (kriko-svelte/) ─────────────────────────────
+ * The reference components' own classes: LED dot-matrices, hardware keys,
+ * tags with a word and a glyph, meters, glass cards, the crumb/title/lead
+ * page frame. Ported from `kriko-svelte/bundle.css` with two adjustments:
+ * every colour arrives from a token (the sheet is theme-agnostic by the
+ * rule the rest of this file answers to), and the fonts are the system's
+ * three faces rather than the literals the reference hardcodes.
+ */
+
+.k-led {
+    display: inline-grid;
+    grid-template-columns: repeat(var(--cols, 8), var(--dot, 4px));
+    gap: var(--gap, 2px);
+}
+.k-led i {
+    width: var(--dot, 4px);
+    height: var(--dot, 4px);
+    border-radius: 1.5px;
+    background: var(--led-off);
+    transition: background var(--dur-quick), box-shadow var(--dur-quick);
+}
+.k-led i.on {
+    background: var(--led, var(--brand-bright));
+    box-shadow: 0 0 var(--glow, 5px) var(--led, var(--brand-bright));
+}
+.k-led.boot i.on {
+    animation: k-boot var(--dur-slower) steps(1) both;
+    animation-delay: calc(var(--i, 0) * var(--dur-press));
+}
+@keyframes k-boot {
+    0% { opacity: 0.1; }
+    25% { opacity: 1; }
+    40% { opacity: 0.15; }
+    65% { opacity: 1; }
+    80% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+@keyframes k-blink {
+    50% { opacity: 0.2; }
+}
+.k-led[data-anim="blink"] i.on {
+    animation: k-blink var(--dur-loop) steps(1) infinite;
+}
+
+.k-key,
+.k-plate,
+.k-glass,
+.k-ghost,
+.k-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 44px;
+    padding: 0 24px;
+    border: 0;
+    border-radius: var(--radius-md);
+    font: 600 15px/16px var(--font-display);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+        transform var(--dur-press) var(--ease-out),
+        box-shadow var(--dur-press) var(--ease-out),
+        filter var(--dur-quick) var(--ease-out),
+        background var(--dur-quick) var(--ease-out),
+        color var(--dur-quick) var(--ease-out);
+}
+.k-key:focus-visible,
+.k-plate:focus-visible,
+.k-glass:focus-visible,
+.k-ghost:focus-visible,
+.k-danger:focus-visible {
+    outline: 2px solid var(--ice);
+    outline-offset: 3px;
+}
+.k-key {
+    color: var(--on-brand);
+    background: linear-gradient(180deg, var(--brand-hover) 0%, var(--brand) 55%, var(--brand-low) 100%);
+    box-shadow: var(--shadow-key);
+}
+.k-key:hover { filter: brightness(1.12); }
+.k-key:active,
+.k-key[aria-pressed="true"] {
+    transform: translateY(3px);
+    box-shadow: var(--shadow-key-pressed);
+}
+.k-plate {
+    color: var(--dim);
+    background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
+    box-shadow: 0 0 0 1px var(--bezel-edge), var(--shadow-bezel);
+}
+.k-plate:hover { color: var(--text); }
+.k-plate:active {
+    transform: translateY(2px);
+    box-shadow: 0 0 0 1px var(--bezel-edge), var(--shadow-well);
+}
+.k-plate.wide {
+    min-width: 340px;
+    height: 72px;
+    padding: 0 28px 0 9px;
+    justify-content: flex-start;
+    gap: 20px;
+}
+.k-plate.wide .k-label {
+    flex: 1;
+    text-align: center;
+    font-size: 22px;
+    letter-spacing: 0.1em;
+}
+.k-tile {
+    width: 54px;
+    height: 54px;
+    border-radius: 10px;
+    background: var(--well);
+    box-shadow: 0 0 0 1px var(--hairline), var(--shadow-well);
+    display: grid;
+    place-items: center;
+    flex: none;
+}
+.k-glass {
+    color: var(--text);
+    background: var(--glass-2);
+    backdrop-filter: blur(16px);
+}
+.k-glass:hover { background: var(--glass-3); }
+.k-ghost {
+    color: var(--dim);
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--border-control);
+}
+.k-ghost:hover { background: var(--glass-1); }
+.k-danger {
+    color: var(--danger);
+    background: var(--danger-wash);
+}
+
+.k-tag {
+    display: inline-flex;
+    white-space: nowrap;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 10px 0 6px;
+    border-radius: var(--radius-sm);
+    background: var(--well);
+    box-shadow: 0 0 0 1px var(--hairline), var(--shadow-well);
+    font: 600 11px/14px var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.k-tag .k-led {
+    --cols: 5;
+    --dot: 3px;
+    --gap: 1px;
+    --glow: 3px;
+}
+.k-tag[data-state="live"] { --led: var(--ice); color: var(--ice); }
+.k-tag[data-state="need"] {
+    --led: var(--on-brand);
+    color: var(--on-brand);
+    background: linear-gradient(180deg, var(--brand-hover), var(--brand));
+    box-shadow: inset 0 1px 0 var(--glass-3);
+}
+.k-tag[data-state="queue"] { --led: var(--led-dim); color: var(--dim); }
+.k-tag[data-state="done"] { --led: var(--dim); color: var(--dim); }
+.k-tag[data-state="block"] {
+    --led: var(--danger);
+    color: var(--danger);
+    background: var(--danger-wash);
+}
+
+.k-seg {
+    position: relative;
+    display: inline-flex;
+    padding: 4px;
+    gap: 2px;
+    border-radius: 14px;
+    background: var(--well);
+    box-shadow: 0 0 0 1px var(--hairline), var(--shadow-well);
+}
+.k-seg .thumb {
+    position: absolute;
+    z-index: 0;
+    top: 4px;
+    left: 4px;
+    width: 56px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
+    box-shadow: 0 0 0 1px var(--bezel-edge), var(--shadow-bezel);
+    transform: translateX(calc(var(--i, 0) * 58px));
+    transition: transform var(--dur-base) var(--ease-mech);
+}
+.k-seg [role="radio"] {
+    position: relative;
+    z-index: 1;
+    width: 56px;
+    height: 40px;
+    border: 0;
+    background: none;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    border-radius: 10px;
+}
+.k-seg [role="radio"]:focus-visible {
+    outline: 2px solid var(--ice);
+    outline-offset: 1px;
+}
+.k-seg .k-led {
+    --cols: 5;
+    --dot: 4px;
+    --gap: 2px;
+    --led: var(--led-dim);
+    --glow: 0px;
+}
+.k-seg [aria-checked="true"] .k-led {
+    --led: var(--ice);
+    --glow: 6px;
+}
+
+.k-switch {
+    position: relative;
+    width: 56px;
+    height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--well);
+    box-shadow: 0 0 0 1px var(--border-control), var(--shadow-well);
+    cursor: pointer;
+}
+.k-switch::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 24px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
+    box-shadow: 0 0 0 1px var(--bezel-edge), var(--shadow-bezel);
+    transition: transform var(--dur-base) var(--ease-mech);
+}
+.k-switch::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 13px;
+    left: 12px;
+    width: 8px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--led-off);
+    transition:
+        transform var(--dur-base) var(--ease-mech),
+        background var(--dur-quick),
+        box-shadow var(--dur-quick);
+}
+.k-switch[aria-checked="true"]::after { transform: translateX(24px); }
+.k-switch[aria-checked="true"]::before {
+    transform: translateX(24px);
+    background: var(--ice);
+    box-shadow: 0 0 8px var(--ice);
+}
+.k-switch:focus-visible {
+    outline: 2px solid var(--ice);
+    outline-offset: 3px;
+}
+
+.k-meter {
+    display: flex;
+    gap: 3px;
+    padding: 6px;
+    border-radius: 8px;
+    background: var(--well);
+    box-shadow: 0 0 0 1px var(--hairline), var(--shadow-well);
+}
+.k-meter i {
+    flex: 1;
+    height: 14px;
+    border-radius: 1.5px;
+    background: var(--led-off);
+    transition: background var(--dur-quick);
+}
+.k-meter i.on {
+    background: var(--led, var(--ice));
+    box-shadow: 0 0 6px var(--led, var(--ice));
+}
+.k-meter i.head { animation: k-blink var(--dur-loop) steps(1) infinite; }
+.k-meter.slim i { height: 8px; }
+
+.k-agent {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--well);
+    box-shadow: 0 0 0 1px var(--hairline), var(--shadow-well);
+}
+.k-agent img { width: 24px; height: 24px; display: block; }
+.k-agent .k-led {
+    --cols: 5;
+    --dot: 4px;
+    --gap: 2px;
+    --led: var(--brand-bright);
+    --glow: 3px;
+}
+
+/* The page frame the reference screens sit in: crumb, display title, lead. */
+.k-crumb {
+    font: 400 12px/16px var(--font-mono);
+    letter-spacing: 0.04em;
+    color: var(--dim);
+}
+.k-crumb b { font-weight: 600; color: var(--dim); }
+.k-title {
+    margin: 10px 0 0;
+    font: 600 56px/56px var(--font-display);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text);
+}
+.k-lead {
+    margin: 10px 0 28px;
+    max-width: 640px;
+    font: 400 16px/24px var(--font-sans);
+    color: var(--dim);
+}
+.k-grid { display: grid; gap: 24px; }
+.k-g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.k-g2 { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+.k-card {
+    background: var(--glass-1);
+    backdrop-filter: blur(16px);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    /* The library's glass card carries no edge by design; the app's surfaces
+     * answer the pointer the same way its keys do, so an actionable card
+     * (a listing's row, a step that can be acted on) lifts its light on
+     * hover and takes the press. Reading cards stay still. */
+    transition: background var(--dur-quick) var(--ease-out),
+        box-shadow var(--dur-quick) var(--ease-out);
+}
+.k-card.interactive:hover {
+    background: var(--glass-2);
+    box-shadow: var(--shadow-key);
+}
+.k-card.interactive:active {
+    transform: translateY(1px);
+}
+.k-card h2 {
+    margin: 0 0 16px;
+    font: 600 28px/32px var(--font-display);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+.k-eyebrow {
+    font: 600 11px/14px var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.k-num {
+    font: 600 64px/60px var(--font-display);
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+}
+.k-input {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 48px;
+    padding: 0 16px;
+    border-radius: var(--radius-md);
+    background: var(--well);
+    box-shadow: 0 0 0 1px var(--border-control), var(--shadow-well);
+    color: var(--text);
+}
+.k-input input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: 400 16px/24px var(--font-sans);
+    outline: 0;
+}
+.k-input input::placeholder { color: var(--dim); }
+.k-input:focus-within {
+    box-shadow: 0 0 0 2px var(--ice), var(--shadow-well);
+}
+.k-table { width: 100%; border-collapse: collapse; }
+.k-table th {
+    padding: 0 12px 10px;
+    text-align: left;
+    font: 600 11px/14px var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--dim);
+    box-shadow: inset 0 -1px 0 var(--hairline);
+}
+.k-table td {
+    padding: 14px 12px;
+    vertical-align: middle;
+    box-shadow: inset 0 -1px 0 var(--hairline);
+}
+.k-table tbody tr:hover { background: var(--glass-1); }
+/* A row that is a link's carrier answers the pointer like the keys do:
+ * light in, not a jump. `tbody tr` above stays for reading tables, where
+ * the wash alone tells the reader which row the pointer is on. */
+.k-table tbody tr:active { background: var(--glass-2); }
+.k-table .m {
+    font: 400 12px/16px var(--font-mono);
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+}
+.k-table .r { text-align: right; }
+.k-conf {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font: 400 12px/16px var(--font-mono);
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+}
+.k-conf .k-meter { width: 96px; padding: 4px; gap: 2px; }
+.k-conf .k-meter i { height: 8px; }
+.k-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.k-spread {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+.k-note {
+    font: 400 12px/16px var(--font-mono);
+    color: var(--dim);
+}
+.k-callout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 20px 24px;
+    border-radius: var(--radius-lg);
+    background: var(--brand-wash);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .k-led i,
+    .k-led.boot i.on,
+    .k-meter i.head {
+        animation: none !important;
+    }
+    .k-seg .thumb,
+    .k-switch::after,
+    .k-switch::before,
+    .k-key,
+    .k-plate {
+        transition: none;
+    }
+    /* The card and row micro-interactions land on their end state, the same
+     * contract as motion.css: no motion, but the hover/press identity (the
+     * wash, the border) still reads without any movement. */
+    .card.interactive,
+    .k-card.interactive {
+        transition: none;
+    }
+    .card.interactive:active,
+    .k-card.interactive:active {
+        transform: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .k-g3,
+    .k-g2 {
+        grid-template-columns: 1fr;
+    }
+    .k-title { font-size: 40px; line-height: 40px; }
 }

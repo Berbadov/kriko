@@ -233,43 +233,45 @@ describe("the stylesheets", () => {
     // A weight or a slope with no face is not missing, it is *faked* by the
     // browser, and a synthesised bold or oblique is what this rule exists to
     // stop.
-    it("sets everything in Plex Mono, with a real face for every weight and slope", () => {
+    it("sets everything in the three system faces, with a real face per weight", () => {
         const fonts = stripComments(SHEETS["./fonts.css"]);
         const faces = [...fonts.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
-        const shipped = new Set<string>();
+        const shipped = new Map<string, Set<string>>();
         for (const face of faces) {
-            expect(face).toMatch(/font-family:\s*"IBM Plex Mono"/);
+            expect(face).toMatch(
+                /font-family:\s*"(Barlow Condensed|DM Sans|JetBrains Mono|IBM Plex Mono)"/,
+            );
+            const family = face.match(/font-family:\s*"([^"]+)"/)![1];
             const style = face.match(/font-style:\s*(\w+)/)![1];
             const weight = face.match(/font-weight:\s*(\d+)/)![1];
-            shipped.add(`${style} ${weight}`);
+            const set = shipped.get(family) ?? new Set<string>();
+            set.add(`${style} ${weight}`);
+            shipped.set(family, set);
         }
-        expect([...shipped].sort()).toEqual([
-            "italic 400",
-            "italic 600",
-            "normal 400",
-            "normal 500",
-            "normal 600",
-        ]);
-
-        // The body, and so every label, heading, input and paragraph, is the mono stack.
-        expect(stripComments(SHEETS["./tokens.css"])).toMatch(/--font-mono:\s*"IBM Plex Mono"/);
+        expect(shipped.get("Barlow Condensed")).toEqual(new Set(["normal 600", "normal 700"]));
+        expect(shipped.get("DM Sans")).toEqual(new Set(["normal 400", "normal 600"]));
+        expect(shipped.get("JetBrains Mono")).toEqual(new Set(["normal 400", "normal 600"]));
+        expect(shipped.get("IBM Plex Mono")?.size).toBeGreaterThan(0);
+        const tokens = stripComments(SHEETS["./tokens.css"]);
+        expect(tokens).toMatch(/--font-display:\s*"Barlow Condensed"/);
+        expect(tokens).toMatch(/--font-sans:\s*"DM Sans"/);
+        expect(tokens).toMatch(/--font-mono:\s*"JetBrains Mono"/);
         expect(stripComments(SHEETS["./base.css"])).toMatch(
-            /font:\s*var\(--t-base\)\s*\/\s*var\(--lh-base\)\s*var\(--font-mono\)/,
+            /font:\s*var\(--t-base\)\s*\/\s*var\(--lh-base\)\s*var\(--font-sans\)/,
         );
-
-        // No stylesheet reaches for another family, so nothing can quietly
-        // leave the face: no sans token, no display token, no named font.
         const everything = Object.entries(SHEETS)
             .filter(([path]) => path !== "./fonts.css")
             .map(([, css]) => stripComments(css))
             .join("\n");
-        expect(everything).not.toMatch(/--font-(sans|display)/);
         const families = [...everything.matchAll(/font-family:\s*([^;]+);/g)].map((m) =>
             m[1].trim(),
         );
-        expect(families.filter((family) => family !== "var(--font-mono)")).toEqual([]);
+        expect(
+            families.filter((family) =>
+                !["var(--font-mono)", "var(--font-sans)", "var(--font-display)"].includes(family),
+            ),
+        ).toEqual([]);
     });
-
     it("uses only the weights it ships", () => {
         const used = new Set<string>();
         for (const [path, css] of Object.entries(SHEETS)) {

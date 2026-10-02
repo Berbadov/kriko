@@ -6,6 +6,7 @@
     import { api } from "../lib/api";
     import { copyText } from "../lib/clipboard";
     import type { AgentConfig, AgentVerify, VerifyStep } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     // B164: this screen is the agents and nothing else. The harness list, the
     // top-N agenda, the build-knowledge planes, the schedule and the skill text
@@ -103,7 +104,7 @@
     </span>
 {/snippet}
 
-<h2><Icon name="connect" size={22} /> Agents</h2>
+<PageHead crumb="system / agents" title="Agents" lead="Which agents Kriko can drive, and which may read for you." />
 
 {#if loadError}
     <Failure error={loadError} retry={refresh} />

@@ -1,12 +1,18 @@
 <script lang="ts">
-    import Icon from "./Icon.svelte";
     import { api } from "./api";
+    import Led from "./kriko/Led.svelte";
+    import Meter from "./kriko/Meter.svelte";
+    import Tag from "./kriko/Tag.svelte";
+    import Key from "./kriko/Key.svelte";
     import type { LocalPlane } from "./types";
 
-    /* The local machine plane's settings (B171): where the LLM server is,
-     * which of its models to use, where search is, how long to wait. Every
-     * list and every sentence comes from `/api/local-plane`; nothing here names
-     * a server or an LLM. Compact on purpose, B184 polishes it. */
+    /* The local machine plane's settings (B171), on the design system's
+     * own faces: where the LLM server is, which of its models to use,
+     * where search is, how long to wait. Every list and every sentence
+     * comes from `/api/local-plane`; nothing here names a server or an
+     * LLM. The status line is a Tag - live when the plane answers, block
+     * when it does not - and a check in flight shows the scan strip, the
+     * same working indicator a running job carries. */
     let status = $state<LocalPlane | null>(null);
     let failed = $state("");
     let saved = $state("");
@@ -51,29 +57,42 @@
     });
 </script>
 
-<section>
-    <h3><Icon name="monitor" /> Local machine</h3>
-    <p class="meta">
-        An LLM running on this computer reads for Kriko, at no cost and with no key.
-    </p>
+<section class="k-card" style="margin-bottom:24px">
+    <div class="k-spread" style="margin-bottom:16px">
+        <div class="k-eyebrow">Local machine</div>
+        {#if busy}
+            <span class="scan run" aria-hidden="true"
+                ><i class="on"></i><i class="on"></i><i class="on head"></i><i></i><i></i></span
+            >
+        {:else if failed}
+            <Tag state="block">Unreachable</Tag>
+        {:else if status?.ready}
+            <Tag state="live">Live</Tag>
+        {:else if status}
+            <Tag state="queue">Not ready</Tag>
+        {/if}
+    </div>
+
     {#if failed}
-        <p class="state" role="status">Could not read the local plane: {failed}</p>
+        <p class="k-note" role="status">Could not read the local plane: {failed}</p>
     {:else if !status}
-        <p class="state loading">Checking…</p>
+        <p class="k-note">Checking…</p>
     {:else}
-        <p class="state" class:fact-ok={status.ready} role="status">{status.line}</p>
-        <div class="fields">
-            <label>
-                Server address
-                <input
-                    type="url"
-                    bind:value={url}
-                    placeholder="Found automatically"
-                    autocomplete="off"
-                />
+        <p class="k-note" style="margin-bottom:16px">{status.line}</p>
+
+        <div class="k-row" style="align-items:flex-end;margin-bottom:16px">
+            <label class="grow">
+                <span class="k-eyebrow" style="display:block;margin-bottom:8px">Server address</span>
+                <span class="k-input"
+                    ><input
+                        type="url"
+                        bind:value={url}
+                        placeholder="Found automatically"
+                        autocomplete="off"
+                /></span>
             </label>
-            <label>
-                LLM
+            <label class="grow">
+                <span class="k-eyebrow" style="display:block;margin-bottom:8px">LLM</span>
                 <select bind:value={llm}>
                     <option value="">First one the server lists</option>
                     {#each status.models as one (one)}
@@ -81,47 +100,39 @@
                     {/each}
                 </select>
             </label>
-            <label>
-                Search service address
-                <input
-                    type="url"
-                    bind:value={searchUrl}
-                    placeholder="http://127.0.0.1:7000"
-                    autocomplete="off"
-                />
+            <label class="grow">
+                <span class="k-eyebrow" style="display:block;margin-bottom:8px"
+                    >Search service address</span
+                >
+                <span class="k-input"
+                    ><input
+                        type="url"
+                        bind:value={searchUrl}
+                        placeholder="http://127.0.0.1:7000"
+                        autocomplete="off"
+                /></span>
             </label>
-            <label>
-                Wait for one answer, in seconds
+            <label class="grow">
+                <span class="k-eyebrow" style="display:block;margin-bottom:8px"
+                    >Wait for one answer, in seconds</span
+                >
                 <input type="number" min="10" bind:value={timeout} placeholder="300" />
             </label>
         </div>
-        <div class="row">
-            <button type="button" onclick={save} disabled={busy}>Save</button>
-            <button type="button" onclick={() => load(false)} disabled={busy}>Check again</button>
-            {#if saved}<span class="meta" role="status">{saved}</span>{/if}
+
+        <div class="k-row">
+            <Key type="submit" onclick={save} disabled={busy}>Save</Key>
+            <Key variant="ghost" onclick={() => load(false)} disabled={busy}>Check again</Key>
+            {#if saved}<span class="k-note" role="status">{saved}</span>{/if}
         </div>
     {/if}
 </section>
 
 <style>
-    section {
-        margin-block: var(--s-5);
-    }
-    .fields {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-        gap: var(--s-2);
-        margin-block: var(--s-3);
-    }
-    .fields label {
+    .grow {
         display: flex;
         flex-direction: column;
-        gap: var(--s-1);
-    }
-    .row {
-        display: flex;
-        align-items: center;
-        gap: var(--s-2);
-        flex-wrap: wrap;
+        flex: 1;
+        min-width: 220px;
     }
 </style>

@@ -6,6 +6,7 @@
     import { api } from "../lib/api";
     import { follow, stateWord } from "../lib/jobs";
     import type { Job, Site, SiteDetail, SiteRule } from "../lib/types";
+import PageHead from "../lib/kriko/PageHead.svelte";
 
     const load = () => api.sites();
     let promise = $state(load());
@@ -117,7 +118,7 @@
     }
 </script>
 
-<h2><Icon name="sites" size={22} /> Sites</h2>
+<PageHead crumb="system / sites" title="Sites" lead="Which listing sites this installation can read." />
 <p class="lede">
     An <em>adapter</em> turns a listing page into a product. Packs ship them;
     this install can also learn one.
