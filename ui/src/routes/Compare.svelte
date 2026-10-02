@@ -1,6 +1,8 @@
 <script lang="ts">
     import Icon from "../lib/Icon.svelte";
     import Async from "../lib/Async.svelte";
+    import PageHead from "../lib/kriko/PageHead.svelte";
+    import Key from "../lib/kriko/Key.svelte";
     import Board from "../lib/Board.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
     import { api } from "../lib/api";
@@ -289,18 +291,13 @@
     }
 </script>
 
-<h2>
-    <Icon name="compare" size={22} /> Compare
+<PageHead crumb="check / compare" title="Compare" lead="Products side by side: the specifications and the known risks, cell by cell." />
+<div class="k-spread" style="margin-bottom: 24px">
+    <span class="k-note">Data only. Nothing here rates a product.</span>
     {#if open}
-        <button
-            type="button"
-            class:primary={boarding}
-            aria-pressed={boarding}
-            onclick={toggleBoard}
-            title="Mark up this comparison: draw and drop notes over the table"
-        ><Icon name="edit" size={16} /> Board</button>
+        <Key variant="plate" pressed={boarding} onclick={toggleBoard}>Board</Key>
     {/if}
-</h2>
+</div>
 
 <Async promise={listed} loading="Loading history…">
     {#snippet children()}
@@ -314,7 +311,7 @@
             />
         {:else}
             <h3><Icon name="history" size={18} /> Drafts</h3>
-            <div class="row drafts">
+            <div class="k-row" style="margin-bottom: 12px">
                 {#each drafts as d (d.draft_id)}
                     <button
                         type="button"
@@ -323,11 +320,9 @@
                         onclick={() => openDraft(d)}>{d.name}</button
                     >
                 {/each}
-                <button type="button" onclick={newDraft}>
-                    <Icon name="plus" size={16} /> New
-                </button>
+                <Key variant="ghost" onclick={newDraft}>New</Key>
             </div>
-            <div class="row drafts">
+            <div class="k-row" style="margin-bottom: 12px">
                 <div class="field grow">
                     <label for="draft-name">Draft name</label>
                     <input id="draft-name" bind:value={name} maxlength="80" />
@@ -400,7 +395,7 @@
                             {/each}
                         </p>
                         <div class="table-scroll">
-                            <table class="compare">
+                            <table class="compare k-table">
                                 <thead>
                                     <tr>
                                         <th scope="col">Product</th>
