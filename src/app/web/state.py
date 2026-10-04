@@ -17,6 +17,7 @@ import sqlite3
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from app import factcheck
 from kriko.store.db import schema_stamp
@@ -700,6 +701,23 @@ CREATE TABLE IF NOT EXISTS compare_boards (
   draft_id  TEXT PRIMARY KEY,
   board     TEXT NOT NULL DEFAULT '{}',
   updated_at TEXT NOT NULL DEFAULT '');
+
+-- The research queue: products the reader lined up from the browser
+-- extension's panel for an agent to research one after another, then compare.
+-- App state, never knowledge: it is the reader's to-do list, and a pack
+-- update or uninstall must not empty it. One row per listing address, so a
+-- second press on the same page does not queue the product twice.
+CREATE TABLE IF NOT EXISTS research_queue (
+  queue_id  TEXT PRIMARY KEY,
+  url       TEXT NOT NULL DEFAULT '',
+  name      TEXT NOT NULL DEFAULT '',
+  lookup_id TEXT NOT NULL DEFAULT '',   -- the stored answer, when there is one
+  origin    TEXT NOT NULL DEFAULT '',   -- the host it was queued from
+  state     TEXT NOT NULL DEFAULT 'waiting',  -- waiting | researching | done
+  added_at  TEXT NOT NULL DEFAULT '');
+-- the one-row-per-listing rule, as an index: a column constraint could never
+-- be added to a table that already exists
+CREATE UNIQUE INDEX IF NOT EXISTS research_queue_url ON research_queue (url);
 """
 
 #: The most operations one installation keeps. A feed, not an archive: the
@@ -1512,6 +1530,65 @@ def save_compare_draft(
 
 def delete_compare_draft(conn: sqlite3.Connection, draft_id: str) -> bool:
     cur = conn.execute("DELETE FROM compare_drafts WHERE draft_id = ?", (draft_id,))
+    conn.commit()
+    return cur.rowcount > 0
+
+
+#: The most products one queue holds: a shortlist being researched, not a
+#: backlog, and the compare screen lines up a handful at a time.
+QUEUE_MAX = 8
+
+
+def _queued(row: sqlite3.Row) -> dict:
+    return {k: row[k] for k in
+            ("queue_id", "url", "name", "lookup_id", "origin", "state", "added_at")}
+
+
+def research_queue(conn: sqlite3.Connection) -> list[dict]:
+    """The queue in research order: first queued, first researched."""
+    return [_queued(r) for r in conn.execute(
+        "SELECT * FROM research_queue ORDER BY added_at, rowid")]
+
+
+def queue_product(
+    conn: sqlite3.Connection, url: str, name: str, lookup_id: str = "",
+) -> tuple[dict, bool]:
+    """Queue the product a listing shows. Returns the row and whether it is new.
+
+    Keyed by the listing address: pressing again on the same page answers with
+    the row already queued (its name and answer refreshed) rather than a
+    second copy. Raises `ValueError` for no address, and `OverflowError` when
+    the queue is full, so the panel can say which.
+    """
+    url = str(url or "").strip()[:2000]
+    if not url:
+        raise ValueError("a queued product needs the listing's address")
+    name = " ".join(str(name or "").split())[:200] or url
+    lookup_id = str(lookup_id or "").strip()[:64]
+    origin = urlsplit(url).hostname or ""
+    row = conn.execute("SELECT * FROM research_queue WHERE url = ?", (url,)).fetchone()
+    if row:
+        conn.execute(
+            "UPDATE research_queue SET name = ?,"
+            " lookup_id = COALESCE(NULLIF(?, ''), lookup_id) WHERE url = ?",
+            (name, lookup_id, url))
+        conn.commit()
+        return _queued(conn.execute(
+            "SELECT * FROM research_queue WHERE url = ?", (url,)).fetchone()), False
+    count = conn.execute("SELECT COUNT(*) FROM research_queue").fetchone()[0]
+    if count >= QUEUE_MAX:
+        raise OverflowError(f"the queue holds {QUEUE_MAX} products")
+    queue_id = secrets.token_hex(8)
+    conn.execute(
+        "INSERT INTO research_queue (queue_id, url, name, lookup_id, origin, added_at)"
+        " VALUES (?,?,?,?,?,?)", (queue_id, url, name, lookup_id, origin, _now()))
+    conn.commit()
+    return _queued(conn.execute(
+        "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()), True
+
+
+def unqueue_product(conn: sqlite3.Connection, queue_id: str) -> bool:
+    cur = conn.execute("DELETE FROM research_queue WHERE queue_id = ?", (queue_id,))
     conn.commit()
     return cur.rowcount > 0
 
