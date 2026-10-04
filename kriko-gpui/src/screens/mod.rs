@@ -88,6 +88,18 @@ pub fn row_desc(text: &str) -> Div {
         .child(text.to_string())
 }
 
+/// What a card shows while its slice of the engine has not arrived, or when
+/// the engine holds nothing for it: one quiet well, never sample numbers.
+pub fn empty_note(text: &str) -> Div {
+    well()
+        .px(px(16.0))
+        .py(px(14.0))
+        .font_family(SANS)
+        .text_size(px(13.0))
+        .text_color(rgb(DIM))
+        .child(text.to_string())
+}
+
 /// Mono table cell text.
 pub fn mono(text: &str, color: u32) -> Div {
     div()
