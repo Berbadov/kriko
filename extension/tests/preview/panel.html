@@ -1,0 +1,97 @@
+<!doctype html>
+<!--
+  The panel in an ordinary browser tab, for looking at it: no extension
+  install, no app running. chrome.* is stubbed the way tests/hover_lite_harness.js
+  stubs it, and one stored answer is delivered the way background.js would.
+
+    python -m http.server 8790 --directory extension
+    open http://127.0.0.1:8790/tests/preview/panel.html
+
+  ?state=error | idle | empty picks another state of the panel.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Kriko panel preview</title>
+  <style>
+    body { margin: 0; min-height: 100vh; background: #e9e6df; font: 15px/1.5 system-ui, sans-serif; color: #222; }
+    .page { max-width: 760px; padding: 48px; }
+    .page h1 { font-size: 26px; margin: 0 0 8px; }
+    .page .price { font-size: 22px; color: #b34700; font-weight: 600; }
+    .page .photo { height: 340px; background: #c9c3b8; border-radius: 6px; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Volkswagen Golf 1.6 TDI Highline, 2014</h1>
+    <div class="price">645.000 TL</div>
+    <div class="photo"></div>
+    <p>190.000 km · Dizel · Manuel · Hatchback</p>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const state = params.get("state") || "risks";
+    const runtimeListeners = [];
+    const storageListeners = [];
+    const CLAIMS = [
+      { claim_id: "c1", pack_id: "org.kriko.cars", subject_id: "s1", title: "Timing chain tensioner wear", severity: "high", strength: "reported", domain: "engine",
+        body: "The tensioner on this engine family loosens with mileage; a rattle at cold start is the first sign.", sources: [{ url: "https://example.org/a", title: "Owner forum thread" }] },
+      { claim_id: "c2", pack_id: "org.kriko.cars", subject_id: "s1", title: "EGR valve clogging on short trips", severity: "medium", strength: "documented", domain: "emissions",
+        body: "Soot builds up in the EGR valve when the car rarely reaches temperature.", sources: [{ url: "https://example.org/b", title: "Service bulletin" }] },
+      { claim_id: "c3", pack_id: "org.kriko.cars", subject_id: "s1", title: "Dual-mass flywheel judder", severity: "medium", strength: "reported", domain: "transmission",
+        body: "A shudder when pulling away in first gear; the flywheel is due around 180,000 km.", sources: [] },
+      { claim_id: "c4", pack_id: "org.kriko.cars", subject_id: "s1", title: "Window regulator clips", severity: "low", strength: "reported", domain: "body",
+        body: "Plastic clips in the door regulators break; a cheap fix.", sources: [] },
+    ];
+    const ENTRY = {
+      ok: true,
+      listing: { damage_info: null, equipment: {} },
+      result: {
+        claims: state === "empty" ? [] : CLAIMS,
+        coverage: state === "empty" ? "NO_RISKS_KNOWN" : "RISKS_FOUND",
+        identity: { make: "volkswagen", model: "golf", fuel: "Dizel" },
+        context: { build_year: 2014, usage_km: 190000 },
+        context_units: { usage_km: "km" },
+        packs: [{ pack_id: "org.kriko.cars", version: "1.4.0" }],
+        app_route: "result/abc123",
+      },
+    };
+    window.chrome = {
+      runtime: {
+        onMessage: { addListener: (fn) => runtimeListeners.push(fn) },
+        lastError: null,
+        sendMessage(message, callback) {
+          console.log("[panel ->]", message.type, message);
+          if (typeof callback !== "function") return;
+          if (message.type === "ANALYZE") {
+            if (state === "error") return callback({ ok: false, code: "APP_NOT_RUNNING", error: "Kriko is not running. Open the Kriko app, then try again." });
+            if (state === "idle") return callback({ ok: false, code: "NO_ADAPTER", error: "No installed pack can read this page." });
+            return callback({ ok: true, pending: true });
+          }
+          if (message.type === "QUEUE_ADD") return setTimeout(() => callback({ ok: true, added: true, count: 4, max: 8 }), 400);
+          if (message.type === "SEARCH") return callback({ ok: true, items: [] });
+          if (message.type === "OPERATIONS") return callback({ ok: true, feed: { items: [] } });
+          callback({ ok: true });
+        },
+        getURL: (p) => "../../" + p,
+      },
+      storage: { onChanged: { addListener: (fn) => storageListeners.push(fn) } },
+    };
+    function deliver(kind, value) {
+      const key = "kriko_" + kind + "_" + location.href;
+      for (const fn of storageListeners) fn({ [key]: { newValue: value } }, "session");
+    }
+    window.__preview = { deliver, ENTRY };
+  </script>
+  <script src="../../hover_lite/icons.js"></script>
+  <script src="../../hover_lite/claim_card.js"></script>
+  <script src="../../hover_lite/hover_lite.js"></script>
+  <script>
+    for (const fn of runtimeListeners) fn({ type: "TOGGLE_HOVER_LITE" });
+    if (state === "risks" || state === "empty") {
+      setTimeout(() => deliver("stage", { name: "reading", detail: "", at: Date.now() }), 300);
+      setTimeout(() => deliver("result", ENTRY), 1200);
+    }
+  </script>
+</body>
+</html>

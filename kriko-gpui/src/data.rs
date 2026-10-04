@@ -2,10 +2,28 @@
 //! local store; claims and numbers are placeholders, exactly as the footer
 //! note under each screen says.
 
-use crate::theme::{TagState, Verdict};
+use crate::marks::{self, Phase};
+use crate::theme::TagState;
 
 pub const FOOTER_NOTE: &str =
     "Sample data. Pack and subject names come from the local store; claims and numbers are placeholders.";
+
+// ---- shared totals (home and knowledge read the same numbers) ----
+
+pub const CLAIMS_BACKED: &str = "1 214";
+pub const CLAIMS_STORED: &str = "1 402";
+pub const SOURCES_READ: &str = "388";
+pub const SITES_READ: &str = "96";
+
+/// Checks run per month, oldest first: the home screen's activity graph.
+pub const HOME_CHECKS_BARS: &[(&str, u8)] = &[
+    ("MAY", 5),
+    ("JUN", 7),
+    ("JUL", 4),
+    ("AUG", 8),
+    ("SEP", 6),
+    ("OCT", 9),
+];
 
 // ---- navigation ----
 
@@ -64,43 +82,106 @@ pub const NAV: &[NavGroupDef] = &[
 pub struct Check {
     pub name: &'static str,
     pub pack: &'static str,
-    pub verdict: Verdict,
-    pub confidence: u8,
     pub agents: &'static [char],
     pub took: &'static str,
     pub when: &'static str,
+    /// How many days ago the check ran; 0 is today. Drives the date
+    /// span filter and the per-month stats on History.
+    pub days_ago: u32,
 }
 
 pub const CHECKS: &[Check] = &[
-    Check { name: "Samsung Galaxy Buds2 Pro", pack: "samsung.headphones", verdict: Verdict::Recommended, confidence: 82, agents: &['C', 'O'], took: "3 min 12", when: "2 min ago" },
-    Check { name: "Samsung Galaxy Buds Pro", pack: "samsung.headphones", verdict: Verdict::WeighUp, confidence: 61, agents: &['C', 'G'], took: "5 min 40", when: "Yesterday" },
-    Check { name: "Samsung Galaxy Buds Live", pack: "samsung.headphones", verdict: Verdict::Avoid, confidence: 74, agents: &['O'], took: "2 min 05", when: "3 days ago" },
-    Check { name: "Apple iPhone 15", pack: "apple.iphone15", verdict: Verdict::Recommended, confidence: 79, agents: &['C', 'C'], took: "4 min 51", when: "Last week" },
-    Check { name: "Volkswagen Passat 2020", pack: "volkswagen.passat.2020", verdict: Verdict::WeighUp, confidence: 58, agents: &['M'], took: "9 min 30", when: "Last week" },
-    Check { name: "Sony WH-1000XM5", pack: "sony.headphones", verdict: Verdict::Recommended, confidence: 88, agents: &['C', 'O'], took: "2 min 48", when: "Last week" },
-    Check { name: "Toyota Corolla 2021", pack: "toyota.cars", verdict: Verdict::WeighUp, confidence: 64, agents: &['M'], took: "8 min 02", when: "2 weeks ago" },
-    Check { name: "Apple AirPods Pro 2", pack: "apple.headphones", verdict: Verdict::Recommended, confidence: 85, agents: &['C', 'C'], took: "3 min 55", when: "2 weeks ago" },
-    Check { name: "Bose QuietComfort Ultra", pack: "bose.headphones", verdict: Verdict::WeighUp, confidence: 69, agents: &['G'], took: "6 min 12", when: "3 weeks ago" },
-    Check { name: "Ford Focus 2019", pack: "ford.cars", verdict: Verdict::Avoid, confidence: 71, agents: &['M'], took: "7 min 44", when: "3 weeks ago" },
-    Check { name: "JBL Tour Pro 2", pack: "jbl.headphones", verdict: Verdict::Recommended, confidence: 76, agents: &['O'], took: "4 min 09", when: "Last month" },
-    Check { name: "Hyundai Ioniq 5", pack: "hyundai.cars", verdict: Verdict::WeighUp, confidence: 66, agents: &['M', 'C'], took: "10 min 18", when: "Last month" },
-    Check { name: "Anker Soundcore Liberty 4", pack: "anker.headphones", verdict: Verdict::Recommended, confidence: 73, agents: &['O'], took: "5 min 27", when: "Last month" },
-    Check { name: "Honda Civic 2022", pack: "honda.cars", verdict: Verdict::WeighUp, confidence: 62, agents: &['M'], took: "9 min 03", when: "Last month" },
-    Check { name: "Sennheiser Momentum 4", pack: "sennheiser.headphones", verdict: Verdict::Recommended, confidence: 81, agents: &['G'], took: "3 min 41", when: "2 months ago" },
-    Check { name: "BMW 3 Series 2021", pack: "bmw.cars", verdict: Verdict::WeighUp, confidence: 59, agents: &['M', 'O'], took: "11 min 06", when: "2 months ago" },
-    Check { name: "Nothing Ear 2", pack: "nothing.headphones", verdict: Verdict::Avoid, confidence: 77, agents: &['O'], took: "2 min 33", when: "2 months ago" },
-    Check { name: "Kia EV6 2023", pack: "kia.cars", verdict: Verdict::Recommended, confidence: 84, agents: &['C'], took: "8 min 51", when: "2 months ago" },
-    Check { name: "Beats Studio Pro", pack: "beats.headphones", verdict: Verdict::WeighUp, confidence: 67, agents: &['G', 'O'], took: "4 min 44", when: "3 months ago" },
-    Check { name: "Volkswagen Golf 2020", pack: "volkswagen.cars", verdict: Verdict::WeighUp, confidence: 63, agents: &['M'], took: "7 min 19", when: "3 months ago" },
-    Check { name: "Technics EAH-AZ80", pack: "technics.headphones", verdict: Verdict::Recommended, confidence: 80, agents: &['C', 'O'], took: "5 min 58", when: "3 months ago" },
-    Check { name: "Mazda 3 2021", pack: "mazda.cars", verdict: Verdict::Avoid, confidence: 72, agents: &['M'], took: "6 min 37", when: "4 months ago" },
-    Check { name: "Audio-Technica M50x", pack: "audiotechnica.headphones", verdict: Verdict::Recommended, confidence: 78, agents: &['O'], took: "3 min 22", when: "4 months ago" },
-    Check { name: "Renault Zoe 2022", pack: "renault.cars", verdict: Verdict::WeighUp, confidence: 57, agents: &['M', 'G'], took: "9 min 45", when: "4 months ago" },
-    Check { name: "Shure Aonic 215", pack: "shure.headphones", verdict: Verdict::WeighUp, confidence: 60, agents: &['G'], took: "4 min 16", when: "5 months ago" },
-    Check { name: "Polestar 2 2023", pack: "polestar.cars", verdict: Verdict::Recommended, confidence: 83, agents: &['C', 'M'], took: "10 min 40", when: "5 months ago" },
+    Check { name: "Samsung Galaxy Buds2 Pro", pack: "samsung.headphones", agents: &['C', 'O'], took: "3 min 12", when: "2 min ago", days_ago: 0 },
+    Check { name: "Samsung Galaxy Buds Pro", pack: "samsung.headphones", agents: &['C', 'G'], took: "5 min 40", when: "Yesterday", days_ago: 1 },
+    Check { name: "Samsung Galaxy Buds Live", pack: "samsung.headphones", agents: &['O'], took: "2 min 05", when: "3 days ago", days_ago: 3 },
+    Check { name: "Apple iPhone 15", pack: "apple.iphone15", agents: &['C', 'C'], took: "4 min 51", when: "Last week", days_ago: 7 },
+    Check { name: "Volkswagen Passat 2020", pack: "volkswagen.passat.2020", agents: &['M'], took: "9 min 30", when: "Last week", days_ago: 7 },
+    Check { name: "Sony WH-1000XM5", pack: "sony.headphones", agents: &['C', 'O'], took: "2 min 48", when: "Last week", days_ago: 7 },
+    Check { name: "Toyota Corolla 2021", pack: "toyota.cars", agents: &['M'], took: "8 min 02", when: "2 weeks ago", days_ago: 14 },
+    Check { name: "Apple AirPods Pro 2", pack: "apple.headphones", agents: &['C', 'C'], took: "3 min 55", when: "2 weeks ago", days_ago: 14 },
+    Check { name: "Bose QuietComfort Ultra", pack: "bose.headphones", agents: &['G'], took: "6 min 12", when: "3 weeks ago", days_ago: 21 },
+    Check { name: "Ford Focus 2019", pack: "ford.cars", agents: &['M'], took: "7 min 44", when: "3 weeks ago", days_ago: 21 },
+    Check { name: "JBL Tour Pro 2", pack: "jbl.headphones", agents: &['O'], took: "4 min 09", when: "Last month", days_ago: 30 },
+    Check { name: "Hyundai Ioniq 5", pack: "hyundai.cars", agents: &['M', 'C'], took: "10 min 18", when: "Last month", days_ago: 30 },
+    Check { name: "Anker Soundcore Liberty 4", pack: "anker.headphones", agents: &['O'], took: "5 min 27", when: "Last month", days_ago: 30 },
+    Check { name: "Honda Civic 2022", pack: "honda.cars", agents: &['M'], took: "9 min 03", when: "Last month", days_ago: 30 },
+    Check { name: "Sennheiser Momentum 4", pack: "sennheiser.headphones", agents: &['G'], took: "3 min 41", when: "2 months ago", days_ago: 60 },
+    Check { name: "BMW 3 Series 2021", pack: "bmw.cars", agents: &['M', 'O'], took: "11 min 06", when: "2 months ago", days_ago: 60 },
+    Check { name: "Nothing Ear 2", pack: "nothing.headphones", agents: &['O'], took: "2 min 33", when: "2 months ago", days_ago: 60 },
+    Check { name: "Kia EV6 2023", pack: "kia.cars", agents: &['C'], took: "8 min 51", when: "2 months ago", days_ago: 60 },
+    Check { name: "Beats Studio Pro", pack: "beats.headphones", agents: &['G', 'O'], took: "4 min 44", when: "3 months ago", days_ago: 90 },
+    Check { name: "Volkswagen Golf 2020", pack: "volkswagen.cars", agents: &['M'], took: "7 min 19", when: "3 months ago", days_ago: 90 },
+    Check { name: "Technics EAH-AZ80", pack: "technics.headphones", agents: &['C', 'O'], took: "5 min 58", when: "3 months ago", days_ago: 90 },
+    Check { name: "Mazda 3 2021", pack: "mazda.cars", agents: &['M'], took: "6 min 37", when: "4 months ago", days_ago: 120 },
+    Check { name: "Audio-Technica M50x", pack: "audiotechnica.headphones", agents: &['O'], took: "3 min 22", when: "4 months ago", days_ago: 120 },
+    Check { name: "Renault Zoe 2022", pack: "renault.cars", agents: &['M', 'G'], took: "9 min 45", when: "4 months ago", days_ago: 120 },
+    Check { name: "Shure Aonic 215", pack: "shure.headphones", agents: &['G'], took: "4 min 16", when: "5 months ago", days_ago: 150 },
+    Check { name: "Polestar 2 2023", pack: "polestar.cars", agents: &['C', 'M'], took: "10 min 40", when: "5 months ago", days_ago: 150 },
 ];
 
 pub const PAGE_SIZE: usize = 5;
+
+// ---- history evidence ----
+
+/// What a check actually grounded: each claim with the source it was
+/// grounded on. Information only — never a verdict.
+pub struct CheckEvidence {
+    pub claims: &'static [(&'static str, &'static str)],
+}
+
+/// The featured check on Run, with the claims it settled.
+pub const EVIDENCE_BUDS2: CheckEvidence = CheckEvidence {
+    claims: &[
+        ("ANC depth measured at -33 dB, against the -40 dB on the box", "rtings.com"),
+        ("Battery held 5 h 04 min at 50% volume, not the 8 h claimed", "rtings.com"),
+        ("IPX7 rating confirmed on the spec sheet", "samsung.com"),
+    ],
+};
+
+pub const EVIDENCE_HEADPHONES: CheckEvidence = CheckEvidence {
+    claims: &[
+        ("ANC depth measured against the label", "rtings.com"),
+        ("Battery runtime measured at 50% volume", "rtings.com"),
+        ("IP rating confirmed on the spec sheet", "the maker's page"),
+    ],
+};
+
+pub const EVIDENCE_CARS: CheckEvidence = CheckEvidence {
+    claims: &[
+        ("Fuel economy measured against the label", "edmunds.com"),
+        ("Safety rating verified against the test report", "the maker's page"),
+        ("Owner reliability history read from the forums", "owner forums"),
+    ],
+};
+
+pub const EVIDENCE_PHONE: CheckEvidence = CheckEvidence {
+    claims: &[
+        ("Battery runtime measured at 120 nits", "gsarena.com"),
+        ("Display brightness measured against the label", "gsarena.com"),
+        ("Update policy confirmed on the support page", "the maker's page"),
+    ],
+};
+
+/// Whether a check is about a car: the pack names a car brand or lives
+/// under `.cars`.
+pub fn is_car(check: &Check) -> bool {
+    check.pack.ends_with(".cars") || check.pack.starts_with("volkswagen")
+}
+
+/// The evidence a check was grounded on. The featured Buds2 Pro check
+/// carries the same claims Run settles; everything else is read from
+/// its category.
+pub fn evidence_for(check: &Check) -> &'static CheckEvidence {
+    if check.name == "Samsung Galaxy Buds2 Pro" {
+        &EVIDENCE_BUDS2
+    } else if check.pack == "apple.iphone15" {
+        &EVIDENCE_PHONE
+    } else if is_car(check) {
+        &EVIDENCE_CARS
+    } else {
+        &EVIDENCE_HEADPHONES
+    }
+}
 
 // ---- activity feed ----
 
@@ -141,17 +222,34 @@ pub struct AgentInfo {
     pub can_read: bool,
     pub can_run: bool,
     pub can_answer: bool,
+    /// The agent's own mark, in dots.
+    pub mark: &'static marks::Mark,
 }
 
 pub const AGENTS: &[AgentInfo] = &[
-    AgentInfo { name: "Claude Code", kind: "CLI", monogram: 'C', state: TagState::Live, state_label: "Connected", latency: "42 ms", allowed: true, detail: "Runs from PATH; reads the MCP server on localhost.", last_seen: "2 min ago", runs: 34, port: "7401", can_read: true, can_run: true, can_answer: true },
-    AgentInfo { name: "opencode", kind: "CLI", monogram: 'O', state: TagState::Live, state_label: "Connected", latency: "58 ms", allowed: true, detail: "Runs from PATH; reads the MCP server on localhost.", last_seen: "9 min ago", runs: 21, port: "7401", can_read: true, can_run: true, can_answer: true },
-    AgentInfo { name: "Antigravity CLI", kind: "CLI", monogram: 'A', state: TagState::Need, state_label: "Needs you", latency: "sign in", allowed: false, detail: "Found on PATH but not signed in. It will be skipped in Run until you sign in.", last_seen: "1 h ago", runs: 0, port: "7401", can_read: false, can_run: false, can_answer: false },
-    AgentInfo { name: "Mistral Vibe", kind: "CLI", monogram: 'M', state: TagState::Queue, state_label: "Not found", latency: "n/a", allowed: false, detail: "Not found on this machine. Install it to let it take part in checks.", last_seen: "never", runs: 0, port: "-", can_read: false, can_run: false, can_answer: false },
-    AgentInfo { name: "GitHub Copilot CLI", kind: "CLI", monogram: 'G', state: TagState::Live, state_label: "Connected", latency: "71 ms", allowed: true, detail: "Runs from PATH; reads the MCP server on localhost.", last_seen: "12 min ago", runs: 17, port: "7401", can_read: true, can_run: true, can_answer: false },
-    AgentInfo { name: "Claude Desktop", kind: "Desktop app", monogram: 'D', state: TagState::Live, state_label: "Connected", latency: "36 ms", allowed: true, detail: "Desktop app with the Kriko extension installed.", last_seen: "just now", runs: 8, port: "7402", can_read: true, can_run: false, can_answer: true },
-    AgentInfo { name: "Cursor", kind: "Desktop app", monogram: 'U', state: TagState::Done, state_label: "Idle", latency: "64 ms", allowed: true, detail: "Desktop app with the Kriko extension installed.", last_seen: "Yesterday", runs: 5, port: "7402", can_read: true, can_run: true, can_answer: false },
+    AgentInfo { name: "Claude Code", kind: "CLI", monogram: 'C', state: TagState::Live, state_label: "Connected", latency: "42 ms", allowed: true, detail: "Runs from PATH; reads the MCP server on localhost.", last_seen: "2 min ago", runs: 34, port: "7401", can_read: true, can_run: true, can_answer: true, mark: &marks::CLAUDE },
+    AgentInfo { name: "opencode", kind: "CLI", monogram: 'O', state: TagState::Live, state_label: "Connected", latency: "58 ms", allowed: true, detail: "Runs from PATH; reads the MCP server on localhost.", last_seen: "9 min ago", runs: 21, port: "7401", can_read: true, can_run: true, can_answer: true, mark: &marks::OPENCODE },
+    AgentInfo { name: "Antigravity CLI", kind: "CLI", monogram: 'A', state: TagState::Need, state_label: "Needs you", latency: "sign in", allowed: false, detail: "Found on PATH but not signed in. It will be skipped in Run until you sign in.", last_seen: "1 h ago", runs: 0, port: "7401", can_read: false, can_run: false, can_answer: false, mark: &marks::ANTIGRAVITY },
+    AgentInfo { name: "Mistral Vibe", kind: "CLI", monogram: 'M', state: TagState::Queue, state_label: "Not found", latency: "n/a", allowed: false, detail: "Not found on this machine. Install it to let it take part in checks.", last_seen: "never", runs: 0, port: "-", can_read: false, can_run: false, can_answer: false, mark: &marks::MISTRAL },
+    AgentInfo { name: "GitHub Copilot CLI", kind: "CLI", monogram: 'G', state: TagState::Live, state_label: "Connected", latency: "71 ms", allowed: true, detail: "Runs from PATH; reads the MCP server on localhost.", last_seen: "12 min ago", runs: 17, port: "7401", can_read: true, can_run: true, can_answer: false, mark: &marks::COPILOT },
+    AgentInfo { name: "Claude Desktop", kind: "Desktop app", monogram: 'D', state: TagState::Live, state_label: "Connected", latency: "36 ms", allowed: true, detail: "Desktop app with the Kriko extension installed.", last_seen: "just now", runs: 8, port: "7402", can_read: true, can_run: false, can_answer: true, mark: &marks::CLAUDE_DESKTOP },
+    AgentInfo { name: "Cursor", kind: "Desktop app", monogram: 'U', state: TagState::Done, state_label: "Idle", latency: "64 ms", allowed: true, detail: "Desktop app with the Kriko extension installed.", last_seen: "Yesterday", runs: 5, port: "7402", can_read: true, can_run: true, can_answer: false, mark: &marks::CURSOR },
 ];
+
+/// What agent `i` is doing, for its tile's motion: the lane it works in if
+/// it has one, the question it holds, or dark when it is missing or not
+/// allowed.
+pub fn agent_phase(i: usize, allowed: bool) -> Phase {
+    if let Some(lane) = DOCK_LANES.iter().find(|l| l.agent == i) {
+        return lane.phase;
+    }
+    match AGENTS[i].state {
+        TagState::Need => Phase::Waiting,
+        TagState::Queue | TagState::Block => Phase::Off,
+        _ if !allowed => Phase::Off,
+        _ => Phase::Idle,
+    }
+}
 
 // ---- knowledge (browse) ----
 
@@ -238,6 +336,65 @@ pub const MODELS: &[LocalModel] = &[
     LocalModel { name: "mistral-nemo-12b", size: "7.1 GB", memory: "9.8 GB", speed: 29, loaded: false, params: "12.2 B", quant: "Q4_K_M", ctx: "128 k", fits: false, note: "Best answers; needs most of the VRAM." },
 ];
 
+/// Where a local runtime stands on this machine.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeState {
+    Running,
+    Installed,
+    Missing,
+}
+
+/// A program that serves an LLM on this computer.
+pub struct Runtime {
+    pub name: &'static str,
+    pub mark: &'static marks::Mark,
+    pub state: RuntimeState,
+    pub port: &'static str,
+    /// What Install fetches, and how big it is.
+    pub install: &'static str,
+    pub detail: &'static str,
+}
+
+pub const RUNTIMES: &[Runtime] = &[
+    Runtime { name: "Built in", mark: &marks::BUILTIN, state: RuntimeState::Installed, port: "7400", install: "ships with Kriko", detail: "Inside Kriko already. Nothing to install, nothing to configure." },
+    Runtime { name: "Ollama", mark: &marks::OLLAMA, state: RuntimeState::Running, port: "11434", install: "winget install Ollama.Ollama · 690 MB", detail: "Found running. Kriko pulls models through it." },
+    Runtime { name: "LM Studio", mark: &marks::LMSTUDIO, state: RuntimeState::Installed, port: "1234", install: "winget install ElementLabs.LMStudio · 480 MB", detail: "Installed, its server is off. Use starts it." },
+    Runtime { name: "llama.cpp server", mark: &marks::LLAMACPP, state: RuntimeState::Missing, port: "8080", install: "winget install ggml.llamacpp · 180 MB", detail: "Lean and fast. Install fetches the CUDA build." },
+    Runtime { name: "Jan", mark: &marks::JAN, state: RuntimeState::Missing, port: "1337", install: "winget install Jan.Jan · 310 MB", detail: "A desktop app with its own model hub." },
+];
+
+/// A model Kriko can fetch, sized against this machine.
+pub struct CatalogueModel {
+    pub name: &'static str,
+    pub maker: &'static str,
+    pub params: &'static str,
+    pub quant: &'static str,
+    pub size_gb: f32,
+    /// Memory it takes once loaded, with a working context.
+    pub need_gb: f32,
+    pub note: &'static str,
+}
+
+pub const CATALOGUE: &[CatalogueModel] = &[
+    CatalogueModel { name: "qwen3-8b", maker: "Qwen", params: "8.2 B", quant: "Q4_K_M", size_gb: 5.0, need_gb: 7.2, note: "Strongest that fits fully on this GPU." },
+    CatalogueModel { name: "llama3.1-8b-instruct", maker: "Meta", params: "8.0 B", quant: "Q4_K_M", size_gb: 4.9, need_gb: 7.0, note: "Steady all-rounder, long context." },
+    CatalogueModel { name: "gemma3-4b", maker: "Google", params: "4.3 B", quant: "Q4_K_M", size_gb: 3.3, need_gb: 4.6, note: "Quick, leaves room for a browser." },
+    CatalogueModel { name: "deepseek-r1-distill-7b", maker: "DeepSeek", params: "7.6 B", quant: "Q4_K_M", size_gb: 4.7, need_gb: 6.8, note: "Thinks out loud; slower, careful." },
+    CatalogueModel { name: "qwen3-1.7b", maker: "Qwen", params: "1.7 B", quant: "Q8_0", size_gb: 1.8, need_gb: 2.4, note: "Runs on the CPU alone, for machines with no GPU." },
+    CatalogueModel { name: "gemma3-12b", maker: "Google", params: "12.2 B", quant: "Q4_K_M", size_gb: 8.1, need_gb: 11.4, note: "Too big for this GPU; spills onto the CPU." },
+];
+
+/// Memory a model may use on the GPU, for sizing the catalogue.
+pub const GPU_VRAM_GB: f32 = 10.0;
+pub const SYSTEM_RAM: &str = "32 GB";
+
+/// Where Get fetches a model from.
+pub const MODEL_SOURCES: &[(&str, &str)] = &[
+    ("Ollama library", "Pulled through Ollama by name; it keeps the files."),
+    ("Hugging Face", "A GGUF file from huggingface.co, saved under ~/.kriko/models."),
+    ("A file on disk", "Point Kriko at a .gguf you already have; nothing downloads."),
+];
+
 /// The machine the local server runs on.
 pub const GPU_NAME: &str = "NVIDIA RTX 3060 Laptop";
 pub const GPU_VRAM_TOTAL: &str = "10.0 GB";
@@ -256,14 +413,68 @@ pub struct BenchRun {
     pub label: &'static str,
     pub took: &'static str,
     pub value: u8,
+    /// The same pass on the benchmark before, for the change.
+    pub before: &'static str,
+    /// Change against that run, percent; negative is faster.
+    pub delta: i8,
 }
 
 pub const BENCH_RUNS: &[BenchRun] = &[
-    BenchRun { label: "Grounding pass", took: "1 min 12", value: 86 },
-    BenchRun { label: "Full check, 3 subjects", took: "3 min 05", value: 62 },
-    BenchRun { label: "Full check, 8 subjects", took: "7 min 41", value: 38 },
-    BenchRun { label: "Claim settling", took: "2 min 18", value: 74 },
-    BenchRun { label: "Local LLM pass", took: "5 min 02", value: 51 },
+    BenchRun { label: "Grounding pass", took: "1 min 12", value: 86, before: "1 min 19", delta: -9 },
+    BenchRun { label: "Full check, 3 subjects", took: "3 min 05", value: 62, before: "3 min 17", delta: -6 },
+    BenchRun { label: "Full check, 8 subjects", took: "7 min 41", value: 38, before: "7 min 22", delta: 4 },
+    BenchRun { label: "Claim settling", took: "2 min 18", value: 74, before: "2 min 21", delta: -2 },
+    BenchRun { label: "Local LLM pass", took: "5 min 02", value: 51, before: "5 min 30", delta: -8 },
+];
+
+/// One stage of a check, as the benchmark times it: its name, what it does,
+/// and its share of a 3-subject full check in seconds.
+pub struct BenchStage {
+    pub name: &'static str,
+    pub what: &'static str,
+    pub secs: f32,
+    pub color: u32,
+}
+
+pub const BENCH_STAGES: &[BenchStage] = &[
+    BenchStage { name: "Read listing", what: "the page through the site adapter", secs: 6.0, color: 0xbfe4ff },
+    BenchStage { name: "Match", what: "identity against the installed packs", secs: 4.0, color: 0x86a3ff },
+    BenchStage { name: "Fetch sources", what: "pages the agents read, from cache or the web", secs: 58.0, color: 0x3a64ff },
+    BenchStage { name: "Agents", what: "the working agents reading and writing", secs: 64.0, color: 0x8f7cff },
+    BenchStage { name: "Local model", what: "grounding each claim against evidence", secs: 41.0, color: 0x46d0a0 },
+    BenchStage { name: "Settle", what: "disputes resolved, claims stored", secs: 12.0, color: 0xf0b45b },
+];
+
+/// The headline numbers: (label, value, unit, change percent, higher is better).
+pub const BENCH_HEADLINE: &[(&str, &str, &str, i8, bool)] = &[
+    ("Full check", "3:05", "min, 3 subjects", -6, false),
+    ("Pages read", "14.2", "per minute", 9, true),
+    ("Local model", "38.5", "tokens / s", 3, true),
+    ("Claims settled", "22", "per minute", -2, true),
+];
+
+/// The full-check time of the last benchmarks, oldest first, in seconds.
+pub const BENCH_HISTORY: &[u16] = &[262, 248, 251, 239, 230, 236, 221, 214, 209, 197, 192, 185];
+pub const BENCH_HISTORY_SPAN: (&str, &str) = ("Aug 2", "today");
+
+/// Each agent's measured pace on this machine:
+/// (index into AGENTS, median answer, tokens per second, claims per run, runs that finished %).
+pub const BENCH_AGENTS: &[(usize, &str, f32, f32, u8)] = &[
+    (0, "4.1 s", 61.0, 9.4, 98),
+    (1, "5.6 s", 48.0, 7.8, 95),
+    (4, "6.9 s", 39.0, 6.1, 91),
+    (5, "3.8 s", 66.0, 4.2, 99),
+    (6, "7.4 s", 35.0, 5.0, 88),
+];
+
+/// What the benchmark measured on: (label, value).
+pub const BENCH_MACHINE: &[(&str, &str)] = &[
+    ("CPU", "Ryzen 7 5800H · 8 cores"),
+    ("GPU", "RTX 3060 Laptop · 10 GB"),
+    ("Memory", "32 GB"),
+    ("Local model", "qwen3-8b · Q4_K_M"),
+    ("Packs", "3 enabled · 1 402 claims"),
+    ("Disk cache", "1.8 GB · 388 pages"),
 ];
 
 // ---- the live actions dock ----
@@ -273,12 +484,14 @@ pub struct DockLane {
     pub agent: usize,
     pub task: &'static str,
     pub progress: u8,
+    /// Which motion the lane's tile makes: what the agent is doing.
+    pub phase: Phase,
 }
 
 pub const DOCK_LANES: &[DockLane] = &[
-    DockLane { agent: 0, task: "Reading rtings.com/buds2-pro", progress: 62 },
-    DockLane { agent: 1, task: "Grounding 3 claims on Buds2 Pro", progress: 38 },
-    DockLane { agent: 4, task: "Waiting for claims to settle", progress: 12 },
+    DockLane { agent: 0, task: "Reading rtings.com/buds2-pro", progress: 62, phase: Phase::Reading },
+    DockLane { agent: 1, task: "Grounding 3 claims on Buds2 Pro", progress: 38, phase: Phase::Thinking },
+    DockLane { agent: 4, task: "Writing 2 settled claims to the store", progress: 12, phase: Phase::Writing },
 ];
 
 /// A question an agent is holding for you, answerable from the dock.
@@ -449,12 +662,13 @@ pub const COMPARE_DRAFTS: &[CompareDraft] = &[
     CompareDraft { name: "Car and phone", slots: &[3, 4] },
 ];
 
-/// Suggested follow-up questions, pressed straight from the table.
+/// Suggested follow-up questions, pressed straight from the table. They
+/// ask what the board knows, never what to buy.
 pub const COMPARE_SUGGESTIONS: &[&str] = &[
-    "Which of these has the fewest serious risks?",
-    "Which one is the cheapest to fix, and why?",
+    "What does each one's knowledge rest on?",
+    "Where do the sources disagree?",
     "What is the single biggest difference between them?",
-    "Which would you buy and why?",
+    "Which claims are settled, and which still open?",
 ];
 
 /// The slots the screen opens with: the earbuds shortlist.
