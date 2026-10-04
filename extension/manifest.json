@@ -57,7 +57,7 @@
     ],
     "web_accessible_resources": [
         {
-            "resources": ["hover_lite/hover_lite.css"],
+            "resources": ["hover_lite/hover_lite.css", "assets/fonts/*.ttf"],
             "matches": ["https://*/*"],
             "use_dynamic_url": true
         }

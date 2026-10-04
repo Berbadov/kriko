@@ -145,6 +145,50 @@ test("a real failure is still shown as one", () => {
   assert.match(p.errorText(), /not reachable/);
 });
 
+test("a failure is said once, in the error box, not again in the status line", () => {
+  const p = loadPanel({ analyzeResponse: { ok: false, error: "Kriko is not reachable (502)." } });
+  p.openPanel();
+  assert.match(p.errorText(), /not reachable/);
+  assert.equal(p.statusText(), "", "the status line is empty while the error box speaks");
+});
+
+// ── queue mode ──────────────────────────────────────────────────────────
+
+test("Add to queue puts this listing's product in the app's research queue", () => {
+  // The queue is filled from the listings themselves: the reader presses the
+  // key on each product they are weighing, and Compare lines them up once an
+  // agent has researched them.
+  const p = loadPanel({ workerResponse: (m) => m.type === "QUEUE_ADD"
+    ? { ok: true, added: true, count: 2, max: 8 } : { ok: true } });
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, lookup_id: "abc123" } });
+  p.click(".lite-queue");
+
+  const ask = p.sent.find((m) => m.type === "QUEUE_ADD");
+  assert.ok(ask, "the panel asked the worker to queue the product");
+  assert.ok(ask.payload.url, "keyed by the listing's address");
+  assert.equal(ask.payload.lookup_id, "abc123", "the stored answer travels with it");
+  assert.ok(ask.payload.name, "under a name the agent can research");
+  const row = p.shadow().querySelector(".lite-queue-row");
+  assert.match(row.textContent, /In the queue/);
+  assert.match(row.textContent, /2 of 8/);
+  assert.ok(p.shadow().querySelector(".lite-queue").disabled, "a second press is not offered");
+});
+
+test("a full queue says so instead of pretending the product was queued", () => {
+  const p = loadPanel({ workerResponse: (m) => m.type === "QUEUE_ADD"
+    ? { ok: false, status: 409, error: "Kriko refused that (the queue holds 8 products)." }
+    : { ok: true } });
+  p.openPanel();
+  p.deliverEntry(ENTRY);
+  p.click(".lite-queue");
+
+  const row = p.shadow().querySelector(".lite-queue-row");
+  assert.equal(row.dataset.phase, "error");
+  assert.match(row.textContent, /queue is full/);
+  assert.equal(p.shadow().querySelector(".lite-queue").disabled, false, "it can be tried again");
+});
+
 // ── the way back to the app ─────────────────────────────────────────────
 
 test("the footer raises the desktop app rather than opening a browser tab", () => {

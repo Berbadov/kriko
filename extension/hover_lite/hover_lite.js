@@ -61,6 +61,7 @@
     errorMsg: null,
     errorCode: null,
     listingMeta: null,         // derived from background metadata response
+    queue: null,               // {url, phase, text}: this page's Add to queue press
     // Typing the name. Panel-local: a search is a question the reader is
     // asking right now, not something the next analysis should remember.
     searchOpen: false,
@@ -168,10 +169,38 @@
   //   * It mutated the host document's `<head>`, from a content script, on a
   //     page we do not own.
   //
-  // The panel's CSS asks for the same stack it always did; with nothing
-  // preloaded it lands on the system face, which is what the reader's other
-  // applications use. Guarded by a test that fails on a remote URL anywhere
-  // in the extension.
+  // The three Kriko faces now ship *inside* the extension (assets/fonts, all
+  // SIL OFL, licences beside them) and are registered from there: the URL is
+  // the extension's own, so nothing leaves the machine and they load offline.
+  // `@font-face` inside a shadow root is ignored by the browser, so the faces
+  // go to `document.fonts` through the FontFace API, which adds no element
+  // to the page's `<head>`. The family names are Kriko's own, so a page that
+  // happens to load DM Sans is never restyled by ours, nor ours by it.
+  // Guarded by a test that fails on a remote URL anywhere in the extension.
+  const FACES = [
+    ["Kriko Display", "BarlowCondensed-600.ttf", "600"],
+    ["Kriko Sans", "DMSans-400.ttf", "400"],
+    ["Kriko Sans", "DMSans-600.ttf", "600"],
+    ["Kriko Mono", "JetBrainsMono-400.ttf", "400"],
+  ];
+  let facesLoaded = false;
+  function loadFaces() {
+    if (facesLoaded) return;
+    facesLoaded = true;
+    if (typeof FontFace !== "function" || !document.fonts) return;
+    for (const [family, file, weight] of FACES) {
+      try {
+        const face = new FontFace(
+          family,
+          `url(${chrome.runtime.getURL("assets/fonts/" + file)})`,
+          { weight, display: "swap" },
+        );
+        face.load().then((loaded) => document.fonts.add(loaded)).catch(() => {});
+      } catch (_) {
+        // A face that will not load leaves the fallback stack in place.
+      }
+    }
+  }
 
   // ─── Helpers ──────────────────────────────────────────────────────────
   function escapeHtml(s) {
@@ -1077,6 +1106,7 @@
     state.closing = false;
     state.visible = true;
 
+    loadFaces();
     hostEl = document.createElement(HOST_TAG);
     hostEl.style.cssText = "all:initial;";
     hostEl.dataset.pipeline = state.pipeline;
@@ -1301,14 +1331,16 @@
 
   // ─── Rendering ────────────────────────────────────────────────────────
   function renderShell() {
-    const dragDots = `<svg class="lite-drag-dots" width="14" height="20" viewBox="0 0 14 20" aria-hidden="true"><g fill="currentColor"><rect x="1" y="2" width="3" height="3"/><rect x="10" y="2" width="3" height="3"/><rect x="1" y="8.5" width="3" height="3"/><rect x="10" y="8.5" width="3" height="3"/><rect x="1" y="15" width="3" height="3"/><rect x="10" y="15" width="3" height="3"/></g></svg>`;
+    // The app's wordmark, inline: no file to fetch and no font to wait for.
+    // The same drawing the desktop app's brand block carries.
+    const wordmark = `<svg class="lite-wordmark" viewBox="0 0 302 100" role="img" aria-label="Kriko"><defs><clipPath id="kriko-cap"><rect x="-30" y="0" width="362" height="100"/></clipPath></defs><g transform="translate(18 0)"><g clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 17.0V83.0M8 50L54 -16M8 50L54 116"/></g><path d="M-12 50H44" stroke="currentColor" stroke-width="5" fill="none"/><rect x="-18" y="36" width="6" height="28" fill="currentColor"/><rect x="42" y="44" width="12" height="12" fill="currentColor"/></g><g transform="translate(84 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 102V8H36L48 20V38L36 50H8M28 50L52 108"/></g><g transform="translate(152 0)" fill="currentColor"><rect x="0" y="0" width="16" height="100"/></g><g transform="translate(180 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 -2V102M8 50L54 -16M8 50L54 116"/></g><g transform="translate(246 0)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M20 8H36L48 20V80L36 92H20L8 80V20Z"/></g></svg>`;
 
+    // The header is the drag handle: the whole brand block moves the panel.
     return `
-      <header class="lite-header">
-        ${dragDots}
+      <header class="lite-header" title="Drag to move">
         <div class="lite-titlebox">
-          <div class="lite-title">Kriko</div>
-          <div class="lite-subtitle">drag to move</div>
+          ${wordmark}
+          <div class="lite-subtitle">local product knowledge</div>
         </div>
         <button type="button" class="lite-iconbtn lite-btn-density"
                 title="Refresh analysis" aria-label="Refresh analysis">
@@ -1419,8 +1451,60 @@
             // the page reads; a second line repeating it is noise (B152.5).
             ? (sameWords(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
             : `<div class="lite-listing-engine" data-unresolved="1">Not recognised; no pack matched this page</div>`}
+        ${renderQueueRow()}
       </div>
     `;
+    const queueButton = slot.querySelector(".lite-queue");
+    if (queueButton) queueButton.addEventListener("click", addToQueue);
+  }
+
+  // Queue mode. The reader lines up the products they are weighing from the
+  // listings themselves; an agent in the app researches them one after
+  // another and Compare lines them up. The state is this page's only: a
+  // queue press on another listing is another product.
+  function queueHere() {
+    return state.queue && state.queue.url === window.location.href ? state.queue : null;
+  }
+
+  function renderQueueRow() {
+    const q = queueHere();
+    const phase = q ? q.phase : "idle";
+    const label = phase === "busy" ? "Queuing…"
+      : phase === "queued" || phase === "already" ? "In the queue"
+        : "Add to queue";
+    const done = phase === "queued" || phase === "already";
+    return `
+      <div class="lite-queue-row" data-phase="${phase}">
+        <button type="button" class="lite-queue" ${phase === "busy" || done ? "disabled" : ""}
+          aria-pressed="${done ? "true" : "false"}">${label}</button>
+        ${q && q.text ? `<span class="lite-queue-note" role="status">${escapeHtml(q.text)}</span>` : ""}
+      </div>`;
+  }
+
+  function addToQueue() {
+    const lm = state.listingMeta || {};
+    const url = window.location.href;
+    state.queue = { url, phase: "busy", text: "" };
+    renderListingHeader();
+    chrome.runtime.sendMessage({ type: "QUEUE_ADD", payload: {
+      url,
+      // the engine's reading of the product first: it is the name the
+      // agent researches under, where the page title is the seller's
+      name: lm.identity_line || lm.title || document.title,
+      lookup_id: (state.result && state.result.lookup_id) || "",
+    } }, (response) => {
+      if (state.queue.url !== url) return;
+      if (chrome.runtime.lastError || !response || !response.ok) {
+        const full = response && response.status === 409;
+        state.queue = { url, phase: "error", text: full
+          ? "The queue is full. Research or remove one in Kriko first."
+          : (response && response.error) || "Kriko is not running. Open the Kriko app, then try again." };
+      } else {
+        state.queue = { url, phase: response.added ? "queued" : "already",
+          text: `${response.added ? "Queued" : "Already queued"} · ${response.count} of ${response.max} in Compare` };
+      }
+      renderListingHeader();
+    });
   }
 
   function renderCriticalAlerts() {
@@ -1757,8 +1841,10 @@
       statusEl.textContent = "";
       statusEl.style.display = "none";
     } else if (state.pipeline === "error") {
-      statusEl.textContent = state.errorMsg || "Analysis failed.";
-      statusEl.style.display = "";
+      // The error box below says it, with its way out beside it; the same
+      // sentence again under the key was the panel saying it twice.
+      statusEl.textContent = "";
+      statusEl.style.display = "none";
     }
   }
 
