@@ -8,7 +8,7 @@ use gpui::{
 };
 
 use crate::app::Kriko;
-use crate::data::Severity;
+use crate::data::{self, Severity};
 use crate::theme::*;
 
 pub(crate) mod about;
@@ -48,6 +48,26 @@ pub fn screen(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 }
 
 // ---- shared building blocks ----
+
+/// A big-number card: eyebrow, display value, mono note. Home's totals and
+/// knowledge's totals share it.
+pub fn total_card(label: &str, value: &str, note: &str) -> Div {
+    card()
+        .flex()
+        .flex_col()
+        .gap(px(8.0))
+        .child(eyebrow(label))
+        .child(
+            div()
+                .font_family(DISPLAY)
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_size(px(64.0))
+                .line_height(px(60.0))
+                .text_color(rgb(INK))
+                .child(value.to_string()),
+        )
+        .child(mono(note, MUTED))
+}
 
 /// Sans title of a settings-style row.
 pub fn row_title(text: &str) -> Div {
@@ -98,7 +118,16 @@ pub fn segmented(
     cx: &mut Context<Kriko>,
     on_pick: impl Fn(&mut Kriko, usize, &mut Context<Kriko>) + Copy + 'static,
 ) -> Div {
-    let id_key = ((current as u64) << 8) | (prev as u64) | (options.len() as u64) << 16;
+    // The thumb's animation id mixes this control's id into the state, so
+    // two segmented controls never share one animation.
+    let mut id_hash = 0u64;
+    for byte in id.bytes() {
+        id_hash = id_hash.wrapping_mul(31).wrapping_add(byte as u64);
+    }
+    let id_key = id_hash.rotate_left(24)
+        | ((current as u64) << 8)
+        | prev as u64
+        | (options.len() as u64) << 16;
     let mut track = segmented_track().child(segmented_thumb(id_key, prev, current, motion));
     for (i, (_, glyph)) in options.iter().enumerate() {
         let listener = cx.listener(move |this, _: &ClickEvent, _w, cx| {
@@ -257,3 +286,18 @@ pub fn stepper(
         )
 }
 
+
+/// A finished check's agent, by the monogram the check stores: its own mark,
+/// still, or the LED letter when no listed agent carries that monogram.
+pub fn agent_by_monogram(m: char) -> Div {
+    match data::AGENTS.iter().position(|a| a.monogram == m) {
+        Some(i) => crate::marks::mark_tile(
+            &format!("mono-{m}"),
+            data::AGENTS[i].mark,
+            crate::marks::Phase::Idle,
+            40.0,
+            false,
+        ),
+        None => agent_tile(letter_rows(m), None),
+    }
+}

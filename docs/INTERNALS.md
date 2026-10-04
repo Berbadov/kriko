@@ -77,6 +77,7 @@ in a document, because a surface nobody knows exists cannot be reasoned about.
 | live | `GET /api/knowledge/clock`, `GET /api/lookup/{lookup_id}/refresh` | What changed in the store, and re-read one past check. |
 | marks | `GET\|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}`, `GET /api/marks/signals` | Author verdicts, pack-keyed, and the research signals they feed. |
 | compare | `GET\|POST /api/compare-drafts`, `PUT\|DELETE /api/compare-drafts/{draft_id}` | Named comparisons of saved checks. App state, never knowledge. |
+| queue | `GET\|POST /api/queue`, `DELETE /api/queue/{queue_id}` | The research queue: products queued from the extension's panel (Add to queue), researched in turn, then compared. One row per listing address; a second press answers `added: false`. App state, never knowledge. |
 | jobs | `POST /api/research`, `POST /api/packs/build`, `POST /api/packs/author`, `POST /api/packs/update`, `GET /api/packs/updates`, `GET /api/jobs`, `GET /api/jobs/{job_id}`, `POST /api/jobs/{job_id}/cancel`, `POST /api/jobs/{job_id}/retry`, `POST /api/jobs/{job_id}/say`, `GET /api/jobs/{job_id}/stream` | SSE polls the row, so a reconnect is safe. |
 | pipeline | `GET /api/pipeline/runs`, `GET /api/pipeline/runs/{run_id}`, `GET /api/pipeline/stream` | What came of a run: sources, kept findings, refusals with their reason. |
 | agenda | `GET /api/agenda`, `GET\|DELETE /api/research-runs`, `GET /api/research-runs/{run_id}` | Computed on read from demand, gaps and thinness. `DELETE` is undo, through `retract_claim`. |
@@ -123,6 +124,7 @@ Uninstalling a pack must not drop history, and history must not move a
 | `site_requests` | Unreadable sites the reader stood on, so "which site next" is answerable. |
 | `site_activation` | The browser's per-site permission verdict. |
 | `compare_drafts` | Named comparisons: which checks, in which order. |
+| `research_queue` | Products queued from the extension, in research order, with the site each came from. |
 | `compare_questions` | The reader's own questions about a comparison, and the answers their agent gave. |
 | `compare_boards` | One comparison's pen marks and typed notes over the table, one JSON document per draft. Cleared when the draft is saved over, because a mark on a column that is gone is a mark about nothing. |
 

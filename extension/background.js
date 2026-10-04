@@ -1696,6 +1696,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // Queue mode: the listing's product joins the app's research queue, for an
+  // agent to research in turn and the compare screen to line up. The page's
+  // address keys it, so a second press answers "already queued".
+  if (request.type === "QUEUE_ADD") {
+    const input = request.payload || {};
+    const url = typeof input.url === "string" ? input.url.slice(0, 2000) : "";
+    if (!url) {
+      sendResponse({ ok: false, error: "This page has no address to queue." });
+      return false;
+    }
+    _postApp("/api/queue", {
+      url,
+      name: String(input.name || "").slice(0, 400),
+      lookup_id: String(input.lookup_id || "").slice(0, 64),
+    })
+      .then((reply) => sendResponse({ ok: true, ...reply }))
+      .catch((error) => sendResponse({
+        ok: false, status: error.status, code: error.code, error: error.message }));
+    return true;
+  }
+
   if (request.type === "CANCEL_JOB") {
     const jobId = request.payload?.job_id;
     if (!jobId) {
