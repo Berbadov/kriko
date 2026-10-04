@@ -4,6 +4,17 @@
 //!
 //! A slice starts empty and `loaded == false`; a screen shows its own
 //! empty state until then, never sample numbers.
+//!
+//! One file per area, so the areas can be worked on side by side:
+//! `history` (History, Home, Browse, Activity), `compare`, `run` (Run, the
+//! dock, Agents), `knowledge` (Overview, Sites, Extension, Settings, About)
+//! and `local` (Local LLM, Benchmark).
+
+pub mod compare;
+pub mod history;
+pub mod knowledge;
+pub mod local;
+pub mod run;
 
 use gpui::Context;
 
@@ -28,6 +39,11 @@ pub struct Health {
 #[derive(Default)]
 pub struct Live {
     pub health: Health,
+    pub history: history::State,
+    pub compare: compare::State,
+    pub run: run::State,
+    pub knowledge: knowledge::State,
+    pub local: local::State,
     /// The last thing that went wrong talking to the engine, for the status
     /// line; cleared by the next success.
     pub problem: Option<String>,
@@ -66,6 +82,11 @@ impl Kriko {
     /// first answers. Each slice lands on its own; none waits on another.
     pub fn refresh_all(&mut self, cx: &mut Context<Self>) {
         self.refresh_health(cx);
+        self.refresh_history(cx);
+        self.refresh_compare(cx);
+        self.refresh_run(cx);
+        self.refresh_knowledge(cx);
+        self.refresh_local(cx);
     }
 
     pub fn refresh_health(&mut self, cx: &mut Context<Self>) {
