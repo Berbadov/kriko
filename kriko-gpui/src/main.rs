@@ -1,11 +1,15 @@
 //! Kriko desktop app. Everything it draws (fonts, icons, sky images) is
 //! embedded in the binary, so the app runs from any working directory.
 
+mod api;
 mod app;
 mod data;
 mod dock;
+mod engine;
+mod live;
 mod marks;
 mod screens;
+mod shell;
 mod theme;
 
 use std::borrow::Cow;
@@ -125,6 +129,11 @@ impl gpui::AssetSource for Assets {
 
 fn main() {
     init_logger();
+    // a second launch raises the first and leaves: one engine per machine
+    if shell::raise_running_instance() {
+        return;
+    }
+    engine::start();
     Application::new().with_assets(Assets).run(|cx: &mut App| {
         register_fonts(
             cx,
@@ -163,7 +172,30 @@ fn main() {
             app_id: Some(SharedString::from("kriko").to_string()),
             ..Default::default()
         };
-        cx.open_window(opts, |_window, cx| cx.new(|cx| Kriko::new(cx)))
-            .expect("kriko window");
+        shell::build_tray();
+        // Quit from anywhere (tray, engine, keyboard) ends the engine first
+        cx.on_app_quit(|_cx| {
+            engine::stop();
+            shell::remove_tray();
+            async {}
+        })
+        .detach();
+        cx.open_window(opts, |window, cx| {
+            shell::remember_window(window);
+            // Window is not Quit: closing hides, the engine keeps serving
+            // the extension, and the tray brings it back or ends it
+            window.on_window_should_close(cx, |_window, cx| {
+                if shell::can_hide() {
+                    shell::hide_window();
+                    false
+                } else {
+                    engine::stop();
+                    cx.quit();
+                    true
+                }
+            });
+            cx.new(|cx| Kriko::new(cx))
+        })
+        .expect("kriko window");
     });
 }

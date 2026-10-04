@@ -11,6 +11,9 @@ use gpui::{
 
 use crate::data;
 use crate::dock;
+use crate::engine;
+use crate::live::Live;
+use crate::shell;
 use crate::screens;
 use crate::theme::*;
 
@@ -363,6 +366,10 @@ pub const BENCH_STEP: f32 = 1.4;
 
 pub struct Kriko {
     pub tab: Tab,
+    /// Where the engine is: starting, answering, or failed with its words.
+    pub engine: engine::Status,
+    /// What the engine said, per area, for the screens to draw.
+    pub live: Live,
     // settings
     pub launch_at_login: bool,
     pub menu_bar_icon: bool,
@@ -487,6 +494,8 @@ impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let mut app = Self {
             tab: Tab::Home,
+            engine: engine::status(),
+            live: Live::default(),
             launch_at_login: true,
             menu_bar_icon: false,
             reduce_motion: false,
@@ -656,6 +665,19 @@ impl Kriko {
             }
             _ => {}
         }
+        // The pulse: the engine's state, the tray, and what the engine asks
+        // of the window, read ten times a second. Each read is a lock and a
+        // channel peek, so the pulse costs nothing while nothing happens.
+        cx.spawn(async move |this, cx| loop {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(100))
+                .await;
+            let alive = this.update(cx, |this, cx| this.pulse(cx)).is_ok();
+            if !alive {
+                break;
+            }
+        })
+        .detach();
         // The needs-you block is not part of the dock's resting state: an
         // agent asks, and only then does it pop in. Simulate one asking.
         cx.spawn(async move |this, cx| {
@@ -703,6 +725,40 @@ impl Kriko {
         })
         .detach();
         app
+    }
+
+    fn pulse(&mut self, cx: &mut Context<Self>) {
+        for action in shell::poll_tray() {
+            match action {
+                shell::TrayAction::Open => shell::show_window(),
+                shell::TrayAction::Quit => Self::quit(cx),
+            }
+        }
+        for event in engine::take_events() {
+            match event {
+                engine::ShellEvent::Focus(_route) => shell::show_window(),
+                engine::ShellEvent::Hide => shell::hide_window(),
+                engine::ShellEvent::Quit => Self::quit(cx),
+            }
+        }
+        let now = engine::status();
+        if now != self.engine {
+            let became_ready = matches!(now, engine::Status::Ready { .. })
+                && !matches!(self.engine, engine::Status::Ready { .. });
+            self.engine = now;
+            if became_ready {
+                self.refresh_all(cx);
+            }
+            cx.notify();
+        }
+    }
+
+    /// Quit Kriko: the engine first (its exit frees the store's lock), then
+    /// the app.
+    pub fn quit(cx: &mut Context<Self>) {
+        engine::stop();
+        shell::remove_tray();
+        cx.quit();
     }
 
     fn input(&self, field: Field) -> &InputState {
@@ -1256,6 +1312,96 @@ impl Kriko {
     /// move itself and the platform caption area gets swallowed. It
     /// carries no brand: the sidebar says kriko once, the page head says
     /// where you are.
+    /// What the window shows until the engine answers, and instead of a
+    /// blank window when it cannot: the engine's own stderr, a retry, and a
+    /// way out.
+    fn boot_screen(&mut self, maximized: bool, cx: &mut Context<Self>) -> Div {
+        let titlebar = self.titlebar(maximized, cx);
+        let motion = !self.reduce_motion;
+        let body = match self.engine.clone() {
+            engine::Status::Failed { title, detail } => div()
+                .flex()
+                .flex_col()
+                .gap(px(16.0))
+                .w_full()
+                .max_w(px(820.0))
+                .child(
+                    div()
+                        .font_family(DISPLAY)
+                        .text_size(px(30.0))
+                        .text_color(rgb(DANGER))
+                        .child(title),
+                )
+                .child(div().text_size(px(15.0)).text_color(rgb(MUTED)).child(
+                    "This is what the engine said. Try again, or quit and start Kriko from the Start menu.",
+                ))
+                .child(
+                    well()
+                        .id("boot-stderr")
+                        .max_h(px(360.0))
+                        .overflow_y_scroll()
+                        .p(px(16.0))
+                        .font_family(MONO)
+                        .text_size(px(12.0))
+                        .text_color(rgb(INK))
+                        .child(detail),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .gap(px(12.0))
+                        .child(key("boot-retry", "Try again").on_click(cx.listener(
+                            |this, _: &ClickEvent, _w, cx| {
+                                engine::restart();
+                                this.engine = engine::status();
+                                cx.notify();
+                            },
+                        )))
+                        .child(danger("boot-quit", "Quit Kriko").on_click(cx.listener(
+                            |_this, _: &ClickEvent, _w, cx| Self::quit(cx),
+                        ))),
+                ),
+            engine::Status::Starting(said) | engine::Status::Ready { base: said, .. } => div()
+                .flex()
+                .flex_col()
+                .items_center()
+                .gap(px(18.0))
+                .child(led_ripple("boot-ripple", motion))
+                .child(
+                    div()
+                        .font_family(DISPLAY)
+                        .text_size(px(30.0))
+                        .text_color(rgb(INK))
+                        .child("Starting Kriko"),
+                )
+                .child(
+                    div()
+                        .font_family(MONO)
+                        .text_size(px(12.0))
+                        .text_color(rgb(DIM))
+                        .child(said),
+                ),
+        };
+        div()
+            .size_full()
+            .relative()
+            .flex()
+            .flex_col()
+            .bg(rgb(GROUND))
+            .text_color(rgb(INK))
+            .font_family(SANS)
+            .child(
+                div()
+                    .flex_1()
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .p(px(40.0))
+                    .child(body),
+            )
+            .child(titlebar)
+    }
+
     fn titlebar(&self, maximized: bool, cx: &mut Context<Self>) -> Stateful<Div> {
         let toggle_dock = cx.listener(|this, _: &ClickEvent, _w, cx| {
             this.dock_open = !this.dock_open;
@@ -1328,6 +1474,10 @@ impl Kriko {
 
 impl Render for Kriko {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if !matches!(self.engine, engine::Status::Ready { .. }) {
+            let maximized = window.is_maximized();
+            return self.boot_screen(maximized, cx).into_any_element();
+        }
         let tab = self.tab;
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
@@ -1407,5 +1557,6 @@ impl Render for Kriko {
                     .child(titlebar),
             )
             .when(self.dock_open, |row| row.child(dock))
+            .into_any_element()
     }
 }

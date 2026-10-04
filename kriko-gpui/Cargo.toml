@@ -17,6 +17,11 @@ winresource = "0.1"
 [dependencies]
 gpui = "0.2.2"
 log = "0.4"
+serde_json = "1"
+
+[target.'cfg(windows)'.dependencies]
+raw-window-handle = "0.6"
+tray-icon = { version = "0.24", default-features = false }
 
 # cargo-wix reads these for the MSI's property table.
 [package.metadata.wix]
