@@ -2,50 +2,13 @@
 //! The server card, the model table with its parameters and status icons,
 //! the tuning card, the GPU memory card, and the one-tap model test.
 
-use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Styled, Window};
+use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
 use crate::app::{Field, Kriko};
 use crate::data;
 use crate::screens::{mono, row_desc, row_title, stepper, trust_icon};
+use crate::marks::{mark_tile, Phase};
 use crate::theme::*;
-
-/// The pale frost box on the hero: the one-tap model test.
-pub fn frost_test(cx: &mut Context<Kriko>) -> Div {
-    let test = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.run_local_test(cx);
-    });
-    frost()
-        .absolute()
-        .bottom(px(24.0))
-        .left(px(40.0))
-        .min_w(px(340.0))
-        .flex()
-        .items_center()
-        .justify_between()
-        .gap(px(20.0))
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(2.0))
-                .child(
-                    div()
-                        .font_family(DISPLAY)
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(22.0))
-                        .text_color(rgb(0x0a0e1a))
-                        .child("TEST THE MODEL"),
-                )
-                .child(
-                    div()
-                        .font_family(SANS)
-                        .text_size(px(13.0))
-                        .text_color(rgb(0x3a4156))
-                        .child("One grounding pass, on this machine, offline."),
-                ),
-        )
-        .child(key("local-test", "Test").on_click(test))
-}
 
 /// One settings-style row: title + description left, a control right.
 fn row(title: &str, desc: &str, control: gpui::AnyElement) -> Div {
@@ -81,6 +44,457 @@ fn switch_row(
         desc,
         switch_anim(id, on, motion).on_click(listener).into_any_element(),
     )
+}
+
+// ---- the guided setup: a runtime, a model, a test ----
+
+/// One cell of the three-step strip: its number (or a check once done),
+/// what the step is, and what it settled on.
+fn step_cell(n: usize, title: &str, value: String, done: bool, current: bool) -> Div {
+    let glyph: gpui::AnyElement = if done {
+        led_matrix(&CHECK5, ICE, 3.0, 1.0)
+    } else {
+        div()
+            .font_family(MONO)
+            .text_size(px(13.0))
+            .text_color(rgb(if current { INK } else { DIM }))
+            .child(n.to_string())
+            .into_any_element()
+    };
+    let cell = if current { well() } else { div() };
+    cell.flex_1()
+        .min_w(px(180.0))
+        .p(px(12.0))
+        .rounded(px(12.0))
+        .flex()
+        .items_center()
+        .gap(px(12.0))
+        .when(current, |d| d.border_color(rgb(BRAND_LOW)))
+        .child(
+            div()
+                .size(px(28.0))
+                .flex_none()
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(px(8.0))
+                .border_1()
+                .border_color(rgb(if done || current { BRAND_LOW } else { BEZEL_HI }))
+                .child(glyph),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(2.0))
+                .min_w(px(0.0))
+                .child(mono(&title.to_uppercase(), if current { ICE } else { DIM }))
+                .child(
+                    div()
+                        .font_family(SANS)
+                        .text_size(px(14.0))
+                        .text_color(rgb(if done || current { INK } else { MUTED }))
+                        .child(value),
+                ),
+        )
+}
+
+/// A small picked/unpicked pill, for the model source.
+fn pill(id: impl Into<gpui::ElementId>, label: &str, picked: bool) -> gpui::Stateful<Div> {
+    div()
+        .id(id)
+        .h(px(34.0))
+        .px(px(14.0))
+        .flex()
+        .items_center()
+        .rounded(px(10.0))
+        .font_family(MONO)
+        .text_size(px(12.0))
+        .cursor_pointer()
+        .text_color(rgb(if picked { ICE } else { MUTED }))
+        .when(picked, |d| {
+            d.bg(rgb(WELL)).border_1().border_color(rgba(BORDER_CONTROL))
+        })
+        .hover(|s| s.text_color(rgb(INK)))
+        .child(label.to_uppercase())
+}
+
+/// The catalogue model that fits this GPU with the most parameters.
+fn best_fit() -> Option<usize> {
+    data::CATALOGUE
+        .iter()
+        .enumerate()
+        .filter(|(_, m)| m.need_gb <= data::GPU_VRAM_GB)
+        .max_by(|a, b| a.1.need_gb.total_cmp(&b.1.need_gb))
+        .map(|(i, _)| i)
+}
+
+fn setup(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
+    let motion = !app.reduce_motion;
+    let rt = app.local_runtime;
+    let runtime_ready = app.runtime_state[rt] == data::RuntimeState::Running;
+    let model_name = app
+        .catalogue_loaded
+        .map(|i| data::CATALOGUE[i].name)
+        .or_else(|| {
+            app.model_loaded
+                .iter()
+                .position(|l| *l)
+                .map(|i| data::MODELS[i].name)
+        });
+    let tested = app.local_test == 2;
+    let current = if !runtime_ready {
+        0
+    } else if model_name.is_none() {
+        1
+    } else if !tested {
+        2
+    } else {
+        3
+    };
+    let steps = div()
+        .flex()
+        .gap(px(8.0))
+        .flex_wrap()
+        .child(step_cell(
+            1,
+            "Runtime",
+            if runtime_ready {
+                format!("{}, running", data::RUNTIMES[rt].name)
+            } else {
+                "Pick what serves the model".to_string()
+            },
+            runtime_ready,
+            current == 0,
+        ))
+        .child(step_cell(
+            2,
+            "Model",
+            model_name
+                .map(|n| format!("{n}, loaded"))
+                .unwrap_or_else(|| "Get one sized to this machine".to_string()),
+            model_name.is_some(),
+            current == 1,
+        ))
+        .child(step_cell(
+            3,
+            "Test",
+            match app.local_test {
+                2 => "Passed, offline".to_string(),
+                1 => "Grounding pass in flight".to_string(),
+                _ => "One pass proves it works".to_string(),
+            },
+            tested,
+            current == 2,
+        ));
+    let guide = card()
+        .flex()
+        .flex_col()
+        .gap(px(12.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(12.0))
+                .child(eyebrow("Set up a local model"))
+                .child(if current == 3 {
+                    tag("local-setup-done", TagState::Done, "Ready", motion)
+                } else if current == 2 && app.local_test == 0 {
+                    // the last step is one key: the grounding pass itself
+                    let test = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                        this.run_local_test(cx);
+                    });
+                    div().child(key("local-setup-test", "Test the model").on_click(test))
+                } else {
+                    tag(
+                        format!("local-setup-step-{current}"),
+                        TagState::Live,
+                        &format!("Step {} of 3", current + 1),
+                        motion,
+                    )
+                }),
+        )
+        .child(row_desc(
+            "Three steps, all on this computer. Kriko finds what is already \
+             installed; anything missing installs from here.",
+        ))
+        .child(steps);
+
+    // ---- runtimes ----
+    let mut runtimes = card().flex().flex_col();
+    runtimes = runtimes
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(12.0))
+                .pb(px(4.0))
+                .child(eyebrow("1 · Runtime"))
+                .child(mono("found on this machine", DIM)),
+        )
+        .child(hairline());
+    for (i, r) in data::RUNTIMES.iter().enumerate() {
+        let state = app.runtime_state[i];
+        let installing = app.runtime_install.filter(|(j, _)| *j == i).map(|(_, p)| p);
+        let in_use = i == rt && state == data::RuntimeState::Running;
+        let phase = if installing.is_some() {
+            Phase::Writing
+        } else if state == data::RuntimeState::Missing {
+            Phase::Off
+        } else {
+            Phase::Idle
+        };
+        let (tag_state, tag_label) = match state {
+            data::RuntimeState::Running => (TagState::Live, "Running"),
+            data::RuntimeState::Installed => (TagState::Done, "Installed"),
+            data::RuntimeState::Missing => (TagState::Queue, "Not found"),
+        };
+        let install = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.install_runtime(i, cx);
+        });
+        let use_it = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.use_runtime(i, cx);
+        });
+        let action: gpui::AnyElement = if in_use {
+            tag(format!("rt-inuse-{i}"), TagState::Live, "In use", motion).into_any_element()
+        } else if installing.is_some() {
+            mono("installing", ICE).into_any_element()
+        } else if state == data::RuntimeState::Missing {
+            key(("rt-install", i), "Install").on_click(install).into_any_element()
+        } else {
+            ghost(("rt-use", i), "Use").on_click(use_it).into_any_element()
+        };
+        let mut body = div()
+            .flex_1()
+            .min_w(px(0.0))
+            .flex()
+            .flex_col()
+            .gap(px(4.0))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(10.0))
+                    .flex_wrap()
+                    .child(row_title(r.name))
+                    .child(tag(format!("rt-state-{i}-{tag_label}"), tag_state, tag_label, motion))
+                    .when(i == 0, |d| d.child(chip("No install"))),
+            )
+            .child(row_desc(r.detail))
+            .child(mono(
+                &if state == data::RuntimeState::Missing {
+                    r.install.to_string()
+                } else {
+                    format!("127.0.0.1:{}", r.port)
+                },
+                DIM,
+            ));
+        if let Some(p) = installing {
+            body = body.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(10.0))
+                    .child(meter_live(format!("rt-meter-{i}"), p, 20, true, motion).max_w(px(320.0)))
+                    .child(mono(&format!("{:.0}%", p.min(100.0)), INK_2)),
+            );
+        }
+        runtimes = runtimes.child(
+            div()
+                .py(px(12.0))
+                .px(px(8.0))
+                .rounded(px(12.0))
+                .when(in_use, |d| d.bg(rgba(GLASS_1)))
+                .flex()
+                .items_center()
+                .gap(px(16.0))
+                .child(mark_tile(&format!("rt-tile-{i}"), r.mark, phase, 40.0, motion))
+                .child(body)
+                .child(div().flex_none().child(action)),
+        );
+        if i + 1 < data::RUNTIMES.len() {
+            runtimes = runtimes.child(hairline());
+        }
+    }
+
+    // ---- the model catalogue, sized to this machine ----
+    let source = app.local_source.min(data::MODEL_SOURCES.len() - 1);
+    let mut sources = div().flex().items_center().gap(px(6.0)).flex_wrap();
+    for (si, (label, _)) in data::MODEL_SOURCES.iter().enumerate() {
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.local_source_prev = this.local_source;
+            this.local_source = si;
+            cx.notify();
+        });
+        sources = sources.child(pill(("local-source", si), label, si == source).on_click(pick));
+    }
+    let best = best_fit();
+    let mut catalogue = card().flex().flex_col();
+    catalogue = catalogue
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(12.0))
+                .pb(px(4.0))
+                .flex_wrap()
+                .child(eyebrow("2 · Get a model"))
+                .child(chip(&format!(
+                    "{} · {:.0} GB VRAM · {} RAM",
+                    data::GPU_NAME,
+                    data::GPU_VRAM_GB,
+                    data::SYSTEM_RAM
+                ))),
+        )
+        .child(
+            div()
+                .py(px(8.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(16.0))
+                .flex_wrap()
+                .child(sources)
+                .child(row_desc(data::MODEL_SOURCES[source].1)),
+        )
+        .child(hairline());
+    if source == 2 {
+        catalogue = catalogue.child(
+            div()
+                .py(px(16.0))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(24.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(2.0))
+                        .child(row_title("Use a .gguf you already have"))
+                        .child(row_desc(
+                            "Kriko reads it in place and sizes it against this GPU before loading.",
+                        )),
+                )
+                .child(key("local-pick-file", "Choose file")),
+        );
+    } else {
+        for (i, m) in data::CATALOGUE.iter().enumerate() {
+            let fits = m.need_gb <= data::GPU_VRAM_GB;
+            let progress = app.pull_progress[i];
+            let on_disk = app.pulled[i];
+            let loaded = app.catalogue_loaded == Some(i);
+            let get = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.pull_model(i, cx);
+            });
+            let load = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                if this.catalogue_loaded == Some(i) {
+                    this.catalogue_loaded = None;
+                } else {
+                    this.catalogue_loaded = Some(i);
+                    // one model holds the memory: the on-disk ones step aside
+                    for l in this.model_loaded.iter_mut() {
+                        *l = false;
+                    }
+                }
+                this.local_test = 0;
+                cx.notify();
+            });
+            let right: gpui::AnyElement = if let Some(p) = progress {
+                let got = m.size_gb * p.min(100.0) / 100.0;
+                div()
+                    .w(px(300.0))
+                    .flex()
+                    .flex_col()
+                    .gap(px(6.0))
+                    .child(meter_live(format!("pull-meter-{i}"), p, 20, true, motion))
+                    .child(mono(
+                        &format!(
+                            "{got:.1} / {:.1} GB · {:.0} MB/s",
+                            m.size_gb,
+                            crate::app::PULL_GBPS * 1000.0
+                        ),
+                        INK_2,
+                    ))
+                    .into_any_element()
+            } else if on_disk {
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(12.0))
+                    .child(mono(if loaded { "loaded" } else { "on disk" }, if loaded { ICE } else { MUTED }))
+                    .child(switch_anim(("pull-load", i), loaded, motion).on_click(load))
+                    .into_any_element()
+            } else {
+                key(("pull-get", i), &format!("Get · {:.1} GB", m.size_gb))
+                    .on_click(get)
+                    .into_any_element()
+            };
+            catalogue = catalogue.child(
+                div()
+                    .py(px(14.0))
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(20.0))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .flex()
+                            .flex_col()
+                            .gap(px(4.0))
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(10.0))
+                                    .flex_wrap()
+                                    .child(row_title(m.name))
+                                    .child(mono(m.maker, DIM))
+                                    .when(best == Some(i), |d| {
+                                        d.child(tag(format!("pull-best-{i}"), TagState::Live, "Best fit", motion))
+                                    })
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .items_center()
+                                            .gap(px(6.0))
+                                            .child(trust_icon(Some(fits)))
+                                            .child(mono(
+                                                &format!(
+                                                    "needs {:.1} of {:.0} GB",
+                                                    m.need_gb,
+                                                    data::GPU_VRAM_GB
+                                                ),
+                                                if fits { MUTED } else { DANGER },
+                                            )),
+                                    ),
+                            )
+                            .child(mono(
+                                &format!("{} params · {}", m.params, m.quant),
+                                MUTED,
+                            ))
+                            .child(row_desc(m.note)),
+                    )
+                    .child(div().flex_none().child(right)),
+            );
+            if i + 1 < data::CATALOGUE.len() {
+                catalogue = catalogue.child(hairline());
+            }
+        }
+    }
+
+    div()
+        .flex()
+        .flex_col()
+        .gap(px(24.0))
+        .child(guide)
+        .child(runtimes)
+        .child(catalogue)
 }
 
 pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
@@ -135,12 +549,11 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .items_center()
                 .justify_between()
                 .gap(px(12.0))
-                .child(eyebrow("Local machine"))
-                .child(tag(TagState::Live, "Live", motion)),
+                .child(eyebrow("Already running a server?"))
+                .child(tag("local-live", TagState::Live, "Live", motion)),
         )
         .child(row_desc(
-            "An LLM running on this computer reads and researches for Kriko, \
-             at no cost and with no key.",
+            "Point Kriko at it by hand. The setup above fills this in for you.",
         ))
         .child(
             div()
@@ -275,7 +688,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                                 .flex_wrap()
                                 .child(row_title(model.name))
                                 .when(loaded, |d| {
-                                    d.child(tag(TagState::Live, "Loaded", motion))
+                                    d.child(tag(format!("local-model-{i}"), TagState::Live, "Loaded", motion))
                                 })
                                 .child(
                                     div()
@@ -462,7 +875,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                         .child(row_title("Offline only"))
                         .child(row_desc("When a local model is loaded, no claim leaves this machine.")),
                 )
-                .child(tag(TagState::Done, "Guaranteed", motion)),
+                .child(tag("local-guaranteed", TagState::Done, "Guaranteed", motion)),
         );
 
     let run_test = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -492,8 +905,11 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                     .flex()
                     .items_center()
                     .gap(px(12.0))
-                    .child(tag(TagState::Live, "Grounding pass in flight", motion))
-                    .child(meter_live(62.0, 20, true, motion).max_w(px(320.0))),
+                    .child(tag("local-grounding", TagState::Live, "Grounding pass in flight", motion))
+                    .child(
+                        meter_live("local-ground-meter", 62.0, 20, true, motion)
+                            .max_w(px(320.0)),
+                    ),
             )
             .child(row_desc("The model is reading a stored page and grounding its claims offline.")),
         _ => div()
@@ -505,7 +921,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                     .flex()
                     .items_center()
                     .gap(px(12.0))
-                    .child(tag(TagState::Done, "Passed", motion))
+                    .child(tag("local-passed", TagState::Done, "Passed", motion))
                     .child(ghost("local-test-again", "Run again").on_click(run_test)),
             )
             .children(
@@ -535,10 +951,12 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         .child(eyebrow("Model test"))
         .child(test_body);
 
+    let setup = setup(app, cx);
     div()
         .flex()
         .flex_col()
         .gap(px(24.0))
+        .child(setup)
         .child(server)
         .child(models)
         .child(

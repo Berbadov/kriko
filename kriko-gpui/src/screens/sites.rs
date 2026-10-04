@@ -75,7 +75,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             )
             .child(div().w(px(120.0)).child(mono(&pages.to_string(), INK_2)))
             .child(div().w(px(120.0)).child(mono(&claims.to_string(), INK_2)))
-            .child(div().w(px(140.0)).child(tag(trust, label, motion)));
+            .child(div().w(px(140.0)).child(tag(format!("sites-{host}"), trust, label, motion)));
         table = table.child(row);
         if count < total_rows {
             table = table.child(hairline());

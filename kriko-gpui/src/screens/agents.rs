@@ -7,6 +7,7 @@ use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, S
 use crate::app::Kriko;
 use crate::data;
 use crate::screens::{mono, row_desc, row_title, th};
+use crate::marks::{mark_tile, phase_beat};
 use crate::theme::*;
 
 pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
@@ -60,14 +61,24 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                     .flex()
                     .items_center()
                     .gap(px(12.0))
-                    .child(agent_tile(letter_rows(agent.monogram), None))
+                    .child(mark_tile(
+                        &format!("agents-row-tile-{i}"),
+                        agent.mark,
+                        data::agent_phase(i, allowed),
+                        40.0,
+                        motion,
+                    ))
                     .child(
                         div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .pr(px(10.0))
                             .flex()
                             .flex_col()
                             .gap(px(2.0))
                             .child(
                                 div()
+                                    .truncate()
                                     .font_family(SANS)
                                     .font_weight(FontWeight::SEMIBOLD)
                                     .text_size(px(15.0))
@@ -77,7 +88,12 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                             .child(mono(agent.kind, MUTED)),
                     ),
             )
-            .child(div().w(px(120.0)).flex().child(tag(agent.state, agent.state_label, motion)))
+            .child(
+                div()
+                    .w(px(120.0))
+                    .flex()
+                    .child(tag(format!("agents-row-{i}"), agent.state, agent.state_label, motion)),
+            )
             .child(div().w(px(96.0)).child(mono(agent.latency, INK_2)))
             .child(div().w(px(104.0)).child(mono(agent.last_seen, INK_2)))
             .child(div().w(px(72.0)).child(mono(&agent.runs.to_string(), INK_2)))
@@ -147,6 +163,8 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                     .gap(px(16.0))
                     .child(
                         div()
+                            .flex_1()
+                            .min_w(px(0.0))
                             .flex()
                             .flex_col()
                             .gap(px(2.0))
@@ -166,15 +184,26 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
-                .child(agent_tile(letter_rows(agent.monogram), None))
+                .gap(px(16.0))
+                .child(mark_tile(
+                    &format!("agents-detail-tile-{selected}"),
+                    agent.mark,
+                    data::agent_phase(selected, allowed),
+                    72.0,
+                    motion,
+                ))
                 .child(
                     div()
                         .flex()
                         .flex_col()
-                        .gap(px(2.0))
+                        .gap(px(4.0))
                         .child(row_title(agent.name))
-                        .child(mono(agent.kind, MUTED)),
+                        .child(mono(agent.kind, MUTED))
+                        .child(phase_beat(
+                            &format!("agents-detail-beat-{selected}"),
+                            data::agent_phase(selected, allowed),
+                            motion,
+                        )),
                 ),
         )
         .child(
@@ -182,7 +211,7 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                 .flex()
                 .items_center()
                 .gap(px(10.0))
-                .child(tag(agent.state, agent.state_label, motion))
+                .child(tag("agents-detail", agent.state, agent.state_label, motion))
                 .child(chip(&format!("mcp :{}", agent.port))),
         )
         .child(hairline())
@@ -226,6 +255,8 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                 .gap(px(16.0))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(2.0))
@@ -245,7 +276,12 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                 .items_center()
                 .gap(px(10.0))
                 .child(ghost("agent-reconnect", "Reconnect").on_click(reconnect))
-                .child(row_desc("Re-reads the MCP handshake for this agent.")),
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .child(row_desc("Re-reads the MCP handshake for this agent.")),
+                ),
         );
 
     div()

@@ -203,8 +203,13 @@ def test_the_shipped_list_matches_what_the_manifest_actually_references(tmp_path
 
     client = _client(tmp_path)
     client.post("/api/extension/stage")
+    staged = tmp_path / "extension"
+    # A web-accessible entry may be a glob (the bundled fonts are
+    # `assets/fonts/*.ttf`); a glob is carried when it matches at least one
+    # staged file, so a pattern that matches nothing still fails here.
     missing = [
-        path for path in sorted(referenced) if not (tmp_path / "extension" / path).exists()
+        path for path in sorted(referenced)
+        if not (any(staged.glob(path)) if "*" in path else (staged / path).exists())
     ]
     assert missing == [], (
         f"manifest.json references {missing}, which app.extension.SHIPPED does "

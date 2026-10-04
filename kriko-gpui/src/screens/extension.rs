@@ -67,7 +67,7 @@ pub fn extension(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .flex()
                 .flex_col()
                 .gap(px(10.0))
-                .child(tag(TagState::Live, "Linked", motion))
+                .child(tag("extension-linked", TagState::Live, "Linked", motion))
                 .child(row_desc("The browser extension is paired with this install. Pages you send land in Knowledge."))
                 .into_any_element()
         } else {
