@@ -3,12 +3,12 @@
 //! input, verdict, keycap, badge). Everything uses only primitives GPUI has:
 //! fills, gradients, 1px borders, outer box shadows, images, SVG alpha masks.
 //! There is no backdrop blur and no inset shadow, so "wells" are a darker fill
-//! plus a hairline ring, and "frost" is a translucent fill over the sky image.
+//! plus a hairline ring, and "frost" is a translucent fill over the hero.
 
 use gpui::{
-    div, img, linear_color_stop, linear_gradient, point, px, rgb, rgba, svg, prelude::*, Animation,
-    AnimationExt, BoxShadow, Div, FontWeight, Hsla, ObjectFit, SharedString, Stateful, StyledImage,
-    Svg, TextAlign,
+    div, img, linear_color_stop, linear_gradient, point, px, rgb, rgba, relative, svg, prelude::*,
+    Animation, AnimationExt, BoxShadow, Div, FontWeight, Hsla, ObjectFit, SharedString, Stateful,
+    Styled, Svg, TextAlign,
 };
 
 // ---- colour tokens (match tokens.json / the screenshots) ----
@@ -188,6 +188,7 @@ pub fn well() -> Div {
 }
 
 /// Pale frosted card that floats over a hero image (the one light surface).
+#[allow(dead_code)] // a design-system surface, kept for the next hero that needs it
 pub fn frost() -> Div {
     div()
         .bg(rgba(FROST))
@@ -224,10 +225,56 @@ pub fn eyebrow(label: &str) -> Div {
         .child(label.to_uppercase())
 }
 
-/// The hero band: the dithered sky PNG fills the box and fades into GROUND.
-/// Add children (the page head) after calling.
-pub fn hero(sky_path: impl Into<SharedString>, height: f32) -> Div {
-    let sky: SharedString = sky_path.into();
+// ---- the sky ----
+
+/// Which sky a hero carries. The dithered band is the identity; under it sits
+/// a matching gradient, so the fades at both edges stay smooth and the
+/// colour never runs out where the image ends.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Sky {
+    /// Home and About: the full sky, brightest.
+    Bright,
+    /// Every working tab: the same sky in the evening.
+    Dim,
+    /// The Local LLM tab: wide and calm.
+    Wide,
+}
+
+impl Sky {
+    /// The vertical base of the sky, two stops of one gradient.
+    fn base(self) -> (u32, u32) {
+        match self {
+            Sky::Bright => (0x0a1130, 0x2144bf),
+            Sky::Dim => (0x060a1c, 0x11234e),
+            Sky::Wide => (0x060a1c, 0x14264f),
+        }
+    }
+
+    /// How much the horizon glows.
+    fn glow(self) -> f32 {
+        match self {
+            Sky::Bright => 0.16,
+            Sky::Dim => 0.07,
+            Sky::Wide => 0.09,
+        }
+    }
+
+    /// The dithered sky band each hero carries.
+    fn image(self) -> &'static str {
+        match self {
+            Sky::Bright => "sky-hero.png",
+            Sky::Dim => "sky-dim.png",
+            Sky::Wide => "sky-wide.png",
+        }
+    }
+}
+
+/// The hero band: the dithered sky image over its gradient base, dissolving
+/// into the ground where the content begins. The sky runs to the top of the
+/// window — the titlebar floats on it. Add children (the page head) after
+/// calling.
+pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
+    let (top, bottom) = sky.base();
     div()
         .relative()
         .w_full()
@@ -235,13 +282,79 @@ pub fn hero(sky_path: impl Into<SharedString>, height: f32) -> Div {
         .overflow_hidden()
         .bg(rgb(GROUND))
         .child(
-            img(embedded(sky))
+            div().absolute().top_0().left_0().size_full().bg(linear_gradient(
+                180.0,
+                linear_color_stop(hsla(top), 0.0),
+                linear_color_stop(hsla(bottom), 1.0),
+            )),
+        )
+        .child(
+            img(embedded(sky.image().into()))
                 .absolute()
                 .top_0()
                 .left_0()
                 .size_full()
                 .object_fit(ObjectFit::Cover),
         )
+        .child(
+            div()
+                .absolute()
+                .bottom_0()
+                .left_0()
+                .w_full()
+                .h(relative(0.55))
+                .bg(linear_gradient(
+                    180.0,
+                    linear_color_stop(Hsla { a: 0.0, ..hsla(ICE) }, 0.0),
+                    linear_color_stop(Hsla { a: sky.glow(), ..hsla(ICE) }, 1.0),
+                )),
+        )
+        .child(sky_veil(motion))
+        .child(
+            div()
+                .absolute()
+                .bottom_0()
+                .left_0()
+                .w_full()
+                .h(px(150.0))
+                .bg(linear_gradient(
+                    180.0,
+                    linear_color_stop(Hsla { a: 0.0, ..hsla(GROUND) }, 0.0),
+                    linear_color_stop(hsla(GROUND), 1.0),
+                )),
+        )
+}
+
+/// A translucent brand wash over the sky that slowly breathes, so the hero
+/// feels alive without anything moving in it. Still (dimmed) without motion.
+fn sky_veil(motion: bool) -> gpui::AnyElement {
+    let veil = div().absolute().top_0().left_0().size_full().bg(linear_gradient(
+        90.0,
+        linear_color_stop(
+            Hsla {
+                a: 0.00,
+                ..hsla(BRAND)
+            },
+            0.0,
+        ),
+        linear_color_stop(
+            Hsla {
+                a: 0.10,
+                ..hsla(BRAND)
+            },
+            1.0,
+        ),
+    ));
+    if motion {
+        veil.with_animation(
+            "sky-breath",
+            Animation::new(std::time::Duration::from_secs(14)).repeat(),
+            |el, t| el.opacity(0.55 + 0.45 * (std::f32::consts::PI * t).sin()),
+        )
+        .into_any_element()
+    } else {
+        veil.opacity(0.6).into_any_element()
+    }
 }
 
 /// The img source that reads from the embedded AssetSource. A bare string
@@ -250,7 +363,8 @@ pub fn embedded(path: SharedString) -> gpui::ImageSource {
     gpui::ImageSource::Resource(gpui::Resource::Embedded(path))
 }
 
-/// Page head over the hero: mono crumb, display title, one lead line.
+/// Page head over the hero: mono crumb, display title, one lead line. It
+/// starts below the floating titlebar, in the sky.
 pub fn page_head(crumb: &str, title: &str, lead: &str) -> Div {
     div()
         .absolute()
@@ -259,7 +373,7 @@ pub fn page_head(crumb: &str, title: &str, lead: &str) -> Div {
         .w_full()
         .h_full()
         .px(px(40.0))
-        .pt(px(22.0))
+        .pt(px(60.0))
         .flex()
         .flex_col()
         .child(
@@ -298,7 +412,11 @@ pub fn page_head(crumb: &str, title: &str, lead: &str) -> Div {
 
 // ---- the merged window top bar ----
 
+/// The sidebar's width. The titlebar floats over everything to its right.
+pub const SIDEBAR_W: f32 = 248.0;
+
 /// One window-control button for the merged titlebar. `close` hovers red.
+/// Resting state is a visible well; it is a control, not a ghost.
 pub fn titlebar_button(
     id: impl Into<gpui::ElementId>,
     icon_name: &str,
@@ -316,28 +434,32 @@ pub fn titlebar_button(
         .bg(rgba(GLASS_1))
         .border_1()
         .border_color(rgba(HAIRLINE))
-        .child(icon(icon_name, 14.0).text_color(rgb(if close {
-            DANGER
-        } else {
-            MUTED
-        })))
-        .hover(|s| s.bg(if close { rgba(DANGER_WASH) } else { rgba(GLASS_2) }))
+        .child(icon(icon_name, 14.0).text_color(rgb(INK_2)))
+        .hover(|s| {
+            s.bg(if close {
+                rgba(DANGER_WASH)
+            } else {
+                rgba(GLASS_2)
+            })
+            .text_color(rgb(if close { DANGER } else { INK }))
+        })
 }
 
-/// The merged titlebar strip. The caller passes the maximized state (for the
-/// restore/maximize icon) and appends nothing else: children are set inside.
+/// The floating top bar: crumb and window controls over the sky, spanning the
+/// content column. It paints nothing — the hero runs behind it, so the sky
+/// is the bar.
 pub fn titlebar() -> Stateful<Div> {
     div()
         .id("kriko-titlebar")
+        .absolute()
+        .top_0()
+        .left_0()
+        .right_0()
         .h(px(40.0))
-        .flex_none()
         .flex()
         .items_center()
         .px(px(12.0))
         .gap(px(12.0))
-        .bg(rgb(SURFACE_1))
-        .border_b_1()
-        .border_color(rgba(HAIRLINE))
 }
 
 // ---- controls ----
@@ -346,6 +468,7 @@ pub fn titlebar() -> Stateful<Div> {
 pub fn key(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
+        .flex_none()
         .h(px(44.0))
         .px(px(24.0))
         .flex()
@@ -375,6 +498,7 @@ pub fn key(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
 pub fn ghost(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
+        .flex_none()
         .h(px(44.0))
         .px(px(24.0))
         .flex()
@@ -396,6 +520,7 @@ pub fn ghost(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
 pub fn danger(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
+        .flex_none()
         .h(px(44.0))
         .px(px(24.0))
         .flex()
@@ -498,13 +623,16 @@ pub fn keycap(text: &str) -> Div {
 
 /// A dot-matrix: rows of equal-length strings, '#' is lit. Each lit dot glows.
 pub fn led_matrix(rows: &[&str], color: u32, dot: f32, gap: f32) -> gpui::AnyElement {
-    led_matrix_anim(rows, color, dot, gap, LedAnim::None, true)
+    led_matrix_anim("", rows, color, dot, gap, LedAnim::None, true)
 }
 
-/// The LED matrix with its animation. `motion == false` draws it static.
-/// Boot staggers the lit dots' flicker by index; blink pulses the whole
-/// matrix, exactly as `.k-led` does in the CSS.
+/// The LED matrix with its animation. `id` must be unique per matrix on the
+/// screen: two LIVE tags sharing an id fight over one animation state and
+/// one ends up half-lit. `motion == false` draws it static. Boot staggers
+/// the lit dots' wake-up flicker; Blink is a marquee — each lit bulb takes
+/// its turn going dim while the unlit dots hold steady.
 pub fn led_matrix_anim(
+    id: &str,
     rows: &[&str],
     color: u32,
     dot: f32,
@@ -532,14 +660,28 @@ pub fn led_matrix_anim(
                     spread_radius: px(0.0),
                 }]);
                 let cell = if motion && anim == LedAnim::Boot && lit_dots > 0 {
-                    base
-                        .with_animation(
-                            ("boot", index),
-                            Animation::new(std::time::Duration::from_millis(600))
-                                .with_easing(boot_ease(index)),
-                            |el, v| el.opacity(v),
-                        )
-                        .into_any_element()
+                    base.with_animation(
+                        gpui::ElementId::named_usize(format!("{id}-led"), index),
+                        Animation::new(std::time::Duration::from_millis(600))
+                            .with_easing(boot_ease(index)),
+                        |el, v| el.opacity(v),
+                    )
+                    .into_any_element()
+                } else if motion && anim == LedAnim::Blink {
+                    // the marquee: bulb `index` dims out of turn, one after
+                    // another, so the sign never goes dark all at once
+                    let phase = index as f32 / lit_dots as f32;
+                    base.with_animation(
+                        gpui::ElementId::named_usize(format!("{id}-blink"), index),
+                        Animation::new(std::time::Duration::from_millis(1200))
+                            .repeat()
+                            .with_easing(|t| t),
+                        move |el, t| {
+                            let k = (t + phase).fract();
+                            el.opacity(if k < 0.6 { 1.0 } else { 0.25 })
+                        },
+                    )
+                    .into_any_element()
                 } else {
                     base.into_any_element()
                 };
@@ -552,18 +694,7 @@ pub fn led_matrix_anim(
         }
         grid = grid.child(line);
     }
-    if motion && anim == LedAnim::Blink {
-        grid.with_animation(
-            "blink",
-            Animation::new(std::time::Duration::from_millis(1600))
-                .repeat()
-                .with_easing(|t| t),
-            |el, t| el.opacity(if t < 0.5 { 1.0 } else { 0.2 }),
-        )
-        .into_any_element()
-    } else {
-        grid.into_any_element()
-    }
+    grid.into_any_element()
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -577,10 +708,12 @@ pub enum TagState {
 
 /// State tag: LED glyph plus a word, always both. The LED animates the way
 /// the CSS does: NEEDS YOU blinks, LIVE boots once on mount. `motion ==
-/// false` (Reduce motion) keeps it static.
-pub fn tag(state: TagState, label: &str, motion: bool) -> Div {
+/// false` (Reduce motion) keeps it static. `id` names the tag's animation:
+/// unique per tag on the screen, or two tags half-light each other.
+pub fn tag(id: impl Into<SharedString>, state: TagState, label: &str, motion: bool) -> Div {
+    let id: SharedString = id.into();
     let (glyph, led, fg): (&[&str], u32, u32) = match state {
-        TagState::Live => (&BANG5, ICE, ICE),
+        TagState::Live => (&PLAY5, ICE, ICE),
         TagState::Need => (&BANG5, 0xffffff, 0xffffff),
         TagState::Queue => (&QUEUE5, LED_DIM, MUTED),
         TagState::Done => (&CHECK5, INK_2, INK_2),
@@ -614,63 +747,75 @@ pub fn tag(state: TagState, label: &str, motion: bool) -> Div {
         TagState::Block => base.bg(rgba(DANGER_WASH)),
         _ => base.bg(rgb(WELL)),
     };
-    base.child(led_matrix_anim(glyph, led, 3.0, 1.0, anim, motion))
+    base.child(led_matrix_anim(&id, glyph, led, 3.0, 1.0, anim, motion))
         .child(label.to_uppercase())
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Verdict {
-    Recommended,
-    WeighUp,
-    Avoid,
-}
-
-impl Verdict {
-    pub fn word(&self) -> &'static str {
-        match self {
-            Verdict::Recommended => "RECOMMENDED",
-            Verdict::WeighUp => "WEIGH UP",
-            Verdict::Avoid => "AVOID",
-        }
-    }
-}
-
-/// Verdict chip: LED glyph plus the verdict word, in the verdict colour.
-pub fn verdict_chip(verdict: Verdict) -> Div {
-    let (glyph, fg, wash): (&[&str], u32, Option<u32>) = match verdict {
-        Verdict::Recommended => (&CHECK5, ICE, None),
-        Verdict::WeighUp => (&QUEUE5, INK_2, None),
-        Verdict::Avoid => (&X5, DANGER, Some(DANGER_WASH)),
-    };
-    let base = div()
-        .h(px(32.0))
-        .px(px(12.0))
-        .pl(px(8.0))
-        .flex()
-        .items_center()
-        .gap(px(10.0))
-        .rounded(px(8.0))
-        .font_family(DISPLAY)
-        .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(15.0))
-        .text_color(rgb(fg))
-        .border_1()
-        .border_color(rgba(HAIRLINE));
-    let base = match wash {
-        Some(w) => base.bg(rgba(w)),
-        None => base.bg(rgb(WELL)),
-    };
-    base.child(led_matrix(glyph, fg, 3.0, 1.0))
-        .child(verdict.word())
 }
 
 /// Segment meter, `segments` squares, `value` 0..=100. When `live`, the
 /// leading lit segment blinks (`.k-meter i.head`); `motion == false` freezes it.
 pub fn meter(value: f32, segments: usize) -> Div {
-    meter_live(value, segments, false, true)
+    meter_live("meter", value, segments, false, true)
 }
 
-pub fn meter_live(value: f32, segments: usize, live: bool, motion: bool) -> Div {
+/// A rippling LED matrix: a working lane's broadcast. The centre dot is the
+/// agent, always lit; a wave of light rolls outward through the rings, in
+/// the same dot language as every other LED in the app.
+pub fn led_ripple(id: &str, motion: bool) -> gpui::AnyElement {
+    let mut grid = div().flex().flex_col().gap(px(1.0)).flex_none();
+    for row in 0..5u32 {
+        let mut line = div().flex().gap(px(1.0));
+        for col in 0..5u32 {
+            let dx = col as f32 - 2.0;
+            let dy = row as f32 - 2.0;
+            let dist = dx.hypot(dy); // 0 at the centre, 2.83 at the corners
+            let base = div().size(px(3.0)).rounded(px(1.0));
+            let dot: gpui::AnyElement = if dist < 0.5 {
+                // the agent itself: steady
+                base.bg(rgb(ICE))
+                    .shadow(vec![BoxShadow {
+                        color: hsla(ICE),
+                        offset: point(px(0.0), px(0.0)),
+                        blur_radius: px(5.0),
+                        spread_radius: px(0.0),
+                    }])
+                    .into_any_element()
+            } else if motion {
+                let phase = dist / 2.83;
+                base.with_animation(
+                    gpui::ElementId::Name(gpui::SharedString::from(format!(
+                        "{id}-ripple-{row}-{col}"
+                    ))),
+                    Animation::new(std::time::Duration::from_millis(1300))
+                        .repeat()
+                        .with_easing(|t| t),
+                    move |el, t| {
+                        // flash as the wave passes this ring, then decay
+                        let k = (t - phase).fract();
+                        let level = (1.0 - k) * (1.0 - k);
+                        el.bg(rgb(if level > 0.45 { ICE } else { LED_OFF }))
+                    },
+                )
+                .into_any_element()
+            } else {
+                base.bg(rgb(LED_OFF)).into_any_element()
+            };
+            line = line.child(dot);
+        }
+        grid = grid.child(line);
+    }
+    grid.into_any_element()
+}
+
+/// Segment meter, `segments` squares, `value` 0..=100. When `live`, the
+/// leading lit segment blinks; `id` names that blink, unique per meter.
+pub fn meter_live(
+    id: impl Into<SharedString>,
+    value: f32,
+    segments: usize,
+    live: bool,
+    motion: bool,
+) -> Div {
+    let head_id = gpui::SharedString::from(format!("{}-head", id.into()));
     let lit = ((segments as f32) * value.clamp(0.0, 100.0) / 100.0).round() as usize;
     let mut track = well().p(px(6.0)).flex().gap(px(3.0));
     for i in 0..segments {
@@ -685,7 +830,7 @@ pub fn meter_live(value: f32, segments: usize, live: bool, motion: bool) -> Div 
             }]);
             if head {
                 cell.with_animation(
-                    "head",
+                    gpui::ElementId::Name(head_id.clone()),
                     Animation::new(std::time::Duration::from_millis(1600))
                         .repeat()
                         .with_easing(|t| t),
@@ -772,9 +917,12 @@ pub fn switch_anim(id: impl Into<gpui::ElementId>, on: bool, motion: bool) -> St
             .left(px(if on { travel } else { 0.0 }))
             .into_any_element()
     };
+    // flex_none: in a narrow column the label beside it would otherwise
+    // squeeze the switch into a sliver and push its knob outside the track
     div()
         .id(id)
         .relative()
+        .flex_none()
         .w(px(56.0))
         .h(px(30.0))
         .rounded(px(15.0))

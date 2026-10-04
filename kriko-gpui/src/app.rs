@@ -4,9 +4,9 @@
 //! method over one state struct.
 
 use gpui::{
-    div, prelude::*, px, rgb, rgba, svg, App, ClickEvent, Context, Div, FocusHandle, IntoElement,
-    KeyDownEvent, ParentElement, Render, SharedString, Stateful, Styled, Window, Animation,
-    AnimationExt,
+    div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle, IntoElement,
+    KeyDownEvent, MouseButton, ParentElement, Render, Stateful, Styled, Window, WindowControlArea,
+    Animation, AnimationExt,
 };
 
 use crate::data;
@@ -14,7 +14,65 @@ use crate::dock;
 use crate::screens;
 use crate::theme::*;
 
-use gpui::MouseButton;
+// ---- native window drag ----
+//
+// GPUI 0.2.2 has no `start_window_move` on Windows, and the platform's
+// HTCAPTION fall-through only works when nothing swallows the non-client
+// button press — anything focusable nearby calls `prevent_default` and the
+// drag dies. So the drag strip starts the native move loop itself.
+
+#[cfg(windows)]
+mod win {
+    #[link(name = "user32")]
+    extern "system" {
+        fn GetActiveWindow() -> isize;
+        fn FindWindowW(class: *const u16, title: *const u16) -> isize;
+        fn ReleaseCapture() -> i32;
+        fn SendMessageW(hwnd: isize, msg: u32, wparam: usize, lparam: isize) -> isize;
+        fn GetCursorPos(point: *mut POINT) -> i32;
+    }
+
+    #[repr(C)]
+    struct POINT {
+        x: i32,
+        y: i32,
+    }
+
+    const WM_NCLBUTTONDOWN: u32 = 0x00A1;
+    const HTCAPTION: usize = 0x2;
+
+    /// Hand the press to the system as a caption press: the native move
+    /// loop starts, exactly as if the strip were a real titlebar.
+    pub fn drag_window() {
+        unsafe {
+            let mut title: Vec<u16> = "Kriko".encode_utf16().chain(std::iter::once(0)).collect();
+            let hwnd = {
+                let active = GetActiveWindow();
+                if active != 0 {
+                    active
+                } else {
+                    FindWindowW(std::ptr::null(), title.as_mut_ptr())
+                }
+            };
+            if hwnd == 0 {
+                return;
+            }
+            let mut point = POINT { x: 0, y: 0 };
+            if GetCursorPos(&mut point) == 0 {
+                return;
+            }
+            let lparam = ((point.y as isize & 0xffff) << 16) | (point.x as isize & 0xffff);
+            ReleaseCapture();
+            SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, lparam);
+        }
+    }
+}
+
+/// The fallback every platform takes: the drag strip calls this on press.
+fn drag_window_fallback() {
+    #[cfg(windows)]
+    win::drag_window();
+}
 
 // ---- keyboard actions (bound in main.rs) ----
 gpui::actions!(kriko, [NewCheck, SearchKnowledge, JumpBrowse]);
@@ -107,8 +165,8 @@ impl Tab {
 
     fn lead(self) -> &'static str {
         match self {
-            Tab::Home => "One place to start a check, see what is waiting and read the last result.",
-            Tab::Run => "One check, from question to verdict, with every claim grounded.",
+            Tab::Home => "Recent work, saved drafts, and where the knowledge stands.",
+            Tab::Run => "One check, from question to stored claims, every step in the open.",
             Tab::History => "Every check you have run, with the evidence it was based on.",
             Tab::Compare => "Up to three subjects side by side, attribute by attribute.",
             Tab::Extension => "Send pages from your browser straight into Kriko's knowledge.",
@@ -124,11 +182,11 @@ impl Tab {
         }
     }
 
-    fn hero_image(self) -> &'static str {
+    fn hero_sky(self) -> Sky {
         match self {
-            Tab::Home | Tab::About => "sky-hero.png",
-            Tab::Local => "sky-wide.png",
-            _ => "sky-dim.png",
+            Tab::Home | Tab::About => Sky::Bright,
+            Tab::Local => Sky::Wide,
+            _ => Sky::Dim,
         }
     }
 
@@ -173,34 +231,6 @@ impl InputState {
 // ---- filters ----
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub enum VerdictFilter {
-    Any,
-    Recommended,
-    WeighUp,
-    Avoid,
-}
-
-impl VerdictFilter {
-    pub fn word(self) -> &'static str {
-        match self {
-            VerdictFilter::Any => "ANY",
-            VerdictFilter::Recommended => "RECOMMENDED",
-            VerdictFilter::WeighUp => "WEIGH UP",
-            VerdictFilter::Avoid => "AVOID",
-        }
-    }
-
-    pub fn next(self) -> Self {
-        match self {
-            VerdictFilter::Any => VerdictFilter::Recommended,
-            VerdictFilter::Recommended => VerdictFilter::WeighUp,
-            VerdictFilter::WeighUp => VerdictFilter::Avoid,
-            VerdictFilter::Avoid => VerdictFilter::Any,
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum PackFilter {
     All,
     Samsung,
@@ -224,6 +254,45 @@ impl PackFilter {
             PackFilter::Samsung => PackFilter::Apple,
             PackFilter::Apple => PackFilter::Volkswagen,
             PackFilter::Volkswagen => PackFilter::All,
+        }
+    }
+}
+
+/// The date span History is narrowed to: how far back checks are shown.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SpanFilter {
+    All,
+    Month,
+    Quarter,
+    Half,
+}
+
+impl SpanFilter {
+    pub fn word(self) -> &'static str {
+        match self {
+            SpanFilter::All => "ALL TIME",
+            SpanFilter::Month => "30 DAYS",
+            SpanFilter::Quarter => "90 DAYS",
+            SpanFilter::Half => "180 DAYS",
+        }
+    }
+
+    /// The span in days; All admits everything.
+    pub fn days(self) -> u32 {
+        match self {
+            SpanFilter::All => u32::MAX,
+            SpanFilter::Month => 30,
+            SpanFilter::Quarter => 90,
+            SpanFilter::Half => 180,
+        }
+    }
+
+    pub fn next(self) -> Self {
+        match self {
+            SpanFilter::All => SpanFilter::Month,
+            SpanFilter::Month => SpanFilter::Quarter,
+            SpanFilter::Quarter => SpanFilter::Half,
+            SpanFilter::Half => SpanFilter::All,
         }
     }
 }
@@ -256,11 +325,39 @@ pub struct CompareDraftDef {
 }
 
 /// A follow-up question asked about the comparison, with its answer once
-/// the agent has finished.
+/// the agent has finished. `agent` names which one answered, by index
+/// into AGENTS.
 pub struct CompareQuestion {
     pub text: String,
+    pub agent: usize,
     pub answer: Option<String>,
 }
+
+/// Where one product stands in the research queue on Compare.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum QueueState {
+    Waiting,
+    Researching,
+    Done,
+}
+
+/// One product in the research queue: the check it researches, how far the
+/// agent has got, and how many claims it found once done.
+pub struct QueueItem {
+    pub check: usize,
+    /// The site the extension queued it from, as the panel posted it.
+    pub origin: &'static str,
+    pub state: QueueState,
+    pub progress: f32,
+    pub claims: u16,
+}
+
+/// Percent of one product the queue's agent researches per 100 ms tick:
+/// about four seconds a product, so the demo walks while you watch.
+pub const QUEUE_STEP: f32 = 2.5;
+
+/// Percent of the benchmark per 100 ms tick, through every stage.
+pub const BENCH_STEP: f32 = 1.4;
 
 // ---- the app ----
 
@@ -280,9 +377,12 @@ pub struct Kriko {
     pub sites_add: InputState,
     pub browse_search: InputState,
     // history
-    pub verdict_filter: VerdictFilter,
     pub pack_filter: PackFilter,
     pub page: usize,
+    pub history_span: SpanFilter,
+    /// The check whose evidence is unfolded on History, by index into
+    /// CHECKS. None: the table rests closed.
+    pub history_open: Option<usize>,
     // activity
     // sites: hosts added this session
     pub added_sites: Vec<String>,
@@ -293,16 +393,23 @@ pub struct Kriko {
     pub agent_selected: usize,
     pub agent_allowed: Vec<bool>,
     pub pack_enabled: Vec<bool>,
+    /// The coverage gap unfolded on Overview, by index into KNOWLEDGE.
+    /// None: every gap rests closed.
+    pub knowledge_open: Option<usize>,
     pub model_loaded: Vec<bool>,
     // extension
     pub extension_linked: bool,
     pub extension_hover: bool,
     // run
     pub run_phase: usize,
-    pub running: bool,
     // the live actions dock
     pub dock_reply: InputState,
     pub dock_resolved: Vec<usize>,
+    /// Which dock requests an agent is asking right now: the needs-you block
+    /// only exists while one is asking, and pops in when it starts.
+    pub dock_request_active: Vec<bool>,
+    /// The reply drawer: closed unless you are answering an agent.
+    pub dock_reply_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
     pub dock_lane_bump: usize,
     pub dock_reply_sent: usize,
@@ -324,6 +431,27 @@ pub struct Kriko {
     pub compare_note_input: InputState,
     pub compare_question_input: InputState,
     pub compare_questions: Vec<CompareQuestion>,
+    /// Which agent the questions on Compare go to, by index into AGENTS.
+    pub compare_agent: usize,
+    /// The rows pinned as preferred on Compare: (section, row). The agent
+    /// reads them with everything else on the board.
+    pub compare_marks: Vec<(usize, usize)>,
+    /// The column slider's thumb, 0..=1. Only moves when more products are
+    /// lined up than fit on screen.
+    pub compare_scroll: f32,
+    pub compare_dragging: bool,
+    // research queue (Compare)
+    pub queue: Vec<QueueItem>,
+    /// The agent the queue researches with, by index into AGENTS.
+    pub queue_agent: usize,
+    pub queue_running: bool,
+    /// When on, a finished queue fills the compare slots by itself.
+    pub queue_auto: bool,
+    // benchmark
+    /// 0..=100 while a benchmark runs, None when idle.
+    pub bench_progress: Option<f32>,
+    /// Benchmarks finished this session, on top of the sample history.
+    pub bench_done: u32,
     // local llm
     pub local_url: InputState,
     pub local_search: InputState,
@@ -335,12 +463,28 @@ pub struct Kriko {
     pub local_auto_unload: bool,
     pub local_cpu_fallback: bool,
     pub local_test: usize,
+    /// Which runtime serves the local model, by index into RUNTIMES.
+    pub local_runtime: usize,
+    pub runtime_state: Vec<data::RuntimeState>,
+    /// The runtime being installed, and how far along, 0..=100.
+    pub runtime_install: Option<(usize, f32)>,
+    /// Where Get fetches from, by index into MODEL_SOURCES.
+    pub local_source: usize,
+    pub local_source_prev: usize,
+    /// Per catalogue model: download progress while fetching.
+    pub pull_progress: Vec<Option<f32>>,
+    pub pulled: Vec<bool>,
+    /// The fetched model in use, by index into CATALOGUE.
+    pub catalogue_loaded: Option<usize>,
     // agents: per-agent tool permissions [read, run, answer]
     pub agent_tools: Vec<[bool; 3]>,
 }
 
+/// The line rate a model download runs at, in GB/s, in the sample app.
+pub const PULL_GBPS: f32 = 0.6;
+
 impl Kriko {
-    pub fn new(cx: &mut App) -> Self {
+    pub fn new(cx: &mut Context<Self>) -> Self {
         let mut app = Self {
             tab: Tab::Home,
             launch_at_login: true,
@@ -354,9 +498,10 @@ impl Kriko {
             activity_filter: InputState::new(cx),
             sites_add: InputState::new(cx),
             browse_search: InputState::new(cx),
-            verdict_filter: VerdictFilter::Any,
             pack_filter: PackFilter::All,
             page: 0,
+            history_span: SpanFilter::All,
+            history_open: None,
             added_sites: Vec::new(),
             browse_selected: 0,
             browse_view: 0,
@@ -364,13 +509,15 @@ impl Kriko {
             agent_selected: 0,
             agent_allowed: data::AGENTS.iter().map(|a| a.allowed).collect(),
             pack_enabled: data::PACKS.iter().map(|p| p.enabled).collect(),
+            knowledge_open: None,
             model_loaded: data::MODELS.iter().map(|m| m.loaded).collect(),
             extension_linked: false,
             extension_hover: false,
             run_phase: 0,
-            running: false,
             dock_reply: InputState::new(cx),
             dock_resolved: Vec::new(),
+            dock_request_active: data::DOCK_REQUESTS.iter().map(|_| false).collect(),
+            dock_reply_open: false,
             dock_feed: vec![
                 DockFeedEntry::now(
                     "Claude Code: read 4 pages of rtings.com".to_string(),
@@ -408,20 +555,43 @@ impl Kriko {
             compare_note_open: None,
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
+            compare_agent: 0,
+            compare_marks: Vec::new(),
+            compare_scroll: 0.0,
+            compare_dragging: false,
+            // what the extension's Add to queue key sent, oldest first
+            queue: [(7usize, "apple.com"), (14, "sennheiser-hearing.com"), (10, "jbl.com")]
+                .into_iter()
+                .map(|(check, origin)| QueueItem {
+                    check,
+                    origin,
+                    state: QueueState::Waiting,
+                    progress: 0.0,
+                    claims: 0,
+                })
+                .collect(),
+            queue_agent: 0,
+            queue_running: false,
+            queue_auto: true,
+            bench_progress: None,
+            bench_done: 0,
             compare_questions: vec![
                 CompareQuestion {
-                    text: "Which of these has the fewest serious risks?".to_string(),
+                    text: "What does each one's knowledge rest on?".to_string(),
+                    agent: 0,
                     answer: Some(
-                        "The Buds2 Pro: one serious risk recorded (the case hinge), \
-                         while the Buds Pro carries a measured battery-swelling risk."
+                        "On record: the Buds2 Pro's ANC rests on 5 sources, the Buds Pro's \
+                         battery on 4 that disagree, the XM5's noise cancelling on 5 that \
+                         agree. Nothing here is ranked — the counts are the knowledge."
                             .to_string(),
                     ),
                 },
                 CompareQuestion {
-                    text: "Is the XM5 worth the higher price?".to_string(),
+                    text: "What does the XM5's higher price buy?".to_string(),
+                    agent: 1,
                     answer: Some(
-                        "If noise cancelling is why you buy: yes, 42 dB measured is the \
-                         strongest of the three. If not: the Buds2 Pro holds up at mid price."
+                        "Measured: 42 dB of noise cancelling, the strongest of the three, \
+                         from 5 agreeing sources. The board records that and nothing beyond it."
                             .to_string(),
                     ),
                 },
@@ -436,6 +606,14 @@ impl Kriko {
             local_auto_unload: true,
             local_cpu_fallback: false,
             local_test: 0,
+            local_runtime: 1,
+            runtime_state: data::RUNTIMES.iter().map(|r| r.state).collect(),
+            runtime_install: None,
+            local_source: 0,
+            local_source_prev: 0,
+            pull_progress: data::CATALOGUE.iter().map(|_| None).collect(),
+            pulled: data::CATALOGUE.iter().map(|_| false).collect(),
+            catalogue_loaded: None,
             agent_tools: data::AGENTS
                 .iter()
                 .map(|a| [a.can_read, a.can_run, a.can_answer])
@@ -472,8 +650,58 @@ impl Kriko {
             Ok("agents") => {
                 app.tab = Tab::Agents;
             }
+            Ok("dock") => {
+                app.dock_request_active[1] = true;
+                app.dock_reply_open = true;
+            }
             _ => {}
         }
+        // The needs-you block is not part of the dock's resting state: an
+        // agent asks, and only then does it pop in. Simulate one asking.
+        cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(std::time::Duration::from_secs(7))
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if !this.dock_request_active[1] {
+                    this.dock_request_active[1] = true;
+                    this.dock_feed.push(DockFeedEntry::now(
+                        "Claude Code: asks about rtings.com".to_string(),
+                        TagState::Need,
+                    ));
+                    // an agent asking you is the one moment the reply
+                    // drawer opens itself
+                    this.dock_reply_open = true;
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
+        // The run plays itself while Run is on screen: one phase every few
+        // beats, then it holds at stored. Reduce motion keeps it still, and
+        // the Replay control on the page winds it back to the start.
+        cx.spawn(async move |this, cx| {
+            loop {
+                cx.background_executor()
+                    .timer(std::time::Duration::from_millis(2400))
+                    .await;
+                if this
+                    .update(cx, |this, cx| {
+                        if this.tab == Tab::Run
+                            && !this.reduce_motion
+                            && this.run_phase < screens::run::PHASES.len()
+                        {
+                            this.run_phase += 1;
+                            cx.notify();
+                        }
+                    })
+                    .is_err()
+                {
+                    break;
+                }
+            }
+        })
+        .detach();
         app
     }
 
@@ -522,6 +750,7 @@ impl Kriko {
                 this.dock_lane_bump = (this.dock_lane_bump + 1) % data::DOCK_LANES.len();
                 this.dock_reply_sent += 1;
             }
+            this.dock_reply_open = false;
             cx.notify();
             return;
         }
@@ -644,18 +873,66 @@ impl Kriko {
 
     // ---- simulated agent work ----
 
-    /// Push the question, then let the agent answer it a moment later.
-    /// While the answer is missing the question shows its LIVE tag.
+    /// Push the question, then let the chosen agent answer it a moment
+    /// later. The answer is read back from the board — subjects, marks,
+    /// notes — and never ranks anything.
     pub fn ask_compare_question(&mut self, cx: &mut Context<Self>) {
         let text = self.compare_question_input.value.trim().to_string();
         if text.is_empty() {
             return;
         }
+        let agent = self.compare_agent;
+        // what the agent sees: the board, read back
+        let subjects: Vec<usize> = self.compare_slots.iter().flatten().copied().collect();
+        let names: Vec<&str> = subjects
+            .iter()
+            .map(|&c| data::CHECKS[c].name)
+            .collect();
+        let marks = self.compare_marks.len();
+        let notes: Vec<String> = self
+            .compare_notes
+            .iter()
+            .map(|n| n.text.trim().to_string())
+            .filter(|t| !t.is_empty())
+            .collect();
+        let strokes = self.compare_strokes.len();
+        let mut answer = format!(
+            "Read straight from your board: {} lined up",
+            if names.len() > 1 {
+                format!("{} and {}", names[..names.len() - 1].join(", "), names[names.len() - 1])
+            } else {
+                names.first().copied().unwrap_or("nothing").to_string()
+            },
+        );
+        if marks > 0 {
+            answer.push_str(&format!(
+                ", {} row{} marked as preferred",
+                marks,
+                if marks > 1 { "s" } else { "" }
+            ));
+        }
+        if !notes.is_empty() {
+            answer.push_str(&format!(
+                ". Your notes read: \"{}\"",
+                notes.join("\"; \"")
+            ));
+        }
+        if strokes > 0 {
+            answer.push_str(&format!(
+                ", {} stroke{} on the board",
+                strokes,
+                if strokes > 1 { "s" } else { "" }
+            ));
+        }
+        answer.push_str(
+            ". Every cell keeps its own sources; this is the table read back, not a ranking.",
+        );
         self.compare_question_input.value.clear();
         self.compare_questions.insert(
             0,
             CompareQuestion {
                 text,
+                agent,
                 answer: None,
             },
         );
@@ -671,12 +948,7 @@ impl Kriko {
                     .rev()
                     .find(|q| q.answer.is_none())
                 {
-                    q.answer = Some(
-                        "On the evidence in this table: the Buds2 Pro carries the fewest \
-                         serious risks, the XM5 the strongest noise cancelling, and the \
-                         Buds Pro is only worth it if the price drops."
-                            .to_string(),
-                    );
+                    q.answer = Some(answer);
                 }
                 cx.notify();
             });
@@ -699,6 +971,232 @@ impl Kriko {
                 this.local_test = 2;
                 cx.notify();
             });
+        })
+        .detach();
+    }
+
+    /// Install a runtime: the bar fills, then it sits installed, ready to use.
+    pub fn install_runtime(&mut self, i: usize, cx: &mut Context<Self>) {
+        if self.runtime_install.is_some() {
+            return;
+        }
+        self.runtime_install = Some((i, 0.0));
+        cx.notify();
+        cx.spawn(async move |this, cx| loop {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(90))
+                .await;
+            let done = this
+                .update(cx, |this, cx| {
+                    let finished = match this.runtime_install.as_mut() {
+                        Some((_, p)) => {
+                            *p += 3.5;
+                            *p >= 100.0
+                        }
+                        None => true,
+                    };
+                    if finished {
+                        this.runtime_install = None;
+                        this.runtime_state[i] = data::RuntimeState::Installed;
+                    }
+                    cx.notify();
+                    finished
+                })
+                .unwrap_or(true);
+            if done {
+                break;
+            }
+        })
+        .detach();
+    }
+
+    /// Use a runtime: start it if it is off, and point the server address at it.
+    pub fn use_runtime(&mut self, i: usize, cx: &mut Context<Self>) {
+        if self.runtime_state[i] == data::RuntimeState::Missing {
+            return;
+        }
+        self.runtime_state[i] = data::RuntimeState::Running;
+        self.local_runtime = i;
+        self.local_url.value = format!("http://127.0.0.1:{}", data::RUNTIMES[i].port);
+        self.local_test = 0;
+        cx.notify();
+    }
+
+    /// Fetch a catalogue model: the meter fills at a steady line rate, so a
+    /// bigger model takes visibly longer, then it is on disk and loadable.
+    // ---- research queue ----
+
+    /// Researches the waiting products one after another with the queue's
+    /// agent: reading, then thinking, then writing claims, a product at a
+    /// time. A finished queue says so in the dock and, with Auto on, fills
+    /// the compare slots.
+    pub fn queue_start(&mut self, cx: &mut Context<Self>) {
+        let left = self.queue.iter().filter(|q| q.state != QueueState::Done).count();
+        if self.queue_running || left == 0 {
+            return;
+        }
+        self.queue_running = true;
+        let agent = data::AGENTS[self.queue_agent].name;
+        self.dock_feed.push(DockFeedEntry::now(
+            format!("{agent}: queue started, {left} to research"),
+            TagState::Live,
+        ));
+        cx.notify();
+        let mut last = std::time::Instant::now();
+        cx.spawn(async move |this, cx| loop {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(100))
+                .await;
+            // ticks arrive late on a busy frame; step by the time that passed
+            let ticks = last.elapsed().as_secs_f32() / 0.1;
+            last = std::time::Instant::now();
+            let done = this
+                .update(cx, |this, cx| {
+                    if !this.queue_running {
+                        return true;
+                    }
+                    let Some(item) = this
+                        .queue
+                        .iter_mut()
+                        .find(|q| q.state != QueueState::Done)
+                    else {
+                        this.queue_running = false;
+                        let n = this.queue.len();
+                        this.dock_feed.push(DockFeedEntry::now(
+                            format!("Queue done: {n} products researched"),
+                            TagState::Done,
+                        ));
+                        if this.queue_auto {
+                            this.queue_to_compare();
+                        }
+                        cx.notify();
+                        return true;
+                    };
+                    item.state = QueueState::Researching;
+                    item.progress += QUEUE_STEP * ticks;
+                    if item.progress >= 100.0 {
+                        item.progress = 100.0;
+                        item.state = QueueState::Done;
+                        // what the agent found, derived from what the store
+                        // already holds for that product, so it is stable
+                        let ev = data::evidence_for(&data::CHECKS[item.check]).claims.len();
+                        item.claims = (ev as u16) * 3 + (item.check as u16 % 5) + 4;
+                    }
+                    cx.notify();
+                    false
+                })
+                .unwrap_or(true);
+            if done {
+                break;
+            }
+        })
+        .detach();
+    }
+
+    /// Puts the researched products into the compare slots as a new draft.
+    pub fn queue_to_compare(&mut self) {
+        let slots: Vec<Option<usize>> = self
+            .queue
+            .iter()
+            .filter(|q| q.state == QueueState::Done)
+            .map(|q| Some(q.check))
+            .take(8)
+            .collect();
+        if slots.is_empty() {
+            return;
+        }
+        let n = self.compare_drafts.len() + 1;
+        self.compare_drafts.push(CompareDraftDef {
+            name: format!("Queue {n}"),
+            slots: slots.clone(),
+        });
+        self.compare_draft = self.compare_drafts.len() - 1;
+        self.compare_slots = slots;
+        self.compare_detail = None;
+        self.compare_picker = None;
+    }
+
+    // ---- benchmark ----
+
+    /// Walks every stage of a check once, timing it; the screen lights the
+    /// stage under way and lands the run in the history when it ends. A
+    /// second press stops it.
+    pub fn bench_start(&mut self, cx: &mut Context<Self>) {
+        if self.bench_progress.is_some() {
+            self.bench_progress = None;
+            cx.notify();
+            return;
+        }
+        self.bench_progress = Some(0.0);
+        cx.notify();
+        let mut last = std::time::Instant::now();
+        cx.spawn(async move |this, cx| loop {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(100))
+                .await;
+            // ticks arrive late on a busy frame; step by the time that passed
+            let ticks = last.elapsed().as_secs_f32() / 0.1;
+            last = std::time::Instant::now();
+            let done = this
+                .update(cx, |this, cx| {
+                    let finished = match this.bench_progress.as_mut() {
+                        Some(p) => {
+                            *p += BENCH_STEP * ticks;
+                            *p >= 100.0
+                        }
+                        None => return true,
+                    };
+                    if finished {
+                        this.bench_progress = None;
+                        this.bench_done += 1;
+                        this.dock_feed.push(DockFeedEntry::now(
+                            "Benchmark finished: full check in 3 min 01".to_string(),
+                            TagState::Done,
+                        ));
+                    }
+                    cx.notify();
+                    finished
+                })
+                .unwrap_or(true);
+            if done {
+                break;
+            }
+        })
+        .detach();
+    }
+
+    pub fn pull_model(&mut self, i: usize, cx: &mut Context<Self>) {
+        if self.pull_progress[i].is_some() || self.pulled[i] {
+            return;
+        }
+        self.pull_progress[i] = Some(0.0);
+        cx.notify();
+        // percent per 100 ms tick at PULL_GBPS
+        let step = 100.0 * PULL_GBPS * 0.1 / data::CATALOGUE[i].size_gb.max(0.1);
+        cx.spawn(async move |this, cx| loop {
+            cx.background_executor()
+                .timer(std::time::Duration::from_millis(100))
+                .await;
+            let done = this
+                .update(cx, |this, cx| {
+                    let finished = match this.pull_progress[i].as_mut() {
+                        Some(p) => {
+                            *p += step;
+                            *p >= 100.0
+                        }
+                        None => true,
+                    };
+                    if finished {
+                        this.pull_progress[i] = None;
+                        this.pulled[i] = true;
+                    }
+                    cx.notify();
+                    finished
+                })
+                .unwrap_or(true);
+            if done {
+                break;
+            }
         })
         .detach();
     }
@@ -739,7 +1237,7 @@ impl Kriko {
             }
         }
         div()
-            .w(px(248.0))
+            .w(px(SIDEBAR_W))
             .flex_none()
             .bg(rgb(SURFACE_1))
             .border_r_1()
@@ -752,54 +1250,31 @@ impl Kriko {
 }
 
 impl Kriko {
-    /// The merged window top bar: the mark and the crumb drag the window;
-    /// the dock toggle and minimize / restore / close sit on the right.
+    /// The floating top bar. The strip between the sidebar and the LIVE
+    /// toggle is the drag area: a plain client strip that hands its press
+    /// to Windows as a caption press, because GPUI 0.2.2 cannot start a
+    /// move itself and the platform caption area gets swallowed. It
+    /// carries no brand: the sidebar says kriko once, the page head says
+    /// where you are.
     fn titlebar(&self, maximized: bool, cx: &mut Context<Self>) -> Stateful<Div> {
-        let minimize = cx.listener(|_, _: &ClickEvent, window, _| window.minimize_window());
-        let zoom = cx.listener(|_, _: &ClickEvent, window, _| window.zoom_window());
-        let close = cx.listener(|_, _: &ClickEvent, window, _| window.remove_window());
         let toggle_dock = cx.listener(|this, _: &ClickEvent, _w, cx| {
             this.dock_open = !this.dock_open;
             cx.notify();
         });
 
         let zoom_icon = if maximized { "restore" } else { "maximize" };
-        let tab = self.tab;
 
         titlebar()
             .child(
-                // the drag region: mark + app name + crumb
+                // the drag strip: the whole sky span left of the controls
                 div()
                     .id("titlebar-drag")
                     .flex()
                     .flex_1()
                     .min_w(px(0.0))
-                    .items_center()
-                    .gap(px(10.0))
+                    .h_full()
                     .cursor_move()
-                    .on_mouse_down(MouseButton::Left, |_, window, _| {
-                        window.start_window_move()
-                    })
-                    .child(
-                        svg()
-                            .path(SharedString::from("kriko-mark-white.svg"))
-                            .size(px(16.0))
-                            .text_color(rgb(BRAND_BRIGHT)),
-                    )
-                    .child(
-                        div()
-                            .font_family(MONO)
-                            .text_size(px(12.0))
-                            .text_color(rgb(MUTED))
-                            .child("kriko"),
-                    )
-                    .child(
-                        div()
-                            .font_family(MONO)
-                            .text_size(px(12.0))
-                            .text_color(rgb(DIM))
-                            .child(format!("/ {}", tab.key())),
-                    ),
+                    .on_mouse_down(MouseButton::Left, |_, _, _| drag_window_fallback()),
             )
             .child(
                 div()
@@ -816,9 +1291,7 @@ impl Kriko {
                             .gap(px(8.0))
                             .rounded(px(8.0))
                             .cursor_pointer()
-                            .bg(rgba(GLASS_1))
-                            .border_1()
-                            .border_color(rgba(HAIRLINE))
+                            .when(self.dock_open, |d| d.bg(rgba(GLASS_1)))
                             .on_click(toggle_dock)
                             .child(icon("agents", 14.0).text_color(rgb(if self.dock_open {
                                 ICE
@@ -837,9 +1310,18 @@ impl Kriko {
                                     .child(if self.dock_open { "LIVE ON" } else { "LIVE OFF" }),
                             ),
                     )
-                    .child(titlebar_button("win-min", "minus", false).on_click(minimize))
-                    .child(titlebar_button("win-max", zoom_icon, false).on_click(zoom))
-                    .child(titlebar_button("win-close", "x", true).on_click(close)),
+                    .child(
+                        titlebar_button("win-min", "minus", false)
+                            .window_control_area(WindowControlArea::Min),
+                    )
+                    .child(
+                        titlebar_button("win-max", zoom_icon, false)
+                            .window_control_area(WindowControlArea::Max),
+                    )
+                    .child(
+                        titlebar_button("win-close", "x", true)
+                            .window_control_area(WindowControlArea::Close),
+                    ),
             )
     }
 }
@@ -852,18 +1334,12 @@ impl Render for Kriko {
         let sidebar = self.sidebar(cx);
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
-        let hero = hero(tab.hero_image(), tab.hero_height())
+        let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
             .child(page_head(tab.crumb(), tab.title(), tab.lead()));
-        let hero = match tab {
-            Tab::Home => hero.child(screens::home::frost_start(cx)),
-            Tab::Local => hero.child(screens::local::frost_test(cx)),
-            _ => hero,
-        };
         div()
             .id("kriko-root")
             .size_full()
             .flex()
-            .flex_col()
             .bg(rgb(GROUND))
             .text_color(rgb(INK))
             .font_family(SANS)
@@ -879,59 +1355,57 @@ impl Render for Kriko {
                 this.tab = Tab::Browse;
                 cx.notify();
             }))
-            .child(titlebar)
+            .child(sidebar)
             .child(
                 div()
+                    .relative()
                     .flex()
                     .flex_1()
+                    .flex_col()
+                    .min_w(px(0.0))
                     .min_h(px(0.0))
-                    .child(sidebar)
+                    // One scroll for the whole page: the hero scrolls
+                    // away with the content, so short windows still
+                    // reach everything, and nothing wide ever paints
+                    // over the dock.
                     .child(
                         div()
+                            .id("main-scroll")
                             .flex()
                             .flex_1()
+                            .min_h(px(0.0))
                             .flex_col()
-                            .min_w(px(0.0))
-                            // One scroll for the whole page: the hero scrolls
-                            // away with the content, so short windows still
-                            // reach everything, and nothing wide ever paints
-                            // over the dock.
+                            .overflow_y_scroll()
+                            .overflow_x_hidden()
+                            // flex_none keeps the hero and the content
+                            // at their natural heights, so the column
+                            // overflows and scrolls instead of every
+                            // child being squeezed to fit.
+                            .child(hero.flex_none())
                             .child(
                                 div()
-                                    .id("main-scroll")
                                     .flex()
-                                    .flex_1()
-                                    .min_h(px(0.0))
                                     .flex_col()
-                                    .overflow_y_scroll()
-                                    .overflow_x_hidden()
-                                    // flex_none keeps the hero and the content
-                                    // at their natural heights, so the column
-                                    // overflows and scrolls instead of every
-                                    // child being squeezed to fit.
-                                    .child(hero.flex_none())
+                                    .flex_none()
+                                    .px(px(40.0))
+                                    .pt(px(20.0))
+                                    .pb(px(48.0))
+                                    .child(content)
                                     .child(
                                         div()
-                                            .flex()
-                                            .flex_col()
-                                            .flex_none()
-                                            .px(px(40.0))
-                                            .pt(px(20.0))
-                                            .pb(px(48.0))
-                                            .child(content)
-                                            .child(
-                                                div()
-                                                    .mt(px(24.0))
-                                                    .mb(px(8.0))
-                                                    .font_family(MONO)
-                                                    .text_size(px(12.0))
-                                                    .text_color(rgb(DIM))
-                                                    .child(data::FOOTER_NOTE),
-                                            ),
+                                            .mt(px(24.0))
+                                            .mb(px(8.0))
+                                            .font_family(MONO)
+                                            .text_size(px(12.0))
+                                            .text_color(rgb(DIM))
+                                            .child(data::FOOTER_NOTE),
                                     ),
                             ),
                     )
-                    .when(self.dock_open, |row| row.child(dock)),
+                    // The bar floats on the sky, after the page so it
+                    // paints on top of the hero it blends into.
+                    .child(titlebar),
             )
+            .when(self.dock_open, |row| row.child(dock))
     }
 }
