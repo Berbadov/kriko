@@ -106,7 +106,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     .text_color(rgb(INK))
                     .child(row.value.to_string()),
             )
-            .child(div().w(px(120.0)).child(tag(row.trust, row.trust_label, motion)));
+            .child(div().w(px(120.0)).child(tag(format!("browse-row-{ri}"), row.trust, row.trust_label, motion)));
         table = table.child(r);
         if ri + 1 < rows.len() {
             table = table.child(hairline());
@@ -126,7 +126,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     .justify_between()
                     .gap(px(12.0))
                     .child(eyebrow("Evidence"))
-                    .child(tag(row.trust, row.trust_label, motion)),
+                    .child(tag("browse-drawer", row.trust, row.trust_label, motion)),
             )
             .child(
                 div()
@@ -238,7 +238,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                         .child(div().flex_1().min_w(px(0.0)))
                         .child(mono(row.value, INK_2))
                         .child(div().w(px(12.0)))
-                        .child(tag(row.trust, row.trust_label, motion)),
+                        .child(tag(format!("browse-detail-{ri}"), row.trust, row.trust_label, motion)),
                 );
             }
             list.into_any_element()
@@ -285,7 +285,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                                 .text_color(rgb(ICE))
                                 .child(row.value.to_string()),
                         )
-                        .child(div().mt(px(2.0)).child(tag(row.trust, row.trust_label, motion))),
+                        .child(div().mt(px(2.0)).child(tag(format!("browse-attr-{ri}"), row.trust, row.trust_label, motion))),
                 );
             }
             div().child(grid).into_any_element()

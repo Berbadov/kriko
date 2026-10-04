@@ -151,12 +151,13 @@ shortcuts and Add/Remove Programs in one go.
 `assets/fonts` holds Barlow Condensed 600/700, DM Sans 400/600 and JetBrains
 Mono 400/600 — the three faces of the design — registered at startup by
 `theme::register_fonts` under app-scoped family names (`Kriko Display`,
-`Kriko Sans`, `Kriko Mono`). The scoped names matter twice over: a machine
+`Kriko Sans`, `Kriko Mono`). The scoped names matter: a machine
 with, say, a system "Barlow" installed would otherwise shadow the embedded
-face, and DirectWrite rejects a bare string handed to `img()` — the sky PNGs
-load through `Resource::Embedded`, never through a path or URI. The sky PNGs
-(`sky-dim`, `sky-hero`, `sky-wide`) are the dithered hero bands; nav icons
-are 24x24 stroke SVGs tinted by `text_color` at 18px.
+face. The hero sky is the dithered band (`sky-dim`, `sky-hero`, `sky-wide`,
+loaded through `Resource::Embedded`, never through a path or URI) over a
+matching gradient in `theme::hero`, so the fades into the titlebar above
+and the content below stay smooth; nav icons are 24x24 stroke SVGs tinted
+by `text_color` at 18px.
 
 A stderr logger is installed at startup because GPUI reports asset and font
 failures through the `log` crate; without a logger those failures are silent
