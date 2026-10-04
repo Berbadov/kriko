@@ -11,9 +11,10 @@ use gpui::{
     MouseButton, PaintQuad, Pixels, SharedString, Styled, Window,
 };
 
-use crate::app::{CompareNote, Field, Kriko};
+use crate::app::{CompareNote, Field, Kriko, QueueState};
 use crate::data::{self, CompareSubject, RiskCell, SpecCell};
 use crate::screens::{mono, plate_s, row_desc, severity_chip, th, trust_icon};
+use crate::marks::{mark_tile, phase_beat, Phase};
 use crate::theme::*;
 
 /// The subject data for a check, or None when nothing is known about it.
@@ -439,10 +440,83 @@ fn risk_rows(
         .collect()
 }
 
+/// The grounded claims each subject carries, aligned by position: row i
+/// holds every subject's i-th claim with the source it was read from.
+fn claim_rows(
+    subjects: &[Option<&'static CompareSubject>],
+) -> Vec<Vec<Option<(&'static str, &'static str)>>> {
+    let max = subjects
+        .iter()
+        .flatten()
+        .map(|s| data::evidence_for(&data::CHECKS[s.check]).claims.len())
+        .max()
+        .unwrap_or(0);
+    (0..max)
+        .map(|i| {
+            subjects
+                .iter()
+                .map(|subject| {
+                    subject.and_then(|s| {
+                        data::evidence_for(&data::CHECKS[s.check])
+                            .claims
+                            .get(i)
+                            .copied()
+                    })
+                })
+                .collect()
+        })
+        .collect()
+}
+
+/// The preferred pin: one click marks a row as yours. Marked rows tint
+/// and join what the agent reads off the board.
+fn pin_button(
+    id: impl Into<gpui::ElementId> + 'static,
+    marked: bool,
+    on_click: impl Fn(&mut Kriko, &mut Context<Kriko>) + 'static,
+    cx: &mut Context<Kriko>,
+) -> gpui::Stateful<Div> {
+    let listener = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| on_click(this, cx));
+    div()
+        .id(id)
+        .w(px(26.0))
+        .h(px(26.0))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded(px(8.0))
+        .cursor_pointer()
+        .hover(|s| s.bg(rgba(GLASS_1)))
+        .child(led_matrix(
+            if marked { &CHECK5 } else { &QUEUE5 },
+            if marked { ICE } else { LED_DIM },
+            3.0,
+            1.0,
+        ))
+        .on_click(listener)
+}
+
 /// The compare table: one column per slot, sections for specs and risks,
 /// one section and one detail row open at a time.
 fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let slots: Vec<Option<usize>> = app.compare_slots.clone();
+    // the column window: three products at a time when many are lined
+    // up, scrubbed by the slider that sits above the table
+    let filled: Vec<usize> = slots.iter().flatten().copied().collect();
+    let visible = filled.len().min(3);
+    let first = if filled.len() > visible {
+        (app.compare_scroll * (filled.len() - visible) as f32).round() as usize
+    } else {
+        0
+    };
+    let slots: Vec<Option<usize>> = if filled.len() > visible {
+        filled[first..first + visible]
+            .iter()
+            .map(|c| Some(*c))
+            .collect()
+    } else {
+        slots
+    };
     let subjects: Vec<Option<&'static CompareSubject>> =
         slots.iter().map(|s| (*s).and_then(subject_for)).collect();
     let specs = spec_rows(&subjects);
@@ -512,12 +586,22 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                 };
                 cx.notify();
             });
+            let marked = app.compare_marks.contains(&(0, ri));
+            let pin = move |this: &mut Kriko, cx: &mut Context<Kriko>| {
+                if this.compare_marks.contains(&(0, ri)) {
+                    this.compare_marks.retain(|m| *m != (0, ri));
+                } else {
+                    this.compare_marks.push((0, ri));
+                }
+                cx.notify();
+            };
             let mut row = div()
                 .id(("spec-row", ri))
                 .py(px(11.0))
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .when(marked, |s| s.bg(rgba(BRAND_WASH)))
                 .hover(|s| s.bg(rgba(GLASS_1)))
                 .on_click(toggle)
                 .child(
@@ -531,7 +615,7 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                             div()
                                 .font_family(SANS)
                                 .text_size(px(14.0))
-                                .text_color(rgb(if detail { ICE } else { INK }))
+                                .text_color(rgb(if detail || marked { ICE } else { INK }))
                                 .child(label.to_string()),
                         )
                         .when(differs, |d| {
@@ -547,6 +631,21 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                                     .text_size(px(9.0))
                                     .text_color(rgb(BRAND_BRIGHT))
                                     .child("DIFFERS"),
+                            )
+                        })
+                        .when(marked, |d| {
+                            d.child(
+                                div()
+                                    .px(px(7.0))
+                                    .h(px(18.0))
+                                    .flex()
+                                    .items_center()
+                                    .rounded(px(6.0))
+                                    .bg(rgba(BRAND_WASH))
+                                    .font_family(MONO)
+                                    .text_size(px(9.0))
+                                    .text_color(rgb(BRAND_BRIGHT))
+                                    .child("PREFERRED"),
                             )
                         }),
                 );
@@ -572,6 +671,7 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                 };
                 row = row.child(cell_div);
             }
+            row = row.child(pin_button(("spec-pin", ri), marked, pin, cx));
             body = body.child(row);
             if detail {
                 let mut d = div()
@@ -729,6 +829,108 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
         }
     }
 
+    // ---- the knowledge section: the claims each product is grounded on ----
+    let claims = claim_rows(&subjects);
+    let claims_label = format!("Knowledge ({})", claims.len());
+    let open_knowledge = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.compare_section = 2;
+        this.compare_detail = None;
+        cx.notify();
+    });
+    body = body.child(hairline());
+    body = body.child(
+        section_head(
+            "cmp-knowledge",
+            claims_label.as_str(),
+            "database",
+            section == 2,
+            cx,
+        )
+        .on_click(open_knowledge),
+    );
+
+    if section == 2 {
+        // clicking a claim marks it as preferred — the knowledge you care
+        // about joins what the agent reads off the board
+        for (ri, cells) in claims.iter().enumerate() {
+            let marked = app.compare_marks.contains(&(2, ri));
+            let mark = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                if this.compare_marks.contains(&(2, ri)) {
+                    this.compare_marks.retain(|m| *m != (2, ri));
+                } else {
+                    this.compare_marks.push((2, ri));
+                }
+                cx.notify();
+            });
+            let mut row = div()
+                .id(("knowledge-row", ri))
+                .py(px(11.0))
+                .flex()
+                .items_center()
+                .cursor_pointer()
+                .when(marked, |s| s.bg(rgba(BRAND_WASH)))
+                .hover(|s| s.bg(rgba(GLASS_1)))
+                .on_click(mark)
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(150.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(
+                            div()
+                                .font_family(SANS)
+                                .text_size(px(14.0))
+                                .text_color(rgb(if marked { ICE } else { INK }))
+                                .child(format!("Grounded claim {}", ri + 1)),
+                        )
+                        .when(marked, |d| {
+                            d.child(
+                                div()
+                                    .px(px(7.0))
+                                    .h(px(18.0))
+                                    .flex()
+                                    .items_center()
+                                    .rounded(px(6.0))
+                                    .bg(rgba(BRAND_WASH))
+                                    .font_family(MONO)
+                                    .text_size(px(9.0))
+                                    .text_color(rgb(BRAND_BRIGHT))
+                                    .child("PREFERRED"),
+                            )
+                        }),
+                );
+            for cell in cells {
+                let cell_div = match cell {
+                    Some((claim, source)) => div()
+                        .w(col_w)
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(2.0))
+                        .child(
+                            div()
+                                .font_family(SANS)
+                                .text_size(px(13.0))
+                                .text_color(rgb(INK_2))
+                                .child(claim.to_string()),
+                        )
+                        .child(mono(source, DIM)),
+                    None => div().w(col_w).child(mono("No claim grounded", DIM)),
+                };
+                row = row.child(cell_div);
+            }
+            body = body.child(row);
+            if ri + 1 < claims.len() {
+                body = body.child(hairline());
+            }
+        }
+        if claims.is_empty() {
+            body = body.child(row_desc("No claims grounded for this shortlist."));
+        }
+    }
+
     body
 }
 
@@ -766,60 +968,397 @@ fn section_head(
 
 // ---- the screen ----
 
-pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+/// The column slider: when more products are lined up than the screen
+/// shows, its thumb scrubs through the columns. Drag it or click the
+/// track; the table windows to wherever it sits.
+fn column_slider(
+    app: &mut Kriko,
+    filled: usize,
+    visible: usize,
+    cx: &mut Context<Kriko>,
+) -> Div {
+    let cell: Rc<RefCell<Option<Bounds<Pixels>>>> = Rc::new(RefCell::new(None));
 
-    // ---- the answer slab: said from the lined-up columns ----
-    let picks: Vec<usize> = app.compare_slots.iter().flatten().copied().collect();
-    let names: Vec<String> = picks.iter().map(|c| data::CHECKS[*c].name.to_string()).collect();
-    let answer = if names.len() >= 2 {
-        format!(
-            "{} leads on measured evidence; {} only where price does.",
-            names[0],
-            names[1..].join(" and ")
-        )
-    } else {
-        "Pick at least two saved checks to line them up.".to_string()
-    };
-    let slab = card()
+    let jump_cell = cell.clone();
+    let jump = cx.listener(move |this, ev: &gpui::MouseDownEvent, _w, cx| {
+        let bounds = jump_cell.borrow().unwrap_or_default();
+        if bounds.size.width <= px(0.0) {
+            return;
+        }
+        this.compare_dragging = true;
+        this.compare_scroll = (f32::from(ev.position.x - bounds.origin.x)
+            / f32::from(bounds.size.width))
+            .clamp(0.0, 1.0);
+        cx.notify();
+    });
+    let drag_cell = cell.clone();
+    let drag = cx.listener(move |this, ev: &gpui::MouseMoveEvent, _w, cx| {
+        if !this.compare_dragging {
+            return;
+        }
+        let bounds = drag_cell.borrow().unwrap_or_default();
+        if bounds.size.width <= px(0.0) {
+            return;
+        }
+        this.compare_scroll = (f32::from(ev.position.x - bounds.origin.x)
+            / f32::from(bounds.size.width))
+            .clamp(0.0, 1.0);
+        cx.notify();
+    });
+    let release = cx.listener(|this, _: &gpui::MouseUpEvent, _w, cx| {
+        this.compare_dragging = false;
+        cx.notify();
+    });
+
+    let track_w = 220.0;
+    let thumb_w = (track_w * visible as f32 / filled as f32)
+        .max(24.0)
+        .min(track_w);
+    let thumb_x = app.compare_scroll * (track_w - thumb_w);
+    let first = (app.compare_scroll * (filled - visible) as f32).round() as usize;
+
+    // the canvas quietly records the track's box, so the next drag knows
+    // where the track sits on screen
+    let capture = cell;
+    let surface = canvas(
+        move |bounds, _, _| {
+            *capture.borrow_mut() = Some(bounds);
+            bounds
+        },
+        |_, _, _, _| {},
+    )
+    .absolute()
+    .size_full();
+
+    div()
         .flex()
         .items_center()
-        .justify_between()
-        .gap(px(24.0))
-        .flex_wrap()
+        .gap(px(12.0))
+        .child(mono("PRODUCTS", DIM))
         .child(
             div()
-                .flex()
-                .flex_col()
-                .gap(px(6.0))
-                .min_w(px(0.0))
-                .flex_1()
-                .child(eyebrow("The answer"))
+                .id("cmp-slider")
+                .relative()
+                .w(px(track_w))
+                .h(px(12.0))
+                .rounded(px(6.0))
+                .bg(rgb(WELL))
+                .border_1()
+                .border_color(rgba(HAIRLINE))
+                .cursor_pointer()
+                .on_mouse_down(MouseButton::Left, jump)
+                .on_mouse_move(drag)
+                .on_mouse_up(MouseButton::Left, release)
                 .child(
                     div()
-                        .font_family(SANS)
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(18.0))
-                        .text_color(rgb(INK))
-                        .child(answer),
+                        .absolute()
+                        .top(px(1.0))
+                        .left(px(1.0 + thumb_x))
+                        .w(px(thumb_w - 2.0))
+                        .h(px(8.0))
+                        .rounded(px(4.0))
+                        .bg(rgb(ICE))
+                        .opacity(0.8)
+                        .shadow(vec![shadow(0xbfe4ff66, 0.0, 0.0, 8.0, 0.0)]),
                 )
-                .child(row_desc(
-                    "Every cell names its own sources; disputed values stay marked until settled.",
-                )),
+                .child(surface),
         )
+        .child(mono(
+            &format!(
+                "{}-{} of {}",
+                first + 1,
+                (first + visible).min(filled),
+                filled
+            ),
+            MUTED,
+        ))
+}
+
+/// What the queue's agent is doing at `progress` percent through a product:
+/// reading its pages, then weighing them, then writing the claims.
+fn queue_phase(progress: f32) -> Phase {
+    if progress < 40.0 {
+        Phase::Reading
+    } else if progress < 75.0 {
+        Phase::Thinking
+    } else {
+        Phase::Writing
+    }
+}
+
+/// Queue mode: a few products lined up, one agent researching them in turn,
+/// and the researched ones handed to the slots below as a new draft.
+fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
+    let motion = !app.reduce_motion;
+    let running = app.queue_running;
+    let done_n = app.queue.iter().filter(|q| q.state == QueueState::Done).count();
+    let left_n = app.queue.len() - done_n;
+
+    // ---- the agent that researches the queue ----
+    let mut agent_row = div().flex().items_center().gap(px(8.0)).flex_wrap();
+    for (i, agent) in data::AGENTS.iter().enumerate() {
+        let usable = app.agent_allowed.get(i).copied().unwrap_or(agent.allowed)
+            && matches!(agent.state, TagState::Live | TagState::Done);
+        if !usable {
+            continue;
+        }
+        let picked = app.queue_agent == i;
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            if !this.queue_running {
+                this.queue_agent = i;
+            }
+            cx.notify();
+        });
+        agent_row = agent_row.child(
+            div()
+                .id(("queue-agent", i))
+                .h(px(36.0))
+                .pl(px(5.0))
+                .pr(px(12.0))
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .rounded(px(10.0))
+                .cursor_pointer()
+                .when(picked, |s| {
+                    s.bg(rgb(WELL)).border_1().border_color(rgba(BORDER_CONTROL))
+                })
+                .when(!picked, |s| s.hover(|h| h.bg(rgba(GLASS_1))))
+                .child(mark_tile(
+                    &format!("queue-agent-tile-{i}"),
+                    agent.mark,
+                    if picked && running { Phase::Thinking } else { Phase::Idle },
+                    26.0,
+                    motion,
+                ))
+                .child(
+                    div()
+                        .font_family(MONO)
+                        .text_size(px(11.0))
+                        .text_color(rgb(if picked { ICE } else { MUTED }))
+                        .child(agent.name.to_string()),
+                )
+                .on_click(pick),
+        );
+    }
+
+    // ---- the queue itself, in research order ----
+    let mut rows = div().flex().flex_col();
+    let agent = &data::AGENTS[app.queue_agent];
+    let n = app.queue.len();
+    for (qi, item) in app.queue.iter().enumerate() {
+        let check = &data::CHECKS[item.check];
+        let phase = match item.state {
+            QueueState::Researching => queue_phase(item.progress),
+            QueueState::Done => Phase::Idle,
+            QueueState::Waiting => Phase::Off,
+        };
+        let remove = move |this: &mut Kriko, cx: &mut Context<Kriko>| {
+            if qi < this.queue.len() && this.queue[qi].state != QueueState::Researching {
+                this.queue.remove(qi);
+            }
+            cx.notify();
+        };
+        let (state, word) = match item.state {
+            QueueState::Waiting => (TagState::Queue, "Queued".to_string()),
+            QueueState::Researching => (TagState::Live, "Researching".to_string()),
+            QueueState::Done => (TagState::Done, format!("{} claims", item.claims)),
+        };
+        let status: gpui::AnyElement = match item.state {
+            QueueState::Researching => phase_beat(&format!("queue-beat-{qi}"), phase, motion)
+                .into_any_element(),
+            _ => tag(format!("queue-tag-{qi}"), state, &word, motion).into_any_element(),
+        };
+        rows = rows.child(
+            div()
+                .py(px(10.0))
+                .flex()
+                .items_center()
+                .gap(px(14.0))
+                .child(mono(&format!("{:02}", qi + 1), DIM))
+                .child(mark_tile(
+                    &format!("queue-row-tile-{qi}"),
+                    agent.mark,
+                    phase,
+                    34.0,
+                    motion,
+                ))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(2.0))
+                        .child(
+                            div()
+                                .font_family(SANS)
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .text_size(px(14.0))
+                                .text_color(rgb(if item.state == QueueState::Waiting {
+                                    INK_2
+                                } else {
+                                    INK
+                                }))
+                                .child(check.name.to_string()),
+                        )
+                        .child(mono(
+                            &match item.state {
+                                QueueState::Researching => match phase {
+                                    Phase::Reading => format!("reading sources for {}", check.pack),
+                                    Phase::Thinking => "weighing what the sources agree on".to_string(),
+                                    _ => "writing claims to the store".to_string(),
+                                },
+                                QueueState::Done => format!("from {} · ready to compare", item.origin),
+                                QueueState::Waiting => format!("from {} · waiting its turn", item.origin),
+                            },
+                            MUTED,
+                        )),
+                )
+                .child(
+                    div()
+                        .w(px(150.0))
+                        .flex_none()
+                        .child(meter_slim(item.progress, 12)),
+                )
+                .child(div().w(px(132.0)).flex_none().flex().child(status))
+                .child(
+                    div()
+                        .w(px(24.0))
+                        .flex_none()
+                        .children((item.state != QueueState::Researching).then(|| {
+                            x_button(("queue-remove", qi), cx, remove).into_any_element()
+                        })),
+                ),
+        );
+        if qi + 1 < n {
+            rows = rows.child(hairline());
+        }
+    }
+    if n == 0 {
+        rows = rows.child(
+            div()
+                .py(px(14.0))
+                .child(row_desc("The queue is empty. Queue the products you are weighing up from their listings.")),
+        );
+    }
+
+    // ---- the keys ----
+    let start = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        if this.queue_running {
+            this.queue_running = false;
+            for q in this.queue.iter_mut() {
+                if q.state == QueueState::Researching {
+                    q.state = QueueState::Waiting;
+                    q.progress = 0.0;
+                }
+            }
+            cx.notify();
+        } else {
+            this.queue_start(cx);
+        }
+    });
+    let to_compare = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.queue_to_compare();
+        cx.notify();
+    });
+    let clear_done = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.queue.retain(|q| q.state != QueueState::Done);
+        cx.notify();
+    });
+    let auto_toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.queue_auto = !this.queue_auto;
+        cx.notify();
+    });
+    let overall = if n == 0 {
+        0.0
+    } else {
+        app.queue.iter().map(|q| q.progress).sum::<f32>() / n as f32
+    };
+    let summary = if running {
+        format!("{} researching · {done_n} of {n} done", agent.name)
+    } else if n > 0 && left_n == 0 {
+        format!("all {n} researched · ready to compare")
+    } else {
+        format!("{left_n} waiting · {done_n} researched")
+    };
+
+    let keys = div()
+        .flex()
+        .items_center()
+        .gap(px(12.0))
+        .flex_wrap()
+        .child(
+            key(
+                "queue-start",
+                if running {
+                    "Stop queue"
+                } else if done_n > 0 && left_n > 0 {
+                    "Resume queue"
+                } else {
+                    "Start queue"
+                },
+            )
+            .on_click(start),
+        )
+        .when(done_n >= 2, |d| {
+            d.child(plate_s("queue-compare", &format!("Compare {done_n} below")).on_click(to_compare))
+        })
+        .when(done_n > 0 && !running, |d| {
+            d.child(plate_s("queue-clear", "Clear done").on_click(clear_done))
+        })
+        .child(div().flex_1().min_w(px(0.0)))
         .child(
             div()
                 .flex()
                 .items_center()
-                .gap(px(8.0))
-                .flex_wrap()
-                .children(
-                    picks
-                        .iter()
-                        .map(|c| verdict_chip(data::CHECKS[*c].verdict))
-                        .collect::<Vec<_>>(),
-                ),
+                .gap(px(10.0))
+                .child(mono("FILL SLOTS WHEN DONE", DIM))
+                .child(switch_anim("queue-auto", app.queue_auto, motion).on_click(auto_toggle)),
         );
+
+    card()
+        .flex()
+        .flex_col()
+        .gap(px(14.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(12.0))
+                .child(eyebrow("Research queue"))
+                .child(div().flex_1())
+                .child(mono(&summary, if running { ICE } else { MUTED })),
+        )
+        .child(row_desc(
+            "Products you queue from the browser extension. One agent researches each in turn, sources first, then claims, and the researched ones land in the slots below to compare.",
+        ))
+        .child(meter_live("queue-overall", overall, 28, running, motion))
+        .child(agent_row)
+        .child(
+            // how a product gets here: from its listing, through the panel
+            well()
+                .px(px(14.0))
+                .py(px(10.0))
+                .flex()
+                .items_center()
+                .gap(px(12.0))
+                .child(icon("extension", 16.0).text_color(rgb(ICE)))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .child(row_desc("On a listing, open the Kriko panel and press Add to queue. It lands here, in the order you queued it.")),
+                )
+                .child(keycap("Alt"))
+                .child(keycap("K")),
+        )
+        .child(well().px(px(14.0)).py(px(4.0)).child(rows))
+        .child(keys)
+}
+
+pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let motion = !app.reduce_motion;
 
     // ---- drafts + the board toggle ----
     let board_toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -927,16 +1466,45 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .on_click(board_toggle),
         );
 
-    // ---- the slots: always at least two, one trailing empty ----
+    // ---- the slots: at least two, one trailing empty, eight at most ----
     let mut slots: Vec<Option<usize>> = app.compare_slots.clone();
     while slots.len() < 2 {
         slots.push(None);
     }
-    if slots.len() < 4 {
+    if slots.len() < 8 {
         slots.push(None);
     }
+    // how many resources stand behind each product's knowledge, against
+    // the best-read product on the board
+    let sources_of = |subject: Option<&'static CompareSubject>| -> u32 {
+        subject
+            .map(|s| {
+                let specs: u32 = s
+                    .specs
+                    .iter()
+                    .flat_map(|(_, cells)| cells.iter())
+                    .map(|c| c.sources as u32)
+                    .sum();
+                let risks: u32 = s
+                    .risks
+                    .iter()
+                    .flat_map(|(_, cells)| cells.iter())
+                    .map(|c| c.sources as u32)
+                    .sum();
+                let claims = data::evidence_for(&data::CHECKS[s.check]).claims.len() as u32;
+                specs + risks + claims
+            })
+            .unwrap_or(0)
+    };
+    let best_read = slots
+        .iter()
+        .filter_map(|s| (*s).and_then(subject_for))
+        .map(|s| sources_of(Some(s)))
+        .max()
+        .unwrap_or(1)
+        .max(1);
     let mut slot_row = div().flex().items_start().gap(px(12.0)).flex_wrap();
-    for (i, slot) in slots.iter().take(4).enumerate() {
+    for (i, slot) in slots.iter().take(8).enumerate() {
         let open_picker = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.compare_picker = if this.compare_picker == Some(i) {
                 None
@@ -953,12 +1521,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             this.compare_detail = None;
             cx.notify();
         };
-        let label = match i {
-            0 => "FIRST",
-            1 => "SECOND",
-            2 => "THIRD",
-            _ => "FOURTH",
-        };
+        let label = ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH"][i];
         let mut col = well()
             .id(("slot", i))
             .flex_1()
@@ -983,22 +1546,16 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         col = match slot {
             Some(c) => {
                 let check = &data::CHECKS[*c];
+                let sources = sources_of(subject_for(*c));
+                let rating = sources as f32 / best_read as f32 * 100.0;
                 col.child(
                         div()
-                            .flex()
-                            .items_center()
-                            .justify_between()
-                            .gap(px(8.0))
-                            .child(
-                                div()
-                                    .min_w(px(0.0))
-                                    .font_family(SANS)
-                                    .font_weight(FontWeight::SEMIBOLD)
-                                    .text_size(px(15.0))
-                                    .text_color(rgb(INK))
-                                    .child(check.name.to_string()),
-                            )
-                            .child(verdict_chip(check.verdict)),
+                            .min_w(px(0.0))
+                            .font_family(SANS)
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_size(px(15.0))
+                            .text_color(rgb(INK))
+                            .child(check.name.to_string()),
                     )
                     .child(mono(check.pack, MUTED))
                     .child(
@@ -1006,9 +1563,13 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             .flex()
                             .items_center()
                             .gap(px(8.0))
-                            .child(meter_slim(check.confidence as f32, 10))
-                            .child(mono(&format!("{}%", check.confidence), INK_2)),
+                            .child(mono("INFO", DIM))
+                            .child(meter_slim(rating, 10).flex_1()),
                     )
+                    .child(mono(
+                        &format!("{sources} sources · vs the best-read here"),
+                        MUTED,
+                    ))
             }
             None => col.child(
                 div()
@@ -1069,8 +1630,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                                     .child(check.name.to_string()),
                             ),
                     )
-                    .child(verdict_chip(check.verdict))
-                    .child(mono(&format!("{}%", check.confidence), MUTED)),
+                    .child(mono(check.pack, MUTED)),
             );
         }
         card()
@@ -1089,6 +1649,90 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     .child(list),
             )
     });
+
+    // ---- the agent: which one answers, and everything it sees ----
+    let picks: Vec<usize> = app.compare_slots.iter().flatten().copied().collect();
+    let board_subjects: Vec<Option<&'static CompareSubject>> =
+        picks.iter().map(|&c| subject_for(c)).collect();
+    let spec_n = spec_rows(&board_subjects).len();
+    let risk_n = risk_rows(&board_subjects).len();
+    let claim_n = claim_rows(&board_subjects).len();
+    let notes_n = app
+        .compare_notes
+        .iter()
+        .filter(|n| !n.text.trim().is_empty())
+        .count();
+    let marks_n = app.compare_marks.len();
+    let strokes_n = app.compare_strokes.len();
+    let notes_chars: usize = app.compare_notes.iter().map(|n| n.text.len()).sum();
+    let tokens = picks.len() * 18
+        + spec_n * 16
+        + risk_n * 18
+        + claim_n * 28
+        + marks_n * 6
+        + strokes_n * 8
+        + notes_chars / 4;
+    let attached = format!(
+        "attached: {} subjects · {} spec rows · {} risks · {} claims · {} notes · {} marks · {} strokes — ≈{:.1}k tokens",
+        picks.len(),
+        spec_n,
+        risk_n,
+        claim_n,
+        notes_n,
+        marks_n,
+        strokes_n,
+        tokens as f32 / 1000.0
+    );
+    let answerers: Vec<usize> = data::AGENTS
+        .iter()
+        .enumerate()
+        .filter(|(_, a)| a.can_answer)
+        .map(|(i, _)| i)
+        .collect();
+    let mut agent_row = div().flex().items_center().gap(px(8.0)).flex_wrap();
+    for &ai in &answerers {
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.compare_agent = ai;
+            cx.notify();
+        });
+        let agent = &data::AGENTS[ai];
+        let picked = app.compare_agent == ai;
+        agent_row = agent_row.child(
+            div()
+                .id(("cmp-agent", ai))
+                .h(px(34.0))
+                .px(px(10.0))
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .rounded(px(10.0))
+                .cursor_pointer()
+                .when(picked, |s| {
+                    s.bg(rgb(WELL))
+                        .border_1()
+                        .border_color(rgba(BORDER_CONTROL))
+                })
+                .child(mark_tile(
+                    &format!("cmp-agent-tile-{ai}"),
+                    agent.mark,
+                    if app.compare_questions.iter().any(|q| q.agent == ai && q.answer.is_none()) {
+                        Phase::Thinking
+                    } else {
+                        Phase::Idle
+                    },
+                    26.0,
+                    motion,
+                ))
+                .child(
+                    div()
+                        .font_family(MONO)
+                        .text_size(px(11.0))
+                        .text_color(rgb(if picked { ICE } else { MUTED }))
+                        .child(agent.name.to_string()),
+                )
+                .on_click(pick),
+        );
+    }
 
     // ---- follow-up questions ----
     let ask_input = app.input_field(
@@ -1130,7 +1774,8 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     }
     let draft_name = app.compare_drafts[app.compare_draft].name.clone();
     let mut questions = div().flex().flex_col().gap(px(10.0));
-    for q in app.compare_questions.iter() {
+    for (qi, q) in app.compare_questions.iter().enumerate() {
+        let agent = &data::AGENTS[q.agent];
         questions = questions.child(
             well()
                 .p(px(14.0))
@@ -1159,7 +1804,12 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             .flex()
                             .items_center()
                             .gap(px(8.0))
-                            .child(tag(TagState::Done, "Answered", motion)),
+                            .child(tag(
+                                format!("compare-answered-{qi}"),
+                                TagState::Done,
+                                &format!("{} answered", agent.name),
+                                motion,
+                            )),
                     ).child(
                         div()
                             .font_family(SANS)
@@ -1173,7 +1823,12 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .flex()
                         .items_center()
                         .gap(px(8.0))
-                        .child(tag(TagState::Live, "Asking your agent", motion)),
+                        .child(tag(
+                            format!("compare-asking-{qi}"),
+                            TagState::Live,
+                            &format!("asking {}", agent.name),
+                            motion,
+                        )),
                 })
                 .child(mono(&format!("kept with {}", draft_name), DIM)),
         );
@@ -1185,8 +1840,16 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .gap(px(12.0))
         .child(eyebrow("Ask your agent"))
         .child(row_desc(
-            "A question about this shortlist, answered by an agent with the table attached.",
+            "A question about this shortlist. The agent reads the whole board: the columns, your marks, your notes.",
         ))
+        .child(agent_row)
+        .child(
+            div()
+                .font_family(MONO)
+                .text_size(px(11.0))
+                .text_color(rgb(MUTED))
+                .child(attached),
+        )
         .child(
             div()
                 .flex()
@@ -1206,14 +1869,19 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .flex()
         .flex_col()
         .gap(px(20.0))
-        .child(slab)
         .child(drafts_row)
+        .child(queue_card(app, cx))
         .children(picker_card);
     if app.compare_board_open {
         page = page.child(board(app, window, cx));
     }
+    page = page.child(slot_row);
+    // the slider appears once the shortlist outgrows the screen
+    let filled_n = app.compare_slots.iter().flatten().count();
+    if filled_n > 3 {
+        page = page.child(column_slider(app, filled_n, 3, cx));
+    }
     page = page
-        .child(slot_row)
         .child(
             div()
                 .id("compare-table-scroll")

@@ -22,7 +22,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 .flex()
                 .flex_col()
                 .gap(px(6.0))
-                .child(tag(TagState::Need, "Needs you", motion))
+                .child(tag("activity-need", TagState::Need, "Needs you", motion))
                 .child(
                     div()
                         .font_family(SANS)
@@ -99,7 +99,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     .text_color(rgb(INK))
                     .child(entry.text.to_string()),
             )
-            .child(tag(entry.state, entry.kind, motion));
+            .child(tag(format!("activity-feed-{ri}"), entry.state, entry.kind, motion));
         feed = feed.child(row);
         if ri + 1 < entries.len() {
             feed = feed.child(hairline());
