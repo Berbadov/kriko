@@ -48,6 +48,16 @@ SPARE_PAGES = 3
 #: Text shorter than a sentence or so is a refusal, a cookie wall or an empty
 #: shell, not a page: it is a miss, so a spare takes its place.
 MIN_PAGE_CHARS = 80
+#: The least of a page worth showing. When the model's context cannot give
+#: every page this much, fewer pages are shown, each one whole enough to
+#: quote from, rather than all of them as fragments.
+MIN_SHARE = 1200
+#: Characters of the task the planner reads. The product and the listing
+#: are at the top; the reply format below them is where a small model picks
+#: up a url and offers it as a "query".
+PLAN_CHARS = 1500
+#: A query longer than this is a sentence, not a search.
+QUERY_WORDS = 15
 
 QUERY_SCHEMA = {"type": "array", "items": {"type": "string"}}
 
@@ -56,6 +66,12 @@ _QUERY_ASK = (
     "JSON array of {n} short web search queries that would find documented "
     "problems, failures and owner reports about the product it names. No "
     "prose.\n\n## Task\n\n{task}"
+)
+
+_QUERY_RETRY = (
+    "That reply was not a list of web search queries. Reply with ONLY a JSON "
+    "array of {n} short search queries (plain words, no URLs), for example "
+    '["first query", "second query"].\n\n## Task\n\n{task}'
 )
 
 _PAGES_HEAD = (
@@ -134,38 +150,99 @@ class LocalAsker:
         self._say(f"read {len(pages)} page(s): "
                   + ", ".join(url for url, _ in pages))
         self._check()
+        pages = self._fit(prompt, pages, queries)
         blocks = "\n\n".join(f"### URL: {url}\n\n{text}" for url, text in pages)
-        return self._complete(prompt + _PAGES_HEAD + blocks)
+        return self._complete(prompt + _PAGES_HEAD + blocks + self._reply_budget())
+
+    def _reply_budget(self) -> str:
+        """The reply's length limit, said to the model.
+
+        A CPU writes a few tokens a second, and a reply cut off at
+        `max_tokens` is minutes spent on JSON that does not close. Measured
+        on a 3B model on four cores: 1 024 tokens took 145 s and parsed to
+        nothing. Told the limit, the model writes fewer items and finishes
+        them.
+        """
+        limit = getattr(self._complete, "max_tokens", None)
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0:
+            return ""
+        return (f"\n\n## Length\n\nYour whole reply must fit in about "
+                f"{int(limit * 0.6)} words. Keep every field short and give "
+                "fewer items rather than more: a finished reply with two items "
+                "beats a longer one that is cut off before it closes.\n")
+
+    def _fit(self, prompt: str, pages: list[tuple[str, str]],
+             queries: list[str]) -> list[tuple[str, str]]:
+        """The pages, cut to fit the context the server runs the model with.
+
+        A local server cuts a prompt that overflows its window from the
+        front, silently, and the front is the instructions: a run measured
+        on Ollama's default 4k window kept 2 050 of 4 331 tokens and
+        answered with nothing. So the pages share what the brief leaves,
+        fewer of them when the share would be a fragment, and `sources`
+        holds exactly what was shown, because that is what quotes are
+        checked against.
+        """
+        allowed = getattr(self._complete, "prompt_chars_allowed", None)
+        if not callable(allowed):
+            return pages
+        room = allowed() - len(prompt) - len(_PAGES_HEAD) - len(self._reply_budget())
+        count = len(pages)
+        while count > 1 and room // count < MIN_SHARE:
+            count -= 1
+        share = max(MIN_SHARE // 2, room // max(1, count) - 40)
+        fitted = [(url, focus(text, share, queries)) for url, text in pages[:count]]
+        if count < len(pages) or any(len(a) < len(b) for (_, a), (_, b) in zip(fitted, pages)):
+            window = getattr(self._complete, "context_tokens", lambda: 0)()
+            self._say(f"fitted {count} of {len(pages)} page(s) into the model's "
+                      f"{window}-token context")
+        self.sources = dict(fitted)
+        return fitted
 
     def _queries(self, prompt: str) -> list[str]:
-        import json
-
         # A case may name its own queries (B185): the fixed set's queries
         # are part of its versioned ground truth, and letting the model
         # invent its own would quietly change what the run measured.
         if self.given_queries:
             return list(self.given_queries)[:QUERIES]
-        raw = self._plan(_QUERY_ASK.format(n=QUERIES, task=prompt[:4000]))
+        task = prompt[:PLAN_CHARS]
+        queries = self._usable(self._plan(_QUERY_ASK.format(n=QUERIES, task=task)))
+        if not queries:
+            # One repair, said plainly: a small model that answered with a
+            # url or prose once usually answers the plain ask right.
+            self._say("the planner's reply held no usable query; asking once more")
+            queries = self._usable(self._plan(_QUERY_RETRY.format(n=QUERIES, task=task)))
+        if not queries:
+            raise LocalInferenceError(
+                f"{self.model!r} at {self.url or 'this machine'} did not "
+                "propose any search query, so nothing was searched. A larger "
+                "model follows this kind of instruction more reliably.")
+        return queries
+
+    @staticmethod
+    def _usable(raw: str) -> list[str]:
+        """The search queries in a planner's reply: no urls, no sentences,
+        no repeats, at most `QUERIES`."""
+        import json
+
         try:
             found = json.loads(raw[raw.index("["): raw.rindex("]") + 1])
         except ValueError:
+            found = []
+        if not isinstance(found, list):
             found = []
         queries: list[str] = []
         lowered: set[str] = set()
         for one in found:
             text = str(one).strip()
             low = text.casefold()
-            if not text or low in lowered:
+            if (not text or low in lowered or "://" in text or low.startswith("www.")
+                    or len(text.split()) > QUERY_WORDS):
                 continue
             lowered.add(low)
             queries.append(text)
             if len(queries) >= QUERIES:
                 break
-        if not queries:
-            raise LocalInferenceError(
-                f"{self.model!r} at {self.url or 'this machine'} did not "
-                "propose any search query, so nothing was searched. A larger "
-                "model follows this kind of instruction more reliably.")
         return queries
 
     def _read(self, queries: list[str]) -> list[tuple[str, str]]:

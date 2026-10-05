@@ -272,3 +272,109 @@ def test_a_stub_page_is_a_miss_and_a_spare_takes_its_place(monkeypatch):
     asker.on_action = lambda line: None
     asker.ask("widget")
     assert list(asker.sources) == ["https://a.test/real"]
+
+
+class Fitted(Complete):
+    """A completion socket that knows its window, as the real one does."""
+
+    max_tokens = 100
+
+    def __init__(self, allowed: int):
+        super().__init__()
+        self.allowed = allowed
+
+    def prompt_chars_allowed(self) -> int:
+        return self.allowed
+
+    def context_tokens(self) -> int:
+        return 4096
+
+
+def test_the_prompt_is_fitted_to_the_models_window():
+    """A server cuts an overflowing prompt from the front, silently; the
+    front is the instructions. So the pages share what the brief leaves,
+    and the sources are exactly what was shown."""
+    long_page = "\n\n".join(f"Paragraph {i} about the widget gearbox." for i in range(400))
+    complete = Fitted(allowed=6000)
+    asker = local_agent.LocalAsker(
+        Plan('["widget gearbox"]'), complete,
+        searcher([{"url": f"https://a.test/{i}", "title": str(i)} for i in range(3)]),
+        reader({f"https://a.test/{i}": long_page for i in range(3)}),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    asker.ask("widget")
+    assert len(complete.prompts[0]) <= 6000
+    shown = complete.prompts[0]
+    for text in asker.sources.values():
+        assert text in shown
+
+
+def test_too_small_a_window_shows_fewer_pages_whole_enough_to_quote():
+    long_page = "\n\n".join(f"Paragraph {i} about the widget gearbox." for i in range(400))
+    complete = Fitted(allowed=local_agent.MIN_SHARE * 2 + 1500)
+    asker = local_agent.LocalAsker(
+        Plan('["widget gearbox"]'), complete,
+        searcher([{"url": f"https://a.test/{i}", "title": str(i)} for i in range(5)]),
+        reader({f"https://a.test/{i}": long_page for i in range(5)}),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    asker.ask("widget")
+    assert 1 <= len(asker.sources) < 5
+    assert all(len(text) >= local_agent.MIN_SHARE // 2 for text in asker.sources.values())
+
+
+def test_the_reply_budget_is_said_to_the_model():
+    complete = Fitted(allowed=100_000)
+    asker = local_agent.LocalAsker(
+        Plan('["q"]'), complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "text"}), model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    asker.ask("widget")
+    assert "about 60 words" in complete.prompts[0]
+
+
+def test_a_url_or_a_sentence_is_not_a_query_and_the_planner_is_asked_again():
+    """Measured on a 3B model: its "query" was a url from the reply format."""
+    replies = iter(['["https://www.example.test/review", "www.example.test"]',
+                    '["widget gearbox failure", "widget owners forum"]'])
+    prompts: list[str] = []
+
+    def planner(prompt):
+        prompts.append(prompt)
+        return next(replies)
+
+    asked: list[str] = []
+    asker = local_agent.LocalAsker(
+        planner, Complete(),
+        searcher([{"url": "https://a.test/1", "title": "A"}], started=asked),
+        reader({"https://a.test/1": "text"}), model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    asker.ask("widget")
+    assert len(prompts) == 2
+    assert asked == ["widget gearbox failure", "widget owners forum"]
+    assert local_agent.LocalAsker._usable('["' + "word " * 20 + '"]') == []
+
+
+def test_the_socket_asks_the_server_for_its_window(monkeypatch):
+    """Ollama says it in `/api/ps`; nothing answering is the 4k default."""
+    import io
+    import json as _json
+
+    from app.providers import local_inference
+
+    socket = local_inference.OpenAICompatSocket("http://127.0.0.1:1", "m:3b")
+    answers = {"/api/ps": {"models": [{"name": "m:3b", "context_length": 8192}]}}
+
+    def urlopen(url, timeout=0):
+        path = url.removeprefix("http://127.0.0.1:1")
+        if path not in answers:
+            raise OSError("nothing here")
+        return io.BytesIO(_json.dumps(answers[path]).encode())
+
+    monkeypatch.setattr(local_inference.urllib.request, "urlopen", urlopen)
+    assert socket.context_tokens() == 8192
+    allowed = socket.prompt_chars_allowed()
+    assert allowed == int((8192 - socket.max_tokens - 128) * local_inference.CHARS_PER_TOKEN)
+
+    silent = local_inference.OpenAICompatSocket("http://127.0.0.1:1", "other")
+    assert silent.context_tokens() == local_inference.DEFAULT_CONTEXT_TOKENS

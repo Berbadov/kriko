@@ -111,6 +111,11 @@ def _salvage_array(reply: str) -> list | None:
     return None
 
 
+#: Characters the reply instructions after the documents take, kept free
+#: when documents are fitted to a socket's window.
+_REPLY_ROOM = 1500
+
+
 class LocalPlane:
     """Research on this machine. Marginal cost: electricity.
 
@@ -275,6 +280,14 @@ class LocalPlane:
 
     def _read(self, task: ResearchTask, batch: list[Document]) -> dict:
         limit = max(500, int(self.spend.context_chars))
+        # A local server cuts an overflowing prompt from the front, which is
+        # the brief, without an error. A socket that knows its window says
+        # how much prompt fits, and the documents share what the brief and
+        # the reply shape leave.
+        allowed = getattr(self._complete, "prompt_chars_allowed", None)
+        if callable(allowed):
+            room = int(allowed()) - len(self.brief(task)) - _REPLY_ROOM
+            limit = max(500, min(limit, room // max(1, len(batch))))
         terms = terms_of(task)
         blocks = "\n\n".join(
             f"### Document {index}\nURL: {one.url}\n\n{focus(one.text, limit, terms)}"
