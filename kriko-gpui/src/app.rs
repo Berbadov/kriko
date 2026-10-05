@@ -312,52 +312,12 @@ impl DockFeedEntry {
     }
 }
 
-/// One sticky note on the compare board. The position is a fraction of the
-/// board's own box, so the note lands on the same column whatever the width.
-#[derive(Clone)]
-pub struct CompareNote {
-    pub x: f32,
-    pub y: f32,
-    pub text: String,
-}
-
 /// A saved, named comparison: which checks sit in which slots.
+#[allow(dead_code)]
 pub struct CompareDraftDef {
     pub name: String,
     pub slots: Vec<Option<usize>>,
 }
-
-/// A follow-up question asked about the comparison, with its answer once
-/// the agent has finished. `agent` names which one answered, by index
-/// into AGENTS.
-pub struct CompareQuestion {
-    pub text: String,
-    pub agent: usize,
-    pub answer: Option<String>,
-}
-
-/// Where one product stands in the research queue on Compare.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum QueueState {
-    Waiting,
-    Researching,
-    Done,
-}
-
-/// One product in the research queue: the check it researches, how far the
-/// agent has got, and how many claims it found once done.
-pub struct QueueItem {
-    pub check: usize,
-    /// The site the extension queued it from, as the panel posted it.
-    pub origin: &'static str,
-    pub state: QueueState,
-    pub progress: f32,
-    pub claims: u16,
-}
-
-/// Percent of one product the queue's agent researches per 100 ms tick:
-/// about four seconds a product, so the demo walks while you watch.
-pub const QUEUE_STEP: f32 = 2.5;
 
 /// Percent of the benchmark per 100 ms tick, through every stage.
 pub const BENCH_STEP: f32 = 1.4;
@@ -421,39 +381,13 @@ pub struct Kriko {
     pub dock_lane_bump: usize,
     pub dock_reply_sent: usize,
     pub dock_open: bool,
-    // compare: the slots, the draft, the board, the questions
+    // compare: the engine's own rows live in `live.compare`; these three are
+    // what Home still reads and stay empty until Home reads `live.compare`
     pub compare_slots: Vec<Option<usize>>,
-    pub compare_picker: Option<usize>,
-    pub compare_section: usize,
-    pub compare_detail: Option<(usize, usize)>,
     pub compare_draft: usize,
     pub compare_drafts: Vec<CompareDraftDef>,
-    pub compare_board_open: bool,
-    pub compare_board_tool: usize,
-    pub compare_strokes: Vec<Vec<(f32, f32)>>,
-    pub compare_stroke_current: Vec<(f32, f32)>,
-    pub compare_drawing: bool,
-    pub compare_notes: Vec<CompareNote>,
-    pub compare_note_open: Option<usize>,
     pub compare_note_input: InputState,
     pub compare_question_input: InputState,
-    pub compare_questions: Vec<CompareQuestion>,
-    /// Which agent the questions on Compare go to, by index into AGENTS.
-    pub compare_agent: usize,
-    /// The rows pinned as preferred on Compare: (section, row). The agent
-    /// reads them with everything else on the board.
-    pub compare_marks: Vec<(usize, usize)>,
-    /// The column slider's thumb, 0..=1. Only moves when more products are
-    /// lined up than fit on screen.
-    pub compare_scroll: f32,
-    pub compare_dragging: bool,
-    // research queue (Compare)
-    pub queue: Vec<QueueItem>,
-    /// The agent the queue researches with, by index into AGENTS.
-    pub queue_agent: usize,
-    pub queue_running: bool,
-    /// When on, a finished queue fills the compare slots by itself.
-    pub queue_auto: bool,
     // benchmark
     /// 0..=100 while a benchmark runs, None when idle.
     pub bench_progress: Option<f32>,
@@ -540,71 +474,13 @@ impl Kriko {
             dock_lane_bump: 0,
             dock_reply_sent: 0,
             dock_open: true,
-            compare_slots: data::COMPARE_DEFAULT_SLOTS
-                .iter()
-                .map(|i| Some(*i))
-                .collect(),
-            compare_picker: None,
-            compare_section: 0,
-            compare_detail: None,
+            compare_slots: Vec::new(),
             compare_draft: 0,
-            compare_drafts: data::COMPARE_DRAFTS
-                .iter()
-                .map(|d| CompareDraftDef {
-                    name: d.name.to_string(),
-                    slots: d.slots.iter().map(|i| Some(*i)).collect(),
-                })
-                .collect(),
-            compare_board_open: false,
-            compare_board_tool: 0,
-            compare_strokes: Vec::new(),
-            compare_stroke_current: Vec::new(),
-            compare_drawing: false,
-            compare_notes: Vec::new(),
-            compare_note_open: None,
+            compare_drafts: Vec::new(),
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
-            compare_agent: 0,
-            compare_marks: Vec::new(),
-            compare_scroll: 0.0,
-            compare_dragging: false,
-            // what the extension's Add to queue key sent, oldest first
-            queue: [(7usize, "apple.com"), (14, "sennheiser-hearing.com"), (10, "jbl.com")]
-                .into_iter()
-                .map(|(check, origin)| QueueItem {
-                    check,
-                    origin,
-                    state: QueueState::Waiting,
-                    progress: 0.0,
-                    claims: 0,
-                })
-                .collect(),
-            queue_agent: 0,
-            queue_running: false,
-            queue_auto: true,
             bench_progress: None,
             bench_done: 0,
-            compare_questions: vec![
-                CompareQuestion {
-                    text: "What does each one's knowledge rest on?".to_string(),
-                    agent: 0,
-                    answer: Some(
-                        "On record: the Buds2 Pro's ANC rests on 5 sources, the Buds Pro's \
-                         battery on 4 that disagree, the XM5's noise cancelling on 5 that \
-                         agree. Nothing here is ranked — the counts are the knowledge."
-                            .to_string(),
-                    ),
-                },
-                CompareQuestion {
-                    text: "What does the XM5's higher price buy?".to_string(),
-                    agent: 1,
-                    answer: Some(
-                        "Measured: 42 dB of noise cancelling, the strongest of the three, \
-                         from 5 agreeing sources. The board records that and nothing beyond it."
-                            .to_string(),
-                    ),
-                },
-            ],
             local_url: InputState::new(cx),
             local_search: InputState::new(cx),
             local_model_pick: 0,
@@ -633,24 +509,8 @@ impl Kriko {
         // A verification hook: KRIKO_VERIFY seeds one page's state so it can
         // be captured without driving the mouse on a busy desktop.
         match std::env::var("KRIKO_VERIFY").as_deref() {
-            Ok("compare") => {
+            Ok("compare") | Ok("risks") => {
                 app.tab = Tab::Compare;
-                app.compare_board_open = true;
-                app.compare_strokes = vec![
-                    vec![(0.12, 0.30), (0.30, 0.38), (0.48, 0.30)],
-                    vec![(0.62, 0.62), (0.70, 0.70), (0.78, 0.62)],
-                ];
-                app.compare_notes = vec![CompareNote {
-                    x: 0.20,
-                    y: 0.18,
-                    text: "this one, if the price drops".to_string(),
-                }];
-                app.compare_detail = Some((0, 0));
-            }
-            Ok("risks") => {
-                app.tab = Tab::Compare;
-                app.compare_section = 1;
-                app.compare_detail = Some((1, 0));
             }
             Ok("local") => {
                 app.tab = Tab::Local;
@@ -822,14 +682,7 @@ impl Kriko {
         }
         // Enter on the compare board commits the note being edited.
         if ks.key.as_str() == "enter" && field == Field::BoardNote {
-            let text = this.input(field).value.trim().to_string();
-            if let Some(open) = this.compare_note_open {
-                if open < this.compare_notes.len() {
-                    this.compare_notes[open].text = text;
-                }
-                this.compare_note_open = None;
-            }
-            this.input_mut(field).value.clear();
+            this.commit_board_note(cx);
             cx.notify();
             return;
         }
@@ -929,89 +782,6 @@ impl Kriko {
 
     // ---- simulated agent work ----
 
-    /// Push the question, then let the chosen agent answer it a moment
-    /// later. The answer is read back from the board — subjects, marks,
-    /// notes — and never ranks anything.
-    pub fn ask_compare_question(&mut self, cx: &mut Context<Self>) {
-        let text = self.compare_question_input.value.trim().to_string();
-        if text.is_empty() {
-            return;
-        }
-        let agent = self.compare_agent;
-        // what the agent sees: the board, read back
-        let subjects: Vec<usize> = self.compare_slots.iter().flatten().copied().collect();
-        let names: Vec<&str> = subjects
-            .iter()
-            .map(|&c| data::CHECKS[c].name)
-            .collect();
-        let marks = self.compare_marks.len();
-        let notes: Vec<String> = self
-            .compare_notes
-            .iter()
-            .map(|n| n.text.trim().to_string())
-            .filter(|t| !t.is_empty())
-            .collect();
-        let strokes = self.compare_strokes.len();
-        let mut answer = format!(
-            "Read straight from your board: {} lined up",
-            if names.len() > 1 {
-                format!("{} and {}", names[..names.len() - 1].join(", "), names[names.len() - 1])
-            } else {
-                names.first().copied().unwrap_or("nothing").to_string()
-            },
-        );
-        if marks > 0 {
-            answer.push_str(&format!(
-                ", {} row{} marked as preferred",
-                marks,
-                if marks > 1 { "s" } else { "" }
-            ));
-        }
-        if !notes.is_empty() {
-            answer.push_str(&format!(
-                ". Your notes read: \"{}\"",
-                notes.join("\"; \"")
-            ));
-        }
-        if strokes > 0 {
-            answer.push_str(&format!(
-                ", {} stroke{} on the board",
-                strokes,
-                if strokes > 1 { "s" } else { "" }
-            ));
-        }
-        answer.push_str(
-            ". Every cell keeps its own sources; this is the table read back, not a ranking.",
-        );
-        self.compare_question_input.value.clear();
-        self.compare_questions.insert(
-            0,
-            CompareQuestion {
-                text,
-                agent,
-                answer: None,
-            },
-        );
-        cx.notify();
-        cx.spawn(async move |this, cx| {
-            cx.background_executor()
-                .timer(std::time::Duration::from_millis(1500))
-                .await;
-            let _ = this.update(cx, |this, cx| {
-                if let Some(q) = this
-                    .compare_questions
-                    .iter_mut()
-                    .rev()
-                    .find(|q| q.answer.is_none())
-                {
-                    q.answer = Some(answer);
-                }
-                cx.notify();
-            });
-        })
-        .detach();
-    }
-
     /// Run the local model test: LIVE for a moment, then the result lines.
     pub fn run_local_test(&mut self, cx: &mut Context<Self>) {
         if self.local_test == 1 {
@@ -1080,98 +850,6 @@ impl Kriko {
 
     /// Fetch a catalogue model: the meter fills at a steady line rate, so a
     /// bigger model takes visibly longer, then it is on disk and loadable.
-    // ---- research queue ----
-
-    /// Researches the waiting products one after another with the queue's
-    /// agent: reading, then thinking, then writing claims, a product at a
-    /// time. A finished queue says so in the dock and, with Auto on, fills
-    /// the compare slots.
-    pub fn queue_start(&mut self, cx: &mut Context<Self>) {
-        let left = self.queue.iter().filter(|q| q.state != QueueState::Done).count();
-        if self.queue_running || left == 0 {
-            return;
-        }
-        self.queue_running = true;
-        let agent = data::AGENTS[self.queue_agent].name;
-        self.dock_feed.push(DockFeedEntry::now(
-            format!("{agent}: queue started, {left} to research"),
-            TagState::Live,
-        ));
-        cx.notify();
-        let mut last = std::time::Instant::now();
-        cx.spawn(async move |this, cx| loop {
-            cx.background_executor()
-                .timer(std::time::Duration::from_millis(100))
-                .await;
-            // ticks arrive late on a busy frame; step by the time that passed
-            let ticks = last.elapsed().as_secs_f32() / 0.1;
-            last = std::time::Instant::now();
-            let done = this
-                .update(cx, |this, cx| {
-                    if !this.queue_running {
-                        return true;
-                    }
-                    let Some(item) = this
-                        .queue
-                        .iter_mut()
-                        .find(|q| q.state != QueueState::Done)
-                    else {
-                        this.queue_running = false;
-                        let n = this.queue.len();
-                        this.dock_feed.push(DockFeedEntry::now(
-                            format!("Queue done: {n} products researched"),
-                            TagState::Done,
-                        ));
-                        if this.queue_auto {
-                            this.queue_to_compare();
-                        }
-                        cx.notify();
-                        return true;
-                    };
-                    item.state = QueueState::Researching;
-                    item.progress += QUEUE_STEP * ticks;
-                    if item.progress >= 100.0 {
-                        item.progress = 100.0;
-                        item.state = QueueState::Done;
-                        // what the agent found, derived from what the store
-                        // already holds for that product, so it is stable
-                        let ev = data::evidence_for(&data::CHECKS[item.check]).claims.len();
-                        item.claims = (ev as u16) * 3 + (item.check as u16 % 5) + 4;
-                    }
-                    cx.notify();
-                    false
-                })
-                .unwrap_or(true);
-            if done {
-                break;
-            }
-        })
-        .detach();
-    }
-
-    /// Puts the researched products into the compare slots as a new draft.
-    pub fn queue_to_compare(&mut self) {
-        let slots: Vec<Option<usize>> = self
-            .queue
-            .iter()
-            .filter(|q| q.state == QueueState::Done)
-            .map(|q| Some(q.check))
-            .take(8)
-            .collect();
-        if slots.is_empty() {
-            return;
-        }
-        let n = self.compare_drafts.len() + 1;
-        self.compare_drafts.push(CompareDraftDef {
-            name: format!("Queue {n}"),
-            slots: slots.clone(),
-        });
-        self.compare_draft = self.compare_drafts.len() - 1;
-        self.compare_slots = slots;
-        self.compare_detail = None;
-        self.compare_picker = None;
-    }
-
     // ---- benchmark ----
 
     /// Walks every stage of a check once, timing it; the screen lights the
