@@ -213,6 +213,7 @@ pub enum Field {
     DockReply,
     CompareAsk,
     BoardNote,
+    RunSearch,
     LocalUrl,
     LocalSearch,
 }
@@ -397,7 +398,6 @@ pub struct Kriko {
     pub browse_selected: usize,
     pub browse_view: usize,
     pub browse_view_prev: usize,
-    pub agent_selected: usize,
     pub agent_allowed: Vec<bool>,
     pub pack_enabled: Vec<bool>,
     /// The coverage gap unfolded on Overview, by index into KNOWLEDGE.
@@ -407,19 +407,13 @@ pub struct Kriko {
     // extension
     pub extension_linked: bool,
     pub extension_hover: bool,
-    // run
-    pub run_phase: usize,
+    // run: the subject search that starts a check
+    pub run_search: InputState,
     // the live actions dock
     pub dock_reply: InputState,
-    pub dock_resolved: Vec<usize>,
-    /// Which dock requests an agent is asking right now: the needs-you block
-    /// only exists while one is asking, and pops in when it starts.
-    pub dock_request_active: Vec<bool>,
     /// The reply drawer: closed unless you are answering an agent.
     pub dock_reply_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
-    pub dock_lane_bump: usize,
-    pub dock_reply_sent: usize,
     pub dock_open: bool,
     // compare: the slots, the draft, the board, the questions
     pub compare_slots: Vec<Option<usize>>,
@@ -483,8 +477,6 @@ pub struct Kriko {
     pub pulled: Vec<bool>,
     /// The fetched model in use, by index into CATALOGUE.
     pub catalogue_loaded: Option<usize>,
-    // agents: per-agent tool permissions [read, run, answer]
-    pub agent_tools: Vec<[bool; 3]>,
 }
 
 /// The line rate a model download runs at, in GB/s, in the sample app.
@@ -515,30 +507,16 @@ impl Kriko {
             browse_selected: 0,
             browse_view: 0,
             browse_view_prev: 0,
-            agent_selected: 0,
             agent_allowed: data::AGENTS.iter().map(|a| a.allowed).collect(),
             pack_enabled: data::PACKS.iter().map(|p| p.enabled).collect(),
             knowledge_open: None,
             model_loaded: data::MODELS.iter().map(|m| m.loaded).collect(),
             extension_linked: false,
             extension_hover: false,
-            run_phase: 0,
+            run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
-            dock_resolved: Vec::new(),
-            dock_request_active: data::DOCK_REQUESTS.iter().map(|_| false).collect(),
             dock_reply_open: false,
-            dock_feed: vec![
-                DockFeedEntry::now(
-                    "Claude Code: read 4 pages of rtings.com".to_string(),
-                    TagState::Done,
-                ),
-                DockFeedEntry::now(
-                    "opencode: settled the battery dispute".to_string(),
-                    TagState::Done,
-                ),
-            ],
-            dock_lane_bump: 0,
-            dock_reply_sent: 0,
+            dock_feed: Vec::new(),
             dock_open: true,
             compare_slots: data::COMPARE_DEFAULT_SLOTS
                 .iter()
@@ -623,10 +601,6 @@ impl Kriko {
             pull_progress: data::CATALOGUE.iter().map(|_| None).collect(),
             pulled: data::CATALOGUE.iter().map(|_| false).collect(),
             catalogue_loaded: None,
-            agent_tools: data::AGENTS
-                .iter()
-                .map(|a| [a.can_read, a.can_run, a.can_answer])
-                .collect(),
         };
         app.local_url.value = "http://127.0.0.1:7400".to_string();
         app.local_search.value = "http://127.0.0.1:7400/search".to_string();
@@ -660,7 +634,6 @@ impl Kriko {
                 app.tab = Tab::Agents;
             }
             Ok("dock") => {
-                app.dock_request_active[1] = true;
                 app.dock_reply_open = true;
             }
             _ => {}
@@ -675,52 +648,6 @@ impl Kriko {
             let alive = this.update(cx, |this, cx| this.pulse(cx)).is_ok();
             if !alive {
                 break;
-            }
-        })
-        .detach();
-        // The needs-you block is not part of the dock's resting state: an
-        // agent asks, and only then does it pop in. Simulate one asking.
-        cx.spawn(async move |this, cx| {
-            cx.background_executor()
-                .timer(std::time::Duration::from_secs(7))
-                .await;
-            let _ = this.update(cx, |this, cx| {
-                if !this.dock_request_active[1] {
-                    this.dock_request_active[1] = true;
-                    this.dock_feed.push(DockFeedEntry::now(
-                        "Claude Code: asks about rtings.com".to_string(),
-                        TagState::Need,
-                    ));
-                    // an agent asking you is the one moment the reply
-                    // drawer opens itself
-                    this.dock_reply_open = true;
-                    cx.notify();
-                }
-            });
-        })
-        .detach();
-        // The run plays itself while Run is on screen: one phase every few
-        // beats, then it holds at stored. Reduce motion keeps it still, and
-        // the Replay control on the page winds it back to the start.
-        cx.spawn(async move |this, cx| {
-            loop {
-                cx.background_executor()
-                    .timer(std::time::Duration::from_millis(2400))
-                    .await;
-                if this
-                    .update(cx, |this, cx| {
-                        if this.tab == Tab::Run
-                            && !this.reduce_motion
-                            && this.run_phase < screens::run::PHASES.len()
-                        {
-                            this.run_phase += 1;
-                            cx.notify();
-                        }
-                    })
-                    .is_err()
-                {
-                    break;
-                }
             }
         })
         .detach();
@@ -770,6 +697,7 @@ impl Kriko {
             Field::DockReply => &self.dock_reply,
             Field::CompareAsk => &self.compare_question_input,
             Field::BoardNote => &self.compare_note_input,
+            Field::RunSearch => &self.run_search,
             Field::LocalUrl => &self.local_url,
             Field::LocalSearch => &self.local_search,
         }
@@ -784,6 +712,7 @@ impl Kriko {
             Field::DockReply => &mut self.dock_reply,
             Field::CompareAsk => &mut self.compare_question_input,
             Field::BoardNote => &mut self.compare_note_input,
+            Field::RunSearch => &mut self.run_search,
             Field::LocalUrl => &mut self.local_url,
             Field::LocalSearch => &mut self.local_search,
         }
@@ -794,19 +723,15 @@ impl Kriko {
         if ks.modifiers.control || ks.modifiers.alt || ks.modifiers.platform {
             return;
         }
-        // Enter in the dock reply sends it straight to the feed.
+        // Enter in the dock reply says it to the running job.
         if ks.key.as_str() == "enter" && field == Field::DockReply {
-            let text = this.input(field).value.trim().to_string();
-            if !text.is_empty() {
-                this.input_mut(field).value.clear();
-                this.dock_feed.push(DockFeedEntry::now(
-                    format!("You: {text}"),
-                    TagState::Done,
-                ));
-                this.dock_lane_bump = (this.dock_lane_bump + 1) % data::DOCK_LANES.len();
-                this.dock_reply_sent += 1;
-            }
-            this.dock_reply_open = false;
+            this.send_reply(cx);
+            cx.notify();
+            return;
+        }
+        // Enter in the Run search looks the subject up.
+        if ks.key.as_str() == "enter" && field == Field::RunSearch {
+            this.search_subjects(cx);
             cx.notify();
             return;
         }
