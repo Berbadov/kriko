@@ -1480,6 +1480,27 @@ def _note_automatic_pass(settings, params: dict) -> None:
         packautoupdate.record_success(settings.app_state_path)
 
 
+def _automatic_pass_without_index(settings, index_url: str, exc: Exception,
+                                  progress: Progress) -> dict:
+    """The weekly pass found no index: an answer, not a failure (1.0.0).
+
+    Nobody pressed anything, so a red job here is noise the reader cannot act
+    on, and it came back at every launch: Activity and the dock filled with
+    the same failure. An index with nothing published means nothing is newer,
+    so the week starts; an unreachable one is asked again at the next launch,
+    as before. Either way the reason stays in the job's log and result.
+    """
+    import urllib.error
+
+    reason = _friendly_index_error(exc)
+    progress.log(f"{reason} ({type(exc).__name__}: {exc})")
+    nothing_published = isinstance(exc, urllib.error.HTTPError) and exc.code == 404
+    if nothing_published:
+        _note_automatic_pass(settings, {"automatic": True})
+    progress.set(1.0, "nothing to update" if nothing_published else "will ask again next launch")
+    return {"index_url": index_url, "updated": [], "skipped": 0, "index": reason}
+
+
 def pack_update(settings, params: dict, progress: Progress) -> dict:
     """Download and install every pack the index has something newer for.
 
@@ -1493,6 +1514,8 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
     try:
         candidates = packsource.fetch_index(index_url)
     except Exception as exc:  # noqa: BLE001 — a sentence, not a protocol code
+        if params.get("automatic"):
+            return _automatic_pass_without_index(settings, index_url, exc, progress)
         # Same mapping as `check_updates`: this job's failure message is what
         # settings-2's Welcome screen shows the reader verbatim, and a raw
         # HTTPError read as "the engine died" (B145 settings-2).
