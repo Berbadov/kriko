@@ -78,3 +78,25 @@ def test_a_product_can_be_taken_off_the_queue(tmp_path):
 def test_no_address_is_refused(tmp_path):
     assert _client(tmp_path).post(
         "/api/queue", json={"url": "  ", "name": "P"}).status_code == 422
+
+
+def test_a_queued_product_moves_along_and_keeps_its_fresh_answer(tmp_path):
+    client = _client(tmp_path)
+    item = client.post("/api/queue", json={
+        "url": "https://shop.example/1", "name": "P", "lookup_id": "old"}).json()["item"]
+    path = f"/api/queue/{item['queue_id']}"
+
+    moved = client.patch(path, json={"state": "researching"}).json()["item"]
+    assert (moved["state"], moved["lookup_id"]) == ("researching", "old")
+    done = client.patch(path, json={"state": "done", "lookup_id": "new"}).json()["item"]
+    assert (done["state"], done["lookup_id"]) == ("done", "new")
+    assert client.get("/api/queue").json()["items"][0]["state"] == "done"
+
+
+def test_a_state_the_queue_does_not_have_is_refused_and_a_gone_row_is_missing(tmp_path):
+    client = _client(tmp_path)
+    item = client.post("/api/queue", json={
+        "url": "https://shop.example/1", "name": "P"}).json()["item"]
+
+    assert client.patch(f"/api/queue/{item['queue_id']}", json={"state": "lost"}).status_code == 422
+    assert client.patch("/api/queue/nope", json={"state": "done"}).status_code == 404

@@ -1587,6 +1587,30 @@ def queue_product(
         "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()), True
 
 
+#: The states a queued product moves through; the window sets them, in order.
+QUEUE_STATES = ("waiting", "researching", "done")
+
+
+def update_queued(conn: sqlite3.Connection, queue_id: str, *,
+                  state: str | None = None, lookup_id: str | None = None) -> dict | None:
+    """Move one queued product along: its state, and the stored answer once
+    researching has made a fresher one. None when it is not queued any more
+    (the reader removed it while an agent was working on it)."""
+    if state is not None and state not in QUEUE_STATES:
+        raise ValueError(f"a queued product is one of {', '.join(QUEUE_STATES)}")
+    row = conn.execute(
+        "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()
+    if row is None:
+        return None
+    conn.execute(
+        "UPDATE research_queue SET state = ?, lookup_id = ? WHERE queue_id = ?",
+        (state if state is not None else row["state"],
+         lookup_id if lookup_id is not None else row["lookup_id"], queue_id))
+    conn.commit()
+    return _queued(conn.execute(
+        "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone())
+
+
 def unqueue_product(conn: sqlite3.Connection, queue_id: str) -> bool:
     cur = conn.execute("DELETE FROM research_queue WHERE queue_id = ?", (queue_id,))
     conn.commit()
