@@ -1,0 +1,21 @@
+{
+  "request": "Claude looks hideous xd",
+  "screen": "Native app right-hand Live actions panel",
+  "proof": "Chromium browser recreation from the native LED matrix data and theme; not a native window capture",
+  "observed": {
+    "mark": "11 by 11 LEDs, 37 lit cells; compact centre and separated staggered spokes",
+    "layout": "300px dock, 34px agent glyph, no label overflow",
+    "phase_indicators": "One per row, unchanged"
+  },
+  "windows": "Native Windows visual/install verification remains pending",
+  "validation": {
+    "tools/gate.sh": "Passed",
+    "python": "2434 passed, 21 skipped",
+    "extension": "214 passed",
+    "dashboard": "613 passed",
+    "lint_types_palette_bundle": "Passed",
+    "wheel": "Built, installed, imported and CLI smoke check passed",
+    "gpui": "cargo check --offline passed (7 existing warnings)",
+    "legacy_tauri": "Gate skipped cargo because Rust is outside its default PATH; native GPUI was checked separately"
+  }
+}
