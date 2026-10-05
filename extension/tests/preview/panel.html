@@ -30,6 +30,7 @@
   </div>
   <script>
     const params = new URLSearchParams(location.search);
+    const lookupId = params.get("lookup");
     const state = params.get("state") || "risks";
     const runtimeListeners = [];
     const storageListeners = [];
@@ -47,6 +48,7 @@
       ok: true,
       listing: { damage_info: null, equipment: {} },
       result: {
+        lookup_id: lookupId || "preview-check",
         claims: state === "empty" ? [] : CLAIMS,
         coverage: state === "empty" ? "NO_RISKS_KNOWN" : "RISKS_FOUND",
         identity: { make: "volkswagen", model: "golf", fuel: "Dizel" },
@@ -63,6 +65,29 @@
         sendMessage(message, callback) {
           console.log("[panel ->]", message.type, message);
           if (typeof callback !== "function") return;
+          // With ?lookup=<id>, the browser journey uses the real saved-job API
+          // of the app serving /preview/. Only chrome.* is replaced here.
+          if (lookupId && ["LOOKUP_ASK", "LOOKUP_QUESTIONS", "JOB_STATUS"].includes(message.type)) {
+            const path = message.type === "JOB_STATUS"
+              ? `/api/jobs/${encodeURIComponent(message.payload.job_id)}`
+              : `/api/lookup/${encodeURIComponent(lookupId)}/questions`;
+            const options = message.type === "LOOKUP_ASK"
+              ? { method: "POST", headers: { "content-type": "application/json" },
+                  body: JSON.stringify({ question: message.payload.question }) } : {};
+            fetch(path, options).then(async res => {
+              const body = await res.json();
+              callback(res.ok ? { ok: true, ...(message.type === "JOB_STATUS" ? { job: body } : body) }
+                : { ok: false, error: String(body.detail || res.status) });
+            }).catch(error => callback({ ok: false, error: error.message }));
+            return;
+          }
+          if (message.type === "LOOKUP_QUESTIONS") return callback({ ok: true, items: [] });
+          if (message.type === "LOOKUP_ASK") return setTimeout(() => callback({ ok: true, job_id: "preview-question" }), 300);
+          if (message.type === "JOB_STATUS") return callback({ ok: true, job: {
+            job_id: "preview-question", state: "succeeded", done: true,
+            result: { answer: "Ask the seller for the service records supporting the repairs, and check the cited sources for the risks you want to inspect.",
+              agent: { id: "preview", label: "Preview agent", model: "Preview model" } },
+          } });
           if (message.type === "ANALYZE") {
             if (state === "error") return callback({ ok: false, code: "APP_NOT_RUNNING", error: "Kriko is not running. Open the Kriko app, then try again." });
             if (state === "idle") return callback({ ok: false, code: "NO_ADAPTER", error: "No installed pack can read this page." });

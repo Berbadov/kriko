@@ -15,6 +15,7 @@ the whole point of the jobs layer.
 import importlib
 import secrets
 import time
+from collections.abc import Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
@@ -2737,7 +2738,6 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     decision support, stored on the question row in `app.sqlite` by
     `answer_compare_question` — never a submission, never a claim.
     """
-    from app.providers import agent_ready, harness_researcher
     draft_id = str(params.get("draft_id") or "").strip()
     question_id = str(params.get("question_id") or "").strip()
     question = str(params.get("question") or "").strip()
@@ -2760,7 +2760,75 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     progress.set(0.05, "lining up the shortlist")
     for stored in answers:
         progress.log(f"{stored['label']}: {len(stored['response'].get('claims') or [])} known risk(s)")
-    if _use_local_ask(settings, params):
+    reply = _ask_about_checks(settings, params, progress, _compare_brief(question, answers))
+    progress.log(reply[:4000] or "(the agent printed nothing)")
+    progress.set(0.9, "writing the answer down")
+    app_state = state.connect(settings.app_state_path)
+    try:
+        row = state.answer_compare_question(
+            app_state, draft_id, question_id, reply, progress.job_id)
+    finally:
+        app_state.close()
+    if not row:
+        raise ValueError("the question is gone — the draft was deleted while it ran")
+    progress.set(1.0, "answered" if reply else "the agent printed nothing")
+    return {"draft_id": draft_id, "question_id": question_id, "answer": reply}
+
+
+def lookup_ask(settings, params: dict, progress: Progress) -> dict:
+    """Answer inside the listing panel, using its saved evidence, as a job.
+
+    The reply stays on the job in app.sqlite; it is never new knowledge.
+    """
+    lookup_id = str(params.get("lookup_id") or "")
+    question = str(params.get("question") or "").strip()
+    conn = state.connect(settings.app_state_path)
+    try:
+        stored = state.get_lookup(conn, lookup_id)
+        previous = state.lookup_questions(conn, lookup_id)
+    finally:
+        conn.close()
+    if stored is None:
+        raise ValueError(f"no such lookup: {lookup_id}")
+    if not question:
+        raise ValueError("Write a question first.")
+    brief = _compare_brief(question, [stored]).replace(
+        "The reader has these products side by side and asks:",
+        "The reader is viewing this listing and asks a follow-up question:", 1)
+    # Sources remain attached to their claims, so the agent can distinguish
+    # the recorded evidence from a new inference and cite the original page.
+    lines = [brief, "Cite the recorded sources when they support your answer."]
+    for claim in stored["response"].get("claims") or []:
+        for source in claim.get("sources") or []:
+            lines.append(f"{claim.get('title', '')}: {source.get('url', '')} "
+                         f"{source.get('quote', '')}")
+    replies = [job for job in previous if job["state"] == state.SUCCEEDED
+               and (job.get("result") or {}).get("answer")][-6:]
+    if replies:
+        lines.append("Previous follow-ups for this listing (agent replies, not new evidence):")
+        for job in replies:
+            lines.append(f"Question: {job['params'].get('question', '')[:2000]}")
+            lines.append(f"Agent reply: {job['result']['answer'][:4000]}")
+    agent: dict = {}
+
+    def report_agent(identity: dict) -> None:
+        agent.update(identity)
+        progress.partial({"agent": identity})
+
+    reply = _ask_about_checks(settings, params, progress, "\n".join(lines),
+                              on_agent=report_agent)
+    if not reply:
+        raise ValueError("The agent returned no answer. Try asking again.")
+    progress.set(1.0, "answered")
+    return {"lookup_id": lookup_id, "question": question, "answer": reply, "agent": agent}
+
+
+def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
+                      on_agent: Callable[[dict], None] | None = None) -> str:
+    from app.providers import agent_ready, harness_researcher
+
+    local = _use_local_ask(settings, params)
+    if local:
         researcher = _local_asker(settings, params, progress)
     else:
         if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
@@ -2778,21 +2846,21 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
         researcher.check_cancelled = progress.check
-    progress.set(0.2, f"asking: {question[:120]}")
-    reply = researcher.ask(_compare_brief(question, answers)).strip()
+    if on_agent is not None:
+        # Read the resolved researcher: a requested CLI can fall back to a
+        # different one. CLI `model` is its id, whereas API/local `model`
+        # names the model; only show the CLI's explicitly selected model.
+        provider = getattr(researcher, "agent", None) or getattr(researcher, "harness", None)
+        api = getattr(researcher, "agent", None) is not None
+        on_agent({
+            "id": "local" if local else str(getattr(provider, "id", "")),
+            "label": "Local model" if local else str(getattr(provider, "label", "Agent")),
+            "model": str(getattr(researcher, "model" if local or api else "requested_model", "")),
+        })
+    progress.set(0.2, f"asking: {str(params.get('question') or '')[:120]}")
+    reply = researcher.ask(brief).strip()
     progress.check()
-    progress.log(reply[:4000] or "(the agent printed nothing)")
-    progress.set(0.9, "writing the answer down")
-    app_state = state.connect(settings.app_state_path)
-    try:
-        row = state.answer_compare_question(
-            app_state, draft_id, question_id, reply, progress.job_id)
-    finally:
-        app_state.close()
-    if not row:
-        raise ValueError("the question is gone — the draft was deleted while it ran")
-    progress.set(1.0, "answered" if reply else "the agent printed nothing")
-    return {"draft_id": draft_id, "question_id": question_id, "answer": reply}
+    return reply
 
 
 def _compare_brief(question: str, answers: list[dict]) -> str:
@@ -2875,4 +2943,5 @@ HANDLERS = {
     "pack_update": pack_update,
     "compare_ask": compare_ask,
     "model_pull": model_pull,
+    "lookup_ask": lookup_ask,
 }

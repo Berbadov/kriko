@@ -24,33 +24,26 @@ pub struct Mark {
 // ---- the agents ----
 
 pub const CLAUDE: Mark = Mark {
+    // The published irregular sunburst, sampled to an 11×11 LED matrix.
     rows: &[
-        "....1....",
-        ".1..1..1.",
-        "..1.1.1..",
-        "...111...",
-        "111111111",
-        "...111...",
-        "..1.1.1..",
-        ".1..1..1.",
-        "....1....",
+        "...1..1....",
+        "...1..1.1..",
+        ".1.11.111..",
+        "..1111111..",
+        "...11111.11",
+        "111111111..",
+        "...11111111",
+        "..111111...",
+        ".1.1.1.111.",
+        "...1.1.11..",
+        ".....1.....",
     ],
-    palette: &[0xe0805e],
+    palette: &[0xd97757],
 };
 
 pub const CLAUDE_DESKTOP: Mark = Mark {
-    rows: &[
-        "222222222",
-        "2.......2",
-        "2.1.1.1.2",
-        "2..111..2",
-        "2.11111.2",
-        "2..111..2",
-        "2.1.1.1.2",
-        "2.......2",
-        "222222222",
-    ],
-    palette: &[0xe0805e, LED_DIM],
+    rows: CLAUDE.rows,
+    palette: CLAUDE.palette,
 };
 
 pub const OPENCODE: Mark = Mark {
@@ -73,20 +66,19 @@ pub const OPENCODE: Mark = Mark {
 };
 
 pub const ANTIGRAVITY: Mark = Mark {
-    // The official arch (Google Antigravity): one bold peak whose legs
-    // flare out to points, yellow crown, red right shoulder, green left,
-    // the feet in blue.
+    // The published curved arch and its colour bands, sampled to LEDs.
     rows: &[
-        "....111....",
-        "...31112...",
-        "..3311222..",
-        "..333.222..",
-        "..33...22..",
-        ".333...225.",
-        ".44.....55.",
-        ".44.....55.",
-        "444.....555",
-        "44.......55",
+        ".....2.....",
+        "....122....",
+        "...35222...",
+        "...35552...",
+        "..5444555..",
+        "..4444455..",
+        "..444..44..",
+        ".444...444.",
+        ".44.....44.",
+        "44.......44",
+        "4.........4",
     ],
     palette: &[0xfbbc04, 0xfc413d, 0x00b95c, 0x3186ff, 0x749bff],
 };
@@ -514,62 +506,45 @@ pub fn mark_glyph(id: &str, mark: &Mark, phase: Phase, size: f32, motion: bool) 
     holder.child(mark_dots(id, mark, phase, dot, gap, motion, false))
 }
 
-/// The phase in words with a three-dot LED beat that moves for live phases.
+/// The phase beside the same recessed LED matrix as the app's status tags.
+/// Whole-pixel bulbs hold their positions while the phase moves their light.
 pub fn phase_beat(id: &str, phase: Phase, motion: bool) -> Div {
-    let color = match phase {
-        Phase::Thinking | Phase::Reading | Phase::Writing => ICE,
-        Phase::Waiting => 0xffffff,
-        Phase::Idle => INK_2,
-        Phase::Off => LED_DIM,
+    let rows: &'static [&'static str] = match phase {
+        // Open book, a scan passing over the recorded page.
+        Phase::Reading => &["11.11", "1.1.1", "1.1.1", "1.1.1", "11.11"],
+        // Pencil, lit in sequence along the diagonal stroke.
+        Phase::Writing => &["....1", "...11", "..11.", ".11..", "11..."],
+        // A ring and centre light, gently shimmering while thinking.
+        Phase::Thinking => &[".111.", "1...1", "1.1.1", "1...1", ".111."],
+        Phase::Waiting => &["..1..", "..1..", "..1..", ".....", "..1.."],
+        Phase::Idle => &[".....", ".....", "1.1.1", ".....", "....."],
+        Phase::Off => &["1...1", ".1.1.", "..1..", ".1.1.", "1...1"],
     };
-    let live = motion
-        && matches!(
-            phase,
-            Phase::Thinking | Phase::Reading | Phase::Writing | Phase::Waiting
-        );
-    let mut dots = div().flex().items_end().gap(px(2.0)).h(px(8.0));
-    for i in 0..3usize {
-        let d = div()
-            .size(px(3.0))
-            .rounded(px(1.0))
-            .bg(rgb(color))
-            .shadow(glow(color, 4.0));
-        dots = dots.child(if live {
-            let offset = i as f32 / 3.0;
-            d.with_animation(
-                gpui::ElementId::Name(SharedString::from(format!(
-                    "{id}-beat-{}-{i}",
-                    phase.label()
-                ))),
-                Animation::new(std::time::Duration::from_millis(900))
-                    .repeat()
-                    .with_easing(|t| t),
-                move |el, t| {
-                    let k = (t - offset).rem_euclid(1.0);
-                    let up = if k < 0.3 {
-                        (k / 0.3 * std::f32::consts::PI).sin()
-                    } else {
-                        0.0
-                    };
-                    el.mb(px(up * 4.0)).opacity(0.35 + 0.65 * up)
-                },
-            )
-            .into_any_element()
-        } else {
-            d.opacity(if phase == Phase::Off { 0.4 } else { 0.8 })
-                .into_any_element()
-        });
-    }
+    let palette: &'static [u32] = match phase {
+        Phase::Thinking | Phase::Reading | Phase::Writing => &[ICE],
+        Phase::Waiting => &[INK],
+        Phase::Idle => &[INK_2],
+        Phase::Off => &[LED_DIM],
+    };
+    let glyph = Mark { rows, palette };
+    let indicator = well()
+        .size(px(25.0))
+        .rounded(px(5.0))
+        .flex_none()
+        .flex()
+        .items_center()
+        .justify_center()
+        .child(mark_matrix(id, &glyph, phase, 3.0, 1.0, motion));
     div()
         .flex()
         .items_center()
         .gap(px(6.0))
-        .child(dots)
+        .child(indicator)
         .child(
             div()
                 .font_family(MONO)
                 .text_size(px(11.0))
-                .text_color(rgb(color))
+                .text_color(rgb(palette[0]))
                 .child(phase.label().to_uppercase()),
         )
 }
