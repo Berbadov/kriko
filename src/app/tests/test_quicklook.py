@@ -107,3 +107,28 @@ def test_a_quick_kind_is_not_queued_behind_a_long_job(tmp_path):
     finally:
         release.set()
         runner.shutdown(wait=True)
+
+
+def test_a_reply_cut_off_at_its_budget_keeps_the_items_it_finished():
+    """A CPU model that ran out of tokens mid-risk: the finished risk is
+    kept, by the same checks as any other, and the cut one is not."""
+    page = "The pump seal leaks after the first winter."
+    reply = (
+        '```json\n{"assumed": "x", "category": "pumps", "pack": "", "specs": [],\n'
+        ' "risks": [{"title": "Seal leak", "why": "w", "check": "c",'
+        ' "severity": "high", "url": "https://a.test/1",'
+        ' "quote": "The pump seal leaks after the first winter."},\n'
+        '  {"title": "Second", "why": "this one was cut off at the bud')
+    out = quicklook.parse(reply, {"https://a.test/1": page})
+    assert [one["title"] for one in out["risks"]] == ["Seal leak"]
+
+
+def test_a_reply_with_no_object_closes_to_nothing():
+    assert quicklook.closed("no json here") is None
+    assert quicklook.closed('{"risks": [') is None
+
+
+def test_a_trailing_comma_does_not_cost_the_reply():
+    reply = ('{"specs": [{"name": "a", "value": "1", "url": "https://a.test/1"},],'
+             ' "risks": [')
+    assert quicklook.closed(reply)["specs"][0]["name"] == "a"
