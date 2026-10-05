@@ -148,7 +148,7 @@ def test_pages_are_read_side_by_side_not_one_after_another():
     assert len(complete.prompts) == 1
 
 
-def test_the_searches_go_out_together():
+def test_the_searches_go_out_together_on_a_hosted_search():
     """Three queries, three searches in flight at once, not one by one."""
     inside: list[int] = []
     lock = threading.Lock()
@@ -166,10 +166,47 @@ def test_the_searches_go_out_together():
         plan, Complete(),
         searcher([{"url": "https://a.test/1", "title": "A"}], gate=gate),
         reader({"https://a.test/1": "text"}),
-        model="m", search_provider="stub")
+        model="m", search_provider="stub", parallel_search=True)
     asker.on_action = lambda line: None
     asker.ask("widget")
     assert len(inside) == 3
+
+
+def test_a_local_scraper_is_searched_one_query_at_a_time():
+    """No burst at a public search engine from the reader's own address."""
+    inside = [0]
+    most = [0]
+    lock = threading.Lock()
+
+    def search(query, limit):
+        with lock:
+            inside[0] += 1
+            most[0] = max(most[0], inside[0])
+        import time
+        time.sleep(0.05)
+        with lock:
+            inside[0] -= 1
+        return [{"url": f"https://a.test/{query}", "title": query}]
+
+    asker = local_agent.LocalAsker(
+        Plan('["q1", "q2", "q3"]'), Complete(), search,
+        reader({f"https://a.test/q{i}": "text" for i in (1, 2, 3)}),
+        model="m", search_provider="openserp")
+    asker.on_action = lambda line: None
+    asker.ask("widget")
+    assert most[0] == 1
+
+
+def test_only_the_hosted_search_is_asked_in_parallel(monkeypatch):
+    from app import providers
+    from app.providers import exa_mcp, openserp
+
+    monkeypatch.setattr(exa_mcp, "search_with_fallback", lambda: (lambda q, n: []))
+    monkeypatch.setattr(openserp, "searcher", lambda base: (lambda q, n: []))
+    hosted = providers.local_asker(base_url="http://127.0.0.1:1", serving_name="m",
+                                   search_kind="exa")
+    scraped = providers.local_asker(base_url="http://127.0.0.1:1", serving_name="m")
+    assert hosted.parallel_search and not scraped.parallel_search
 
 
 def test_a_page_that_never_answers_does_not_hold_the_run(monkeypatch):

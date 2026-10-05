@@ -258,3 +258,38 @@ def test_a_hosted_readers_markdown_loses_its_addresses_not_its_words():
         "The [gearbox](https://a.test/gearbox_(part)) fails early.\n"
         "![](data:image/png;base64,AAAABBBBCCCC)")
     assert text == "logo\nThe gearbox fails early."
+
+
+def test_a_table_or_a_list_of_fault_names_is_not_a_menu(monkeypatch):
+    """A menu is a run of links. Cells and list items that are not links
+    stay, however short and however many."""
+    monkeypatch.setitem(__import__("sys").modules, "trafilatura", None)
+    rows = [("Color", "Red"), ("Transmission", "Automatic"),
+            ("Drivetrain", "AWD"), ("Fuel", "Gasoline")]
+    faults = ["Timing chain", "Oil leak", "Turbo", "DPF clog", "EGR valve",
+              "Injectors", "Clutch", "Flywheel", "Water pump"]
+    markup = ("<table>" + "".join(f"<tr><td>{a}</td><td>{b}</td></tr>" for a, b in rows)
+              + "</table><ul>" + "".join(f"<li>{x}</li>" for x in faults) + "</ul>")
+    text = fetch.to_text(markup)
+    assert "Transmission Automatic" in text
+    for fault in faults:
+        assert fault in text
+
+
+def test_a_markdown_table_row_is_not_code():
+    assert pagereader.plain("| Known issue | timing chain stretch | high |") == (
+        "| Known issue | timing chain stretch | high |")
+
+
+def test_a_custom_element_is_not_read_as_the_tag_it_starts_with(monkeypatch):
+    """`<button-group>` is not `<button>`: no scan for a closer it never
+    has, and the text inside it is kept."""
+    import time
+
+    monkeypatch.setitem(__import__("sys").modules, "trafilatura", None)
+    markup = ("<p>start</p>" + "<button-group>kept words</button-group>" * 300
+              + "<p>" + "y" * 1_600_000 + "</p>")
+    started = time.monotonic()
+    text = fetch.to_text(markup)
+    assert time.monotonic() - started < 1.5
+    assert "kept words" in text

@@ -79,9 +79,15 @@ class LocalAsker:
 
     def __init__(self, plan, complete, search, fetch, *, model: str,
                  search_provider: str, url: str = "",
-                 given_queries: list[str] | None = None):
+                 given_queries: list[str] | None = None,
+                 parallel_search: bool = False):
         self.given_queries = [str(one).strip() for one in (given_queries or [])
                               if str(one).strip()]
+        #: True only for a hosted search service built to take concurrent
+        #: requests. A local scraper (OpenSERP) asks a public search engine
+        #: from the reader's own address, and a burst there is how a run
+        #: earns a CAPTCHA, so it stays one query at a time.
+        self.parallel_search = parallel_search
         self._plan = plan
         self._complete = complete
         self._search = search
@@ -163,7 +169,7 @@ class LocalAsker:
         return queries
 
     def _read(self, queries: list[str]) -> list[tuple[str, str]]:
-        """Search every query at once, then read the pages side by side.
+        """Search the queries, then read the pages side by side.
 
         The reads are the slow part and they do not depend on each other, so
         they go out together on a small pool: five pages fetched one after
@@ -172,7 +178,9 @@ class LocalAsker:
         spare pages go out with them, and the read stops at `READ_DEADLINE`
         or once `MAX_PAGES` have answered, whichever is first. The order the
         pages appear in the prompt is still the order the queries named
-        them, so the model's brief does not change with the fetching.
+        them, so the model's brief does not change with the fetching. The
+        searches go out together only on a hosted search
+        (`parallel_search`).
 
         Each page is cut to `PAGE_CHARS` around the queries' own words
         (`kriko.research.window.focus`), not from the top: a listing's top
@@ -186,11 +194,17 @@ class LocalAsker:
             except LocalSearchError as error:
                 return [], f"search failed for {query!r}: {error}"
 
-        # The searches do not depend on each other either, so they go out
-        # together too; their hits are still taken in the queries' order,
-        # and the log is written from this thread only.
-        with ThreadPoolExecutor(max_workers=max(1, len(queries))) as pool:
-            answered = list(pool.map(_hits, queries))
+        # On a hosted search the queries go out together; their hits are
+        # still taken in the queries' order, and the log is written from
+        # this thread only.
+        if self.parallel_search and len(queries) > 1:
+            with ThreadPoolExecutor(max_workers=len(queries)) as pool:
+                answered = list(pool.map(_hits, queries))
+        else:
+            answered = []
+            for query in queries:
+                self._check()
+                answered.append(_hits(query))
         wanted: list[str] = []
         seen: set[str] = set()
         for hits, failure in answered:

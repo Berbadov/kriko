@@ -77,9 +77,11 @@ How items are written, per `docs/DOCTRINE.md`:
   and its spend line show them.
 - **Done when:** a spawned Claude Code run loads only its search and fetch
   tools (measured: 29 327 input tokens of fixed context before, 5 719 after,
-  on 2.1.289); the page text every plane hands a model carries no menus,
-  comments, markup or link and image addresses, so a listing site's first
-  window is its content rather than its navigation; the window shown to a
+  on 2.1.289); the page text Kriko itself reads for a model (the plain
+  fetch, the hosted readers, the browser rung) carries no menus, comments,
+  markup or link and image addresses, so a listing site's first window is
+  its content rather than its navigation (a CLI's own fetch tool is the
+  CLI's, and out of reach); the window shown to a
   model is the part of the page about the subject, not its first N
   characters; the local agent searches in parallel and stops waiting for a
   page that has not answered within a deadline; and `tools/gate.sh` passes.

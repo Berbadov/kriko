@@ -27,6 +27,8 @@ import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
+from app.providers.fetch import LINK_CLOSE, LINK_OPEN, prose_lines
+
 EXA_ENDPOINT = "https://mcp.exa.ai/mcp"
 EXA_TOOL = "web_fetch_exa"
 PARALLEL_ENDPOINT = "https://search.parallel.ai/mcp"
@@ -88,12 +90,11 @@ def plain(text: str) -> str:
     and every image its address: tokens the model pays for and can never
     quote from. `[the text](url)` becomes `the text` and an image becomes
     its alt text, so what is left is what the page says. Then the same line
-    filter the plain fetch uses drops the menus.
+    filter the plain fetch uses drops the menus (a run of lines that are
+    each one link).
     """
-    from app.providers.fetch import prose_lines  # noqa: PLC0415 — fetch imports this module
-
     text = _IMAGE.sub(lambda m: m.group(1), text)
-    text = _LINK.sub(lambda m: m.group(1), text)
+    text = _LINK.sub(lambda m: LINK_OPEN + m.group(1) + LINK_CLOSE, text)
     text = _BARE_DATA.sub("", text)
     lines = prose_lines(line.strip() for line in text.splitlines())
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
