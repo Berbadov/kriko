@@ -1,17 +1,17 @@
-"""Set the version, in the six places it lives.
+"""Set the version, in the four places it lives.
 
     python tools/bump.py 0.8.1
     python tools/bump.py --show
 
-**Why a script for a `sed`.** The version is in five committed files —
-`pyproject.toml`, `tauri/src-tauri/Cargo.toml`, `tauri/src-tauri/tauri.conf.json`,
-`tauri/package.json` and `tauri/src-tauri/Cargo.lock` — and
-`test_the_four_version_strings_agree` fails if they disagree. That test is the reason bumping by hand mostly works and is
-exactly the wrong shape: it tells you afterwards, once, that you missed one.
+**Why a script for a `sed`.** The version is in three committed files:
+`pyproject.toml`, `kriko-gpui/Cargo.toml` and the `kriko-gpui` entry of
+`kriko-gpui/Cargo.lock`. `test_the_version_strings_agree` fails if they
+disagree. That test is the reason bumping by hand mostly works and is exactly
+the wrong shape: it tells you afterwards, once, that you missed one.
 
-The sixth place is not a file in the tree at all. `app.version.app_version()`
+The fourth place is not a file in the tree at all. `app.version.app_version()`
 reads the *installed* distribution's metadata, which is what `/api/health`
-reports — so a tree at 0.8.1 with a 0.8.0 editable install serves 0.8.0, and
+reports, so a tree at 0.8.1 with a 0.8.0 editable install serves 0.8.0, and
 `test_the_version_the_app_reports_is_the_version_the_tree_says` goes red for a
 reason that is about your `.venv` rather than about your change. That one needs
 a reinstall, not an edit, which is why a `sed` could never have finished the
@@ -37,20 +37,16 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sentence about what happened in 0.8.0.
 PLACES = (
     (Path("pyproject.toml"), re.compile(r'^(version = ")([^"]+)(")', re.M)),
-    (Path("tauri/src-tauri/Cargo.toml"), re.compile(r'^(version = ")([^"]+)(")', re.M)),
-    (Path("tauri/src-tauri/tauri.conf.json"), re.compile(r'^(\s*"version": ")([^"]+)(")', re.M)),
-    (Path("tauri/package.json"), re.compile(r'^(\s*"version": ")([^"]+)(")', re.M)),
-    # The lock, and it is not bookkeeping. `desktop.yml` runs
-    # `cargo metadata --locked` so a lock that has fallen behind Cargo.toml is a
-    # red job rather than a silent rewrite — which means a stale entry here does
-    # not disagree quietly, it *stops the build*. On 2026-09-14 the committed
-    # lock said 0.7.6 against a tree at 0.8.0, four bumps stale, and the only
-    # reason nobody had hit it is that the workflow has never had a runner.
+    (Path("kriko-gpui/Cargo.toml"), re.compile(r'^(version = ")([^"]+)(")', re.M)),
+    # The lock, and it is not bookkeeping. `package.ps1` and `desktop.yml` run
+    # `cargo metadata --locked`, so a lock that has fallen behind Cargo.toml is
+    # a red build rather than a silent rewrite, which means a stale entry here
+    # does not disagree quietly, it *stops the build*.
     #
     # Anchored on the crate's own entry: a lock is thousands of lines of
     # dependency versions and every one of them must be left alone.
-    (Path("tauri/src-tauri/Cargo.lock"),
-     re.compile(r'(name = "kriko"\nversion = ")([^"]+)(")')),
+    (Path("kriko-gpui/Cargo.lock"),
+     re.compile(r'(name = "kriko-gpui"\r?\nversion = ")([^"]+)(")')),
 )
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
@@ -93,14 +89,14 @@ def show(strict: bool = False) -> int:
     if len(values) > 1:
         print("\nthese disagree — `python tools/bump.py <version>` sets them all")
         return 1
-    # The installed distribution is the fifth string, and the one the reader
+    # The installed distribution is the fourth string, and the one the reader
     # is shown: `/api/health` and `app_version()` read it rather than the
     # tree. An editable install left behind by an earlier bump is how a
     # 0.8.7 checkout reported itself as 0.7.11 for days. Absent is fine --
     # a fresh clone has not installed anything yet, and that is not a lie.
     #
     # Only under `--strict`, and the reason is a build that failed on this in
-    # the field: `packaging/build_desktop.ps1` runs the plain check as a
+    # the field: `kriko-gpui/package.ps1` runs the plain check as a
     # pre-flight, *before* its own `pip install -e .`, so failing here would
     # refuse the build over a state that same build repairs a step later -- a
     # guard blocking the thing that fixes what it is complaining about. The
@@ -157,7 +153,7 @@ def bump(version: str) -> int:
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="tools/bump.py", description=__doc__.split("\n")[0])
     parser.add_argument("version", nargs="?", help="the new version, as X.Y.Z")
-    parser.add_argument("--show", action="store_true", help="print all six and stop")
+    parser.add_argument("--show", action="store_true", help="print every place and stop")
     parser.add_argument(
         "--strict",
         action="store_true",
