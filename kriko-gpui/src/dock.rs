@@ -126,7 +126,9 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .flex()
                         .items_center()
                         .gap(px(10.0))
-                        .child(mark_glyph(&format!("dock-lane-tile-{i}"), agent.mark, lane.phase, 34.0, motion))
+                        .child(mark_glyph(
+                            &format!("dock-lane-tile-{i}"), agent.mark, lane.phase, 34.0, false,
+                        ))
                         .child(
                             div()
                                 .flex_1()
@@ -153,24 +155,9 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                 .child(mono(lane.task, MUTED)),
                         ),
                 )
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap(px(8.0))
-                        .child(
-                            meter_live(
-                                format!("dock-lane-meter-{i}"),
-                                progress,
-                                12,
-                                true,
-                                motion,
-                            )
-                            .flex_1(),
-                        )
-                        // the lane's broadcast: a wave rolling through its LEDs
-                        .child(led_ripple(&format!("dock-lane-{i}"), motion)),
-                ),
+                // The phase lights above are the lane's single activity
+                // signal. Progress stays readable without a second blink.
+                .child(meter(progress, 12)),
         );
     }
 

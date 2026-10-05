@@ -49,7 +49,7 @@
     pos: null,                 // {left, top} once dragged
     dragging: false,
     compact: false,
-    openIds: new Set(),        // expanded claim indices
+    openIds: new Set(),        // expanded claim keys (stable across reordering)
     detailsOpen: false,        // Listing-details panel collapsed by default
     openDetailRows: new Set(), // expanded rows inside listing details
     pipeline: "idle",          // idle | analyzing | result | error
@@ -62,6 +62,8 @@
     errorCode: null,
     listingMeta: null,         // derived from background metadata response
     queue: null,               // {url, phase, text}: this page's Add to queue press
+    queueHelpOpen: false,
+    followups: new Map(),       // saved answer id -> its questions and draft
     // Typing the name. Panel-local: a search is a question the reader is
     // asking right now, not something the next analysis should remember.
     searchOpen: false,
@@ -109,6 +111,7 @@
     // became of saying it — per question id, for the chips to show.
     researchAnswers: {},
     researchTold: {},
+    researchDraftAnswers: {},
     // B148: the quick look's answer, kept while the deeper run goes on.
     // `{ assumed, risks, dropped }` or null.
     researchQuick: null,
@@ -468,11 +471,16 @@
       const before = state.result;
       if (before && before.lookup_id && before.lookup_id === entry.result.lookup_id) {
         const had = new Set((before.claims || []).map(claimKeyOf));
+        const present = new Set((entry.result.claims || []).map(claimKeyOf));
+        state.openIds = new Set([...state.openIds].filter(key => present.has(key)));
         for (const claim of entry.result.claims || []) {
           if (!had.has(claimKeyOf(claim))) state.freshKeys.add(claimKeyOf(claim));
         }
       } else {
         state.freshKeys = new Set();
+        state.openIds = new Set();
+        // A different saved answer gets its own card tree.
+        if (claimsListEl) claimsListEl.replaceChildren();
       }
       // An answer means something read this page after all.
       state.noAdapter = false;
@@ -481,7 +489,6 @@
       state.result = entry.result;
       state.errorMsg = null;
       setPipeline("result");
-      state.openIds = new Set();
     } else if (entry.ok === false) {
       // extension-5/extension-8 (B145 audit): the stored-result path (a page
       // reloaded onto a cached entry, or the panel reopened) used to ignore
@@ -676,7 +683,7 @@
   function costLine() {
     const plane = state.researchPlane;
     if (!plane) return "";
-    if (plane.backend === "api") {
+    if (plane.backend === "api" || plane.cost_basis === "per_token") {
       const cap = Number(plane.budget_usd || 0);
       return cap > 0
         ? `Costs money; this run is capped at $${cap.toFixed(2)} of your API keys.`
@@ -724,6 +731,7 @@
     state.researchMessage = "Looking it up…";
     state.researchAnswers = {};
     state.researchTold = {};
+    state.researchDraftAnswers = {};
     state.researchQuick = null;
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
@@ -846,20 +854,24 @@
   function renderResearch() {
     const slot = bodyEl?.querySelector(".lite-research-slot");
     if (!slot) return;
-    if (!state.researchOpen) { slot.innerHTML = ""; return; }
+    if (!state.researchOpen) { slot.innerHTML = ""; slot._researchMarkup = null; return; }
     const busy = Boolean(state.researching);
     const target = state.researchTarget;
     const draft = state.researchJob?.kind === "pack_author";
     const cost = costLine();
-    const asked = (state.researchJob?.attention?.questions || []).filter((q) => q && q.id);
-    slot.innerHTML = `
-      <section class="lite-research" data-state="${escapeHtml(state.researchState)}">
+    const asked = (state.researchJob?.attention?.questions
+      || state.researchJob?.result?.questions || []).filter((q) => q && q.id);
+    const editing = slot.querySelector(".lite-question-input:focus");
+    const editingId = editing?.dataset.id;
+    const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
+    const markup = `
+      <section class="lite-research">
         <strong>Research this product</strong>
         ${target ? `<p>${escapeHtml(target.label || target.subject_id)}</p>` : `
           <label>Product name<input class="lite-research-name" maxlength="350" ${busy ? "disabled" : ""} /></label>
           <label>Context<textarea class="lite-research-context" maxlength="140" ${busy ? "disabled" : ""}></textarea></label>`}
         <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
-        <p class="lite-research-status" role="status">${escapeHtml(state.researchMessage)}</p>
+        <p class="lite-research-status" role="status"></p>
         ${state.researchQuick?.risks.length ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
@@ -873,7 +885,11 @@
               <button type="button" class="lite-chip" data-q="${qi}" data-o="${oi}"
                 aria-pressed="${state.researchAnswers[q.id] === o}">${escapeHtml(o)}${
                 o === q.default && !state.researchAnswers[q.id] ? ` <span class="lite-chip-note">its guess</span>` : ""}</button>`).join("")}</div>`
-              : `<p class="lite-told">Answer this one in Kriko: open the research job below.</p>`}
+              : ""}
+            <form class="lite-question-form" data-q="${qi}">
+              <label>Your answer<input class="lite-question-input" data-id="${escapeHtml(q.id)}" maxlength="2000" /></label>
+              <button type="submit" class="lite-chip">Send answer</button>
+            </form>
             ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
           </fieldset>`).join("")}
         </div>` : ""}
@@ -882,6 +898,26 @@
         ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
         ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
       </section>`;
+    // Progress-only polls should update the sentence, never re-create the
+    // quick-look cards or the question the reader is typing an answer to.
+    const signature = markup + JSON.stringify(state.researchQuick);
+    if (slot._researchMarkup === signature) {
+      slot.querySelector(".lite-research").dataset.state = state.researchState;
+      slot.querySelector(".lite-research-status").textContent = state.researchMessage;
+      const name = slot.querySelector(".lite-research-name");
+      if (name && name.value !== state.researchName) name.value = state.researchName;
+      const context = slot.querySelector(".lite-research-context");
+      if (context && context.value !== state.researchContext) context.value = state.researchContext;
+      slot.querySelectorAll(".lite-question-input").forEach(input => {
+        const value = state.researchDraftAnswers[input.dataset.id] || "";
+        if (input.value !== value) input.value = value;
+      });
+      return;
+    }
+    slot._researchMarkup = signature;
+    slot.innerHTML = markup;
+    slot.querySelector(".lite-research").dataset.state = state.researchState;
+    slot.querySelector(".lite-research-status").textContent = state.researchMessage;
     const name = slot.querySelector(".lite-research-name");
     if (name) {
       name.value = state.researchName;
@@ -922,10 +958,25 @@
     });
     slot.querySelector(".lite-research-cancel")?.addEventListener("click", cancelResearch);
     slot.querySelectorAll(".lite-chip").forEach((chip) => chip.addEventListener("click", () => {
+      if (!chip.hasAttribute("data-q")) return;
       const question = asked[Number(chip.dataset.q)];
       const option = question?.options?.[Number(chip.dataset.o)];
       if (question && option !== undefined) answerQuestion(question, option);
     }));
+    slot.querySelectorAll(".lite-question-form").forEach(form => {
+      const question = asked[Number(form.dataset.q)];
+      const input = form.querySelector("input");
+      input.value = state.researchDraftAnswers[question.id] || "";
+      input.addEventListener("input", () => { state.researchDraftAnswers[question.id] = input.value; });
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (input.value.trim()) answerQuestion(question, input.value.trim());
+      });
+      if (input.dataset.id === editingId) {
+        input.focus({ preventScroll: true });
+        input.setSelectionRange(...selection);
+      }
+    });
     slot.querySelector(".lite-research-output")?.addEventListener("click", () => {
       const route = `jobs/${encodeURIComponent(state.researchJob.job_id)}`;
       openInApp(route, appUrlFor(route));
@@ -1381,6 +1432,7 @@
         <div class="lite-verdict-slot"></div>
         <div class="lite-claims-head-slot"></div>
         <section class="lite-claims"></section>
+        <div class="lite-followup-slot"></div>
         <div class="lite-details-slot"></div>
       </div>
 
@@ -1456,6 +1508,11 @@
     `;
     const queueButton = slot.querySelector(".lite-queue");
     if (queueButton) queueButton.addEventListener("click", addToQueue);
+    slot.querySelector(".lite-queue-help")?.addEventListener("click", (event) => {
+      state.queueHelpOpen = !state.queueHelpOpen;
+      event.currentTarget.setAttribute("aria-expanded", String(state.queueHelpOpen));
+      slot.querySelector(".lite-queue-guide").hidden = !state.queueHelpOpen;
+    });
   }
 
   // Queue mode. The reader lines up the products they are weighing from the
@@ -1477,7 +1534,18 @@
       <div class="lite-queue-row" data-phase="${phase}">
         <button type="button" class="lite-queue" ${phase === "busy" || done ? "disabled" : ""}
           aria-pressed="${done ? "true" : "false"}">${label}</button>
+        <button type="button" class="lite-queue-help" aria-label="How to use the research queue"
+          aria-controls="lite-queue-guide" aria-expanded="${state.queueHelpOpen}"
+          title="How to use the research queue">?</button>
         ${q && q.text ? `<span class="lite-queue-note" role="status">${escapeHtml(q.text)}</span>` : ""}
+      </div>
+      <div id="lite-queue-guide" class="lite-queue-guide" ${state.queueHelpOpen ? "" : "hidden"}>
+        <strong>Research a shortlist</strong>
+        <p>Add to queue saves this product and its listing in Kriko. Add other products
+          from their listings, then open <b>Compare → Research queue</b> in Kriko,
+          choose an agent and press <b>Start queue</b>.</p>
+        <p>The agent researches each product in turn so you can compare the results.
+          Adding a product does not start research. The queue is kept on this computer.</p>
       </div>`;
   }
 
@@ -1825,6 +1893,7 @@
   // coming back into view asks again at once instead of waiting for Analyze.
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && state.visible && !state.liveTimer) pollLive();
+    if (!document.hidden && state.visible) renderFollowups();
   });
 
   function renderStatus() {
@@ -2270,7 +2339,10 @@
   function renderClaimsList() {
     if (!claimsListEl) return;
     claimsListEl.dataset.compact = state.compact ? "1" : "0";
-    claimsListEl.innerHTML = "";
+    // Keep the result tree while reconciling a live answer. Clearing it
+    // restarts entrance animations and drops focus and collapsed groups.
+    if (state.pipeline !== "result" || !state.result?.claims?.length
+        || state.noAdapter || state.unknownProduct) claimsListEl.replaceChildren();
 
     if (state.pipeline === "analyzing") {
       const skel = document.createElement("div");
@@ -2341,8 +2413,7 @@
       return;
     }
 
-    // Group for display, by the claim's own domain. Global claim indices into
-    // state.result.claims are preserved so toggleOne/setAllOpen keep working.
+    // Group for display by the claim's own domain, retaining cards by key.
     // A domain is whatever string the answering pack's claim carries — engine
     // parts today, drill bits or anything else tomorrow. Title-casing each
     // word is a generic text transform, not a lookup keyed on car vocabulary
@@ -2373,6 +2444,13 @@
       }));
     }
 
+    const oldGroups = new Map([...claimsListEl.querySelectorAll(".lite-domain-group")]
+      .map(group => [group.dataset.domain, group]));
+    const oldCards = new Map([...claimsListEl.querySelectorAll(".lite-claim-anim")]
+      .map(wrap => [wrap.dataset.claimKey, wrap]));
+    const initial = oldGroups.size === 0;
+    const keptGroups = new Set();
+    const keptCards = new Set();
     let delayCounter = 0;
     for (const { iconDomain, label, items } of groups) {
       const high = items.filter(i => i.claim.severity === "high").length;
@@ -2385,10 +2463,13 @@
       if (med)  sevHtml.push('<span class="lite-domain-sev-dot" data-sev="med"></span>' + med);
       if (low)  sevHtml.push('<span class="lite-domain-sev-dot" data-sev="low"></span>' + low);
 
-      const groupEl = document.createElement("div");
-      groupEl.className = "lite-domain-group";
-      groupEl.dataset.open = "1";
-      groupEl.innerHTML = `
+      let groupEl = oldGroups.get(iconDomain);
+      if (!groupEl) {
+        groupEl = document.createElement("div");
+        groupEl.className = "lite-domain-group";
+        groupEl.dataset.domain = iconDomain;
+        groupEl.dataset.open = "1";
+        groupEl.innerHTML = `
         <button type="button" class="lite-domain-head" aria-expanded="true">
           <span class="lite-domain-icon">${domainIconSvg(iconDomain, { size: 15 })}</span>
           <span class="lite-domain-name">${escapeHtml(label)}</span>
@@ -2398,16 +2479,57 @@
         </button>
         <div class="lite-domain-body"></div>
       `;
+        const head = groupEl.querySelector(".lite-domain-head");
+        head.addEventListener("click", () => {
+          const isOpen = head.getAttribute("aria-expanded") === "true";
+          head.setAttribute("aria-expanded", isOpen ? "false" : "true");
+          groupEl.dataset.open = isOpen ? "0" : "1";
+          groupEl.querySelector(".lite-domain-toggle").textContent = isOpen ? "+" : "\u2212";
+        });
+      }
+      keptGroups.add(groupEl);
+      groupEl.querySelector(".lite-domain-count").textContent = items.length;
+      groupEl.querySelector(".lite-domain-sev").innerHTML = sevHtml.join("");
 
       // Populate body with claim cards
       const bodyEl = groupEl.querySelector(".lite-domain-body");
-      items.forEach(({ claim, idx }) => {
-        const wrap = document.createElement("div");
-        wrap.className = "lite-claim-anim";
-        wrap.style.animationDelay = (80 + delayCounter * 70) + "ms";
-        delayCounter++;
-        const card = renderClaimCard(claim, { open: state.openIds.has(idx), compact: state.compact });
-        if (state.freshKeys.has(claimKeyOf(claim))) {
+      items.forEach(({ claim }, position) => {
+        const key = claimKeyOf(claim);
+        let wrap = oldCards.get(key);
+        if (!wrap) {
+          wrap = document.createElement("div");
+          wrap.className = "lite-claim-anim";
+          wrap.dataset.claimKey = key;
+          if (initial) wrap.style.animationDelay = (80 + delayCounter++ * 70) + "ms";
+          else wrap.style.animation = "none";
+        }
+        keptCards.add(wrap);
+        let card = wrap.querySelector(".lite-rc");
+        const signature = JSON.stringify(claim);
+        if (!card || wrap._claimSignature !== signature) {
+          const next = renderClaimCard(claim, { open: state.openIds.has(key), compact: state.compact });
+          if (card) {
+            // Changed evidence updates the existing article without replaying
+            // the wrapper's animation. Unchanged cards keep all their controls.
+            card.innerHTML = next.innerHTML;
+            card.dataset.sev = next.dataset.sev;
+            card.dataset.strength = next.dataset.strength;
+          } else {
+            card = next;
+            wrap.appendChild(card);
+            card.addEventListener("click", (event) => {
+              if (event.target.closest(".lite-rc-toggle")) toggleOne(key, card);
+              const fact = event.target.closest(".lite-rc-factbtn");
+              if (fact) checkFacts(wrap._claim, card);
+              const mark = event.target.closest(".lite-rc-markbtn");
+              if (mark) markClaim(wrap._claim, mark.dataset.verdict, card);
+            });
+          }
+          wrap._claimSignature = signature;
+        }
+        wrap._claim = claim;
+        updateClaimCard(card, { open: state.openIds.has(key), compact: state.compact });
+        if (state.freshKeys.has(key) && !card.querySelector(".lite-rc-new")) {
           const title = card.querySelector(".lite-rc-title");
           const chip = document.createElement("span");
           chip.className = "lite-rc-new";
@@ -2416,8 +2538,6 @@
           if (title) title.prepend(chip);
           card.dataset.fresh = "1";
         }
-        const btn = card.querySelector(".lite-rc-toggle");
-        btn.addEventListener("click", () => toggleOne(idx, card));
         // Re-assert any verdict this claim already carries: the list is
         // rebuilt on every expand-all and every fresh analysis, and a mark
         // that disappeared on redraw would read as one that failed to save.
@@ -2431,35 +2551,18 @@
           factClaimCard(card, state.facts.get(claim.claim_id),
             state.checkingFacts.has(claim.claim_id));
         }
-        const factBtn = card.querySelector(".lite-rc-factbtn");
-        if (factBtn) {
-          factBtn.addEventListener("click", (event) => {
-            event.stopPropagation(); // the card header toggles on click
-            checkFacts(claim, card);
-          });
-        }
-        card.querySelectorAll(".lite-rc-markbtn").forEach((markBtn) => {
-          markBtn.addEventListener("click", (event) => {
-            event.stopPropagation(); // the card header toggles on click
-            markClaim(claim, markBtn.dataset.verdict, card);
-          });
-        });
-        wrap.appendChild(card);
-        bodyEl.appendChild(wrap);
+        // Avoid even moving an already correctly placed card: DOM moves can
+        // blur a focused button. New cards insert around the existing tree.
+        const at = bodyEl.children[position];
+        if (at !== wrap) bodyEl.insertBefore(wrap, at || null);
       });
-
-      // Wire group toggle
-      const head = groupEl.querySelector(".lite-domain-head");
-      const toggleSpan = groupEl.querySelector(".lite-domain-toggle");
-      head.addEventListener("click", () => {
-        const isOpen = head.getAttribute("aria-expanded") === "true";
-        head.setAttribute("aria-expanded", isOpen ? "false" : "true");
-        groupEl.dataset.open = isOpen ? "0" : "1";
-        toggleSpan.textContent = isOpen ? "+" : "\u2212";
-      });
-
-      claimsListEl.appendChild(groupEl);
+      const at = claimsListEl.children[keptGroups.size - 1];
+      if (at !== groupEl) claimsListEl.insertBefore(groupEl, at || null);
     }
+    for (const wrap of oldCards.values()) if (!keptCards.has(wrap)) wrap.remove();
+    for (const group of oldGroups.values()) if (!keptGroups.has(group)) group.remove();
+    // Remove skeletons/gaps left from the first answer arriving.
+    for (const child of [...claimsListEl.children]) if (!keptGroups.has(child)) child.remove();
 
     renderGaps();
   }
@@ -2584,8 +2687,162 @@
     footerEl.hidden = false;
   }
 
+  function followupHere() {
+    const id = state.pipeline === "result" && state.result?.lookup_id;
+    if (!id) return null;
+    if (!state.followups.has(id)) state.followups.set(id, {
+      id, query: "", status: "", starting: false, jobs: [], loaded: false,
+      polling: new Set(), paused: new Set(),
+    });
+    return state.followups.get(id);
+  }
+
+  function renderFollowups() {
+    const slot = bodyEl?.querySelector(".lite-followup-slot");
+    if (!slot) return;
+    const row = followupHere();
+    if (!row) { slot.replaceChildren(); delete slot.dataset.lookupId; return; }
+    if (slot.dataset.lookupId !== row.id) {
+      slot.dataset.lookupId = row.id;
+      slot.innerHTML = `
+        <section class="lite-followup">
+          <strong>Ask a follow-up</strong>
+          <p class="lite-followup-note">Ask your agent about this listing's risks and evidence.
+            Uses your configured agent or local model. Paid agents are capped at $0.20 per question.</p>
+          <div class="lite-followup-history" aria-live="polite"></div>
+          <form class="lite-followup-form">
+            <label for="lite-followup-input">Your question</label>
+            <textarea id="lite-followup-input" class="lite-followup-input" maxlength="2000"
+              placeholder="What should I check before deciding?" rows="2"></textarea>
+            <button type="submit" class="lite-followup-send">Ask your agent</button>
+          </form>
+          <p class="lite-followup-status" role="status"></p>
+        </section>`;
+      const input = slot.querySelector(".lite-followup-input");
+      input.value = row.query;
+      input.addEventListener("input", () => { row.query = input.value; });
+      slot.querySelector("form").addEventListener("submit", event => {
+        event.preventDefault();
+        askFollowup(row);
+      });
+    }
+    const pending = row.starting || row.jobs.some(job => !job.done);
+    const send = slot.querySelector(".lite-followup-send");
+    send.disabled = pending;
+    send.textContent = pending ? "Asking…" : "Ask your agent";
+    const status = slot.querySelector(".lite-followup-status");
+    status.textContent = row.status;
+    if (row.paused.size) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lite-followup-retry lite-open-app";
+      button.textContent = "Retry progress";
+      button.addEventListener("click", () => {
+        const ids = [...row.paused];
+        row.paused.clear();
+        for (const id of ids) pollFollowup(row, id);
+      });
+      status.append(" ", button);
+    }
+    const history = slot.querySelector(".lite-followup-history");
+    const signature = JSON.stringify(row.jobs);
+    if (history._signature !== signature) {
+      history._signature = signature;
+      history.innerHTML = row.jobs.map(job => {
+        const agent = job.result?.agent;
+        const phase = job.done
+          ? (job.state === "succeeded" ? "Answered"
+            : job.state === "cancelled" ? "Cancelled"
+              : job.state === "interrupted" ? "Interrupted" : "Failed")
+          : job.state === "running" ? "Answering…" : "Queued…";
+        return `
+        <article class="lite-followup-exchange">
+          <div class="lite-followup-message lite-followup-user">
+            <div class="lite-followup-user-label">You · Question</div>
+            <div class="lite-followup-question">${escapeHtml(job.params?.question || job.question || "")}</div>
+          </div>
+          <div class="lite-followup-message lite-followup-agent" aria-busy="${!job.done}">
+            <div class="lite-followup-reply-head">
+              <span class="lite-followup-agent-label">${escapeHtml(agent?.label || "Agent")} · Answer</span>
+              <span class="lite-followup-job-status" data-active="${!job.done}">${phase}</span>
+            </div>
+            ${agent?.model ? `<div class="lite-followup-model">${escapeHtml(agent.model)}</div>` : ""}
+            <div class="lite-followup-answer">${escapeHtml(job.result?.answer
+              || (job.done ? job.error || "No answer was returned." : "Waiting for the answer…"))}</div>
+          </div>
+        </article>`;
+      }).join("");
+    }
+    if (!row.loaded) {
+      row.loaded = true;
+      chrome.runtime.sendMessage({ type: "LOOKUP_QUESTIONS", payload: { lookup_id: row.id } }, response => {
+        if (!chrome.runtime.lastError && response?.ok && Array.isArray(response.items)) {
+          const existing = new Set(row.jobs.map(job => job.job_id));
+          row.jobs = [...response.items.filter(job => !existing.has(job.job_id)), ...row.jobs];
+        }
+        if (followupHere() === row) renderFollowups();
+      });
+    }
+    for (const job of row.jobs) if (!job.done && !row.polling.has(job.job_id)
+      && !row.paused.has(job.job_id)) pollFollowup(row, job.job_id);
+  }
+
+  function askFollowup(row) {
+    const question = row.query.trim();
+    if (!question || row.starting || row.jobs.some(job => !job.done)) return;
+    row.starting = true;
+    row.status = "Starting your question…";
+    renderFollowups();
+    chrome.runtime.sendMessage({ type: "LOOKUP_ASK", payload: { lookup_id: row.id, question } }, response => {
+      row.starting = false;
+      if (chrome.runtime.lastError || !response?.ok || !response.job_id) {
+        row.status = response?.error || "Could not ask. Open Kriko and try again.";
+      } else {
+        row.status = "";
+        if (row.query.trim() === question) row.query = "";
+        row.jobs.push({ job_id: response.job_id, question, done: false });
+        const input = followupHere() === row && bodyEl?.querySelector(".lite-followup-input");
+        if (input) input.value = row.query;
+      }
+      if (followupHere() === row) renderFollowups();
+    });
+  }
+
+  function pollFollowup(row, jobId) {
+    if (!state.visible || document.hidden || followupHere() !== row) {
+      row.polling.delete(jobId);
+      return;
+    }
+    row.polling.add(jobId);
+    chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, response => {
+      if (chrome.runtime.lastError || !response?.ok || !response.job) {
+        row.status = "Cannot check the answer. It may still be running; retry progress below.";
+        row.polling.delete(jobId);
+        row.paused.add(jobId);
+        if (followupHere() === row) renderFollowups();
+        return;
+      }
+      const index = row.jobs.findIndex(job => job.job_id === jobId);
+      if (index < 0) return;
+      const job = response.job;
+      const done = job.done || ["succeeded", "failed", "cancelled", "interrupted"].includes(job.state);
+      row.jobs[index] = { ...row.jobs[index], ...job, done };
+      row.status = done && job.state !== "succeeded"
+        ? job.error || job.message || "The question did not finish. Try asking again." : "";
+      if (done) row.polling.delete(jobId);
+      if (followupHere() === row) renderFollowups();
+      if (!done) setTimeout(() => pollFollowup(row, jobId), 1000);
+    });
+  }
+
   function renderBody() {
     if (!bodyEl) return;
+    const scrollTop = bodyEl.scrollTop;
+    const top = bodyEl.getBoundingClientRect().top;
+    const anchor = [...(claimsListEl?.querySelectorAll(".lite-rc") || [])]
+      .find(card => card.getBoundingClientRect().bottom > top);
+    const anchorTop = anchor?.getBoundingClientRect().top;
+    const focused = shadow.activeElement;
     renderListingHeader();
     renderCriticalAlerts();
     renderCta();
@@ -2596,22 +2853,29 @@
     renderVerdict();
     renderClaimsHeader();
     renderClaimsList();
+    renderFollowups();
     renderListingDetails();
     renderFooter();
+    // New cards above the one being read should not push it out of view.
+    bodyEl.scrollTop = scrollTop + (anchor?.isConnected
+      ? anchor.getBoundingClientRect().top - anchorTop : 0);
+    if (focused?.isConnected && shadow.activeElement !== focused) {
+      focused.focus({ preventScroll: true });
+    }
   }
 
   // ─── Interactions ─────────────────────────────────────────────────────
-  function toggleOne(idx, cardEl) {
-    if (state.openIds.has(idx)) state.openIds.delete(idx);
-    else state.openIds.add(idx);
-    updateClaimCard(cardEl, { open: state.openIds.has(idx) });
+  function toggleOne(key, cardEl) {
+    if (state.openIds.has(key)) state.openIds.delete(key);
+    else state.openIds.add(key);
+    updateClaimCard(cardEl, { open: state.openIds.has(key) });
     // Update Expand/Collapse-all chip "on" state
     renderClaimsHeader();
   }
   function setAllOpen(open) {
     if (!state.result) return;
     state.openIds = open
-      ? new Set(state.result.claims.map((_, i) => i))
+      ? new Set(state.result.claims.map(claimKeyOf))
       : new Set();
     // Mutate cards in place so each one runs its own expand/collapse animation
     // — re-rendering the list would retrigger the entrance animation.

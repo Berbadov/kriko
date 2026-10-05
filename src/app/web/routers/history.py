@@ -8,8 +8,8 @@ engine's.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.web import state
-from app.web.deps import get_app_state, get_store
+from app.web import state, tasks
+from app.web.deps import get_app_state, get_jobs, get_store
 
 router = APIRouter(prefix="/api", tags=["history"])
 
@@ -70,6 +70,31 @@ def get_lookup(lookup_id: str, app_state=Depends(get_app_state)):
     if row is None:
         raise HTTPException(404, f"no such lookup: {lookup_id}")
     return row
+
+
+class FollowupRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+
+
+@router.get("/lookup/{lookup_id}/questions")
+def lookup_questions(lookup_id: str, app_state=Depends(get_app_state)):
+    if state.get_lookup(app_state, lookup_id) is None:
+        raise HTTPException(404, f"no such lookup: {lookup_id}")
+    return {"items": state.lookup_questions(app_state, lookup_id)}
+
+
+@router.post("/lookup/{lookup_id}/questions")
+def ask_lookup(lookup_id: str, body: FollowupRequest,
+               app_state=Depends(get_app_state), runner=Depends(get_jobs)):
+    if state.get_lookup(app_state, lookup_id) is None:
+        raise HTTPException(404, f"no such lookup: {lookup_id}")
+    question = body.question.strip()
+    if not question:
+        raise HTTPException(422, "Write a question first.")
+    params = {"lookup_id": lookup_id, "question": question,
+              "backend": tasks.default_backend(runner.settings.app_state_path),
+              "budget_usd": tasks.DEFAULT_BUDGET_USD}
+    return {"job_id": runner.submit("lookup_ask", params), "kind": "lookup_ask"}
 
 
 @router.delete("/history/{lookup_id}")
