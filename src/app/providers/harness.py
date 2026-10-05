@@ -249,6 +249,9 @@ class Harness:
     #: plane over a flag their `claude` has never heard of, and `--help` is
     #: the only honest way to ask. Resolved by `command_for`.
     preferred: tuple[str, ...] = ()
+    #: Flags with a value, added on the same rule as `preferred`: only when
+    #: this machine's `--help` declares the flag.
+    preferred_values: tuple[tuple[str, str], ...] = ()
     #: How this CLI is handed the page reader, or `None` for a CLI that is not
     #: (yet) verified to take one. See `PageReader`.
     reader: PageReader | None = None
@@ -436,6 +439,13 @@ KNOWN = (
         # auth, the built-in tools and permissions alone. Both are what this
         # spawn already claimed to be.
         preferred=("--strict-mcp-config", "--safe-mode"),
+        # `--allowedTools` only *permits* the two search tools; every other
+        # built-in tool's definition is still loaded into the context of
+        # every turn. `--tools` is the list of tools that exist at all.
+        # Measured on 2.1.289, one `-p` turn: 29 327 input tokens of fixed
+        # context without it, 5 719 with it. MCP tools (the page reader
+        # below) are not in the built-in set and are not affected.
+        preferred_values=(("--tools", ",".join(SEARCH_TOOLS)),),
         # **The page reader (B155).** Sites behind Cloudflare's bot blocking
         # answer this CLI's own fetcher (`Claude-User`) with a 403, on 2.1.283
         # and 2.1.284 alike. `--mcp-config <configs...>` "loads MCP servers
@@ -1393,6 +1403,8 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
         args = _with_grant(args, reader.grant_flag, reader_tools(one)) or args
         attach = [reader.config_flag, reader_config]
     return [executable, *args, *(f for f in one.preferred if f in supported),
+            *(part for flag, value in one.preferred_values if flag in supported
+              for part in (flag, value)),
             *attach,
             *([one.model_flag, model] if model and one.model_flag else []),
             *([one.effort_flag, effort] if effort else []),
