@@ -58,3 +58,13 @@ How items are written, per `docs/DOCTRINE.md`:
   read, its spend and the verify verdict from the engine, no sample
   constants; a small model that breaks JSON once still completes the run;
   and `tools/gate.sh` passes.
+
+## 12. Compare with a small local model *(2026-10-05)*
+
+> "I'm trying to make the seeling point of the app with the compare screen. app is opensource though. trying 4b and lower param models are the target but ui must include higher param models for high vram users. every process should work seamlessly with high accuracy with efficient token usage on scraping and crawling."
+
+- **Where:** Compare follow-up questions and Local LLM model setup in the GPUI app.
+- **Done when:** Compare offers the ready local model beside connected agents; a local question answers from the saved checks without a web search, fits a bounded relevant table into a small model's context, distinguishes recorded facts from unknowns, and the Local LLM screen keeps larger available models selectable alongside small ones. Tests prove the local question makes no search call and preserves each compared product.
+- **Not this:** inventing facts or hiding larger installed models to promote small ones.
+- **Owner:** agent-compare-operations worktree.
+- **Left:** the code and automated checks are in the worktree; the installed GPUI screen still needs a visual walk, and the branch needs integration with the local agent refactor in the main checkout before this item can leave the backlog.

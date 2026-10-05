@@ -83,13 +83,15 @@ class OpenAICompatSocket:
                  temperature: float = 0.0,
                  context_chars: int = 12000,
                  max_tokens: int | None = DEFAULT_MAX_TOKENS,
-                 response_json_schema: dict | str = ""):
+                 response_json_schema: dict | str = "",
+                 reasoning_effort: str = ""):
         self.base_url = base_url.rstrip("/").removesuffix("/v1")
         self.serving_name = serving_name
         self.timeout = timeout
         self.temperature = temperature
         self.context_chars = context_chars
         self.max_tokens = max_tokens
+        self.reasoning_effort = reasoning_effort.strip()
         if isinstance(response_json_schema, str):
             response_json_schema = (json.loads(response_json_schema)
                                     if response_json_schema.strip() else {})
@@ -118,6 +120,8 @@ class OpenAICompatSocket:
         }
         if isinstance(self.max_tokens, int) and self.max_tokens > 0:
             body["max_tokens"] = self.max_tokens
+        if self.reasoning_effort:
+            body["reasoning_effort"] = self.reasoning_effort
         if self._schema:
             body["response_format"] = {
                 "type": "json_schema",
@@ -131,21 +135,33 @@ class OpenAICompatSocket:
                 # idle connection. One plain retry, schema dropped too,
                 # since a server caught mid-load can refuse it as well.
                 body.pop("response_format", None)
+                body.pop("reasoning_effort", None)
                 try:
                     payload = self._post(body)
                 except urllib.error.HTTPError as again:
                     raise self._refused(again) from again
                 except Exception as other:  # noqa: BLE001
                     raise self._failed(other) from other
-            elif error.code == 400 and "response_format" in body:
-                # The server cannot constrain its output; ask plainly.
-                body.pop("response_format")
-                try:
-                    payload = self._post(body)
-                except urllib.error.HTTPError as again:
-                    raise self._refused(again) from again
-                except Exception as other:  # noqa: BLE001
-                    raise self._failed(other) from other
+            elif error.code == 400 and ("response_format" in body
+                                         or "reasoning_effort" in body):
+                # The server may not understand an optional field. Drop
+                # schema first, then effort, so a capable server keeps the
+                # remaining option when only one was refused.
+                payload = None
+                for optional in ("response_format", "reasoning_effort"):
+                    if optional not in body:
+                        continue
+                    body.pop(optional)
+                    try:
+                        payload = self._post(body)
+                        break
+                    except urllib.error.HTTPError as again:
+                        if again.code != 400:
+                            raise self._refused(again) from again
+                    except Exception as other:  # noqa: BLE001
+                        raise self._failed(other) from other
+                if payload is None:
+                    raise self._refused(error) from error
             else:
                 raise self._refused(error) from error
         except Exception as error:  # noqa: BLE001 - named for the reader below
