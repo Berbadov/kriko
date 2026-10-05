@@ -137,7 +137,7 @@ pipeline step a person walks.
 a fan, not a column. Import down only:
 
 ```
-tauri/  desktop shell (Rust, ~180 lines) — sidecar lifetime, nothing else; no engine logic ever
+kriko-gpui/  desktop app (Rust, GPUI) — supervises the sidecar, draws the interface over HTTP; no engine logic ever
 ui/     Svelte+Vite source -> src/app/web/static/; HTTP to app/; no Python, no catalog vocabulary
 app/    interfaces — cli, web dashboard, mcp server, operator TUI (same HTTP API, no webview)
 kriko/  engine — pack store, lookup, ranking, research interface; imports NONE of the others; no category
@@ -179,22 +179,23 @@ must not depend on which door the work arrived through.
 
 **Desktop shell is a supervisor, not a second engine.** `src/app/sidecar.py`
 binds an OS-chosen port and prints `KRIKO_PORT <n>` first (a parent-found port
-is already lost at bind). `tauri/` polls `/api/health`, then shows; on failure
-it renders stderr, because a blank window is a bug. **Window is not Quit:**
+is already lost at bind). `kriko-gpui/src/engine.rs` polls `/api/health` while
+the window says it is starting; on failure it renders stderr, because a blank
+window is a bug. **Window is not Quit:**
 closing hides and the engine keeps serving, which the extension needs; the tray
 (Open, Quit) ends it. On Windows a kill is a *tree* kill, because a one-file
 bundle re-executes: the spawned pid is the bootloader and the child holds the
 image. `--exit-with-parent` (stdin close) is the crash belt; an orphan holds
 the write-ahead lock *and* maps its own executable, which fails the next
-install, so `installer.nsh` stops the shell first (its exit closes stdin, the
-designed way out) and the sidecar second. Two sockets, announced and fixed,
+install, so the MSI (`kriko-gpui/wix/main.wxs`) stops the app first (its exit
+closes stdin, the designed way out) and the sidecar second. Two sockets, announced and fixed,
 because the extension cannot be told a random port. Guards with no crate build:
 handshake and flag agreement on both sides, the extension port equals the
-server constant, every `start_engine` failure reaches `emit_failure`, the
-installer script kills the shipped binary, and no engine vocabulary appears in
-Rust. `test_the_shell_is_valid_rust.py` parses through bare `rustc` (`error:`
+server constant, every start failure reaches the failure screen, the installer
+kills the shipped binaries, and the app reads the store only through the HTTP
+API (no SQL, no sqlite crate). `test_the_shell_is_valid_rust.py` parses through bare `rustc` (`error:`
 with no code means a syntax error, `error[E0432]` means an unresolved name; it
-skips where there is no `rustc`, and never passes). See `tauri/README.md`.
+skips where there is no `rustc`, and never passes). See `kriko-gpui/README.md`.
 
 **Two SQLite files, on purpose:** `~/.kriko/knowledge.sqlite` (the engine
 store) against `~/.kriko/app.sqlite` (`app/web/state.py`: history and
@@ -243,4 +244,4 @@ A need from the wrong layer means moving the module (drivers to
 | `docs/PACK_CONTRACT.md` | what a catalog contains, must and may | current |
 | `docs/GLOSSARY.md` | one line per word, and the words with two meanings | current |
 | `docs/AGENT_OPERATIONS.md` | operation vocabulary, the harness protocol, open questions | a note, dated 2026-09-14 |
-| `tauri/README.md` | the shell: launch, failures, local build | current, hand-built |
+| `kriko-gpui/README.md` | the desktop app: engine supervision, screens, installer | current, hand-built |

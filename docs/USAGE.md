@@ -22,8 +22,8 @@ flowchart LR
 
 ## 1. Run it
 
-Install the `desktop` workflow's installer (`Kriko_<version>_x64-setup.exe`,
-`.deb`, `.AppImage`, `.dmg`) and launch it; see `tauri/README.md`. From a
+Install the `desktop` workflow's installer (`kriko-<version>-x86_64.msi`, a
+per-user install with no admin prompt) and launch it; see `kriko-gpui/README.md`. From a
 checkout:
 
 ```bash

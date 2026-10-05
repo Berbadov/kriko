@@ -52,8 +52,8 @@ which in its log.
 - **"agent" is four things**: the **agent** plane (by hand); the **harness**
   (a CLI Kriko *starts*); a **coding agent** working on Kriko's own source;
   and the research agent file each pack ships. Prefer "harness plane" or "CLI".
-- **"shell" is two things**: the **desktop shell** (`tauri/`, about 180 lines
-  of Rust that own the sidecar's lifetime and no engine logic) and the
+- **"shell" is two things**: the **desktop shell** (`kriko-gpui/`, the native
+  app that owns the sidecar's lifetime and reads the engine only over HTTP) and the
   terminal's own shell (the PTY handed to the operator's terminal).
 - **"ledger" is two things**: the **evidence ledger** (`src/kriko/ledger/`,
   build time: documents, chunks, extractions, clusters, verdicts) and the

@@ -73,16 +73,11 @@ ui/.svelte-kit/
 # build for no reason. Reproducible installs are load-bearing here.
 !ui/package-lock.json
 
-# The desktop shell's build products. The Rust target directory is ~2GB, the
-# frozen sidecar is per-OS, and `tauri icon` generates every icon in
-# src-tauri/icons/ from packaging/icon-master.png -- including icon.png,
-# which is why the master is not in that directory. It used to be, and the
-# command re-encoded its own input on every build.
-tauri/node_modules/
-tauri/src-tauri/target/
-tauri/src-tauri/binaries/
-tauri/src-tauri/gen/
-tauri/src-tauri/icons/*
+# The desktop app's build products. A Rust target directory is ~2GB (one per
+# worktree or agent, hence the glob), and the installers in builds/ are made
+# by kriko-gpui/package.ps1, never committed.
+kriko-gpui/target*/
+kriko-gpui/builds/
 build/
 
 # Something in this working tree drops files with non-UTF-8 names (an

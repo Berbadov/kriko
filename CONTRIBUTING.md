@@ -128,7 +128,7 @@ The `desktop` workflow (four installers, three runners plus
 (`workflow_dispatch`; the tag and pull-request triggers were removed
 2026-09-13 for the same minutes reason). Run it from the Actions tab
 (`platforms: all` for the Linux and macOS legs) or build on a Windows host per
-`tauri/README.md`, which is how every installer so far was made.
+`kriko-gpui/README.md`, which is how every installer so far was made.
 
 The gate runs with no secrets. Root `npm test` uses `npm install` (its lockfile
 is gitignored); the `ui` gate uses `npm ci` (lockfile committed), because

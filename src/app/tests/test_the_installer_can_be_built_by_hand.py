@@ -7,9 +7,11 @@ with no runner assigned, which is what a spending cap looks like from the
 inside. A tag that produces nothing is not a release, and "ship to the reader,
 not to the branch" is rule 4 of the phase this repository is still in.
 
-So the same steps live in `packaging/build_desktop.ps1`, runnable on the
-Windows box that has to freeze the sidecar anyway (PyInstaller cannot
-cross-compile — the workflow was never doing anything a local run could not).
+So the same steps live in `kriko-gpui/package.ps1`, runnable on the Windows box
+that has to freeze the sidecar anyway (PyInstaller cannot cross-compile: the
+workflow was never doing anything a local run could not). That script is the
+one recipe; `packaging/build_desktop.ps1`, which was the same thing for the
+previous shell, is gone.
 
 That leaves the failure mode this file exists for: **two copies of a build
 drift.** A step added to the workflow and not to the script means the hand-run
@@ -35,20 +37,20 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = ROOT / ".github" / "workflows" / "desktop.yml"
-SCRIPT = ROOT / "packaging" / "build_desktop.ps1"
+SCRIPT = ROOT / "kriko-gpui" / "package.ps1"
 
 #: Repository files a build step invokes: the spec PyInstaller reads, the lock
-#: pip installs, the smoke tests, the updater configuration.
+#: pip installs, the smoke tests.
 ARTIFACT = re.compile(r"\b((?:packaging|tools)/[\w.-]+\.(?:py|spec)|requirements\.lock)\b")
 
 #: npm scripts are the other half of the build and are not files. Matched as
-#: "run <script>" and "<tool> <subcommand>" pairs rather than by name.
+#: "run <script>" and "ci" pairs rather than by name.
 NPM_SCRIPT = re.compile(r"npm --prefix (\w+) (?:ci|run ([\w-]+))")
 
-#: The two `tauri` subcommands the bundle depends on. `tauri build` producing
-#: the installer and `tauri icon` producing the icons it embeds are separate
-#: steps and a script can plausibly have one without the other.
-TAURI_SUBCOMMAND = re.compile(r"\btauri (icon|build)\b")
+#: The cargo commands the bundle depends on. Building the app and wrapping it
+#: in an MSI are separate steps, and a script can plausibly have one without
+#: the other.
+CARGO_STEP = re.compile(r"\bcargo (build --release|wix)\b")
 
 
 def _bundle_job(text: str) -> str:
@@ -66,20 +68,17 @@ def _bundle_job(text: str) -> str:
 
 
 def _windows_steps(job: str) -> list[str]:
-    """Every step in the job that runs on the windows leg.
+    """Every step in the job. The job runs on Windows and nowhere else.
 
-    A step is skipped only if its `if:` excludes windows explicitly — the
-    Linux system-deps step is the one that does. Guessing the other way (an
-    allow-list of windows steps) would silently drop a new step, which is the
-    drift this file is here to catch.
+    A step is only skipped if its `if:` excludes windows explicitly. Guessing
+    the other way (an allow-list of windows steps) would silently drop a new
+    step, which is the drift this file is here to catch.
     """
     steps = []
     for chunk in re.split(r"\n {12}- ", job)[1:]:
         guard = re.search(r"^ *if: (.+)$", chunk, re.MULTILINE)
-        if guard and "!= 'windows'" not in guard.group(1):
-            condition = guard.group(1)
-            if "== 'linux'" in condition or "== 'macos'" in condition:
-                continue
+        if guard and "!= 'windows'" in guard.group(1):
+            continue
         steps.append(chunk)
     return steps
 
@@ -104,7 +103,7 @@ def script() -> str:
 def test_the_script_exists_and_is_a_build(script):
     """A missing or stub script would satisfy every subset check below it."""
     assert len(script.splitlines()) > 60
-    assert "tauri build" in script
+    assert "cargo build --release" in script
 
 
 def test_the_workflow_still_parses_into_steps(workflow_build):
@@ -116,6 +115,7 @@ def test_the_workflow_still_parses_into_steps(workflow_build):
     """
     assert ARTIFACT.findall(workflow_build), "no build artifacts found in the workflow"
     assert NPM_SCRIPT.findall(workflow_build), "no npm steps found in the workflow"
+    assert CARGO_STEP.findall(workflow_build), "no cargo steps found in the workflow"
 
 
 def test_every_artifact_the_release_build_names_is_named_by_the_script(
@@ -123,7 +123,7 @@ def test_every_artifact_the_release_build_names_is_named_by_the_script(
 ):
     """The drift check, in the direction that matters.
 
-    Workflow → script, not the reverse: the script may hold extra checks a
+    Workflow -> script, not the reverse: the script may hold extra checks a
     runner does not need (`Get-Command` for the toolchain, an installer-exists
     assertion at the end), but a step the *release* build runs and the hand
     build skips means the two produce different software.
@@ -138,12 +138,9 @@ def test_every_artifact_the_release_build_names_is_named_by_the_script(
 
 
 def test_the_script_builds_the_same_npm_surfaces(workflow_build, script):
-    """`ui` and `tauri` are separate installs, and both are load-bearing.
-
-    The prefix is checked as well as the script name because `npm run build`
-    in the wrong directory is a plausible transcription error that produces a
-    bundle with no frontend in it.
-    """
+    """The prefix is checked as well as the script name because `npm run
+    build` in the wrong directory is a plausible transcription error that
+    produces a bundle with no frontend in it."""
     required = {
         (prefix, run) for prefix, run in NPM_SCRIPT.findall(workflow_build)
     }
@@ -155,49 +152,49 @@ def test_the_script_builds_the_same_npm_surfaces(workflow_build, script):
     assert missing == [], f"{SCRIPT.name} is missing: {missing}"
 
 
-@pytest.mark.parametrize("subcommand", ["icon", "build"])
-def test_the_script_runs_both_tauri_subcommands(workflow_build, script, subcommand):
+@pytest.mark.parametrize("step", ["build --release", "wix"])
+def test_the_script_runs_both_cargo_steps(workflow_build, script, step):
     """Derived from the workflow, then asserted on the script.
 
-    Parametrized rather than looped so a script that bundles without
-    generating icons names which half is missing.
+    Parametrized rather than looped so a script that builds the app without
+    making the MSI names which half is missing.
     """
-    if f"tauri {subcommand}" not in workflow_build:
-        pytest.skip(f"the workflow no longer runs `tauri {subcommand}`")
-    assert f"tauri {subcommand}" in script
+    if f"cargo {step}" not in workflow_build:
+        pytest.skip(f"the workflow no longer runs `cargo {step}`")
+    if step == "wix":
+        assert '"wix"' in script, "the script never runs `cargo wix`"
+    else:
+        assert f"cargo {step}" in script
 
 
-def test_the_script_freezes_before_it_bundles(script):
+def test_the_script_freezes_before_it_packs(script):
     """Order is part of the build, not a detail.
 
-    Tauri embeds whatever sits in `binaries/` at bundle time. A script that
-    bundles first and freezes after produces an installer carrying the
-    *previous* run's sidecar — green, silent, and wrong. Same reasoning as
+    The MSI carries whatever sits beside `kriko.exe` when WiX runs. A script
+    that packed first and froze after would produce an installer carrying the
+    *previous* run's sidecar: green, silent, and wrong. Same reasoning as
     `test_the_release_workflow_verifies_the_lock_before_it_builds`.
     """
     lines = script.splitlines()
     freeze = min(i for i, line in enumerate(lines) if "PyInstaller" in line)
-    place = min(i for i, line in enumerate(lines) if "binaries/kriko-sidecar" in line)
-    bundle = min(
-        i for i, line in enumerate(lines) if re.search(r"tauri run tauri build", line)
-    )
-    assert freeze < place < bundle, (freeze, place, bundle)
+    place = min(i for i, line in enumerate(lines) if "Place the sidecar" in line)
+    pack = min(i for i, line in enumerate(lines) if '"wix"' in line)
+    assert freeze < place < pack, (freeze, place, pack)
 
 
 def test_the_script_smoke_tests_what_it_produced(script):
     """The two checks v0.2.4 did not have, in the order they have to run.
 
     The sidecar's handshake is checked on the frozen binary before it is
-    embedded, and the shell is launched after the bundle exists. A script that
-    ran either earlier would be testing something other than what it shipped.
+    placed in the installer, and the app is launched after it exists. A script
+    that ran either earlier would be testing something other than what it
+    shipped.
     """
     lines = script.splitlines()
     sidecar = min(i for i, line in enumerate(lines) if "smoke_sidecar.py" in line)
-    bundle = min(
-        i for i, line in enumerate(lines) if re.search(r"tauri run tauri build", line)
-    )
+    pack = min(i for i, line in enumerate(lines) if '"wix"' in line)
     app = min(i for i, line in enumerate(lines) if "smoke_app.py" in line)
-    assert sidecar < bundle < app, (sidecar, bundle, app)
+    assert sidecar < pack < app, (sidecar, pack, app)
 
 
 def _powershell_scripts() -> list[Path]:
@@ -228,7 +225,7 @@ def test_there_are_powershell_scripts_to_check():
 def test_a_powershell_script_is_ascii_only(ps1: Path):
     """Windows PowerShell 5.1 decodes a BOM-less .ps1 as ANSI, not UTF-8.
 
-    Found by running the thing. `build_desktop.ps1` was written with em-dashes
+    Found by running the thing. the old build script was written with em-dashes
     in its comments, which is fine in every editor and fine under `pwsh` 7 --
     and a parse error under `powershell` 5.1, which is what a stock Windows box
     actually has. 5.1 reads a script with no BOM using the system codepage
@@ -331,8 +328,9 @@ def test_a_spawned_frozen_binary_is_ended_by_tree(script: Path):
 
         PermissionError: [WinError 5] Access is denied: 'dist/kriko-sidecar.exe'
 
-    `tauri/` has tree-killed since v0.2.x and its README explains exactly this;
-    `smoke_app.py` does too, with the same reasoning in a comment beside it. So
+    The previous shell tree-killed since v0.2.x and its README explained exactly
+    this; `smoke_app.py` does too, with the same reasoning in a comment beside
+    it. So
     the knowledge was in the repository twice and the third caller still got it
     wrong -- which is the definition of something that belongs in a test rather
     than in a comment.
@@ -341,10 +339,10 @@ def test_a_spawned_frozen_binary_is_ended_by_tree(script: Path):
     holding a file has nothing left to break. It only surfaces when the build
     runs twice on one machine, which is precisely what B81 exists to allow.
 
-    The rule is "ends through a tree-aware helper", not "calls taskkill" --
-    `smoke_app.py` kills by image name because the shell, not it, spawned the
-    sidecar and it has no pid to work from. Both are tree kills; the thing being
-    forbidden is a lone `terminate()` on a bootloader.
+    The rule is "ends through a tree-aware helper", not "calls taskkill":
+    `smoke_app.py` kills its own app's tree by pid (`/T`), which takes the
+    engine the app started with it. The thing being forbidden is a lone
+    `terminate()` on a bootloader.
     """
     text = script.read_text(encoding="utf-8")
     if "subprocess.Popen" not in text:
@@ -366,52 +364,37 @@ def test_a_spawned_frozen_binary_is_ended_by_tree(script: Path):
 def test_the_script_reports_only_what_this_run_produced(script):
     """A green line naming a stale installer is worse than no line at all.
 
-    `target/release/bundle` is not cleaned between builds, so the recursive
-    listing that ends the script sees every installer any earlier run left
-    behind. On 2026-09-09 the 0.5.1 build finished by printing a 0.5.0
-    setup.exe from four hours and three commits earlier alongside its own, in
-    the same colour, with no way to tell them apart but a filename that only
-    differs because that build happened to be stamped. A reader is handed a
-    path out of that list, and CI never sees this because a runner is
-    destroyed after the job -- the same reason none of B81's three defects
-    were caught before the build ran twice on one machine.
+    The old recipe listed `target/release/bundle` recursively, which is never
+    cleaned, and on 2026-09-09 finished by printing a 0.5.0 setup.exe from four
+    hours earlier beside its own, in the same colour. A reader is handed a path
+    out of that list. CI never sees this because a runner is destroyed after
+    the job: it surfaces only when the build runs twice on one machine.
 
-    The fix is a timestamp taken before the build and compared after it, so
-    both halves are asserted: the variable is set before anything is built,
-    and the listing actually filters on it.
+    The MSI and the zip are therefore deleted before they are made, and the
+    script refuses to report one it did not just produce.
     """
-    lines = script.splitlines()
-    started = min(
-        (i for i, line in enumerate(lines) if re.search(r"^\$\w+ = Get-Date", line)),
-        default=None,
-    )
-    assert started is not None, "nothing records when the build started"
-    name = re.match(r"^\$(\w+) = Get-Date", lines[started]).group(1)
-
-    bundle = min(i for i, line in enumerate(lines) if "tauri run tauri build" in line)
-    assert started < bundle, "the start time is taken after the build it dates"
-
-    listing = script[script.index("Get-ChildItem -Recurse") :]
-    assert re.search(rf"LastWriteTime -ge \${name}\b", listing), (
-        "the installer listing does not filter on ${} -- it will report "
-        "whatever an earlier build left in bundle/".format(name)
+    for artifact in ("$msi", "$zip"):
+        removal = re.search(
+            rf"Test-Path -LiteralPath {re.escape(artifact)}\)\s*\{{\s*Remove-Item -LiteralPath {re.escape(artifact)}",
+            script,
+        )
+        assert removal, f"{artifact} is not removed before it is rebuilt"
+    assert "made no MSI" in script, "an MSI that was never produced is not refused"
+    assert "Get-ChildItem -Recurse" not in script, (
+        "a recursive listing reports whatever an earlier build left behind"
     )
 
 
-def test_the_script_proves_a_requested_stamp_arrived(script):
-    """A version that did not take is a green build and a mislabelled file.
+def test_the_script_checks_a_requested_version_against_the_tree(script):
+    """The stamp is gone with the updater; the check stays.
 
-    `configure_updater.py` stamps `tauri.conf.json`, Tauri names the bundle
-    from it, and nothing between them fails loudly: a stamp that silently did
-    not apply produces an installer carrying whatever version the tree was
-    committed at. The filename is the only evidence either way, so the script
-    checks it rather than trusting the step that wrote it.
+    An installer whose name is not its contents is worse than a failed build.
+    The name and the contents both come from the tree, so `-Version` is a
+    question ("is this the version you meant to build?") and the answer is
+    refused when it is no.
     """
     assert re.search(r"\$Version\b", script), "the script takes no -Version"
-    tail = script[script.index("Get-ChildItem -Recurse") :]
-    assert "no installer from this run carries it" in tail, (
-        "a requested -Version is never checked against what was produced"
-    )
+    assert "asked for" in script
 
 
 @pytest.mark.parametrize("script", _packaging_scripts(), ids=lambda p: p.name)
@@ -464,7 +447,7 @@ def test_every_powershell_script_parses():
     PowerShell's own parser, via `pwsh`, which needs nothing from the script and
     does not run a line of it. Skips where there is no `pwsh` — a gate that
     cannot run must not pass silently, but neither may it fail a Linux checkout
-    that never installed one. `tauri/README.md` names it in the pre-flight.
+    that never installed one.
     """
     import shutil
     import subprocess
@@ -488,32 +471,30 @@ def test_every_powershell_script_parses():
         )
 
 
-def test_the_stamp_has_to_be_the_version_the_tree_actually_is():
+def test_the_requested_version_has_to_be_the_version_the_tree_actually_is():
     """An installer whose name is not its contents is worse than a failed build.
 
-    2026-09-15: `-Version 0.8.5` on a checkout at 0.8.0 produced
-    `Kriko_0.8.5_x64-setup.exe` containing 0.8.0 of everything — the log said
-    "Compiling kriko v0.8.0" one line above the bundle it named 0.8.5. The
-    reader installed it, found the fixes missing, and reported that the version
-    number had not been updated. It had: the *label* had.
+    2026-09-15: `-Version 0.8.5` on a checkout at 0.8.0 produced an installer
+    named 0.8.5 containing 0.8.0 of everything; the log said "Compiling kriko
+    v0.8.0" one line above the bundle it named 0.8.5. The reader installed it,
+    found the fixes missing, and reported that the version number had not been
+    updated. It had: the *label* had.
 
-    The stamp only reaches `tauri.conf.json`, which is what names the bundle;
-    Cargo.toml, pyproject and the frozen sidecar's own metadata all come from
-    the tree. So the script has to refuse the mismatch, and say which of the
-    two moves (`git pull`, `tools/bump.py`) fixes it.
+    So the script has to refuse the mismatch, and say which of the two moves
+    (a pull, `tools/bump.py`) fixes it.
     """
-    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
-    assert "asked to stamp" in script
+    script = SCRIPT.read_text(encoding="utf-8")
+    assert "asked for" in script
     assert "pyproject.toml" in script
-    assert "bump.py" in script and "git pull" in script
+    assert "bump.py" in script and "pull" in script
 
 
 def test_the_freeze_refuses_an_install_that_is_a_different_checkout():
     """`app_version()` reads the installed distribution's metadata, which is
     what PyInstaller freezes and what /api/health reports. An editable install
-    pointing at another clone — easy to have — would freeze that clone's code
+    pointing at another clone (easy to have) would freeze that clone's code
     under this one's name, which is B134 with no log line to notice it by."""
-    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
     assert "app_version" in script
     assert "the install reports" in script
 
@@ -522,21 +503,18 @@ def test_the_script_refuses_to_build_from_a_tree_whose_own_files_disagree():
     """The gap the two checks above leave open.
 
     `-Version` vs pyproject, and the installed distribution vs pyproject, are
-    both checked — but neither ever looks at `tauri.conf.json`, which is the
-    file NSIS actually names the bundle from. A tree where `pyproject.toml`
-    was bumped by hand and `tauri.conf.json` was not would pass both existing
-    checks and come out the other end as an installer whose filename is one
-    version and whose compiled code is another — the same failure
-    `test_the_stamp_has_to_be_the_version_the_tree_actually_is` documents,
-    one file over. `tools/bump.py --show` already makes exactly this
-    comparison and exits non-zero on a disagreement (it is
-    `test_the_four_version_strings_agree` as a command); the build script has
-    to call it before doing any of the expensive work below.
+    both checked, but neither looks at `kriko-gpui/Cargo.toml`, which is the
+    file the MSI is versioned from (cargo-wix reads it). A tree where
+    `pyproject.toml` was bumped by hand and the crate was not would pass both
+    and come out as an installer whose filename is one version and whose
+    compiled code is another. `tools/bump.py --show` already makes exactly this
+    comparison and exits non-zero on a disagreement; the build script has to
+    call it before doing any of the expensive work below.
     """
-    script = (ROOT / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
+    script = SCRIPT.read_text(encoding="utf-8")
     assert "bump.py" in script and "--show" in script
-    assert "tauri.conf.json" in script
-    # Before the Python side is even installed, not after — a mismatch here
+    assert "Cargo.toml" in script
+    # Before the Python side is even installed, not after: a mismatch here
     # is cheap to catch before rustc or npm have done any work.
     assert script.index("bump.py") < script.index("Install the Python side")
 

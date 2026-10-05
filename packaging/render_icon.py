@@ -1,4 +1,5 @@
-"""Render the brand mark to the PNG Tauri derives every icon from.
+"""Render the brand mark to the 1024px master PNG, the frontend copies and the
+extension icons.
 
 There are two marks and one design, and the split is the point.
 
@@ -10,11 +11,11 @@ That is what the extension's toolbar icons are still rendered from, by an
 exact-integer nearest-neighbour scale.
 
 `extension/assets/logo-mark-large.svg` is the same letter with room to be one.
-The master `tauri icon` derives from is 1024px, and a 16-cell grid taken there
-is eight hard blocks with a 64px cell — which is what the reader was looking at
+The 1024px master is a 16-cell grid taken that far: eight hard blocks with a
+64px cell — which is what the reader was looking at
 when they said the icon was "pixelated and very ugly". They were right, and it
 was two defects at once: the grid does not survive that scale, *and* the master
-had been left at 512 so `tauri icon` was upscaling it as well.
+had been left at 512 so whatever derived from it was upscaling it as well.
 
 So the large mark is rasterised properly, with a scanline routine written out
 below. It understands convex polygons of flat colour and nothing else, which is
@@ -27,10 +28,11 @@ carry the risk.
 
     python packaging/render_icon.py
 
-Writes `tauri/src-tauri/icons/icon.png`, the 1024px master every other size is
-derived from, and `icon.ico`, which is the one derived file that has to exist
-*before* the shell will compile on Windows rather than when it is bundled. The
-packaging step's `tauri icon` writes the remaining sizes from the same master.
+Writes `packaging/icon-master.png`, the 1024px master, the two copies the
+frontend serves, and the extension's toolbar icons. The desktop app's own
+`kriko-gpui/assets/kriko.ico` is a separate, hand-drawn tile (the white K on
+the brand blue, rounded) that the exe and the installer both read; it is not
+derived here, and `test_the_desktop_icon_is_a_whole_ico` holds its shape.
 """
 
 import re
@@ -40,15 +42,11 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 SOURCE = REPO / "extension" / "assets" / "logo-mark.svg"
-#: The 1024px master, and deliberately *not* inside `tauri/src-tauri/icons/`.
-#: The build runs `tauri icon <master>`, which writes every derived size into
-#: that directory — including a re-encoded `icon.png`. When the master lived
-#: there it was both the input and one of the outputs, so every installer
-#: build silently overwrote the committed file (20,697 bytes in, 18,403 out)
-#: and left the tree dirty with a PNG nobody had edited. Same defect as the
-#: CRLF one below, one layer out: a generated file that comes back changed
-#: teaches people to ignore its diff. Here it would also have failed
-#: `test_the_committed_icon_is_what_the_mark_renders_to` on the next run.
+#: The 1024px master. Kept under `packaging/`, outside any directory a build
+#: writes into, so a build can never re-encode the committed file and leave the
+#: tree dirty with a PNG nobody edited (it did exactly that once, which is how
+#: this location was chosen). `test_the_committed_icon_is_what_the_mark_
+#: renders_to` fails if it ever stops being what the mark renders to.
 TARGET = REPO / "packaging" / "icon-master.png"
 #: The same mark, served to the frontend as the rail brand and the favicon.
 #: A copy rather than an import because `ui/` may not reach outside itself —
@@ -73,10 +71,10 @@ WEB_LARGE_TARGET = REPO / "ui" / "public" / "mark-large.svg"
 #: grid staying whole rather than about which file the master comes from.
 SCALE = 64
 
-#: What `tauri icon` derives every app icon from. 1024 because that is its
-#: largest output, and a smaller master means it upscales — which is exactly
+#: The master's side. 1024 because it is the largest size anything derives
+#: from it, and a smaller master means that upscales — which is exactly
 #: how this shipped blurred: the file sat at 512 while
-#: `test_the_master_is_large_enough_for_every_icon_tauri_derives` said so, in
+#: `test_the_master_is_large_enough` said so, in
 #: a suite red enough that the line went unread.
 MASTER = 1024
 
@@ -84,34 +82,6 @@ MASTER = 1024
 #: showing steps at 1024px; more buys nothing an icon can show, and this
 #: routine is pure Python.
 SUPERSAMPLE = 4
-
-#: The Windows icon, and the one file `cargo check` cannot proceed without on
-#: a Windows host — `tauri-build` generates a Win32 resource from it before
-#: rustc reads a line, so its absence is not a missing *icon*, it is the whole
-#: shell failing to compile.
-#:
-#: Every other derived size comes from `tauri icon`, which `desktop.yml` runs
-#: and which needs the Tauri CLI and a network to install it. `tools/gate.sh`
-#: has neither on purpose. That left the tauri leg unrunnable on exactly the
-#: machine that builds the installers — and an unrunnable cargo check is how a
-#: `main.rs` that could not be parsed shipped in B83. So this one file is
-#: derived here instead, by the renderer that already exists: an ICO is a
-#: 6-byte directory, one 16-byte entry per image, and then PNGs, which is a
-#: container, not a rasteriser, and stays inside this file's no-dependencies
-#: rule. `tauri icon` still overwrites it at bundle time; the two agree
-#: because both start from `icon.png`'s source.
-ICO_TARGET = REPO / "tauri" / "src-tauri" / "icons" / "icon.ico"
-#: Scale per stored image. Windows picks the nearest at display time, so the
-#: set is the conventional one — and every entry is a whole multiple of the
-#: 16-cell grid, for the same reason `EXTENSION_ICONS` is.
-ICO_SIZES = (1, 2, 3, 4, 8, 16)
-#: Where the ICO stops using the pixel mark and starts using the drawing, in
-#: pixels. 48 because that is the last size the grid is *better* at: three
-#: screen pixels per cell still reads as deliberate blocks, and at 64 the
-#: diagonal starts looking like a mistake rather than a style. It is the same
-#: line `EXTENSION_ICONS` sits below and the app master sits above; the ICO is
-#: simply the one file that has entries on both sides of it.
-GRID_UNTIL = 48
 
 RECT = re.compile(
     r'<rect\s+x="(\d+)"\s+y="(\d+)"\s+width="(\d+)"\s+height="(\d+)"\s+fill="#([0-9A-Fa-f]{6})"'
@@ -263,40 +233,6 @@ def smooth_png(shapes, side: int, size: int) -> bytes:
     return _png_bytes(size, raw)
 
 
-def ico(images: list[tuple[int, bytes]]) -> bytes:
-    """A Windows ICO wrapping PNGs somebody else rendered.
-
-    PNG-in-ICO rather than the older BMP-with-AND-mask form: Windows has read
-    it since Vista, it is what `tauri icon` writes, and it means the images
-    here are byte-identical to the ones the renderers produce everywhere else
-    — there is one renderer per mark, not a third one for this format.
-
-    It takes finished images rather than a grid because the entries do not all
-    come from the same drawing: below 64px they are the pixel mark, above it
-    the smooth one. A function that rasterised here would have to know that
-    rule, and the rule belongs at the one place that states it.
-    """
-    header = struct.pack("<HHH", 0, 1, len(images))
-    offset = len(header) + 16 * len(images)
-    directory, body = b"", b""
-    for side, image in images:
-        directory += struct.pack(
-            "<BBBBHHII",
-            # 0 means 256 — the field is one byte, so the largest size a
-            # directory entry can name outright is 255.
-            side if side < 256 else 0,
-            side if side < 256 else 0,
-            0,  # not a palette
-            0,  # reserved
-            1,  # colour planes
-            32,  # bits per pixel — RGBA, as `png()` writes
-            len(image),
-            offset,
-        )
-        body += image
-        offset += len(image)
-    return header + directory + body
-
 
 #: The extension's toolbar icons, and the scale each is rendered at. Every
 #: size Chrome asks for is a whole multiple of the 16-cell grid, which is why
@@ -425,42 +361,21 @@ def main() -> None:
 
     # The master comes from the large mark; everything below it still comes
     # from the grid. That is the whole reason there are two files: the grid is
-    # right at 16px and eight hard blocks at 1024, and `tauri icon` derives
+    # right at 16px and eight hard blocks at 1024, and the master is derived
     # every app icon from this one PNG.
     units, shapes = outlines(LARGE_SOURCE.read_text(encoding="utf-8"))
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_bytes(smooth_png(shapes, units, MASTER))
     print(f"{LARGE_SOURCE.name} ({units}x{units}) -> {TARGET} ({MASTER}px)")
-    # `TARGET` is the master under packaging/, not a file in icons/ — so
-    # nothing above this line has created the directory the ICO lives in,
-    # and on a fresh checkout `ICO_TARGET.write_bytes` was a FileNotFoundError
-    # before this script ever reached its own end. Same fix as TARGET: the
-    # writer owns its directory.
-    ICO_TARGET.parent.mkdir(parents=True, exist_ok=True)
-
-    # The ICO holds both marks, split where every other size splits: the grid
-    # up to 48px, the drawing from 64 up. A single ICO is the one file that
-    # carries sizes from either side of that line, so it is also the one place
-    # the split has to be made rather than assumed — Windows picks an entry by
-    # display size, and the reader sees a taskbar tile and a title-bar tile
-    # that must look like the same product at both ends.
-    ICO_TARGET.write_bytes(ico([
-        (side * scale, png(pixels, scale) if side * scale <= GRID_UNTIL
-         else smooth_png(shapes, units, side * scale))
-        for scale in ICO_SIZES
-    ]))
-
     WEB_TARGET.parent.mkdir(parents=True, exist_ok=True)
     # newline="": `write_text` translates "\n" to "\r\n" on Windows, so
     # rendering on this host rewrote all 37 lines of a file whose content had
     # not changed at all — `aa795e6` and `bea9e88` are the same defect in
-    # tauri.conf.json and in the bump tool. A generated file that reports
+    # a config file and in the bump tool. A generated file that reports
     # itself as modified on one platform is a diff nobody can read, and the
     # frontend copy has to stay byte for byte the source anyway: a test
     # compares the two as text.
     WEB_TARGET.write_text(svg, encoding="utf-8", newline="")
-    print(f"{SOURCE.name} -> {ICO_TARGET} "
-          f"({', '.join(f'{side * one}px' for one in ICO_SIZES)})")
     print(f"{SOURCE.name} -> {WEB_TARGET}")
     # Same newline rule as the copy above, and for the same reason: a test
     # compares this file with its source as text.
