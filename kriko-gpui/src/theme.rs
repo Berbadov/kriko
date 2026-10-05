@@ -757,53 +757,44 @@ pub fn meter(value: f32, segments: usize) -> Div {
     meter_live("meter", value, segments, false, true)
 }
 
-/// A rippling LED matrix: a working lane's broadcast. The centre dot is the
-/// agent, always lit; a wave of light rolls outward through the rings, in
-/// the same dot language as every other LED in the app.
+/// A working indicator: three round LEDs breathing in turn, left to right,
+/// like a carrier signal. Round and soft, so it reads as "alive" beside a
+/// segment meter without becoming a second grid. Still, it rests with the
+/// middle LED lit and the outer two dim.
 pub fn led_ripple(id: &str, motion: bool) -> gpui::AnyElement {
-    let mut grid = div().flex().flex_col().gap(px(1.0)).flex_none();
-    for row in 0..5u32 {
-        let mut line = div().flex().gap(px(1.0));
-        for col in 0..5u32 {
-            let dx = col as f32 - 2.0;
-            let dy = row as f32 - 2.0;
-            let dist = dx.hypot(dy); // 0 at the centre, 2.83 at the corners
-            let base = div().size(px(3.0)).rounded(px(1.0));
-            let dot: gpui::AnyElement = if dist < 0.5 {
-                // the agent itself: steady
-                base.bg(rgb(ICE))
-                    .shadow(vec![BoxShadow {
-                        color: hsla(ICE),
-                        offset: point(px(0.0), px(0.0)),
-                        blur_radius: px(5.0),
-                        spread_radius: px(0.0),
-                    }])
-                    .into_any_element()
-            } else if motion {
-                let phase = dist / 2.83;
-                base.with_animation(
-                    gpui::ElementId::Name(gpui::SharedString::from(format!(
-                        "{id}-ripple-{row}-{col}"
-                    ))),
-                    Animation::new(std::time::Duration::from_millis(1300))
-                        .repeat()
-                        .with_easing(|t| t),
-                    move |el, t| {
-                        // flash as the wave passes this ring, then decay
-                        let k = (t - phase).fract();
-                        let level = (1.0 - k) * (1.0 - k);
-                        el.bg(rgb(if level > 0.45 { ICE } else { LED_OFF }))
-                    },
-                )
-                .into_any_element()
-            } else {
-                base.bg(rgb(LED_OFF)).into_any_element()
-            };
-            line = line.child(dot);
-        }
-        grid = grid.child(line);
+    fn lit(el: Div, level: f32) -> Div {
+        let alpha = (36.0 + 219.0 * level) as u32;
+        el.bg(rgba((ICE << 8) | alpha.min(255))).shadow(vec![BoxShadow {
+            color: gpui::Hsla { a: 0.55 * level, ..hsla(ICE) },
+            offset: point(px(0.0), px(0.0)),
+            blur_radius: px(2.0 + 6.0 * level),
+            spread_radius: px(0.0),
+        }])
     }
-    grid.into_any_element()
+    let mut row = div().flex().items_center().gap(px(4.0)).flex_none().px(px(2.0));
+    for i in 0..3u32 {
+        let base = div().size(px(6.0)).rounded_full();
+        let dot: gpui::AnyElement = if motion {
+            let offset = i as f32 / 3.0;
+            base.with_animation(
+                gpui::ElementId::Name(gpui::SharedString::from(format!("{id}-breath-{i}"))),
+                Animation::new(std::time::Duration::from_millis(1200))
+                    .repeat()
+                    .with_easing(|t| t),
+                move |el, t| {
+                    // one smooth swell per cycle, each LED a third behind
+                    let phase = (t - offset).rem_euclid(1.0);
+                    let level = 0.5 - 0.5 * (phase * std::f32::consts::TAU).cos();
+                    lit(el, level * level)
+                },
+            )
+            .into_any_element()
+        } else {
+            lit(base, if i == 1 { 1.0 } else { 0.15 }).into_any_element()
+        };
+        row = row.child(dot);
+    }
+    row.into_any_element()
 }
 
 /// Segment meter, `segments` squares, `value` 0..=100. When `live`, the
