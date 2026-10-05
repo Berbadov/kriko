@@ -128,7 +128,7 @@ def bump(version: str) -> int:
         # on Windows translates "\n" into "\r\n", so setting one version line
         # rewrote all 382 of pyproject.toml's and left five files dirty in a
         # diff nobody could read — the same defect `aa795e6` fixed for
-        # tauri.conf.json, here in the one tool that touches every version
+        # the old shell's config, here in the one tool that touches every version
         # string at once. `read_text` already normalised the newlines it
         # returned, so writing the bytes back preserves the file instead of
         # converting it.

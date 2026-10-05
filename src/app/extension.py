@@ -436,7 +436,7 @@ def _spawn(argv: list[str]) -> None:
     the reader's browser with it mid-listing with nothing on screen to explain
     why. On Windows the same is true of the console group, and there is no
     session to leave — the shell already kills the sidecar's *tree* on exit
-    (see `tauri/`), which is why the browser must not be in it.
+    (see `kriko-gpui/src/engine.rs`), which is why the browser must not be in it.
     """
     subprocess.Popen(
         argv,
