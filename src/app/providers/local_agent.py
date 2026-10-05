@@ -20,8 +20,12 @@ reply shape and the same grounding as every other door; only the reader of the
 web differs.
 """
 
+import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+
 from app.providers.local_inference import LocalInferenceError
 from kriko.research.politeness import LocalSearchError
+from kriko.research.window import focus
 
 #: Queries proposed, hits taken per query and pages read in all. Small on
 #: purpose: each page costs a model call's worth of context on a CPU.
@@ -32,6 +36,28 @@ MAX_PAGES = 5
 #: quotes are checked against. The two are the same on purpose: a quote from
 #: beyond what the model saw could only have been invented.
 PAGE_CHARS = 6000
+#: Seconds the read waits for pages once the search is done. A page behind a
+#: bot wall walks the whole fetch ladder (plain fetch, two hosted readers, a
+#: headless browser), which can take minutes, and the model should not wait
+#: on the slowest page when the others are in. A page still out at the
+#: deadline is a miss, exactly as an unreadable one.
+READ_DEADLINE = 25.0
+#: Candidate pages asked for beyond `MAX_PAGES`, so a page that is slow or
+#: unreadable is replaced by the next one instead of leaving a gap.
+SPARE_PAGES = 3
+#: Text shorter than a sentence or so is a refusal, a cookie wall or an empty
+#: shell, not a page: it is a miss, so a spare takes its place.
+MIN_PAGE_CHARS = 80
+#: The least of a page worth showing. When the model's context cannot give
+#: every page this much, fewer pages are shown, each one whole enough to
+#: quote from, rather than all of them as fragments.
+MIN_SHARE = 1200
+#: Characters of the task the planner reads. The product and the listing
+#: are at the top; the reply format below them is where a small model picks
+#: up a url and offers it as a "query".
+PLAN_CHARS = 1500
+#: A query longer than this is a sentence, not a search.
+QUERY_WORDS = 15
 
 QUERY_SCHEMA = {"type": "array", "items": {"type": "string"}}
 
@@ -40,6 +66,12 @@ _QUERY_ASK = (
     "JSON array of {n} short web search queries that would find documented "
     "problems, failures and owner reports about the product it names. No "
     "prose.\n\n## Task\n\n{task}"
+)
+
+_QUERY_RETRY = (
+    "That reply was not a list of web search queries. Reply with ONLY a JSON "
+    "array of {n} short search queries (plain words, no URLs), for example "
+    '["first query", "second query"].\n\n## Task\n\n{task}'
 )
 
 _PAGES_HEAD = (
@@ -63,9 +95,15 @@ class LocalAsker:
 
     def __init__(self, plan, complete, search, fetch, *, model: str,
                  search_provider: str, url: str = "",
-                 given_queries: list[str] | None = None):
+                 given_queries: list[str] | None = None,
+                 parallel_search: bool = False):
         self.given_queries = [str(one).strip() for one in (given_queries or [])
                               if str(one).strip()]
+        #: True only for a hosted search service built to take concurrent
+        #: requests. A local scraper (OpenSERP) asks a public search engine
+        #: from the reader's own address, and a burst there is how a run
+        #: earns a CAPTCHA, so it stays one query at a time.
+        self.parallel_search = parallel_search
         self._plan = plan
         self._complete = complete
         self._search = search
@@ -112,33 +150,68 @@ class LocalAsker:
         self._say(f"read {len(pages)} page(s): "
                   + ", ".join(url for url, _ in pages))
         self._check()
+        pages = self._fit(prompt, pages, queries)
         blocks = "\n\n".join(f"### URL: {url}\n\n{text}" for url, text in pages)
-        return self._complete(prompt + _PAGES_HEAD + blocks)
+        return self._complete(prompt + _PAGES_HEAD + blocks + self._reply_budget())
+
+    def _reply_budget(self) -> str:
+        """The reply's length limit, said to the model.
+
+        A CPU writes a few tokens a second, and a reply cut off at
+        `max_tokens` is minutes spent on JSON that does not close. Measured
+        on a 3B model on four cores: 1 024 tokens took 145 s and parsed to
+        nothing. Told the limit, the model writes fewer items and finishes
+        them.
+        """
+        limit = getattr(self._complete, "max_tokens", None)
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit <= 0:
+            return ""
+        return (f"\n\n## Length\n\nYour whole reply must fit in about "
+                f"{int(limit * 0.6)} words. Keep every field short and give "
+                "fewer items rather than more: a finished reply with two items "
+                "beats a longer one that is cut off before it closes.\n")
+
+    def _fit(self, prompt: str, pages: list[tuple[str, str]],
+             queries: list[str]) -> list[tuple[str, str]]:
+        """The pages, cut to fit the context the server runs the model with.
+
+        A local server cuts a prompt that overflows its window from the
+        front, silently, and the front is the instructions: a run measured
+        on Ollama's default 4k window kept 2 050 of 4 331 tokens and
+        answered with nothing. So the pages share what the brief leaves,
+        fewer of them when the share would be a fragment, and `sources`
+        holds exactly what was shown, because that is what quotes are
+        checked against.
+        """
+        allowed = getattr(self._complete, "prompt_chars_allowed", None)
+        if not callable(allowed):
+            return pages
+        room = allowed() - len(prompt) - len(_PAGES_HEAD) - len(self._reply_budget())
+        count = len(pages)
+        while count > 1 and room // count < MIN_SHARE:
+            count -= 1
+        share = max(MIN_SHARE // 2, room // max(1, count) - 40)
+        fitted = [(url, focus(text, share, queries)) for url, text in pages[:count]]
+        if count < len(pages) or any(len(a) < len(b) for (_, a), (_, b) in zip(fitted, pages)):
+            window = getattr(self._complete, "context_tokens", lambda: 0)()
+            self._say(f"fitted {count} of {len(pages)} page(s) into the model's "
+                      f"{window}-token context")
+        self.sources = dict(fitted)
+        return fitted
 
     def _queries(self, prompt: str) -> list[str]:
-        import json
-
         # A case may name its own queries (B185): the fixed set's queries
         # are part of its versioned ground truth, and letting the model
         # invent its own would quietly change what the run measured.
         if self.given_queries:
             return list(self.given_queries)[:QUERIES]
-        raw = self._plan(_QUERY_ASK.format(n=QUERIES, task=prompt[:4000]))
-        try:
-            found = json.loads(raw[raw.index("["): raw.rindex("]") + 1])
-        except ValueError:
-            found = []
-        queries: list[str] = []
-        lowered: set[str] = set()
-        for one in found:
-            text = str(one).strip()
-            low = text.casefold()
-            if not text or low in lowered:
-                continue
-            lowered.add(low)
-            queries.append(text)
-            if len(queries) >= QUERIES:
-                break
+        task = prompt[:PLAN_CHARS]
+        queries = self._usable(self._plan(_QUERY_ASK.format(n=QUERIES, task=task)))
+        if not queries:
+            # One repair, said plainly: a small model that answered with a
+            # url or prose once usually answers the plain ask right.
+            self._say("the planner's reply held no usable query; asking once more")
+            queries = self._usable(self._plan(_QUERY_RETRY.format(n=QUERIES, task=task)))
         if not queries:
             raise LocalInferenceError(
                 f"{self.model!r} at {self.url or 'this machine'} did not "
@@ -146,47 +219,121 @@ class LocalAsker:
                 "model follows this kind of instruction more reliably.")
         return queries
 
+    @staticmethod
+    def _usable(raw: str) -> list[str]:
+        """The search queries in a planner's reply: no urls, no sentences,
+        no repeats, at most `QUERIES`."""
+        import json
+
+        try:
+            found = json.loads(raw[raw.index("["): raw.rindex("]") + 1])
+        except ValueError:
+            found = []
+        if not isinstance(found, list):
+            found = []
+        queries: list[str] = []
+        lowered: set[str] = set()
+        for one in found:
+            text = str(one).strip()
+            low = text.casefold()
+            if (not text or low in lowered or "://" in text or low.startswith("www.")
+                    or len(text.split()) > QUERY_WORDS):
+                continue
+            lowered.add(low)
+            queries.append(text)
+            if len(queries) >= QUERIES:
+                break
+        return queries
+
     def _read(self, queries: list[str]) -> list[tuple[str, str]]:
-        """Search each query, then read the pages side by side.
+        """Search the queries, then read the pages side by side.
 
         The reads are the slow part and they do not depend on each other, so
         they go out together on a small pool: five pages fetched one after
         another on a cold connection costs five round trips in sequence,
-        which on a CPU-bound run is the difference the reader feels. The
-        order the pages appear in the prompt is still the order the queries
-        named them, so the model's brief does not change with the fetching.
+        which on a CPU-bound run is the difference the reader feels. A few
+        spare pages go out with them, and the read stops at `READ_DEADLINE`
+        or once `MAX_PAGES` have answered, whichever is first. The order the
+        pages appear in the prompt is still the order the queries named
+        them, so the model's brief does not change with the fetching. The
+        searches go out together only on a hosted search
+        (`parallel_search`).
+
+        Each page is cut to `PAGE_CHARS` around the queries' own words
+        (`kriko.research.window.focus`), not from the top: a listing's top
+        is its menu. The cut text is what the quotes are checked against.
         """
+        self._check()
+
+        def _hits(query: str) -> tuple[list, str]:
+            try:
+                return self._search(query, HITS_PER_QUERY) or [], ""
+            except LocalSearchError as error:
+                return [], f"search failed for {query!r}: {error}"
+
+        # On a hosted search the queries go out together; their hits are
+        # still taken in the queries' order, and the log is written from
+        # this thread only.
+        if self.parallel_search and len(queries) > 1:
+            with ThreadPoolExecutor(max_workers=len(queries)) as pool:
+                answered = list(pool.map(_hits, queries))
+        else:
+            answered = []
+            for query in queries:
+                self._check()
+                answered.append(_hits(query))
         wanted: list[str] = []
         seen: set[str] = set()
-        for query in queries:
-            self._check()
-            try:
-                hits = self._search(query, HITS_PER_QUERY) or []
-            except LocalSearchError as error:
-                self._say(f"search failed for {query!r}: {error}")
-                continue
+        for hits, failure in answered:
+            if failure:
+                self._say(failure)
             for hit in hits:
                 url = str(hit.get("url", "")).strip()
-                if not url or url in seen or len(wanted) >= MAX_PAGES:
+                if not url or url in seen or len(wanted) >= MAX_PAGES + SPARE_PAGES:
                     continue
                 seen.add(url)
                 wanted.append(url)
         if not wanted:
             return []
-        from concurrent.futures import ThreadPoolExecutor
+        self._check()
 
-        def _one(url: str) -> tuple[str, str]:
+        def _one(url: str) -> str:
             try:
                 got = self._fetch(url)
             except Exception:  # noqa: BLE001 - an unreadable page is a miss
-                return url, ""
-            text = getattr(got, "text", got) or ""
-            return url, str(text).strip()[:PAGE_CHARS]
+                return ""
+            text = str(getattr(got, "text", got) or "").strip()
+            if len(text) < MIN_PAGE_CHARS:
+                return ""
+            return focus(text, PAGE_CHARS, queries)
 
+        read: dict[str, str] = {}
+        pool = ThreadPoolExecutor(max_workers=min(6, len(wanted)))
+        try:
+            pending = {pool.submit(_one, url): url for url in wanted}
+            deadline = time.monotonic() + READ_DEADLINE
+            while pending:
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    self._say(f"stopped waiting for {len(pending)} slow page(s)")
+                    break
+                done, _ = wait(pending, timeout=min(left, 1.0),
+                               return_when=FIRST_COMPLETED)
+                for future in done:
+                    read[pending.pop(future)] = future.result()
+                self._check()
+                # Enough are in once MAX_PAGES have text; a spare only
+                # stands in for a page that missed.
+                if sum(1 for text in read.values() if text) >= MAX_PAGES:
+                    break
+        finally:
+            # A page still out is abandoned, not waited for: its thread ends
+            # on its own timeout and nothing reads what it returns.
+            pool.shutdown(wait=False, cancel_futures=True)
         pages: list[tuple[str, str]] = []
-        with ThreadPoolExecutor(max_workers=min(4, len(wanted))) as pool:
-            for url, text in pool.map(_one, wanted):
-                if text:
-                    pages.append((url, text))
-                    self.sources[url] = text
+        for url in wanted:
+            text = read.get(url, "")
+            if text and len(pages) < MAX_PAGES:
+                pages.append((url, text))
+                self.sources[url] = text
         return pages
