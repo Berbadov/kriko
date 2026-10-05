@@ -5,8 +5,9 @@
 
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
-use crate::app::{Field, Kriko};
+use crate::app::{Field, Kriko, Tab};
 use crate::live::local::{Held, Machine, Plane, PullPhase};
+use crate::live::run;
 use crate::marks::{self, mark_tile, Mark, Phase};
 use crate::screens::{empty_note, mono, row_desc, row_title, stepper, trust_icon};
 use crate::theme::*;
@@ -742,11 +743,74 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     let guide = setup(app, &plane, machine.as_ref(), window, cx);
     let server = server_card(app, &plane, window, cx);
     let models = model_card(app, &plane, &held, machine.as_ref(), cx);
+    let open_compare = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.tab = Tab::Compare;
+        this.refresh_compare(cx);
+        cx.notify();
+    });
+    let open_run = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.tab = Tab::Run;
+        this.refresh_jobs(cx);
+        cx.notify();
+    });
+    let use_card = card().flex().flex_col().gap(px(10.0))
+        .child(eyebrow("Use and inspect"))
+        .child(row_desc(if plane.ready {
+            "Ask the local model about saved checks in Compare. The answer stays with the draft, including its model, source summary, and reported token use. Run shows the activity feed for checks."
+        } else {
+            "Start a runtime and pick a model above. Compare will then offer it beside connected agents."
+        }))
+        .child(div().flex().gap(px(10.0)).flex_wrap()
+            .child(key("local-open-compare", "Open Compare").on_click(open_compare))
+            .child(ghost("local-open-run", "View runs").on_click(open_run)));
+    let refresh_work = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_jobs(cx));
+    let recent_jobs: Vec<_> = app.live.run.jobs.iter()
+        .filter(|j| j.backend == "local" || j.harness == "local")
+        .take(5).cloned().collect();
+    let mut work = card().flex().flex_col().gap(px(10.0))
+        .child(div().flex().items_center().justify_between()
+            .child(eyebrow("Recent local work"))
+            .child(ghost("local-refresh-work", "Refresh").on_click(refresh_work)))
+        .child(hairline());
+    if !app.live.run.jobs_loaded {
+        work = work.child(empty_note("Reading recent jobs from the engine."));
+    } else if recent_jobs.is_empty() {
+        work = work.child(empty_note("No local work in the recent jobs yet. Ask from Compare to see an answer and its steps here."));
+    }
+    for (i, job) in recent_jobs.iter().enumerate() {
+        let id = job.id.clone();
+        let open = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.live.run.pinned = Some(id.clone());
+            this.tab = Tab::Run;
+            this.refresh_jobs(cx);
+            cx.notify();
+        });
+        let title = if !job.question.is_empty() { job.question.clone() }
+            else if !job.product.is_empty() { job.product.clone() }
+            else { run::kind_word(&job.kind) };
+        let state = match job.state.as_str() {
+            "succeeded" => TagState::Done,
+            "failed" | "interrupted" => TagState::Block,
+            "running" => TagState::Live,
+            _ => TagState::Queue,
+        };
+        work = work.child(div().id(("local-work", i))
+            .py(px(10.0)).flex().items_center().gap(px(12.0))
+            .cursor_pointer().hover(|s| s.bg(rgba(GLASS_1)))
+            .on_click(open)
+            .child(tag(format!("local-work-state-{i}"), state, &job.state, motion))
+            .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(2.0))
+                .child(row_title(&title))
+                .child(mono(&format!("{} · {}", run::kind_word(&job.kind), job.message), MUTED)))
+            .child(mono(&run::ago(&job.created_at), DIM)));
+    }
     div()
         .flex()
         .flex_col()
         .gap(px(24.0))
         .child(guide)
+        .child(use_card)
+        .child(work)
         .child(server)
         .child(models)
         .child(
