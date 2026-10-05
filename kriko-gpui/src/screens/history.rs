@@ -1,62 +1,69 @@
 //! History: every check you have run, with the evidence it was based on.
-//! Search on top with the pack and date-span filters beside it, stats over
+//! Search on top with the catalog and date-span filters beside it, stats over
 //! what the filters admit, the runs in a glass card, pagination underneath.
-//! Each row unfolds into a drawer: the claims it grounded, the product
-//! links it read from, and what it took. Information only — no verdicts,
-//! no confidence.
+//! Each row unfolds into a drawer: the claims the check grounded with the
+//! sources behind each, and the page it read. Information only — no
+//! verdicts, no confidence. Everything here is the engine's own record
+//! (`/api/history`, `/api/lookup/{id}`).
 
 use gpui::{
     div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba, Animation, AnimationExt,
     ClickEvent, Context, Div, FontWeight, Styled, Window,
 };
 
-use crate::app::{Field, Kriko, PackFilter, SpanFilter};
+use crate::app::{Field, Kriko, SpanFilter};
 use crate::data;
-use crate::screens::{agent_by_monogram, mono, plate_s, row_desc, th};
+use crate::live::history::{ago, month_buckets, now_secs, ClaimView};
+use crate::screens::{empty_note, mono, plate_s, row_desc, th};
 use crate::theme::*;
 
-/// The indices into CHECKS the current search, pack and span filters
-/// admit, newest first.
-fn filtered_checks(query: &str, pack: PackFilter, span: SpanFilter) -> Vec<usize> {
-    data::CHECKS
-        .iter()
-        .enumerate()
-        .filter(|(_, c)| {
-            let ok_query = query.is_empty()
-                || c.name.to_lowercase().contains(query)
-                || c.pack.to_lowercase().contains(query);
-            let ok_pack = match pack {
-                PackFilter::All => true,
-                PackFilter::Samsung => c.pack.starts_with("samsung"),
-                PackFilter::Apple => c.pack.starts_with("apple"),
-                PackFilter::Volkswagen => c.pack.starts_with("volkswagen"),
-            };
-            let ok_span = c.days_ago <= span.days();
-            ok_query && ok_pack && ok_span
-        })
-        .map(|(i, _)| i)
-        .collect()
+/// `text` on one line, cut to `n` characters with an ellipsis when longer.
+pub(crate) fn clip(text: &str, n: usize) -> String {
+    let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if flat.chars().count() <= n {
+        return flat;
+    }
+    let mut out: String = flat.chars().take(n).collect();
+    out.push('…');
+    out
 }
 
-/// The links a check read its product from: the review site and the
-/// maker's page, built from the product's own name.
-fn product_links(check: &data::Check) -> Vec<String> {
-    let mut parts = check.name.split_whitespace();
-    let brand = parts.next().unwrap_or("maker").to_lowercase();
-    let slug = parts.collect::<Vec<_>>().join("-").to_lowercase();
-    let review = if data::is_car(check) {
-        "edmunds.com"
-    } else {
-        "rtings.com"
+/// The engine's own severity word in its own tint: the hot ones run warm,
+/// the rest sit quiet. Whatever word the catalog used is the word shown.
+pub(crate) fn severity_word_chip(word: &str) -> Div {
+    let (glyph, fg, bg): (&[&str], u32, u32) = match word {
+        "critical" => (&X5, DANGER, DANGER_WASH),
+        "high" | "serious" => (&BANG5, 0xffb86b, 0xffb86b1f),
+        _ => (&QUEUE5, MUTED, WELL),
     };
-    vec![
-        format!("{review}/{brand}/{slug}"),
-        format!("{brand}.com/{slug}"),
-    ]
+    div()
+        .h(px(24.0))
+        .px(px(8.0))
+        .flex()
+        .flex_none()
+        .items_center()
+        .gap(px(7.0))
+        .rounded(px(7.0))
+        .bg(rgb(bg))
+        .border_1()
+        .border_color(rgba(HAIRLINE))
+        .font_family(MONO)
+        .text_size(px(10.0))
+        .text_color(rgb(fg))
+        .child(led_matrix(glyph, fg, 3.0, 1.0))
+        .child(if word.is_empty() {
+            "NOTED".to_string()
+        } else {
+            word.to_uppercase()
+        })
 }
 
 /// A cycling mono control: one click advances to the next value.
-fn cycle_ctrl(id: &'static str, label: &str, value: &str) -> gpui::Stateful<Div> {
+pub(crate) fn cycle_ctrl(
+    id: impl Into<gpui::ElementId>,
+    label: &str,
+    value: &str,
+) -> gpui::Stateful<Div> {
     div()
         .id(id)
         .h(px(44.0))
@@ -85,10 +92,81 @@ fn cycle_ctrl(id: &'static str, label: &str, value: &str) -> gpui::Stateful<Div>
         .child(icon("chevron-down", 14.0).text_color(rgb(MUTED)))
 }
 
+/// One claim of an opened check: its severity and title, then the sources
+/// behind it, each with its domain, its stance and the quote it was read from.
+fn claim_block(claim: &ClaimView) -> Div {
+    let mut block = div().flex().flex_col().gap(px(6.0)).child(
+        div()
+            .flex()
+            .items_start()
+            .gap(px(12.0))
+            .child(div().pt(px(2.0)).child(led_matrix(&CHECK5, INK_2, 3.0, 1.0)))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(0.0))
+                    .font_family(SANS)
+                    .text_size(px(13.0))
+                    .text_color(rgb(INK_2))
+                    .child(claim.title.clone()),
+            )
+            .child(severity_word_chip(&claim.severity)),
+    );
+    if claim.sources.is_empty() {
+        block = block.child(
+            div()
+                .pl(px(24.0))
+                .child(mono("No source stored behind this one yet.", DIM)),
+        );
+    }
+    for src in claim.sources.iter().take(4) {
+        let against = src.stance == "refutes";
+        block = block.child(
+            div()
+                .pl(px(24.0))
+                .flex()
+                .flex_col()
+                .gap(px(2.0))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(10.0))
+                        .child(mono(
+                            if src.domain.is_empty() { &src.url } else { &src.domain },
+                            ICE,
+                        ))
+                        .child(mono(
+                            if against { "AGAINST" } else { "FOR" },
+                            if against { 0xffb86b } else { MUTED },
+                        )),
+                )
+                .when(!src.quote.is_empty(), |d| {
+                    d.child(
+                        div()
+                            .font_family(SANS)
+                            .text_size(px(12.0))
+                            .text_color(rgb(MUTED))
+                            .child(format!("“{}”", clip(&src.quote, 260))),
+                    )
+                }),
+        );
+    }
+    block
+}
+
 pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
+    if !app.live.history.loaded {
+        return div().child(empty_note("Reading your history from the engine."));
+    }
+    if app.live.history.items.is_empty() {
+        return div().child(empty_note(
+            "No checks yet. A check you run, or one the browser extension makes, lands here.",
+        ));
+    }
 
-    // ---- the controls row: search + the pack and date-span filters ----
+    // ---- the controls row: search + the catalog and date-span filters ----
     let search = app.input_field(
         Field::HistorySearch,
         "history-search",
@@ -99,18 +177,22 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     );
 
     let pack_next = cx.listener(|this, _: &ClickEvent, _w, cx| {
-        this.pack_filter = this.pack_filter.next();
+        let next = this.live.history.next_pack();
+        this.live.history.pack = next;
+        this.live.history.open = None;
+        this.live.history.detail = None;
         this.page = 0;
-        this.history_open = None;
         cx.notify();
     });
     let span_next = cx.listener(|this, _: &ClickEvent, _w, cx| {
         this.history_span = this.history_span.next();
         this.page = 0;
-        this.history_open = None;
+        this.live.history.open = None;
+        this.live.history.detail = None;
         cx.notify();
     });
 
+    let pack_word = clip(&app.live.history.pack_word(), 26).to_uppercase();
     let controls = div()
         .flex()
         .flex_wrap()
@@ -118,18 +200,14 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .gap(px(12.0))
         .mb(px(24.0))
         .child(div().flex_1().min_w(px(220.0)).child(search))
-        .child(
-            cycle_ctrl("filter-pack", "PACK", app.pack_filter.word()).on_click(pack_next),
-        )
-        .child(
-            cycle_ctrl("filter-span", "TIME", app.history_span.word()).on_click(span_next),
-        );
+        .child(cycle_ctrl("filter-pack", "PACK", &pack_word).on_click(pack_next))
+        .child(cycle_ctrl("filter-span", "TIME", app.history_span.word()).on_click(span_next));
 
     // ---- filtering ----
+    let now = now_secs();
     let query = app.history_search.value.to_lowercase();
-    let pack = app.pack_filter;
-    let span = app.history_span;
-    let filtered = filtered_checks(&query, pack, span);
+    let span: SpanFilter = app.history_span;
+    let filtered = app.live.history.filtered(&query, span.days(), now);
     let total = filtered.len();
     let pages = if total == 0 {
         1
@@ -145,19 +223,19 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .collect();
 
     // ---- the stats: what the current filters admit ----
-    let mut buckets = [0u32; 6];
-    for &i in &filtered {
-        let b = (data::CHECKS[i].days_ago / 30).min(5) as usize;
-        buckets[5 - b] += 1; // index 0 is the oldest month, 5 is now
-    }
-    let bar_max = buckets.iter().copied().max().unwrap_or(1).max(1) as f32;
-    let bar_labels = ["5 m", "4 m", "3 m", "2 m", "1 m", "now"];
+    let items = &app.live.history.items;
+    let months = month_buckets(filtered.iter().filter_map(|&i| items[i].ts), now, 6);
+    let bar_max = months.iter().map(|(_, c)| *c).max().unwrap_or(1).max(1) as f32;
     // the bars regrow whenever the filters change: the id carries them, so
-    // a new pack or span remounts the graph and the animation replays
-    let bar_anim_id = format!("hist-bar-{}-{}", pack.word(), span.word());
+    // a new catalog or span remounts the graph and the animation replays
+    let bar_anim_id = format!(
+        "hist-bar-{}-{}",
+        app.live.history.pack.as_deref().unwrap_or("all"),
+        span.word()
+    );
     let mut bars = div().flex().items_end().gap(px(10.0)).h(px(96.0));
-    for bi in 0..6 {
-        let value = buckets[bi];
+    for (bi, (label, value)) in months.iter().enumerate() {
+        let value = *value;
         let height = if value == 0 {
             3.0
         } else {
@@ -212,39 +290,26 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .font_family(MONO)
                         .text_size(px(10.0))
                         .text_color(rgb(MUTED))
-                        .child(bar_labels[bi]),
+                        .child(label.clone()),
                 ),
         );
     }
 
-    let packs_touched = {
-        let mut packs: Vec<&str> = Vec::new();
-        for &i in &filtered {
-            let p = data::CHECKS[i].pack;
-            if !packs.contains(&p) {
-                packs.push(p);
+    let distinct_packs = |idx: &mut dyn Iterator<Item = usize>| -> usize {
+        let mut seen: Vec<&str> = Vec::new();
+        for i in idx {
+            for p in &items[i].packs {
+                if !seen.contains(&p.0.as_str()) {
+                    seen.push(p.0.as_str());
+                }
             }
         }
-        packs.len()
+        seen.len()
     };
-    let packs_all = {
-        let mut packs: Vec<&str> = Vec::new();
-        for c in data::CHECKS {
-            if !packs.contains(&c.pack) {
-                packs.push(c.pack);
-            }
-        }
-        packs.len().max(1)
-    };
-    let claims_grounded: usize = filtered
-        .iter()
-        .map(|&i| data::evidence_for(&data::CHECKS[i]).claims.len())
-        .sum();
-    let claims_all: usize = data::CHECKS
-        .iter()
-        .map(|c| data::evidence_for(c).claims.len())
-        .sum::<usize>()
-        .max(1);
+    let packs_touched = distinct_packs(&mut filtered.iter().copied());
+    let packs_all = distinct_packs(&mut (0..items.len())).max(1);
+    let claims_grounded: usize = filtered.iter().map(|&i| items[i].claims).sum();
+    let claims_all: usize = items.iter().map(|c| c.claims).sum::<usize>().max(1);
 
     let stat = |label: &str,
                 value: String,
@@ -314,7 +379,6 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
 
     // ---- the table card ----
     let mut table = card().flex().flex_col();
-    // header
     table = table
         .child(
             div()
@@ -323,9 +387,8 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .pb(px(10.0))
                 .child(div().w(px(28.0)))
                 .child(div().flex_1().child(th("Check")))
-                .child(div().w(px(108.0)).child(th("Agents")))
-                .child(div().w(px(120.0)).child(th("Took")))
-                .child(div().w(px(100.0)).child(th("When"))),
+                .child(div().w(px(120.0)).child(th("Claims")))
+                .child(div().w(px(110.0)).child(th("When"))),
         )
         .child(hairline());
 
@@ -350,21 +413,19 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         );
     }
 
+    let pack_key = app
+        .live
+        .history
+        .pack
+        .clone()
+        .unwrap_or_else(|| "all".to_string());
     for (ri, &gi) in rows.iter().enumerate() {
-        let check = &data::CHECKS[gi];
-        let open = app.history_open == Some(gi);
+        let check = &items[gi];
+        let open = app.live.history.open.as_deref() == Some(check.id.as_str());
+        let open_id = check.id.clone();
         let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-            this.history_open = if this.history_open == Some(gi) {
-                None
-            } else {
-                Some(gi)
-            };
-            cx.notify();
+            this.toggle_history_open(open_id.clone(), cx);
         });
-        let mut agent_tiles = div().w(px(108.0)).flex().items_center().gap(px(6.0));
-        for m in check.agents {
-            agent_tiles = agent_tiles.child(agent_by_monogram(*m));
-        }
         let columns = div()
             .id(gpui::ElementId::named_usize("hist-row", gi))
             .flex()
@@ -391,108 +452,104 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             .font_weight(FontWeight::SEMIBOLD)
                             .text_size(px(15.0))
                             .text_color(rgb(INK))
-                            .child(check.name.to_string()),
+                            .child(check.label.clone()),
                     )
-                    .child(mono(check.pack, MUTED)),
+                    .child(mono(&clip(&check.pack_line(), 60), MUTED)),
             )
-            .child(agent_tiles)
-            .child(div().w(px(120.0)).child(mono(check.took, INK_2)))
-            .child(div().w(px(100.0)).child(mono(check.when, MUTED)));
+            .child(div().w(px(120.0)).child(mono(&format!("{} claims", check.claims), INK_2)))
+            .child(div().w(px(110.0)).child(mono(&ago(check.ts, now), MUTED)));
 
         let mut row = div().flex().flex_col().child(columns);
         if open {
-            // the drawer: the claims, then the links, then what it took.
-            // Everything inside settles in one item after another.
-            let ev = data::evidence_for(check);
+            // the drawer: the claims with their sources, then the page read.
             let mut panel = well()
                 .mt(px(2.0))
                 .mb(px(6.0))
                 .p(px(16.0))
                 .flex()
                 .flex_col()
-                .gap(px(8.0))
+                .gap(px(10.0))
                 .child(eyebrow("Evidence"));
-            let mut item = 0usize;
-            for (claim, source) in ev.claims {
-                let line = div()
-                    .flex()
-                    .items_center()
-                    .gap(px(12.0))
-                    .child(led_matrix(&CHECK5, INK_2, 3.0, 1.0))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .font_family(SANS)
-                            .text_size(px(13.0))
-                            .text_color(rgb(INK_2))
-                            .child(claim.to_string()),
-                    )
-                    .child(mono(source, DIM));
-                let line: gpui::AnyElement = if motion {
-                    let delay = 120.0 + item as f32 * 90.0;
-                    item += 1;
-                    line.with_animation(
-                        gpui::ElementId::named_usize(format!("hist-claim-{gi}"), item),
-                        Animation::new(std::time::Duration::from_millis(800)).with_easing(
-                            move |t| {
-                                let local = ((t * 800.0 - delay) / 450.0).clamp(0.0, 1.0);
-                                1.0 - (1.0 - local).powi(3)
-                            },
-                        ),
-                        |el, v| el.opacity(v),
-                    )
-                    .into_any_element()
-                } else {
-                    line.into_any_element()
-                };
-                panel = panel.child(line);
+            match &app.live.history.detail {
+                Some(detail) if detail.id == check.id => {
+                    if detail.claims.is_empty() {
+                        panel = panel.child(mono("This check grounded no claim.", MUTED));
+                    }
+                    for (item, claim) in detail.claims.iter().enumerate() {
+                        let line = claim_block(claim);
+                        let line: gpui::AnyElement = if motion {
+                            let delay = 120.0 + item.min(8) as f32 * 90.0;
+                            line.with_animation(
+                                gpui::ElementId::named_usize(format!("hist-claim-{}", check.id), item),
+                                Animation::new(std::time::Duration::from_millis(800)).with_easing(
+                                    move |t| {
+                                        let local = ((t * 800.0 - delay) / 450.0).clamp(0.0, 1.0);
+                                        1.0 - (1.0 - local).powi(3)
+                                    },
+                                ),
+                                |el, v| el.opacity(v),
+                            )
+                            .into_any_element()
+                        } else {
+                            line.into_any_element()
+                        };
+                        panel = panel.child(line);
+                    }
+                    if !detail.url.is_empty() {
+                        panel = panel
+                            .child(hairline())
+                            .child(eyebrow("Read from"))
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(10.0))
+                                    .child(icon("arrow-right", 12.0).text_color(rgb(MUTED)))
+                                    .child(
+                                        div()
+                                            .min_w(px(0.0))
+                                            .font_family(MONO)
+                                            .text_size(px(12.0))
+                                            .text_color(rgb(ICE))
+                                            .child(clip(&detail.url, 90)),
+                                    ),
+                            );
+                    }
+                }
+                _ => {
+                    panel = panel.child(mono("Reading this check from the store.", MUTED));
+                }
             }
-            panel = panel.child(hairline()).child(eyebrow("Product links"));
-            for link in product_links(check) {
-                let line = div()
+            let armed = app.live.history.forget_armed.as_deref() == Some(check.id.as_str());
+            let forget_id = check.id.clone();
+            let forget = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                this.forget_check(forget_id.clone(), cx);
+            });
+            panel = panel.child(hairline()).child(
+                div()
                     .flex()
                     .items_center()
-                    .gap(px(10.0))
-                    .child(icon("arrow-right", 12.0).text_color(rgb(MUTED)))
+                    .justify_between()
+                    .gap(px(12.0))
                     .child(
                         div()
                             .font_family(MONO)
-                            .text_size(px(12.0))
-                            .text_color(rgb(ICE))
-                            .child(link),
-                    );
-                let line: gpui::AnyElement = if motion {
-                    let delay = 120.0 + item as f32 * 90.0;
-                    item += 1;
-                    line.with_animation(
-                        gpui::ElementId::named_usize(format!("hist-link-{gi}"), item),
-                        Animation::new(std::time::Duration::from_millis(800)).with_easing(
-                            move |t| {
-                                let local = ((t * 800.0 - delay) / 450.0).clamp(0.0, 1.0);
-                                1.0 - (1.0 - local).powi(3)
-                            },
-                        ),
-                        |el, v| el.opacity(v),
+                            .text_size(px(11.0))
+                            .text_color(rgb(MUTED))
+                            .child(format!(
+                                "{} claims · from {} · stored to {}",
+                                check.claims,
+                                if check.source.is_empty() { "the app" } else { &check.source },
+                                clip(&check.pack_line(), 50),
+                            )),
                     )
-                    .into_any_element()
-                } else {
-                    line.into_any_element()
-                };
-                panel = panel.child(line);
-            }
-            panel = panel.child(
-                div()
-                    .pt(px(2.0))
-                    .font_family(MONO)
-                    .text_size(px(11.0))
-                    .text_color(rgb(MUTED))
-                    .child(format!(
-                        "{} agents took part · took {} · stored to {}",
-                        check.agents.len(),
-                        check.took,
-                        check.pack
-                    )),
+                    .child(
+                        danger(
+                            gpui::ElementId::named_usize("hist-forget", gi),
+                            if armed { "Press again to forget" } else { "Forget" },
+                        )
+                        .on_click(forget),
+                    ),
             );
             row = row.child(panel);
         }
@@ -503,7 +560,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             let delay = ri as f32 * 60.0;
             row.with_animation(
                 gpui::ElementId::named_usize(
-                    format!("hist-row-in-{page}-{}-{}", pack.word(), span.word()),
+                    format!("hist-row-in-{page}-{pack_key}-{}", span.word()),
                     ri,
                 ),
                 Animation::new(std::time::Duration::from_millis(900)).with_easing(move |t| {
@@ -525,13 +582,17 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     // ---- pagination ----
     let prev = cx.listener(|this, _: &ClickEvent, _w, cx| {
         this.page = this.page.saturating_sub(1);
-        this.history_open = None;
+        this.live.history.open = None;
+        this.live.history.detail = None;
         cx.notify();
     });
     let next = cx.listener(|this, _: &ClickEvent, _w, cx| {
         // clamp here too, so the page counter never runs past the last page
-        let query = this.history_search.value.to_lowercase();
-        let total = filtered_checks(&query, this.pack_filter, this.history_span).len();
+        let total = this
+            .live
+            .history
+            .filtered(&this.history_search.value, this.history_span.days(), now_secs())
+            .len();
         let pages = if total == 0 {
             1
         } else {
@@ -540,7 +601,8 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         if this.page + 1 < pages {
             this.page += 1;
         }
-        this.history_open = None;
+        this.live.history.open = None;
+        this.live.history.detail = None;
         cx.notify();
     });
     let shown = rows.len();
