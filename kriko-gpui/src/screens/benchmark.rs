@@ -243,15 +243,13 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
         BenchPhase::Failed(why) => (tag("bench-failed", TagState::Block, why, motion), "Run benchmark"),
     };
     let mut planes = div().flex().items_center().gap(px(6.0)).flex_wrap();
-    for (i, (plane, meaning)) in b.planes.iter().enumerate() {
+    for (i, (plane, _meaning)) in b.planes.iter().enumerate() {
         let name = plane.clone();
         let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.bench_toggle_plane(&name, cx);
         });
         planes = planes.child(
-            pill(("bench-plane", i), plane, b.picked.contains(plane))
-                .on_click(toggle)
-                .tooltip_text(meaning.clone()),
+            pill(("bench-plane", i), plane, b.picked.contains(plane)).on_click(toggle),
         );
     }
     let start_panel = card()
