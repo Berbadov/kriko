@@ -24,28 +24,33 @@ pub struct Mark {
 // ---- the agents ----
 
 pub const CLAUDE: Mark = Mark {
-    // Optically simplified sunburst for the 34px glyph: separated spokes,
-    // a compact centre and staggered diagonals preserve its hand-drawn feel.
-    // Sampling the full silhouette filled the gaps into an orange blob.
     rows: &[
-        ".....1.....",
-        "..1..1...1.",
-        "...1.1..1..",
-        "....11.1...",
-        "....111....",
-        "11111111111",
-        "....111....",
-        "...1.11....",
-        "..1..1.1...",
-        ".1...1..1..",
-        ".....1.....",
+        "....1....",
+        ".1..1..1.",
+        "..1.1.1..",
+        "...111...",
+        "111111111",
+        "...111...",
+        "..1.1.1..",
+        ".1..1..1.",
+        "....1....",
     ],
-    palette: &[0xd97757],
+    palette: &[0xe0805e],
 };
 
 pub const CLAUDE_DESKTOP: Mark = Mark {
-    rows: CLAUDE.rows,
-    palette: CLAUDE.palette,
+    rows: &[
+        "222222222",
+        "2.......2",
+        "2.1.1.1.2",
+        "2..111..2",
+        "2.11111.2",
+        "2..111..2",
+        "2.1.1.1.2",
+        "2.......2",
+        "222222222",
+    ],
+    palette: &[0xe0805e, LED_DIM],
 };
 
 pub const OPENCODE: Mark = Mark {
