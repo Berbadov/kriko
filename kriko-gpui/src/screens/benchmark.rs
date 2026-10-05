@@ -1,14 +1,17 @@
-//! Benchmark: how long the parts of a check take on this machine.
-//! The machine it measured on and the run key; the headline numbers with
-//! their change; where one check's time goes, stage by stage; how each
-//! agent paces; the history of full checks; and the timed passes.
+//! Benchmark: how the agents and planes do on the engine's fixed test set,
+//! on this machine. The machine and the run key; the headline numbers with
+//! their change since the benchmark before; each agent side by side; the
+//! history of benchmarks; and the latest one, run by run. Everything is a
+//! row the engine measured (`GET /api/bench`); a number it did not measure
+//! reads "n/a", never zero.
 
-use gpui::{div, point, prelude::*, px, relative, rgb, rgba, Context, Div, FontWeight, Styled, Window};
+use gpui::{div, point, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Styled, Window};
 
 use crate::app::Kriko;
-use crate::data;
-use crate::marks::{mark_glyph, Phase};
-use crate::screens::{mono, row_desc, th};
+use crate::live::local::{batches, change, BenchPhase, BenchRun, Batch, Machine};
+use crate::marks::{self, mark_glyph, Mark, Phase};
+use crate::screens::local::pill;
+use crate::screens::{empty_note, mono, row_desc, th};
 use crate::theme::*;
 
 fn glow(color: u32, blur: f32) -> Vec<gpui::BoxShadow> {
@@ -36,15 +39,22 @@ fn led_bar(value: f32, segments: usize, color: u32) -> Div {
 }
 
 /// "m:ss" for a number of seconds.
-fn clock(secs: f32) -> String {
+fn clock(secs: f64) -> String {
     let s = secs.max(0.0).round() as u32;
     format!("{}:{:02}", s / 60, s % 60)
 }
 
-/// The change since the last benchmark: an LED arrow and the percent, in ice
-/// when it got better and the danger ink when it got worse. `higher_better`
-/// says which way better points for this number.
-fn delta(pct: i8, higher_better: bool) -> Div {
+fn seconds(ms: Option<f64>) -> String {
+    ms.map(|m| format!("{:.1} s", m / 1000.0)).unwrap_or_else(|| "n/a".to_string())
+}
+
+/// The change since the benchmark before: an LED arrow and the percent, in
+/// ice when it got better and the danger ink when it got worse. `None` says
+/// there is nothing to compare with.
+fn delta(pct: Option<i8>, higher_better: bool) -> Div {
+    let Some(pct) = pct else {
+        return mono("no earlier benchmark", DIM);
+    };
     let better = if higher_better { pct > 0 } else { pct < 0 };
     let color = if pct == 0 {
         MUTED
@@ -65,29 +75,25 @@ fn delta(pct: i8, higher_better: bool) -> Div {
 }
 
 /// One headline number: label, the figure in display type, its unit, the
-/// change, and a strip of the full-check history under it.
-fn headline(i: usize, label: &str, value: &str, unit: &str, pct: i8, higher_better: bool) -> Div {
+/// change, and a strip of the benchmarks before it.
+fn headline(label: &str, value: &str, unit: &str, pct: Option<i8>, higher_better: bool, series: &[Option<f64>]) -> Div {
     let mut spark = div().flex().items_end().gap(px(2.0)).h(px(22.0));
-    // every headline has its own walk; the first is the real history
-    let n = data::BENCH_HISTORY.len();
-    let (lo, hi) = data::BENCH_HISTORY
-        .iter()
-        .fold((u16::MAX, 0u16), |(a, b), &v| (a.min(v), b.max(v)));
-    for (k, v) in data::BENCH_HISTORY.iter().enumerate() {
-        let wobble = ((k * 7 + i * 5) % 6) as f32 * 0.06;
-        let mut f = (*v - lo) as f32 / (hi - lo).max(1) as f32;
-        if higher_better {
-            f = 1.0 - f; // fewer seconds, more throughput
-        }
-        let f = (0.25 + 0.75 * (f * 0.8 + wobble)).min(1.0);
-        let last = k + 1 == n;
+    let known: Vec<f64> = series.iter().flatten().copied().collect();
+    let lo = known.iter().copied().fold(f64::MAX, f64::min);
+    let hi = known.iter().copied().fold(f64::MIN, f64::max);
+    for (k, v) in series.iter().enumerate() {
+        let last = k + 1 == series.len();
+        let h = match v {
+            Some(v) => 4.0 + 18.0 * ((v - lo) / (hi - lo).max(f64::MIN_POSITIVE)).clamp(0.0, 1.0),
+            None => 3.0,
+        };
         spark = spark.child(
             div()
                 .w(px(5.0))
-                .h(px((22.0 * f).round().max(3.0)))
+                .h(px(h.round() as f32))
                 .rounded(px(1.0))
-                .bg(rgb(if last { ICE } else { LED_DIM }))
-                .when(last, |d| d.shadow(glow(ICE, 5.0))),
+                .bg(rgb(if v.is_none() { LED_OFF } else if last { ICE } else { LED_DIM }))
+                .when(last && v.is_some(), |d| d.shadow(glow(ICE, 5.0))),
         );
     }
     card()
@@ -123,18 +129,76 @@ fn headline(i: usize, label: &str, value: &str, unit: &str, pct: i8, higher_bett
         )
 }
 
+/// The mark an agent wears, by the id the engine gives it.
+fn mark_for(plane: &str, llm: &str, local_server: &str) -> &'static Mark {
+    let id = llm.to_lowercase();
+    for (needle, mark) in [
+        ("claude", &marks::CLAUDE),
+        ("opencode", &marks::OPENCODE),
+        ("antigravity", &marks::ANTIGRAVITY),
+        ("agy", &marks::ANTIGRAVITY),
+        ("mistral", &marks::MISTRAL),
+        ("copilot", &marks::COPILOT),
+        ("cursor", &marks::CURSOR),
+    ] {
+        if id.contains(needle) {
+            return mark;
+        }
+    }
+    if plane == "local" {
+        return match local_server {
+            "Ollama" => &marks::OLLAMA,
+            "LM Studio" => &marks::LMSTUDIO,
+            "llama-server" => &marks::LLAMACPP,
+            _ => &marks::BUILTIN,
+        };
+    }
+    &marks::BUILTIN
+}
+
+fn machine_cells(m: Option<&Machine>) -> Vec<(&'static str, String)> {
+    let na = || "n/a".to_string();
+    let Some(m) = m else {
+        return vec![("Machine", "reading".to_string())];
+    };
+    vec![
+        (
+            "CPU",
+            match (&m.cpu, m.cores) {
+                (Some(n), Some(c)) => format!("{n} · {c:.0} threads"),
+                (Some(n), None) => n.clone(),
+                _ => na(),
+            },
+        ),
+        ("GPU", m.gpu.clone().unwrap_or_else(na)),
+        (
+            "VRAM",
+            m.vram_total_mb.map(|v| format!("{:.1} GB", v / 1024.0)).unwrap_or_else(na),
+        ),
+        ("Memory", m.ram_mb.map(|v| format!("{:.1} GB", v / 1024.0)).unwrap_or_else(na)),
+    ]
+}
+
 pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
-    let run = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.bench_start(cx);
-    });
-    let total: f32 = data::BENCH_STAGES.iter().map(|s| s.secs).sum();
-    let progress = app.bench_progress;
-    let at = progress.map(|p| p / 100.0 * total);
+    let b = &app.live.local.bench;
+    if !b.loaded {
+        return div().child(empty_note("Asking Kriko's engine for its benchmark results."));
+    }
+    let server = app
+        .live
+        .local
+        .plane
+        .as_ref()
+        .map(|p| p.name.clone())
+        .unwrap_or_default();
+    let press = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.bench_press(cx));
+    let all = batches(&b.runs);
+    let running = matches!(b.phase, BenchPhase::Running { .. });
 
     // ---- the machine and the run key ----
     let mut machine = div().flex().flex_wrap().gap(px(8.0));
-    for (label, value) in data::BENCH_MACHINE {
+    for (label, value) in machine_cells(app.live.local.machine.as_ref()) {
         machine = machine.child(
             well()
                 .px(px(12.0))
@@ -143,29 +207,53 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .flex_col()
                 .gap(px(2.0))
                 .child(mono(&label.to_uppercase(), DIM))
-                .child(mono(value, INK_2)),
+                .child(mono(&value, INK_2)),
         );
     }
-    let status = match at {
-        Some(t) => {
-            let stage = data::BENCH_STAGES
-                .iter()
-                .scan(0.0, |acc, s| {
-                    *acc += s.secs;
-                    Some((*acc, s.name))
-                })
-                .find(|(end, _)| t < *end)
-                .map(|(_, n)| n)
-                .unwrap_or("Settle");
+    let (status, key_label) = match &b.phase {
+        BenchPhase::Idle => (tag("bench-idle", TagState::Done, "Idle", motion), "Run benchmark"),
+        BenchPhase::Estimating => (tag("bench-est", TagState::Live, "Pricing the grid", motion), "Pricing"),
+        BenchPhase::Confirm(e) => (
+            tag(
+                "bench-confirm",
+                TagState::Need,
+                &format!(
+                    "{} measurement{}, {}. Press again to run",
+                    e.runs,
+                    if e.runs == 1 { "" } else { "s" },
+                    match e.usd {
+                        Some(u) if u > 0.0 => format!("about ${u:.2}"),
+                        Some(_) => "nothing to spend".to_string(),
+                        None => "cost not yet measured here".to_string(),
+                    }
+                ),
+                motion,
+            ),
+            "Confirm and run",
+        ),
+        BenchPhase::Running { progress, message, .. } => (
             tag(
                 "bench-running",
                 TagState::Live,
-                &format!("Running · {stage} · {} of {}", clock(t), clock(total)),
+                &format!("Running · {:.0}% · {message}", progress.min(100.0)),
                 motion,
-            )
-        }
-        None => tag("bench-idle", TagState::Done, "Idle", motion),
+            ),
+            "Stop benchmark",
+        ),
+        BenchPhase::Failed(why) => (tag("bench-failed", TagState::Block, why, motion), "Run benchmark"),
     };
+    let mut planes = div().flex().items_center().gap(px(6.0)).flex_wrap();
+    for (i, (plane, meaning)) in b.planes.iter().enumerate() {
+        let name = plane.clone();
+        let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.bench_toggle_plane(&name, cx);
+        });
+        planes = planes.child(
+            pill(("bench-plane", i), plane, b.picked.contains(plane))
+                .on_click(toggle)
+                .tooltip_text(meaning.clone()),
+        );
+    }
     let start_panel = card()
         .flex()
         .flex_col()
@@ -175,13 +263,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .flex()
                 .items_center()
                 .gap(px(24.0))
-                .child(
-                    plate_wide(
-                        "bench-run",
-                        if progress.is_some() { "Stop benchmark" } else { "Run benchmark" },
-                    )
-                    .on_click(run),
-                )
+                .child(plate_wide("bench-run", key_label).on_click(press))
                 .child(
                     div()
                         .flex_1()
@@ -190,135 +272,84 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                         .flex_col()
                         .gap(px(2.0))
                         .child(row_desc(
-                            "Times every stage of a check with the packs that are enabled now, on one saved listing, three subjects. Nothing is stored and no claim leaves this machine.",
+                            "Runs the engine's fixed test set on the planes picked below and records time, tokens, \
+                             cost and how many claims were accepted. The first press prices it; a second spends.",
                         ))
                         .child(mono(
                             &format!(
-                                "Last benchmark: {} · {} on record",
-                                if app.bench_done > 0 { "just now" } else { "2 min ago" },
-                                data::BENCH_HISTORY.len() as u32 + app.bench_done
+                                "{} · {} run{} on record",
+                                if b.set_label.trim() == "· 0 cases" { "test set" } else { &b.set_label },
+                                b.runs.len(),
+                                if b.runs.len() == 1 { "" } else { "s" }
                             ),
                             DIM,
                         )),
                 ),
         )
-        .child(div().flex().child(status))
+        .child(div().flex().items_center().gap(px(16.0)).flex_wrap().child(status).child(planes))
+        .children(b.last.clone().map(|l| mono(&l, MUTED)))
         .child(div().pt(px(4.0)).child(eyebrow("Measured on")))
         .child(machine);
 
-    // ---- the headline numbers ----
-    let mut heads = div().flex().flex_wrap().gap(px(16.0));
-    for (i, (label, value, unit, pct, hb)) in data::BENCH_HEADLINE.iter().enumerate() {
-        heads = heads.child(headline(i, label, value, unit, *pct, *hb));
+    if b.runs.is_empty() {
+        return div()
+            .flex()
+            .flex_col()
+            .gap(px(24.0))
+            .child(start_panel)
+            .child(empty_note("Nothing has been benchmarked here yet. Run one to see how an agent does."));
     }
 
-    // ---- where one check's time goes ----
-    // one bar, each stage its share; while a benchmark runs the stages
-    // light up in turn and the one under way fills
-    let mut stacked = well().p(px(6.0)).flex().gap(px(3.0)).h(px(30.0));
-    let mut legend = div().flex().flex_col();
-    let mut start = 0.0f32;
-    for (si, stage) in data::BENCH_STAGES.iter().enumerate() {
-        let share = stage.secs / total;
-        let end = start + stage.secs;
-        let (fill, live) = match at {
-            Some(t) if t >= end => (1.0, false),
-            Some(t) if t >= start => ((t - start) / stage.secs, true),
-            Some(_) => (0.0, false),
-            None => (1.0, false),
-        };
-        stacked = stacked.child(
-            div()
-                .w(relative(share))
-                .h_full()
-                .rounded(px(3.0))
-                .bg(rgb(LED_OFF))
-                .overflow_hidden()
-                .child(
-                    div()
-                        .w(relative(fill))
-                        .h_full()
-                        .rounded(px(3.0))
-                        .bg(rgb(stage.color))
-                        .shadow(glow(stage.color, if live { 10.0 } else { 4.0 })),
-                ),
-        );
-        legend = legend
-            .child(
-                div()
-                    .py(px(9.0))
-                    .flex()
-                    .items_center()
-                    .gap(px(14.0))
-                    .child(
-                        div()
-                            .size(px(10.0))
-                            .flex_none()
-                            .rounded(px(2.0))
-                            .bg(rgb(stage.color))
-                            .shadow(glow(stage.color, 5.0)),
-                    )
-                    .child(
-                        div()
-                            .w(px(140.0))
-                            .flex_none()
-                            .font_family(SANS)
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .text_size(px(14.0))
-                            .text_color(rgb(if live { ICE } else { INK }))
-                            .child(stage.name),
-                    )
-                    .child(div().flex_1().min_w(px(0.0)).child(row_desc(stage.what)))
-                    .child(
-                        div()
-                            .w(px(64.0))
-                            .flex_none()
-                            .flex()
-                            .justify_end()
-                            .child(mono(&format!("{:.0}%", share * 100.0), MUTED)),
-                    )
-                    .child(
-                        div()
-                            .w(px(64.0))
-                            .flex_none()
-                            .flex()
-                            .justify_end()
-                            .child(mono(&clock(stage.secs), if live { ICE } else { INK_2 })),
-                    ),
-            );
-        if si + 1 < data::BENCH_STAGES.len() {
-            legend = legend.child(hairline());
-        }
-        start = end;
-    }
-    let slowest = data::BENCH_STAGES
-        .iter()
-        .max_by(|a, b| a.secs.total_cmp(&b.secs))
-        .map(|s| s.name)
-        .unwrap_or("");
-    let breakdown = card()
+    // ---- the headline numbers: the latest benchmark against the one before ----
+    let latest = all.first().cloned().unwrap_or_default();
+    let before = all.get(1).cloned();
+    let take = |f: fn(&Batch) -> Option<f64>| -> Vec<Option<f64>> {
+        let mut v: Vec<Option<f64>> = all.iter().take(12).map(f).collect();
+        v.reverse();
+        v
+    };
+    let ms = |x: &Batch| x.median_ms;
+    let tokens = |x: &Batch| x.median_tokens;
+    let usd = |x: &Batch| x.median_usd;
+    let accept = |x: &Batch| x.acceptance;
+    let heads = div()
         .flex()
-        .flex_col()
-        .gap(px(12.0))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .child(eyebrow("Where one check's time goes"))
-                .child(mono(&format!("{} total · 3 subjects", clock(total)), MUTED)),
-        )
-        .child(stacked)
-        .child(row_desc(&format!(
-            "{slowest} and fetching sources take most of a check. Pages already in the cache skip the fetch, so a second check of the same product is faster."
-        )))
-        .child(legend);
+        .flex_wrap()
+        .gap(px(16.0))
+        .child(headline(
+            "Median answer",
+            &latest.median_ms.map(|m| format!("{:.1}", m / 1000.0)).unwrap_or_else(|| "n/a".into()),
+            "s",
+            change(latest.median_ms, before.as_ref().and_then(ms)),
+            false,
+            &take(|x| x.median_ms),
+        ))
+        .child(headline(
+            "Tokens per run",
+            &latest.median_tokens.map(|t| format!("{:.0}", t)).unwrap_or_else(|| "n/a".into()),
+            "tokens",
+            change(latest.median_tokens, before.as_ref().and_then(tokens)),
+            false,
+            &take(|x| x.median_tokens),
+        ))
+        .child(headline(
+            "Cost per run",
+            &latest.median_usd.map(|u| format!("{u:.3}")).unwrap_or_else(|| "n/a".into()),
+            if latest.median_usd.is_some() { "USD" } else { "not measured" },
+            change(latest.median_usd, before.as_ref().and_then(usd)),
+            false,
+            &take(|x| x.median_usd),
+        ))
+        .child(headline(
+            "Claims accepted",
+            &latest.acceptance.map(|a| format!("{:.0}", a * 100.0)).unwrap_or_else(|| "n/a".into()),
+            "%",
+            change(latest.acceptance, before.as_ref().and_then(accept)),
+            true,
+            &take(|x| x.acceptance),
+        ));
 
     // ---- the agents, side by side ----
-    let fastest = data::BENCH_AGENTS
-        .iter()
-        .map(|a| a.2)
-        .fold(1.0f32, f32::max);
     let mut agents = card()
         .flex()
         .flex_col()
@@ -332,12 +363,28 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .child(div().w(px(84.0)).child(th("Answer")))
                 .child(div().w(px(180.0)).child(th("Tokens / s")))
                 .child(div().w(px(112.0)).child(th("Claims / run")))
-                .child(div().w(px(84.0)).child(th("Finished"))),
+                .child(div().w(px(84.0)).child(th("Finished")))
+                .child(div().w(px(96.0)).child(th("Ungrounded"))),
         )
         .child(hairline());
-    for (k, (ai, answer, tps, claims, finished)) in data::BENCH_AGENTS.iter().enumerate() {
-        let agent = &data::AGENTS[*ai];
-        let running = progress.is_some();
+    let speeds: Vec<Option<f64>> = b
+        .summary
+        .iter()
+        .map(|r| match (r.tokens, r.ms) {
+            (Some(t), Some(ms)) if ms > 0.0 => Some(t * 1000.0 / ms),
+            _ => None,
+        })
+        .collect();
+    let fastest = speeds.iter().flatten().copied().fold(0.0f64, f64::max);
+    for (k, row) in b.summary.iter().enumerate() {
+        let name = if row.llm.is_empty() { row.plane.clone() } else { row.llm.clone() };
+        let finished = if row.runs > 0.0 { Some((row.runs - row.failures) / row.runs * 100.0) } else { None };
+        let ungrounded = b
+            .scored
+            .iter()
+            .find(|g| g.plane == row.plane && g.llm == row.llm)
+            .and_then(|g| g.hallucination);
+        let tps = speeds[k];
         agents = agents.child(
             div()
                 .py(px(10.0))
@@ -352,61 +399,80 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                         .gap(px(12.0))
                         .child(mark_glyph(
                             &format!("bench-agent-{k}"),
-                            agent.mark,
+                            mark_for(&row.plane, &row.llm, &server),
                             if running { Phase::Thinking } else { Phase::Idle },
                             30.0,
                             motion,
                         ))
                         .child(
                             div()
-                                .font_family(SANS)
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .text_size(px(14.0))
-                                .text_color(rgb(INK))
-                                .child(agent.name),
+                                .flex()
+                                .flex_col()
+                                .child(
+                                    div()
+                                        .font_family(SANS)
+                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .text_size(px(14.0))
+                                        .text_color(rgb(INK))
+                                        .child(name),
+                                )
+                                .child(mono(&format!("{} · {} · {:.0} runs", row.plane, row.protocol, row.runs), DIM)),
                         ),
                 )
-                .child(div().w(px(84.0)).child(mono(answer, INK_2)))
+                .child(div().w(px(84.0)).child(mono(&seconds(row.ms), INK_2)))
                 .child(
-                    div()
-                        .w(px(180.0))
-                        .flex()
-                        .items_center()
-                        .gap(px(10.0))
-                        .child(led_bar(tps / fastest * 100.0, 10, if *tps >= fastest { ICE } else { LED_DIM }))
-                        .child(mono(&format!("{tps:.0}"), INK_2)),
+                    div().w(px(180.0)).flex().items_center().gap(px(10.0)).child(match tps {
+                        Some(t) => div()
+                            .flex()
+                            .items_center()
+                            .gap(px(10.0))
+                            .child(led_bar(
+                                if fastest > 0.0 { (t / fastest * 100.0) as f32 } else { 0.0 },
+                                10,
+                                if t >= fastest { ICE } else { LED_DIM },
+                            ))
+                            .child(mono(&format!("{t:.0}"), INK_2)),
+                        None => div().child(mono("n/a", DIM)),
+                    }),
                 )
-                .child(div().w(px(112.0)).child(mono(&format!("{claims:.1}"), INK_2)))
                 .child(
                     div()
-                        .w(px(84.0))
-                        .child(mono(&format!("{finished}%"), if *finished >= 95 { ICE } else { INK_2 })),
-                ),
+                        .w(px(112.0))
+                        .child(mono(&if row.runs > 0.0 { format!("{:.1}", row.accepted / row.runs) } else { "n/a".into() }, INK_2)),
+                )
+                .child(div().w(px(84.0)).child(match finished {
+                    Some(f) => mono(&format!("{f:.0}%"), if f >= 95.0 { ICE } else { INK_2 }),
+                    None => mono("n/a", DIM),
+                }))
+                .child(div().w(px(96.0)).child(match ungrounded {
+                    Some(h) => mono(&format!("{:.0}%", h * 100.0), if h > 0.0 { DANGER } else { ICE }),
+                    None => mono("not scored", DIM),
+                })),
         );
-        if k + 1 < data::BENCH_AGENTS.len() {
+        if k + 1 < b.summary.len() {
             agents = agents.child(hairline());
         }
     }
 
-    // ---- the history of full checks ----
-    let (lo, hi) = data::BENCH_HISTORY
-        .iter()
-        .fold((u16::MAX, 0u16), |(a, b), &v| (a.min(v), b.max(v)));
-    let n = data::BENCH_HISTORY.len();
+    // ---- the history of benchmarks ----
+    let mut series: Vec<&Batch> = all.iter().filter(|x| x.median_ms.is_some()).take(10).collect();
+    series.reverse();
+    let vals: Vec<f64> = series.iter().filter_map(|x| x.median_ms).collect();
+    let lo = vals.iter().copied().fold(f64::MAX, f64::min);
+    let hi = vals.iter().copied().fold(f64::MIN, f64::max);
     let rows = 10usize;
     let mut columns = div().flex().items_end().justify_between().gap(px(6.0));
-    for (k, v) in data::BENCH_HISTORY.iter().enumerate() {
-        let lit = (2.0 + (*v - lo + 10) as f32 / (hi - lo + 10) as f32 * (rows as f32 - 2.0)).round() as usize;
-        let last = k + 1 == n;
-        let best = *v == lo;
+    for (k, x) in series.iter().enumerate() {
+        let v = x.median_ms.unwrap_or(0.0);
+        let lit = (2.0 + (v - lo) / (hi - lo).max(1.0) * (rows as f64 - 2.0)).round() as usize;
+        let last = k + 1 == series.len();
+        let best = v == lo;
         let color = if last { ICE } else if best { INK_2 } else { MUTED };
         let mut col = div().flex().flex_col().gap(px(2.0)).items_center();
         for r in 0..rows {
-            let on = rows - r <= lit;
             let d = div().w(px(18.0)).h(px(6.0)).rounded(px(1.5));
-            col = col.child(if on {
-                d.bg(rgb(color)).opacity(if last { 1.0 } else { 0.7 })
-                    .when(last, |d| d.shadow(glow(ICE, 5.0)))
+            col = col.child(if rows - r <= lit {
+                d.bg(rgb(color)).opacity(if last { 1.0 } else { 0.7 }).when(last, |d| d.shadow(glow(ICE, 5.0)))
             } else {
                 d.bg(rgb(LED_OFF))
             });
@@ -417,12 +483,11 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .flex_col()
                 .items_center()
                 .gap(px(6.0))
-                .child(mono(&clock(*v as f32), if last { ICE } else if best { INK_2 } else { DIM }))
+                .child(mono(&clock(v / 1000.0), if last { ICE } else if best { INK_2 } else { DIM }))
                 .child(col),
         );
     }
-    let first = *data::BENCH_HISTORY.first().unwrap_or(&1) as f32;
-    let latest = *data::BENCH_HISTORY.last().unwrap_or(&1) as f32;
+    let date = |x: &Batch| x.at.chars().take(10).collect::<String>();
     let history = card()
         .flex()
         .flex_col()
@@ -432,30 +497,37 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .flex()
                 .items_center()
                 .justify_between()
-                .child(eyebrow("Full check, benchmark by benchmark"))
-                .child(delta((((latest - first) / first) * 100.0).round() as i8, false)),
+                .child(eyebrow("Typical answer, benchmark by benchmark"))
+                .child(delta(
+                    change(series.last().and_then(|x| x.median_ms), series.first().and_then(|x| x.median_ms)),
+                    false,
+                )),
         )
-        .child(row_desc(&format!(
-            "Shorter is faster. From {} to {}, the full check went from {} to {}: the cache grew and the local model moved to the GPU.",
-            data::BENCH_HISTORY_SPAN.0,
-            data::BENCH_HISTORY_SPAN.1,
-            clock(first),
-            clock(latest)
-        )))
+        .child(row_desc(&match (series.first(), series.last()) {
+            (Some(a), Some(z)) if series.len() > 1 => format!(
+                "Shorter is faster. The median answer went from {} to {} between {} and {}.",
+                seconds(a.median_ms),
+                seconds(z.median_ms),
+                date(a),
+                date(z)
+            ),
+            _ => "Shorter is faster. One benchmark is on record; the next one draws the line.".to_string(),
+        }))
         .child(columns)
-        .child(
-            div()
-                .flex()
-                .justify_between()
-                .child(mono(data::BENCH_HISTORY_SPAN.0, DIM))
-                .child(mono(data::BENCH_HISTORY_SPAN.1, DIM)),
-        );
+        .children(match (series.first(), series.last()) {
+            (Some(a), Some(z)) => Some(
+                div().flex().justify_between().child(mono(&date(a), DIM)).child(mono(&date(z), DIM)),
+            ),
+            _ => None,
+        });
 
-    // ---- the timed passes ----
+    // ---- the latest benchmark, run by run ----
+    let mine: Vec<&BenchRun> = b.runs.iter().filter(|r| r.batch_id == latest.id).collect();
+    let slowest = mine.iter().filter_map(|r| r.ms).fold(1.0f64, f64::max);
     let mut bars = card().flex().flex_col();
-    bars = bars.child(div().mb(px(12.0)).child(eyebrow("Timed passes")));
-    for (i, entry) in data::BENCH_RUNS.iter().enumerate() {
-        let color = if i == 0 { ICE } else { LED_DIM };
+    bars = bars.child(div().mb(px(12.0)).child(eyebrow("Latest benchmark, run by run")));
+    for (i, r) in mine.iter().enumerate() {
+        let failed = !r.error.is_empty();
         bars = bars.child(
             div()
                 .py(px(12.0))
@@ -473,22 +545,26 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                                 .font_family(SANS)
                                 .text_size(px(14.0))
                                 .text_color(rgb(INK_2))
-                                .child(entry.label.to_string()),
+                                .child(format!(
+                                    "{} · {}",
+                                    r.subject,
+                                    if r.llm.is_empty() { &r.plane } else { &r.llm }
+                                )),
                         )
-                        .child(mono(&format!("was {}", entry.before), DIM))
-                        .child(div().w(px(64.0)).flex().justify_end().child(delta(entry.delta, false)))
-                        .child(
-                            div()
-                                .w(px(72.0))
-                                .flex()
-                                .justify_end()
-                                .child(mono(entry.took, INK)),
-                        ),
+                        .child(mono(
+                            &if failed { format!("failed: {}", r.error) } else { format!("{:.0} accepted, {:.0} refused", r.accepted, r.refused) },
+                            if failed { DANGER } else { DIM },
+                        ))
+                        .child(div().w(px(72.0)).flex().justify_end().child(mono(&seconds(r.ms), INK))),
                 )
-                .child(led_bar(entry.value as f32, 28, color)),
+                .child(led_bar(
+                    r.ms.map(|m| (m / slowest * 100.0) as f32).unwrap_or(0.0),
+                    28,
+                    if failed { DANGER } else if i == 0 { ICE } else { LED_DIM },
+                )),
         );
-        if i + 1 < data::BENCH_RUNS.len() {
-            bars = bars.child(hairline());
+        if i + 1 < mine.len() {
+            bars = bars.child(crate::theme::hairline());
         }
     }
 
@@ -498,7 +574,6 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
         .gap(px(24.0))
         .child(start_panel)
         .child(heads)
-        .child(breakdown)
         .child(
             div()
                 .flex()
@@ -515,6 +590,6 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .items_center()
                 .gap(px(8.0))
                 .child(div().size(px(6.0)).rounded(px(1.5)).bg(rgba(0xbfe4ff99)))
-                .child(mono("Ice is better than last time, red is worse. Bars are against the fastest here.", DIM)),
+                .child(mono("Ice is better than the benchmark before, red is worse. n/a means the engine did not measure it.", DIM)),
         )
 }
