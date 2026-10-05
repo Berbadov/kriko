@@ -88,7 +88,7 @@ def test_a_runtime_is_installed_when_it_is_on_path(monkeypatch, tmp_path):
     # not on PATH, but where the installer leaves it
     where = tmp_path / "Programs" / "Ollama"
     where.mkdir(parents=True)
-    (where / "ollama.exe").write_text("x")
+    (where / "ollama.exe").write_bytes(b"x")
     monkeypatch.setattr(machine.shutil, "which", lambda name: None)
     rows = {row["id"]: row for row in machine.runtimes()}
     assert rows["ollama"]["installed"]
