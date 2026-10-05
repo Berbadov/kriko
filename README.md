@@ -148,13 +148,14 @@ the details are in `backlog.md`.
 
 ## Desktop build
 
-`tauri/` wraps the same server: a Rust shell spawns a frozen Python sidecar,
-waits for `/api/health`, then shows the UI from the same `~/.kriko/` store.
-Installers come from `.github/workflows/desktop.yml` (**hand-run only**, no
-Actions minutes) or locally from `pwsh packaging/build_desktop.ps1`;
+`kriko-gpui/` is the desktop app: a native GPUI window that spawns the frozen
+Python sidecar, waits for `/api/health`, and draws every screen from the same
+`~/.kriko/` store over HTTP. Installers come from `.github/workflows/desktop.yml`
+(**hand-run only**, no Actions minutes) or locally from
+`powershell -File kriko-gpui/package.ps1`;
 `packaging/freeze.sh` builds the sidecar alone, with no Rust needed. The
 sidecar is also the console (`kriko-sidecar --tui`, and a Start-menu shortcut
-on Windows). See `tauri/README.md`.
+on Windows). See `kriko-gpui/README.md`.
 
 ## Where to go next
 
@@ -169,4 +170,4 @@ on Windows). See `tauri/README.md`.
 | `docs/STYLE.md`         | How these documents are written. Rules, not taste          |
 | `docs/INSTALL_WINDOWS.md` | Installing on Windows, including the extension step      |
 | `docs/PACK_CONTRACT.md` | Authoring a catalog for a new product category             |
-| `tauri/README.md`       | The desktop shell: launch sequence and build               |
+| `kriko-gpui/README.md`  | The desktop app: engine supervision, screens and build     |

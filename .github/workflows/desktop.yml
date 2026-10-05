@@ -1,8 +1,8 @@
 name: desktop
 
 # Hand-run only, since 2026-09-13. It used to fire on `v*` tags and on pull
-# requests touching tauri/, packaging/ or sidecar.py as well, and it should
-# again the day this account has Actions minutes — put the `push` and
+# requests touching the desktop app, packaging/ or sidecar.py as well, and it
+# should again the day this account has Actions minutes: put the `push` and
 # `pull_request` blocks back, nothing else here depends on them.
 #
 # What changed is the environment, not the value. With no minutes, each of
@@ -13,18 +13,14 @@ name: desktop
 # ever report a false failure trains everyone to ignore a red desktop build,
 # which is the state you least want to be in on the day one is real.
 #
-# Nothing below is trimmed. This file is the only written record of how an
-# installer is built, and its smoke steps are the checks that would have caught
-# v0.2.4 — CLAUDE.md's app-first rule 3. Until minutes return, the recipe is run
-# by hand on the Windows host, as every installer since 0.5.0 has been.
+# Nothing below is trimmed. This file and `kriko-gpui/package.ps1` are the
+# same recipe, step for step: one is run by a runner, the other by hand on the
+# Windows host, and a change to either is a change to both
+# (`test_the_installer_can_be_built_by_hand.py` holds them to it). The smoke
+# steps are the checks that would have caught v0.2.4: CLAUDE.md's app-first
+# rule 3.
 on:
     workflow_dispatch:
-        inputs:
-            platforms:
-                description: "which runners to bundle"
-                default: windows
-                type: choice
-                options: [windows, all]
 
 concurrency:
     group: desktop-${{ github.ref }}
@@ -36,52 +32,14 @@ permissions:
     contents: read
 
 jobs:
-    # Which runners to bundle on, decided in one place.
-    #
-    # Windows only by default, because the reader is: one person opens these
-    # installers and they are on Windows, so a .deb and a .dmg nobody
-    # downloads are two more runners' minutes on every tag. `platforms: all`
-    # on a hand-run brings all three back, and is how to catch an OS-specific
-    # break before a release now that there is no pull-request trigger to do
-    # it automatically. The `pull_request` arm of the test below is kept
-    # rather than deleted: it is dead while the trigger is gone, and correct
-    # again the moment the trigger is restored.
-    #
-    # It is a job rather than a job-level `if` because a matrix leg cannot be
-    # switched off that way: `jobs.<id>.if` is evaluated once, before the
-    # matrix exists, so it cannot see `matrix.label`. Computing the matrix is
-    # the only way to have fewer legs.
-    which:
-        name: which runners
-        runs-on: ubuntu-latest
-        outputs:
-            legs: ${{ steps.pick.outputs.legs }}
-        steps:
-            - id: pick
-              shell: bash
-              run: |
-                  windows='{"os":"windows-latest","label":"windows","sidecar":"kriko-sidecar.exe"}'
-                  others='{"os":"ubuntu-22.04","label":"linux","sidecar":"kriko-sidecar"},{"os":"macos-latest","label":"macos","sidecar":"kriko-sidecar"}'
-                  if [ "${{ github.event_name }}" = "pull_request" ] \
-                     || [ "${{ inputs.platforms }}" = "all" ]; then
-                      legs="[$others,$windows]"
-                  else
-                      legs="[$windows]"
-                  fi
-                  echo "legs=$legs" >> "$GITHUB_OUTPUT"
-                  echo "$legs"
-
+    # Windows only: the desktop app and its installer are Windows, and
+    # PyInstaller cannot cross-compile the sidecar anyway.
     bundle:
-        needs: which
-        name: ${{ matrix.label }}
-        runs-on: ${{ matrix.os }}
-        strategy:
-            # fail-fast off: "does it build on Windows" and "does it build on
-            # macOS" are separate answers, and one failing must not hide the
-            # other.
-            fail-fast: false
-            matrix:
-                include: ${{ fromJSON(needs.which.outputs.legs) }}
+        name: windows
+        runs-on: windows-latest
+        defaults:
+            run:
+                shell: bash
         steps:
             - uses: actions/checkout@v4
 
@@ -91,7 +49,7 @@ jobs:
                   # and this one is not cosmetic: `"3.14"` resolves to whatever
                   # setup-python has newest in that line, the pinned pydantic
                   # raises on import under 3.14.0rc2, and PyInstaller would
-                  # happily freeze that — shipping a sidecar that dies on its
+                  # happily freeze that, shipping a sidecar that dies on its
                   # first request. The interpreter the binary carries should be
                   # the one the suite actually ran on.
                   python-version: "3.13"
@@ -104,23 +62,27 @@ jobs:
 
             # The lock is the pin, and this is what makes it one. Cargo already
             # *uses* a committed Cargo.lock; what it will also do, quietly, is
-            # rewrite it when Cargo.toml has moved — and then the release that
+            # rewrite it when Cargo.toml has moved, and then the release that
             # got tagged is not the one anybody resolved. `--locked` turns that
             # into a red job instead. Cheap: metadata resolves, it does not
             # build. See B53 and `test_shell_is_locked.py`.
-            - name: The shell's crate graph is the one that was committed
+            - name: The app's crate graph is the one that was committed
               shell: bash
               run: cargo metadata --locked --format-version 1 > /dev/null
-              working-directory: tauri/src-tauri
+              working-directory: kriko-gpui
 
-            # WebKitGTK and friends. Tauri 2 on Linux needs the 4.1 ABI; 4.0
-            # builds and then fails to open a window.
-            - name: Linux system deps
-              if: matrix.label == 'linux'
+            # The three committed version strings agree, and the tag (when
+            # there is one) is the tree. The installer's name and contents both
+            # come from the tree, so a tag that is not the tree is a lie.
+            - name: The version is the tree's
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev \
-                    librsvg2-dev patchelf libssl-dev xvfb
+                  python tools/bump.py --show
+                  tree=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+                  if [ "${{ github.ref_type }}" = "tag" ] && [ "${GITHUB_REF_NAME#v}" != "$tree" ]; then
+                      echo "tag ${GITHUB_REF_NAME} is not the tree ($tree)"
+                      exit 1
+                  fi
+                  echo "VERSION=$tree" >> "$GITHUB_ENV"
 
             - name: Install Python side
               run: |
@@ -132,7 +94,7 @@ jobs:
                   pip install -r requirements.lock -e "." pyinstaller
 
             # The UI first: the spec refuses to freeze without it rather than
-            # shipping an app that 404s on its own frontend.
+            # shipping an engine that 404s on its own frontend.
             - name: Build the UI
               run: |
                   npm --prefix ui ci --no-audit --no-fund
@@ -151,88 +113,52 @@ jobs:
             # A frozen binary that cannot print its port is a blank window, so
             # the handshake is checked here, before it is bundled into anything.
             - name: The frozen sidecar answers
-              shell: bash
-              run: python packaging/smoke_sidecar.py "dist/${{ matrix.sidecar }}"
+              run: python packaging/smoke_sidecar.py "dist/kriko-sidecar.exe"
 
-            # Tauri resolves externalBin as <name>-<target triple>.
+            - name: Build the app
+              run: cargo build --release --locked
+              working-directory: kriko-gpui
+
+            # Beside kriko.exe: where the app looks for its engine, and where
+            # main.wxs picks both programs up.
             - name: Place the sidecar
-              shell: bash
-              run: |
-                  triple=$(rustc -Vv | sed -n 's/host: //p')
-                  mkdir -p tauri/src-tauri/binaries
-                  ext=""
-                  [ "${{ matrix.label }}" = "windows" ] && ext=".exe"
-                  cp "dist/${{ matrix.sidecar }}" \
-                     "tauri/src-tauri/binaries/kriko-sidecar-$triple$ext"
+              run: cp dist/kriko-sidecar.exe kriko-gpui/target/release/kriko-sidecar.exe
 
-            - name: Icons
+            # The per-user MSI. WiX 3 is on the runner image (the WIX
+            # environment variable points at it); cargo-wix drives it.
+            - name: The MSI
+              working-directory: kriko-gpui
               run: |
-                  # `ci`, not `install`: this resolves the Tauri CLI, and a
-                  # floating `^2` is exactly how v0.2.1 opened while v0.2.4
-                  # panicked on an identical tree four hours later.
-                  npm --prefix tauri ci --no-audit --no-fund
-                  npm --prefix tauri run tauri icon src-tauri/icons/icon.png
+                  cargo install cargo-wix --locked
+                  mkdir -p builds
+                  out="$(pwd -W)/builds/kriko-$VERSION-x86_64.msi"
+                  cargo wix --no-build --nocapture --bin-path "$WIX/bin" --output "$out"
+                  ls -l builds
 
-            # Self-update is a build-time decision, because the key that makes
-            # it trustworthy lives in a repository secret. Without the secret
-            # this is a no-op and the run still produces installers — see
-            # packaging/configure_updater.py.
-            - name: Configure self-update
-              shell: bash
-              env:
-                  TAURI_SIGNING_PUBLIC_KEY: ${{ vars.TAURI_SIGNING_PUBLIC_KEY }}
+            # The installer building is not the app starting. v0.2.4 built
+            # green and then panicked before its first window, a failure with
+            # nowhere to be seen but a stderr no double-click has. So the app
+            # is launched here, held, and asked whether it is still up.
+            - name: The app opens
+              run: python packaging/smoke_app.py kriko-gpui/target/release/kriko.exe
+
+            - name: The portable zip
+              shell: pwsh
               run: |
-                  python packaging/configure_updater.py \
-                      --repo "${{ github.repository }}" \
-                      --version "${{ github.ref_type == 'tag' && github.ref_name || '' }}"
-
-            # Unsigned, on all three — code signing needs certificates, which is
-            # a policy decision (an Apple developer account, an EV cert) and not
-            # this workflow's to make. The updater's minisign key below is a
-            # different thing entirely: it signs the update payload, not the
-            # executable, so it works on unsigned builds.
-            - name: Bundle
-              env:
-                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-              run: npm --prefix tauri run tauri build
-
-            # The installers building is not the app starting. v0.2.4 built
-            # green on all three runners and then panicked in `build()` before
-            # its first window, because a plugin configured at package time was
-            # registered unconditionally — a failure with nowhere to be seen but
-            # a stderr no double-click has. So the shell is launched here.
-            #
-            # Not on macOS: a Tauri binary run outside its .app is a different
-            # question there, and a check that fails for reasons unrelated to
-            # the build is a check that gets switched off. Linux and Windows
-            # share the config path that broke, which is what this is for.
-            - name: The bundled shell opens
-              if: matrix.label != 'macos'
-              shell: bash
-              run: |
-                  shell_binary=tauri/src-tauri/target/release/kriko
-                  [ "${{ matrix.label }}" = "windows" ] && shell_binary="$shell_binary.exe"
-                  if [ "${{ matrix.label }}" = "linux" ]; then
-                      xvfb-run -a python packaging/smoke_app.py "$shell_binary"
-                  else
-                      python packaging/smoke_app.py "$shell_binary"
-                  fi
+                  $bin = "kriko-gpui/target/release"
+                  Compress-Archive -Path "$bin/kriko.exe", "$bin/kriko-sidecar.exe" `
+                      -DestinationPath "kriko-gpui/builds/kriko-$env:VERSION-win64-portable.zip" -Force
 
             - uses: actions/upload-artifact@v4
               with:
-                  name: kriko-${{ matrix.label }}
+                  name: kriko-windows
                   path: |
-                      tauri/src-tauri/target/release/bundle/**/*.deb
-                      tauri/src-tauri/target/release/bundle/**/*.AppImage
-                      tauri/src-tauri/target/release/bundle/**/*.dmg
-                      tauri/src-tauri/target/release/bundle/**/*.exe
-                      tauri/src-tauri/target/release/bundle/**/*.tar.gz
-                      tauri/src-tauri/target/release/bundle/**/*.sig
+                      kriko-gpui/builds/*.msi
+                      kriko-gpui/builds/*.zip
                   if-no-files-found: error
 
     # The knowledge, built once and published beside the installers. Packs are
-    # what the app is *for*, and they change far more often than the binary —
+    # what the app is *for*, and they change far more often than the binary,
     # so they ship as their own assets with an index an installed Kriko can
     # poll, rather than being frozen into a release nobody can update without
     # reinstalling.
@@ -243,13 +169,7 @@ jobs:
             - uses: actions/checkout@v4
             - uses: actions/setup-python@v5
               with:
-                  # 3.13, lowered from 3.14 with the floor on 2026-09-14 (B110),
-                  # and this one is not cosmetic: `"3.14"` resolves to whatever
-                  # setup-python has newest in that line, the pinned pydantic
-                  # raises on import under 3.14.0rc2, and PyInstaller would
-                  # happily freeze that — shipping a sidecar that dies on its
-                  # first request. The interpreter the binary carries should be
-                  # the one the suite actually ran on.
+                  # 3.13: see the note on the bundle job.
                   python-version: "3.13"
             - name: Install
               run: |
@@ -283,8 +203,7 @@ jobs:
     # A run's artifacts expire and need a GitHub login to fetch. A release is a
     # permanent URL anyone with the repo can click, which is the difference
     # between "CI produced a binary" and "the app is downloadable". Tags only:
-    # a release per pull request would be noise, and `desktop.yml` already runs
-    # on PRs to prove the bundle still builds.
+    # a release per pull request would be noise.
     release:
         name: release
         needs: [bundle, packs]
@@ -294,63 +213,36 @@ jobs:
             contents: write
         steps:
             - uses: actions/checkout@v4
-            - uses: actions/setup-python@v5
-              with:
-                  # 3.13, lowered from 3.14 with the floor on 2026-09-14 (B110),
-                  # and this one is not cosmetic: `"3.14"` resolves to whatever
-                  # setup-python has newest in that line, the pinned pydantic
-                  # raises on import under 3.14.0rc2, and PyInstaller would
-                  # happily freeze that — shipping a sidecar that dies on its
-                  # first request. The interpreter the binary carries should be
-                  # the one the suite actually ran on.
-                  python-version: "3.13"
             - uses: actions/download-artifact@v4
               with:
                   path: artifacts
 
-            # The bundlers nest by format (deb/, dmg/, nsis/, appimage/). Flatten
-            # so the release page lists four files rather than four directories,
-            # and fail loudly on an empty set — a release with no installers in
+            # Flatten so the release page lists files rather than directories,
+            # and fail loudly on an empty set: a release with no installer in
             # it is worse than no release, because it looks like one.
             - name: Collect the installers
               run: |
                   mkdir -p release
                   find artifacts -type f \
-                      \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' \
-                         -o -name '*.exe' -o -name '*.kpack' -o -name 'packs.json' \) \
+                      \( -name '*.msi' -o -name '*.zip' -o -name '*.kpack' -o -name 'packs.json' \) \
                       -exec cp {} release/ \;
                   ls -lh release
                   test -n "$(ls -A release)"
-
-            # The one manifest an installed app polls, joined from three
-            # runners' artifacts. Skipped rather than failed when no signing key
-            # is configured: a release with installers and no self-update is a
-            # release; a failed release job is not.
-            - name: The update manifest
-              run: |
-                  if find artifacts -name '*.sig' | grep -q .; then
-                      python packaging/updater_manifest.py \
-                          --artifacts artifacts \
-                          --version "${GITHUB_REF_NAME#v}" \
-                          --base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}" \
-                          --notes "Kriko ${{ github.ref_name }}" \
-                          --out release/latest.json
-                      cat release/latest.json
-                  else
-                      echo "no updater artifacts — TAURI_SIGNING_PRIVATE_KEY is unset"
-                  fi
 
             - uses: softprops/action-gh-release@v2
               with:
                   files: release/*
                   generate_release_notes: true
                   body: |
-                      Unsigned builds. macOS will call this an unidentified
-                      developer (right-click → Open) and Windows SmartScreen
-                      will warn on the installer (More info → Run anyway) —
-                      code signing needs an Apple developer account and an EV
+                      Unsigned builds: Windows SmartScreen will warn on the
+                      installer (More info -> Run anyway). Code signing needs a
                       certificate, tracked as B52.
+
+                      The MSI installs for the current user under
+                      %LOCALAPPDATA%\Programs\Kriko and needs no administrator
+                      prompt. There is no self-updater in 1.0: install a newer
+                      MSI over the old one. Installed packs still update
+                      themselves weekly.
 
                       Kriko keeps everything in `~/.kriko`: `knowledge.sqlite`
                       for installed packs, `app.sqlite` for your own history.
-                      Uninstalling the app leaves both.

@@ -138,9 +138,9 @@ select = [
 # `check_untyped_defs` — still real type checking, just not reaching into
 # unannotated function bodies — with a short, named list of per-module
 # overrides for the specific patterns that are false positives here, each
-# with its reason below. `ui/`, `tauri/` and every `tests/` package are out of
+# with its reason below. `ui/`, `kriko-gpui/` and every `tests/` package are out of
 # scope: `ui/` is Svelte/TypeScript (checked by `svelte-check`, not mypy),
-# `tauri/` is Rust, and a test suite proving a false-positive-shaped pattern
+# `kriko-gpui/` is Rust, and a test suite proving a false-positive-shaped pattern
 # on purpose (mocks, duck-typed doubles) is not the code this gate is for.
 [tool.mypy]
 python_version = "3.13"
