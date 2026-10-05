@@ -11,15 +11,56 @@ use gpui::{
     MouseButton, PaintQuad, Pixels, SharedString, Styled, Window,
 };
 
-use crate::app::{CompareNote, Field, Kriko, QueueState};
-use crate::data::{self, CompareSubject, RiskCell, SpecCell};
-use crate::screens::{mono, plate_s, row_desc, severity_chip, th, trust_icon};
-use crate::marks::{mark_tile, phase_beat, Phase};
+use crate::app::{Field, Kriko};
+use crate::live::compare::{self as live, Check, Level, Loaded, Note, QState, MAX_SLOTS};
+use crate::marks::{self, mark_tile, phase_beat, Phase};
+use crate::screens::{empty_note, mono, plate_s, row_desc, th, trust_icon};
 use crate::theme::*;
 
-/// The subject data for a check, or None when nothing is known about it.
-fn subject_for(check: usize) -> Option<&'static CompareSubject> {
-    data::COMPARE_SUBJECTS.iter().find(|s| s.check == check)
+/// The agent's own mark by the id the engine knows it by; the built-in mark
+/// for one without a mark of its own.
+fn mark_for(id: &str) -> &'static marks::Mark {
+    match id {
+        "claude-code" => &marks::CLAUDE,
+        "opencode" => &marks::OPENCODE,
+        "antigravity-cli" => &marks::ANTIGRAVITY,
+        "mistral-vibe" => &marks::MISTRAL,
+        "github-copilot" => &marks::COPILOT,
+        _ => &marks::BUILTIN,
+    }
+}
+
+/// The engine's own word for a risk's severity, in the chip's look.
+fn level_chip(level: Level) -> Div {
+    let (glyph, fg, bg): (&[&str], u32, u32) = match level {
+        Level::Critical => (&X5, DANGER, DANGER_WASH),
+        Level::High => (&BANG5, 0xffb86b, 0xffb86b1f),
+        Level::Medium => (&BANG5, INK_2, WELL),
+        Level::Low | Level::Unrated => (&QUEUE5, MUTED, WELL),
+    };
+    div()
+        .h(px(24.0))
+        .px(px(8.0))
+        .flex()
+        .items_center()
+        .gap(px(7.0))
+        .rounded(px(7.0))
+        .bg(rgb(bg))
+        .border_1()
+        .border_color(rgba(HAIRLINE))
+        .font_family(MONO)
+        .text_size(px(10.0))
+        .text_color(rgb(fg))
+        .child(led_matrix(glyph, fg, 3.0, 1.0))
+        .child(level.word())
+}
+
+/// The check a slot holds, once read.
+fn check_in<'a>(app: &'a Kriko, id: &Option<String>) -> Option<&'a Check> {
+    match id.as_ref().and_then(|id| app.live.compare.checks.get(id)) {
+        Some(Loaded::Ready(c)) => Some(c),
+        _ => None,
+    }
 }
 
 /// A tiny bezel icon button (the slot's clear x, the note's remove x).
@@ -76,17 +117,17 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
                 return;
             }
             let (x, y) = board_point(bounds, event.position);
-            if this.compare_board_tool == 0 {
-                this.compare_drawing = true;
-                this.compare_stroke_current = vec![(x, y)];
+            if this.live.compare.board_tool == 0 {
+                this.live.compare.drawing = true;
+                this.live.compare.stroke_current = vec![(x, y)];
             } else {
-                this.compare_notes.push(CompareNote {
+                this.live.compare.notes.push(Note {
                     x,
                     y,
                     text: String::new(),
                 });
-                let open = this.compare_notes.len() - 1;
-                this.compare_note_open = Some(open);
+                let open = this.live.compare.notes.len() - 1;
+                this.live.compare.note_open = Some(open);
                 this.compare_note_input.value.clear();
             }
             cx.notify();
@@ -95,7 +136,7 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
 
     let move_cell = bounds_cell.clone();
     let on_move = cx.listener(move |this, event: &gpui::MouseMoveEvent, _w, cx| {
-        if !this.compare_drawing || this.compare_board_tool != 0 {
+        if !this.live.compare.drawing || this.live.compare.board_tool != 0 {
             return;
         }
         let bounds = move_cell.borrow().unwrap_or_default();
@@ -103,48 +144,51 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
             return;
         }
         let (x, y) = board_point(bounds, event.position);
-        let len = this.compare_stroke_current.len();
+        let len = this.live.compare.stroke_current.len();
         let moved = len == 0 || {
-            let last = this.compare_stroke_current[len - 1];
+            let last = this.live.compare.stroke_current[len - 1];
             (last.0 - x).abs() > 0.002 || (last.1 - y).abs() > 0.002
         };
         if moved {
-            this.compare_stroke_current.push((x, y));
+            this.live.compare.stroke_current.push((x, y));
             cx.notify();
         }
     });
 
     let on_up = cx.listener(|this, _: &gpui::MouseUpEvent, _w, cx| {
-        if this.compare_drawing {
-            this.compare_drawing = false;
-            if this.compare_stroke_current.len() > 1 {
-                let stroke = std::mem::take(&mut this.compare_stroke_current);
-                this.compare_strokes.push(stroke);
+        if this.live.compare.drawing {
+            this.live.compare.drawing = false;
+            if this.live.compare.stroke_current.len() > 1 {
+                let stroke = std::mem::take(&mut this.live.compare.stroke_current);
+                this.live.compare.strokes.push(stroke);
+                this.save_board_soon(cx);
             } else {
-                this.compare_stroke_current.clear();
+                this.live.compare.stroke_current.clear();
             }
             cx.notify();
         }
     });
 
     let undo = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.compare_strokes.pop();
+        this.live.compare.strokes.pop();
+        this.save_board_soon(cx);
         cx.notify();
     });
     let clear = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.compare_strokes.clear();
-        this.compare_notes.clear();
-        this.compare_note_open = None;
+        this.live.compare.strokes.clear();
+        this.live.compare.notes.clear();
+        this.live.compare.note_open = None;
+        this.save_board_soon(cx);
         cx.notify();
     });
     let close = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.compare_board_open = false;
+        this.live.compare.board_open = false;
         cx.notify();
     });
 
     let pick_tool = |i: usize| {
         cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.compare_board_tool = i;
+            this.live.compare.board_tool = i;
             cx.notify();
         })
     };
@@ -155,11 +199,11 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         .flex_wrap()
         .child(div().flex_1().min_w(px(0.0)))
         .child(
-            tool_chip("board-pen", "check", "PEN", app.compare_board_tool == 0)
+            tool_chip("board-pen", "check", "PEN", app.live.compare.board_tool == 0)
                 .on_click(pick_tool(0)),
         )
         .child(
-            tool_chip("board-note", "plus", "NOTE", app.compare_board_tool == 1)
+            tool_chip("board-note", "plus", "NOTE", app.live.compare.board_tool == 1)
                 .on_click(pick_tool(1)),
         )
         .child(plate_s("board-undo", "Undo mark").on_click(undo))
@@ -168,8 +212,8 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
 
     // The canvas that paints every stroke: fractions land wherever the
     // board is drawn now, never where the pen happened to be.
-    let mut strokes: Vec<Vec<(f32, f32)>> = app.compare_strokes.clone();
-    strokes.push(app.compare_stroke_current.clone());
+    let mut strokes: Vec<Vec<(f32, f32)>> = app.live.compare.strokes.clone();
+    strokes.push(app.live.compare.stroke_current.clone());
     let surface = canvas(
         move |bounds, _, _| bounds,
         move |bounds, _, window, _| {
@@ -217,7 +261,7 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     .size_full();
 
     let hint = div().flex().items_center().gap(px(8.0)).child(row_desc(
-        if app.compare_board_tool == 0 {
+        if app.live.compare.board_tool == 0 {
             "Drag over the board to mark it: circle the winner, cross out a column."
         } else {
             "Click anywhere on the board to pin a note where it belongs."
@@ -288,7 +332,7 @@ fn pin_notes(
     window: &mut Window,
     cx: &mut Context<Kriko>,
 ) -> Vec<gpui::AnyElement> {
-    let notes: Vec<CompareNote> = app.compare_notes.clone();
+    let notes: Vec<Note> = app.live.compare.notes.clone();
     let mut pinned: Vec<gpui::AnyElement> = Vec::new();
     for (i, note) in notes.into_iter().enumerate() {
         // The position is read from the box the board was painted in, so a
@@ -300,23 +344,24 @@ fn pin_notes(
             ),
             _ => (16.0, 16.0),
         };
-        let open = app.compare_note_open == Some(i);
+        let open = app.live.compare.note_open == Some(i);
         let open_note = cx.listener(move |this, _: &gpui::ClickEvent, window, cx| {
-            if i >= this.compare_notes.len() {
+            if i >= this.live.compare.notes.len() {
                 return;
             }
-            this.compare_note_open = Some(i);
-            this.compare_note_input.value = this.compare_notes[i].text.clone();
+            this.live.compare.note_open = Some(i);
+            this.compare_note_input.value = this.live.compare.notes[i].text.clone();
             let handle = this.compare_note_input.handle.clone();
             window.focus(&handle);
             cx.notify();
         });
         let remove_note = move |this: &mut Kriko, cx: &mut Context<Kriko>| {
-            if this.compare_note_open == Some(i) {
-                this.compare_note_open = None;
+            if this.live.compare.note_open == Some(i) {
+                this.live.compare.note_open = None;
             }
-            if i < this.compare_notes.len() {
-                this.compare_notes.remove(i);
+            if i < this.live.compare.notes.len() {
+                this.live.compare.notes.remove(i);
+                this.save_board_soon(cx);
             }
             cx.notify();
         };
@@ -382,91 +427,7 @@ fn pin_notes(
     pinned
 }
 
-// ---- the table ----
-
-/// Every spec label any chosen subject carries, first-seen order.
-fn spec_rows(
-    subjects: &[Option<&'static CompareSubject>],
-) -> Vec<(&'static str, Vec<Option<SpecCell>>)> {
-    let mut labels: Vec<&'static str> = Vec::new();
-    for subject in subjects.iter().flatten() {
-        for (label, _) in subject.specs {
-            if !labels.contains(label) {
-                labels.push(label);
-            }
-        }
-    }
-    labels
-        .into_iter()
-        .map(|label| {
-            let cells = subjects
-                .iter()
-                .map(|subject| {
-                    subject
-                        .and_then(|s| s.specs.iter().find(|(l, _)| *l == label))
-                        .map(|(_, cells)| cells[0])
-                })
-                .collect();
-            (label, cells)
-        })
-        .collect()
-}
-
-/// Every risk title any chosen subject carries, first-seen order.
-fn risk_rows(
-    subjects: &[Option<&'static CompareSubject>],
-) -> Vec<(&'static str, Vec<Option<RiskCell>>)> {
-    let mut labels: Vec<&'static str> = Vec::new();
-    for subject in subjects.iter().flatten() {
-        for (label, _) in subject.risks {
-            if !labels.contains(label) {
-                labels.push(label);
-            }
-        }
-    }
-    labels
-        .into_iter()
-        .map(|label| {
-            let cells = subjects
-                .iter()
-                .map(|subject| {
-                    subject
-                        .and_then(|s| s.risks.iter().find(|(l, _)| *l == label))
-                        .map(|(_, cells)| cells[0])
-                })
-                .collect();
-            (label, cells)
-        })
-        .collect()
-}
-
-/// The grounded claims each subject carries, aligned by position: row i
-/// holds every subject's i-th claim with the source it was read from.
-fn claim_rows(
-    subjects: &[Option<&'static CompareSubject>],
-) -> Vec<Vec<Option<(&'static str, &'static str)>>> {
-    let max = subjects
-        .iter()
-        .flatten()
-        .map(|s| data::evidence_for(&data::CHECKS[s.check]).claims.len())
-        .max()
-        .unwrap_or(0);
-    (0..max)
-        .map(|i| {
-            subjects
-                .iter()
-                .map(|subject| {
-                    subject.and_then(|s| {
-                        data::evidence_for(&data::CHECKS[s.check])
-                            .claims
-                            .get(i)
-                            .copied()
-                    })
-                })
-                .collect()
-        })
-        .collect()
-}
+/// ---- the table ----
 
 /// The preferred pin: one click marks a row as yours. Marked rows tint
 /// and join what the agent reads off the board.
@@ -496,32 +457,53 @@ fn pin_button(
         .on_click(listener)
 }
 
+fn preferred_chip() -> Div {
+    div()
+        .px(px(7.0))
+        .h(px(18.0))
+        .flex()
+        .items_center()
+        .rounded(px(6.0))
+        .bg(rgba(BRAND_WASH))
+        .font_family(MONO)
+        .text_size(px(9.0))
+        .text_color(rgb(BRAND_BRIGHT))
+        .child("PREFERRED")
+}
+
 /// The compare table: one column per slot, sections for specs and risks,
-/// one section and one detail row open at a time.
+/// one section and one detail row open at a time. Every cell is what the
+/// saved check and its product say; a column still being read says so.
 fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let slots: Vec<Option<usize>> = app.compare_slots.clone();
+    let all: Vec<Option<String>> = app.live.compare.slots.clone();
     // the column window: three products at a time when many are lined
     // up, scrubbed by the slider that sits above the table
-    let filled: Vec<usize> = slots.iter().flatten().copied().collect();
+    let filled: Vec<String> = all.iter().flatten().cloned().collect();
     let visible = filled.len().min(3);
     let first = if filled.len() > visible {
-        (app.compare_scroll * (filled.len() - visible) as f32).round() as usize
+        (app.live.compare.scroll * (filled.len() - visible) as f32).round() as usize
     } else {
         0
     };
-    let slots: Vec<Option<usize>> = if filled.len() > visible {
-        filled[first..first + visible]
-            .iter()
-            .map(|c| Some(*c))
-            .collect()
+    let slots: Vec<Option<String>> = if filled.len() > visible {
+        filled[first..first + visible].iter().cloned().map(Some).collect()
     } else {
-        slots
+        all
     };
-    let subjects: Vec<Option<&'static CompareSubject>> =
-        slots.iter().map(|s| (*s).and_then(subject_for)).collect();
-    let specs = spec_rows(&subjects);
-    let risks = risk_rows(&subjects);
+    let columns: Vec<Option<&Check>> = slots.iter().map(|s| check_in(app, s)).collect();
+    let specs = live::spec_rows(&columns);
+    let risks = live::risk_rows(&columns);
+    let names: Vec<String> = slots
+        .iter()
+        .map(|s| match s.as_ref().and_then(|id| app.live.compare.checks.get(id)) {
+            Some(Loaded::Ready(c)) => c.name.clone(),
+            Some(Loaded::Missing(_)) => "Not found".to_string(),
+            Some(Loaded::Loading) => "Reading".to_string(),
+            None => "Empty slot".to_string(),
+        })
+        .collect();
     let col_w = px(190.0);
+    let marks_now: Vec<String> = app.marks_now().to_vec();
 
     // The header: the attribute column, then one per slot.
     let mut head = div()
@@ -529,71 +511,58 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
         .items_center()
         .pb(px(10.0))
         .child(div().flex_1().min_w(px(150.0)).child(th("Attribute")));
-    for slot in &slots {
-        let label = slot
-            .map(|c| data::CHECKS[c].name.to_uppercase())
-            .unwrap_or_else(|| "EMPTY SLOT".to_string());
+    for (slot, name) in slots.iter().zip(&names) {
         head = head.child(
             div().w(col_w).min_w(px(0.0)).child(
                 div()
                     .font_family(MONO)
                     .text_size(px(11.0))
                     .text_color(rgb(if slot.is_some() { DIM } else { LED_OFF }))
-                    .child(label),
+                    .child(name.to_uppercase()),
             ),
         );
     }
 
     let mut body = card().flex().flex_col().child(head).child(hairline());
-    let section = app.compare_section;
+    let section = app.live.compare.section;
 
     // ---- the specs section ----
     let open_specs = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.compare_section = 0;
-        this.compare_detail = None;
+        this.live.compare.section = 0;
+        this.live.compare.detail = None;
         cx.notify();
     });
     let open_risks = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.compare_section = 1;
-        this.compare_detail = None;
+        this.live.compare.section = 1;
+        this.live.compare.detail = None;
         cx.notify();
     });
     let specs_label = format!("Specifications ({})", specs.len());
     let risks_label = format!("Known risks ({})", risks.len());
     body = body.child(
-        section_head(
-            "cmp-specs",
-            specs_label.as_str(),
-            "layers",
-            section == 0,
-            cx,
-        )
-        .on_click(open_specs),
+        section_head("cmp-specs", specs_label.as_str(), "layers", section == 0, cx)
+            .on_click(open_specs),
     );
 
     if section == 0 {
-        for (ri, (label, cells)) in specs.iter().enumerate() {
-            let differs = {
-                let vals: Vec<&str> = cells.iter().filter_map(|c| c.map(|c| c.value)).collect();
-                vals.len() > 1 && vals.windows(2).any(|w| w[0] != w[1])
-            };
-            let detail = app.compare_detail == Some((0, ri));
+        for (ri, row_data) in specs.iter().enumerate() {
+            let detail = app.live.compare.detail == Some((0, ri));
             let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                this.compare_detail = if this.compare_detail == Some((0, ri)) {
+                this.live.compare.detail = if this.live.compare.detail == Some((0, ri)) {
                     None
                 } else {
                     Some((0, ri))
                 };
                 cx.notify();
             });
-            let marked = app.compare_marks.contains(&(0, ri));
-            let pin = move |this: &mut Kriko, cx: &mut Context<Kriko>| {
-                if this.compare_marks.contains(&(0, ri)) {
-                    this.compare_marks.retain(|m| *m != (0, ri));
-                } else {
-                    this.compare_marks.push((0, ri));
+            let key = format!("spec:{}", row_data.label);
+            let marked = marks_now.contains(&key);
+            let pin = {
+                let key = key.clone();
+                move |this: &mut Kriko, cx: &mut Context<Kriko>| {
+                    this.toggle_mark(key.clone(), cx);
+                    cx.notify();
                 }
-                cx.notify();
             };
             let mut row = div()
                 .id(("spec-row", ri))
@@ -616,9 +585,9 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                                 .font_family(SANS)
                                 .text_size(px(14.0))
                                 .text_color(rgb(if detail || marked { ICE } else { INK }))
-                                .child(label.to_string()),
+                                .child(row_data.label.clone()),
                         )
-                        .when(differs, |d| {
+                        .when(row_data.differs, |d| {
                             d.child(
                                 div()
                                     .px(px(7.0))
@@ -633,23 +602,9 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                                     .child("DIFFERS"),
                             )
                         })
-                        .when(marked, |d| {
-                            d.child(
-                                div()
-                                    .px(px(7.0))
-                                    .h(px(18.0))
-                                    .flex()
-                                    .items_center()
-                                    .rounded(px(6.0))
-                                    .bg(rgba(BRAND_WASH))
-                                    .font_family(MONO)
-                                    .text_size(px(9.0))
-                                    .text_color(rgb(BRAND_BRIGHT))
-                                    .child("PREFERRED"),
-                            )
-                        }),
+                        .when(marked, |d| d.child(preferred_chip())),
                 );
-            for cell in cells {
+            for cell in &row_data.cells {
                 let cell_div = match cell {
                     Some(c) => div()
                         .w(col_w)
@@ -664,10 +619,10 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                                 .font_family(SANS)
                                 .text_size(px(14.0))
                                 .text_color(rgb(INK_2))
-                                .child(c.value.to_string()),
+                                .child(c.value.clone()),
                         )
-                        .child(trust_icon(c.backed)),
-                    None => div().w(col_w).child(mono("Not recorded", DIM)),
+                        .child(trust_icon((!c.source.is_empty()).then_some(true))),
+                    None => div().w(col_w).child(mono("Not stated", DIM)),
                 };
                 row = row.child(cell_div);
             }
@@ -681,15 +636,12 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                     .flex_col()
                     .gap(px(6.0))
                     .child(row_desc("Where each value comes from:"));
-                for (ci, cell) in cells.iter().enumerate() {
-                    let name = slots
-                        .get(ci)
-                        .and_then(|s| *s)
-                        .map(|c| data::CHECKS[c].name)
-                        .unwrap_or("Empty slot");
+                for (ci, cell) in row_data.cells.iter().enumerate() {
+                    let name = names.get(ci).cloned().unwrap_or_default();
                     let line = match cell {
-                        Some(c) => format!("{}: {} source(s) on record.", name, c.sources),
-                        None => format!("{}: no installed catalog holds this attribute.", name),
+                        Some(c) if !c.source.is_empty() => format!("{}: read from {}.", name, c.source),
+                        Some(_) => format!("{}: the catalog names no page for it.", name),
+                        None => format!("{}: no installed catalog states this.", name),
                     };
                     d = d.child(
                         div()
@@ -698,7 +650,7 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                             .items_center()
                             .gap(px(8.0))
                             .child(match cell {
-                                Some(c) => trust_icon(c.backed),
+                                Some(c) => trust_icon((!c.source.is_empty()).then_some(true)),
                                 None => led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0),
                             })
                             .child(mono(&line, MUTED)),
@@ -711,67 +663,82 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
             }
         }
         if specs.is_empty() {
-            body = body.child(row_desc("No specifications recorded for this shortlist."));
+            body = body.child(row_desc(if columns.iter().any(|c| c.is_some()) {
+                "No specifications are recorded for these products."
+            } else {
+                "Line up a saved check to read its specifications."
+            }));
         }
     }
 
     // ---- the risks section ----
     body = body.child(hairline());
     body = body.child(
-        section_head(
-            "cmp-risks",
-            risks_label.as_str(),
-            "check",
-            section == 1,
-            cx,
-        )
-        .on_click(open_risks),
+        section_head("cmp-risks", risks_label.as_str(), "check", section == 1, cx)
+            .on_click(open_risks),
     );
 
     if section == 1 {
-        for (ri, (label, cells)) in risks.iter().enumerate() {
-            let detail = app.compare_detail == Some((1, ri));
+        for (ri, row_data) in risks.iter().enumerate() {
+            let detail = app.live.compare.detail == Some((1, ri));
             let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                this.compare_detail = if this.compare_detail == Some((1, ri)) {
+                this.live.compare.detail = if this.live.compare.detail == Some((1, ri)) {
                     None
                 } else {
                     Some((1, ri))
                 };
                 cx.notify();
             });
-            let any = cells.iter().any(|c| c.is_some());
+            let key = format!("risk:{}", row_data.title);
+            let marked = marks_now.contains(&key);
+            let pin = {
+                let key = key.clone();
+                move |this: &mut Kriko, cx: &mut Context<Kriko>| {
+                    this.toggle_mark(key.clone(), cx);
+                    cx.notify();
+                }
+            };
             let mut row = div()
                 .id(("risk-row", ri))
                 .py(px(11.0))
                 .flex()
                 .items_center()
                 .cursor_pointer()
+                .when(marked, |s| s.bg(rgba(BRAND_WASH)))
                 .hover(|s| s.bg(rgba(GLASS_1)))
                 .on_click(toggle)
                 .child(
                     div()
                         .flex_1()
                         .min_w(px(150.0))
+                        .pr(px(12.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
                         .child(
                             div()
                                 .font_family(SANS)
                                 .text_size(px(14.0))
-                                .text_color(rgb(if detail { ICE } else { INK }))
-                                .child(label.to_string()),
-                        ),
+                                .text_color(rgb(if detail || marked { ICE } else { INK }))
+                                .child(row_data.title.clone()),
+                        )
+                        .when(marked, |d| d.child(div().flex().child(preferred_chip()))),
                 );
-            for cell in cells {
+            for cell in &row_data.cells {
                 let cell_div = match cell {
-                    Some(c) => div().w(col_w).min_w(px(0.0)).flex().items_center().child(
-                        match c.severity {
-                            Some(sev) => severity_chip(sev),
-                            None => mono("None", DIM),
-                        },
-                    ),
+                    Some(c) => div()
+                        .w(col_w)
+                        .min_w(px(0.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(level_chip(c.level))
+                        .child(trust_icon(c.backed())),
                     None => div().w(col_w).child(mono("Not recorded", DIM)),
                 };
                 row = row.child(cell_div);
             }
+            row = row.child(pin_button(("risk-pin", ri), marked, pin, cx));
             body = body.child(row);
             if detail {
                 let mut d = div()
@@ -779,15 +746,16 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                     .py(px(10.0))
                     .flex()
                     .flex_col()
-                    .gap(px(6.0))
+                    .gap(px(8.0))
                     .child(row_desc("The evidence behind each word:"));
-                for (ci, cell) in cells.iter().enumerate() {
-                    let name = slots
-                        .get(ci)
-                        .and_then(|s| *s)
-                        .map(|c| data::CHECKS[c].name)
-                        .unwrap_or("Empty slot");
+                for (ci, cell) in row_data.cells.iter().enumerate() {
+                    let name = names.get(ci).cloned().unwrap_or_default();
                     if let Some(c) = cell {
+                        let said = match (c.disputed, c.sources.len()) {
+                            (true, n) => format!("disputed · {n} source(s) on record"),
+                            (false, 0) => "no source on record".to_string(),
+                            (false, n) => format!("backed · {n} source(s) on record: {}", c.sources.join(", ")),
+                        };
                         d = d.child(
                             div()
                                 .pl(px(14.0))
@@ -799,24 +767,13 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
                                         .flex()
                                         .items_center()
                                         .gap(px(8.0))
-                                        .child(match c.severity {
-                                            Some(sev) => {
-                                                severity_chip(sev).into_any_element()
-                                            }
-                                            None => led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0),
-                                        })
-                                        .child(mono(name, MUTED)),
+                                        .child(level_chip(c.level))
+                                        .child(mono(&name, MUTED)),
                                 )
-                                .child(row_desc(c.body))
-                                .child(mono(
-                                    &format!("{} source(s) on record.", c.sources),
-                                    DIM,
-                                )),
+                                .child(row_desc(&c.body))
+                                .child(mono(&said, DIM)),
                         );
                     }
-                }
-                if !any {
-                    d = d.child(row_desc("Nothing recorded against any of them."));
                 }
                 body = body.child(well().p(px(12.0)).mb(px(6.0)).child(d));
             }
@@ -825,116 +782,18 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
             }
         }
         if risks.is_empty() {
-            body = body.child(row_desc("No known risks recorded for this shortlist."));
-        }
-    }
-
-    // ---- the knowledge section: the claims each product is grounded on ----
-    let claims = claim_rows(&subjects);
-    let claims_label = format!("Knowledge ({})", claims.len());
-    let open_knowledge = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.compare_section = 2;
-        this.compare_detail = None;
-        cx.notify();
-    });
-    body = body.child(hairline());
-    body = body.child(
-        section_head(
-            "cmp-knowledge",
-            claims_label.as_str(),
-            "database",
-            section == 2,
-            cx,
-        )
-        .on_click(open_knowledge),
-    );
-
-    if section == 2 {
-        // clicking a claim marks it as preferred — the knowledge you care
-        // about joins what the agent reads off the board
-        for (ri, cells) in claims.iter().enumerate() {
-            let marked = app.compare_marks.contains(&(2, ri));
-            let mark = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                if this.compare_marks.contains(&(2, ri)) {
-                    this.compare_marks.retain(|m| *m != (2, ri));
-                } else {
-                    this.compare_marks.push((2, ri));
-                }
-                cx.notify();
-            });
-            let mut row = div()
-                .id(("knowledge-row", ri))
-                .py(px(11.0))
-                .flex()
-                .items_center()
-                .cursor_pointer()
-                .when(marked, |s| s.bg(rgba(BRAND_WASH)))
-                .hover(|s| s.bg(rgba(GLASS_1)))
-                .on_click(mark)
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(150.0))
-                        .flex()
-                        .items_center()
-                        .gap(px(8.0))
-                        .child(
-                            div()
-                                .font_family(SANS)
-                                .text_size(px(14.0))
-                                .text_color(rgb(if marked { ICE } else { INK }))
-                                .child(format!("Grounded claim {}", ri + 1)),
-                        )
-                        .when(marked, |d| {
-                            d.child(
-                                div()
-                                    .px(px(7.0))
-                                    .h(px(18.0))
-                                    .flex()
-                                    .items_center()
-                                    .rounded(px(6.0))
-                                    .bg(rgba(BRAND_WASH))
-                                    .font_family(MONO)
-                                    .text_size(px(9.0))
-                                    .text_color(rgb(BRAND_BRIGHT))
-                                    .child("PREFERRED"),
-                            )
-                        }),
-                );
-            for cell in cells {
-                let cell_div = match cell {
-                    Some((claim, source)) => div()
-                        .w(col_w)
-                        .min_w(px(0.0))
-                        .flex()
-                        .flex_col()
-                        .gap(px(2.0))
-                        .child(
-                            div()
-                                .font_family(SANS)
-                                .text_size(px(13.0))
-                                .text_color(rgb(INK_2))
-                                .child(claim.to_string()),
-                        )
-                        .child(mono(source, DIM)),
-                    None => div().w(col_w).child(mono("No claim grounded", DIM)),
-                };
-                row = row.child(cell_div);
-            }
-            body = body.child(row);
-            if ri + 1 < claims.len() {
-                body = body.child(hairline());
-            }
-        }
-        if claims.is_empty() {
-            body = body.child(row_desc("No claims grounded for this shortlist."));
+            body = body.child(row_desc(if columns.iter().any(|c| c.is_some()) {
+                "No known risks are recorded for these products."
+            } else {
+                "Line up a saved check to read its known risks."
+            }));
         }
     }
 
     body
 }
 
-/// One section header: the icon, the label, and the open state.
+// One section header: the icon, the label, and the open state.
 fn section_head(
     id: impl Into<gpui::ElementId>,
     label: &str,
@@ -985,28 +844,28 @@ fn column_slider(
         if bounds.size.width <= px(0.0) {
             return;
         }
-        this.compare_dragging = true;
-        this.compare_scroll = (f32::from(ev.position.x - bounds.origin.x)
+        this.live.compare.dragging = true;
+        this.live.compare.scroll = (f32::from(ev.position.x - bounds.origin.x)
             / f32::from(bounds.size.width))
             .clamp(0.0, 1.0);
         cx.notify();
     });
     let drag_cell = cell.clone();
     let drag = cx.listener(move |this, ev: &gpui::MouseMoveEvent, _w, cx| {
-        if !this.compare_dragging {
+        if !this.live.compare.dragging {
             return;
         }
         let bounds = drag_cell.borrow().unwrap_or_default();
         if bounds.size.width <= px(0.0) {
             return;
         }
-        this.compare_scroll = (f32::from(ev.position.x - bounds.origin.x)
+        this.live.compare.scroll = (f32::from(ev.position.x - bounds.origin.x)
             / f32::from(bounds.size.width))
             .clamp(0.0, 1.0);
         cx.notify();
     });
     let release = cx.listener(|this, _: &gpui::MouseUpEvent, _w, cx| {
-        this.compare_dragging = false;
+        this.live.compare.dragging = false;
         cx.notify();
     });
 
@@ -1014,8 +873,8 @@ fn column_slider(
     let thumb_w = (track_w * visible as f32 / filled as f32)
         .max(24.0)
         .min(track_w);
-    let thumb_x = app.compare_scroll * (track_w - thumb_w);
-    let first = (app.compare_scroll * (filled - visible) as f32).round() as usize;
+    let thumb_x = app.live.compare.scroll * (track_w - thumb_w);
+    let first = (app.live.compare.scroll * (filled - visible) as f32).round() as usize;
 
     // the canvas quietly records the track's box, so the next drag knows
     // where the track sits on screen
@@ -1074,100 +933,139 @@ fn column_slider(
         ))
 }
 
-/// What the queue's agent is doing at `progress` percent through a product:
-/// reading its pages, then weighing them, then writing the claims.
-fn queue_phase(progress: f32) -> Phase {
-    if progress < 40.0 {
-        Phase::Reading
-    } else if progress < 75.0 {
-        Phase::Thinking
-    } else {
-        Phase::Writing
-    }
+/// One agent in a row of agent keys: its own mark, lit while it works.
+fn agent_key(
+    id: impl Into<gpui::ElementId>,
+    tile_id: &str,
+    agent_id: &str,
+    label: &str,
+    picked: bool,
+    working: bool,
+    motion: bool,
+) -> gpui::Stateful<Div> {
+    div()
+        .id(id)
+        .h(px(36.0))
+        .pl(px(5.0))
+        .pr(px(12.0))
+        .flex()
+        .items_center()
+        .gap(px(8.0))
+        .rounded(px(10.0))
+        .cursor_pointer()
+        .when(picked, |s| s.bg(rgb(WELL)).border_1().border_color(rgba(BORDER_CONTROL)))
+        .when(!picked, |s| s.hover(|h| h.bg(rgba(GLASS_1))))
+        .child(mark_tile(
+            tile_id,
+            mark_for(agent_id),
+            if picked && working { Phase::Thinking } else { Phase::Idle },
+            26.0,
+            motion,
+        ))
+        .child(
+            div()
+                .font_family(MONO)
+                .text_size(px(11.0))
+                .text_color(rgb(if picked { ICE } else { MUTED }))
+                .child(label.to_string()),
+        )
 }
 
-/// Queue mode: a few products lined up, one agent researching them in turn,
-/// and the researched ones handed to the slots below as a new draft.
+/// Queue mode: the products queued from the browser extension, one agent
+/// researching them in turn, and the researched ones handed to the slots
+/// below as a new draft.
 fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
-    let running = app.queue_running;
-    let done_n = app.queue.iter().filter(|q| q.state == QueueState::Done).count();
-    let left_n = app.queue.len() - done_n;
+    let c = &app.live.compare;
+    let running = c.queue_running;
+    let n = c.queue.len();
+    let done_n = c.queue.iter().filter(|q| q.state == QState::Done).count();
+    let ready_n = c
+        .queue
+        .iter()
+        .filter(|q| q.state == QState::Done && !q.lookup_id.is_empty())
+        .count();
+    let left_n = n - done_n;
+    let agent_name = c
+        .harnesses
+        .iter()
+        .find(|(id, _)| *id == c.queue_harness)
+        .map(|(_, label)| label.clone())
+        .unwrap_or_else(|| "The agent".to_string());
+    let working_id = c.queue_harness.clone();
 
     // ---- the agent that researches the queue ----
     let mut agent_row = div().flex().items_center().gap(px(8.0)).flex_wrap();
-    for (i, agent) in data::AGENTS.iter().enumerate() {
-        let usable = app.agent_allowed.get(i).copied().unwrap_or(agent.allowed)
-            && matches!(agent.state, TagState::Live | TagState::Done);
-        if !usable {
-            continue;
-        }
-        let picked = app.queue_agent == i;
-        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            if !this.queue_running {
-                this.queue_agent = i;
-            }
-            cx.notify();
-        });
+    for (i, (id, label)) in c.harnesses.iter().enumerate() {
+        let pick = {
+            let id = id.clone();
+            cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                if !this.live.compare.queue_running {
+                    this.live.compare.queue_harness = id.clone();
+                }
+                cx.notify();
+            })
+        };
         agent_row = agent_row.child(
-            div()
-                .id(("queue-agent", i))
-                .h(px(36.0))
-                .pl(px(5.0))
-                .pr(px(12.0))
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .rounded(px(10.0))
-                .cursor_pointer()
-                .when(picked, |s| {
-                    s.bg(rgb(WELL)).border_1().border_color(rgba(BORDER_CONTROL))
-                })
-                .when(!picked, |s| s.hover(|h| h.bg(rgba(GLASS_1))))
-                .child(mark_tile(
-                    &format!("queue-agent-tile-{i}"),
-                    agent.mark,
-                    if picked && running { Phase::Thinking } else { Phase::Idle },
-                    26.0,
-                    motion,
-                ))
-                .child(
-                    div()
-                        .font_family(MONO)
-                        .text_size(px(11.0))
-                        .text_color(rgb(if picked { ICE } else { MUTED }))
-                        .child(agent.name.to_string()),
-                )
-                .on_click(pick),
+            agent_key(
+                ("queue-agent", i),
+                &format!("queue-agent-tile-{i}"),
+                id,
+                label,
+                *id == working_id,
+                running,
+                motion,
+            )
+            .on_click(pick),
         );
     }
 
     // ---- the queue itself, in research order ----
     let mut rows = div().flex().flex_col();
-    let agent = &data::AGENTS[app.queue_agent];
-    let n = app.queue.len();
-    for (qi, item) in app.queue.iter().enumerate() {
-        let check = &data::CHECKS[item.check];
+    for (qi, item) in c.queue.iter().enumerate() {
+        let run = c.queue_run.get(&item.queue_id).cloned().unwrap_or_default();
         let phase = match item.state {
-            QueueState::Researching => queue_phase(item.progress),
-            QueueState::Done => Phase::Idle,
-            QueueState::Waiting => Phase::Off,
+            QState::Researching => run.phase.unwrap_or(Phase::Thinking),
+            QState::Done => Phase::Idle,
+            QState::Waiting => Phase::Off,
         };
+        let queue_id = item.queue_id.clone();
         let remove = move |this: &mut Kriko, cx: &mut Context<Kriko>| {
-            if qi < this.queue.len() && this.queue[qi].state != QueueState::Researching {
-                this.queue.remove(qi);
-            }
+            this.queue_remove(queue_id.clone(), cx);
             cx.notify();
         };
-        let (state, word) = match item.state {
-            QueueState::Waiting => (TagState::Queue, "Queued".to_string()),
-            QueueState::Researching => (TagState::Live, "Researching".to_string()),
-            QueueState::Done => (TagState::Done, format!("{} claims", item.claims)),
+        let (state, word) = match (item.state, &run.note) {
+            (QState::Researching, _) => (TagState::Live, "Researching".to_string()),
+            (QState::Done, _) => (
+                TagState::Done,
+                match run.claims {
+                    Some(k) => format!("{k} claims"),
+                    None => "Researched".to_string(),
+                },
+            ),
+            (QState::Waiting, Some(note)) if note == "not in your catalogs" => {
+                (TagState::Need, "Not in catalogs".to_string())
+            }
+            (QState::Waiting, Some(_)) => (TagState::Need, "Passed over".to_string()),
+            (QState::Waiting, None) => (TagState::Queue, "Queued".to_string()),
         };
         let status: gpui::AnyElement = match item.state {
-            QueueState::Researching => phase_beat(&format!("queue-beat-{qi}"), phase, motion)
-                .into_any_element(),
+            QState::Researching => {
+                phase_beat(&format!("queue-beat-{qi}"), phase, motion).into_any_element()
+            }
             _ => tag(format!("queue-tag-{qi}"), state, &word, motion).into_any_element(),
+        };
+        let since = live::ago(&item.added_at);
+        let sub = match (item.state, &run.note) {
+            (QState::Researching, _) => run.line.clone(),
+            (QState::Done, _) => format!("from {} · ready to compare", item.origin),
+            (QState::Waiting, Some(note)) => format!("from {} · {}", item.origin, note),
+            (QState::Waiting, None) => format!("from {} · queued {}", item.origin, since),
+        };
+        let progress = match item.state {
+            QState::Done => 100.0,
+            QState::Researching => run.progress,
+            QState::Waiting => 0.0,
         };
         rows = rows.child(
             div()
@@ -1178,7 +1076,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                 .child(mono(&format!("{:02}", qi + 1), DIM))
                 .child(mark_tile(
                     &format!("queue-row-tile-{qi}"),
-                    agent.mark,
+                    mark_for(&working_id),
                     phase,
                     34.0,
                     motion,
@@ -1195,40 +1093,18 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                                 .font_family(SANS)
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .text_size(px(14.0))
-                                .text_color(rgb(if item.state == QueueState::Waiting {
-                                    INK_2
-                                } else {
-                                    INK
-                                }))
-                                .child(check.name.to_string()),
+                                .text_color(rgb(if item.state == QState::Waiting { INK_2 } else { INK }))
+                                .child(item.title()),
                         )
-                        .child(mono(
-                            &match item.state {
-                                QueueState::Researching => match phase {
-                                    Phase::Reading => format!("reading sources for {}", check.pack),
-                                    Phase::Thinking => "weighing what the sources agree on".to_string(),
-                                    _ => "writing claims to the store".to_string(),
-                                },
-                                QueueState::Done => format!("from {} · ready to compare", item.origin),
-                                QueueState::Waiting => format!("from {} · waiting its turn", item.origin),
-                            },
-                            MUTED,
-                        )),
+                        .child(mono(&sub, MUTED)),
                 )
-                .child(
-                    div()
-                        .w(px(150.0))
-                        .flex_none()
-                        .child(meter_slim(item.progress, 12)),
-                )
+                .child(div().w(px(150.0)).flex_none().child(meter_slim(progress, 12)))
                 .child(div().w(px(132.0)).flex_none().flex().child(status))
                 .child(
-                    div()
-                        .w(px(24.0))
-                        .flex_none()
-                        .children((item.state != QueueState::Researching).then(|| {
-                            x_button(("queue-remove", qi), cx, remove).into_any_element()
-                        })),
+                    div().w(px(24.0)).flex_none().children(
+                        (item.state != QState::Researching)
+                            .then(|| x_button(("queue-remove", qi), cx, remove).into_any_element()),
+                    ),
                 ),
         );
         if qi + 1 < n {
@@ -1236,73 +1112,84 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         }
     }
     if n == 0 {
-        rows = rows.child(
-            div()
-                .py(px(14.0))
-                .child(row_desc("The queue is empty. Queue the products you are weighing up from their listings.")),
-        );
+        rows = rows.child(div().py(px(14.0)).child(row_desc(if c.queue_loaded {
+            "The queue is empty. Queue the products you are weighing up from their listings."
+        } else {
+            "Reading the queue..."
+        })));
     }
 
     // ---- the keys ----
     let start = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        if this.queue_running {
-            this.queue_running = false;
-            for q in this.queue.iter_mut() {
-                if q.state == QueueState::Researching {
-                    q.state = QueueState::Waiting;
-                    q.progress = 0.0;
-                }
-            }
-            cx.notify();
+        if this.live.compare.queue_running {
+            this.queue_stop();
         } else {
             this.queue_start(cx);
         }
+        cx.notify();
     });
     let to_compare = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.queue_to_compare();
+        this.queue_to_compare(cx);
         cx.notify();
     });
     let clear_done = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.queue.retain(|q| q.state != QueueState::Done);
+        this.queue_clear_done(cx);
         cx.notify();
     });
-    let auto_toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.queue_auto = !this.queue_auto;
+    let auto_on = c.queue_auto;
+    let auto_toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+        this.set_queue_auto(!auto_on, cx);
         cx.notify();
     });
     let overall = if n == 0 {
         0.0
     } else {
-        app.queue.iter().map(|q| q.progress).sum::<f32>() / n as f32
+        c.queue
+            .iter()
+            .map(|q| match q.state {
+                QState::Done => 100.0,
+                QState::Researching => c.queue_run.get(&q.queue_id).map(|r| r.progress).unwrap_or(0.0),
+                QState::Waiting => 0.0,
+            })
+            .sum::<f32>()
+            / n as f32
     };
-    let summary = if running {
-        format!("{} researching · {done_n} of {n} done", agent.name)
+    let summary = if !c.queue_loaded {
+        "reading".to_string()
+    } else if running {
+        format!("{agent_name} researching · {done_n} of {n} done")
     } else if n > 0 && left_n == 0 {
         format!("all {n} researched · ready to compare")
+    } else if n == 0 {
+        "nothing queued".to_string()
     } else {
         format!("{left_n} waiting · {done_n} researched")
     };
+    let can_start = running
+        || (c.queue.iter().any(|q| q.state == QState::Waiting) && !c.harnesses.is_empty());
 
     let keys = div()
         .flex()
         .items_center()
         .gap(px(12.0))
         .flex_wrap()
-        .child(
-            key(
-                "queue-start",
-                if running {
-                    "Stop queue"
-                } else if done_n > 0 && left_n > 0 {
-                    "Resume queue"
-                } else {
-                    "Start queue"
-                },
+        .when(can_start, |d| {
+            d.child(
+                key(
+                    "queue-start",
+                    if running {
+                        "Stop queue"
+                    } else if done_n > 0 && left_n > 0 {
+                        "Resume queue"
+                    } else {
+                        "Start queue"
+                    },
+                )
+                .on_click(start),
             )
-            .on_click(start),
-        )
-        .when(done_n >= 2, |d| {
-            d.child(plate_s("queue-compare", &format!("Compare {done_n} below")).on_click(to_compare))
+        })
+        .when(ready_n >= 2, |d| {
+            d.child(plate_s("queue-compare", &format!("Compare {ready_n} below")).on_click(to_compare))
         })
         .when(done_n > 0 && !running, |d| {
             d.child(plate_s("queue-clear", "Clear done").on_click(clear_done))
@@ -1314,7 +1201,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                 .items_center()
                 .gap(px(10.0))
                 .child(mono("FILL SLOTS WHEN DONE", DIM))
-                .child(switch_anim("queue-auto", app.queue_auto, motion).on_click(auto_toggle)),
+                .child(switch_anim("queue-auto", auto_on, motion).on_click(auto_toggle)),
         );
 
     card()
@@ -1334,7 +1221,12 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             "Products you queue from the browser extension. One agent researches each in turn, sources first, then claims, and the researched ones land in the slots below to compare.",
         ))
         .child(meter_live("queue-overall", overall, 28, running, motion))
-        .child(agent_row)
+        .child(if c.harnesses.is_empty() {
+            empty_note("No agent is ready on this machine. Settings shows which ones Kriko can start.")
+                .into_any_element()
+        } else {
+            agent_row.into_any_element()
+        })
         .child(
             // how a product gets here: from its listing, through the panel
             well()
@@ -1345,10 +1237,9 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                 .gap(px(12.0))
                 .child(icon("extension", 16.0).text_color(rgb(ICE)))
                 .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(0.0))
-                        .child(row_desc("On a listing, open the Kriko panel and press Add to queue. It lands here, in the order you queued it.")),
+                    div().flex_1().min_w(px(0.0)).child(row_desc(
+                        "On a listing, open the Kriko panel and press Add to queue. It lands here, in the order you queued it.",
+                    )),
                 )
                 .child(keycap("Alt"))
                 .child(keycap("K")),
@@ -1362,7 +1253,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
 
     // ---- drafts + the board toggle ----
     let board_toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.compare_board_open = !this.compare_board_open;
+        this.live.compare.board_open = !this.live.compare.board_open;
         cx.notify();
     });
     let mut drafts_row = div()
@@ -1371,14 +1262,14 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .gap(px(8.0))
         .flex_wrap()
         .child(mono("DRAFTS", DIM));
-    for (i, draft) in app.compare_drafts.iter().enumerate() {
+    let open_draft = app.live.compare.draft.clone();
+    for (i, draft) in app.live.compare.drafts.iter().enumerate() {
+        let id = draft.draft_id.clone();
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.compare_draft = i;
-            this.compare_slots = this.compare_drafts[i].slots.clone();
-            this.compare_detail = None;
+            this.select_draft(&id, cx);
             cx.notify();
         });
-        let current = app.compare_draft == i;
+        let current = open_draft.as_deref() == Some(draft.draft_id.as_str());
         drafts_row = drafts_row.child(
             div()
                 .id(("draft", i))
@@ -1391,47 +1282,40 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .font_family(MONO)
                 .text_size(px(11.0))
                 .when(current, |s| {
-                    s.bg(rgb(WELL))
-                        .border_1()
-                        .border_color(rgba(HAIRLINE))
-                        .text_color(rgb(ICE))
+                    s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE)).text_color(rgb(ICE))
                 })
                 .when(!current, |s| {
-                    s.text_color(rgb(MUTED))
-                        .hover(|h| h.bg(rgba(GLASS_1)).text_color(rgb(INK)))
+                    s.text_color(rgb(MUTED)).hover(|h| h.bg(rgba(GLASS_1)).text_color(rgb(INK)))
                 })
                 .child(draft.name.clone())
                 .on_click(pick),
         );
     }
+    if !app.live.compare.drafts_loaded {
+        drafts_row = drafts_row.child(mono("reading", DIM));
+    } else if app.live.compare.drafts.is_empty() {
+        drafts_row = drafts_row.child(mono("none saved yet", DIM));
+    }
     let new_draft = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        let n = this.compare_drafts.len() + 1;
-        this.compare_drafts.push(crate::app::CompareDraftDef {
-            name: format!("New draft {n}"),
-            slots: this.compare_slots.clone(),
-        });
-        this.compare_draft = this.compare_drafts.len() - 1;
+        this.new_draft(cx);
         cx.notify();
     });
     let save_draft = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        let d = this.compare_draft;
-        if d < this.compare_drafts.len() {
-            this.compare_drafts[d].slots = this.compare_slots.clone();
-        }
+        this.save_draft(cx);
         cx.notify();
     });
     let delete_draft = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        if this.compare_drafts.len() > 1 {
-            this.compare_drafts.remove(this.compare_draft);
-            this.compare_draft = 0;
-            this.compare_slots = this.compare_drafts[0].slots.clone();
-        }
+        this.delete_draft(cx);
         cx.notify();
     });
+    let unsaved = app.draft_unsaved();
     drafts_row = drafts_row
         .child(plate_s("draft-new", "+ New").on_click(new_draft))
         .child(plate_s("draft-save", "Save").on_click(save_draft))
-        .child(plate_s("draft-delete", "Delete").on_click(delete_draft))
+        .when(open_draft.is_some(), |d| {
+            d.child(plate_s("draft-delete", "Delete").on_click(delete_draft))
+        })
+        .when(unsaved, |d| d.child(mono("UNSAVED SLOTS", DIM)))
         .child(div().flex_1().min_w(px(0.0)))
         .child(
             div()
@@ -1445,80 +1329,46 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .cursor_pointer()
                 .font_family(MONO)
                 .text_size(px(12.0))
-                .when(app.compare_board_open, |s| {
-                    s.bg(rgb(WELL))
-                        .border_1()
-                        .border_color(rgba(BORDER_CONTROL))
-                        .text_color(rgb(ICE))
+                .when(app.live.compare.board_open, |s| {
+                    s.bg(rgb(WELL)).border_1().border_color(rgba(BORDER_CONTROL)).text_color(rgb(ICE))
                 })
-                .when(!app.compare_board_open, |s| {
-                    s.text_color(rgb(MUTED))
-                        .hover(|h| h.bg(rgba(GLASS_1)).text_color(rgb(INK)))
+                .when(!app.live.compare.board_open, |s| {
+                    s.text_color(rgb(MUTED)).hover(|h| h.bg(rgba(GLASS_1)).text_color(rgb(INK)))
                 })
-                .child(
-                    icon("check", 14.0).text_color(rgb(if app.compare_board_open {
-                        ICE
-                    } else {
-                        MUTED
-                    })),
-                )
+                .child(icon("check", 14.0).text_color(rgb(if app.live.compare.board_open {
+                    ICE
+                } else {
+                    MUTED
+                })))
                 .child("BOARD")
                 .on_click(board_toggle),
         );
 
     // ---- the slots: at least two, one trailing empty, eight at most ----
-    let mut slots: Vec<Option<usize>> = app.compare_slots.clone();
+    let mut slots: Vec<Option<String>> = app.live.compare.slots.clone();
     while slots.len() < 2 {
         slots.push(None);
     }
-    if slots.len() < 8 {
+    if slots.len() < MAX_SLOTS {
         slots.push(None);
     }
-    // how many resources stand behind each product's knowledge, against
-    // the best-read product on the board
-    let sources_of = |subject: Option<&'static CompareSubject>| -> u32 {
-        subject
-            .map(|s| {
-                let specs: u32 = s
-                    .specs
-                    .iter()
-                    .flat_map(|(_, cells)| cells.iter())
-                    .map(|c| c.sources as u32)
-                    .sum();
-                let risks: u32 = s
-                    .risks
-                    .iter()
-                    .flat_map(|(_, cells)| cells.iter())
-                    .map(|c| c.sources as u32)
-                    .sum();
-                let claims = data::evidence_for(&data::CHECKS[s.check]).claims.len() as u32;
-                specs + risks + claims
-            })
-            .unwrap_or(0)
-    };
+    // how many sources stand behind each product's knowledge, against the
+    // best-read product on the board
     let best_read = slots
         .iter()
-        .filter_map(|s| (*s).and_then(subject_for))
-        .map(|s| sources_of(Some(s)))
+        .filter_map(|s| check_in(app, s))
+        .map(|c| c.sources())
         .max()
         .unwrap_or(1)
         .max(1);
     let mut slot_row = div().flex().items_start().gap(px(12.0)).flex_wrap();
-    for (i, slot) in slots.iter().take(8).enumerate() {
+    for (i, slot) in slots.iter().take(MAX_SLOTS).enumerate() {
         let open_picker = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.compare_picker = if this.compare_picker == Some(i) {
-                None
-            } else {
-                Some(i)
-            };
+            this.live.compare.picker = if this.live.compare.picker == Some(i) { None } else { Some(i) };
             cx.notify();
         });
         let clear_slot = move |this: &mut Kriko, cx: &mut Context<Kriko>| {
-            while this.compare_slots.len() <= i {
-                this.compare_slots.push(None);
-            }
-            this.compare_slots[i] = None;
-            this.compare_detail = None;
+            this.clear_slot(i);
             cx.notify();
         };
         let label = ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH"][i];
@@ -1539,37 +1389,56 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     .gap(px(8.0))
                     .child(mono(label, DIM))
                     .child(div().flex_1())
-                    .children(slot.map(|_| {
-                        x_button(("slot-clear", i), cx, clear_slot).into_any_element()
-                    })),
+                    .children(slot.as_ref().map(|_| x_button(("slot-clear", i), cx, clear_slot).into_any_element())),
             );
-        col = match slot {
-            Some(c) => {
-                let check = &data::CHECKS[*c];
-                let sources = sources_of(subject_for(*c));
+        col = match slot.as_ref().map(|id| (id, app.live.compare.checks.get(id))) {
+            Some((_, Some(Loaded::Ready(check)))) => {
+                let sources = check.sources();
                 let rating = sources as f32 / best_read as f32 * 100.0;
                 col.child(
-                        div()
-                            .min_w(px(0.0))
-                            .font_family(SANS)
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .text_size(px(15.0))
-                            .text_color(rgb(INK))
-                            .child(check.name.to_string()),
-                    )
-                    .child(mono(check.pack, MUTED))
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(8.0))
-                            .child(mono("INFO", DIM))
-                            .child(meter_slim(rating, 10).flex_1()),
-                    )
-                    .child(mono(
-                        &format!("{sources} sources · vs the best-read here"),
-                        MUTED,
-                    ))
+                    div()
+                        .min_w(px(0.0))
+                        .font_family(SANS)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(px(15.0))
+                        .text_color(rgb(INK))
+                        .child(check.name.clone()),
+                )
+                .child(mono(
+                    if check.category.is_empty() { "no catalog matched" } else { check.category.as_str() },
+                    MUTED,
+                ))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(mono("INFO", DIM))
+                        .child(meter_slim(rating, 10).flex_1()),
+                )
+                .child(mono(&format!("{sources} sources · vs the best-read here"), MUTED))
+            }
+            Some((id, Some(Loaded::Missing(why)))) => col
+                .child(mono("NOT FOUND", DIM))
+                .child(row_desc(&format!("The saved check {id} could not be read: {why}"))),
+            Some((id, _)) => {
+                let name = app
+                    .live
+                    .compare
+                    .history
+                    .iter()
+                    .find(|h| h.lookup_id == *id)
+                    .map(|h| h.label.clone())
+                    .unwrap_or_else(|| "Reading the saved check".to_string());
+                col.child(
+                    div()
+                        .font_family(SANS)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(px(15.0))
+                        .text_color(rgb(INK_2))
+                        .child(name),
+                )
+                .child(mono("reading...", DIM))
             }
             None => col.child(
                 div()
@@ -1590,17 +1459,13 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     }
 
     // ---- the picker: every saved check, one click to assign ----
-    let picker_card = app.compare_picker.map(|slot_i| {
+    let picker_card = app.live.compare.picker.map(|slot_i| {
         let mut list = div().flex().flex_col().flex_none();
-        for (ci, check) in data::CHECKS.iter().enumerate() {
-            let taken = slots.contains(&Some(ci));
+        for (ci, item) in app.live.compare.history.iter().enumerate() {
+            let taken = slots.contains(&Some(item.lookup_id.clone()));
+            let lookup_id = item.lookup_id.clone();
             let assign = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                while this.compare_slots.len() <= slot_i {
-                    this.compare_slots.push(None);
-                }
-                this.compare_slots[slot_i] = Some(ci);
-                this.compare_picker = None;
-                this.compare_detail = None;
+                this.assign_slot(slot_i, lookup_id.clone(), cx);
                 cx.notify();
             });
             list = list.child(
@@ -1617,120 +1482,118 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     .when(taken, |s| s.opacity(0.35))
                     .on_click(assign)
                     .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .flex()
-                            .flex_col()
-                            .child(
-                                div()
-                                    .font_family(SANS)
-                                    .text_size(px(13.0))
-                                    .text_color(rgb(if taken { MUTED } else { INK }))
-                                    .child(check.name.to_string()),
-                            ),
+                        div().flex_1().min_w(px(0.0)).flex().flex_col().child(
+                            div()
+                                .font_family(SANS)
+                                .text_size(px(13.0))
+                                .text_color(rgb(if taken { MUTED } else { INK }))
+                                .child(item.label.clone()),
+                        ),
                     )
-                    .child(mono(check.pack, MUTED)),
+                    .child(mono(
+                        &if item.category.is_empty() {
+                            live::ago(&item.created_at)
+                        } else {
+                            format!("{} · {}", item.category, live::ago(&item.created_at))
+                        },
+                        MUTED,
+                    )),
             );
         }
+        let body: gpui::AnyElement = if !app.live.compare.history_loaded {
+            empty_note("Reading your saved checks...").into_any_element()
+        } else if app.live.compare.history.is_empty() {
+            empty_note("No saved checks yet. Run a check, or use the extension on a listing, and it will be here.")
+                .into_any_element()
+        } else {
+            div()
+                .id("picker-scroll")
+                .max_h(px(260.0))
+                .overflow_y_scroll()
+                .flex()
+                .flex_col()
+                .child(list)
+                .into_any_element()
+        };
         card()
             .flex()
             .flex_col()
             .gap(px(4.0))
             .child(eyebrow("Pick a saved check"))
             .child(hairline())
-            .child(
+            .child(body)
+    });
+
+    // ---- the answer, said from the lined-up data ----
+    let ready: Vec<Option<&Check>> = app
+        .live
+        .compare
+        .slots
+        .iter()
+        .flatten()
+        .map(|id| match app.live.compare.checks.get(id) {
+            Some(Loaded::Ready(c)) => Some(c),
+            _ => None,
+        })
+        .collect();
+    let said = live::answer_lines(&ready);
+    let answer_card = (!said.is_empty()).then(|| {
+        let mut lines = div().flex().flex_col().gap(px(6.0));
+        for line in said {
+            lines = lines.child(
                 div()
-                    .id("picker-scroll")
-                    .max_h(px(260.0))
-                    .overflow_y_scroll()
-                    .flex()
-                    .flex_col()
-                    .child(list),
-            )
+                    .font_family(SANS)
+                    .text_size(px(14.0))
+                    .line_height(px(21.0))
+                    .text_color(rgb(INK_2))
+                    .child(line),
+            );
+        }
+        card()
+            .flex()
+            .flex_col()
+            .gap(px(8.0))
+            .child(eyebrow("What the lined-up data says"))
+            .child(lines)
+            .child(mono("COUNTED FROM THE COLUMNS BELOW · NOT A RANKING", DIM))
     });
 
     // ---- the agent: which one answers, and everything it sees ----
-    let picks: Vec<usize> = app.compare_slots.iter().flatten().copied().collect();
-    let board_subjects: Vec<Option<&'static CompareSubject>> =
-        picks.iter().map(|&c| subject_for(c)).collect();
-    let spec_n = spec_rows(&board_subjects).len();
-    let risk_n = risk_rows(&board_subjects).len();
-    let claim_n = claim_rows(&board_subjects).len();
-    let notes_n = app
-        .compare_notes
-        .iter()
-        .filter(|n| !n.text.trim().is_empty())
-        .count();
-    let marks_n = app.compare_marks.len();
-    let strokes_n = app.compare_strokes.len();
-    let notes_chars: usize = app.compare_notes.iter().map(|n| n.text.len()).sum();
-    let tokens = picks.len() * 18
-        + spec_n * 16
-        + risk_n * 18
-        + claim_n * 28
-        + marks_n * 6
-        + strokes_n * 8
-        + notes_chars / 4;
+    let spec_n = live::spec_rows(&ready).len();
+    let risk_n = live::risk_rows(&ready).len();
+    let notes_n = app.live.compare.notes.iter().filter(|n| !n.text.trim().is_empty()).count();
+    let marks_n = app.marks_now().len();
+    let strokes_n = app.live.compare.strokes.len();
     let attached = format!(
-        "attached: {} subjects · {} spec rows · {} risks · {} claims · {} notes · {} marks · {} strokes — ≈{:.1}k tokens",
-        picks.len(),
+        "attached: {} checks · {} spec rows · {} risks · {} notes · {} marks · {} strokes",
+        ready.iter().flatten().count(),
         spec_n,
         risk_n,
-        claim_n,
         notes_n,
         marks_n,
         strokes_n,
-        tokens as f32 / 1000.0
     );
-    let answerers: Vec<usize> = data::AGENTS
-        .iter()
-        .enumerate()
-        .filter(|(_, a)| a.can_answer)
-        .map(|(i, _)| i)
-        .collect();
+    let waiting_answer = app.live.compare.asking || app.live.compare.questions.iter().any(|q| q.answer.is_none() && !app.live.compare.failed.contains_key(&q.question_id));
     let mut agent_row = div().flex().items_center().gap(px(8.0)).flex_wrap();
-    for &ai in &answerers {
-        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.compare_agent = ai;
-            cx.notify();
-        });
-        let agent = &data::AGENTS[ai];
-        let picked = app.compare_agent == ai;
+    for (ai, (id, label)) in app.live.compare.harnesses.iter().enumerate() {
+        let pick = {
+            let id = id.clone();
+            cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.live.compare.harness = id.clone();
+                cx.notify();
+            })
+        };
         agent_row = agent_row.child(
-            div()
-                .id(("cmp-agent", ai))
-                .h(px(34.0))
-                .px(px(10.0))
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .rounded(px(10.0))
-                .cursor_pointer()
-                .when(picked, |s| {
-                    s.bg(rgb(WELL))
-                        .border_1()
-                        .border_color(rgba(BORDER_CONTROL))
-                })
-                .child(mark_tile(
-                    &format!("cmp-agent-tile-{ai}"),
-                    agent.mark,
-                    if app.compare_questions.iter().any(|q| q.agent == ai && q.answer.is_none()) {
-                        Phase::Thinking
-                    } else {
-                        Phase::Idle
-                    },
-                    26.0,
-                    motion,
-                ))
-                .child(
-                    div()
-                        .font_family(MONO)
-                        .text_size(px(11.0))
-                        .text_color(rgb(if picked { ICE } else { MUTED }))
-                        .child(agent.name.to_string()),
-                )
-                .on_click(pick),
+            agent_key(
+                ("cmp-agent", ai),
+                &format!("cmp-agent-tile-{ai}"),
+                id,
+                label,
+                *id == app.live.compare.harness,
+                waiting_answer,
+                motion,
+            )
+            .on_click(pick),
         );
     }
 
@@ -1745,9 +1608,10 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     );
     let ask = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         this.ask_compare_question(cx);
+        cx.notify();
     });
     let mut suggestions = div().flex().items_center().gap(px(8.0)).flex_wrap();
-    for (i, text) in data::COMPARE_SUGGESTIONS.iter().enumerate() {
+    for (i, text) in crate::data::COMPARE_SUGGESTIONS.iter().enumerate() {
         let fill = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.compare_question_input.value = text.to_string();
             cx.notify();
@@ -1772,10 +1636,26 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .on_click(fill),
         );
     }
-    let draft_name = app.compare_drafts[app.compare_draft].name.clone();
+    let draft_name = app
+        .live
+        .compare
+        .draft
+        .as_ref()
+        .and_then(|id| app.live.compare.drafts.iter().find(|d| d.draft_id == *id))
+        .map(|d| d.name.clone())
+        .unwrap_or_default();
+    let agent_label = app
+        .live
+        .compare
+        .harnesses
+        .iter()
+        .find(|(id, _)| *id == app.live.compare.harness)
+        .map(|(_, l)| l.clone())
+        .unwrap_or_else(|| "your agent".to_string());
     let mut questions = div().flex().flex_col().gap(px(10.0));
-    for (qi, q) in app.compare_questions.iter().enumerate() {
-        let agent = &data::AGENTS[q.agent];
+    for (qi, q) in app.live.compare.questions.iter().enumerate() {
+        let failure = app.live.compare.failed.get(&q.question_id);
+        let line = app.live.compare.job_line.get(&q.job_id);
         questions = questions.child(
             well()
                 .p(px(14.0))
@@ -1798,39 +1678,59 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                                 .child(q.text.clone()),
                         ),
                 )
-                .child(match &q.answer {
-                    Some(a) => div().pl(px(24.0)).flex().flex_col().gap(px(6.0)).child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(8.0))
-                            .child(tag(
-                                format!("compare-answered-{qi}"),
-                                TagState::Done,
-                                &format!("{} answered", agent.name),
-                                motion,
-                            )),
-                    ).child(
-                        div()
-                            .font_family(SANS)
-                            .text_size(px(14.0))
-                            .line_height(px(21.0))
-                            .text_color(rgb(INK_2))
-                            .child(a.clone()),
-                    ),
-                    None => div()
+                .child(match (&q.answer, failure) {
+                    (Some(a), _) => div()
                         .pl(px(24.0))
                         .flex()
-                        .items_center()
-                        .gap(px(8.0))
-                        .child(tag(
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(div().flex().items_center().gap(px(8.0)).child(tag(
+                            format!("compare-answered-{qi}"),
+                            TagState::Done,
+                            "answered",
+                            motion,
+                        )))
+                        .child(
+                            div()
+                                .font_family(SANS)
+                                .text_size(px(14.0))
+                                .line_height(px(21.0))
+                                .text_color(rgb(INK_2))
+                                .child(a.clone()),
+                        ),
+                    (None, Some(why)) => div()
+                        .pl(px(24.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(div().flex().items_center().gap(px(8.0)).child(tag(
+                            format!("compare-failed-{qi}"),
+                            TagState::Need,
+                            "no answer",
+                            motion,
+                        )))
+                        .child(row_desc(why)),
+                    (None, None) => div()
+                        .pl(px(24.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(div().flex().items_center().gap(px(8.0)).child(tag(
                             format!("compare-asking-{qi}"),
                             TagState::Live,
-                            &format!("asking {}", agent.name),
+                            &format!("asking {agent_label}"),
                             motion,
-                        )),
+                        )))
+                        .children(line.map(|l| mono(l, MUTED))),
                 })
-                .child(mono(&format!("kept with {}", draft_name), DIM)),
+                .child(mono(
+                    &format!(
+                        "kept with {} · asked {}",
+                        if draft_name.is_empty() { "this draft" } else { draft_name.as_str() },
+                        live::ago(&q.asked_at)
+                    ),
+                    DIM,
+                )),
         );
     }
 
@@ -1840,16 +1740,15 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .gap(px(12.0))
         .child(eyebrow("Ask your agent"))
         .child(row_desc(
-            "A question about this shortlist. The agent reads the whole board: the columns, your marks, your notes.",
+            "A question about this shortlist. The agent reads the saved checks in the slots; asking saves the slots to the draft first.",
         ))
-        .child(agent_row)
-        .child(
-            div()
-                .font_family(MONO)
-                .text_size(px(11.0))
-                .text_color(rgb(MUTED))
-                .child(attached),
-        )
+        .child(if app.live.compare.harnesses.is_empty() {
+            empty_note("No agent is ready on this machine. Settings shows which ones Kriko can start.")
+                .into_any_element()
+        } else {
+            agent_row.into_any_element()
+        })
+        .child(div().font_family(MONO).text_size(px(11.0)).text_color(rgb(MUTED)).child(attached))
         .child(
             div()
                 .flex()
@@ -1857,7 +1756,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .gap(px(12.0))
                 .flex_wrap()
                 .child(div().flex_1().min_w(px(260.0)).child(ask_input))
-                .child(key("cmp-ask", "Ask").on_click(ask)),
+                .child(key("cmp-ask", if app.live.compare.asking { "Asking..." } else { "Ask" }).on_click(ask)),
         )
         .child(suggestions)
         .child(questions);
@@ -1865,22 +1764,27 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     // ---- assemble ----
     // The board sits directly under the toggle that opens it, so it is on
     // screen the moment it appears, with the slots above the table below.
-    let mut page = div()
-        .flex()
-        .flex_col()
-        .gap(px(20.0))
-        .child(drafts_row)
-        .child(queue_card(app, cx))
-        .children(picker_card);
-    if app.compare_board_open {
+    let mut page = div().flex().flex_col().gap(px(20.0)).child(drafts_row);
+    if let Some(say) = app.live.compare.say.clone() {
+        page = page.child(
+            div()
+                .font_family(MONO)
+                .text_size(px(12.0))
+                .text_color(rgb(DANGER))
+                .child(say),
+        );
+    }
+    page = page.child(queue_card(app, cx)).children(picker_card);
+    if app.live.compare.board_open {
         page = page.child(board(app, window, cx));
     }
     page = page.child(slot_row);
     // the slider appears once the shortlist outgrows the screen
-    let filled_n = app.compare_slots.iter().flatten().count();
+    let filled_n = app.live.compare.slots.iter().flatten().count();
     if filled_n > 3 {
         page = page.child(column_slider(app, filled_n, 3, cx));
     }
+    page = page.children(answer_card);
     page = page
         .child(
             div()
