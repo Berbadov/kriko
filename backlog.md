@@ -229,32 +229,28 @@ temporary log fallback. Screenshots and observations are committed in
 `docs/previews/extension-live-panel/` for PR review. The reader authorized
 opening and merging the PR; Windows visual/install checks remain open.
 
-## 19. Make the agent sunburst readable in LEDs *(2026-10-05)*
+## 20. Restore the original agent LED mark *(2026-10-05)*
 
-**Asked:** "Claude looks hideous xd"
+**Asked:** "Revert the claude icon and then we conclude this"
 
-- **Where:** the native app's agent marks, particularly the right-hand Live
-  actions panel.
-- **Done when:** the orange LED sunburst has distinct rays and a compact
-  centre at the panel's actual size, instead of the dense irregular blob;
-  the existing LED renderer and phase indicator remain consistent.
-- **Not this:** replacing the LED mark with smooth artwork.
-- **Owner:** this session / `fix/claude-led-sunburst`.
-- **Reproduced:** the committed panel preview shows the previous densely
-  sampled centre swallowing the gaps between its rays.
-- **Observed on the branch:** the 11×11 mark now has 37 lit cells with a
-  compact centre and separated, slightly staggered spokes. The Chromium
-  recreation at the panel's 300px width and 34px glyph size shows a clear
-  orange asterisk, with no label overflow and one phase matrix per row.
-  Proof: `docs/previews/claude-led-sunburst/panel.png`. This is a browser
-  recreation of native data, not a native window capture.
-- **Validation:** full gate passed (2434 Python tests, 214 extension tests,
-  613 dashboard tests, lint/types, bundle and wheel checks). Native GPUI
-  `cargo check --offline` passed. Its temporary build cache was cleared
-  after compilation so the full gate could run with sufficient disk space.
-- **Left:** native Windows visual/install verification remains pending.
+- **Where:** the native app's agent marks, including the Live actions panel.
+- **Done when:** the original 9×9 LED marks and palette from before the
+  two icon redesigns are restored; the other requested improvements remain.
+- **Not this:** another redesign or undoing the extension and phase fixes.
+- **Owner:** this session / `revert/claude-led-icon`.
+- **Supersedes:** item 19 is cancelled by this request; its historical
+  preview remains in git as the record of the rejected design.
+- **Observed:** both mark declarations match commit `94b51a5` exactly,
+  including the desktop variant and palette; the remainder of `marks.rs`
+  is unchanged. The browser recreation at 300px panel width shows the
+  restored 9×9 mark at the 34px glyph size without overflow, with one phase
+  matrix per row. Proof: `docs/previews/claude-led-revert/panel.png`.
+- **Validation:** full gate passed (2434 Python tests, 226 extension tests,
+  613 dashboard tests, lint/types, bundle and wheel smoke checks).
+  Legacy Tauri cargo was skipped because Rust is outside the default PATH.
+- **Left:** native Windows visual verification remains open.
 
-## 20. Svelte is gone: the GPUI app is the only window *(2026-10-05)*
+## 21. Svelte is gone: the GPUI app is the only window *(2026-10-05)*
 
 > "Bro demolish that svelte. Like, literally nuke it. Not the web extension
 > though. We moved to guide completely works better and somewhat easier to
@@ -275,7 +271,7 @@ opening and merging the PR; Windows visual/install checks remain open.
   passed (2418 Python tests, 227 extension tests, wheel smoke) with no `ui`
   leg. The extension's files changed only in two palette comments.
 
-## 21. A benchmark no model can answer from memory *(2026-10-05)*
+## 22. A benchmark no model can answer from memory *(2026-10-05)*
 
 > "For the extension I think we need a better process a product that any
 > agent do no know. With made up websites, complex one medium complex and a
