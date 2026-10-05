@@ -1782,6 +1782,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // `/api/extension/research-plane` answers with the same discipline as
   // `/api/keys` — a plane name and a number, nothing that could be replayed
   // as a credential.
+  if (request.type === "LOOKUP_ASK" || request.type === "LOOKUP_QUESTIONS") {
+    const lookupId = String(request.payload?.lookup_id || "");
+    const question = String(request.payload?.question || "").trim();
+    if (!lookupId || (request.type === "LOOKUP_ASK" && (!question || question.length > 2000))) {
+      sendResponse({ ok: false, error: "Choose a saved check and write a question (up to 2000 characters)." });
+      return false;
+    }
+    const path = `/api/lookup/${encodeURIComponent(lookupId)}/questions`;
+    const call = request.type === "LOOKUP_ASK" ? _postApp(path, { question }) : _getApp(path);
+    call.then((reply) => sendResponse({ ok: true, ...reply }))
+      .catch((error) => sendResponse({ ok: false, code: error.code, error: error.message }));
+    return true;
+  }
+
   if (request.type === "RESEARCH_PLANE") {
     _getApp("/api/extension/research-plane")
       .then((plane) => sendResponse({ ok: true, plane }))
