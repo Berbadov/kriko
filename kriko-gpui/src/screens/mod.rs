@@ -8,7 +8,6 @@ use gpui::{
 };
 
 use crate::app::Kriko;
-use crate::data::{self, Severity};
 use crate::theme::*;
 
 pub(crate) mod about;
@@ -182,31 +181,6 @@ pub fn plate_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
 
 // ---- compare + local helpers ----
 
-/// A risk severity word in its own tint, with its LED glyph: the status
-/// icon of a risk cell. MINOR sits quiet; SERIOUS and CRITICAL run hot.
-pub fn severity_chip(severity: Severity) -> Div {
-    let (glyph, fg, bg): (&[&str], u32, u32) = match severity {
-        Severity::Minor => (&QUEUE5, MUTED, WELL),
-        Severity::Serious => (&BANG5, 0xffb86b, 0xffb86b1f),
-        Severity::Critical => (&X5, DANGER, DANGER_WASH),
-    };
-    div()
-        .h(px(24.0))
-        .px(px(8.0))
-        .flex()
-        .items_center()
-        .gap(px(7.0))
-        .rounded(px(7.0))
-        .bg(rgb(bg))
-        .border_1()
-        .border_color(rgba(HAIRLINE))
-        .font_family(MONO)
-        .text_size(px(10.0))
-        .text_color(rgb(fg))
-        .child(led_matrix(glyph, fg, 3.0, 1.0))
-        .child(severity.word())
-}
-
 /// One spec cell's trust status icon: BACKED (check), DISPUTED (bang),
 /// NO EVIDENCE (queue), or nothing when nothing is recorded.
 pub fn trust_icon(backed: Option<bool>) -> gpui::AnyElement {
@@ -298,18 +272,3 @@ pub fn stepper(
         )
 }
 
-
-/// A finished check's agent, by the monogram the check stores: its own mark,
-/// still, or the LED letter when no listed agent carries that monogram.
-pub fn agent_by_monogram(m: char) -> Div {
-    match data::AGENTS.iter().position(|a| a.monogram == m) {
-        Some(i) => crate::marks::mark_tile(
-            &format!("mono-{m}"),
-            data::AGENTS[i].mark,
-            crate::marks::Phase::Idle,
-            40.0,
-            false,
-        ),
-        None => agent_tile(letter_rows(m), None),
-    }
-}

@@ -8,7 +8,7 @@ the asker pick.
 `app_version` reads the installed distribution's metadata rather than a
 constant, because a constant here would be a fifth place the number lives:
 `test_every_version_string_in_the_tree_agrees` already pins pyproject,
-Cargo.toml, package.json and tauri.conf.json to one value, and reading the
+the Cargo manifest, package.json and the MSI to one value, and reading the
 metadata inherits that guarantee instead of adding to the list. In a frozen
 sidecar the metadata may be absent, which is a packaging gap, not a crash — so
 the fallback is `"unknown"` and the endpoint still answers.

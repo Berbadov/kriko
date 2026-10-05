@@ -161,9 +161,9 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-# Tauri's externalBin wants `<name>-<target-triple>`; the CI job renames the
-# artifact rather than hardcoding a triple here, so this spec stays the same
-# file on all three runners.
+# The name carries no target triple: `kriko-gpui` looks for exactly
+# `kriko-sidecar` beside its own executable, so this spec stays the same file
+# on every runner.
 exe = EXE(
     pyz,
     a.scripts,
@@ -177,7 +177,7 @@ exe = EXE(
     # PyInstaller's windowed mode leaves `sys.stdout` as None on Windows, and
     # the first thing this binary does is print its port — the handshake would
     # raise before the server ever started. The terminal window is suppressed
-    # on the spawning side instead: Tauri's shell plugin creates the child with
-    # CREATE_NO_WINDOW, so nothing flashes.
+    # on the spawning side instead: `kriko-gpui/src/engine.rs` creates the
+    # child with CREATE_NO_WINDOW, so nothing flashes.
     console=True,
 )
