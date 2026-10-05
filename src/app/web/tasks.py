@@ -2826,6 +2826,18 @@ def _context_units_of(response: dict) -> dict:
     return units if isinstance(units, dict) else {}
 
 
+def model_pull(settings, params: dict, progress: Progress) -> dict:
+    """Download a model through Ollama, relaying its own progress and errors."""
+    from app import modelpull
+
+    model = str(params.get("model") or "")
+    base = modelpull.ollama_base(settings.app_state_path)
+    if not base:
+        raise RuntimeError(
+            "Ollama is not running. Start it, then try the download again.")
+    return modelpull.pull(base, model, progress)
+
+
 HANDLERS = {
     "research": research,
     "bench": bench,
@@ -2839,4 +2851,5 @@ HANDLERS = {
     "site_register": site_register,
     "pack_update": pack_update,
     "compare_ask": compare_ask,
+    "model_pull": model_pull,
 }
