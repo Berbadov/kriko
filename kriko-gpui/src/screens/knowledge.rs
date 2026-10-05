@@ -127,8 +127,8 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                                 .items_center()
                                 .justify_between()
                                 .gap(px(16.0))
-                                .child(row_title(&pack.name))
-                                .child(mono(&note, MUTED)),
+                                .child(div().flex_1().min_w(px(0.0)).truncate().child(row_title(&pack.name)))
+                                .child(div().flex_none().child(mono(&note, MUTED))),
                         )
                         .child(meter_slim(pack.subjects as f32 / max_subjects * 100.0, 10))
                         .child(mono(&format!("{} · {}", pack.id, pack.version), DIM)),
