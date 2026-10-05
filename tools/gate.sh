@@ -16,7 +16,7 @@
 #     tools/gate.sh py       # just the Python suite
 #     tools/gate.sh wheel    # just: does the artifact we ship actually import
 #     tools/gate.sh ui       # just vitest, types, and the stale-bundle check
-#     tools/gate.sh tauri    # just the shell's cargo check, native + windows-target
+#     tools/gate.sh gpui     # just the desktop app: cargo check and cargo test, offline
 #
 # Exits non-zero on the first failure, and says which gate failed. Nothing here
 # needs secrets: the suite must pass without an API key, which is the same rule
@@ -68,11 +68,11 @@ step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 
 if [ "$only" = all ] || [ "$only" = py ]; then
     ran=1
-    # Four files carry this project's version and only one of them names the
-    # installer. Two releases have now shipped under a number the tree did not
+    # Three files carry this project's version (pyproject, the app's Cargo.toml
+    # and its lock) and the app's is the one that names the installer. Two releases have now shipped under a number the tree did not
     # contain, each caught at build time on the Windows host -- hours after the
     # commit that caused it. It costs a second here.
-    step "the four version strings agree"
+    step "the version strings agree"
     "$PYTHON" tools/bump.py --show --strict
     # B138: ruff before pytest, so a lint failure is cheap to see and does not
     # wait behind a ~80s test run. Config (the curated rule set, and every
@@ -163,9 +163,9 @@ if [ "$only" = all ] || [ "$only" = ui ]; then
     fi
 fi
 
-if [ "$only" = all ] || [ "$only" = tauri ]; then
+if [ "$only" = all ] || [ "$only" = gpui ]; then
     ran=1
-    CRATE="tauri/src-tauri"
+    CRATE="kriko-gpui"
     CARGO="$(command -v cargo || true)"
     if [ -z "$CARGO" ]; then
         CARGO_BIN="${CARGO_HOME:-$HOME/.cargo}/bin/cargo"
@@ -173,98 +173,45 @@ if [ "$only" = all ] || [ "$only" = tauri ]; then
     fi
 
     if [ -z "$CARGO" ]; then
-        step "cargo check (tauri/src-tauri)"
-        echo "no cargo on this machine — skipping. pytest's test_the_shell_is_valid_rust.py already parsed every .rs file above; a real compile still needs a Rust toolchain (rustup.rs) or the Windows host that builds the installer."
+        step "cargo check (kriko-gpui)"
+        echo "no cargo on this machine — skipping. pytest's test_the_shell_is_valid_rust.py still reads the shell's sources above; a real compile needs a Rust toolchain (rustup.rs) or the Windows host that builds the installer."
     else
         export PATH="$(dirname "$CARGO"):$PATH"
 
-        _tauri_cargo_check() {
-            local target_flag="$1" desc="$2" out status
-            out=$(cd "$CRATE" && cargo check --locked --offline $target_flag 2>&1)
+        # Offline on purpose: a gate that fetches is a gate that fails for the
+        # network. A cold registry cache is a skip with its remedy, never a
+        # red tick that was not a test result.
+        _gpui_cargo() {
+            local desc="$1"; shift
+            local out status
+            out=$(cd "$CRATE" && cargo "$@" --locked --offline 2>&1)
             status=$?
-            printf '%s\n' "$out"
+            printf '%s
+' "$out"
             [ "$status" = 0 ] && return 0
-            # The last alternative is the gap the first version had: a machine
-            # with no pkg-config *binary* at all fails with "The pkg-config
-            # command could not be found", which matches none of the
-            # package-name patterns above and used to fail the gate instead
-            # of skipping — the tauri leg was unrunnable on a clean container,
-            # the exact thing the skip exists to prevent.
-            if printf '%s' "$out" | grep -qiE "webkit2gtk.*not found|Package .*was not found|glib-2\.0.*not found|appindicator.*not found|pkg-config command could not be found"; then
-                echo "skipping $desc — a system dev package pkg-config cannot find is missing (see tauri/README.md's pre-flight apt-get line: libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev)"
-                return 2
-            fi
-            if printf '%s' "$out" | grep -qiE "target .* may not be installed|can't find crate for \`core\`"; then
-                echo "skipping $desc — the $target_flag target is not installed (rustup target add x86_64-pc-windows-gnu)"
-                return 2
-            fi
-            if printf '%s' "$out" | grep -qiE "failed to get |spurious network error|unable to get packages from source|offline mode|no matching package named"; then
+            if printf '%s' "$out" | grep -qiE "failed to get |spurious network error|unable to get packages from source|offline mode|no matching package named|attempting to make an HTTP request"; then
                 echo "skipping $desc — the cargo registry cache is not warm and this gate runs --offline; run \`cargo fetch --locked\` once in $CRATE (needs network), then re-run"
                 return 2
             fi
             return 1
         }
 
-        # tauri.conf.json declares the sidecar as an external binary, and its
-        # build script refuses to run when the file for the triple being built
-        # is absent. That is correct — it is what stops an installer shipping
-        # without an engine — so a *check* has to place an empty stand-in and
-        # take it away again.
-        #
-        # This used to happen for the gnu cross-target only, which made the
-        # native leg unrunnable on Windows: the host triple there is
-        # `x86_64-pc-windows-msvc`, whose stub nothing created, so the leg died
-        # on `resource path binaries\kriko-sidecar-x86_64-pc-windows-msvc.exe
-        # doesn't exist` before rustc read a line. Same shape as the `bin/` vs
-        # `Scripts/` bug this file opens with: written for a Linux host, run on
-        # the Windows one that actually builds the installer. Stub whichever
-        # triple the check is about, and ask rustc what the host's is rather
-        # than assuming.
-        _tauri_check_with_stub() {
-            local triple="$1" target_flag="$2" desc="$3" stub created=0 result=0
-            stub="$CRATE/binaries/kriko-sidecar-$triple"
-            case "$triple" in *windows*) stub="$stub.exe" ;; esac
-            if [ -n "$triple" ] && [ ! -e "$stub" ]; then
-                mkdir -p "$(dirname "$stub")"
-                : > "$stub"
-                created=1
-            fi
-            _tauri_cargo_check "$target_flag" "$desc" || result=$?
-            [ "$created" = 1 ] && rm -f "$stub"
-            return "$result"
-        }
+        step "cargo check (kriko-gpui)"
+        result=0
+        _gpui_cargo "the cargo check" check || result=$?
+        [ "$result" = 1 ] && exit 1
 
-        HOST_TRIPLE=$(rustc -vV 2>/dev/null | sed -n 's/^host: //p')
-
-        # `icons/` is gitignored but for the 1024px master, because every other
-        # size is generated at packaging time by `tauri icon` — which needs the
-        # Tauri CLI, which needs a network this gate does not have. One of those
-        # generated files is not a bundling detail though: `tauri-build` turns
-        # `icon.ico` into a Win32 resource *before* rustc runs, so on a Windows
-        # host its absence is not a missing icon, it is `cargo check` refusing
-        # to start. `render_icon.py` derives that one file from the same master,
-        # offline and deterministically, which is what makes this leg runnable
-        # on the machine that actually builds installers.
-        if [ ! -e "$CRATE/icons/icon.ico" ]; then
-            "$PYTHON" packaging/render_icon.py >/dev/null
+        if [ "$result" = 0 ]; then
+            step "cargo test (kriko-gpui)"
+            result=0
+            _gpui_cargo "the cargo tests" test || result=$?
+            [ "$result" = 1 ] && exit 1
         fi
-
-        step "cargo check (tauri/src-tauri, native)"
-        result=0
-        _tauri_check_with_stub "$HOST_TRIPLE" "" "the native cargo check" || result=$?
-        [ "$result" = 1 ] && exit 1
-
-        step "cargo check (tauri/src-tauri, windows cross-target)"
-        result=0
-        _tauri_check_with_stub "x86_64-pc-windows-gnu" \
-            "--target x86_64-pc-windows-gnu" \
-            "the windows cross-target cargo check" || result=$?
-        [ "$result" = 1 ] && exit 1
     fi
 fi
 
 if [ "$ran" = 0 ]; then
-    echo "unknown gate: $only (expected: all, py, node, ui, tauri)" >&2
+    echo "unknown gate: $only (expected: all, py, node, ui, gpui, wheel)" >&2
     exit 2
 fi
 
