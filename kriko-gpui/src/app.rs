@@ -233,34 +233,6 @@ impl InputState {
 
 // ---- filters ----
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum PackFilter {
-    All,
-    Samsung,
-    Apple,
-    Volkswagen,
-}
-
-impl PackFilter {
-    pub fn word(self) -> &'static str {
-        match self {
-            PackFilter::All => "ALL",
-            PackFilter::Samsung => "SAMSUNG",
-            PackFilter::Apple => "APPLE",
-            PackFilter::Volkswagen => "VOLKSWAGEN",
-        }
-    }
-
-    pub fn next(self) -> Self {
-        match self {
-            PackFilter::All => PackFilter::Samsung,
-            PackFilter::Samsung => PackFilter::Apple,
-            PackFilter::Apple => PackFilter::Volkswagen,
-            PackFilter::Volkswagen => PackFilter::All,
-        }
-    }
-}
-
 /// The date span History is narrowed to: how far back checks are shown.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum SpanFilter {
@@ -344,17 +316,12 @@ pub struct Kriko {
     pub sites_add: InputState,
     pub browse_search: InputState,
     // history
-    pub pack_filter: PackFilter,
     pub page: usize,
     pub history_span: SpanFilter,
-    /// The check whose evidence is unfolded on History, by index into
-    /// CHECKS. None: the table rests closed.
-    pub history_open: Option<usize>,
     // activity
     // sites: hosts added this session
     pub added_sites: Vec<String>,
     // browse / agents / packs / models
-    pub browse_selected: usize,
     pub browse_view: usize,
     pub browse_view_prev: usize,
     pub agent_selected: usize,
@@ -441,12 +408,9 @@ impl Kriko {
             activity_filter: InputState::new(cx),
             sites_add: InputState::new(cx),
             browse_search: InputState::new(cx),
-            pack_filter: PackFilter::All,
             page: 0,
             history_span: SpanFilter::All,
-            history_open: None,
             added_sites: Vec::new(),
-            browse_selected: 0,
             browse_view: 0,
             browse_view_prev: 0,
             agent_selected: 0,
@@ -611,6 +575,7 @@ impl Kriko {
             }
             cx.notify();
         }
+        self.tick_history(cx);
     }
 
     /// Quit Kriko: the engine first (its exit frees the store's lock), then
@@ -708,6 +673,9 @@ impl Kriko {
         }
         if field == Field::HistorySearch {
             this.page = 0;
+        }
+        if field == Field::BrowseSearch {
+            this.browse_search_typed(cx);
         }
         cx.notify();
     }
