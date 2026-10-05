@@ -287,13 +287,6 @@ impl DockFeedEntry {
     }
 }
 
-/// A saved, named comparison: which checks sit in which slots.
-#[allow(dead_code)]
-pub struct CompareDraftDef {
-    pub name: String,
-    pub slots: Vec<Option<usize>>,
-}
-
 // ---- the app ----
 
 pub struct Kriko {
@@ -317,7 +310,6 @@ pub struct Kriko {
     // browse / agents / packs / models
     pub browse_view: usize,
     pub browse_view_prev: usize,
-    pub agent_allowed: Vec<bool>,
     // run: the subject search that starts a check
     pub run_search: InputState,
     // the live actions dock
@@ -326,11 +318,7 @@ pub struct Kriko {
     pub dock_reply_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
     pub dock_open: bool,
-    // compare: the engine's own rows live in `live.compare`; these three are
-    // what Home still reads and stay empty until Home reads `live.compare`
-    pub compare_slots: Vec<Option<usize>>,
-    pub compare_draft: usize,
-    pub compare_drafts: Vec<CompareDraftDef>,
+    // compare: the engine's own rows live in `live.compare`
     pub compare_note_input: InputState,
     pub compare_question_input: InputState,
     // local llm: the address, the search service and the model to get; the
@@ -357,15 +345,11 @@ impl Kriko {
             history_span: SpanFilter::All,
             browse_view: 0,
             browse_view_prev: 0,
-            agent_allowed: data::AGENTS.iter().map(|a| a.allowed).collect(),
             run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
             dock_feed: Vec::new(),
             dock_open: true,
-            compare_slots: Vec::new(),
-            compare_draft: 0,
-            compare_drafts: Vec::new(),
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
             local_url: InputState::new(cx),
@@ -915,16 +899,7 @@ impl Render for Kriko {
                                     .px(px(40.0))
                                     .pt(px(20.0))
                                     .pb(px(48.0))
-                                    .child(content)
-                                    .child(
-                                        div()
-                                            .mt(px(24.0))
-                                            .mb(px(8.0))
-                                            .font_family(MONO)
-                                            .text_size(px(12.0))
-                                            .text_color(rgb(DIM))
-                                            .child(data::FOOTER_NOTE),
-                                    ),
+                                    .child(content),
                             ),
                     )
                     // The bar floats on the sky, after the page so it
