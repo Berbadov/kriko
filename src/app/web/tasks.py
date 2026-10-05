@@ -135,7 +135,7 @@ class LocalNotReady(RuntimeError):
     what to do. A failed job with that text, never a run of "0 claims"."""
 
 
-def _local_plan(params: dict) -> dict:
+def _local_plan(params: dict, *, with_search: bool = True) -> dict:
     """What a local run uses, resolved off the running server (B171).
 
     The run's own `model` counts only when the server lists it: the Run screen
@@ -148,6 +148,7 @@ def _local_plan(params: dict) -> dict:
         params.get("app_state_path"),
         url=str(params.get("llm_base_url") or ""),
         search_url=str(params.get("search_base_url") or ""),
+        with_search=with_search,
     )
     if not plan["ready"]:
         raise LocalNotReady(plan["reason"])
@@ -194,6 +195,24 @@ def _local_asker(settings, params: dict, progress: Progress):
     researcher.check_cancelled = progress.check
     researcher.replies = progress.replies
     return researcher
+
+
+def _local_compare_completer(settings, params: dict, progress: Progress):
+    """A saved comparison needs the local model, not a search service.
+
+    The checks have already been read and grounded. Asking the web again
+    spends a planning call, search calls and page context on unrelated pages.
+    This socket sees only the stored table and cannot quietly replace it.
+    """
+    from app.providers.local_inference import OpenAICompatSocket
+
+    plan = _local_plan({**params, "app_state_path": settings.app_state_path},
+                       with_search=False)
+    progress.log(f"local comparison: {plan['line']}; using saved checks only")
+    return OpenAICompatSocket(
+        plan["url"], plan["model"], timeout=plan["timeout"],
+        max_tokens=2048, reasoning_effort="none",
+    )
 
 
 def _researcher(params: dict):
@@ -2761,7 +2780,13 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     for stored in answers:
         progress.log(f"{stored['label']}: {len(stored['response'].get('claims') or [])} known risk(s)")
     if _use_local_ask(settings, params):
-        researcher = _local_asker(settings, params, progress)
+        completer = _local_compare_completer(settings, params, progress)
+        brief = _compare_brief(
+            question, answers,
+            max_chars=max(3000, completer.context_chars - 2500),
+        )
+        progress.log(f"comparison brief: {len(brief)} characters from saved checks; no web search")
+        ask = completer
     else:
         if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
             raise ValueError(
@@ -2778,8 +2803,10 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
         researcher.check_cancelled = progress.check
+        brief = _compare_brief(question, answers)
+        ask = researcher.ask
     progress.set(0.2, f"asking: {question[:120]}")
-    reply = researcher.ask(_compare_brief(question, answers)).strip()
+    reply = ask(brief).strip()
     progress.check()
     progress.log(reply[:4000] or "(the agent printed nothing)")
     progress.set(0.9, "writing the answer down")
@@ -2795,7 +2822,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     return {"draft_id": draft_id, "question_id": question_id, "answer": reply}
 
 
-def _compare_brief(question: str, answers: list[dict]) -> str:
+def _compare_brief(question: str, answers: list[dict], *,
+                   max_chars: int | None = None) -> str:
     """The table the question is about, as the agent's own reading material.
 
     Every word of it comes from the stored answers themselves — labels,
@@ -2810,9 +2838,13 @@ def _compare_brief(question: str, answers: list[dict]) -> str:
         "",
         "Answer about the products below, using their recorded risks and "
         "specifications. Where the records do not answer the question, say "
-        "so plainly rather than guessing. Do not invent risks.",
+        "so plainly rather than guessing. Do not invent risks. A product "
+        "with no recorded risk is not proven risk-free. Name the product and "
+        "recorded risk behind each conclusion.",
         "",
     ]
+    if max_chars is not None:
+        return _compact_compare_brief(lines, question, answers, max_chars)
     for stored in answers:
         response = stored["response"]
         lines.append(f"## {stored['label']}")
@@ -2836,6 +2868,71 @@ def _compare_brief(question: str, answers: list[dict]) -> str:
                 lines.append(f"- {key}: {value}{(' ' + unit) if unit else ''}")
         lines.append("")
     return "\n".join(lines)
+
+
+def _compact_compare_brief(lines: list[str], question: str,
+                           answers: list[dict], max_chars: int) -> str:
+    """Give each product a fair share of a small model's context.
+
+    Claim order is the lookup's ranking. Question word overlap brings a
+    directly relevant claim forward without another model call. Anything
+    omitted is counted, so a short brief cannot masquerade as full coverage.
+    """
+    import re
+
+    words = {w for w in re.findall(r"\w{2,}", question.casefold())
+             if w not in {"which", "what", "this", "that", "with", "from", "these", "about"}}
+    lines.insert(-1, "Severity order, most to least serious: critical > high > medium > low. "
+                 "For a severity comparison, check that order before deciding. "
+                 "Severity alone does not establish repair cost.")
+    # Long questions compete with all four product sections for one context.
+    # Keep enough room for every product before deciding how much to retain.
+    fixed_head = len("\n".join(lines)) - len(question)
+    question_room = max(200, max_chars - fixed_head - len(answers) * 260)
+    if len(question) > question_room:
+        lines[1] = f"QUESTION: {question[:question_room - 23]} [question truncated]"
+    head = "\n".join(lines)
+    share = max(0, (max_chars - len(head) - len(answers) * 2)
+                // max(1, len(answers)))
+    sections = []
+    for stored in answers:
+        response = stored["response"]
+        claims = response.get("claims") or []
+        title = f"## {str(stored['label'])[:120]}"
+        section = [title, f"Recorded risks: {len(claims)} total."]
+        room = share - len("\n".join(section)) - 80
+        units = _context_units_of(response)
+        for key, value in sorted((response.get("context") or {}).items()):
+            item = f"- {str(key)[:80]}: {str(value)[:120]} {str(units.get(key, ''))[:30]}".rstrip()
+            if len(item) + 1 > room:
+                break
+            section.append(item)
+            room -= len(item) + 1
+        ranked = sorted(enumerate(claims), key=lambda pair: (
+            -len(words & set(re.findall(r"\w{2,}",
+                " ".join(str(pair[1].get(k) or "") for k in ("title", "body", "advice")).casefold()))),
+            pair[0],
+        ))
+        shown = 0
+        for _, claim in ranked:
+            item = (f"- [{str(claim.get('severity') or '')[:20]}] "
+                    f"{str(claim.get('title') or '')[:160]}: "
+                    f"{str(claim.get('body') or '')[:340]}")
+            if claim.get("advice"):
+                item += f" (advice: {str(claim['advice'])[:180]})"
+            if len(item) + 1 > room:
+                continue
+            section.append(item)
+            room -= len(item) + 1
+            shown += 1
+        if shown < len(claims):
+            section.append(f"Risks shown: {shown} of {len(claims)}; {len(claims) - shown} "
+                           "recorded risks omitted from this brief.")
+        else:
+            section.append(f"Risks shown: all {len(claims)} recorded risks. "
+                           "Unrecorded risks may still exist.")
+        sections.append("\n".join(section))
+    return head + "\n" + "\n\n".join(sections)
 
 
 def _context_units_of(response: dict) -> dict:
