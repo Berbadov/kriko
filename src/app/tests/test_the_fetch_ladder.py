@@ -215,3 +215,46 @@ def test_parallel_parse_takes_the_asked_page_and_joins_excerpts():
     )
     assert pagereader.parse_parallel(text, "https://asked.test/y") == "first\nsecond"
     assert pagereader.parse_parallel("not json", "https://asked.test/y") == ""
+
+
+def test_a_sites_menu_and_code_never_reach_the_model(monkeypatch):
+    """The stdlib extraction (the desktop build has no trafilatura) drops a
+    run of one-word links, comments, the head and an unclosed script, and
+    keeps the prose and a specification line beside them."""
+    makes = "".join(f"<li><a href='/m{i}'>Make{chr(65 + i)}</a></li>" for i in range(20))
+    markup = (
+        "<html><head><title>Widget 3 problems</title>"
+        "<meta name='x' content='y'><link rel='stylesheet' href='a.css'></head>"
+        f"<body><div class='menu'><ul>{makes}</ul></div>"
+        "<!-- <div>an old banner nobody sees</div> -->"
+        "<p>The widget gearbox fails at 60 000 km, owners report.</p>"
+        "<p>6 GB RAM</p>"
+        "<div>window.__STATE__={\"a\":[1,2,3],\"b\":{\"c\":\"d\"}};var x=1;</div>"
+        "<script>var unclosed = 1;"
+    )
+    monkeypatch.setitem(__import__("sys").modules, "trafilatura", None)
+    text = fetch.to_text(markup)
+    assert "The widget gearbox fails at 60 000 km, owners report." in text
+    assert "6 GB RAM" in text
+    assert text.startswith("Widget 3 problems")
+    assert "MakeA" not in text
+    assert "old banner" not in text
+    assert "__STATE__" not in text
+    assert "unclosed" not in text
+
+
+def test_a_short_list_of_labels_is_kept(monkeypatch):
+    """Fewer crumbs than a menu run are headings and labels, not navigation."""
+    monkeypatch.setitem(__import__("sys").modules, "trafilatura", None)
+    markup = "".join(f"<p>{word}</p>" for word in ("Display", "Battery", "Camera"))
+    assert fetch.to_text(markup).split() == ["Display", "Battery", "Camera"]
+
+
+def test_a_hosted_readers_markdown_loses_its_addresses_not_its_words():
+    from app.providers import pagereader
+
+    text = pagereader.plain(
+        "![logo](https://cdn.test/logo.png)\n"
+        "The [gearbox](https://a.test/gearbox_(part)) fails early.\n"
+        "![](data:image/png;base64,AAAABBBBCCCC)")
+    assert text == "logo\nThe gearbox fails early."

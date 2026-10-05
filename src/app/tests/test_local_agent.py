@@ -14,6 +14,12 @@ from app.providers import local_agent
 from app.providers.local_inference import LocalInferenceError
 
 
+@pytest.fixture(autouse=True)
+def short_pages_count(monkeypatch):
+    """The stub pages here are a few words; a real page is not."""
+    monkeypatch.setattr(local_agent, "MIN_PAGE_CHARS", 0)
+
+
 class Plan:
     """The socket that proposes queries; scripted per test."""
 
@@ -140,3 +146,92 @@ def test_pages_are_read_side_by_side_not_one_after_another():
     asker.on_action = lambda line: None
     asker.ask("widget")
     assert len(complete.prompts) == 1
+
+
+def test_the_searches_go_out_together():
+    """Three queries, three searches in flight at once, not one by one."""
+    inside: list[int] = []
+    lock = threading.Lock()
+    all_in = threading.Event()
+
+    def gate():
+        with lock:
+            inside.append(1)
+            if len(inside) >= 3:
+                all_in.set()
+        assert all_in.wait(5.0), "searches ran one at a time"
+
+    plan = Plan('["q1", "q2", "q3"]')
+    asker = local_agent.LocalAsker(
+        plan, Complete(),
+        searcher([{"url": "https://a.test/1", "title": "A"}], gate=gate),
+        reader({"https://a.test/1": "text"}),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    asker.ask("widget")
+    assert len(inside) == 3
+
+
+def test_a_page_that_never_answers_does_not_hold_the_run(monkeypatch):
+    """The slow page is abandoned at the deadline; the others are read."""
+    monkeypatch.setattr(local_agent, "READ_DEADLINE", 0.5)
+    stuck = threading.Event()
+    said: list[str] = []
+
+    def fetch(url):
+        if url.endswith("/slow"):
+            stuck.wait(10.0)
+            return "too late"
+        return "the readable page"
+
+    asker = local_agent.LocalAsker(
+        Plan('["q"]'), Complete(),
+        searcher([{"url": "https://a.test/slow", "title": "S"},
+                  {"url": "https://a.test/fast", "title": "F"}]),
+        fetch, model="m", search_provider="stub")
+    asker.on_action = said.append
+    import time
+    started = time.monotonic()
+    asker.ask("widget")
+    stuck.set()
+    assert time.monotonic() - started < 5.0
+    assert list(asker.sources) == ["https://a.test/fast"]
+    assert any("slow page" in line for line in said)
+
+
+def test_a_long_page_is_cut_around_the_queries_not_from_the_top():
+    """The window a small model reads is the page's part about the subject.
+
+    The kept text is also what the quotes are checked against, so a quote
+    from the part the model never saw is still refused.
+    """
+    menu = "\n\n".join(f"Menu entry number {i} of the site" for i in range(400))
+    page = ("Widget page\n\n" + menu
+            + "\n\nThe widget gearbox fails at 60 000 km, owners report.")
+    asker = local_agent.LocalAsker(
+        Plan('["widget gearbox fails"]'), Complete(),
+        searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": page}),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    asker.ask("widget")
+    kept = asker.sources["https://a.test/1"]
+    assert len(kept) <= local_agent.PAGE_CHARS
+    assert "gearbox fails at 60 000 km" in kept
+    assert kept.startswith("Widget page")
+
+
+def test_a_stub_page_is_a_miss_and_a_spare_takes_its_place(monkeypatch):
+    """A cookie wall or an 'access denied' is not one of the pages read."""
+    monkeypatch.setattr(local_agent, "MIN_PAGE_CHARS", 80)
+    monkeypatch.setattr(local_agent, "MAX_PAGES", 1)
+    asker = local_agent.LocalAsker(
+        Plan('["q"]'), Complete(),
+        searcher([{"url": "https://a.test/wall", "title": "W"},
+                  {"url": "https://a.test/real", "title": "R"}]),
+        reader({"https://a.test/wall": "Access denied",
+                "https://a.test/real": "A real page. " * 30}),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    asker.ask("widget")
+    assert list(asker.sources) == ["https://a.test/real"]

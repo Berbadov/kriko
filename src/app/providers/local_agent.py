@@ -20,8 +20,12 @@ reply shape and the same grounding as every other door; only the reader of the
 web differs.
 """
 
+import time
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+
 from app.providers.local_inference import LocalInferenceError
 from kriko.research.politeness import LocalSearchError
+from kriko.research.window import focus
 
 #: Queries proposed, hits taken per query and pages read in all. Small on
 #: purpose: each page costs a model call's worth of context on a CPU.
@@ -32,6 +36,18 @@ MAX_PAGES = 5
 #: quotes are checked against. The two are the same on purpose: a quote from
 #: beyond what the model saw could only have been invented.
 PAGE_CHARS = 6000
+#: Seconds the read waits for pages once the search is done. A page behind a
+#: bot wall walks the whole fetch ladder (plain fetch, two hosted readers, a
+#: headless browser), which can take minutes, and the model should not wait
+#: on the slowest page when the others are in. A page still out at the
+#: deadline is a miss, exactly as an unreadable one.
+READ_DEADLINE = 25.0
+#: Candidate pages asked for beyond `MAX_PAGES`, so a page that is slow or
+#: unreadable is replaced by the next one instead of leaving a gap.
+SPARE_PAGES = 3
+#: Text shorter than a sentence or so is a refusal, a cookie wall or an empty
+#: shell, not a page: it is a miss, so a spare takes its place.
+MIN_PAGE_CHARS = 80
 
 QUERY_SCHEMA = {"type": "array", "items": {"type": "string"}}
 
@@ -147,46 +163,86 @@ class LocalAsker:
         return queries
 
     def _read(self, queries: list[str]) -> list[tuple[str, str]]:
-        """Search each query, then read the pages side by side.
+        """Search every query at once, then read the pages side by side.
 
         The reads are the slow part and they do not depend on each other, so
         they go out together on a small pool: five pages fetched one after
         another on a cold connection costs five round trips in sequence,
-        which on a CPU-bound run is the difference the reader feels. The
-        order the pages appear in the prompt is still the order the queries
-        named them, so the model's brief does not change with the fetching.
+        which on a CPU-bound run is the difference the reader feels. A few
+        spare pages go out with them, and the read stops at `READ_DEADLINE`
+        or once `MAX_PAGES` have answered, whichever is first. The order the
+        pages appear in the prompt is still the order the queries named
+        them, so the model's brief does not change with the fetching.
+
+        Each page is cut to `PAGE_CHARS` around the queries' own words
+        (`kriko.research.window.focus`), not from the top: a listing's top
+        is its menu. The cut text is what the quotes are checked against.
         """
+        self._check()
+
+        def _hits(query: str) -> tuple[list, str]:
+            try:
+                return self._search(query, HITS_PER_QUERY) or [], ""
+            except LocalSearchError as error:
+                return [], f"search failed for {query!r}: {error}"
+
+        # The searches do not depend on each other either, so they go out
+        # together too; their hits are still taken in the queries' order,
+        # and the log is written from this thread only.
+        with ThreadPoolExecutor(max_workers=max(1, len(queries))) as pool:
+            answered = list(pool.map(_hits, queries))
         wanted: list[str] = []
         seen: set[str] = set()
-        for query in queries:
-            self._check()
-            try:
-                hits = self._search(query, HITS_PER_QUERY) or []
-            except LocalSearchError as error:
-                self._say(f"search failed for {query!r}: {error}")
-                continue
+        for hits, failure in answered:
+            if failure:
+                self._say(failure)
             for hit in hits:
                 url = str(hit.get("url", "")).strip()
-                if not url or url in seen or len(wanted) >= MAX_PAGES:
+                if not url or url in seen or len(wanted) >= MAX_PAGES + SPARE_PAGES:
                     continue
                 seen.add(url)
                 wanted.append(url)
         if not wanted:
             return []
-        from concurrent.futures import ThreadPoolExecutor
+        self._check()
 
-        def _one(url: str) -> tuple[str, str]:
+        def _one(url: str) -> str:
             try:
                 got = self._fetch(url)
             except Exception:  # noqa: BLE001 - an unreadable page is a miss
-                return url, ""
-            text = getattr(got, "text", got) or ""
-            return url, str(text).strip()[:PAGE_CHARS]
+                return ""
+            text = str(getattr(got, "text", got) or "").strip()
+            if len(text) < MIN_PAGE_CHARS:
+                return ""
+            return focus(text, PAGE_CHARS, queries)
 
+        read: dict[str, str] = {}
+        pool = ThreadPoolExecutor(max_workers=min(6, len(wanted)))
+        try:
+            pending = {pool.submit(_one, url): url for url in wanted}
+            deadline = time.monotonic() + READ_DEADLINE
+            while pending:
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    self._say(f"stopped waiting for {len(pending)} slow page(s)")
+                    break
+                done, _ = wait(pending, timeout=min(left, 1.0),
+                               return_when=FIRST_COMPLETED)
+                for future in done:
+                    read[pending.pop(future)] = future.result()
+                self._check()
+                # Enough are in once MAX_PAGES have text; a spare only
+                # stands in for a page that missed.
+                if sum(1 for text in read.values() if text) >= MAX_PAGES:
+                    break
+        finally:
+            # A page still out is abandoned, not waited for: its thread ends
+            # on its own timeout and nothing reads what it returns.
+            pool.shutdown(wait=False, cancel_futures=True)
         pages: list[tuple[str, str]] = []
-        with ThreadPoolExecutor(max_workers=min(4, len(wanted))) as pool:
-            for url, text in pool.map(_one, wanted):
-                if text:
-                    pages.append((url, text))
-                    self.sources[url] = text
+        for url in wanted:
+            text = read.get(url, "")
+            if text and len(pages) < MAX_PAGES:
+                pages.append((url, text))
+                self.sources[url] = text
         return pages
