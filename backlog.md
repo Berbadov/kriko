@@ -228,3 +228,47 @@ offline dependencies are not cached. The Python runner used a writable
 temporary log fallback. Screenshots and observations are committed in
 `docs/previews/extension-live-panel/` for PR review. The reader authorized
 opening and merging the PR; Windows visual/install checks remain open.
+
+## 19. Svelte is gone: the GPUI app is the only window *(2026-10-05)*
+
+> "Bro demolish that svelte. Like, literally nuke it. Not the web extension
+> though. We moved to guide completely works better and somewhat easier to
+> read."
+
+- **Where:** the repository tree, `tools/gate.sh`, and the engine's own
+  address in a browser (`http://127.0.0.1:<port>/`).
+- **Done when:** `ui/`, `kriko-svelte/` and the committed bundle under
+  `src/app/web/static/` are deleted, with every test, gate step, packaging
+  line and document that existed only for them; the engine still serves every
+  `/api/...` route the GPUI app, the TUI and the extension read; the
+  extension's own files, palette and tests are untouched and pass; and
+  `tools/gate.sh` passes with no `ui` leg.
+- **Not this:** removing the browser extension or any `/api` route.
+
+## 20. A benchmark no model can answer from memory *(2026-10-05)*
+
+> "For the extension I think we need a better process a product that any
+> agent do no know. With made up websites, complex one medium complex and a
+> simple one. Then a real one, a very complex good like a car with many
+> different components, a middle complexity one and a simple one. Each good
+> have tricky similar goods. Agents gotta differentiate between 2010 k5k and
+> 2020 k5k and 2020 k5k with adblue. The non existing good important since it
+> might be a leverage for the local small agent. Beating the training data
+> with our algorithms against giant sota models."
+
+- **Where:** kriko-gpui's Benchmark tab, and the engine's benchmark job.
+- **Done when:** the fixed set has two halves. *Invented:* three products
+  that exist nowhere (complex, medium, simple), each with look-alike siblings
+  that differ by year or one fitted part, listed on three made-up listing
+  sites (complex, medium, simple layout) and discussed on made-up source
+  pages, all served from a local fixture so no search engine and no training
+  set has ever seen them. *Real:* three real products (a car with many
+  components, a medium one, a simple one), each with look-alike siblings,
+  listed on the same made-up sites and researched on the open web. Ground
+  truth is per variant, and a fault that belongs to a sibling but not to the
+  asked variant scores as *wrong variant*, apart from recall and
+  hallucination. Every plane runs the same set, and the Benchmark tab shows
+  recall, hallucination and wrong-variant rate per plane and model from the
+  engine's own rows, invented and real side by side.
+- **Not this:** sample constants on the tab, or cases drawn from the
+  reader's installed packs.
