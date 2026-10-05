@@ -8,6 +8,7 @@ validation, the consume-once, and the two constants on either side of a pipe
 with no compiler to check them against each other.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -109,13 +110,18 @@ def test_the_shell_and_the_engine_agree_on_the_stdout_line():
     """Two constants, one pipe, no compiler between them.
 
     A rename on either side would silently stop raising the window: the POST
-    still succeeds, the SPA still navigates, and the app just never comes to
-    the front — which reads as the same dead button this replaced.
+    still succeeds, the app still has its route, and the window just never
+    comes to the front, which reads as the same dead button this replaced.
     """
-    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
-    assert f'const FOCUS_LINE: &str = "{focus.FOCUS_LINE}";' in main_rs
-    # And it must actually be acted on, not merely declared.
-    assert "if line.contains(FOCUS_LINE) {\n                        show_window" in main_rs
+    engine = (REPO / "kriko-gpui" / "src" / "engine.rs").read_text(encoding="utf-8")
+    assert f'const FOCUS_LINE: &str = "{focus.FOCUS_LINE}";' in engine
+    # And it must actually be acted on, not merely declared: the line becomes
+    # an event, and the window raises on it.
+    assert "line.contains(FOCUS_LINE)" in engine and "ShellEvent::Focus" in engine
+    app = (REPO / "kriko-gpui" / "src" / "app.rs").read_text(encoding="utf-8")
+    assert re.search(r"ShellEvent::Focus\(\w+\)\s*=>\s*shell::show_window\(\)", app), (
+        "the app receives the focus event and does not raise the window"
+    )
 
 
 def test_the_focus_line_cannot_be_mistaken_for_the_port_handshake():
@@ -182,11 +188,11 @@ def test_the_shell_declares_its_supervision_when_it_spawns_the_sidecar():
 
     A supervised sidecar and a hand-run one are identical over HTTP. If this
     flag goes missing from the spawn, every focus request reports `no_shell`
-    and the extension opens a browser tab beside the running app — exactly
-    the bug this whole path exists to fix, and nothing else would fail.
+    and the extension opens a browser tab beside the running app, which is
+    exactly the bug this whole path exists to fix, and nothing else would fail.
     """
-    main_rs = (REPO / "tauri" / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
-    assert '.args(["--exit-with-parent", "--supervised"])' in main_rs
+    engine = (REPO / "kriko-gpui" / "src" / "engine.rs").read_text(encoding="utf-8")
+    assert '.args(["--exit-with-parent", "--supervised"])' in engine
 
 
 def test_the_sidecar_accepts_the_flag_the_shell_passes(capfd):

@@ -1,12 +1,15 @@
-"""B152: closing the window asks in Kriko's own box, once, silently.
+"""The engine can ask the window to hide or quit, and the app does it.
 
-The reader's words: *"when we close the app, it shows a warning screen which
-is fine but we need dont show me again button and more stylised warning box;
-and please no OS warning sound."* The native message box is gone from the
-shell; the page draws the notice and answers through `/api/window`, which
-prints a line the shell acts on — the same pipe `KRIKO_FOCUS` uses.
+B152, kept for the native app. The reader's words: *"when we close the app, it
+shows a warning screen which is fine but we need dont show me again button and
+more stylised warning box; and please no OS warning sound."* The GPUI app has
+no webview and no page to draw that notice, so the property that remains is the
+route: `/api/window` records the choice and prints a `KRIKO_WINDOW` line, the
+same pipe `KRIKO_FOCUS` uses, and the Rust side turns the line into a hide or a
+quit. Closing the window itself is `test_the_shell_runs_in_the_tray.py`.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -17,7 +20,8 @@ from app.web.routers import focus
 from app.web.settings import Settings
 
 REPO = Path(__file__).resolve().parents[3]
-MAIN_RS = REPO / "tauri" / "src-tauri" / "src" / "main.rs"
+ENGINE_RS = REPO / "kriko-gpui" / "src" / "engine.rs"
+APP_RS = REPO / "kriko-gpui" / "src" / "app.rs"
 
 
 @pytest.fixture
@@ -63,20 +67,18 @@ def test_an_action_the_shell_does_not_know_is_refused(client, capfd):
 
 
 def test_the_shell_and_the_engine_agree_on_the_line():
-    main_rs = MAIN_RS.read_text(encoding="utf-8")
-    assert f'const WINDOW_LINE: &str = "{focus.WINDOW_LINE}";' in main_rs
-    assert "if line.contains(WINDOW_LINE) {\n                        window_answer" in main_rs
-    for action in ("hide", "quit"):
-        assert f'"{action}" =>' in main_rs
-    assert 'page.eval("window.__krikoClose && window.__krikoClose()")' in main_rs
+    engine = ENGINE_RS.read_text(encoding="utf-8")
+    assert f'const WINDOW_LINE: &str = "{focus.WINDOW_LINE}";' in engine
+    assert "line.contains(WINDOW_LINE)" in engine
+    for action, event in (("hide", "Hide"), ("quit", "Quit")):
+        assert f'"{action}" => Some(ShellEvent::{event})' in engine
 
 
-def test_the_close_button_no_longer_opens_a_native_box():
-    """A native message box is the sound the reader asked to be rid of."""
-    main_rs = MAIN_RS.read_text(encoding="utf-8")
-    close = main_rs.split("tauri::WindowEvent::CloseRequested", 1)[1].split("WindowEvent::Destroyed", 1)[0]
-    assert "dialog" not in close and "ask_page_to_close(window)" in close
-    assert "fn hint_still_running" not in main_rs
+def test_the_app_acts_on_what_the_engine_asked():
+    """Hide hides the window; quit stops the engine and ends the app."""
+    app = APP_RS.read_text(encoding="utf-8")
+    assert re.search(r"ShellEvent::Hide\s*=>\s*shell::hide_window\(\)", app)
+    assert re.search(r"ShellEvent::Quit\s*=>\s*Self::quit\(cx\)", app)
 
 
 def test_the_window_line_cannot_be_mistaken_for_another():

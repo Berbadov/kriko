@@ -1,60 +1,34 @@
-<?xml version='1.0' encoding='windows-1252'?>
+<?xml version='1.0' encoding='utf-8'?>
 <!--
-  Copyright (C) 2017 Christopher R. Field.
+  Kriko's installer: one per-user MSI, no UAC prompt.
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  It installs under %LOCALAPPDATA%\Programs\Kriko and carries two programs:
 
-  http://www.apache.org/licenses/LICENSE-2.0
+    kriko.exe          the desktop app (GPUI)
+    kriko-sidecar.exe  the engine, which the app starts and supervises
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+  The sidecar is built by PyInstaller (packaging/kriko-sidecar.spec) and
+  placed beside kriko.exe in the cargo output directory by package.ps1, so
+  both come from $(var.CargoTargetBinDir). `cargo wix` fills in Version and
+  CargoTargetBinDir; package.ps1 is the one place that runs it.
+
+  What an installer owes this app, and where it is paid:
+
+  * Nothing of ours may be running while files are replaced or removed. The
+    sidecar maps its own image, so a live one fails the copy. StopKriko runs
+    first and StopEngine second: ending kriko.exe closes the sidecar's stdin,
+    which is the engine's designed way out, and the second kill is the belt.
+    Both are tree kills (/T) because the one-file bundle re-executes, so the
+    pid that holds the file is a child of the one a name finds. They run
+    before the old version is removed (upgrade) and before files go
+    (uninstall). A "not found" is the expected answer, so neither can fail
+    the install.
+  * A per-user install must not touch the machine: no PATH entry, nothing
+    under Program Files, nothing needing elevation.
+  * Every component's key path is a value under HKCU, which is what Windows
+    Installer asks of anything written into a user profile (ICE38), and every
+    folder this creates is removed again (ICE64).
 -->
-
-<!--
-  The "cargo wix" subcommand provides a variety of predefined variables available
-  for customization of this template. The values for each variable are set at
-  installer creation time. The following variables are available:
-
-  TargetTriple      = The rustc target triple name.
-  TargetEnv         = The rustc target environment. This is typically either
-                      "msvc" or "gnu" depending on the toolchain downloaded and
-                      installed.
-  TargetVendor      = The rustc target vendor. This is typically "pc", but Rust
-                      does support other vendors, like "uwp".
-  CargoTargetBinDir = The complete path to the directory containing the
-                      binaries (exes) to include. The default would be
-                      "target\release\". If an explicit rustc target triple is
-                      used, i.e. cross-compiling, then the default path would
-                      be "target\<CARGO_TARGET>\<CARGO_PROFILE>",
-                      where "<CARGO_TARGET>" is replaced with the "CargoTarget"
-                      variable value and "<CARGO_PROFILE>" is replaced with the
-                      value from the "CargoProfile" variable. This can also
-                      be overridden manually with the "target-bin-dir" flag.
-  CargoTargetDir    = The path to the directory for the build artifacts, i.e.
-                      "target".
-  CargoProfile      = The cargo profile used to build the binaries
-                      (usually "debug" or "release").
-  Version           = The version for the installer. The default is the
-                      "Major.Minor.Fix" semantic versioning number of the Rust
-                      package.
--->
-
-<!--
-  Please do not remove these pre-processor If-Else blocks. These are used with
-  the `cargo wix` subcommand to automatically determine the installation
-  destination for 32-bit versus 64-bit installers. Removal of these lines will
-  cause installation errors.
--->
-<?if $(sys.BUILDARCH) = x64 or $(sys.BUILDARCH) = arm64 ?>
-    <?define PlatformProgramFilesFolder = "ProgramFiles64Folder" ?>
-<?else ?>
-    <?define PlatformProgramFilesFolder = "ProgramFilesFolder" ?>
-<?endif ?>
 
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
 
@@ -69,15 +43,20 @@
 
         <Package Id='*'
             Keywords='Installer'
-            Description='Kriko â€” local product knowledge, on the Kriko design system'
+            Description='Kriko: local product knowledge'
             Manufacturer='Kriko'
-            InstallerVersion='450'
+            InstallerVersion='500'
             Languages='1033'
             Compressed='yes'
-            InstallScope='perMachine'
+            InstallScope='perUser'
             SummaryCodepage='1252'
             />
 
+        <!--
+          Upgrade-aware: a newer MSI replaces an older one, an older one
+          refuses. The old version is removed after the stop actions below
+          have run, so its files are not held.
+        -->
         <MajorUpgrade
             Schedule='afterInstallInitialize'
             DowngradeErrorMessage='A newer version of [ProductName] is already installed. Setup will now exit.'/>
@@ -88,154 +67,112 @@
         <Directory Id='TARGETDIR' Name='SourceDir'>
             <Directory Id='ProgramMenuFolder' Name='ProgMenu'/>
             <Directory Id='DesktopFolder' Name='Desktop'/>
-            <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
-                <Directory Id='APPLICATIONFOLDER' Name='Kriko'>
-                    
-                    <!--
-                      Enabling the license sidecar file in the installer is a four step process:
+            <Directory Id='LocalAppDataFolder' Name='LocalAppData'>
+                <Directory Id='ProgramsFolder' Name='Programs'>
+                    <Directory Id='APPLICATIONFOLDER' Name='Kriko'>
 
-                      1. Uncomment the `Component` tag and its contents.
-                      2. Change the value for the `Source` attribute in the `File` tag to a path
-                         to the file that should be included as the license sidecar file. The path
-                         can, and probably should be, relative to this file.
-                      3. Change the value for the `Name` attribute in the `File` tag to the
-                         desired name for the file when it is installed alongside the `bin` folder
-                         in the installation directory. This can be omitted if the desired name is
-                         the same as the file name.
-                      4. Uncomment the `ComponentRef` tag with the Id attribute value of "License"
-                         further down in this file.
-                    -->
-                    <!--
-                    <Component Id='License' Guid='*'>
-                        <File Id='LicenseFile' Name='ChangeMe' DiskId='1' Source='C:\Path\To\File' KeyPath='yes'/>
-                    </Component>
-                    -->
+                        <Component Id='AppFolder' Guid='*'>
+                            <RemoveFolder Id='RemoveAppFolder' On='uninstall'/>
+                            <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='folder' Type='integer' Value='1' KeyPath='yes'/>
+                        </Component>
 
-                    <Component Id='Path' Guid='FC522261-6544-421E-AE27-822E8C766354' KeyPath='yes'>
-                        <Environment
-                            Id='PATH'
-                            Name='PATH'
-                            Value='[APPLICATIONFOLDER]'
-                            Permanent='no'
-                            Part='last'
-                            Action='set'
-                            System='yes'/>
-                    </Component>
-                    <Component Id='binary0' Guid='*'>
-                        <File
-                            Id='exe0'
-                            Name='kriko.exe'
-                            DiskId='1'
-                            Source='$(var.CargoTargetBinDir)\kriko.exe'
-                            KeyPath='yes'>
+                        <Component Id='KrikoExe' Guid='*'>
+                            <File Id='KrikoExe' Name='kriko.exe' DiskId='1' Source='$(var.CargoTargetBinDir)\kriko.exe' KeyPath='no'/>
+                            <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='kriko.exe' Type='integer' Value='1' KeyPath='yes'/>
+                        </Component>
+
+                        <Component Id='SidecarExe' Guid='*'>
+                            <File Id='SidecarExe' Name='kriko-sidecar.exe' DiskId='1' Source='$(var.CargoTargetBinDir)\kriko-sidecar.exe' KeyPath='no'/>
+                            <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='kriko-sidecar.exe' Type='integer' Value='1' KeyPath='yes'/>
+                        </Component>
+
+                        <Component Id='StartMenuKriko' Guid='*'>
                             <Shortcut
-                                Id='StartMenuShortcut'
+                                Id='StartMenuKriko'
                                 Directory='ProgramMenuFolder'
                                 Name='Kriko'
-                                Description='Kriko — local product knowledge'
+                                Description='Kriko: local product knowledge'
+                                Target='[APPLICATIONFOLDER]kriko.exe'
                                 WorkingDirectory='APPLICATIONFOLDER'
-                                Advertise='yes'/>
+                                Icon='KrikoIcon.ico'/>
+                            <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='start-menu' Type='integer' Value='1' KeyPath='yes'/>
+                        </Component>
+
+                        <!--
+                          The operator console, as something you double-click:
+                          the engine binary with its tui flag, drawn with the app's
+                          icon. A console window appears on purpose, because
+                          the terminal is the interface here.
+                        -->
+                        <Component Id='StartMenuConsole' Guid='*'>
                             <Shortcut
-                                Id='DesktopShortcut'
+                                Id='StartMenuConsole'
+                                Directory='ProgramMenuFolder'
+                                Name='Kriko Console'
+                                Description='Kriko operator console'
+                                Target='[APPLICATIONFOLDER]kriko-sidecar.exe'
+                                Arguments='--tui'
+                                WorkingDirectory='APPLICATIONFOLDER'
+                                Icon='KrikoIcon.ico'/>
+                            <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='start-menu-console' Type='integer' Value='1' KeyPath='yes'/>
+                        </Component>
+
+                        <Component Id='DesktopKriko' Guid='*'>
+                            <Shortcut
+                                Id='DesktopKriko'
                                 Directory='DesktopFolder'
                                 Name='Kriko'
-                                Description='Kriko — local product knowledge'
+                                Description='Kriko: local product knowledge'
+                                Target='[APPLICATIONFOLDER]kriko.exe'
                                 WorkingDirectory='APPLICATIONFOLDER'
-                                Advertise='yes'/>
-                        </File>
-                    </Component>
+                                Icon='KrikoIcon.ico'/>
+                            <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='desktop' Type='integer' Value='1' KeyPath='yes'/>
+                        </Component>
+                    </Directory>
                 </Directory>
             </Directory>
         </Directory>
 
         <Feature
             Id='Binaries'
-            Title='Application'
-            Description='Installs all binaries and the license.'
+            Title='Kriko'
+            Description='The app, its engine and the shortcuts.'
             Level='1'
             ConfigurableDirectory='APPLICATIONFOLDER'
             AllowAdvertise='no'
-            Display='expand'
             Absent='disallow'>
-            
-            <!--
-              Uncomment the following `ComponentRef` tag to add the license
-              sidecar file to the installer.
-            -->
-            <!--<ComponentRef Id='License'/>-->
-
-            <ComponentRef Id='binary0'/>
-
-            <Feature
-                Id='Environment'
-                Title='PATH Environment Variable'
-                Description='Add the install location of the [ProductName] executable to the PATH system environment variable. This allows the [ProductName] executable to be called from any location.'
-                Level='1'
-                Absent='allow'>
-                <ComponentRef Id='Path'/>
-            </Feature>
+            <ComponentRef Id='AppFolder'/>
+            <ComponentRef Id='KrikoExe'/>
+            <ComponentRef Id='SidecarExe'/>
+            <ComponentRef Id='StartMenuKriko'/>
+            <ComponentRef Id='StartMenuConsole'/>
+            <ComponentRef Id='DesktopKriko'/>
         </Feature>
+
+        <!--
+          Stop a running Kriko: the app first, then the engine. Immediate
+          actions are enough because nothing here needs elevation, and they
+          sit right after InstallInitialize, before the old version is removed
+          and before any file is touched. WixQuietExec reads QtExecCmdLine and
+          runs it without a console window; Return='ignore' because "no such
+          process" is the normal outcome.
+        -->
+        <CustomAction Id='SetStopKriko' Property='QtExecCmdLine' Value='&quot;[SystemFolder]taskkill.exe&quot; /F /T /IM kriko.exe'/>
+        <CustomAction Id='StopKriko' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
+        <CustomAction Id='SetStopEngine' Property='QtExecCmdLine' Value='&quot;[SystemFolder]taskkill.exe&quot; /F /T /IM kriko-sidecar.exe'/>
+        <CustomAction Id='StopEngine' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
+        <InstallExecuteSequence>
+            <Custom Action='SetStopKriko' Before='RemoveExistingProducts'/>
+            <Custom Action='StopKriko' After='SetStopKriko'/>
+            <Custom Action='SetStopEngine' After='StopKriko'/>
+            <Custom Action='StopEngine' After='SetStopEngine'/>
+        </InstallExecuteSequence>
 
         <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize'/>
 
-        <!--
-          Disabling the custom product icon for the application in the
-          Add/Remove Programs control panel requires commenting out or
-          removing the following `Icon` and `Property` tags.
-        -->
-        <Icon Id='ProductICO' SourceFile='assets/kriko.ico'/>
-        <Property Id='ARPPRODUCTICON' Value='ProductICO' />
-        
+        <Icon Id='KrikoIcon.ico' SourceFile='assets/kriko.ico'/>
+        <Property Id='ARPPRODUCTICON' Value='KrikoIcon.ico'/>
         <Property Id='ARPHELPLINK' Value='https://kriko.local'/>
-        
-        <UI>
-            <UIRef Id='WixUI_FeatureTree'/>
-            
-            <!--
-              Enabling the EULA dialog in the installer is a three step process:
-
-                1. Comment out or remove the two `Publish` tags that follow the
-                   `WixVariable` tag.
-                2. Uncomment the `<WixVariable Id='WixUILicenseRtf' Value='Path\to\Eula.rft'>` tag further down
-                3. Replace the `Value` attribute of the `WixVariable` tag with
-                   the path to a RTF file that will be used as the EULA and
-                   displayed in the license agreement dialog.
-            -->
-            <Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>
-            <Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>
-
-        </UI>
-
-        
-        <!--
-          Enabling the EULA dialog in the installer requires uncommenting
-          the following `WixUILicenseRTF` tag and changing the `Value`
-          attribute.
-        -->
-        <!-- <WixVariable Id='WixUILicenseRtf' Value='Relative\Path\to\Eula.rtf'/> -->
-
-        
-        <!--
-          Uncomment the next `WixVariable` tag to customize the installer's
-          Graphical User Interface (GUI) and add a custom banner image across
-          the top of each screen. See the WiX Toolset documentation for details
-          about customization.
-
-          The banner BMP dimensions are 493 x 58 pixels.
-        -->
-        <!--<WixVariable Id='WixUIBannerBmp' Value='wix\Banner.bmp'/>-->
-
-        
-        <!--
-          Uncomment the next `WixVariable` tag to customize the installer's
-          Graphical User Interface (GUI) and add a custom image to the first
-          dialog, or screen. See the WiX Toolset documentation for details about
-          customization.
-
-          The dialog BMP dimensions are 493 x 312 pixels.
-        -->
-        <!--<WixVariable Id='WixUIDialogBmp' Value='wix\Dialog.bmp'/>-->
-
     </Product>
 
 </Wix>
