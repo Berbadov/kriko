@@ -2779,7 +2779,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     progress.set(0.05, "lining up the shortlist")
     for stored in answers:
         progress.log(f"{stored['label']}: {len(stored['response'].get('claims') or [])} known risk(s)")
-    if _use_local_ask(settings, params):
+    local = _use_local_ask(settings, params)
+    if local:
         completer = _local_compare_completer(settings, params, progress)
         brief = _compare_brief(
             question, answers,
@@ -2819,7 +2820,21 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     if not row:
         raise ValueError("the question is gone — the draft was deleted while it ran")
     progress.set(1.0, "answered" if reply else "the agent printed nothing")
-    return {"draft_id": draft_id, "question_id": question_id, "answer": reply}
+    source_summary = [
+        {"name": str(stored["label"]),
+         "risks": len(stored["response"].get("claims") or [])}
+        for stored in answers
+    ]
+    provider = completer if local else researcher
+    return {
+        "draft_id": draft_id, "question_id": question_id, "answer": reply,
+        "source": "saved checks", "saved_checks": source_summary,
+        "brief_chars": len(brief), "web_searches": 0 if local else None,
+        "model": str(getattr(provider, "model", "") or ""),
+        "tokens_used": getattr(provider, "tokens_used", None),
+        "tokens_in": getattr(provider, "tokens_in", None),
+        "tokens_out": getattr(provider, "tokens_out", None),
+    }
 
 
 def _compare_brief(question: str, answers: list[dict], *,

@@ -135,6 +135,10 @@ def test_the_job_handler_answers_a_question_and_writes_it_on_the_row(
 
     class _Completer:
         context_chars = 12000
+        model = "small:4b"
+        tokens_used = 141
+        tokens_in = 100
+        tokens_out = 41
 
         def __call__(self, prompt):
             self.prompt = prompt
@@ -156,6 +160,12 @@ def test_the_job_handler_answers_a_question_and_writes_it_on_the_row(
         "draft_id": made["draft_id"], "question_id": asked["question_id"],
         "question": asked["question"]}, _Progress())
     assert result["answer"].startswith("The first one")
+    assert result["saved_checks"] == [
+        {"name": "One", "risks": 1}, {"name": "Two", "risks": 0}]
+    assert result["brief_chars"] == len(researcher.prompt)
+    assert result["web_searches"] == 0
+    assert (result["model"], result["tokens_used"], result["tokens_in"], result["tokens_out"]) == (
+        "small:4b", 141, 100, 41)
     assert "QUESTION: which has the cheaper known fix?" in researcher.prompt
     assert "## One" in researcher.prompt and "## Two" in researcher.prompt
     conn = state.connect(settings.app_state_path)

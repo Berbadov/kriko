@@ -59,8 +59,10 @@ pub struct Job {
     pub created_at: String,
     pub finished_at: String,
     pub harness: String,
+    pub backend: String,
     pub subject_id: String,
     pub product: String,
+    pub question: String,
     pub retry_of: String,
     pub attention: Option<Attention>,
     pub feed: Vec<FeedLine>,
@@ -217,8 +219,10 @@ fn job_from(v: &Value) -> Job {
         created_at: api::s(v, "created_at"),
         finished_at: api::s(v, "finished_at"),
         harness: api::s(&params, "harness"),
+        backend: api::s(&params, "backend"),
         subject_id: api::s(&params, "subject_id"),
         product,
+        question: api::s(&params, "question"),
         retry_of: api::s(&params, "retry_of"),
         attention,
         feed,
@@ -977,6 +981,16 @@ impl Kriko {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn recent_local_jobs_keep_their_backend_and_question_for_navigation() {
+        let job = job_from(&json!({"job_id": "ask-1", "kind": "compare_ask",
+            "state": "succeeded", "done": true,
+            "params": {"backend": "local", "harness": "local",
+                "question": "Which has the lower known risk?"}}));
+        assert_eq!(job.backend, "local");
+        assert_eq!(job.question, "Which has the lower known risk?");
+    }
 
     fn running(feed: Value) -> Job {
         job_from(&json!({

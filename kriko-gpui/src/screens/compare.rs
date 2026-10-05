@@ -11,8 +11,8 @@ use gpui::{
     MouseButton, PaintQuad, Pixels, SharedString, Styled, Window,
 };
 
-use crate::app::{Field, Kriko};
-use crate::live::compare::{self as live, Check, Level, Loaded, Note, QState, MAX_SLOTS};
+use crate::app::{Field, Kriko, Tab};
+use crate::live::compare::{self as live, Check, Level, Loaded, Note, QState, QuestionRun, MAX_SLOTS};
 use crate::marks::{self, mark_tile, phase_beat, Phase};
 use crate::screens::{empty_note, mono, plate_s, row_desc, th, trust_icon};
 use crate::theme::*;
@@ -1248,6 +1248,56 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         .child(keys)
 }
 
+fn question_run_detail(run: &QuestionRun) -> Div {
+    let mut detail = div().pl(px(24.0)).flex().flex_col().gap(px(5.0));
+    if !run.state.is_empty() {
+        let stage = if run.state == "succeeded" { "Complete" }
+            else if run.state == "failed" { "Failed" }
+            else if run.state == "cancelled" { "Cancelled" }
+            else { "In progress" };
+        detail = detail.child(mono(
+            &format!("{} · {:.0}% · {}", stage, (run.progress * 100.0).clamp(0.0, 100.0), run.message),
+            MUTED,
+        ));
+    }
+    if !run.saved_checks.is_empty() {
+        let sources = run.saved_checks.iter()
+            .map(|(name, risks)| format!("{name} ({risks} known risks)"))
+            .collect::<Vec<_>>().join(" · ");
+        detail = detail.child(mono(&format!("Saved checks behind answer: {sources}"), MUTED));
+    } else if run.state == "succeeded" {
+        detail = detail.child(mono("Saved check summary was not recorded for this answer", DIM));
+    }
+    if !run.steps.is_empty() {
+        detail = detail.child(mono("STEPS", DIM));
+        for step in &run.steps {
+            detail = detail.child(mono(&format!("• {step}"), MUTED));
+        }
+    }
+    if !run.model.is_empty() {
+        detail = detail.child(mono(&format!("Model: {}", run.model), MUTED));
+    } else if run.state == "succeeded" {
+        detail = detail.child(mono("Model name not reported by this agent", DIM));
+    }
+    if run.state == "succeeded" {
+        let usage = match run.tokens_used {
+            Some(total) => {
+                let parts = match (run.tokens_in, run.tokens_out) {
+                    (Some(input), Some(output)) => format!(" ({input} in, {output} out)"),
+                    _ => String::new(),
+                };
+                format!("{total} tokens{parts}")
+            }
+            None => "Token use not reported by this agent".to_string(),
+        };
+        let brief = run.brief_chars.map(|n| format!(" · {n} brief characters (some risks may be omitted)"))
+            .unwrap_or_default();
+        let search = if run.no_web_search { " · no new web search" } else { "" };
+        detail = detail.child(mono(&format!("{usage}{brief}{search}"), MUTED));
+    }
+    detail
+}
+
 pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
 
@@ -1656,19 +1706,10 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .and_then(|id| app.live.compare.drafts.iter().find(|d| d.draft_id == *id))
         .map(|d| d.name.clone())
         .unwrap_or_default();
-    let agent_label = app
-        .live
-        .compare
-        .harnesses
-        .iter()
-        .find(|(id, _)| *id == app.live.compare.harness)
-        .map(|(_, l)| l.clone())
-        .unwrap_or_else(|| local_model.as_ref().map(|m| format!("local · {m}"))
-            .unwrap_or_else(|| "your agent".to_string()));
     let mut questions = div().flex().flex_col().gap(px(10.0));
     for (qi, q) in app.live.compare.questions.iter().enumerate() {
         let failure = app.live.compare.failed.get(&q.question_id);
-        let line = app.live.compare.job_line.get(&q.job_id);
+        let run = app.live.compare.question_runs.get(&q.job_id);
         questions = questions.child(
             well()
                 .p(px(14.0))
@@ -1723,6 +1764,10 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             motion,
                         )))
                         .child(row_desc(why)),
+                    (None, None) if run.is_some_and(|r| r.state == "succeeded") => div()
+                        .pl(px(24.0))
+                        .child(tag(format!("compare-empty-{qi}"), TagState::Need,
+                            "no text returned", motion)),
                     (None, None) => div()
                         .pl(px(24.0))
                         .flex()
@@ -1731,11 +1776,11 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .child(div().flex().items_center().gap(px(8.0)).child(tag(
                             format!("compare-asking-{qi}"),
                             TagState::Live,
-                            &format!("asking {agent_label}"),
+                            "answering",
                             motion,
-                        )))
-                        .children(line.map(|l| mono(l, MUTED))),
+                        ))),
                 })
+                .children(run.map(question_run_detail))
                 .child(mono(
                     &format!(
                         "kept with {} · asked {}",
@@ -1756,7 +1801,13 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             "Ask from the saved checks in these slots. The local model reads a short, relevant brief without searching the web. Asking saves the slots to this draft first.",
         ))
         .child(if app.live.compare.harnesses.is_empty() && local_model.is_none() {
-            empty_note("No agent or local model is ready. Set one up in Settings or Local LLM.")
+            let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                this.tab = Tab::Local;
+                cx.notify();
+            });
+            div().flex().items_center().gap(px(12.0))
+                .child(empty_note("No agent or local model is ready."))
+                .child(ghost("compare-open-local", "Set up Local LLM").on_click(open_local))
                 .into_any_element()
         } else {
             agent_row.into_any_element()
