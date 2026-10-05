@@ -1,11 +1,12 @@
 //! Settings: where a preference lives, and the fact that it lives anywhere.
-//! Four cards in a 2x2 grid: General, Privacy, Shortcuts, Danger zone —
-//! the shape of the reference screen.
+//! Four cards in a 2x2 grid: General, Keys, Shortcuts, Danger zone — the
+//! shape of the reference screen. The app's own preferences are saved in the
+//! engine's settings; the keys are the engine's own key file.
 
 use gpui::{div, prelude::*, px, rgb, Context, Div, Stateful, Styled, Window};
 
-use crate::app::{Kriko, Tab};
-use crate::screens::{row_desc, row_title};
+use crate::app::{Field, Kriko};
+use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
 use crate::theme::*;
 
 /// One row of a card: title + description left, a control right.
@@ -18,6 +19,8 @@ fn row(title: &str, desc: &str, control: gpui::AnyElement) -> Div {
         .gap(px(24.0))
         .child(
             div()
+                .flex_1()
+                .min_w(px(0.0))
                 .flex()
                 .flex_col()
                 .gap(px(2.0))
@@ -25,33 +28,6 @@ fn row(title: &str, desc: &str, control: gpui::AnyElement) -> Div {
                 .child(row_desc(desc)),
         )
         .child(control)
-}
-
-fn switch_row(
-    id: &'static str,
-    title: &str,
-    desc: &str,
-    on: bool,
-    motion: bool,
-    cx: &mut Context<Kriko>,
-) -> Div {
-    row(
-        title,
-        desc,
-        switch_anim(id, on, motion)
-            .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                match id {
-                    "sw-launch" => this.launch_at_login = !this.launch_at_login,
-                    "sw-menubar" => this.menu_bar_icon = !this.menu_bar_icon,
-                    "sw-motion" => this.reduce_motion = !this.reduce_motion,
-                    "sw-ask" => this.ask_before_reading = !this.ask_before_reading,
-                    "sw-raw" => this.keep_raw_pages = !this.keep_raw_pages,
-                    _ => {}
-                }
-                cx.notify();
-            }))
-            .into_any_element(),
-    )
 }
 
 /// A shortcut row: label left, keycaps right.
@@ -86,34 +62,124 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
         .child(caps)
 }
 
-pub fn settings(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
+pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
+    let motion = !app.reduce_motion;
+    let key_input = app.input_field(Field::KeyValue, "key-value", "Paste the key, then Save", None, window, cx);
+    let k = &app.live.knowledge;
+
     // ---- general ----
+    let login = switch_anim("sw-launch", k.launch_at_login, motion).on_click(cx.listener(
+        |this, _: &gpui::ClickEvent, _w, cx| {
+            let on = !this.live.knowledge.launch_at_login;
+            this.set_launch_at_login(on, cx);
+        },
+    ));
+    let reduce = switch_anim("sw-motion", app.reduce_motion, motion).on_click(cx.listener(
+        |this, _: &gpui::ClickEvent, _w, cx| {
+            let on = !this.reduce_motion;
+            this.set_reduce_motion(on, cx);
+        },
+    ));
+    let store = if app.live.health.store.is_empty() {
+        "the engine has not said".to_string()
+    } else {
+        app.live.health.store.clone()
+    };
     let general = card()
         .flex()
         .flex_col()
         .child(div().mb(px(4.0)).child(eyebrow("General")))
         .child(hairline())
-        .child(switch_row("sw-launch", "Launch at login", "Start Kriko when you sign in", app.launch_at_login, !app.reduce_motion, cx))
+        .child(row(
+            "Launch at login",
+            "Start Kriko when you sign in to Windows",
+            login.into_any_element(),
+        ))
         .child(hairline())
-        .child(switch_row("sw-menubar", "Menu bar icon", "Show run state without opening the window", app.menu_bar_icon, !app.reduce_motion, cx))
+        .child(row("Reduce motion", "Turns off loops and flicker", reduce.into_any_element()))
         .child(hairline())
-        .child(switch_row("sw-motion", "Reduce motion", "Turns off loops and flicker", app.reduce_motion, !app.reduce_motion, cx));
+        .child(
+            div()
+                .py(px(14.0))
+                .flex()
+                .flex_col()
+                .gap(px(4.0))
+                .child(row_title("Data location"))
+                .child(row_desc("Everything stays on this machine"))
+                .child(mono(&store, MUTED)),
+        );
 
-    // ---- privacy ----
-    let privacy = card()
+    // ---- keys ----
+    let mut keys = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(4.0)).child(eyebrow("Privacy")))
-        .child(hairline())
-        .child(switch_row("sw-ask", "Ask before reading new sites", "Pauses the run for your approval", app.ask_before_reading, !app.reduce_motion, cx))
-        .child(hairline())
-        .child(switch_row("sw-raw", "Keep raw pages", "Store page text next to claims", app.keep_raw_pages, !app.reduce_motion, cx))
-        .child(hairline())
-        .child(row(
-            "Data location",
-            "All data remains on this machine",
-            chip("~/.kriko").into_any_element(),
-        ));
+        .child(div().mb(px(4.0)).child(eyebrow("Keys")))
+        .child(hairline());
+    if !k.keys_loaded {
+        keys = keys.child(div().pt(px(12.0)).child(empty_note("Waiting for Kriko's engine.")));
+    }
+    for (i, p) in k.keys.iter().enumerate() {
+        let picked = k.key_provider.as_deref() == Some(p.id.as_str());
+        let (pid, rid) = (p.id.clone(), p.id.clone());
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.live.knowledge.key_provider = Some(pid.clone());
+            cx.notify();
+        });
+        let remove = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.remove_key(rid.clone(), cx);
+        });
+        let state = if p.present {
+            let from = if p.source.is_empty() { String::new() } else { format!(" from {}", p.source) };
+            format!("set, ends {}{}", p.hint, from)
+        } else {
+            "not set".to_string()
+        };
+        keys = keys
+            .child(row(
+                &p.label,
+                &state,
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .child(ghost(("key-pick", i), if picked { "Typing" } else { "Set" }).on_click(pick))
+                    .when(p.present, |d| d.child(ghost(("key-remove", i), "Remove").on_click(remove)))
+                    .into_any_element(),
+            ))
+            .child(hairline());
+    }
+    if let Some(target) = k.key_provider.as_ref().and_then(|id| k.keys.iter().find(|p| &p.id == id)) {
+        let id = target.id.clone();
+        let save = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            let value = this.key_value.value.trim().to_string();
+            this.key_value.value.clear();
+            this.save_key(id.clone(), value, cx);
+            cx.notify();
+        });
+        keys = keys.child(
+            div()
+                .pt(px(12.0))
+                .flex()
+                .flex_col()
+                .gap(px(10.0))
+                .child(row_desc(&format!(
+                    "A key for {}. It goes to the engine's own key file and nowhere else.",
+                    target.label
+                )))
+                .child(
+                    div()
+                        .flex()
+                        .gap(px(12.0))
+                        .child(div().flex_1().min_w(px(0.0)).child(key_input))
+                        .child(plate_s("key-save", "Save").on_click(save)),
+                ),
+        );
+    } else if k.keys_loaded {
+        keys = keys.child(div().pt(px(12.0)).child(row_desc("Pick Set on a provider to type its key.")));
+    }
+    if !k.keys_path.is_empty() {
+        keys = keys.child(div().pt(px(8.0)).child(mono(&k.keys_path, DIM)));
+    }
 
     // ---- shortcuts ----
     let shortcuts = card()
@@ -128,85 +194,59 @@ pub fn settings(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
         .child(shortcut_row("Jump to Browse", None, &["ctrl", "B"]));
 
     // ---- danger zone ----
-    let danger_zone;
-    if app.erased {
-        let rebuild = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-            this.tab = Tab::Browse;
-            cx.notify();
-        });
-        danger_zone = card()
-            .flex()
-            .flex_col()
-            .child(
-                div()
-                    .mb(px(4.0))
-                    .child(
-                        div()
-                            .font_family(MONO)
-                            .text_size(px(11.0))
-                            .text_color(rgb(DANGER))
-                            .child("DANGER ZONE"),
-                    ),
-            )
-            .child(hairline())
-            .child(
-                div()
-                    .py(px(14.0))
-                    .flex()
-                    .flex_col()
-                    .gap(px(8.0))
-                    .child(row_title("Every catalog removed"))
-                    .child(row_desc("Packs, claims and evidence are gone. Rebuild them from Browse."))
-                    .child(div().mt(px(4.0)).flex().child(ghost("rebuild", "Rebuild from Browse").on_click(rebuild))),
-            );
+    let confirm = k.erase_confirm;
+    let busy = k.erase_busy;
+    let label = if busy {
+        "Removing"
+    } else if confirm {
+        "Really remove every pack?"
     } else {
-        let label = if app.erase_confirm {
-            "Really erase everything?"
+        "Remove all packs"
+    };
+    let erase = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        if this.live.knowledge.erase_busy {
+            return;
+        }
+        if !this.live.knowledge.erase_confirm {
+            this.live.knowledge.erase_confirm = true;
         } else {
-            "Erase data"
-        };
-        let erase = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-            if !this.erase_confirm {
-                this.erase_confirm = true;
+            this.erase_packs(cx);
+        }
+        cx.notify();
+    });
+    let cancel = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.live.knowledge.erase_confirm = false;
+        cx.notify();
+    });
+    let danger_zone = card()
+        .flex()
+        .flex_col()
+        .child(
+            div().mb(px(4.0)).child(
+                div()
+                    .font_family(MONO)
+                    .text_size(px(11.0))
+                    .text_color(rgb(DANGER))
+                    .child("DANGER ZONE"),
+            ),
+        )
+        .child(hairline())
+        .child(row(
+            "Remove every pack",
+            if confirm {
+                "This removes every installed pack and every pack draft, with their claims and evidence. Your history is kept. Packs come back only when you install them again."
             } else {
-                this.erased = true;
-                this.erase_confirm = false;
-            }
-            cx.notify();
-        });
-        let cancel = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-            this.erase_confirm = false;
-            cx.notify();
-        });
-        danger_zone = card()
-            .flex()
-            .flex_col()
-            .child(
-                div()
-                    .mb(px(4.0))
-                    .child(
-                        div()
-                            .font_family(MONO)
-                            .text_size(px(11.0))
-                            .text_color(rgb(DANGER))
-                            .child("DANGER ZONE"),
-                    ),
-            )
-            .child(hairline())
-            .child(row(
-                "Erase local data",
-                "Removes packs, claims, evidence and history",
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(12.0))
-                    .when(app.erase_confirm, |d| {
-                        d.child(ghost("erase-cancel", "Cancel").on_click(cancel))
-                    })
-                    .child(danger("erase", label).on_click(erase))
-                    .into_any_element(),
-            ));
-    }
+                "Removes all packs and drafts. Keeps your history."
+            },
+            div()
+                .flex()
+                .items_center()
+                .gap(px(12.0))
+                .when(confirm && !busy, |d| d.child(ghost("erase-cancel", "Cancel").on_click(cancel)))
+                .child(danger("erase", label).on_click(erase))
+                .into_any_element(),
+        ))
+        .when_some(k.settings_notice.clone(), |c, n| c.child(div().pt(px(8.0)).child(mono(&n, MUTED))));
 
     div()
         .id("settings-scroll")
@@ -234,7 +274,7 @@ pub fn settings(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                         .flex()
                         .flex_col()
                         .gap(px(24.0))
-                        .child(privacy)
+                        .child(keys)
                         .child(danger_zone),
                 ),
         )
