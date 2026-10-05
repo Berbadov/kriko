@@ -86,7 +86,7 @@ def _sources() -> list[Path]:
     )
 
 
-def test_every_rust_source_parses():
+def test_every_rust_source_parses(tmp_path):
     rustc = _rustc()
     if rustc is None:
         pytest.skip("no rustc on this machine — the Windows leg is the gate there")
@@ -98,7 +98,9 @@ def test_every_rust_source_parses():
         checked += 1
         done = subprocess.run(
             [rustc, "--edition", edition, "--crate-type", "lib",
-             "--emit=metadata", "-o", os.devnull, str(source)],
+             # a real file, not os.devnull: a source that resolves every name
+             # gets written, and Windows will not rename a temp file onto `nul`
+             "--emit=metadata", "-o", str(tmp_path / "out.rmeta"), str(source)],
             capture_output=True, text=True, cwd=CRATE,
         )
         for line in done.stderr.splitlines():
