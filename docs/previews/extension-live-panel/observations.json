@@ -1,0 +1,22 @@
+{
+  "extension": "Chromium used the real saved-job API and SQLite; only the model boundary was a stand-in.",
+  "native_panel": "Browser recreation from the native matrix data and theme; not a native window capture.",
+  "observed": {
+    "followups": "Two questions answered inline, prior conversation supplied to the next answer, restored after reload.",
+    "cards": "Existing node, expansion and focus retained; reading-position drift 0.15625px; no entrance animation on refresh.",
+    "queue_help": "Opened with the keyboard and explains saving and starting queued research.",
+    "live_panel": "One phase matrix per row; fixed cell positions while brightness changes; reduced motion freezes cells; both agent marks use LEDs."
+  },
+  "windows": "Native Windows installation and browser-extension verification remain pending.",
+  "validation": {
+    "tools/gate.sh": "Passed",
+    "python": "2435 passed, 20 skipped",
+    "extension": "227 passed",
+    "dashboard": "613 passed",
+    "lint_and_types": "Passed",
+    "wheel": "Built, installed into a clean environment, imported and CLI ran",
+    "gpui": "cargo check --offline passed on Linux",
+    "legacy_tauri": "Native and Windows cargo checks skipped by the gate because offline Tauri dependencies are not cached",
+    "cloud_test_runner": "Used a writable temporary app-log fallback and the project-root import path; production code unchanged"
+  }
+}
