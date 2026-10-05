@@ -14,29 +14,39 @@ fn kv(k: &str, v: &str) -> Div {
         .items_center()
         .justify_between()
         .gap(px(24.0))
-        .child(mono(k, DIM))
-        .child(mono(v, INK_2))
+        .child(mono(k, DIM).flex_none())
+        .child(mono(v, INK_2).min_w(px(0.0)))
 }
 
-pub fn about(_app: &mut Kriko, _window: &mut Window, _cx: &mut Context<Kriko>) -> Div {
-    let facts = card()
+pub fn about(app: &mut Kriko, _window: &mut Window, _cx: &mut Context<Kriko>) -> Div {
+    let h = &app.live.health;
+    let said = |v: &str| {
+        if h.loaded && !v.is_empty() {
+            v.to_string()
+        } else {
+            "not reported yet".to_string()
+        }
+    };
+    let schema = if h.loaded { h.schema_version.to_string() } else { "not reported yet".to_string() };
+    let mut facts = card()
         .flex()
         .flex_col()
         .child(div().mb(px(4.0)).child(eyebrow("This install")))
         .child(hairline())
-        .child(kv("Version", "0.11.0"))
+        .child(kv("Version", &said(&h.version)))
         .child(hairline())
-        .child(kv("Design system", "Kriko / Panel"))
+        .child(kv("Schema version", &schema))
         .child(hairline())
-        .child(kv("Fonts", "Barlow Condensed · DM Sans · JetBrains Mono"))
+        .child(kv("Knowledge store", &said(&h.store)))
         .child(hairline())
-        .child(kv("Data location", "~/.kriko"))
+        .child(kv("App state", &said(&h.app_state)))
         .child(hairline())
-        .child(kv("Engine", "kriko-sidecar, local"))
+        .child(kv("Log file", &said(&h.log_file)))
         .child(hairline())
-        .child(kv("Browser extension", "Chrome / Firefox, TypeScript"))
-        .child(hairline())
-        .child(kv("Licence", "See LICENSE in the repository"));
+        .child(kv("Releases", &said(&h.releases_url)));
+    for (id, version) in &h.packs {
+        facts = facts.child(hairline()).child(kv(id, version));
+    }
 
     let brand = card()
         .flex()
