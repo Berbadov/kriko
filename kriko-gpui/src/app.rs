@@ -209,6 +209,7 @@ pub enum Field {
     HistorySearch,
     ActivityFilter,
     SitesAdd,
+    KeyValue,
     BrowseSearch,
     DockReply,
     CompareAsk,
@@ -303,37 +304,23 @@ pub struct Kriko {
     /// What the engine said, per area, for the screens to draw.
     pub live: Live,
     // settings
-    pub launch_at_login: bool,
-    pub menu_bar_icon: bool,
     pub reduce_motion: bool,
-    pub ask_before_reading: bool,
-    pub keep_raw_pages: bool,
-    pub erase_confirm: bool,
-    pub erased: bool,
     // inputs
     pub history_search: InputState,
     pub activity_filter: InputState,
     pub sites_add: InputState,
+    pub key_value: InputState,
     pub browse_search: InputState,
     // history
     pub page: usize,
     pub history_span: SpanFilter,
     // activity
-    // sites: hosts added this session
-    pub added_sites: Vec<String>,
     // browse / agents / packs / models
     pub browse_view: usize,
     pub browse_view_prev: usize,
     pub agent_selected: usize,
     pub agent_allowed: Vec<bool>,
-    pub pack_enabled: Vec<bool>,
-    /// The coverage gap unfolded on Overview, by index into KNOWLEDGE.
-    /// None: every gap rests closed.
-    pub knowledge_open: Option<usize>,
     pub model_loaded: Vec<bool>,
-    // extension
-    pub extension_linked: bool,
-    pub extension_hover: bool,
     // run
     pub run_phase: usize,
     // the live actions dock
@@ -397,29 +384,19 @@ impl Kriko {
             tab: Tab::Home,
             engine: engine::status(),
             live: Live::default(),
-            launch_at_login: true,
-            menu_bar_icon: false,
             reduce_motion: false,
-            ask_before_reading: true,
-            keep_raw_pages: true,
-            erase_confirm: false,
-            erased: false,
             history_search: InputState::new(cx),
             activity_filter: InputState::new(cx),
             sites_add: InputState::new(cx),
+            key_value: InputState::new(cx),
             browse_search: InputState::new(cx),
             page: 0,
             history_span: SpanFilter::All,
-            added_sites: Vec::new(),
             browse_view: 0,
             browse_view_prev: 0,
             agent_selected: 0,
             agent_allowed: data::AGENTS.iter().map(|a| a.allowed).collect(),
-            pack_enabled: data::PACKS.iter().map(|p| p.enabled).collect(),
-            knowledge_open: None,
             model_loaded: data::MODELS.iter().map(|m| m.loaded).collect(),
-            extension_linked: false,
-            extension_hover: false,
             run_phase: 0,
             dock_reply: InputState::new(cx),
             dock_resolved: Vec::new(),
@@ -591,6 +568,7 @@ impl Kriko {
             Field::HistorySearch => &self.history_search,
             Field::ActivityFilter => &self.activity_filter,
             Field::SitesAdd => &self.sites_add,
+            Field::KeyValue => &self.key_value,
             Field::BrowseSearch => &self.browse_search,
             Field::DockReply => &self.dock_reply,
             Field::CompareAsk => &self.compare_question_input,
@@ -605,6 +583,7 @@ impl Kriko {
             Field::HistorySearch => &mut self.history_search,
             Field::ActivityFilter => &mut self.activity_filter,
             Field::SitesAdd => &mut self.sites_add,
+            Field::KeyValue => &mut self.key_value,
             Field::BrowseSearch => &mut self.browse_search,
             Field::DockReply => &mut self.dock_reply,
             Field::CompareAsk => &mut self.compare_question_input,
@@ -616,6 +595,18 @@ impl Kriko {
 
     fn handle_key(this: &mut Kriko, field: Field, event: &KeyDownEvent, cx: &mut Context<Kriko>) {
         let ks = &event.keystroke;
+        // Ctrl+V pastes into the two fields that take a pasted value.
+        if ks.modifiers.control
+            && ks.key.as_str() == "v"
+            && matches!(field, Field::SitesAdd | Field::KeyValue)
+        {
+            if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
+                let line = text.lines().next().unwrap_or("").trim().to_string();
+                this.input_mut(field).value.push_str(&line);
+                cx.notify();
+            }
+            return;
+        }
         if ks.modifiers.control || ks.modifiers.alt || ks.modifiers.platform {
             return;
         }
@@ -639,8 +630,18 @@ impl Kriko {
         if ks.key.as_str() == "enter" && field == Field::SitesAdd {
             let host = this.input(field).value.trim().to_string();
             if !host.is_empty() {
-                this.added_sites.push(host);
                 this.input_mut(field).value.clear();
+                this.register_site(&host, cx);
+            }
+            cx.notify();
+            return;
+        }
+        // Enter in the key field saves the key for the provider picked.
+        if ks.key.as_str() == "enter" && field == Field::KeyValue {
+            let value = this.input(field).value.trim().to_string();
+            if let Some(provider) = this.live.knowledge.key_provider.clone() {
+                this.input_mut(field).value.clear();
+                this.save_key(provider, value, cx);
             }
             cx.notify();
             return;
@@ -933,6 +934,7 @@ impl Kriko {
                     .flex_none()
                     .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
                         this.tab = Tab::from_key(key);
+                        this.on_open_tab(cx);
                         cx.notify();
                     }));
                 nav = nav.child(row);
