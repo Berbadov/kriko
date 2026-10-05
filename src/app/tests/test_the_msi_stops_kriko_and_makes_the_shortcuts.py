@@ -141,3 +141,20 @@ def test_every_shortcut_goes_with_the_install(wix):
 def test_the_installer_uses_the_one_brand_icon():
     text = WXS.read_text(encoding="utf-8")
     assert "assets/kriko.ico" in text
+
+
+def test_each_quiet_exec_is_handed_the_property_it_reads(wix):
+    """WixQuietExec reads WixQuietExecCmdLine (WixQuietExec64 reads
+    WixQuietExec64CmdLine). The 1.0.0 recipe set QtExecCmdLine, the old
+    CAQuietExec's name, so both stop actions ran with no command: an
+    uninstall left Kriko running and its folder behind."""
+    actions = _actions(wix)
+    quiet = [a for a in actions.values() if (a.get("DllEntry") or "").startswith("WixQuietExec")]
+    assert quiet, "the installer has no quiet-exec actions to check"
+    for action in quiet:
+        setter = actions.get("Set" + action.get("Id"))
+        assert setter is not None, f"{action.get('Id')} has no Set{action.get('Id')} before it"
+        assert setter.get("Property") == action.get("DllEntry") + "CmdLine", (
+            f"Set{action.get('Id')} sets {setter.get('Property')}, but "
+            f"{action.get('DllEntry')} reads {action.get('DllEntry')}CmdLine"
+        )

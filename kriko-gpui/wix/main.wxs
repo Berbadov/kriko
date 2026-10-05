@@ -159,13 +159,15 @@
           Stop a running Kriko: the app first, then the engine. Immediate
           actions are enough because nothing here needs elevation, and they
           sit right after InstallInitialize, before the old version is removed
-          and before any file is touched. WixQuietExec reads QtExecCmdLine and
-          runs it without a console window; Return='ignore' because "no such
-          process" is the normal outcome.
+          and before any file is touched. WixQuietExec reads
+          WixQuietExecCmdLine and runs it without a console window (not
+          QtExecCmdLine, which is the old CAQuietExec's: with it the actions
+          ran with no command and killed nothing, seen on the 1.0.0 MSI);
+          Return='ignore' because "no such process" is the normal outcome.
         -->
-        <CustomAction Id='SetStopKriko' Property='QtExecCmdLine' Value='&quot;[SystemFolder]taskkill.exe&quot; /F /T /IM kriko.exe'/>
+        <CustomAction Id='SetStopKriko' Property='WixQuietExecCmdLine' Value='&quot;[SystemFolder]taskkill.exe&quot; /F /T /IM kriko.exe'/>
         <CustomAction Id='StopKriko' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
-        <CustomAction Id='SetStopEngine' Property='QtExecCmdLine' Value='&quot;[SystemFolder]taskkill.exe&quot; /F /T /IM kriko-sidecar.exe'/>
+        <CustomAction Id='SetStopEngine' Property='WixQuietExecCmdLine' Value='&quot;[SystemFolder]taskkill.exe&quot; /F /T /IM kriko-sidecar.exe'/>
         <CustomAction Id='StopEngine' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
         <InstallExecuteSequence>
             <Custom Action='SetStopKriko' Before='RemoveExistingProducts'/>
