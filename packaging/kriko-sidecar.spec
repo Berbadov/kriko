@@ -22,9 +22,8 @@
 # has already been wrong once — collecting all of `mcp` pulls in `mcp.cli`,
 # which raises "typer is required" and fails the freeze on every runner.
 #
-# `datas` — five things in this repo are read from disk rather than imported,
-# and every one is invisible to PyInstaller's import graph: the built frontend
-# (src/app/web/static/, or the app 404s on its own UI), the store's DDL
+# `datas` — four things in this repo are read from disk rather than imported,
+# and every one is invisible to PyInstaller's import graph: the store's DDL
 # (src/kriko/store/schema.sql, or every query raises FileNotFoundError), the
 # browser extension, the first-party packs, and the shipped model catalogue
 # (src/app/models.toml, or install_default() throws FileNotFoundError on every
@@ -59,7 +58,6 @@ sys.path.insert(0, SPECPATH)
 from freeze_imports import CONSOLE_MODULES, FROZEN_EXCLUDES, kriko_submodules, mcp_submodules
 
 ROOT = Path(SPECPATH).parent
-STATIC = ROOT / "src" / "app" / "web" / "static"
 
 # The browser extension travels *inside* the sidecar, unpacked to
 # `app/extension_src` where `app/extension.py` looks for it. It is data, not
@@ -95,12 +93,6 @@ if not (EXTENSION / "manifest.json").exists():
         "extension and cannot install one it does not carry"
     )
 
-if not (STATIC / "index.html").exists():
-    raise SystemExit(
-        "src/app/web/static/index.html is missing — run "
-        "`npm --prefix ui run build` before freezing, or the app ships with no UI"
-    )
-
 # See the `winpty-agent.exe` note above `datas` for why this is a `binaries`
 # entry rather than something PyInstaller finds on its own. Only Windows
 # installs `pywinpty` at all (pyproject.toml's `sys_platform == 'win32'`
@@ -125,7 +117,6 @@ a = Analysis(
     pathex=[str(ROOT / "src")],
     binaries=WINPTY_BINARIES,
     datas=[
-        (str(STATIC), "app/web/static"),
         (str(ROOT / "src" / "kriko" / "store" / "schema.sql"), "kriko/store"),
         (str(ROOT / "src" / "app" / "models.toml"), "app"),
         # B185: the benchmark's fixed test set, read from disk beside

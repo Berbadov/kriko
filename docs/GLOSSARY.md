@@ -73,6 +73,5 @@ which in its log.
 2. One word, one meaning.
 3. A word the UI shows belongs in this table.
 4. A pack's vocabulary is never an engine or client identifier. No category
-   word appears in `src/kriko/` or `ui/src/`, and two tests hold that:
-   `test_core_is_domain_free.py` walks the engine's AST and
-   `test_ui_contains_no_pack_vocabulary` reads the frontend's source.
+   word appears in `src/kriko/`, and `test_core_is_domain_free.py` walks
+   the engine's AST to hold that.

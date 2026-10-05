@@ -13,8 +13,8 @@ B### — "…"
 
 **Checked on:** here / Windows
 
-<!-- A screenshot of the screen named in the entry's "Where"
-     (tools/walk.sh writes them to .walk/), or the journey check's output. -->
+<!-- A screenshot of the screen named in the entry's "Where",
+     or the journey check's output. -->
 
 ## What it does not do yet
 
@@ -73,7 +73,6 @@ paste test output here
 ### Before merge
 
 - [ ] One request in this PR, and the branch is less than a day old (or rebased on `main`)
-- [ ] `tools/walk.sh` shows no errors on the screens this touches
 - [ ] Its journey check passes, or (until `tools/journeys/` exists, B191) the
       steps and the end result are walked by hand above (docs/DOCTRINE.md §4)
 

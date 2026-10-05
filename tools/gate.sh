@@ -15,7 +15,6 @@
 #     tools/gate.sh          # everything
 #     tools/gate.sh py       # just the Python suite
 #     tools/gate.sh wheel    # just: does the artifact we ship actually import
-#     tools/gate.sh ui       # just vitest, types, and the stale-bundle check
 #     tools/gate.sh tauri    # just the shell's cargo check, native + windows-target
 #
 # Exits non-zero on the first failure, and says which gate failed. Nothing here
@@ -133,36 +132,6 @@ if [ "$only" = all ] || [ "$only" = node ]; then
     fi
 fi
 
-if [ "$only" = all ] || [ "$only" = ui ]; then
-    ran=1
-    step "vitest (svelte components)"
-    npm --prefix ui test
-
-    # Types, which was a local-only gate until the workflow took it, and is a
-    # local-only gate again. `--threshold error` because the two standing
-    # warnings are accessibility notes on markup that is deliberate, and a
-    # warning that fails a build is a warning somebody silences.
-    step "svelte-check"
-    npm --prefix ui run check -- --threshold error
-
-    # The extension's colour tokens are generated from the app's theme — same
-    # discipline as the bundle below, and for the same reason: the extension
-    # loads static files with no build step, so the output is committed and
-    # something has to notice when it stops matching its source.
-    step "the panel's palette is not stale"
-    python tools/tokens.py --check
-
-    # src/app/web/static/ is committed build output: the wheel ships it, so a
-    # stale bundle means `pip install kriko` serves a UI nobody can reproduce
-    # from source. Rebuild and require a clean diff.
-    step "the committed bundle is not stale"
-    npm --prefix ui run build
-    if ! git diff --exit-code -- src/app/web/static; then
-        echo "src/app/web/static is stale — the rebuild above changed it. Commit the result." >&2
-        exit 1
-    fi
-fi
-
 if [ "$only" = all ] || [ "$only" = tauri ]; then
     ran=1
     CRATE="tauri/src-tauri"
@@ -264,7 +233,7 @@ if [ "$only" = all ] || [ "$only" = tauri ]; then
 fi
 
 if [ "$ran" = 0 ]; then
-    echo "unknown gate: $only (expected: all, py, node, ui, tauri)" >&2
+    echo "unknown gate: $only (expected: all, py, wheel, node, tauri)" >&2
     exit 2
 fi
 

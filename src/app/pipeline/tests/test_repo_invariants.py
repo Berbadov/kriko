@@ -9,7 +9,6 @@ import ast
 import json
 import re
 import subprocess
-import sys
 from configparser import ConfigParser
 from pathlib import Path
 
@@ -239,68 +238,6 @@ def test_every_pack_in_the_repo_builds_and_is_not_empty(tmp_path):
                 else " — it has no build.py, so the generic builder ran"
             )
         )
-
-
-UI_SRC = REPO / "ui" / "src"
-
-# Pack vocabulary. The engine's domain-freedom is checked by
-# src/kriko/tests/test_core_is_domain_free.py walking kriko/'s AST; the same
-# failure mode is now reachable in TypeScript, where no Python test looks. One
-# `if (key === "make")` in a form component and G6 is over at the DOM boundary.
-PACK_VOCABULARY = (
-    "make",
-    "model",
-    "engine_code",
-    "gearbox",
-    "fuel",
-    "mileage",
-    "vehicle",
-    "car",
-)
-
-
-def test_ui_contains_no_pack_vocabulary():
-    """ui/ builds its forms from pack rows, never from a hardcoded key list.
-
-    Identity keys come from /api/identity-keys/{pack_id} and context keys from
-    /api/packs/{pack_id}/vocabulary. A literal key name in the frontend is the
-    same scalability bug as a Python constant, in a language the AST test does
-    not read.
-
-    Test fixtures are excluded: they need realistic-looking values, and a
-    fixture cannot leak into what a user sees.
-    """
-    if not UI_SRC.is_dir():
-        return
-    pattern = re.compile(rf"\b(?:{'|'.join(PACK_VOCABULARY)})\b", re.IGNORECASE)
-    hits = []
-    for path in sorted(UI_SRC.rglob("*")):
-        if path.suffix not in {".ts", ".svelte"} or path.name.endswith(".test.ts"):
-            continue
-        for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if pattern.search(line):
-                hits.append(f"{_rel(path)}:{n}: {line.strip()}")
-    assert not hits, (
-        "pack vocabulary in ui/src — build the field from the pack's own rows "
-        "(/api/identity-keys, /api/packs/{id}/vocabulary) instead:\n" + "\n".join(hits)
-    )
-
-
-def test_no_hand_written_frontend_survives():
-    """app.js was replaced by ui/, not supplemented by it.
-
-    Two frontends in one directory is how the built bundle silently stops
-    being what the server serves.
-    """
-    stale = [
-        p.name
-        for p in (REPO / "src" / "app" / "web" / "static").glob("*")
-        if p.name in {"app.js", "app.css"}
-    ]
-    assert not stale, (
-        f"{stale} still in the served static dir — the Svelte build in ui/ "
-        f"replaces them; delete them and rebuild."
-    )
 
 
 # ── the desktop shell ─────────────────────────────────────────────────────
@@ -537,10 +474,9 @@ def test_the_frozen_spec_bundles_every_data_file_it_reads_from_disk():
     datas_block = spec_text[datas_start:datas_end]
 
     # Each of these must appear as a distinctive fragment inside `datas=[...]` —
-    # either the STATIC/EXTENSION variable the spec builds from ROOT, or the
+    # either the EXTENSION variable the spec builds from ROOT, or the
     # literal filename for a path built inline (as models.toml's fix does).
     required = {
-        "STATIC": "the built frontend",
         "schema.sql": "the store's DDL",
         "models.toml": "the shipped model catalogue",
         "EXTENSION": "the browser extension",
@@ -703,102 +639,6 @@ def test_the_app_stays_standalone():
             f"{driver} is a dependency again — the store is SQLite, and the "
             f"engine talks to it with the stdlib sqlite3 module"
         )
-
-
-def test_the_app_wears_the_extension_palette():
-    """The app's default theme and the extension's live sheet are one palette.
-
-    This exists because it already went wrong: the `lemonade` theme was ported
-    from `extension/colors_and_type.css`, a file nothing loaded — the port was
-    faithful to a stylesheet that had not painted a pixel in months, and the
-    only thing that caught it was the reader looking at both windows. (That
-    file is deleted now.)
-
-    It used to compare two values by hand — the ground and the accent — which
-    was two of twenty-eight and chosen because they are what a glance
-    registers. The palette is generated now, so this defers to the generator:
-    `tools/tokens.py --check` compares all of them, and the map it compares
-    them through is code rather than a comment. What is still asserted here is
-    the part no generator covers — that the app is set in Plex Mono, and that it
-    actually *opens* wearing this theme, which since B159 is its only one.
-    """
-    generated = subprocess.run(
-        [sys.executable, "tools/tokens.py", "--check"],
-        cwd=REPO, capture_output=True, text=True,
-    )
-    assert generated.returncode == 0, generated.stderr or generated.stdout
-
-    themes = REPO / "ui" / "src" / "styles" / "themes"
-
-    # Panel is the *only* theme (B159: "Remove all theme selections, keep only
-    # the Panel theme"). A second sheet here is a choice waiting for a picker,
-    # and a picker is how the app used to open looking like a different tool.
-    assert [sheet.name for sheet in themes.glob("*.css")] == ["panel.css"], (
-        "the app has more than one theme sheet; Panel is the only theme"
-    )
-
-    # The app is set in Plex Mono throughout (fonts.css ships its weights),
-    # the face the panel already uses for its numbers. The extension's own
-    # sheet still names Plex Sans for its text until B186 applies the same
-    # rule there, so this no longer asks the two to agree on it.
-    tokens = (REPO / "ui" / "src" / "styles" / "tokens.css").read_text(encoding="utf-8")
-    assert "ibm plex mono" in tokens.lower(), (
-        "tokens.css no longer names IBM Plex Mono, the app's typeface"
-    )
-
-    # And the app must actually open in it. With no picker there is nothing to
-    # select a palette but the import itself, so the entry point has to load
-    # this sheet and only this one.
-    entry = (REPO / "ui" / "src" / "main.ts").read_text(encoding="utf-8")
-    assert 'import "./styles/themes/panel.css";' in entry, (
-        "the app no longer opens wearing the extension's palette"
-    )
-    assert entry.count("styles/themes/") == 1, "main.ts imports a second theme"
-
-
-def test_both_clients_call_it_the_same_thing_on_screen():
-    """The reader's word is one word, in the panel and in the app.
-
-    The row is a `claim` everywhere it is named — store, wire, both clients'
-    variables — and what a buyer *reads* is "risk", in both. That split is
-    deliberate (`docs/STYLE.md` rule 9) and it is exactly the kind of
-    correspondence this repository keeps finding rotted: two files, one
-    convention, nothing holding them together.
-
-    It rotted once already, during the rename that made the field names agree:
-    the panel's counts bar was changed to say CLAIMS while the app went on
-    saying "8 known risks, 7 serious" over the same eight rows. Caught by
-    looking at the two windows, which is not a mechanism.
-    """
-    panel = (REPO / "extension" / "hover_lite" / "hover_lite.js").read_text(encoding="utf-8")
-    app = (REPO / "ui" / "src" / "lib" / "verdict.ts").read_text(encoding="utf-8")
-
-    said = re.search(r'"known risk"', app)
-    assert said, (
-        "ui/src/lib/verdict.ts no longer says \"known risk\" — if the app's "
-        "word for the reader changed, the panel's has to change with it"
-    )
-    assert "Risks · ${total}" in panel, (
-        "the panel no longer heads its list 'Risks · N', but the app still "
-        "counts 'known risk'. One reader, one word."
-    )
-
-    # B152.5: the severity words and the ask line are the app's, read off
-    # `report.ts` — so renaming one there fails here until the panel follows.
-    report = (REPO / "ui" / "src" / "lib" / "report.ts").read_text(encoding="utf-8")
-    block = re.search(r"SEVERITY_WORD[^{]*\{([^}]*)\}", report)
-    assert block, "ui/src/lib/report.ts no longer names SEVERITY_WORD"
-    words = re.findall(r':\s*"([^"]+)"', block.group(1))
-    assert len(words) == 3, words
-    for word in words:
-        assert f'<span class="lbl">{word.lower()}</span>' in panel, (
-            f"the app calls a severity {word!r}; the panel's counts bar does not"
-        )
-    card = (REPO / "extension" / "hover_lite" / "claim_card.js").read_text(encoding="utf-8")
-    ask = (REPO / "ui" / "src" / "lib" / "ClaimCard.svelte").read_text(encoding="utf-8")
-    assert "What to ask" in ask and "What to ask" in card, (
-        "the app and the panel no longer head the buyer's question the same way"
-    )
 
 
 def test_no_two_tracked_files_differ_only_in_case():

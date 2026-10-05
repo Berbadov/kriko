@@ -19,7 +19,7 @@ layering principle in `CLAUDE.md` disagree, `CLAUDE.md` wins.
 
 ```mermaid
 flowchart TD
-    UI["ui/ — frontend, HTTP only"] --> APP["app/ — CLI, web, MCP, TUI"]
+    UI["kriko-gpui/ — the window, HTTP only"] --> APP["app/ — CLI, web, MCP, TUI"]
     APP --> K["kriko/ — engine, imports none of the others"]
     PACKS["packs/ — one dir per category"] --> K
     APP --> PL["app/pipeline/ — ledger drivers"]
@@ -30,7 +30,7 @@ flowchart TD
 
 | Package | Owns | Read first |
 |---|---|---|
-| `ui/` | Svelte source; `npm --prefix ui run build` writes `src/app/web/static/` | `ui/src/lib/shell/nav.ts`, the one route table the rail, the palette and the router all read |
+| `kriko-gpui/` | The window: GPUI screens over the engine's HTTP API | `kriko-gpui/src/app.rs` |
 | `src/app/` | Interfaces: CLI, FastAPI dashboard, MCP server, operator TUI | `src/app/cli.py` |
 | `src/app/pipeline/` | Drivers that orchestrate a category's ledger and remediate its gaps | `src/app/pipeline/ledger_run.py` |
 | `src/kriko/` | Engine: pack store, generic lookup and ranking, gates, research interface | `src/kriko/store/packstore.py` |
@@ -38,15 +38,11 @@ flowchart TD
 | `packs/<name>/pipeline/` | Evidence ledger and grounded extraction for one category | that pack's `pipeline/ledger/acquire.py` |
 | `extension/` | Reads a listing page; a background worker calls the web API and renders the risk cards | `extension/content.js` |
 
-### `ui/`, the frontend
+### `kriko-gpui/`, the window
 
-Svelte 5 and Vite, built into `src/app/web/static/`. A hash-routed shell over
-the route table in `lib/shell/nav.ts`, which also holds the alias words so a
-retired screen's address still opens whatever absorbed it. `styles/` holds the
-tokens and the one theme (`themes/panel.css`); `lib/` the typed API client
-plus pure derivation (`report.ts`, `verdict.ts`, `compare.ts`, `health.ts`,
-`fields.ts`, `homeSeries.ts`); `routes/` one component per destination. Only
-the report surface is editorial (68ch, a print sheet).
+Rust and GPUI. `app.rs` holds the tabs and their state, `screens/` one module
+per tab, `theme.rs` the palette and `engine.rs` the engine's lifetime. See
+`kriko-gpui/README.md`.
 
 ## Chasing a question? read these
 

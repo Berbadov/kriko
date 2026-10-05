@@ -31,8 +31,7 @@ local.db
 node_modules/
 
 # package-lock.json is NOT ignored, and used to be -- as a bare pattern, which
-# matches at every depth, so it swallowed the root lockfile and tauri's while
-# ui/'s survived only because it was already tracked when the rule landed.
+# matches at every depth, so it swallowed the root lockfile and tauri's.
 # That is how `@tauri-apps/cli: "^2"` came to float: v0.2.1 opened and v0.2.4,
 # four hours later, panicked on a byte-identical tree. A release that cannot
 # be rebuilt is not a release.
@@ -62,17 +61,6 @@ src/*.egg-info/
 # Subagent-driven-development scratch (ledger, briefs, review packages)
 .superpowers/
 
-# UI build inputs. The build *output* (src/app/web/static/) is committed on
-# purpose — the wheel ships it, so `pip install kriko` needs no Node.
-ui/node_modules/
-ui/.svelte-kit/
-
-# ...but ui/package-lock.json IS committed, overriding the repo-wide ignore on
-# line 32. The CI stale-bundle check rebuilds and diffs the committed output,
-# so a floating dependency version would change an asset hash and fail the
-# build for no reason. Reproducible installs are load-bearing here.
-!ui/package-lock.json
-
 # The desktop shell's build products. The Rust target directory is ~2GB, the
 # frozen sidecar is per-OS, and `tauri icon` generates every icon in
 # src-tauri/icons/ from packaging/icon-master.png -- including icon.png,
@@ -92,8 +80,6 @@ build/
 # their literal bytes so no `git add -A` can pick one up again.
 0�d
 
-# tools/walk.sh output
-.walk/
 
 # Hand-run build transcripts from packaging/build_desktop.ps1 — the recipe
 # writes one per run on the Windows host, and it is a log, not a source.
@@ -109,3 +95,6 @@ _crop.png
 
 # Zed editor state
 .zed/
+
+# Local screenshots and proofs
+.walk/

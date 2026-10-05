@@ -31,7 +31,6 @@ The window starts hidden on `shell-ui/index.html`, invokes `start_engine`, and o
 Rust (`rustup`), Node, Python. Neither wheel nor test suite needs any of it.
 
 ```bash
-npm --prefix ui run build                       # UI the sidecar serves
 pip install pyinstaller
 pyinstaller packaging/kriko-sidecar.spec        # -> dist/kriko-sidecar
 mkdir -p tauri/src-tauri/binaries

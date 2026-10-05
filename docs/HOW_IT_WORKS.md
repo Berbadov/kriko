@@ -64,7 +64,7 @@ request.
 ```mermaid
 flowchart TD
     T["<b>tauri/</b> — the desktop shell<br/>owns the sidecar's lifetime, nothing else"] --> U
-    U["<b>ui/</b> — the frontend<br/>talks HTTP, knows no catalog's vocabulary"] --> A
+    U["<b>kriko-gpui/</b> — the window<br/>talks HTTP to the engine"] --> A
     A["<b>app/</b> — the interfaces<br/>web, CLI, MCP, operator console"] --> K
     P["<b>packs/</b> — one directory per category<br/>data, vocabulary, trust, its own bar"] --> K
     A --> PL["<b>app/pipeline/</b> — pipeline drivers"]

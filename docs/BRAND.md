@@ -11,9 +11,7 @@ python packaging/render_lockup.py
 
 ```
 logo-mark.svg (16x16)       -> extension/assets/icons/icon-{16,32,48,128}.png
-logo-mark.svg               -> ui/public/mark.svg
 logo-mark-large.svg (64x64) -> packaging/icon-master.png (1024px)
-logo-mark-large.svg         -> ui/public/mark-large.svg
 logo-mark.svg + KRIKO       -> extension/assets/logo-lockup.svg
 logo-mark.svg + KRIKO       -> extension/assets/logo-lockup-mono.svg
 ```
@@ -25,8 +23,6 @@ logo-mark.svg + KRIKO       -> extension/assets/logo-lockup-mono.svg
 | You want | Use | Source? |
 |---|---|---|
 | Toolbar icon | `extension/assets/icons/icon-*.png` | rendered |
-| Favicon | `ui/public/mark.svg` | rendered |
-| Rail (32px, smooth) | `ui/public/mark-large.svg` | rendered |
 | App icon master | `packaging/icon-master.png` | rendered |
 | Logo with name | `extension/assets/logo-lockup.svg` | rendered |
 | Logo on foreign ground | `extension/assets/logo-lockup-mono.svg` (`currentColor`, no ground) | rendered |
@@ -35,13 +31,13 @@ logo-mark.svg + KRIKO       -> extension/assets/logo-lockup-mono.svg
 
 ## The three colours
 
-Owned by `ui/src/styles/themes/panel.css`, borrowed by the mark — so it never sits on the rail as a foreign object. A test asserts mark hex and theme tokens agree.
+Owned by the extension panel's palette (`extension/hover_lite/hover_lite.css`), borrowed by the mark — so it never sits on a surface as a foreign object. A test asserts mark hex and theme tokens agree.
 
 | Role | Token | Value |
 |---|---|---|
-| Ground | `--n-2` | `#15171C` |
-| Letter | `--n-9` | `#E7E9ED` |
-| Rising arm | `--accent` | `#E8C04B` |
+| Ground | `--bg-panel` | `#10131C` |
+| Letter | `--fg` | `#E7EAF4` |
+| Rising arm | `--accent` | `#A5C3FF` |
 
 ## Two marks, one design
 
