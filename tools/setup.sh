@@ -12,8 +12,7 @@
 # claim false; that `-e .` is needed for `app.version` to report the tree's
 # version rather than a stale one; that the `pipeline` extra is not optional for
 # the *suite* even though it is optional for serving — without it six modules
-# fail to import and four tests error; that `ui/` and the repo root have
-# separate `node_modules`; and that `src/*.egg-info` goes stale and makes a
+# fail to import and four tests error; and that `src/*.egg-info` goes stale and makes a
 # version test fail for a reason that has nothing to do with the tree.
 #
 # Every one of those is a thing a person had to find out by failing. None of
@@ -145,17 +144,12 @@ rm -f /tmp/kriko-import.$$
 
 # ── Node ────────────────────────────────────────────────────────────────
 #
-# Two trees, and they are not the same install. The root holds the extension's
-# tests; `ui/` holds the Svelte app, and its lockfile is committed because the
-# stale-bundle check needs the same dependency versions to produce the same
-# asset hashes.
+# One tree: the root holds the extension's tests.
 if command -v npm >/dev/null 2>&1; then
     say "node dependencies (root: extension tests)"
     npm install --silent --no-audit --no-fund
-    say "node dependencies (ui: the dashboard)"
-    npm --prefix ui ci --silent --no-audit --no-fund
 else
-    bad "npm not found — the Python half is ready, the two JS suites are not."
+    bad "npm not found — the Python half is ready, the extension suite is not."
 fi
 
 say "ready"

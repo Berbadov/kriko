@@ -181,19 +181,6 @@ def test_both_headers_are_spelled_the_same_on_both_sides():
         assert found, f"background.js never names {header}"
 
 
-def test_the_dashboard_holds_no_version_floor_either():
-    # It renders the sentence the app wrote. A comparison in the view would be
-    # a third copy of the rule — and the one nobody would think to check when
-    # the floor moves.
-    ui = Path(__file__).resolve().parents[3] / "ui" / "src"
-    for name in ("routes/Extension.svelte", "lib/types.ts"):
-        source = (ui / name).read_text(encoding="utf-8")
-        quoted = re.escape(extension.MINIMUM_VERSION)
-        assert not re.search(rf'["\']{quoted}["\']', source), (
-            f"{name} states a version floor; the rule lives in app/extension.py"
-        )
-
-
 def test_the_extension_holds_no_version_floor_of_its_own():
     # The comparison lives in the extension; the *rule* lives here. A floor
     # written in both would be the compatibility matrix this design exists to

@@ -111,9 +111,9 @@ def _appdata() -> Path | None:
 
     But an unset `%APPDATA%` was never the only way this leaked: on a real
     Windows machine it is always set, so a caller who redirects `HOME`/
-    `USERPROFILE` alone — every one-click test, `tools/walk.sh`'s isolated
-    runs — still got the *real* `%APPDATA%` back here, because the inherited
-    environment variable was trusted over the redirected home. That made the
+    `USERPROFILE` alone — every one-click test, isolated runs — still got
+    the *real* `%APPDATA%` back here, because the inherited environment
+    variable was trusted over the redirected home. That made the
     isolation the docstring above claims true for three targets out of four
     and silently false for Claude Desktop, whose config a redirected run could
     still read (or, worse, overwrite). So `%APPDATA%` is honoured only when it

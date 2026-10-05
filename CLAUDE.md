@@ -138,7 +138,7 @@ a fan, not a column. Import down only:
 
 ```
 tauri/  desktop shell (Rust, ~180 lines) — sidecar lifetime, nothing else; no engine logic ever
-ui/     Svelte+Vite source -> src/app/web/static/; HTTP to app/; no Python, no catalog vocabulary
+kriko-gpui/  the window (Rust, GPUI); HTTP to app/; no Python, no engine logic
 app/    interfaces — cli, web dashboard, mcp server, operator TUI (same HTTP API, no webview)
 kriko/  engine — pack store, lookup, ranking, research interface; imports NONE of the others; no category
 packs/  per-category data, vocabulary, trust tiers, builder, coverage report (third-party-authored)
@@ -164,9 +164,8 @@ grep -rnE "^[[:space:]]*(from|import) (app|app.pipeline)"                       
 grep -rnE "^[[:space:]]*(from|import) backend"                    --include='*.py' src/app/   | grep -v /pipeline/ | grep -v /tests/
 ```
 
-Enforced in `src/app/pipeline/tests/test_repo_invariants.py`. `ui/` rebuild:
-`npm --prefix ui run build`, commit both; the gate fails on a stale bundle.
-Forms come from `/api/identity-keys/{pack_id}` and
+Enforced in `src/app/pipeline/tests/test_repo_invariants.py`. The engine
+serves data, never screens: `/` is a one-line notice. Forms come from `/api/identity-keys/{pack_id}` and
 `/api/packs/{pack_id}/vocabulary` at runtime
 (`test_ui_contains_no_pack_vocabulary`, in that same invariants file).
 

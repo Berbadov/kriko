@@ -22,8 +22,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from app import agentconfig, agentskill, bundledpacks, extension as ext, logs, packautoupdate
 from app import modelcatalogue
@@ -68,7 +67,12 @@ from kriko.store.db import SCHEMA_VERSION, connect
 
 log = logging.getLogger(__name__)
 
-STATIC = Path(__file__).parent / "static"
+#: What `/` answers. The engine serves data, not screens: the window is the
+#: desktop app, and everything it shows comes from `/api/...`.
+INDEX = (
+    "<!doctype html><meta charset=utf-8><title>Kriko</title>"
+    "<p>The Kriko engine is running. Open the Kriko app to see it.</p>"
+)
 
 
 def _shipped_extension_version() -> str:
@@ -393,8 +397,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             },
         )
 
-    app.mount("/static", StaticFiles(directory=STATIC), name="static")
-
     @app.get("/api/health")
     def liveness():
         return {
@@ -446,9 +448,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "port_is_ours": bool(app.state.settings.extension_port_bound),
         }
 
-    @app.get("/")
+    @app.get("/", response_class=HTMLResponse)
     def index():
-        return FileResponse(STATIC / "index.html")
+        # The window is the desktop app now; this server has no screens of
+        # its own. A browser tab that lands here (the extension's fallback
+        # when no window is listening) is told where to look instead of
+        # shown a 404.
+        return INDEX
 
     return app
 

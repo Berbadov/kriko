@@ -61,76 +61,6 @@ def test_the_app_icon_is_actually_antialiased():
     assert width == height == render_icon.MASTER
 
 
-def test_the_frontend_serves_the_same_mark():
-    """`ui/public/mark.svg` is a published copy, not a second drawing.
-
-    Vite bundles only what lives under `ui/`, so the frontend cannot reach the
-    source file and needs its own. `render_icon.main()` writes both from one
-    read; this is what fails when somebody edits the source and reruns nothing.
-    """
-    assert render_icon.WEB_TARGET.read_text(encoding="utf-8") == (
-        render_icon.SOURCE.read_text(encoding="utf-8")
-    )
-
-
-def test_the_frontend_serves_the_large_mark_too():
-    """The rail draws the 64x64 drawing, and `ui/public/mark-large.svg` is its copy.
-
-    B161: "Fix the pixelated Kriko logo in the top left". The rail drew the 16x16
-    grid at 28px, a 1.75 scale that no rendering mode makes crisp. It draws the
-    drawing now, which has real diagonals and scales smoothly, and the frontend
-    can only reach files under `ui/`, so the drawing is published there by the
-    same script that renders every other size from it. This is what fails when
-    somebody edits the large mark and reruns nothing.
-    """
-    assert render_icon.WEB_LARGE_TARGET.read_text(encoding="utf-8") == (
-        render_icon.LARGE_SOURCE.read_text(encoding="utf-8")
-    )
-
-
-def test_the_rail_draws_a_smooth_vector_never_a_scaled_bitmap():
-    """Pixel art at a fractional scale is what the reader called pixelated.
-
-    Read off the two files that decide it: the component that names the image,
-    and the stylesheet that says how it is scaled. Either half alone could be
-    reverted quietly, and the source-reading tests above would still pass on a
-    rail that looks exactly as it did.
-
-    The rail used to draw the large mark at a fixed 32px. The rebuild replaced
-    it with the design system's own wordmark, which is a vector with its own
-    aspect and no square box to be a fraction of — so the assertion is now the
-    one that actually matters and the specific numbers are gone: the rail's
-    image is an `.svg`, it is not told to scale as pixel art, and its width
-    follows its height rather than being pinned to a square.
-    """
-    root = Path(__file__).resolve().parents[3]
-    rail = (root / "ui" / "src" / "lib" / "shell" / "Sidebar.svelte").read_text(encoding="utf-8")
-    drawn = re.findall(r'<img[^>]*class="mark"[^>]*src="([^"]+)"', rail)
-    assert drawn, "the rail no longer draws any mark at all"
-    assert drawn[0].endswith(".svg"), (
-        f"the rail's mark is {drawn[0]}, and the reader called the last one "
-        "pixelated: the rail's image has to be a vector"
-    )
-    assert "/static/" in drawn[0], (
-        f"the rail draws {drawn[0]}, but Vite's base is /static/ because "
-        "FastAPI mounts StaticFiles there; a root-relative path falls through "
-        "to the SPA catch-all and renders as a broken image"
-    )
-
-    css = (root / "ui" / "src" / "styles" / "components.css").read_text(encoding="utf-8")
-    at = css.index(".brand .mark {")
-    # Comments stripped: the rule explains what it replaced, and naming the old
-    # declaration in prose is not the declaration coming back.
-    rule = re.sub(r"/\*.*?\*/", "", css[at : css.index("}", at)], flags=re.S)
-    assert "pixelated" not in rule, (
-        "the rail's mark is scaled as pixel art again; the drawing is a vector"
-    )
-    assert re.search(r"width:\s*auto", rule) and re.search(r"height:\s*\d+px", rule), (
-        "the wordmark keeps its own aspect: height is drawn and width follows "
-        "it. A fixed width on a vector this shape stretches the letter."
-    )
-
-
 def test_the_app_and_the_extension_show_the_same_letter():
     """The ratchet, and what it guards changed in 0.10.0.
 
@@ -194,9 +124,8 @@ def test_the_manifest_asks_for_no_size_the_render_does_not_make():
 def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
     """The three colours are palette, not decoration.
 
-    Ground, letter and joint are `--n-2`, `--n-9` and `--accent` of the panel
-    theme — the theme the app opens in, ported from the extension's live
-    stylesheet. A mark using anything else would sit on the rail as a foreign
+    Ground, letter and joint are `--bg-panel`, `--fg` and `--accent` of the panel
+    sheet, the extension's live stylesheet. A mark using anything else would sit on the rail as a foreign
     object, which is exactly how the lemon read.
     """
     # Both marks. They are one design in two drawings, and a colour changed in
@@ -209,13 +138,11 @@ def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
     )
     theme = (
         Path(__file__).resolve().parents[3]
-        / "ui/src/styles/themes/panel.css"
+        / "extension/hover_lite/hover_lite.css"
     ).read_text(encoding="utf-8").lower()
 
-    # `panel.css` answers `--accent` with `var(--ice)` rather than a literal, so
-    # an equality against the text `--accent:` would pass on any value at all,
-    # including none. The rebuild made it an alias, and without resolving it this
-    # test would have stopped watching the one colour it exists to watch.
+    # A token can be an alias (`var(--ice)`) rather than a literal, so each
+    # one is resolved before it is compared.
     palette = dict(re.findall(r"--([a-z0-9-]+):\s*([^;]+);", theme))
 
     def resolves(token: str) -> str:
@@ -237,8 +164,8 @@ def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
             token = inner.removeprefix("--")
 
     for label, colour, token in (
-        ("the ground", "#10131c", "--n-2"),
-        ("the letter", "#e7eaf4", "--n-9"),
+        ("the ground", "#10131c", "--bg-panel"),
+        ("the letter", "#e7eaf4", "--fg"),
         ("the joint", "#a5c3ff", "--accent"),
     ):
         assert svg.count(colour) >= 2, (
@@ -314,9 +241,8 @@ def test_every_brand_asset_actually_parses():
 
     root = Path(__file__).resolve().parents[3]
     assets = sorted(
-        {render_icon.SOURCE, render_icon.WEB_TARGET}
+        {render_icon.SOURCE}
         | set((root / "extension" / "assets").glob("*.svg"))
-        | set((root / "ui" / "public").glob("*.svg"))
     )
     assert assets, "no brand SVGs found; the glob is wrong"
     for asset in assets:

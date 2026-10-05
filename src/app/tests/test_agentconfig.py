@@ -154,7 +154,7 @@ def test_a_redirected_home_redirects_claude_desktop_too(tmp_path, monkeypatch):
 
     Before this fix, `_appdata()` trusted an inherited `APPDATA` env var
     unconditionally, so a caller that redirects `HOME`/`USERPROFILE` alone (as
-    every one-click test and `tools/walk.sh` does) still got the operator's
+    every one-click test does) still got the operator's
     real roaming folder back for Claude Desktop specifically — the one target
     out of four whose isolation that left broken.
     """

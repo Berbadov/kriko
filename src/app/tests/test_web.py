@@ -159,23 +159,12 @@ def client(tmp_path):
 # ── the page itself ──────────────────────────────────────────────────────
 
 
-def test_the_page_and_its_assets_are_served(client):
-    """Every asset the page asks for resolves.
-
-    The views used to be asserted here as markup — `data-tab="dashboard"` and
-    friends. They are rendered by the Svelte bundle now, so the server-side
-    thing worth checking is not which tabs exist but that nothing the built
-    index references 404s. That catches a stale or half-copied bundle, which
-    the old markup assertions never could.
-    """
-    assert client.get("/").status_code == 200
-    page = client.get("/").text
-    assert '<div id="app">' in page
-
-    referenced = re.findall(r'(?:src|href)="(/static/[^"]+)"', page)
-    assert referenced, "the built index references no assets at all"
-    for asset in referenced:
-        assert client.get(asset).status_code == 200, f"{asset} is referenced but not served"
+def test_the_engine_serves_data_not_screens(client):
+    """`/` says where the window is; nothing else is served outside `/api`."""
+    page = client.get("/")
+    assert page.status_code == 200
+    assert "Open the Kriko app" in page.text
+    assert client.get("/static/index.html").status_code == 404
 
 
 def test_health_reports_which_store_it_is_looking_at(client):

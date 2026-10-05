@@ -39,7 +39,6 @@ Conventional commits with scope, as history uses: `feat(hub):`, `fix(hub):` (nam
 ```bash
 python -m pytest        # all tests — no arguments
 npm test                # extension scraper + panel
-npm --prefix ui test    # dashboard Svelte components
 ```
 
 Run `pytest` bare: `pytest.ini` pins `testpaths`, and naming directories skips `app/pipeline/tests` silently (576 of 761 tests once). The suite must pass with **no API keys and no `.env`**; a keyed test reaches the network and belongs behind a marker.
@@ -53,29 +52,10 @@ python -m pytest src/app/pipeline/tests/test_repo_invariants.py
 
 Serving is the local FastAPI app on the SQLite pack store; the pipeline stays separate, so importing `app.web.app` must not load `app.pipeline` or the LLM stack.
 
-## The frontend
+## The window
 
-`ui/` is Svelte + Vite source; `src/app/web/static/` is committed build output (the wheel serves the UI with no Node toolchain, which is only true while the output matches the source). After touching `ui/src/`:
-
-```bash
-npm --prefix ui test
-npm --prefix ui run build      # rewrites src/app/web/static/
-git add ui src/app/web/static
-```
-
-`tools/gate.sh ui` rebuilds and fails on a dirty diff. `ui/package-lock.json` is committed (overriding the repo ignore) for reproducible asset hashes. `ui/src/` holds **no vocabulary from any catalog**: forms come from `/api/identity-keys/{pack_id}` and `/api/packs/{pack_id}/vocabulary` at runtime, checked by `test_ui_contains_no_pack_vocabulary` in `test_repo_invariants.py`.
-
-### Pressing every button: `tools/walk.sh`
-
-Component tests stub fetch, so they miss slow screens and dead buttons. `walk.sh` starts the app on a throwaway home (never `~/.kriko`) with the first-party catalogs freshly installed, opens every rail screen in headless Chromium, presses every button from a fresh load, and writes `.walk/walk.md` (load time, console errors, requests over 400; per button: errored, never settled, slow, or changed nothing).
-
-```bash
-tools/walk.sh             # all screens, ~15 min
-tools/walk.sh agents      # addresses containing "agents"
-KRIKO_WALK_REAL_CLIS=1 tools/walk.sh agents   # the real agent CLIs on this machine
-```
-
-The default run puts instant stand-in CLIs on `PATH`. Buttons named quit, uninstall, delete, remove, forget, reset, revoke or undo are listed, never pressed. It needs Playwright (`npm i -g playwright && npx playwright install chromium`), which is not a repo dependency and not in the gate.
+The window is `kriko-gpui/` (Rust, GPUI). It reads the engine over HTTP like
+the extension and the TUI; the engine serves data, never screens.
 
 ## Dead code
 
@@ -100,16 +80,12 @@ Needing something from above means **the module is in the wrong layer, so move i
 ```bash
 tools/gate.sh            # everything
 tools/gate.sh py         # Python suite only
-tools/gate.sh ui         # vitest + types + stale-bundle check
 ```
 
 | Gate | Catches |
 |---|---|
 | `pytest` | full suite + the layering and testpaths invariants |
 | `npm test` | scraper and extension-panel tests (jsdom) |
-| `npm --prefix ui test` | Svelte component tests |
-| `svelte-check` | type errors at `--threshold error` |
-| rebuild + `git diff` | a committed bundle that no longer matches `ui/src/` |
 
 **It runs on your machine, as a deliberate retreat.** These were `ci.yml`'s
 three jobs, moved verbatim into `tools/gate.sh` on 2026-09-13 when the

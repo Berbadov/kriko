@@ -251,7 +251,6 @@ def test_a_check_lives_in_the_interfaces_file_not_the_engines(client, monkeypatc
 
 ROOT = Path(__file__).resolve().parents[3]
 PANEL = ROOT / "extension" / "hover_lite" / "claim_card.js"
-REPORT = ROOT / "ui" / "src" / "lib" / "report.ts"
 
 
 def _keys(text: str, name: str) -> set[str]:
@@ -265,14 +264,6 @@ def _keys(text: str, name: str) -> set[str]:
 
 def test_the_panel_words_every_verdict_and_invents_none():
     assert _keys(PANEL.read_text(encoding="utf-8"), "FACT_WORD") == set(factcheck.VERDICTS)
-
-
-def test_the_report_words_and_tones_every_verdict():
-    text = REPORT.read_text(encoding="utf-8")
-    # Tone as well as wording: an untoned verdict falls back to neutral, so a
-    # new "retracted" would arrive looking like a footnote.
-    assert _keys(text, "FACT_WORD") == set(factcheck.VERDICTS)
-    assert _keys(text, "FACT_TONE") == set(factcheck.VERDICTS)
 
 
 def test_the_extension_asks_the_app_rather_than_judging_a_page_itself():

@@ -4,8 +4,7 @@ Kriko instructs agents from more than one document, and that is the whole
 problem. `kriko/research/agent.py` renders the research **brief** — the sole
 product of the $0 plane, since `gather()` returns nothing on purpose.
 `app/agentskill.py` generates the **skill** a harness loads. `app/agenda.py`
-writes the *why* on each agenda row, and `ui/src/lib/agenda.ts` writes the same
-sentence for the screen. A pack may ship its own `research/skill.md`. All five
+writes the *why* on each agenda row. A pack may ship its own `research/skill.md`. All four
 name MCP tools in prose, none of them is checked against the MCP server, and
 nothing compares them to each other.
 
@@ -72,7 +71,6 @@ DOCUMENTS = [
     "src/kriko/research/agent.py",
     "src/app/agentskill.py",
     "src/app/agenda.py",
-    "ui/src/lib/agenda.ts",
 ]
 
 #: A pack's own agent-facing prose. Globbed rather than listed: a second

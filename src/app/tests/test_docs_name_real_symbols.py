@@ -51,8 +51,6 @@ def _tracked(*globs: str) -> str:
                            capture_output=True, text=True, check=True).stdout.split()
     out = []
     for name in files:
-        if "web/static" in name:  # committed build output, not source
-            continue
         try:
             out.append((REPO / name).read_text(encoding="utf-8", errors="ignore"))
         except OSError:
@@ -68,7 +66,7 @@ def _known_symbols() -> set[str]:
     names |= set(re.findall(r"^\s*(?:async )?def (\w+)",
                             _tracked("*.py"), re.M))
     names |= set(re.findall(r"(?:function|const|let)\s+(\w+)",
-                            _tracked("*.ts", "*.js", "*.svelte")))
+                            _tracked("*.ts", "*.js")))
     return names
 
 

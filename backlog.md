@@ -244,6 +244,11 @@ opening and merging the PR; Windows visual/install checks remain open.
   extension's own files, palette and tests are untouched and pass; and
   `tools/gate.sh` passes with no `ui` leg.
 - **Not this:** removing the browser extension or any `/api` route.
+- **Owner:** `claude/agent-speed-token-efficiency-frw1ev`.
+- **Observed on the branch:** `ui/`, `kriko-svelte/`, the bundle and
+  `tools/walk.sh` are gone; `/` answers a one-line notice; `tools/gate.sh`
+  passed (2418 Python tests, 227 extension tests, wheel smoke) with no `ui`
+  leg. The extension's files changed only in two palette comments.
 
 ## 20. A benchmark no model can answer from memory *(2026-10-05)*
 

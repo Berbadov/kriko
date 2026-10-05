@@ -35,7 +35,7 @@ fifth: a double-clicked installer.
 
 ## 3. Reproduce first, then fix
 
-A bug fails on purpose first (a test, `tools/walk.sh`, a symptom script). No
+A bug fails on purpose first (a test, a symptom script). No
 prior failure is a guess. Three failed fixes in one place means the model of
 the problem is wrong. A fact about an outside tool is read from that tool, with
 a test that fails when the tool drifts.
@@ -44,9 +44,8 @@ a test that fails when the tool drifts.
 
 | Kind | Proves | Does **not** prove |
 |---|---|---|
-| Unit / component (pytest, vitest) | logic, world stubbed | world matches stub |
+| Unit / component (pytest, node) | logic, world stubbed | world matches stub |
 | Source-reading guard (`test_repo_invariants.py` et al.) | code rule holds | anything *works* |
-| `tools/walk.sh` | screens load, buttons respond, no errors/hangs | the button's purpose |
 | **Journey check** (below) | reader's end result happened | — the one that counts |
 | Reader's Windows install | works where used | — |
 
@@ -56,7 +55,7 @@ middle (collaborators).
 
 ### Journey checks
 
-One reader task start to finish in `tools/journeys/`, run by `tools/walk.sh`,
+One reader task start to finish in `tools/journeys/`,
 stated the way a "Done when" is: load the extension and check in; check a
 listing and read the risks; research one subject and see the catalog gain
 claims; change a model or an effort and read the next command line; install,
@@ -70,7 +69,7 @@ observed result and a screenshot.
 ## 5. Every PR carries its own proof
 
 Merge requires: the quoted request and its id; the "Done when" and what was
-observed; a screenshot of the "Where" screen (`.walk/`) or the journey's output;
+observed; a screenshot of the "Where" screen or the journey's output;
 where it was checked; and what it still does not do, stated rather than left
 for the reader to find. Then **an uninvolved second agent reviews** the entry,
 the proof and the diff, and answers one question: *does this do what was asked,
@@ -97,7 +96,6 @@ alternative next to it.
   failing check pre-existed (for a bug); the "Done when" is seen on the
   **Where** screen; it is checked on Windows or the PR says it is not; the
   journey passes, or is hand-walked until B191.
-- [ ] `tools/gate.sh` is green and `tools/walk.sh` is clean on the screens this
-  touches; the PR carries the quote, the observation and the screenshot; a
+- [ ] `tools/gate.sh` is green; the PR carries the quote, the observation and the screenshot; a
   second agent has reviewed it; it is on `main`; and the item has left
   `backlog.md`, with the commit saying what was observed.
