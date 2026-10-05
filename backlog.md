@@ -228,3 +228,28 @@ offline dependencies are not cached. The Python runner used a writable
 temporary log fallback. Screenshots and observations are committed in
 `docs/previews/extension-live-panel/` for PR review. The reader authorized
 opening and merging the PR; Windows visual/install checks remain open.
+
+## 19. Make the agent sunburst readable in LEDs *(2026-10-05)*
+
+**Asked:** "Claude looks hideous xd"
+
+- **Where:** the native app's agent marks, particularly the right-hand Live
+  actions panel.
+- **Done when:** the orange LED sunburst has distinct rays and a compact
+  centre at the panel's actual size, instead of the dense irregular blob;
+  the existing LED renderer and phase indicator remain consistent.
+- **Not this:** replacing the LED mark with smooth artwork.
+- **Owner:** this session / `fix/claude-led-sunburst`.
+- **Reproduced:** the committed panel preview shows the previous densely
+  sampled centre swallowing the gaps between its rays.
+- **Observed on the branch:** the 11×11 mark now has 37 lit cells with a
+  compact centre and separated, slightly staggered spokes. The Chromium
+  recreation at the panel's 300px width and 34px glyph size shows a clear
+  orange asterisk, with no label overflow and one phase matrix per row.
+  Proof: `docs/previews/claude-led-sunburst/panel.png`. This is a browser
+  recreation of native data, not a native window capture.
+- **Validation:** full gate passed (2434 Python tests, 214 extension tests,
+  613 dashboard tests, lint/types, bundle and wheel checks). Native GPUI
+  `cargo check --offline` passed. Its temporary build cache was cleared
+  after compilation so the full gate could run with sufficient disk space.
+- **Left:** native Windows visual/install verification remains pending.
