@@ -1558,20 +1558,14 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .child(mono("COUNTED FROM THE COLUMNS BELOW · NOT A RANKING", DIM))
     });
 
-    // ---- the agent: which one answers, and everything it sees ----
+    // ---- the agent: which one answers, and the saved checks it reads ----
     let spec_n = live::spec_rows(&ready).len();
     let risk_n = live::risk_rows(&ready).len();
-    let notes_n = app.live.compare.notes.iter().filter(|n| !n.text.trim().is_empty()).count();
-    let marks_n = app.marks_now().len();
-    let strokes_n = app.live.compare.strokes.len();
     let attached = format!(
-        "attached: {} checks · {} spec rows · {} risks · {} notes · {} marks · {} strokes",
+        "saved checks: {} · {} spec rows · {} known risks",
         ready.iter().flatten().count(),
         spec_n,
         risk_n,
-        notes_n,
-        marks_n,
-        strokes_n,
     );
     let waiting_answer = app.live.compare.asking || app.live.compare.questions.iter().any(|q| q.answer.is_none() && !app.live.compare.failed.contains_key(&q.question_id));
     let mut agent_row = div().flex().items_center().gap(px(8.0)).flex_wrap();
@@ -1596,12 +1590,30 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .on_click(pick),
         );
     }
+    let local_model = app.live.local.plane.as_ref()
+        .filter(|p| p.ready)
+        .map(|p| p.model.clone());
+    if let Some(model) = &local_model {
+        let pick = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+            this.live.compare.harness = "local".to_string();
+            cx.notify();
+        });
+        agent_row = agent_row.child(
+            agent_key(
+                "cmp-agent-local", "cmp-agent-local-tile", "local",
+                &format!("Local · {model}"),
+                app.live.compare.harness == "local" ||
+                    (app.live.compare.harness.is_empty() && app.live.compare.harnesses.is_empty()),
+                waiting_answer, motion,
+            ).on_click(pick),
+        );
+    }
 
     // ---- follow-up questions ----
     let ask_input = app.input_field(
         Field::CompareAsk,
         "compare-ask",
-        "Ask your agent about this shortlist...",
+        "Ask about this shortlist...",
         Some("agents"),
         window,
         cx,
@@ -1651,7 +1663,8 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .iter()
         .find(|(id, _)| *id == app.live.compare.harness)
         .map(|(_, l)| l.clone())
-        .unwrap_or_else(|| "your agent".to_string());
+        .unwrap_or_else(|| local_model.as_ref().map(|m| format!("local · {m}"))
+            .unwrap_or_else(|| "your agent".to_string()));
     let mut questions = div().flex().flex_col().gap(px(10.0));
     for (qi, q) in app.live.compare.questions.iter().enumerate() {
         let failure = app.live.compare.failed.get(&q.question_id);
@@ -1738,12 +1751,12 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .flex()
         .flex_col()
         .gap(px(12.0))
-        .child(eyebrow("Ask your agent"))
+        .child(eyebrow("Ask about this comparison"))
         .child(row_desc(
-            "A question about this shortlist. The agent reads the saved checks in the slots; asking saves the slots to the draft first.",
+            "Ask from the saved checks in these slots. The local model reads a short, relevant brief without searching the web. Asking saves the slots to this draft first.",
         ))
-        .child(if app.live.compare.harnesses.is_empty() {
-            empty_note("No agent is ready on this machine. Settings shows which ones Kriko can start.")
+        .child(if app.live.compare.harnesses.is_empty() && local_model.is_none() {
+            empty_note("No agent or local model is ready. Set one up in Settings or Local LLM.")
                 .into_any_element()
         } else {
             agent_row.into_any_element()

@@ -1185,7 +1185,14 @@ impl Kriko {
         }
         self.live.compare.asking = true;
         self.live.compare.say = None;
-        let harness = self.live.compare.harness.clone();
+        let harness = if self.live.compare.harness.is_empty()
+            && self.live.local.plane.as_ref().is_some_and(|p| p.ready)
+        {
+            "local".to_string()
+        } else {
+            self.live.compare.harness.clone()
+        };
+        let backend = if harness == "local" { "local" } else { "harness" };
         let ids = self.slot_ids();
         self.with_draft(cx, move |this, id, cx| {
             // the draft holds the slots as they are now
@@ -1208,7 +1215,7 @@ impl Kriko {
                     saved.and_then(|_| {
                         api::post(
                             &format!("/api/compare-drafts/{}/questions", api::seg(&id)),
-                            json!({"question": text, "harness": harness}),
+                            json!({"question": text, "harness": harness, "backend": backend}),
                         )
                     })
                 },
