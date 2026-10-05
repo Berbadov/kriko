@@ -178,7 +178,7 @@ impl Tab {
             Tab::Sites => "The sites Kriko reads, and how far each one is trusted.",
             Tab::Activity => "What Kriko did today, and what is waiting for you.",
             Tab::Agents => "The coding agents on this machine that can reach Kriko.",
-            Tab::Benchmark => "How long the parts of a check take on this machine.",
+            Tab::Benchmark => "How the agents and planes do on a fixed test set, here.",
             Tab::Local => "A local model, for checks that never leave this machine.",
             Tab::Settings => "Control how Kriko starts, reads and stores things.",
             Tab::About => "Kriko. Local product knowledge.",
@@ -217,6 +217,7 @@ pub enum Field {
     RunSearch,
     LocalUrl,
     LocalSearch,
+    LocalGet,
 }
 
 pub struct InputState {
@@ -293,9 +294,6 @@ pub struct CompareDraftDef {
     pub slots: Vec<Option<usize>>,
 }
 
-/// Percent of the benchmark per 100 ms tick, through every stage.
-pub const BENCH_STEP: f32 = 1.4;
-
 // ---- the app ----
 
 pub struct Kriko {
@@ -320,7 +318,6 @@ pub struct Kriko {
     pub browse_view: usize,
     pub browse_view_prev: usize,
     pub agent_allowed: Vec<bool>,
-    pub model_loaded: Vec<bool>,
     // run: the subject search that starts a check
     pub run_search: InputState,
     // the live actions dock
@@ -336,39 +333,13 @@ pub struct Kriko {
     pub compare_drafts: Vec<CompareDraftDef>,
     pub compare_note_input: InputState,
     pub compare_question_input: InputState,
-    // benchmark
-    /// 0..=100 while a benchmark runs, None when idle.
-    pub bench_progress: Option<f32>,
-    /// Benchmarks finished this session, on top of the sample history.
-    pub bench_done: u32,
-    // local llm
+    // local llm: the address, the search service and the model to get; the
+    // rest of this area is `live::local`
     pub local_url: InputState,
     pub local_search: InputState,
-    pub local_model_pick: usize,
-    pub local_timeout: u32,
-    pub local_temp: u16,
-    pub local_max_tokens: u16,
-    pub local_gpu_layers: u16,
-    pub local_auto_unload: bool,
-    pub local_cpu_fallback: bool,
-    pub local_test: usize,
-    /// Which runtime serves the local model, by index into RUNTIMES.
-    pub local_runtime: usize,
-    pub runtime_state: Vec<data::RuntimeState>,
-    /// The runtime being installed, and how far along, 0..=100.
-    pub runtime_install: Option<(usize, f32)>,
-    /// Where Get fetches from, by index into MODEL_SOURCES.
-    pub local_source: usize,
-    pub local_source_prev: usize,
-    /// Per catalogue model: download progress while fetching.
-    pub pull_progress: Vec<Option<f32>>,
-    pub pulled: Vec<bool>,
-    /// The fetched model in use, by index into CATALOGUE.
-    pub catalogue_loaded: Option<usize>,
+    pub local_get: InputState,
 }
 
-/// The line rate a model download runs at, in GB/s, in the sample app.
-pub const PULL_GBPS: f32 = 0.6;
 
 impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
@@ -387,7 +358,6 @@ impl Kriko {
             browse_view: 0,
             browse_view_prev: 0,
             agent_allowed: data::AGENTS.iter().map(|a| a.allowed).collect(),
-            model_loaded: data::MODELS.iter().map(|m| m.loaded).collect(),
             run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
@@ -398,29 +368,10 @@ impl Kriko {
             compare_drafts: Vec::new(),
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
-            bench_progress: None,
-            bench_done: 0,
             local_url: InputState::new(cx),
             local_search: InputState::new(cx),
-            local_model_pick: 0,
-            local_timeout: 300,
-            local_temp: 7,
-            local_max_tokens: 4096,
-            local_gpu_layers: 33,
-            local_auto_unload: true,
-            local_cpu_fallback: false,
-            local_test: 0,
-            local_runtime: 1,
-            runtime_state: data::RUNTIMES.iter().map(|r| r.state).collect(),
-            runtime_install: None,
-            local_source: 0,
-            local_source_prev: 0,
-            pull_progress: data::CATALOGUE.iter().map(|_| None).collect(),
-            pulled: data::CATALOGUE.iter().map(|_| false).collect(),
-            catalogue_loaded: None,
+            local_get: InputState::new(cx),
         };
-        app.local_url.value = "http://127.0.0.1:7400".to_string();
-        app.local_search.value = "http://127.0.0.1:7400/search".to_string();
         // A verification hook: KRIKO_VERIFY seeds one page's state so it can
         // be captured without driving the mouse on a busy desktop.
         match std::env::var("KRIKO_VERIFY").as_deref() {
@@ -429,7 +380,6 @@ impl Kriko {
             }
             Ok("local") => {
                 app.tab = Tab::Local;
-                app.local_test = 2;
             }
             Ok("agents") => {
                 app.tab = Tab::Agents;
@@ -503,6 +453,7 @@ impl Kriko {
             Field::RunSearch => &self.run_search,
             Field::LocalUrl => &self.local_url,
             Field::LocalSearch => &self.local_search,
+            Field::LocalGet => &self.local_get,
         }
     }
 
@@ -519,6 +470,7 @@ impl Kriko {
             Field::RunSearch => &mut self.run_search,
             Field::LocalUrl => &mut self.local_url,
             Field::LocalSearch => &mut self.local_search,
+            Field::LocalGet => &mut self.local_get,
         }
     }
 
@@ -575,6 +527,11 @@ impl Kriko {
         if ks.key.as_str() == "enter" && field == Field::BoardNote {
             this.commit_board_note(cx);
             cx.notify();
+            return;
+        }
+        // Enter in the Get field starts the download.
+        if ks.key.as_str() == "enter" && field == Field::LocalGet {
+            this.local_pull(cx);
             return;
         }
         // Enter on the compare question asks it, the same as the Ask key.
@@ -672,161 +629,6 @@ impl Kriko {
                     .into_any_element()
             })
             .when(focused, |d| d.child(caret))
-    }
-
-    // ---- simulated agent work ----
-
-    /// Run the local model test: LIVE for a moment, then the result lines.
-    pub fn run_local_test(&mut self, cx: &mut Context<Self>) {
-        if self.local_test == 1 {
-            return;
-        }
-        self.local_test = 1;
-        cx.notify();
-        cx.spawn(async move |this, cx| {
-            cx.background_executor()
-                .timer(std::time::Duration::from_millis(2400))
-                .await;
-            let _ = this.update(cx, |this, cx| {
-                this.local_test = 2;
-                cx.notify();
-            });
-        })
-        .detach();
-    }
-
-    /// Install a runtime: the bar fills, then it sits installed, ready to use.
-    pub fn install_runtime(&mut self, i: usize, cx: &mut Context<Self>) {
-        if self.runtime_install.is_some() {
-            return;
-        }
-        self.runtime_install = Some((i, 0.0));
-        cx.notify();
-        cx.spawn(async move |this, cx| loop {
-            cx.background_executor()
-                .timer(std::time::Duration::from_millis(90))
-                .await;
-            let done = this
-                .update(cx, |this, cx| {
-                    let finished = match this.runtime_install.as_mut() {
-                        Some((_, p)) => {
-                            *p += 3.5;
-                            *p >= 100.0
-                        }
-                        None => true,
-                    };
-                    if finished {
-                        this.runtime_install = None;
-                        this.runtime_state[i] = data::RuntimeState::Installed;
-                    }
-                    cx.notify();
-                    finished
-                })
-                .unwrap_or(true);
-            if done {
-                break;
-            }
-        })
-        .detach();
-    }
-
-    /// Use a runtime: start it if it is off, and point the server address at it.
-    pub fn use_runtime(&mut self, i: usize, cx: &mut Context<Self>) {
-        if self.runtime_state[i] == data::RuntimeState::Missing {
-            return;
-        }
-        self.runtime_state[i] = data::RuntimeState::Running;
-        self.local_runtime = i;
-        self.local_url.value = format!("http://127.0.0.1:{}", data::RUNTIMES[i].port);
-        self.local_test = 0;
-        cx.notify();
-    }
-
-    /// Fetch a catalogue model: the meter fills at a steady line rate, so a
-    /// bigger model takes visibly longer, then it is on disk and loadable.
-    // ---- benchmark ----
-
-    /// Walks every stage of a check once, timing it; the screen lights the
-    /// stage under way and lands the run in the history when it ends. A
-    /// second press stops it.
-    pub fn bench_start(&mut self, cx: &mut Context<Self>) {
-        if self.bench_progress.is_some() {
-            self.bench_progress = None;
-            cx.notify();
-            return;
-        }
-        self.bench_progress = Some(0.0);
-        cx.notify();
-        let mut last = std::time::Instant::now();
-        cx.spawn(async move |this, cx| loop {
-            cx.background_executor()
-                .timer(std::time::Duration::from_millis(100))
-                .await;
-            // ticks arrive late on a busy frame; step by the time that passed
-            let ticks = last.elapsed().as_secs_f32() / 0.1;
-            last = std::time::Instant::now();
-            let done = this
-                .update(cx, |this, cx| {
-                    let finished = match this.bench_progress.as_mut() {
-                        Some(p) => {
-                            *p += BENCH_STEP * ticks;
-                            *p >= 100.0
-                        }
-                        None => return true,
-                    };
-                    if finished {
-                        this.bench_progress = None;
-                        this.bench_done += 1;
-                        this.dock_feed.push(DockFeedEntry::now(
-                            "Benchmark finished: full check in 3 min 01".to_string(),
-                            TagState::Done,
-                        ));
-                    }
-                    cx.notify();
-                    finished
-                })
-                .unwrap_or(true);
-            if done {
-                break;
-            }
-        })
-        .detach();
-    }
-
-    pub fn pull_model(&mut self, i: usize, cx: &mut Context<Self>) {
-        if self.pull_progress[i].is_some() || self.pulled[i] {
-            return;
-        }
-        self.pull_progress[i] = Some(0.0);
-        cx.notify();
-        // percent per 100 ms tick at PULL_GBPS
-        let step = 100.0 * PULL_GBPS * 0.1 / data::CATALOGUE[i].size_gb.max(0.1);
-        cx.spawn(async move |this, cx| loop {
-            cx.background_executor()
-                .timer(std::time::Duration::from_millis(100))
-                .await;
-            let done = this
-                .update(cx, |this, cx| {
-                    let finished = match this.pull_progress[i].as_mut() {
-                        Some(p) => {
-                            *p += step;
-                            *p >= 100.0
-                        }
-                        None => true,
-                    };
-                    if finished {
-                        this.pull_progress[i] = None;
-                        this.pulled[i] = true;
-                    }
-                    cx.notify();
-                    finished
-                })
-                .unwrap_or(true);
-            if done {
-                break;
-            }
-        })
-        .detach();
     }
 
     // ---- sidebar ----
