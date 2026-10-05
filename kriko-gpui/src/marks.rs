@@ -24,18 +24,20 @@ pub struct Mark {
 // ---- the agents ----
 
 pub const CLAUDE: Mark = Mark {
-    // The published irregular sunburst, sampled to an 11×11 LED matrix.
+    // Optically simplified sunburst for the 34px glyph: separated spokes,
+    // a compact centre and staggered diagonals preserve its hand-drawn feel.
+    // Sampling the full silhouette filled the gaps into an orange blob.
     rows: &[
-        "...1..1....",
-        "...1..1.1..",
-        ".1.11.111..",
-        "..1111111..",
-        "...11111.11",
-        "111111111..",
-        "...11111111",
-        "..111111...",
-        ".1.1.1.111.",
-        "...1.1.11..",
+        ".....1.....",
+        "..1..1...1.",
+        "...1.1..1..",
+        "....11.1...",
+        "....111....",
+        "11111111111",
+        "....111....",
+        "...1.11....",
+        "..1..1.1...",
+        ".1...1..1..",
         ".....1.....",
     ],
     palette: &[0xd97757],
