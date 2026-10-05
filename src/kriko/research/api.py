@@ -21,6 +21,7 @@ import json
 from collections.abc import Callable
 
 from kriko.extract.grounding import comparable as _grounding_form
+from kriko.research.window import focus, terms_of
 from kriko.research.base import (
     STANDARD,
     Document,
@@ -251,8 +252,9 @@ class ApiResearcher:
         """One completion for one batch. Returns findings by url."""
         self._charge(task)
         limit = max(500, int(self.spend.context_chars))
+        terms = terms_of(task)
         blocks = "\n\n".join(
-            f"### Document {index}\nURL: {one.url}\n\n{one.text[:limit]}"
+            f"### Document {index}\nURL: {one.url}\n\n{focus(one.text, limit, terms)}"
             for index, one in enumerate(batch, start=1)
         )
         preamble = self.spend.preamble_text
