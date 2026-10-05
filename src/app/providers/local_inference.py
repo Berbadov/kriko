@@ -21,6 +21,7 @@ plane says it in the job log.
 import json
 import socket
 import urllib.error
+import urllib.parse
 import urllib.request
 
 #: Long enough for a small model on a CPU to read a page and write a JSON
@@ -33,6 +34,16 @@ DEFAULT_TIMEOUT = 300.0
 #: how a small model turns one page into twenty minutes on a CPU. `None`
 #: means the server's own default (nothing sent on the wire).
 DEFAULT_MAX_TOKENS = 1024
+
+#: The context window assumed when the server will not say: Ollama's own
+#: default. Too small costs a page; too large and the server silently drops
+#: the front of the prompt, which is the instructions.
+DEFAULT_CONTEXT_TOKENS = 4096
+#: Characters per token, rounded down on purpose: an estimate that is low
+#: leaves room, one that is high overflows the window.
+CHARS_PER_TOKEN = 3.0
+#: Tokens kept free beside the reply budget, for the chat template.
+_TEMPLATE_TOKENS = 128
 
 #: A second try after these, because a local server's failure modes are
 #: transient in exactly this way: an idle process paged out to disk answers
@@ -105,6 +116,7 @@ class OpenAICompatSocket:
         #: plane to say *why* a reply was short instead of guessing.
         self.last_finish_reason = ""
         self.truncated = 0
+        self._context: int | None = None
 
     def __call__(self, prompt: str) -> str:
         return self.complete(prompt)
@@ -171,6 +183,58 @@ class OpenAICompatSocket:
                 f"{self.serving_name!r}: the model produced no text. Try a "
                 "larger model, or check that it is loaded.")
         return text
+
+    def context_tokens(self) -> int:
+        """The window the server runs this model with, in tokens.
+
+        Asked of the server, because it is a runtime setting rather than a
+        property of the model: Ollama loads a model trained on 32k at 4k
+        unless told otherwise, and a prompt past it is cut from the front
+        without an error. Each engine says it in its own place (Ollama's
+        `/api/ps`, llama-server's `/props`, LM Studio's `/api/v0/models`).
+        `DEFAULT_CONTEXT_TOKENS` when none answers. Kept once found; not
+        kept while unknown, since Ollama only lists a model once loaded.
+        """
+        if self._context:
+            return self._context
+        found = self._ask_context()
+        if found:
+            self._context = found
+        return found or DEFAULT_CONTEXT_TOKENS
+
+    def prompt_chars_allowed(self) -> int:
+        """How many characters of prompt fit beside the reply budget."""
+        reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
+        tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
+        return max(1000, int(tokens * CHARS_PER_TOKEN))
+
+    def _ask_context(self) -> int | None:
+        def get(path: str):
+            try:
+                with urllib.request.urlopen(self.base_url + path, timeout=5) as resp:
+                    return json.loads(resp.read().decode("utf-8", "replace"))
+            except Exception:  # noqa: BLE001 - an engine that does not say is "unknown"
+                return None
+
+        def number(value) -> int | None:
+            return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else None
+
+        ps = get("/api/ps")
+        if isinstance(ps, dict):
+            for one in ps.get("models") or []:
+                if isinstance(one, dict) and self.serving_name in (one.get("name"), one.get("model")):
+                    if number(one.get("context_length")):
+                        return one["context_length"]
+        props = get("/props")
+        if isinstance(props, dict):
+            settings = props.get("default_generation_settings") or {}
+            value = number(settings.get("n_ctx")) if isinstance(settings, dict) else None
+            if value:
+                return value
+        studio = get("/api/v0/models/" + urllib.parse.quote(self.serving_name, safe=""))
+        if isinstance(studio, dict):
+            return number(studio.get("loaded_context_length"))
+        return None
 
     def _post(self, body: dict) -> dict:
         request = urllib.request.Request(

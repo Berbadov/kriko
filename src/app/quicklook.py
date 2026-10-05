@@ -131,6 +131,12 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
     from kriko.extract.grounding import loose_span
 
     found = _payload(reply)
+    if not isinstance(found, dict) or not {"risks", "specs"} & found.keys():
+        # A reply cut off at its token budget (a local model on a CPU, in
+        # practice) is still mostly whole items. Every item is checked by
+        # the same rules below, so a closed-off reply keeps what was
+        # finished and drops nothing it would not have dropped anyway.
+        found = closed(reply) or found
     if not isinstance(found, dict):
         return {"assumed": "", "category": "", "pack": "", "specs": [],
                 "risks": [], "dropped": 0}
@@ -197,6 +203,55 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         "risks": risks,
         "dropped": dropped,
     }
+
+
+def closed(reply: str) -> dict | None:
+    """The JSON object in a reply that stopped mid-way, closed at the last
+    item it finished. `None` when there is no object to close."""
+    import json
+    import re
+
+    start = reply.find("{")
+    if start < 0:
+        return None
+    text = reply[start:]
+    stack: list[str] = []
+    in_string = escaped = False
+    safe = 0
+    safe_stack: list[str] = []
+    for index, char in enumerate(text):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char in "{[":
+            stack.append("}" if char == "{" else "]")
+        elif char in "}]":
+            if not stack:
+                break
+            stack.pop()
+            if not stack:
+                safe, safe_stack = index + 1, []
+                break
+            safe, safe_stack = index + 1, list(stack)
+    if not safe:
+        return None
+    candidate = text[:safe] + "".join(reversed(safe_stack))
+    try:
+        found = json.loads(candidate)
+    except ValueError:
+        # A small model's other habit: a comma before a closing bracket.
+        try:
+            found = json.loads(re.sub(r",\s*([\]}])", r"\1", candidate))
+        except ValueError:
+            return None
+    return found if isinstance(found, dict) else None
 
 
 def _line(value) -> str:
