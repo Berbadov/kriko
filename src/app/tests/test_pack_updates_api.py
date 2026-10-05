@@ -309,5 +309,28 @@ def test_an_unreachable_index_is_asked_again_at_the_next_launch(client):
 
     settings, runner = _pointed_at(client, "http://127.0.0.1:9/packs.json")
 
-    assert _wait(client, packautoupdate.submit_if_due(settings, runner))["state"] == "failed"
-    assert packautoupdate.submit_if_due(settings, runner), "a failed pass must not count as a check"
+    job = _wait(client, packautoupdate.submit_if_due(settings, runner))
+    # nobody pressed anything, so nothing turns red; the reason stays in the job
+    assert job["state"] == "succeeded"
+    assert job["result"]["index"] == "The pack download site could not be reached."
+    assert packautoupdate.submit_if_due(settings, runner), "an unreachable index is not a check"
+
+
+def test_an_index_with_nothing_published_is_a_quiet_week(client, serve):
+    from app import packautoupdate
+
+    _, base = serve
+    settings, runner = _pointed_at(client, f"{base}/nothing-here.json")
+
+    job = _wait(client, packautoupdate.submit_if_due(settings, runner))
+    assert job["state"] == "succeeded"
+    assert job["result"]["index"] == "The pack index has nothing published yet."
+    assert packautoupdate.submit_if_due(settings, runner) is None, "nothing newer counts as a check"
+
+
+def test_a_pressed_update_still_says_the_index_is_missing(client, serve):
+    _, base = serve
+    with client:
+        job = run(client, index_url=f"{base}/nothing-here.json")
+    assert job["state"] == "failed"
+    assert job["message"].endswith("The pack index has nothing published yet.")
