@@ -252,38 +252,41 @@ def test_the_mark_is_painted_in_the_panel_theme_s_own_colours():
         )
 
 
-def test_the_master_is_not_somewhere_the_build_writes_over_it():
-    """`tauri icon <master>` fills `tauri/src-tauri/icons/`, icon.png included.
+def test_the_desktop_icon_is_a_whole_ico():
+    """`kriko-gpui/assets/kriko.ico` is the one file the exe and the MSI both read.
 
-    The master lived in that directory until 2026-09-21, which made it both
-    the command's input and one of its outputs: every installer build
-    re-encoded the committed file (20,697 bytes in, 18,403 out) and left the
-    tree dirty with a PNG nobody had edited. `tauri/README.md` carried a line
-    that restored it from git by hand afterwards, which is a person standing
-    in for a path change -- and one the packaging script never ran at all.
-
-    The next gate run would have failed `test_the_committed_icon_is_what_the_
-    mark_renders_to`, so the cost of forgetting was a red suite on work that
-    was correct. Checked here rather than trusted, because the build that
-    overwrites it is hand-run on a different machine.
+    `build.rs` embeds it in kriko.exe (the taskbar, the tray's resource 1) and
+    `wix/main.wxs` hands it to the shortcuts and Add/Remove Programs. It is a
+    hand-drawn tile, not rendered from the mark, so nothing derives it and
+    nothing would notice it going missing or turning into a one-size file --
+    both of which draw a blurred or blank icon on a machine nobody tests.
     """
     root = Path(__file__).resolve().parents[3]
-    generated = root / "tauri" / "src-tauri" / "icons"
-    assert generated not in render_icon.TARGET.parents, (
-        f"{render_icon.TARGET.relative_to(root)} is inside the directory "
-        f"`tauri icon` generates into, so the build overwrites the master it "
-        f"was given. Keep the master outside it"
-    )
-    build = (root / "packaging" / "build_desktop.ps1").read_text(encoding="utf-8")
-    where = render_icon.TARGET.relative_to(root).as_posix()
-    assert where.rsplit("/", 1)[-1] in build, (
-        f"packaging/build_desktop.ps1 does not name {where}, so the installer "
-        f"is built from an icon this script never rendered"
-    )
+    ico = root / "kriko-gpui" / "assets" / "kriko.ico"
+    data = ico.read_bytes()
+    reserved, kind, count = struct.unpack("<HHH", data[:6])
+    assert (reserved, kind) == (0, 1), "not an ICO"
+    sides = set()
+    for one in range(count):
+        side, _, _, _, _, _, length, offset = struct.unpack(
+            "<BBBBHHII", data[6 + 16 * one : 22 + 16 * one]
+        )
+        assert data[offset : offset + 4] == b"\x89PNG", "entry is not a PNG"
+        assert offset + length <= len(data)
+        sides.add(side or 256)
+    assert {16, 32, 48, 256} <= sides, f"sizes {sorted(sides)} leave a size to scale"
+    for where, needle in (
+        ("kriko-gpui/build.rs", "assets/kriko.ico"),
+        ("kriko-gpui/wix/main.wxs", "assets/kriko.ico"),
+    ):
+        assert needle in (root / where).read_text(encoding="utf-8"), (
+            f"{where} does not read {needle}, so the installed app is not "
+            f"wearing the icon this test checks"
+        )
 
 
-def test_the_master_is_large_enough_for_every_icon_tauri_derives():
-    """`tauri icon` derives up to 1024; a smaller master upscales and blurs."""
+def test_the_master_is_large_enough():
+    """A smaller master upscales and blurs whatever is derived from it."""
     header = render_icon.TARGET.read_bytes()[16:24]
     width, height = struct.unpack(">II", header)
     assert width == height == 1024
