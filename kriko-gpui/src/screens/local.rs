@@ -756,7 +756,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     let use_card = card().flex().flex_col().gap(px(10.0))
         .child(eyebrow("Use and inspect"))
         .child(row_desc(if plane.ready {
-            "Ask the local model about saved checks in Compare. The answer stays with the draft, including its model, source summary, and reported token use. Run shows the activity feed for checks."
+            "Ask the local model about saved checks in Compare. The answer stays with the draft, including its model, source summary, and reported token use. Open a local run below for its log, cited pages, and self-check verdict."
         } else {
             "Start a runtime and pick a model above. Compare will then offer it beside connected agents."
         }))

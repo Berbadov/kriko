@@ -74,6 +74,6 @@ How items are written, per `docs/DOCTRINE.md`:
 > "work on the ui integration more, make everything accessible easily and observable"
 
 - **Where:** Compare follow-up questions and the Local LLM tab in the GPUI app.
-- **Done when:** a reader can get from local model setup to Compare and Run in one press; the Local LLM tab lists recent local jobs with a path to each run; Compare shows which model answered, what saved material it read, live progress, token usage when reported, and the outcome after reopening the draft; missing usage is shown honestly. A failed question remains inspectable after reopening. The display reads durable job data, and GPUI tests pass.
+- **Done when:** a reader can get from local model setup to Compare and Run in one press; the Local LLM tab lists recent local jobs with a path to each run; Run exposes a local quick look's cited pages, token use, and self-check verdict when recorded; Compare shows which model answered, what saved material it read, live progress, token usage when reported, and the outcome after reopening the draft; missing usage is shown honestly. A failed question remains inspectable after reopening. The display reads durable job data, and GPUI tests pass.
 - **Owner:** agent-compare-operations worktree.
 - **Left:** code and focused checks are in the worktree; the installed GPUI screen still needs a visual walk, and the branch must be integrated with the main checkout's uncommitted local-agent refactor.

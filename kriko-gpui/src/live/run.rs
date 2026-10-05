@@ -63,6 +63,7 @@ pub struct Job {
     pub subject_id: String,
     pub product: String,
     pub question: String,
+    pub result: Value,
     pub retry_of: String,
     pub attention: Option<Attention>,
     pub feed: Vec<FeedLine>,
@@ -223,6 +224,7 @@ fn job_from(v: &Value) -> Job {
         subject_id: api::s(&params, "subject_id"),
         product,
         question: api::s(&params, "question"),
+        result: v.get("result").cloned().unwrap_or(Value::Null),
         retry_of: api::s(&params, "retry_of"),
         attention,
         feed,
@@ -476,6 +478,8 @@ impl State {
         let kind = kind_word(&job.kind);
         let subject = if !job.product.is_empty() {
             job.product.clone()
+        } else if !job.question.is_empty() {
+            job.question.clone()
         } else {
             self.labels.get(&job.subject_id).cloned().unwrap_or_default()
         };
@@ -990,6 +994,7 @@ mod tests {
                 "question": "Which has the lower known risk?"}}));
         assert_eq!(job.backend, "local");
         assert_eq!(job.question, "Which has the lower known risk?");
+        assert!(job.result.is_null());
     }
 
     fn running(feed: Value) -> Job {
