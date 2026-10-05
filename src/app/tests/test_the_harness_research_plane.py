@@ -661,12 +661,34 @@ def test_the_spawn_asks_for_the_readers_own_configuration_to_be_left_out(
     one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
     assert one.preferred == ("--strict-mcp-config", "--safe-mode")
 
+    found = harness_mod.locate(one) or one.executable
     monkeypatch.setitem(
-        harness_mod._DECLARED, one.executable,
+        harness_mod._DECLARED, found,
         frozenset({"--strict-mcp-config", "--safe-mode", "--output-format"}),
     )
     assert harness_mod.command_for(one)[-2:] == [
         "--strict-mcp-config", "--safe-mode"]
+
+
+def test_a_claude_run_loads_only_the_tools_it_may_use(monkeypatch):
+    """`--tools WebSearch,WebFetch`, where the CLI declares `--tools`.
+
+    `--allowedTools` permits; it does not unload. Every other built-in
+    tool's definition rode every turn of every run: on 2.1.289 one `-p`
+    turn read 29 327 input tokens of fixed context without `--tools` and
+    5 719 with it. A CLI that never heard of the flag runs without it.
+    """
+    one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+    found = harness_mod.locate(one) or one.executable
+    monkeypatch.setitem(harness_mod._HELP, found, "--output-format stream-json json")
+    monkeypatch.setitem(harness_mod._DECLARED, found,
+                        frozenset({"--output-format", "--tools"}))
+    command = harness_mod.command_for(one)
+    at = command.index("--tools")
+    assert command[at + 1] == ",".join(harness_mod.SEARCH_TOOLS)
+
+    monkeypatch.setitem(harness_mod._DECLARED, found, frozenset({"--output-format"}))
+    assert "--tools" not in harness_mod.command_for(one)
 
 
 def test_a_flag_this_machines_cli_never_heard_of_is_not_passed(monkeypatch):

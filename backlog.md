@@ -64,3 +64,27 @@ How items are written, per `docs/DOCTRINE.md`:
   read, its spend and the verify verdict from the engine, no sample
   constants; a small model that breaks JSON once still completes the run;
   and `tools/gate.sh` passes.
+
+## 12. Agents faster, and no tokens spent on a site's code *(2026-10-05)*
+
+> "Aight id like to work on the speed and the efficiency of the agents in the
+> app. Currently they work very well but they are kinda slow. Like annoyingly.
+> Plus I dont want them to spend too much tokens on gibberish of the code in
+> the sites. These goes for the local agent too."
+
+- **Where:** every research and quick-look run, on each plane: a coding-agent
+  CLI (harness), the API agent, and the local agent (Ollama), as the run's log
+  and its spend line show them.
+- **Done when:** a spawned Claude Code run loads only its search and fetch
+  tools (measured: 29 327 input tokens of fixed context before, 5 719 after,
+  on 2.1.289); the page text Kriko itself reads for a model (the plain
+  fetch, the hosted readers, the browser rung) carries no menus, comments,
+  markup or link and image addresses, so a listing site's first window is
+  its content rather than its navigation (a CLI's own fetch tool is the
+  CLI's, and out of reach); the window shown to a
+  model is the part of the page about the subject, not its first N
+  characters; the local agent searches in parallel and stops waiting for a
+  page that has not answered within a deadline; and `tools/gate.sh` passes.
+- **Not this:** a smaller model, fewer pages, or a lower quality bar. Same
+  work, less waste.
+- **Owner:** `claude/agent-speed-token-efficiency-frw1ev`.
