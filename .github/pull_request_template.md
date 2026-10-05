@@ -63,7 +63,7 @@ not; an unticked box is fine if you say why.
 
 - [ ] `python -m pytest` — no arguments, so `pytest.ini` picks up every testpath
 - [ ] `npm test`
-- [ ] If this touches `packaging/`, `tauri/` or `src/app/sidecar.py`, the
+- [ ] If this touches `packaging/`, `kriko-gpui/` or `src/app/sidecar.py`, the
       `desktop` workflow ran and all three runners are green.
 
 ```

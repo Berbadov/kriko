@@ -304,83 +304,122 @@ def test_no_hand_written_frontend_survives():
 
 
 # ── the desktop shell ─────────────────────────────────────────────────────
-# tauri/ is optional: no Rust toolchain is needed for the wheel or this suite.
-# But three things about it are load-bearing and break invisibly — a blank
-# window, or an engine reimplemented in Rust — so they are pinned in Python
-# where CI already runs.
+# kriko-gpui/ is the desktop app: a native GPUI window that supervises the
+# sidecar and draws every screen itself. It is optional for the wheel and for
+# this suite (no Rust toolchain is needed here), but a few things about it are
+# load-bearing and break invisibly: a window that never opens, or an engine
+# reimplemented in Rust. They are pinned in Python, where the gate already runs.
 
-TAURI = REPO / "tauri"
+GPUI = REPO / "kriko-gpui"
+
+
+def _rust_code(path: Path) -> str:
+    """The file with `//` comments stripped.
+
+    These assertions are about what the shell *does*, and the sources are
+    heavily commented with the very identifiers asserted on; a gate that a
+    comment can satisfy is not a gate.
+    """
+    return "\n".join(
+        re.sub(r"//.*$", "", line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+    )
+
+
+def _fn_body(source: str, name: str) -> str:
+    """The brace-balanced body of `fn <name>`."""
+    start = source.index(f"fn {name}")
+    start = source.index("{", start)
+    depth = 0
+    for i in range(start, len(source)):
+        depth += {"{": 1, "}": -1}.get(source[i], 0)
+        if depth == 0:
+            return source[start : i + 1]
+    raise AssertionError(f"unbalanced braces in fn {name}")
 
 
 def test_the_shell_and_the_sidecar_agree_on_the_handshake():
-    """One string decides whether the app opens or shows a white rectangle.
+    """One string decides whether the app opens or shows a failure screen.
 
     Rust reads the sidecar's first line of stdout to learn the port. If either
-    side renames the marker, the window never opens and nothing anywhere says
-    why — there is no shared type to break and no test the compiler runs.
+    side renames the marker, the engine is never found and nothing anywhere
+    says why: there is no shared type to break and no test the compiler runs.
     """
     from app.sidecar import PORT_LINE
 
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
-    declared = re.search(r'const PORT_LINE: &str = "([^"]+)"', main_rs)
-    assert declared, "main.rs no longer declares PORT_LINE"
+    engine = _rust_code(GPUI / "src" / "engine.rs")
+    declared = re.search(r'const PORT_LINE: &str = "([^"]+)"', engine)
+    assert declared, "engine.rs no longer declares PORT_LINE"
     assert declared.group(1) == PORT_LINE, (
         f"the shell greps for {declared.group(1)!r} but app/sidecar.py prints "
-        f"{PORT_LINE!r}. The window would never open."
+        f"{PORT_LINE!r}. The engine would never be found."
     )
 
 
 def test_the_shell_holds_no_engine_logic():
-    """Tauri wraps the Python engine; it does not become a second one.
+    """The app supervises the Python engine; it does not become a second one.
 
     The moment a query, a rank or a pack read exists in Rust, there are two
-    engines to keep in agreement and the layering fan in CLAUDE.md is a
-    drawing rather than a rule. The shell's whole job is the sidecar's
-    lifetime.
+    engines to keep in agreement and the layering in CLAUDE.md is a drawing
+    rather than a rule. The screens legitimately *name* API fields (a claim, a
+    pack id: they draw what the engine returns over HTTP), so this does not
+    ban vocabulary. It bans the things only an engine does: SQL, a database
+    crate, and opening the store files.
     """
-    rust = list((TAURI / "src-tauri" / "src").rglob("*.rs"))
-    assert rust, "no Rust sources found — fix this path, not the test"
+    rust = [p for p in (GPUI / "src").rglob("*.rs")]
+    assert rust, "no Rust sources found: fix this path, not the test"
 
-    # Engine vocabulary, not shell vocabulary. `spawn`, `kill`, `health` and
-    # `port` are exactly what a supervisor is allowed to know about.
     forbidden = re.compile(
-        r"\b(sqlite|rusqlite|SELECT\s|INSERT\s|claim|pack_id|subject_id|"
-        r"relevance|severity)\b",
+        r"(sqlite|rusqlite|sqlx|\bSELECT\s|\bINSERT\s+INTO\b|\bDELETE\s+FROM\b|"
+        r"\bCREATE\s+TABLE\b)",
         re.IGNORECASE,
     )
     for path in rust:
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            code = line.split("//")[0]
-            assert not forbidden.search(code), (
-                f"{_rel(path)}:{number} puts engine vocabulary in "
-                f"the shell: {line.strip()!r}. Rust owns the sidecar's "
-                f"lifetime and nothing else — see tauri/README.md."
+        for number, line in enumerate(_rust_code(path).splitlines(), start=1):
+            assert not forbidden.search(line), (
+                f"{_rel(path)}:{number} puts engine logic in the shell: "
+                f"{line.strip()!r}. Rust owns the sidecar's lifetime and "
+                f"draws what the engine says over HTTP; it never reads the "
+                f"store. See kriko-gpui/README.md."
             )
+
+    manifest = (GPUI / "Cargo.toml").read_text(encoding="utf-8")
+    lock = (GPUI / "Cargo.lock").read_text(encoding="utf-8")
+    for crate in ("rusqlite", "sqlx", "libsqlite3-sys", "diesel"):
+        assert crate not in manifest and f'name = "{crate}"' not in lock, (
+            f"{crate} is in the desktop app's graph: the store is the "
+            f"engine's, read through its HTTP API"
+        )
 
 
 def test_the_boot_screen_can_render_a_failure():
-    """A sidecar that dies must produce an explanation, not a blank page.
+    """A sidecar that dies must produce an explanation, not a blank window.
 
-    The boot page is plain HTML with no build step for the same reason: it has
-    to render when everything else is broken.
+    Every way the engine can fail to come up has to land in `Status::Failed`
+    with the engine's own stderr, and the window has to draw that status. The
+    window is created whatever the engine does, so the failure has somewhere
+    to be seen.
     """
-    page = (TAURI / "shell-ui" / "index.html").read_text(encoding="utf-8")
-    assert "kriko://failed" in page, "the boot screen ignores the failure event"
-    # The stderr goes through textContent. It is a subprocess's output, so an
-    # innerHTML assignment carrying it would be an injection with a very short
-    # path from "the engine crashed" to "the engine crashed and ran something".
-    assert "textContent" in page
-    injectable = [
-        line
-        for line in page.splitlines()
-        if "innerHTML" in line.split("//")[0] and 'innerHTML = ""' not in line
-    ]
-    assert injectable == [], f"stderr must not reach innerHTML: {injectable}"
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
-    assert "kriko://failed" in main_rs, "the shell never emits a failure"
-    assert "kill_engine" in main_rs, (
-        "nothing kills the sidecar — an orphaned uvicorn holds the store's WAL "
-        "lock and breaks the next launch"
+    engine = _rust_code(GPUI / "src" / "engine.rs")
+    spawn = _fn_body(engine, "spawn")
+    attach = _fn_body(engine, "attach")
+    assert "Status::Failed" in attach, "an engine that never answers is not reported"
+    assert re.search(r"Err\(e\)\s*=>\s*\{\s*set_status\(Status::Failed", spawn), (
+        "a sidecar that cannot be launched at all is not reported"
+    )
+    assert "s.stderr" in spawn and "s.status = Status::Failed" in spawn, (
+        "an engine that exits after starting does not reach the failure screen "
+        "with what it said on stderr"
+    )
+    app = _rust_code(GPUI / "src" / "app.rs")
+    boot = _fn_body(app, "boot_screen")
+    assert "Status::Failed" in boot and "detail" in boot, (
+        "the window never draws the failure"
+    )
+    assert "engine::restart" in boot, "the failure screen offers no retry"
+    assert "kill_tree" in _fn_body(engine, "stop"), (
+        "nothing kills the sidecar's tree: an orphaned engine holds the "
+        "store's WAL lock and breaks the next launch"
     )
 
 
@@ -409,61 +448,42 @@ def test_the_extension_and_the_server_agree_on_a_port():
 
 
 def test_the_shell_tells_the_sidecar_to_die_with_it():
-    """The flag is the only thing covering a *crashed* shell.
+    """The flag is the only thing covering a *crashed* app.
 
-    `kill_engine` runs on window close and on exit. Neither runs when the shell
-    is killed or panics, and the survivor keeps the store's WAL lock — and, on
-    Windows, its own image, which is what made an installer fail with "Error
-    opening file for writing: kriko-sidecar.exe". A flag spelled on one side
-    only is silent: argparse would reject it and the window would never open.
+    `stop` runs on Quit and on exit. Neither runs when the app is killed or
+    panics, and the survivor keeps the store's WAL lock and, on Windows, its
+    own image, which is what made an installer fail with "Error opening file
+    for writing: kriko-sidecar.exe". A flag spelled on one side only is
+    silent: argparse would reject it and the engine would never start.
     """
     flag = "--exit-with-parent"
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
+    engine = _rust_code(GPUI / "src" / "engine.rs")
     sidecar = (REPO / "src" / "app" / "sidecar.py").read_text(encoding="utf-8")
-    assert flag in main_rs, f"the shell does not pass {flag} — an orphan survives a crash"
-    assert flag in sidecar, f"the sidecar does not accept {flag} — it would fail to start"
+    assert flag in engine, f"the shell does not pass {flag}: an orphan survives a crash"
+    assert flag in sidecar, f"the sidecar does not accept {flag}: it would fail to start"
+    # The write end of the pipe is what the sidecar watches, so it has to be
+    # kept for the whole run rather than dropped after spawn.
+    assert "ChildStdin" in engine and "s.stdin = child.stdin.take()" in engine
 
 
-def test_a_sidecar_that_cannot_start_still_gets_a_window():
-    """`Err` from `start_engine` has nowhere to be read.
+def test_the_shell_stops_the_whole_tree_on_windows():
+    """A one-file PyInstaller bundle re-executes, so the pid spawned is only a
+    bootloader and the child holds the image mapped. Killing the pid alone
+    leaves the engine alive; `taskkill /T` is what ends it."""
+    engine = _rust_code(GPUI / "src" / "engine.rs")
+    kill = _fn_body(engine, "kill_tree")
+    assert '"/T"' in kill and '"/F"' in kill and "taskkill" in kill
 
-    The window is created hidden and shown once the engine is healthy, so an
-    error returned to the boot page renders into something invisible: the app
-    "does not open", with no window and no message. Every failure path has to
-    reach `emit_failure`, which shows the window itself.
-    """
-    main_rs = (TAURI / "src-tauri" / "src" / "main.rs").read_text(encoding="utf-8")
-    body = main_rs.split("fn start_engine")[1].split("\nfn ")[0]
-    assert "emit_failure" in body, (
-        "start_engine can fail without showing the window — the process would "
-        "have no window at all, which is the blank-window bug in its worst form"
+
+def test_the_engine_port_is_the_same_on_both_sides_of_the_pipe():
+    from app.web.settings import EXTENSION_PORT
+
+    engine = _rust_code(GPUI / "src" / "engine.rs")
+    declared = re.search(r"const EXTENSION_PORT: u16 = (\d+);", engine)
+    assert declared, "engine.rs no longer declares EXTENSION_PORT"
+    assert int(declared.group(1)) == EXTENSION_PORT, (
+        "the app attaches to an engine on a port the server does not bind"
     )
-
-
-def test_the_windows_installer_stops_a_running_engine_first():
-    """The install failure a reader actually hit, pinned.
-
-    NSIS overwrites the sidecar in place. A live one — leaked by an earlier
-    version, or by a crash — keeps its onefile image mapped, and the installer
-    stops with Abort/Retry/Ignore, all three of which are wrong. So the
-    installer kills it, and the name it kills has to be the name Tauri ships.
-    """
-    config = json.loads((TAURI / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))
-    hooks = config["bundle"]["windows"]["nsis"]["installerHooks"]
-    script = TAURI / "src-tauri" / hooks
-    assert script.exists(), f"{hooks} is configured but missing"
-    text = script.read_text(encoding="utf-8")
-
-    binaries = config["bundle"]["externalBin"]
-    name = Path(binaries[0]).name
-    assert f"{name}.exe" in text, (
-        f"the hook does not stop {name}.exe, which is the file the installer "
-        f"fails to open for writing"
-    )
-    for macro in ("NSIS_HOOK_PREINSTALL", "NSIS_HOOK_PREUNINSTALL"):
-        assert macro in text, f"{hooks} defines no {macro}"
-    # /T because the pid holding the image is a child of the one we spawned.
-    assert "/T" in text, "taskkill without /T leaves the onefile child alive"
 
 
 def test_every_data_file_under_src_is_declared_as_package_data():

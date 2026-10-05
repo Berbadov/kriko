@@ -162,13 +162,13 @@ the Windows installer adds a Start-menu shortcut for it.
 ## The desktop shell
 
 `src/app/sidecar.py` binds port 0, prints `KRIKO_PORT <n>` first and hands the
-bound socket to uvicorn. `tauri/src-tauri/src/main.rs` spawns it, polls
-`/api/health`, then shows the window; a failure renders stderr. `--mcp` runs
+bound socket to uvicorn. `kriko-gpui/src/engine.rs` spawns it, polls
+`/api/health` while the window says it is starting; a failure renders stderr. `--mcp` runs
 the MCP stdio server from the same binary and `--exit-with-parent` is the crash
 belt. `packaging/kriko-sidecar.spec` freezes it,
 `packaging/smoke_sidecar.py` gates the handshake, health and frontend, and
 `.github/workflows/desktop.yml` is the hand-run installer recipe. The
-supervisor rules are in `CLAUDE.md` and `tauri/README.md`.
+supervisor rules are in `CLAUDE.md` and `kriko-gpui/README.md`.
 
 ## The knowledge plane, the ledger
 
