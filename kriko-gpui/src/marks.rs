@@ -198,6 +198,8 @@ pub const LLAMACPP: Mark = Mark {
     palette: &[INK, ICE],
 };
 
+// no Local LLM runtime row draws it yet; kept with the other runtime marks
+#[allow(dead_code)]
 pub const JAN: Mark = Mark {
     rows: &[
         "....11..",

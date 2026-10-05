@@ -127,46 +127,6 @@ pub enum LedAnim {
     Blink,
 }
 
-/// Monogram letters for agents without an official icon (5x5).
-pub const LETTERS: [(&str, [&str; 5]); 26] = [
-    ("A", [".###.", "#...#", "#####", "#...#", "#...#"]),
-    ("B", ["####.", "#...#", "####.", "#...#", "####."]),
-    ("C", [".###.", "#....", "#....", "#....", ".###."]),
-    ("D", ["####.", "#...#", "#...#", "#...#", "####."]),
-    ("E", ["#####", "#....", "####.", "#....", "#####"]),
-    ("F", ["#####", "#....", "####.", "#....", "#...."]),
-    ("G", [".###.", "#....", "#.###", "#...#", ".###."]),
-    ("H", ["#...#", "#...#", "#####", "#...#", "#...#"]),
-    ("I", ["#####", "..#..", "..#..", "..#..", "#####"]),
-    ("J", ["..###", "...#.", "...#.", "#..#.", ".##.."]),
-    ("K", ["#..#.", "#.#..", "##...", "#.#..", "#..#."]),
-    ("L", ["#....", "#....", "#....", "#....", "#####"]),
-    ("M", ["#...#", "##.##", "#.#.#", "#...#", "#...#"]),
-    ("N", ["#...#", "##..#", "#.#.#", "#..##", "#...#"]),
-    ("O", [".###.", "#...#", "#...#", "#...#", ".###."]),
-    ("P", ["####.", "#...#", "####.", "#....", "#...."]),
-    ("Q", [".###.", "#...#", "#.#.#", "#..#.", ".##.#"]),
-    ("R", ["####.", "#...#", "####.", "#.#..", "#..#."]),
-    ("S", [".####", "#....", ".###.", "....#", "####."]),
-    ("T", ["#####", "..#..", "..#..", "..#..", "..#.."]),
-    ("U", ["#...#", "#...#", "#...#", "#...#", ".###."]),
-    ("V", ["#...#", "#...#", "#...#", ".#.#.", "..#.."]),
-    ("W", ["#...#", "#...#", "#.#.#", "##.##", "#...#"]),
-    ("X", ["#...#", ".#.#.", "..#..", ".#.#.", "#...#"]),
-    ("Y", ["#...#", ".#.#.", "..#..", "..#..", "..#.."]),
-    ("Z", ["#####", "...#.", "..#..", ".#...", "#####"]),
-];
-
-pub fn letter_rows(letter: char) -> [&'static str; 5] {
-    let upper = letter.to_ascii_uppercase().to_string();
-    for (name, rows) in LETTERS {
-        if *name == upper {
-            return rows;
-        }
-    }
-    QUEUE5
-}
-
 // ---- surfaces ----
 
 /// Glass card: translucent fill over the ground, soft shadow.
@@ -922,19 +882,6 @@ pub fn switch_anim(id: impl Into<gpui::ElementId>, on: bool, motion: bool) -> St
         .border_color(rgba(BORDER_CONTROL))
         .cursor_pointer()
         .child(knob)
-}
-
-/// Agent tile: 40px well. Pass the official icon path, or None for the LED monogram.
-pub fn agent_tile(letter_rows: [&str; 5], icon: Option<SharedString>) -> Div {
-    let t = well()
-        .size(px(40.0))
-        .flex()
-        .items_center()
-        .justify_center();
-    match icon {
-        Some(p) => t.child(img(embedded(p)).size(px(24.0))),
-        None => t.child(led_matrix(&letter_rows, BRAND_BRIGHT, 3.0, 1.0)),
-    }
 }
 
 /// The k-seg thumb: the bezel square that slides to the picked cell.
