@@ -1,182 +1,180 @@
-//! Agents: the coding agents on this machine that can reach Kriko.
-//! The table on the left with last-seen and run counts, the detail card
-//! for the picked agent on the right: state, latency, tools, reconnect.
+//! Agents: the coding agents on this machine, as the engine finds them. Two
+//! facts per agent, each from its own endpoint: whether it can run a check
+//! (`GET /api/prefs`: usable, needs sign-in, not installed) and whether it is
+//! wired to Kriko's MCP server (`GET /api/agent-targets`). The detail card
+//! acts on the picked one: use it for runs, connect it, refresh its skill.
 
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, Styled, Window};
 
 use crate::app::Kriko;
-use crate::data;
-use crate::screens::{mono, row_desc, row_title, th};
-use crate::marks::{mark_tile, phase_beat};
+use crate::live::run::{mark_for, AgentEntry, RunState, Target};
+use crate::marks::{mark_tile, phase_beat, Phase};
+use crate::screens::{empty_note, mono, row_desc, row_title, th};
 use crate::theme::*;
+
+/// How an agent stands as a runner of checks: the tag state and its word.
+fn run_word(h: &RunState) -> (TagState, &'static str) {
+    match h {
+        RunState::Ready => (TagState::Live, "Ready"),
+        RunState::Unusable(_) => (TagState::Need, "Needs sign-in"),
+        RunState::Missing { .. } => (TagState::Queue, "Not installed"),
+    }
+}
+
+/// How an agent stands as an MCP connection target.
+fn mcp_word(t: &Target) -> (TagState, &'static str) {
+    match t.state.as_str() {
+        "connected" => (TagState::Live, "Connected"),
+        "stale" => (TagState::Need, "Stale"),
+        "unreadable" => (TagState::Block, "Unreadable"),
+        _ => (TagState::Queue, "Not connected"),
+    }
+}
+
+/// The tile's motion: what a running job of this agent is doing; otherwise
+/// still when usable or connected, dark when it is not there, a held breath
+/// when it needs you.
+fn entry_phase(app: &Kriko, e: &AgentEntry) -> Phase {
+    if let Some(job) = app.live.run.running().find(|j| j.harness == e.id) {
+        return job.lane_phase();
+    }
+    match (&e.harness, &e.target) {
+        (Some(h), _) => match h.state {
+            RunState::Ready => Phase::Idle,
+            RunState::Unusable(_) => Phase::Waiting,
+            RunState::Missing { .. } => Phase::Off,
+        },
+        (None, Some(t)) if t.state == "connected" => Phase::Idle,
+        _ => Phase::Off,
+    }
+}
 
 pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
     let motion = !app.reduce_motion;
-    let selected = app.agent_selected.min(data::AGENTS.len() - 1);
+    let entries = app.live.run.agent_entries();
+    let loaded = app.live.run.prefs_loaded || app.live.run.targets_loaded;
 
-    let mut table = card().flex().flex_col();
-    table = table
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .pb(px(10.0))
-                .child(div().flex_1().min_w(px(160.0)).child(th("Agent")))
-                .child(div().w(px(120.0)).child(th("State")))
-                .child(div().w(px(96.0)).child(th("Latency")))
-                .child(div().w(px(104.0)).child(th("Last seen")))
-                .child(div().w(px(72.0)).child(th("Runs")))
-                .child(div().w(px(90.0)).child(th("Allowed"))),
-        )
-        .child(hairline());
+    let body: Div = if entries.is_empty() {
+        div().child(empty_note(if loaded {
+            "No agent was found on this machine."
+        } else {
+            "Waiting for the engine to list the agents."
+        }))
+    } else {
+        let selected = app.live.run.selected_agent().map(|e| e.id).unwrap_or_default();
+        let picked = entries.iter().find(|e| e.id == selected).cloned();
 
-    for (i, agent) in data::AGENTS.iter().enumerate() {
-        let is_selected = i == selected;
-        let click = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.agent_selected = i;
-            cx.notify();
-        });
-        let allowed = app.agent_allowed.get(i).copied().unwrap_or(agent.allowed);
-        let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            if i < this.agent_allowed.len() {
-                this.agent_allowed[i] = !this.agent_allowed[i];
-            }
-            cx.notify();
-        });
-        let row = div()
-            .id(("agent-row", i))
-            .flex()
-            .items_center()
-            .py(px(12.0))
-            .cursor_pointer()
-            .hover(|s| s.bg(rgba(GLASS_1)))
-            .when(is_selected, |s| {
-                s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE))
-            })
-            .on_click(click)
+        let mut table = card().flex().flex_col();
+        table = table
             .child(
                 div()
-                    .flex_1()
-                    .min_w(px(160.0))
                     .flex()
                     .items_center()
-                    .gap(px(12.0))
-                    .child(mark_tile(
-                        &format!("agents-row-tile-{i}"),
-                        agent.mark,
-                        data::agent_phase(i, allowed),
-                        40.0,
-                        motion,
-                    ))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .pr(px(10.0))
-                            .flex()
-                            .flex_col()
-                            .gap(px(2.0))
-                            .child(
-                                div()
-                                    .truncate()
-                                    .font_family(SANS)
-                                    .font_weight(FontWeight::SEMIBOLD)
-                                    .text_size(px(15.0))
-                                    .text_color(rgb(if is_selected { ICE } else { INK }))
-                                    .child(agent.name.to_string()),
-                            )
-                            .child(mono(agent.kind, MUTED)),
-                    ),
-            )
-            .child(
-                div()
-                    .w(px(120.0))
-                    .flex()
-                    .child(tag(format!("agents-row-{i}"), agent.state, agent.state_label, motion)),
-            )
-            .child(div().w(px(96.0)).child(mono(agent.latency, INK_2)))
-            .child(div().w(px(104.0)).child(mono(agent.last_seen, INK_2)))
-            .child(div().w(px(72.0)).child(mono(&agent.runs.to_string(), INK_2)))
-            .child(
-                div()
-                    .w(px(90.0))
-                    .flex()
-                    .child(switch_anim(("agent-sw", i), allowed, motion).on_click(toggle)),
-            );
-        table = table.child(row);
-        if i + 1 < data::AGENTS.len() {
-            table = table.child(hairline());
-        }
-    }
-
-    // ---- detail card ----
-    let agent = &data::AGENTS[selected];
-    let allowed = app
-        .agent_allowed
-        .get(selected)
-        .copied()
-        .unwrap_or(agent.allowed);
-    let tools = app.agent_tools.get(selected).copied().unwrap_or([
-        agent.can_read,
-        agent.can_run,
-        agent.can_answer,
-    ]);
-
-    let allowed_toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-        if selected < this.agent_allowed.len() {
-            this.agent_allowed[selected] = !this.agent_allowed[selected];
-        }
-        cx.notify();
-    });
-    let reconnect = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-        // A reconnect re-reads the MCP handshake; the run stays untouched.
-        this.dock_feed.push(crate::app::DockFeedEntry::now(
-            format!("{}: reconnected", data::AGENTS[selected].name),
-            TagState::Done,
-        ));
-        cx.notify();
-    });
-
-    let mut tool_rows = div().flex().flex_col();
-    for (ti, (label, desc)) in [
-        ("Read pages", "Read pages Kriko stores, for grounding"),
-        ("Take part in Run", "Join a check as one of the working agents"),
-        ("Answer questions", "Answer follow-up questions from Compare"),
-    ]
-    .into_iter()
-    .enumerate()
-    {
-        let on = tools[ti];
-        let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            if let Some(t) = this.agent_tools.get_mut(selected) {
-                t[ti] = !t[ti];
-            }
-            cx.notify();
-        });
-        tool_rows = tool_rows
-            .child(
-                div()
-                    .py(px(11.0))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap(px(16.0))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .flex()
-                            .flex_col()
-                            .gap(px(2.0))
-                            .child(row_title(label))
-                            .child(row_desc(desc)),
-                    )
-                    .child(switch_anim(("agent-tool", ti), on, motion).on_click(toggle)),
+                    .pb(px(10.0))
+                    .child(div().flex_1().min_w(px(160.0)).child(th("Agent")))
+                    .child(div().w(px(140.0)).child(th("Runs checks")))
+                    .child(div().w(px(140.0)).child(th("MCP")))
+                    .child(div().w(px(80.0)).child(th("Recent runs"))),
             )
             .child(hairline());
-    }
 
-    let detail = card()
+        for (i, e) in entries.iter().enumerate() {
+            let is_selected = e.id == selected;
+            let id = e.id.clone();
+            let click = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.select_agent(id.clone());
+                cx.notify();
+            });
+            let chosen = app.live.run.preferred == e.id;
+            let runs_cell = match &e.harness {
+                Some(h) => {
+                    let (state, word) = run_word(&h.state);
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(tag(format!("agents-row-{i}"), state, word, motion))
+                        .when(chosen, |d| d.child(chip("chosen")))
+                }
+                None => div().child(mono("-", DIM)),
+            };
+            let mcp_cell = match &e.target {
+                Some(t) => {
+                    let (state, word) = mcp_word(t);
+                    div().flex().child(tag(format!("agents-mcp-{i}"), state, word, motion))
+                }
+                None => div().child(mono("-", DIM)),
+            };
+            let row = div()
+                .id(("agent-row", i))
+                .flex()
+                .items_center()
+                .py(px(12.0))
+                .cursor_pointer()
+                .hover(|s| s.bg(rgba(GLASS_1)))
+                .when(is_selected, |s| {
+                    s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE))
+                })
+                .on_click(click)
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(160.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(12.0))
+                        .child(mark_tile(
+                            &format!("agents-row-tile-{i}"),
+                            mark_for(&e.id),
+                            entry_phase(app, e),
+                            40.0,
+                            motion,
+                        ))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w(px(0.0))
+                                .pr(px(10.0))
+                                .truncate()
+                                .font_family(SANS)
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .text_size(px(15.0))
+                                .text_color(rgb(if is_selected { ICE } else { INK }))
+                                .child(e.label.clone()),
+                        ),
+                )
+                .child(div().w(px(140.0)).child(runs_cell))
+                .child(div().w(px(140.0)).child(mcp_cell))
+                .child(
+                    div()
+                        .w(px(80.0))
+                        .child(mono(&app.live.run.runs_of(&e.id).to_string(), INK_2)),
+                );
+            table = table.child(row);
+            if i + 1 < entries.len() {
+                table = table.child(hairline());
+            }
+        }
+
+        let detail = match picked {
+            Some(e) => detail_card(app, &e, motion, cx),
+            None => card(),
+        };
+        div()
+            .flex()
+            .gap(px(24.0))
+            .items_start()
+            .min_w(px(980.0))
+            .child(div().flex_1().min_w(px(0.0)).child(table))
+            .child(div().w(px(320.0)).flex_none().child(detail))
+    };
+
+    div().id("agents-row-scroll").overflow_x_scroll().child(body)
+}
+
+fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko>) -> Div {
+    let phase = entry_phase(app, e);
+    let mut c = card()
         .flex()
         .flex_col()
         .gap(px(10.0))
@@ -186,9 +184,9 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                 .items_center()
                 .gap(px(16.0))
                 .child(mark_tile(
-                    &format!("agents-detail-tile-{selected}"),
-                    agent.mark,
-                    data::agent_phase(selected, allowed),
+                    &format!("agents-detail-tile-{}", e.id),
+                    mark_for(&e.id),
+                    phase,
                     72.0,
                     motion,
                 ))
@@ -197,103 +195,141 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                         .flex()
                         .flex_col()
                         .gap(px(4.0))
-                        .child(row_title(agent.name))
-                        .child(mono(agent.kind, MUTED))
-                        .child(phase_beat(
-                            &format!("agents-detail-beat-{selected}"),
-                            data::agent_phase(selected, allowed),
-                            motion,
-                        )),
-                ),
-        )
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(10.0))
-                .child(tag("agents-detail", agent.state, agent.state_label, motion))
-                .child(chip(&format!("mcp :{}", agent.port))),
-        )
-        .child(hairline())
-        .child(row_desc(agent.detail))
-        .child(hairline())
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(16.0))
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap(px(2.0))
-                        .child(mono("LATENCY", DIM))
-                        .child(mono(agent.latency, INK_2)),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap(px(2.0))
-                        .child(mono("LAST SEEN", DIM))
-                        .child(mono(agent.last_seen, INK_2)),
-                )
-                .child(
-                    div()
-                        .flex()
-                        .flex_col()
-                        .gap(px(2.0))
-                        .child(mono("RUNS", DIM))
-                        .child(mono(&agent.runs.to_string(), INK_2)),
-                ),
-        )
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap(px(16.0))
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(0.0))
-                        .flex()
-                        .flex_col()
-                        .gap(px(2.0))
-                        .child(row_title("Allowed in Run"))
-                        .child(row_desc("When off, this agent is skipped in every check.")),
-                )
-                .child(
-                    switch_anim("agent-detail-sw", allowed, motion).on_click(allowed_toggle),
-                ),
-        )
-        .child(hairline())
-        .child(div().pb(px(2.0)).child(eyebrow("Tools")))
-        .child(tool_rows)
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(10.0))
-                .child(ghost("agent-reconnect", "Reconnect").on_click(reconnect))
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(0.0))
-                        .child(row_desc("Re-reads the MCP handshake for this agent.")),
+                        .child(row_title(&e.label))
+                        .child(mono(&e.id, MUTED))
+                        .child(phase_beat(&format!("agents-detail-beat-{}", e.id), phase, motion)),
                 ),
         );
 
-    div()
-        .id("agents-row-scroll")
-        .overflow_x_scroll()
-        .child(
-            div()
-                .flex()
-                .gap(px(24.0))
-                .items_start()
-                .min_w(px(980.0))
-                .child(div().flex_1().min_w(px(0.0)).child(table))
-                .child(div().w(px(320.0)).flex_none().child(detail)),
-        )
+    // ---- runs checks ----
+    if let Some(h) = &e.harness {
+        let (state, word) = run_word(&h.state);
+        let chosen = app.live.run.preferred == e.id;
+        c = c
+            .child(hairline())
+            .child(eyebrow("Runs checks"))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(10.0))
+                    .child(tag("agents-detail-run", state, word, motion))
+                    .when(chosen, |d| d.child(chip("used for runs"))),
+            );
+        match &h.state {
+            RunState::Ready => {
+                let runs = app.live.run.runs_of(&e.id);
+                c = c.child(row_desc(&format!(
+                    "{runs} of the engine's last 30 jobs ran with it."
+                )));
+                if !chosen {
+                    let id = e.id.clone();
+                    let use_it = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                        this.prefer_agent(id.clone(), cx);
+                        cx.notify();
+                    });
+                    c = c.child(div().child(ghost("agent-use", "Use for runs").on_click(use_it)));
+                }
+            }
+            RunState::Unusable(why) => c = c.child(row_desc(why)),
+            RunState::Missing { hint, url } => {
+                c = c.child(row_desc(if hint.is_empty() { "Not found on this machine." } else { hint }));
+                if !url.is_empty() {
+                    c = c.child(mono(url, DIM));
+                }
+            }
+        }
+    }
+
+    // ---- MCP connection ----
+    if let Some(t) = &e.target {
+        let (state, word) = mcp_word(t);
+        let id = e.id.clone();
+        let connect = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.connect_target(id.clone(), cx);
+            cx.notify();
+        });
+        let label = if t.state == "absent" { "Connect" } else { "Reconnect" };
+        c = c
+            .child(hairline())
+            .child(eyebrow("MCP connection"))
+            .child(tag("agents-detail-mcp", state, word, motion))
+            .child(mono(&t.path, DIM));
+        if !t.detail.is_empty() {
+            c = c.child(row_desc(&t.detail));
+        }
+        if t.skill_supported {
+            let skill = if t.skill_stale {
+                "The skill on disk is out of date."
+            } else if t.skill_present {
+                "The skill is on disk and current."
+            } else {
+                "No skill is written yet."
+            };
+            c = c.child(row_desc(skill));
+        }
+        let mut keys = div().flex().items_center().gap(px(10.0)).child(ghost("agent-connect", label).on_click(connect));
+        if t.skill_supported {
+            let id = e.id.clone();
+            let refresh = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.refresh_skill(id.clone(), cx);
+                cx.notify();
+            });
+            keys = keys.child(ghost("agent-skill", "Refresh skill").on_click(refresh));
+        }
+        c = c.child(keys);
+    }
+
+    if !app.live.run.agent_note.is_empty() {
+        c = c.child(row_desc(&app.live.run.agent_note));
+    }
+
+    // ---- check connection: the engine starts its own MCP server and says
+    // which step it passed ----
+    let verify = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.verify_agents(cx);
+        cx.notify();
+    });
+    c = c.child(hairline()).child(
+        div()
+            .flex()
+            .items_center()
+            .gap(px(10.0))
+            .child(
+                ghost(
+                    "agent-verify",
+                    if app.live.run.verifying { "Checking" } else { "Check connection" },
+                )
+                .on_click(verify),
+            )
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(0.0))
+                    .child(row_desc("Starts Kriko's MCP server and asks it who it is.")),
+            ),
+    );
+    if let Some(v) = &app.live.run.verify {
+        let mut steps = div().flex().flex_col().gap(px(6.0));
+        for (i, (step, state)) in v.steps.iter().enumerate() {
+            let (ts, word) = match state.as_str() {
+                "ok" => (TagState::Done, "ok"),
+                "failed" => (TagState::Block, "failed"),
+                _ => (TagState::Queue, "skipped"),
+            };
+            steps = steps.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(10.0))
+                    .child(tag(format!("agents-verify-{i}"), ts, word, motion))
+                    .child(mono(step, INK_2)),
+            );
+        }
+        c = c.child(steps);
+        if !v.ok && !v.detail.is_empty() {
+            c = c.child(row_desc(&v.detail));
+        }
+    }
+    c
 }
