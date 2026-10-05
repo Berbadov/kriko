@@ -72,7 +72,7 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                     .items_center()
                     .pb(px(10.0))
                     .child(div().flex_1().min_w(px(160.0)).child(th("Agent")))
-                    .child(div().w(px(140.0)).child(th("Runs checks")))
+                    .child(div().w(px(200.0)).child(th("Runs checks")))
                     .child(div().w(px(140.0)).child(th("MCP")))
                     .child(div().w(px(80.0)).child(th("Recent runs"))),
             )
@@ -143,7 +143,7 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                                 .child(e.label.clone()),
                         ),
                 )
-                .child(div().w(px(140.0)).child(runs_cell))
+                .child(div().w(px(200.0)).flex_none().child(runs_cell))
                 .child(div().w(px(140.0)).child(mcp_cell))
                 .child(
                     div()
