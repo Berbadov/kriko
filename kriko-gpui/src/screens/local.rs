@@ -526,13 +526,29 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                 .child(eyebrow("Models"))
                 .child(mono(&format!("{} on {}", plane.models.len(), if plane.name.is_empty() { "the server" } else { &plane.name }), DIM)),
         )
-        .child(hairline());
+        .child(hairline())
+        .child(row_desc(
+            "Start with 4B or smaller for modest hardware. Every model on the server stays available below, including larger ones for machines with more VRAM.",
+        ));
     if plane.models.is_empty() {
         return models.child(div().pt(px(12.0)).child(empty_note(
             "No model is downloaded on the server Kriko is using. Get one above.",
         )));
     }
-    for (i, name) in plane.models.iter().enumerate() {
+    for group in 0..3 {
+      let members: Vec<_> = plane.models.iter().enumerate().filter(|(_, name)| {
+          let info = held.iter().find(|h| &h.name == *name);
+          model_group(info.and_then(|h| h.params.as_deref()), name) == group
+      }).collect();
+      if members.is_empty() {
+          continue;
+      }
+      models = models.child(div().pt(px(14.0)).child(mono(match group {
+          0 => "4B AND SMALLER",
+          1 => "LARGER MODELS",
+          _ => "SIZE NOT REPORTED",
+      }, DIM)));
+      for (i, name) in members {
         let info = held.iter().find(|h| &h.name == name);
         let in_use = *name == plane.model;
         let fit: Option<bool> = match (info.and_then(|h| h.size_bytes), vram_bytes) {
@@ -600,11 +616,40 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                 )
                 .child(div().flex_none().child(right)),
         );
-        if i + 1 < plane.models.len() {
-            models = models.child(hairline());
-        }
+        models = models.child(hairline());
+      }
     }
     models
+}
+
+/// Group by the server's parameter count when it supplies one. The model name
+/// is only a fallback for runtimes that list names without Ollama's details.
+fn model_group(params: Option<&str>, name: &str) -> usize {
+    let size = params.and_then(parse_billions).or_else(|| {
+        name.split([':', '-', '_']).rev().find_map(parse_billions)
+    });
+    match size {
+        Some(n) if n <= 4.0 => 0,
+        Some(_) => 1,
+        None => 2,
+    }
+}
+
+fn parse_billions(raw: &str) -> Option<f64> {
+    raw.trim().to_ascii_lowercase().strip_suffix('b')?.parse().ok()
+}
+
+#[cfg(test)]
+mod model_group_tests {
+    use super::model_group;
+
+    #[test]
+    fn installed_small_and_large_models_remain_visible_in_their_groups() {
+        assert_eq!(model_group(Some("4.0B"), "any-model"), 0);
+        assert_eq!(model_group(Some("27B"), "any-model"), 1);
+        assert_eq!(model_group(None, "another:70b"), 1);
+        assert_eq!(model_group(None, "custom-model"), 2);
+    }
 }
 
 pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
