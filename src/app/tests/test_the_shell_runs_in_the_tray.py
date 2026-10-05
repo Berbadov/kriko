@@ -169,3 +169,15 @@ def test_the_tray_dependency_is_declared_for_windows():
         "without the crate the tray code does not compile, and the only "
         "machine that would find out is the one building the installer"
     )
+
+
+def test_a_release_build_opens_no_console():
+    """Without the windows subsystem, a double-clicked Kriko shortcut opened a
+    terminal titled "Kriko" beside the app (seen on the 1.0.0 MSI)."""
+    attribute = re.compile(
+        r'#!\[cfg_attr\(\s*not\(debug_assertions\)\s*,\s*windows_subsystem\s*=\s*"windows"\s*\)\]'
+    )
+    assert attribute.search(_code("main.rs")), (
+        'kriko-gpui/src/main.rs must carry '
+        '#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]'
+    )

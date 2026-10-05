@@ -28,6 +28,10 @@
   * Every component's key path is a value under HKCU, which is what Windows
     Installer asks of anything written into a user profile (ICE38), and every
     folder this creates is removed again (ICE64).
+  * A component holding a file under a registry key path cannot have its
+    GUID generated (candle CNDL0230), so the two program components carry
+    fixed ones. Never change them: a component's GUID is its identity across
+    upgrades.
 -->
 
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
@@ -73,15 +77,17 @@
 
                         <Component Id='AppFolder' Guid='*'>
                             <RemoveFolder Id='RemoveAppFolder' On='uninstall'/>
+                            <!-- ICE64 asks for every profile folder; Windows only removes it when empty -->
+                            <RemoveFolder Id='RemoveProgramsFolder' Directory='ProgramsFolder' On='uninstall'/>
                             <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='folder' Type='integer' Value='1' KeyPath='yes'/>
                         </Component>
 
-                        <Component Id='KrikoExe' Guid='*'>
+                        <Component Id='KrikoExe' Guid='0AD7022D-949E-49B6-BEA5-D945783F3777'>
                             <File Id='KrikoExe' Name='kriko.exe' DiskId='1' Source='$(var.CargoTargetBinDir)\kriko.exe' KeyPath='no'/>
                             <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='kriko.exe' Type='integer' Value='1' KeyPath='yes'/>
                         </Component>
 
-                        <Component Id='SidecarExe' Guid='*'>
+                        <Component Id='SidecarExe' Guid='D57A4215-D6A0-4F75-A1EF-7836646D67C7'>
                             <File Id='SidecarExe' Name='kriko-sidecar.exe' DiskId='1' Source='$(var.CargoTargetBinDir)\kriko-sidecar.exe' KeyPath='no'/>
                             <RegistryValue Root='HKCU' Key='Software\Kriko\Installer' Name='kriko-sidecar.exe' Type='integer' Value='1' KeyPath='yes'/>
                         </Component>

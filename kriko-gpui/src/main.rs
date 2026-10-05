@@ -1,6 +1,11 @@
 //! Kriko desktop app. Everything it draws (fonts, icons, sky images) is
 //! embedded in the binary, so the app runs from any working directory.
 
+// A release build is a window program: without this Windows gives kriko.exe a
+// console, and a double-clicked shortcut opened a terminal titled "Kriko"
+// beside the app. Debug builds keep the console for their logs.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 mod api;
 mod app;
 mod data;
