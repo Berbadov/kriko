@@ -1,15 +1,12 @@
-//! Knowledge overview: what the packs know, and where they run thin.
-//! The totals read from the packs that are actually on, each pack carries
-//! its weight, the support bar is counted from the stored claims, the
-//! coverage gaps unfold into their disputes, and the thinnest claims are
-//! found, not hardcoded. Information only — nothing here ranks anything.
+//! Knowledge overview: what the packs know, and where they run thin, read
+//! from the engine: the installed packs and their switches, the totals of the
+//! ones that are on, the subjects nobody has researched, and the claims that
+//! rest on the least. Information only; nothing here ranks anything.
 
-use gpui::{div, prelude::*, px, rgb, rgba, Animation, AnimationExt, ClickEvent, Context, Div,
-    Styled, Window};
+use gpui::{div, prelude::*, px, rgb, rgba, Animation, AnimationExt, ClickEvent, Context, Div, Window};
 
 use crate::app::Kriko;
-use crate::data;
-use crate::screens::{mono, row_desc, row_title, total_card};
+use crate::screens::{empty_note, mono, row_desc, row_title, total_card};
 use crate::theme::*;
 
 /// The smooth settle the whole page shares: a fade with a stagger.
@@ -37,33 +34,75 @@ fn settle(
 
 pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
+    let k = &app.live.knowledge;
 
-    // ---- packs with switches; the totals read from the enabled ones ----
-    let enabled_packs: Vec<usize> = data::PACKS
-        .iter()
-        .enumerate()
-        .filter(|(i, _)| app.pack_enabled.get(*i).copied().unwrap_or(false))
-        .map(|(i, _)| i)
-        .collect();
-    let subjects_on: u32 = enabled_packs
-        .iter()
-        .map(|&i| data::PACKS[i].subjects as u32)
-        .sum();
-    let max_subjects = data::PACKS.iter().map(|p| p.subjects).max().unwrap_or(1) as f32;
+    if !k.packs_loaded {
+        return div().child(empty_note(
+            "Waiting for Kriko's engine. The packs appear here as soon as it answers.",
+        ));
+    }
 
+    // ---- pack updates: only when a newer version is on offer ----
+    let mut banner: Option<Div> = None;
+    if !k.offers.is_empty() {
+        let mut b = card()
+            .flex()
+            .flex_col()
+            .child(div().mb(px(4.0)).child(eyebrow("Pack updates")))
+            .child(hairline());
+        let working = k.update_job.as_ref().map(|j| !j.done).unwrap_or(false);
+        for (i, o) in k.offers.iter().enumerate() {
+            let id = o.pack_id.clone();
+            let go = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                this.update_pack(id.clone(), cx);
+            });
+            let button = key(("pack-update", i), "Update");
+            let button = if working { button.opacity(0.5) } else { button.on_click(go) };
+            b = b.child(
+                div()
+                    .py(px(12.0))
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(16.0))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .flex()
+                            .flex_col()
+                            .gap(px(2.0))
+                            .child(row_title(&o.name))
+                            .child(mono(&format!("{} to {}", o.installed, o.offered), MUTED)),
+                    )
+                    .child(button),
+            );
+        }
+        if let Some(job) = &k.update_job {
+            let line = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
+            b = b.child(mono(&line, if job.state == "failed" { DANGER } else { MUTED }));
+        }
+        banner = Some(b);
+    }
+
+    // ---- packs with switches; the meter is each pack's share of subjects ----
+    let max_subjects = k.packs.iter().map(|p| p.subjects).max().unwrap_or(1).max(1) as f32;
     let mut packs = card().flex().flex_col();
     packs = packs.child(div().mb(px(4.0)).child(eyebrow("Packs")));
     packs = packs.child(hairline());
-    for (i, pack) in data::PACKS.iter().enumerate() {
+    if k.packs.is_empty() {
+        packs = packs.child(div().pt(px(12.0)).child(empty_note(
+            "No packs are installed. Install one from Browse and its knowledge lands here.",
+        )));
+    }
+    for (i, pack) in k.packs.iter().enumerate() {
+        let id = pack.id.clone();
+        let want = !pack.enabled;
         let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-            if i < this.pack_enabled.len() {
-                this.pack_enabled[i] = !this.pack_enabled[i];
-            }
-            cx.notify();
+            this.set_pack_enabled(id.clone(), want, cx);
         });
-        let enabled = app.pack_enabled.get(i).copied().unwrap_or(false);
-        let note = if enabled {
-            format!("{} subjects", pack.subjects)
+        let note = if pack.enabled {
+            format!("{} subjects · {} claims", pack.subjects, pack.claims)
         } else {
             "off, not read".to_string()
         };
@@ -74,7 +113,7 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                 .items_center()
                 .justify_between()
                 .gap(px(24.0))
-                .when(!enabled, |s| s.opacity(0.5))
+                .when(!pack.enabled, |s| s.opacity(0.5))
                 .child(
                     div()
                         .flex()
@@ -88,195 +127,69 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                                 .items_center()
                                 .justify_between()
                                 .gap(px(16.0))
-                                .child(row_title(pack.name))
+                                .child(row_title(&pack.name))
                                 .child(mono(&note, MUTED)),
                         )
-                        .child(
-                            meter_slim(pack.subjects as f32 / max_subjects * 100.0, 10),
-                        ),
+                        .child(meter_slim(pack.subjects as f32 / max_subjects * 100.0, 10))
+                        .child(mono(&format!("{} · {}", pack.id, pack.version), DIM)),
                 )
-                .child(switch_anim(("pack-sw", i), enabled, motion).on_click(toggle)),
+                .child(switch_anim(("pack-sw", i), pack.enabled, motion).on_click(toggle)),
         );
-        if i + 1 < data::PACKS.len() {
+        if i + 1 < k.packs.len() {
             packs = packs.child(hairline());
         }
     }
 
-    // ---- the support bar, counted from the stored claims ----
-    let total_rows = data::KNOWLEDGE.len().max(1) as f32;
-    let share = |state: TagState| {
-        data::KNOWLEDGE
-            .iter()
-            .filter(|r| r.trust == state)
-            .count() as f32
-            / total_rows
-            * 100.0
-    };
-    let support_rows = [
-        ("BACKED", share(TagState::Done), "check"),
-        ("DISPUTED", share(TagState::Need), "queue"),
-        ("NO EVIDENCE", share(TagState::Queue), "x"),
-    ];
-    let mut support = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Support"));
-    for (si, (label, pct, _glyph)) in support_rows.iter().enumerate() {
-        let line = div()
-            .flex()
-            .items_center()
-            .gap(px(10.0))
-            .child(mono(label, DIM))
-            .child(meter(*pct, 24));
-        support = support.child(settle(
-            gpui::ElementId::named_usize("ov-support", si),
-            300.0 + si as f32 * 140.0,
-            motion,
-        )(line));
-    }
-    support = support.child(row_desc(
-        "Share of stored claims, counted from the rows themselves.",
-    ));
-
-    // ---- coverage gaps, each one unfolding its dispute ----
+    // ---- coverage gaps: subjects of the enabled packs nothing reaches ----
     let mut gaps_card = card().flex().flex_col();
     gaps_card = gaps_card.child(div().mb(px(4.0)).child(eyebrow("Coverage gaps")));
     gaps_card = gaps_card.child(hairline());
-    let mut gap_n = 0usize;
-    for (ki, row) in data::KNOWLEDGE.iter().enumerate() {
-        if row.trust == TagState::Done {
-            continue;
-        }
-        let open = app.knowledge_open == Some(ki);
-        let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-            this.knowledge_open = if this.knowledge_open == Some(ki) {
-                None
-            } else {
-                Some(ki)
-            };
-            cx.notify();
-        });
-        let mut gap_row = div()
-            .id(("gap-row", ki))
-            .py(px(12.0))
-            .flex()
-            .flex_col()
-            .child(
-                div()
-                    .id(("gap-open", ki))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap(px(16.0))
-                    .cursor_pointer()
-                    .hover(|s| s.bg(rgba(GLASS_1)))
-                    .on_click(toggle)
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .flex()
-                            .flex_col()
-                            .gap(px(2.0))
-                            .child(row_title(row.attribute))
-                            .child(mono(row.subject, MUTED)),
-                    )
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(10.0))
-                            .child(icon(
-                                if open { "collapse" } else { "expand" },
-                                14.0,
-                            )
-                            .text_color(rgb(MUTED)))
-                            .child(tag(
-                                format!("knowledge-gap-{ki}"),
-                                row.trust,
-                                row.trust_label,
-                                motion,
-                            )),
-                    ),
-            );
-        if open {
-            // the dispute, both sides, the way the sources left it
-            let mut panel = well()
-                .mt(px(4.0))
-                .mb(px(6.0))
-                .p(px(14.0))
+    if k.gaps.is_empty() {
+        gaps_card = gaps_card.child(div().pt(px(12.0)).child(empty_note(
+            "Every subject in the enabled packs has at least one claim.",
+        )));
+    }
+    let shown = 8usize;
+    for (gi, gap) in k.gaps.iter().take(shown).enumerate() {
+        gaps_card = gaps_card.child(
+            div()
+                .py(px(12.0))
                 .flex()
-                .flex_col()
-                .gap(px(8.0));
-            if !row.evidence_for.is_empty() {
-                panel = panel
-                    .child(eyebrow("On one side"))
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(12.0))
-                            .child(led_matrix(&CHECK5, INK_2, 3.0, 1.0))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w(px(0.0))
-                                    .font_family(SANS)
-                                    .text_size(px(13.0))
-                                    .text_color(rgb(INK_2))
-                                    .child(row.evidence_for.to_string()),
-                            ),
-                    );
-            }
-            if !row.evidence_against.is_empty() {
-                panel = panel
-                    .child(eyebrow("On the other"))
-                    .child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(12.0))
-                            .child(led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0))
-                            .child(
-                                div()
-                                    .flex_1()
-                                    .min_w(px(0.0))
-                                    .font_family(SANS)
-                                    .text_size(px(13.0))
-                                    .text_color(rgb(INK_2))
-                                    .child(row.evidence_against.to_string()),
-                            ),
-                    );
-            }
-            if row.evidence_for.is_empty() && row.evidence_against.is_empty() {
-                panel = panel.child(row_desc(
-                    "Nothing on record. A run would go read for it.",
-                ));
-            }
-            panel = panel.child(mono(
-                &format!(
-                    "{} claims · {} sources on record",
-                    row.claims, row.sources
-                ),
-                MUTED,
-            ));
-            gap_row = gap_row.child(panel);
-        }
-        gaps_card = gaps_card.child(gap_row);
-        gap_n += 1;
-        // a hairline between gaps that skips the last one
-        if gap_n < data::KNOWLEDGE.iter().filter(|r| r.trust != TagState::Done).count() {
+                .items_center()
+                .justify_between()
+                .gap(px(16.0))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(2.0))
+                        .child(row_title(&gap.label))
+                        .child(mono(&format!("{} · {}", gap.kind, gap.pack_id), MUTED)),
+                )
+                .child(tag(format!("knowledge-gap-{gi}"), TagState::Queue, "No claims", motion)),
+        );
+        if gi + 1 < shown.min(k.gaps.len()) {
             gaps_card = gaps_card.child(hairline());
         }
     }
+    if k.gaps.len() > shown {
+        gaps_card = gaps_card.child(
+            div()
+                .pt(px(8.0))
+                .child(mono(&format!("and {} more", k.gaps.len() - shown), DIM)),
+        );
+    }
 
     // ---- the thinnest claims, found rather than asserted ----
-    let max_sources = data::KNOWLEDGE.iter().map(|r| r.sources).max().unwrap_or(1) as f32;
-    let mut thinnest: Vec<&data::KnowledgeRow> =
-        data::KNOWLEDGE.iter().filter(|r| r.sources > 0).collect();
-    thinnest.sort_by_key(|r| r.sources);
-    thinnest.truncate(3);
+    let max_sources = k.thin.iter().map(|r| r.sources).max().unwrap_or(1).max(1) as f32;
     let mut thin_card = card().flex().flex_col();
     thin_card = thin_card.child(div().mb(px(4.0)).child(eyebrow("Runs thin")));
     thin_card = thin_card.child(hairline());
-    if thinnest.is_empty() {
+    if !k.thin_loaded {
+        thin_card = thin_card.child(div().pt(px(12.0)).child(empty_note("Looking for the thinnest claims.")));
+    } else if k.thin.is_empty() {
         thin_card = thin_card.child(
             div()
                 .py(px(32.0))
@@ -284,66 +197,123 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex_col()
                 .items_center()
                 .gap(px(8.0))
-                .child(led_matrix_anim(
-                    "ov-thin-empty",
-                    &CHECK5,
-                    INK_2,
-                    4.0,
-                    2.0,
-                    LedAnim::Boot,
-                    motion,
-                ))
-                .child(row_desc("Every stored claim rests on more than one source.")),
+                .child(led_matrix_anim("ov-thin-empty", &CHECK5, INK_2, 4.0, 2.0, LedAnim::Boot, motion))
+                .child(row_desc("No claim with evidence rests on thin ground.")),
         );
-    } else {
-        for (ti, row) in thinnest.iter().enumerate() {
-            thin_card = thin_card.child(
-                div()
-                    .py(px(12.0))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap(px(16.0))
-                    .child(
-                        div()
-                            .flex_1()
-                            .min_w(px(0.0))
-                            .flex()
-                            .flex_col()
-                            .gap(px(6.0))
-                            .child(
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .justify_between()
-                                    .gap(px(16.0))
-                                    .child(row_title(row.attribute))
-                                    .child(mono(
-                                        &format!("{} source{}", row.sources, if row.sources > 1 { "s" } else { "" }),
-                                        MUTED,
-                                    )),
-                            )
-                            .child(meter_slim(
-                                row.sources as f32 / max_sources * 100.0,
-                                10,
-                            )),
-                    )
-                    .child(mono(row.subject, MUTED)),
-            );
-            if ti + 1 < thinnest.len() {
-                thin_card = thin_card.child(hairline());
+    }
+    for (ti, row) in k.thin.iter().enumerate() {
+        let open = k.thin_open.as_deref() == Some(row.claim_id.as_str());
+        let (cid, sid) = (row.claim_id.clone(), row.subject_id.clone());
+        let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+            this.toggle_thin(cid.clone(), sid.clone(), cx);
+            cx.notify();
+        });
+        let state_tag = if row.refuted_by > 0 {
+            tag(format!("thin-{ti}"), TagState::Need, "Disputed", motion)
+        } else {
+            tag(format!("thin-{ti}"), TagState::Queue, "Thin", motion)
+        };
+        let mut line = div().id(("thin-row", ti)).py(px(12.0)).flex().flex_col().child(
+            div()
+                .id(("thin-open", ti))
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(16.0))
+                .cursor_pointer()
+                .hover(|s| s.bg(rgba(GLASS_1)))
+                .on_click(toggle)
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .gap(px(16.0))
+                                .child(row_title(&row.title))
+                                .child(mono(
+                                    &format!(
+                                        "{} source{}",
+                                        row.sources,
+                                        if row.sources == 1 { "" } else { "s" }
+                                    ),
+                                    MUTED,
+                                )),
+                        )
+                        .child(meter_slim(row.sources as f32 / max_sources * 100.0, 10))
+                        .child(mono(&row.subject, DIM)),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(10.0))
+                        .child(icon(if open { "collapse" } else { "expand" }, 14.0).text_color(rgb(MUTED)))
+                        .child(state_tag),
+                ),
+        );
+        if open {
+            let mut panel = well().mt(px(4.0)).mb(px(6.0)).p(px(14.0)).flex().flex_col().gap(px(10.0));
+            if !k.thin_quotes_loaded {
+                panel = panel.child(row_desc("Reading the evidence."));
+            } else if k.thin_quotes.is_empty() {
+                panel = panel.child(row_desc("No evidence on record for this claim."));
             }
+            for q in &k.thin_quotes {
+                let (glyph, color): (&[&str], u32) =
+                    if q.stance == "refutes" { (&QUEUE5, LED_DIM) } else { (&CHECK5, INK_2) };
+                panel = panel.child(
+                    div()
+                        .flex()
+                        .items_start()
+                        .gap(px(12.0))
+                        .child(led_matrix(glyph, color, 3.0, 1.0))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w(px(0.0))
+                                .flex()
+                                .flex_col()
+                                .gap(px(2.0))
+                                .child(
+                                    div()
+                                        .font_family(SANS)
+                                        .text_size(px(13.0))
+                                        .text_color(rgb(INK_2))
+                                        .child(format!("\u{201c}{}\u{201d}", q.quote)),
+                                )
+                                .child(mono(&format!("{} · {} · {}", q.domain, q.stance, q.tier), MUTED)),
+                        ),
+                );
+            }
+            line = line.child(panel);
+        }
+        thin_card = thin_card.child(line);
+        if ti + 1 < k.thin.len() {
+            thin_card = thin_card.child(hairline());
         }
     }
 
-    // ---- the totals: subjects counted from the packs that are on ----
+    // ---- the totals, from the packs that are on ----
+    let t = &k.totals;
     let packs_note = format!(
         "across {} enabled pack{}",
-        enabled_packs.len(),
-        if enabled_packs.len() == 1 { "" } else { "s" }
+        t.enabled_packs,
+        if t.enabled_packs == 1 { "" } else { "s" }
     );
-    let backed_note = format!("{} backed", data::CLAIMS_BACKED);
-    let sites_note = format!("{} sites read", data::SITES_READ);
+    let claims_note = format!("{} packs installed", t.packs);
+
+    let mut left = div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(24.0));
+    if let Some(b) = banner {
+        left = left.child(b);
+    }
+    left = left.child(packs);
 
     div()
         .flex()
@@ -354,21 +324,15 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex()
                 .flex_wrap()
                 .gap(px(24.0))
-                .child(settle(
-                    gpui::ElementId::named_usize("ov-total", 0),
-                    0.0,
-                    motion,
-                )(total_card("Subjects", &subjects_on.to_string(), &packs_note).flex_1()))
-                .child(settle(
-                    gpui::ElementId::named_usize("ov-total", 1),
-                    90.0,
-                    motion,
-                )(total_card("Claims", data::CLAIMS_STORED, &backed_note).flex_1()))
-                .child(settle(
-                    gpui::ElementId::named_usize("ov-total", 2),
-                    180.0,
-                    motion,
-                )(total_card("Sources", data::SOURCES_READ, &sites_note).flex_1())),
+                .child(settle(gpui::ElementId::named_usize("ov-total", 0), 0.0, motion)(
+                    total_card("Subjects", &t.subjects.to_string(), &packs_note).flex_1(),
+                ))
+                .child(settle(gpui::ElementId::named_usize("ov-total", 1), 90.0, motion)(
+                    total_card("Claims", &t.claims.to_string(), &claims_note).flex_1(),
+                ))
+                .child(settle(gpui::ElementId::named_usize("ov-total", 2), 180.0, motion)(
+                    total_card("Evidence", &t.evidence.to_string(), "quotes with their sources").flex_1(),
+                )),
         )
         .child(
             div()
@@ -376,29 +340,10 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex_wrap()
                 .gap(px(24.0))
                 .items_start()
-                .child(settle(
-                    gpui::ElementId::named_usize("ov-card", 0),
-                    260.0,
-                    motion,
-                )(div().flex_1().min_w(px(0.0)).child(packs)))
-                .child(
-                    settle(
-                        gpui::ElementId::named_usize("ov-card", 1),
-                        340.0,
-                        motion,
-                    )(div()
-                        .flex_1()
-                        .min_w(px(0.0))
-                        .flex()
-                        .flex_col()
-                        .gap(px(24.0))
-                        .child(support)
-                        .child(gaps_card)),
-                ),
+                .child(settle(gpui::ElementId::named_usize("ov-card", 0), 260.0, motion)(left))
+                .child(settle(gpui::ElementId::named_usize("ov-card", 1), 340.0, motion)(
+                    div().flex_1().min_w(px(0.0)).child(gaps_card),
+                )),
         )
-        .child(settle(
-            gpui::ElementId::named_usize("ov-card", 2),
-            420.0,
-            motion,
-        )(thin_card))
+        .child(settle(gpui::ElementId::named_usize("ov-card", 2), 420.0, motion)(thin_card))
 }
