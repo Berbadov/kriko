@@ -27,6 +27,7 @@ How items are written, per `docs/DOCTRINE.md`:
   serving the extension until Quit; a failed engine start shows its stderr
   instead of a blank window; the version reads 1.0.0 everywhere; and
   `tools/gate.sh` passes.
+
 - **Left:** the reader's own run. Observed 2026-10-05 on the built MSI
   (`dist/kriko-1.0.0-x86_64.msi`): a silent per-user install, the desktop
   shortcut opens the app with no terminal beside it, the app starts its own
@@ -58,3 +59,12 @@ How items are written, per `docs/DOCTRINE.md`:
   read, its spend and the verify verdict from the engine, no sample
   constants; a small model that breaks JSON once still completes the run;
   and `tools/gate.sh` passes.
+
+## 23. App background and browser toolbar connection *(2026-10-06)*
+
+> "let's handle the background state of the app since it has to connect to the web extension. and handle the web extensions small icon on the browser please"
+
+- **Where:** the Windows tray after closing the Kriko window, and the browser extension's toolbar icon.
+- **Done when:** closing the window leaves the supervised engine reachable on the extension's fixed local port, the tray can reopen or quit it, and the toolbar icon shows whether that engine is reachable without hiding the per-page risk badge. Clicking the icon still opens the in-page panel when Chrome permits it.
+- **Not this:** keeping an invisible process alive after Quit, or claiming the app is connected based only on a cached result.
+- **Owner:** `codex/background-extension`.
