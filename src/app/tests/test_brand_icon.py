@@ -131,44 +131,21 @@ def test_the_rail_draws_a_smooth_vector_never_a_scaled_bitmap():
     )
 
 
-def test_the_app_and_the_extension_show_the_same_letter():
-    """The ratchet, and what it guards changed in 0.10.0.
+@pytest.mark.parametrize("size", render_icon.EXTENSION_ICONS)
+def test_the_toolbar_shows_the_desktop_app_s_own_icon(size: int):
+    """All four sizes, byte for byte, are the desktop icon's own images.
 
-    It used to compare two *drawings*: a rasterised glyph somebody made for
-    the toolbar, against hand-placed rects on a 16x16 grid. Both were reduced
-    to one *role* per cell — ground, letter, joint — because byte equality
-    across an antialiased fringe is impossible and would have been the wrong
-    question anyway. That caught them diverging.
-
-    The extension's icons are now rendered from the same grid
-    (`render_icon.EXTENSION_ICONS`), so they cannot diverge — there is one
-    drawing. What this catches instead is somebody editing the mark and
-    committing it without re-running the render, which is the same failure
-    arriving through the other door, and the only one still open.
-
-    The role reduction stays rather than a byte comparison, because it is the
-    assertion worth making out loud: whatever the renderer does, the thing in
-    the toolbar is the same *letter* as the thing in the taskbar.
+    Since 1.0.1 there is one mark: the toolbar, the exe, the taskbar and the
+    installer all show the white K on the brand plate from `kriko.ico`. A
+    toolbar icon that is not those bytes is a second drawing of the letter,
+    which is how the extension kept the old mark after the app changed.
+    Chrome picks a size by display density, so every size is checked.
     """
-    assert render_icon.roles_from_svg(
-        render_icon.SOURCE.read_text(encoding="utf-8")
-    ) == render_icon.roles_from_png(render_icon.EXTENSION_ICON.read_bytes(), 16)
-
-
-@pytest.mark.parametrize("size", sorted(render_icon.EXTENSION_ICONS))
-def test_every_size_the_manifest_ships_is_what_the_grid_renders(size: int):
-    """All four, byte for byte — the 32px one is not a special case.
-
-    Chrome picks a size by display density and by where it is drawing, so a
-    reader on a high-DPI machine may never see the one size a spot check
-    happened to cover.
-    """
-    _, pixels = render_icon.grid(
-        render_icon.SOURCE.read_text(encoding="utf-8")
-    )
+    images = render_icon.ico_images(render_icon.DESKTOP_ICO.read_bytes())
     icon = render_icon.EXTENSION_DIR / f"icon-{size}.png"
-    assert icon.read_bytes() == render_icon.png(
-        pixels, render_icon.EXTENSION_ICONS[size]
+    assert icon.read_bytes() == images[size], (
+        f"{icon.name} is not the desktop icon's {size}px image; "
+        "run `python packaging/render_icon.py`"
     )
 
 
