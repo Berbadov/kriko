@@ -10,14 +10,38 @@ under `packs/`, checks the rules below, and adds a guard that fails when only
 one pack exists in the repo, because one example proves nothing. A failing pack
 is fixed in the pack, not in the test.
 
+## What is in a pack, and where does it go?
+
+Four items are required. The rest is optional and buys maturity. Bright boxes
+are the floor; dark boxes may be absent.
+
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    YAML["pack.toml + data/*.yaml"] --> BUILD["kriko build"]
-    BUILD --> KPACK[".kpack"] --> INSTALL["kriko install<br/>(refused with no subjects and claims)"]
-    INSTALL --> STORE["the SQLite store"] --> LOOKUP["resolve, then query claims"]
+    subgraph DIR["packs/#lt;name#gt;/"]
+        direction TB
+        TOML["pack.toml<br/>[pack] and [identity]"]
+        DATA["data/*.yaml"]
+        README["README.md"]
+        OPT["optional: vocabulary/, research/,<br/>trust/, adapters/, build.py,<br/>pipeline/, coverage.py"]
+    end
+    DIR --> BUILD["kriko build"]
+    BUILD --> KPACK[".kpack"]
+    KPACK --> INSTALL["kriko install<br/>refused with no subjects and claims"]
+    INSTALL --> STORE["the SQLite store"]
+    STORE --> LOOKUP["resolve, then query claims"]
+
+    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
+    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
+    classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
+    class TOML,DATA,README brand
+    class OPT,BUILD,KPACK,STORE plain
+    class INSTALL danger
+    class LOOKUP ice
 ```
 
-## The required minimum
+## What is the required minimum?
 
 1. **`pack.toml`** with a `[pack]` table declaring `id` (stable, and namespaced
    by whoever publishes it), `name` and `version`. `publisher`, `license` and
@@ -36,7 +60,7 @@ flowchart LR
 
 `packs/drill/` is that floor exactly, and passes.
 
-## Why `[identity]` is the most consequential declaration
+## Why is `[identity]` the most consequential declaration?
 
 It decides what "the same product" means. Two packs describing the same product
 merge their rows only if they hash it identically. Too narrow and two different
@@ -48,7 +72,7 @@ would hash to the same id. There is no single correct shape, and a pack that
 differs from another is not thereby wrong: rows union on attribute overlap
 (`src/kriko/tests/test_lookup.py`) instead of collapsing into one.
 
-## The optional parts
+## What are the optional parts?
 
 Unenforced. Each buys what a mature pack needs, and a pack that has none of them
 is still a valid pack.
@@ -84,12 +108,12 @@ is still a valid pack.
   is the largest part of a pack that has one.
 - **`coverage.py`** — the pack's own coverage report.
 
-## Start here
+## Where do I start?
 
 Copy `packs/drill/` for the minimum, then read a pack that has grown up for the
 mature shape. Only the four minimum items are required.
 
-## Enforcement
+## Which file is the authority?
 
 `src/kriko/tests/test_pack_contract.py` is the authority: the minimum per pack,
 the more-than-one-pack guard, and the query-language declarations. On a

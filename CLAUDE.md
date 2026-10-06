@@ -21,7 +21,8 @@ other machine reads.
 
 Short form, not a substitute:
 
-1. **Write the request down first** in `backlog.md`, quoting the reader, with
+1. **Write the request down first** as a GitHub issue (mirrored to Linear),
+   quoting the reader, with
    **Where** (exact screen) and **Done when** (what they can see). Read it
    back before any code. No "Done when", no start.
 2. **Done means observed**: end result on the named screen, on `main`, on
@@ -64,9 +65,11 @@ then delete this section.
 
 ## Task tracking
 
-Open work is `backlog.md`, and it is the only status file: a finished item
-leaves the backlog and its commit message carries the reasoning. `git log` is
-the record of what was done. Check before starting and keep it current.
+Open work is GitHub issues, each mirrored to the Linear team with a link each
+way; nothing in the repo is a status file. A PR closes its issue
+(`Closes #n`), and its commit message carries the reasoning. `git log` is the
+record of what was done. Check the issues before starting and keep them
+current.
 
 ## Product principle — what Kriko surfaces
 
@@ -231,9 +234,7 @@ A need from the wrong layer means moving the module (drivers to
 | `README.md` | overview, quickstart, what a catalog is | current |
 | `packs/<name>/README.md` | one catalog's coverage and its own bar | current |
 | `CLAUDE.md` | agent principles and working rules | current |
-| `CONTRIBUTING.md` | loop, branches, commits, gate | current |
-| `docs/DOCTRINE.md` | request to done: backlog, done-ness, tests, PR proof, parallel agents | current, read first |
-| `backlog.md` | open work, the only status file | current |
+| `docs/DOCTRINE.md` | request to done: the issue, done-ness, tests, PR proof, parallel agents; then setup, branches, commits, the gate | current, read first |
 | `docs/ARCHITECTURE.md` | reading map, package ownership | current |
 | `docs/USAGE.md` | operating the stack and growing knowledge | current |
 | `docs/HOW_IT_WORKS.md` | matching, catalog lifecycle, a run, layering | current |

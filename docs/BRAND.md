@@ -1,6 +1,6 @@
 # Use the mark
 
-Everything shown — toolbar tile, taskbar icon, favicon, rail — is generated. Change a source, re-render, commit output:
+Everything shown (toolbar tile, taskbar icon, favicon, rail) is generated. Change a source, re-render, commit output:
 
 ```bash
 python packaging/render_icon.py
@@ -9,13 +9,20 @@ python packaging/render_lockup.py
 
 **Two sources, only two.** Everything else is output:
 
-```
-logo-mark.svg (16x16)       -> extension/assets/icons/icon-{16,32,48,128}.png
-logo-mark.svg               -> ui/public/mark.svg
-logo-mark-large.svg (64x64) -> packaging/icon-master.png (1024px)
-logo-mark-large.svg         -> ui/public/mark-large.svg
-logo-mark.svg + KRIKO       -> extension/assets/logo-lockup.svg
-logo-mark.svg + KRIKO       -> extension/assets/logo-lockup-mono.svg
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+flowchart LR
+    S1["logo-mark.svg<br/>(16x16)"]:::brand
+    S2["logo-mark-large.svg<br/>(64x64)"]:::brand
+    S1 --> O1["extension/assets/icons/<br/>icon-{16,32,48,128}.png"]:::ice
+    S1 --> O2["ui/public/mark.svg"]:::ice
+    S2 --> O3["packaging/icon-master.png<br/>(1024px)"]:::ice
+    S2 --> O4["ui/public/mark-large.svg"]:::ice
+    S1 -->|"+ KRIKO"| O5["extension/assets/logo-lockup.svg"]:::ice
+    S1 -->|"+ KRIKO"| O6["extension/assets/logo-lockup-mono.svg"]:::ice
+
+    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
 ```
 
 > **Tests fail and you did not touch the mark?** Somebody edited an output. Re-run both scripts and commit. If a test still fails, a source was edited without re-rendering.
@@ -36,6 +43,8 @@ logo-mark.svg + KRIKO       -> extension/assets/logo-lockup-mono.svg
 ## The three colours
 
 Owned by `ui/src/styles/themes/panel.css`, borrowed by the mark — so it never sits on the rail as a foreign object. A test asserts mark hex and theme tokens agree.
+
+The desktop app's own palette lives in `kriko-gpui/src/theme.rs`. Diagrams in these documents use it; see [how the docs are written](STYLE.md).
 
 | Role | Token | Value |
 |---|---|---|
