@@ -162,7 +162,7 @@ th {
 }
 button,
 .tab {
-    /* The design system's plate (kriko-svelte's .k-plate), worn by every
+    /* The design system's plate (.k-plate), worn by every
      * button this app draws: the bezel gradient face, the hairline edge,
      * the lit top and dark bottom, and - the half that makes it a *key*
      * rather than a labelled rectangle - the mechanical press: 2px of
@@ -338,7 +338,7 @@ a.button {
 input:not([type="radio"]):not([type="checkbox"]),
 select,
 textarea {
-    /* The design system's input (kriko-svelte's .k-input): a sunk well
+    /* The design system's input (.k-input): a sunk well
      * with a control edge, not a raised box. A field that takes typing
      * is the one surface that must read as *in* the panel rather than
      * on it; the raised face here was the "two applications" problem
@@ -567,7 +567,7 @@ legend {
 
 /* ── cards, badges, disclosure ────────────────────────────────────── */
 .card {
-    /* The design system's glass face (kriko-svelte's .k-card), worn by the
+    /* The design system's glass face (.k-card), worn by the
      * app's own cards: the near-transparent white wash and the blur behind
      * it, the large radius, the roomy pad. Screens that render `.card` and
      * screens that render `.k-card` must land on the same surface — two
@@ -1155,7 +1155,7 @@ li.gap {
     padding: var(--s-2) var(--s-3);
     text-decoration: none;
     border-radius: var(--radius-md);
-    /* The design system's brand plate (kriko-svelte's .k-brandblock): the
+    /* The design system's brand plate (.k-brandblock): the
      * blue face the white wordmark sits on, one rounded block rather than a
      * bare mark floating on the rail's ground. */
     background: linear-gradient(180deg, var(--brand-hover), var(--brand-low));
@@ -2212,10 +2212,10 @@ form.say > input {
     }
 }
 
-/* ── the kriko design system (kriko-svelte/) ─────────────────────────────
+/* ── the kriko design system ─────────────────────────────────────────
  * The reference components' own classes: LED dot-matrices, hardware keys,
  * tags with a word and a glyph, meters, glass cards, the crumb/title/lead
- * page frame. Ported from `kriko-svelte/bundle.css` with two adjustments:
+ * page frame. Ported from the design system's `bundle.css` (retired 2026-10-06, kept in git history) with two adjustments:
  * every colour arrives from a token (the sheet is theme-agnostic by the
  * rule the rest of this file answers to), and the fonts are the system's
  * three faces rather than the literals the reference hardcodes.

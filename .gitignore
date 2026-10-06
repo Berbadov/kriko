@@ -31,8 +31,6 @@ build.log
 # agent, hence the glob. Installers come from kriko-gpui/package.ps1.
 kriko-gpui/target*/
 kriko-gpui/builds/
-# Leftovers of the retired Tauri shell, superseded by kriko-gpui/.
-tauri/
 
 # --- Runtime data the engine and pipelines write ---------------------------
 # Evidence ledger (src/kriko/ledger/db.py) and the per-pack pipeline caches.

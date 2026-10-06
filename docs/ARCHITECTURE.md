@@ -38,7 +38,6 @@ flowchart TD
 | Package | Owns | Read first |
 |---|---|---|
 | `kriko-gpui/` | The desktop app (Rust, GPUI): supervises the sidecar, draws the interface over HTTP, no engine logic | `kriko-gpui/README.md`, then `kriko-gpui/src/engine.rs` |
-| `kriko-svelte/` | The design-system source the UI cites | `kriko-svelte/README.md` |
 | `ui/` | Svelte source; `npm --prefix ui run build` writes `src/app/web/static/` | `ui/src/lib/shell/nav.ts`, the one route table the rail, the palette and the router all read |
 | `src/app/` | Interfaces: CLI, FastAPI dashboard, MCP server, operator TUI; the frozen sidecar entry | `src/app/cli.py`, `src/app/sidecar.py` |
 | `src/app/pipeline/` | Drivers that orchestrate a category's ledger and remediate its gaps | `src/app/pipeline/ledger_run.py` |
