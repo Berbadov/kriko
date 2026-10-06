@@ -728,7 +728,7 @@ def test_health_names_every_version_a_reader_might_be_asked_for(client):
 
     The app binary, the store's schema, and each pack's own semver are
     deliberately independent — packs update weekly through the engine, the
-    binary rarely and through Tauri. Collapsing them into one "version" is how
+    binary rarely and through the desktop shell. Collapsing them into one "version" is how
     a reader reports the wrong one.
     """
     body = client.get("/api/health").json()

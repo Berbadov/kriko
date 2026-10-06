@@ -10,7 +10,7 @@ The fix cannot be a link, because a page has no way to raise a native window.
 So the handoff goes the other way: the extension **posts a route**, and the
 two processes that can act on it each pick up their half.
 
-* The **shell** (`tauri/src-tauri/src/main.rs`) is already reading the
+* The **shell** (`kriko-gpui/src/engine.rs`) is already reading the
   sidecar's stdout for the port handshake, so it costs nothing to have the
   sidecar print one more line. `KRIKO_FOCUS` on stdout makes the shell call
   `show_window` — raise and focus. That is the only thing Rust does here, and
@@ -51,7 +51,7 @@ from app.web.deps import get_app_state
 router = APIRouter(prefix="/api", tags=["focus"])
 
 #: The shell greps stdout for this. Must match `FOCUS_LINE` in
-#: `tauri/src-tauri/src/main.rs`; `test_sidecar.py` fails the suite if the two
+#: `kriko-gpui/src/engine.rs`; `test_focus.py` fails the suite if the two
 #: drift, because a renamed constant here would silently stop raising the
 #: window and look like a dead button.
 #:
@@ -151,7 +151,7 @@ def take_focus(request: Request) -> dict:
 # does. The choice lives in `app.sqlite`: the window's origin carries a port
 # picked fresh each launch, so its localStorage would forget by morning.
 
-#: Must match `WINDOW_LINE` in `tauri/src-tauri/src/main.rs`.
+#: Must match `WINDOW_LINE` in `kriko-gpui/src/engine.rs`.
 WINDOW_LINE = "KRIKO_WINDOW"
 #: The `settings` row that says the reader has seen the close notice enough.
 CLOSE_NOTICE_OFF = "close_notice_off"
