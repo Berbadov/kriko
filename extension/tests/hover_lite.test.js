@@ -765,6 +765,35 @@ test("every result carries its identity, which is the whole point", () => {
   assert.match(hits[0].textContent, /134 known/);
 });
 
+test("an unrelated listing refresh keeps unchanged search cards mounted", () => {
+  const p = loadPanel({ searchResponse: HITS });
+  p.openPanel();
+  p.click(".lite-btn-search");
+  p.type(".lite-search-field", "golf");
+  p.flushTimers();
+
+  const first = p.shadow().querySelector(".lite-search-hit");
+  assert.ok(first);
+  p.deliverEntry(ENTRY);
+  assert.equal(p.shadow().querySelector(".lite-search-hit"), first,
+    "a background listing update rebuilt the same search results");
+});
+
+test("a product already in the catalogs searches that product again instead of research", () => {
+  const p = loadPanel({ searchResponse: HITS });
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result,
+    subjects: [{ kind: "product", subject_id: "product-1", label: "Golf VII" }] } });
+
+  assert.equal(p.shadow().querySelector(".lite-find-product").textContent,
+    "Search this product again");
+  assert.equal(p.shadow().querySelector(".lite-research-product").hidden, true);
+  p.click(".lite-find-product");
+  assert.equal(p.shadow().querySelector(".lite-search-field").value, "Golf VII");
+  p.flushTimers();
+  assert.equal(p.sent.filter((message) => message.type === "SEARCH").at(-1).payload.q, "Golf VII");
+});
+
 test("a search that finds nothing says so rather than showing an empty list", () => {
   const p = loadPanel({ searchResponse: { ok: true, items: [] } });
   p.openPanel();
@@ -963,9 +992,10 @@ test("a deep run that installed its pack refreshes the listing (B148)", () => {
   p.type(".lite-research-name", "Mystery Car 1.6");
   const before = p.sent.filter((m) => m.type === "ANALYZE").length;
   p.click(".lite-research-start");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /installed/);
   assert.equal(p.sent.filter((m) => m.type === "ANALYZE").length, before + 1,
     "the listing was analysed again once the pack was in");
+  assert.equal(p.shadow().querySelector(".lite-research-slot").textContent, "",
+    "the completed research form stayed open after installing the product");
 });
 
 test("an answer leaves one refresh control, the header's (B152.8)", () => {
