@@ -54,7 +54,7 @@ fi
 PYTHON="${PYTHON:-.venv/bin/python}"
 if [ ! -x "$PYTHON" ]; then
     echo "gate.sh: no interpreter at '$PYTHON'." >&2
-    echo "Create the venv (see CONTRIBUTING.md) or set PYTHON=/path/to/python." >&2
+    echo "Create the venv (see docs/DOCTRINE.md) or set PYTHON=/path/to/python." >&2
     exit 1
 fi
 # Exported, not merely set: `tools/smoke_wheel.sh` is a separate process and
