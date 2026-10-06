@@ -1349,9 +1349,10 @@ impl Kriko {
 
                 // 1. which product is it
                 let it = item.clone();
-                let target = bg(&ex, move || resolve_target(&it)).await;
-                let target = match target {
-                    Ok(t) => t,
+                let resolved = bg(&ex, move || resolve_target(&it)).await;
+                let (mut target, draft_research) = match resolved {
+                    Ok(t) => (Some(t), false),
+                    Err(why) if why == "not in your catalogs" => (None, true),
                     Err(why) => {
                         let _ = bg(&ex, patch("waiting", None, id.clone())).await;
                         let qid = id.clone();
@@ -1363,13 +1364,26 @@ impl Kriko {
                     }
                 };
 
-                // 2. start the research job
-                let body = json!({
-                    "subject_id": target.subject_id,
-                    "pack_id": target.pack_id,
-                    "harness": harness,
-                });
-                let started = bg(&ex, move || api::post("/api/research", body)).await;
+                // 2. research an unknown product into the installed catalogs;
+                // known products keep using the regular subject research path.
+                let selected_harness = harness.clone();
+                let started = if let Some(found) = target.as_ref() {
+                    let body = json!({
+                        "subject_id": found.subject_id,
+                        "pack_id": found.pack_id,
+                        "harness": selected_harness,
+                    });
+                    bg(&ex, move || api::post("/api/research", body)).await
+                } else {
+                    let body = json!({
+                        "q": item.name,
+                        "url": item.url,
+                        "harness": selected_harness,
+                        "allow_draft": true,
+                        "quick": false,
+                    });
+                    bg(&ex, move || api::post("/api/extension/research-plane", body)).await
+                };
                 let job_id = match started {
                     Ok(v) => api::s(&v, "job_id"),
                     Err(e) => {
@@ -1384,7 +1398,7 @@ impl Kriko {
                 };
 
                 // 3. follow it
-                let outcome: (String, String);
+                let mut outcome: (String, String);
                 loop {
                     cx.background_executor().timer(Duration::from_millis(700)).await;
                     let path = format!("/api/jobs/{}", api::seg(&job_id));
@@ -1429,12 +1443,28 @@ impl Kriko {
                     }
                 }
 
+                // A new catalog product exists only after pack authoring has
+                // installed it. Resolve that subject before making its compare
+                // lookup, without launching a second research job.
+                if outcome.0 == "succeeded" && draft_research {
+                    let it = item.clone();
+                    target = bg(&ex, move || resolve_target(&it)).await.ok();
+                    if target.is_none() {
+                        outcome = (
+                            "failed".into(),
+                            "Research finished, but the product is not in the installed catalogs yet."
+                                .into(),
+                        );
+                    }
+                }
+
                 // 4. the product's fresh answer, so Compare reads what was found
                 if outcome.0 == "succeeded" {
+                    let found = target.expect("a successful queue run has a product");
                     let lookup = bg(&ex, move || {
                         api::post(
                             "/api/lookup",
-                            json!({"kind": target.kind, "identity": target.identity}),
+                            json!({"kind": found.kind, "identity": found.identity}),
                         )
                     })
                     .await;
