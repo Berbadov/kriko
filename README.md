@@ -1,38 +1,34 @@
 <div align="center">
 
-<img src="extension/assets/logo-lockup.svg" alt="Kriko" width="360">
+<img src="docs/assets/kriko-lockup.svg" alt="Kriko" width="320">
 
-### What is known to go wrong with *this specific one*?
+### What is known to go wrong with this specific product?
 
-**A local-first knowledge engine for manufactured products, on any listing site.**<br>
-Every answer carries its quote. Nothing leaves your machine.
+A knowledge engine for manufactured products, read beside any listing.<br>
+Every risk it shows carries the quote it came from.
 
-[![version](https://img.shields.io/badge/version-1.0.0-1F4FFF?style=for-the-badge&labelColor=05070F)](../../releases/latest)
-[![windows](https://img.shields.io/badge/windows-MSI_%7C_portable-1F4FFF?style=for-the-badge&labelColor=05070F)](../../releases/latest)
-[![python](https://img.shields.io/badge/python-3.13%2B-86A3FF?style=for-the-badge&labelColor=05070F)](pyproject.toml)<br>
-[![local first](https://img.shields.io/badge/runs-100%25_on_your_machine-BFE4FF?style=for-the-badge&labelColor=05070F)](#-download)
-[![no account](https://img.shields.io/badge/account-none-E8C04B?style=for-the-badge&labelColor=05070F)](#-download)
-[![no cloud](https://img.shields.io/badge/uploads-zero-FF6B5E?style=for-the-badge&labelColor=05070F)](#-download)
+[![version](https://img.shields.io/badge/version-1.0.1-1F4FFF?style=flat-square&labelColor=05070F)](../../releases/latest)
+[![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](../../releases/latest)
 
-[**Download**](#-download) · [**Quick start**](#-quick-start) · [**Catalogs**](#-what-a-catalog-is) · [**Research**](#-research-ideas-not-promises) · [**Docs**](#-where-to-go-next)
+[Download](#download) · [Build it yourself](#build-it-yourself) · [Quick start](#quick-start) · [Catalogs](#what-a-catalog-is) · [Model benchmarks](#model-benchmarks) · [Docs](#documentation)
 
 </div>
 
 ---
 
-## ✨ Why Kriko
+## Overview
 
 | | |
 |---|---|
-| 🏠 **Local first** | The engine, your history and every catalog live in `~/.kriko`. No Docker, no Postgres, no service, no account. |
-| 🔎 **Quoted, or refused** | A risk (`claim` in the code) that cannot be shown in a document that was actually read is refused before it reaches the store. Every refusal is written down with its reason, so "why does it not know this" has an answer. |
-| 🧩 **Any category, as data** | Knowledge comes from **catalogs** (`pack` in the code) and site reading from **site adapters**. Both are data. The engine knows no category, so a new one is a directory, never a code change. |
-| 🧭 **On the page you are reading** | The browser extension reads the listing, asks the engine on `127.0.0.1`, and shows the risks beside it. |
+| **Self-contained** | The engine, the reader's history and every catalog live in `~/.kriko`. There is no server to run and no database to provision. |
+| **Quoted, or refused** | A risk (`claim` in the code) that cannot be shown in a document that was actually read is refused before it reaches the store. Every refusal is recorded with its reason. |
+| **Any category, as data** | Knowledge comes from **catalogs** (`pack` in the code) and site reading from **site adapters**. Both are data. The engine knows no category, so a new one is a directory, never a code change. |
+| **Beside the listing** | The browser extension reads the listing, queries the engine on `127.0.0.1`, and shows the risks next to it. |
 
-## 👀 What it looks like
+## How a lookup reads
 
 A lookup names the product with the identity keys the catalog declares. The
-engine passes them through and has no idea what a key means.
+engine passes them through without interpreting them.
 
 ```console
 $ kriko lookup <key>=<value> <key>=<value> --limit 3
@@ -43,20 +39,20 @@ match: exact  (1 subject(s))  coverage: RISKS_FOUND
    <subject label>  ·  <area>  ·  relevance 0.270
 ```
 
-Add `-v` to see each risk's check, its sources and their trust tier. It also
-says why an unconfirmed risk is shown anyway, ranked lower.
+Add `-v` to see each risk's check, its sources and their trust tier, and why
+an unconfirmed risk is shown anyway, ranked lower.
 
 ![How Kriko works](docs/assets/hero.svg)
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    L(["🛒 a listing"]):::ice --> E["extension/<br/>reads the page"]:::plain
+    L(["a listing"]):::ice --> E["extension/<br/>reads the page"]:::plain
     E --> A["app/<br/>desktop · web · CLI · TUI"]:::plain
     A --> K["kriko/<br/>engine, knows no category"]:::brand
     P["packs/*<br/>data only"]:::plain --> S[("~/.kriko<br/>store")]:::plain
     K <--> S
-    K --> R(["⚠️ risks, ranked,<br/>each with its quote"]):::mark
+    K --> R(["risks, ranked,<br/>each with its quote"]):::mark
     K -.->|"no quote"| X(["refused, reason logged"]):::danger
 
     classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
@@ -66,40 +62,96 @@ flowchart LR
     classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
 ```
 
-## 📦 Download
+## Download
 
-**Kriko 1.0.0 is a Windows release.** The installer carries its own Python,
+Kriko 1.0.1 is a Windows x64 release. The installer carries its own Python,
 the engine and the first-party catalogs, so a fresh install opens with
-knowledge in it. Get both files from the [latest release](../../releases/latest):
+knowledge in it. Both files are on the [latest release](../../releases/latest):
 
 | File | What it is |
 |------|------------|
-| `kriko-1.0.0-x86_64.msi` | 🪟 Per-user installer. Start menu entry, tray icon, no admin rights. |
-| `kriko-1.0.0-win64-portable.zip` | 🎒 Both executables, no install. Unzip and run `kriko.exe`. |
+| `kriko-1.0.1-x86_64.msi` | Per-user installer. Start menu entries and a tray icon; no administrator rights needed. |
+| `kriko-1.0.1-win64-portable.zip` | Both executables, no install. Unzip and run `kriko.exe`. |
 
-> **Windows SmartScreen says "Windows protected your PC"?** The build is
-> unsigned. Choose **More info**, then **Run anyway**. Signing is a policy
-> decision and is not part of 1.0.
+> **SmartScreen shows "Windows protected your PC".** The build is unsigned.
+> Choose **More info**, then **Run anyway**.
 
-On macOS or Linux, run it [from source](#-quick-start): the engine, CLI,
+On macOS or Linux, run it [from source](#quick-start). The engine, CLI,
 dashboard and extension all work there.
 
-**Closing the window is not quitting.** The engine keeps serving the browser
+**Closing the window does not quit.** The engine keeps serving the browser
 extension. Quit from the tray icon.
 
-**Where things live.** Everything is in `~/.kriko`. `knowledge.sqlite` holds
-the installed catalogs and `app.sqlite` holds your history. They are separate
-files, so uninstalling a catalog cannot drop your history.
+**Where data is kept.** Everything is in `~/.kriko`. `knowledge.sqlite` holds
+the installed catalogs and `app.sqlite` holds the reader's history. They are
+separate files, so uninstalling a catalog cannot drop history.
 
-**Staying current, two clocks.**
+**Updates run on two clocks.**
 
-- 📚 *Catalogs* are checked weekly against the latest release's index. Only
-  newer ones download, and each is verified by `sha256` before install (the
-  same path as `kriko install`; override the index with `KRIKO_PACK_INDEX`).
-- 🔄 *The app* checks on startup against a minisign key baked in at build
-  time. Neither update touches `~/.kriko`.
+- *Catalogs* are checked weekly against the latest release's index. Only newer
+  ones download, and each is verified by `sha256` before install (the same
+  path as `kriko install`; override the index with `KRIKO_PACK_INDEX`).
+- *The app* checks on startup against a minisign key set at build time.
+  Neither update touches `~/.kriko`.
 
-## 🚀 Quick start
+## Build it yourself
+
+The installer is built on a Windows host by one script,
+`kriko-gpui/package.ps1`. `.github/workflows/desktop.yml` runs the same steps
+in the same order, and is hand-run only for now. PyInstaller cannot
+cross-compile, so the Windows build has to run on Windows.
+
+**Prerequisites**
+
+| Tool | Version | Check |
+|------|---------|-------|
+| Python | 3.13+ | `python --version` |
+| Node | 20+ | `node --version` |
+| Rust toolchain | stable, MSVC target | `cargo --version` |
+| cargo-wix | any | `cargo install cargo-wix` |
+| WiX Toolset | 3.x (3.14 is tested) | `candle.exe -?` |
+
+**Build**
+
+```powershell
+git clone <this repository> kriko
+cd kriko
+powershell -ExecutionPolicy Bypass -File kriko-gpui\package.ps1 -WixBin C:\path\to\wix314
+```
+
+The script checks that every version agrees, installs the Python side into
+`.venv` (creating it if missing), builds the dashboard and the catalogs,
+freezes the sidecar and checks that it answers, builds the app, wraps the MSI,
+and confirms the built app starts. Each step prints a `===` header; the script
+stops at the first failure.
+
+| Output | Path |
+|--------|------|
+| Installer | `kriko-gpui\builds\kriko-<version>-x86_64.msi` |
+| Portable | `kriko-gpui\builds\kriko-<version>-win64-portable.zip` |
+
+| Parameter | Use |
+|-----------|-----|
+| `-WixBin <dir>` | The folder holding `candle.exe` and `light.exe`. Without it, the `WIX` environment variable or `PATH` is used. |
+| `-Python <exe>` | The interpreter to build with. Default `.venv\Scripts\python.exe`. |
+| `-Version <x.y.z>` | The version this build is meant to be. A check, not a stamp: it must equal `pyproject.toml`. |
+| `-SkipUi` | Reuse the committed dashboard bundle. Safe only when `ui/` has not changed since it was built. |
+
+> **WiX is not found.** Pass `-WixBin`, or set `WIX` to the folder holding
+> `candle.exe`. Only WiX 3.x is supported.
+
+> **The version check fails.** `tools/bump.py <x.y.z>` sets the version in
+> every file that carries it. Re-run `tools/setup.sh` so the installed
+> metadata agrees.
+
+The MSI installs per user under `%LOCALAPPDATA%\Programs\Kriko`, creates the
+Start menu shortcuts "Kriko" and "Kriko Console", and stops a running Kriko
+before it replaces files. `packaging/freeze.sh` builds the sidecar alone, with
+no Rust needed. The sidecar is also the operator console
+(`kriko-sidecar --tui`). See [the desktop app's README](kriko-gpui/README.md)
+for engine supervision and the installer's internals.
+
+## Quick start
 
 From a checkout, with Python 3.13+ and Node:
 
@@ -113,7 +165,7 @@ kriko lookup <key>=<value> -v
 Then pick an interface. They share one store:
 
 ```bash
-python -m app.web                # dashboard + the check endpoint on 127.0.0.1:8787
+python -m app.web                # dashboard and the check endpoint on 127.0.0.1:8787
 kriko tui                        # operator console: planes, jobs, operations, shell
 kriko prefs                      # chosen providers, measured spend, sites, drafts
 ```
@@ -125,12 +177,9 @@ otherwise.
 Developer mode, choose **Load unpacked** and pick `extension/`. Or stage a copy
 from the app's Browser extension screen (`~/.kriko/extension/`).
 
-> **The panel says "Kriko is not running"?** Start the desktop app or
-> `python -m app.web` first. The extension talks to a fixed local port, never
-> to the internet.
-
-<details>
-<summary><strong>Install from source, the details</strong></summary>
+> **The panel says "Kriko is not running".** Start the desktop app or
+> `python -m app.web` first. The extension talks to a fixed port on
+> `127.0.0.1` and nowhere else.
 
 The CLI and the desktop app share `~/.kriko`, so a catalog installed in one is
 visible in the other. Identity is bare `key=value` pairs, declared by the
@@ -138,74 +187,71 @@ catalog and passed through opaquely, which is why `lookup` has no
 per-category flags. Only the research path needs API keys; serving a lookup
 never does. The app's Settings screen stores them. Run `tools/gate.sh` before
 pushing.
-</details>
 
-## 🧩 What a catalog is
+## What a catalog is
 
 A catalog is data plus a builder, never code that runs in the engine:
 
 | Part | Where |
 |------|-------|
-| 🪪 Name, version and identity keys | `packs/<name>/pack.toml` |
-| 📇 Subjects | `packs/<name>/data/` |
-| 🗣️ Vocabulary | `packs/<name>/vocabulary/` |
-| 🎯 Its own bar for what is worth surfacing | `packs/<name>/research/principle.md` |
-| 🔨 Built from YAML to one `.kpack` file | `kriko build packs/<name>` (a catalog may bring its own `build.py` and trust tiers) |
+| Name, version and identity keys | `packs/<name>/pack.toml` |
+| Subjects | `packs/<name>/data/` |
+| Vocabulary | `packs/<name>/vocabulary/` |
+| Its own bar for what is worth surfacing | `packs/<name>/research/principle.md` |
+| Built from YAML to one `.kpack` file | `kriko build packs/<name>` (a catalog may bring its own `build.py` and trust tiers) |
 
 Two ship today, and they are deliberately unlike each other. One is a mature
-catalog with its own research pipeline. The other is a tiny synthetic category
-with no pipeline at all. Together they prove the engine holds no assumption
+catalog with its own research pipeline. The other is a small synthetic category
+with no pipeline at all. Together they show the engine holds no assumption
 about the kind of product it answers about. See
 [the pack contract](docs/PACK_CONTRACT.md) for what a catalog must and may
 contain.
 
-<details>
-<summary><strong>🔬 Research planes, the details</strong></summary>
+### Research planes
 
-The default plane costs **nothing extra**. A coding agent you already have a
-subscription for does the reading, through the MCP server (System, then
-Agents) and the research agent. Every write is re-checked in code: quotes
-must be verbatim, figures sourced, unit codes exact.
+New knowledge is read by one of three planes. Every write is re-checked in
+code: quotes must be verbatim, figures sourced, unit codes exact.
 
-- 🖥️ **Local model.** A model server on your own machine is the first plane
-  (System, then Settings, to set its address).
-- ⌨️ **CLI fallback.** The same three operations: `agenda`, `brief`, `submit`.
-- 💳 **Paid API.** For unattended runs only, and never the default.
+| Plane | What does the reading | Cost |
+|-------|-----------------------|------|
+| Harness | A coding agent CLI already installed, through the MCP server (System, then Agents) | The existing subscription |
+| Local model | A model server on the same host (System, then Settings, to set its address) | None |
+| Paid API | A hosted model, for unattended runs only; never the default | Metered |
 
-In-app *Research* runs as a job and produces a brief before anything is spent.
-Full walkthrough: [operating Kriko and growing its knowledge](docs/USAGE.md).
-</details>
+The CLI exposes the same three operations as the MCP server: `agenda`,
+`brief`, `submit`. In-app *Research* runs as a job and produces a brief before
+anything is spent. Full walkthrough:
+[operating Kriko and growing its knowledge](docs/USAGE.md).
 
-## 🧪 Research ideas, not promises
+## Model benchmarks
 
-Ideas worth a month, each measured before it was written down. Open work is
-tracked in the repo's issues.
+The Benchmark screen (System, then Benchmark) runs the engine's fixed test set
+against each configured plane and records every run in `app.sqlite`
+(`bench_runs`). The same run is `POST /api/bench`, priced first by
+`POST /api/bench/estimate`. Results are per machine: they depend on the
+installed agents, the hardware and the catalogs.
 
-| Idea | What was measured |
-|------|-------------------|
-| 🤏 A small local model as the extractor, then fine-tuned | A 4B-class local model on a consumer GPU: about 49 s for 6 pages, 7 of 8 quotes grounded, 3 accepted by the gate. A 3B-class model returned nothing usable. |
-| 🎯 A principle filter as an optional add-on | Zero-shot on 40 real risks from a mature catalog: AUC 0.46 to 0.61, which is chance. It needs a labelled per-catalog set and a fine-tune first. |
-| ✂️ MCP demoted, then removed | The CLI's `agenda`/`brief`/`submit` already match the MCP tools, so MCP is a thin wrapper. It goes when nothing uses it. |
-| 🌐 A third-party fetcher: tested, not adopted | 20 URLs: the same 6 quotes as the built-in reader, 3x slower (5.6 s against 1.7 s median). At most a flagged fallback for pages that need scripting. |
+**Benchmark screen, reference Windows host**
 
-## 🛠️ Desktop build
+| Version | Plane | Protocol | Runs | Errors | Median time per case | Median tokens | Findings accepted |
+|---------|-------|----------|------|--------|----------------------|---------------|-------------------|
+| 1.0.0 | Harness (a coding agent CLI) | standard | 3 | 0 | 29.6 s | 103,741 | 5 of 5 |
 
-`kriko-gpui/` is the desktop app. It is a native GPUI window that:
+**Earlier extraction measurements, before the Benchmark screen existed**
 
-1. spawns the frozen Python sidecar,
-2. waits for `/api/health`, showing the engine's stderr if it fails,
-3. draws every screen from the same `~/.kriko/` store over HTTP.
+| Model | Hardware | Result |
+|-------|----------|--------|
+| Local, 4B class | Consumer GPU | About 49 s for 6 pages; 7 of 8 quotes grounded; 3 findings accepted by the gate |
+| Local, 3B class | Consumer GPU | Nothing usable returned |
 
-```powershell
-powershell -File kriko-gpui/package.ps1   # -> kriko-gpui/builds/*.msi and *.zip
-```
+Two further measurements shaped the design:
 
-`packaging/freeze.sh` builds the sidecar alone, with no Rust needed.
-`.github/workflows/desktop.yml` is the same recipe, **hand-run only** for now.
-The sidecar is also the console (`kriko-sidecar --tui`, with a Start-menu
-shortcut on Windows). See [the desktop app's README](kriko-gpui/README.md).
+| Question | Result |
+|----------|--------|
+| Can a zero-shot principle filter rank risks? | On 40 real risks from a mature catalog, AUC 0.46 to 0.61, which is chance. It needs a labelled per-catalog set and a fine-tune first. |
+| Is a third-party page fetcher better than the built-in reader? | On 20 URLs it found the same 6 quotes, 3x slower (5.6 s against 1.7 s median). At most a flagged fallback for pages that need scripting. |
 
-## 📚 Where to go next
+## Documentation
 
 | Doc | For |
 |-----|-----|
@@ -216,13 +262,5 @@ shortcut on Windows). See [the desktop app's README](kriko-gpui/README.md).
 | [`docs/HOW_IT_WORKS.md`](docs/HOW_IT_WORKS.md) | Four diagrams: matching, catalog lifecycle, a run, layering |
 | [`docs/INSTALL_WINDOWS.md`](docs/INSTALL_WINDOWS.md) | Installing on Windows, including the extension step |
 | [`docs/PACK_CONTRACT.md`](docs/PACK_CONTRACT.md) | Authoring a catalog for a new product category |
-| [`docs/STYLE.md`](docs/STYLE.md) | How these documents are written. Rules, not taste |
+| [`docs/STYLE.md`](docs/STYLE.md) | How these documents are written |
 | [`kriko-gpui/README.md`](kriko-gpui/README.md) | The desktop app: engine supervision, screens and build |
-
-<div align="center">
-
----
-
-<sub>Made to answer one question well, on your own machine. 🟦⬛</sub>
-
-</div>

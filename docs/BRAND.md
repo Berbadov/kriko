@@ -7,14 +7,16 @@ python packaging/render_icon.py
 python packaging/render_lockup.py
 ```
 
-**Two sources, only two.** Everything else is output:
+**Three sources.** The desktop app's identity in `kriko-gpui/assets/` (the white K on the blue tile) is what a reader sees first: the taskbar, the installer, the toolbar and this repository's README. The two grid marks still feed the dashboard. Everything else is output:
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
     S1["logo-mark.svg<br/>(16x16)"]:::brand
     S2["logo-mark-large.svg<br/>(64x64)"]:::brand
-    S1 --> O1["extension/assets/icons/<br/>icon-{16,32,48,128}.png"]:::ice
+    S0["kriko-gpui/assets/<br/>kriko.ico · kriko-wordmark-white.svg"]:::brand
+    S0 -->|"copied, byte for byte"| O1["extension/assets/icons/<br/>icon-{16,32,48,128}.png"]:::ice
+    S0 -->|"on a blue plate"| O7["docs/assets/kriko-lockup.svg<br/>(README)"]:::ice
     S1 --> O2["ui/public/mark.svg"]:::ice
     S2 --> O3["packaging/icon-master.png<br/>(1024px)"]:::ice
     S2 --> O4["ui/public/mark-large.svg"]:::ice
@@ -31,7 +33,9 @@ flowchart LR
 
 | You want | Use | Source? |
 |---|---|---|
-| Toolbar icon | `extension/assets/icons/icon-*.png` | rendered |
+| Toolbar icon | `extension/assets/icons/icon-*.png` (the ICO's own images) | rendered |
+| README header | `docs/assets/kriko-lockup.svg` | drawn from the app's wordmark |
+| Change the app's icon or wordmark | `kriko-gpui/assets/kriko.ico`, `kriko-wordmark-white.svg` | **source** |
 | Favicon | `ui/public/mark.svg` | rendered |
 | Rail (32px, smooth) | `ui/public/mark-large.svg` | rendered |
 | App icon master | `packaging/icon-master.png` | rendered |
