@@ -1,5 +1,5 @@
 <script lang="ts">
-    /* The design system's page frame (kriko-svelte/AppShell.svelte): a mono
+    /* The design system's page frame: a mono
      * crumb line, the display title, a one-line lead. Every screen wears it
      * so the rail is not the only thing saying where the reader is. */
     let {

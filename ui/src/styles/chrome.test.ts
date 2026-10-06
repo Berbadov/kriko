@@ -279,7 +279,7 @@ describe("the work column", () => {
      * every control spends the button's own tokens, so that a change to the
      * button's face moves them together and none can drift back to flat. */
     /* The rebuild replaced the raised control kit with the design
-     * system's own: keys are kriko-svelte's .k-plate/.k-key (bezel
+     * system's own: keys are .k-plate/.k-key (bezel
      * gradient, mechanical press), fields its .k-input (a sunk well,
      * not a raised box - a field you type *into* reads as in the panel).
      * B160's intent - every control a physical thing, one vocabulary of
@@ -360,7 +360,7 @@ describe("the work column", () => {
         // as a 16-cell grid drawn at 28px with `image-rendering: pixelated`, a
         // 1.75 scale that no smoothing setting makes crisp. The rebuild goes
         // further: the rail now carries the design system's own wordmark SVG
-        // (kriko-svelte/assets), white on the blue brand plate, so the old
+        //, white on the blue brand plate, so the old
         // 32px square and its fixed width are gone with the bitmap. What must
         // never come back is a raster mark scaled by the browser.
         const mark = block(".brand .mark").replace(/\/\*[\s\S]*?\*\//g, "");
