@@ -472,6 +472,50 @@ def test_draft_opt_in_requires_a_boolean(research_client, value):
     assert research_client.get("/api/jobs").json()["items"] == []
 
 
+def test_queue_draft_starts_only_the_selected_installing_research_job(
+    tmp_path, monkeypatch,
+):
+    """Compare's fallback needs one job that installs the unknown product.
+
+    A quick-look job would be a second visible lane and would finish before
+    the catalog was ready for the queue's lookup.
+    """
+    from app import localplane
+    from app.providers import apiagent, harness
+    from app.web.deps import get_jobs
+
+    submissions = []
+
+    class Runner:
+        def submit(self, kind, params):
+            submissions.append((kind, params))
+            return "queue-author-job"
+
+    monkeypatch.setattr(harness, "available", lambda: [SimpleNamespace(id="fixture-cli")])
+    monkeypatch.setattr(apiagent, "available", lambda: [])
+    monkeypatch.setattr(localplane, "resolve", lambda *_a, **_kw: {
+        "ready": False, "reason": "not configured", "line": "not configured",
+    })
+    client = _client(tmp_path)
+    client.app.dependency_overrides[get_jobs] = lambda: Runner()
+
+    response = client.post("/api/extension/research-plane", json={
+        "q": "Unknown Widget", "url": "https://example.org/listing/1",
+        "allow_draft": True, "harness": "fixture-cli", "quick": False,
+    })
+
+    assert response.status_code == 200, response.text
+    assert response.json()["job_id"] == "queue-author-job"
+    assert response.json()["kind"] == "pack_author"
+    assert len(submissions) == 1, "a quick-look job was queued beside the draft"
+    kind, params = submissions[0]
+    assert kind == "pack_author"
+    assert params["harness"] == "fixture-cli"
+    assert params["backend"] == "harness"
+    assert params["install"] is True
+    assert params["product"] == "Unknown Widget"
+
+
 @pytest.mark.parametrize("outcome", ["draft", "refused", "cancelled"])
 def test_product_draft_reuses_author_gates_and_cancellation(
     research_client, monkeypatch, outcome,
