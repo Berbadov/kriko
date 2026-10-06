@@ -379,76 +379,6 @@ fn mark_dots(
     grid
 }
 
-/// The ring of dots inside a tile's edge: a comet for Thinking, blinking
-/// corners for Waiting, nothing otherwise.
-fn tile_ring(id: &str, size: f32, phase: Phase, motion: bool) -> Option<gpui::AnyElement> {
-    if !motion || !matches!(phase, Phase::Thinking | Phase::Waiting) {
-        return None;
-    }
-    let inset = 3.0;
-    let dot = (size / 20.0).round().max(2.0);
-    let span = size - inset * 2.0 - dot;
-    let per_side = 7usize;
-    let slots = per_side * 4;
-    let mut ring = div().absolute().top_0().left_0().size(px(size));
-    for i in 0..slots {
-        let side = i / per_side;
-        let k = (i % per_side) as f32 / per_side as f32;
-        // clockwise from the top-left corner
-        let (x, y) = match side {
-            0 => (k * span, 0.0),
-            1 => (span, k * span),
-            2 => (span - k * span, span),
-            _ => (0.0, span - k * span),
-        };
-        let (x, y) = (x.round(), y.round());
-        let corner = i % per_side == 0;
-        if phase == Phase::Waiting && !corner {
-            continue;
-        }
-        let color = if phase == Phase::Waiting { 0xffffff } else { ICE };
-        let pos = i as f32 / slots as f32;
-        let d = div()
-            .absolute()
-            .left(px(inset + x))
-            .top(px(inset + y))
-            .size(px(dot))
-            .rounded(px(dot * 0.5))
-            .bg(rgb(color))
-            .shadow(glow(color, dot * 2.5));
-        ring = ring.child(
-            d.with_animation(
-                gpui::ElementId::Name(SharedString::from(format!(
-                    "{id}-ring-{}-{i}",
-                    phase.label()
-                ))),
-                Animation::new(std::time::Duration::from_millis(if phase == Phase::Waiting {
-                    1100
-                } else {
-                    1500
-                }))
-                .repeat()
-                .with_easing(|t| t),
-                move |el, t| {
-                    if phase == Phase::Waiting {
-                        el.opacity(if t < 0.5 { 1.0 } else { 0.0 })
-                    } else {
-                        // the comet's head at t, a fading tail behind it
-                        let behind = (t - pos).rem_euclid(1.0);
-                        let tail = 0.28;
-                        el.opacity(if behind < tail {
-                            (1.0 - behind / tail).powf(1.6)
-                        } else {
-                            0.0
-                        })
-                    }
-                },
-            ),
-        );
-    }
-    Some(ring.into_any_element())
-}
-
 /// An agent's tile: a recessed well holding its mark, moving for its phase.
 /// `size` is the tile's side; 40 in lanes and lists, larger on detail cards.
 pub fn mark_tile(id: &str, mark: &Mark, phase: Phase, size: f32, motion: bool) -> Div {
@@ -476,9 +406,6 @@ pub fn mark_tile(id: &str, mark: &Mark, phase: Phase, size: f32, motion: bool) -
         .child(mark_matrix(id, mark, phase, dot, gap, motion));
     if matches!(phase, Phase::Thinking | Phase::Reading | Phase::Writing) {
         tile = tile.shadow(glow(BRAND, 10.0));
-    }
-    if let Some(ring) = tile_ring(id, size, phase, motion) {
-        tile = tile.child(ring);
     }
     tile
 }

@@ -1029,10 +1029,12 @@
             : "Research completed. Open the research job for findings.")
         : job.state === "interrupted" ? "Research interrupted by an app restart."
         : `Research failed. ${job.error || job.message || "Open the job for details."}`;
+      const installed = job.state === "succeeded" && Boolean(job.result?.installed);
+      if (installed) state.researchOpen = false;
       renderResearch();
       // B148: the pack the deep run installed is knowledge now, so the
       // listing is asked again and its cards arrive without a press.
-      if (job.state === "succeeded" && job.result?.installed) triggerAnalyze(true);
+      if (installed) triggerAnalyze(true);
     });
   }
 
@@ -1211,7 +1213,10 @@
     searchBtn.addEventListener("click", () =>
       (state.searchOpen ? closeSearch() : openSearch()));
     closeBtn.addEventListener("click", closePanel);
-    panel.querySelector(".lite-find-product").addEventListener("click", openSearch);
+    panel.querySelector(".lite-find-product").addEventListener("click", () => {
+      const product = (state.result?.subjects || []).find((one) => one.kind === "product");
+      openSearch(product?.label || "");
+    });
     panel.querySelector(".lite-research-product").addEventListener("click", () => {
       const subjects = (state.result?.subjects || []).filter((one) => one.kind === "product");
       researchSubject(subjects.length === 1 ? subjects[0] : null);
@@ -1978,11 +1983,22 @@
   let searchTimer = null;
   let searchRunId = 0;
 
-  function openSearch() {
+  function openSearch(query = "") {
+    const initialQuery = String(query || "").trim();
+    if (initialQuery) {
+      state.searchQuery = initialQuery;
+      state.searchResults = null;
+      state.searchError = null;
+      state.searchBusy = false;
+    }
     state.searchOpen = true;
     renderSearch();
     const field = bodyEl && bodyEl.querySelector(".lite-search-field");
-    if (field) field.focus();
+    if (field) {
+      if (initialQuery) field.value = initialQuery;
+      field.focus();
+    }
+    if (initialQuery.length >= SEARCH_MIN) runSearch(initialQuery);
   }
 
   function runSearch(text) {
@@ -2062,6 +2078,16 @@
   function renderSearchResults() {
     const box = bodyEl && bodyEl.querySelector(".lite-search-results");
     if (!box) return;
+    const signature = JSON.stringify({
+      query: state.searchQuery,
+      busy: state.searchBusy,
+      error: state.searchError,
+      results: state.searchResults,
+    });
+    // Listing refreshes are independent from search. Keep matching cards
+    // mounted so polling cannot reset their expansion, focus or scroll.
+    if (box.dataset.renderKey === signature) return;
+    box.dataset.renderKey = signature;
     box.innerHTML = "";
 
     if (state.searchBusy) {
@@ -2835,6 +2861,14 @@
     });
   }
 
+  function renderProductActions() {
+    const knownProduct = (state.result?.subjects || []).some((one) => one.kind === "product");
+    const find = bodyEl?.querySelector(".lite-find-product");
+    const research = bodyEl?.querySelector(".lite-research-product");
+    if (find) find.textContent = knownProduct ? "Search this product again" : "Find in installed packs";
+    if (research) research.hidden = knownProduct;
+  }
+
   function renderBody() {
     if (!bodyEl) return;
     const scrollTop = bodyEl.scrollTop;
@@ -2847,6 +2881,7 @@
     renderCriticalAlerts();
     renderCta();
     renderStatus();
+    renderProductActions();
     renderSearch();
     renderLive();
     renderResearch();

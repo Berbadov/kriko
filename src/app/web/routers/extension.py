@@ -196,10 +196,14 @@ def research_plane(request: Request) -> dict:
 class ExtensionResearchRequest(BaseModel):
     q: str = Field("", max_length=500)
     subject_id: str = Field("", max_length=200)
+    harness: str = Field("", max_length=200)
     model: str = Field("", max_length=200)
     search: str = Field("", max_length=64)
     cap: float | None = Field(None, gt=0, allow_inf_nan=False)
     allow_draft: bool = Field(False, strict=True)
+    #: Queue runs need the installed draft; the listing's quick-look card is
+    #: useful in the browser panel but would start a second visible job here.
+    quick: bool = Field(True, strict=True)
     #: The listing the reader is on, so the quick look can hold itself to the
     #: pack whose site this is (its `research/principle.md`). Optional.
     url: str = Field("", max_length=2000)
@@ -258,9 +262,14 @@ def start_research_plane(
 
         installed = harness.available()
         stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
+        requested = body.harness.strip()
+        api_ids = {one.id for one in apiagent.available()}
+        installed_ids = {one.id for one in installed}
+        if requested and requested not in api_ids | installed_ids:
+            raise HTTPException(503, f"The selected research agent is not available: {requested}") from exc
         # An API agent counts only once picked: it bills per token, and a
         # key saved for something else is not a yes to that (B153).
-        picked_api = stored in {one.id for one in apiagent.available()}
+        picked_api = (requested in api_ids) if requested else stored in api_ids
         # The model on this computer (B171, B172): first for a reader who has
         # picked no agent, and the only door for one who has none at all.
         from app import localplane
@@ -268,7 +277,7 @@ def start_research_plane(
         local = localplane.resolve(
             getattr(request.app.state.settings, "app_state_path", None),
             with_search=False)
-        if local["ready"] and (not stored or (not installed and not picked_api)):
+        if not requested and local["ready"] and (not stored or (not installed and not picked_api)):
             from app import pagefacts
 
             page = pagefacts.clean(body.facts, body.description)
@@ -278,6 +287,13 @@ def start_research_plane(
                 "page": page, "budget_usd": 0.0,
             }
             deepen = runner.submit("pack_author", params)
+            if not body.quick:
+                return {
+                    "job_id": deepen, "kind": "pack_author", "backend": "local",
+                    "harness": "", "cost_basis": "self_hosted", "budget_usd": 0.0,
+                    "why": local["line"],
+                    "note": "Runs on the local model and installs its product research when done.",
+                }
             pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
             quick = runner.submit("quick_look", {
                 "product": body.q.strip(), "harness": "", "backend": "local",
@@ -293,7 +309,7 @@ def start_research_plane(
                         "first; the deeper research keeps going and installs "
                         "itself when done.",
             }
-        if not installed and not picked_api:
+        if not installed_ids and not picked_api:
             raise HTTPException(503, (
                 "Product drafts need an agent. Install a coding-agent CLI, pick "
                 "the Mistral API agent in Settings → Agents (it needs a Mistral "
@@ -318,7 +334,9 @@ def start_research_plane(
         from app import pagefacts
 
         page = pagefacts.clean(body.facts, body.description)
-        if picked_api or stored in {one.id for one in installed}:
+        if requested:
+            selected = requested
+        elif picked_api or stored in installed_ids:
             selected = stored
         else:
             selected = installed[0].id
@@ -345,6 +363,20 @@ def start_research_plane(
         # the quick look runs in its own lane (`jobs.QUICK_KINDS`) and is the
         # id the panel follows.
         deepen = runner.submit("pack_author", params)
+        if not body.quick:
+            if billed:
+                label = apiagent.BY_ID[selected].label
+                return {
+                    "job_id": deepen, "kind": "pack_author", "backend": "harness",
+                    "harness": selected, "cost_basis": "per_token",
+                    "budget_usd": deep_budget,
+                    "note": f"Bills your {label} key: about ${deep_budget:.2f} for the product research.",
+                }
+            return {
+                "job_id": deepen, "kind": "pack_author", "backend": "harness",
+                "harness": selected, "cost_basis": "subscription", "budget_usd": None,
+                "note": "Uses your harness subscription and installs its product research when done.",
+            }
         pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
         quick = runner.submit("quick_look", {
             "product": body.q.strip(), "harness": selected,
