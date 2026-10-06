@@ -55,6 +55,8 @@ pub struct Job {
     /// 0..=1.
     pub progress: f32,
     pub message: String,
+    /// The complete agent output, shown in the dock's optional log drawer.
+    pub log: String,
     pub done: bool,
     pub created_at: String,
     pub finished_at: String,
@@ -213,6 +215,7 @@ fn job_from(v: &Value) -> Job {
         state: api::s(v, "state"),
         progress: api::n(v, "progress").unwrap_or(0.0) as f32,
         message: api::s(v, "message"),
+        log: api::s(v, "log"),
         done,
         created_at: api::s(v, "created_at"),
         finished_at: api::s(v, "finished_at"),
@@ -1010,6 +1013,16 @@ mod tests {
         assert_eq!(j.harness, "opencode");
         let a = j.attention.unwrap();
         assert_eq!(a.questions[0].options, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn a_running_job_keeps_its_full_log_for_the_dock_drawer() {
+        let log = "Starting research\nReading two sources\n";
+        let job = job_from(&json!({
+            "job_id": "j", "kind": "research", "state": "running",
+            "done": false, "log": log,
+        }));
+        assert_eq!(job.log, log);
     }
 
     #[test]
