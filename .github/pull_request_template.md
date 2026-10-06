@@ -1,9 +1,9 @@
 ## The request
 
-<!-- Backlog id, and the reader's words quoted. See docs/DOCTRINE.md §1. -->
-B### — "…"
+<!-- The issue, and the reader's words quoted. See docs/DOCTRINE.md §1. -->
+Closes #<n> — "…"
 
-**Done when:** <copied from the backlog entry>
+**Done when:** <copied from the issue>
 
 ## What was observed
 
@@ -22,7 +22,7 @@ B### — "…"
 
 ## Review against the request
 
-<!-- A second agent that did not write this, reading only the backlog entry,
+<!-- A second agent that did not write this, reading only the issue,
      the proof above and the diff: does it do what was asked, where it was
      asked? Paste its verdict. docs/DOCTRINE.md §5. -->
 
@@ -79,6 +79,6 @@ paste test output here
 
 ### Tracking
 
-- [ ] `backlog.md` updated: the item leaves it, or its "Found" lines record
-      what you measured. The commit message says what was observed, so no
-      document has to carry a second status list.
+- [ ] The issue closes with this PR (`Closes #n` above) and its Linear twin
+      is moved to done, or the issue records what you measured. The commit
+      message says what was observed, so no document carries a status list.
