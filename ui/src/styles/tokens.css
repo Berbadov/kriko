@@ -72,7 +72,7 @@
     /* An LED stagger index, written per-dot by Led.svelte; 0 means "first",
      * which is the right answer for an element rendered without one. */
     --i: 0;
-    /* The design system's hardware vocabulary (kriko-svelte/): the press of
+    /* The design system's hardware vocabulary: the press of
      * a key, a quick state change, the base for a part that physically
      * travels, and the mechanical spring that carries it there. */
     --dur-press: 90ms;
