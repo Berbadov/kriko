@@ -179,7 +179,7 @@ impl Tab {
             Tab::Activity => "What Kriko did today, and what is waiting for you.",
             Tab::Agents => "The coding agents on this machine that can reach Kriko.",
             Tab::Benchmark => "How the agents and planes do on a fixed test set, here.",
-            Tab::Local => "A local model, for checks that never leave this machine.",
+            Tab::Local => "Choose a model on this machine and see where its answers come from.",
             Tab::Settings => "Control how Kriko starts, reads and stores things.",
             Tab::About => "Kriko. Local product knowledge.",
         }

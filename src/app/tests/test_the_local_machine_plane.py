@@ -261,6 +261,40 @@ def test_a_server_that_refuses_the_schema_is_asked_again_plainly(stub):
     assert "response_format" not in stub.chat_seen[1]
 
 
+def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):
+    """A reasoning model left at full effort spends the reply's whole budget
+    on thinking and writes nothing; the socket asks for low effort on the
+    OpenAI surface, and a server that does not know the field drops it and
+    is asked again — schema first when both are refused."""
+    stub.chat = [completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert stub.chat_seen[0]["reasoning_effort"] == "low"
+
+    # The stub keeps every call this test made, so the block's calls are
+    # counted from where the last one ended.
+    stub.chat = [(400, {"error": {"message": "unknown field"}}), completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert "reasoning_effort" in stub.chat_seen[1]
+    assert "reasoning_effort" not in stub.chat_seen[2]
+
+    # Both optional fields refused: the schema goes first, then the effort.
+    stub.chat = [(400, {"error": {"message": "no response_format"}}),
+                 (400, {"error": {"message": "no reasoning_effort"}}),
+                 completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA,
+        reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert "response_format" in stub.chat_seen[3]
+    assert "response_format" not in stub.chat_seen[4]
+    assert "reasoning_effort" in stub.chat_seen[4]
+    assert "reasoning_effort" not in stub.chat_seen[5]
+
+
 def test_a_missing_model_names_the_address_and_the_model(stub):
     stub.chat = [(404, {"error": {"message": "model 'local' not found"}})]
     with pytest.raises(local_inference.LocalInferenceError) as said:
