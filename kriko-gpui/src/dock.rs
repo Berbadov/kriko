@@ -134,7 +134,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                 this.stop_job(id.clone(), cx);
                 cx.notify();
             });
-            key(("dock-lane-stop", i), "Stop")
+            danger_s(("dock-lane-stop", i), "Stop")
                 .on_click(cancel)
                 .into_any_element()
         };
@@ -182,7 +182,14 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                         )
                                         .child(stop),
                                 )
-                                .child(div().truncate().child(mono(&status, MUTED))),
+                                .child(div().truncate().child(mono(&status, MUTED)))
+                                .child(
+                                    div().pt(px(4.0)).child(progress_bar(
+                                        &format!("dock-lane-bar-{i}"),
+                                        job.progress,
+                                        motion,
+                                    )),
+                                ),
                         ),
                 ),
         );
@@ -290,12 +297,10 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
 
     // ---- the reply: to the running job, disabled when none ----
     let target = app.live.run.reply_target().map(|j| app.live.run.task(j));
+    // Conditional: with nothing running there is nobody to answer, so the
+    // section is not drawn at all rather than standing there empty.
     let reply_drawer: Option<gpui::AnyElement> = match (&target, app.dock_reply_open) {
-        (None, _) => Some(
-            empty_note("Nothing is running to answer.")
-                .flex_none()
-                .into_any_element(),
-        ),
+        (None, _) => None,
         (Some(task), false) => {
             let open = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
                 this.dock_reply_open = true;

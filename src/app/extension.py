@@ -276,7 +276,7 @@ def refresh(source: Path | None, target: Path) -> bool:
 
 
 def reveal(path: Path) -> str:
-    """Open `path` in the platform's file manager.
+    """Show the extension folder in the platform's file manager.
 
     Best-effort by design, and it returns what it tried rather than raising: a
     machine with no file manager (a headless test box, a stripped container) is
@@ -284,7 +284,7 @@ def reveal(path: Path) -> str:
     them the path, which is the part they actually need.
     """
     if sys.platform.startswith("win"):
-        command = ["explorer", str(path)]
+        command = ["explorer", "/select,", str(path)]
     elif sys.platform == "darwin":
         command = ["open", str(path)]
     else:
@@ -496,7 +496,7 @@ def launch_with_extension(
         # the `DisableLoadExtensionCommandLineSwitch` feature makes the flag a
         # silent no-op, so the window opens, the landing page loads, and the
         # extension is simply absent. That is exactly the 0.8.0 report — "it
-        # does open a chrome page with sahibinden but kriko isn't loaded" —
+        # does open a chrome page with the listing site but kriko isn't loaded" —
         # and it is the worst shape a failure can take, because everything
         # visible worked.
         #

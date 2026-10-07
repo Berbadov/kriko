@@ -149,6 +149,20 @@ def test_the_toolbar_shows_the_desktop_app_s_own_icon(size: int):
     )
 
 
+@pytest.mark.parametrize("size", render_icon.EXTENSION_ICONS)
+def test_offline_toolbar_icon_keeps_the_mark_but_mutes_it(size: int):
+    side, pixels = render_icon.grid(
+        render_icon.SOURCE.read_text(encoding="utf-8")
+    )
+    icon = render_icon.EXTENSION_DIR / f"icon-offline-{size}.png"
+    assert icon.read_bytes() == render_icon.png(
+        render_icon.offline_grid(pixels), size // side
+    )
+    assert icon.read_bytes() != (
+        render_icon.EXTENSION_DIR / f"icon-{size}.png"
+    ).read_bytes()
+
+
 def test_the_manifest_asks_for_no_size_the_render_does_not_make():
     """The list of sizes lives in two files and they have to agree.
 

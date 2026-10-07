@@ -7,7 +7,7 @@
 // report counted the site, and the reader opened a listing to no panel, which
 // from their side is identical to "nothing known about this car".
 //
-// Every test here is about the *mechanism*, never about sahibinden: the
+// Every test here is about the *mechanism*, never about one real site: the
 // fixtures name invented hosts precisely so that passing cannot depend on
 // which packs happen to be in the tree.
 const test = require("node:test");
@@ -32,10 +32,23 @@ const adapter = (site, extra = {}) => ({
   id: site.split(".")[0], site, match: [`*${site}/*`], fields: {}, ...extra,
 });
 
-// A host the static manifest genuinely covers, read off the manifest rather
-// than named, so trimming a static block moves this test with it.
+// The shipped manifest injects nowhere by itself: every site arrives through
+// an adapter. The worker still honours a static block if one is ever packaged,
+// so that branch is held with a manifest that has one, on an invented host.
+const STATIC_MANIFEST = {
+  ...MANIFEST,
+  content_scripts: [{
+    matches: ["https://*.listing.example/*"],
+    js: ["content.js", "hover_lite/icons.js", "hover_lite/claim_card.js",
+         "hover_lite/hover_lite.js"],
+    run_at: "document_idle",
+  }],
+};
+
+// A host that manifest covers, read off it rather than named, so editing the
+// static block moves this test with it.
 function aStaticHost() {
-  for (const block of MANIFEST.content_scripts || []) {
+  for (const block of STATIC_MANIFEST.content_scripts || []) {
     for (const pattern of block.matches || []) {
       const host = pattern.split("://")[1].split("/")[0].replace(/^\*\./, "");
       if (host) return host;
@@ -104,6 +117,7 @@ test("a site the package already injects on is never registered again",
     const h = loadBackground({
       routes: { [ADAPTERS]: [adapter(host)] },
       grantedOrigins: [`https://*.${host}/*`],
+      manifest: STATIC_MANIFEST,
     });
     const reply = await sync(h);
     // Not an error and not a warning — it is already covered. Registering it
@@ -328,6 +342,18 @@ test("the manifest can ask for a site at runtime", () => {
     "without `alarms` a failed sync is never retried");
   assert.ok((MANIFEST.optional_host_permissions || []).length,
     "without optional host permissions there is nothing to grant");
+});
+
+test("the packaged manifest names no site of its own", () => {
+  // Every listing site arrives through an installed adapter and the reader's
+  // grant. A host written into the manifest is a site the extension knows
+  // about with no pack behind it — the one place site vocabulary could creep
+  // back in without any adapter test noticing.
+  assert.deepEqual(MANIFEST.content_scripts || [], []);
+  for (const pattern of MANIFEST.host_permissions || []) {
+    assert.match(pattern, /^http:\/\/127\.0\.0\.1\//,
+      `host permission for a site: ${pattern}`);
+  }
 });
 
 test("the panel's stylesheet can reach a site added at runtime", () => {

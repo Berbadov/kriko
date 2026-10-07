@@ -61,11 +61,17 @@ pub struct Job {
     pub created_at: String,
     pub finished_at: String,
     pub harness: String,
+    pub backend: String,
+    pub model: String,
     pub subject_id: String,
     pub product: String,
+    pub question: String,
+    pub result: Value,
     pub retry_of: String,
     pub attention: Option<Attention>,
     pub feed: Vec<FeedLine>,
+    pub answer: String,
+    pub no_answer_why: String,
 }
 
 /// Where a job stands, in the four phases the stepper shows.
@@ -118,6 +124,9 @@ impl Job {
         if self.state == "queued" {
             return Phase::Idle;
         }
+        if self.attention.is_some() {
+            return Phase::Waiting;
+        }
         match self.feed.last().map(|l| l.kind.as_str()) {
             Some("source") | Some("search") => Phase::Reading,
             Some("finding") => Phase::Writing,
@@ -134,6 +143,63 @@ impl Job {
 
     pub fn failed(&self) -> bool {
         matches!(self.state.as_str(), "failed" | "interrupted")
+    }
+
+    /// The whole log as events, newest line last, the same shapes the engine
+    /// reads (`livefeed`): the server's feed carries only the live tail, so
+    /// the full story is classified here.
+    pub fn log_events(&self) -> Vec<FeedLine> {
+        if self.log.is_empty() {
+            return self.feed.clone();
+        }
+        self.log
+            .lines()
+            .flat_map(|raw| raw.split("; "))
+            .map(|l| l.trim())
+            .filter(|l| !l.is_empty())
+            .map(|l| FeedLine { kind: event_kind(l), text: clip(l, 220) })
+            .collect()
+    }
+
+    /// How long the run took, or has been running, from its own stamps.
+    pub fn duration_word(&self) -> String {
+        let (Some(start), end) = (epoch(&self.created_at), if self.done {
+            epoch(&self.finished_at)
+        } else {
+            Some(now_epoch())
+        }) else {
+            return String::new();
+        };
+        let Some(end) = end else { return String::new() };
+        let s = (end - start).max(0);
+        let word = match s {
+            0..=59 => format!("{s} s"),
+            60..=3599 => format!("{} min {:02} s", s / 60, s % 60),
+            3600..=86399 => format!("{} h {} min", s / 3600, (s % 3600) / 60),
+            _ => format!("{} d {} h", s / 86400, (s % 86400) / 3600),
+        };
+        if self.done {
+            format!("ran for {word}")
+        } else {
+            format!("{word} in")
+        }
+    }
+}
+
+/// One log line's event kind, in the engine's closed vocabulary.
+pub fn event_kind(line: &str) -> String {
+    let l = line.to_lowercase();
+    let starts = |head: &str| l.starts_with(head);
+    if starts("a tool call failed") || starts("refused") || starts("left out") || starts("stopped:") {
+        "problem".into()
+    } else if starts("kept") || starts("wrote") {
+        "finding".into()
+    } else if starts("fetched") || starts("read through the page reader") {
+        "source".into()
+    } else if starts("searched") || starts("query:") {
+        "search".into()
+    } else {
+        "note".into()
     }
 }
 
@@ -209,6 +275,16 @@ fn job_from(v: &Value) -> Job {
             p
         }
     };
+    let result = v.get("result").cloned().unwrap_or(Value::Null);
+    let answer = {
+        let said = api::s(&result, "answer");
+        if !said.is_empty() {
+            said
+        } else {
+            api::s(&result, "outcome")
+        }
+    };
+    let no_answer_why = api::s(&result, "note");
     Job {
         id: api::s(v, "job_id"),
         kind: api::s(v, "kind"),
@@ -220,15 +296,21 @@ fn job_from(v: &Value) -> Job {
         created_at: api::s(v, "created_at"),
         finished_at: api::s(v, "finished_at"),
         harness: api::s(&params, "harness"),
+        backend: api::s(&params, "backend"),
+        model: api::s(&params, "model"),
         subject_id: api::s(&params, "subject_id"),
         product,
+        question: api::s(&params, "question"),
+        result: v.get("result").cloned().unwrap_or(Value::Null),
         retry_of: api::s(&params, "retry_of"),
         attention,
         feed,
+        answer,
+        no_answer_why,
     }
 }
 
-fn clip(s: &str, max: usize) -> String {
+pub(crate) fn clip(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         s.to_string()
     } else {
@@ -310,6 +392,17 @@ pub struct Harness {
     pub id: String,
     pub label: String,
     pub state: RunState,
+    /// The model chosen for this harness; empty means its own default.
+    pub llm: String,
+    /// The models this provider says it serves, asked for at refresh.
+    pub llms: Vec<String>,
+    pub llms_note: String,
+    pub llm_selectable: bool,
+    /// The effort chosen for this harness; empty means its own default.
+    pub effort: String,
+    /// The effort levels this CLI's `--help` declares; empty means no dial.
+    pub efforts: Vec<String>,
+    pub effort_hint: String,
 }
 
 #[derive(Clone, Debug)]
@@ -341,6 +434,11 @@ pub struct Verify {
     pub ok: bool,
     pub steps: Vec<(String, String)>,
     pub detail: String,
+    /// The engine's own transcript of the check: the command, each step,
+    /// the answer, and the error text on failure.
+    pub log: String,
+    /// How long the whole check took, in milliseconds.
+    pub ms: i64,
 }
 
 /// The agent mark for a harness or target id; the engine's own mark when
@@ -387,6 +485,8 @@ pub struct State {
     pub polling: bool,
     pub jobs: Vec<Job>,
     pub jobs_loaded: bool,
+    /// The Activity entry whose complete agent log is open.
+    pub activity_log_open: Option<String>,
     list_inflight: bool,
     detail_inflight: bool,
     last_list: Option<Instant>,
@@ -401,6 +501,11 @@ pub struct State {
     label_asked: HashSet<String>,
     /// The option picked for each question, by question id.
     pub answers: HashMap<String, String>,
+    /// The Run screen's log level filter: 0 is all, then search, source,
+    /// finding, problem.
+    pub log_level: usize,
+    /// When the log's Copy plate was pressed, for its "Copied" flash.
+    pub log_copied_at: Option<Instant>,
     pub start: Start,
     // agents
     pub harnesses: Vec<Harness>,
@@ -410,6 +515,17 @@ pub struct State {
     pub targets_loaded: bool,
     pub agent_selected: String,
     pub agent_note: String,
+    /// The reader's own arrangement of the agents, as the engine stored it.
+    pub agent_order: Vec<String>,
+    /// The detail card's model drawer.
+    pub model_drawer: bool,
+    /// Every kind of source a run can be pointed at, `(id, words)`, in the
+    /// engine's order.
+    pub source_kinds: Vec<(String, String)>,
+    /// The kinds the reader picked, and the most sources a run reads (0 is
+    /// "the run decides"). Both stored by the engine, read by every agent.
+    pub research_kinds: Vec<String>,
+    pub research_sources: u32,
     pub verifying: bool,
     pub verify: Option<Verify>,
 }
@@ -475,6 +591,8 @@ impl State {
         let kind = kind_word(&job.kind);
         let subject = if !job.product.is_empty() {
             job.product.clone()
+        } else if !job.question.is_empty() {
+            job.question.clone()
         } else {
             self.labels.get(&job.subject_id).cloned().unwrap_or_default()
         };
@@ -511,6 +629,10 @@ impl State {
                 }),
             }
         }
+        // the reader's arrangement wins: the named ones first in that order,
+        // anything unnamed after, where the engine listed it
+        let place = |id: &str| self.agent_order.iter().position(|o| o == id);
+        out.sort_by_key(|e| (place(&e.id).unwrap_or(usize::MAX), e.label.clone()));
         out
     }
 
@@ -534,6 +656,13 @@ impl State {
         };
         if usable(&self.preferred) {
             return self.preferred.clone();
+        }
+        // A picked Local model stays the pick when its server is down: the
+        // engine fails the run with the reason rather than this screen
+        // quietly handing it to a CLI. With nothing picked, a ready local
+        // model goes first, as the engine's own default does (B172).
+        if self.preferred == "local" || (self.preferred.is_empty() && usable("local")) {
+            return "local".to_string();
         }
         self.harnesses
             .iter()
@@ -570,19 +699,31 @@ impl State {
 // ---- reading the engine ----
 
 fn harnesses_from(v: &Value) -> Vec<Harness> {
+    let from_row = |h: &Value, state: RunState| Harness {
+        id: api::s(h, "id"),
+        label: api::s(h, "label"),
+        state,
+        llm: api::s(h, "llm"),
+        llms: api::arr(h, "llms")
+            .iter()
+            .filter_map(|m| m.as_str().map(str::to_string))
+            .collect(),
+        llms_note: api::s(h, "llms_note"),
+        llm_selectable: api::b(h, "llm_selectable"),
+        effort: api::s(h, "effort"),
+        efforts: api::arr(h, "efforts")
+            .iter()
+            .filter_map(|m| m.as_str().map(str::to_string))
+            .collect(),
+        effort_hint: api::s(h, "effort_hint"),
+    };
     let mut out: Vec<Harness> = api::arr(v, "harnesses")
         .iter()
-        .map(|h| Harness { id: api::s(h, "id"), label: api::s(h, "label"), state: RunState::Ready })
+        .map(|h| from_row(h, RunState::Ready))
         .collect();
-    out.extend(api::arr(v, "unusable").iter().map(|h| Harness {
-        id: api::s(h, "id"),
-        label: api::s(h, "label"),
-        state: RunState::Unusable(api::s(h, "why")),
-    }));
-    out.extend(api::arr(v, "missing").iter().map(|h| Harness {
-        id: api::s(h, "id"),
-        label: api::s(h, "label"),
-        state: RunState::Missing { hint: api::s(h, "install_hint"), url: api::s(h, "download_url") },
+    out.extend(api::arr(v, "unusable").iter().map(|h| from_row(h, RunState::Unusable(api::s(h, "why")))));
+    out.extend(api::arr(v, "missing").iter().map(|h| {
+        from_row(h, RunState::Missing { hint: api::s(h, "install_hint"), url: api::s(h, "download_url") })
     }));
     out
 }
@@ -763,7 +904,62 @@ impl Kriko {
             .get("chosen")
             .map(|c| api::s(c, "preferred_harness"))
             .unwrap_or_default();
+        run.agent_order = v
+            .get("chosen")
+            .map(|c| api::s(c, "agent_order"))
+            .unwrap_or_default()
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .collect();
+        run.source_kinds = api::arr(v, "source_kinds")
+            .iter()
+            .map(|k| (api::s(k, "id"), api::s(k, "label")))
+            .collect();
+        let research = v.get("research").cloned().unwrap_or(Value::Null);
+        run.research_kinds = api::arr(&research, "kinds")
+            .iter()
+            .filter_map(|k| k.as_str().map(str::to_string))
+            .collect();
+        run.research_sources = research
+            .get("sources")
+            .and_then(|n| n.as_u64())
+            .unwrap_or(0) as u32;
         run.prefs_loaded = true;
+    }
+
+    /// Turn one kind of source on or off for every agent run.
+    pub fn toggle_source_kind(&mut self, kind: String, cx: &mut Context<Self>) {
+        let mut kinds = self.live.run.research_kinds.clone();
+        if let Some(at) = kinds.iter().position(|k| *k == kind) {
+            kinds.remove(at);
+        } else {
+            kinds.push(kind);
+        }
+        self.live.run.research_kinds = kinds.clone();
+        let body = serde_json::json!({ "research_source_kinds": kinds.join(",") });
+        self.save_research_options(body, cx);
+    }
+
+    /// Set the most sources an agent run reads; 0 leaves it to the run.
+    pub fn pick_source_count(&mut self, count: u32, cx: &mut Context<Self>) {
+        self.live.run.research_sources = count;
+        let body = serde_json::json!({ "research_sources": count.to_string() });
+        self.save_research_options(body, cx);
+    }
+
+    fn save_research_options(&mut self, body: Value, cx: &mut Context<Self>) {
+        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
+            this.note(&reply);
+            match reply {
+                Ok(v) => {
+                    this.apply_prefs(&v);
+                    this.live.run.agent_note = "Saved. Every agent run reads these.".into();
+                }
+                Err(e) => this.live.run.agent_note = e.message,
+            }
+        });
     }
 
     // ---- what the keys do ----
@@ -945,6 +1141,90 @@ impl Kriko {
         });
     }
 
+    /// Move one agent up or down in the reader's arrangement, and keep it.
+    pub fn order_agent(&mut self, id: String, step: i64, cx: &mut Context<Self>) {
+        let ids: Vec<String> = self.live.run.agent_entries().iter().map(|e| e.id.clone()).collect();
+        let mut order: Vec<String> = self
+            .live
+            .run
+            .agent_order
+            .iter()
+            .filter(|o| ids.contains(o))
+            .cloned()
+            .collect();
+        for e in &ids {
+            if !order.contains(e) {
+                order.push(e.clone());
+            }
+        }
+        let Some(at) = order.iter().position(|o| o == &id) else { return };
+        let to = at as i64 + step;
+        if to < 0 || to >= order.len() as i64 {
+            return;
+        }
+        order.swap(at, to as usize);
+        let body = serde_json::json!({ "agent_order": order.join(",") });
+        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
+            this.note(&reply);
+            if let Ok(v) = reply {
+                this.apply_prefs(&v);
+            }
+        });
+    }
+
+    /// The model drawer: the provider's own list, asked for when it opens.
+    pub fn open_agent_models(&mut self, cx: &mut Context<Self>) {
+        let opening = self.live.run.model_drawer;
+        self.live.run.model_drawer = !opening;
+        cx.notify();
+        if !opening {
+            self.fetch(cx, move || api::get("/api/prefs?fresh=true"), |this, reply, _| {
+                this.note(&reply);
+                if let Ok(v) = reply {
+                    this.apply_prefs(&v);
+                }
+            });
+        }
+    }
+
+    /// Pick the model one provider runs with; empty is its own default.
+    pub fn pick_agent_model(&mut self, id: String, model: String, cx: &mut Context<Self>) {
+        // The local row's model is the Local LLM page's own setting.
+        let key = if id == "local" {
+            "local_model".to_string()
+        } else {
+            format!("harness_model_{}", id.replace('-', "_"))
+        };
+        let body = serde_json::json!({ key: model });
+        self.live.run.model_drawer = false;
+        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
+            this.note(&reply);
+            match reply {
+                Ok(v) => {
+                    this.apply_prefs(&v);
+                    this.live.run.agent_note = "Saved. New runs use this model.".into();
+                }
+                Err(e) => this.live.run.agent_note = e.message,
+            }
+        });
+    }
+
+    /// Pick how hard one provider thinks; empty is its own default.
+    pub fn pick_agent_effort(&mut self, id: String, effort: String, cx: &mut Context<Self>) {
+        let key = format!("harness_effort_{}", id.replace('-', "_"));
+        let body = serde_json::json!({ key: effort });
+        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
+            this.note(&reply);
+            match reply {
+                Ok(v) => {
+                    this.apply_prefs(&v);
+                    this.live.run.agent_note = "Saved. New runs use this effort.".into();
+                }
+                Err(e) => this.live.run.agent_note = e.message,
+            }
+        });
+    }
+
     /// Check connection: the engine starts its own MCP server and reports
     /// each step it passed.
     pub fn verify_agents(&mut self, cx: &mut Context<Self>) {
@@ -953,10 +1233,12 @@ impl Kriko {
         }
         self.live.run.verifying = true;
         self.live.run.verify = None;
-        self.fetch(cx, || api::post("/api/agent-verify", serde_json::json!({})), |this, reply, _| {
+        let started = Instant::now();
+        self.fetch(cx, || api::post("/api/agent-verify", serde_json::json!({})), move |this, reply, _| {
             this.note(&reply);
             let run = &mut this.live.run;
             run.verifying = false;
+            let elapsed_ms = started.elapsed().as_millis() as i64;
             match reply {
                 Ok(v) => {
                     run.verify = Some(Verify {
@@ -966,10 +1248,12 @@ impl Kriko {
                             .map(|s| (api::s(s, "id"), api::s(s, "state")))
                             .collect(),
                         detail: api::s(&v, "detail"),
+                        log: api::s(&v, "log"),
+                        ms: elapsed_ms,
                     })
                 }
                 Err(e) => {
-                    run.verify = Some(Verify { ok: false, steps: Vec::new(), detail: e.message })
+                    run.verify = Some(Verify { ok: false, steps: Vec::new(), detail: e.message, ms: elapsed_ms, ..Default::default() })
                 }
             }
         });
@@ -980,6 +1264,52 @@ impl Kriko {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn the_local_model_is_an_agent_row_with_its_dials() {
+        // The reader: "Local agent cannot be chosen in agents tab" and "No
+        // model and effort selection just agents tab".
+        let v = json!({"harnesses": [
+            {"id": "local", "label": "Local model", "llm": "small:4b",
+             "llms": ["small:4b", "big:27b"], "llm_selectable": true, "efforts": []},
+            {"id": "claude-code", "label": "Claude Code", "llm": "", "llms": ["a", "b"],
+             "llm_selectable": true, "effort": "high", "efforts": ["low", "high"]}
+        ]});
+        let found = harnesses_from(&v);
+        assert_eq!(found[0].id, "local");
+        assert!(matches!(found[0].state, RunState::Ready));
+        assert_eq!(found[0].llms, vec!["small:4b", "big:27b"]);
+        assert!(found[0].efforts.is_empty());
+        assert_eq!(found[1].effort, "high");
+        assert_eq!(found[1].efforts, vec!["low", "high"]);
+    }
+
+    #[test]
+    fn a_check_runs_on_the_local_model_when_it_is_picked_or_nothing_is() {
+        let mut st = State::default();
+        st.harnesses = harnesses_from(&json!({"harnesses": [
+            {"id": "claude-code", "label": "Claude Code"},
+            {"id": "local", "label": "Local model"}
+        ]}));
+        assert_eq!(st.start_harness(), "local");
+        st.preferred = "claude-code".into();
+        assert_eq!(st.start_harness(), "claude-code");
+        // picked, but its server is down: still the pick, never a CLI
+        st.preferred = "local".into();
+        st.harnesses.retain(|h| h.id != "local");
+        assert_eq!(st.start_harness(), "local");
+    }
+
+    #[test]
+    fn recent_local_jobs_keep_their_backend_and_question_for_navigation() {
+        let job = job_from(&json!({"job_id": "ask-1", "kind": "compare_ask",
+            "state": "succeeded", "done": true,
+            "params": {"backend": "local", "harness": "local",
+                "question": "Which has the lower known risk?"}}));
+        assert_eq!(job.backend, "local");
+        assert_eq!(job.question, "Which has the lower known risk?");
+        assert!(job.result.is_null());
+    }
 
     fn running(feed: Value) -> Job {
         job_from(&json!({
@@ -1016,6 +1346,26 @@ mod tests {
     }
 
     #[test]
+    fn a_done_job_carries_its_answer() {
+        let said = job_from(&json!({
+            "job_id": "j", "kind": "research", "state": "succeeded", "done": true,
+            "result": {"outcome": "kept 3 claim(s)", "note": ""}
+        }));
+        assert_eq!(said.answer, "kept 3 claim(s)");
+        let replied = job_from(&json!({
+            "job_id": "q", "kind": "compare_ask", "state": "succeeded", "done": true,
+            "result": {"answer": "the reply"}
+        }));
+        assert_eq!(replied.answer, "the reply");
+        let silent = job_from(&json!({
+            "job_id": "s", "kind": "research", "state": "succeeded", "done": true,
+            "result": {"outcome": "", "note": "the CLI answered without a findings list"}
+        }));
+        assert_eq!(silent.answer, "");
+        assert_eq!(silent.no_answer_why, "the CLI answered without a findings list");
+    }
+
+    #[test]
     fn a_running_job_keeps_its_full_log_for_the_dock_drawer() {
         let log = "Starting research\nReading two sources\n";
         let job = job_from(&json!({
@@ -1047,6 +1397,31 @@ mod tests {
     }
 
     #[test]
+    fn the_log_is_read_as_the_engines_events() {
+        let j = job_from(&json!({
+            "job_id": "j", "kind": "research", "state": "succeeded", "done": true,
+            "log": "planned the queries\nsearched one; fetched a\nread through the page reader b\nkept c\ncould not say\na tool call failed d"
+        }));
+        let events = j.log_events();
+        let kinds: Vec<&str> = events.iter().map(|e| e.kind.as_str()).collect();
+        assert_eq!(kinds, vec!["note", "search", "source", "source", "finding", "note", "problem"]);
+        assert!(running(json!([])).log_events().is_empty());
+    }
+
+    #[test]
+    fn the_run_says_how_long_it_took() {
+        let j = job_from(&json!({
+            "job_id": "j", "kind": "research", "state": "succeeded", "done": true,
+            "created_at": "2026-10-04T16:48:00+00:00",
+            "finished_at": "2026-10-04T16:51:12+00:00",
+            "params": {"backend": "api", "model": "mistral-large"}
+        }));
+        assert_eq!(j.duration_word(), "ran for 3 min 12 s");
+        assert_eq!(j.backend, "api");
+        assert_eq!(j.model, "mistral-large");
+    }
+
+    #[test]
     fn agents_merge_by_id() {
         let mut s = State::default();
         s.harnesses = harnesses_from(&json!({"harnesses": [{"id": "claude-code", "label": "Claude Code"}]}));
@@ -1057,5 +1432,18 @@ mod tests {
         assert_eq!(all.len(), 2);
         assert!(all[0].harness.is_some() && all[0].target.is_some());
         assert!(all[1].harness.is_none());
+    }
+
+    #[test]
+    fn the_readers_arrangement_of_the_agents_wins() {
+        let mut s = State::default();
+        s.harnesses = harnesses_from(&json!({"harnesses": [
+            {"id": "a", "label": "A"}, {"id": "b", "label": "B"}]}));
+        let ids = |s: &State| s.agent_entries().iter().map(|e| e.id.clone()).collect::<Vec<_>>();
+        assert_eq!(ids(&s), vec!["a", "b"]);
+        s.agent_order = vec!["b".to_string()];
+        assert_eq!(ids(&s), vec!["b", "a"]);
+        s.agent_order = vec!["ghost".to_string()];
+        assert_eq!(ids(&s), vec!["a", "b"]);
     }
 }

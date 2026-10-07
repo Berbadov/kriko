@@ -7,7 +7,7 @@
 // `kriko/tests/test_adapters.py`. What is left here is the part only a browser
 // can do: find label/value pairs in markup that changes without notice.
 //
-// The split matters because of how this used to fail. A Sahibinden redesign
+// The split matters because of how this used to fail. A listing-site redesign
 // would zero every field, the extension would go on reporting success, and the
 // only symptom was the server answering "Missing required fields". Keeping the
 // meaning server-side means a site change is a pack edit, not a release.
@@ -33,12 +33,13 @@ const PACK_LABELS = [
 // The `local_panel` block the server hands down beside the labels: the words,
 // selectors and thresholds for the two blocks the panel renders locally.
 //
-// Read off the shipped adapter rather than restated here, on purpose. A test
-// carrying its own copy of the rules cannot notice the shipped ones going
-// stale — and going stale is the exact failure this block exists to prevent.
+// Read off the full-sized fixture adapter (an invented host, `listing.example`)
+// rather than restated here, on purpose: the same file feeds the Python
+// adapter tests, so one copy of the rules is exercised from both ends and the
+// two cannot drift apart.
 const ADAPTER = JSON.parse(
   fs.readFileSync(
-    path.join(__dirname, "..", "..", "packs", "cars", "adapters", "sahibinden.json"),
+    path.join(__dirname, "..", "..", "packs", "cars", "tests", "fixtures", "listing_example_adapter.json"),
     "utf8"
   )
 );
@@ -47,7 +48,7 @@ const PACK_PANEL = ADAPTER.local_panel;
 // ── the page's own labels, uninterpreted ────────────────────────────────
 
 test("classic info list: labels and values are reported exactly as written", () => {
-  const s = loadContentScript(fixture("sahibinden_classic.html"));
+  const s = loadContentScript(fixture("listing_classic.html"));
   const { fields } = s.buildScrape(PACK_LABELS);
 
   assert.equal(fields["Marka"], "Volkswagen");
@@ -71,7 +72,7 @@ test("a label the pack considers noise is still reported, not filtered here", ()
 });
 
 test("english locale is not a special case — the labels are just different", () => {
-  const s = loadContentScript(fixture("sahibinden_english.html"));
+  const s = loadContentScript(fixture("listing_english.html"));
   const { fields } = s.buildScrape(PACK_LABELS);
 
   assert.equal(fields["Make"], "Volkswagen");
@@ -81,12 +82,12 @@ test("english locale is not a special case — the labels are just different", (
 });
 
 test("the technical panel is merged in without overwriting the info list", () => {
-  const s = loadContentScript(fixture("sahibinden_english.html"));
+  const s = loadContentScript(fixture("listing_english.html"));
   const { fields } = s.buildScrape(PACK_LABELS);
 
   assert.equal(fields["Transmission / Drive Type"],
                "DSG / 7 Gear / Front Wheel Drive");
-  // Sahibinden's own bug: "Engine Capacity" labels the power row in one table
+  // The site's own bug: "Engine Capacity" labels the power row in one table
   // and the real capacity in another. The scraper keeps the first and lets the
   // adapter's range bound decide — it does not guess here.
   assert.ok(fields["Engine Capacity"]);
@@ -124,7 +125,7 @@ test("the scrape carries the url, the title and the description", () => {
     <h1 class="classifiedTitle">2014 Volkswagen Golf 1.6 TDI</h1>
     <div id="classifiedDescription">Bakımlı araç.</div>`);
   const scrape = s.buildScrape(PACK_LABELS);
-  assert.match(scrape.url, /sahibinden\.com/);
+  assert.match(scrape.url, /listing\.example/);
   assert.equal(scrape.title, "2014 Volkswagen Golf 1.6 TDI");
   assert.equal(scrape.description, "Bakımlı araç.");
 });
@@ -132,7 +133,7 @@ test("the scrape carries the url, the title and the description", () => {
 test("damage and equipment stay local and never enter the posted fields", () => {
   // The panel renders these; the engine has no rule for them. Sending them
   // would put listing-specific personal-ish detail on the wire for nothing.
-  const s = loadContentScript(fixture("sahibinden_classic.html"));
+  const s = loadContentScript(fixture("listing_classic.html"));
   const scrape = s.buildScrape(PACK_LABELS, PACK_PANEL);
   assert.ok(scrape.listing);
   assert.ok(scrape.listing.damage_info);
@@ -145,7 +146,7 @@ test("the scraper reports no identity of its own", () => {
   // A regression guard for the whole point of Phase 6c: if `make`, `year` or
   // `fuel_type` reappear on the scrape, the interpretation has crept back into
   // the client and the pack has stopped being the source of truth.
-  const s = loadContentScript(fixture("sahibinden_classic.html"));
+  const s = loadContentScript(fixture("listing_classic.html"));
   const scrape = s.buildScrape(PACK_LABELS);
   for (const key of ["make", "model", "year", "fuel_type", "transmission",
                      "engine_volume_cc", "power_hp", "mileage_km"]) {
