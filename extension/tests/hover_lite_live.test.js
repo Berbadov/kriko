@@ -104,11 +104,13 @@ test("what else is running is named, with who started it", () => {
   assert.match(rows[1], /the app/);
 });
 
-test("a row that carries a stage and a share shows both", () => {
+test("a row that carries a stage shows it in words, never as a percentage", () => {
+  // The reader: "Web extension showing progresses as percentages." An agent
+  // job's share jumps from a tenth to done, so the number read as a stall.
   const p = analyzing({ operationsResponse: RUNNING });
 
   assert.match(p.liveRows()[1], /extraction/);
-  assert.match(p.liveRows()[1], /50%/);
+  assert.doesNotMatch(p.liveRows()[1], /%/);
 });
 
 test("an operation that has ended is not still listed as running", () => {

@@ -302,3 +302,20 @@ def test_saving_a_board_replaces_it_wholesale(client):
              json={"strokes": [], "notes": []})
     back = http.get(f"/api/compare-drafts/{made['draft_id']}/board").json()
     assert back["strokes"] == [] and back["notes"] == []
+
+
+def test_the_brief_carries_each_claims_sources():
+    """The reader: "in compare agents do not read the sources of the
+    knowledge." Each claim's recorded pages and quotes reach the agent, in
+    the full brief and, where it fits, in a small model's compact one."""
+    from app.web.tasks import _compare_brief
+    claim = {"title": "Timing chain", "body": "Stretches early.", "severity": "high",
+             "sources": [{"url": "https://example.org/thread", "quote": "the chain rattled at 80k",
+                          "tier": "forum_ugc"}]}
+    answers = [{"label": "One", "response": {"claims": [claim], "context": {}}},
+               {"label": "Two", "response": {"claims": [], "context": {}}}]
+    full = _compare_brief("which is safer?", answers)
+    assert 'source: https://example.org/thread [forum_ugc] "the chain rattled at 80k"' in full
+    assert "cite the recorded source" in full
+    compact = _compare_brief("which is safer?", answers, max_chars=4000)
+    assert "https://example.org/thread" in compact

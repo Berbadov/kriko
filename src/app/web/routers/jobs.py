@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import AliasChoices, BaseModel, Field
 
+from app import prefs
 from app.web import livefeed, state, tasks
 from app.web.deps import get_app_state, get_jobs
 
@@ -61,6 +62,9 @@ class ResearchRequest(BaseModel):
     model: str = Field("", max_length=200, validation_alias=AliasChoices("model", "llm"))
     harness: str = Field("", max_length=64)
     search: str = Field("", max_length=64)
+    #: Which kinds of source to go to first (`prefs.SOURCE_KINDS`); empty
+    #: means the Agents tab's stored choice.
+    source_kinds: list[str] = Field(default_factory=list, max_length=12)
 
 
 class UpdateRequest(BaseModel):
@@ -88,6 +92,7 @@ class AuthorRequest(BaseModel):
     #: brief as it was. Carried into the prompt as a ceiling, since a CLI has
     #: no per-run source flag of its own to set.
     max_documents: int = Field(0, ge=0, le=50)
+    source_kinds: list[str] = Field(default_factory=list, max_length=12)
     #: Answers to the questions a previous run asked, keyed by their id.
     #:
     #: Supplied at the *start* of a run rather than during one, and that is the
@@ -116,7 +121,12 @@ def _submit(runner, kind: str, params: dict) -> dict:
 
 @router.post("/research")
 def start_research(body: ResearchRequest, runner=Depends(get_jobs)):
-    return _submit(runner, "research", body.model_dump())
+    params = body.model_dump()
+    if params.get("harness") == prefs.LOCAL_PICK:
+        # The Local model row is a plane, not a CLI: naming it as a harness
+        # would fall back to whichever CLI is installed (`resolve_agent`).
+        params.update(harness="", backend="local")
+    return _submit(runner, "research", params)
 
 
 @router.post("/packs/author")

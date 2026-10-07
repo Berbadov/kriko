@@ -582,26 +582,30 @@ def test_product_draft_reuses_author_gates_and_cancellation(
         "model": "paid-model", "search": "paid-search", "cap": 0.01,
     })
     quick_id = response.json()["job_id"]
-    job_id = response.json()["deepen_job_id"]
+    assert response.status_code == 200
+    # One job, not two (the reader: "Pack and quick look works together,
+    # making a double job instead of one"). The look is saved on its own.
+    assert response.json() == {
+        "job_id": quick_id, "kind": "quick_look",
+        "backend": "harness",
+        "harness": "fixture-harness", "cost_basis": "subscription",
+        "budget_usd": None,
+        "note": "Uses your harness subscription. The quick look is saved; "
+                "add it to a pack when you want it kept as knowledge.",
+    }
+    looked = _wait_research_job(research_client, quick_id)
+    assert looked["state"] == "succeeded", looked["message"]
+    assert [r["title"] for r in looked["result"]["risks"]] == ["Gear wear"]
+    assert looked["result"]["dropped"] == 1
+    assert "Unknown Widget" in quick[0]
+    assert not prompts, "a pack run started beside the quick look"
+    # "quick looks can be a part of a pack": asked for, afterwards.
+    added = research_client.post(f"/api/extension/quick-looks/{quick_id}/pack")
+    assert added.status_code == 200, added.text
+    job_id = added.json()["job_id"]
+    assert added.json()["quick_job_id"] == quick_id
     try:
-        assert response.status_code == 200
-        assert response.json() == {
-            "job_id": quick_id, "kind": "quick_look", "deepen_job_id": job_id,
-            "backend": "harness",
-            "harness": "fixture-harness", "cost_basis": "subscription",
-            "budget_usd": None,
-            "note": "Uses your harness subscription. A quick answer first; the "
-                    "deeper research keeps going and installs itself when done.",
-        }
         assert started.wait(10)
-        # B148: the quick look answers while the deep run is still holding the
-        # only main-lane worker — it was never queued behind it.
-        looked = _wait_research_job(research_client, quick_id)
-        assert looked["state"] == "succeeded", looked["message"]
-        assert looked["result"]["deepen_job_id"] == job_id
-        assert [r["title"] for r in looked["result"]["risks"]] == ["Gear wear"]
-        assert looked["result"]["dropped"] == 1
-        assert "Unknown Widget" in quick[0]
         if outcome == "cancelled":
             stopped = research_client.post(f"/api/jobs/{job_id}/cancel")
             assert stopped.json()["state"] == "cancelling"
