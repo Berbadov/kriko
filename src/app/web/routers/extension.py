@@ -16,7 +16,6 @@ from app import extension, keys, sites
 from app.web import state
 from app.web.deps import get_app_state, get_jobs, get_store
 from app.web.routers.research import resolve_research_subject
-from app.web.settings import EXTENSION_PORT
 from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher
 
@@ -97,7 +96,7 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
         # something else on the machine holds it the extension will install
         # perfectly and reach nothing, which looks identical to a bad install
         # from the reader's side — so the page gets told, rather than guessing.
-        "port": EXTENSION_PORT,
+        "port": request.app.state.settings.extension_port,
         "port_is_ours": bool(request.app.state.settings.extension_port_bound),
         "browsers": extension.browsers(),
         "sightings": sightings,
