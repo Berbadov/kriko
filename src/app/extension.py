@@ -496,7 +496,7 @@ def launch_with_extension(
         # the `DisableLoadExtensionCommandLineSwitch` feature makes the flag a
         # silent no-op, so the window opens, the landing page loads, and the
         # extension is simply absent. That is exactly the 0.8.0 report — "it
-        # does open a chrome page with sahibinden but kriko isn't loaded" —
+        # does open a chrome page with the listing site but kriko isn't loaded" —
         # and it is the worst shape a failure can take, because everything
         # visible worked.
         #

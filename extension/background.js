@@ -120,7 +120,7 @@ async function toggleHoverLite(tab) {
 // It used to toggle the panel and give up silently where no content script is
 // running — which is every site no pack has an adapter for, and which the
 // reader experienced as "I cannot open the extension on pages that aren't
-// registered, so basically it opens on sahibinden only". Nothing was broken;
+// registered, so basically it opens on one site only". Nothing was broken;
 // the site was simply unknown, and the extension had no way to say so.
 //
 // So a click that finds no panel now *reports the page* to the app. The app
@@ -364,7 +364,7 @@ function adapterFor(url, adapters) {
 
 // Whether *some* installed adapter reads this site at all, even though none
 // of its patterns matched this exact page. A pack's match pattern is a glob
-// like `*sahibinden.com/ilan/*` — the domain fragment before the first `/` is
+// like `*example.com/listing/*` — the domain fragment before the first `/` is
 // as much "which site" as this extension can read without hardcoding a
 // site's own shape (the scalability principle: no site vocabulary here).
 // Distinguishing this from "no pack reads this site" is extension-5/6 (B145
@@ -534,8 +534,16 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     const last = got && got[SELF_RELOAD_KEY];
     if (!last || !last.pending) return;
     await chrome.storage.local.set({ [SELF_RELOAD_KEY]: { ...last, pending: false } });
+    // Every site the panel is injected on: the manifest's own blocks (none
+    // are shipped today) and the per-site registrations, which persist across
+    // the reload. Not the every-site one: `https://*/*` would reload every
+    // tab the reader has open to refresh a panel most of them never showed.
     const patterns = [];
-    for (const entry of chrome.runtime.getManifest().content_scripts || []) {
+    const blocks = [
+      ...(chrome.runtime.getManifest().content_scripts || []),
+      ...(await _registeredSiteScripts()),
+    ];
+    for (const entry of blocks) {
       for (const one of entry.matches || []) if (!patterns.includes(one)) patterns.push(one);
     }
     if (!patterns.length) return;
@@ -630,7 +638,7 @@ async function fetchAdapters() {
 //
 // *Detection.* The app already knows; it is the only thing that can. So the
 // worker asks — `/api/adapters` is the same endpoint a run already uses, and
-// an adapter's `site` is a bare registrable host (`sahibinden.com`), which
+// an adapter's `site` is a bare registrable host (`example.com`), which
 // becomes exactly one match pattern. No hostname list lives in this file, and
 // none should ever be added to it.
 //

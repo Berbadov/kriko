@@ -21,9 +21,14 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // answers `permissions.contains` from its own table, and the difference
 // between "pending" and "reading" is the whole of B69's consent story — so the
 // test has to be able to set it.
+// `manifest` replaces the packaged one. The shipped manifest names no site
+// (every site arrives through an adapter), so the static-block branch of the
+// worker — skip a host the package already injects on — is only reachable
+// with a manifest that has one; a test passes it rather than the shipped
+// file growing a site for the suite's sake.
 function loadBackground({
   routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
-  grantedOrigins = [], responseHeaders = {}, loadedDigest = "",
+  grantedOrigins = [], responseHeaders = {}, loadedDigest = "", manifest = null,
 } = {}) {
   const state = {
     session: {},
@@ -100,8 +105,9 @@ function loadBackground({
         // does *not* need to register — so the harness hands it the real
         // file, not a summary of it. A manifest edit that drops a static
         // block then changes what these tests see, which is correct.
-        getManifest: () => JSON.parse(fs.readFileSync(
-          path.join(__dirname, "..", "manifest.json"), "utf8")),
+        getManifest: () => (manifest ? JSON.parse(JSON.stringify(manifest))
+          : JSON.parse(fs.readFileSync(
+            path.join(__dirname, "..", "manifest.json"), "utf8"))),
         onMessage: { addListener: (fn) => messageListeners.push(fn) },
         sendMessage() {},
         openOptionsPage() { state.optionsOpened += 1; },

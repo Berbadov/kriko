@@ -6,7 +6,7 @@ is the door: what is registered, what has been asked for, and the button that
 turns the second into the first.
 
 The reader's sentence this exists for: *"I cannot open the extension on pages
-that aren't registered, so basically it opens on sahibinden only."*
+that aren't registered, so basically it opens on one site only."*
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
