@@ -205,6 +205,26 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
     }
 
 
+def grounded_risk_indices(reply: str, sources: dict[str, str] | None) -> list[int]:
+    """Candidate risk indexes that pass the same exact source check as parse."""
+    if sources is None:
+        return []
+    import json
+
+    from app.packauthor import _payload
+
+    candidates = _payload(reply).get("risks") or []
+    grounded = []
+    for index, candidate in enumerate(candidates):
+        if not isinstance(candidate, dict):
+            continue
+        parsed = parse(json.dumps({"risks": [candidate]}), sources)
+        risks = parsed["risks"]
+        if risks and risks[0]["sources"][0].get("grounded") is True:
+            grounded.append(index)
+    return grounded
+
+
 def closed(reply: str) -> dict | None:
     """The JSON object in a reply that stopped mid-way, closed at the last
     item it finished. `None` when there is no object to close."""

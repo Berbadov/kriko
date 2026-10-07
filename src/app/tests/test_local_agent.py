@@ -80,6 +80,27 @@ def test_pages_are_named_in_the_prompt_with_their_urls():
     assert "https://a.test/2" in complete.prompts[0]
 
 
+def test_the_local_run_reports_its_live_stages_and_engine_counters():
+    asker, _, _ = make(
+        '["widget problems"]',
+        [{"url": "https://a.test/1", "title": "A"}],
+        {"https://a.test/1": "The widget gearbox can fail."})
+    snapshots = []
+    asker.on_telemetry = snapshots.append
+
+    asker.ask("widget problems")
+
+    assert [one["stage"] for one in snapshots] == [
+        "planning searches", "searching the web", "reading pages",
+        "learning from the first pages", "answering from pages",
+        "self-verifying answer", "checking cited quotes",
+    ]
+    assert snapshots[-1]["queries"] == ["widget problems"]
+    assert snapshots[-1]["pages_read"] == 1
+    assert snapshots[-1]["pages"] == ["https://a.test/1"]
+    assert snapshots[-1]["model_calls"] == 4
+
+
 def test_an_unreadable_page_is_a_miss_not_a_failure():
     asker, _, complete = make(
         '["q1"]',
@@ -336,7 +357,8 @@ def test_the_reply_budget_is_said_to_the_model():
 def test_a_url_or_a_sentence_is_not_a_query_and_the_planner_is_asked_again():
     """Measured on a 3B model: its "query" was a url from the reply format."""
     replies = iter(['["https://www.example.test/review", "www.example.test"]',
-                    '["widget gearbox failure", "widget owners forum"]'])
+                    '["widget gearbox failure", "widget owners forum"]',
+                    '[]'])
     prompts: list[str] = []
 
     def planner(prompt):
@@ -350,9 +372,206 @@ def test_a_url_or_a_sentence_is_not_a_query_and_the_planner_is_asked_again():
         reader({"https://a.test/1": "text"}), model="m", search_provider="stub")
     asker.on_action = lambda line: None
     asker.ask("widget")
-    assert len(prompts) == 2
+    assert len(prompts) == 3
     assert asked == ["widget gearbox failure", "widget owners forum"]
     assert local_agent.LocalAsker._usable('["' + "word " * 20 + '"]') == []
+
+
+def test_the_second_search_round_uses_the_first_pages_to_fill_a_gap():
+    replies = iter([
+        '["gearbox failures"]',
+        '["gearbox owner repair reports"]',
+    ])
+    prompts = []
+    searches = []
+
+    def planner(prompt):
+        prompts.append(prompt)
+        return next(replies)
+
+    def search(query, limit):
+        searches.append(query)
+        page = "first" if query == "gearbox failures" else "followup"
+        return [{"url": f"https://a.test/{page}", "title": page}]
+
+    pages = {
+        "https://a.test/first": "Owners report gearbox failures under load.",
+        "https://a.test/followup": "A repair shop replaced the gearbox twice.",
+    }
+    complete = Complete('{"risks":[]}')
+    asker = local_agent.LocalAsker(
+        planner, complete, search, reader(pages),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+
+    asker.ask("widget gearbox reliability")
+
+    assert searches == ["gearbox failures", "gearbox owner repair reports"]
+    assert "Owners report gearbox failures" in prompts[1]
+    assert "https://a.test/first" in complete.prompts[0]
+    assert "https://a.test/followup" in complete.prompts[0]
+    assert asker.queries == ["gearbox failures", "gearbox owner repair reports"]
+    assert list(asker.sources) == ["https://a.test/first", "https://a.test/followup"]
+
+
+def test_a_followup_planner_repairs_one_bad_json_reply_and_keeps_the_run():
+    replies = iter([
+        '["given widget query"]',
+        "not json",
+        '["new widget owner reports"]',
+    ])
+    plan_prompts = []
+    searched = []
+
+    def planner(prompt):
+        plan_prompts.append(prompt)
+        return next(replies)
+
+    def search(query, limit):
+        searched.append(query)
+        suffix = "first" if query == "given widget query" else "followup"
+        return [{"url": f"https://a.test/{suffix}", "title": suffix}]
+
+    asker = local_agent.LocalAsker(
+        planner, Complete('{"risks":[]}'), search,
+        reader({"https://a.test/first": "first page text",
+                "https://a.test/followup": "follow-up page text"}),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+
+    asker.ask("widget")
+
+    assert len(plan_prompts) == 3
+    assert "first page text" in plan_prompts[1]
+    assert searched == ["given widget query", "new widget owner reports"]
+    assert list(asker.sources) == ["https://a.test/first", "https://a.test/followup"]
+
+
+def test_the_model_self_check_is_bounded_retried_and_kept_with_telemetry():
+    answer = (
+        '{"risks":['
+        '{"title":"Gearbox failure","why":"The gearbox fails under load.",'
+        '"url":"https://a.test/1","quote":"gearbox fails under load"},'
+        '{"title":"Made-up fault","why":"The switch catches fire.",'
+        '"url":"https://a.test/1","quote":"the switch catches fire"}]}'
+    )
+    verdicts = iter([
+        "not json",
+        '{"items":[{"index":0,"verdict":"supported"},'
+        '{"index":1,"verdict":"unsupported"}]}',
+    ])
+
+    class Verifier(Complete):
+        def __call__(self, prompt):
+            self.prompts.append(prompt)
+            return next(verdicts)
+
+    verifier = Verifier()
+    asker = local_agent.LocalAsker(
+        Plan('[]'), Complete(answer),
+        searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "The gearbox fails under load."}),
+        model="m", search_provider="stub", verify=verifier,
+        given_queries=["widget gearbox failures"])
+    asker.on_action = lambda line: None
+
+    asker.ask("widget")
+
+    assert len(verifier.prompts) == 2
+    assert "Gearbox failure" in verifier.prompts[0]
+    assert "The gearbox fails under load." in verifier.prompts[0]
+    assert asker.self_verification == {
+        "status": "complete", "verdict": "mixed", "checked": 2,
+        "supported": 1, "unsupported": 1, "unclear": 0,
+        "items": [
+            {"index": 0, "verdict": "supported"},
+            {"index": 1, "verdict": "unsupported"},
+        ],
+    }
+    assert asker.telemetry("complete")["self_verification"]["verdict"] == "mixed"
+    assert asker.model_calls == 3
+
+
+def test_self_check_preserves_raw_risk_indexes_when_non_objects_are_skipped():
+    answer = '{"risks":[null,{"title":"One"},false,{"title":"Three"}]}'
+    verifier = Complete(
+        '{"items":[{"index":1,"verdict":"supported"},'
+        '{"index":3,"verdict":"unclear"}]}')
+    asker = local_agent.LocalAsker(
+        Plan('[]'), Complete(answer), lambda *_: [], lambda *_: "",
+        model="m", search_provider="stub", verify=verifier)
+
+    asker._self_verify(answer)
+
+    assert asker.self_verification == {
+        "status": "complete", "verdict": "inconclusive", "checked": 2,
+        "supported": 1, "unsupported": 0, "unclear": 1,
+        "items": [
+            {"index": 1, "verdict": "supported"},
+            {"index": 3, "verdict": "unclear"},
+        ],
+    }
+
+
+def test_quote_repair_changes_only_a_quote_that_the_page_can_ground():
+    page = ("Owners report the hinge came loose after four months. "
+            "The port stops charging.")
+    answer = (
+        '{"risks":['
+        '{"title":"Loose hinge","why":"Owners report a loose hinge.",'
+        '"url":"https://a.test/1","quote":"a hinge failed"},'
+        '{"title":"Grounded port","why":"The port stops charging.",'
+        '"url":"https://a.test/1","quote":"port stops charging"}]}'
+    )
+    repair = Complete(
+        '{"items":[{"index":0,"quote":"hinge came loose after four months"},'
+        '{"index":1,"quote":"invented words"}]}')
+    asker = local_agent.LocalAsker(
+        Plan('[]'), Complete(answer), lambda *_: [], lambda *_: "",
+        model="m", search_provider="stub", repair=repair)
+    asker.sources = {"https://a.test/1": page}
+
+    fixed = asker._repair_quotes(answer)
+
+    from app.packauthor import _payload
+
+    risks = _payload(fixed)["risks"]
+    assert risks[0]["quote"] == "hinge came loose after four months"
+    assert risks[0]["title"] == "Loose hinge"
+    assert risks[0]["why"] == "Owners report a loose hinge."
+    assert risks[1]["quote"] == "port stops charging"
+    assert len(repair.prompts) == 1
+    assert '"index": 0' in repair.prompts[0]
+    assert '"index": 1' not in repair.prompts[0]
+    assert asker.quote_repair == {
+        "status": "complete", "checked": 1, "repaired": 1, "unrepaired": 0,
+    }
+    assert asker.model_calls == 1
+
+
+def test_quote_repair_rejects_a_quote_from_a_different_fetched_page():
+    answer = (
+        '{"risks":[{"title":"Loose hinge","why":"It loosens.",'
+        '"url":"https://a.test/1","quote":"not on this page"}]}'
+    )
+    repair = Complete(
+        '{"items":[{"index":0,"quote":"a charging port can fail"}]}')
+    asker = local_agent.LocalAsker(
+        Plan('[]'), Complete(answer), lambda *_: [], lambda *_: "",
+        model="m", search_provider="stub", repair=repair)
+    asker.sources = {
+        "https://a.test/1": "The hinge screws may loosen over time.",
+        "https://b.test/2": "A charging port can fail.",
+    }
+
+    fixed = asker._repair_quotes(answer)
+
+    from app.packauthor import _payload
+
+    assert _payload(fixed)["risks"][0]["quote"] == "not on this page"
+    assert asker.quote_repair == {
+        "status": "unrepaired", "checked": 1, "repaired": 0, "unrepaired": 1,
+    }
 
 
 def test_the_socket_asks_the_server_for_its_window(monkeypatch):

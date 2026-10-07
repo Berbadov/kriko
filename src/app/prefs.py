@@ -25,6 +25,7 @@ from app import modelcatalogue
 HARNESS = "preferred_harness"
 MODEL = "llm_model"
 SEARCH = "search_provider"
+AGENT_ORDER = "agent_order"
 
 #: One key per stage of a run, and every one of them optional.
 #:
@@ -90,7 +91,7 @@ LOCAL_SEARCH_URL = "local_search_url"
 LOCAL_TIMEOUT = "local_timeout"
 LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT)
 
-KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS,
+KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS)
 
 
@@ -112,7 +113,7 @@ def for_role(conn, role: str, override: str = "") -> str:
 
 
 def read(conn) -> dict:
-    """The three, with empty meaning "whatever the machine offers"."""
+    """The saved choices, with empty meaning "whatever the machine offers"."""
     from app.web import state
 
     stored = state.all_settings(conn) if conn is not None else {}

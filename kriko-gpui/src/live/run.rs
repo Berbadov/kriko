@@ -61,8 +61,11 @@ pub struct Job {
     pub created_at: String,
     pub finished_at: String,
     pub harness: String,
+    pub backend: String,
     pub subject_id: String,
     pub product: String,
+    /// The engine's partial or final result, used by the Local LLM run card.
+    pub result: Value,
     pub retry_of: String,
     pub attention: Option<Attention>,
     pub feed: Vec<FeedLine>,
@@ -220,8 +223,10 @@ fn job_from(v: &Value) -> Job {
         created_at: api::s(v, "created_at"),
         finished_at: api::s(v, "finished_at"),
         harness: api::s(&params, "harness"),
+        backend: api::s(&params, "backend"),
         subject_id: api::s(&params, "subject_id"),
         product,
+        result: v.get("result").cloned().unwrap_or(Value::Null),
         retry_of: api::s(&params, "retry_of"),
         attention,
         feed,
@@ -310,6 +315,10 @@ pub struct Harness {
     pub id: String,
     pub label: String,
     pub state: RunState,
+    pub model: String,
+    pub models: Vec<String>,
+    pub models_note: String,
+    pub model_selectable: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -405,11 +414,15 @@ pub struct State {
     // agents
     pub harnesses: Vec<Harness>,
     pub preferred: String,
+    /// Saved display order; unknown/new agents remain after the saved ones.
+    pub agent_order: Vec<String>,
     pub prefs_loaded: bool,
     pub targets: Vec<Target>,
     pub targets_loaded: bool,
     pub agent_selected: String,
     pub agent_note: String,
+    pub model_drawer: String,
+    pub models_loading: bool,
     pub verifying: bool,
     pub verify: Option<Verify>,
 }
@@ -511,6 +524,13 @@ impl State {
                 }),
             }
         }
+        let rank: HashMap<&str, usize> = self
+            .agent_order
+            .iter()
+            .enumerate()
+            .map(|(i, id)| (id.as_str(), i))
+            .collect();
+        out.sort_by_key(|entry| rank.get(entry.id.as_str()).copied().unwrap_or(usize::MAX));
         out
     }
 
@@ -572,17 +592,37 @@ impl State {
 fn harnesses_from(v: &Value) -> Vec<Harness> {
     let mut out: Vec<Harness> = api::arr(v, "harnesses")
         .iter()
-        .map(|h| Harness { id: api::s(h, "id"), label: api::s(h, "label"), state: RunState::Ready })
+        .map(|h| Harness {
+            id: api::s(h, "id"),
+            label: api::s(h, "label"),
+            state: RunState::Ready,
+            model: api::s(h, "llm"),
+            models: api::arr(h, "llms")
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect(),
+            models_note: api::s(h, "llms_note"),
+            model_selectable: api::b(h, "llm_selectable"),
+        })
         .collect();
     out.extend(api::arr(v, "unusable").iter().map(|h| Harness {
         id: api::s(h, "id"),
         label: api::s(h, "label"),
         state: RunState::Unusable(api::s(h, "why")),
+        model: String::new(),
+        models: Vec::new(),
+        models_note: String::new(),
+        model_selectable: false,
     }));
     out.extend(api::arr(v, "missing").iter().map(|h| Harness {
         id: api::s(h, "id"),
         label: api::s(h, "label"),
         state: RunState::Missing { hint: api::s(h, "install_hint"), url: api::s(h, "download_url") },
+        model: String::new(),
+        models: Vec::new(),
+        models_note: String::new(),
+        model_selectable: false,
     }));
     out
 }
@@ -654,10 +694,11 @@ impl Kriko {
 
     /// 700 ms: follow the current job while it runs; every 3 s (15 s when
     /// nothing is on screen that shows it) the jobs list; every 10 s the
-    /// agent lists while Agents is open.
+    /// agent lists while Agents is open. Local also watches the job list so
+    /// its latest local quick-look trace stays current.
     fn run_tick(&mut self, cx: &mut Context<Self>) {
         let now = Instant::now();
-        let watching = self.dock_open || self.tab == Tab::Run;
+        let watching = self.dock_open || matches!(self.tab, Tab::Run | Tab::Local);
         let every = Duration::from_secs(if watching { 3 } else { 15 });
         let due = |last: Option<Instant>, every: Duration| last.is_none_or(|t| now - t >= every);
         if self.tab == Tab::Run || self.dock_open {
@@ -763,6 +804,14 @@ impl Kriko {
             .get("chosen")
             .map(|c| api::s(c, "preferred_harness"))
             .unwrap_or_default();
+        run.agent_order = v
+            .get("chosen")
+            .map(|c| api::s(c, "agent_order"))
+            .unwrap_or_default()
+            .split(',')
+            .filter(|id| !id.is_empty())
+            .map(str::to_owned)
+            .collect();
         run.prefs_loaded = true;
     }
 
@@ -904,6 +953,69 @@ impl Kriko {
         self.live.run.verify = None;
     }
 
+    /// Reorder the visible roster and persist it with this installation's
+    /// preferences. Optimistic order makes the control feel immediate; on a
+    /// write failure the list snaps back to the last saved order.
+    pub fn move_agent(&mut self, id: String, delta: isize, cx: &mut Context<Self>) {
+        let mut order: Vec<String> = self.live.run.agent_entries().iter().map(|e| e.id.clone()).collect();
+        let Some(at) = order.iter().position(|one| one == &id) else { return };
+        let Some(to) = at.checked_add_signed(delta).filter(|to| *to < order.len()) else { return };
+        let before = self.live.run.agent_order.clone();
+        order.swap(at, to);
+        self.live.run.agent_order = order.clone();
+        let body = serde_json::json!({"agent_order": order.join(",")});
+        self.fetch(cx, move || api::put("/api/prefs", body), move |this, reply, _| {
+            match reply {
+                Ok(v) => {
+                    this.apply_prefs(&v);
+                    this.live.run.agent_note = "Agent order saved for this installation.".into();
+                }
+                Err(e) => {
+                    this.live.run.agent_order = before;
+                    this.live.run.agent_note = e.message;
+                }
+            }
+        });
+    }
+
+    /// Opening a model drawer asks each provider for its current list. It is
+    /// deliberately lazy so merely showing Agents never waits on CLI probes.
+    pub fn toggle_agent_models(&mut self, id: String, cx: &mut Context<Self>) {
+        if self.live.run.model_drawer == id {
+            self.live.run.model_drawer.clear();
+            self.live.run.models_loading = false;
+            return;
+        }
+        self.live.run.model_drawer = id;
+        self.live.run.models_loading = true;
+        self.fetch(cx, || api::get("/api/prefs?fresh=true"), |this, reply, _| {
+            this.live.run.models_loading = false;
+            this.note(&reply);
+            match reply {
+                Ok(v) => this.apply_prefs(&v),
+                Err(e) => this.live.run.agent_note = e.message,
+            }
+        });
+    }
+
+    /// Store a model offered by this harness, or an empty string for its own
+    /// default. `prefs` derives the key from the roster so provider additions
+    /// do not need another hand-maintained allow-list.
+    pub fn prefer_agent_model(&mut self, id: String, model: String, cx: &mut Context<Self>) {
+        let key = format!("harness_model_{}", id.replace('-', "_"));
+        let body = serde_json::json!({key: model});
+        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
+            this.note(&reply);
+            match reply {
+                Ok(v) => {
+                    this.apply_prefs(&v);
+                    this.live.run.agent_note = "Provider model saved for future runs.".into();
+                }
+                Err(e) => this.live.run.agent_note = e.message,
+            }
+        });
+    }
+
     /// Connect or Reconnect: write this installation's address into the
     /// agent's own config.
     pub fn connect_target(&mut self, id: String, cx: &mut Context<Self>) {
@@ -1026,6 +1138,27 @@ mod tests {
     }
 
     #[test]
+    fn local_quick_look_keeps_engine_telemetry_for_the_local_screen() {
+        let job = job_from(&json!({
+            "job_id": "j", "kind": "quick_look", "state": "running",
+            "done": false, "params": {"backend": "local", "product": "Widget"},
+            "result": {"cost_basis": "self_hosted", "telemetry": {
+                "stage": "reading pages", "pages_read": 2,
+                "pages": ["https://a.test/1", "https://a.test/2"],
+                "self_verification": {"verdict": "mixed"}
+            }}
+        }));
+        assert_eq!(job.backend, "local");
+        assert_eq!(job.product, "Widget");
+        assert_eq!(api::s(&job.result["telemetry"], "stage"), "reading pages");
+        assert_eq!(api::n(&job.result["telemetry"], "pages_read"), Some(2.0));
+        assert_eq!(
+            api::s(&job.result["telemetry"]["self_verification"], "verdict"),
+            "mixed"
+        );
+    }
+
+    #[test]
     fn stamps_are_read_as_utc() {
         assert_eq!(epoch("1970-01-02T00:00:00+00:00"), Some(86400));
         assert_eq!(epoch("2026-10-04T16:48:22+00:00"), epoch("2026-10-04T16:48:22.123"));
@@ -1057,5 +1190,33 @@ mod tests {
         assert_eq!(all.len(), 2);
         assert!(all[0].harness.is_some() && all[0].target.is_some());
         assert!(all[1].harness.is_none());
+    }
+
+    #[test]
+    fn provider_model_lists_are_kept_on_the_agent() {
+        let rows = harnesses_from(&json!({"harnesses": [{
+            "id": "opencode", "label": "OpenCode", "llm": "provider/model-a",
+            "llms": ["provider/model-a", "provider/model-b"],
+            "llms_note": "current list", "llm_selectable": true
+        }]}));
+        assert_eq!(rows[0].model, "provider/model-a");
+        assert_eq!(rows[0].models, ["provider/model-a", "provider/model-b"]);
+        assert_eq!(rows[0].models_note, "current list");
+        assert!(rows[0].model_selectable);
+    }
+
+    #[test]
+    fn saved_agent_order_spans_runner_and_connection_rows() {
+        let mut s = State::default();
+        s.harnesses = harnesses_from(&json!({"harnesses": [
+            {"id": "claude-code", "label": "Claude Code"},
+            {"id": "opencode", "label": "OpenCode"}
+        ]}));
+        s.targets = targets_from(&json!({"targets": [
+            {"id": "cursor", "label": "Cursor", "state": "absent"}
+        ]}));
+        s.agent_order = vec!["cursor".into(), "opencode".into()];
+        let ids: Vec<String> = s.agent_entries().into_iter().map(|e| e.id).collect();
+        assert_eq!(ids, ["cursor", "opencode", "claude-code"]);
     }
 }
