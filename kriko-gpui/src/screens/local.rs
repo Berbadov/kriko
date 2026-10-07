@@ -5,8 +5,10 @@
 
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
+use crate::api::{self, Value};
 use crate::app::{Field, Kriko};
 use crate::live::local::{Held, Machine, Plane, PullPhase};
+use crate::live::run::Job;
 use crate::marks::{self, mark_tile, Mark, Phase};
 use crate::screens::{empty_note, mono, row_desc, row_title, stepper, trust_icon};
 use crate::theme::*;
@@ -607,6 +609,143 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
     models
 }
 
+fn local_run_card(job: Option<&Job>) -> Div {
+    let Some(job) = job else {
+        return card()
+            .flex()
+            .flex_col()
+            .gap(px(10.0))
+            .child(eyebrow("Latest local run"))
+            .child(empty_note(
+                "No local quick-look run yet. A local run will leave its stages and quote checks here.",
+            ));
+    };
+
+    let empty = Value::Null;
+    let telemetry = job.result.get("telemetry").unwrap_or(&empty);
+    let verification = telemetry.get("verification").unwrap_or(&empty);
+    let self_verification = telemetry.get("self_verification").unwrap_or(&empty);
+    let quote_repair = telemetry.get("quote_repair").unwrap_or(&empty);
+    let stage = api::s(telemetry, "stage");
+    let stage = if stage.is_empty() { "Waiting for the local model" } else { &stage };
+    let label = if job.done {
+        if job.state == "succeeded" { "Completed" } else { &job.state }
+    } else if job.state == "queued" {
+        "Queued"
+    } else {
+        "Running"
+    };
+    let model = api::s(&job.result, "model");
+    let pages_read = api::n(telemetry, "pages_read")
+        .map(|n| format!("{} page{} read", n, if n == 1.0 { "" } else { "s" }))
+        .unwrap_or_else(|| "Pages not reported".into());
+    let model_calls = api::n(telemetry, "model_calls")
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| "—".into());
+    let tokens = api::n(telemetry, "tokens_used")
+        .or_else(|| api::n(&job.result, "tokens_used"))
+        .map(|n| n.to_string())
+        .unwrap_or_else(|| "not reported".into());
+    let risks = job.result.get("risks")
+        .and_then(Value::as_array)
+        .map(|items| items.len())
+        .unwrap_or(0);
+    let risk_text = if job.done {
+        format!("{risks} grounded risk(s)")
+    } else {
+        "risk check pending".into()
+    };
+    let verdict = api::s(verification, "verdict");
+    let mut out = card()
+        .flex()
+        .flex_col()
+        .gap(px(10.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(12.0))
+                .child(eyebrow("Latest local run"))
+                .child(chip(label)),
+        )
+        .child(row_title(if job.product.is_empty() { "Quick look" } else { &job.product }))
+        .child(row_desc(&format!(
+            "{}{}{}",
+            stage,
+            if model.is_empty() { String::new() } else { format!(" · {model}") },
+            if job.done { String::new() } else { format!(" · {}", job.message) },
+        )))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .flex_wrap()
+                .gap(px(14.0))
+                .child(mono(&pages_read, INK_2))
+                .child(mono(&format!("{} model calls", model_calls), INK_2))
+                .child(mono(&format!("{tokens} tokens"), INK_2))
+                .child(mono(&risk_text, INK_2))
+                .child(mono("self-hosted · no provider charge", MUTED)),
+        );
+
+    let queries: Vec<String> = api::arr(telemetry, "queries")
+        .iter()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect();
+    out = out.child(eyebrow("Searches"));
+    if queries.is_empty() {
+        out = out.child(row_desc("The local model has not returned any search queries yet."));
+    } else {
+        for query in queries {
+            out = out.child(mono(&query, INK_2));
+        }
+    }
+
+    let pages: Vec<String> = api::arr(telemetry, "pages")
+        .iter()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect();
+    out = out.child(eyebrow("Pages read"));
+    if pages.is_empty() {
+        out = out.child(row_desc("No fetched page is recorded yet."));
+    } else {
+        for page in pages {
+            out = out.child(mono(&page, MUTED));
+        }
+    }
+
+    out = out.child(eyebrow("Engine quote check"))
+        .child(row_desc(if verdict.is_empty() {
+            "Quote verification is waiting for the answer."
+        } else {
+            &verdict
+        }));
+
+    let self_verdict = api::s(self_verification, "verdict");
+    out = out.child(eyebrow("Quote repair"));
+    let repair_status = api::s(quote_repair, "status");
+    let repair_checked = api::n(quote_repair, "checked").unwrap_or(0.0) as usize;
+    let repaired = api::n(quote_repair, "repaired").unwrap_or(0.0) as usize;
+    let repair_text = if repair_status.is_empty() {
+        "Quote repair is waiting for the answer.".to_owned()
+    } else if repair_status == "not needed" {
+        "No quote correction was needed.".to_owned()
+    } else {
+        format!("{repaired} of {repair_checked} quote(s) corrected · {repair_status}")
+    };
+    out = out.child(row_desc(&repair_text));
+
+    out.child(eyebrow("Local model self-check"))
+        .child(row_desc(if self_verdict.is_empty() {
+            "The model self-check is waiting for the answer."
+        } else {
+            &self_verdict
+        }))
+}
+
 pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
     let Some(plane) = app.live.local.plane.clone() else {
@@ -616,6 +755,14 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     };
     let machine = app.live.local.machine.clone();
     let held = app.live.local.held.clone().unwrap_or_default();
+    let local_run = app.live.run.jobs.iter()
+        .filter(|job| {
+            job.kind == "quick_look"
+                && (job.backend == "local"
+                    || api::s(&job.result, "cost_basis") == "self_hosted")
+        })
+        .max_by(|a, b| a.created_at.cmp(&b.created_at))
+        .cloned();
 
     // ---- the GPU memory card ----
     let vram = machine
@@ -704,6 +851,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         .child(guide)
         .child(server)
         .child(models)
+        .child(local_run_card(local_run.as_ref()))
         .child(
             div()
                 .flex()

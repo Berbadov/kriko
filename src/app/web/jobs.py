@@ -168,6 +168,23 @@ class JobRunner:
         pool.submit(self._run, job_id, kind, params)
         return job_id
 
+    def submit_retry(self, parent_id: str, kind: str, params: dict) -> str:
+        """Resolve duplicate retry requests to one durable child.
+
+        The lock covers both the existing-child read and insertion. It also
+        leaves the database row as the source of truth, so a retry request
+        after a process restart finds the child it created before the restart.
+        """
+        with self._lock:
+            conn = self._connect()
+            try:
+                existing = state.retry_of(conn, parent_id)
+            finally:
+                conn.close()
+            if existing is not None:
+                return existing["job_id"]
+            return self.submit(kind, params)
+
     def _run(self, job_id: str, kind: str, params: dict) -> None:
         conn = self._connect()
         progress = Progress(job_id, conn)

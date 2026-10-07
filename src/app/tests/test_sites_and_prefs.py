@@ -230,13 +230,14 @@ def test_a_packs_detail_is_read_only(client, settings, tmp_path):
         "INSERT INTO pack_assets (pack_id, name, kind, content)"
         " VALUES ('probe', 'adapters/arabam.json', 'adapter', ?)",
         ('{"id": "pack.arabam", "site": "arabam.com",'
-         ' "match": ["*arabam.com/*"], "fields": {}}',),
+         ' "match": ["*arabam.com/ilan/*"], "fields": {}}',),
     )
     store.commit()
     body = client.get("/api/sites/arabam.com/detail").json()
     assert body["editable"] is False
     assert body["spec"] is None
     assert body["pack_id"] == "probe"
+    assert body["match"] == ["*arabam.com/ilan/*"]
 
 
 def test_amending_a_learned_site_checks_and_stores(client, settings):
@@ -311,6 +312,13 @@ def test_a_choice_survives_being_made(client):
     assert chosen == dict.fromkeys(prefs.KEYS, "") | {
         "llm_model": "qwen3.5-27b", "search_provider": "tavily",
     }
+
+
+def test_agent_order_is_a_saved_preference(client):
+    order = "opencode,claude-code,cursor"
+    saved = client.put("/api/prefs", json={prefs.AGENT_ORDER: order}).json()
+    assert saved["chosen"][prefs.AGENT_ORDER] == order
+    assert client.get("/api/prefs").json()["chosen"][prefs.AGENT_ORDER] == order
 
 
 def test_either_search_key_is_enough_for_the_paid_plane():

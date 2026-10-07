@@ -198,6 +198,10 @@ impl Kriko {
                 self.refresh_keys(cx);
                 self.refresh_health(cx);
             }
+            Tab::Local => {
+                self.refresh_local(cx);
+                self.refresh_jobs(cx);
+            }
             _ => {}
         }
     }
