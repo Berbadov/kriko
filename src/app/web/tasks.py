@@ -189,7 +189,8 @@ def _local_asker(settings, params: dict, progress: Progress):
         search_base_url=plan["search_url"], search_kind=plan["search_kind"],
         timeout=plan["timeout"],
         given_queries=[str(one).strip() for one in (params.get("queries") or [])
-                       if str(one).strip()])
+                       if str(one).strip()],
+        quote_repair=bool(params.get("_quote_repair")))
     progress.log(f"local plane: {plan['line']}")
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
@@ -1794,7 +1795,25 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             store.close()
 
     if _use_local_ask(settings, params):
-        researcher = _local_asker(settings, params, progress)
+        researcher = _local_asker(
+            settings, {**params, "_quote_repair": True}, progress)
+        # Keep a small, structured snapshot on the job while a local run is
+        # still in flight. The Local LLM screen reads these engine facts from
+        # `/api/jobs`; model output and fetched page text never go in the
+        # telemetry snapshot.
+        if callable(getattr(researcher, "telemetry", None)):
+            def report_local_stage(snapshot: dict) -> None:
+                progress.partial({
+                    "product": product,
+                    "cost_basis": "self_hosted",
+                    "model": str(getattr(researcher, "model", "") or ""),
+                    "telemetry": snapshot,
+                    "risks": [],
+                    "specs": [],
+                    "dropped": 0,
+                })
+
+            researcher.on_telemetry = report_local_stage
     else:
         researcher = harness_researcher(
             preferred=str(params.get("harness") or ""),
@@ -1819,15 +1838,44 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
-    found = quicklook.parse(reply, getattr(researcher, "sources", None))
+    sources = getattr(researcher, "sources", None)
+    found = quicklook.parse(reply, sources)
+    reconcile = getattr(researcher, "reconcile_grounding", None)
+    if callable(reconcile) and sources is not None:
+        reconcile(quicklook.grounded_risk_indices(reply, sources))
     kept = len(found["risks"])
+    telemetry = None
+    if callable(getattr(researcher, "telemetry", None)):
+        grounded = sum(
+            1
+            for risk in found["risks"]
+            if any(source.get("grounded") is True for source in risk.get("sources", []))
+        )
+        if kept == 0 and found["dropped"] == 0:
+            verdict = "No risk claims to verify."
+        elif grounded == kept and found["dropped"] == 0:
+            verdict = f"All {grounded} cited risk quote(s) matched fetched page text."
+        else:
+            verdict = (
+                f"{grounded} cited risk quote(s) matched fetched page text; "
+                f"{found['dropped']} unsupported item(s) were dropped."
+            )
+        telemetry = {
+            **researcher.telemetry("complete"),
+            "self_verification": getattr(researcher, "self_verification", None),
+            "verification": {
+                "checked": grounded,
+                "dropped": found["dropped"],
+                "verdict": verdict,
+            },
+        }
     spent = getattr(researcher, "spent", None)
     billed = getattr(researcher, "cost_basis", "") == "per_token"
     progress.set(1.0, (
         f"{kept} risk(s) found" if kept else "nothing it could source in the time")
         + (f", {found['dropped']} unsourced dropped" if found["dropped"] else "")
         + ((f", ${spent:.2f}" if spent is not None else ", cost unknown") if billed else ""))
-    return {
+    result = {
         "product": product,
         **found,
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
@@ -1837,6 +1885,12 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "spent_usd": spent if billed else None,
         "tokens_used": getattr(researcher, "tokens_used", None),
     }
+    if telemetry is not None:
+        result["telemetry"] = telemetry
+        # The job row can return this final verification even before its
+        # terminal status reaches the jobs-list poll.
+        progress.partial(result)
+    return result
 
 
 def _install_draft(settings, written: dict, progress: Progress) -> str:

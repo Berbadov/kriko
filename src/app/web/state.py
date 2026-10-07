@@ -2484,20 +2484,16 @@ def quick_look_for(conn: sqlite3.Connection, deepen_job_id: str) -> dict | None:
     return None
 
 
-def live_retry_of(conn: sqlite3.Connection, job_id: str) -> dict | None:
-    """A not-yet-finished job whose `retry_of` names `job_id`, if one exists.
+def retry_of(conn: sqlite3.Connection, job_id: str) -> dict | None:
+    """The first retry child for `job_id`, live or finished, if one exists.
 
-    ops-5/ops-m1: two concurrent `POST /retry` on the same job with no
-    server-side guard both create a child — a double-click with no client
-    guard, or any two automation callers racing the same endpoint, always
-    produces two live retries of one run. `retry_job` checks this before
-    submitting a new one so the endpoint is idempotent regardless of what
-    called it.
+    A quick child can finish between two retry requests. Looking only at live
+    children then creates a duplicate even when the client sent the requests
+    as one double-click. A later retry starts from the child row, so resolving
+    the same parent to its first child does not remove the retry path.
     """
     for row in conn.execute(
-        "SELECT * FROM jobs WHERE state NOT IN (?, ?, ?, ?)"
-        " ORDER BY created_at DESC, rowid DESC",
-        tuple(TERMINAL),
+        "SELECT * FROM jobs ORDER BY created_at DESC, rowid DESC"
     ).fetchall():
         job = _job(row)
         if job["params"].get("retry_of") == job_id:

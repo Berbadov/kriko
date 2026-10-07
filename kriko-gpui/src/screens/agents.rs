@@ -74,7 +74,8 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                     .child(div().flex_1().min_w(px(160.0)).child(th("Agent")))
                     .child(div().w(px(200.0)).child(th("Runs checks")))
                     .child(div().w(px(140.0)).child(th("MCP")))
-                    .child(div().w(px(80.0)).child(th("Recent runs"))),
+                    .child(div().w(px(80.0)).child(th("Recent runs")))
+                    .child(div().w(px(72.0)).child(th("Order"))),
             )
             .child(hairline());
 
@@ -149,7 +150,37 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                     div()
                         .w(px(80.0))
                         .child(mono(&app.live.run.runs_of(&e.id).to_string(), INK_2)),
-                );
+                )
+                .child({
+                    let up: gpui::AnyElement = if i > 0 {
+                        let id = e.id.clone();
+                        let move_up = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                            this.move_agent(id.clone(), -1, cx);
+                            cx.notify();
+                        });
+                        ghost(("agent-up", i), "↑").on_click(move_up).into_any_element()
+                    } else {
+                        div().into_any_element()
+                    };
+                    let down: gpui::AnyElement = if i + 1 < entries.len() {
+                        let id = e.id.clone();
+                        let move_down = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                            this.move_agent(id.clone(), 1, cx);
+                            cx.notify();
+                        });
+                        ghost(("agent-down", i), "↓").on_click(move_down).into_any_element()
+                    } else {
+                        div().into_any_element()
+                    };
+                    div()
+                        .w(px(72.0))
+                        .flex_none()
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .child(up)
+                        .child(down)
+                });
             table = table.child(row);
             if i + 1 < entries.len() {
                 table = table.child(hairline());
@@ -236,6 +267,72 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
                 c = c.child(row_desc(if hint.is_empty() { "Not found on this machine." } else { hint }));
                 if !url.is_empty() {
                     c = c.child(mono(url, DIM));
+                }
+            }
+        }
+
+        if h.model_selectable {
+            let opened = app.live.run.model_drawer == e.id;
+            let model_description = if h.model.is_empty() {
+                "Using the provider's default model.".to_string()
+            } else {
+                format!("Using {}.", h.model)
+            };
+            let id = e.id.clone();
+            let toggle_models = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.toggle_agent_models(id.clone(), cx);
+                cx.notify();
+            });
+            c = c
+                .child(hairline())
+                .child(eyebrow("Provider model"))
+                .child(row_desc(&model_description))
+                .child(ghost(
+                    "agent-models",
+                    if opened { "Hide models" } else { "Choose a model" },
+                ).on_click(toggle_models));
+            if opened {
+                if app.live.run.models_loading {
+                    c = c.child(row_desc("Reading this provider's current model list…"));
+                } else if h.models.is_empty() {
+                    let note = if h.models_note.is_empty() {
+                        "This provider did not list any models.".to_string()
+                    } else {
+                        h.models_note.clone()
+                    };
+                    c = c.child(row_desc(&note));
+                }
+                for (i, model) in h.models.iter().enumerate() {
+                    let picked = h.model == *model;
+                    let chosen = model.clone();
+                    let id = e.id.clone();
+                    let choose = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                        this.prefer_agent_model(id.clone(), chosen.clone(), cx);
+                        cx.notify();
+                    });
+                    c = c.child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .gap(px(10.0))
+                            .child(div().flex_1().min_w(px(0.0)).truncate().child(mono(model, INK_2)))
+                            .child(if picked {
+                                chip("In use").into_any_element()
+                            } else {
+                                ghost(("agent-model-use", i), "Use")
+                                    .on_click(choose)
+                                    .into_any_element()
+                            }),
+                    );
+                }
+                if !h.model.is_empty() {
+                    let id = e.id.clone();
+                    let default = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                        this.prefer_agent_model(id.clone(), String::new(), cx);
+                        cx.notify();
+                    });
+                    c = c.child(ghost("agent-model-default", "Use provider default").on_click(default));
                 }
             }
         }
