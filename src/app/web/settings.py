@@ -89,6 +89,9 @@ class Settings:
     #: UI state — history and interface settings. Beside the engine's store in
     #: ~/.kriko, never inside it: see app/web/state.py for why.
     app_state_path: Path = DEFAULT_STORE.parent / "app.sqlite"
+    #: The port selected for the browser extension listener. The sidecar sets
+    #: this from its launch argument before it creates the web app.
+    extension_port: int = EXTENSION_PORT
     #: Where to look for newer packs. A `packs.json` published beside the
     #: installers on the releases page — knowledge ships on its own clock, so
     #: `latest` rather than a pinned tag, and overridable for anyone running
@@ -148,6 +151,7 @@ class Settings:
             ),
             "releases_url": os.environ.get("KRIKO_RELEASES_URL", cls.releases_url),
             "extension_port_bound": os.environ.get("KRIKO_EXTENSION_BOUND") == "1",
+            "extension_port": int(os.environ.get("KRIKO_EXTENSION_PORT", EXTENSION_PORT)),
             "shell_attached": os.environ.get("KRIKO_SUPERVISED") == "1",
         }
         base.update(overrides)
