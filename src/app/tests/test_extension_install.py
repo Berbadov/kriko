@@ -162,13 +162,16 @@ def test_an_ordinary_request_is_not_a_sighting(tmp_path):
 
 
 def test_the_page_is_told_when_the_extension_port_is_not_ours(tmp_path):
-    """The extension cannot be handed a port, so it hardcodes one.
+    """The page reports the listener port selected for this engine.
 
     When something else on the machine holds it, the extension installs
     perfectly and fails on every listing — and the reader's obvious response,
     reinstalling the extension, never helps. The app knows; it has to say.
     """
     assert _client(tmp_path).get("/api/extension").json()["port"] == EXTENSION_PORT
+    selected = _client(tmp_path, extension_port=8790)
+    assert selected.get("/api/extension").json()["port"] == 8790
+    assert selected.get("/api/health").json()["extension_port"] == 8790
     assert _client(tmp_path).get("/api/extension").json()["port_is_ours"] is False
     assert (
         _client(tmp_path, extension_port_bound=True).get("/api/extension").json()[

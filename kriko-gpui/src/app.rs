@@ -218,6 +218,7 @@ pub enum Field {
     LocalUrl,
     LocalSearch,
     LocalGet,
+    ExtensionPort,
 }
 
 pub struct InputState {
@@ -326,11 +327,14 @@ pub struct Kriko {
     pub local_url: InputState,
     pub local_search: InputState,
     pub local_get: InputState,
+    pub extension_port_input: InputState,
 }
 
 
 impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
+        let mut extension_port_input = InputState::new(cx);
+        extension_port_input.value = engine::configured_extension_port().to_string();
         let mut app = Self {
             tab: Tab::Home,
             engine: engine::status(),
@@ -355,6 +359,7 @@ impl Kriko {
             local_url: InputState::new(cx),
             local_search: InputState::new(cx),
             local_get: InputState::new(cx),
+            extension_port_input,
         };
         // A verification hook: KRIKO_VERIFY seeds one page's state so it can
         // be captured without driving the mouse on a busy desktop.
@@ -446,6 +451,7 @@ impl Kriko {
             Field::LocalUrl => &self.local_url,
             Field::LocalSearch => &self.local_search,
             Field::LocalGet => &self.local_get,
+            Field::ExtensionPort => &self.extension_port_input,
         }
     }
 
@@ -463,6 +469,7 @@ impl Kriko {
             Field::LocalUrl => &mut self.local_url,
             Field::LocalSearch => &mut self.local_search,
             Field::LocalGet => &mut self.local_get,
+            Field::ExtensionPort => &mut self.extension_port_input,
         }
     }
 
@@ -524,6 +531,10 @@ impl Kriko {
         // Enter in the Get field starts the download.
         if ks.key.as_str() == "enter" && field == Field::LocalGet {
             this.local_pull(cx);
+            return;
+        }
+        if ks.key.as_str() == "enter" && field == Field::ExtensionPort {
+            this.save_extension_port(cx);
             return;
         }
         // Enter on the compare question asks it, the same as the Ask key.
