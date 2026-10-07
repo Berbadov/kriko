@@ -196,13 +196,20 @@ def test_research_this_product_sends_the_listing_to_all_three_passes(client, mon
     r = client.post("/api/extension/research-plane", json={
         "q": "Zephyr Tourer 3.0", "allow_draft": True, "url": URL,
         "facts": {"Motor Gücü": "233 hp", "Yıl": "2008"},
-        "description": "Sahibinden temiz, BUG motor.",
+        "description": "Ilk elden temiz, BUG motor.",
     })
     assert r.status_code == 200, r.text
-    assert done.wait(10)
     deadline = time.time() + 10
     while not prompts["quick"] and time.time() < deadline:
         time.sleep(0.05)
+    # The quick look is one job; the other two passes run when it is added
+    # to a pack (#129), and the listing travels with it.
+    while client.get(f"/api/jobs/{r.json()['job_id']}").json()["state"] != "succeeded" \
+            and time.time() < deadline:
+        time.sleep(0.05)
+    added = client.post(f"/api/extension/quick-looks/{r.json()['job_id']}/pack")
+    assert added.status_code == 200, added.text
+    assert done.wait(10)
     for name in ("quick", "check", "author"):
         assert prompts[name], name
         assert "* Motor Gücü: 233 hp" in prompts[name][0], name
