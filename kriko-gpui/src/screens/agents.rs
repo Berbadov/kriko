@@ -309,6 +309,16 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
                     .child(row_desc("Starts Kriko's MCP server and asks it who it is.")),
             ),
     );
+    if app.live.run.verifying {
+        c = c.child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(10.0))
+                .child(led_ripple("agent-verify-progress", motion))
+                .child(row_desc("Checking the configured command and available tools…")),
+        );
+    }
     if let Some(v) = &app.live.run.verify {
         let mut steps = div().flex().flex_col().gap(px(6.0));
         for (i, (step, state)) in v.steps.iter().enumerate() {
@@ -327,6 +337,22 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
             );
         }
         c = c.child(steps);
+        c = c.child(row_desc(&format!(
+            "{} · {} ms",
+            if v.ok { "Connection check passed" } else { "Connection check failed" },
+            v.ms
+        )));
+        if !v.log.is_empty() {
+            c = c.child(
+                well()
+                    .max_h(px(220.0))
+                    .p(px(12.0))
+                    .font_family(MONO)
+                    .text_size(px(12.0))
+                    .text_color(rgb(INK_2))
+                    .child(v.log.clone()),
+            );
+        }
         if !v.ok && !v.detail.is_empty() {
             c = c.child(row_desc(&v.detail));
         }
