@@ -14,6 +14,8 @@ any category (G6). Nothing the agent replies is filed as knowledge — this is
 the reader's own decision support, not a submission path, and it writes only
 to `app.sqlite`.
 """
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
@@ -26,6 +28,7 @@ router = APIRouter(prefix="/api/compare-drafts", tags=["compare"])
 class QuestionRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     harness: str = Field(default="", max_length=200)
+    backend: Literal["harness", "local"] = "harness"
 
 
 @router.get("/{draft_id}/questions")
@@ -59,6 +62,7 @@ def ask_question(
             "question_id": question["question_id"],
             "question": question["question"],
             "harness": body.harness,
+            "backend": body.backend,
         })
     except KeyError as exc:  # pragma: no cover - the handler is registered
         raise HTTPException(400, str(exc)) from exc

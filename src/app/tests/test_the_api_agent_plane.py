@@ -416,10 +416,13 @@ def test_the_panel_names_the_bill_before_a_picked_api_agent_spends(machine, tmp_
             "q": "Unknown Widget", "allow_draft": True}).json()
         assert answer["cost_basis"] == "per_token"
         assert answer["harness"] == "mistral-api"
-        assert answer["budget_usd"] == 0.70
+        # One job (#129): the quick look, billed at this door's cap. A pack
+        # run is a second bill only when the reader adds the look to a pack.
+        assert answer["budget_usd"] == 0.20
         assert "Bills your Mistral API key" in answer["note"]
         budgets = {kind: params["budget_usd"] for kind, params in submitted}
-        assert budgets == {"pack_author": apiagent.DEFAULT_BUDGET_USD, "quick_look": 0.20}
+        assert budgets == {"quick_look": 0.20}
+        assert apiagent.DEFAULT_BUDGET_USD > 0.20
     finally:
         client.app.state.jobs.shutdown(wait=True)
 

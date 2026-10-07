@@ -476,6 +476,30 @@ pub fn ghost(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .child(label.to_uppercase())
 }
 
+/// A compact danger key for a row that already carries its own label: the
+/// dock's per-lane Stop, which at full key size outweighed the task it stops.
+pub fn danger_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
+    div()
+        .id(id)
+        .flex_none()
+        .h(px(22.0))
+        .px(px(8.0))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded(px(6.0))
+        .font_family(MONO)
+        .text_color(rgb(DANGER))
+        .text_size(px(10.0))
+        .cursor_pointer()
+        .bg(rgba(DANGER_WASH))
+        .border_1()
+        .border_color(rgba(DANGER_EDGE))
+        .hover(|s| s.bg(rgba(0xff6b5e3d)))
+        .active(|s| s.opacity(0.85))
+        .child(label.to_uppercase())
+}
+
 /// Danger button: danger wash fill, danger text.
 pub fn danger(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
@@ -715,6 +739,50 @@ pub fn tag(id: impl Into<SharedString>, state: TagState, label: &str, motion: bo
 /// leading lit segment blinks (`.k-meter i.head`); `motion == false` freezes it.
 pub fn meter(value: f32, segments: usize) -> Div {
     meter_live("meter", value, segments, false, true)
+}
+
+/// A thin progress bar for a job in flight: a track, a fill to the job's own
+/// share, and a sheen that keeps sweeping across the fill so a run that sits
+/// on one stage still reads as alive. Never a number beside it (#129: "Not
+/// percentages but progress bars, animated"). Still under reduced motion.
+pub fn progress_bar(id: &str, share: f32, motion: bool) -> Div {
+    // a sliver even at zero, so a run that has just started is visibly on
+    let share = share.clamp(0.0, 1.0).max(0.06);
+    let mut fill = div()
+        .relative()
+        .h_full()
+        .w(relative(share))
+        .rounded(px(2.0))
+        .overflow_hidden()
+        .bg(rgb(ICE));
+    if motion {
+        let sheen = div()
+            .absolute()
+            .top_0()
+            .h_full()
+            .w(relative(0.35))
+            .bg(linear_gradient(
+                90.0,
+                linear_color_stop(rgba(0xffffff00), 0.0),
+                linear_color_stop(rgba(0xffffffb0), 0.5),
+            ))
+            .with_animation(
+                gpui::ElementId::Name(SharedString::from(format!("{id}-sheen"))),
+                Animation::new(std::time::Duration::from_millis(1400))
+                    .repeat()
+                    .with_easing(|t| t),
+                // from just off the left edge to just off the right
+                |el, t| el.left(relative(-0.35 + 1.35 * t)),
+            );
+        fill = fill.child(sheen);
+    }
+    div()
+        .h(px(4.0))
+        .w_full()
+        .rounded(px(2.0))
+        .overflow_hidden()
+        .bg(rgba(GLASS_2))
+        .child(fill)
 }
 
 /// A working indicator: three round LEDs breathing in turn, left to right,

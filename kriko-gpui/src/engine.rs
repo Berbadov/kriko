@@ -29,9 +29,34 @@ pub const PORT_LINE: &str = "KRIKO_PORT";
 pub const FOCUS_LINE: &str = "KRIKO_FOCUS";
 /// The sidecar prints this with `ack|hide|quit` when the window is answered.
 pub const WINDOW_LINE: &str = "KRIKO_WINDOW";
-/// The fixed second socket the browser extension knows. Must equal
+/// Default second socket for the browser extension. Must equal
 /// `app.web.settings.EXTENSION_PORT`.
 pub const EXTENSION_PORT: u16 = 8787;
+
+fn extension_port_path() -> Option<std::path::PathBuf> {
+    std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(|home| std::path::PathBuf::from(home).join(".kriko").join("extension-port"))
+}
+
+/// The reader's saved listener port, or the default on a new install.
+pub fn configured_extension_port() -> u16 {
+    extension_port_path()
+        .and_then(|path| std::fs::read_to_string(path).ok())
+        .and_then(|text| text.trim().parse::<u16>().ok())
+        .filter(|port| *port != 0)
+        .unwrap_or(EXTENSION_PORT)
+}
+
+/// Save a port before restarting the supervised sidecar.
+pub fn set_extension_port(port: u16) -> Result<(), String> {
+    if port == 0 {
+        return Err("Choose a port from 1 to 65535.".into());
+    }
+    let path = extension_port_path().ok_or("Cannot find the user home directory.")?;
+    std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
+    std::fs::write(path, port.to_string()).map_err(|e| e.to_string())
+}
 /// How long the engine gets to answer `/api/health` after it names a port.
 const HEALTH_TIMEOUT: Duration = Duration::from_secs(45);
 /// The most stderr kept for the failure screen (the tail is what matters).
@@ -65,6 +90,7 @@ struct Supervisor {
     stdin: Option<ChildStdin>,
     stderr: String,
     started: bool,
+    generation: u64,
 }
 
 fn sup() -> &'static Mutex<Supervisor> {
@@ -77,12 +103,16 @@ fn sup() -> &'static Mutex<Supervisor> {
             stdin: None,
             stderr: String::new(),
             started: false,
+            generation: 0,
         })
     })
 }
 
-fn set_status(status: Status) {
-    sup().lock().unwrap().status = status;
+fn set_status(generation: u64, status: Status) {
+    let mut s = sup().lock().unwrap();
+    if s.started && s.generation == generation {
+        s.status = status;
+    }
 }
 
 /// The engine's state right now.
@@ -107,18 +137,20 @@ pub fn take_events() -> Vec<ShellEvent> {
 /// it again while a start is in flight or done does nothing, so a retry
 /// after a failure is [`restart`].
 pub fn start() {
-    {
+    let generation = {
         let mut s = sup().lock().unwrap();
         if s.started {
             return;
         }
         s.started = true;
+        s.generation += 1;
         s.stderr.clear();
         s.status = Status::Starting("Starting Kriko's engine…".into());
-    }
+        s.generation
+    };
     std::thread::Builder::new()
         .name("engine-supervisor".into())
-        .spawn(supervise)
+        .spawn(move || supervise(generation))
         .ok();
 }
 
@@ -128,23 +160,24 @@ pub fn restart() {
     start();
 }
 
-fn supervise() {
+fn supervise(generation: u64) {
     if let Ok(url) = std::env::var("KRIKO_URL") {
         let url = url.trim_end_matches('/').to_string();
-        attach(&url);
+        attach(&url, generation);
         return;
     }
+    let extension_port = configured_extension_port();
     let beside = std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(|dir| dir.join(sidecar_name())))
         .filter(|path| path.is_file());
-    let command = match beside {
+    let mut command = match beside {
         Some(path) => Command::new(path),
         None => {
             // no bundled engine: a running one is the next best thing
-            let fixed = format!("http://127.0.0.1:{EXTENSION_PORT}");
+            let fixed = format!("http://127.0.0.1:{extension_port}");
             if health(&fixed).is_ok() {
-                attach(&fixed);
+                attach(&fixed, generation);
                 return;
             }
             let python = std::env::var("KRIKO_PYTHON")
@@ -157,7 +190,8 @@ fn supervise() {
             c
         }
     };
-    spawn(command);
+    command.arg("--extension-port").arg(extension_port.to_string());
+    spawn(command, generation);
 }
 
 /// The source checkout's own virtualenv, found by walking up from this exe
@@ -176,17 +210,17 @@ fn sidecar_name() -> &'static str {
     }
 }
 
-fn attach(base: &str) {
-    set_status(Status::Starting(format!("Connecting to {base}…")));
+fn attach(base: &str, generation: u64) {
+    set_status(generation, Status::Starting(format!("Connecting to {base}…")));
     let deadline = Instant::now() + HEALTH_TIMEOUT;
     loop {
         match health(base) {
             Ok(version) => {
-                set_status(Status::Ready { base: base.to_string(), version });
+                set_status(generation, Status::Ready { base: base.to_string(), version });
                 return;
             }
             Err(e) if Instant::now() >= deadline => {
-                set_status(Status::Failed {
+                set_status(generation, Status::Failed {
                     title: "Kriko's engine never answered".into(),
                     detail: format!("{base}/api/health: {e}"),
                 });
@@ -197,7 +231,7 @@ fn attach(base: &str) {
     }
 }
 
-fn spawn(mut command: Command) {
+fn spawn(mut command: Command, generation: u64) {
     command
         .args(["--exit-with-parent", "--supervised"])
         .stdin(Stdio::piped())
@@ -212,7 +246,7 @@ fn spawn(mut command: Command) {
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(e) => {
-            set_status(Status::Failed {
+            set_status(generation, Status::Failed {
                 title: "Kriko's engine could not be started".into(),
                 detail: format!("{:?}: {e}", command.get_program()),
             });
@@ -255,7 +289,7 @@ fn spawn(mut command: Command) {
                 .nth(1)
                 .and_then(|rest| rest.trim().parse::<u16>().ok());
             if let Some(p) = port {
-                std::thread::spawn(move || attach(&format!("http://127.0.0.1:{p}")));
+                std::thread::spawn(move || attach(&format!("http://127.0.0.1:{p}"), generation));
             }
         } else if line.contains(FOCUS_LINE) {
             let route = line.split(FOCUS_LINE).nth(1).unwrap_or("").trim().to_string();
@@ -288,7 +322,7 @@ fn spawn(mut command: Command) {
         std::thread::sleep(Duration::from_millis(50));
     }
     let mut s = sup().lock().unwrap();
-    if !s.started {
+    if !s.started || s.generation != generation {
         return; // stopped on purpose
     }
     let said = s.stderr.trim().to_string();
@@ -316,6 +350,7 @@ pub fn stop() {
     let (child, stdin) = {
         let mut s = sup().lock().unwrap();
         s.started = false;
+        s.generation += 1;
         (s.child.take(), s.stdin.take())
     };
     drop(stdin); // the polite way: the sidecar watches this pipe

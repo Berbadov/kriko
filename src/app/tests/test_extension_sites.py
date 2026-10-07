@@ -107,7 +107,7 @@ def host_of(pattern: str) -> str:
 
     Both dialects are globs over a URL and both may lead with a wildcard, so
     the comparison is on the registrable-looking tail rather than on equality:
-    `https://*.sahibinden.com/*` and `*sahibinden.com/ilan/*` name the same
+    `https://*.example.com/*` and `*example.com/listing/*` name the same
     site and are not the same string.
     """
     tail = pattern.split("://", 1)[-1]
@@ -276,7 +276,7 @@ def test_nothing_shipped_reaches_a_third_party():
                 continue
             # A `match` pattern in the manifest is a *permission*, not a
             # fetch, and the test above already holds it against the packs.
-            if "sahibinden.com" in host or "carchecker.pro" in host:
+            if "carchecker.pro" in host:
                 continue
             offenders.append(f"{path}: {match.group(0)}")
     assert offenders == []

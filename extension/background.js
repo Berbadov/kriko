@@ -17,6 +17,15 @@
 
 const DEFAULT_API_BASE = "http://127.0.0.1:8787";
 const LOADED_CONTENT_DIGEST = "";
+const CONNECTION_ALARM = "kriko-connection";
+const CONNECTION_PERIOD_MINUTES = 1;
+const ACTION_ICONS = {
+  online: { 16: "assets/icons/icon-16.png", 32: "assets/icons/icon-32.png",
+            48: "assets/icons/icon-48.png" },
+  offline: { 16: "assets/icons/icon-offline-16.png",
+             32: "assets/icons/icon-offline-32.png",
+             48: "assets/icons/icon-offline-48.png" },
+};
 
 //: How many rows one search may return to the panel. The engine allows up to
 //: 50; a floating panel beside a listing is a list somebody scans, and the
@@ -111,7 +120,7 @@ async function toggleHoverLite(tab) {
 // It used to toggle the panel and give up silently where no content script is
 // running — which is every site no pack has an adapter for, and which the
 // reader experienced as "I cannot open the extension on pages that aren't
-// registered, so basically it opens on sahibinden only". Nothing was broken;
+// registered, so basically it opens on one site only". Nothing was broken;
 // the site was simply unknown, and the extension had no way to say so.
 //
 // So a click that finds no panel now *reports the page* to the app. The app
@@ -355,7 +364,7 @@ function adapterFor(url, adapters) {
 
 // Whether *some* installed adapter reads this site at all, even though none
 // of its patterns matched this exact page. A pack's match pattern is a glob
-// like `*sahibinden.com/ilan/*` — the domain fragment before the first `/` is
+// like `*example.com/listing/*` — the domain fragment before the first `/` is
 // as much "which site" as this extension can read without hardcoding a
 // site's own shape (the scalability principle: no site vocabulary here).
 // Distinguishing this from "no pack reads this site" is extension-5/6 (B145
@@ -439,6 +448,38 @@ async function _fetchApp(url, init) {
   }
 }
 
+// Chrome suspends this worker while it is idle. The toolbar icon is browser
+// state, not worker memory, so refresh it on browser startup and a short alarm.
+// A separate icon leaves the per-tab risk count and question/error badges alone.
+let connectionProbe = null;
+async function refreshConnectionIcon() {
+  if (connectionProbe) return connectionProbe;
+  connectionProbe = (async () => {
+    let connected = false;
+    let version = "";
+    try {
+      const response = await _fetchApp(`${await apiBase()}/api/health`);
+      if (response.ok) {
+        const health = await response.json();
+        connected = health?.ok === true;
+        version = String(health?.version || "");
+      }
+    } catch (_) {
+      // No listener is the ordinary state before Kriko starts.
+    }
+    await chrome.action.setIcon({ path: connected ? ACTION_ICONS.online : ACTION_ICONS.offline });
+    await chrome.action.setTitle({ title: connected
+      ? `Kriko ${version}: connected. Click to open the panel.`
+      : "Kriko: app is not running. Open Kriko to connect." });
+    return connected;
+  })();
+  try {
+    return await connectionProbe;
+  } finally {
+    connectionProbe = null;
+  }
+}
+
 // ── the other half of the handshake ─────────────────────────────────────
 //
 // The app answers with the oldest extension it can talk to, on every
@@ -493,8 +534,16 @@ chrome.runtime.onInstalled.addListener(async (details) => {
     const last = got && got[SELF_RELOAD_KEY];
     if (!last || !last.pending) return;
     await chrome.storage.local.set({ [SELF_RELOAD_KEY]: { ...last, pending: false } });
+    // Every site the panel is injected on: the manifest's own blocks (none
+    // are shipped today) and the per-site registrations, which persist across
+    // the reload. Not the every-site one: `https://*/*` would reload every
+    // tab the reader has open to refresh a panel most of them never showed.
     const patterns = [];
-    for (const entry of chrome.runtime.getManifest().content_scripts || []) {
+    const blocks = [
+      ...(chrome.runtime.getManifest().content_scripts || []),
+      ...(await _registeredSiteScripts()),
+    ];
+    for (const entry of blocks) {
       for (const one of entry.matches || []) if (!patterns.includes(one)) patterns.push(one);
     }
     if (!patterns.length) return;
@@ -589,7 +638,7 @@ async function fetchAdapters() {
 //
 // *Detection.* The app already knows; it is the only thing that can. So the
 // worker asks — `/api/adapters` is the same endpoint a run already uses, and
-// an adapter's `site` is a bare registrable host (`sahibinden.com`), which
+// an adapter's `site` is a bare registrable host (`example.com`), which
 // becomes exactly one match pattern. No hostname list lives in this file, and
 // none should ever be added to it.
 //
@@ -917,17 +966,26 @@ async function _reportActivation(sites) {
 // fails, and something has to try again without the reader doing anything.
 chrome.runtime.onInstalled.addListener(() => {
   void syncSites({ fresh: true });
+  void refreshConnectionIcon();
 });
 if (chrome.runtime.onStartup) {
-  chrome.runtime.onStartup.addListener(() => { void syncSites({ fresh: true }); });
+  chrome.runtime.onStartup.addListener(() => {
+    void syncSites({ fresh: true });
+    void refreshConnectionIcon();
+  });
 }
 if (chrome.alarms) {
   chrome.alarms.create(SITE_SYNC_ALARM, {
     periodInMinutes: SITE_SYNC_PERIOD_MINUTES,
     delayInMinutes: 1,
   });
+  chrome.alarms.create(CONNECTION_ALARM, {
+    periodInMinutes: CONNECTION_PERIOD_MINUTES,
+    delayInMinutes: 1,
+  });
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm && alarm.name === SITE_SYNC_ALARM) void syncSites({ fresh: true });
+    if (alarm && alarm.name === CONNECTION_ALARM) void refreshConnectionIcon();
   });
 }
 // A grant is the event the pending list was waiting for, and a revocation has
@@ -1694,6 +1752,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch((error) => sendResponse({
         ok: false, status: error.status, code: error.code, error: error.message }));
     return true;
+  }
+
+  // A saved quick look joins a pack only when the reader asks: the look is
+  // one job, the pack run that files its sourced risks is a second, started
+  // here (POST /api/extension/quick-looks/{id}/pack).
+  if (request.type === "QUICK_TO_PACK") {
+    const jobId = String(request.payload?.job_id || "").trim();
+    if (!jobId) {
+      sendResponse({ ok: false, error: "Missing job_id" });
+      return false;
+    }
+    _postApp(`/api/extension/quick-looks/${encodeURIComponent(jobId)}/pack`, {})
+      .then((job) => sendResponse({ ok: true, job }))
+      .catch((error) => sendResponse({
+        ok: false, status: error.status, code: error.code, error: error.message }));
+    return true; // async
   }
 
   // Queue mode: the listing's product joins the app's research queue, for an

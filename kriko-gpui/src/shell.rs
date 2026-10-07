@@ -162,7 +162,7 @@ mod tray {
         // the exe's own icon resource (build.rs embeds assets/kriko.ico as 1)
         let icon = Icon::from_resource(1, None).map_err(|e| e.to_string())?;
         let tray = TrayIconBuilder::new()
-            .with_tooltip("Kriko — engine running")
+            .with_tooltip("Kriko — connecting to engine")
             .with_menu(Box::new(menu))
             .with_menu_on_left_click(false)
             .with_icon(icon)
@@ -197,6 +197,14 @@ mod tray {
     pub fn remove() {
         ICON.with(|slot| slot.borrow_mut().take());
     }
+
+    pub fn set_tooltip(text: &str) {
+        ICON.with(|slot| {
+            if let Some(icon) = slot.borrow().as_ref() {
+                let _ = icon.set_tooltip(Some(text));
+            }
+        });
+    }
 }
 
 /// Puts Kriko in the tray. On failure closing will quit, never strand.
@@ -221,4 +229,19 @@ pub fn poll_tray() -> Vec<TrayAction> {
 pub fn remove_tray() {
     #[cfg(windows)]
     tray::remove();
+}
+
+/// The tray remains visible when the window is hidden, so its label must
+/// describe the engine's actual state rather than merely the app process.
+pub fn set_tray_status(ready: bool, failed: bool) {
+    #[cfg(windows)]
+    tray::set_tooltip(if ready {
+        "Kriko — engine ready for browser extension"
+    } else if failed {
+        "Kriko — engine stopped; open the app"
+    } else {
+        "Kriko — connecting to engine"
+    });
+    #[cfg(not(windows))]
+    let _ = (ready, failed);
 }

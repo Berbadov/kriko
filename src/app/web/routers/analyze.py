@@ -1,8 +1,8 @@
 """The browser plane: a scraped page in, ranked claims out.
 
 This is the drop-in replacement for the old `/analyze`, with one difference
-that matters: the old endpoint knew about Sahibinden. This one knows about
-adapters, and the cars pack knows about Sahibinden. Adding a listing site is a
+that matters: the old endpoint knew about one listing site. This one knows
+about adapters, and a pack knows about its sites. Adding a listing site is a
 JSON file in a pack.
 """
 
@@ -94,7 +94,7 @@ def list_adapters(store=Depends(get_store), app_state=Depends(get_app_state)):
         # Sites this installation learned by itself. Listed here because this
         # endpoint is what the extension reads to decide where to inject: a
         # site the reader registered is useless if the browser never runs on
-        # it, and that seam is exactly what "it only opens on sahibinden" was.
+        # it, and that seam is exactly what "it only opens on one site" was.
         {
             "id": (row.get("spec") or {}).get("id", f"local.{row['host']}"),
             "site": row["host"],

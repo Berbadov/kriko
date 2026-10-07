@@ -119,7 +119,7 @@ impl Tab {
             Tab::Activity => "What Kriko did today, and what is waiting for you.",
             Tab::Agents => "The coding agents on this machine that can reach Kriko.",
             Tab::Benchmark => "How the agents and planes do on a fixed test set, here.",
-            Tab::Local => "A local model, for checks that never leave this machine.",
+            Tab::Local => "Choose a model on this machine and see where its answers come from.",
             Tab::Settings => "Control how Kriko starts, reads and stores things.",
             Tab::About => "Kriko. Local product knowledge.",
         }
@@ -158,6 +158,7 @@ pub enum Field {
     LocalUrl,
     LocalSearch,
     LocalGet,
+    ExtensionPort,
 }
 
 pub struct InputState {
@@ -250,6 +251,9 @@ pub struct Kriko {
     // browse / agents / packs / models
     pub browse_view: usize,
     pub browse_view_prev: usize,
+    pub browse_page: usize,
+    pub browse_page_size: usize,
+    pub browse_filters_open: bool,
     // run: the subject search that starts a check
     pub run_search: InputState,
     // the live actions dock
@@ -268,11 +272,14 @@ pub struct Kriko {
     pub local_url: InputState,
     pub local_search: InputState,
     pub local_get: InputState,
+    pub extension_port_input: InputState,
 }
 
 
 impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
+        let mut extension_port_input = InputState::new(cx);
+        extension_port_input.value = engine::configured_extension_port().to_string();
         let mut app = Self {
             tab: Tab::Home,
             engine: engine::status(),
@@ -287,6 +294,9 @@ impl Kriko {
             history_span: SpanFilter::All,
             browse_view: 0,
             browse_view_prev: 0,
+            browse_page: 0,
+            browse_page_size: 25,
+            browse_filters_open: false,
             run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
@@ -298,6 +308,7 @@ impl Kriko {
             local_url: InputState::new(cx),
             local_search: InputState::new(cx),
             local_get: InputState::new(cx),
+            extension_port_input,
         };
         // A verification hook: KRIKO_VERIFY seeds one page's state so it can
         // be captured without driving the mouse on a busy desktop.
@@ -316,6 +327,10 @@ impl Kriko {
             }
             _ => {}
         }
+        shell::set_tray_status(
+            matches!(app.engine, engine::Status::Ready { .. }),
+            matches!(app.engine, engine::Status::Failed { .. }),
+        );
         // The pulse: the engine's state, the tray, and what the engine asks
         // of the window, read ten times a second. Each read is a lock and a
         // channel peek, so the pulse costs nothing while nothing happens.
@@ -348,6 +363,10 @@ impl Kriko {
         }
         let now = engine::status();
         if now != self.engine {
+            shell::set_tray_status(
+                matches!(now, engine::Status::Ready { .. }),
+                matches!(now, engine::Status::Failed { .. }),
+            );
             let became_ready = matches!(now, engine::Status::Ready { .. })
                 && !matches!(self.engine, engine::Status::Ready { .. });
             self.engine = now;
@@ -381,6 +400,7 @@ impl Kriko {
             Field::LocalUrl => &self.local_url,
             Field::LocalSearch => &self.local_search,
             Field::LocalGet => &self.local_get,
+            Field::ExtensionPort => &self.extension_port_input,
         }
     }
 
@@ -398,6 +418,7 @@ impl Kriko {
             Field::LocalUrl => &mut self.local_url,
             Field::LocalSearch => &mut self.local_search,
             Field::LocalGet => &mut self.local_get,
+            Field::ExtensionPort => &mut self.extension_port_input,
         }
     }
 
@@ -459,6 +480,10 @@ impl Kriko {
         // Enter in the Get field starts the download.
         if ks.key.as_str() == "enter" && field == Field::LocalGet {
             this.local_pull(cx);
+            return;
+        }
+        if ks.key.as_str() == "enter" && field == Field::ExtensionPort {
+            this.save_extension_port(cx);
             return;
         }
         // Enter on the compare question asks it, the same as the Ask key.
@@ -609,9 +634,8 @@ impl Kriko {
 
 impl Kriko {
     /// The floating top bar. The strip between the sidebar and the LIVE
-    /// toggle is the drag area: a plain client strip that hands its press
-    /// to Windows as a caption press, because GPUI 0.2.2 cannot start a
-    /// move itself and the platform caption area gets swallowed. It
+    /// toggle is the drag area. GPUI maps its Drag hitbox to the native
+    /// caption hit test, so Windows owns the move gesture. It
     /// carries no brand: the sidebar says kriko once, the page head says
     /// where you are.
     /// What the window shows until the engine answers, and instead of a

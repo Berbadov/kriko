@@ -29,11 +29,11 @@ def conn(tmp_path):
 
 
 def test_a_label_is_recorded_with_a_page_to_look_at(conn):
-    state.record_unmapped(conn, "sahibinden", ["Kimden"], url="https://x/1")
+    state.record_unmapped(conn, "listing", ["Kimden"], url="https://x/1")
     rows = state.unmapped_labels(conn)
     assert len(rows) == 1
     assert rows[0]["label"] == "Kimden"
-    assert rows[0]["adapter_id"] == "sahibinden"
+    assert rows[0]["adapter_id"] == "listing"
     assert rows[0]["seen"] == 1
     # Without a URL the author has a label and nowhere to go with it.
     assert rows[0]["sample_url"] == "https://x/1"
