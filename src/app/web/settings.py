@@ -97,7 +97,7 @@ class Settings:
         "https://github.com/Berbadov/kriko/releases/latest/download/packs.json"
     )
     #: Where a reader goes to fetch a build by hand. The app updates itself
-    #: through Tauri's signed updater when a release carries signatures; until
+    #: through the desktop shell's signed updater when a release carries signatures; until
     #: one does, this page is the only way to move between versions, and About
     #: says so rather than implying an in-app switch that does not exist.
     #: Overridable so a fork does not send its readers here.
@@ -114,7 +114,7 @@ class Settings:
     #:
     #: Not a guess and not a probe — the shell *says so*, by passing
     #: `--supervised` when it spawns us. Nothing else can know it: a headless
-    #: `python -m app.sidecar` and a Tauri-supervised one are identical over
+    #: `python -m app.sidecar` and a shell-supervised one are identical over
     #: HTTP, they answer the same endpoints on the same ports, and the only
     #: difference is whether anybody is reading our stdout.
     #:

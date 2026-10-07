@@ -4,32 +4,40 @@ Run it, load the extension, connect an agent, grow the knowledge. The mechanism
 is in [INTERNALS.md](INTERNALS.md).
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    R["Research<br/>an agent, or a local model"] --> B["Build<br/>a catalog into a .kpack"]
-    B --> I["Install<br/>~/.kriko/knowledge.sqlite"]
-    I --> L["Check<br/>the extension, or POST /api/analyze"]
+    R["Research<br/>an agent, or a local model"]:::plain --> B["Build<br/>a catalog into a .kpack"]:::plain
+    B --> I["Install<br/>~/.kriko/knowledge.sqlite"]:::brand
+    I --> L["Check<br/>the extension, or POST /api/analyze"]:::ice
+    classDef brand fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+    classDef plain fill:#090E1B,stroke:#3A4156,color:#C9D1EA
+    classDef ice   fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
 ```
 
 ## Prerequisites
 
-- **Desktop app:** nothing. It carries its own Python; no Docker, no Postgres.
-  Store `~/.kriko/knowledge.sqlite`, history `~/.kriko/app.sqlite`.
-- **Checkout work** (pipeline, CLI, tests): the interpreter floor in
-  `pyproject.toml`, which is 3.13.
-- **Research keys:** only the hosted planes need them, and only the one you
-  choose. Set them in the environment or on the app's Settings screen, which
-  stores them under `~/.kriko/env`. Serving a lookup needs no key at all.
+| For | You need |
+|---|---|
+| **Desktop app** | Nothing. It carries its own Python; no Docker, no Postgres. Store `~/.kriko/knowledge.sqlite`, history `~/.kriko/app.sqlite` |
+| **Checkout work** (pipeline, CLI, tests) | The interpreter floor in `pyproject.toml`, which is 3.13 |
+| **Research keys** | Only the hosted planes, and only the one you choose. Set them in the environment or on the app's Settings screen, which stores them under `~/.kriko/env`. Serving a lookup needs no key at all |
 
 ## 1. Run it
 
-Install the `desktop` workflow's installer (`kriko-<version>-x86_64.msi`, a
-per-user install with no admin prompt) and launch it; see `kriko-gpui/README.md`. From a
-checkout:
+Install `kriko-<version>-x86_64.msi` (a per-user install with no admin prompt)
+and launch it. `kriko-gpui/package.ps1` builds it; the `desktop` workflow runs
+the same recipe. See `kriko-gpui/README.md`, and
+[INSTALL_WINDOWS.md](INSTALL_WINDOWS.md) for the steps. From a checkout:
 
 ```bash
 .venv/bin/python -m app.web            # http://127.0.0.1:8787
 curl http://127.0.0.1:8787/api/health  # {"ok":true,"store":...,"app_state":...}
 ```
+
+On Windows, closing the window leaves Kriko in the system tray so the browser
+extension can keep using the engine. Open it again from the tray or the desktop
+shortcut. Choose **Quit Kriko** in the tray to stop the engine too. The tray
+tooltip says whether the engine is ready, still starting, or stopped.
 
 > Port 8787 taken? The extension only talks to 8787. The desktop app opens
 > anyway and logs to stderr; stop whatever else is listening.
@@ -43,6 +51,11 @@ first reaches the app.
 **From a checkout:** `chrome://extensions`, Developer mode, Load unpacked,
 select `extension/`. Open a page an adapter can read; the panel appears after
 about 1.5 seconds.
+
+The small toolbar icon is coloured when the app answers and muted when it
+cannot be reached. Chrome refreshes that state about once a minute. Any number
+or question mark on the icon describes the current page, not the connection.
+Click the icon to open the panel on the page.
 
 > After an app update, or any change under `extension/`: stage again, then the
 > browser's Reload (the circular arrow on the extension's card at
@@ -65,6 +78,20 @@ agent's row to connect it.
 | Points elsewhere | Names a different `knowledge.sqlite`; findings land where this window never reads. |
 | Config unreadable | Will not parse; nothing written. |
 
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+flowchart TD
+    S["Agent's row on<br/>System, then Agents"]:::brand --> Q{"What does it say?"}
+    Q -->|Not connected| C["Use the row's action"]:::ice
+    Q -->|Points elsewhere| C
+    Q -->|Config unreadable| X["Nothing written:<br/>fix the config file"]:::danger
+    Q -->|Connected| V["Verify, then restart the agent"]:::ice
+    C --> V
+    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
+    classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
+```
+
 *Verify* runs a real MCP handshake and tool listing, and shows each step's
 result. Restart the agent afterwards. The research skill is assembled from the
 installed catalogs and served at `GET /api/agent-skill`; it names no screen, no
@@ -85,7 +112,7 @@ the agent says it read.
 server running on this machine and which model to use. The plane reports
 whether it is ready, and a run started without naming a plane uses it first.
 The one thing it cannot do alone is search: it uses a hosted keyless search
-until a local search service is available (see `backlog.md`, B192).
+until a local search service is available.
 
 ## 4. Terminal
 
@@ -113,6 +140,23 @@ work.
 
 ```
 use the kriko_research agent to research <product>
+```
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+sequenceDiagram
+    participant A as Agent
+    participant K as Kriko server
+    participant D as Draft on disk
+    A->>K: look up the variants
+    K-->>A: what is covered, what is not
+    A->>K: submit findings, each with a quote
+    alt quote is in the document the agent read
+        K->>D: write a draft, data only
+    else refused
+        K-->>A: refusal that names the fix
+    end
+    Note over D: kriko build, then install
 ```
 
 The agent looks up the variants first, because naming is cheap and research is
@@ -156,6 +200,20 @@ installed. Statuses are pipeline-owned, so never hand-edit `status`.
 | `verified` | Confirmed | Two or more independent sources |
 | `review`, `held` | Reported, with its source count | Thin, or high severity |
 | `rejected`, `draft` | not served | Refused, or not pipeline output |
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+flowchart LR
+    C["A claim"]:::plain --> G{"Grounded source?"}
+    G -->|none| N["Not served"]:::danger
+    G -->|"rejected, draft"| N
+    G -->|"two or more independent"| V["Confirmed"]:::mark
+    G -->|"one, or high severity"| R["Reported,<br/>with its source count"]:::ice
+    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
+    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
+    classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
+    classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
+```
 
 Only claims with at least one grounded source are served, and a single-source
 report is always labelled as a report.

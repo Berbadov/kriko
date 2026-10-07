@@ -373,6 +373,10 @@ impl Kriko {
             }
             _ => {}
         }
+        shell::set_tray_status(
+            matches!(app.engine, engine::Status::Ready { .. }),
+            matches!(app.engine, engine::Status::Failed { .. }),
+        );
         // The pulse: the engine's state, the tray, and what the engine asks
         // of the window, read ten times a second. Each read is a lock and a
         // channel peek, so the pulse costs nothing while nothing happens.
@@ -405,6 +409,10 @@ impl Kriko {
         }
         let now = engine::status();
         if now != self.engine {
+            shell::set_tray_status(
+                matches!(now, engine::Status::Ready { .. }),
+                matches!(now, engine::Status::Failed { .. }),
+            );
             let became_ready = matches!(now, engine::Status::Ready { .. })
                 && !matches!(self.engine, engine::Status::Ready { .. });
             self.engine = now;

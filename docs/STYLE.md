@@ -46,13 +46,45 @@ opens.
     runtime precisely because a typed list is stale within days. A path under
     `packs/<name>/` is a location, not a category claim, and stays. A worked
     example built on one category is a claim, and goes.
-12. **No document is a second status list.** `backlog.md` holds open work and
-    nothing else. Finished work is a commit, and its message carries the
+12. **No document is a status list.** Open work is GitHub issues (mirrored
+    to Linear), never a file in the repo. Finished work is a commit, and its message carries the
     reasoning, so no document can drift away from the tree.
+
+## Draw a diagram in the app's colours
+
+Every Mermaid diagram wears the desktop app's palette, so a page reads as part
+of the same product. The values come from `kriko-gpui/src/theme.rs`; if a
+token moves there, it moves here.
+
+Start every diagram with this line, unchanged:
+
+```text
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+```
+
+Then colour nodes by role with these classes. Copy only the ones you use:
+
+```text
+classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
+classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
+classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
+classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
+```
+
+| Class | Token | Use it for |
+|---|---|---|
+| `brand` | `BRAND` `#1F4FFF` | The thing the diagram is about; one or two nodes |
+| `plain` | `SURFACE_1` `#090E1B` | Everything else |
+| `ice` | `ICE` `#BFE4FF` | What the reader sees or types: a screen, a command, a result |
+| `danger` | `DANGER` `#FF6B5E` | A refusal, a failure, a red line |
+| `mark` | the mark's arm `#E8C04B` | At most one node: the answer, the risk shown |
+
+Lines are `BRAND_BRIGHT` (`#86A3FF`), which reads on GitHub's light and dark
+pages alike. Do not set `background`: GitHub draws the page behind the
+diagram.
 
 ## Exempt
 
-- **`backlog.md`** — a work log, allowed length, carrying the reasoning that a
-  finished item's commit message cannot hold in a table.
 - **Code comments** — answer "why is this like this", at whatever length that
   takes.

@@ -7,6 +7,7 @@ mechanism.
 ## The request path, serving plane
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 sequenceDiagram
     participant C as extension/content.js
     participant B as extension/background.js
@@ -47,11 +48,30 @@ written at acceptance (`app/findings.py`).
 Long work is a row, not a request.
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    P["POST /api/research<br/>POST /api/packs/build"] --> R["JobRunner<br/>one worker, web/jobs.py"]
-    R --> T["web/tasks.py<br/>settings, params, progress"]
-    R <--> S[("app.sqlite jobs")]
-    S --> V["GET /api/jobs/{job_id}<br/>/stream (SSE)"]
+    P["POST /api/research<br/>POST /api/packs/build"]:::ice --> R["JobRunner<br/>one worker, web/jobs.py"]:::brand
+    R --> T["web/tasks.py<br/>settings, params, progress"]:::plain
+    R <--> S[("app.sqlite jobs")]:::plain
+    S --> V["GET /api/jobs/{job_id}<br/>/stream (SSE)"]:::ice
+    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
+    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
+```
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+stateDiagram-v2
+    [*] --> queued
+    queued --> running
+    running --> succeeded
+    running --> failed
+    running --> cancelled: cooperative cancel
+    running --> interrupted: recover() at startup
+    succeeded --> [*]
+    failed --> [*]
+    cancelled --> [*]
+    interrupted --> [*]
 ```
 
 States are `queued`/`running`, then `succeeded`, `failed`, `cancelled` or
@@ -105,6 +125,18 @@ Two SQLite files, on purpose. `~/.kriko/knowledge.sqlite` is the engine store;
 Uninstalling a pack must not drop history, and history must not move a
 `content_digest`. `/api/health` reports both paths.
 
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+flowchart LR
+    ENGN["kriko/ engine"]:::brand --> K[("~/.kriko/knowledge.sqlite<br/>packs, claims, sources")]:::plain
+    APP["app/ interfaces"]:::brand --> A[("~/.kriko/app.sqlite<br/>history, settings, jobs")]:::plain
+    H["GET /api/health"]:::ice -.-> K
+    H -.-> A
+    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
+    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
+```
+
 | Table | Holds |
 |---|---|
 | `settings` | The reader's preferences, as key and value. |
@@ -142,11 +174,15 @@ never dropped.
 ## The interfaces beside the web app
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    CLI["kriko (app/cli.py)"] -->|"packs, install, uninstall,<br/>enable, build, lookup"| ST[("knowledge.sqlite")]
-    CLI -->|"prefs, costs, sites, verify,<br/>drafts, operations, bench, tui"| ENG["Engine client<br/>app/tui/client.py"]
-    TUI["kriko tui"] --> ENG
-    ENG -->|HTTP| WEB["a running app,<br/>or an in-process engine"]
+    CLI["kriko (app/cli.py)"]:::ice -->|"packs, install, uninstall,<br/>enable, build, lookup"| ST[("knowledge.sqlite")]:::plain
+    CLI -->|"prefs, costs, sites, verify,<br/>drafts, operations, bench, tui"| ENG["Engine client<br/>app/tui/client.py"]:::brand
+    TUI["kriko tui"]:::ice --> ENG
+    ENG -->|HTTP| WEB["a running app,<br/>or an in-process engine"]:::plain
+    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
+    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
 ```
 
 Only the store commands open the database directly; everything else goes over
@@ -162,6 +198,19 @@ PTY until Ctrl-]. It is reachable as `kriko tui` or `kriko-sidecar --tui`, and
 the Windows installer adds a Start-menu shortcut for it.
 
 ## The desktop shell
+
+```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
+sequenceDiagram
+    participant G as kriko-gpui/src/engine.rs
+    participant S as src/app/sidecar.py
+    G->>S: spawn
+    S-->>G: KRIKO_PORT n (first line)
+    loop while the window says it is starting
+        G->>S: GET /api/health
+    end
+    Note over G,S: on failure the window renders stderr
+```
 
 `src/app/sidecar.py` binds port 0, prints `KRIKO_PORT <n>` first and hands the
 bound socket to uvicorn. `kriko-gpui/src/engine.rs` spawns it, polls
@@ -179,12 +228,16 @@ in `src/kriko/ledger/`; the policy is the pack's own, in
 `packs/<name>/pipeline/`.
 
 ```mermaid
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    A["acquire<br/>discover, rank, fetch, ingest"] --> X["extract<br/>grounded quotes"]
-    X --> R["resolve<br/>component from evidence"]
-    R --> V["cluster + verdict<br/>one call per cluster"]
-    V --> E["export<br/>the pack's own YAML"]
-    E --> B["build<br/>YAML to the store"]
+    A["acquire<br/>discover, rank, fetch, ingest"]:::plain --> X["extract<br/>grounded quotes"]:::plain
+    X --> R["resolve<br/>component from evidence"]:::plain
+    R --> V["cluster + verdict<br/>one call per cluster"]:::brand
+    V --> E["export<br/>the pack's own YAML"]:::plain
+    E --> B["build<br/>YAML to the store"]:::ice
+    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
+    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
+    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
 ```
 
 | Stage | Where |

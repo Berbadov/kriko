@@ -8,7 +8,7 @@
  * `font-display: swap` on purpose — text in a fallback face beats no text.
  * See `ui/public/fonts/README.md` for what each file is and its licence.
  *
- * Three families, the kriko design system's own (see `kriko-svelte/`):
+ * Three families, the kriko design system's own:
  * Barlow Condensed for display (headings, keys, verdicts — every uppercase
  * title the reference screens set at 56px), DM Sans for reading (the body,
  * table cells, inputs), and JetBrains Mono for figures, eyebrows and notes.
