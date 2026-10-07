@@ -261,6 +261,38 @@ def test_a_server_that_refuses_the_schema_is_asked_again_plainly(stub):
     assert "response_format" not in stub.chat_seen[1]
 
 
+def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):
+    """A reasoning model left at full effort spends the reply's whole budget
+    on thinking and writes nothing; the socket asks for low effort on the
+    OpenAI surface, and a server that does not know the field drops it and
+    is asked again — schema first when both are refused."""
+    stub.chat = [completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert stub.chat_seen[0]["reasoning_effort"] == "low"
+
+    # The stub keeps every call this test made, so the block's calls are
+    # counted from where the last one ended.
+    stub.chat = [(400, {"error": {"message": "unknown field"}}), completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert "reasoning_effort" in stub.chat_seen[1]
+    assert "reasoning_effort" not in stub.chat_seen[2]
+
+    # Both optional fields refused: the schema goes first, then the effort.
+    stub.chat = [(400, {"error": {"message": "no response_format"}}),
+                 (400, {"error": {"message": "no reasoning_effort"}}),
+                 completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA,
+        reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert "response_format" in stub.chat_seen[3]
+    assert "response_format" not in stub.chat_seen[4]
+    assert "reasoning_effort" in stub.chat_seen[4]
+    assert "reasoning_effort" not in stub.chat_seen[5]
 def test_a_server_that_refuses_reasoning_effort_is_asked_again_plainly(stub):
     stub.chat = [(400, {"error": {"message": "no reasoning_effort"}}),
                  completion("answer")]
@@ -593,8 +625,13 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
          "quote": "this sentence is on no page", "why": "x", "check": "y",
          "severity": "low"},
     ]}
+    # Four calls now, in order: the round-one queries, the round-two
+    # queries (one readable page after round one, so round two ran), the
+    # answer, and the self-check reading it against its page.
     ready.chat = [completion('["renault 1.5 dci timing chain"]'),
-                  completion(json.dumps(risks))]
+                  completion('["renault clio 1.5 dCi owner reports"]'),
+                  completion(json.dumps(risks)),
+                  completion('{"unsupported": [], "note": "carried"}')]
     path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})
     settings = type("S", (), {"store_path": tmp_path / "k.sqlite",
                               "app_state_path": path})()
@@ -609,7 +646,9 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
     assert result["cost_basis"] == "self_hosted" and result["model"] == "qwen3-4b"
     assert any("local plane: Ready" in line for line in progress.lines)
     assert ready.chat_seen[0]["model"] == "qwen3-4b"
-    assert "Pages you fetched" in ready.chat_seen[1]["messages"][0]["content"]
+    assert "Pages you fetched" in ready.chat_seen[2]["messages"][0]["content"]
+    assert "You are checking an answer" in ready.chat_seen[3]["messages"][0]["content"]
+    assert result["verification"]["unsupported"] == []
 
 
 def test_with_no_agent_and_a_ready_model_the_quick_look_picks_local_by_itself(
