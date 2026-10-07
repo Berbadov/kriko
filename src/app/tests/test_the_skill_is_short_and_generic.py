@@ -121,8 +121,11 @@ def test_the_skill_names_no_screen_product_harness_or_model(store):
     # No repo path, no dated history, no other category's example.
     assert "docs/" not in prose and "src/" not in prose and "packs/" not in prose
     assert not re.search(r"\b20\d\d-\d\d-\d\d\b", prose)
-    for product in ("car", "drill", "golf", "timing belt", "sahibinden"):
+    for product in ("car", "drill", "golf", "timing belt"):
         assert not re.search(rf"\b{product}\b", lowered), product
+    # Nor any one listing site: a site is a pack's adapter, never the skill's.
+    site = re.search(r"\b[a-z0-9-]+\.(?:com|net|org|de|pl|co\.uk|com\.tr)\b", lowered)
+    assert not site, site and site.group(0)
 
 
 def test_each_of_the_five_steps_names_one_input_and_one_output(store):
