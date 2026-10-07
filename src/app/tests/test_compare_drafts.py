@@ -86,6 +86,23 @@ def test_a_follow_up_question_is_stored_listed_and_refused_for_a_gone_draft(clie
                      json={"question": "   "}).status_code == 422
 
 
+def test_compare_can_explicitly_choose_the_local_model(client, monkeypatch):
+    http, _ = client
+    made = http.post("/api/compare-drafts",
+                     json={"name": "Two", "lookup_ids": ["a", "b"]}).json()
+    submitted = []
+    monkeypatch.setattr(http.app.state.jobs, "submit",
+                        lambda kind, params: submitted.append((kind, params)) or "job-local")
+    asked = http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
+                      json={"question": "Which has fewer known risks?",
+                            "backend": "local", "harness": "local"})
+    assert asked.status_code == 200
+    assert submitted[0][0] == "compare_ask"
+    assert submitted[0][1]["backend"] == "local"
+    assert http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
+                     json={"question": "x", "backend": "invalid"}).status_code == 422
+
+
 def _one_lookup(settings, label, response) -> str:
     """Record one stored answer and return the id it was given.
 
@@ -112,17 +129,26 @@ def test_the_job_handler_answers_a_question_and_writes_it_on_the_row(
     b2 = _one_lookup(settings, "Two", {"claims": [], "context": {}})
     made = http.post("/api/compare-drafts",
                      json={"name": "Two cars", "lookup_ids": [a1, b2]}).json()
+    monkeypatch.setattr(http.app.state.jobs, "submit", lambda *_: "queued-test-job")
     asked = http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
                       json={"question": "which has the cheaper known fix?"}).json()
 
-    class _Researcher:
-        def ask(self, prompt):
+    class _Completer:
+        context_chars = 12000
+        model = "small:4b"
+        tokens_used = 141
+        tokens_in = 100
+        tokens_out = 41
+
+        def __call__(self, prompt):
             self.prompt = prompt
             return " The first one: the chain is a known, cheap fix. "
 
-    researcher = _Researcher()
+    researcher = _Completer()
     monkeypatch.setattr(tasks, "_use_local_ask", lambda *a, **k: True)
-    monkeypatch.setattr(tasks, "_local_asker", lambda *a, **k: researcher)
+    monkeypatch.setattr(tasks, "_local_compare_completer", lambda *a, **k: researcher)
+    monkeypatch.setattr(tasks, "_local_asker", lambda *a, **k: (_ for _ in ()).throw(
+        AssertionError("comparison must not search or crawl")))
 
     class _Progress:
         job_id = "job-1"
@@ -134,6 +160,12 @@ def test_the_job_handler_answers_a_question_and_writes_it_on_the_row(
         "draft_id": made["draft_id"], "question_id": asked["question_id"],
         "question": asked["question"]}, _Progress())
     assert result["answer"].startswith("The first one")
+    assert result["saved_checks"] == [
+        {"name": "One", "risks": 1}, {"name": "Two", "risks": 0}]
+    assert result["brief_chars"] == len(researcher.prompt)
+    assert result["web_searches"] == 0
+    assert (result["model"], result["tokens_used"], result["tokens_in"], result["tokens_out"]) == (
+        "small:4b", 141, 100, 41)
     assert "QUESTION: which has the cheaper known fix?" in researcher.prompt
     assert "## One" in researcher.prompt and "## Two" in researcher.prompt
     conn = state.connect(settings.app_state_path)
@@ -141,6 +173,53 @@ def test_the_job_handler_answers_a_question_and_writes_it_on_the_row(
     conn.close()
     assert stored[0]["answer"].startswith("The first one")
     assert stored[0]["job_id"] == "job-1"
+
+
+def test_small_compare_brief_keeps_each_product_and_names_omissions():
+    from app.web.tasks import _compare_brief
+
+    answers = [
+        {"label": f"Product {i}", "response": {
+            "claims": [{"title": f"Risk {j}", "body": "A" * 300,
+                        "severity": "high"} for j in range(20)],
+            "context": {"year": 2020 + i},
+        }} for i in range(4)
+    ]
+    brief = _compare_brief("Which has Risk 19?", answers, max_chars=4000)
+    assert len(brief) <= 4000
+    for i in range(4):
+        assert f"## Product {i}" in brief
+    assert brief.count("Risks shown:") == 4
+    assert "- [high] Risk 19" in brief
+    assert "recorded risks omitted from this brief" in brief
+
+    long_question = "Which is safer? " + "detail " * 300
+    bounded = _compare_brief(long_question, answers, max_chars=3000)
+    assert len(bounded) <= 3000
+    assert all(f"## Product {i}" in bounded for i in range(4))
+
+
+def test_local_comparison_probes_only_the_model(monkeypatch, tmp_path):
+    from app import localplane
+    from app.web.tasks import _local_compare_completer
+
+    probed = []
+
+    def resolve(*args, **kwargs):
+        probed.append(kwargs.get("with_search"))
+        return {"ready": True, "url": "http://127.0.0.1:11434",
+                "model": "a-larger-model:27b", "models": ["a-larger-model:27b"],
+                "timeout": 300, "line": "Ready"}
+
+    monkeypatch.setattr(localplane, "resolve", resolve)
+    settings = type("Settings", (), {"app_state_path": tmp_path / "app.sqlite"})()
+    logged = []
+    progress = type("Progress", (), {"log": lambda self, line: logged.append(line)})()
+    socket = _local_compare_completer(settings, {}, progress)
+    assert probed == [False]
+    assert socket.serving_name == "a-larger-model:27b"
+    assert socket.reasoning_effort == "none"
+    assert "saved checks only" in logged[0]
 
 
 def test_a_question_about_a_shortlist_of_one_is_refused(client, monkeypatch):
