@@ -1139,10 +1139,12 @@ impl Kriko {
         }
         self.live.run.verifying = true;
         self.live.run.verify = None;
-        self.fetch(cx, || api::post("/api/agent-verify", serde_json::json!({})), |this, reply, _| {
+        let started = Instant::now();
+        self.fetch(cx, || api::post("/api/agent-verify", serde_json::json!({})), move |this, reply, _| {
             this.note(&reply);
             let run = &mut this.live.run;
             run.verifying = false;
+            let elapsed_ms = started.elapsed().as_millis() as i64;
             match reply {
                 Ok(v) => {
                     run.verify = Some(Verify {
@@ -1153,11 +1155,11 @@ impl Kriko {
                             .collect(),
                         detail: api::s(&v, "detail"),
                         log: api::s(&v, "log"),
-                        ms: api::n(&v, "ms").unwrap_or(0.0) as i64,
+                        ms: elapsed_ms,
                     })
                 }
                 Err(e) => {
-                    run.verify = Some(Verify { ok: false, steps: Vec::new(), detail: e.message, ..Default::default() })
+                    run.verify = Some(Verify { ok: false, steps: Vec::new(), detail: e.message, ms: elapsed_ms, ..Default::default() })
                 }
             }
         });
