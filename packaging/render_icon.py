@@ -256,6 +256,16 @@ EXTENSION_DIR = REPO / "extension" / "assets" / "icons"
 EXTENSION_ICON = EXTENSION_DIR / "icon-32.png"
 
 
+def offline_grid(pixels: list[list[tuple[int, int, int, int]]]) -> list[list[tuple[int, int, int, int]]]:
+    """Keep the same small K, muted while the local app is unreachable."""
+    ground = pixels[0][0]
+    return [
+        [(37, 43, 53, 255) if pixel == ground else (137, 147, 162, 255)
+         for pixel in row]
+        for row in pixels
+    ]
+
+
 def decode(data: bytes) -> tuple[int, int, bytes]:
     """A minimal 8-bit RGBA PNG reader — enough for our own icons.
 
@@ -385,10 +395,14 @@ def main() -> None:
     print(f"{LARGE_SOURCE.name} -> {WEB_LARGE_TARGET}")
 
     EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
+    disconnected = offline_grid(pixels)
     for size, scale in sorted(EXTENSION_ICONS.items()):
         if side * scale != size:
             raise ValueError(f"{size}px is not {side} cells at {scale}x")
         (EXTENSION_DIR / f"icon-{size}.png").write_bytes(png(pixels, scale))
+        (EXTENSION_DIR / f"icon-offline-{size}.png").write_bytes(
+            png(disconnected, scale)
+        )
     print(f"{SOURCE.name} -> {EXTENSION_DIR}/icon-"
           f"{{{','.join(str(one) for one in sorted(EXTENSION_ICONS))}}}.png")
 

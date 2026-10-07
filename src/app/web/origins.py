@@ -44,14 +44,10 @@ from urllib.parse import urlsplit
 #: rather than a 1.0.0 one (see the audit's Q5).
 EXTENSION_SCHEMES = ("chrome-extension", "moz-extension", "safari-web-extension")
 
-#: Hosts this server answers to. `tauri.localhost` is the desktop shell's own
-#: origin on Windows, where the webview does not use the http:// URL.
-LOOPBACK_HOSTS = frozenset(
-    {"127.0.0.1", "localhost", "::1", "[::1]", "0.0.0.0", "tauri.localhost"}
-)
-
-#: Non-http schemes the desktop shell's webview may load the SPA from.
-SHELL_SCHEMES = ("tauri", "asset")
+#: Hosts this server answers to. The desktop app (kriko-gpui) is a native
+#: client and sends no `Origin` at all; the retired webview shell's own
+#: `tauri://` scheme and `tauri.localhost` host are no longer trusted.
+LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "[::1]", "0.0.0.0"})
 
 
 def _bare_host(value: str) -> str:
@@ -102,7 +98,7 @@ def origin_is_allowed(header: str | None) -> bool:
         # without owning a domain.
         return False
     parts = urlsplit(origin)
-    if parts.scheme in EXTENSION_SCHEMES or parts.scheme in SHELL_SCHEMES:
+    if parts.scheme in EXTENSION_SCHEMES:
         return True
     if parts.scheme in ("http", "https"):
         return _bare_host(parts.netloc) in LOOPBACK_HOSTS
@@ -116,8 +112,6 @@ def terminal_origin_is_allowed(header: str | None) -> bool:
     if origin == "null":
         return False
     parts = urlsplit(origin)
-    if parts.scheme in SHELL_SCHEMES:
-        return True
     if parts.scheme in ("http", "https"):
         return _bare_host(parts.netloc) in LOOPBACK_HOSTS
     return False

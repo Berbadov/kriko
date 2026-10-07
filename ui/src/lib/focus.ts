@@ -2,7 +2,7 @@
  *
  * The browser extension's "Open in Kriko" cannot raise a native window and
  * cannot reach this SPA directly, so the handoff runs through the engine:
- * the extension posts a route, the sidecar prints a line that makes the Tauri
+ * the extension posts a route, the sidecar prints a line that makes the desktop
  * shell raise the window, and this poll is the half that actually navigates.
  * See `src/app/web/routers/focus.py` for the whole shape of it.
  *

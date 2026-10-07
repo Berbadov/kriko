@@ -62,7 +62,7 @@ trap 'rm -rf "$WORK"' EXIT
 say() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
 bad() { printf '\033[31m%s\033[0m\n' "$1" >&2; exit 1; }
 
-[ -x "$PYTHON" ] || bad "no interpreter at '$PYTHON'; see CONTRIBUTING.md or set PYTHON="
+[ -x "$PYTHON" ] || bad "no interpreter at '$PYTHON'; see docs/DOCTRINE.md or set PYTHON="
 
 # `uv` when it is there, pip and the stdlib when it is not. Requiring uv made
 # this gate unrunnable rather than strict: it is installed by `tools/setup.sh`,

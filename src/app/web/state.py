@@ -2513,6 +2513,16 @@ def list_jobs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
     return [_job(row) for row in rows]
 
 
+def lookup_questions(conn: sqlite3.Connection, lookup_id: str) -> list[dict]:
+    """Follow-up jobs for one saved check, oldest first, across restarts."""
+    rows = conn.execute(
+        "SELECT * FROM jobs WHERE kind = 'lookup_ask'"
+        " AND json_extract(params_json, '$.lookup_id') = ?"
+        " ORDER BY created_at DESC, rowid DESC LIMIT 30", (lookup_id,),
+    ).fetchall()
+    return [_job(row) for row in reversed(rows)]
+
+
 def work_in_flight(conn: sqlite3.Connection) -> int:
     """How many jobs are queued or running right now.
 

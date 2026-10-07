@@ -23,7 +23,7 @@
  * `tools/tokens.py` derives the extension's names from these, and a component
  * that spends `var(--panel)` needs no idea which sheet answers it.
  *
- * The palette is the kriko design system's (kriko-svelte/): a deep blue-black
+ * The palette is the kriko design system's: a deep blue-black
  * ground, the blue brand with its bezel gradient, ice for what is live, wells
  * and hairlines for depth. The reader's reference screens all wear it.
  */

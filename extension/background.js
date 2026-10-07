@@ -17,6 +17,15 @@
 
 const DEFAULT_API_BASE = "http://127.0.0.1:8787";
 const LOADED_CONTENT_DIGEST = "";
+const CONNECTION_ALARM = "kriko-connection";
+const CONNECTION_PERIOD_MINUTES = 1;
+const ACTION_ICONS = {
+  online: { 16: "assets/icons/icon-16.png", 32: "assets/icons/icon-32.png",
+            48: "assets/icons/icon-48.png" },
+  offline: { 16: "assets/icons/icon-offline-16.png",
+             32: "assets/icons/icon-offline-32.png",
+             48: "assets/icons/icon-offline-48.png" },
+};
 
 //: How many rows one search may return to the panel. The engine allows up to
 //: 50; a floating panel beside a listing is a list somebody scans, and the
@@ -436,6 +445,38 @@ async function _fetchApp(url, init) {
     throw down;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+// Chrome suspends this worker while it is idle. The toolbar icon is browser
+// state, not worker memory, so refresh it on browser startup and a short alarm.
+// A separate icon leaves the per-tab risk count and question/error badges alone.
+let connectionProbe = null;
+async function refreshConnectionIcon() {
+  if (connectionProbe) return connectionProbe;
+  connectionProbe = (async () => {
+    let connected = false;
+    let version = "";
+    try {
+      const response = await _fetchApp(`${await apiBase()}/api/health`);
+      if (response.ok) {
+        const health = await response.json();
+        connected = health?.ok === true;
+        version = String(health?.version || "");
+      }
+    } catch (_) {
+      // No listener is the ordinary state before Kriko starts.
+    }
+    await chrome.action.setIcon({ path: connected ? ACTION_ICONS.online : ACTION_ICONS.offline });
+    await chrome.action.setTitle({ title: connected
+      ? `Kriko ${version}: connected. Click to open the panel.`
+      : "Kriko: app is not running. Open Kriko to connect." });
+    return connected;
+  })();
+  try {
+    return await connectionProbe;
+  } finally {
+    connectionProbe = null;
   }
 }
 
@@ -917,17 +958,26 @@ async function _reportActivation(sites) {
 // fails, and something has to try again without the reader doing anything.
 chrome.runtime.onInstalled.addListener(() => {
   void syncSites({ fresh: true });
+  void refreshConnectionIcon();
 });
 if (chrome.runtime.onStartup) {
-  chrome.runtime.onStartup.addListener(() => { void syncSites({ fresh: true }); });
+  chrome.runtime.onStartup.addListener(() => {
+    void syncSites({ fresh: true });
+    void refreshConnectionIcon();
+  });
 }
 if (chrome.alarms) {
   chrome.alarms.create(SITE_SYNC_ALARM, {
     periodInMinutes: SITE_SYNC_PERIOD_MINUTES,
     delayInMinutes: 1,
   });
+  chrome.alarms.create(CONNECTION_ALARM, {
+    periodInMinutes: CONNECTION_PERIOD_MINUTES,
+    delayInMinutes: 1,
+  });
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm && alarm.name === SITE_SYNC_ALARM) void syncSites({ fresh: true });
+    if (alarm && alarm.name === CONNECTION_ALARM) void refreshConnectionIcon();
   });
 }
 // A grant is the event the pending list was waiting for, and a revocation has
@@ -1782,6 +1832,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // `/api/extension/research-plane` answers with the same discipline as
   // `/api/keys` — a plane name and a number, nothing that could be replayed
   // as a credential.
+  if (request.type === "LOOKUP_ASK" || request.type === "LOOKUP_QUESTIONS") {
+    const lookupId = String(request.payload?.lookup_id || "");
+    const question = String(request.payload?.question || "").trim();
+    if (!lookupId || (request.type === "LOOKUP_ASK" && (!question || question.length > 2000))) {
+      sendResponse({ ok: false, error: "Choose a saved check and write a question (up to 2000 characters)." });
+      return false;
+    }
+    const path = `/api/lookup/${encodeURIComponent(lookupId)}/questions`;
+    const call = request.type === "LOOKUP_ASK" ? _postApp(path, { question }) : _getApp(path);
+    call.then((reply) => sendResponse({ ok: true, ...reply }))
+      .catch((error) => sendResponse({ ok: false, code: error.code, error: error.message }));
+    return true;
+  }
+
   if (request.type === "RESEARCH_PLANE") {
     _getApp("/api/extension/research-plane")
       .then((plane) => sendResponse({ ok: true, plane }))
