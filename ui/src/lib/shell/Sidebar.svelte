@@ -123,7 +123,7 @@
              mounts StaticFiles there, so a root-relative path to a
              public/ asset falls through to the SPA catch-all and the mark
              renders as a broken image. Guarded by public-assets.test.ts. -->
-        <!-- The design system's wordmark (kriko-svelte/assets), white on the
+        <!-- The design system's wordmark, white on the
              blue brand plate: the same drawing the reference rail opens with.
              The 32px mark stays in the tree for the installer's app icon. -->
         <img class="mark" src="/static/kriko-wordmark-white.svg" alt="Kriko" />

@@ -499,4 +499,5 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
         response_json_schema=local_agent.QUERY_SCHEMA)
     return local_agent.LocalAsker(
         plan, complete, search, fetch.reader(), model=serving_name,
-        search_provider=provider, url=base_url, given_queries=given_queries)
+        search_provider=provider, url=base_url, given_queries=given_queries,
+        parallel_search=provider == "exa-mcp")

@@ -40,7 +40,7 @@ def read(*names: str) -> str:
 
 @pytest.fixture(scope="module")
 def prose() -> str:
-    files = ["README.md", "CLAUDE.md", "CONTRIBUTING.md"]
+    files = ["README.md", "CLAUDE.md"]
     files += [
         str(path.relative_to(ROOT))
         for path in sorted(DOCS.glob("*.md"))

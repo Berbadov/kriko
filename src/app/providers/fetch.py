@@ -47,9 +47,30 @@ USER_AGENT = "Kriko/1.0 (+https://github.com/Berbadov/kriko)"
 REFUSED = (403, 429, 503)
 
 _DROP = re.compile(
-    r"<(script|style|noscript|nav|header|footer|aside|form|svg)\b[^>]*>.*?</\1>",
+    r"<(script|style|noscript|nav|header|footer|aside|form|svg|template|iframe"
+    r"|select|button|dialog|menu|object|canvas|picture|video|audio)(?![\w-])[^>]*>.*?</\1>",
     re.IGNORECASE | re.DOTALL,
 )
+#: Markup that is never prose, and that `_TAG` alone would leave behind as
+#: text: comments (often whole commented-out blocks of markup), CDATA, the
+#: `<head>` (its `<title>` is kept separately), and a `<script>` or `<style>`
+#: the `MAX_BYTES` cut left without its closing tag.
+_COMMENT = re.compile(r"<!--.*?(-->|\Z)|<!\[CDATA\[.*?(\]\]>|\Z)", re.DOTALL)
+# `(?![\w-])` rather than `\b`: `\b` matches before a hyphen, so a custom
+# element (`<button-group>`, `<video-js>`) would be read as the tag it starts
+# with and scan the page for a closer it never has.
+_HEAD = re.compile(r"<head(?![\w-])[^>]*>.*?</head>", re.IGNORECASE | re.DOTALL)
+_TITLE = re.compile(r"<title(?![\w-])[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
+_UNCLOSED = re.compile(r"<(script|style)(?![\w-]).*\Z", re.IGNORECASE | re.DOTALL)
+_MAIN = re.compile(r"<main(?![\w-])[^>]*>(.*)</main>", re.IGNORECASE | re.DOTALL)
+_ANCHOR = re.compile(r"<a(?![\w-])[^>]*>(.*?)</a>", re.IGNORECASE | re.DOTALL)
+#: Around a link's text until `prose_lines` has read it: a menu is a run of
+#: links, and once the tags are gone this is the only trace of which lines
+#: were links. Control characters no page text carries.
+LINK_OPEN, LINK_CLOSE = "\x01", "\x02"
+#: A `<main>` with less text than this is a shell around a page drawn by
+#: script, and the body is the better bet.
+_MAIN_MIN_CHARS = 500
 _TAG = re.compile(r"<[^>]+>")
 _SPACE = re.compile(r"[ \t\r\f\v]+")
 _BLANK = re.compile(r"\n{3,}")
@@ -165,7 +186,16 @@ def to_text(markup: str) -> str:
         if extracted.strip():
             return extracted.strip()
 
-    body = _DROP.sub(" ", markup)
+    body = _COMMENT.sub(" ", markup)
+    title = _TITLE.search(body)
+    body = _HEAD.sub(" ", body)
+    body = _UNCLOSED.sub(" ", _DROP.sub(" ", body))
+    main = _MAIN.search(body)
+    if main and len(_TAG.sub("", main.group(1)).strip()) >= _MAIN_MIN_CHARS:
+        body = main.group(1)
+    if title:
+        body = f"<p>{title.group(1)}</p>{body}"
+    body = _ANCHOR.sub(lambda m: LINK_OPEN + m.group(1) + LINK_CLOSE, body)
     body = re.sub(r"</(p|div|li|h[1-6]|tr|br)\s*>", "\n", body, flags=re.IGNORECASE)
     body = re.sub(r"<br\s*/?>", "\n", body, flags=re.IGNORECASE)
     body = _TAG.sub(" ", body)
@@ -173,5 +203,74 @@ def to_text(markup: str) -> str:
     # as text would otherwise become a tag on this line and be stripped.
     body = html.unescape(body)
     body = _SPACE.sub(" ", body)
-    body = "\n".join(line.strip() for line in body.splitlines())
+    body = "\n".join(prose_lines(line.strip() for line in body.splitlines()))
     return _BLANK.sub("\n\n", body).strip()
+
+
+#: A menu is a run of crumbs: short lines that are each one link and nothing
+#: else (`Home`, `Log in`, `Acura`, `2019`). This many in a row, blank lines
+#: aside, is navigation, not content. A line that is not a link (a table
+#: cell, a list of fault names) is never a crumb, and neither is one that
+#: mixes a figure with words (`6 GB RAM`).
+MENU_RUN = 8
+_CRUMB_WORDS = 3
+_CRUMB_CHARS = 30
+#: Characters that are code and almost never prose. A long line where they
+#: are this dense is an inlined blob of script or data, not a sentence.
+_CODE = set("{}[]<>=;$\\^~`")
+_CODE_DENSITY = 0.08
+_CODE_MIN_CHARS = 30
+
+
+def _crumb(line: str) -> bool:
+    if not (line.startswith(LINK_OPEN) and line.endswith(LINK_CLOSE)):
+        return False
+    line = line[1:-1].strip()
+    if not (0 < len(line) <= _CRUMB_CHARS and len(line.split()) <= _CRUMB_WORDS
+            and line[-1] not in ".!?:"):
+        return False
+    has_digit = any(char.isdigit() for char in line)
+    has_letter = any(char.isalpha() for char in line)
+    return not (has_digit and has_letter)
+
+
+def _code(line: str) -> bool:
+    if len(line) < _CODE_MIN_CHARS:
+        return False
+    return sum(char in _CODE for char in line) / len(line) >= _CODE_DENSITY
+
+
+def prose_lines(lines) -> list[str]:
+    """The lines worth a model's tokens: menus and inlined code removed.
+
+    Every token a model reads costs time on a CPU and money on a meter, and
+    a site's navigation is most of a listing page's first screen. What goes
+    is decided by the shape of a line, never by its words, so it holds for
+    any site in any language: a run of `MENU_RUN` links that are each a
+    line of their own, and a line dense with code characters. The link
+    marks (`LINK_OPEN`, `LINK_CLOSE`) are removed from what is kept.
+    Grounding is unaffected: what a model is shown is what its quotes are
+    checked against.
+    """
+    kept: list[str] = []
+    run: list[int] = []
+    for line in lines:
+        if not line:
+            kept.append(line)
+            continue
+        if _code(line):
+            continue
+        if _crumb(line):
+            run.append(len(kept))
+            kept.append(line)
+            continue
+        if len(run) >= MENU_RUN:
+            for index in run:
+                kept[index] = ""
+        run = []
+        kept.append(line)
+    if len(run) >= MENU_RUN:
+        for index in run:
+            kept[index] = ""
+    return [line.replace(LINK_OPEN, "").replace(LINK_CLOSE, "").strip()
+            for line in kept]

@@ -113,12 +113,20 @@ def test_the_extension_is_let_in(client):
         "http://127.0.0.1:8787",
         "http://localhost:1420",
         "http://[::1]:8787",
-        "tauri://localhost",
         "moz-extension://deadbeef",
     ],
 )
 def test_the_app_talking_to_itself_is_let_in(origin):
     assert origins.origin_is_allowed(origin) is True
+
+
+@pytest.mark.parametrize(
+    "origin", ["tauri://localhost", "asset://localhost", "http://tauri.localhost"]
+)
+def test_the_retired_webview_shell_is_no_longer_trusted(origin):
+    """The desktop app is native and sends no Origin; the webview shell it
+    replaced is gone, so its schemes and host are strangers now."""
+    assert origins.origin_is_allowed(origin) is False
 
 
 def test_no_origin_is_not_an_attack(client):
@@ -152,7 +160,7 @@ def test_a_bare_hostname_is_not_a_rebinding_target():
 
 def test_the_check_is_case_and_port_insensitive():
     assert origins.origin_is_allowed("HTTP://LocalHost:9999") is True
-    assert origins.host_is_ours("TAURI.localhost") is True
+    assert origins.host_is_ours("LOCALHOST:8787") is True
 
 
 def test_it_runs_before_anything_else_can_act_on_the_request(client):

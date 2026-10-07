@@ -43,9 +43,9 @@ def _fresh_session(monkeypatch):
     session.close()
 
 
-def test_terminal_origin_allows_the_shell_and_loopback_only():
+def test_terminal_origin_allows_the_native_app_and_loopback_only():
     assert terminal_origin_is_allowed(None)
-    assert terminal_origin_is_allowed("tauri://localhost")
+    assert not terminal_origin_is_allowed("tauri://localhost")
     assert terminal_origin_is_allowed("http://127.0.0.1:8787")
     assert not terminal_origin_is_allowed("chrome-extension://abc")
     assert not terminal_origin_is_allowed("moz-extension://abc")

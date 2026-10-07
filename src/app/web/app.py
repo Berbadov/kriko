@@ -414,7 +414,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # Two SQLite files is a thing an operator has to know about, so
             # the endpoint that names one names both.
             "app_state": str(app.state.settings.app_state_path),
-            # Three versions, never one. The binary updates through Tauri, a
+            # Three versions, never one. The binary updates through the shell, a
             # pack updates through the engine, and the schema changes with
             # neither — a reader asked "what are you running" has to be able
             # to answer the question that was actually meant.

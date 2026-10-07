@@ -5,7 +5,7 @@ under the SIL Open Font License 1.1, checked in rather than fetched at runtime.
 A desktop app cannot assume the network, and `tokens.test.ts` fails the build
 on any `@import` or `fonts.googleapis` reference for exactly that reason.
 
-The design system (`kriko-svelte/`) sets its screens in three faces, and the
+The Kriko design system sets its screens in three faces, and the
 app now wears the same three: **Barlow Condensed** for display, **DM Sans**
 for reading, **JetBrains Mono** for figures and labels. **IBM Plex Mono**
 stays bundled as the mono stack's named fallback so nothing that asks for a
