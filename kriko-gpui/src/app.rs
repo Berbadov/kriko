@@ -260,6 +260,8 @@ pub struct Kriko {
     pub dock_reply: InputState,
     /// The reply drawer: closed unless you are answering an agent.
     pub dock_reply_open: bool,
+    /// The full live agent logs drawer in the dock.
+    pub dock_logs_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
     pub dock_open: bool,
     // compare: the engine's own rows live in `live.compare`
@@ -298,6 +300,7 @@ impl Kriko {
             run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
+            dock_logs_open: false,
             dock_feed: Vec::new(),
             dock_open: true,
             compare_note_input: InputState::new(cx),
@@ -732,10 +735,11 @@ impl Kriko {
         });
 
         let zoom_icon = if maximized { "restore" } else { "maximize" };
+        let needs_you = self.live.run.needs_you().len();
 
         titlebar()
             .child(
-                // the drag strip: the whole sky span left of the controls
+                // The system drag area avoids synthesizing native mouse messages.
                 div()
                     .id("titlebar-drag")
                     .flex()
@@ -779,6 +783,14 @@ impl Kriko {
                                     .child(if self.dock_open { "LIVE ON" } else { "LIVE OFF" }),
                             ),
                     )
+                    .when(needs_you > 0, |d| {
+                        d.child(tag(
+                            "titlebar-needs-you",
+                            TagState::Need,
+                            &format!("? {needs_you}"),
+                            !self.reduce_motion,
+                        ))
+                    })
                     .child(
                         titlebar_button("win-min", "minus", false)
                             .window_control_area(WindowControlArea::Min),
