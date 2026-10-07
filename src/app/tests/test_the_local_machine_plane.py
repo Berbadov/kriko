@@ -293,14 +293,6 @@ def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):
     assert "response_format" not in stub.chat_seen[4]
     assert "reasoning_effort" in stub.chat_seen[4]
     assert "reasoning_effort" not in stub.chat_seen[5]
-def test_a_server_that_refuses_reasoning_effort_is_asked_again_plainly(stub):
-    stub.chat = [(400, {"error": {"message": "no reasoning_effort"}}),
-                 completion("answer")]
-    socket_ = local_inference.OpenAICompatSocket(
-        stub.url, "m", reasoning_effort="none")
-    assert socket_("p") == "answer"
-    assert stub.chat_seen[0]["reasoning_effort"] == "none"
-    assert "reasoning_effort" not in stub.chat_seen[1]
 
 
 def test_a_missing_model_names_the_address_and_the_model(stub):
