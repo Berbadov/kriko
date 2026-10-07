@@ -476,6 +476,30 @@ pub fn ghost(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .child(label.to_uppercase())
 }
 
+/// A compact danger key for a row that already carries its own label: the
+/// dock's per-lane Stop, which at full key size outweighed the task it stops.
+pub fn danger_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
+    div()
+        .id(id)
+        .flex_none()
+        .h(px(22.0))
+        .px(px(8.0))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded(px(6.0))
+        .font_family(MONO)
+        .text_color(rgb(DANGER))
+        .text_size(px(10.0))
+        .cursor_pointer()
+        .bg(rgba(DANGER_WASH))
+        .border_1()
+        .border_color(rgba(DANGER_EDGE))
+        .hover(|s| s.bg(rgba(0xff6b5e3d)))
+        .active(|s| s.opacity(0.85))
+        .child(label.to_uppercase())
+}
+
 /// Danger button: danger wash fill, danger text.
 pub fn danger(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()

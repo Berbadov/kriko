@@ -313,19 +313,48 @@ def _bills_per_token(params: dict, app_state_path=None) -> bool:
         return False
 
 
-def _source_ceiling(params: dict) -> str:
-    """The Run screen's sources slider, as a sentence at the end of the brief.
+def _source_ceiling(params: dict, app_state_path=None) -> str:
+    """The reader's source options, as sentences at the end of the brief.
 
-    A coding-agent CLI has no flag for "read at most N pages", so the ceiling
-    is asked for in the prompt. Empty when the reader set none (B175).
+    A coding-agent CLI has no flag for "read at most N pages" or "go to the
+    forums first", so both are asked for in the prompt. The run's own
+    `max_documents` and `source_kinds` win; otherwise the Agents tab's stored
+    choice applies (`prefs.research_options`). Empty when none is set (B175).
     """
-    wanted = int(params.get("max_documents") or 0)
-    if wanted <= 0:
-        return ""
-    return (
-        f"\n\nRead at most {wanted} source{'s' if wanted != 1 else ''} in total "
-        f"for this task, then write what they support."
-    )
+    from app import prefs
+
+    wanted = _research_options(params, app_state_path)
+    out = ""
+    if wanted["kinds"]:
+        names = [prefs.SOURCE_KINDS[one] for one in wanted["kinds"]]
+        out += ("\n\nGo to these kinds of source first: " + "; ".join(names)
+                + ". Use others only where these say nothing.")
+    if wanted["sources"] > 0:
+        count = wanted["sources"]
+        out += (f"\n\nRead at most {count} source{'s' if count != 1 else ''} in total "
+                f"for this task, then write what they support.")
+    return out
+
+
+def _research_options(params: dict, app_state_path=None) -> dict:
+    """The run's source count and kinds, falling back to the stored ones."""
+    from app import prefs
+
+    kinds = params.get("source_kinds") or []
+    if isinstance(kinds, str):
+        kinds = [one.strip() for one in kinds.split(",")]
+    conn = None
+    path = app_state_path or params.get("app_state_path")
+    try:
+        conn = state.connect(path) if path else None
+    except Exception:  # noqa: BLE001 - an unreadable preference is no preference
+        conn = None
+    try:
+        return prefs.research_options(
+            conn, sources=int(params.get("max_documents") or 0), kinds=list(kinds))
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def _cap_agent(researcher, params: dict) -> None:
@@ -659,6 +688,12 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # the presets are bundles of these knobs, never a wall around them.
         from app import scale as scaling
 
+        # The Agents tab's stored source count stands in for a run that named
+        # none, the same as it does for every agent prompt.
+        if not int(params.get("max_documents") or 0):
+            stored_count = _research_options(params, getattr(settings, "app_state_path", None))["sources"]
+            if stored_count:
+                params = {**params, "max_documents": stored_count}
         depth = scaling.applied(str(params.get("scale") or ""), params)
         # Live, per stage and per model, while the run spends — rather than
         # one number on the way out, which arrives too late to act on and
@@ -1708,7 +1743,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     from app import pagefacts
 
     prompt += pagefacts.block(params.get("page"))
-    prompt += _source_ceiling(params)
+    prompt += _source_ceiling(params, settings.app_state_path)
     reply = researcher.ask(prompt)
     progress.check()
     progress.set(0.7, "writing the draft")
@@ -1834,7 +1869,8 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         packs = ""
     progress.set(0.1, f"a quick look at {product}")
     reply = researcher.ask(
-        quicklook.brief(product, principle, params.get("page"), packs, attributes))
+        quicklook.brief(product, principle, params.get("page"), packs, attributes)
+        + _source_ceiling(params, settings.app_state_path))
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
@@ -1900,8 +1936,13 @@ QUICK_APPEAR_SECONDS = 5.0
 QUICK_POLL_SECONDS = 0.2
 
 
-def _await_quick_look(settings, progress: Progress) -> dict:
+def _await_quick_look(settings, progress: Progress, params: dict | None = None) -> dict:
     """What the quick look beside this job concluded, or `{}`.
+
+    A quick look is its own saved job, not half of a pack (the reader: "Quick
+    looks shouldn't be a pack but quick looks can be a part of a pack"). When
+    the reader asks for one to join a pack afterwards, the pack run names it
+    (`quick_job_id`) and reads its stored result here without waiting.
 
     The deepen job needs the quick look's answer before it can choose a pack:
     which installed pack the product belongs in, and the sourced risks that
@@ -1910,6 +1951,17 @@ def _await_quick_look(settings, progress: Progress) -> dict:
     without those risks.
     """
     conn = state.connect(settings.app_state_path)
+    named = str((params or {}).get("quick_job_id") or "").strip()
+    if named:
+        try:
+            job = state.get_job(conn, named)
+        finally:
+            conn.close()
+        if job and job["kind"] == "quick_look" and job["state"] == state.SUCCEEDED:
+            progress.log(f"adding the saved quick look {named} to a pack")
+            return job["result"] or {}
+        progress.log(f"the saved quick look {named} is not a finished look; carrying on without it")
+        return {}
     try:
         began = time.monotonic()
         said = False
@@ -1991,7 +2043,7 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
     from app import categorypack, packauthor, pagefacts
     from kriko.gates import load_gates
 
-    quick = _await_quick_look(settings, progress)
+    quick = _await_quick_look(settings, progress, params)
     said = str(quick.get("category") or "").strip()
     target = categorypack.resolve(
         categorypack.candidates(settings.store_path),
@@ -2934,7 +2986,8 @@ def _compare_brief(question: str, answers: list[dict], *,
         "specifications. Where the records do not answer the question, say "
         "so plainly rather than guessing. Do not invent risks. A product "
         "with no recorded risk is not proven risk-free. Name the product and "
-        "recorded risk behind each conclusion.",
+        "recorded risk behind each conclusion, and cite the recorded source "
+        "(its page and quote) that supports it.",
         "",
     ]
     if max_chars is not None:
@@ -2953,6 +3006,7 @@ def _compare_brief(question: str, answers: list[dict], *,
                 if claim.get("advice"):
                     line += f" (advice: {claim['advice']})"
                 lines.append(line)
+                lines.extend(_source_lines(claim))
         else:
             lines.append("Known risks: none recorded.")
         if response.get("context"):
@@ -3014,6 +3068,11 @@ def _compact_compare_brief(lines: list[str], question: str,
                     f"{str(claim.get('body') or '')[:340]}")
             if claim.get("advice"):
                 item += f" (advice: {str(claim['advice'])[:180]})"
+            # The first source rides along when it fits: a small model's
+            # answer can then name the page, not only the claim.
+            cited = _source_lines(claim, limit=1, quote_chars=160)
+            if cited and len(item) + len(cited[0]) + 2 <= room:
+                item += "\n" + cited[0]
             if len(item) + 1 > room:
                 continue
             section.append(item)
@@ -3027,6 +3086,30 @@ def _compact_compare_brief(lines: list[str], question: str,
                            "Unrecorded risks may still exist.")
         sections.append("\n".join(section))
     return head + "\n" + "\n\n".join(sections)
+
+
+def _source_lines(claim: dict, *, limit: int = 3, quote_chars: int = 300) -> list[str]:
+    """A claim's recorded sources as brief lines: the page, then its quote.
+
+    The reader: "in compare agents do not read the sources of the knowledge."
+    The brief carried each claim's words and dropped the evidence under it,
+    so an agent could weigh claims but never the pages behind them. Sources
+    are passed through as stored, any category's alike.
+    """
+    out = []
+    for source in (claim.get("sources") or [])[:limit]:
+        if not isinstance(source, dict):
+            continue
+        url = str(source.get("url") or "").strip()
+        quote = " ".join(str(source.get("quote") or "").split())[:quote_chars]
+        if not (url or quote):
+            continue
+        tier = str(source.get("tier") or source.get("source_tier") or "").strip()
+        line = f"    source: {url}" + (f" [{tier}]" if tier else "")
+        if quote:
+            line += f' "{quote}"'
+        out.append(line)
+    return out
 
 
 def _context_units_of(response: dict) -> dict:

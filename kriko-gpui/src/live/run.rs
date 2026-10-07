@@ -398,6 +398,11 @@ pub struct Harness {
     pub llms: Vec<String>,
     pub llms_note: String,
     pub llm_selectable: bool,
+    /// The effort chosen for this harness; empty means its own default.
+    pub effort: String,
+    /// The effort levels this CLI's `--help` declares; empty means no dial.
+    pub efforts: Vec<String>,
+    pub effort_hint: String,
 }
 
 #[derive(Clone, Debug)]
@@ -514,6 +519,13 @@ pub struct State {
     pub agent_order: Vec<String>,
     /// The detail card's model drawer.
     pub model_drawer: bool,
+    /// Every kind of source a run can be pointed at, `(id, words)`, in the
+    /// engine's order.
+    pub source_kinds: Vec<(String, String)>,
+    /// The kinds the reader picked, and the most sources a run reads (0 is
+    /// "the run decides"). Both stored by the engine, read by every agent.
+    pub research_kinds: Vec<String>,
+    pub research_sources: u32,
     pub verifying: bool,
     pub verify: Option<Verify>,
 }
@@ -691,6 +703,12 @@ fn harnesses_from(v: &Value) -> Vec<Harness> {
             .collect(),
         llms_note: api::s(h, "llms_note"),
         llm_selectable: api::b(h, "llm_selectable"),
+        effort: api::s(h, "effort"),
+        efforts: api::arr(h, "efforts")
+            .iter()
+            .filter_map(|m| m.as_str().map(str::to_string))
+            .collect(),
+        effort_hint: api::s(h, "effort_hint"),
     };
     let mut out: Vec<Harness> = api::arr(v, "harnesses")
         .iter()
@@ -888,7 +906,53 @@ impl Kriko {
             .filter(|s| !s.is_empty())
             .map(str::to_string)
             .collect();
+        run.source_kinds = api::arr(v, "source_kinds")
+            .iter()
+            .map(|k| (api::s(k, "id"), api::s(k, "label")))
+            .collect();
+        let research = v.get("research").cloned().unwrap_or(Value::Null);
+        run.research_kinds = api::arr(&research, "kinds")
+            .iter()
+            .filter_map(|k| k.as_str().map(str::to_string))
+            .collect();
+        run.research_sources = research
+            .get("sources")
+            .and_then(|n| n.as_u64())
+            .unwrap_or(0) as u32;
         run.prefs_loaded = true;
+    }
+
+    /// Turn one kind of source on or off for every agent run.
+    pub fn toggle_source_kind(&mut self, kind: String, cx: &mut Context<Self>) {
+        let mut kinds = self.live.run.research_kinds.clone();
+        if let Some(at) = kinds.iter().position(|k| *k == kind) {
+            kinds.remove(at);
+        } else {
+            kinds.push(kind);
+        }
+        self.live.run.research_kinds = kinds.clone();
+        let body = serde_json::json!({ "research_source_kinds": kinds.join(",") });
+        self.save_research_options(body, cx);
+    }
+
+    /// Set the most sources an agent run reads; 0 leaves it to the run.
+    pub fn pick_source_count(&mut self, count: u32, cx: &mut Context<Self>) {
+        self.live.run.research_sources = count;
+        let body = serde_json::json!({ "research_sources": count.to_string() });
+        self.save_research_options(body, cx);
+    }
+
+    fn save_research_options(&mut self, body: Value, cx: &mut Context<Self>) {
+        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
+            this.note(&reply);
+            match reply {
+                Ok(v) => {
+                    this.apply_prefs(&v);
+                    this.live.run.agent_note = "Saved. Every agent run reads these.".into();
+                }
+                Err(e) => this.live.run.agent_note = e.message,
+            }
+        });
     }
 
     // ---- what the keys do ----
@@ -1118,7 +1182,12 @@ impl Kriko {
 
     /// Pick the model one provider runs with; empty is its own default.
     pub fn pick_agent_model(&mut self, id: String, model: String, cx: &mut Context<Self>) {
-        let key = format!("harness_model_{}", id.replace('-', "_"));
+        // The local row's model is the Local LLM page's own setting.
+        let key = if id == "local" {
+            "local_model".to_string()
+        } else {
+            format!("harness_model_{}", id.replace('-', "_"))
+        };
         let body = serde_json::json!({ key: model });
         self.live.run.model_drawer = false;
         self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
@@ -1127,6 +1196,22 @@ impl Kriko {
                 Ok(v) => {
                     this.apply_prefs(&v);
                     this.live.run.agent_note = "Saved. New runs use this model.".into();
+                }
+                Err(e) => this.live.run.agent_note = e.message,
+            }
+        });
+    }
+
+    /// Pick how hard one provider thinks; empty is its own default.
+    pub fn pick_agent_effort(&mut self, id: String, effort: String, cx: &mut Context<Self>) {
+        let key = format!("harness_effort_{}", id.replace('-', "_"));
+        let body = serde_json::json!({ key: effort });
+        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
+            this.note(&reply);
+            match reply {
+                Ok(v) => {
+                    this.apply_prefs(&v);
+                    this.live.run.agent_note = "Saved. New runs use this effort.".into();
                 }
                 Err(e) => this.live.run.agent_note = e.message,
             }
@@ -1172,6 +1257,25 @@ impl Kriko {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn the_local_model_is_an_agent_row_with_its_dials() {
+        // The reader: "Local agent cannot be chosen in agents tab" and "No
+        // model and effort selection just agents tab".
+        let v = json!({"harnesses": [
+            {"id": "local", "label": "Local model", "llm": "small:4b",
+             "llms": ["small:4b", "big:27b"], "llm_selectable": true, "efforts": []},
+            {"id": "claude-code", "label": "Claude Code", "llm": "", "llms": ["a", "b"],
+             "llm_selectable": true, "effort": "high", "efforts": ["low", "high"]}
+        ]});
+        let found = harnesses_from(&v);
+        assert_eq!(found[0].id, "local");
+        assert!(matches!(found[0].state, RunState::Ready));
+        assert_eq!(found[0].llms, vec!["small:4b", "big:27b"]);
+        assert!(found[0].efforts.is_empty());
+        assert_eq!(found[1].effort, "high");
+        assert_eq!(found[1].efforts, vec!["low", "high"]);
+    }
 
     #[test]
     fn recent_local_jobs_keep_their_backend_and_question_for_navigation() {
