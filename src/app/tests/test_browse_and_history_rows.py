@@ -42,6 +42,28 @@ def test_subjects_filter_by_severity_and_evidence(client):
     assert [s["label"] for s in both] == ["Widget Bit"]
 
 
+def test_subject_pages_include_a_stable_total_and_keep_the_legacy_list_shape(client):
+    legacy = client.get("/api/subjects").json()
+    first = client.get("/api/subjects", params={"paged": "true", "limit": 2}).json()
+    second = client.get(
+        "/api/subjects", params={"paged": "true", "limit": 2, "offset": 2}
+    ).json()
+
+    assert len(legacy) == 4
+    assert first == {
+        "items": legacy[:2],
+        "total": 4,
+        "limit": 2,
+        "offset": 0,
+    }
+    assert second["items"] == legacy[2:]
+    assert second["total"] == 4
+    assert second["offset"] == 2
+    assert client.get(
+        "/api/subjects", params={"paged": "true", "limit": 2, "offset": 20}
+    ).json()["items"] == []
+
+
 def test_a_filter_value_no_subject_has_returns_nothing_not_everything(client):
     assert client.get("/api/subjects?evidence=corroborated").json() == []
     assert client.get("/api/subjects?severity=nonsense").json() == []
