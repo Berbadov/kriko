@@ -144,9 +144,11 @@ class OpenAICompatSocket:
                     raise self._failed(other) from other
             elif error.code == 400 and ("response_format" in body
                                          or "reasoning_effort" in body):
-                # The server may not understand an optional field. Drop
-                # schema first, then effort, so a capable server keeps the
-                # remaining option when only one was refused.
+                # The server cannot take a field it does not know: it cannot
+                # constrain its output, or it does not speak this effort
+                # dialect. Either optional field may be the refused one, so
+                # they are dropped one at a time — schema first, the older
+                # refusal — and each drop earns one retry.
                 payload = None
                 for optional in ("response_format", "reasoning_effort"):
                     if optional not in body:
