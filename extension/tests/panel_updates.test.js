@@ -203,6 +203,11 @@ test("deeper research progress keeps quick-look cards expanded without blinking"
   const status = p.shadow().querySelector(".lite-research-status").textContent;
   assert.match(status, /Reading sources · \d+s/);
   assert.doesNotMatch(status, /%/);
+  // The reader: "Not percentages but progress bars, animated."
+  const bar = p.shadow().querySelector(".lite-research .lite-progress");
+  assert.ok(bar && !bar.hidden, "no progress bar while the run is going");
+  assert.equal(bar.style.getPropertyValue("--p"), "50%");
+  assert.equal(bar.getAttribute("aria-valuenow"), "50");
 });
 
 test("a quick look is one saved job, and joins a pack only when asked", () => {
