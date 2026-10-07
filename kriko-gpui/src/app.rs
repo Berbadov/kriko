@@ -251,6 +251,9 @@ pub struct Kriko {
     // browse / agents / packs / models
     pub browse_view: usize,
     pub browse_view_prev: usize,
+    pub browse_page: usize,
+    pub browse_page_size: usize,
+    pub browse_filters_open: bool,
     // run: the subject search that starts a check
     pub run_search: InputState,
     // the live actions dock
@@ -289,6 +292,9 @@ impl Kriko {
             history_span: SpanFilter::All,
             browse_view: 0,
             browse_view_prev: 0,
+            browse_page: 0,
+            browse_page_size: 25,
+            browse_filters_open: false,
             run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,

@@ -271,6 +271,7 @@ pub struct State {
     // Browse
     pub subjects_loaded: bool,
     pub subjects: Vec<Subject>,
+    pub subjects_total: usize,
     pub subjects_asked: String,
     pub filters: Vec<FilterDef>,
     /// Per filter, the picked option (0 is all).
@@ -364,8 +365,10 @@ impl State {
 
     /// The query string for `/api/subjects`, from the search text and the
     /// filters picked. It doubles as the key a reply must still match.
-    pub fn subjects_url(&self, query: &str) -> String {
-        let mut url = String::from("/api/subjects?limit=100");
+    pub fn subjects_url(&self, query: &str, page: usize, page_size: usize) -> String {
+        let size = page_size.clamp(1, 200);
+        let offset = page.saturating_mul(size);
+        let mut url = format!("/api/subjects?paged=true&limit={size}&offset={offset}");
         if !query.trim().is_empty() {
             url.push_str(&format!("&q={}", api::seg(query.trim())));
         }
@@ -629,7 +632,11 @@ impl Kriko {
     }
 
     fn load_subjects(&mut self, cx: &mut Context<Self>) {
-        let url = self.live.history.subjects_url(&self.browse_search.value);
+        let url = self.live.history.subjects_url(
+            &self.browse_search.value,
+            self.browse_page,
+            self.browse_page_size,
+        );
         self.live.history.subjects_asked = url.clone();
         let path = url.clone();
         self.fetch(cx, move || api::get(&path), move |this, reply, _| {
@@ -640,7 +647,7 @@ impl Kriko {
             }
             if let Ok(v) = reply {
                 let h = &mut this.live.history;
-                h.subjects = api::arr(&v, "")
+                h.subjects = api::arr(&v, "items")
                     .iter()
                     .map(|s| Subject {
                         id: api::s(s, "subject_id"),
@@ -650,6 +657,9 @@ impl Kriko {
                         claims: api::n(s, "claims").unwrap_or(0.0) as i64,
                     })
                     .collect();
+                h.subjects_total = api::n(&v, "total")
+                    .unwrap_or(h.subjects.len() as f64)
+                    .max(0.0) as usize;
                 h.subjects_loaded = true;
             }
         });
@@ -659,6 +669,8 @@ impl Kriko {
     /// typing has stopped for a quarter of a second.
     pub fn browse_search_typed(&mut self, cx: &mut Context<Self>) {
         self.live.history.search_seq += 1;
+        self.browse_page = 0;
+        self.clear_browse_selection();
         let seq = self.live.history.search_seq;
         cx.spawn(async move |this, cx| {
             cx.background_executor().timer(Duration::from_millis(250)).await;
@@ -672,15 +684,46 @@ impl Kriko {
         .detach();
     }
 
-    /// Cycle one Browse filter to its next option (and back to all).
-    pub fn cycle_browse_filter(&mut self, i: usize, cx: &mut Context<Self>) {
+    /// Select one explicit Browse filter value; 0 means no filter.
+    pub fn pick_browse_filter(&mut self, i: usize, pick: usize, cx: &mut Context<Self>) {
         let h = &mut self.live.history;
         let Some(f) = h.filters.get(i) else { return };
-        let n = f.options.len() + 1;
-        if let Some(pick) = h.filter_pick.get_mut(i) {
-            *pick = (*pick + 1) % n;
-        }
+        if pick > f.options.len() { return; }
+        let Some(current) = h.filter_pick.get_mut(i) else { return };
+        if *current == pick { return; }
+        *current = pick;
+        self.browse_page = 0;
+        self.clear_browse_selection();
         self.load_subjects(cx);
+    }
+
+    /// Reset every Browse filter, including selections hidden in the drawer.
+    pub fn clear_browse_filters(&mut self, cx: &mut Context<Self>) {
+        if self.live.history.filter_pick.iter().all(|pick| *pick == 0) {
+            return;
+        }
+        self.live.history.filter_pick.fill(0);
+        self.browse_page = 0;
+        self.clear_browse_selection();
+        self.load_subjects(cx);
+    }
+
+    /// Change the Browse page or page size and request only that slice.
+    pub fn browse_page_changed(&mut self, page: usize, page_size: usize, cx: &mut Context<Self>) {
+        let size = page_size.clamp(1, 200);
+        let pages = self.live.history.subjects_total.div_ceil(size).max(1);
+        self.browse_page_size = size;
+        self.browse_page = page.min(pages - 1);
+        self.clear_browse_selection();
+        self.load_subjects(cx);
+    }
+
+    /// Clear the selected subject when the visible result slice changes.
+    fn clear_browse_selection(&mut self) {
+        let h = &mut self.live.history;
+        h.subject_sel = None;
+        h.subject_detail = None;
+        h.subject_evidence = None;
     }
 
     /// Picks a subject for the drawer and reads it and its evidence.
@@ -841,6 +884,6 @@ mod tests {
             options: vec![("a.b".into(), "A".into())],
         }];
         s.filter_pick = vec![1];
-        assert_eq!(s.subjects_url(" k9k engine "), "/api/subjects?limit=100&q=k9k%20engine&pack_id=a.b");
+        assert_eq!(s.subjects_url(" k9k engine ", 2, 25), "/api/subjects?paged=true&limit=25&offset=50&q=k9k%20engine&pack_id=a.b");
     }
 }
