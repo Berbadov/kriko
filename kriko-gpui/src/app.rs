@@ -5,7 +5,7 @@
 
 use gpui::{
     div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle, IntoElement,
-    KeyDownEvent, MouseButton, ParentElement, Render, Stateful, Styled, Window, WindowControlArea,
+    KeyDownEvent, ParentElement, Render, Stateful, Styled, Window, WindowControlArea,
     Animation, AnimationExt,
 };
 
@@ -16,66 +16,6 @@ use crate::live::Live;
 use crate::shell;
 use crate::screens;
 use crate::theme::*;
-
-// ---- native window drag ----
-//
-// GPUI 0.2.2 has no `start_window_move` on Windows, and the platform's
-// HTCAPTION fall-through only works when nothing swallows the non-client
-// button press — anything focusable nearby calls `prevent_default` and the
-// drag dies. So the drag strip starts the native move loop itself.
-
-#[cfg(windows)]
-mod win {
-    #[link(name = "user32")]
-    extern "system" {
-        fn GetActiveWindow() -> isize;
-        fn FindWindowW(class: *const u16, title: *const u16) -> isize;
-        fn ReleaseCapture() -> i32;
-        fn SendMessageW(hwnd: isize, msg: u32, wparam: usize, lparam: isize) -> isize;
-        fn GetCursorPos(point: *mut POINT) -> i32;
-    }
-
-    #[repr(C)]
-    struct POINT {
-        x: i32,
-        y: i32,
-    }
-
-    const WM_NCLBUTTONDOWN: u32 = 0x00A1;
-    const HTCAPTION: usize = 0x2;
-
-    /// Hand the press to the system as a caption press: the native move
-    /// loop starts, exactly as if the strip were a real titlebar.
-    pub fn drag_window() {
-        unsafe {
-            let mut title: Vec<u16> = "Kriko".encode_utf16().chain(std::iter::once(0)).collect();
-            let hwnd = {
-                let active = GetActiveWindow();
-                if active != 0 {
-                    active
-                } else {
-                    FindWindowW(std::ptr::null(), title.as_mut_ptr())
-                }
-            };
-            if hwnd == 0 {
-                return;
-            }
-            let mut point = POINT { x: 0, y: 0 };
-            if GetCursorPos(&mut point) == 0 {
-                return;
-            }
-            let lparam = ((point.y as isize & 0xffff) << 16) | (point.x as isize & 0xffff);
-            ReleaseCapture();
-            SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, lparam);
-        }
-    }
-}
-
-/// The fallback every platform takes: the drag strip calls this on press.
-fn drag_window_fallback() {
-    #[cfg(windows)]
-    win::drag_window();
-}
 
 // ---- keyboard actions (bound in main.rs) ----
 gpui::actions!(kriko, [NewCheck, SearchKnowledge, JumpBrowse]);
@@ -685,9 +625,8 @@ impl Kriko {
 
 impl Kriko {
     /// The floating top bar. The strip between the sidebar and the LIVE
-    /// toggle is the drag area: a plain client strip that hands its press
-    /// to Windows as a caption press, because GPUI 0.2.2 cannot start a
-    /// move itself and the platform caption area gets swallowed. It
+    /// toggle is the drag area. GPUI maps its Drag hitbox to the native
+    /// caption hit test, so Windows owns the move gesture. It
     /// carries no brand: the sidebar says kriko once, the page head says
     /// where you are.
     /// What the window shows until the engine answers, and instead of a
@@ -798,7 +737,7 @@ impl Kriko {
                     .min_w(px(0.0))
                     .h_full()
                     .cursor_move()
-                    .on_mouse_down(MouseButton::Left, |_, _, _| drag_window_fallback()),
+                    .window_control_area(WindowControlArea::Drag),
             )
             .child(
                 div()
