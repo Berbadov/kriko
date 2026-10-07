@@ -480,6 +480,8 @@ pub struct State {
     pub polling: bool,
     pub jobs: Vec<Job>,
     pub jobs_loaded: bool,
+    /// The Activity entry whose complete agent log is open.
+    pub activity_log_open: Option<String>,
     list_inflight: bool,
     detail_inflight: bool,
     last_list: Option<Instant>,
