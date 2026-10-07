@@ -9,12 +9,23 @@ install that silently reaches nothing) looks identical to a bad install.
 
 import json
 import re
+import sys
 
 from fastapi.testclient import TestClient
 
 from app import extension
 from app.web.app import create_app
 from app.web.settings import EXTENSION_PORT, Settings
+
+
+def test_reveal_selects_extension_folder_in_parent_on_windows(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(extension.subprocess, "Popen", lambda command, **kwargs: calls.append(command))
+
+    path = tmp_path / "extension"
+    assert extension.reveal(path) == ""
+    assert calls == [["explorer", "/select,", str(path)]]
 
 
 def _client(tmp_path, **over):
