@@ -819,6 +819,7 @@
     state.researching = job.job_id;
     state.researchState = "starting";
     state.researchMessage = "Running again with your answer...";
+    state.researchStartedAt = Date.now();
     renderResearch();
     chrome.runtime.sendMessage({ type: "JOB_RETRY", payload: { job_id: job.job_id, answers } },
       (response) => {

@@ -657,6 +657,13 @@ impl State {
         if usable(&self.preferred) {
             return self.preferred.clone();
         }
+        // A picked Local model stays the pick when its server is down: the
+        // engine fails the run with the reason rather than this screen
+        // quietly handing it to a CLI. With nothing picked, a ready local
+        // model goes first, as the engine's own default does (B172).
+        if self.preferred == "local" || (self.preferred.is_empty() && usable("local")) {
+            return "local".to_string();
+        }
         self.harnesses
             .iter()
             .find(|h| matches!(h.state, RunState::Ready))
@@ -1275,6 +1282,22 @@ mod tests {
         assert!(found[0].efforts.is_empty());
         assert_eq!(found[1].effort, "high");
         assert_eq!(found[1].efforts, vec!["low", "high"]);
+    }
+
+    #[test]
+    fn a_check_runs_on_the_local_model_when_it_is_picked_or_nothing_is() {
+        let mut st = State::default();
+        st.harnesses = harnesses_from(&json!({"harnesses": [
+            {"id": "claude-code", "label": "Claude Code"},
+            {"id": "local", "label": "Local model"}
+        ]}));
+        assert_eq!(st.start_harness(), "local");
+        st.preferred = "claude-code".into();
+        assert_eq!(st.start_harness(), "claude-code");
+        // picked, but its server is down: still the pick, never a CLI
+        st.preferred = "local".into();
+        st.harnesses.retain(|h| h.id != "local");
+        assert_eq!(st.start_harness(), "local");
     }
 
     #[test]
