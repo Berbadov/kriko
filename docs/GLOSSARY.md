@@ -1,7 +1,9 @@
 # Kriko, the words
 
-Terms already used across the code and the documents, collected because
-definitions drift between sessions. One line each, plus its owner.
+Look a word up here before you use it. One line each, plus the file that owns
+it. Definitions drift between sessions, so this is the one place they are held.
+Words are grouped by what they are about, then listed in the order a reader
+meets them.
 
 ## The knowledge
 
@@ -51,14 +53,14 @@ which in its log.
 
 - **"agent" is four things**: the **agent** plane (by hand); the **harness**
   (a CLI Kriko *starts*); a **coding agent** working on Kriko's own source;
-  and the research agent file each pack ships. Prefer "harness plane" or "CLI".
+  and the research agent file each pack ships. Say "harness plane" or "CLI".
 - **"shell" is two things**: the **desktop shell** (`kriko-gpui/`, the native
-  app that owns the sidecar's lifetime and reads the engine only over HTTP) and the
-  terminal's own shell (the PTY handed to the operator's terminal).
+  app that owns the sidecar's lifetime and reads the engine only over HTTP) and
+  the terminal's own shell (the PTY handed to the operator's terminal).
 - **"ledger" is two things**: the **evidence ledger** (`src/kriko/ledger/`,
   build time: documents, chunks, extractions, clusters, verdicts) and the
   job's **ledgering** stage, which records verdicts into `app.sqlite` through
-  `log_submission`. Prefer "evidence ledger" and "submissions log".
+  `log_submission`. Say "evidence ledger" and "submissions log".
 - **"risk" is retired as a code word.** The engine stores, sends and renders a
   **claim**; the screen still says *risk*, which is the reader's word.
 - **"extension"** is the browser client in `extension/` and nothing else.
@@ -68,6 +70,8 @@ which in its log.
   so the bridge is written down once.
 
 ## Naming rules for new things
+
+Before a new word enters the code or the screen:
 
 1. Name it for the user, not for the mechanism (`lineup` over `priority_queue`).
 2. One word, one meaning.

@@ -152,7 +152,7 @@ def test_there_are_workflows_to_check():
     Was `>= 2` until 2026-09-13, when `ci.yml` was deleted — this account has no
     Actions minutes, so every run since the workflow was un-paused failed in
     seconds without ever being allocated a runner, and its three jobs moved into
-    `tools/gate.sh` (see CONTRIBUTING.md). `desktop.yml` is the one that remains,
+    `tools/gate.sh` (see docs/DOCTRINE.md). `desktop.yml` is the one that remains,
     and it is the one this file's real check was written for: it installs Python
     and must install the lock.
 

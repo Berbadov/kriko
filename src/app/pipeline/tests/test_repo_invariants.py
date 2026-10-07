@@ -1150,26 +1150,19 @@ def test_no_text_file_is_read_or_written_in_the_platform_encoding():
     )
 
 
-def test_every_new_backlog_item_says_when_it_is_done():
+def test_the_request_template_asks_where_and_done_when():
     """docs/DOCTRINE.md §1: a request is written down with what counts as done.
 
-    Three requests of 2026-09 (the research limiters) never reached the
-    backlog and drifted into chips, a dropdown and nothing. From B141 on, an
-    item without a **Done when:** line is not an item yet. Earlier ones are
-    history and are left as they are.
+    Three requests of 2026-09 (the research limiters) were never written down
+    and drifted into chips, a dropdown and nothing. Open work moved from a
+    file to GitHub issues on 2026-10-06, so the rule moved to the one form
+    every request is opened from: if it stops asking for the reader's words,
+    the screen and the outcome, the next request is a guess again.
     """
-    import re
-
-    text = (REPO / "backlog.md").read_text(encoding="utf-8", errors="replace")
-    heads = list(re.finditer(r"^### B(\d+)\b.*$", text, re.M))
-    missing = []
-    for at, head in enumerate(heads):
-        if int(head.group(1)) < 141:
-            continue
-        end = heads[at + 1].start() if at + 1 < len(heads) else len(text)
-        body = text[head.end():end].split("\n## ", 1)[0]
-        if "**Done when:**" not in body:
-            missing.append(head.group(0).strip())
+    template = REPO / ".github" / "ISSUE_TEMPLATE" / "request.md"
+    text = template.read_text(encoding="utf-8")
+    missing = [field for field in ("**Asked:**", "**Where:**", "**Done when:**")
+               if field not in text]
     assert not missing, (
-        "backlog items with no **Done when:** line — write what the reader will "
-        "be able to see, per docs/DOCTRINE.md §1:\n  " + "\n  ".join(missing))
+        f"{template.relative_to(REPO)} no longer asks for {missing}; every "
+        "request needs them, per docs/DOCTRINE.md §1.")

@@ -17,7 +17,7 @@
 # version test fail for a reason that has nothing to do with the tree.
 #
 # Every one of those is a thing a person had to find out by failing. None of
-# them is interesting. So they live here instead, and `CONTRIBUTING.md` says to
+# them is interesting. So they live here instead, and `docs/DOCTRINE.md` says to
 # run this rather than listing them again.
 #
 # It never touches `~/.kriko`: your store, your history and your keys are not

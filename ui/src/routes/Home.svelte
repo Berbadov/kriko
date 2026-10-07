@@ -9,7 +9,7 @@
     import { toHash } from "../lib/router";
     import type { HistoryItem } from "../lib/types";
     /* Home: what this installation has done lately, as three graphs (B174),
-     * in the design system's page frame (kriko-svelte/pages/Home.svelte).
+     * in the design system's page frame.
      *
      * Counted in the browser from the rows the server already keeps
      * (`/api/operations`, `/api/jobs`), with the totals from `/api/usage`
