@@ -280,7 +280,8 @@ def start_research_plane(
         # an agent id, so it is never checked against the installed CLIs.
         wants_local = requested == prefs.LOCAL_PICK or (not requested and (
             not stored or stored == prefs.LOCAL_PICK or (not installed and not picked_api)))
-        if requested == prefs.LOCAL_PICK and not local["ready"]:
+        if not local["ready"] and (requested == prefs.LOCAL_PICK
+                                   or (not requested and stored == prefs.LOCAL_PICK)):
             raise HTTPException(503, f"The local model is not ready. {local['reason']}") from exc
         if wants_local and local["ready"]:
             from app import pagefacts
@@ -436,6 +437,13 @@ def add_quick_look_to_pack(job_id: str, runner=Depends(get_jobs),
         raise HTTPException(404, f"no quick look {job_id}")
     if job["state"] != state.SUCCEEDED:
         raise HTTPException(409, "This quick look did not finish, so there is nothing to add yet.")
+    # Pressed twice, it is one pack run: the one already going is the answer.
+    for one in state.list_jobs(conn, 200):
+        if (one["kind"] == "pack_author" and not one["done"]
+                and one["params"].get("quick_job_id") == job_id):
+            return {"job_id": one["job_id"], "kind": "pack_author", "quick_job_id": job_id,
+                    "backend": one["params"].get("backend", ""),
+                    "harness": one["params"].get("harness", "")}
     look = job["params"]
     product = str(look.get("product") or "").strip()
     local = str(look.get("backend") or "") == "local"
