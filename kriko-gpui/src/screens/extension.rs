@@ -4,7 +4,7 @@
 
 use gpui::{div, prelude::*, px, rgb, ClickEvent, Context, Div, Styled, Window};
 
-use crate::app::Kriko;
+use crate::app::{Field, Kriko};
 use crate::live::knowledge::{ago_seconds, ExtStatus};
 use crate::screens::{empty_note, mono, row_desc, row_title};
 use crate::theme::*;
@@ -61,7 +61,7 @@ fn seen_line(e: &ExtStatus) -> (TagState, &'static str, String) {
     }
 }
 
-pub fn extension(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
     let k = &app.live.knowledge;
     let Some(e) = &k.ext else {
@@ -70,10 +70,14 @@ pub fn extension(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
         ));
     };
 
+    let port_input = app.input_field(
+        Field::ExtensionPort, "ext-port-input", "8787", None, window, cx,
+    );
     let act = |action: &'static str| {
         cx.listener(move |this, _: &ClickEvent, _w, cx| this.extension_action(action, cx))
     };
     let check = cx.listener(|this, _: &ClickEvent, _w, cx| this.refresh_extension(cx));
+    let save_port = cx.listener(|this, _: &ClickEvent, _w, cx| this.save_extension_port(cx));
 
     // ---- steps ----
     let staged_line = if !e.available {
@@ -148,6 +152,12 @@ pub fn extension(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
             ),
             DIM,
         ))
+        .child(hairline())
+        .child(eyebrow("Connection port"))
+        .child(row_desc("Choose a free local port, then use the same address in the browser extension's settings."))
+        .child(port_input)
+        .child(ghost("ext-save-port", "Save port and restart engine").on_click(save_port))
+        .child(mono(&format!("Extension address: http://127.0.0.1:{}", e.port), DIM))
         .child(
             div()
                 .flex()

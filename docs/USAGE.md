@@ -34,8 +34,16 @@ the same recipe. See `kriko-gpui/README.md`, and
 curl http://127.0.0.1:8787/api/health  # {"ok":true,"store":...,"app_state":...}
 ```
 
-> Port 8787 taken? The extension only talks to 8787. The desktop app opens
-> anyway and logs to stderr; stop whatever else is listening.
+On Windows, closing the window leaves Kriko in the system tray so the browser
+extension can keep using the engine. Open it again from the tray or the desktop
+shortcut. Choose **Quit Kriko** in the tray to stop the engine too. The tray
+tooltip says whether the engine is ready, still starting, or stopped.
+
+> Port 8787 taken? In the desktop app's **Browser extension** screen, enter a
+> free port and choose **Save port and restart engine**. Then open the browser
+> extension's settings and set its address to the one shown in the app, such
+> as `http://127.0.0.1:8790`. The choice survives desktop restarts. A port
+> conflict leaves the app open and marks the extension listener unavailable.
 
 ## 2. The browser extension
 
@@ -46,6 +54,11 @@ first reaches the app.
 **From a checkout:** `chrome://extensions`, Developer mode, Load unpacked,
 select `extension/`. Open a page an adapter can read; the panel appears after
 about 1.5 seconds.
+
+The small toolbar icon is coloured when the app answers and muted when it
+cannot be reached. Chrome refreshes that state about once a minute. Any number
+or question mark on the icon describes the current page, not the connection.
+Click the icon to open the panel on the page.
 
 > After an app update, or any change under `extension/`: stage again, then the
 > browser's Reload (the circular arrow on the extension's card at

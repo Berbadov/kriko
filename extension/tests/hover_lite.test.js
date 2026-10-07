@@ -120,7 +120,7 @@ test("the panel asks the worker for an analysis by its current message name", ()
 });
 
 test("which pages are analysable is the worker's answer, not a hostname check", () => {
-  // The panel used to test for sahibinden.com itself, which meant installing
+  // The panel used to test for one hardcoded host itself, which meant installing
   // a pack for a second listing site changed nothing until someone edited
   // this file. The installed adapters decide; the panel just asks.
   const p = loadPanel({ url: "https://arabam.example/ilan/9" });

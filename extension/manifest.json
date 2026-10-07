@@ -2,10 +2,10 @@
     "manifest_version": 3,
     "name": "Kriko",
     "description": "Shows what is known to go wrong with the product on the page you are reading.",
-    "version": "0.3.1",
+    "version": "0.4.0",
     "permissions": ["activeTab", "storage", "scripting", "alarms"],
     "optional_host_permissions": ["https://*/*"],
-    "host_permissions": ["http://127.0.0.1/*", "https://*.sahibinden.com/*"],
+    "host_permissions": ["http://127.0.0.1/*"],
     "background": {
         "service_worker": "background.js"
     },
@@ -35,26 +35,6 @@
         "page": "options/options.html",
         "open_in_tab": true
     },
-    "content_scripts": [
-        {
-            "matches": [
-                "https://*.sahibinden.com/*"
-            ],
-            "js": ["content.js"],
-            "run_at": "document_idle"
-        },
-        {
-            "matches": [
-                "https://*.sahibinden.com/*"
-            ],
-            "js": [
-                "hover_lite/icons.js",
-                "hover_lite/claim_card.js",
-                "hover_lite/hover_lite.js"
-            ],
-            "run_at": "document_idle"
-        }
-    ],
     "web_accessible_resources": [
         {
             "resources": ["hover_lite/hover_lite.css", "assets/fonts/*.ttf"],

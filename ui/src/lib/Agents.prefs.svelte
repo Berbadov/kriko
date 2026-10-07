@@ -153,7 +153,10 @@
     // The preference key is the id with its dashes folded, which is what the
     // server reads. Written once here rather than inline twice, because the
     // two picks below would otherwise each carry their own copy of the rule.
-    const key = (prefix: string, id: string) => `${prefix}_${id.replace(/-/g, "_")}`;
+    // The Local row's LLM is the local plane's own setting
+    // (`prefs.harness_model_key`), so one choice holds on every screen.
+    const key = (prefix: string, id: string) =>
+        prefix === "harness_model" && id === "local" ? "local_model" : `${prefix}_${id.replace(/-/g, "_")}`;
 
     // The mark (D2). A vendor's own logo is a trademark, and the app carries
     // none until the reader supplies the published assets; until then each

@@ -7,7 +7,7 @@ and a pack is how knowledge travels.
 
 It left one thing with no answer, and it is the reader's: *"I cannot open the
 extension on pages that aren't registered — so basically it opens on
-sahibinden only."* The panel is not missing on those pages; the **site** is.
+one site only."* The panel is not missing on those pages; the **site** is.
 Until now the only way to add one was to author a whole pack, which is a
 disproportionate answer to "this listing site also sells cars".
 

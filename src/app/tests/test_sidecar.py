@@ -249,6 +249,7 @@ def test_the_extension_port_is_served_as_well_as_the_announced_one(tmp_path):
             body = _health(port)
             assert body is not None, f"nothing served on {port}"
             assert body["ok"] is True
+            assert body["extension_port"] == free
     finally:
         process.terminate()
         process.wait(timeout=15)
