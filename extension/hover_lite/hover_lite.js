@@ -115,6 +115,8 @@
     // B148: the quick look's answer, kept while the deeper run goes on.
     // `{ assumed, risks, dropped }` or null.
     researchQuick: null,
+    // The followed job's share of its work, for the progress bar.
+    researchProgress: 0,
     // The saved quick look the "Add to a pack" button would file, or null.
     researchQuickJob: null,
     // When the followed run started, for the elapsed time beside its stage.
@@ -740,6 +742,7 @@
     state.researchQuick = null;
     state.researchQuickJob = null;
     state.researchStartedAt = Date.now();
+    state.researchProgress = 0;
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
       ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
@@ -820,6 +823,7 @@
     state.researchState = "starting";
     state.researchMessage = "Running again with your answer...";
     state.researchStartedAt = Date.now();
+    state.researchProgress = 0;
     renderResearch();
     chrome.runtime.sendMessage({ type: "JOB_RETRY", payload: { job_id: job.job_id, answers } },
       (response) => {
@@ -883,6 +887,7 @@
           <label>Context<textarea class="lite-research-context" maxlength="140" ${busy ? "disabled" : ""}></textarea></label>`}
         <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
         <p class="lite-research-status" role="status"></p>
+        <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
         ${state.researchQuick?.risks.length ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
@@ -916,6 +921,7 @@
     if (slot._researchMarkup === signature) {
       slot.querySelector(".lite-research").dataset.state = state.researchState;
       slot.querySelector(".lite-research-status").textContent = state.researchMessage;
+      showProgress(slot.querySelector(".lite-progress"), state.researching ? state.researchProgress : null);
       const name = slot.querySelector(".lite-research-name");
       if (name && name.value !== state.researchName) name.value = state.researchName;
       const context = slot.querySelector(".lite-research-context");
@@ -930,6 +936,7 @@
     slot.innerHTML = markup;
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
+    showProgress(slot.querySelector(".lite-progress"), state.researching ? state.researchProgress : null);
     const name = slot.querySelector(".lite-research-name");
     if (name) {
       name.value = state.researchName;
@@ -1005,6 +1012,20 @@
   // reader watches the run land without ever leaving the listing they were
   // reading. Polled rather than pushed: the panel has no open connection to
   // the app, and a job id is cheap to ask about again.
+  /* An animated bar for a run in flight: filled to the job's own share, with
+   * a moving sheen so a run that sits on one stage still reads as alive.
+   * `null` hides it. The reader asked for bars, never a percentage figure. */
+  function showProgress(bar, share) {
+    if (!bar) return;
+    if (share === null || share === undefined) { bar.hidden = true; return; }
+    const value = Math.max(0, Math.min(1, Number(share) || 0));
+    bar.hidden = false;
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", "100");
+    bar.setAttribute("aria-valuenow", String(Math.round(value * 100)));
+    bar.style.setProperty("--p", `${Math.max(6, value * 100)}%`);
+  }
+
   /* "1m 12s" since the run started, from this panel's own clock. */
   function elapsedWords(since) {
     const seconds = Math.max(0, Math.round((Date.now() - (since || Date.now())) / 1000));
@@ -1020,6 +1041,7 @@
     if (!jobId || state.researching) return;
     state.researching = "pack";
     state.researchStartedAt = Date.now();
+    state.researchProgress = 0;
     state.researchState = "queued";
     state.researchMessage = "Adding the quick look to a pack…";
     renderResearch();
@@ -1056,6 +1078,7 @@
         // The stage in words and how long it has run, never a percentage: an
         // agent job jumps from a tenth to done, so a number read as a stall.
         state.researchMessage = `${job.message || job.state || "Researching"} · ${elapsedWords(state.researchStartedAt)}`;
+        state.researchProgress = job.progress || 0;
         renderResearch();
         setTimeout(() => pollResearchJob(jobId), 1000);
         return;
@@ -1869,6 +1892,14 @@
       item.textContent = note
         ? `${row.name} · ${who} · ${note}`
         : `${row.name} · ${who}`;
+      if (typeof row.progress === "number") {
+        const bar = document.createElement("div");
+        bar.className = "lite-progress lite-progress-row";
+        bar.setAttribute("role", "progressbar");
+        bar.innerHTML = `<div class="lite-progress-fill"></div>`;
+        showProgress(bar, row.progress);
+        item.appendChild(bar);
+      }
       list.appendChild(item);
     }
   }

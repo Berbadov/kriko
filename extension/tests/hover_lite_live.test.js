@@ -111,6 +111,10 @@ test("a row that carries a stage shows it in words, never as a percentage", () =
 
   assert.match(p.liveRows()[1], /extraction/);
   assert.doesNotMatch(p.liveRows()[1], /%/);
+  // ...and as a bar: "Not percentages but progress bars, animated."
+  const bars = p.shadow().querySelectorAll(".lite-live-list .lite-progress");
+  assert.equal(bars.length, 1, "only the row that reports a share gets a bar");
+  assert.equal(bars[0].style.getPropertyValue("--p"), "50%");
 });
 
 test("an operation that has ended is not still listed as running", () => {
