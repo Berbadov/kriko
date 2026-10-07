@@ -16,7 +16,7 @@ import importlib
 import secrets
 import time
 from collections.abc import Callable
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -108,6 +108,14 @@ def default_plane(app_state_path=None) -> tuple[str, str]:
         local = localplane.resolve(app_state_path, with_search=False)
     except Exception:  # noqa: BLE001 - a probe must never fail a run
         pass
+    if _stored_local_pick(app_state_path):
+        # The reader picked the Local model row: that plane, ready or not. A
+        # pick that fell back to a CLI would spend their subscription on a run
+        # they asked to keep on this machine; not ready fails with the reason.
+        return "local", (
+            f"the Local model is the picked agent: {local['model']} on "
+            f"{local['name']} at {local['url']}" if local["ready"] else
+            f"the Local model is the picked agent, but it is not ready ({local['reason']})")
     chose = localplane.reader_chose_an_agent(app_state_path)
     if local["ready"] and not chose:
         return "local", (
@@ -129,6 +137,41 @@ def default_plane(app_state_path=None) -> tuple[str, str]:
     return "agent", (f"{skipped}; no coding agent either, so the agent plane "
                      "(a brief, nothing fetched)" if skipped
                      else "no coding agent is available")
+
+
+def _stored_local_pick(app_state_path) -> bool:
+    """Whether the reader's stored pick is the Local model row."""
+    if not app_state_path:
+        return False
+    from app import prefs
+
+    try:
+        conn = state.connect(app_state_path)
+    except Exception:  # noqa: BLE001 - an unreadable preference is no preference
+        return False
+    try:
+        return prefs.read(conn).get(prefs.HARNESS) == prefs.LOCAL_PICK
+    finally:
+        conn.close()
+
+
+def _picked_local(params: dict, app_state_path=None) -> bool:
+    """Whether this run asked for the Local model, by name or by the stored pick.
+
+    One answer for every door: a run naming `harness=local` (the Agents tab's
+    row, Compare, the Run screen) or naming no agent while the stored pick is
+    local runs on the local plane, and never falls back to a CLI. An explicit
+    other plane (`api`, `agent`) is the run's own choice and stands.
+    """
+    from app import prefs
+
+    harness = str(params.get("harness") or "")
+    backend = str(params.get("backend") or "").lower()
+    if backend not in ("", "harness", "local"):
+        return False
+    if harness == prefs.LOCAL_PICK:
+        return True
+    return not harness and _stored_local_pick(app_state_path or params.get("app_state_path"))
 
 
 class LocalNotReady(RuntimeError):
@@ -170,6 +213,10 @@ def _use_local_ask(settings, params: dict) -> bool:
     where the door decides so (B172), never by overriding a CLI here.
     """
     if str(params.get("backend") or "").lower() == "local":
+        return True
+    if _picked_local(params, getattr(settings, "app_state_path", None)):
+        # `_local_plan` raises `LocalNotReady` with the reason when it cannot
+        # run: a picked local model never quietly becomes a CLI.
         return True
     from app import localplane
     from app.providers import agent_ready
@@ -225,6 +272,8 @@ def _researcher(params: dict):
     engine owns none, so `kriko.research` could never have built this itself.
     """
     backend = str(params.get("backend") or default_backend(params.get("app_state_path"))).lower()
+    if _picked_local(params):
+        backend = "local"
     if backend == "harness":
         # Same reason as the paid plane below, one layer out: this one spawns a
         # process, and `kriko/` owns no subprocesses any more than it owns
@@ -321,19 +370,25 @@ def _source_ceiling(params: dict, app_state_path=None) -> str:
     `max_documents` and `source_kinds` win; otherwise the Agents tab's stored
     choice applies (`prefs.research_options`). Empty when none is set (B175).
     """
-    from app import prefs
 
     wanted = _research_options(params, app_state_path)
     out = ""
     if wanted["kinds"]:
-        names = [prefs.SOURCE_KINDS[one] for one in wanted["kinds"]]
-        out += ("\n\nGo to these kinds of source first: " + "; ".join(names)
-                + ". Use others only where these say nothing.")
+        out += "\n\n" + _source_kinds_line(wanted["kinds"])
     if wanted["sources"] > 0:
         count = wanted["sources"]
         out += (f"\n\nRead at most {count} source{'s' if count != 1 else ''} in total "
                 f"for this task, then write what they support.")
     return out
+
+
+def _source_kinds_line(kinds: list[str]) -> str:
+    """The picked kinds of source, as one instruction."""
+    from app import prefs
+
+    names = [prefs.SOURCE_KINDS[one] for one in kinds if one in prefs.SOURCE_KINDS]
+    return ("Go to these kinds of source first: " + "; ".join(names)
+            + ". Use others only where these say nothing.") if names else ""
 
 
 def _research_options(params: dict, app_state_path=None) -> dict:
@@ -690,10 +745,13 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
 
         # The Agents tab's stored source count stands in for a run that named
         # none, the same as it does for every agent prompt.
-        if not int(params.get("max_documents") or 0):
-            stored_count = _research_options(params, getattr(settings, "app_state_path", None))["sources"]
-            if stored_count:
-                params = {**params, "max_documents": stored_count}
+        options = _research_options(
+            {**params, "max_documents": 0}, getattr(settings, "app_state_path", None))
+        if not int(params.get("max_documents") or 0) and not str(params.get("scale") or "") \
+                and options["sources"]:
+            # The stored count stands in only for a run that named neither a
+            # count nor a scale: a reader who picked Deep on Run meant Deep.
+            params = {**params, "max_documents": options["sources"]}
         depth = scaling.applied(str(params.get("scale") or ""), params)
         # Live, per stage and per model, while the run spends — rather than
         # one number on the way out, which arrives too late to act on and
@@ -710,6 +768,10 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             budget_usd=ceiling,
             max_documents=depth["max_documents"],
         )
+        if options["kinds"]:
+            # Every plane's brief carries it (`AgentResearcher.brief`).
+            task = replace(task, guidance=_source_kinds_line(options["kinds"]))
+            progress.log(f"sources first: {', '.join(options['kinds'])}")
         progress.set(0.1, f"planning {task.subject_label}")
         # Recorded on the run, so a thin pack reads as "this was a Quick run"
         # rather than as a quality failure — which is the difference between a

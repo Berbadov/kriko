@@ -648,3 +648,36 @@ def test_product_draft_reuses_author_gates_and_cancellation(
             assert conn.execute("SELECT COUNT(*) FROM subjects").fetchone()[0] == 1
     finally:
         conn.close()
+
+
+def test_add_to_a_pack_twice_is_one_run(tmp_path, monkeypatch):
+    """A double press of "Add to a pack" starts one pack run, not two."""
+    from app.web import state
+    from app.web.deps import get_jobs
+
+    client = _client(tmp_path)
+    settings = client.app.state.settings
+    submitted = []
+
+    class Runner:
+        def submit(self, kind, params):
+            conn = state.connect(settings.app_state_path)
+            try:
+                job_id = state.create_job(conn, kind, params)
+            finally:
+                conn.close()
+            submitted.append(job_id)
+            return job_id
+
+    conn = state.connect(settings.app_state_path)
+    try:
+        look = state.create_job(conn, "quick_look", {"product": "Widget", "harness": "cli"})
+        conn.execute("UPDATE jobs SET state = ? WHERE job_id = ?", (state.SUCCEEDED, look))
+        conn.commit()
+    finally:
+        conn.close()
+    client.app.dependency_overrides[get_jobs] = lambda: Runner()
+    first = client.post(f"/api/extension/quick-looks/{look}/pack").json()
+    second = client.post(f"/api/extension/quick-looks/{look}/pack").json()
+    assert first["job_id"] == second["job_id"]
+    assert len(submitted) == 1
