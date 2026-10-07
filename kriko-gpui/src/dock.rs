@@ -182,7 +182,14 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                         )
                                         .child(stop),
                                 )
-                                .child(div().truncate().child(mono(&status, MUTED))),
+                                .child(div().truncate().child(mono(&status, MUTED)))
+                                .child(
+                                    div().pt(px(4.0)).child(progress_bar(
+                                        &format!("dock-lane-bar-{i}"),
+                                        job.progress,
+                                        motion,
+                                    )),
+                                ),
                         ),
                 ),
         );
