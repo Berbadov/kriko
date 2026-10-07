@@ -298,12 +298,8 @@ def test_a_failed_job_can_be_run_again_without_losing_why_it_failed(client):
     assert client.get(f"/api/jobs/{first}").json()["state"] == state.FAILED
 
 
-def test_two_concurrent_retries_of_one_job_produce_one_child(client):
-    """ops-5/ops-m1: nothing in the endpoint itself refused a second retry
-    while the first was still queued or running — a double-click with no
-    client-side guard, or two raw API callers racing the endpoint, both
-    created a second `pack_author`/`research` job with the same `retry_of`.
-    """
+def test_retries_of_one_parent_reuse_a_finished_child(client):
+    """A fast retry cannot fall out of the idempotency check when it ends."""
     first = client.post("/api/research", json={"subject_id": "nope"}).json()["job_id"]
     for _ in range(400):
         if client.get(f"/api/jobs/{first}").json()["done"]:
@@ -311,12 +307,20 @@ def test_two_concurrent_retries_of_one_job_produce_one_child(client):
         time.sleep(0.02)
 
     once = client.post(f"/api/jobs/{first}/retry").json()["job_id"]
+    for _ in range(400):
+        if client.get(f"/api/jobs/{once}").json()["done"]:
+            break
+        time.sleep(0.02)
+    # A quick failed retry still belongs to the parent, even after it ends.
     twice = client.post(f"/api/jobs/{first}/retry").json()["job_id"]
     assert once == twice
 
     live = [row for row in client.get("/api/jobs").json()["items"]
             if row["params"].get("retry_of") == first]
     assert len(live) == 1
+    # A later retry can begin from the first retry's own row.
+    again = client.post(f"/api/jobs/{once}/retry").json()["job_id"]
+    assert again != once
 
 
 def test_retrying_a_job_that_is_still_going_is_refused(settings):

@@ -549,6 +549,7 @@ class _Progress:
 
     def __init__(self):
         self.lines = []
+        self.partials = []
 
     def log(self, line):
         self.lines.append(line)
@@ -563,7 +564,7 @@ class _Progress:
         return []
 
     def partial(self, *args, **kwargs):
-        pass
+        self.partials.append(args[0] if args else kwargs)
 
 
 def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
@@ -583,8 +584,18 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
          "quote": "this sentence is on no page", "why": "x", "check": "y",
          "severity": "low"},
     ]}
-    ready.chat = [completion('["renault 1.5 dci timing chain"]'),
-                  completion(json.dumps(risks))]
+    ready.chat = [
+        completion('["renault 1.5 dci timing chain"]'),
+        completion('[]'),
+        completion(json.dumps(risks)),
+        completion('{"items":[]}'),
+        completion(json.dumps({"items": [
+            {"index": 0, "verdict": "supported"},
+            # The model is optimistic about the invented quote. The engine's
+            # exact fetched-page check must overrule it in final telemetry.
+            {"index": 1, "verdict": "supported"},
+        ]})),
+    ]
     path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})
     settings = type("S", (), {"store_path": tmp_path / "k.sqlite",
                               "app_state_path": path})()
@@ -597,9 +608,34 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
     assert result["risks"][0]["sources"][0]["grounded"] is True
     assert result["dropped"] == 1
     assert result["cost_basis"] == "self_hosted" and result["model"] == "qwen3-4b"
+    assert result["telemetry"]["pages_read"] == 1
+    assert result["telemetry"]["model_calls"] == 5
+    assert result["telemetry"]["quote_repair"] == {
+        "status": "unrepaired", "checked": 1, "repaired": 0,
+        "unrepaired": 1,
+    }
+    assert result["telemetry"]["self_verification"] == {
+        "status": "complete", "verdict": "mixed", "checked": 2,
+        "supported": 1, "unsupported": 1, "unclear": 0,
+        "model_verdict": "supported", "engine_grounded": 1,
+        "items": [
+            {"index": 0, "verdict": "supported"},
+            {"index": 1, "verdict": "unsupported"},
+        ],
+    }
+    assert result["telemetry"]["verification"] == {
+        "checked": 1,
+        "dropped": 1,
+        "verdict": "1 cited risk quote(s) matched fetched page text; "
+        "1 unsupported item(s) were dropped.",
+    }
+    assert any(
+        partial.get("telemetry", {}).get("stage") == "checking cited quotes"
+        for partial in progress.partials
+    )
     assert any("local plane: Ready" in line for line in progress.lines)
     assert ready.chat_seen[0]["model"] == "qwen3-4b"
-    assert "Pages you fetched" in ready.chat_seen[1]["messages"][0]["content"]
+    assert "Pages you fetched" in ready.chat_seen[2]["messages"][0]["content"]
 
 
 def test_with_no_agent_and_a_ready_model_the_quick_look_picks_local_by_itself(

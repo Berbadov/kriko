@@ -344,7 +344,14 @@ def detail(store, app_conn, host: str) -> dict | None:
     if not wanted:
         return None
     from kriko.adapters import declared_labels
-    spec = adapter_for(store, app_conn, f"https://{wanted}/")
+    # Detail describes the host's adapter, not whether the host's root path
+    # is a listing. A pack commonly matches only listing paths (for example
+    # /ilan/), so asking `adapter_for` about `/` can miss an adapter that
+    # `registered()` has just shown on the Sites screen.
+    spec = next((one for one in load_adapters(store)
+                 if host_of(str(one.get("site") or "")) == wanted), None)
+    if spec is None:
+        spec = adapter_for(store, app_conn, f"https://{wanted}/")
     if spec is None:
         return None
     rows = local_rows(app_conn) if app_conn is not None else []

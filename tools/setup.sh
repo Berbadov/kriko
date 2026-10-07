@@ -158,6 +158,12 @@ else
     bad "npm not found — the Python half is ready, the two JS suites are not."
 fi
 
+# The coding-agent files are local, ignored output, not source. A fresh
+# checkout still needs them before the contract test and local CLI runs can
+# agree with the canonical prompt under packs/cars/pipeline/agent/.
+say "rendering local research-agent prompts"
+"$PY" -m packs.cars.pipeline.agent.render
+
 say "ready"
 cat <<'DONE'
   tools/gate.sh            everything the branch used to be checked for
