@@ -12,6 +12,7 @@ use gpui::{
 };
 
 use crate::app::{Field, Kriko};
+use crate::api::{self, Value};
 use crate::live::run::{ago, mark_for, Job, Stage};
 use crate::marks::{mark_tile, phase_beat};
 use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
@@ -60,6 +61,9 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
     match (&job, app.live.run.jobs_loaded) {
         (Some(job), _) => {
             page = page.child(subject_card(app, job, motion, cx));
+            if let Some(evidence) = local_quick_look_card(job) {
+                page = page.child(evidence);
+            }
             if job.attention.is_some() {
                 page = page.child(questions_card(app, job, cx));
             }
@@ -85,6 +89,72 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
         page = page.child(feed_card(job, motion));
     }
     page
+}
+
+/// The quick look's saved result, separate from its narrated job log. The
+/// cited pages are the ones behind the returned cards; the log lists the
+/// larger set of pages that the local agent considered.
+fn local_quick_look_card(job: &Job) -> Option<Div> {
+    if job.kind != "quick_look" || (job.backend != "local" && job.harness != "local")
+        || !job.done || job.result.is_null() {
+        return None;
+    }
+    let result = &job.result;
+    let model = api::s(result, "model");
+    let tokens = api::n(result, "tokens_used")
+        .map(|n| format!("{} tokens", n as u64))
+        .unwrap_or_else(|| "Token use not reported by this model server".into());
+    let risks = api::arr(result, "risks");
+    let dropped = api::n(result, "dropped").unwrap_or(0.0) as usize;
+    let mut urls = Vec::<String>::new();
+    for risk in risks {
+        for source in api::arr(risk, "sources") {
+            let url = api::s(source, "url");
+            if !url.is_empty() && !urls.contains(&url) {
+                urls.push(url);
+            }
+        }
+    }
+    for spec in api::arr(result, "specs") {
+        let url = api::s(spec, "url");
+        if !url.is_empty() && !urls.contains(&url) {
+            urls.push(url);
+        }
+    }
+    let mut card = card().flex().flex_col().gap(px(10.0))
+        .child(eyebrow("Local quick look · evidence"))
+        .child(row_desc(&format!("{} · {tokens} · {} sourced risks kept · {dropped} unsourced dropped",
+            if model.is_empty() { "Model not reported" } else { &model }, risks.len())));
+    let verification = result.get("verification").unwrap_or(&Value::Null);
+    if verification.is_object() {
+        let error = api::s(verification, "error");
+        let unsupported = api::arr(verification, "unsupported");
+        card = if !error.is_empty() {
+            card.child(mono(&format!("Self-check unavailable: {error}"), DANGER))
+        } else if unsupported.is_empty() {
+            card.child(mono("Self-check: no unsupported risks reported", MUTED))
+        } else {
+            card.child(mono(&format!("Self-check flagged {} risk(s):", unsupported.len()), DANGER))
+        };
+        for item in unsupported {
+            card = card.child(row_desc(&format!("{} — {}", api::s(item, "title"), api::s(item, "reason"))));
+        }
+        let note = api::s(verification, "note");
+        if !note.is_empty() {
+            card = card.child(row_desc(&note));
+        }
+    } else {
+        card = card.child(mono("Self-check verdict not recorded for this run", DIM));
+    }
+    if urls.is_empty() {
+        card = card.child(mono("No cited page in the saved answer", DIM));
+    } else {
+        card = card.child(mono(&format!("CITED PAGES · {}", urls.len()), DIM));
+        for url in urls {
+            card = card.child(mono(&url, MUTED));
+        }
+    }
+    Some(card)
 }
 
 fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
