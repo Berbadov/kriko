@@ -10,7 +10,7 @@ use crate::app::{Field, Kriko, Tab};
 use crate::live::history::{ago, feed_kind, now_secs};
 use crate::live::run::kind_word;
 use crate::screens::history::clip;
-use crate::screens::{empty_note, mono};
+use crate::screens::{empty_note, mono, row_desc, row_title};
 use crate::theme::*;
 
 /// An operation's name as words: `pack_update` reads "Pack update".
@@ -192,7 +192,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(3.0))
                     .child(row_title(&app.live.run.task(job)))
                     .child(row_desc(&line)))
-                .child(ghost(format!("activity-run-{}", i), if open { "Hide details" } else { "View details" }).on_click(toggle)),
+                .child(ghost(("activity-run", i), if open { "Hide details" } else { "View details" }).on_click(toggle)),
         );
         if open {
             if !job.answer.is_empty() {
