@@ -8,6 +8,7 @@ use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
 use crate::live::history::{ago, feed_kind, now_secs};
+use crate::live::run::kind_word;
 use crate::screens::history::clip;
 use crate::screens::{empty_note, mono};
 use crate::theme::*;
@@ -156,11 +157,65 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         }
     }
 
+    // Agent runs have a richer job record than the operations feed above:
+    // name the agent/model and let the reader open the complete answer/log.
+    let recent_jobs: Vec<_> = app.live.run.jobs.iter()
+        .filter(|job| job.is_research_like() || job.kind == "compare_ask")
+        .take(20)
+        .collect();
+    let mut runs = card().flex().flex_col().gap(px(10.0))
+        .child(div().mb(px(4.0)).child(eyebrow("Agent runs")));
+    if recent_jobs.is_empty() {
+        runs = runs.child(empty_note(if app.live.run.jobs_loaded {
+            "No agent runs yet."
+        } else {
+            "Reading completed and running agent jobs."
+        }));
+    }
+    for (i, job) in recent_jobs.iter().enumerate() {
+        if i > 0 { runs = runs.child(hairline()); }
+        let id = job.id.clone();
+        let open = app.live.run.activity_log_open.as_deref() == Some(job.id.as_str());
+        let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.live.run.activity_log_open = if this.live.run.activity_log_open.as_deref() == Some(id.as_str()) {
+                None
+            } else {
+                Some(id.clone())
+            };
+            cx.notify();
+        });
+        let agent = if job.harness.is_empty() { "Agent not reported" } else { &job.harness };
+        let model = if job.model.is_empty() { "model not reported" } else { &job.model };
+        let line = format!("{} · {} · {} · {}", kind_word(&job.kind), agent, model, job.state);
+        runs = runs.child(
+            div().flex().items_center().gap(px(12.0))
+                .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(3.0))
+                    .child(row_title(&app.live.run.task(job)))
+                    .child(row_desc(&line)))
+                .child(ghost(format!("activity-run-{}", i), if open { "Hide details" } else { "View details" }).on_click(toggle)),
+        );
+        if open {
+            if !job.answer.is_empty() {
+                runs = runs.child(row_desc(&format!("Answer: {}", job.answer)));
+            } else if job.done && !job.no_answer_why.is_empty() {
+                runs = runs.child(row_desc(&format!("No answer: {}", job.no_answer_why)));
+            }
+            let log = if !job.log.is_empty() {
+                job.log.clone()
+            } else {
+                job.feed.iter().map(|line| line.text.as_str()).collect::<Vec<_>>().join("\n")
+            };
+            runs = runs.child(well().p(px(12.0)).font_family(MONO).text_size(px(12.0))
+                .text_color(rgb(INK_2)).child(if log.is_empty() { "This run left no log.".to_string() } else { log }));
+        }
+    }
+
     div()
         .flex()
         .flex_col()
         .gap(px(24.0))
         .children(callout)
+        .child(runs)
         .child(div().flex().child(filter))
         .child(feed)
 }
