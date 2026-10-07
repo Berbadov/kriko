@@ -55,7 +55,7 @@ pub struct Job {
     /// 0..=1.
     pub progress: f32,
     pub message: String,
-    /// The complete agent output, used by the dock's optional log drawer.
+    /// The complete agent output, shown in the dock's optional log drawer.
     pub log: String,
     pub done: bool,
     pub created_at: String,
@@ -1236,6 +1236,16 @@ mod tests {
         }));
         assert_eq!(silent.answer, "");
         assert_eq!(silent.no_answer_why, "the CLI answered without a findings list");
+    }
+
+    #[test]
+    fn a_running_job_keeps_its_full_log_for_the_dock_drawer() {
+        let log = "Starting research\nReading two sources\n";
+        let job = job_from(&json!({
+            "job_id": "j", "kind": "research", "state": "running",
+            "done": false, "log": log,
+        }));
+        assert_eq!(job.log, log);
     }
 
     #[test]
