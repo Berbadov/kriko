@@ -64,6 +64,9 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
             if let Some(evidence) = local_quick_look_card(job) {
                 page = page.child(evidence);
             }
+            if let Some(answer) = answer_card(job) {
+                page = page.child(answer);
+            }
             if job.attention.is_some() {
                 page = page.child(questions_card(app, job, cx));
             }
@@ -89,6 +92,30 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
         page = page.child(feed_card(job, motion));
     }
     page
+}
+
+/// A finished agent run must show its answer, even when the engine returned
+/// no answer text. The job feed is a record of work, not the answer itself.
+fn answer_card(job: &Job) -> Option<Div> {
+    if job.state != "succeeded"
+        || !matches!(job.kind.as_str(), "research" | "agenda_run" | "compare_ask")
+    {
+        return None;
+    }
+    let answer = job.answer.trim();
+    let reason = job.no_answer_why.trim();
+    let mut result = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Agent answer"));
+    if answer.is_empty() {
+        result = result.child(row_title("The agent returned no answer"));
+        result = result.child(row_desc(if reason.is_empty() {
+            "The run finished without answer text. Check its log and stored findings below."
+        } else {
+            reason
+        }));
+    } else {
+        result = result.child(row_desc(answer));
+    }
+    Some(result)
 }
 
 /// The quick look's saved result, separate from its narrated job log. The
