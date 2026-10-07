@@ -23,19 +23,19 @@ const path = require("node:path");
 const { loadContentScript } = require("./harness.js");
 const { loadPanel } = require("./hover_lite_harness.js");
 
-// The shipped rules, not a copy of them. A test carrying its own block cannot
-// notice the real one going stale, and going stale is the failure this whole
-// change exists to make impossible.
+// The fixture adapter's rules, not a copy of them: the same file feeds the
+// Python adapter tests and the interpreter-key invariant, so a test carrying
+// its own block here could drift from what those check.
 const PANEL = JSON.parse(
   fs.readFileSync(
-    path.join(__dirname, "..", "..", "packs", "cars", "adapters", "sahibinden.json"),
+    path.join(__dirname, "..", "..", "packs", "cars", "tests", "fixtures", "listing_example_adapter.json"),
     "utf8"
   )
 ).local_panel;
 
 // ── the scraper reads what the pack declared ────────────────────────────
 
-// Real sahibinden markup: one block per state, its heading in Turkish, its
+// Real listing markup: one block per state, its heading in Turkish, its
 // parts as list items. The headings are spelled with the site's own diacritics
 // on purpose — the adapter declares "degisen" and the fold is what makes those
 // meet.

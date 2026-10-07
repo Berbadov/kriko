@@ -11,7 +11,7 @@ const PANEL_JS = path.join(__dirname, "..", "hover_lite", "hover_lite.js");
 const CARD_JS = path.join(__dirname, "..", "hover_lite", "claim_card.js");
 
 function loadPanel({
-  url = "https://www.sahibinden.com/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
+  url = "https://www.listing.example/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
   analyzeResponse = { ok: false },
   // What the service worker says to the panel's *write* messages — marking a
   // claim, raising the app, starting research. Defaults to success because

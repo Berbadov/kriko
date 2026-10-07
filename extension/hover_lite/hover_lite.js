@@ -1,5 +1,5 @@
-/* Hover Lite — floating analyzer card injected into Sahibinden / carchecker
-   listing pages via Shadow DOM. The toolbar action toggles visibility.
+/* Hover Lite — floating analyzer card injected into listing pages an
+   installed adapter matches, via Shadow DOM. The toolbar action toggles visibility.
 
    State machine:
      idle      → no analysis run yet (button: "Analyze current page")
@@ -24,7 +24,7 @@
 
   /* What the panel says before anything has been analysed.
    *
-   * It used to name one site — "Open a Sahibinden listing, then analyze." —
+   * It used to name one site — "Open a <site> listing, then analyze." —
    * which was the last of the site's own knowledge left in the client after
    * every other trace of it was pushed into the pack's adapter. The panel only
    * ever mounts on a page an adapter matched, so naming *which* site was never
@@ -435,7 +435,7 @@
   //
   // Whether this page is worth analysing is the installed packs' answer, and
   // the worker is the one holding it. The panel used to test for
-  // sahibinden.com here, which meant installing a pack for a second listing
+  // one hardcoded host here, which meant installing a pack for a second listing
   // site changed nothing until someone edited this file. So it always asks,
   // and treats NO_ADAPTER as "quiet", not as a failure.
 

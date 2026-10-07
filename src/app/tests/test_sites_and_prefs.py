@@ -1,7 +1,7 @@
 """Sites this installation can learn, and the three choices it now has.
 
 *"I cannot open the web extension on the pages that aren't registered, so
-basically it opens on sahibinden only."* — the panel was never missing; the
+basically it opens on one site only."* — the panel was never missing; the
 **site** was, and the only way to add one was to author a whole pack.
 
 *"Don't forget preferred agent / api model / Tavily and Exa options, user info
@@ -101,7 +101,7 @@ def test_a_learned_site_is_readable_and_shows_where_it_came_from(client, setting
 def test_a_learned_site_reaches_the_extension(client, settings):
     """`/api/adapters` is what the extension reads to decide where to inject.
     A site the reader registered is useless if the browser never runs on it —
-    and that seam is exactly what "it only opens on sahibinden" was."""
+    and that seam is exactly what "it only opens on one site" was."""
     conn = state.connect(settings.app_state_path)
     state.save_local_adapter(conn, host="arabam.com", spec=sites.check(ADAPTER))
     hosts = {row["site"] for row in client.get("/api/adapters").json()}

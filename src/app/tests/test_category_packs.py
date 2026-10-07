@@ -160,14 +160,17 @@ def _wait(client, job_id):
 
 
 def _check(client, title):
-    """One press of "Research this product". Returns the finished deepen job."""
+    """One press of "Research this product", then "Add to a pack"."""
     response = client.post("/api/extension/research-plane", json={
         "q": title, "allow_draft": True})
     assert response.status_code == 200, response.text
     body = response.json()
     quick = _wait(client, body["job_id"])
     assert quick["state"] == "succeeded", quick["message"]
-    deepen = _wait(client, body["deepen_job_id"])
+    # A quick look is saved on its own; "Add to a pack" files it (#129).
+    added = client.post(f"/api/extension/quick-looks/{body['job_id']}/pack")
+    assert added.status_code == 200, added.text
+    deepen = _wait(client, added.json()["job_id"])
     return quick, deepen
 
 

@@ -1001,8 +1001,8 @@ def test_the_extension_speaks_no_sites_own_language():
     )
 
 
-def test_the_shipped_panel_declares_what_the_interpreter_reads():
-    """Every rule key the interpreter reads is one a pack actually ships.
+def test_the_panel_rules_declare_what_the_interpreter_reads():
+    """Every rule key the interpreter reads is one a panel block declares.
 
     The two halves drift in opposite directions and both are silent. A key the
     interpreter stopped reading leaves an alert that never fires; a key it
@@ -1019,23 +1019,34 @@ def test_the_shipped_panel_declares_what_the_interpreter_reads():
     around a key still named on the next line reads as honoured here. That is
     a behaviour question and `extension/tests/local_panel.test.js` is where it
     is caught; a source gate that claimed otherwise would be lying.
+
+    Read from every adapter a pack ships plus the cars pack's full-sized test
+    fixture (`packs/cars/tests/fixtures/listing_example_adapter.json`, an
+    invented host). The fixture is what `local_panel.test.js` drives the
+    interpreter with, so "nothing declares it" means "nothing exercises it",
+    and a shipped adapter is held to the same key set whenever one exists.
     """
-    adapter = REPO / "packs" / "cars" / "adapters" / "sahibinden.json"
-    panel = json.loads(adapter.read_text(encoding="utf-8")).get("local_panel")
-    assert panel, "the cars adapter ships no local_panel block"
+    sources = sorted((REPO / "packs").glob("*/adapters/*.json")) + [
+        REPO / "packs" / "cars" / "tests" / "fixtures" / "listing_example_adapter.json"
+    ]
+    alerts = []
+    for path in sources:
+        panel = json.loads(path.read_text(encoding="utf-8")).get("local_panel") or {}
+        alerts.extend(panel.get("alerts") or [])
+    assert alerts, "no adapter or fixture declares a local_panel with alerts"
 
     source = (REPO / "extension" / "hover_lite" / "hover_lite.js").read_text(
         encoding="utf-8"
     )
     honoured = set(re.findall(r"\brule\.(\w+)", source))
-    shipped = {key for rule in panel["alerts"] for key in rule if not key.startswith("_")}
+    shipped = {key for rule in alerts for key in rule if not key.startswith("_")}
     assert honoured, "no rule keys found in the panel — has the interpreter moved?"
     assert shipped - honoured == set(), (
-        f"the shipped rules use keys the interpreter never reads, so they do "
+        f"the declared rules use keys the interpreter never reads, so they do "
         f"nothing: {sorted(shipped - honoured)}"
     )
     assert honoured - shipped == set(), (
-        f"the interpreter reads keys nothing ships, so no test exercises "
+        f"the interpreter reads keys nothing declares, so no test exercises "
         f"them: {sorted(honoured - shipped)}"
     )
 
