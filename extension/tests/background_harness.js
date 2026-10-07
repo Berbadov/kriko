@@ -29,6 +29,8 @@ function loadBackground({
     session: {},
     local: {},
     badge: {},
+    toolbarIcon: null,
+    toolbarTitle: "",
     // Every request the worker made, in order — the wire contract under test.
     requests: [],
     // Every message it sent to a content script.
@@ -66,6 +68,7 @@ function loadBackground({
   const alarmListeners = [];
   const permissionListeners = [];
   const installedListeners = [];
+  const startupListeners = [];
 
   const area = (bucket) => ({
     async get(keys) {
@@ -92,7 +95,7 @@ function loadBackground({
       runtime: {
         onInstalled: { addListener: (fn) => installedListeners.push(fn) },
         reload() { state.selfReloads += 1; },
-        onStartup: { addListener() {} },
+        onStartup: { addListener: (fn) => startupListeners.push(fn) },
         // The worker reads the packaged manifest to find out which sites it
         // does *not* need to register — so the harness hands it the real
         // file, not a summary of it. A manifest edit that drops a static
@@ -166,6 +169,8 @@ function loadBackground({
         onClicked: { addListener: (fn) => clickListeners.push(fn) },
         async setBadgeText({ text, tabId }) { state.badge[tabId] = text; },
         async setBadgeBackgroundColor() {},
+        async setIcon({ path }) { state.toolbarIcon = path; },
+        async setTitle({ title }) { state.toolbarTitle = title; },
       },
     },
     fetch: async (url, init) => {
@@ -218,7 +223,7 @@ function loadBackground({
                   { filename: "background.js" });
 
   return { sandbox, state, messageListeners, commandListeners, clickListeners,
-           alarmListeners, permissionListeners, installedListeners };
+           alarmListeners, permissionListeners, installedListeners, startupListeners };
 }
 
 // Calling a message listener the way Chrome does: one shot at
