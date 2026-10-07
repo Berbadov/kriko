@@ -86,7 +86,7 @@ dashboard and extension all work there.
 | **Run** | One check, from the product to stored risks. The Live actions bar beside every screen shows each running agent, its logs, a Stop key, and a reply box while something is running. |
 | **Agents** | Every agent on the machine, including the **Local model** when a model server holds a model. Pick the one checks run with, its **model** and its **effort**, and the **research sources** every agent run reads: which kinds go first (forums, reviews, recalls, manufacturer documents, video, news) and how many sources at most. |
 | **Compare** | Line up saved checks and ask about them with any agent or the local model. The agent reads each risk's recorded sources and cites them. |
-| **Browser extension** | Reads the listing beside you. For a product no catalog knows, a **quick look** answers in a minute or two and is saved on its own; **Add to a pack** files it into the category's catalog only when you ask. Progress is shown as the current stage and the time it has taken. |
+| **Browser extension** | Reads the listing beside you. For a product no catalog knows, a **quick look** answers in a minute or two and is saved on its own; **Add to a pack** files it into the category's catalog only when you ask. Progress is an animated bar beside the current stage and the time it has taken. |
 
 **Closing the window does not quit.** The engine keeps serving the browser
 extension. Quit from the tray icon.
