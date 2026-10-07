@@ -276,7 +276,7 @@ def refresh(source: Path | None, target: Path) -> bool:
 
 
 def reveal(path: Path) -> str:
-    """Open `path` in the platform's file manager.
+    """Show the extension folder in the platform's file manager.
 
     Best-effort by design, and it returns what it tried rather than raising: a
     machine with no file manager (a headless test box, a stripped container) is
@@ -284,7 +284,7 @@ def reveal(path: Path) -> str:
     them the path, which is the part they actually need.
     """
     if sys.platform.startswith("win"):
-        command = ["explorer", str(path)]
+        command = ["explorer", "/select,", str(path)]
     elif sys.platform == "darwin":
         command = ["open", str(path)]
     else:
