@@ -157,7 +157,10 @@ def targets() -> list[Target]:
         Target("claude-code", "Claude Code", home / ".claude.json"),
         Target("claude-desktop", "Claude Desktop", _claude_desktop_path()),
         Target("cursor", "Cursor", home / ".cursor/mcp.json"),
-        Target("vscode", "VS Code", home / ".vscode/mcp.json", key="servers"),
+        # VS Code is not listed: it is an editor, not an agent, and its row on
+        # the Agents tab read as one more agent the reader could pick. The
+        # `servers` key convention stays supported for a config written by
+        # hand (`Target(..., key="servers")`).
     ]
     return [t for t in found if t.path is not None]
 

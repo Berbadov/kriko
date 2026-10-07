@@ -1640,24 +1640,9 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .on_click(pick),
         );
     }
-    let local_model = app.live.local.plane.as_ref()
-        .filter(|p| p.ready)
-        .map(|p| p.model.clone());
-    if let Some(model) = &local_model {
-        let pick = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-            this.live.compare.harness = "local".to_string();
-            cx.notify();
-        });
-        agent_row = agent_row.child(
-            agent_key(
-                "cmp-agent-local", "cmp-agent-local-tile", "local",
-                &format!("Local · {model}"),
-                app.live.compare.harness == "local" ||
-                    (app.live.compare.harness.is_empty() && app.live.compare.harnesses.is_empty()),
-                waiting_answer, motion,
-            ).on_click(pick),
-        );
-    }
+    // The local model is one of the engine's agent rows now (`/api/prefs`
+    // lists it when its server holds a model), so it is picked above like
+    // any agent, never drawn twice.
 
     // ---- follow-up questions ----
     let ask_input = app.input_field(
@@ -1800,7 +1785,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .child(row_desc(
             "Ask from the saved checks in these slots. The local model reads a short, relevant brief without searching the web. Asking saves the slots to this draft first.",
         ))
-        .child(if app.live.compare.harnesses.is_empty() && local_model.is_none() {
+        .child(if app.live.compare.harnesses.is_empty() {
             let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
                 this.tab = Tab::Local;
                 cx.notify();

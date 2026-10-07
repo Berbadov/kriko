@@ -1746,6 +1746,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // A saved quick look joins a pack only when the reader asks: the look is
+  // one job, the pack run that files its sourced risks is a second, started
+  // here (POST /api/extension/quick-looks/{id}/pack).
+  if (request.type === "QUICK_TO_PACK") {
+    const jobId = String(request.payload?.job_id || "").trim();
+    if (!jobId) {
+      sendResponse({ ok: false, error: "Missing job_id" });
+      return false;
+    }
+    _postApp(`/api/extension/quick-looks/${encodeURIComponent(jobId)}/pack`, {})
+      .then((job) => sendResponse({ ok: true, job }))
+      .catch((error) => sendResponse({
+        ok: false, status: error.status, code: error.code, error: error.message }));
+    return true; // async
+  }
+
   // Queue mode: the listing's product joins the app's research queue, for an
   // agent to research in turn and the compare screen to line up. The page's
   // address keys it, so a second press answers "already queued".

@@ -160,6 +160,8 @@ def reader_chose_an_agent(app_state_path=None) -> bool:
     except Exception:  # noqa: BLE001
         return False
     try:
-        return bool(prefs.read(conn).get(prefs.HARNESS))
+        # Picking the Local model row is a pick of the local plane, not an
+        # agent, so it keeps the local plane first.
+        return prefs.read(conn).get(prefs.HARNESS) not in ("", prefs.LOCAL_PICK)
     finally:
         conn.close()

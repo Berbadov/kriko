@@ -7,8 +7,9 @@
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, Styled, Window};
 
 use crate::app::Kriko;
-use crate::live::run::{mark_for, AgentEntry, RunState, Target};
+use crate::live::run::{mark_for, AgentEntry, Harness, RunState, Target};
 use crate::marks::{mark_tile, phase_beat, Phase};
+use crate::screens::run::option_chip;
 use crate::screens::{empty_note, mono, row_desc, row_title, th};
 use crate::theme::*;
 
@@ -169,7 +170,53 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
             .child(div().w(px(320.0)).flex_none().child(detail))
     };
 
-    div().id("agents-row-scroll").overflow_x_scroll().child(body)
+    div()
+        .id("agents-row-scroll")
+        .overflow_x_scroll()
+        .flex()
+        .flex_col()
+        .gap(px(24.0))
+        .child(body)
+        .when(app.live.run.prefs_loaded, |d| d.child(research_card(app, cx)))
+}
+
+/// The source options every agent run reads: which kinds of source to go to
+/// first, and how many sources at most. Stored by the engine, so a check
+/// started from the app, the extension or Compare reads the same choice.
+fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
+    let run = &app.live.run;
+    let mut kinds = div().flex().flex_wrap().gap(px(6.0));
+    for (i, (id, words)) in run.source_kinds.iter().enumerate() {
+        let on = run.research_kinds.contains(id);
+        let kind = id.clone();
+        let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.toggle_source_kind(kind.clone(), cx);
+            cx.notify();
+        });
+        kinds = kinds.child(option_chip(("source-kind", i), words, on).on_click(toggle));
+    }
+    let mut counts = div().flex().flex_wrap().gap(px(6.0));
+    for (i, n) in [0u32, 3, 5, 10, 20, 40].into_iter().enumerate() {
+        let label = if n == 0 { "Run decides".to_string() } else { n.to_string() };
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.pick_source_count(n, cx);
+            cx.notify();
+        });
+        counts = counts.child(
+            option_chip(("source-count", i), &label, run.research_sources == n).on_click(pick),
+        );
+    }
+    card()
+        .flex()
+        .flex_col()
+        .gap(px(10.0))
+        .child(eyebrow("Research sources"))
+        .child(row_desc(
+            "Every agent run reads these: the kinds of source it goes to first, and the most sources it reads. None picked leaves it to the agent.",
+        ))
+        .child(kinds)
+        .child(eyebrow("Sources per run"))
+        .child(counts)
 }
 
 fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko>) -> Div {
@@ -230,6 +277,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
                     });
                     c = c.child(div().child(ghost("agent-use", "Use for runs").on_click(use_it)));
                 }
+                c = c.child(dials(h, cx));
             }
             RunState::Unusable(why) => c = c.child(row_desc(why)),
             RunState::Missing { hint, url } => {
@@ -358,4 +406,62 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
         }
     }
     c
+}
+
+/// The two dials a ready agent runs with: which model, and how hard it
+/// thinks. Each lists what the engine found for this machine (the provider's
+/// own model list, the CLI's own `--help` effort levels); "Default" leaves
+/// the choice to the agent. A dial the agent does not have is not drawn.
+fn dials(h: &Harness, cx: &mut Context<Kriko>) -> Div {
+    let mut out = div().flex().flex_col().gap(px(10.0));
+    if h.llm_selectable && (!h.llms.is_empty() || !h.llm.is_empty()) {
+        let mut names: Vec<String> = h.llms.clone();
+        if !h.llm.is_empty() && !names.contains(&h.llm) {
+            names.insert(0, h.llm.clone());
+        }
+        let mut row = div().flex().flex_wrap().gap(px(6.0));
+        // The local model has no "default" of its own: the server runs one.
+        if h.id != "local" {
+            let id = h.id.clone();
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.pick_agent_model(id.clone(), String::new(), cx);
+                cx.notify();
+            });
+            row = row.child(option_chip("agent-model-default", "Default", h.llm.is_empty()).on_click(pick));
+        }
+        for (i, name) in names.iter().enumerate() {
+            let (id, model) = (h.id.clone(), name.clone());
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.pick_agent_model(id.clone(), model.clone(), cx);
+                cx.notify();
+            });
+            row = row.child(option_chip(("agent-model", i), name, *name == h.llm).on_click(pick));
+        }
+        out = out.child(hairline()).child(eyebrow("Model")).child(row);
+        if !h.llms_note.is_empty() {
+            out = out.child(row_desc(&h.llms_note));
+        }
+    }
+    if !h.efforts.is_empty() {
+        let mut row = div().flex().flex_wrap().gap(px(6.0));
+        let id = h.id.clone();
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.pick_agent_effort(id.clone(), String::new(), cx);
+            cx.notify();
+        });
+        row = row.child(option_chip("agent-effort-default", "Default", h.effort.is_empty()).on_click(pick));
+        for (i, level) in h.efforts.iter().enumerate() {
+            let (id, effort) = (h.id.clone(), level.clone());
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.pick_agent_effort(id.clone(), effort.clone(), cx);
+                cx.notify();
+            });
+            row = row.child(option_chip(("agent-effort", i), level, *level == h.effort).on_click(pick));
+        }
+        out = out.child(hairline()).child(eyebrow("Effort")).child(row);
+        if !h.effort_hint.is_empty() {
+            out = out.child(row_desc(&h.effort_hint));
+        }
+    }
+    out
 }
