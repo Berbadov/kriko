@@ -404,7 +404,7 @@ def test_the_boot_screen_can_render_a_failure():
     spawn = _fn_body(engine, "spawn")
     attach = _fn_body(engine, "attach")
     assert "Status::Failed" in attach, "an engine that never answers is not reported"
-    assert re.search(r"Err\(e\)\s*=>\s*\{\s*set_status\(Status::Failed", spawn), (
+    assert re.search(r"Err\(e\)\s*=>\s*\{\s*set_status\(generation,\s*Status::Failed", spawn), (
         "a sidecar that cannot be launched at all is not reported"
     )
     assert "s.stderr" in spawn and "s.status = Status::Failed" in spawn, (

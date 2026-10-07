@@ -216,6 +216,9 @@ def main(argv=None) -> int:
         help="a desktop shell is reading our stdout and can raise a window",
     )
     args = parser.parse_args(argv)
+    if not 0 <= args.extension_port <= 65535:
+        parser.error("--extension-port must be between 0 and 65535")
+    os.environ["KRIKO_EXTENSION_PORT"] = str(args.extension_port)
 
     # Before the store, before the bind: whatever happens next has somewhere
     # to be written down. The shell captures our stderr only until the window
