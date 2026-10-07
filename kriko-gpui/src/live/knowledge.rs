@@ -10,6 +10,7 @@ use gpui::Context;
 
 use crate::api::{self, Value};
 use crate::app::{Kriko, Tab};
+use crate::engine;
 
 // ---- the shapes the screens draw ----
 
@@ -597,6 +598,33 @@ impl Kriko {
                 this.refresh_extension(cx);
             },
         );
+    }
+
+    pub fn save_extension_port(&mut self, cx: &mut Context<Self>) {
+        let text = self.extension_port_input.value.trim();
+        let Ok(port) = text.parse::<u16>() else {
+            self.live.knowledge.ext_notice = Some("Choose a port from 1 to 65535.".into());
+            cx.notify();
+            return;
+        };
+        if std::env::var_os("KRIKO_URL").is_some() {
+            self.live.knowledge.ext_notice = Some(
+                "This window is attached to another engine. Change that engine's extension port instead.".into(),
+            );
+            cx.notify();
+            return;
+        }
+        match engine::set_extension_port(port) {
+            Ok(()) => {
+                self.live.knowledge.ext_notice = Some(format!(
+                    "Restarting the engine on port {port}. In the browser extension settings, set the app address to http://127.0.0.1:{port}."
+                ));
+                self.live.knowledge.ext = None;
+                engine::restart();
+            }
+            Err(error) => self.live.knowledge.ext_notice = Some(error),
+        }
+        cx.notify();
     }
 
     // ---- Settings ----

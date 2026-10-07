@@ -15,7 +15,7 @@
       <p class="lede">One setting: where the Kriko app is listening.</p>
 
       <form id="form" novalidate>
-        <label for="base">The app's address</label>
+        <label for="base">The app's address and port</label>
         <input
           id="base"
           name="base"
@@ -27,7 +27,9 @@
         <p class="hint">
           Leave it empty to use the default,
           <code id="default">http://127.0.0.1:8787</code>. The extension talks
-          to nothing on the internet.
+          to nothing on the internet. If you changed the port in Kriko's
+          Extension screen, enter <code>http://127.0.0.1:</code> followed by
+          that port here.
         </p>
         <div class="row">
           <button type="submit" id="save">Save and test</button>

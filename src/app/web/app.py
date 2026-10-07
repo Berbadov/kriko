@@ -438,7 +438,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # after they have decided something is broken — too late to be the
             # thing that tells them.
             "shell_attached": bool(app.state.settings.shell_attached),
-            "extension_port": EXTENSION_PORT,
+            "extension_port": app.state.settings.extension_port,
             # The extension's half of the handshake. It reads this on its own
             # schedule and compares its manifest against the floor, because
             # the app cannot make the browser do anything — only say what it
@@ -476,7 +476,8 @@ def main(argv=None) -> int:
     # that had simply never tried to bind it, because nobody had probed. Set
     # it honestly: this process holds EXTENSION_PORT exactly when it is the
     # port it was asked to serve on.
-    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if args.port == EXTENSION_PORT else "0"
+    selected_port = int(os.environ.get("KRIKO_EXTENSION_PORT", EXTENSION_PORT))
+    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if args.port == selected_port else "0"
     # Each CLI's and each keyed provider's LLM list, asked once in the
     # background: `agy models` takes seconds, and the Agents screen should not
     # be the one that pays for it.
