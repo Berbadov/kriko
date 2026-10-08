@@ -1,4 +1,5 @@
 <script lang="ts">
+    import JackMark from "../lib/kriko/JackMark.svelte";
     import Icon from "../lib/Icon.svelte";
     import { count } from "../lib/plural";
     import Async from "../lib/Async.svelte";
@@ -484,8 +485,8 @@ import PageHead from "../lib/kriko/PageHead.svelte";
 </section>
 
 {#if runningJobId}
-    <p class="state loading">
-        A benchmark is running · <a href="#/activity?lens=live">watch it on Activity</a>. The
+    <p class="state loading loading-mark">
+        <JackMark />A benchmark is running · <a href="#/activity?lens=live">watch it on Activity</a>. The
         numbers below are from the last completed run.
     </p>
 {/if}

@@ -4,6 +4,7 @@
     import Failure from "../lib/Failure.svelte";
     import RunPanel from "../lib/RunPanel.svelte";
     import RunWith from "../lib/RunWith.svelte";
+    import PipelineScene from "../lib/kriko/PipelineScene.svelte";
     import SourceSlider from "../lib/SourceSlider.svelte";
     import { api } from "../lib/api";
     import { follow, isLive } from "../lib/jobs";
@@ -151,6 +152,7 @@ import PageHead from "../lib/kriko/PageHead.svelte";
 {/if}
 
 <div class="stage" aria-label="Runs">
+    {#if !live.length}<PipelineScene />{/if}
     {#each [...live, ...finished] as job (job.job_id)}
         <RunPanel {job} {now} agent={agentOf(job, preferred, installed)} />
     {:else}

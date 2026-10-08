@@ -4,6 +4,7 @@
     import { api } from "../lib/api";
     import { count } from "../lib/plural";
     import Failure from "../lib/Failure.svelte";
+    import JackMark from "../lib/kriko/JackMark.svelte";
     import { signalNote, tieNote } from "../lib/health";
     import { hashWith } from "../lib/router";
     import type { ClaimHealth, HealthTree } from "../lib/types";
@@ -77,7 +78,7 @@
 {#if tieNote(claims)}<p class="meta">{tieNote(claims)}</p>{/if}
 
 {#await ready}
-    <p class="state loading">Loading…</p>
+    <p class="state loading loading-mark"><JackMark />Loading…</p>
 {:then}
     {#if failure}
         <Failure error={failure} retry={load} />
