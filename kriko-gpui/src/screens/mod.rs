@@ -18,6 +18,7 @@ pub(crate) mod browse;
 pub(crate) mod compare;
 pub(crate) mod extension;
 pub(crate) mod history;
+pub(crate) mod logs;
 pub(crate) mod home;
 pub(crate) mod knowledge;
 pub(crate) mod local;

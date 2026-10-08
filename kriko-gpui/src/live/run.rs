@@ -157,7 +157,7 @@ impl Job {
             .flat_map(|raw| raw.split("; "))
             .map(|l| l.trim())
             .filter(|l| !l.is_empty())
-            .map(|l| FeedLine { kind: event_kind(l), text: clip(l, 220) })
+            .map(|l| FeedLine { kind: event_kind(l), text: l.to_string() })
             .collect()
     }
 
@@ -284,7 +284,9 @@ fn job_from(v: &Value) -> Job {
             api::s(&result, "outcome")
         }
     };
-    let no_answer_why = api::s(&result, "note");
+    let no_answer_why = if let Some(diagnostic) = result.get("diagnostic") {
+        api::s(diagnostic, "message")
+    } else { api::s(&result, "note") };
     Job {
         id: api::s(v, "job_id"),
         kind: api::s(v, "kind"),
@@ -528,6 +530,7 @@ pub struct State {
     pub research_sources: u32,
     pub verifying: bool,
     pub verify: Option<Verify>,
+    pub verify_log_open: bool,
 }
 
 impl State {
@@ -1017,7 +1020,7 @@ impl Kriko {
             cx.notify();
             return;
         }
-        self.dock_reply.value.clear();
+        self.dock_reply.set_value(String::new());
         let path = format!("/api/jobs/{}/say", api::seg(&job.id));
         let task = self.live.run.task(&job);
         self.fetch(cx, move || api::post(&path, serde_json::json!({ "text": text.clone() })).map(|v| (v, text)), move |this, reply, _| {
@@ -1084,7 +1087,7 @@ impl Kriko {
                     start.hits.clear();
                     start.searched = false;
                     start.note.clear();
-                    this.run_search.value.clear();
+                    this.run_search.set_value(String::new());
                     this.live.run.pinned = Some(id);
                     this.live.run.detail = None;
                     this.refresh_jobs(cx);
@@ -1097,7 +1100,6 @@ impl Kriko {
     pub fn select_agent(&mut self, id: String) {
         self.live.run.agent_selected = id;
         self.live.run.agent_note.clear();
-        self.live.run.verify = None;
     }
 
     /// Connect or Reconnect: write this installation's address into the

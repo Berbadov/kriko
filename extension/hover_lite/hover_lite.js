@@ -119,6 +119,9 @@
     researchProgress: 0,
     // The saved quick look the "Add to a pack" button would file, or null.
     researchQuickJob: null,
+    researchSavedAt: "",
+    taskLogs: new Map(),
+    quickSourcesOpen: false,
     // When the followed run started, for the elapsed time beside its stage.
     researchStartedAt: 0,
     researchState: "",
@@ -711,12 +714,16 @@
       return;
     }
     state.researchTarget = subject?.subject_id ? subject : null;
-    state.researchName = subject?.label || state.searchQuery || state.listingMeta?.title || document.title || "";
+    const nextName = subject?.label || state.searchQuery || state.listingMeta?.title || document.title || "";
+    if (nextName !== state.researchName) {
+      state.researchQuick = null;
+      state.researchQuickJob = null;
+      state.researchSavedAt = "";
+    }
+    state.researchName = nextName;
     state.researchContext = "";
     state.researchOpen = true;
     state.researchJob = null;
-    state.researchQuick = null;
-    state.researchQuickJob = null;
     state.researchState = "";
     state.researchMessage = "";
     requestResearchPlane();
@@ -732,6 +739,11 @@
     const subject_id = state.researchTarget?.subject_id;
     const q = [state.researchName.trim(), state.researchContext.trim()].filter(Boolean).join(" · ");
     if (!subject_id && !q) return;
+    if (state.researchQuick && String(state.researchQuick.product || "").trim() !== q) {
+      state.researchQuick = null;
+      state.researchQuickJob = null;
+      state.researchSavedAt = "";
+    }
     const cap = Number(state.researchPlane.budget_usd);
     state.researching = subject_id || q;
     state.researchState = "starting";
@@ -739,8 +751,7 @@
     state.researchAnswers = {};
     state.researchTold = {};
     state.researchDraftAnswers = {};
-    state.researchQuick = null;
-    state.researchQuickJob = null;
+    // Retain the last successful cards while refreshing, including failure.
     state.researchStartedAt = Date.now();
     state.researchProgress = 0;
     renderResearch();
@@ -768,8 +779,17 @@
    * happening rather than ending on "done" while the real work goes on. */
   function quickLookDone(job) {
     const result = job.result || {};
+    if (job.state !== "succeeded") {
+      state.researching = null;
+      state.researchMessage = job.error || job.message || "The quick look did not finish. Retry below.";
+      renderResearch();
+      return;
+    }
+    state.researchSavedAt = job.finished_at || job.created_at || "";
     state.researchQuick = {
+      product: result.product || state.researchName,
       assumed: result.assumed || "",
+      specs: Array.isArray(result.specs) ? result.specs : [],
       risks: Array.isArray(result.risks) ? result.risks : [],
       dropped: Number(result.dropped) || 0,
     };
@@ -783,9 +803,10 @@
       // A quick look is not a pack: it is saved as it is, and joins a pack
       // only when the reader presses "Add to a pack".
       state.researching = null;
-      state.researchQuickJob = job.state === "succeeded" && found ? state.researchJob?.job_id : null;
+      state.researchQuickJob = job.job_id || state.researchJob?.job_id || null;
       state.researchMessage = said;
       renderResearch();
+      renderFollowups();
       return;
     }
     state.researchJob = { job_id: deepen, kind: "pack_author" };
@@ -887,10 +908,15 @@
           <label>Context<textarea class="lite-research-context" maxlength="140" ${busy ? "disabled" : ""}></textarea></label>`}
         <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
         <p class="lite-research-status" role="status"></p>
+        ${state.researchSavedAt ? `<p class="lite-saved-result">Saved result · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
-        ${state.researchQuick?.risks.length ? `<div class="lite-quick">
+        ${state.researchQuick && (state.researchQuick.risks.length || state.researchQuick.specs?.length) ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
+          <div class="lite-quick-specs"></div>
+          <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
+            <summary>Sources</summary><div class="lite-quick-source-list"></div>
+          </details>
         </div>` : ""}
         ${asked.length ? `<div class="lite-asked" aria-live="polite">
           <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
@@ -910,15 +936,17 @@
           </fieldset>`).join("")}
         </div>` : ""}
         ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
-        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Research again" : "Research this product"}</button>` : ""}
+        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Refresh Quick Look" : "Research this product"}</button>` : ""}
         ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
         ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
         ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
+        <div class="lite-task-log-slot"></div>
       </section>`;
     // Progress-only polls should update the sentence, never re-create the
     // quick-look cards or the question the reader is typing an answer to.
     const signature = markup + JSON.stringify(state.researchQuick);
     if (slot._researchMarkup === signature) {
+      renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
       slot.querySelector(".lite-research-status").textContent = state.researchMessage;
       showProgress(slot.querySelector(".lite-progress"), state.researching ? state.researchProgress : null);
@@ -934,6 +962,7 @@
     }
     slot._researchMarkup = signature;
     slot.innerHTML = markup;
+    renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
     showProgress(slot.querySelector(".lite-progress"), state.researching ? state.researchProgress : null);
@@ -950,6 +979,31 @@
     slot.querySelector(".lite-research-start")?.addEventListener("click", () => startResearch());
     slot.querySelector(".lite-research-pack")?.addEventListener("click", addQuickToPack);
     const quickCards = slot.querySelector(".lite-quick-cards");
+    const sourceList = slot.querySelector(".lite-quick-source-list");
+    const sources = new Map();
+    const specsSlot = slot.querySelector(".lite-quick-specs");
+    for (const spec of state.researchQuick?.specs || []) {
+      const item = document.createElement("p");
+      item.textContent = `${spec.name}: ${spec.value}`;
+      specsSlot?.appendChild(item);
+    }
+    for (const risk of state.researchQuick?.risks || []) {
+      for (const src of risk.sources || []) if (/^https?:\/\//i.test(src.url || "")) sources.set(src.url, src);
+    }
+    for (const spec of state.researchQuick?.specs || []) {
+      if (/^https?:\/\//i.test(spec.url || "") && !sources.has(spec.url)) sources.set(spec.url, spec);
+    }
+    for (const src of sources.values()) {
+      const item = document.createElement("p");
+      const link = document.createElement("a");
+      link.href = src.url; link.target = "_blank"; link.rel = "noopener noreferrer";
+      link.textContent = src.domain || src.url;
+      item.append(link, document.createTextNode(src.quote ? ` · ${src.quote}` : ""));
+      sourceList?.appendChild(item);
+    }
+    slot.querySelector(".lite-quick-sources")?.addEventListener("toggle", event => {
+      state.quickSourcesOpen = event.target.open;
+    });
     (quickCards ? state.researchQuick.risks : []).forEach((risk, i) => {
       const wrap = document.createElement("div");
       wrap.className = "lite-claim-anim";
@@ -1024,6 +1078,48 @@
     bar.setAttribute("aria-valuemax", "100");
     bar.setAttribute("aria-valuenow", String(Math.round(value * 100)));
     bar.style.setProperty("--p", `${Math.max(6, value * 100)}%`);
+  }
+
+  function renderTaskLog(slot, job) {
+    if (!slot || !job?.job_id) return;
+    if (!state.taskLogs.has(job.job_id)) state.taskLogs.set(job.job_id, { open: false, filter: "" });
+    const view = state.taskLogs.get(job.job_id);
+    if (slot.dataset.jobId !== job.job_id) {
+      slot.dataset.jobId = job.job_id;
+      slot.innerHTML = `<details class="lite-task-log"><summary>Task logs</summary>
+        <p class="lite-task-log-meta"></p><div class="lite-task-log-controls">
+          <select aria-label="Log filter"><option value="">All</option><option value="search">Search</option>
+            <option value="read">Sources</option><option value="fail">Problems</option></select>
+          <button type="button">Copy log</button></div><pre class="lite-task-log-text"></pre></details>`;
+      const details = slot.querySelector("details");
+      details.open = view.open;
+      details.addEventListener("toggle", () => { view.open = details.open; });
+      const filter = slot.querySelector("select");
+      filter.value = view.filter;
+      filter.addEventListener("change", () => { view.filter = filter.value; renderTaskLog(slot, state.researchJob); });
+      slot.querySelector("button").addEventListener("click", () => {
+        const text = slot.querySelector("pre").textContent;
+        window.navigator.clipboard?.writeText(text).catch(() => {});
+      });
+    }
+    const agent = job.result?.agent;
+    const started = Date.parse(job.created_at || "");
+    const end = Date.parse(job.finished_at || "") || Date.now();
+    slot.querySelector(".lite-task-log-meta").textContent = [
+      agent?.label || job.result?.harness || job.params?.harness || job.params?.backend || "Agent",
+      agent?.model || job.result?.model || job.params?.model || "Model not reported",
+      job.kind || "Task", job.state || "queued", job.message,
+      Number.isFinite(started) ? `${Math.max(0, Math.round((end - started) / 1000))} s` : "",
+    ].filter(Boolean).join(" · ");
+    slot.querySelector("details").dataset.active = String(!job.done && job.state === "running");
+    const log = String(job.log || "").split("\n").filter(line => !view.filter || line.toLowerCase().includes(view.filter)).join("\n");
+    const body = slot.querySelector("pre");
+    const bottom = body.scrollHeight - body.scrollTop - body.clientHeight < 16;
+    if (body.textContent !== log) {
+      const position = body.scrollTop;
+      body.textContent = log || (job.done ? "No log entries for this filter." : "Waiting for log entries.");
+      body.scrollTop = bottom ? body.scrollHeight : position;
+    }
   }
 
   /* "1m 12s" since the run started, from this panel's own clock. */
@@ -1300,6 +1396,16 @@
     // If nothing is cached yet on a listing page, kick off (or join) the run so
     // the panel shows progress instead of an empty state.
     requestCached({ triggerIfMissing: true });
+    chrome.runtime.sendMessage({ type: "SAVED_QUICK_LOOK", payload: { url: location.href } }, response => {
+      if (chrome.runtime.lastError || !response?.ok || !response.job || state.researching || state.researchJob) return;
+      const job = response.job;
+      state.researchName = job.params?.product || "";
+      state.researchJob = { ...job, kind: "quick_look" };
+      state.researchOpen = true;
+      state.researchState = job.state;
+      requestResearchPlane();
+      quickLookDone(job);
+    });
 
     // Only while the panel is on screen. A closed panel that kept asking
     // would be a request a second, forever, on every tab left open.
@@ -1360,7 +1466,8 @@
   }
 
   function initialPosition() {
-    const left = state.side === "left" ? PAD_DOCK : (window.innerWidth - PANEL_W - PAD_DOCK);
+    const width = Math.min(PANEL_W, Math.max(0, window.innerWidth - PAD_DOCK * 2));
+    const left = state.side === "left" ? PAD_DOCK : (window.innerWidth - width - PAD_DOCK);
     return { left, top: PAD_DOCK };
   }
 
@@ -2792,7 +2899,8 @@
   }
 
   function followupHere() {
-    const id = state.pipeline === "result" && state.result?.lookup_id;
+    const id = (state.researchOpen && state.researchQuickJob)
+      || (state.pipeline === "result" && state.result?.lookup_id);
     if (!id) return null;
     if (!state.followups.has(id)) state.followups.set(id, {
       id, query: "", status: "", starting: false, jobs: [], loaded: false,

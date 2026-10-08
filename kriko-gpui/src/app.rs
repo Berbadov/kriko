@@ -6,7 +6,6 @@
 use gpui::{
     div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle, IntoElement,
     KeyDownEvent, ParentElement, Render, Stateful, Styled, Window, WindowControlArea,
-    Animation, AnimationExt,
 };
 
 use crate::data;
@@ -147,6 +146,7 @@ impl Tab {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Field {
     HistorySearch,
+    OverviewSearch,
     ActivityFilter,
     SitesAdd,
     KeyValue,
@@ -164,6 +164,12 @@ pub enum Field {
 pub struct InputState {
     pub value: String,
     pub handle: FocusHandle,
+    pub cursor: Option<usize>,
+    pub anchor: Option<usize>,
+    pub layout: Option<gpui::ShapedLine>,
+    pub bounds: Option<gpui::Bounds<gpui::Pixels>>,
+    pub scroll_x: gpui::Pixels,
+    pub selecting: bool,
 }
 
 impl InputState {
@@ -171,7 +177,42 @@ impl InputState {
         Self {
             value: String::new(),
             handle: cx.focus_handle(),
+            cursor: None,
+            anchor: None,
+            layout: None,
+            bounds: None,
+            scroll_x: px(0.0),
+            selecting: false,
         }
+    }
+
+    pub fn set_value(&mut self, value: String) {
+        self.value = value;
+        self.cursor = None;
+        self.anchor = None;
+        self.layout = None;
+        self.scroll_x = px(0.0);
+        self.selecting = false;
+    }
+
+    pub fn position(&self) -> usize {
+        text_boundary(&self.value, self.cursor.unwrap_or(self.value.len()))
+    }
+
+    pub fn selection(&self) -> std::ops::Range<usize> {
+        text_selection(&self.value, self.position(), self.anchor)
+    }
+
+    pub fn replace_selection(&mut self, text: &str) {
+        let range = self.selection();
+        self.cursor = Some(range.start + text.len());
+        self.anchor = None;
+        self.value.replace_range(range, text);
+    }
+
+    pub fn move_cursor(&mut self, at: usize, extend_selection: bool) {
+        self.anchor = if extend_selection { Some(self.anchor.unwrap_or(self.position())) } else { None };
+        self.cursor = Some(at);
     }
 }
 
@@ -243,6 +284,12 @@ pub struct Kriko {
     pub run_concurrency_prev: usize,
     // inputs
     pub history_search: InputState,
+    pub overview_search: InputState,
+    pub overview_filters_open: bool,
+    pub overview_pack: String,
+    pub overview_status: String,
+    pub overview_product: String,
+    pub log_views: std::collections::HashMap<String, screens::logs::View>,
     pub activity_filter: InputState,
     pub sites_add: InputState,
     pub key_value: InputState,
@@ -282,7 +329,7 @@ pub struct Kriko {
 impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let mut extension_port_input = InputState::new(cx);
-        extension_port_input.value = engine::configured_extension_port().to_string();
+        extension_port_input.set_value(engine::configured_extension_port().to_string());
         let mut app = Self {
             tab: Tab::Home,
             engine: engine::status(),
@@ -291,6 +338,12 @@ impl Kriko {
             run_concurrency: 1,
             run_concurrency_prev: 0,
             history_search: InputState::new(cx),
+            overview_search: InputState::new(cx),
+            overview_filters_open: false,
+            overview_pack: String::new(),
+            overview_status: String::new(),
+            overview_product: String::new(),
+            log_views: std::collections::HashMap::new(),
             activity_filter: InputState::new(cx),
             sites_add: InputState::new(cx),
             key_value: InputState::new(cx),
@@ -391,9 +444,10 @@ impl Kriko {
         cx.quit();
     }
 
-    fn input(&self, field: Field) -> &InputState {
+    pub(crate) fn input(&self, field: Field) -> &InputState {
         match field {
             Field::HistorySearch => &self.history_search,
+            Field::OverviewSearch => &self.overview_search,
             Field::ActivityFilter => &self.activity_filter,
             Field::SitesAdd => &self.sites_add,
             Field::KeyValue => &self.key_value,
@@ -409,9 +463,10 @@ impl Kriko {
         }
     }
 
-    fn input_mut(&mut self, field: Field) -> &mut InputState {
+    pub(crate) fn input_mut(&mut self, field: Field) -> &mut InputState {
         match field {
             Field::HistorySearch => &mut self.history_search,
+            Field::OverviewSearch => &mut self.overview_search,
             Field::ActivityFilter => &mut self.activity_filter,
             Field::SitesAdd => &mut self.sites_add,
             Field::KeyValue => &mut self.key_value,
@@ -427,23 +482,32 @@ impl Kriko {
         }
     }
 
-    fn handle_key(this: &mut Kriko, field: Field, event: &KeyDownEvent, cx: &mut Context<Kriko>) {
+    pub(crate) fn handle_key(this: &mut Kriko, field: Field, event: &KeyDownEvent, cx: &mut Context<Kriko>) {
         let ks = &event.keystroke;
-        // Ctrl+V pastes into the two fields that take a pasted value.
-        if ks.modifiers.control
-            && ks.key.as_str() == "v"
-            && matches!(field, Field::SitesAdd | Field::KeyValue)
-        {
-            if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
-                let line = text.lines().next().unwrap_or("").trim().to_string();
-                this.input_mut(field).value.push_str(&line);
-                cx.notify();
+        if ks.modifiers.control || ks.modifiers.platform {
+            let selected = this.input(field).selection();
+            match ks.key.as_str() {
+                "a" => {
+                    let len = this.input(field).value.len();
+                    let input = this.input_mut(field);
+                    input.anchor = Some(0);
+                    input.cursor = Some(len);
+                }
+                "c" | "x" if !selected.is_empty() => {
+                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(this.input(field).value[selected].to_string()));
+                    if ks.key == "x" { this.input_mut(field).replace_selection(""); }
+                }
+                "v" => {
+                    if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
+                        this.input_mut(field).replace_selection(&text.replace(['\r', '\n'], " "));
+                    }
+                }
+                _ => return,
             }
+            this.input_changed(field, cx);
             return;
         }
-        if ks.modifiers.control || ks.modifiers.alt || ks.modifiers.platform {
-            return;
-        }
+        if ks.modifiers.alt { return; }
         // Enter in the dock reply says it to the running job.
         if ks.key.as_str() == "enter" && field == Field::DockReply {
             this.send_reply(cx);
@@ -460,7 +524,7 @@ impl Kriko {
         if ks.key.as_str() == "enter" && field == Field::SitesAdd {
             let host = this.input(field).value.trim().to_string();
             if !host.is_empty() {
-                this.input_mut(field).value.clear();
+                this.input_mut(field).set_value(String::new());
                 this.register_site(&host, cx);
             }
             cx.notify();
@@ -470,7 +534,7 @@ impl Kriko {
         if ks.key.as_str() == "enter" && field == Field::KeyValue {
             let value = this.input(field).value.trim().to_string();
             if let Some(provider) = this.live.knowledge.key_provider.clone() {
-                this.input_mut(field).value.clear();
+                this.input_mut(field).set_value(String::new());
                 this.save_key(provider, value, cx);
             }
             cx.notify();
@@ -497,26 +561,44 @@ impl Kriko {
             cx.notify();
             return;
         }
-        let state = this.input_mut(field);
+        let input = this.input_mut(field);
+        let at = input.position();
+        let previous = input.value[..at].char_indices().last().map(|(i, _)| i).unwrap_or(0);
+        let next = input.value[at..].chars().next().map(|c| at + c.len_utf8()).unwrap_or(at);
         match ks.key.as_str() {
-            "backspace" => {
-                state.value.pop();
+            "left" => {
+                let to = if !ks.modifiers.shift && !input.selection().is_empty() { input.selection().start } else { previous };
+                input.move_cursor(to, ks.modifiers.shift);
             }
-            "space" => state.value.push(' '),
+            "right" => {
+                let to = if !ks.modifiers.shift && !input.selection().is_empty() { input.selection().end } else { next };
+                input.move_cursor(to, ks.modifiers.shift);
+            }
+            "home" => input.move_cursor(0, ks.modifiers.shift),
+            "end" => input.move_cursor(input.value.len(), ks.modifiers.shift),
+            "backspace" => {
+                if input.selection().is_empty() { input.anchor = Some(previous); }
+                input.replace_selection("");
+            }
+            "delete" => {
+                if input.selection().is_empty() { input.anchor = Some(next); }
+                input.replace_selection("");
+            }
             "escape" => {}
-            key if key.chars().count() == 1 => {
-                if state.value.len() < 200 {
-                    state.value.push_str(key);
+            "space" => input.replace_selection(" "),
+            _ => {
+                let text = ks.key_char.as_deref().unwrap_or(ks.key.as_str());
+                if text.chars().count() == 1 && input.value.chars().count() < 200 {
+                    input.replace_selection(text);
                 }
             }
-            _ => {}
         }
-        if field == Field::HistorySearch {
-            this.page = 0;
-        }
-        if field == Field::BrowseSearch {
-            this.browse_search_typed(cx);
-        }
+        this.input_changed(field, cx);
+    }
+
+    pub(crate) fn input_changed(&mut self, field: Field, cx: &mut Context<Self>) {
+        if field == Field::HistorySearch { self.page = 0; }
+        if field == Field::BrowseSearch { self.browse_search_typed(cx); }
         cx.notify();
     }
 
@@ -530,62 +612,7 @@ impl Kriko {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Stateful<Div> {
-        let state = self.input(field);
-        let focused = state.handle.is_focused(window);
-        let value = state.value.clone();
-        let empty = value.is_empty();
-        let listener = cx.listener(move |this, event: &KeyDownEvent, _w, cx| {
-            Self::handle_key(this, field, event, cx);
-        });
-        let caret_base = div().w(px(2.0)).h(px(20.0)).bg(rgb(INK));
-        let caret: gpui::AnyElement = if self.reduce_motion {
-            caret_base.into_any_element()
-        } else {
-            caret_base
-                .with_animation(
-                    "blink",
-                    Animation::new(std::time::Duration::from_millis(1100)).repeat(),
-                    |el, t| el.opacity(if t < 0.5 { 1.0 } else { 0.0 }),
-                )
-                .into_any_element()
-        };
-        div()
-            .id(id)
-            .track_focus(&state.handle)
-            .h(px(48.0))
-            .min_w(px(0.0))
-            .flex()
-            .flex_1()
-            .items_center()
-            .gap(px(12.0))
-            .px(px(16.0))
-            .rounded(px(12.0))
-            .bg(rgb(WELL))
-            .border_1()
-            .border_color(rgba(BORDER_CONTROL))
-            .when(focused, |d| d.border_color(rgb(ICE)))
-            .on_key_down(listener)
-            .children(icon_name.map(|n| {
-                icon(n, 18.0)
-                    .flex_none()
-                    .text_color(rgb(if empty { DIM } else { MUTED }))
-            }))
-            .child(if empty {
-                div()
-                    .font_family(SANS)
-                    .text_size(px(16.0))
-                    .text_color(rgb(DIM))
-                    .child(placeholder.to_string())
-                    .into_any_element()
-            } else {
-                div()
-                    .font_family(SANS)
-                    .text_size(px(16.0))
-                    .text_color(rgb(INK))
-                    .child(value)
-                    .into_any_element()
-            })
-            .when(focused, |d| d.child(caret))
+        crate::text_input::field(self, field, id, placeholder, icon_name, window, cx)
     }
 
     // ---- sidebar ----
@@ -889,5 +916,34 @@ impl Render for Kriko {
             )
             .when(self.dock_open, |row| row.child(dock))
             .into_any_element()
+    }
+}
+
+fn text_boundary(value: &str, requested: usize) -> usize {
+    let mut at = requested.min(value.len());
+    while !value.is_char_boundary(at) { at -= 1; }
+    at
+}
+
+fn text_selection(value: &str, cursor: usize, anchor: Option<usize>) -> std::ops::Range<usize> {
+    let at = text_boundary(value, cursor);
+    let anchor = text_boundary(value, anchor.unwrap_or(at));
+    at.min(anchor)..at.max(anchor)
+}
+
+#[cfg(test)]
+mod input_tests {
+    use super::{text_boundary, text_selection};
+
+    #[test]
+    fn unicode_selection_clamps_stale_positions_and_replaces_whole_characters() {
+        let mut value = "Şımart 🤖".to_string();
+        assert_eq!(text_boundary(&value, 1), 0);
+        let emoji = value.find('🤖').unwrap();
+        let range = text_selection(&value, value.len() + 100, Some(emoji + 1));
+        value.replace_range(range, "Katya");
+        assert_eq!(value, "Şımart Katya");
+        assert_eq!(text_selection(&value, 0, Some(2)), 0..2);
+        assert_eq!(text_selection("", 42, Some(10)), 0..0);
     }
 }

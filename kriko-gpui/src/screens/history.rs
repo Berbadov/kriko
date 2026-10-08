@@ -160,11 +160,6 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     if !app.live.history.loaded {
         return div().child(empty_note("Reading your history from the engine."));
     }
-    if app.live.history.items.is_empty() {
-        return div().child(empty_note(
-            "No checks yet. A check you run, or one the browser extension makes, lands here.",
-        ));
-    }
 
     // ---- the controls row: search + the catalog and date-span filters ----
     let search = app.input_field(
@@ -176,32 +171,57 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         cx,
     );
 
-    let pack_next = cx.listener(|this, _: &ClickEvent, _w, cx| {
-        let next = this.live.history.next_pack();
-        this.live.history.pack = next;
-        this.live.history.open = None;
-        this.live.history.detail = None;
-        this.page = 0;
+    let mut controls = div().flex().flex_col().gap(px(12.0)).mb(px(24.0));
+    let mut bar = div().flex().flex_wrap().items_center().gap(px(10.0))
+        .child(div().flex_1().min_w(px(220.0)).child(search));
+    let filters = [
+        ("pack", format!("Pack · {}", app.live.history.pack_word())),
+        ("time", format!("Date · {}", app.history_span.word())),
+        ("kind", format!("Kind · {}", if app.live.history.record_kind.is_empty() { "All" } else { &app.live.history.record_kind })),
+        ("status", format!("Status · {}", if app.live.history.record_status.is_empty() { "All" } else { &app.live.history.record_status })),
+    ];
+    for (i, (field, label)) in filters.iter().enumerate() {
+        let field = field.to_string();
+        let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+            this.live.history.filter_open = if this.live.history.filter_open.as_deref() == Some(&field) { None } else { Some(field.clone()) };
+            cx.notify();
+        });
+        bar = bar.child(plate_s(("history-filter", i), label).on_click(toggle));
+    }
+    let clear = cx.listener(|this, _: &ClickEvent, _w, cx| {
+        this.live.history.pack = None;
+        this.live.history.record_kind.clear(); this.live.history.record_status.clear();
+        this.history_span = SpanFilter::All; this.history_search.set_value(String::new()); this.page = 0;
         cx.notify();
     });
-    let span_next = cx.listener(|this, _: &ClickEvent, _w, cx| {
-        this.history_span = this.history_span.next();
-        this.page = 0;
-        this.live.history.open = None;
-        this.live.history.detail = None;
-        cx.notify();
-    });
-
-    let pack_word = clip(&app.live.history.pack_word(), 26).to_uppercase();
-    let controls = div()
-        .flex()
-        .flex_wrap()
-        .items_center()
-        .gap(px(12.0))
-        .mb(px(24.0))
-        .child(div().flex_1().min_w(px(220.0)).child(search))
-        .child(cycle_ctrl("filter-pack", "PACK", &pack_word).on_click(pack_next))
-        .child(cycle_ctrl("filter-span", "TIME", app.history_span.word()).on_click(span_next));
+    controls = controls.child(bar.child(plate_s("history-filter-reset", "Reset filters").on_click(clear)));
+    if let Some(field) = app.live.history.filter_open.clone() {
+        let mut choices: Vec<(String, String)> = vec![(String::new(), "All".into())];
+        match field.as_str() {
+            "pack" => choices.extend(app.live.history.pack_options()),
+            "time" => choices = vec![("0".into(), "All time".into()), ("1".into(), "Past month".into()), ("2".into(), "Past quarter".into()), ("3".into(), "Past six months".into())],
+            "kind" => choices.extend([("check", "Checks"), ("run", "Agent runs"), ("queue", "Queue-ups"), ("pack_build", "Pack builds")].map(|(v,l)| (v.into(),l.into()))),
+            "status" => choices.extend(["queued", "running", "succeeded", "failed", "cancelled", "interrupted", "waiting", "researching", "done", "removed"].map(|v| (v.into(),v.into()))),
+            _ => {}
+        }
+        let mut drawer = card().flex().flex_col().gap(px(10.0)).child(eyebrow(&format!("Choose {field}")));
+        let mut options = div().flex().flex_wrap().gap(px(8.0));
+        for (i, (value, label)) in choices.iter().enumerate() {
+            let value = value.clone(); let field = field.clone();
+            let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                match field.as_str() {
+                    "pack" => this.live.history.pack = if value.is_empty() { None } else { Some(value.clone()) },
+                    "time" => this.history_span = match value.as_str() { "1" => SpanFilter::Month, "2" => SpanFilter::Quarter, "3" => SpanFilter::Half, _ => SpanFilter::All },
+                    "kind" => this.live.history.record_kind = value.clone(),
+                    "status" => this.live.history.record_status = value.clone(), _ => {}
+                }
+                this.page = 0; this.live.history.filter_open = None; this.live.history.open = None; cx.notify();
+            });
+            options = options.child(plate_s(("history-filter-option",i),label).on_click(pick));
+        }
+        drawer = drawer.child(options).child(plate_s("history-filter-close", "Close").on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.live.history.filter_open = None; cx.notify(); })));
+        controls = controls.child(drawer);
+    }
 
     // ---- filtering ----
     let now = now_secs();
@@ -209,6 +229,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     let span: SpanFilter = app.history_span;
     let filtered = app.live.history.filtered(&query, span.days(), now);
     let total = filtered.len();
+    controls = controls.child(mono(&format!("{total} matching records"), MUTED));
     let pages = if total == 0 {
         1
     } else {
@@ -223,7 +244,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .collect();
 
     // ---- the stats: what the current filters admit ----
-    let items = &app.live.history.items;
+    let items = app.live.history.history_rows();
     let months = month_buckets(filtered.iter().filter_map(|&i| items[i].ts), now, 6);
     let bar_max = months.iter().map(|(_, c)| *c).max().unwrap_or(1).max(1) as f32;
     // the bars regrow whenever the filters change: the id carries them, so
@@ -359,7 +380,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .flex()
                 .flex_col()
                 .gap(px(10.0))
-                .child(eyebrow("Checks per month"))
+                .child(eyebrow("Records per month"))
                 .child(bars),
         )
         .child(stat(
@@ -386,7 +407,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .items_center()
                 .pb(px(10.0))
                 .child(div().w(px(28.0)))
-                .child(div().flex_1().child(th("Check")))
+                .child(div().flex_1().child(th("Record")))
                 .child(div().w(px(120.0)).child(th("Claims")))
                 .child(div().w(px(110.0)).child(th("When"))),
         )
@@ -423,8 +444,12 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         let check = &items[gi];
         let open = app.live.history.open.as_deref() == Some(check.id.as_str());
         let open_id = check.id.clone();
+        let kind = check.kind.clone();
         let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-            this.toggle_history_open(open_id.clone(), cx);
+            if let Some(job_id) = open_id.strip_prefix("job:") {
+                this.live.run.pinned = Some(job_id.to_string()); this.tab = crate::app::Tab::Run; this.refresh_jobs(cx);
+            } else if kind == "check" { this.toggle_history_open(open_id.clone(), cx); }
+            cx.notify();
         });
         let columns = div()
             .id(gpui::ElementId::named_usize("hist-row", gi))
@@ -454,7 +479,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             .text_color(rgb(INK))
                             .child(check.label.clone()),
                     )
-                    .child(mono(&clip(&check.pack_line(), 60), MUTED)),
+                    .child(mono(&format!("{} · {} · {} {}", check.kind, check.status, clip(&check.pack_line(), 60), check.agent), MUTED)),
             )
             .child(div().w(px(120.0)).child(mono(&format!("{} claims", check.claims), INK_2)))
             .child(div().w(px(110.0)).child(mono(&ago(check.ts, now), MUTED)));

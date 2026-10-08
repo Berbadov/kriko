@@ -7,6 +7,7 @@ read, what the model is handed, and what happens when a page will not read.
 """
 
 import threading
+import json
 
 import pytest
 
@@ -40,6 +41,56 @@ class Complete:
     def __call__(self, prompt: str) -> str:
         self.prompts.append(prompt)
         return self.reply
+
+
+class Sequence(Complete):
+    def __init__(self, replies):
+        super().__init__()
+        self.replies = iter(replies)
+        self.calls = 0
+
+    def __call__(self, prompt):
+        self.prompts.append(prompt)
+        self.calls += 1
+        return next(self.replies)
+
+
+def test_quick_answer_repairs_bad_json_once_and_keeps_source_and_self_checks():
+    answer = json.dumps({"risks": [{"title": "Pump failure", "url": "https://a.test/1", "quote": "the pump failed"}], "specs": []})
+    complete = Sequence(["not JSON", answer, '{"verdicts":[{"index":0,"supported":true,"reason":"the page reports it"}]}'])
+    asker = local_agent.LocalAsker(Plan('["failure reports"]'), complete,
+        searcher([{"url": "https://a.test/1"}]), reader({"https://a.test/1": "An owner said the pump failed."}),
+        model="small", search_provider="stub")
+    assert asker.ask_quick("Widget MK2") == answer
+    assert asker.telemetry["queries"] == ["Widget MK2 failure reports"]
+    assert asker.telemetry["repairs"] == 1
+    assert asker.telemetry["verification"][0]["quote_in_read_page"] is True
+    assert asker.telemetry["self_verify"]["verdicts"][0]["supported"] is True
+    assert len(complete.prompts) == 3
+
+
+def test_second_search_learns_from_the_first_pages():
+    plan = Sequence(['["Widget failures"]', '["Widget MK2 pump recall"]'])
+    answer = json.dumps({"risks": [{"title": "Pump failure", "url": "https://a.test/2", "quote": "the pump failed"}], "specs": []})
+    complete = Sequence(['{"risks":[],"specs":[]}', answer, '{"verdicts":[]}'])
+    asker = local_agent.LocalAsker(plan, complete,
+        lambda query, limit: [{"url": "https://a.test/2" if "recall" in query else "https://a.test/1"}],
+        reader({"https://a.test/1": "The first review names a revised pump.", "https://a.test/2": "A recall says the pump failed."}),
+        model="small", search_provider="stub")
+    assert asker.ask_quick("Widget MK2") == answer
+    assert "first review names a revised pump" in plan.prompts[1]
+    assert len(asker.telemetry["queries"]) == 2
+
+
+def test_invalid_answer_is_a_distinct_bounded_failure():
+    complete = Sequence(["not JSON", "still not JSON"])
+    asker = local_agent.LocalAsker(Plan('["query"]'), complete,
+        searcher([{"url": "https://a.test/1"}]), reader({"https://a.test/1": "readable page"}),
+        model="small", search_provider="stub")
+    with pytest.raises(LocalInferenceError) as error:
+        asker.ask_quick("Widget")
+    assert error.value.code == "invalid_json"
+    assert complete.calls == 2
 
 
 def searcher(hits, started=None, gate=None):

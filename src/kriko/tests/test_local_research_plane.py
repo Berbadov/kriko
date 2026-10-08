@@ -255,6 +255,22 @@ class TestLocalPlaneGrounding:
         plane = self.make(complete)
         assert plane.extract(task(), DOC) == []
 
+    def test_quote_repair_changes_only_the_quote_and_is_bounded(self):
+        import json
+        original = finding_json(quote="misremembered text")
+        complete = RecordingComplete([json.dumps(original), json.dumps([{
+            "index": 0, "quote": "the pump seized at 40,000 units without warning",
+            "title": "Injected replacement", "source_url": "https://wrong.test"}])])
+        plane = self.make(complete)
+        [found] = plane.extract(task(), DOC)
+        assert found.title == original[0]["title"]
+        assert found.source_url == DOC.url
+        assert found.quote in DOC_TEXT
+        assert plane.spent_calls == len(complete.prompts) == 2
+        bad = RecordingComplete([json.dumps(original), json.dumps([{"index": 0, "quote": "still invented"}])])
+        assert self.make(bad).extract(task(), DOC) == []
+        assert len(bad.prompts) == 2
+
     def test_wrong_url_is_dropped(self):
         complete = RecordingComplete([__import__("json").dumps(
             finding_json(url="https://other.test/x"))])

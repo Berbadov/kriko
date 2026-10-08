@@ -295,6 +295,7 @@ def reveal(path: Path) -> str:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=not sys.platform.startswith("win"),
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except OSError as cause:
         return f"could not open a file manager: {cause}"

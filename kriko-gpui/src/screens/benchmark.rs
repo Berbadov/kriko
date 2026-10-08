@@ -7,12 +7,92 @@
 
 use gpui::{div, point, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Styled, Window};
 
-use crate::app::Kriko;
+use crate::app::{Kriko, Tab};
 use crate::live::local::{batches, change, BenchPhase, BenchRun, Batch, Machine};
 use crate::marks::{self, mark_glyph, Mark, Phase};
 use crate::screens::local::pill;
-use crate::screens::{empty_note, mono, row_desc, th};
+use crate::screens::{empty_note, mono, plate_s, row_desc, row_title, th};
 use crate::theme::*;
+
+fn setup(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
+    let b = &app.live.local.bench;
+    let mut result = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Run setup"))
+        .child(row_desc("Each case asks for product risks, searches and reads evidence, then scores the answer against the versioned expected findings and forbidden claims. Generation controls below apply to local inference; other agents use their own supported defaults."));
+    for (name, key, values, current) in [
+        ("First cases (or choose below)", "cases", vec![1, 3, 5, 10], b.case_count),
+        ("Pages per case", "documents", vec![1, 3, 5, 10, 20], b.documents),
+        ("Repetitions", "repeats", vec![1, 2, 3, 5, 10], b.repeats),
+        ("Timeout seconds per inference / agent call", "timeout", vec![60, 120, 240, 600, 1200], b.timeout),
+        ("Local reply tokens", "tokens", vec![512, 1024, 2048, 4096], b.max_tokens),
+    ] {
+        let mut row = div().flex().flex_wrap().items_center().gap(px(8.0)).child(row_desc(name));
+        for (i, value) in values.into_iter().enumerate() {
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                let b = &mut this.live.local.bench;
+                if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+                match key { "cases" => { b.case_count = value; b.case_ids.clear(); }, "documents" => b.documents = value,
+                    "repeats" => b.repeats = value, "timeout" => b.timeout = value, _ => b.max_tokens = value }
+                b.phase = BenchPhase::Idle; cx.notify();
+            });
+            row = row.child(pill(gpui::ElementId::named_usize(format!("bench-setup-{key}"), i), &value.to_string(), current == value).on_click(pick));
+        }
+        result = result.child(row);
+    }
+    let mut temp = div().flex().gap(px(8.0)).child(row_desc("Local temperature"));
+    for (i, value) in [0.0, 0.2, 0.5, 1.0].into_iter().enumerate() {
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            if matches!(this.live.local.bench.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+            this.live.local.bench.temperature = value; this.live.local.bench.phase = BenchPhase::Idle; cx.notify();
+        });
+        temp = temp.child(pill(("bench-temperature", i), &value.to_string(), b.temperature == value).on_click(pick));
+    }
+    result = result.child(temp).child(hairline()).child(eyebrow("Agents and served models"));
+    for (i, entry) in app.live.run.agent_entries().iter().enumerate() {
+        let Some(h) = &entry.harness else { continue };
+        if !matches!(h.state, crate::live::run::RunState::Ready) { continue; }
+        let id = entry.id.clone();
+        let select_agent = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            let b = &mut this.live.local.bench;
+            if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+            b.harness = id.clone(); b.models.clear();
+            b.picked = vec![if id == "local" { "local" } else if id.ends_with("-api") { "api" } else { "harness" }.to_string()];
+            b.phase = BenchPhase::Idle; cx.notify();
+        });
+        let mut row = div().flex().flex_wrap().gap(px(8.0))
+            .child(plate_s(("bench-agent-pick", i), &entry.label).on_click(select_agent))
+            .child(row_desc(&format!("{} · {}", entry.id, if h.llm.is_empty() { "agent default" } else { &h.llm })));
+        for (n, model) in h.llms.iter().enumerate() {
+            let chosen = model.clone(); let agent = entry.id.clone();
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                let b = &mut this.live.local.bench;
+                if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+                if b.harness != agent { b.models.clear(); }
+                b.harness = agent.clone(); b.picked = vec![if agent == "local" { "local" } else if agent.ends_with("-api") { "api" } else { "harness" }.to_string()];
+                if b.models.contains(&chosen) { b.models.retain(|m| m != &chosen); } else { b.models.push(chosen.clone()); }
+                b.phase = BenchPhase::Idle; cx.notify();
+            });
+            row = row.child(pill(gpui::ElementId::named_usize(format!("bench-served-{i}"), n), model, b.models.contains(model)).on_click(pick));
+        }
+        result = result.child(row);
+    }
+    result = result.child(hairline()).child(eyebrow("Test cases and expected answers"));
+    for (i, case) in b.cases.iter().enumerate() {
+        let id = crate::api::s(case, "id"); let selected = b.case_ids.contains(&id) || (b.case_ids.is_empty() && i < b.case_count);
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            let b = &mut this.live.local.bench;
+            if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+            if b.case_ids.is_empty() { b.case_ids = b.cases.iter().take(b.case_count).map(|c| crate::api::s(c, "id")).collect(); }
+            if b.case_ids.contains(&id) { if b.case_ids.len() == 1 { return; } b.case_ids.retain(|x| x != &id); } else { b.case_ids.push(id.clone()); }
+            b.phase = BenchPhase::Idle; cx.notify();
+        });
+        result = result.child(div().flex().flex_col().gap(px(4.0))
+            .child(pill(("bench-case-pick", i), &crate::api::s(case, "product"), selected).on_click(pick))
+            .child(row_desc(&format!("Expected: {} · forbidden: {}",
+                case.get("must_find").map(|v| v.to_string()).unwrap_or_default(),
+                case.get("must_not_find").map(|v| v.to_string()).unwrap_or_default()))));
+    }
+    result.child(row_desc("Correctness: expected findings matched / expected findings. Unsupported rate: unsupported findings / produced findings. Source coverage and accuracy are not independently measured by this test set. Task token rate includes input and output over total task time; it is not inference speed. n/a means not measured."))
+}
 
 fn glow(color: u32, blur: f32) -> Vec<gpui::BoxShadow> {
     vec![gpui::BoxShadow {
@@ -181,7 +261,8 @@ fn machine_cells(m: Option<&Machine>) -> Vec<(&'static str, String)> {
 
 pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
-    let b = &app.live.local.bench;
+    let bench = app.live.local.bench.clone();
+    let b = &bench;
     if !b.loaded {
         return div().child(empty_note("Asking Kriko's engine for its benchmark results."));
     }
@@ -195,6 +276,25 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
     let press = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.bench_press(cx));
     let all = batches(&b.runs);
     let running = matches!(b.phase, BenchPhase::Running { .. });
+    let setup_panel = setup(app, cx);
+    let mut progress_panel = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Live progress"));
+    let jobs: Vec<_> = app.live.run.jobs.iter().filter(|j| j.kind == "bench").take(5).cloned().collect();
+    if jobs.is_empty() { progress_panel = progress_panel.child(empty_note("No benchmark task yet.")); }
+    for job in &jobs { progress_panel = progress_panel.child(crate::screens::logs::job_logs(app, job, cx)); }
+    let export = b.snapshot.to_string();
+    let copy = cx.listener(move |_this, _: &gpui::ClickEvent, _w, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(export.clone())));
+    let source = cx.listener(|_this, _: &gpui::ClickEvent, _w, cx| { cx.open_url("https://github.com/Berbadov/kriko/blob/main/src/app/bench.py"); });
+    let runtime_settings = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.tab = Tab::Settings; this.refresh_local(cx); cx.notify();
+    });
+    let runtime = app.live.local.plane.as_ref().map(|p| p.runtime.clone()).unwrap_or(crate::api::Value::Null);
+    progress_panel = progress_panel.child(row_desc(&format!("Local runtime: {} · model {} · active device {} · {}",
+        crate::api::s(&runtime, "runtime"), crate::api::s(&runtime, "model"),
+        crate::api::s(&runtime, "device"), crate::api::s(&runtime, "reason"))));
+    progress_panel = progress_panel.child(div().flex().flex_wrap().gap(px(10.0))
+        .child(plate_s("bench-export", "Copy detailed results JSON").on_click(copy))
+        .child(plate_s("bench-source", "Open benchmark source").on_click(source))
+        .child(plate_s("bench-runtime-settings", "Local runtime settings").on_click(runtime_settings)));
 
     // ---- the machine and the run key ----
     let mut machine = div().flex().flex_wrap().gap(px(8.0));
@@ -295,6 +395,8 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
             .flex_col()
             .gap(px(24.0))
             .child(start_panel)
+            .child(setup_panel)
+            .child(progress_panel)
             .child(empty_note("Nothing has been benchmarked here yet. Run one to see how an agent does."));
     }
 
@@ -359,7 +461,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .pb(px(10.0))
                 .child(div().flex_1().min_w(px(170.0)).child(th("Agent")))
                 .child(div().w(px(84.0)).child(th("Answer")))
-                .child(div().w(px(180.0)).child(th("Tokens / s")))
+                .child(div().w(px(180.0)).child(th("Task tokens / s")))
                 .child(div().w(px(112.0)).child(th("Claims / run")))
                 .child(div().w(px(84.0)).child(th("Finished")))
                 .child(div().w(px(96.0)).child(th("Ungrounded"))),
@@ -369,7 +471,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
         .summary
         .iter()
         .map(|r| match (r.tokens, r.ms) {
-            (Some(t), Some(ms)) if ms > 0.0 => Some(t * 1000.0 / ms),
+            (Some(t), Some(ms)) if ms > 0.0 && r.runs > 0.0 => Some(t * 1000.0 / r.runs / ms),
             _ => None,
         })
         .collect();
@@ -521,10 +623,31 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
 
     // ---- the latest benchmark, run by run ----
     let mine: Vec<&BenchRun> = b.runs.iter().filter(|r| r.batch_id == latest.id).collect();
+    let mut variation = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Repeated case variation"))
+        .child(row_desc("Elapsed range includes the entire task. Compare repeated samples of the same case and agent; these are not inference-speed measurements."));
+    let mut groups = std::collections::BTreeMap::<(String, String, String), Vec<&BenchRun>>::new();
+    for run in &mine { groups.entry((run.plane.clone(), run.llm.clone(), run.subject.clone())).or_default().push(run); }
+    for ((plane, llm, subject), runs) in groups {
+        let times: Vec<f64> = runs.iter().filter_map(|r| r.ms).collect();
+        let failed = runs.iter().filter(|r| !r.error.is_empty()).count();
+        let range = if times.len() < 2 { "Variation unavailable: fewer than two timed samples".into() } else {
+            format!("task range {:.2}–{:.2} s", times.iter().copied().fold(f64::INFINITY, f64::min) / 1000.0,
+                times.iter().copied().fold(f64::NEG_INFINITY, f64::max) / 1000.0)
+        };
+        variation = variation.child(row_desc(&format!("{subject} · {plane} / {llm} · n={} · failures {failed}/{} · {range}", runs.len(), runs.len())));
+    }
+    if let Some(scored) = b.snapshot.get("scored").and_then(|v| v.get("groups")) {
+        variation = variation.child(row_desc("Correctness and unsupported-rate counts with Wilson intervals, grouped by agent, model, protocol and test-set version:"))
+            .child(well().id("bench-score-intervals").max_h(px(240.0)).overflow_y_scroll().p(px(12.0))
+                .child(row_desc(&serde_json::to_string_pretty(scored).unwrap_or_default())));
+    }
     let slowest = mine.iter().filter_map(|r| r.ms).fold(1.0f64, f64::max);
     let mut bars = card().flex().flex_col();
     bars = bars.child(div().mb(px(12.0)).child(eyebrow("Latest benchmark, run by run")));
     for (i, r) in mine.iter().enumerate() {
+        let detail = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.live.local.bench.detail = if this.live.local.bench.detail == Some(i) { None } else { Some(i) }; cx.notify();
+        });
         let failed = !r.error.is_empty();
         bars = bars.child(
             div()
@@ -559,7 +682,10 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                     r.ms.map(|m| (m / slowest * 100.0) as f32).unwrap_or(0.0),
                     28,
                     if failed { DANGER } else if i == 0 { ICE } else { LED_DIM },
-                )),
+                ))
+                .child(plate_s(("bench-case-detail", i), "Answer, evidence, score and settings").on_click(detail))
+                .when(b.detail == Some(i), |d| d.child(well().id(("bench-detail-scroll", i)).max_h(px(400.0)).overflow_y_scroll()
+                    .p(px(12.0)).child(row_desc(&serde_json::to_string_pretty(&r.raw).unwrap_or_default())))),
         );
         if i + 1 < mine.len() {
             bars = bars.child(crate::theme::hairline());
@@ -571,6 +697,9 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
         .flex_col()
         .gap(px(24.0))
         .child(start_panel)
+        .child(setup_panel)
+        .child(progress_panel)
+        .child(row_title("Results"))
         .child(heads)
         .child(
             div()
@@ -582,6 +711,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .child(div().flex_1().min_w(px(360.0)).child(history)),
         )
         .child(bars)
+        .child(variation)
         .child(
             div()
                 .flex()
