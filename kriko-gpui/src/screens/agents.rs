@@ -75,7 +75,8 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                     .child(div().flex_1().min_w(px(160.0)).child(th("Agent")))
                     .child(div().w(px(200.0)).child(th("Runs checks")))
                     .child(div().w(px(140.0)).child(th("MCP")))
-                    .child(div().w(px(80.0)).child(th("Recent runs"))),
+                    .child(div().w(px(80.0)).child(th("Recent runs")))
+                    .child(div().w(px(72.0)).child(th("Order"))),
             )
             .child(hairline());
 
