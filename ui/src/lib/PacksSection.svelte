@@ -1,4 +1,5 @@
 <script lang="ts">
+    import JackMark from "./kriko/JackMark.svelte";
     import FilePick from "./FilePick.svelte";
     import Icon from "./Icon.svelte";
     import { count } from "./plural";
@@ -224,7 +225,7 @@
 {/if}
 
 {#await ready}
-    <p class="state loading">Loading catalogs…</p>
+    <p class="state loading loading-mark"><JackMark />Loading catalogs…</p>
 {:then}
     {#if failure}
         <Failure error={failure} retry={() => refresh()} />

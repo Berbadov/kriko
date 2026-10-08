@@ -1,4 +1,5 @@
 <script lang="ts">
+    import JackMark from "../lib/kriko/JackMark.svelte";
     /* What the knowledge pipeline is doing, while it does it.
      *
      * The Runs screen answers "is it still going, and what did it print".
@@ -204,7 +205,7 @@
         actionHref="#/jobs"
     />
 {:else if !ready}
-    <p class="state loading">Loading…</p>
+    <p class="state loading loading-mark"><JackMark />Loading…</p>
 {/if}
 
 {#if runs.length}
