@@ -303,7 +303,7 @@ def start_research_plane(
             # pack only when the reader asks (`POST /quick-looks/{id}/pack`).
             pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
             quick = runner.submit("quick_look", {
-                "product": body.q.strip(), "harness": "", "backend": "local",
+                "product": body.q.strip(), "page_url": body.url, "harness": "", "backend": "local",
                 "pack_id": pack_id, "page": page, "budget_usd": 0.0,
             })
             return {
@@ -384,7 +384,7 @@ def start_research_plane(
             }
         pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
         quick = runner.submit("quick_look", {
-            "product": body.q.strip(), "harness": selected,
+            "product": body.q.strip(), "page_url": body.url, "harness": selected,
             "pack_id": pack_id, "page": page, "budget_usd": quick_budget,
         })
         if billed:
@@ -419,6 +419,29 @@ def start_research_plane(
         "job_id": runner.submit("research", params), "kind": "research",
         **subject, **plane, "budget_usd": params["budget_usd"],
     }
+
+
+@router.get("/quick-looks")
+def saved_quick_look(url: str, product: str = "", conn=Depends(get_app_state)) -> dict:
+    """Restore the newest successful result; a failed refresh cannot erase it."""
+    from app.pageidentity import canonical_url
+
+    wanted = canonical_url(url)
+    if not wanted:
+        return {"job": None}
+    name = " ".join(product.casefold().split())
+    for row in conn.execute(
+        "SELECT * FROM jobs WHERE kind = 'quick_look' AND state = 'succeeded'"
+        " ORDER BY created_at DESC, rowid DESC"
+    ):
+        job = state._job(row)
+        params = job["params"]
+        if canonical_url(params.get("page_url", "")) != wanted:
+            continue
+        if name and " ".join(str(params.get("product", "")).casefold().split()) != name:
+            continue
+        return {"job": job}
+    return {"job": None}
 
 
 @router.post("/quick-looks/{job_id}/pack")
