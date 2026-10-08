@@ -80,6 +80,9 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
             .child(hairline());
 
         for (i, e) in entries.iter().enumerate() {
+            let up_id = e.id.clone(); let down_id = e.id.clone();
+            let up = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.order_agent(up_id.clone(), -1, cx));
+            let down = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.order_agent(down_id.clone(), 1, cx));
             let is_selected = e.id == selected;
             let id = e.id.clone();
             let click = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -150,7 +153,10 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                     div()
                         .w(px(80.0))
                         .child(mono(&app.live.run.runs_of(&e.id).to_string(), INK_2)),
-                );
+                )
+                .child(div().flex().gap(px(4.0))
+                    .when(i > 0, |d| d.child(ghost(("agent-up", i), "Up").on_click(up)))
+                    .when(i + 1 < entries.len(), |d| d.child(ghost(("agent-down", i), "Down").on_click(down))));
             table = table.child(row);
             if i + 1 < entries.len() {
                 table = table.child(hairline());
@@ -193,7 +199,7 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
             this.toggle_source_kind(kind.clone(), cx);
             cx.notify();
         });
-        kinds = kinds.child(option_chip(("source-kind", i), words, on).on_click(toggle));
+        kinds = kinds.child(div().w(px(220.0)).min_w(px(0.0)).child(option_chip(("source-kind", i), words, on).h_auto().min_h(px(30.0)).py(px(8.0)).on_click(toggle)));
     }
     let mut counts = div().flex().flex_wrap().gap(px(6.0));
     for (i, n) in [0u32, 3, 5, 10, 20, 40].into_iter().enumerate() {
@@ -212,7 +218,7 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         .gap(px(10.0))
         .child(eyebrow("Research sources"))
         .child(row_desc(
-            "Every agent run reads these: the kinds of source it goes to first, and the most sources it reads. None picked leaves it to the agent.",
+            "Choose source types to read first. No types selected lets the agent choose. The limit caps pages read, not the number of findings included in the answer.",
         ))
         .child(kinds)
         .child(eyebrow("Sources per run"))
@@ -277,7 +283,9 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
                     });
                     c = c.child(div().child(ghost("agent-use", "Use for runs").on_click(use_it)));
                 }
-                c = c.child(dials(h, cx));
+                let models = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.open_agent_models(cx));
+                c = c.child(ghost("agent-models-drawer", if app.live.run.model_drawer { "Close model and effort choices" } else { "Models and effort" }).on_click(models));
+                if app.live.run.model_drawer { c = c.child(well().p(px(12.0)).child(dials(h, cx))); }
             }
             RunState::Unusable(why) => c = c.child(row_desc(why)),
             RunState::Missing { hint, url } => {
@@ -391,15 +399,22 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
             v.ms
         )));
         if !v.log.is_empty() {
-            c = c.child(
+            let toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| { this.live.run.verify_log_open = !this.live.run.verify_log_open; cx.notify(); });
+            let copied = v.log.clone();
+            let copy = cx.listener(move |_this, _: &gpui::ClickEvent, _w, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(copied.clone())));
+            c = c.child(div().flex().gap(px(8.0))
+                .child(ghost("agent-check-logs", if app.live.run.verify_log_open { "Hide logs" } else { "Show logs" }).on_click(toggle))
+                .child(ghost("agent-check-copy", "Copy log").on_click(copy)));
+            if app.live.run.verify_log_open { c = c.child(
                 well()
+                    .id("agent-check-log-scroll").overflow_y_scroll()
                     .max_h(px(220.0))
                     .p(px(12.0))
                     .font_family(MONO)
                     .text_size(px(12.0))
                     .text_color(rgb(INK_2))
                     .child(v.log.clone()),
-            );
+            ); }
         }
         if !v.ok && !v.detail.is_empty() {
             c = c.child(row_desc(&v.detail));

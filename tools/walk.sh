@@ -41,11 +41,12 @@ fi
 PORT="${KRIKO_WALK_PORT:-8799}"
 OUT="${KRIKO_WALK_OUT:-.walk}"
 HOME_DIR="$(mktemp -d)"
+server=""
 # Anything the walk's buttons launched with this home — the Extension screen
 # opens a real browser on a profile under it — outlives the server, holds its
 # files open, and on Windows is a window left on the reader's desktop.
 cleanup() {
-    kill "$server" 2>/dev/null || true
+    [ -z "$server" ] || kill "$server" 2>/dev/null || true
     if command -v powershell.exe >/dev/null 2>&1 && command -v cygpath >/dev/null 2>&1; then
         # The venv's python.exe is a launcher that re-execs the real one, so
         # `kill` above ends the launcher and leaves the server serving.
@@ -57,7 +58,7 @@ trap cleanup EXIT
 
 # The first-party packs, built fresh, so every screen has knowledge to show.
 # An empty store renders half the app as empty states and walks nothing.
-"$PYTHON" packaging/build_packs.py >"$HOME_DIR/build.log" 2>&1 || { cat "$HOME_DIR/build.log"; exit 1; }
+HOME="$HOME_DIR" USERPROFILE="$HOME_DIR" "$PYTHON" packaging/build_packs.py >"$HOME_DIR/build.log" 2>&1 || { cat "$HOME_DIR/build.log"; exit 1; }
 
 path="$PATH"
 [ -n "${KRIKO_WALK_REAL_CLIS:-}" ] || path="$PWD/tools/walk/bin:$PATH"

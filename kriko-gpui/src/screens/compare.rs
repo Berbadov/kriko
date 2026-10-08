@@ -128,7 +128,7 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
                 });
                 let open = this.live.compare.notes.len() - 1;
                 this.live.compare.note_open = Some(open);
-                this.compare_note_input.value.clear();
+                this.compare_note_input.set_value(String::new());
             }
             cx.notify();
         },
@@ -350,7 +350,7 @@ fn pin_notes(
                 return;
             }
             this.live.compare.note_open = Some(i);
-            this.compare_note_input.value = this.live.compare.notes[i].text.clone();
+            this.compare_note_input.set_value(this.live.compare.notes[i].text.clone());
             let handle = this.compare_note_input.handle.clone();
             window.focus(&handle);
             cx.notify();
@@ -1660,7 +1660,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     let mut suggestions = div().flex().items_center().gap(px(8.0)).flex_wrap();
     for (i, text) in crate::data::COMPARE_SUGGESTIONS.iter().enumerate() {
         let fill = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.compare_question_input.value = text.to_string();
+            this.compare_question_input.set_value(text.to_string());
             cx.notify();
         });
         suggestions = suggestions.child(
@@ -1692,7 +1692,8 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .map(|d| d.name.clone())
         .unwrap_or_default();
     let mut questions = div().flex().flex_col().gap(px(10.0));
-    for (qi, q) in app.live.compare.questions.iter().enumerate() {
+    let saved_questions = app.live.compare.questions.clone();
+    for (qi, q) in saved_questions.iter().enumerate() {
         let failure = app.live.compare.failed.get(&q.question_id);
         let run = app.live.compare.question_runs.get(&q.job_id);
         questions = questions.child(
@@ -1775,6 +1776,11 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     DIM,
                 )),
         );
+    }
+    for q in &saved_questions {
+        if let Some(job) = app.live.run.jobs.iter().find(|job| job.id == q.job_id).cloned() {
+            questions = questions.child(crate::screens::logs::job_logs(app, &job, cx));
+        }
     }
 
     let questions_card = card()

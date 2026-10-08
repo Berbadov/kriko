@@ -5,8 +5,8 @@
 
 use gpui::{div, prelude::*, px, rgb, rgba, Animation, AnimationExt, ClickEvent, Context, Div, Window};
 
-use crate::app::Kriko;
-use crate::screens::{empty_note, mono, row_desc, row_title, total_card};
+use crate::app::{Field, Kriko};
+use crate::screens::{empty_note, mono, row_desc, row_title, total_card, plate_s};
 use crate::theme::*;
 
 /// The smooth settle the whole page shares: a fade with a stagger.
@@ -32,9 +32,70 @@ fn settle(
     }
 }
 
-pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
+    let search = app.input_field(Field::OverviewSearch, "overview-search", "Search packs or products", Some("search"), window, cx);
+    let query = app.overview_search.value.to_lowercase();
+    let pack_pick = app.overview_pack.clone();
+    let status_pick = app.overview_status.clone();
+    let product_pick = app.overview_product.clone();
     let k = &app.live.knowledge;
+    let matched = |text: &str| query.is_empty() || text.to_lowercase().contains(&query);
+    let pack_rows: Vec<_> = k.packs.iter().filter(|p| (pack_pick.is_empty() || p.id == pack_pick)
+        && product_pick.is_empty() && matched(&p.name)
+        && match status_pick.as_str() { "enabled" => p.enabled, "disabled" => !p.enabled, "unresearched" | "thin" | "disputed" => false, _ => true }).collect();
+    let gaps: Vec<_> = k.gaps.iter().filter(|g| (pack_pick.is_empty() || g.pack_id == pack_pick)
+        && (product_pick.is_empty() || product_pick == format!("{}\n{}", g.pack_id, g.label))
+        && matched(&g.label) && matches!(status_pick.as_str(), "" | "unresearched")).collect();
+    let thin: Vec<_> = k.thin.iter().filter(|t| (pack_pick.is_empty() || t.pack_id == pack_pick)
+        && (product_pick.is_empty() || product_pick == format!("{}\n{}", t.pack_id, t.subject))
+        && matched(&format!("{} {}", t.subject, t.title))
+        && match status_pick.as_str() { "" | "thin" => true, "disputed" => t.refuted_by > 0, _ => false }).collect();
+    let matches = pack_rows.len() + gaps.len() + thin.len();
+    let active = usize::from(!pack_pick.is_empty()) + usize::from(!status_pick.is_empty()) + usize::from(!product_pick.is_empty());
+    let toggle = cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_filters_open = !this.overview_filters_open; cx.notify(); });
+    let reset = cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_pack.clear(); this.overview_status.clear(); this.overview_product.clear(); this.overview_search.set_value(String::new()); cx.notify(); });
+    let mut controls = div().flex().flex_col().gap(px(12.0)).child(
+        div().flex().flex_wrap().gap(px(10.0)).child(search)
+            .child(plate_s("overview-filters", &format!("Filters · {active} active")).on_click(toggle))
+            .child(plate_s("overview-reset", "Reset filters").on_click(reset)))
+        .child(row_desc(&format!("{matches} matching records · Pack: {} · Status: {} · Product: {}",
+            if pack_pick.is_empty() { "All" } else { &pack_pick }, if status_pick.is_empty() { "All" } else { &status_pick },
+            if product_pick.is_empty() { "All" } else { product_pick.split_once('\n').map(|(_,label)| label).unwrap_or(&product_pick) })));
+    if app.overview_filters_open {
+        let mut drawer = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Overview filters"));
+        let mut choices = div().flex().flex_wrap().gap(px(8.0));
+        for (i, (id, label)) in std::iter::once((String::new(), "All packs".to_string())).chain(k.packs.iter().map(|p| (p.id.clone(), p.name.clone()))).enumerate() {
+            let selected = id == pack_pick;
+            let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| { this.overview_pack = id.clone(); cx.notify(); });
+            choices = choices.child(plate_s(("overview-pack",i), &label).when(selected, |b| b.border_color(rgb(ICE))).on_click(pick));
+        }
+        drawer = drawer.child(eyebrow("Pack")).child(choices);
+        let mut products = std::collections::BTreeMap::<String, String>::new();
+        products.insert(String::new(), "All products".into());
+        for gap in &k.gaps { if pack_pick.is_empty() || gap.pack_id == pack_pick {
+            products.insert(format!("{}\n{}", gap.pack_id, gap.label), gap.label.clone());
+        } }
+        for thin in &k.thin { if pack_pick.is_empty() || thin.pack_id == pack_pick {
+            products.insert(format!("{}\n{}", thin.pack_id, thin.subject), thin.subject.clone());
+        } }
+        let mut product_choices = div().flex().flex_wrap().gap(px(8.0));
+        for (i, (id, label)) in products.into_iter().enumerate() {
+            let selected = id == product_pick;
+            let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| { this.overview_product = id.clone(); cx.notify(); });
+            product_choices = product_choices.child(plate_s(("overview-product", i), &label).when(selected, |b| b.border_color(rgb(ICE))).on_click(pick));
+        }
+        drawer = drawer.child(eyebrow("Product")).child(product_choices);
+        let mut choices = div().flex().flex_wrap().gap(px(8.0));
+        for (i, (id, label)) in [("", "All records"), ("enabled", "Enabled packs"), ("disabled", "Disabled packs"), ("unresearched", "No claims"), ("thin", "Thin evidence"), ("disputed", "Disputed")].iter().enumerate() {
+            let id = id.to_string(); let selected = id == status_pick;
+            let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| { this.overview_status = id.clone(); cx.notify(); });
+            choices = choices.child(plate_s(("overview-status",i), label).when(selected, |b| b.border_color(rgb(ICE))).on_click(pick));
+        }
+        drawer = drawer.child(eyebrow("Status")).child(choices).child(plate_s("overview-filter-close", "Close").on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_filters_open = false; cx.notify(); })));
+        controls = controls.child(drawer);
+    }
+    if matches == 0 && k.packs_loaded { controls = controls.child(empty_note("No record matches. Reset the filters or change the search.")); }
 
     if !k.packs_loaded {
         return div().child(empty_note(
@@ -95,7 +156,7 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
             "No packs are installed. Install one from Browse and its knowledge lands here.",
         )));
     }
-    for (i, pack) in k.packs.iter().enumerate() {
+    for (i, pack) in pack_rows.iter().enumerate() {
         let id = pack.id.clone();
         let want = !pack.enabled;
         let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
@@ -135,7 +196,7 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                 )
                 .child(switch_anim(("pack-sw", i), pack.enabled, motion).on_click(toggle)),
         );
-        if i + 1 < k.packs.len() {
+        if i + 1 < pack_rows.len() {
             packs = packs.child(hairline());
         }
     }
@@ -144,13 +205,13 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
     let mut gaps_card = card().flex().flex_col();
     gaps_card = gaps_card.child(div().mb(px(4.0)).child(eyebrow("Coverage gaps")));
     gaps_card = gaps_card.child(hairline());
-    if k.gaps.is_empty() {
+    if gaps.is_empty() {
         gaps_card = gaps_card.child(div().pt(px(12.0)).child(empty_note(
             "Every subject in the enabled packs has at least one claim.",
         )));
     }
     let shown = 8usize;
-    for (gi, gap) in k.gaps.iter().take(shown).enumerate() {
+    for (gi, gap) in gaps.iter().take(shown).enumerate() {
         gaps_card = gaps_card.child(
             div()
                 .py(px(12.0))
@@ -170,15 +231,15 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                 )
                 .child(tag(format!("knowledge-gap-{gi}"), TagState::Queue, "No claims", motion)),
         );
-        if gi + 1 < shown.min(k.gaps.len()) {
+        if gi + 1 < shown.min(gaps.len()) {
             gaps_card = gaps_card.child(hairline());
         }
     }
-    if k.gaps.len() > shown {
+    if gaps.len() > shown {
         gaps_card = gaps_card.child(
             div()
                 .pt(px(8.0))
-                .child(mono(&format!("and {} more", k.gaps.len() - shown), DIM)),
+                .child(mono(&format!("and {} more", gaps.len() - shown), DIM)),
         );
     }
 
@@ -189,7 +250,7 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
     thin_card = thin_card.child(hairline());
     if !k.thin_loaded {
         thin_card = thin_card.child(div().pt(px(12.0)).child(empty_note("Looking for the thinnest claims.")));
-    } else if k.thin.is_empty() {
+    } else if thin.is_empty() {
         thin_card = thin_card.child(
             div()
                 .py(px(32.0))
@@ -201,7 +262,7 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                 .child(row_desc("No claim with evidence rests on thin ground.")),
         );
     }
-    for (ti, row) in k.thin.iter().enumerate() {
+    for (ti, row) in thin.iter().enumerate() {
         let open = k.thin_open.as_deref() == Some(row.claim_id.as_str());
         let (cid, sid) = (row.claim_id.clone(), row.subject_id.clone());
         let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
@@ -295,7 +356,7 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
             line = line.child(panel);
         }
         thin_card = thin_card.child(line);
-        if ti + 1 < k.thin.len() {
+        if ti + 1 < thin.len() {
             thin_card = thin_card.child(hairline());
         }
     }
@@ -319,6 +380,7 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
         .flex()
         .flex_col()
         .gap(px(24.0))
+        .child(controls)
         .child(
             div()
                 .flex()

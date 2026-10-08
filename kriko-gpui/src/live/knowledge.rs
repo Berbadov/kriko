@@ -42,6 +42,7 @@ pub struct Gap {
 
 #[derive(Clone)]
 pub struct Thin {
+    pub pack_id: String,
     pub claim_id: String,
     pub subject_id: String,
     pub subject: String,
@@ -199,6 +200,7 @@ impl Kriko {
             Tab::Sites => self.refresh_sites(cx),
             Tab::Extension => self.refresh_extension(cx),
             Tab::Settings => {
+                self.refresh_local(cx);
                 self.refresh_settings(cx);
                 self.refresh_keys(cx);
                 self.refresh_health(cx);
@@ -299,6 +301,7 @@ impl Kriko {
                 k.thin = api::arr(&v, "claims")
                     .iter()
                     .map(|c| Thin {
+                        pack_id: api::s(c, "pack_id"),
                         claim_id: api::s(c, "claim_id"),
                         subject_id: api::s(c, "subject_id"),
                         subject: api::s(c, "subject_label"),

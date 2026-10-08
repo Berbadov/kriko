@@ -40,6 +40,7 @@ pub struct Plane {
     pub stored_model: String,
     pub stored_search: String,
     pub stored_timeout: String,
+    pub runtime: Value,
 }
 
 #[derive(Default, Clone)]
@@ -111,6 +112,7 @@ pub struct BenchRun {
     pub accepted: f64,
     pub refused: f64,
     pub error: String,
+    pub raw: Value,
 }
 
 #[derive(Default, Clone)]
@@ -156,7 +158,7 @@ impl Default for BenchPhase {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Bench {
     pub loaded: bool,
     pub runs: Vec<BenchRun>,
@@ -169,6 +171,18 @@ pub struct Bench {
     pub phase: BenchPhase,
     /// How the last job ended, in the engine's words.
     pub last: Option<String>,
+    pub cases: Vec<Value>,
+    pub case_ids: Vec<String>,
+    pub models: Vec<String>,
+    pub harness: String,
+    pub case_count: usize,
+    pub documents: usize,
+    pub repeats: usize,
+    pub timeout: usize,
+    pub max_tokens: usize,
+    pub temperature: f64,
+    pub detail: Option<usize>,
+    pub snapshot: Value,
 }
 
 #[derive(Default)]
@@ -177,8 +191,12 @@ pub struct State {
     pub plane: Option<Plane>,
     pub machine: Option<Machine>,
     pub held: Option<Vec<Held>>,
-    /// Local models the engine's own catalogue offers (none ship today).
+    /// Downloadable names from the provider's library.
     pub offered: Vec<String>,
+    pub catalogue_open: bool,
+    pub catalogue_loading: bool,
+    pub catalogue_error: String,
+    pub models_open: bool,
     /// The model the picker shows, which Save stores.
     pub model_pick: Option<String>,
     pub timeout: u32,
@@ -230,6 +248,7 @@ pub fn plane_from(v: &Value) -> Plane {
         stored_model: api::s(&stored, "local_model"),
         stored_search: api::s(&stored, "local_search_url"),
         stored_timeout: api::s(&stored, "local_timeout"),
+        runtime: v.get("runtime").cloned().unwrap_or(Value::Null),
     }
 }
 
@@ -281,6 +300,7 @@ fn run_from(v: &Value) -> BenchRun {
         accepted: api::n(v, "accepted").unwrap_or(0.0),
         refused: api::n(v, "refused").unwrap_or(0.0),
         error: api::s(v, "error"),
+        raw: v.clone(),
     }
 }
 
@@ -434,18 +454,22 @@ impl Kriko {
         self.refresh_machine(false, cx);
         self.refresh_held(cx);
         self.refresh_bench(cx);
-        self.fetch(cx, || api::get("/api/prefs"), |this, reply, _| {
-            if let Ok(v) = reply {
-                let offered = v
-                    .get("models")
-                    .map(|m| api::arr(m, "offered"))
-                    .unwrap_or(&[])
-                    .iter()
-                    .filter(|o| matches!(api::s(o, "provider").as_str(), "ollama" | "local"))
-                    .map(|o| api::s(o, "id"))
-                    .collect();
-                this.live.local.offered = offered;
+
+    }
+
+    pub fn refresh_local_catalogue(&mut self, cx: &mut Context<Self>) {
+        if self.live.local.catalogue_loading { return; }
+        self.live.local.catalogue_loading = true;
+        self.fetch(cx, || api::get("/api/local-models?available=true&fresh=true"), |this, reply, cx| {
+            this.live.local.catalogue_loading = false;
+            match reply {
+                Ok(value) => {
+                    this.live.local.offered = strings(&value, "available");
+                    this.live.local.catalogue_error = api::s(&value, "catalogue_error");
+                }
+                Err(error) => { this.live.local.catalogue_error = error.to_string(); }
             }
+            cx.notify();
         });
     }
 
@@ -458,8 +482,8 @@ impl Kriko {
             if let Ok(v) = reply {
                 let plane = plane_from(&v);
                 if fill || !this.live.local.loaded {
-                    this.local_url.value = plane.stored_url.clone();
-                    this.local_search.value = plane.stored_search.clone();
+                    this.local_url.set_value(plane.stored_url.clone());
+                    this.local_search.set_value(plane.stored_search.clone());
                     this.live.local.timeout = plane.timeout.round().max(1.0) as u32;
                     this.live.local.model_pick = if plane.model.is_empty() {
                         None
@@ -532,7 +556,7 @@ impl Kriko {
 
     /// Points the plane at a running server and keeps the choice.
     pub fn local_use_server(&mut self, url: String, cx: &mut Context<Self>) {
-        self.local_url.value = url;
+        self.local_url.set_value(url);
         self.live.local.model_pick = None;
         self.local_save(cx);
     }
@@ -607,7 +631,7 @@ impl Kriko {
                                     })
                                 };
                                 if job.succeeded() {
-                                    this.local_get.value.clear();
+                                    this.local_get.set_value(String::new());
                                     this.refresh_plane(false, cx);
                                     this.refresh_held(cx);
                                 }
@@ -645,6 +669,11 @@ impl Kriko {
             this.note(&reply);
             let Ok(v) = reply else { return };
             let b = &mut this.live.local.bench;
+            if !b.loaded {
+                b.case_count = 3; b.documents = 3; b.repeats = 1;
+                b.timeout = 240; b.max_tokens = 1024;
+            }
+            b.snapshot = v.clone();
             b.runs = api::arr(&v, "runs").iter().map(run_from).collect();
             b.summary = api::arr(&v, "summary")
                 .iter()
@@ -682,6 +711,7 @@ impl Kriko {
                 b.picked = vec!["harness".to_string()];
             }
             let set = v.get("test_set").cloned().unwrap_or(Value::Null);
+            b.cases = api::arr(&set, "cases").to_vec();
             b.set_label = format!(
                 "{} {} · {} cases",
                 api::s(&set, "id"),
@@ -698,12 +728,17 @@ impl Kriko {
         serde_json::json!({
             "planes": self.live.local.bench.picked.join(", "),
             "pack_id": "",
-            "cases": 3,
-            "max_documents": 3,
+            "cases": self.live.local.bench.case_count.max(1),
+            "case_ids": self.live.local.bench.case_ids,
+            "max_documents": self.live.local.bench.documents.max(1),
             "budget_usd": 0.2,
             "protocols": "",
-            "reps": 1,
-            "llms": "",
+            "reps": self.live.local.bench.repeats.max(1),
+            "llms": self.live.local.bench.models.join(","),
+            "harness": self.live.local.bench.harness,
+            "timeout_seconds": self.live.local.bench.timeout.max(10),
+            "max_tokens": self.live.local.bench.max_tokens.max(128),
+            "temperature": self.live.local.bench.temperature,
             "searches": "",
         })
     }

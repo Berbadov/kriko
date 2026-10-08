@@ -47,6 +47,11 @@ class BenchRequest(BaseModel):
     #: it was simply not reachable from here, so "which providers" could not
     #: be scoped from the screen that runs the benchmark.
     searches: str = ""
+    case_ids: list[str] = Field(default_factory=list, max_length=50)
+    timeout_seconds: float = Field(240, ge=10, le=3600)
+    temperature: float = Field(0, ge=0, le=2)
+    max_tokens: int = Field(1024, ge=128, le=16384)
+    harness: str = ""
 
 
 @router.get("/bench")
@@ -164,8 +169,12 @@ def estimate_bench(
         bench.validate(params)
     except ValueError as exc:
         raise HTTPException(422, str(exc))
-    found = bench.cases(store, pack_id=params.get("pack_id") or "",
-                        limit=int(params.get("cases") or bench.DEFAULT_CASES))
+    from app import benchcases
+    found = benchcases.case_rows(50 if params["case_ids"] else params["cases"])
+    if params["case_ids"]:
+        found = [one for one in found if one["id"] in params["case_ids"]]
+    if not found:
+        raise HTTPException(422, "Select at least one known test case.")
     return bench.estimate(conn, params, len(found))
 
 

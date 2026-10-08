@@ -311,12 +311,18 @@ def test_two_concurrent_retries_of_one_job_produce_one_child(client):
         time.sleep(0.02)
 
     once = client.post(f"/api/jobs/{first}/retry").json()["job_id"]
+    for _ in range(400):
+        if client.get(f"/api/jobs/{once}").json()["done"]:
+            break
+        time.sleep(0.02)
     twice = client.post(f"/api/jobs/{first}/retry").json()["job_id"]
     assert once == twice
 
     live = [row for row in client.get("/api/jobs").json()["items"]
             if row["params"].get("retry_of") == first]
     assert len(live) == 1
+    child = client.post(f"/api/jobs/{once}/retry").json()["job_id"]
+    assert child != once
 
 
 def test_retrying_a_job_that_is_still_going_is_refused(settings):

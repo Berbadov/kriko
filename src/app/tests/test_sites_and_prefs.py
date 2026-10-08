@@ -125,7 +125,7 @@ def test_a_packs_adapter_always_wins_over_a_learned_one(settings, tmp_path):
         # glob over the whole URL, so a leading dot would miss the bare host —
         # which is how a real pack writes it.
         ('{"id": "pack.arabam", "site": "arabam.com",'
-         ' "match": ["*arabam.com/*"], "fields": {}}',),
+         ' "match": ["*arabam.com/ilan/*"], "fields": {}}',),
     )
     store.commit()
     conn = state.connect(settings.app_state_path)
@@ -539,3 +539,9 @@ def test_a_stage_with_no_choice_falls_back_to_the_default(client):
         assert prefs.for_role(conn, "extract", "per-run") == "per-run"
     finally:
         conn.close()
+
+
+def test_agent_order_survives_another_app_connection(client, settings):
+    assert client.put("/api/prefs", json={"agent_order": "local,codex,claude"}).status_code == 200
+    reopened = TestClient(create_app(settings))
+    assert reopened.get("/api/prefs").json()["chosen"]["agent_order"] == "local,codex,claude"
