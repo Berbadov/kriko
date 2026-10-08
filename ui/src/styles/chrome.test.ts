@@ -284,22 +284,37 @@ describe("the work column", () => {
      * not a raised box - a field you type *into* reads as in the panel).
      * B160's intent - every control a physical thing, one vocabulary of
      * faces and presses - is held to the library's faces now. */
-    describe("the physical control kit", () => {
-        it("wears the library's plate on every button", () => {
+    // #139: the 3D treatment came off the buttons, reversing B160. A button is
+    // one flat face, pressed by colour, never by travel or a drop shadow.
+    describe("the flat control kit", () => {
+        it("gives every button one flat face, with no plate or drop", () => {
             const button = block("button,\n.tab");
-            expect(button).toMatch(/linear-gradient\(180deg,\s*var\(--bezel-hi\),\s*var\(--bezel-lo\)\)/);
-            expect(button).toMatch(/box-shadow:\s*[\s\S]*var\(--shadow-bezel\)/);
+            expect(button).toMatch(/background:\s*var\(--glass-2\)/);
+            expect(button).not.toMatch(/linear-gradient/);
+            expect(button).not.toMatch(/shadow-bezel/);
             expect(button).toMatch(/font:\s*600 15px\/16px var\(--font-display\)/);
         });
-        it("presses mechanically: travel, then the bezel becomes a well", () => {
+        it("presses a button by colour, never by travel", () => {
             const press = block("button:active,\n.tab:active");
-            expect(press).toMatch(/transform:\s*translateY\(2px\)/);
-            expect(press).toMatch(/var\(--shadow-well\)/);
+            expect(press).not.toMatch(/translateY/);
+            expect(press).toMatch(/background:\s*var\(--glass-3\)/);
         });
-        it("sinks the primary key the full 3px of its base", () => {
+        it("fills the primary key with one brand colour, and presses it by colour", () => {
+            const face = block("button.primary,\n.tab.active");
+            expect(face).toMatch(/background:\s*var\(--brand\)/);
+            expect(face).not.toMatch(/linear-gradient/);
+            expect(face).not.toMatch(/shadow-key/);
             const press = block('button.primary:active,\n.tab.active:active,\nbutton.primary[aria-pressed="true"]');
-            expect(press).toMatch(/transform:\s*translateY\(3px\)/);
-            expect(press).toMatch(/var\(--shadow-key-pressed\)/);
+            expect(press).not.toMatch(/translateY/);
+            expect(press).toMatch(/background:\s*var\(--brand-low\)/);
+        });
+        it("keeps the design system's keys flat as well", () => {
+            const key = block(".k-key");
+            expect(key).not.toMatch(/linear-gradient/);
+            expect(key).not.toMatch(/shadow-key/);
+            const plate = block(".k-plate");
+            expect(plate).not.toMatch(/linear-gradient/);
+            expect(plate).not.toMatch(/shadow-bezel/);
         });
         it("draws fields as the library's well, focus-lit in ice", () => {
             const field = block(
