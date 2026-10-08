@@ -99,6 +99,7 @@ def resolve(app_state_path=None, *, url: str = "", model: str = "",
         "models": chosen["models"] if chosen else [],
         "model": "",
         "timeout": timeout_of(mine[prefs.LOCAL_TIMEOUT]),
+        "runtime_options": {},
         "ready": False,
         "reason": "",
         "line": "",
@@ -124,6 +125,13 @@ def resolve(app_state_path=None, *, url: str = "", model: str = "",
     else:
         out["model"] = _pick(chosen["models"], want_model)
         out["ready"] = True
+    from app.localruntime import inspect, options
+    out["runtime"] = inspect(out["url"], out["name"], out["model"], mine)
+    if out["runtime"]["runtime"] == "Ollama":
+        out["name"] = "Ollama"
+        if chosen:
+            chosen["name"] = "Ollama"
+    out["runtime_options"] = options(mine) if out["runtime"]["supported"] else {}
     if not with_search:
         # Not asked, so not claimed: a readiness check that skipped the
         # search probe must not say which search is in use.
@@ -160,6 +168,8 @@ def reader_chose_an_agent(app_state_path=None) -> bool:
     except Exception:  # noqa: BLE001
         return False
     try:
-        return bool(prefs.read(conn).get(prefs.HARNESS))
+        # Picking the Local model row is a pick of the local plane, not an
+        # agent, so it keeps the local plane first.
+        return prefs.read(conn).get(prefs.HARNESS) not in ("", prefs.LOCAL_PICK)
     finally:
         conn.close()

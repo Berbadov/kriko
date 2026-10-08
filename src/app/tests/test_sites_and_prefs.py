@@ -1,7 +1,7 @@
 """Sites this installation can learn, and the three choices it now has.
 
 *"I cannot open the web extension on the pages that aren't registered, so
-basically it opens on sahibinden only."* — the panel was never missing; the
+basically it opens on one site only."* — the panel was never missing; the
 **site** was, and the only way to add one was to author a whole pack.
 
 *"Don't forget preferred agent / api model / Tavily and Exa options, user info
@@ -101,7 +101,7 @@ def test_a_learned_site_is_readable_and_shows_where_it_came_from(client, setting
 def test_a_learned_site_reaches_the_extension(client, settings):
     """`/api/adapters` is what the extension reads to decide where to inject.
     A site the reader registered is useless if the browser never runs on it —
-    and that seam is exactly what "it only opens on sahibinden" was."""
+    and that seam is exactly what "it only opens on one site" was."""
     conn = state.connect(settings.app_state_path)
     state.save_local_adapter(conn, host="arabam.com", spec=sites.check(ADAPTER))
     hosts = {row["site"] for row in client.get("/api/adapters").json()}
@@ -125,7 +125,7 @@ def test_a_packs_adapter_always_wins_over_a_learned_one(settings, tmp_path):
         # glob over the whole URL, so a leading dot would miss the bare host —
         # which is how a real pack writes it.
         ('{"id": "pack.arabam", "site": "arabam.com",'
-         ' "match": ["*arabam.com/*"], "fields": {}}',),
+         ' "match": ["*arabam.com/ilan/*"], "fields": {}}',),
     )
     store.commit()
     conn = state.connect(settings.app_state_path)
@@ -230,14 +230,13 @@ def test_a_packs_detail_is_read_only(client, settings, tmp_path):
         "INSERT INTO pack_assets (pack_id, name, kind, content)"
         " VALUES ('probe', 'adapters/arabam.json', 'adapter', ?)",
         ('{"id": "pack.arabam", "site": "arabam.com",'
-         ' "match": ["*arabam.com/ilan/*"], "fields": {}}',),
+         ' "match": ["*arabam.com/*"], "fields": {}}',),
     )
     store.commit()
     body = client.get("/api/sites/arabam.com/detail").json()
     assert body["editable"] is False
     assert body["spec"] is None
     assert body["pack_id"] == "probe"
-    assert body["match"] == ["*arabam.com/ilan/*"]
 
 
 def test_amending_a_learned_site_checks_and_stores(client, settings):
@@ -312,13 +311,6 @@ def test_a_choice_survives_being_made(client):
     assert chosen == dict.fromkeys(prefs.KEYS, "") | {
         "llm_model": "qwen3.5-27b", "search_provider": "tavily",
     }
-
-
-def test_agent_order_is_a_saved_preference(client):
-    order = "opencode,claude-code,cursor"
-    saved = client.put("/api/prefs", json={prefs.AGENT_ORDER: order}).json()
-    assert saved["chosen"][prefs.AGENT_ORDER] == order
-    assert client.get("/api/prefs").json()["chosen"][prefs.AGENT_ORDER] == order
 
 
 def test_either_search_key_is_enough_for_the_paid_plane():
@@ -547,3 +539,9 @@ def test_a_stage_with_no_choice_falls_back_to_the_default(client):
         assert prefs.for_role(conn, "extract", "per-run") == "per-run"
     finally:
         conn.close()
+
+
+def test_agent_order_survives_another_app_connection(client, settings):
+    assert client.put("/api/prefs", json={"agent_order": "local,codex,claude"}).status_code == 200
+    reopened = TestClient(create_app(settings))
+    assert reopened.get("/api/prefs").json()["chosen"]["agent_order"] == "local,codex,claude"

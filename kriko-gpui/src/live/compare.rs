@@ -150,6 +150,47 @@ pub struct Question {
     pub asked_at: String,
 }
 
+#[derive(Clone, Default)]
+pub struct QuestionRun {
+    pub state: String,
+    pub progress: f32,
+    pub message: String,
+    pub model: String,
+    pub tokens_used: Option<u64>,
+    pub tokens_in: Option<u64>,
+    pub tokens_out: Option<u64>,
+    pub brief_chars: Option<u64>,
+    pub saved_checks: Vec<(String, usize)>,
+    pub no_web_search: bool,
+    pub steps: Vec<String>,
+}
+
+impl QuestionRun {
+    fn from_job(job: &Value) -> Self {
+        let result = job.get("result").unwrap_or(&Value::Null);
+        Self {
+            state: api::s(job, "state"),
+            progress: api::n(job, "progress").unwrap_or(0.0) as f32,
+            message: api::s(job, "message"),
+            model: api::s(result, "model"),
+            tokens_used: api::n(result, "tokens_used").map(|n| n as u64),
+            tokens_in: api::n(result, "tokens_in").map(|n| n as u64),
+            tokens_out: api::n(result, "tokens_out").map(|n| n as u64),
+            brief_chars: api::n(result, "brief_chars").map(|n| n as u64),
+            saved_checks: api::arr(result, "saved_checks").iter()
+                .map(|v| (api::s(v, "name"), api::n(v, "risks").unwrap_or(0.0) as usize))
+                .collect(),
+            no_web_search: api::n(result, "web_searches") == Some(0.0),
+            steps: api::s(job, "log").lines()
+                .filter(|line| line.starts_with("local comparison:")
+                    || line.starts_with("comparison brief:")
+                    || line.ends_with("known risk(s)"))
+                .rev().take(6).map(str::to_string).collect::<Vec<_>>()
+                .into_iter().rev().collect(),
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum QState {
     Waiting,
@@ -235,8 +276,10 @@ pub struct State {
     pub watching: HashSet<String>,
     /// question_id -> why its job did not answer.
     pub failed: HashMap<String, String>,
-    /// job_id -> what the agent last said while answering.
-    pub job_line: HashMap<String, String>,
+    /// Durable job detail, including usage when the model server reports it.
+    pub question_runs: HashMap<String, QuestionRun>,
+    /// Completed jobs fetched once when reopening a draft.
+    pub question_jobs_loaded: HashSet<String>,
 
     /// (id, label) of every agent that can answer or research.
     pub harnesses: Vec<(String, String)>,
@@ -1101,7 +1144,7 @@ impl Kriko {
             }
             c.note_open = None;
         }
-        self.compare_note_input.value.clear();
+        self.compare_note_input.set_value(String::new());
         self.save_board_soon(cx);
     }
 
@@ -1121,8 +1164,20 @@ impl Kriko {
                     let list: Vec<Question> = api::arr(&v, "items").iter().map(question_from).collect();
                     this.live.compare.questions = list.clone();
                     for q in list {
-                        if q.answer.is_none() && !q.job_id.is_empty() {
+                        if q.answer.is_none() && !q.job_id.is_empty()
+                            && !this.live.compare.question_jobs_loaded.contains(&q.job_id) {
                             this.watch_question(draft_id.clone(), q, cx);
+                        } else if !q.job_id.is_empty()
+                            && this.live.compare.question_jobs_loaded.insert(q.job_id.clone()) {
+                            let path = format!("/api/jobs/{}", api::seg(&q.job_id));
+                            let jid = q.job_id.clone();
+                            this.fetch(cx, move || api::get(&path), move |this, reply, _| {
+                                if let Ok(job) = reply {
+                                    this.live.compare.question_runs.insert(jid, QuestionRun::from_job(&job));
+                                } else {
+                                    this.live.compare.question_jobs_loaded.remove(&jid);
+                                }
+                            });
                         }
                     }
                 }
@@ -1145,11 +1200,12 @@ impl Kriko {
             let finished = this
                 .update(cx, |this, cx| match reply {
                     Ok(job) => {
-                        this.live.compare.job_line.insert(jid.clone(), doing_of(&job));
+                        this.live.compare.question_runs.insert(jid.clone(), QuestionRun::from_job(&job));
                         if api::b(&job, "done") {
                             if api::s(&job, "state") != "succeeded" {
                                 this.live.compare.failed.insert(qid, api::s(&job, "message"));
                             }
+                            this.live.compare.question_jobs_loaded.insert(jid.clone());
                             this.live.compare.watching.remove(&jid);
                             this.load_questions(draft, cx);
                             true
@@ -1185,7 +1241,14 @@ impl Kriko {
         }
         self.live.compare.asking = true;
         self.live.compare.say = None;
-        let harness = self.live.compare.harness.clone();
+        let harness = if self.live.compare.harness.is_empty()
+            && self.live.local.plane.as_ref().is_some_and(|p| p.ready)
+        {
+            "local".to_string()
+        } else {
+            self.live.compare.harness.clone()
+        };
+        let backend = if harness == "local" { "local" } else { "harness" };
         let ids = self.slot_ids();
         self.with_draft(cx, move |this, id, cx| {
             // the draft holds the slots as they are now
@@ -1208,7 +1271,7 @@ impl Kriko {
                     saved.and_then(|_| {
                         api::post(
                             &format!("/api/compare-drafts/{}/questions", api::seg(&id)),
-                            json!({"question": text, "harness": harness}),
+                            json!({"question": text, "harness": harness, "backend": backend}),
                         )
                     })
                 },
@@ -1216,7 +1279,7 @@ impl Kriko {
                     this.live.compare.asking = false;
                     say_error(this, &reply);
                     if reply.is_ok() {
-                        this.compare_question_input.value.clear();
+                        this.compare_question_input.set_value(String::new());
                         this.load_drafts(false, cx);
                         this.load_questions(draft, cx);
                     }
@@ -1581,6 +1644,24 @@ fn round4(v: f32) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn question_job_keeps_source_and_usage_facts_without_inventing_missing_tokens() {
+        let done = json!({"state": "succeeded", "progress": 1.0, "message": "answered",
+            "log": "local comparison: saved checks only\nOne: 2 known risk(s)\ncomparison brief: 2500 characters from saved checks; no web search\nFull answer that should not be doubled in the step trail",
+            "result": {"model": "small:4b", "tokens_used": 141, "tokens_in": 100,
+                "tokens_out": 41, "brief_chars": 2500, "web_searches": 0,
+                "saved_checks": [{"name": "One", "risks": 2}, {"name": "Two", "risks": 0}]}});
+        let run = QuestionRun::from_job(&done);
+        assert_eq!(run.model, "small:4b");
+        assert_eq!(run.tokens_used, Some(141));
+        assert_eq!(run.saved_checks, [("One".into(), 2), ("Two".into(), 0)]);
+        assert!(run.no_web_search);
+        assert_eq!(run.steps.len(), 3);
+        let unreported = QuestionRun::from_job(&json!({"state": "succeeded", "result": {}}));
+        assert_eq!(unreported.tokens_used, None);
+        assert!(!unreported.no_web_search);
+    }
 
     fn check(name: &str, specs: &[(&str, &str)], risks: &[(&str, Level, bool)]) -> Check {
         Check {

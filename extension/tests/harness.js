@@ -8,7 +8,7 @@ const { JSDOM } = require("jsdom");
 
 const CONTENT_JS = path.join(__dirname, "..", "content.js");
 
-function loadContentScript(html, url = "https://www.sahibinden.com/ilan/vasita-otomobil-volkswagen-golf-123456/detay") {
+function loadContentScript(html, url = "https://www.listing.example/ilan/vasita-otomobil-volkswagen-golf-123456/detay") {
   const dom = new JSDOM(html, { url });
   const sandbox = {
     document: dom.window.document,

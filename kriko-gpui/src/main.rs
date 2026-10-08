@@ -8,6 +8,9 @@
 
 mod api;
 mod app;
+// The arithmetic `build.rs` uses to choose the title ink; tested here.
+#[cfg(test)]
+mod contrast;
 mod data;
 mod dock;
 mod engine;
@@ -16,6 +19,7 @@ mod marks;
 mod screens;
 mod shell;
 mod theme;
+mod text_input;
 
 use std::borrow::Cow;
 

@@ -125,7 +125,8 @@ def read(url: str) -> str:
     try:
         done = subprocess.run(
             [browser, *_switches(profile), url], capture_output=True,
-            timeout=TIMEOUT, check=False)
+            timeout=TIMEOUT, check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except (OSError, subprocess.TimeoutExpired):
         return ""
     finally:

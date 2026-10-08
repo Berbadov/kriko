@@ -24,18 +24,26 @@ class PullRequest(BaseModel):
 
 
 @router.get("/local-models")
-def local_models(request: Request) -> dict:
+def local_models(request: Request, available: bool = False, fresh: bool = False) -> dict:
     """The models Ollama holds, with its own sizes; empty when it is not up.
 
     Other servers list names only (`/api/local-plane`), so this answers for
     the one runtime that reports more.
     """
     base = modelpull.ollama_base(request.app.state.settings.app_state_path)
-    return {
+    payload: dict = {
         "runtime": "ollama" if base else None,
         "url": base or None,
         "models": modelpull.installed(base) if base else [],
     }
+    if available:
+        payload["library_url"] = "https://ollama.com/library"
+        try:
+            payload["available"] = modelpull.available(fresh=fresh)
+        except RuntimeError as error:
+            payload["available"] = []
+            payload["catalogue_error"] = str(error)
+    return payload
 
 
 @router.post("/local-models/pull")

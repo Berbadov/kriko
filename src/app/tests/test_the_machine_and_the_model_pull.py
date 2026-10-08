@@ -305,3 +305,31 @@ def test_nothing_up_holds_no_models(client, monkeypatch):
     assert client.get("/api/local-models").json() == {
         "runtime": None, "url": None, "models": []}
     assert modelpull.installed("http://127.0.0.1:9") == []
+
+
+def test_downloadable_models_come_from_provider_data_and_cache_success(monkeypatch):
+    import io
+    monkeypatch.setattr(modelpull, "_library_cache", None)
+    calls = []
+    def opener(url, timeout):
+        calls.append((url, timeout))
+        return io.BytesIO(b'<a href="/library/tiny">x</a><a href="/library/large">x</a><a href="/library/tiny">x</a>')
+    assert modelpull.available(opener=opener) == ["tiny", "large"]
+    assert modelpull.available(opener=lambda *a, **kw: pytest.fail("cache missed")) == ["tiny", "large"]
+    assert calls == [("https://ollama.com/library", 8)]
+    with pytest.raises(RuntimeError, match="no model choices"):
+        modelpull.available(opener=lambda *a, **kw: io.BytesIO(b"changed provider page"), fresh=True)
+
+
+def test_catalogue_is_opt_in_and_reports_provider_failure(client, monkeypatch):
+    monkeypatch.setattr(modelpull, "ollama_base", lambda path=None: "")
+    calls = []
+    def available(**kw):
+        calls.append(kw)
+        raise RuntimeError("provider offline")
+    monkeypatch.setattr(modelpull, "available", available)
+    assert "available" not in client.get("/api/local-models").json()
+    assert calls == []
+    body = client.get("/api/local-models?available=true").json()
+    assert body["available"] == [] and body["catalogue_error"] == "provider offline"
+    assert calls == [{"fresh": False}]

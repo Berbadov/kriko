@@ -177,3 +177,9 @@ def test_a_real_appdata_under_the_real_home_is_still_honoured(tmp_path, monkeypa
     monkeypatch.setenv("APPDATA", str(real_appdata))
     monkeypatch.setattr(sys, "platform", "win32")
     assert agentconfig._appdata() == real_appdata
+
+
+def test_the_agents_tab_lists_no_editor():
+    """The reader's words: "We gotta remove visual studio code from agents
+    tab." An editor is not an agent, so no target names one."""
+    assert "vscode" not in {one.id for one in agentconfig.targets()}

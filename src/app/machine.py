@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import threading
 import time
+import sys
 from pathlib import Path
 
 CACHE_SECONDS = 60.0
@@ -99,23 +100,14 @@ def _ram_total_mb() -> int | None:
 
 def _cpu_name() -> str | None:
     try:
-        if os.name == "nt":
+        if sys.platform == "win32":
             import winreg
 
-            # The POSIX typeshed stub for `winreg` omits the Windows-only
-            # symbols, even inside this runtime-guarded branch. Resolve them
-            # dynamically so the cross-platform gate can type-check the
-            # Windows implementation without changing its runtime behavior.
-            open_key = getattr(winreg, "OpenKey", None)
-            machine_key = getattr(winreg, "HKEY_LOCAL_MACHINE", None)
-            query_value = getattr(winreg, "QueryValueEx", None)
-            if not callable(open_key) or machine_key is None or not callable(query_value):
-                return None
-            with open_key(
-                machine_key,
+            with winreg.OpenKey(
+                winreg.HKEY_LOCAL_MACHINE,
                 r"HARDWARE\DESCRIPTION\System\CentralProcessor\0",
             ) as key:
-                name = str(query_value(key, "ProcessorNameString")[0]).strip()
+                name = str(winreg.QueryValueEx(key, "ProcessorNameString")[0]).strip()
                 if name:
                     return name
         cpuinfo = Path("/proc/cpuinfo")

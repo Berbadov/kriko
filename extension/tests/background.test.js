@@ -64,9 +64,23 @@ test("a run's question is answered through say, or retried with the answer (B147
 const MANIFEST = JSON.parse(fs.readFileSync(
   path.join(__dirname, "..", "manifest.json"), "utf8"));
 
+// A manifest that injects statically on one invented host. The shipped one
+// names no site, so the "already covered by the package" branch is reached
+// through this rather than through a real site in `manifest.json`.
+const STATIC_HOST = "listing.example";
+const STATIC_MANIFEST = {
+  ...MANIFEST,
+  content_scripts: [{
+    matches: [`https://*.${STATIC_HOST}/*`],
+    js: ["content.js", "hover_lite/icons.js", "hover_lite/claim_card.js",
+         "hover_lite/hover_lite.js"],
+    run_at: "document_idle",
+  }],
+};
+
 const ADAPTERS = [{
-  id: "sahibinden", site: "sahibinden.com", pack_id: "org.kriko.cars",
-  match: ["*sahibinden.com/ilan/*"],
+  id: "listing", site: STATIC_HOST, pack_id: "org.kriko.cars",
+  match: [`*${STATIC_HOST}/ilan/*`],
   labels: ["marka", "seri", "yıl", "yakıt", "vites", "kilometre"],
 }];
 
@@ -82,7 +96,7 @@ const CLAIM = {
 };
 
 const ANALYSIS = {
-  adapter: "sahibinden",
+  adapter: "listing",
   identity: { make: "volkswagen", model: "golf" },
   context: { usage_km: 190000 },
   context_units: { usage_km: "km" },
@@ -95,7 +109,7 @@ const ANALYSIS = {
 };
 
 const SCRAPE = {
-  url: "https://www.sahibinden.com/ilan/x",
+  url: "https://www.listing.example/ilan/x",
   title: "2014 Volkswagen Golf",
   description: "Bakımlı.",
   fields: { Marka: "Volkswagen", Yıl: "2014" },
@@ -228,18 +242,20 @@ test("the first click on an unknown site asks once for every site, then opens th
 });
 
 test("a click on the site the package already runs on never prompts", async () => {
-  const h = loadBackground({ tabResponses: { TOGGLE_HOVER_LITE: { ok: true } } });
-  await h.clickListeners[0]({ id: 7, url: "https://www.sahibinden.com/ilan/1" });
+  const h = loadBackground({ tabResponses: { TOGGLE_HOVER_LITE: { ok: true } },
+                            manifest: STATIC_MANIFEST });
+  await h.clickListeners[0]({ id: 7, url: `https://www.${STATIC_HOST}/ilan/1` });
   assert.deepEqual(h.state.permissionRequests, []);
 });
 
 test("once every site is granted, one registration covers them, skipping hosts already covered", async () => {
-  const h = loadBackground({ routes: routes(), grantedOrigins: ["https://*/*"] });
+  const h = loadBackground({ routes: routes(), grantedOrigins: ["https://*/*"],
+                            manifest: STATIC_MANIFEST });
   await h.sandbox.syncSites({ fresh: true });
   const any = h.state.registered.find((s) => s.id === "kriko-anysite");
   assert.ok(any, "no every-site registration");
   assert.deepEqual(any.matches, ["https://*/*"]);
-  assert.ok(any.excludeMatches.includes("https://*.sahibinden.com/*"),
+  assert.ok(any.excludeMatches.includes(`https://*.${STATIC_HOST}/*`),
     "the manifest's own site must not run the panel twice");
   await h.sandbox.syncSites({ fresh: true });
   assert.equal(h.state.registered.filter((s) => s.id === "kriko-anysite").length, 1);
@@ -382,6 +398,27 @@ test("the toolbar button and the keyboard shortcut send the same message", async
                    ["TOGGLE_HOVER_LITE", "TOGGLE_HOVER_LITE"]);
   // The command has no tab of its own and has to ask which one is in front.
   assert.deepEqual(h.state.tabMessages.map((m) => m.tabId), [7, 1]);
+});
+
+test("the small toolbar icon reflects a live app without replacing a page's risk badge", async () => {
+  const h = loadBackground({ routes: { "/api/health": { ok: true, version: "1.0.0" } } });
+  h.state.badge[1] = "2";
+  assert.equal(h.state.alarms["kriko-connection"].periodInMinutes, 1);
+  h.startupListeners[0]();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(h.state.toolbarIcon[16], "assets/icons/icon-16.png");
+  assert.match(h.state.toolbarTitle, /connected.*open the panel/i);
+  assert.equal(h.state.badge[1], "2");
+  assert.ok(h.state.requests.some((request) =>
+    request.url === "http://127.0.0.1:8787/api/health"));
+});
+
+test("the toolbar icon becomes muted when the app stops answering", async () => {
+  const h = loadBackground({ offline: true });
+  h.alarmListeners[0]({ name: "kriko-connection" });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(h.state.toolbarIcon[16], "assets/icons/icon-offline-16.png");
+  assert.match(h.state.toolbarTitle, /app is not running/i);
 });
 
 test("the manifest declares the command the worker listens for", () => {

@@ -119,6 +119,9 @@ if installed != declared:
 print(f"ok: {installed}")
 CHECK
 
+say "refreshing generated research-agent prompts"
+"$PY" -m packs.cars.pipeline.agent.render
+
 # The check that matters, and the one the first version of this script did not
 # have: does the tree actually *import*?
 #
@@ -157,12 +160,6 @@ if command -v npm >/dev/null 2>&1; then
 else
     bad "npm not found — the Python half is ready, the two JS suites are not."
 fi
-
-# The coding-agent files are local, ignored output, not source. A fresh
-# checkout still needs them before the contract test and local CLI runs can
-# agree with the canonical prompt under packs/cars/pipeline/agent/.
-say "rendering local research-agent prompts"
-"$PY" -m packs.cars.pipeline.agent.render
 
 say "ready"
 cat <<'DONE'
