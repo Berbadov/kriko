@@ -1870,6 +1870,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === "SAVED_QUICK_LOOK") {
+    const url = String(request.payload?.url || "").slice(0, 2000);
+    _getApp(`/api/extension/quick-looks?url=${encodeURIComponent(url)}`)
+      .then((response) => sendResponse({ ok: true, ...response }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
   if (request.type === "RESEARCH_PLANE") {
     _getApp("/api/extension/research-plane")
       .then((plane) => sendResponse({ ok: true, plane }))

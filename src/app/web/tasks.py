@@ -236,12 +236,19 @@ def _local_asker(settings, params: dict, progress: Progress):
         base_url=plan["url"], serving_name=plan["model"],
         search_base_url=plan["search_url"], search_kind=plan["search_kind"],
         timeout=plan["timeout"],
+        runtime_options=plan.get("runtime_options"),
+        temperature=float(params.get("temperature") or 0),
+        max_tokens=int(params.get("max_tokens") or 1024),
         given_queries=[str(one).strip() for one in (params.get("queries") or [])
                        if str(one).strip()])
     progress.log(f"local plane: {plan['line']}")
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
     researcher.replies = progress.replies
+    researcher.runtime = plan.get("runtime", {})
+    source_options = _research_options(params, settings.app_state_path)
+    researcher.max_pages = max(1, min(int(source_options["sources"] or 3), 40))
+    researcher.source_instructions = _source_kinds_line(source_options["kinds"])
     return researcher
 
 
@@ -259,7 +266,7 @@ def _local_compare_completer(settings, params: dict, progress: Progress):
     progress.log(f"local comparison: {plan['line']}; using saved checks only")
     return OpenAICompatSocket(
         plan["url"], plan["model"], timeout=plan["timeout"],
-        max_tokens=2048, reasoning_effort="none",
+        max_tokens=2048, reasoning_effort="none", runtime_options=plan.get("runtime_options"),
     )
 
 
@@ -316,6 +323,7 @@ def _researcher(params: dict):
             search_base_url=plan["search_url"],
             search_kind=plan["search_kind"],
             timeout=plan["timeout"],
+            runtime_options=plan.get("runtime_options"),
             engine=sources and next(iter(sources)) or "",
             scheduler=PolitenessScheduler(sources or {"duckduckgo": 3.5}),
         )
@@ -1930,9 +1938,20 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     except Exception:  # noqa: BLE001 - a list of packs is never why a look fails
         packs = ""
     progress.set(0.1, f"a quick look at {product}")
-    reply = researcher.ask(
-        quicklook.brief(product, principle, params.get("page"), packs, attributes)
-        + _source_ceiling(params, settings.app_state_path))
+    try:
+        if hasattr(researcher, "ask_quick"):
+            reply = researcher.ask_quick(product, principle=principle,
+                                         page=params.get("page"), packs=packs, attributes=attributes)
+        else:
+            reply = researcher.ask(
+                quicklook.brief(product, principle, params.get("page"), packs, attributes)
+                + _source_ceiling(params, settings.app_state_path))
+    except Exception as error:
+        progress.partial({"product": product, "diagnostic": {
+            "code": getattr(error, "code", "inference_error"), "message": str(error)},
+            "telemetry": getattr(researcher, "telemetry", {}),
+            "runtime": getattr(researcher, "runtime", {})})
+        raise
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
@@ -1953,6 +1972,10 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "cost_basis": getattr(researcher, "cost_basis", "subscription"),
         "spent_usd": spent if billed else None,
         "tokens_used": getattr(researcher, "tokens_used", None),
+        "telemetry": getattr(researcher, "telemetry", {}),
+        "runtime": getattr(researcher, "runtime", {}),
+        "diagnostic": {"code": "answer" if kept or found["specs"] else "no_supported_findings",
+                       "message": "" if kept or found["specs"] else "Pages were read, but no supported findings were kept."},
     }
 
 
@@ -2701,7 +2724,12 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         # A pack's gold set still runs when named, so an author can measure
         # their own bar; it is never the default.
         from app import benchcases
-        found = benchcases.case_rows(limit)
+        selected = params.get("case_ids") or []
+        found = benchcases.case_rows(50 if selected else limit)
+        if selected:
+            found = [one for one in found if one["id"] in selected]
+            if not found:
+                raise ValueError("no selected test case exists in this test set")
         graded = bool(found)
         if not found:
             found = bench_mod.gold_cases(conn, pack_id=pack_id, limit=limit)
@@ -2754,7 +2782,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         # harness CLIs' names with the paid catalogue's made runs that could
         # only fail.
         runs_of = bench_mod.pairs(
-            chosen, [one for one in models_asked if one], bench_mod.llm_owners(),
+            chosen, [one for one in models_asked if one], bench_mod.owners_for(params),
         )
         total = (
             len(found) * len(runs_of) * len(protocols_asked)
@@ -2787,6 +2815,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         batch_id=batch_id,
                         search=search,
                         model=model,
+                        run_settings={key: params[key] for key in ("timeout_seconds", "temperature", "max_tokens", "harness") if key in params},
                         check_cancelled=progress.check,
                     )
                     row["rep"] = rep
@@ -2949,7 +2978,7 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
     question = str(params.get("question") or "").strip()
     conn = state.connect(settings.app_state_path)
     try:
-        stored = state.get_lookup(conn, lookup_id)
+        stored = state.saved_answer(conn, lookup_id)
         previous = state.lookup_questions(conn, lookup_id)
     finally:
         conn.close()
