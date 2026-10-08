@@ -208,6 +208,7 @@ class JobRunner:
             max_workers=prefs.MAX_RUN_CONCURRENCY, thread_name_prefix="kriko-job")
         self._quick = ThreadPoolExecutor(max_workers=2, thread_name_prefix="kriko-quick")
         self._lock = threading.Lock()
+        self._retry_lock = threading.Lock()
         self._waiting: list[_Waiting] = []
         self._running: dict[str, frozenset[str]] = {}
         self._closed = False
@@ -314,6 +315,20 @@ class JobRunner:
             return state.interrupt_running(conn)
         finally:
             conn.close()
+
+    def retry(self, kind: str, params: dict) -> str:
+        """One child per parent, including a child that has already finished.
+
+        Serialize lookup and submission independently of the scheduling lock:
+        submit pumps the queue and must be able to take that lock itself.
+        """
+        with self._retry_lock:
+            conn = self._connect()
+            try:
+                existing = state.live_retry_of(conn, params["retry_of"])
+            finally:
+                conn.close()
+            return existing["job_id"] if existing else self.submit(kind, params)
 
     def submit(self, kind: str, params: dict) -> str:
         if kind not in self.handlers:

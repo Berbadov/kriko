@@ -681,3 +681,29 @@ def test_add_to_a_pack_twice_is_one_run(tmp_path, monkeypatch):
     second = client.post(f"/api/extension/quick-looks/{look}/pack").json()
     assert first["job_id"] == second["job_id"]
     assert len(submitted) == 1
+
+
+def test_saved_quick_look_survives_restart_tracking_urls_and_failed_refresh(tmp_path):
+    from app.web import state
+
+    client = _client(tmp_path)
+    conn = state.connect(client.app.state.settings.app_state_path)
+    saved = state.create_job(conn, "quick_look", {
+        "product": "Long product", "page_url": "https://www.shop.test/item?id=2&utm_source=one"})
+    result = {"assumed": "Exact variant", "risks": [{"title": "Problem", "sources": []}]}
+    state.finish_job(conn, saved, state.SUCCEEDED, result=result)
+    failed = state.create_job(conn, "quick_look", {
+        "product": "Long product", "page_url": "https://shop.test/item?id=2"})
+    state.finish_job(conn, failed, state.FAILED)
+    conn.close()
+    restarted = _client(tmp_path)
+    response = restarted.get("/api/extension/quick-looks", params={
+        "url": "https://shop.test/item/?utm_source=two&id=2#section"}).json()
+    assert response["job"]["job_id"] == saved
+    assert response["job"]["result"] == result
+    assert response["job"]["finished_at"]
+    assert restarted.get("/api/extension/quick-looks", params={
+        "url": "https://shop.test/item?id=3"}).json()["job"] is None
+    assert restarted.get("/api/extension/quick-looks", params={
+        "url": "https://shop.test/item?id=2", "product": "Different product"}).json()["job"] is None
+    assert restarted.get(f"/api/lookup/{saved}/questions").status_code == 200

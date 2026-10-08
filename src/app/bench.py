@@ -176,12 +176,15 @@ def _asker(settings, params: dict, progress):
     backend = str(params.get("backend") or "").lower()
     if backend == "local":
         return tasks._local_asker(settings, params, progress)
+    if backend == "api" and str(params.get("harness") or "").endswith("-api"):
+        backend = "harness"
     return tasks._researcher({**params, "backend": backend})
 
 
 def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
                max_documents: int, budget_usd: float, batch_id: str,
                search: str = "", model: str = "",
+               run_settings: dict | None = None,
                check_cancelled: Callable[[], None] | None = None) -> dict:
     """One fixed-set case: a product question against versioned ground truth.
 
@@ -209,34 +212,50 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
         row["error"] = error
         return row
     row.update(columns)
+    run_settings = run_settings or {}
+    row["detail"] = {"case": case, "settings": run_settings, "answer": None}
     silent = _Silent(check_cancelled)
     silent.check()
     started = time.perf_counter()
+    researcher = None
     try:
         researcher = _asker(settings, {
             "backend": plane, "protocol": protocol, "search": search,
             "model": model, "max_documents": max_documents,
             "budget_usd": budget_usd,
             "app_state_path": settings.app_state_path,
-            "timeout_seconds": FIXED_CASE_TIMEOUT_SECONDS,
+            "timeout_seconds": run_settings.get("timeout_seconds") or FIXED_CASE_TIMEOUT_SECONDS,
+            "temperature": run_settings.get("temperature", 0),
+            "max_tokens": run_settings.get("max_tokens", 1024),
+            "harness": run_settings.get("harness", ""),
             "queries": case.get("queries") or [],
         }, silent)
         if hasattr(researcher, "on_action"):
             researcher.on_action = silent.log
         if hasattr(researcher, "check_cancelled"):
             researcher.check_cancelled = silent.check
-        reply = researcher.ask(quicklook.brief(
-            case.get("product") or case["id"], "", None,
-            "", ""))
+        if hasattr(researcher, "ask_quick"):
+            reply = researcher.ask_quick(case.get("product") or case["id"])
+        else:
+            reply = researcher.ask(quicklook.brief(case.get("product") or case["id"], "", None, "", ""))
         silent.check()
     except Cancelled:
         raise
     except Exception as exc:  # noqa: BLE001 - a failed case is a measurement
         row["ms"] = int((time.perf_counter() - started) * 1000)
         row["error"] = f"{type(exc).__name__}: {exc}"
+        row["detail"].update(error=row["error"], error_code=getattr(exc, "code", ""),
+                             runtime=getattr(researcher, "runtime", {}),
+                             telemetry=getattr(researcher, "telemetry", {}),
+                             sources=getattr(researcher, "sources", {}))
         return row
     row["ms"] = int((time.perf_counter() - started) * 1000)
     found = quicklook.parse(reply, getattr(researcher, "sources", None))
+    row["documents"] = len(getattr(researcher, "sources", {}))
+    row["detail"].update(answer=found, raw_reply=reply,
+                         sources=getattr(researcher, "sources", {}),
+                         runtime=getattr(researcher, "runtime", {}),
+                         telemetry=getattr(researcher, "telemetry", {}))
     produced = [
         {"title": one.get("title", ""), "domain": one.get("domain", ""),
          "quote": one.get("quote", "")}
@@ -269,6 +288,7 @@ def run_case(
     batch_id: str = "",
     search: str = "",
     model: str = "",
+    run_settings: dict | None = None,
     opener=None,
     check_cancelled: Callable[[], None] | None = None,
 ) -> dict:
@@ -298,6 +318,7 @@ def run_case(
             settings, case, plane=plane, protocol=protocol,
             max_documents=max_documents, budget_usd=budget_usd,
             batch_id=batch_id, search=search, model=model,
+            run_settings=run_settings,
             check_cancelled=check_cancelled,
         )
     if kind == "bulk":
@@ -820,6 +841,12 @@ def validate(params: dict) -> dict:
     from app import keys
     from app import protocols
 
+    from app import benchcases
+    requested_cases = params.get("case_ids") or []
+    known_cases = {one["id"] for one in benchcases.case_rows(50)}
+    unknown_cases = set(requested_cases) - known_cases
+    if unknown_cases:
+        raise ValueError("unknown test case(s): " + ", ".join(sorted(unknown_cases)))
     planes = split_axis(params, "planes")
     unknown_planes = [one for one in planes if one not in KNOWN_PLANES]
     if unknown_planes:
@@ -864,6 +891,18 @@ def llm_owners() -> dict[str, set[str]]:
             owners.setdefault(name, set()).add("harness")
     for name in modelcatalogue.load():
         owners.setdefault(name, set()).add("api")
+    return owners
+
+
+def owners_for(params: dict) -> dict[str, set[str]]:
+    owners = llm_owners()
+    # A named agent's served model choices take precedence over overlapping
+    # namespaces, such as an Ollama model also named in the API catalogue.
+    agent = str(params.get("harness") or "")
+    if agent:
+        plane = "local" if agent == "local" else "api" if agent.endswith("-api") else "harness"
+        for name in split_axis(params, "models", "model", "llms", "llm"):
+            owners[name] = {plane}
     return owners
 
 
@@ -928,7 +967,7 @@ def estimate(conn, params: dict, case_count: int) -> dict:
     from app import costs
 
     validate(params)
-    shape = grid(params, case_count, llm_owners())
+    shape = grid(params, case_count, owners_for(params))
     per_run = costs.estimate(conn, plane="api")
     usd, tokens = per_run.get("usd"), per_run.get("tokens")
     priced = shape["runs"]

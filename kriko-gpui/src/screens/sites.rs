@@ -41,7 +41,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     let add_click = cx.listener(|this, _: &ClickEvent, _w, cx| {
         let text = this.sites_add.value.trim().to_string();
         if !text.is_empty() {
-            this.sites_add.value.clear();
+            this.sites_add.set_value(String::new());
             this.register_site(&text, cx);
         }
         cx.notify();

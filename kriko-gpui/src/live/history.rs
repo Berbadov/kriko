@@ -128,6 +128,9 @@ pub struct Item {
     pub ts: Option<i64>,
     pub label: String,
     pub source: String,
+    pub kind: String,
+    pub status: String,
+    pub agent: String,
     pub claims: usize,
     pub category: String,
     /// (pack_id, name)
@@ -256,6 +259,11 @@ pub struct Op {
 pub struct State {
     pub loaded: bool,
     pub items: Vec<Item>,
+    pub records: Vec<Item>,
+    pub records_loaded: bool,
+    pub filter_open: Option<String>,
+    pub record_kind: String,
+    pub record_status: String,
     // History's own controls
     /// The catalog History is narrowed to; None is all of them.
     pub pack: Option<String>,
@@ -292,10 +300,13 @@ pub struct State {
 }
 
 impl State {
+    pub fn history_rows(&self) -> &[Item] {
+        if self.records_loaded { &self.records } else { &self.items }
+    }
     /// The catalogs present in the history, by name, for the pack filter.
     pub fn pack_options(&self) -> Vec<(String, String)> {
         let mut out: Vec<(String, String)> = Vec::new();
-        for item in &self.items {
+        for item in self.history_rows() {
             for p in &item.packs {
                 if !out.iter().any(|(id, _)| *id == p.0) {
                     out.push(p.clone());
@@ -323,8 +334,7 @@ impl State {
         match &self.pack {
             None => "ALL".to_string(),
             Some(id) => self
-                .items
-                .iter()
+                .history_rows().iter()
                 .flat_map(|i| i.packs.iter())
                 .find(|p| &p.0 == id)
                 .map(|p| p.1.clone())
@@ -336,8 +346,7 @@ impl State {
     /// newest first (the engine already sorts them so).
     pub fn filtered(&self, query: &str, span_days: u32, now: i64) -> Vec<usize> {
         let query = query.to_lowercase();
-        self.items
-            .iter()
+        self.history_rows().iter()
             .enumerate()
             .filter(|(_, c)| {
                 let ok_query = query.is_empty()
@@ -353,6 +362,8 @@ impl State {
                         .map(|ts| now - ts <= span_days as i64 * 86400)
                         .unwrap_or(true);
                 ok_query && ok_pack && ok_span
+                    && (self.record_kind.is_empty() || c.kind == self.record_kind)
+                    && (self.record_status.is_empty() || c.status == self.record_status)
             })
             .map(|(i, _)| i)
             .collect()
@@ -390,6 +401,9 @@ fn item_from(v: &Value) -> Item {
         ts: parse_utc(&api::s(v, "created_at")),
         label: api::s(v, "label"),
         source: api::s(v, "source"),
+        kind: v.get("kind").and_then(|v| v.as_str()).unwrap_or("check").into(),
+        status: v.get("status").and_then(|v| v.as_str()).unwrap_or("succeeded").into(),
+        agent: api::s(v, "agent"),
         claims: api::n(v, "claim_count").unwrap_or(0.0) as usize,
         category: api::s(v, "category"),
         packs: api::arr(v, "packs")
@@ -503,6 +517,13 @@ impl Kriko {
     /// History, Home's drafts, status and catalogs: everything the checks
     /// screens draw from, asked for at once.
     pub fn refresh_history(&mut self, cx: &mut Context<Self>) {
+        self.fetch(cx, || api::get("/api/history/records?limit=1000"), |this, reply, _| {
+            this.note(&reply);
+            if let Ok(v) = reply {
+                this.live.history.records = api::arr(&v, "items").iter().map(item_from).collect();
+                this.live.history.records_loaded = true;
+            }
+        });
         self.fetch(cx, || api::get("/api/history?limit=200"), |this, reply, _| {
             this.note(&reply);
             if let Ok(v) = reply {
@@ -860,6 +881,7 @@ mod tests {
             ts: None,
             label: id.into(),
             source: String::new(),
+            kind: "check".into(), status: "succeeded".into(), agent: String::new(),
             claims: 0,
             category: String::new(),
             packs: vec![(pack.into(), pack.to_uppercase())],

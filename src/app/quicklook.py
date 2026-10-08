@@ -191,6 +191,9 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         name, value = _line(raw.get("name")), _line(raw.get("value"))
         url = str(raw.get("url") or "").strip()
         host = urlparse(url).netloc if url.startswith(("http://", "https://")) else ""
+        if sources is not None and url not in sources:
+            dropped += 1
+            continue
         if name and value and host:
             specs.append({"name": name, "value": value, "url": url,
                           "domain": host.removeprefix("www.")})
