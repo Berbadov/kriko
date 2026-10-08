@@ -894,6 +894,18 @@ pre {
 .state.loading {
     color: var(--accent);
 }
+/* A loading sentence starts with the jack mark. It is inline, so a sentence
+ * with a link in it still flows as text, and it is sized to the line it sits
+ * on, so it scales with the words beside it. */
+.jack {
+    display: inline-block;
+    width: calc(1.5em * 0.72);
+    height: 1.5em;
+    vertical-align: -0.3em;
+}
+.loading-mark .jack {
+    margin-right: var(--s-2);
+}
 .state.no-match,
 .state.unknown,
 /* B73's "behind but still works" verdict: a caution, not a fault — the
@@ -2238,8 +2250,8 @@ form.say > input {
     box-shadow: 0 0 var(--glow, 5px) var(--led, var(--brand-bright));
 }
 .k-led.boot i.on {
-    animation: k-boot var(--dur-slower) steps(1) both;
-    animation-delay: calc(var(--i, 0) * var(--dur-press));
+    animation: k-boot var(--dur-boot) steps(1) both;
+    animation-delay: calc(var(--i, 0) * var(--stagger-led));
 }
 @keyframes k-boot {
     0% { opacity: 0.1; }

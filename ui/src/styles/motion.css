@@ -35,14 +35,28 @@
     animation: kriko-enter var(--dur-slow) var(--ease-out) both;
 }
 
+/* The card rise the design system specifies: 12px and opacity, 260ms, fifty
+ * milliseconds between cards. Its own keyframes, because the view's 4px rise
+ * above is a different gesture. */
+@keyframes kriko-rise {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
 /* A view's own cards, one after another. The view rises as one thing; the
  * cards inside it follow at a short delay each, so a screen with three or
  * four blocks reads as an ordered arrival rather than a single block that
  * happens to have seams. The cap matters: a tenth card lands with the view,
  * and anything past it is visible without any help. */
 .enter > * {
-    animation: kriko-enter var(--dur-slow) var(--ease-out) both;
-    animation-delay: calc(var(--dur-fast) + var(--i, 0) * 40ms);
+    animation: kriko-rise var(--dur-base) var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * var(--stagger-card));
 }
 .enter > *:nth-child(1) { --i: 0; }
 .enter > *:nth-child(2) { --i: 1; }
@@ -99,7 +113,7 @@
     height: 6px;
     border-radius: 50%;
     background: var(--accent);
-    animation: kriko-breathe 2s var(--ease) infinite;
+    animation: kriko-breathe var(--dur-breathe) var(--ease) infinite;
 }
 
 /* ── the agent is working ─────────────────────────────────────── */
@@ -181,7 +195,34 @@
     animation: kriko-breathe 1600ms var(--ease) infinite;
 }
 
+/* ── the loud moment ──────────────────────────────────────────────── */
+/* One brand flash when a run finishes: the only thing in the Run screen that
+ * fills the whole stage, and only once per run. Four hard steps rather than a
+ * smooth fade, so it reads as a flash and not as a tint. The stage it sits on
+ * must be positioned. */
+@keyframes kriko-flash {
+    from {
+        opacity: 0.55;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.scene-flash {
+    position: absolute;
+    inset: 0;
+    background: var(--brand);
+    pointer-events: none;
+    animation: kriko-flash var(--dur-flash) steps(4, end) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+    /* The flash is the loud moment reduced motion exists to stop. */
+    .scene-flash {
+        animation: none;
+        opacity: 0;
+    }
     /* Landed, not frozen. Each of these is the final frame of the rule above,
      * so a reader who asked for no motion sees the finished state rather than
      * whatever the first keyframe happened to be. */

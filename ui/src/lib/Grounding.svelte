@@ -1,4 +1,5 @@
 <script lang="ts">
+    import JackMark from "./kriko/JackMark.svelte";
     import { api } from "./api";
     import { ApiError } from "./api";
     import { remedyFor } from "./failure";
@@ -62,7 +63,7 @@
 <details ontoggle={open}>
     <summary class="meta">Retained pages · what was actually kept</summary>
     {#if load === "loading"}
-        <p class="meta">Checking what was kept…</p>
+        <p class="meta loading-mark"><JackMark />Checking what was kept…</p>
     {:else if load === "error"}
         <p class="meta">{loadError}</p>
     {:else if load === "loaded"}
@@ -88,7 +89,7 @@
                             </button>
                         {/if}
                         {#if docs[row.source_id] === "loading"}
-                            <p class="meta">Loading the retained page…</p>
+                            <p class="meta loading-mark"><JackMark />Loading the retained page…</p>
                         {:else if docs[row.source_id] === "not-kept"}
                             <p class="meta">No page was kept for this source.</p>
                         {:else if docs[row.source_id] === "error"}

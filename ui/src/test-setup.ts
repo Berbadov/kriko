@@ -12,3 +12,10 @@ import { clearApiCache } from "./lib/api";
 afterEach(() => {
     clearApiCache();
 });
+
+// jsdom has no canvas. The pipeline scene asks for a 2D context on mount, and
+// jsdom would print "Not implemented" for every one of those. Answer null
+// quietly instead: a component that draws must then cope with no context,
+// and a test that does need to draw stubs its own context.
+HTMLCanvasElement.prototype.getContext = (() =>
+    null) as unknown as typeof HTMLCanvasElement.prototype.getContext;

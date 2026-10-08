@@ -1,5 +1,6 @@
 <script lang="ts">
     import Failure from "../lib/Failure.svelte";
+    import JackMark from "../lib/kriko/JackMark.svelte";
     import Report from "../lib/Report.svelte";
     import { ApiError, api } from "../lib/api";
     import { onKnowledgeChange } from "../lib/knowledge";
@@ -57,7 +58,7 @@
     <p class="state empty">That lookup is no longer in your history.</p>
 {:else}
 {#await stored}
-    <p class="state loading">Loading…</p>
+    <p class="state loading loading-mark"><JackMark />Loading…</p>
 {:then first}
     {@const result = live ?? first}
     <Report
