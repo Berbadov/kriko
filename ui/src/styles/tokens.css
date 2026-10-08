@@ -69,6 +69,15 @@
     --dur-slower: 400ms;
     --dur-loop: 1600ms;
     --dur-scan: 600ms;
+    /* The designed values in `Motion.md` that the app had no token for: the
+     * LED boot, the one flash that closes a run, the breathe of a live dot, and
+     * the two gaps a stagger is made of. Named here so each number is read in
+     * one place and never typed into a component. */
+    --dur-boot: 600ms;
+    --dur-flash: 360ms;
+    --dur-breathe: 2400ms;
+    --stagger-led: 9ms;
+    --stagger-card: 50ms;
     /* An LED stagger index, written per-dot by Led.svelte; 0 means "first",
      * which is the right answer for an element rendered without one. */
     --i: 0;

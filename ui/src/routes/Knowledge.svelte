@@ -1,4 +1,5 @@
 <script lang="ts">
+    import JackMark from "../lib/kriko/JackMark.svelte";
     import Icon from "../lib/Icon.svelte";
     import Failure from "../lib/Failure.svelte";
     import { remedyFor } from "../lib/failure";
@@ -621,7 +622,7 @@
 {/if}
 
 {#await ready}
-    <p class="state loading">Reading the store…</p>
+    <p class="state loading loading-mark"><JackMark />Reading the store…</p>
 {:then}
     {#if error}
         <Failure {error} retry={loadList} />
