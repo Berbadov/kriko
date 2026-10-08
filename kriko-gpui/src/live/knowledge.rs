@@ -197,6 +197,10 @@ impl Kriko {
                 self.refresh_thin(cx);
                 self.refresh_updates(cx);
             }
+            Tab::Local => {
+                self.refresh_local(cx);
+                self.refresh_jobs(cx);
+            }
             Tab::Sites => self.refresh_sites(cx),
             Tab::Extension => self.refresh_extension(cx),
             Tab::Settings => {
