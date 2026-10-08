@@ -1448,4 +1448,33 @@ mod tests {
         s.agent_order = vec!["ghost".to_string()];
         assert_eq!(ids(&s), vec!["a", "b"]);
     }
+
+    #[test]
+    fn provider_model_lists_are_kept_on_the_agent() {
+        let rows = harnesses_from(&json!({"harnesses": [{
+            "id": "opencode", "label": "OpenCode", "llm": "provider/model-a",
+            "llms": ["provider/model-a", "provider/model-b"],
+            "llms_note": "current list", "llm_selectable": true
+        }]}));
+        assert_eq!(rows[0].llm, "provider/model-a");
+        assert_eq!(rows[0].llms, ["provider/model-a", "provider/model-b"]);
+        assert_eq!(rows[0].llms_note, "current list");
+        assert!(rows[0].llm_selectable);
+    }
+
+    #[test]
+    fn saved_agent_order_spans_runner_and_connection_rows() {
+        let mut s = State::default();
+        s.harnesses = harnesses_from(&json!({"harnesses": [
+            {"id": "claude-code", "label": "Claude Code"},
+            {"id": "opencode", "label": "OpenCode"}
+        ]}));
+        s.targets = targets_from(&json!({"targets": [
+            {"id": "cursor", "label": "Cursor", "state": "absent"}
+        ]}));
+        s.agent_order = vec!["cursor".into(), "opencode".into()];
+        let ids: Vec<String> = s.agent_entries().into_iter().map(|e| e.id).collect();
+        assert_eq!(ids, ["cursor", "opencode", "claude-code"]);
+    }
+
 }
