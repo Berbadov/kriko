@@ -820,7 +820,7 @@ impl Render for Kriko {
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
         let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
-            .child(page_head(tab.crumb(), tab.title(), tab.lead()));
+            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead()));
         div()
             .id("kriko-root")
             .size_full()
