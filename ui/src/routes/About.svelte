@@ -2,6 +2,7 @@
     import Icon from "../lib/Icon.svelte";
     import { api } from "../lib/api";
     import Failure from "../lib/Failure.svelte";
+    import JackMark from "../lib/kriko/JackMark.svelte";
     import type { Health } from "../lib/types";
 import PageHead from "../lib/kriko/PageHead.svelte";
 
@@ -28,7 +29,7 @@ import PageHead from "../lib/kriko/PageHead.svelte";
 </p>
 
 {#await ready}
-    <p class="state loading">Loading…</p>
+    <p class="state loading loading-mark"><JackMark />Loading…</p>
 {:then}
     {#if error}
         <Failure {error} retry={load} />
