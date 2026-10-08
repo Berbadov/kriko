@@ -132,7 +132,8 @@ import PageHead from "../lib/kriko/PageHead.svelte";
     // `agy models` — not the paid catalogue's. Each runs only on the plane
     // that names it (`bench.pairs` on the server).
     const harnessLlms = $derived(
-        (prefsView?.harnesses ?? []).filter((one) => one.llm_selectable && (one.llms ?? []).length),
+        // The Local row is the local plane, benchmarked as its own plane.
+        (prefsView?.harnesses ?? []).filter((one) => one.id !== "local" && one.llm_selectable && (one.llms ?? []).length),
     );
     // A CLI that lists no LLMs says so here instead of vanishing from the chips.
     const unlistedLlms = $derived(

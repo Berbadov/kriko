@@ -118,6 +118,7 @@
 .lite-panel {
   position: fixed;
   width: 400px;
+  max-width: calc(100vw - 32px);
   z-index: 2147483000;
   font-family: var(--font-body);
   color: var(--fg);
@@ -136,6 +137,14 @@
     left 300ms var(--ease-out),
     right 300ms var(--ease-out);
 }
+
+.lite-task-log { margin-top: 12px; }
+.lite-task-log summary { cursor: pointer; }
+.lite-task-log[data-active="true"] summary::before { content: "● "; color: var(--low-ink); animation: lite-asked-breathe 1.5s ease-in-out infinite; }
+.lite-task-log-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.lite-task-log-text { max-height: 240px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 var(--font-mono); }
+.lite-quick-sources a { color: var(--low-ink); }
+@media (prefers-reduced-motion: reduce) { .lite-task-log summary::before { animation: none !important; } }
 .lite-panel[data-side="left"] { transform-origin: left center; }
 .lite-panel[data-dragging="1"] {
   box-shadow:
@@ -1422,6 +1431,29 @@
   font: inherit;
 }
 .lite-research-status { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* A run in flight: a thin bar filled to the job's share, with a sheen that
+   keeps moving while a stage takes its time. Never a number (#129). */
+.lite-progress {
+  height: 4px;
+  margin: 6px 0 2px;
+  border-radius: 2px;
+  background: rgba(127, 127, 127, 0.18);
+  overflow: hidden;
+}
+.lite-progress[hidden] { display: none; }
+.lite-progress-row { height: 3px; margin: 3px 0 4px; }
+.lite-progress-fill {
+  height: 100%;
+  width: var(--p, 6%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent) 0%, #ffffff 50%, var(--accent) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  transition: width 0.6s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lite-progress-fill { animation: none; transition: none; background: var(--accent); }
+}
 .lite-research[data-state="failed"] .lite-research-status { color: var(--high-ink); }
 .lite-research[data-state="cancelled"] .lite-research-status { color: var(--fg-muted); }
 .lite-research button { margin: 4px 4px 0 0; }
@@ -2015,3 +2047,17 @@
 .lite-question-input { min-width: 0; width: 100%; box-sizing: border-box; padding: 7px; font: inherit; color: var(--fg); background: var(--bg-base); border: 1px solid var(--border); }
 .lite-question-input:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 .lite-queue-row[data-phase="error"] .lite-queue-note { color: var(--high-ink); }
+
+/* Bound research cards to the same viewport as the knowledge cards. */
+.lite-body { overflow-x: hidden; }
+.lite-research-slot, .lite-research, .lite-quick, .lite-quick-cards,
+.lite-claim-anim, .lite-rc, .lite-rc-titlebox { min-width: 0; max-width: 100%; }
+.lite-research { overflow-wrap: anywhere; }
+.lite-research input, .lite-research textarea { width: 100%; min-width: 0; max-width: 100%; }
+.lite-rc-titlebox { flex: 1 1 0; }
+.lite-rc-title, .lite-rc-meta, .lite-quick-assumed, .lite-quick-src,
+.lite-listing-title, .lite-unknown-name { overflow-wrap: anywhere; }
+.lite-research .lite-rc-toggle { flex: 0 0 30px; padding: 0; margin: 0 10px 0 0; }
+.lite-question-form { flex-wrap: wrap; }
+.lite-question-form label { min-width: 0; }
+.lite-saved-result { font: 10px/1.5 var(--font-mono); color: var(--fg-muted); }

@@ -191,6 +191,9 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         name, value = _line(raw.get("name")), _line(raw.get("value"))
         url = str(raw.get("url") or "").strip()
         host = urlparse(url).netloc if url.startswith(("http://", "https://")) else ""
+        if sources is not None and url not in sources:
+            dropped += 1
+            continue
         if name and value and host:
             specs.append({"name": name, "value": value, "url": url,
                           "domain": host.removeprefix("www.")})
@@ -203,26 +206,6 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         "risks": risks,
         "dropped": dropped,
     }
-
-
-def grounded_risk_indices(reply: str, sources: dict[str, str] | None) -> list[int]:
-    """Candidate risk indexes that pass the same exact source check as parse."""
-    if sources is None:
-        return []
-    import json
-
-    from app.packauthor import _payload
-
-    candidates = _payload(reply).get("risks") or []
-    grounded = []
-    for index, candidate in enumerate(candidates):
-        if not isinstance(candidate, dict):
-            continue
-        parsed = parse(json.dumps({"risks": [candidate]}), sources)
-        risks = parsed["risks"]
-        if risks and risks[0]["sources"][0].get("grounded") is True:
-            grounded.append(index)
-    return grounded
 
 
 def closed(reply: str) -> dict | None:

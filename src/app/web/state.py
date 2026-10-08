@@ -587,7 +587,8 @@ CREATE TABLE IF NOT EXISTS bench_runs (
     -- Which fixed set a `fixed` row measured, and at which version (B185,
     -- D6). Runs scored on different sets are never ranked together.
     set_id        TEXT NOT NULL DEFAULT '',
-    set_version   TEXT NOT NULL DEFAULT ''
+    set_version   TEXT NOT NULL DEFAULT '',
+    detail_json   TEXT NOT NULL DEFAULT '{}'
 );
 CREATE INDEX IF NOT EXISTS bench_runs_at ON bench_runs (at DESC);
 
@@ -718,6 +719,10 @@ CREATE TABLE IF NOT EXISTS research_queue (
 -- the one-row-per-listing rule, as an index: a column constraint could never
 -- be added to a table that already exists
 CREATE UNIQUE INDEX IF NOT EXISTS research_queue_url ON research_queue (url);
+CREATE TABLE IF NOT EXISTS queue_history (
+  queue_id TEXT PRIMARY KEY, url TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '',
+  lookup_id TEXT NOT NULL DEFAULT '', origin TEXT NOT NULL DEFAULT '',
+  state TEXT NOT NULL DEFAULT 'waiting', added_at TEXT NOT NULL DEFAULT '');
 """
 
 #: The most operations one installation keeps. A feed, not an archive: the
@@ -1550,6 +1555,17 @@ def research_queue(conn: sqlite3.Connection) -> list[dict]:
         "SELECT * FROM research_queue ORDER BY added_at, rowid")]
 
 
+def _remember_queue(conn: sqlite3.Connection, queue_id: str) -> None:
+    conn.execute("INSERT OR REPLACE INTO queue_history SELECT * FROM research_queue WHERE queue_id = ?",
+                 (queue_id,))
+
+
+def queue_history(conn: sqlite3.Connection) -> list[dict]:
+    conn.execute("INSERT OR REPLACE INTO queue_history SELECT * FROM research_queue")
+    conn.commit()
+    return [_queued(row) for row in conn.execute("SELECT * FROM queue_history ORDER BY added_at DESC, rowid DESC")]
+
+
 def queue_product(
     conn: sqlite3.Connection, url: str, name: str, lookup_id: str = "",
 ) -> tuple[dict, bool]:
@@ -1582,6 +1598,7 @@ def queue_product(
     conn.execute(
         "INSERT INTO research_queue (queue_id, url, name, lookup_id, origin, added_at)"
         " VALUES (?,?,?,?,?,?)", (queue_id, url, name, lookup_id, origin, _now()))
+    _remember_queue(conn, queue_id)
     conn.commit()
     return _queued(conn.execute(
         "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()), True
@@ -1606,12 +1623,15 @@ def update_queued(conn: sqlite3.Connection, queue_id: str, *,
         "UPDATE research_queue SET state = ?, lookup_id = ? WHERE queue_id = ?",
         (state if state is not None else row["state"],
          lookup_id if lookup_id is not None else row["lookup_id"], queue_id))
+    _remember_queue(conn, queue_id)
     conn.commit()
     return _queued(conn.execute(
         "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone())
 
 
 def unqueue_product(conn: sqlite3.Connection, queue_id: str) -> bool:
+    _remember_queue(conn, queue_id)
+    conn.execute("UPDATE queue_history SET state = 'removed' WHERE queue_id = ?", (queue_id,))
     cur = conn.execute("DELETE FROM research_queue WHERE queue_id = ?", (queue_id,))
     conn.commit()
     return cur.rowcount > 0
@@ -1878,8 +1898,8 @@ def record_bench(conn: sqlite3.Connection, row: dict) -> str:
         " pack_id, plane, model, protocol, context_chars, batch_size, ms,"
         " tokens, usd, documents, findings, accepted, refused, reasons_json,"
         " error, note, gold_json, rep, search_provider, kind, set_id,"
-        " set_version)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        " set_version, detail_json)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (
             bench_id,
             str(row.get("batch_id") or ""),
@@ -1908,6 +1928,7 @@ def record_bench(conn: sqlite3.Connection, row: dict) -> str:
             str(row.get("kind") or "specific"),
             str(row.get("set_id") or ""),
             str(row.get("set_version") or ""),
+            json.dumps(row.get("detail") or {}),
         ),
     )
     conn.commit()
@@ -1922,6 +1943,10 @@ def bench_runs(conn: sqlite3.Connection, *, limit: int = 100) -> list[dict]:
     out = []
     for row in rows:
         one = dict(row)
+        try:
+            one["detail"] = json.loads(one.pop("detail_json") or "{}")
+        except ValueError:
+            one["detail"] = {}
         try:
             one["reasons"] = json.loads(one.pop("reasons_json") or "[]")
         except ValueError:
@@ -2466,6 +2491,23 @@ def get_job(conn: sqlite3.Connection, job_id: str) -> dict | None:
     return _job(row) if row else None
 
 
+def live_job_ids(conn: sqlite3.Connection, job_ids: list[str]) -> set[str]:
+    """Which of these are still queued, the rest having been cancelled.
+
+    One query for the whole waiting line, so the runner's scheduler can
+    drop a cancelled row from the line without reading each one.
+    """
+    if not job_ids:
+        return set()
+    marks = ",".join("?" * len(job_ids))
+    return {
+        row[0] for row in conn.execute(
+            f"SELECT job_id FROM jobs WHERE job_id IN ({marks}) AND state = ?",
+            (*job_ids, QUEUED),
+        )
+    }
+
+
 def quick_look_for(conn: sqlite3.Connection, deepen_job_id: str) -> dict | None:
     """The quick look started beside a deepen job, if it has been created.
 
@@ -2484,16 +2526,14 @@ def quick_look_for(conn: sqlite3.Connection, deepen_job_id: str) -> dict | None:
     return None
 
 
-def retry_of(conn: sqlite3.Connection, job_id: str) -> dict | None:
-    """The first retry child for `job_id`, live or finished, if one exists.
+def live_retry_of(conn: sqlite3.Connection, job_id: str) -> dict | None:
+    """The first retry child, whether active or finished.
 
-    A quick child can finish between two retry requests. Looking only at live
-    children then creates a duplicate even when the client sent the requests
-    as one double-click. A later retry starts from the child row, so resolving
-    the same parent to its first child does not remove the retry path.
+    A subsequent attempt retries that child, preserving an unambiguous chain.
+    The legacy name remains for callers that already use this lookup.
     """
     for row in conn.execute(
-        "SELECT * FROM jobs ORDER BY created_at DESC, rowid DESC"
+        "SELECT * FROM jobs ORDER BY created_at, rowid",
     ).fetchall():
         job = _job(row)
         if job["params"].get("retry_of") == job_id:
@@ -2507,6 +2547,22 @@ def list_jobs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
         (max(0, limit),),
     ).fetchall()
     return [_job(row) for row in rows]
+
+
+def saved_answer(conn: sqlite3.Connection, answer_id: str) -> dict | None:
+    """Evidence for a follow-up, from either a lookup or a saved Quick Look."""
+    stored = get_lookup(conn, answer_id)
+    if stored is not None:
+        return stored
+    job = get_job(conn, answer_id)
+    if not job or job["kind"] != "quick_look" or job["state"] != SUCCEEDED:
+        return None
+    result = job.get("result") or {}
+    return {"lookup_id": answer_id, "label": job["params"].get("product", ""),
+            "response": {"claims": result.get("risks") or [],
+                         "specs": result.get("specs") or [],
+                         "category": result.get("category", ""),
+                         "assumed": result.get("assumed", "")}}
 
 
 def lookup_questions(conn: sqlite3.Connection, lookup_id: str) -> list[dict]:

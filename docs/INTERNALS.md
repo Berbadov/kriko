@@ -45,12 +45,16 @@ written at acceptance (`app/findings.py`).
 
 ## The jobs plane
 
-Long work is a row, not a request.
+Long work is a row, not a request. How many run at once is the reader's
+Settings choice (`run_concurrency`, 1 to 4, one by default); each job claims
+the pack it writes (`jobs.claims`), two overlapping claims never run
+together, and a kind whose target cannot be named runs alone. Quick looks
+keep their own lane.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    P["POST /api/research<br/>POST /api/packs/build"]:::ice --> R["JobRunner<br/>one worker, web/jobs.py"]:::brand
+    P["POST /api/research<br/>POST /api/packs/build"]:::ice --> R["JobRunner<br/>N at once, one per pack, web/jobs.py"]:::brand
     R --> T["web/tasks.py<br/>settings, params, progress"]:::plain
     R <--> S[("app.sqlite jobs")]:::plain
     S --> V["GET /api/jobs/{job_id}<br/>/stream (SSE)"]:::ice
@@ -150,7 +154,7 @@ flowchart LR
 | `fact_checks` | The last "the page still says this" per (pack, claim). A dead link is a signal, not a retraction. |
 | `extension_seen` | Extension origins, hit counts and versions. |
 | `research_runs`, `research_run_claims` | Plane, model, budget against spend, outcome; per claim a `removed_at` for undo. Install-local. |
-| `bench_runs` | Every benchmark row: plane, model, protocol, context size, cost, and the per-reason refusals. `rep` marks a repeat of the same case. |
+| `bench_runs` | Every benchmark row: plane, model, protocol, context size, cost, and the per-reason refusals. `rep` marks a repeat of the same case. `detail_json` keeps the versioned case, run settings, answer, evidence, runtime and diagnostics. |
 | `operations` | The any-door work feed, bounded to 2000 rows. |
 | `documents` | Quote-proving page text, one row per `source_id`, bounded. |
 | `unmapped_labels` | Labels seen on pages that no adapter reads. |
@@ -158,6 +162,7 @@ flowchart LR
 | `site_requests` | Unreadable sites the reader stood on, so "which site next" is answerable. |
 | `site_activation` | The browser's per-site permission verdict. |
 | `compare_drafts` | Named comparisons: which checks, in which order. |
+| `queue_history` | Durable queue entries, including completed and removed products; active entries are reconciled from `research_queue`. |
 | `research_queue` | Products queued from the extension, in research order, with the site each came from. |
 | `compare_questions` | The reader's own questions about a comparison, and the answers their agent gave. |
 | `compare_boards` | One comparison's pen marks and typed notes over the table, one JSON document per draft. Cleared when the draft is saved over, because a mark on a column that is gone is a mark about nothing. |

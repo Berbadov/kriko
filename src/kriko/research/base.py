@@ -235,6 +235,10 @@ class ResearchTask:
     #: per subject and per pack, so it is the one document that can carry it
     #: without growing.
     identification: str = ""
+    #: The reader's own standing instructions for every run, in words, from
+    #: the interface (which kinds of source to go to first). Opaque here: the
+    #: engine appends it to the brief and never reads it.
+    guidance: str = ""
 
     @property
     def rationale_rule(self) -> str:

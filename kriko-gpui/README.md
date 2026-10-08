@@ -68,7 +68,7 @@ flowchart TD
     A{"KRIKO_URL set?"}:::plain -->|yes| B["Attach to it, start nothing"]:::ice
     A -->|no| C{"kriko-sidecar.exe<br/>beside kriko.exe?"}:::plain
     C -->|yes| D["Start it (installed layout)"]:::brand
-    C -->|no| E{"Engine already answering<br/>on the extension port 8787?"}:::plain
+    C -->|no| E{"Engine already answering<br/>on the selected extension port?"}:::plain
     E -->|yes| F["Attach to it"]:::ice
     E -->|no| G["python -m app.sidecar<br/>(KRIKO_PYTHON picks the interpreter)"]:::plain
     D --> H["Poll /api/health"]:::plain

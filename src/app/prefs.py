@@ -23,9 +23,14 @@ from app import modelcatalogue
 #: The settings keys. Named once, here, because both the router that writes
 #: them and the providers that read them would otherwise spell them twice.
 HARNESS = "preferred_harness"
+#: The pick that names the model on this machine rather than an agent: the
+#: Agents tab's Local model row. Stored in `HARNESS` like any pick, so the
+#: reader's choice is one setting, but it is never an agent id, and a door
+#: that checks a pick against the installed CLIs must let it through.
+LOCAL_PICK = "local"
+AGENT_ORDER = "agent_order"
 MODEL = "llm_model"
 SEARCH = "search_provider"
-AGENT_ORDER = "agent_order"
 
 #: One key per stage of a run, and every one of them optional.
 #:
@@ -42,6 +47,10 @@ ROLE_KEYS = tuple(role_key(one) for one in modelcatalogue.ROLES)
 
 
 def harness_model_key(harness_id: str) -> str:
+    if harness_id == LOCAL_PICK:
+        # The local row's model is the Local LLM page's own setting: one
+        # choice, whichever screen it was made on.
+        return LOCAL_MODEL
     return f"harness_model_{harness_id}".replace("-", "_")
 
 
@@ -89,10 +98,87 @@ LOCAL_URL = "local_url"
 LOCAL_MODEL = "local_model"
 LOCAL_SEARCH_URL = "local_search_url"
 LOCAL_TIMEOUT = "local_timeout"
-LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT)
+LOCAL_DEVICE = "local_device"
+LOCAL_CONTEXT = "local_context_tokens"
+LOCAL_GPU_LAYERS = "local_gpu_layers"
+LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT,
+              LOCAL_DEVICE, LOCAL_CONTEXT, LOCAL_GPU_LAYERS)
+
+#: What every agent run reads, set once on the Agents tab: how many sources
+#: at most (empty or 0 leaves it to the run), and which kinds of source to go
+#: to first. The reader's words: "options for research: forum/review/and such
+#: sources for options and source counts for agents".
+RESEARCH_SOURCES = "research_sources"
+RESEARCH_KINDS = "research_source_kinds"
+RESEARCH_KEYS = (RESEARCH_SOURCES, RESEARCH_KINDS)
+#: The kinds, as the prompt names them. A small closed vocabulary of where
+#: evidence comes from, true of any category (CLAUDE.md's exception), never a
+#: list of products: ordered as the Agents tab shows them.
+SOURCE_KINDS = {
+    "forums": "owner forums and discussion threads",
+    "reviews": "professional reviews and long-term tests",
+    "recalls": "recalls, service bulletins and official notices",
+    "manufacturer": "the manufacturer's own documentation",
+    "video": "video reviews and teardowns",
+    "news": "news reports",
+}
+#: The ceiling the Agents tab offers; a run's own `max_documents` may not
+#: exceed the schema's 50 either.
+MAX_RESEARCH_SOURCES = 50
+
+
+def research_options(conn, *, sources: int = 0, kinds: list[str] | None = None) -> dict:
+    """`{"sources": n, "kinds": [...]}`: the run's own, else the stored.
+
+    Unknown kinds are dropped rather than refused, so a request from an older
+    client still runs.
+    """
+    stored = read(conn) if conn is not None else dict.fromkeys(KEYS, "")
+    count = int(sources or 0)
+    if count <= 0:
+        try:
+            count = int(stored.get(RESEARCH_SOURCES) or 0)
+        except ValueError:
+            count = 0
+    wanted = kinds if kinds else [
+        one.strip() for one in (stored.get(RESEARCH_KINDS) or "").split(",")]
+    return {
+        "sources": max(0, min(count, MAX_RESEARCH_SOURCES)),
+        "kinds": [one for one in SOURCE_KINDS if one in set(wanted)],
+    }
+
+
+#: How many agent runs the job runner may have going at once (#133). The
+#: reader's words: "concurrent agent runs, with options in settings". Unset
+#: means one, which is how every run went before the choice existed.
+RUN_CONCURRENCY = "run_concurrency"
+#: The ceiling Settings offers. Each run is a CLI process or a model's
+#: attention plus its own fetches; past four the machine, the provider's rate
+#: limit and the reader's bill all say no before this number would.
+MAX_RUN_CONCURRENCY = 4
+
+
+def run_concurrency(conn) -> int:
+    """How many runs at once, clamped to 1..`MAX_RUN_CONCURRENCY`.
+
+    Read through `state.all_settings` rather than `read`, because Settings
+    stores it as a number and `read` would hand back a string. Either form
+    parses; anything that does not is one, never an error, since a job must
+    not fail to start over a preference.
+    """
+    from app.web import state
+
+    stored = state.all_settings(conn).get(RUN_CONCURRENCY) if conn is not None else None
+    try:
+        wanted = int(str(stored).strip() or 1) if stored is not None else 1
+    except ValueError:
+        wanted = 1
+    return max(1, min(wanted, MAX_RUN_CONCURRENCY))
+
 
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
-        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS)
+        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, *RESEARCH_KEYS,
+        RUN_CONCURRENCY)
 
 
 def for_role(conn, role: str, override: str = "") -> str:
@@ -113,7 +199,7 @@ def for_role(conn, role: str, override: str = "") -> str:
 
 
 def read(conn) -> dict:
-    """The saved choices, with empty meaning "whatever the machine offers"."""
+    """The three, with empty meaning "whatever the machine offers"."""
     from app.web import state
 
     stored = state.all_settings(conn) if conn is not None else {}
@@ -251,6 +337,42 @@ def api_agent_rows(conn) -> tuple[list[dict], list[dict]]:
     return rows, missing
 
 
+def local_agent_rows(conn) -> tuple[list[dict], list[dict], list[dict]]:
+    """The model on this machine as one more agent row: `(ready, unusable, missing)`.
+
+    The reader's words: "Local agent cannot be chosen in agents tab". It ran
+    every check a reader with no agent started, and still had no row of its
+    own, so it could not be picked over an installed CLI. Shaped like the CLI
+    rows so every screen that lists agents lists it too; its models are the
+    ones the server says it holds, and picking one writes `LOCAL_MODEL`.
+    """
+    from app import localplane
+
+    try:
+        mine = read(conn)
+        plane = localplane.resolve(None, url=mine[LOCAL_URL], model=mine[LOCAL_MODEL],
+                                   with_search=False)
+    except Exception as exc:  # noqa: BLE001 - a probe never breaks the agents list
+        return [], [], [{"id": LOCAL_PICK, "label": "Local model", "command": "",
+                         "download_url": "", "install_hint": str(exc),
+                         "needs_account": ""}]
+    label = "Local model"
+    if plane["ready"]:
+        return [{
+            "id": LOCAL_PICK, "label": label, "path": plane["url"], "command": "",
+            "needs_account": "", "cost_basis": "self_hosted", "local": True,
+            "llm": plane["model"], "llms": list(plane["models"]),
+            "llms_note": f"served by {plane['name']} at {plane['url']}",
+            "llm_hint": "", "llm_selectable": True,
+            "effort": "", "efforts": [], "effort_hint": "",
+        }], [], []
+    if plane["url"]:
+        return [], [{"id": LOCAL_PICK, "label": label, "why": plane["reason"]}], []
+    return [], [], [{"id": LOCAL_PICK, "label": label, "command": "",
+                     "download_url": "https://ollama.com/download",
+                     "install_hint": plane["reason"], "needs_account": ""}]
+
+
 def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
     """What could be chosen here, and what is chosen now.
 
@@ -306,6 +428,10 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
         if one.id not in have and not one.unusable
     ]
     api_rows, api_missing = api_agent_rows(conn)
+    local_ready, local_unusable, local_missing = local_agent_rows(conn)
+    installed += local_ready
+    unusable += local_unusable
+    missing += local_missing
     return {
         "chosen": chosen,
         "effective": effective(conn),
@@ -313,6 +439,9 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
         "unusable": unusable,
         "missing": missing + api_missing,
         "dirs_env": harness.DIRS_ENV,
+        "source_kinds": [{"id": one, "label": label}
+                         for one, label in SOURCE_KINDS.items()],
+        "research": research_options(conn),
         "search_providers": [
             {
                 "id": one,

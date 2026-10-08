@@ -1,12 +1,13 @@
 //! Settings: where a preference lives, and the fact that it lives anywhere.
-//! Four cards in a 2x2 grid: General, Keys, Shortcuts, Danger zone — the
+//! Five cards in two columns: General, Runs, Shortcuts | Keys, Danger zone — the
 //! shape of the reference screen. The app's own preferences are saved in the
 //! engine's settings; the keys are the engine's own key file.
 
 use gpui::{div, prelude::*, px, rgb, Context, Div, Stateful, Styled, Window};
 
 use crate::app::{Field, Kriko};
-use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
+use crate::live::knowledge::RUNS_MAX;
+use crate::screens::{empty_note, mono, plate_s, row_desc, row_title, segmented};
 use crate::theme::*;
 
 /// One row of a card: title + description left, a control right.
@@ -65,6 +66,7 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
 pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
     let motion = !app.reduce_motion;
     let key_input = app.input_field(Field::KeyValue, "key-value", "Paste the key, then Save", None, window, cx);
+    let runtime = crate::screens::local::runtime_settings(app, cx);
     let k = &app.live.knowledge;
 
     // ---- general ----
@@ -109,6 +111,41 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 .child(mono(&store, MUTED)),
         );
 
+    // ---- runs ----
+    // How many agent runs the engine may have going at once (#133). The
+    // engine reads it at every start, so a change needs no restart.
+    let runs_picker = segmented(
+        "runs-at-once",
+        &[("1", ONE5), ("2", TWO5), ("3", THREE5), ("4", FOUR5)],
+        app.run_concurrency.clamp(1, RUNS_MAX) - 1,
+        app.run_concurrency_prev.min(RUNS_MAX - 1),
+        motion,
+        cx,
+        |this, i, cx| {
+            this.set_run_concurrency(i + 1, cx);
+            cx.notify();
+        },
+    );
+    let runs_note = if app.run_concurrency <= 1 {
+        "One at a time; the rest wait their turn in Activity.".to_string()
+    } else {
+        format!(
+            "Up to {} together. Each one spends on its own agent or key.",
+            app.run_concurrency
+        )
+    };
+    let runs = card()
+        .flex()
+        .flex_col()
+        .child(div().mb(px(4.0)).child(eyebrow("Runs")))
+        .child(hairline())
+        .child(row(
+            "Agent runs at once",
+            "Research, authoring and checks that may go together. Two on the same pack always take turns.",
+            runs_picker.into_any_element(),
+        ))
+        .child(div().pb(px(8.0)).child(row_desc(&runs_note)));
+
     // ---- keys ----
     let mut keys = card()
         .flex()
@@ -152,7 +189,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         let id = target.id.clone();
         let save = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             let value = this.key_value.value.trim().to_string();
-            this.key_value.value.clear();
+            this.key_value.set_value(String::new());
             this.save_key(id.clone(), value, cx);
             cx.notify();
         });
@@ -265,6 +302,8 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                         .flex_col()
                         .gap(px(24.0))
                         .child(general)
+                        .child(runs)
+                        .child(runtime)
                         .child(shortcuts),
                 )
                 .child(

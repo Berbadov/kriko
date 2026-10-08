@@ -10,6 +10,7 @@ use gpui::Context;
 
 use crate::api::{self, Value};
 use crate::app::{Kriko, Tab};
+use crate::engine;
 
 // ---- the shapes the screens draw ----
 
@@ -41,6 +42,7 @@ pub struct Gap {
 
 #[derive(Clone)]
 pub struct Thin {
+    pub pack_id: String,
     pub claim_id: String,
     pub subject_id: String,
     pub subject: String,
@@ -163,6 +165,9 @@ pub struct State {
     pub erase_busy: bool,
 }
 
+/// The engine's own ceiling (`prefs.MAX_RUN_CONCURRENCY`); it clamps too.
+pub const RUNS_MAX: usize = 4;
+
 const REG_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const REG_VALUE: &str = "Kriko";
 
@@ -192,15 +197,17 @@ impl Kriko {
                 self.refresh_thin(cx);
                 self.refresh_updates(cx);
             }
-            Tab::Sites => self.refresh_sites(cx),
-            Tab::Extension => self.refresh_extension(cx),
-            Tab::Settings => {
-                self.refresh_keys(cx);
-                self.refresh_health(cx);
-            }
             Tab::Local => {
                 self.refresh_local(cx);
                 self.refresh_jobs(cx);
+            }
+            Tab::Sites => self.refresh_sites(cx),
+            Tab::Extension => self.refresh_extension(cx),
+            Tab::Settings => {
+                self.refresh_local(cx);
+                self.refresh_settings(cx);
+                self.refresh_keys(cx);
+                self.refresh_health(cx);
             }
             _ => {}
         }
@@ -298,6 +305,7 @@ impl Kriko {
                 k.thin = api::arr(&v, "claims")
                     .iter()
                     .map(|c| Thin {
+                        pack_id: api::s(c, "pack_id"),
                         claim_id: api::s(c, "claim_id"),
                         subject_id: api::s(c, "subject_id"),
                         subject: api::s(c, "subject_label"),
@@ -603,6 +611,33 @@ impl Kriko {
         );
     }
 
+    pub fn save_extension_port(&mut self, cx: &mut Context<Self>) {
+        let text = self.extension_port_input.value.trim();
+        let Ok(port) = text.parse::<u16>() else {
+            self.live.knowledge.ext_notice = Some("Choose a port from 1 to 65535.".into());
+            cx.notify();
+            return;
+        };
+        if std::env::var_os("KRIKO_URL").is_some() {
+            self.live.knowledge.ext_notice = Some(
+                "This window is attached to another engine. Change that engine's extension port instead.".into(),
+            );
+            cx.notify();
+            return;
+        }
+        match engine::set_extension_port(port) {
+            Ok(()) => {
+                self.live.knowledge.ext_notice = Some(format!(
+                    "Restarting the engine on port {port}. In the browser extension settings, set the app address to http://127.0.0.1:{port}."
+                ));
+                self.live.knowledge.ext = None;
+                engine::restart();
+            }
+            Err(error) => self.live.knowledge.ext_notice = Some(error),
+        }
+        cx.notify();
+    }
+
     // ---- Settings ----
 
     pub fn refresh_settings(&mut self, cx: &mut Context<Self>) {
@@ -611,6 +646,17 @@ impl Kriko {
             if let Ok(v) = reply {
                 if let Some(on) = v.get("app.reduce_motion").and_then(|x| x.as_bool()) {
                     this.reduce_motion = on;
+                }
+                // A number from this screen, a string from `/api/prefs`.
+                let runs = v.get("run_concurrency").and_then(|x| {
+                    x.as_u64().or_else(|| x.as_str().and_then(|s| s.trim().parse().ok()))
+                });
+                if let Some(n) = runs {
+                    let n = (n as usize).clamp(1, RUNS_MAX);
+                    if n != this.run_concurrency {
+                        this.run_concurrency_prev = this.run_concurrency - 1;
+                        this.run_concurrency = n;
+                    }
                 }
                 this.live.knowledge.settings_loaded = true;
             }
@@ -629,6 +675,15 @@ impl Kriko {
                 }
             },
         );
+    }
+
+    /// How many agent runs the engine may have going at once. Two on one
+    /// pack still take turns; that is the engine's rule, not this screen's.
+    pub fn set_run_concurrency(&mut self, n: usize, cx: &mut Context<Self>) {
+        let n = n.clamp(1, RUNS_MAX);
+        self.run_concurrency_prev = self.run_concurrency - 1;
+        self.run_concurrency = n;
+        self.save_setting("run_concurrency", Value::from(n as u64), cx);
     }
 
     pub fn set_reduce_motion(&mut self, on: bool, cx: &mut Context<Self>) {

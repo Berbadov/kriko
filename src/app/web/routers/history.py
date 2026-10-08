@@ -64,6 +64,30 @@ def history(
     return {"items": items}
 
 
+@router.get("/history/records")
+def history_records(limit: int = Query(200, ge=1, le=1000),
+                    app_state=Depends(get_app_state), store=Depends(get_store)):
+    """Checks, agent runs, queue entries and pack builds with explicit kinds."""
+    checks = history(min(limit, 200), app_state, store)["items"]
+    items = [{**row, "kind": "check", "status": "succeeded", "agent": ""} for row in checks]
+    names = {row["pack_id"]: row["name"] for row in store.execute("SELECT pack_id, name FROM packs")}
+    for job in state.list_jobs(app_state, limit):
+        params, result = job["params"], job.get("result") or {}
+        pack = str(params.get("pack_id") or result.get("pack_id") or "")
+        items.append({"lookup_id": "job:" + job["job_id"], "created_at": job["created_at"],
+                      "label": params.get("product") or params.get("category") or params.get("subject_id") or job["kind"],
+                      "source": job["kind"], "kind": "pack_build" if job["kind"] == "pack_build" else "run",
+                      "status": job["state"], "agent": result.get("harness") or params.get("harness") or params.get("backend", ""),
+                      "claim_count": len(result.get("risks") or []), "category": names.get(pack, ""),
+                      "packs": [{"pack_id": pack, "name": names.get(pack, pack)}] if pack else []})
+    for queued in state.queue_history(app_state):
+        items.append({"lookup_id": "queue:" + queued["queue_id"], "created_at": queued["added_at"],
+                      "label": queued["name"], "source": queued["url"], "kind": "queue",
+                      "status": queued["state"], "agent": "", "claim_count": 0, "category": "", "packs": []})
+    items.sort(key=lambda row: (row["created_at"], row["lookup_id"]), reverse=True)
+    return {"items": items[:limit]}
+
+
 @router.get("/lookup/{lookup_id}")
 def get_lookup(lookup_id: str, app_state=Depends(get_app_state)):
     row = state.get_lookup(app_state, lookup_id)
@@ -78,7 +102,7 @@ class FollowupRequest(BaseModel):
 
 @router.get("/lookup/{lookup_id}/questions")
 def lookup_questions(lookup_id: str, app_state=Depends(get_app_state)):
-    if state.get_lookup(app_state, lookup_id) is None:
+    if state.saved_answer(app_state, lookup_id) is None:
         raise HTTPException(404, f"no such lookup: {lookup_id}")
     return {"items": state.lookup_questions(app_state, lookup_id)}
 
@@ -86,7 +110,7 @@ def lookup_questions(lookup_id: str, app_state=Depends(get_app_state)):
 @router.post("/lookup/{lookup_id}/questions")
 def ask_lookup(lookup_id: str, body: FollowupRequest,
                app_state=Depends(get_app_state), runner=Depends(get_jobs)):
-    if state.get_lookup(app_state, lookup_id) is None:
+    if state.saved_answer(app_state, lookup_id) is None:
         raise HTTPException(404, f"no such lookup: {lookup_id}")
     question = body.question.strip()
     if not question:

@@ -77,6 +77,10 @@ pub const PLAY5: [&str; 5] = ["..#..", "..##.", "..###", "..##.", "..#.."];
 pub const COLS5: [&str; 5] = ["#.#.#", "#.#.#", "#.#.#", "#.#.#", "#.#.#"];
 pub const LIST5: [&str; 5] = ["#####", ".....", "#####", ".....", "#####"];
 pub const GRID5: [&str; 5] = ["#.#.#", ".....", "#.#.#", ".....", "#.#.#"];
+pub const ONE5: [&str; 5] = ["..#..", ".##..", "..#..", "..#..", ".###."];
+pub const TWO5: [&str; 5] = [".###.", "....#", "..##.", ".#...", "#####"];
+pub const THREE5: [&str; 5] = ["####.", "....#", ".###.", "....#", "####."];
+pub const FOUR5: [&str; 5] = ["#..#.", "#..#.", "#####", "...#.", "...#."];
 
 // ---- motion ----
 //
@@ -187,10 +191,29 @@ pub fn eyebrow(label: &str) -> Div {
 
 // ---- the sky ----
 
+/// The page head's colours on one sky. `build.rs` reads the sky image where
+/// the words sit, picks the ink with the better contrast (light on a dark
+/// sky, dark on a bright one) and the least shade of the other colour that
+/// holds it at 7:1 over the brightest likely speck. A new sky image gets its
+/// own answer by being there.
+#[derive(Clone, Copy, Debug)]
+pub struct SkyInk {
+    pub ink: u32,
+    pub shade: u32,
+    pub shade_alpha: f32,
+    #[allow(dead_code)] // reported, and asserted in the tests
+    pub contrast: f32,
+    /// Whether the brand accent still reads at 4.5:1 there; if not, the
+    /// crumb wears the ink.
+    pub accent_reads: bool,
+}
+
+include!("sky_ink.rs");
+
 /// Which sky a hero carries. The dithered band is the identity; under it sits
 /// a matching gradient, so the fades at both edges stay smooth and the
 /// colour never runs out where the image ends.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Sky {
     /// Home and About: the full sky, brightest.
     Bright,
@@ -217,6 +240,16 @@ impl Sky {
             Sky::Dim => 0.07,
             Sky::Wide => 0.09,
         }
+    }
+
+    /// How the page head's words go on this sky: measured from the image at
+    /// build time (`build.rs`), never chosen by eye.
+    pub fn ink(self) -> SkyInk {
+        SKY_INK[match self {
+            Sky::Bright => 0,
+            Sky::Dim => 1,
+            Sky::Wide => 2,
+        }]
     }
 
     /// The dithered sky band each hero carries.
@@ -325,49 +358,78 @@ pub fn embedded(path: SharedString) -> gpui::ImageSource {
 
 /// Page head over the hero: mono crumb, display title, one lead line. It
 /// starts below the floating titlebar, in the sky.
-pub fn page_head(crumb: &str, title: &str, lead: &str) -> Div {
+///
+/// The sky stays whole and the words adapt to it (`Sky::ink`): their colour
+/// is the one that contrasts with what is measured behind them, and a shade
+/// of the opposite colour, only as dense as 7:1 needs, sits under the left
+/// of the band and is gone by its middle, so the sky on the right is
+/// untouched. The title names the page rather than filling it (the reader:
+/// "page titles takes too much space, but i dont wanna lose the sky").
+pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str) -> Div {
+    let plan = sky.ink();
+    let shade = |a: f32| Hsla { a, ..hsla(plan.shade) };
+    let accent = if plan.accent_reads { BRAND_BRIGHT } else { plan.ink };
     div()
         .absolute()
         .top_0()
         .left_0()
         .w_full()
         .h_full()
-        .px(px(40.0))
-        .pt(px(60.0))
-        .flex()
-        .flex_col()
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .font_family(MONO)
-                .text_size(px(12.0))
-                .child(div().text_color(rgb(BRAND_BRIGHT)).child("kriko /"))
-                .child(div().text_color(rgb(INK_2)).child(crumb.to_uppercase())),
-        )
-        .child(
-            div()
-                .mt(px(8.0))
-                .font_family(DISPLAY)
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_size(px(56.0))
-                .line_height(px(56.0))
-                .text_color(rgb(INK))
-                .child(title.to_uppercase()),
-        )
-        .when(!lead.is_empty(), |d| {
+        .when(plan.shade_alpha > 0.0, |d| {
             d.child(
                 div()
-                    .mt(px(16.0))
-                    .max_w(px(640.0))
-                    .font_family(SANS)
-                    .text_size(px(16.0))
-                    .line_height(px(24.0))
-                    .text_color(rgb(INK_2))
-                    .child(lead.to_string()),
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full()
+                    .bg(linear_gradient(
+                        90.0,
+                        linear_color_stop(shade(plan.shade_alpha), 0.38),
+                        linear_color_stop(shade(0.0), 0.72),
+                    )),
             )
         })
+        .child(
+            div()
+                .relative()
+                .px(px(40.0))
+                .pt(px(60.0))
+                .flex()
+                .flex_col()
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .font_family(MONO)
+                        .text_size(px(12.0))
+                        .child(div().text_color(rgb(accent)).child("kriko /"))
+                        .child(div().text_color(rgb(plan.ink)).opacity(0.8).child(crumb.to_uppercase())),
+                )
+                .child(
+                    div()
+                        .mt(px(6.0))
+                        .font_family(DISPLAY)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(px(34.0))
+                        .line_height(px(38.0))
+                        .text_color(rgb(plan.ink))
+                        .child(title.to_uppercase()),
+                )
+                .when(!lead.is_empty(), |d| {
+                    d.child(
+                        div()
+                            .mt(px(10.0))
+                            .max_w(px(560.0))
+                            .font_family(SANS)
+                            .text_size(px(15.0))
+                            .line_height(px(22.0))
+                            .text_color(rgb(plan.ink))
+                            .opacity(0.88)
+                            .child(lead.to_string()),
+                    )
+                }),
+        )
 }
 
 // ---- the merged window top bar ----
@@ -473,6 +535,30 @@ pub fn ghost(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .border_1()
         .border_color(rgba(BORDER_CONTROL))
         .hover(|s| s.bg(rgba(GLASS_2)))
+        .child(label.to_uppercase())
+}
+
+/// A compact danger key for a row that already carries its own label: the
+/// dock's per-lane Stop, which at full key size outweighed the task it stops.
+pub fn danger_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
+    div()
+        .id(id)
+        .flex_none()
+        .h(px(22.0))
+        .px(px(8.0))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded(px(6.0))
+        .font_family(MONO)
+        .text_color(rgb(DANGER))
+        .text_size(px(10.0))
+        .cursor_pointer()
+        .bg(rgba(DANGER_WASH))
+        .border_1()
+        .border_color(rgba(DANGER_EDGE))
+        .hover(|s| s.bg(rgba(0xff6b5e3d)))
+        .active(|s| s.opacity(0.85))
         .child(label.to_uppercase())
 }
 
@@ -715,6 +801,50 @@ pub fn tag(id: impl Into<SharedString>, state: TagState, label: &str, motion: bo
 /// leading lit segment blinks (`.k-meter i.head`); `motion == false` freezes it.
 pub fn meter(value: f32, segments: usize) -> Div {
     meter_live("meter", value, segments, false, true)
+}
+
+/// A thin progress bar for a job in flight: a track, a fill to the job's own
+/// share, and a sheen that keeps sweeping across the fill so a run that sits
+/// on one stage still reads as alive. Never a number beside it (#129: "Not
+/// percentages but progress bars, animated"). Still under reduced motion.
+pub fn progress_bar(id: &str, share: f32, motion: bool) -> Div {
+    // a sliver even at zero, so a run that has just started is visibly on
+    let share = share.clamp(0.0, 1.0).max(0.06);
+    let mut fill = div()
+        .relative()
+        .h_full()
+        .w(relative(share))
+        .rounded(px(2.0))
+        .overflow_hidden()
+        .bg(rgb(ICE));
+    if motion {
+        let sheen = div()
+            .absolute()
+            .top_0()
+            .h_full()
+            .w(relative(0.35))
+            .bg(linear_gradient(
+                90.0,
+                linear_color_stop(rgba(0xffffff00), 0.0),
+                linear_color_stop(rgba(0xffffffb0), 0.5),
+            ))
+            .with_animation(
+                gpui::ElementId::Name(SharedString::from(format!("{id}-sheen"))),
+                Animation::new(std::time::Duration::from_millis(1400))
+                    .repeat()
+                    .with_easing(|t| t),
+                // from just off the left edge to just off the right
+                |el, t| el.left(relative(-0.35 + 1.35 * t)),
+            );
+        fill = fill.child(sheen);
+    }
+    div()
+        .h(px(4.0))
+        .w_full()
+        .rounded(px(2.0))
+        .overflow_hidden()
+        .bg(rgba(GLASS_2))
+        .child(fill)
 }
 
 /// A working indicator: three round LEDs breathing in turn, left to right,
@@ -1060,3 +1190,27 @@ pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
         )
 }
 
+#[cfg(test)]
+mod sky_ink_tests {
+    use super::*;
+
+    #[test]
+    fn every_sky_holds_its_words_at_seven_to_one() {
+        for sky in [Sky::Bright, Sky::Dim, Sky::Wide] {
+            let plan = sky.ink();
+            assert!(plan.contrast >= 7.0, "{:?}", plan);
+            assert!(plan.shade_alpha <= 0.85, "{:?}", plan);
+        }
+    }
+
+    #[test]
+    fn the_build_script_measures_with_the_themes_own_colours() {
+        let script = include_str!("../build.rs");
+        for (name, value) in [("INK", INK), ("GROUND", GROUND), ("ACCENT", BRAND_BRIGHT)] {
+            assert!(
+                script.contains(&format!("const {name}: u32 = 0x{value:06x};")),
+                "build.rs's {name} is not theme.rs's"
+            );
+        }
+    }
+}

@@ -273,13 +273,13 @@ def test_no_row_carries_the_listing_the_reader_was_looking_at(store, tmp_path):
     log = _log(tmp_path / "a.jsonl", [{
         "coverage": "NOT_MATCHED",
         "identity": {"make": "x", "model": "y"},
-        "url": "https://www.sahibinden.com/ilan/private-123456/detay",
-        "ad_metadata": {"title": "SAHIBINDEN TEMIZ", "description": "call me"},
+        "url": "https://www.privateseller.example/ilan/private-123456/detay",
+        "ad_metadata": {"title": "PRIVATESELLER TEMIZ", "description": "call me"},
         "context": {"usage_km": 190000},
     }])
 
     blob = json.dumps(agenda.compute(store, log_path=log))
-    assert "sahibinden" not in blob.lower()
+    assert "privateseller" not in blob.lower()
     assert "call me" not in blob
 
 

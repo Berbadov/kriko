@@ -16,7 +16,7 @@ import importlib
 import secrets
 import time
 from collections.abc import Callable
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -108,6 +108,14 @@ def default_plane(app_state_path=None) -> tuple[str, str]:
         local = localplane.resolve(app_state_path, with_search=False)
     except Exception:  # noqa: BLE001 - a probe must never fail a run
         pass
+    if _stored_local_pick(app_state_path):
+        # The reader picked the Local model row: that plane, ready or not. A
+        # pick that fell back to a CLI would spend their subscription on a run
+        # they asked to keep on this machine; not ready fails with the reason.
+        return "local", (
+            f"the Local model is the picked agent: {local['model']} on "
+            f"{local['name']} at {local['url']}" if local["ready"] else
+            f"the Local model is the picked agent, but it is not ready ({local['reason']})")
     chose = localplane.reader_chose_an_agent(app_state_path)
     if local["ready"] and not chose:
         return "local", (
@@ -131,12 +139,47 @@ def default_plane(app_state_path=None) -> tuple[str, str]:
                      else "no coding agent is available")
 
 
+def _stored_local_pick(app_state_path) -> bool:
+    """Whether the reader's stored pick is the Local model row."""
+    if not app_state_path:
+        return False
+    from app import prefs
+
+    try:
+        conn = state.connect(app_state_path)
+    except Exception:  # noqa: BLE001 - an unreadable preference is no preference
+        return False
+    try:
+        return prefs.read(conn).get(prefs.HARNESS) == prefs.LOCAL_PICK
+    finally:
+        conn.close()
+
+
+def _picked_local(params: dict, app_state_path=None) -> bool:
+    """Whether this run asked for the Local model, by name or by the stored pick.
+
+    One answer for every door: a run naming `harness=local` (the Agents tab's
+    row, Compare, the Run screen) or naming no agent while the stored pick is
+    local runs on the local plane, and never falls back to a CLI. An explicit
+    other plane (`api`, `agent`) is the run's own choice and stands.
+    """
+    from app import prefs
+
+    harness = str(params.get("harness") or "")
+    backend = str(params.get("backend") or "").lower()
+    if backend not in ("", "harness", "local"):
+        return False
+    if harness == prefs.LOCAL_PICK:
+        return True
+    return not harness and _stored_local_pick(app_state_path or params.get("app_state_path"))
+
+
 class LocalNotReady(RuntimeError):
     """The local plane was asked for and cannot run; the text says why and
     what to do. A failed job with that text, never a run of "0 claims"."""
 
 
-def _local_plan(params: dict) -> dict:
+def _local_plan(params: dict, *, with_search: bool = True) -> dict:
     """What a local run uses, resolved off the running server (B171).
 
     The run's own `model` counts only when the server lists it: the Run screen
@@ -149,6 +192,7 @@ def _local_plan(params: dict) -> dict:
         params.get("app_state_path"),
         url=str(params.get("llm_base_url") or ""),
         search_url=str(params.get("search_base_url") or ""),
+        with_search=with_search,
     )
     if not plan["ready"]:
         raise LocalNotReady(plan["reason"])
@@ -170,6 +214,10 @@ def _use_local_ask(settings, params: dict) -> bool:
     """
     if str(params.get("backend") or "").lower() == "local":
         return True
+    if _picked_local(params, getattr(settings, "app_state_path", None)):
+        # `_local_plan` raises `LocalNotReady` with the reason when it cannot
+        # run: a picked local model never quietly becomes a CLI.
+        return True
     from app import localplane
     from app.providers import agent_ready
 
@@ -188,14 +236,38 @@ def _local_asker(settings, params: dict, progress: Progress):
         base_url=plan["url"], serving_name=plan["model"],
         search_base_url=plan["search_url"], search_kind=plan["search_kind"],
         timeout=plan["timeout"],
+        runtime_options=plan.get("runtime_options"),
+        temperature=float(params.get("temperature") or 0),
+        max_tokens=int(params.get("max_tokens") or 1024),
         given_queries=[str(one).strip() for one in (params.get("queries") or [])
-                       if str(one).strip()],
-        quote_repair=bool(params.get("_quote_repair")))
+                       if str(one).strip()])
     progress.log(f"local plane: {plan['line']}")
     researcher.on_action = progress.log
     researcher.check_cancelled = progress.check
     researcher.replies = progress.replies
+    researcher.runtime = plan.get("runtime", {})
+    source_options = _research_options(params, settings.app_state_path)
+    researcher.max_pages = max(1, min(int(source_options["sources"] or 3), 40))
+    researcher.source_instructions = _source_kinds_line(source_options["kinds"])
     return researcher
+
+
+def _local_compare_completer(settings, params: dict, progress: Progress):
+    """A saved comparison needs the local model, not a search service.
+
+    The checks have already been read and grounded. Asking the web again
+    spends a planning call, search calls and page context on unrelated pages.
+    This socket sees only the stored table and cannot quietly replace it.
+    """
+    from app.providers.local_inference import OpenAICompatSocket
+
+    plan = _local_plan({**params, "app_state_path": settings.app_state_path},
+                       with_search=False)
+    progress.log(f"local comparison: {plan['line']}; using saved checks only")
+    return OpenAICompatSocket(
+        plan["url"], plan["model"], timeout=plan["timeout"],
+        max_tokens=2048, reasoning_effort="none", runtime_options=plan.get("runtime_options"),
+    )
 
 
 def _researcher(params: dict):
@@ -207,6 +279,8 @@ def _researcher(params: dict):
     engine owns none, so `kriko.research` could never have built this itself.
     """
     backend = str(params.get("backend") or default_backend(params.get("app_state_path"))).lower()
+    if _picked_local(params):
+        backend = "local"
     if backend == "harness":
         # Same reason as the paid plane below, one layer out: this one spawns a
         # process, and `kriko/` owns no subprocesses any more than it owns
@@ -249,6 +323,7 @@ def _researcher(params: dict):
             search_base_url=plan["search_url"],
             search_kind=plan["search_kind"],
             timeout=plan["timeout"],
+            runtime_options=plan.get("runtime_options"),
             engine=sources and next(iter(sources)) or "",
             scheduler=PolitenessScheduler(sources or {"duckduckgo": 3.5}),
         )
@@ -295,19 +370,54 @@ def _bills_per_token(params: dict, app_state_path=None) -> bool:
         return False
 
 
-def _source_ceiling(params: dict) -> str:
-    """The Run screen's sources slider, as a sentence at the end of the brief.
+def _source_ceiling(params: dict, app_state_path=None) -> str:
+    """The reader's source options, as sentences at the end of the brief.
 
-    A coding-agent CLI has no flag for "read at most N pages", so the ceiling
-    is asked for in the prompt. Empty when the reader set none (B175).
+    A coding-agent CLI has no flag for "read at most N pages" or "go to the
+    forums first", so both are asked for in the prompt. The run's own
+    `max_documents` and `source_kinds` win; otherwise the Agents tab's stored
+    choice applies (`prefs.research_options`). Empty when none is set (B175).
     """
-    wanted = int(params.get("max_documents") or 0)
-    if wanted <= 0:
-        return ""
-    return (
-        f"\n\nRead at most {wanted} source{'s' if wanted != 1 else ''} in total "
-        f"for this task, then write what they support."
-    )
+
+    wanted = _research_options(params, app_state_path)
+    out = ""
+    if wanted["kinds"]:
+        out += "\n\n" + _source_kinds_line(wanted["kinds"])
+    if wanted["sources"] > 0:
+        count = wanted["sources"]
+        out += (f"\n\nRead at most {count} source{'s' if count != 1 else ''} in total "
+                f"for this task, then write what they support.")
+    return out
+
+
+def _source_kinds_line(kinds: list[str]) -> str:
+    """The picked kinds of source, as one instruction."""
+    from app import prefs
+
+    names = [prefs.SOURCE_KINDS[one] for one in kinds if one in prefs.SOURCE_KINDS]
+    return ("Go to these kinds of source first: " + "; ".join(names)
+            + ". Use others only where these say nothing.") if names else ""
+
+
+def _research_options(params: dict, app_state_path=None) -> dict:
+    """The run's source count and kinds, falling back to the stored ones."""
+    from app import prefs
+
+    kinds = params.get("source_kinds") or []
+    if isinstance(kinds, str):
+        kinds = [one.strip() for one in kinds.split(",")]
+    conn = None
+    path = app_state_path or params.get("app_state_path")
+    try:
+        conn = state.connect(path) if path else None
+    except Exception:  # noqa: BLE001 - an unreadable preference is no preference
+        conn = None
+    try:
+        return prefs.research_options(
+            conn, sources=int(params.get("max_documents") or 0), kinds=list(kinds))
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def _cap_agent(researcher, params: dict) -> None:
@@ -641,6 +751,15 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # the presets are bundles of these knobs, never a wall around them.
         from app import scale as scaling
 
+        # The Agents tab's stored source count stands in for a run that named
+        # none, the same as it does for every agent prompt.
+        options = _research_options(
+            {**params, "max_documents": 0}, getattr(settings, "app_state_path", None))
+        if not int(params.get("max_documents") or 0) and not str(params.get("scale") or "") \
+                and options["sources"]:
+            # The stored count stands in only for a run that named neither a
+            # count nor a scale: a reader who picked Deep on Run meant Deep.
+            params = {**params, "max_documents": options["sources"]}
         depth = scaling.applied(str(params.get("scale") or ""), params)
         # Live, per stage and per model, while the run spends — rather than
         # one number on the way out, which arrives too late to act on and
@@ -657,6 +776,10 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             budget_usd=ceiling,
             max_documents=depth["max_documents"],
         )
+        if options["kinds"]:
+            # Every plane's brief carries it (`AgentResearcher.brief`).
+            task = replace(task, guidance=_source_kinds_line(options["kinds"]))
+            progress.log(f"sources first: {', '.join(options['kinds'])}")
         progress.set(0.1, f"planning {task.subject_label}")
         # Recorded on the run, so a thin pack reads as "this was a Quick run"
         # rather than as a quality failure — which is the difference between a
@@ -1690,7 +1813,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     from app import pagefacts
 
     prompt += pagefacts.block(params.get("page"))
-    prompt += _source_ceiling(params)
+    prompt += _source_ceiling(params, settings.app_state_path)
     reply = researcher.ask(prompt)
     progress.check()
     progress.set(0.7, "writing the draft")
@@ -1795,25 +1918,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             store.close()
 
     if _use_local_ask(settings, params):
-        researcher = _local_asker(
-            settings, {**params, "_quote_repair": True}, progress)
-        # Keep a small, structured snapshot on the job while a local run is
-        # still in flight. The Local LLM screen reads these engine facts from
-        # `/api/jobs`; model output and fetched page text never go in the
-        # telemetry snapshot.
-        if callable(getattr(researcher, "telemetry", None)):
-            def report_local_stage(snapshot: dict) -> None:
-                progress.partial({
-                    "product": product,
-                    "cost_basis": "self_hosted",
-                    "model": str(getattr(researcher, "model", "") or ""),
-                    "telemetry": snapshot,
-                    "risks": [],
-                    "specs": [],
-                    "dropped": 0,
-                })
-
-            researcher.on_telemetry = report_local_stage
+        researcher = _local_asker(settings, params, progress)
     else:
         researcher = harness_researcher(
             preferred=str(params.get("harness") or ""),
@@ -1833,49 +1938,32 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     except Exception:  # noqa: BLE001 - a list of packs is never why a look fails
         packs = ""
     progress.set(0.1, f"a quick look at {product}")
-    reply = researcher.ask(
-        quicklook.brief(product, principle, params.get("page"), packs, attributes))
+    try:
+        if hasattr(researcher, "ask_quick"):
+            reply = researcher.ask_quick(product, principle=principle,
+                                         page=params.get("page"), packs=packs, attributes=attributes)
+        else:
+            reply = researcher.ask(
+                quicklook.brief(product, principle, params.get("page"), packs, attributes)
+                + _source_ceiling(params, settings.app_state_path))
+    except Exception as error:
+        progress.partial({"product": product, "diagnostic": {
+            "code": getattr(error, "code", "inference_error"), "message": str(error)},
+            "telemetry": getattr(researcher, "telemetry", {}),
+            "runtime": getattr(researcher, "runtime", {})})
+        raise
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
-    sources = getattr(researcher, "sources", None)
-    found = quicklook.parse(reply, sources)
-    reconcile = getattr(researcher, "reconcile_grounding", None)
-    if callable(reconcile) and sources is not None:
-        reconcile(quicklook.grounded_risk_indices(reply, sources))
+    found = quicklook.parse(reply, getattr(researcher, "sources", None))
     kept = len(found["risks"])
-    telemetry = None
-    if callable(getattr(researcher, "telemetry", None)):
-        grounded = sum(
-            1
-            for risk in found["risks"]
-            if any(source.get("grounded") is True for source in risk.get("sources", []))
-        )
-        if kept == 0 and found["dropped"] == 0:
-            verdict = "No risk claims to verify."
-        elif grounded == kept and found["dropped"] == 0:
-            verdict = f"All {grounded} cited risk quote(s) matched fetched page text."
-        else:
-            verdict = (
-                f"{grounded} cited risk quote(s) matched fetched page text; "
-                f"{found['dropped']} unsupported item(s) were dropped."
-            )
-        telemetry = {
-            **researcher.telemetry("complete"),
-            "self_verification": getattr(researcher, "self_verification", None),
-            "verification": {
-                "checked": grounded,
-                "dropped": found["dropped"],
-                "verdict": verdict,
-            },
-        }
     spent = getattr(researcher, "spent", None)
     billed = getattr(researcher, "cost_basis", "") == "per_token"
     progress.set(1.0, (
         f"{kept} risk(s) found" if kept else "nothing it could source in the time")
         + (f", {found['dropped']} unsourced dropped" if found["dropped"] else "")
         + ((f", ${spent:.2f}" if spent is not None else ", cost unknown") if billed else ""))
-    result = {
+    return {
         "product": product,
         **found,
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
@@ -1884,13 +1972,11 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "cost_basis": getattr(researcher, "cost_basis", "subscription"),
         "spent_usd": spent if billed else None,
         "tokens_used": getattr(researcher, "tokens_used", None),
+        "telemetry": getattr(researcher, "telemetry", {}),
+        "runtime": getattr(researcher, "runtime", {}),
+        "diagnostic": {"code": "answer" if kept or found["specs"] else "no_supported_findings",
+                       "message": "" if kept or found["specs"] else "Pages were read, but no supported findings were kept."},
     }
-    if telemetry is not None:
-        result["telemetry"] = telemetry
-        # The job row can return this final verification even before its
-        # terminal status reaches the jobs-list poll.
-        progress.partial(result)
-    return result
 
 
 def _install_draft(settings, written: dict, progress: Progress) -> str:
@@ -1935,8 +2021,13 @@ QUICK_APPEAR_SECONDS = 5.0
 QUICK_POLL_SECONDS = 0.2
 
 
-def _await_quick_look(settings, progress: Progress) -> dict:
+def _await_quick_look(settings, progress: Progress, params: dict | None = None) -> dict:
     """What the quick look beside this job concluded, or `{}`.
+
+    A quick look is its own saved job, not half of a pack (the reader: "Quick
+    looks shouldn't be a pack but quick looks can be a part of a pack"). When
+    the reader asks for one to join a pack afterwards, the pack run names it
+    (`quick_job_id`) and reads its stored result here without waiting.
 
     The deepen job needs the quick look's answer before it can choose a pack:
     which installed pack the product belongs in, and the sourced risks that
@@ -1945,6 +2036,17 @@ def _await_quick_look(settings, progress: Progress) -> dict:
     without those risks.
     """
     conn = state.connect(settings.app_state_path)
+    named = str((params or {}).get("quick_job_id") or "").strip()
+    if named:
+        try:
+            job = state.get_job(conn, named)
+        finally:
+            conn.close()
+        if job and job["kind"] == "quick_look" and job["state"] == state.SUCCEEDED:
+            progress.log(f"adding the saved quick look {named} to a pack")
+            return job["result"] or {}
+        progress.log(f"the saved quick look {named} is not a finished look; carrying on without it")
+        return {}
     try:
         began = time.monotonic()
         said = False
@@ -2026,7 +2128,7 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
     from app import categorypack, packauthor, pagefacts
     from kriko.gates import load_gates
 
-    quick = _await_quick_look(settings, progress)
+    quick = _await_quick_look(settings, progress, params)
     said = str(quick.get("category") or "").strip()
     target = categorypack.resolve(
         categorypack.candidates(settings.store_path),
@@ -2622,7 +2724,12 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         # A pack's gold set still runs when named, so an author can measure
         # their own bar; it is never the default.
         from app import benchcases
-        found = benchcases.case_rows(limit)
+        selected = params.get("case_ids") or []
+        found = benchcases.case_rows(50 if selected else limit)
+        if selected:
+            found = [one for one in found if one["id"] in selected]
+            if not found:
+                raise ValueError("no selected test case exists in this test set")
         graded = bool(found)
         if not found:
             found = bench_mod.gold_cases(conn, pack_id=pack_id, limit=limit)
@@ -2675,7 +2782,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         # harness CLIs' names with the paid catalogue's made runs that could
         # only fail.
         runs_of = bench_mod.pairs(
-            chosen, [one for one in models_asked if one], bench_mod.llm_owners(),
+            chosen, [one for one in models_asked if one], bench_mod.owners_for(params),
         )
         total = (
             len(found) * len(runs_of) * len(protocols_asked)
@@ -2708,6 +2815,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         batch_id=batch_id,
                         search=search,
                         model=model,
+                        run_settings={key: params[key] for key in ("timeout_seconds", "temperature", "max_tokens", "harness") if key in params},
                         check_cancelled=progress.check,
                     )
                     row["rep"] = rep
@@ -2814,7 +2922,26 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     progress.set(0.05, "lining up the shortlist")
     for stored in answers:
         progress.log(f"{stored['label']}: {len(stored['response'].get('claims') or [])} known risk(s)")
-    reply = _ask_about_checks(settings, params, progress, _compare_brief(question, answers))
+    local = _use_local_ask(settings, params)
+    agent: dict = {}
+    if local:
+        completer = _local_compare_completer(settings, params, progress)
+        brief = _compare_brief(
+            question, answers,
+            max_chars=max(3000, completer.context_chars - 2500),
+        )
+        progress.log(f"comparison brief: {len(brief)} characters from saved checks; no web search")
+        progress.set(0.2, f"asking: {question[:120]}")
+        reply = completer(brief).strip()
+        progress.check()
+    else:
+        brief = _compare_brief(question, answers)
+
+        def report_agent(identity: dict) -> None:
+            agent.update(identity)
+
+        reply = _ask_about_checks(settings, params, progress, brief,
+                                  on_agent=report_agent)
     progress.log(reply[:4000] or "(the agent printed nothing)")
     progress.set(0.9, "writing the answer down")
     app_state = state.connect(settings.app_state_path)
@@ -2826,7 +2953,20 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     if not row:
         raise ValueError("the question is gone — the draft was deleted while it ran")
     progress.set(1.0, "answered" if reply else "the agent printed nothing")
-    return {"draft_id": draft_id, "question_id": question_id, "answer": reply}
+    source_summary = [
+        {"name": str(stored["label"]),
+         "risks": len(stored["response"].get("claims") or [])}
+        for stored in answers
+    ]
+    return {
+        "draft_id": draft_id, "question_id": question_id, "answer": reply,
+        "source": "saved checks", "saved_checks": source_summary,
+        "brief_chars": len(brief), "web_searches": 0 if local else None,
+        "model": str(getattr(completer, "model", "") if local else agent.get("model", "")),
+        "tokens_used": getattr(completer, "tokens_used", None) if local else None,
+        "tokens_in": getattr(completer, "tokens_in", None) if local else None,
+        "tokens_out": getattr(completer, "tokens_out", None) if local else None,
+    }
 
 
 def lookup_ask(settings, params: dict, progress: Progress) -> dict:
@@ -2838,7 +2978,7 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
     question = str(params.get("question") or "").strip()
     conn = state.connect(settings.app_state_path)
     try:
-        stored = state.get_lookup(conn, lookup_id)
+        stored = state.saved_answer(conn, lookup_id)
         previous = state.lookup_questions(conn, lookup_id)
     finally:
         conn.close()
@@ -2884,6 +3024,7 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     local = _use_local_ask(settings, params)
     if local:
         researcher = _local_asker(settings, params, progress)
+
     else:
         if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
             raise ValueError(
@@ -2917,7 +3058,9 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     return reply
 
 
-def _compare_brief(question: str, answers: list[dict]) -> str:
+
+def _compare_brief(question: str, answers: list[dict], *,
+                   max_chars: int | None = None) -> str:
     """The table the question is about, as the agent's own reading material.
 
     Every word of it comes from the stored answers themselves — labels,
@@ -2932,9 +3075,14 @@ def _compare_brief(question: str, answers: list[dict]) -> str:
         "",
         "Answer about the products below, using their recorded risks and "
         "specifications. Where the records do not answer the question, say "
-        "so plainly rather than guessing. Do not invent risks.",
+        "so plainly rather than guessing. Do not invent risks. A product "
+        "with no recorded risk is not proven risk-free. Name the product and "
+        "recorded risk behind each conclusion, and cite the recorded source "
+        "(its page and quote) that supports it.",
         "",
     ]
+    if max_chars is not None:
+        return _compact_compare_brief(lines, question, answers, max_chars)
     for stored in answers:
         response = stored["response"]
         lines.append(f"## {stored['label']}")
@@ -2949,6 +3097,7 @@ def _compare_brief(question: str, answers: list[dict]) -> str:
                 if claim.get("advice"):
                     line += f" (advice: {claim['advice']})"
                 lines.append(line)
+                lines.extend(_source_lines(claim))
         else:
             lines.append("Known risks: none recorded.")
         if response.get("context"):
@@ -2958,6 +3107,100 @@ def _compare_brief(question: str, answers: list[dict]) -> str:
                 lines.append(f"- {key}: {value}{(' ' + unit) if unit else ''}")
         lines.append("")
     return "\n".join(lines)
+
+
+def _compact_compare_brief(lines: list[str], question: str,
+                           answers: list[dict], max_chars: int) -> str:
+    """Give each product a fair share of a small model's context.
+
+    Claim order is the lookup's ranking. Question word overlap brings a
+    directly relevant claim forward without another model call. Anything
+    omitted is counted, so a short brief cannot masquerade as full coverage.
+    """
+    import re
+
+    words = {w for w in re.findall(r"\w{2,}", question.casefold())
+             if w not in {"which", "what", "this", "that", "with", "from", "these", "about"}}
+    lines.insert(-1, "Severity order, most to least serious: critical > high > medium > low. "
+                 "For a severity comparison, check that order before deciding. "
+                 "Severity alone does not establish repair cost.")
+    # Long questions compete with all four product sections for one context.
+    # Keep enough room for every product before deciding how much to retain.
+    fixed_head = len("\n".join(lines)) - len(question)
+    question_room = max(200, max_chars - fixed_head - len(answers) * 260)
+    if len(question) > question_room:
+        lines[1] = f"QUESTION: {question[:question_room - 23]} [question truncated]"
+    head = "\n".join(lines)
+    share = max(0, (max_chars - len(head) - len(answers) * 2)
+                // max(1, len(answers)))
+    sections = []
+    for stored in answers:
+        response = stored["response"]
+        claims = response.get("claims") or []
+        title = f"## {str(stored['label'])[:120]}"
+        section = [title, f"Recorded risks: {len(claims)} total."]
+        room = share - len("\n".join(section)) - 80
+        units = _context_units_of(response)
+        for key, value in sorted((response.get("context") or {}).items()):
+            item = f"- {str(key)[:80]}: {str(value)[:120]} {str(units.get(key, ''))[:30]}".rstrip()
+            if len(item) + 1 > room:
+                break
+            section.append(item)
+            room -= len(item) + 1
+        ranked = sorted(enumerate(claims), key=lambda pair: (
+            -len(words & set(re.findall(r"\w{2,}",
+                " ".join(str(pair[1].get(k) or "") for k in ("title", "body", "advice")).casefold()))),
+            pair[0],
+        ))
+        shown = 0
+        for _, claim in ranked:
+            item = (f"- [{str(claim.get('severity') or '')[:20]}] "
+                    f"{str(claim.get('title') or '')[:160]}: "
+                    f"{str(claim.get('body') or '')[:340]}")
+            if claim.get("advice"):
+                item += f" (advice: {str(claim['advice'])[:180]})"
+            # The first source rides along when it fits: a small model's
+            # answer can then name the page, not only the claim.
+            cited = _source_lines(claim, limit=1, quote_chars=160)
+            if cited and len(item) + len(cited[0]) + 2 <= room:
+                item += "\n" + cited[0]
+            if len(item) + 1 > room:
+                continue
+            section.append(item)
+            room -= len(item) + 1
+            shown += 1
+        if shown < len(claims):
+            section.append(f"Risks shown: {shown} of {len(claims)}; {len(claims) - shown} "
+                           "recorded risks omitted from this brief.")
+        else:
+            section.append(f"Risks shown: all {len(claims)} recorded risks. "
+                           "Unrecorded risks may still exist.")
+        sections.append("\n".join(section))
+    return head + "\n" + "\n\n".join(sections)
+
+
+def _source_lines(claim: dict, *, limit: int = 3, quote_chars: int = 300) -> list[str]:
+    """A claim's recorded sources as brief lines: the page, then its quote.
+
+    The reader: "in compare agents do not read the sources of the knowledge."
+    The brief carried each claim's words and dropped the evidence under it,
+    so an agent could weigh claims but never the pages behind them. Sources
+    are passed through as stored, any category's alike.
+    """
+    out = []
+    for source in (claim.get("sources") or [])[:limit]:
+        if not isinstance(source, dict):
+            continue
+        url = str(source.get("url") or "").strip()
+        quote = " ".join(str(source.get("quote") or "").split())[:quote_chars]
+        if not (url or quote):
+            continue
+        tier = str(source.get("tier") or source.get("source_tier") or "").strip()
+        line = f"    source: {url}" + (f" [{tier}]" if tier else "")
+        if quote:
+            line += f' "{quote}"'
+        out.append(line)
+    return out
 
 
 def _context_units_of(response: dict) -> dict:

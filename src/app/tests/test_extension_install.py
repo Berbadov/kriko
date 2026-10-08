@@ -9,12 +9,23 @@ install that silently reaches nothing) looks identical to a bad install.
 
 import json
 import re
+import sys
 
 from fastapi.testclient import TestClient
 
 from app import extension
 from app.web.app import create_app
 from app.web.settings import EXTENSION_PORT, Settings
+
+
+def test_reveal_selects_extension_folder_in_parent_on_windows(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(extension.subprocess, "Popen", lambda command, **kwargs: calls.append(command))
+
+    path = tmp_path / "extension"
+    assert extension.reveal(path) == ""
+    assert calls == [["explorer", "/select,", str(path)]]
 
 
 def _client(tmp_path, **over):
@@ -162,13 +173,16 @@ def test_an_ordinary_request_is_not_a_sighting(tmp_path):
 
 
 def test_the_page_is_told_when_the_extension_port_is_not_ours(tmp_path):
-    """The extension cannot be handed a port, so it hardcodes one.
+    """The page reports the listener port selected for this engine.
 
     When something else on the machine holds it, the extension installs
     perfectly and fails on every listing — and the reader's obvious response,
     reinstalling the extension, never helps. The app knows; it has to say.
     """
     assert _client(tmp_path).get("/api/extension").json()["port"] == EXTENSION_PORT
+    selected = _client(tmp_path, extension_port=8790)
+    assert selected.get("/api/extension").json()["port"] == 8790
+    assert selected.get("/api/health").json()["extension_port"] == 8790
     assert _client(tmp_path).get("/api/extension").json()["port_is_ours"] is False
     assert (
         _client(tmp_path, extension_port_bound=True).get("/api/extension").json()[
