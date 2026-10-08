@@ -19,6 +19,7 @@ mod marks;
 mod screens;
 mod shell;
 mod theme;
+mod text_input;
 
 use std::borrow::Cow;
 

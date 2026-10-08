@@ -28,6 +28,7 @@ HARNESS = "preferred_harness"
 #: reader's choice is one setting, but it is never an agent id, and a door
 #: that checks a pick against the installed CLIs must let it through.
 LOCAL_PICK = "local"
+AGENT_ORDER = "agent_order"
 MODEL = "llm_model"
 SEARCH = "search_provider"
 
@@ -97,7 +98,11 @@ LOCAL_URL = "local_url"
 LOCAL_MODEL = "local_model"
 LOCAL_SEARCH_URL = "local_search_url"
 LOCAL_TIMEOUT = "local_timeout"
-LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT)
+LOCAL_DEVICE = "local_device"
+LOCAL_CONTEXT = "local_context_tokens"
+LOCAL_GPU_LAYERS = "local_gpu_layers"
+LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT,
+              LOCAL_DEVICE, LOCAL_CONTEXT, LOCAL_GPU_LAYERS)
 
 #: What every agent run reads, set once on the Agents tab: how many sources
 #: at most (empty or 0 leaves it to the run), and which kinds of source to go
@@ -171,7 +176,7 @@ def run_concurrency(conn) -> int:
     return max(1, min(wanted, MAX_RUN_CONCURRENCY))
 
 
-KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS,
+KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, *RESEARCH_KEYS,
         RUN_CONCURRENCY)
 

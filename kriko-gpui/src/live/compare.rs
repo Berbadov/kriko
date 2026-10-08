@@ -1144,7 +1144,7 @@ impl Kriko {
             }
             c.note_open = None;
         }
-        self.compare_note_input.value.clear();
+        self.compare_note_input.set_value(String::new());
         self.save_board_soon(cx);
     }
 
@@ -1279,7 +1279,7 @@ impl Kriko {
                     this.live.compare.asking = false;
                     say_error(this, &reply);
                     if reply.is_ok() {
-                        this.compare_question_input.value.clear();
+                        this.compare_question_input.set_value(String::new());
                         this.load_drafts(false, cx);
                         this.load_questions(draft, cx);
                     }

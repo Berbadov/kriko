@@ -346,6 +346,11 @@ def detail(store, app_conn, host: str) -> dict | None:
     from kriko.adapters import declared_labels
     spec = adapter_for(store, app_conn, f"https://{wanted}/")
     if spec is None:
+        # A detail view describes a host's adapter; its root need not be a
+        # listing URL accepted by that adapter.
+        spec = next((one for one in load_adapters(store)
+                     if host_of(one.get("site", "")) == wanted), None)
+    if spec is None:
         return None
     rows = local_rows(app_conn) if app_conn is not None else []
     local = next((row for row in rows if row["host"] == wanted), None)

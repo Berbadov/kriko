@@ -66,6 +66,7 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
 pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
     let motion = !app.reduce_motion;
     let key_input = app.input_field(Field::KeyValue, "key-value", "Paste the key, then Save", None, window, cx);
+    let runtime = crate::screens::local::runtime_settings(app, cx);
     let k = &app.live.knowledge;
 
     // ---- general ----
@@ -188,7 +189,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         let id = target.id.clone();
         let save = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             let value = this.key_value.value.trim().to_string();
-            this.key_value.value.clear();
+            this.key_value.set_value(String::new());
             this.save_key(id.clone(), value, cx);
             cx.notify();
         });
@@ -302,6 +303,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                         .gap(px(24.0))
                         .child(general)
                         .child(runs)
+                        .child(runtime)
                         .child(shortcuts),
                 )
                 .child(

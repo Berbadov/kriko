@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import threading
 import time
+import sys
 from pathlib import Path
 
 CACHE_SECONDS = 60.0
@@ -99,7 +100,7 @@ def _ram_total_mb() -> int | None:
 
 def _cpu_name() -> str | None:
     try:
-        if os.name == "nt":
+        if sys.platform == "win32":
             import winreg
 
             with winreg.OpenKey(

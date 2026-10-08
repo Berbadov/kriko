@@ -3,8 +3,8 @@
 Ollama is the one runtime that takes a download over HTTP: `POST /api/pull`
 streams newline-delimited JSON, one line per step, and says `{"error": ...}`
 when it cannot. This module relays that stream into a job's progress and
-nothing else. It knows no model name, size or catalogue: the model is the
-reader's to name, and the size is whatever Ollama reports for it.
+nothing else. Downloadable names come from Ollama's public library. Installed sizes and
+progress are whatever the runtime reports for them.
 
 A download is many layers, each with its own `total` and `completed`; the job
 shows the sum, so the bar moves forward as a whole instead of restarting for
@@ -158,3 +158,31 @@ def _error_text(body: bytes) -> str:
     if isinstance(said, dict):
         return str(said.get("error") or "")
     return ""
+
+
+_LIBRARY = "https://ollama.com/library"
+_LIBRARY_NAMES = re.compile(r'href=["\']/library/([A-Za-z0-9_.:-]+)["\']')
+_library_cache: tuple[float, list[str]] | None = None
+
+
+def available(*, opener=None, fresh: bool = False) -> list[str]:
+    """Read the provider's public names only when the reader opens the drawer.
+
+    Keep successful reads for six hours; failed reads are retryable. The HTML
+    never enters an inference prompt. No provider model names live in the UI.
+    """
+    global _library_cache
+    now = time.monotonic()
+    if not fresh and _library_cache is not None and now - _library_cache[0] < 21600:
+        return list(_library_cache[1])
+    opener = opener or urllib.request.urlopen
+    try:
+        with opener(_LIBRARY, timeout=8) as response:
+            html = response.read(2_000_000).decode("utf-8", "replace")
+        names = list(dict.fromkeys(_LIBRARY_NAMES.findall(html)))[:100]
+        if not names:
+            raise RuntimeError("Ollama's library returned no model choices. Open the provider library or retry.")
+    except (OSError, ValueError) as error:
+        raise RuntimeError(f"Could not read Ollama's model library: {error}") from error
+    _library_cache = (now, names)
+    return list(names)

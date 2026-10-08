@@ -89,7 +89,7 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
     page = page.child(start_card(app, window, cx));
     if let Some(job) = &job {
         page = page.child(lane_card(app, job, motion));
-        page = page.child(feed_card(app, job, motion, cx));
+        page = page.child(card().child(crate::screens::logs::job_logs(app, job, cx)));
     }
     page
 }
@@ -169,6 +169,19 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
         let note = api::s(verification, "note");
         if !note.is_empty() {
             card = card.child(row_desc(&note));
+        }
+    } else if let Some(check) = result.get("telemetry").and_then(|t| t.get("self_verify")) {
+        card = card.child(row_desc("Model self-check opinions; exact source quotes remain the evidence gate."));
+        if let Some(verdicts) = check.get("verdicts").and_then(|v| v.as_array()) {
+            for verdict in verdicts {
+                let index = api::n(verdict, "index").unwrap_or(0.0) as usize;
+                let title = risks.get(index).map(|risk| api::s(risk, "title")).unwrap_or_default();
+                let supported = verdict.get("supported").and_then(|v| v.as_bool()).unwrap_or(false);
+                card = card.child(row_desc(&format!("{} · {} · {}", title,
+                    if supported { "supported" } else { "flagged" }, api::s(verdict, "reason"))));
+            }
+        } else {
+            card = card.child(row_desc(&format!("Self-check unavailable: {} {}", api::s(check, "status"), api::s(check, "message"))));
         }
     } else {
         card = card.child(mono("Self-check verdict not recorded for this run", DIM));
