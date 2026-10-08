@@ -4,6 +4,7 @@
     import { api } from "./lib/api";
     import History from "./lib/History.svelte";
     import Lazy from "./lib/Lazy.svelte";
+    import JackMark from "./lib/kriko/JackMark.svelte";
     import { watchFocus } from "./lib/focus";
     import { route, toHash } from "./lib/router";
     import CloseNotice from "./lib/shell/CloseNotice.svelte";
@@ -161,7 +162,7 @@
     <main class="work" class:with-history={showHistory} class:centred={boarding}>
         <div class="view" bind:this={viewEl} tabindex="-1">
             {#await ready}
-                <p class="state loading">Starting…</p>
+                <p class="state loading loading-mark"><JackMark />Starting…</p>
             {:then}
                 <!-- Keyed so a view arrives rather than swapping in place: at a
                      glance, an instant repaint of a same-shaped page is hard to

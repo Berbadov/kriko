@@ -1,6 +1,7 @@
 <script lang="ts">
     import { untrack, type Snippet } from "svelte";
     import Failure from "./Failure.svelte";
+    import JackMark from "./kriko/JackMark.svelte";
     import { remedyFor } from "./failure";
 
     let {
@@ -79,7 +80,7 @@
     {:else if skeleton}
         {@render skeleton()}
     {:else}
-        <p class="state loading">{loading}</p>
+        <p class="state loading loading-mark"><JackMark />{loading}</p>
     {/if}
     {#snippet failed(error, reset)}
         <div class="failure" role="alert">

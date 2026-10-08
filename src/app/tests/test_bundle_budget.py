@@ -104,7 +104,12 @@ import pytest
 #: and research them in turn), `Local.svelte` (the local plane's own screen) and
 #: the `kriko/` control kit — 11 components — plus the shared `types.ts` and
 #: `stub-fetch.ts` the new tests stub against. 340,237 bytes.
-BUDGET = {".js": 342_000, ".css": 82_000}
+#: Raised .js from 342,000 to 360,000 on 2026-10-08: the agent pipeline scene
+#: on the Run screen (`PipelineScene.svelte`, and `pipelineScene.ts`, which is
+#: the MotionLab's full-run frame ported as pure geometry) and the jack loader
+#: inline in each loading sentence. No dependency: the scene is hand-written
+#: and the bundle grew 12,800 bytes, from 340,301 to 353,100.
+BUDGET = {".js": 360_000, ".css": 82_000}
 
 #: Chunks deliberately kept out of the first paint, by the stem Vite names them
 #: with. Empty since the terminal left, and that is the honest state — the
@@ -127,7 +132,11 @@ DEFERRED: tuple[str, ...] = ()
 #: and the reasoning at the top of this file says why nothing should be — so this
 #: is what every reader waits on before the window draws. That is worth knowing,
 #: which is why the number is written down rather than trimmed.
-FIRST_PAINT_BUDGET = 424_000
+#: Raised to 440,000 on 2026-10-08 for the same reason as .js above. The
+#: eager payload is now 353,100 bytes of JS and 81,259 of CSS, 434,359 in
+#: all, up from 420,630. Nothing is deferred; the pipeline scene is on the
+#: Run screen, which every reader can reach, so it is first paint like the rest.
+FIRST_PAINT_BUDGET = 440_000
 
 #: The whole payload, gzipped or not, including the index and any asset Vite
 #: emitted beside the two bundles. What the window actually has to read.
