@@ -164,6 +164,9 @@ pub struct State {
     pub erase_busy: bool,
 }
 
+/// The engine's own ceiling (`prefs.MAX_RUN_CONCURRENCY`); it clamps too.
+pub const RUNS_MAX: usize = 4;
+
 const REG_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const REG_VALUE: &str = "Kriko";
 
@@ -196,6 +199,7 @@ impl Kriko {
             Tab::Sites => self.refresh_sites(cx),
             Tab::Extension => self.refresh_extension(cx),
             Tab::Settings => {
+                self.refresh_settings(cx);
                 self.refresh_keys(cx);
                 self.refresh_health(cx);
             }
@@ -636,6 +640,17 @@ impl Kriko {
                 if let Some(on) = v.get("app.reduce_motion").and_then(|x| x.as_bool()) {
                     this.reduce_motion = on;
                 }
+                // A number from this screen, a string from `/api/prefs`.
+                let runs = v.get("run_concurrency").and_then(|x| {
+                    x.as_u64().or_else(|| x.as_str().and_then(|s| s.trim().parse().ok()))
+                });
+                if let Some(n) = runs {
+                    let n = (n as usize).clamp(1, RUNS_MAX);
+                    if n != this.run_concurrency {
+                        this.run_concurrency_prev = this.run_concurrency - 1;
+                        this.run_concurrency = n;
+                    }
+                }
                 this.live.knowledge.settings_loaded = true;
             }
         });
@@ -653,6 +668,15 @@ impl Kriko {
                 }
             },
         );
+    }
+
+    /// How many agent runs the engine may have going at once. Two on one
+    /// pack still take turns; that is the engine's rule, not this screen's.
+    pub fn set_run_concurrency(&mut self, n: usize, cx: &mut Context<Self>) {
+        let n = n.clamp(1, RUNS_MAX);
+        self.run_concurrency_prev = self.run_concurrency - 1;
+        self.run_concurrency = n;
+        self.save_setting("run_concurrency", Value::from(n as u64), cx);
     }
 
     pub fn set_reduce_motion(&mut self, on: bool, cx: &mut Context<Self>) {
