@@ -328,6 +328,49 @@ class LocalPlane:
                         "what it finished is kept, the rest is a miss")
             self._say(self.note)
         found = self._parse(task, batch, reply)
+        payload = _salvage_array(self._unfence(reply))
+        if isinstance(payload, list):
+            from kriko.research.api import _grounding_form
+            texts = {one.url: one.text for one in batch}
+            repairable = []
+            for index, item in enumerate(payload):
+                if not isinstance(item, dict):
+                    continue
+                url = str(item.get("source_url") or (batch[0].url if len(batch) == 1 else ""))
+                quote = str(item.get("quote") or "")
+                if url in texts and quote and _grounding_form(quote) not in _grounding_form(texts[url]):
+                    repairable.append({"index": index, "source_url": url,
+                                       "title": str(item.get("title") or ""), "quote": quote})
+                if len(repairable) == 6:
+                    break
+            if repairable:
+                self._say(f"repairing {len(repairable)} unsupported quote(s) once")
+                repair_prompt = ("Copy a short exact quote from the cited document for each entry. "
+                                 "Reply ONLY a JSON array of {index,quote}. Empty quote if no "
+                                 "support exists. Do not change the claim or its URL.\n"
+                                 + json.dumps(repairable, ensure_ascii=False) + "\n" + blocks)
+                allowed = getattr(self._complete, "prompt_chars_allowed", None)
+                if not callable(allowed) or len(repair_prompt) <= allowed():
+                    self.check_cancelled()
+                    set_schema = getattr(self._complete, "set_schema", lambda _schema: None)
+                    set_schema({"type": "array", "items": {"type": "object", "properties": {
+                        "index": {"type": "integer"}, "quote": {"type": "string"}}, "required": ["index", "quote"]}})
+                    try:
+                        repairs = _salvage_array(self._unfence(self._complete(repair_prompt)))
+                        self.spent_calls += 1
+                        valid = {one["index"] for one in repairable}
+                        for repair in repairs or []:
+                            if (isinstance(repair, dict) and isinstance(repair.get("index"), int)
+                                    and not isinstance(repair["index"], bool) and repair["index"] in valid):
+                                payload[repair["index"]]["quote"] = str(repair.get("quote") or "")
+                        found = self._parse(task, batch, json.dumps(payload, ensure_ascii=False))
+                    except Exception as error:  # noqa: BLE001 - original grounded findings remain valid
+                        self._say(f"quote repair failed: {error}")
+                        self.check_cancelled()
+                    finally:
+                        set_schema({"type": "array", "items": {"type": "object", "properties": {
+                            key: {"type": "string"} for key in ("source_url", "title", "domain", "severity", "quote", "body", "advice")},
+                            "required": ["source_url", "title", "quote", "body"]}})
         if not any(found.values()) and reply.strip():
             self.note = ("the reply held no grounded finding "
                          "(its text may not have been JSON)")

@@ -161,7 +161,9 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     // name the agent/model and let the reader open the complete answer/log.
     let recent_jobs: Vec<_> = app.live.run.jobs.iter()
         .filter(|job| job.is_research_like() || job.kind == "compare_ask")
-        .take(20)
+        .filter(|job| query.is_empty() || format!("{} {} {} {} {}", job.kind, job.harness, job.model,
+            job.state, app.live.run.task(job)).to_lowercase().contains(&query))
+        .take(20).cloned()
         .collect();
     let mut runs = card().flex().flex_col().gap(px(10.0))
         .child(div().mb(px(4.0)).child(eyebrow("Agent runs")));
@@ -194,19 +196,17 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     .child(row_desc(&line)))
                 .child(ghost(("activity-run", i), if open { "Hide details" } else { "View details" }).on_click(toggle)),
         );
+        runs = runs.child(crate::screens::logs::job_logs(app, job, cx));
         if open {
             if !job.answer.is_empty() {
                 runs = runs.child(row_desc(&format!("Answer: {}", job.answer)));
-            } else if job.done && !job.no_answer_why.is_empty() {
-                runs = runs.child(row_desc(&format!("No answer: {}", job.no_answer_why)));
+            } else if job.done {
+                let reason = if job.state == "failed" { job.message.as_str() } else if !job.no_answer_why.is_empty() {
+                    job.no_answer_why.as_str()
+                } else { "The agent returned no answer text. Open the saved run for its findings and evidence." };
+                runs = runs.child(row_desc(&format!("No answer: {reason}")));
             }
-            let log = if !job.log.is_empty() {
-                job.log.clone()
-            } else {
-                job.feed.iter().map(|line| line.text.as_str()).collect::<Vec<_>>().join("\n")
-            };
-            runs = runs.child(well().p(px(12.0)).font_family(MONO).text_size(px(12.0))
-                .text_color(rgb(INK_2)).child(if log.is_empty() { "This run left no log.".to_string() } else { log }));
+
         }
     }
 
