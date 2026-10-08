@@ -143,8 +143,37 @@ def research_options(conn, *, sources: int = 0, kinds: list[str] | None = None) 
     }
 
 
+#: How many agent runs the job runner may have going at once (#133). The
+#: reader's words: "concurrent agent runs, with options in settings". Unset
+#: means one, which is how every run went before the choice existed.
+RUN_CONCURRENCY = "run_concurrency"
+#: The ceiling Settings offers. Each run is a CLI process or a model's
+#: attention plus its own fetches; past four the machine, the provider's rate
+#: limit and the reader's bill all say no before this number would.
+MAX_RUN_CONCURRENCY = 4
+
+
+def run_concurrency(conn) -> int:
+    """How many runs at once, clamped to 1..`MAX_RUN_CONCURRENCY`.
+
+    Read through `state.all_settings` rather than `read`, because Settings
+    stores it as a number and `read` would hand back a string. Either form
+    parses; anything that does not is one, never an error, since a job must
+    not fail to start over a preference.
+    """
+    from app.web import state
+
+    stored = state.all_settings(conn).get(RUN_CONCURRENCY) if conn is not None else None
+    try:
+        wanted = int(str(stored).strip() or 1) if stored is not None else 1
+    except ValueError:
+        wanted = 1
+    return max(1, min(wanted, MAX_RUN_CONCURRENCY))
+
+
 KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS,
-        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, *RESEARCH_KEYS)
+        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, *RESEARCH_KEYS,
+        RUN_CONCURRENCY)
 
 
 def for_role(conn, role: str, override: str = "") -> str:
