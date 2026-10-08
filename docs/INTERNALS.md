@@ -45,12 +45,16 @@ written at acceptance (`app/findings.py`).
 
 ## The jobs plane
 
-Long work is a row, not a request.
+Long work is a row, not a request. How many run at once is the reader's
+Settings choice (`run_concurrency`, 1 to 4, one by default); each job claims
+the pack it writes (`jobs.claims`), two overlapping claims never run
+together, and a kind whose target cannot be named runs alone. Quick looks
+keep their own lane.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    P["POST /api/research<br/>POST /api/packs/build"]:::ice --> R["JobRunner<br/>one worker, web/jobs.py"]:::brand
+    P["POST /api/research<br/>POST /api/packs/build"]:::ice --> R["JobRunner<br/>N at once, one per pack, web/jobs.py"]:::brand
     R --> T["web/tasks.py<br/>settings, params, progress"]:::plain
     R <--> S[("app.sqlite jobs")]:::plain
     S --> V["GET /api/jobs/{job_id}<br/>/stream (SSE)"]:::ice
