@@ -73,6 +73,10 @@ FINDINGS_SCHEMA = {
 class LocalInferenceError(RuntimeError):
     """The local server did not produce a completion, and why, in words."""
 
+    def __init__(self, message: str, *, code: str = "inference_error"):
+        super().__init__(message)
+        self.code = code
+
 
 class OpenAICompatSocket:
     """A completion socket for a local inference server.
@@ -94,13 +98,16 @@ class OpenAICompatSocket:
                  temperature: float = 0.0,
                  context_chars: int = 12000,
                  max_tokens: int | None = DEFAULT_MAX_TOKENS,
-                 response_json_schema: dict | str = ""):
+                 response_json_schema: dict | str = "",
+                 reasoning_effort: str = "", runtime_options: dict | None = None):
         self.base_url = base_url.rstrip("/").removesuffix("/v1")
         self.serving_name = serving_name
         self.timeout = timeout
         self.temperature = temperature
         self.context_chars = context_chars
         self.max_tokens = max_tokens
+        self.reasoning_effort = reasoning_effort.strip()
+        self.runtime_options = dict(runtime_options or {})
         if isinstance(response_json_schema, str):
             response_json_schema = (json.loads(response_json_schema)
                                     if response_json_schema.strip() else {})
@@ -121,6 +128,9 @@ class OpenAICompatSocket:
     def __call__(self, prompt: str) -> str:
         return self.complete(prompt)
 
+    def set_schema(self, schema: dict) -> None:
+        self._schema = schema
+
     def complete(self, prompt: str) -> str:
         body = {
             "model": self.serving_name,
@@ -130,6 +140,8 @@ class OpenAICompatSocket:
         }
         if isinstance(self.max_tokens, int) and self.max_tokens > 0:
             body["max_tokens"] = self.max_tokens
+        if self.reasoning_effort:
+            body["reasoning_effort"] = self.reasoning_effort
         if self._schema:
             body["response_format"] = {
                 "type": "json_schema",
@@ -143,21 +155,35 @@ class OpenAICompatSocket:
                 # idle connection. One plain retry, schema dropped too,
                 # since a server caught mid-load can refuse it as well.
                 body.pop("response_format", None)
+                body.pop("reasoning_effort", None)
                 try:
                     payload = self._post(body)
                 except urllib.error.HTTPError as again:
                     raise self._refused(again) from again
                 except Exception as other:  # noqa: BLE001
                     raise self._failed(other) from other
-            elif error.code == 400 and "response_format" in body:
-                # The server cannot constrain its output; ask plainly.
-                body.pop("response_format")
-                try:
-                    payload = self._post(body)
-                except urllib.error.HTTPError as again:
-                    raise self._refused(again) from again
-                except Exception as other:  # noqa: BLE001
-                    raise self._failed(other) from other
+            elif error.code == 400 and ("response_format" in body
+                                         or "reasoning_effort" in body):
+                # The server cannot take a field it does not know: it cannot
+                # constrain its output, or it does not speak this effort
+                # dialect. Either optional field may be the refused one, so
+                # they are dropped one at a time — schema first, the older
+                # refusal — and each drop earns one retry.
+                payload = None
+                for optional in ("response_format", "reasoning_effort"):
+                    if optional not in body:
+                        continue
+                    body.pop(optional)
+                    try:
+                        payload = self._post(body)
+                        break
+                    except urllib.error.HTTPError as again:
+                        if again.code != 400:
+                            raise self._refused(again) from again
+                    except Exception as other:  # noqa: BLE001
+                        raise self._failed(other) from other
+                if payload is None:
+                    raise self._refused(error) from error
             else:
                 raise self._refused(error) from error
         except Exception as error:  # noqa: BLE001 - named for the reader below
@@ -177,11 +203,11 @@ class OpenAICompatSocket:
                 raise LocalInferenceError(
                     f"{self.base_url} cut {self.serving_name!r} off at "
                     f"{self.max_tokens} tokens before it wrote anything. The "
-                    "page may be too long for this model's context.")
+                    "page may be too long for this model's context.", code="truncated")
             raise LocalInferenceError(
                 f"{self.base_url} answered with an empty reply from "
                 f"{self.serving_name!r}: the model produced no text. Try a "
-                "larger model, or check that it is loaded.")
+                "larger model, or check that it is loaded.", code="empty_reply")
         return text
 
     def context_tokens(self) -> int:
@@ -195,6 +221,9 @@ class OpenAICompatSocket:
         `DEFAULT_CONTEXT_TOKENS` when none answers. Kept once found; not
         kept while unknown, since Ollama only lists a model once loaded.
         """
+        requested = self.runtime_options.get("num_ctx")
+        if isinstance(requested, int) and requested > 0:
+            return requested
         if self._context:
             return self._context
         found = self._ask_context()
@@ -237,6 +266,27 @@ class OpenAICompatSocket:
         return None
 
     def _post(self, body: dict) -> dict:
+        if self.runtime_options:
+            # Loader options are not part of the OpenAI API. Use Ollama's
+            # native endpoint only for settings that resolve identified as
+            # supported; never silently send ignored GPU fields to /v1.
+            native = {"model": self.serving_name, "messages": body["messages"],
+                      "stream": False, "options": {
+                          **self.runtime_options, "temperature": body["temperature"],
+                          **({"num_predict": body["max_tokens"]} if "max_tokens" in body else {})}}
+            if "response_format" in body:
+                native["format"] = body["response_format"]["json_schema"]["schema"]
+            request = urllib.request.Request(
+                self.base_url + "/api/chat", data=json.dumps(native).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(request, timeout=self.timeout) as resp:
+                result = json.load(resp)
+            incoming, outgoing = result.get("prompt_eval_count"), result.get("eval_count")
+            usage = {"prompt_tokens": incoming, "completion_tokens": outgoing}
+            if isinstance(incoming, int) and isinstance(outgoing, int):
+                usage["total_tokens"] = incoming + outgoing
+            return {"choices": [{"message": result.get("message", {}),
+                                 "finish_reason": result.get("done_reason", "stop")}], "usage": usage}
         request = urllib.request.Request(
             self.base_url + "/v1/chat/completions",
             data=json.dumps(body).encode("utf-8"),
@@ -283,7 +333,7 @@ class OpenAICompatSocket:
             return LocalInferenceError(
                 f"{self.base_url} did not answer within {self.timeout:g} s. A "
                 "model on a CPU can be slow: raise the timeout in Settings, "
-                "Local machine, or use a smaller model.")
+                "Local machine, or use a smaller model.", code="timeout")
         if isinstance(error, (urllib.error.URLError, OSError)):
             return LocalInferenceError(
                 f"{self.base_url} is not reachable (server down). Start the "

@@ -8,8 +8,9 @@ use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
 use crate::live::history::{ago, feed_kind, now_secs};
+use crate::live::run::kind_word;
 use crate::screens::history::clip;
-use crate::screens::{empty_note, mono};
+use crate::screens::{empty_note, mono, row_desc, row_title};
 use crate::theme::*;
 
 /// An operation's name as words: `pack_update` reads "Pack update".
@@ -156,11 +157,65 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         }
     }
 
+    // Agent runs have a richer job record than the operations feed above:
+    // name the agent/model and let the reader open the complete answer/log.
+    let recent_jobs: Vec<_> = app.live.run.jobs.iter()
+        .filter(|job| job.is_research_like() || job.kind == "compare_ask")
+        .filter(|job| query.is_empty() || format!("{} {} {} {} {}", job.kind, job.harness, job.model,
+            job.state, app.live.run.task(job)).to_lowercase().contains(&query))
+        .take(20).cloned()
+        .collect();
+    let mut runs = card().flex().flex_col().gap(px(10.0))
+        .child(div().mb(px(4.0)).child(eyebrow("Agent runs")));
+    if recent_jobs.is_empty() {
+        runs = runs.child(empty_note(if app.live.run.jobs_loaded {
+            "No agent runs yet."
+        } else {
+            "Reading completed and running agent jobs."
+        }));
+    }
+    for (i, job) in recent_jobs.iter().enumerate() {
+        if i > 0 { runs = runs.child(hairline()); }
+        let id = job.id.clone();
+        let open = app.live.run.activity_log_open.as_deref() == Some(job.id.as_str());
+        let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.live.run.activity_log_open = if this.live.run.activity_log_open.as_deref() == Some(id.as_str()) {
+                None
+            } else {
+                Some(id.clone())
+            };
+            cx.notify();
+        });
+        let agent = if job.harness.is_empty() { "Agent not reported" } else { &job.harness };
+        let model = if job.model.is_empty() { "model not reported" } else { &job.model };
+        let line = format!("{} · {} · {} · {}", kind_word(&job.kind), agent, model, job.state);
+        runs = runs.child(
+            div().flex().items_center().gap(px(12.0))
+                .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(3.0))
+                    .child(row_title(&app.live.run.task(job)))
+                    .child(row_desc(&line)))
+                .child(ghost(("activity-run", i), if open { "Hide details" } else { "View details" }).on_click(toggle)),
+        );
+        runs = runs.child(crate::screens::logs::job_logs(app, job, cx));
+        if open {
+            if !job.answer.is_empty() {
+                runs = runs.child(row_desc(&format!("Answer: {}", job.answer)));
+            } else if job.done {
+                let reason = if job.state == "failed" { job.message.as_str() } else if !job.no_answer_why.is_empty() {
+                    job.no_answer_why.as_str()
+                } else { "The agent returned no answer text. Open the saved run for its findings and evidence." };
+                runs = runs.child(row_desc(&format!("No answer: {reason}")));
+            }
+
+        }
+    }
+
     div()
         .flex()
         .flex_col()
         .gap(px(24.0))
         .children(callout)
+        .child(runs)
         .child(div().flex().child(filter))
         .child(feed)
 }

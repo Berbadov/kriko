@@ -249,41 +249,27 @@ class TestLocalPlaneGrounding:
         assert found[0].severity == "high"
         assert found[0].source_url == DOC.url
 
-    def test_an_invented_quote_gets_one_grounded_repair_attempt(self):
-        complete = RecordingComplete([
-            __import__("json").dumps(
-                finding_json(quote="this sentence is not in the document")),
-            __import__("json").dumps([{
-                "id": 0,
-                "quote": "the pump seized at 40,000 units without warning",
-            }]),
-        ])
-        plane = self.make(complete)
-        found = plane.extract(task(), DOC)
-        assert len(found) == 1
-        assert found[0].title == "Pump fails early"
-        assert found[0].quote == "the pump seized at 40,000 units without warning"
-        assert plane.spent_calls == 2
-        assert len(complete.prompts) == 2
-        assert "Repair only the missing or inaccurate quotes" in complete.prompts[1]
-
-    def test_quote_repair_keeps_the_grounding_gate_armed(self):
-        complete = RecordingComplete([
-            __import__("json").dumps(
-                finding_json(quote="not in the page")),
-            '[{"id":0,"quote":"also not in the page"}]',
-        ])
+    def test_invented_quote_is_dropped(self):
+        complete = RecordingComplete([__import__("json").dumps(
+            finding_json(quote="this sentence is not in the document"))])
         plane = self.make(complete)
         assert plane.extract(task(), DOC) == []
-        assert len(complete.prompts) == 2
 
-    def test_quote_repair_never_rehomes_a_candidate_from_the_wrong_url(self):
-        complete = RecordingComplete([
-            __import__("json").dumps(finding_json(url="https://other.test/x")),
-        ])
+    def test_quote_repair_changes_only_the_quote_and_is_bounded(self):
+        import json
+        original = finding_json(quote="misremembered text")
+        complete = RecordingComplete([json.dumps(original), json.dumps([{
+            "index": 0, "quote": "the pump seized at 40,000 units without warning",
+            "title": "Injected replacement", "source_url": "https://wrong.test"}])])
         plane = self.make(complete)
-        assert plane.extract(task(), DOC) == []
-        assert len(complete.prompts) == 1
+        [found] = plane.extract(task(), DOC)
+        assert found.title == original[0]["title"]
+        assert found.source_url == DOC.url
+        assert found.quote in DOC_TEXT
+        assert plane.spent_calls == len(complete.prompts) == 2
+        bad = RecordingComplete([json.dumps(original), json.dumps([{"index": 0, "quote": "still invented"}])])
+        assert self.make(bad).extract(task(), DOC) == []
+        assert len(bad.prompts) == 2
 
     def test_wrong_url_is_dropped(self):
         complete = RecordingComplete([__import__("json").dumps(

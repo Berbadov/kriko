@@ -1,10 +1,17 @@
 {
-  "id": "sahibinden",
-  "site": "sahibinden.com",
+  "id": "listing",
+  "site": "listing.example",
   "subject_kind": "product",
   "match": [
-    "*sahibinden.com/ilan/*",
-    "*sahibinden.com/*vasita*"
+    "*listing.example/ilan/*",
+    "*listing.example/*vasita*"
+  ],
+  "_fixture_comment": [
+    "TEST FIXTURE, not a shipped adapter: it lives under tests/ so no pack",
+    "build, store or extension ever loads it. It is a full-sized adapter with",
+    "a real local_panel block, kept so the interpreter, the panel evaluator",
+    "and the label rules are exercised against realistic data on an invented",
+    "host (listing.example) rather than against a real site."
   ],
   "_comment": [
     "Declarative on purpose. This file describes WHICH scraped labels mean what;",
@@ -165,7 +172,7 @@
     "header_selector": "h1, h2, h3, h4, h5, .title, .header",
     "max_item_length": 60,
     "legacy": {
-      "_comment": "Older sahibinden DOMs encoded the state in CSS classes on the silhouette nodes themselves. Only read when the modern selectors above found nothing.",
+      "_comment": "Older DOMs of this markup encoded the state in CSS classes on the silhouette nodes themselves. Only read when the modern selectors above found nothing.",
       "node_selector": "[class*='damageInfo'] *, [id*='damageInfo'] *, [class*='Damage'] *, [id*='Damage'] *, [class*='Boya'] *, [id*='Boya'] *",
       "name_attributes": [
         "title",

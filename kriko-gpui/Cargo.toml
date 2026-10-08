@@ -1,6 +1,6 @@
 [package]
 name = "kriko-gpui"
-version = "1.0.1"
+version = "1.1.0"
 edition = "2021"
 description = "Kriko — local product knowledge, on the Kriko design system"
 license = "LicenseRef-LICENSE"
@@ -13,6 +13,8 @@ path = "src/main.rs"
 
 [build-dependencies]
 winresource = "0.1"
+# Reads the sky images to choose the page title's ink (`src/contrast.rs`).
+png = "0.17"
 
 [dependencies]
 gpui = "0.2.2"

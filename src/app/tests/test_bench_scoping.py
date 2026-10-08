@@ -103,3 +103,15 @@ def test_each_llm_runs_on_the_plane_that_names_it():
     assert bench.pairs(["api"], [], owners) == [("api", "")]
     shape = bench.grid({"planes": "harness,api", "llms": "opus,gpt-4o-mini", "reps": 2}, 3, owners)
     assert shape["runs"] == 3 * 2 * 2 and shape["paid_runs"] == 3 * 2
+
+
+def test_named_local_models_do_not_fall_back_to_an_unrelated_default(monkeypatch):
+    monkeypatch.setattr(bench, "llm_owners", lambda: {"mistral": {"api"}})
+    params = {"harness": "local", "models": "mistral", "planes": "local"}
+    assert bench.pairs(["local"], ["mistral"], bench.owners_for(params)) == [("local", "mistral")]
+
+
+def test_a_partially_invalid_case_choice_is_rejected():
+    from app import benchcases
+    with pytest.raises(ValueError, match="unknown test case"):
+        bench.validate({"case_ids": [benchcases.case_rows(1)[0]["id"], "missing"]})

@@ -4,7 +4,7 @@
 // the fuel type, that "Seri" holds the model while "Model" holds the trim,
 // that "110 hp" under "Engine Capacity" is not a displacement. All of that is
 // site knowledge, and site knowledge now lives in the pack, as
-// `packs/cars/adapters/sahibinden.json`. Two reasons it moved:
+// `packs/<pack>/adapters/<site>.json`. Two reasons it moved:
 //
 //   * A site redesign used to require an extension release. It is now a data
 //     edit — the same rule the catalog has always been held to.
@@ -27,8 +27,8 @@ function cleanText(text) {
 }
 
 // Last resort when no known container selector matches: find the LABEL text
-// itself anywhere in the document and read the value next to it. Sahibinden has
-// redesigned this markup repeatedly, and every redesign silently zeroed every
+// itself anywhere in the document and read the value next to it. Listing sites
+// redesign this markup repeatedly, and every redesign silently zeroed every
 // field — the extension kept "working" while the server answered "no identity
 // resolved". Anchoring on the label survives a class rename.
 //

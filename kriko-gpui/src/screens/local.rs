@@ -5,13 +5,50 @@
 
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
-use crate::api::{self, Value};
-use crate::app::{Field, Kriko};
+use crate::app::{Field, Kriko, Tab};
 use crate::live::local::{Held, Machine, Plane, PullPhase};
-use crate::live::run::Job;
+use crate::live::run;
 use crate::marks::{self, mark_tile, Mark, Phase};
 use crate::screens::{empty_note, mono, row_desc, row_title, stepper, trust_icon};
 use crate::theme::*;
+
+pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
+    let runtime = app.live.local.plane.as_ref().map(|p| p.runtime.clone()).unwrap_or(crate::api::Value::Null);
+    let supported = crate::api::b(&runtime, "supported");
+    let stored = runtime.get("settings").cloned().unwrap_or(crate::api::Value::Null);
+    let refresh = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_local(cx));
+    let mut result = card().flex().flex_col().gap(px(12.0))
+        .child(div().flex().items_center().justify_between().child(eyebrow("Local inference device"))
+            .child(ghost("runtime-refresh", "Refresh device").on_click(refresh)))
+        .child(row_desc(&format!("Active: {} · {}", crate::api::s(&runtime, "device"), crate::api::s(&runtime, "reason"))))
+        .child(row_desc(&crate::api::s(&runtime, "settings_help")));
+    if let Some(bytes) = crate::api::n(&runtime, "vram_bytes") {
+        result = result.child(mono(&format!("Runtime VRAM {:.2} GB · context {}",
+            bytes / 1e9, crate::api::n(&runtime, "context_tokens").map(|n| format!("{n:.0} tokens")).unwrap_or_else(|| "not reported".into())), MUTED));
+    }
+    if !supported { return result; }
+    for (group, key, choices) in [
+        ("Device", "local_device", vec![("Auto", ""), ("CPU", "cpu"), ("GPU", "gpu")]),
+        ("GPU layers", "local_gpu_layers", vec![("Runtime default", ""), ("All", "-1"), ("16", "16"), ("32", "32")]),
+        ("Context tokens", "local_context_tokens", vec![("Runtime default", ""), ("2048", "2048"), ("4096", "4096"), ("8192", "8192"), ("16384", "16384")]),
+    ] {
+        let mut controls = div().flex().flex_wrap().gap(px(8.0)).child(row_desc(group));
+        for (i, (label, value)) in choices.into_iter().enumerate() {
+            let key = key.to_string(); let value = value.to_string();
+            let selected = crate::api::s(&stored, &key) == value;
+            let button_id = gpui::ElementId::named_usize(format!("runtime-{key}"), i);
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                let body = serde_json::json!({key.clone(): value.clone()});
+                this.fetch(cx, move || crate::api::put("/api/prefs", body), |this, reply, cx| {
+                    this.note(&reply); if reply.is_ok() { this.refresh_local(cx); }
+                });
+            });
+            controls = controls.child(pill(button_id, label, selected).on_click(pick));
+        }
+        result = result.child(controls);
+    }
+    result
+}
 
 // ---- the guided setup: a runtime, then a model ----
 
@@ -108,7 +145,7 @@ fn setup(
     app: &mut Kriko,
     plane: &Plane,
     machine: Option<&Machine>,
-    window: &mut Window,
+    _window: &mut Window,
     cx: &mut Context<Kriko>,
 ) -> Div {
     let motion = !app.reduce_motion;
@@ -284,9 +321,13 @@ fn setup(
         .map(|m| m.runtimes.iter().any(|r| r.id == "ollama" && r.installed))
         .unwrap_or(false);
     let ollama_up = plane.servers.iter().any(|s| s.name == "Ollama" && s.up);
-    let pulling = matches!(&app.live.local.pull, Some(p) if p.phase == PullPhase::Running);
-    let get = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_pull(cx));
-    let get_field = app.input_field(Field::LocalGet, "local-get", "Model name, as Ollama lists it", None, window, cx);
+    let drawer = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.live.local.catalogue_open = !this.live.local.catalogue_open;
+        if this.live.local.catalogue_open && this.live.local.offered.is_empty() { this.refresh_local_catalogue(cx); }
+        cx.notify();
+    });
+    let refresh_catalogue = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_local_catalogue(cx));
+    let library = cx.listener(|_this, _: &gpui::ClickEvent, _w, cx| cx.open_url("https://ollama.com/library"));
     let mut catalogue = card().flex().flex_col().gap(px(12.0));
     catalogue = catalogue
         .child(
@@ -297,7 +338,7 @@ fn setup(
                 .gap(px(12.0))
                 .flex_wrap()
                 .child(eyebrow("2 · Get a model"))
-                .child(chip(&machine_line(machine))),
+                .child(ghost("local-download-drawer", if app.live.local.catalogue_open { "Close model drawer" } else { "Browse downloadable models" }).on_click(drawer)),
         )
         .child(hairline());
     if !ollama_installed && !ollama_up {
@@ -306,31 +347,25 @@ fn setup(
              Get a model in the program you run instead, then check again.",
         ));
     } else {
-        catalogue = catalogue
-            .child(row_desc(if ollama_up {
-                "Type the name of a model and Kriko downloads it through Ollama, which keeps the files."
-            } else {
-                "Ollama is installed but not running. Start it to download a model."
-            }))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(12.0))
-                    .child(get_field)
-                    .child(if pulling {
-                        ghost("local-get-key", "Downloading").into_any_element()
-                    } else {
-                        key("local-get-key", "Get").on_click(get).into_any_element()
-                    }),
-            );
+        catalogue = catalogue.child(row_desc(if ollama_up {
+            "Choose from Ollama's library. Ollama keeps downloaded files; download progress and errors appear here."
+        } else { "Ollama is installed but not running. Start it to download a model." }));
+    }
+    if app.live.local.catalogue_open {
+        catalogue = catalogue.child(div().flex().flex_wrap().gap(px(8.0))
+            .child(ghost("local-catalogue-refresh", if app.live.local.catalogue_loading { "Loading library" } else { "Refresh library" }).on_click(refresh_catalogue))
+            .child(ghost("local-catalogue-provider", "Open provider library and sizes").on_click(library)));
+        if !app.live.local.catalogue_error.is_empty() { catalogue = catalogue.child(row_desc(&app.live.local.catalogue_error)); }
+        if app.live.local.offered.is_empty() && !app.live.local.catalogue_loading { catalogue = catalogue.child(empty_note("No downloadable models loaded. Refresh the library.")); }
+        let mut choices = div().id("local-download-choices").max_h(px(320.0)).overflow_y_scroll().flex().flex_col().gap(px(8.0));
         for (i, name) in app.live.local.offered.clone().iter().enumerate() {
             let model = name.clone();
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                this.local_get.value = model.clone();
+                if matches!(&this.live.local.pull, Some(p) if p.phase == PullPhase::Running) { return; }
+                this.local_get.set_value(model.clone());
                 this.local_pull(cx);
             });
-            catalogue = catalogue.child(
+            choices = choices.child(
                 div()
                     .flex()
                     .items_center()
@@ -340,6 +375,7 @@ fn setup(
                     .child(ghost(("local-offered", i), "Get").on_click(pick)),
             );
         }
+        catalogue = catalogue.child(choices);
     }
     if let Some(p) = app.live.local.pull.clone() {
         let cancel = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_pull_cancel(cx));
@@ -394,7 +430,7 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
     let motion = !app.reduce_motion;
     let url_field = app.input_field(Field::LocalUrl, "local-url", "Found automatically", Some("local"), window, cx);
     let search_field = app.input_field(Field::LocalSearch, "local-search", "http://127.0.0.1:7000", Some("search"), window, cx);
-    let cycle_model = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_cycle_model(cx));
+    let cycle_model = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| { this.live.local.models_open = true; cx.notify(); });
     let save = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_save(cx));
     let timeout = app.live.local.timeout;
     let timeout_step = stepper(
@@ -516,6 +552,7 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
 fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Machine>, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
     let vram_bytes = machine.and_then(|m| m.vram_total_mb).map(|mb| mb * 1024.0 * 1024.0);
+    let drawer = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| { this.live.local.models_open = !this.live.local.models_open; cx.notify(); });
     let mut models = card().flex().flex_col();
     models = models
         .child(
@@ -525,16 +562,33 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                 .justify_between()
                 .gap(px(12.0))
                 .pb(px(4.0))
-                .child(eyebrow("Models"))
+                .child(ghost("local-installed-drawer", if app.live.local.models_open { "Close downloaded models" } else { "Choose downloaded model" }).on_click(drawer))
                 .child(mono(&format!("{} on {}", plane.models.len(), if plane.name.is_empty() { "the server" } else { &plane.name }), DIM)),
         )
-        .child(hairline());
+        .child(hairline())
+        .child(row_desc(
+            "Start with 4B or smaller for modest hardware. Every model on the server stays available below, including larger ones for machines with more VRAM.",
+        ));
+    if !app.live.local.models_open { return models.child(row_desc(&format!("Current model: {} · {} downloaded", plane.model, plane.models.len()))); }
     if plane.models.is_empty() {
         return models.child(div().pt(px(12.0)).child(empty_note(
             "No model is downloaded on the server Kriko is using. Get one above.",
         )));
     }
-    for (i, name) in plane.models.iter().enumerate() {
+    for group in 0..3 {
+      let members: Vec<_> = plane.models.iter().enumerate().filter(|(_, name)| {
+          let info = held.iter().find(|h| &h.name == *name);
+          model_group(info.and_then(|h| h.params.as_deref()), name) == group
+      }).collect();
+      if members.is_empty() {
+          continue;
+      }
+      models = models.child(div().pt(px(14.0)).child(mono(match group {
+          0 => "4B AND SMALLER",
+          1 => "LARGER MODELS",
+          _ => "SIZE NOT REPORTED",
+      }, DIM)));
+      for (i, name) in members {
         let info = held.iter().find(|h| &h.name == name);
         let in_use = *name == plane.model;
         let fit: Option<bool> = match (info.and_then(|h| h.size_bytes), vram_bytes) {
@@ -602,148 +656,40 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                 )
                 .child(div().flex_none().child(right)),
         );
-        if i + 1 < plane.models.len() {
-            models = models.child(hairline());
-        }
+        models = models.child(hairline());
+      }
     }
     models
 }
 
-fn local_run_card(job: Option<&Job>) -> Div {
-    let Some(job) = job else {
-        return card()
-            .flex()
-            .flex_col()
-            .gap(px(10.0))
-            .child(eyebrow("Latest local run"))
-            .child(empty_note(
-                "No local quick-look run yet. A local run will leave its stages and quote checks here.",
-            ));
-    };
-
-    let empty = Value::Null;
-    let telemetry = job.result.get("telemetry").unwrap_or(&empty);
-    let verification = telemetry.get("verification").unwrap_or(&empty);
-    let self_verification = telemetry.get("self_verification").unwrap_or(&empty);
-    let quote_repair = telemetry.get("quote_repair").unwrap_or(&empty);
-    let stage = api::s(telemetry, "stage");
-    let stage = if stage.is_empty() { "Waiting for the local model" } else { &stage };
-    let label = if job.done {
-        if job.state == "succeeded" { "Completed" } else { &job.state }
-    } else if job.state == "queued" {
-        "Queued"
-    } else {
-        "Running"
-    };
-    let model = api::s(&job.result, "model");
-    let pages_read = api::n(telemetry, "pages_read")
-        .map(|n| format!("{} page{} read", n, if n == 1.0 { "" } else { "s" }))
-        .unwrap_or_else(|| "Pages not reported".into());
-    let model_calls = api::n(telemetry, "model_calls")
-        .map(|n| n.to_string())
-        .unwrap_or_else(|| "—".into());
-    let tokens = api::n(telemetry, "tokens_used")
-        .or_else(|| api::n(&job.result, "tokens_used"))
-        .map(|n| n.to_string())
-        .unwrap_or_else(|| "not reported".into());
-    let risks = job.result.get("risks")
-        .and_then(Value::as_array)
-        .map(|items| items.len())
-        .unwrap_or(0);
-    let risk_text = if job.done {
-        format!("{risks} grounded risk(s)")
-    } else {
-        "risk check pending".into()
-    };
-    let verdict = api::s(verification, "verdict");
-    let mut out = card()
-        .flex()
-        .flex_col()
-        .gap(px(10.0))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap(px(12.0))
-                .child(eyebrow("Latest local run"))
-                .child(chip(label)),
-        )
-        .child(row_title(if job.product.is_empty() { "Quick look" } else { &job.product }))
-        .child(row_desc(&format!(
-            "{}{}{}",
-            stage,
-            if model.is_empty() { String::new() } else { format!(" · {model}") },
-            if job.done { String::new() } else { format!(" · {}", job.message) },
-        )))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .flex_wrap()
-                .gap(px(14.0))
-                .child(mono(&pages_read, INK_2))
-                .child(mono(&format!("{} model calls", model_calls), INK_2))
-                .child(mono(&format!("{tokens} tokens"), INK_2))
-                .child(mono(&risk_text, INK_2))
-                .child(mono("self-hosted · no provider charge", MUTED)),
-        );
-
-    let queries: Vec<String> = api::arr(telemetry, "queries")
-        .iter()
-        .filter_map(Value::as_str)
-        .map(str::to_owned)
-        .collect();
-    out = out.child(eyebrow("Searches"));
-    if queries.is_empty() {
-        out = out.child(row_desc("The local model has not returned any search queries yet."));
-    } else {
-        for query in queries {
-            out = out.child(mono(&query, INK_2));
-        }
+/// Group by the server's parameter count when it supplies one. The model name
+/// is only a fallback for runtimes that list names without Ollama's details.
+fn model_group(params: Option<&str>, name: &str) -> usize {
+    let size = params.and_then(parse_billions).or_else(|| {
+        name.split([':', '-', '_']).rev().find_map(parse_billions)
+    });
+    match size {
+        Some(n) if n <= 4.0 => 0,
+        Some(_) => 1,
+        None => 2,
     }
+}
 
-    let pages: Vec<String> = api::arr(telemetry, "pages")
-        .iter()
-        .filter_map(Value::as_str)
-        .map(str::to_owned)
-        .collect();
-    out = out.child(eyebrow("Pages read"));
-    if pages.is_empty() {
-        out = out.child(row_desc("No fetched page is recorded yet."));
-    } else {
-        for page in pages {
-            out = out.child(mono(&page, MUTED));
-        }
+fn parse_billions(raw: &str) -> Option<f64> {
+    raw.trim().to_ascii_lowercase().strip_suffix('b')?.parse().ok()
+}
+
+#[cfg(test)]
+mod model_group_tests {
+    use super::model_group;
+
+    #[test]
+    fn installed_small_and_large_models_remain_visible_in_their_groups() {
+        assert_eq!(model_group(Some("4.0B"), "any-model"), 0);
+        assert_eq!(model_group(Some("27B"), "any-model"), 1);
+        assert_eq!(model_group(None, "another:70b"), 1);
+        assert_eq!(model_group(None, "custom-model"), 2);
     }
-
-    out = out.child(eyebrow("Engine quote check"))
-        .child(row_desc(if verdict.is_empty() {
-            "Quote verification is waiting for the answer."
-        } else {
-            &verdict
-        }));
-
-    let self_verdict = api::s(self_verification, "verdict");
-    out = out.child(eyebrow("Quote repair"));
-    let repair_status = api::s(quote_repair, "status");
-    let repair_checked = api::n(quote_repair, "checked").unwrap_or(0.0) as usize;
-    let repaired = api::n(quote_repair, "repaired").unwrap_or(0.0) as usize;
-    let repair_text = if repair_status.is_empty() {
-        "Quote repair is waiting for the answer.".to_owned()
-    } else if repair_status == "not needed" {
-        "No quote correction was needed.".to_owned()
-    } else {
-        format!("{repaired} of {repair_checked} quote(s) corrected · {repair_status}")
-    };
-    out = out.child(row_desc(&repair_text));
-
-    out.child(eyebrow("Local model self-check"))
-        .child(row_desc(if self_verdict.is_empty() {
-            "The model self-check is waiting for the answer."
-        } else {
-            &self_verdict
-        }))
 }
 
 pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
@@ -755,14 +701,6 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     };
     let machine = app.live.local.machine.clone();
     let held = app.live.local.held.clone().unwrap_or_default();
-    let local_run = app.live.run.jobs.iter()
-        .filter(|job| {
-            job.kind == "quick_look"
-                && (job.backend == "local"
-                    || api::s(&job.result, "cost_basis") == "self_hosted")
-        })
-        .max_by(|a, b| a.created_at.cmp(&b.created_at))
-        .cloned();
 
     // ---- the GPU memory card ----
     let vram = machine
@@ -842,16 +780,90 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         );
 
     let guide = setup(app, &plane, machine.as_ref(), window, cx);
+    let runtime = runtime_settings(app, cx);
     let server = server_card(app, &plane, window, cx);
     let models = model_card(app, &plane, &held, machine.as_ref(), cx);
+    let open_compare = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.tab = Tab::Compare;
+        this.refresh_compare(cx);
+        cx.notify();
+    });
+    let open_run = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.tab = Tab::Run;
+        this.refresh_jobs(cx);
+        cx.notify();
+    });
+    let use_card = card().flex().flex_col().gap(px(10.0))
+        .child(eyebrow("Use and inspect"))
+        .child(row_desc(if plane.ready {
+            "Ask the local model about saved checks in Compare. The answer stays with the draft, including its model, source summary, and reported token use. Open a local run below for its log, cited pages, and self-check verdict."
+        } else {
+            "Start a runtime and pick a model above. Compare will then offer it beside connected agents."
+        }))
+        .child(div().flex().gap(px(10.0)).flex_wrap()
+            .child(key("local-open-compare", "Open Compare").on_click(open_compare))
+            .child(ghost("local-open-run", "View runs").on_click(open_run)));
+    let refresh_work = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_jobs(cx));
+    let recent_jobs: Vec<_> = app.live.run.jobs.iter()
+        .filter(|j| j.backend == "local" || j.harness == "local")
+        .take(5).cloned().collect();
+    let mut work = card().flex().flex_col().gap(px(10.0))
+        .child(div().flex().items_center().justify_between()
+            .child(eyebrow("Recent local work"))
+            .child(ghost("local-refresh-work", "Refresh").on_click(refresh_work)))
+        .child(hairline());
+    if !app.live.run.jobs_loaded {
+        work = work.child(empty_note("Reading recent jobs from the engine."));
+    } else if recent_jobs.is_empty() {
+        work = work.child(empty_note("No local work in the recent jobs yet. Ask from Compare to see an answer and its steps here."));
+    }
+    for (i, job) in recent_jobs.iter().enumerate() {
+        let id = job.id.clone();
+        let open = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.live.run.pinned = Some(id.clone());
+            this.tab = Tab::Run;
+            this.refresh_jobs(cx);
+            cx.notify();
+        });
+        let title = if !job.question.is_empty() { job.question.clone() }
+            else if !job.product.is_empty() { job.product.clone() }
+            else { run::kind_word(&job.kind) };
+        let state = match job.state.as_str() {
+            "succeeded" => TagState::Done,
+            "failed" | "interrupted" => TagState::Block,
+            "running" => TagState::Live,
+            _ => TagState::Queue,
+        };
+        work = work.child(div().id(("local-work", i))
+            .py(px(10.0)).flex().items_center().gap(px(12.0))
+            .cursor_pointer().hover(|s| s.bg(rgba(GLASS_1)))
+            .on_click(open)
+            .child(tag(format!("local-work-state-{i}"), state, &job.state, motion))
+            .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(2.0))
+                .child(row_title(&title))
+                .child(mono(&format!("{} · {}", run::kind_word(&job.kind), job.message), MUTED)))
+            .child(mono(&run::ago(&job.created_at), DIM)));
+        work = work.child(crate::screens::logs::job_logs(app, job, cx));
+        if let Some(telemetry) = job.result.get("telemetry") {
+            work = work.child(row_desc(&format!("Queries: {} · pages: {} · calls: {} · tokens: {} · verification: {} · model self-check: {}",
+                telemetry.get("queries").map(|v| v.to_string()).unwrap_or_else(|| "not reported".into()),
+                telemetry.get("pages").map(|v| v.to_string()).unwrap_or_else(|| "not reported".into()),
+                telemetry.get("model_calls").map(|v| v.to_string()).unwrap_or_else(|| "not reported".into()),
+                job.result.get("tokens_used").map(|v| v.to_string()).unwrap_or_else(|| "not reported".into()),
+                telemetry.get("verification").map(|v| v.to_string()).unwrap_or_else(|| "not reported".into()),
+                telemetry.get("self_verify").map(|v| v.to_string()).unwrap_or_else(|| "not performed".into()))));
+        }
+    }
     div()
         .flex()
         .flex_col()
         .gap(px(24.0))
         .child(guide)
+        .child(use_card)
+        .child(work)
         .child(server)
+        .child(runtime)
         .child(models)
-        .child(local_run_card(local_run.as_ref()))
         .child(
             div()
                 .flex()

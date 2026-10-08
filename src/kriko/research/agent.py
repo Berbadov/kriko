@@ -206,6 +206,8 @@ class AgentResearcher:
                       "never be used to attribute a claim, because they are "
                       "shared with sibling products: "
                       + ", ".join(widening)]
+        if task.guidance.strip():
+            lines += ["", task.guidance.strip()]
         return "\n".join(lines)
 
     def gather(self, task: ResearchTask) -> list[Document]:

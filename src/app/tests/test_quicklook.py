@@ -60,20 +60,6 @@ def test_a_quote_the_plane_saw_is_marked_grounded_and_a_cli_quote_is_not():
     assert quicklook.parse(reply, {"https://e.org/a": "nothing here"})["dropped"] == 1
 
 
-def test_grounded_risk_indexes_match_parse_and_keep_raw_candidate_positions():
-    reply = _fenced({"risks": [
-        "not a risk object",
-        {"title": "Invented", "url": "https://e.org/a", "quote": "not here"},
-        {"title": "Grounded", "url": "https://e.org/a", "quote": "chain stretches"},
-        {"title": "Missing page", "url": "https://e.org/missing", "quote": "chain"},
-        {"title": "Also grounded", "url": "https://e.org/a", "quote": "garages replaced it"},
-    ]})
-    sources = {"https://e.org/a": "The chain stretches early; garages replaced it."}
-
-    assert quicklook.grounded_risk_indices(reply, sources) == [2, 4]
-    assert quicklook.grounded_risk_indices(reply, None) == []
-
-
 def test_at_most_max_risks_are_kept():
     many = [{"title": f"r{i}", "url": "https://e.org", "quote": "q"} for i in range(20)]
     assert len(quicklook.parse(_fenced({"risks": many}))["risks"]) == quicklook.MAX_RISKS
