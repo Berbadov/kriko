@@ -12,6 +12,7 @@ use gpui::{
 };
 
 use crate::app::{Field, Kriko};
+use crate::api::{self, Value};
 use crate::live::run::{ago, mark_for, Job, Stage};
 use crate::marks::{mark_tile, phase_beat};
 use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
@@ -60,6 +61,12 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
     match (&job, app.live.run.jobs_loaded) {
         (Some(job), _) => {
             page = page.child(subject_card(app, job, motion, cx));
+            if let Some(evidence) = local_quick_look_card(job) {
+                page = page.child(evidence);
+            }
+            if let Some(answer) = answer_card(job) {
+                page = page.child(answer);
+            }
             if job.attention.is_some() {
                 page = page.child(questions_card(app, job, cx));
             }
@@ -82,9 +89,112 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
     page = page.child(start_card(app, window, cx));
     if let Some(job) = &job {
         page = page.child(lane_card(app, job, motion));
-        page = page.child(feed_card(job, motion));
+        page = page.child(card().child(crate::screens::logs::job_logs(app, job, cx)));
     }
     page
+}
+
+/// A finished agent run must show its answer, even when the engine returned
+/// no answer text. The job feed is a record of work, not the answer itself.
+fn answer_card(job: &Job) -> Option<Div> {
+    if job.state != "succeeded"
+        || !matches!(job.kind.as_str(), "research" | "agenda_run" | "compare_ask")
+    {
+        return None;
+    }
+    let answer = job.answer.trim();
+    let reason = job.no_answer_why.trim();
+    let mut result = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Agent answer"));
+    if answer.is_empty() {
+        result = result.child(row_title("The agent returned no answer"));
+        result = result.child(row_desc(if reason.is_empty() {
+            "The run finished without answer text. Check its log and stored findings below."
+        } else {
+            reason
+        }));
+    } else {
+        result = result.child(row_desc(answer));
+    }
+    Some(result)
+}
+
+/// The quick look's saved result, separate from its narrated job log. The
+/// cited pages are the ones behind the returned cards; the log lists the
+/// larger set of pages that the local agent considered.
+fn local_quick_look_card(job: &Job) -> Option<Div> {
+    if job.kind != "quick_look" || (job.backend != "local" && job.harness != "local")
+        || !job.done || job.result.is_null() {
+        return None;
+    }
+    let result = &job.result;
+    let model = api::s(result, "model");
+    let tokens = api::n(result, "tokens_used")
+        .map(|n| format!("{} tokens", n as u64))
+        .unwrap_or_else(|| "Token use not reported by this model server".into());
+    let risks = api::arr(result, "risks");
+    let dropped = api::n(result, "dropped").unwrap_or(0.0) as usize;
+    let mut urls = Vec::<String>::new();
+    for risk in risks {
+        for source in api::arr(risk, "sources") {
+            let url = api::s(source, "url");
+            if !url.is_empty() && !urls.contains(&url) {
+                urls.push(url);
+            }
+        }
+    }
+    for spec in api::arr(result, "specs") {
+        let url = api::s(spec, "url");
+        if !url.is_empty() && !urls.contains(&url) {
+            urls.push(url);
+        }
+    }
+    let mut card = card().flex().flex_col().gap(px(10.0))
+        .child(eyebrow("Local quick look · evidence"))
+        .child(row_desc(&format!("{} · {tokens} · {} sourced risks kept · {dropped} unsourced dropped",
+            if model.is_empty() { "Model not reported" } else { &model }, risks.len())));
+    let verification = result.get("verification").unwrap_or(&Value::Null);
+    if verification.is_object() {
+        let error = api::s(verification, "error");
+        let unsupported = api::arr(verification, "unsupported");
+        card = if !error.is_empty() {
+            card.child(mono(&format!("Self-check unavailable: {error}"), DANGER))
+        } else if unsupported.is_empty() {
+            card.child(mono("Self-check: no unsupported risks reported", MUTED))
+        } else {
+            card.child(mono(&format!("Self-check flagged {} risk(s):", unsupported.len()), DANGER))
+        };
+        for item in unsupported {
+            card = card.child(row_desc(&format!("{} — {}", api::s(item, "title"), api::s(item, "reason"))));
+        }
+        let note = api::s(verification, "note");
+        if !note.is_empty() {
+            card = card.child(row_desc(&note));
+        }
+    } else if let Some(check) = result.get("telemetry").and_then(|t| t.get("self_verify")) {
+        card = card.child(row_desc("Model self-check opinions; exact source quotes remain the evidence gate."));
+        if let Some(verdicts) = check.get("verdicts").and_then(|v| v.as_array()) {
+            for verdict in verdicts {
+                let index = api::n(verdict, "index").unwrap_or(0.0) as usize;
+                let title = risks.get(index).map(|risk| api::s(risk, "title")).unwrap_or_default();
+                let supported = verdict.get("supported").and_then(|v| v.as_bool()).unwrap_or(false);
+                card = card.child(row_desc(&format!("{} · {} · {}", title,
+                    if supported { "supported" } else { "flagged" }, api::s(verdict, "reason"))));
+            }
+        } else {
+            card = card.child(row_desc(&format!("Self-check unavailable: {} {}", api::s(check, "status"), api::s(check, "message"))));
+        }
+    } else {
+        card = card.child(mono("Self-check verdict not recorded for this run", DIM));
+    }
+    if urls.is_empty() {
+        card = card.child(mono("No cited page in the saved answer", DIM));
+    } else {
+        card = card.child(mono(&format!("CITED PAGES · {}", urls.len()), DIM));
+        for url in urls {
+            card = card.child(mono(&url, MUTED));
+        }
+    }
+    Some(card)
 }
 
 fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
@@ -168,6 +278,13 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
     let mut meta = vec![when];
     if !job.harness.is_empty() {
         meta.push(format!("with {}", job.harness));
+    }
+    if !job.model.is_empty() {
+        meta.push(format!("model {}", job.model));
+    }
+    let duration = job.duration_word();
+    if !duration.is_empty() {
+        meta.push(duration);
     }
     if !job.done {
         meta.push(format!("{}%", (job.progress * 100.0).round() as i64));
@@ -419,18 +536,44 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
 }
 
 /// The engine's feed for the job, newest first.
-fn feed_card(job: &Job, motion: bool) -> Div {
+fn feed_card(app: &mut Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
     let mut feed = card().flex().flex_col();
     feed = feed.child(div().mb(px(12.0)).child(eyebrow(if job.done { "Log" } else { "Live feed" })));
-    if job.feed.is_empty() {
+    let all = job.log_events();
+    if all.is_empty() {
         return feed.child(empty_note(if job.done {
             "This run left no log."
         } else {
             "Nothing yet. Lines land here as the agent reads and writes."
         }));
     }
-    let count = job.feed.len();
-    for (i, line) in job.feed.iter().rev().enumerate() {
+    let levels = ["ALL", "SEARCH", "SOURCE", "FINDING", "PROBLEM"];
+    let selected = app.live.run.log_level.min(levels.len() - 1);
+    let next_filter = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.live.run.log_level = (this.live.run.log_level + 1) % 5;
+        cx.notify();
+    });
+    let copied = all.iter().map(|line| line.text.as_str()).collect::<Vec<_>>().join("\n");
+    let copy_log = cx.listener(move |_this, _: &gpui::ClickEvent, _w, cx| {
+        cx.write_to_clipboard(gpui::ClipboardItem::new_string(copied.clone()));
+    });
+    feed = feed.child(
+        div()
+            .flex()
+            .items_center()
+            .gap(px(10.0))
+            .child(plate_s("run-log-level", &format!("LEVEL · {}", levels[selected])).on_click(next_filter))
+            .child(plate_s("run-log-copy", "Copy log").on_click(copy_log)),
+    );
+    let selected_kind = ["", "search", "source", "finding", "problem"][selected];
+    let lines: Vec<_> = all.iter().rev().filter(|line| {
+        selected_kind.is_empty() || line.kind == selected_kind
+    }).collect();
+    if lines.is_empty() {
+        return feed.child(empty_note("No log entries match this level."));
+    }
+    let count = lines.len();
+    for (i, line) in lines.into_iter().enumerate() {
         let state = if line.kind == "problem" {
             TagState::Block
         } else if i == 0 && !job.done {

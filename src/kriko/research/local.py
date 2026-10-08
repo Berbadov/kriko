@@ -48,10 +48,6 @@ _MAX_GATE_WAIT = 60.0
 #: to survive a multi-task session (the quick look's, the bench's).
 _BRIEF_CACHE_MAX = 8
 
-# One focused completion may repair at most this many ungrounded quote fields
-# from the model's own risk list. It cannot introduce new findings.
-QUOTE_REPAIR_MAX = 6
-
 #: Reply shape the extractor must produce. Mirrors the paid plane's keys
 #: so a finding's provenance never depends on which plane wrote it.
 _REPLY_SHAPE = (
@@ -331,128 +327,62 @@ class LocalPlane:
             self.note = ("the completion was cut off at the token budget; "
                         "what it finished is kept, the rest is a miss")
             self._say(self.note)
-        reply = self._repair_quotes(task, batch, reply)
         found = self._parse(task, batch, reply)
+        payload = _salvage_array(self._unfence(reply))
+        if isinstance(payload, list):
+            from kriko.research.api import _grounding_form
+            texts = {one.url: one.text for one in batch}
+            repairable = []
+            for index, item in enumerate(payload):
+                if not isinstance(item, dict):
+                    continue
+                url = str(item.get("source_url") or (batch[0].url if len(batch) == 1 else ""))
+                quote = str(item.get("quote") or "")
+                if url in texts and quote and _grounding_form(quote) not in _grounding_form(texts[url]):
+                    repairable.append({"index": index, "source_url": url,
+                                       "title": str(item.get("title") or ""), "quote": quote})
+                if len(repairable) == 6:
+                    break
+            if repairable:
+                self._say(f"repairing {len(repairable)} unsupported quote(s) once")
+                repair_prompt = ("Copy a short exact quote from the cited document for each entry. "
+                                 "Reply ONLY a JSON array of {index,quote}. Empty quote if no "
+                                 "support exists. Do not change the claim or its URL.\n"
+                                 + json.dumps(repairable, ensure_ascii=False) + "\n" + blocks)
+                allowed = getattr(self._complete, "prompt_chars_allowed", None)
+                if not callable(allowed) or len(repair_prompt) <= allowed():
+                    self.check_cancelled()
+                    set_schema = getattr(self._complete, "set_schema", lambda _schema: None)
+                    set_schema({"type": "array", "items": {"type": "object", "properties": {
+                        "index": {"type": "integer"}, "quote": {"type": "string"}}, "required": ["index", "quote"]}})
+                    try:
+                        repairs = _salvage_array(self._unfence(self._complete(repair_prompt)))
+                        self.spent_calls += 1
+                        valid = {one["index"] for one in repairable}
+                        for repair in repairs or []:
+                            if (isinstance(repair, dict) and isinstance(repair.get("index"), int)
+                                    and not isinstance(repair["index"], bool) and repair["index"] in valid):
+                                payload[repair["index"]]["quote"] = str(repair.get("quote") or "")
+                        found = self._parse(task, batch, json.dumps(payload, ensure_ascii=False))
+                    except Exception as error:  # noqa: BLE001 - original grounded findings remain valid
+                        self._say(f"quote repair failed: {error}")
+                        self.check_cancelled()
+                    finally:
+                        set_schema({"type": "array", "items": {"type": "object", "properties": {
+                            key: {"type": "string"} for key in ("source_url", "title", "domain", "severity", "quote", "body", "advice")},
+                            "required": ["source_url", "title", "quote", "body"]}})
         if not any(found.values()) and reply.strip():
             self.note = ("the reply held no grounded finding "
                          "(its text may not have been JSON)")
         return found
 
-    @staticmethod
-    def _payload(reply: str) -> list | None:
-        """The candidate array, including the local model's common fences."""
-        text = LocalPlane._unfence(reply)
-        try:
-            payload = json.loads(text)
-        except (json.JSONDecodeError, TypeError):
-            payload = _salvage_array(text)
-        return payload if isinstance(payload, list) else None
-
-    def _repair_quotes(self, task: ResearchTask, batch: list[Document],
-                       reply: str) -> str:
-        """Make one bounded re-ask for quotes the grounding check will drop.
-
-        The model only returns an id and a replacement quote for a candidate
-        it already wrote. The page text and grounding gate remain authoritative;
-        a repair can never add a risk or change its title/body.
-        """
-        from kriko.research.api import _grounding_form
-
-        payload = self._payload(reply)
-        if not payload or not batch:
-            return reply
-        texts = {one.url: one.text for one in batch}
-        grounded = {url: _grounding_form(text) for url, text in texts.items()}
-        candidates: list[dict] = []
-        for index, raw in enumerate(payload):
-            if not isinstance(raw, dict):
-                continue
-            title = str(raw.get("title") or "").strip()
-            url = str(raw.get("source_url") or "").strip()
-            if not url and len(batch) == 1:
-                url = batch[0].url
-            if not title or url not in texts:
-                continue
-            quote = str(raw.get("quote") or "").strip()
-            if quote and _grounding_form(quote) in grounded[url]:
-                continue
-            candidates.append({
-                "id": index,
-                "source_url": url,
-                "title": title[:160],
-                "about": str(raw.get("body") or "")[:240],
-            })
-            if len(candidates) == QUOTE_REPAIR_MAX:
-                break
-        if not candidates:
-            return reply
-
-        self._say(f"repairing quotes for {len(candidates)} risk(s) that did not ground")
-        prefix = (
-            "Repair only the missing or inaccurate quotes for these existing "
-            "risk candidates. Do not add claims or change their meaning. "
-            "Return ONLY a JSON array of {id, quote}. Each quote must be copied "
-            "word for word from the page with that candidate's source_url. "
-            "If no relevant sentence is present, omit that id.\n\n"
-            "## Candidates\n"
-            + json.dumps(candidates, ensure_ascii=False)
-            + "\n\n## Page text\n"
-        )
-        allowed = getattr(self._complete, "prompt_chars_allowed", None)
-        page_chars = max(500, int(self.spend.context_chars))
-        if callable(allowed):
-            page_chars = max(500, min(page_chars, int(allowed()) - len(prefix) - 400))
-        room_per_page = max(500, page_chars // len(batch))
-        pages = "\n\n".join(
-            f"### URL: {one.url}\n\n{focus(one.text, room_per_page, terms_of(task))}"
-            for one in batch
-        )
-        self.check_cancelled()
-        try:
-            repaired_reply = self._complete(prefix + pages)
-        except Exception as error:  # noqa: BLE001 — original grounded items survive
-            self.note = f"quote repair did not answer: {error}"
-            self._say(self.note)
-            return reply
-        self.spent_calls += 1
-        repairs = self._payload(repaired_reply)
-        if not repairs:
-            self.note = "quote repair returned no usable quotes; unsupported items were dropped"
-            self._say(self.note)
-            return reply
-
-        by_id: dict[int, str] = {}
-        for raw in repairs:
-            if not isinstance(raw, dict):
-                continue
-            repair_id = raw.get("id")
-            quote = str(raw.get("quote") or "").strip()
-            if isinstance(repair_id, int) and not isinstance(repair_id, bool) and quote:
-                by_id[repair_id] = quote
-
-        repaired = 0
-        for candidate in candidates:
-            index = candidate["id"]
-            quote = by_id.get(index, "")
-            url = candidate["source_url"]
-            if not quote or _grounding_form(quote) not in grounded[url]:
-                continue
-            raw = payload[index]
-            raw["quote"] = quote
-            if not str(raw.get("source_url") or "").strip() and len(batch) == 1:
-                raw["source_url"] = url
-            repaired += 1
-        if repaired:
-            self._say(f"grounded {repaired} repaired quote(s)")
-            return json.dumps(payload, ensure_ascii=False)
-        self.note = "quote repair found no verbatim matches; unsupported items were dropped"
-        self._say(self.note)
-        return reply
-
     def _parse(self, task: ResearchTask, batch: list[Document],
                reply: str) -> dict:
         from kriko.research.api import _grounding_form
-        payload = self._payload(reply)
+        try:
+            payload = json.loads(self._unfence(reply))
+        except (json.JSONDecodeError, TypeError):
+            payload = _salvage_array(self._unfence(reply))
         if not isinstance(payload, list):
             return {}
         by_url: dict[str, list[Finding]] = {}

@@ -200,5 +200,40 @@ test("deeper research progress keeps quick-look cards expanded without blinking"
   p.flushTimers();
   assert.ok(card.isConnected, "a progress poll replaced the quick-look card");
   assert.equal(card.dataset.open, "1");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /50%/);
+  const status = p.shadow().querySelector(".lite-research-status").textContent;
+  assert.match(status, /Reading sources · \d+s/);
+  assert.doesNotMatch(status, /%/);
+  // The reader: "Not percentages but progress bars, animated."
+  const bar = p.shadow().querySelector(".lite-research .lite-progress");
+  assert.ok(bar && !bar.hidden, "no progress bar while the run is going");
+  assert.equal(bar.style.getPropertyValue("--p"), "50%");
+  assert.equal(bar.getAttribute("aria-valuenow"), "50");
+});
+
+test("a quick look is one saved job, and joins a pack only when asked", () => {
+  // The reader: "Quick looks shouldn't be a pack but quick looks can be a
+  // part of a pack. Quick looks are saved."
+  const sent = [];
+  const p = loadPanel({ workerResponse: m => {
+    sent.push(m);
+    if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "agent" } };
+    if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "quick", kind: "quick_look" } };
+    if (m.type === "QUICK_TO_PACK") return { ok: true, job: { job_id: "deep", kind: "pack_author" } };
+    if (m.type === "JOB_STATUS") return m.payload.job_id === "quick"
+      ? { ok: true, job: { kind: "quick_look", state: "succeeded", done: true,
+          result: { risks: [claim("Quick risk")] } } }
+      : { ok: true, job: { state: "running", progress: 0.1, message: "Filing it" } };
+    return { ok: true, items: [] };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ok: false, code: "UNKNOWN_PRODUCT", productName: "An uncovered product" });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "An uncovered product");
+  p.click(".lite-research-start");
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /Saved in Kriko/);
+  assert.ok(!sent.some(m => m.type === "QUICK_TO_PACK"), "a pack run started by itself");
+  p.click(".lite-research-pack");
+  const asked = sent.find(m => m.type === "QUICK_TO_PACK");
+  assert.equal(asked.payload.job_id, "quick");
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /Filing it/);
 });

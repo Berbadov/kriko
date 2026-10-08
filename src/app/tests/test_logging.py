@@ -117,13 +117,10 @@ def test_health_names_the_log_file(tmp_path):
     assert body["analysis_log_problem"] is None
 
 
-def test_health_reports_an_unwritable_analysis_log(tmp_path, monkeypatch):
+def test_health_reports_an_unwritable_analysis_log(tmp_path):
     """The regression under test: a swallowed write and a green suite."""
     blocked = tmp_path / "blocked"
     blocked.mkdir()
-    # Keep the fallback inside this test's writable sandbox. The real home is
-    # intentionally read-only in managed test environments.
-    monkeypatch.setattr(logs, "KRIKO_HOME", tmp_path / "kriko")
     blocked.chmod(stat.S_IRUSR | stat.S_IXUSR)
     try:
         _skip_unless_write_can_be_denied(blocked)

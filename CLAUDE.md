@@ -173,8 +173,8 @@ Forms come from `/api/identity-keys/{pack_id}` and
 `/api/packs/{pack_id}/vocabulary` at runtime
 (`test_ui_contains_no_pack_vocabulary`, in that same invariants file).
 
-**Long work is a row, not a request** (`app/web/jobs.py`, one worker,
-cooperative cancel; state in `app.sqlite` `jobs`; handlers in
+**Long work is a row, not a request** (`app/web/jobs.py`: as many at once
+as Settings says, never two on one pack, cooperative cancel; state in `app.sqlite` `jobs`; handlers in
 `app/web/tasks.py`). The POST returns a job id; log, result and failure
 outlive the request and the process (`running` at startup becomes
 `interrupted`). Same acceptance path as MCP (`app/findings.py`), so provenance

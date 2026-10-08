@@ -2,9 +2,9 @@
 
 Two things are being defended here.
 
-**Site knowledge belongs to a pack.** The old `/analyze` knew about Sahibinden;
-this knows about adapters, and the cars pack knows about Sahibinden. A new
-listing site is a JSON file.
+**Site knowledge belongs to a pack.** The old `/analyze` knew about one
+listing site; this knows about adapters, and a pack knows about its sites. A
+new listing site is a JSON file.
 
 **A wrong number is worse than a missing one.** Scraped values lie in a
 specific way — a run of digits with a locale's grouping separator can look
@@ -135,7 +135,7 @@ def test_labels_with_no_rule_are_reported_not_silently_dropped():
     Silently ignoring unknown labels is how an adapter rots: the page starts
     carrying something worth reading and nobody finds out for a year.
     """
-    got = adapt(SPEC, {"Marka": "Makita", "Kimden": "Sahibinden",
+    got = adapt(SPEC, {"Marka": "Makita", "Kimden": "Galeriden",
                        "Takasa Uygun": "Evet"})
     assert got.unmapped == ("Kimden", "Takasa Uygun")
 
@@ -179,25 +179,22 @@ def test_an_unknown_parse_hint_falls_back_to_plain_text():
     assert adapt(spec, {"a": " hello "}).identity["a"] == "hello"
 
 
-def test_the_real_cars_adapter_reads_a_real_listing_shape():
+def test_a_full_sized_cars_adapter_reads_a_real_listing_shape():
     """The shape extension/content.js actually produces today.
 
-    This exercises the cars pack's real, shipped
-    `packs/cars/adapters/sahibinden.json` as a concrete example — the
-    runner (`adapt`) itself is category-blind, but no other installed pack
-    ships an adapter file, so there is nothing else to point this at. The
-    make/model/fuel below are real cars-pack vocabulary on purpose, not a
-    fixture to decontaminate.
+    This exercises a full-sized cars adapter as a concrete example — the
+    runner (`adapt`) itself is category-blind. The adapter is the cars pack's
+    test fixture on an invented host (`listing.example`), not a shipped one:
+    no real site is named anywhere in the product. The make/model/fuel below
+    are real cars-pack vocabulary on purpose, not a fixture to decontaminate.
     """
-    from pathlib import Path
-    spec = json.loads(Path("packs/cars/adapters/sahibinden.json")
-                      .read_text(encoding="utf-8"))
+    spec = _cars_spec()
     got = adapt(spec, {
         "Marka": "Renault", "Seri": "Megane", "Model": "1.5 dCi Joy",
         "Yıl": "2018", "Yakıt": "Dizel", "Vites": "Otomatik",
         "Motor Hacmi": "1.461 cm3", "Motor Gücü": "110 hp", "KM": "180.000",
         "Renk": "Beyaz",
-    }, url="https://www.sahibinden.com/ilan/x")
+    }, url="https://www.listing.example/ilan/x")
 
     assert got.identity == {
         "make": "Renault", "model": "Megane", "fuel": "Dizel",
@@ -205,7 +202,7 @@ def test_the_real_cars_adapter_reads_a_real_listing_shape():
         "power_min_hp": 110, "build_year": 2018,
     }
     assert got.context["usage_km"] == 180_000
-    # "Model" on Sahibinden is the trim, not the model — the model lives in
+    # "Model" on this markup is the trim, not the model — the model lives in
     # "Seri". Getting this backwards was a real bug in the old scraper.
     assert got.identity["model"] == "Megane"
 
@@ -219,15 +216,16 @@ def test_the_real_cars_adapter_reads_a_real_listing_shape():
 
 def _cars_spec():
     from pathlib import Path
-    return json.loads(Path("packs/cars/adapters/sahibinden.json")
-                      .read_text(encoding="utf-8"))
+    fixture = (Path(__file__).resolve().parents[3] / "packs" / "cars" / "tests"
+               / "fixtures" / "listing_example_adapter.json")
+    return json.loads(fixture.read_text(encoding="utf-8"))
 
 
 def test_an_exact_label_beats_a_longer_one_that_merely_contains_it():
     """"Yakıt Tüketimi" must not answer for "Yakıt"."""
     got = adapt(_cars_spec(),
                 {"Yakıt Tüketimi": "4,5 lt", "Yakıt": "Dizel"},
-                url="https://www.sahibinden.com/ilan/x")
+                url="https://www.listing.example/ilan/x")
     assert got.identity["fuel"] == "Dizel"
 
 
@@ -237,13 +235,13 @@ def test_an_ignored_label_is_never_picked_even_when_a_rule_would_match_it():
     that some better label happened to exist on the page."""
     got = adapt(_cars_spec(),
                 {"Yakıt Tüketimi": "4,5 lt"},
-                url="https://www.sahibinden.com/ilan/x")
+                url="https://www.listing.example/ilan/x")
     assert "fuel" not in got.identity
 
 
 # ── the page's own labels are not always readable ────────────────────────
 #
-# Sahibinden has redesigned its info-list markup repeatedly, and every
+# Listing sites redesign their info-list markup repeatedly, and every
 # redesign silently zeroed every field. The client used to paper over that
 # with title-parsing heuristics; those are site knowledge, so they belong to
 # the adapter. Two closed mechanisms cover it:
@@ -343,7 +341,7 @@ def test_the_vocabulary_is_whatever_the_packs_declared_identity_on(tmp_path):
 # knowledge in the one place that cannot be updated without shipping a
 # release. `segment` is the closed replacement: pick an end of a delimited
 # value, and nothing else — the middle segment goes unused on purpose, the
-# same way the original three-part Sahibinden cell dropped its gear count.
+# same way the original three-part listing cell dropped its gear count.
 
 SEGMENT_SPEC = {
     "id": "segments",
@@ -402,7 +400,7 @@ def test_an_accented_label_is_ignored_by_its_plain_spelling():
     ignored and were reported as unmapped anyway, because the blocklist could
     not recognise its own entries once the page capitalised them."""
     got = adapt(_cars_spec(), {"İlan No": "1", "İlan Tarihi": "13 July 2026"},
-                url="https://www.sahibinden.com/ilan/x")
+                url="https://www.listing.example/ilan/x")
     assert got.unmapped == ()
 
 
@@ -440,21 +438,26 @@ def test_an_adapter_with_no_panel_gets_an_empty_one_rather_than_none():
 
 
 def test_the_cars_panel_declares_a_state_before_it_declares_a_narrower_one():
-    """Precedence in the shipped block is array order, and order is load-bearing.
+    """Precedence in a panel block is array order, and order is load-bearing.
 
     "lokal boyalı" contains "boyalı", so a state whose terms are a superstring
     of another's has to come first or it is unreachable. This is a property of
-    the shipped data rather than of the format, so it is checked here rather
-    than asserted in a docstring nobody executes.
+    the data rather than of the format, so it is checked on every adapter the
+    packs ship that declares a panel, and on the full-sized fixture so the
+    check always has something to hold.
     """
-    import json
     from pathlib import Path
 
     repo = Path(__file__).resolve().parents[3]
-    spec = json.loads(
-        (repo / "packs" / "cars" / "adapters" / "sahibinden.json").read_text(encoding="utf-8")
-    )
-    states = spec["local_panel"]["states"]
+    specs = [_cars_spec()] + [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in sorted((repo / "packs").glob("*/adapters/*.json"))
+    ]
+    for spec in specs:
+        _assert_state_precedence((spec.get("local_panel") or {}).get("states") or [])
+
+
+def _assert_state_precedence(states):
     for i, state in enumerate(states):
         for later in states[i + 1:]:
             for mine in state["header_terms"]:

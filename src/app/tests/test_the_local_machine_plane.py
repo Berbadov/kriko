@@ -35,6 +35,7 @@ class Stub:
         self.mcp_text = ""
         self.mcp_agents: list = []
         self.delay = 0.0
+        self.ps = None
         stub = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -48,6 +49,10 @@ class Stub:
 
             def do_GET(self):
                 path = self.path.split("?")[0]
+                if path == "/api/version" and stub.ps is not None:
+                    return self._send(200, {"version": "test"})
+                if path == "/api/ps" and stub.ps is not None:
+                    return self._send(200, {"models": stub.ps})
                 if path == stub.models_path and stub.models is not None:
                     return self._send(200, {"object": "list", "data": [
                         {"id": name} for name in stub.models]})
@@ -60,7 +65,7 @@ class Stub:
             def do_POST(self):
                 size = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(size) or b"{}")
-                if self.path == "/v1/chat/completions":
+                if self.path in ("/v1/chat/completions", "/api/chat"):
                     stub.chat_seen.append(body)
                     time.sleep(stub.delay)
                     status, reply = stub.chat.pop(0) if stub.chat else (
@@ -259,6 +264,68 @@ def test_a_server_that_refuses_the_schema_is_asked_again_plainly(stub):
     assert socket_("p") == "[]"
     assert "response_format" in stub.chat_seen[0]
     assert "response_format" not in stub.chat_seen[1]
+
+
+def test_runtime_settings_survive_restart_and_reach_the_native_ollama_socket(machine, stub, tmp_path):
+    stub.models = ["small"]
+    stub.ps = [{"name": "small", "size": 2000, "size_vram": 1500, "context_length": 8192}]
+    path = tmp_path / "app.sqlite"
+    conn = state.connect(path)
+    prefs.write(conn, {prefs.LOCAL_URL: stub.url, prefs.LOCAL_MODEL: "small",
+        prefs.LOCAL_DEVICE: "cpu", prefs.LOCAL_GPU_LAYERS: "32", prefs.LOCAL_CONTEXT: "8192"})
+    conn.close()
+    plan = localplane.resolve(path, with_search=False)
+    assert plan["runtime"]["device"] == "mixed"
+    assert plan["runtime"]["vram_bytes"] == 1500
+    assert plan["runtime_options"] == {"num_gpu": 0, "num_ctx": 8192}
+    stub.chat = [(200, {"message": {"content": "{}"}, "prompt_eval_count": 30,
+                        "eval_count": 10, "done_reason": "stop"})]
+    complete = local_inference.OpenAICompatSocket(stub.url, "small", runtime_options=plan["runtime_options"], max_tokens=512)
+    assert complete("task") == "{}"
+    assert complete.tokens_used == 40
+    assert complete.context_tokens() == 8192
+    assert stub.chat_seen[0]["options"] == {"num_gpu": 0, "num_ctx": 8192, "num_predict": 512, "temperature": 0.0}
+
+
+def test_unreported_runtime_device_stays_unknown_and_controls_stay_external(stub):
+    from app.localruntime import inspect
+    runtime = inspect(stub.url, "LM Studio", "small", {prefs.LOCAL_DEVICE: "gpu"})
+    assert runtime["device"] == "unknown"
+    assert not runtime["supported"]
+
+
+def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):
+    """A reasoning model left at full effort spends the reply's whole budget
+    on thinking and writes nothing; the socket asks for low effort on the
+    OpenAI surface, and a server that does not know the field drops it and
+    is asked again — schema first when both are refused."""
+    stub.chat = [completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert stub.chat_seen[0]["reasoning_effort"] == "low"
+
+    # The stub keeps every call this test made, so the block's calls are
+    # counted from where the last one ended.
+    stub.chat = [(400, {"error": {"message": "unknown field"}}), completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert "reasoning_effort" in stub.chat_seen[1]
+    assert "reasoning_effort" not in stub.chat_seen[2]
+
+    # Both optional fields refused: the schema goes first, then the effort.
+    stub.chat = [(400, {"error": {"message": "no response_format"}}),
+                 (400, {"error": {"message": "no reasoning_effort"}}),
+                 completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA,
+        reasoning_effort="low")
+    assert socket_("p") == "[]"
+    assert "response_format" in stub.chat_seen[3]
+    assert "response_format" not in stub.chat_seen[4]
+    assert "reasoning_effort" in stub.chat_seen[4]
+    assert "reasoning_effort" not in stub.chat_seen[5]
 
 
 def test_a_missing_model_names_the_address_and_the_model(stub):
@@ -549,7 +616,6 @@ class _Progress:
 
     def __init__(self):
         self.lines = []
-        self.partials = []
 
     def log(self, line):
         self.lines.append(line)
@@ -564,7 +630,7 @@ class _Progress:
         return []
 
     def partial(self, *args, **kwargs):
-        self.partials.append(args[0] if args else kwargs)
+        pass
 
 
 def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
@@ -584,18 +650,8 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
          "quote": "this sentence is on no page", "why": "x", "check": "y",
          "severity": "low"},
     ]}
-    ready.chat = [
-        completion('["renault 1.5 dci timing chain"]'),
-        completion('[]'),
-        completion(json.dumps(risks)),
-        completion('{"items":[]}'),
-        completion(json.dumps({"items": [
-            {"index": 0, "verdict": "supported"},
-            # The model is optimistic about the invented quote. The engine's
-            # exact fetched-page check must overrule it in final telemetry.
-            {"index": 1, "verdict": "supported"},
-        ]})),
-    ]
+    ready.chat = [completion('["renault 1.5 dci timing chain"]'),
+                  completion(json.dumps(risks)), completion(json.dumps(risks))]
     path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})
     settings = type("S", (), {"store_path": tmp_path / "k.sqlite",
                               "app_state_path": path})()
@@ -607,35 +663,12 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
     assert [one["title"] for one in result["risks"]] == ["Timing chain stretches early"]
     assert result["risks"][0]["sources"][0]["grounded"] is True
     assert result["dropped"] == 1
+    assert result["telemetry"]["repairs"] == 1
+    assert result["telemetry"]["verification"][0]["quote_in_read_page"] is True
     assert result["cost_basis"] == "self_hosted" and result["model"] == "qwen3-4b"
-    assert result["telemetry"]["pages_read"] == 1
-    assert result["telemetry"]["model_calls"] == 5
-    assert result["telemetry"]["quote_repair"] == {
-        "status": "unrepaired", "checked": 1, "repaired": 0,
-        "unrepaired": 1,
-    }
-    assert result["telemetry"]["self_verification"] == {
-        "status": "complete", "verdict": "mixed", "checked": 2,
-        "supported": 1, "unsupported": 1, "unclear": 0,
-        "model_verdict": "supported", "engine_grounded": 1,
-        "items": [
-            {"index": 0, "verdict": "supported"},
-            {"index": 1, "verdict": "unsupported"},
-        ],
-    }
-    assert result["telemetry"]["verification"] == {
-        "checked": 1,
-        "dropped": 1,
-        "verdict": "1 cited risk quote(s) matched fetched page text; "
-        "1 unsupported item(s) were dropped.",
-    }
-    assert any(
-        partial.get("telemetry", {}).get("stage") == "checking cited quotes"
-        for partial in progress.partials
-    )
     assert any("local plane: Ready" in line for line in progress.lines)
     assert ready.chat_seen[0]["model"] == "qwen3-4b"
-    assert "Pages you fetched" in ready.chat_seen[2]["messages"][0]["content"]
+    assert "Pages you fetched" in ready.chat_seen[1]["messages"][0]["content"]
 
 
 def test_with_no_agent_and_a_ready_model_the_quick_look_picks_local_by_itself(

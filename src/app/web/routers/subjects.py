@@ -46,8 +46,12 @@ def list_subjects(
     severity: str = "",
     evidence: str = "",
     limit: int = 100,
+    offset: int = 0,
+    paged: bool = False,
     store=Depends(get_store),
 ):
+    limit = min(max(limit, 1), 200)
+    offset = max(offset, 0)
     clauses, args = ["p.enabled = 1"], []
     if pack_id:
         clauses.append("s.pack_id = ?")
@@ -75,21 +79,34 @@ def list_subjects(
         escaped = q.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         clauses.append("LOWER(s.label) LIKE ? ESCAPE '\\'")
         args.append(f"%{escaped}%")
-    return [
+    from_where = (
+        "FROM subjects s JOIN packs p USING (pack_id)"
+        " LEFT JOIN claims c USING (subject_id, pack_id)"
+        f" LEFT JOIN ({_BEST_SOURCES}) sev"
+        "   ON sev.subject_id = s.subject_id AND sev.pack_id = s.pack_id"
+        f" WHERE {' AND '.join(clauses)}"
+    )
+    items = [
         dict(r)
         for r in store.execute(
             f"SELECT s.subject_id, s.pack_id, s.kind, s.label,"
-            f"       COUNT(c.claim_id) AS claims"
-            f" FROM subjects s JOIN packs p USING (pack_id)"
-            f" LEFT JOIN claims c USING (subject_id, pack_id)"
-            f" LEFT JOIN ({_BEST_SOURCES}) sev"
-            f"   ON sev.subject_id = s.subject_id AND sev.pack_id = s.pack_id"
-            f" WHERE {' AND '.join(clauses)}"
+            f"       COUNT(c.claim_id) AS claims {from_where}"
             f" GROUP BY s.subject_id, s.pack_id"
-            f" ORDER BY claims DESC, s.label LIMIT ?",
-            (*args, limit),
+            f" ORDER BY claims DESC, s.label LIMIT ? OFFSET ?",
+            (*args, limit, offset),
         )
     ]
+    if not paged:
+        return items
+
+    total = store.execute(
+        "SELECT COUNT(*) FROM ("
+        " SELECT s.subject_id, s.pack_id "
+        f" {from_where} GROUP BY s.subject_id, s.pack_id"
+        ")",
+        args,
+    ).fetchone()[0]
+    return {"items": items, "total": total, "limit": limit, "offset": offset}
 
 
 @router.get("/subjects/filters")

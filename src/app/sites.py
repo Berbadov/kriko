@@ -7,7 +7,7 @@ and a pack is how knowledge travels.
 
 It left one thing with no answer, and it is the reader's: *"I cannot open the
 extension on pages that aren't registered — so basically it opens on
-sahibinden only."* The panel is not missing on those pages; the **site** is.
+one site only."* The panel is not missing on those pages; the **site** is.
 Until now the only way to add one was to author a whole pack, which is a
 disproportionate answer to "this listing site also sells cars".
 
@@ -344,14 +344,12 @@ def detail(store, app_conn, host: str) -> dict | None:
     if not wanted:
         return None
     from kriko.adapters import declared_labels
-    # Detail describes the host's adapter, not whether the host's root path
-    # is a listing. A pack commonly matches only listing paths (for example
-    # /ilan/), so asking `adapter_for` about `/` can miss an adapter that
-    # `registered()` has just shown on the Sites screen.
-    spec = next((one for one in load_adapters(store)
-                 if host_of(str(one.get("site") or "")) == wanted), None)
+    spec = adapter_for(store, app_conn, f"https://{wanted}/")
     if spec is None:
-        spec = adapter_for(store, app_conn, f"https://{wanted}/")
+        # A detail view describes a host's adapter; its root need not be a
+        # listing URL accepted by that adapter.
+        spec = next((one for one in load_adapters(store)
+                     if host_of(one.get("site", "")) == wanted), None)
     if spec is None:
         return None
     rows = local_rows(app_conn) if app_conn is not None else []

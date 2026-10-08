@@ -268,6 +268,16 @@ def ico_images(data: bytes) -> dict[int, bytes]:
     return images
 
 
+def offline_grid(pixels: list[list[tuple[int, int, int, int]]]) -> list[list[tuple[int, int, int, int]]]:
+    """Keep the same small K, muted while the local app is unreachable."""
+    ground = pixels[0][0]
+    return [
+        [(37, 43, 53, 255) if pixel == ground else (137, 147, 162, 255)
+         for pixel in row]
+        for row in pixels
+    ]
+
+
 def decode(data: bytes) -> tuple[int, int, bytes]:
     """A minimal 8-bit RGBA PNG reader — enough for our own icons.
 
@@ -398,10 +408,16 @@ def main() -> None:
 
     EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
     images = ico_images(DESKTOP_ICO.read_bytes())
+    disconnected = offline_grid(pixels)
     for size in EXTENSION_ICONS:
         if size not in images:
             raise ValueError(f"{DESKTOP_ICO.name} has no {size}px PNG image")
+        if size % side:
+            raise ValueError(f"{size}px is not a whole multiple of {side} cells")
         (EXTENSION_DIR / f"icon-{size}.png").write_bytes(images[size])
+        (EXTENSION_DIR / f"icon-offline-{size}.png").write_bytes(
+            png(disconnected, size // side)
+        )
     print(f"{DESKTOP_ICO.name} -> {EXTENSION_DIR}/icon-"
           f"{{{','.join(str(one) for one in EXTENSION_ICONS)}}}.png")
 

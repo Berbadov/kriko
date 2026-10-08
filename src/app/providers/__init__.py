@@ -420,7 +420,8 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
 
 
 def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
-                 search_kind: str, timeout: float, schema):
+                 search_kind: str, timeout: float, schema, runtime_options=None,
+                 temperature: float = 0.0, max_tokens: int = 1024):
     """The sockets both local doors share: a completion and a search."""
     from app.providers import exa_mcp, local_inference, openserp
 
@@ -432,7 +433,8 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
         raise ValueError("the local plane needs the address of a model server")
     complete = local_inference.OpenAICompatSocket(
         base_url, serving_name, timeout=timeout or local_inference.DEFAULT_TIMEOUT,
-        response_json_schema=schema)
+        response_json_schema=schema, runtime_options=runtime_options,
+        temperature=temperature, max_tokens=max_tokens)
     if search_kind == "exa":
         return complete, exa_mcp.search_with_fallback(), "exa-mcp"
     return complete, openserp.searcher(search_base_url), "openserp"
@@ -441,7 +443,8 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
 def local_researcher(*, base_url: str = "", serving_name: str = "",
                      search_base_url: str = "", engine: str = "",
                      scheduler=None, spend=None, model: str = "",
-                     search_kind: str = "openserp", timeout: float = 0.0):
+                     search_kind: str = "openserp", timeout: float = 0.0,
+                     runtime_options=None):
     """The free plane that gathers: this machine's own sockets do the work.
 
     A local inference server completes, a search service searches (OpenSERP
@@ -467,7 +470,7 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
     complete, search, provider = _local_parts(
         base_url=base_url, serving_name=name, search_base_url=search_base_url,
         search_kind=search_kind, timeout=timeout,
-        schema=local_inference.FINDINGS_SCHEMA)
+        schema=local_inference.FINDINGS_SCHEMA, runtime_options=runtime_options)
     researcher = LocalPlane(
         search, fetch.reader(), complete, scheduler=scheduler, spend=spend,
     )
@@ -480,8 +483,8 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
 
 def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
                 search_kind: str = "openserp", timeout: float = 0.0,
-                given_queries: list[str] | None = None,
-                quote_repair: bool = False):
+                given_queries: list[str] | None = None, runtime_options=None,
+                temperature: float = 0.0, max_tokens: int = 1024):
     """The local model as something that can `ask` (B171): the quick look, the
     pack author and the pack amend take it when no coding agent is there.
 
@@ -493,25 +496,13 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
     complete, search, provider = _local_parts(
         base_url=base_url, serving_name=serving_name,
         search_base_url=search_base_url, search_kind=search_kind,
-        timeout=timeout, schema="")
+        timeout=timeout, schema="", runtime_options=runtime_options,
+        temperature=temperature, max_tokens=max_tokens)
     plan = local_inference.OpenAICompatSocket(
         base_url, serving_name,
         timeout=timeout or local_inference.DEFAULT_TIMEOUT,
-        max_tokens=192,
-        response_json_schema=local_agent.QUERY_SCHEMA)
-    verify = local_inference.OpenAICompatSocket(
-        base_url, serving_name,
-        timeout=timeout or local_inference.DEFAULT_TIMEOUT,
-        max_tokens=local_agent.VERIFY_MAX_TOKENS,
-        response_json_schema=local_agent.SELF_VERIFY_SCHEMA)
-    repair = None
-    if quote_repair:
-        repair = local_inference.OpenAICompatSocket(
-            base_url, serving_name,
-            timeout=timeout or local_inference.DEFAULT_TIMEOUT,
-            max_tokens=local_agent.QUOTE_REPAIR_MAX_TOKENS,
-            response_json_schema=local_agent.QUOTE_REPAIR_SCHEMA)
+        response_json_schema=local_agent.QUERY_SCHEMA, runtime_options=runtime_options)
     return local_agent.LocalAsker(
         plan, complete, search, fetch.reader(), model=serving_name,
         search_provider=provider, url=base_url, given_queries=given_queries,
-        parallel_search=provider == "exa-mcp", verify=verify, repair=repair)
+        parallel_search=provider == "exa-mcp")
