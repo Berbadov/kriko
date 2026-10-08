@@ -162,18 +162,14 @@ th {
 }
 button,
 .tab {
-    /* The design system's plate (.k-plate), worn by every
-     * button this app draws: the bezel gradient face, the hairline edge,
-     * the lit top and dark bottom, and - the half that makes it a *key*
-     * rather than a labelled rectangle - the mechanical press: 2px of
-     * travel on the same spring curve the library's segmented thumb
-     * rides, with the bezel shadow collapsing to a well. A button and a
-     * Key must be the same object, or every screen carries two eras. */
+    /* One flat face for every button this app draws: the glass fill, no
+     * plate, no drop and no travel on press. The 3D treatment came off the
+     * buttons in #139, which reverses the earlier "make every button 3D" (B160). */
     font: 600 15px/16px var(--font-display);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--text);
-    background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
+    background: var(--glass-2);
     border: 0;
     border-radius: var(--radius-md);
     padding: 0 24px;
@@ -184,12 +180,7 @@ button,
     gap: 12px;
     min-width: max-content;
     cursor: pointer;
-    box-shadow:
-        0 0 0 1px var(--bezel-edge),
-        var(--shadow-bezel);
     transition:
-        transform var(--dur-press) var(--ease-out),
-        box-shadow var(--dur-press) var(--ease-out),
         filter var(--dur-quick) var(--ease-out),
         background var(--dur-quick) var(--ease-out),
         color var(--dur-quick) var(--ease-out);
@@ -200,10 +191,7 @@ button:hover,
 }
 button:active,
 .tab:active {
-    transform: translateY(2px);
-    box-shadow:
-        0 0 0 1px var(--bezel-edge),
-        var(--shadow-well);
+    background: var(--glass-3);
 }
 button:focus-visible,
 .tab:focus-visible {
@@ -213,39 +201,27 @@ button:focus-visible,
 button:disabled,
 button[aria-disabled="true"] {
     opacity: 0.5;
-    box-shadow: 0 0 0 1px var(--bezel-edge);
     cursor: not-allowed;
-    transform: none;
 }
 
-/* The one action a view is about: the design system's 3D key (kriko-
- * svelte's .k-key). The blue brand gradient face, the lit top edge, and
- * the solid base under it - the 0 3px 0 shadow is what makes the key a
- * physical object that *can* sink. On press it travels the full 3px and
- * the base collapses: the key goes into the panel. */
+/* The one action a view is about: a flat brand face. Hover and press change
+ * its colour only; the 3D key came off in #139. */
 button.primary,
 .tab.active {
     color: var(--on-brand);
-    text-shadow: var(--key-ink-shadow);
-    background: linear-gradient(
-        180deg,
-        var(--brand-hover) 0%,
-        var(--brand) 55%,
-        var(--brand-low) 100%
-    );
+    background: var(--brand);
     border: 0;
-    box-shadow: var(--shadow-key);
+    box-shadow: none;
     font-weight: 600;
 }
 button.primary:hover,
 .tab.active:hover {
-    filter: brightness(1.12);
+    background: var(--brand-hover);
 }
 button.primary:active,
 .tab.active:active,
 button.primary[aria-pressed="true"] {
-    transform: translateY(3px);
-    box-shadow: var(--shadow-key-pressed);
+    background: var(--brand-low);
 }
 /* Everything that is not the action: the library's ghost - no face, a
  * hairline ring, the glass wash arriving on hover. */
@@ -2302,25 +2278,22 @@ form.say > input {
 }
 .k-key {
     color: var(--on-brand);
-    background: linear-gradient(180deg, var(--brand-hover) 0%, var(--brand) 55%, var(--brand-low) 100%);
-    box-shadow: var(--shadow-key);
+    background: var(--brand);
+    box-shadow: none;
 }
-.k-key:hover { filter: brightness(1.12); }
+.k-key:hover { background: var(--brand-hover); }
 .k-key:active,
 .k-key[aria-pressed="true"] {
-    transform: translateY(3px);
-    box-shadow: var(--shadow-key-pressed);
+    background: var(--brand-low);
+    box-shadow: none;
 }
 .k-plate {
     color: var(--dim);
-    background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
-    box-shadow: 0 0 0 1px var(--bezel-edge), var(--shadow-bezel);
+    background: var(--glass-2);
+    box-shadow: none;
 }
-.k-plate:hover { color: var(--text); }
-.k-plate:active {
-    transform: translateY(2px);
-    box-shadow: 0 0 0 1px var(--bezel-edge), var(--shadow-well);
-}
+.k-plate:hover { color: var(--text); background: var(--glass-3); }
+.k-plate:active { background: var(--glass-3); box-shadow: none; }
 .k-plate.wide {
     min-width: 340px;
     height: 72px;
