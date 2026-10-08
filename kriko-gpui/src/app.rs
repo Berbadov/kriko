@@ -238,6 +238,9 @@ pub struct Kriko {
     pub live: Live,
     // settings
     pub reduce_motion: bool,
+    /// Agent runs at once, 1..=4 (#133): the engine reads it at every start.
+    pub run_concurrency: usize,
+    pub run_concurrency_prev: usize,
     // inputs
     pub history_search: InputState,
     pub activity_filter: InputState,
@@ -285,6 +288,8 @@ impl Kriko {
             engine: engine::status(),
             live: Live::default(),
             reduce_motion: false,
+            run_concurrency: 1,
+            run_concurrency_prev: 0,
             history_search: InputState::new(cx),
             activity_filter: InputState::new(cx),
             sites_add: InputState::new(cx),
@@ -820,7 +825,7 @@ impl Render for Kriko {
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
         let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
-            .child(page_head(tab.crumb(), tab.title(), tab.lead()));
+            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead()));
         div()
             .id("kriko-root")
             .size_full()

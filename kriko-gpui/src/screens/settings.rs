@@ -1,12 +1,13 @@
 //! Settings: where a preference lives, and the fact that it lives anywhere.
-//! Four cards in a 2x2 grid: General, Keys, Shortcuts, Danger zone — the
+//! Five cards in two columns: General, Runs, Shortcuts | Keys, Danger zone — the
 //! shape of the reference screen. The app's own preferences are saved in the
 //! engine's settings; the keys are the engine's own key file.
 
 use gpui::{div, prelude::*, px, rgb, Context, Div, Stateful, Styled, Window};
 
 use crate::app::{Field, Kriko};
-use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
+use crate::live::knowledge::RUNS_MAX;
+use crate::screens::{empty_note, mono, plate_s, row_desc, row_title, segmented};
 use crate::theme::*;
 
 /// One row of a card: title + description left, a control right.
@@ -108,6 +109,41 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 .child(row_desc("Everything stays on this machine"))
                 .child(mono(&store, MUTED)),
         );
+
+    // ---- runs ----
+    // How many agent runs the engine may have going at once (#133). The
+    // engine reads it at every start, so a change needs no restart.
+    let runs_picker = segmented(
+        "runs-at-once",
+        &[("1", ONE5), ("2", TWO5), ("3", THREE5), ("4", FOUR5)],
+        app.run_concurrency.clamp(1, RUNS_MAX) - 1,
+        app.run_concurrency_prev.min(RUNS_MAX - 1),
+        motion,
+        cx,
+        |this, i, cx| {
+            this.set_run_concurrency(i + 1, cx);
+            cx.notify();
+        },
+    );
+    let runs_note = if app.run_concurrency <= 1 {
+        "One at a time; the rest wait their turn in Activity.".to_string()
+    } else {
+        format!(
+            "Up to {} together. Each one spends on its own agent or key.",
+            app.run_concurrency
+        )
+    };
+    let runs = card()
+        .flex()
+        .flex_col()
+        .child(div().mb(px(4.0)).child(eyebrow("Runs")))
+        .child(hairline())
+        .child(row(
+            "Agent runs at once",
+            "Research, authoring and checks that may go together. Two on the same pack always take turns.",
+            runs_picker.into_any_element(),
+        ))
+        .child(div().pb(px(8.0)).child(row_desc(&runs_note)));
 
     // ---- keys ----
     let mut keys = card()
@@ -265,6 +301,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                         .flex_col()
                         .gap(px(24.0))
                         .child(general)
+                        .child(runs)
                         .child(shortcuts),
                 )
                 .child(

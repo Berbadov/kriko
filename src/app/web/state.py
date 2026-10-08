@@ -2466,6 +2466,23 @@ def get_job(conn: sqlite3.Connection, job_id: str) -> dict | None:
     return _job(row) if row else None
 
 
+def live_job_ids(conn: sqlite3.Connection, job_ids: list[str]) -> set[str]:
+    """Which of these are still queued, the rest having been cancelled.
+
+    One query for the whole waiting line, so the runner's scheduler can
+    drop a cancelled row from the line without reading each one.
+    """
+    if not job_ids:
+        return set()
+    marks = ",".join("?" * len(job_ids))
+    return {
+        row[0] for row in conn.execute(
+            f"SELECT job_id FROM jobs WHERE job_id IN ({marks}) AND state = ?",
+            (*job_ids, QUEUED),
+        )
+    }
+
+
 def quick_look_for(conn: sqlite3.Connection, deepen_job_id: str) -> dict | None:
     """The quick look started beside a deepen job, if it has been created.
 

@@ -14,16 +14,27 @@ Three decisions, all of them about failure rather than about throughput:
 the work *is*. That is why a killed process leaves `interrupted` jobs and not
 mysteries — see `JobRunner.recover`.
 
-**One worker.** `ThreadPoolExecutor(max_workers=1)`. Research is I/O- and
-cost-heavy and two concurrent builds writing the same pack directory is a bug
-we should not be able to express. Serial is the feature.
+**Serial per pack, as wide as the reader chose (#133).** This was one worker,
+because two concurrent builds writing the same pack directory is a bug we
+should not be able to express. That bug is about *the same pack*, and one
+worker also serialised a forty-minute author of one category behind the
+research of another, which nothing required. So every job now names what it
+writes (`claims`), a job starts only when nothing running overlaps its claims,
+and how many run at once is the reader's Settings choice
+(`prefs.run_concurrency`), one unless they raised it. A kind whose target
+cannot be named claims `EVERYTHING` and runs alone, exactly as before: the
+default for anything new is the old safety, never the new speed.
+
+Order still holds where it matters. A job that is waiting blocks every later
+job whose claims overlap its own, so two runs on one pack start in the order
+they were asked for, and a run that needs everything is not starved by a
+stream of small ones that keep slipping past it.
 
 **One exception: the quick lane.** A quick look (B148) is one short agent
 call that writes nothing to the store, and the reader is waiting on the
 listing for it. Queued behind a forty-minute pack author — which it is
 usually submitted *beside* — it would be the slowness it exists to fix. So
-kinds in `QUICK_KINDS` get their own small pool. Nothing in it writes a pack
-directory, which is the only reason the main lane is serial.
+kinds in `QUICK_KINDS` get their own small pool, outside the limit above.
 
 **Cooperative cancel.** Cancel sets a flag the handler reads between steps.
 Killing a thread mid-write is how a half-installed pack happens, so a running
@@ -37,13 +48,54 @@ from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
-from app import operations
+from app import operations, prefs
+from kriko.store.db import connect
 from app.web import state
 
 
 #: Kinds that never write the store or a pack directory, and are short enough
 #: that queueing them behind long work would defeat them.
 QUICK_KINDS = frozenset({"quick_look", "lookup_ask"})
+
+#: The claim that overlaps every other: a job holding it runs alone.
+EVERYTHING = "*"
+
+
+def _named(prefix: str, value) -> frozenset[str]:
+    text = str(value or "").strip()
+    return frozenset({f"{prefix}:{text}"}) if text else frozenset({EVERYTHING})
+
+
+def claims(kind: str, params: dict) -> frozenset[str]:
+    """What a job writes, as names no other running job may also hold.
+
+    Keyed by the job's own parameters, never by a pack's name written here:
+    the pack id is data (CLAUDE.md, no category in code). A kind not listed,
+    or a listed one whose parameters do not name a target, claims
+    `EVERYTHING`, so a new kind is serial until somebody decides otherwise.
+
+    Drafts are one name for all authoring: an author's draft slug is chosen
+    by the agent mid-run, so two authors cannot be told apart up front, and an
+    amend may be extending the very draft an author is writing.
+    """
+    if kind in ("research", "verify", "site_register", "agenda_run", "bench",
+                "pack_update"):
+        return _named("pack", params.get("pack_id"))
+    if kind == "pack_build":
+        root = str(params.get("root") or "").replace("\\", "/").rstrip("/")
+        return _named("pack", root.rsplit("/", 1)[-1])
+    if kind in ("pack_author", "pack_amend"):
+        return frozenset({"drafts"})
+    if kind == "compare_ask":
+        return _named("compare", params.get("draft_id"))
+    if kind == "model_pull":
+        return _named("model", params.get("model"))
+    return frozenset({EVERYTHING})
+
+
+def _overlap(one: frozenset[str], other: frozenset[str]) -> bool:
+    return bool(one & other) or (EVERYTHING in one and bool(other)) or (
+        EVERYTHING in other and bool(one))
 
 
 class Cancelled(Exception):
@@ -134,13 +186,120 @@ def _stopped(kept: dict) -> str:
     )
 
 
+@dataclass
+class _Waiting:
+    job_id: str
+    kind: str
+    params: dict
+    claims: frozenset[str]
+    #: The reason last written to the row, so a pump that finds the same
+    #: reason does not write it again on every pass.
+    said: str = ""
+
+
 class JobRunner:
     def __init__(self, settings, handlers: Mapping[str, Handler]):
         self.settings = settings
         self.handlers = handlers
-        self._pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="kriko-job")
+        # Sized to the ceiling, not to the choice: the choice is read at every
+        # start, so raising it in Settings needs no restart, and an idle
+        # executor thread costs nothing.
+        self._pool = ThreadPoolExecutor(
+            max_workers=prefs.MAX_RUN_CONCURRENCY, thread_name_prefix="kriko-job")
         self._quick = ThreadPoolExecutor(max_workers=2, thread_name_prefix="kriko-quick")
         self._lock = threading.Lock()
+        self._waiting: list[_Waiting] = []
+        self._running: dict[str, frozenset[str]] = {}
+        self._closed = False
+
+    def _limit(self) -> int:
+        conn = self._connect()
+        try:
+            return prefs.run_concurrency(conn)
+        except sqlite3.Error:
+            return 1
+        finally:
+            conn.close()
+
+    def _pump(self) -> None:
+        """Start every waiting job that may start now, oldest first.
+
+        Called on submit, on every finish and on cancel: those are the only
+        moments the answer can change (besides the Settings choice, which the
+        next of them picks up).
+        """
+        limit = self._limit()
+        conn = self._connect()
+        try:
+            with self._lock:
+                if self._closed:
+                    return
+                live = state.live_job_ids(conn, [w.job_id for w in self._waiting])
+                # A row cancelled while it waited holds nothing: dispatch it
+                # anyway so `_run` sees the cancel and returns at once.
+                start: list[_Waiting] = []
+                keep: list[_Waiting] = []
+                ahead: frozenset[str] = frozenset()
+                holding = list(self._running.values())
+                for one in self._waiting:
+                    gone = one.job_id not in live
+                    if gone:
+                        start.append(one)
+                        continue
+                    if len(self._running) >= limit:
+                        reason = (f"waiting: {limit} run(s) at once already "
+                                  "going; Settings → Runs sets how many")
+                    elif any(_overlap(one.claims, held) for held in holding) or \
+                            _overlap(one.claims, ahead):
+                        reason = ("waiting for the run ahead of it on the same "
+                                  "pack to finish" if EVERYTHING not in one.claims
+                                  else "waiting to run alone: it may touch every pack")
+                    else:
+                        start.append(one)
+                        self._running[one.job_id] = one.claims
+                        holding.append(one.claims)
+                        continue
+                    ahead = ahead | one.claims
+                    if reason != one.said:
+                        one.said = reason
+                        state.update_job(conn, one.job_id, message=reason)
+                    keep.append(one)
+                self._waiting = keep
+                for one in start:
+                    self._pool.submit(self._run, one.job_id, one.kind, one.params,
+                                      True, bool(one.said))
+        finally:
+            conn.close()
+
+    def _with_pack(self, params: dict) -> dict:
+        """The params, with the pack named when only the subject was.
+
+        A research or verify request may name just a subject, and the handler
+        finds its pack itself. The claim has to find the same pack, or two
+        runs on one pack would pass as two runs on nothing in particular.
+        Unknown subject: left as it is, which claims `EVERYTHING`.
+        """
+        subject = str(params.get("subject_id") or "").strip()
+        if params.get("pack_id") or not subject:
+            return params
+        try:
+            store = connect(self.settings.store_path, read_only=True)
+        except (sqlite3.Error, OSError):
+            return params
+        try:
+            row = store.execute(
+                "SELECT pack_id FROM subjects WHERE subject_id = ?", (subject,)
+            ).fetchone()
+        except sqlite3.Error:
+            row = None
+        finally:
+            store.close()
+        return {**params, "pack_id": row[0]} if row else params
+
+    def _done(self, job_id: str) -> None:
+        with self._lock:
+            self._running.pop(job_id, None)
+        self._pump()
 
     # Each job opens its own connection. sqlite3 connections belong to the
     # thread that made them, and the request that submitted a job is long gone
@@ -164,17 +323,27 @@ class JobRunner:
             job_id = state.create_job(conn, kind, params)
         finally:
             conn.close()
-        pool = self._quick if kind in QUICK_KINDS else self._pool
-        pool.submit(self._run, job_id, kind, params)
+        if kind in QUICK_KINDS:
+            self._quick.submit(self._run, job_id, kind, params, False)
+            return job_id
+        with self._lock:
+            self._waiting.append(
+                _Waiting(job_id, kind, params, claims(kind, self._with_pack(params))))
+        self._pump()
         return job_id
 
-    def _run(self, job_id: str, kind: str, params: dict) -> None:
+    def _run(self, job_id: str, kind: str, params: dict, lane: bool = True,
+             waited: bool = False) -> None:
         conn = self._connect()
         progress = Progress(job_id, conn)
         try:
             # The row may have been cancelled while it sat in the queue.
             if not state.start_job(conn, job_id):
                 return
+            if waited:
+                # A row that waited still says why; it is not waiting now.
+                # Blank, so the handler's first `set` is the next word on it.
+                state.update_job(conn, job_id, message="")
             progress.check()
             # The same row the MCP door writes (B122), so the feed is "what is
             # this installation doing", not "what did the agent ask". A job and
@@ -227,14 +396,22 @@ class JobRunner:
             )
         finally:
             conn.close()
+            if lane:
+                self._done(job_id)
 
     def cancel(self, job_id: str) -> str | None:
         conn = self._connect()
         try:
-            return state.request_cancel(conn, job_id)
+            answer = state.request_cancel(conn, job_id)
         finally:
             conn.close()
+        # A waiting row cancelled is a place in the line given back.
+        self._pump()
+        return answer
 
     def shutdown(self, wait: bool = False) -> None:
+        with self._lock:
+            self._closed = True
+            self._waiting.clear()
         self._pool.shutdown(wait=wait, cancel_futures=True)
         self._quick.shutdown(wait=wait, cancel_futures=True)
