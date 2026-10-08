@@ -291,11 +291,6 @@ def retry_job(job_id: str, body: RetryRequest | None = None,
         raise HTTPException(404, f"no such job: {job_id}")
     if not row["done"]:
         raise HTTPException(409, f"job {job_id} is still {row['state']}")
-    # Idempotent regardless of caller (ops-5/ops-m1): a retry already live
-    # for this job is the answer, not a second child of it.
-    existing = state.live_retry_of(app_state, job_id)
-    if existing is not None:
-        return {"job_id": existing["job_id"], "kind": existing["kind"]}
     params = dict(row["params"] or {})
     params["retry_of"] = job_id
     # Merged onto whatever the first run was given, so answering one question
@@ -304,7 +299,11 @@ def retry_job(job_id: str, body: RetryRequest | None = None,
              if str(value).strip()}
     if given:
         params["answers"] = {**(params.get("answers") or {}), **given}
-    return _submit(runner, row["kind"], params)
+    try:
+        child = runner.retry(row["kind"], params)
+    except KeyError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"job_id": child, "kind": row["kind"]}
 
 
 @router.get("/jobs/{job_id}/stream")

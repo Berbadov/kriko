@@ -911,6 +911,7 @@ def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
             text=True, encoding="utf-8", errors="replace",
             env={**os.environ, **CHILD_ENCODING_ENV},
             start_new_session=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except Exception:  # noqa: BLE001 — a CLI that will not start declares nothing
         return ""
@@ -2758,6 +2759,7 @@ class HarnessResearcher(AgentResearcher):
                 env={**os.environ, **CHILD_ENCODING_ENV, **self.harness.env, **self._run_env},
                 cwd=self._run_cwd or os.path.expanduser("~"),
                 shell=self._needs_shell(command),
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 # POSIX only (Windows accepts and ignores it — see
                 # `subprocess._execute_child`'s `unused_start_new_session`).
                 # It is what makes `_kill_tree` able to reach a child at all:
@@ -3135,6 +3137,7 @@ class HarnessResearcher(AgentResearcher):
                 subprocess.run(
                     ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
                     capture_output=True, timeout=10,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
             else:
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)

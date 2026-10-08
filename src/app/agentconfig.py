@@ -471,6 +471,7 @@ def _handshake(server: dict, *, timeout: float, reached: set[str]) -> dict:
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True,
             env=_launch_environment(server.get("env", {})),
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except OSError as exc:
         return {"ok": False, "detail": f"could not start the command: {exc}"}

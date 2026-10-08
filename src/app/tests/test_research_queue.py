@@ -75,6 +75,18 @@ def test_a_product_can_be_taken_off_the_queue(tmp_path):
     assert client.delete(f"/api/queue/{item['queue_id']}").status_code == 404
 
 
+def test_history_keeps_completed_and_removed_queue_work_after_restart(tmp_path):
+    client = _client(tmp_path)
+    item = client.post("/api/queue", json={"url": "https://shop.example/1", "name": "Widget"}).json()["item"]
+    conn = state.connect(tmp_path / "app.sqlite")
+    state.update_queued(conn, item["queue_id"], state="done")
+    conn.close()
+    client.delete(f"/api/queue/{item['queue_id']}")
+    records = _client(tmp_path).get("/api/history/records").json()["items"]
+    [row] = [r for r in records if r["kind"] == "queue"]
+    assert row["label"] == "Widget" and row["status"] == "removed"
+
+
 def test_no_address_is_refused(tmp_path):
     assert _client(tmp_path).post(
         "/api/queue", json={"url": "  ", "name": "P"}).status_code == 422
