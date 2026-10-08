@@ -1,4 +1,5 @@
 <script lang="ts">
+    import JackMark from "../lib/kriko/JackMark.svelte";
     import Icon from "../lib/Icon.svelte";
     import { onDestroy } from "svelte";
     import { api } from "../lib/api";
@@ -377,7 +378,7 @@ import PageHead from "../lib/kriko/PageHead.svelte";
         {/if}
     {/if}
 {:else}
-    <p class="state loading">Reading the extension status…</p>
+    <p class="state loading loading-mark"><JackMark />Reading the extension status…</p>
 {/if}
 
 <style>

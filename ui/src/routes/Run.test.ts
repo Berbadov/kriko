@@ -203,3 +203,35 @@ describe("Run: the live panel (B176)", () => {
         expect(await screen.findByText("No run is going")).toBeInTheDocument();
     });
 });
+
+/* #136: the pipeline scene is the Run screen's picture of "no run going", so it
+ * shows exactly when no job is live, and gives way to a live run's panel. */
+describe("Run: the pipeline scene (#136)", () => {
+    const scene = () => screen.queryByRole("img", { name: /agent pipeline/i });
+
+    it("shows the pipeline scene when no run is going", async () => {
+        stub(base());
+        render(Run);
+        await screen.findByText("No run is going");
+        expect(scene()).toBeInTheDocument();
+    });
+
+    it("gives way to the scene's panel while a run is live", async () => {
+        stub(base({ "/api/jobs": { items: [JOB] } }));
+        render(Run);
+        await screen.findByRole("region", { name: /run$/ });
+        expect(scene()).toBeNull();
+    });
+
+    it("comes back once a run has finished, above the finished run's panel", async () => {
+        stub(base({
+            "/api/packs/author": { job_id: "j9" },
+            "/api/jobs/j9": { ...JOB, job_id: "j9", state: "done", done: true, progress: 1, message: "Done" },
+        }));
+        render(Run);
+        await fireEvent.input(screen.getByLabelText("Category"), { target: { value: "e-bikes" } });
+        await fireEvent.click(screen.getByRole("button", { name: "Start" }));
+        await screen.findByRole("region", { name: /run$/ });
+        expect(scene()).toBeInTheDocument();
+    });
+});

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import JackMark from "../lib/kriko/JackMark.svelte";
     import Icon from "../lib/Icon.svelte";
     import Async from "../lib/Async.svelte";
     import EmptyState from "../lib/EmptyState.svelte";
@@ -206,7 +207,7 @@ import PageHead from "../lib/kriko/PageHead.svelte";
                                 {#if detailError}
                                     <Failure error={detailError} />
                                 {:else if !detail}
-                                    <p class="state loading">Reading the adapter…</p>
+                                    <p class="state loading loading-mark"><JackMark />Reading the adapter…</p>
                                 {:else}
                                     <dl class="facts">
                                         <dt>Match</dt>

@@ -14,13 +14,14 @@ describe("Lazy", () => {
     });
 
     it("shows a starting state before the module resolves", () => {
-        render(Lazy, {
+        const { container } = render(Lazy, {
             props: {
                 loader: () => import("./EmptyState.svelte"),
                 props: { title: "Loaded on demand" },
             },
         });
         expect(screen.getByText("Starting…")).toBeInTheDocument();
+        expect(container.querySelector("svg.jack")).not.toBeNull();
     });
 
     it("surfaces a failed chunk the way every other view does", async () => {
