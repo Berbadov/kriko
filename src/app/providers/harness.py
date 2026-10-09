@@ -360,6 +360,11 @@ class Harness:
     download_url: str = ""
     #: The one command that installs it, for the missing-harness card.
     install_hint: str = ""
+    #: The same install as a PowerShell script the app can run for the reader
+    #: (`app/agentinstall.py`), taken from the vendor's own Windows
+    #: instructions. Empty means no one-click install: the card shows the
+    #: hint and the download page instead.
+    install_command: str = ""
     #: What account it bills to. Every headless plane spends *something* —
     #: a subscription, a quota, a key — and "no marginal cost" is only true
     #: once the reader knows which one they already pay.
@@ -414,6 +419,7 @@ KNOWN: tuple[Harness, ...] = (
         _claude_args(),
         download_url="https://code.claude.com/docs",
         install_hint="winget install Anthropic.ClaudeCode",
+        install_command="irm https://claude.ai/install.ps1 | iex",
         needs_account="a Claude subscription or API billing; log in once with an interactive `claude` session first",
         model_flag="--model",
         model_source="help",
@@ -527,7 +533,12 @@ KNOWN: tuple[Harness, ...] = (
         "agy",
         ("--output-format", "stream-json"),
         download_url="https://antigravity.google/download",
-        install_hint="curl -fsSL https://antigravity.google/cli/install.sh | bash",
+        install_hint=(
+            "irm https://antigravity.google/cli/install.ps1 | iex"
+            if os.name == "nt"
+            else "curl -fsSL https://antigravity.google/cli/install.sh | bash"
+        ),
+        install_command="irm https://antigravity.google/cli/install.ps1 | iex",
         needs_account="a Google account (free-tier quotas) or a Gemini API key; sign in once with an interactive `agy` session first",
         protocol="agy",
         prompt_argument=False,
@@ -590,6 +601,13 @@ KNOWN: tuple[Harness, ...] = (
             if os.name == "nt"
             else "curl -LsSf https://mistral.ai/vibe/install.sh | bash"
         ),
+        # Mistral's own installer installs `uv` when it is missing and then
+        # `uv tool install mistral-vibe`; this is that, with uv's Windows installer.
+        install_command=(
+            "if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {"
+            " irm https://astral.sh/uv/install.ps1 | iex;"
+            " $env:Path = \"$HOME\\.local\\bin;$env:Path\" };"
+            " uv tool install mistral-vibe"),
         needs_account="a Mistral account or API key (MISTRAL_API_KEY); run `vibe --setup` once first",
         protocol="vibe", prompt_argument=False,
         required=("--output", "--agent", "--enabled-tools", "--prompt"),
@@ -887,7 +905,14 @@ KNOWN = tuple(h for h in KNOWN if h.id in {"claude-code", "antigravity-cli", "mi
             protocol="codex", model_flag="--model", model_unlisted=True,
             effort_flag="codex-thinking", effort_choices=("low", "medium", "high", "xhigh"),
             model_source="codex-cache", download_url="https://developers.openai.com/codex/cli",
-            install_hint="npm install -g @openai/codex", needs_account="your ChatGPT account; sign in with codex login"),
+            install_hint="npm install -g @openai/codex",
+            install_command=(
+                "if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {"
+                " Write-Output 'Node.js is needed first; installing it.';"
+                " winget install --id OpenJS.NodeJS.LTS -e --silent --accept-package-agreements --accept-source-agreements;"
+                " $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User') };"
+                " npm install -g @openai/codex"),
+            needs_account="your ChatGPT account; sign in with codex login"),
 )
 
 def available() -> list[Harness]:

@@ -3226,7 +3226,15 @@ def model_pull(settings, params: dict, progress: Progress) -> dict:
     return modelpull.pull(base, model, progress)
 
 
+def agent_install(settings, params: dict, progress: Progress) -> dict:
+    """Install an agent CLI, or set up the local model, for the reader."""
+    from app import agentinstall
+
+    return agentinstall.install(settings, params, progress)
+
+
 HANDLERS = {
+    "agent_install": agent_install,
     "research": research,
     "bench": bench,
     "agenda_run": agenda_run,

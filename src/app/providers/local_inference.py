@@ -140,8 +140,13 @@ class OpenAICompatSocket:
         }
         if isinstance(self.max_tokens, int) and self.max_tokens > 0:
             body["max_tokens"] = self.max_tokens
-        if self.reasoning_effort:
-            body["reasoning_effort"] = self.reasoning_effort
+        # A model that thinks first (Qwen 3.5 and kin) spends the whole reply
+        # budget on its reasoning and answers with an empty string: a 0.8B
+        # model took 12 s to write nothing, and under a second to answer once
+        # told not to think. Extraction wants the answer, so thinking is off
+        # unless the reader chose an effort. A server that does not know the
+        # field is handled below (HTTP 400 drops it and retries).
+        body["reasoning_effort"] = self.reasoning_effort or "none"
         if self._schema:
             body["response_format"] = {
                 "type": "json_schema",
@@ -271,7 +276,9 @@ class OpenAICompatSocket:
             # native endpoint only for settings that resolve identified as
             # supported; never silently send ignored GPU fields to /v1.
             native = {"model": self.serving_name, "messages": body["messages"],
-                      "stream": False, "options": {
+                      "stream": False,
+                      **({"think": False} if body.get("reasoning_effort") == "none" else {}),
+                      "options": {
                           **self.runtime_options, "temperature": body["temperature"],
                           **({"num_predict": body["max_tokens"]} if "max_tokens" in body else {})}}
             if "response_format" in body:

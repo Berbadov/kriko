@@ -370,7 +370,8 @@ def local_agent_rows(conn) -> tuple[list[dict], list[dict], list[dict]]:
         return [], [{"id": LOCAL_PICK, "label": label, "why": plane["reason"]}], []
     return [], [], [{"id": LOCAL_PICK, "label": label, "command": "",
                      "download_url": "https://ollama.com/download",
-                     "install_hint": plane["reason"], "needs_account": ""}]
+                     "install_hint": plane["reason"], "needs_account": "",
+                     "can_install": True}]
 
 
 def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
@@ -382,7 +383,7 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
     hardcoded model list would be stale within a release and wrong for anyone
     pointing `LLM_BASE_URL` at their own gateway.
     """
-    from app import keys, modeldiscovery
+    from app import agentinstall, keys, modeldiscovery
     from app.providers import harness, llm
     from app.web.settings import KRIKO_HOME
 
@@ -423,6 +424,7 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
             "id": one.id, "label": one.label, "command": one.executable,
             "download_url": one.download_url, "install_hint": one.install_hint,
             "needs_account": one.needs_account,
+            "can_install": agentinstall.can_install(one.id),
         }
         for one in harness.KNOWN
         if one.id not in have and not one.unusable
