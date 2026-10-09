@@ -18,14 +18,26 @@ from app.web.app import create_app
 from app.web.settings import EXTENSION_PORT, Settings
 
 
-def test_reveal_selects_extension_folder_in_parent_on_windows(monkeypatch, tmp_path):
+def test_reveal_opens_the_extension_folder_itself_on_windows(monkeypatch, tmp_path):
     calls = []
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(extension.subprocess, "Popen", lambda command, **kwargs: calls.append(command))
 
     path = tmp_path / "extension"
     assert extension.reveal(path) == ""
-    assert calls == [["explorer", "/select,", str(path)]]
+    assert calls == [["explorer", str(path)]]
+
+
+def test_the_shell_can_ask_for_the_path_alone_and_open_it_itself(monkeypatch, tmp_path):
+    """A window the background engine opens stays behind the app; the shell opens it instead."""
+    calls = []
+    monkeypatch.setattr(extension, "reveal", lambda path: calls.append(path) or "")
+    client = _client(tmp_path)
+    assert client.post("/api/extension/stage").status_code == 200
+    got = client.post("/api/extension/reveal?spawn=false").json()
+    assert got["path"] and got["error"] == "" and calls == []
+    client.post("/api/extension/reveal")
+    assert len(calls) == 1
 
 
 def _client(tmp_path, **over):

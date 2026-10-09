@@ -18,7 +18,40 @@ fn kv(k: &str, v: &str) -> Div {
         .child(mono(v, INK_2).min_w(px(0.0)))
 }
 
-pub fn about(app: &mut Kriko, _window: &mut Window, _cx: &mut Context<Kriko>) -> Div {
+fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
+    let k = &app.live.knowledge;
+    let check = |label: &str, cx: &mut Context<Kriko>| {
+        ghost("app-update-check", label)
+            .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.check_app_update(cx)))
+            .into_any_element()
+    };
+    let (line, action) = match (&k.app_update, k.app_update_busy) {
+        (_, true) => ("Installing the update. Kriko will close and reopen.".to_string(), None),
+        (Some(u), _) if u.newer => (
+            format!("Version {} is available. Installing keeps your catalogs and history.", u.version),
+            Some(
+                key("app-update-install", "Install and restart")
+                    .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.install_app_update(cx)))
+                    .into_any_element(),
+            ),
+        ),
+        (Some(u), _) if !u.error.is_empty() => (format!("Could not check: {}.", u.error), Some(check("Check again", cx))),
+        (Some(_), _) => ("This is the newest version.".to_string(), Some(check("Check again", cx))),
+        (None, _) => ("Not checked yet.".to_string(), Some(check("Check for updates", cx))),
+    };
+    let mut row = div().flex().items_center().justify_between().gap(px(24.0)).child(mono(&line, INK_2).min_w(px(0.0)));
+    if let Some(button) = action {
+        row = row.child(button);
+    }
+    let mut panel = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Updates")).child(row);
+    if let Some(note) = &k.app_update_note {
+        panel = panel.child(mono(note, DIM));
+    }
+    panel
+}
+
+pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let updates = updates_card(app, cx);
     let h = &app.live.health;
     let said = |v: &str| {
         if h.loaded && !v.is_empty() {
@@ -104,6 +137,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, _cx: &mut Context<Kriko>) ->
         .flex_col()
         .gap(px(24.0))
         .child(brand)
+        .child(updates)
         .child(blurb)
         .child(facts)
 }
