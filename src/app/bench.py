@@ -206,6 +206,7 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
         "kind": "fixed",
         "set_id": case.get("set_id") or "",
         "set_version": case.get("set_version") or "",
+        "model": model,
     }
     columns, error = _spend_columns(protocol)
     if error:
@@ -230,6 +231,14 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
             "harness": run_settings.get("harness", ""),
             "queries": case.get("queries") or [],
         }, silent)
+        # ask() does not pass through gather(), which normally applies these
+        # ceilings. A fixed case must honour the same run controls.
+        for name, value in (("max_documents", max_documents),
+                            ("max_pages", max_documents), ("budget_usd", budget_usd)):
+            if hasattr(researcher, name):
+                setattr(researcher, name, value)
+        row["model"] = str(getattr(researcher, "requested_model", "")
+                           or getattr(researcher, "model", "") or model or plane)
         if hasattr(researcher, "on_action"):
             researcher.on_action = silent.log
         if hasattr(researcher, "check_cancelled"):
@@ -263,7 +272,8 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
     ]
     judged = gold_mod.judge(case, produced)
     row["gold"] = judged
-    row["model"] = str(getattr(researcher, "model", "") or "") or plane
+    row["model"] = str(getattr(researcher, "requested_model", "")
+                       or getattr(researcher, "model", "") or model or plane)
     row["search_provider"] = (
         str(getattr(researcher, "search_provider", "") or "") or search
         or row["search_provider"])

@@ -124,15 +124,12 @@ def available(path: Path | None = None) -> list[ApiAgent]:
 
 
 def models_for(agent: ApiAgent, home: Path | None = None) -> list[str]:
-    """The catalogue's models for this agent's provider, its default first.
-
-    Read off `models.toml` rather than listed here, so that a row the reader
-    adds for a new model is selectable the day they add it.
-    """
-    from app import modelcatalogue
+    """The provider's live list plus priced catalogue entries, default first."""
+    from app import modelcatalogue, modeldiscovery
 
     rows = modelcatalogue.load(home)
-    names = [name for name, row in rows.items() if row.get("provider") == agent.key]
+    names = {name for name, row in rows.items() if row.get("provider") == agent.key}
+    names.update(modeldiscovery.cached().get(agent.key, []))
     return sorted(names, key=lambda name: (name != agent.default_model, name))
 
 
