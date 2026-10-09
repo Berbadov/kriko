@@ -76,13 +76,13 @@ too for a full wipe.
 
 Not on a web store: load it from disk.
 
-1. In the app, **Check**, then **Browser extension**, then **Add the
-   extension**. The files are staged under `~/.kriko/extension/`.
+1. In the app, **Check**, then **Browser extension**, then **Stage** (or
+   **Refresh** if already staged). **Show folder** opens `~/.kriko/extension/`.
 2. `chrome://extensions`, **Developer mode** on, **Load unpacked**, and pick
    that folder (the one *containing* `manifest.json`). Pin the extension.
 
-> After an app update the card says the staged files are older, and **Add
-> again** followed by the browser's Reload (the circular arrow on the
+> After an app update the card says the staged files are older, and **Refresh**
+> followed by the browser's Reload (the circular arrow on the
 > extension's card) is the whole repair. The card also compares a content
 > digest, so an extension older than this build is caught even when the version
 > numbers agree.
