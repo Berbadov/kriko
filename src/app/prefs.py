@@ -353,10 +353,10 @@ def local_agent_rows(conn) -> tuple[list[dict], list[dict], list[dict]]:
         plane = localplane.resolve(None, url=mine[LOCAL_URL], model=mine[LOCAL_MODEL],
                                    with_search=False)
     except Exception as exc:  # noqa: BLE001 - a probe never breaks the agents list
-        return [], [], [{"id": LOCAL_PICK, "label": "Local model", "command": "",
+        return [], [], [{"id": LOCAL_PICK, "label": "Local agent", "command": "",
                          "download_url": "", "install_hint": str(exc),
                          "needs_account": ""}]
-    label = "Local model"
+    label = "Local agent"
     if plane["ready"]:
         return [{
             "id": LOCAL_PICK, "label": label, "path": plane["url"], "command": "",
@@ -427,7 +427,7 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
         for one in harness.KNOWN
         if one.id not in have and not one.unusable
     ]
-    api_rows, api_missing = api_agent_rows(conn)
+    api_rows, api_missing = [], []
     local_ready, local_unusable, local_missing = local_agent_rows(conn)
     installed += local_ready
     unusable += local_unusable
