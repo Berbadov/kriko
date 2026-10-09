@@ -201,3 +201,17 @@ def no_test_finds_the_readers_local_model_server(monkeypatch):
             for name, url in local_discovery.CANDIDATES])
     monkeypatch.setattr(local_discovery, "search_answers",
                         lambda url="", timeout=1.0: False)
+
+
+@pytest.fixture(autouse=True)
+def the_readers_registry_path_is_not_a_test_input(monkeypatch):
+    """A test that hides an agent by emptying PATH must not find the real one.
+
+    `app.loginpath` reads the registry's PATH so an agent installed after the
+    app started is found. On a developer's machine that registry lists the real
+    agents, so every test that fakes a missing one would pass or fail on whose
+    computer it ran. A test that wants the registry says so by patching it.
+    """
+    from app import loginpath
+
+    monkeypatch.setattr(loginpath, "_registry_path_values", lambda: [])
