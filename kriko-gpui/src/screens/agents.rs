@@ -179,7 +179,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 
     div()
         .id("agents-row-scroll")
-        .overflow_x_scroll()
+        .overflow_x_scroll().occlude()
         .flex()
         .flex_col()
         .gap(px(24.0))
@@ -408,7 +408,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                 .child(ghost("agent-check-copy", "Copy log").on_click(copy)));
             c = c.child(reveal(
                 well()
-                    .id("agent-check-log-scroll").overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                    .id("agent-check-log-scroll").overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                     .max_h(px(220.0))
                     .p(px(12.0))
                     .font_family(MONO)
@@ -442,7 +442,7 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
         }
         let query = app.model_search.value.trim().to_lowercase();
         names.retain(|name| query.is_empty() || name.to_lowercase().contains(&query));
-        let mut row = div().id("agent-model-list").h(px(220.0)).min_h(px(0.0)).overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation()).flex().flex_col().gap(px(6.0));
+        let mut row = div().id("agent-model-list").h(px(220.0)).min_h(px(0.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation()).flex().flex_col().gap(px(6.0));
         // The local model has no "default" of its own: the server runs one.
         if h.id != "local" {
             let id = h.id.clone();

@@ -681,7 +681,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .child(
             div()
                 .id("hist-table-scroll")
-                .overflow_x_scroll()
+                .overflow_x_scroll().occlude()
                 .child(table.min_w(px(640.0))),
         )
 }

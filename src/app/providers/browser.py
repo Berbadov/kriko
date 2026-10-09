@@ -24,6 +24,7 @@ import logging
 import os
 import shutil
 import subprocess
+from app.winprocess import hidden_startup
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -126,7 +127,7 @@ def read(url: str) -> str:
         done = subprocess.run(
             [browser, *_switches(profile), url], capture_output=True,
             timeout=TIMEOUT, check=False,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except (OSError, subprocess.TimeoutExpired):
         return ""
     finally:

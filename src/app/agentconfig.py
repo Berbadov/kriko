@@ -442,6 +442,7 @@ def _handshake(server: dict, *, timeout: float, reached: set[str]) -> dict:
     """
     import json
     import subprocess
+    from app.winprocess import hidden_startup
     import time
 
     def frame(method: str, params: dict, id_: int | None) -> str:
@@ -471,7 +472,7 @@ def _handshake(server: dict, *, timeout: float, reached: set[str]) -> dict:
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True,
             env=_launch_environment(server.get("env", {})),
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except OSError as exc:
         return {"ok": False, "detail": f"could not start the command: {exc}"}
