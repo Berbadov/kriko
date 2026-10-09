@@ -6,9 +6,10 @@
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
-use crate::live::local::{Held, Machine, Plane, PullPhase};
+use crate::live::local::{Held, LibraryModel, Machine, Plane, PullPhase};
 use crate::live::run;
 use crate::marks::{self, mark_tile, Mark, Phase};
+use crate::screens::run::option_chip;
 use crate::screens::{empty_note, mono, row_desc, row_title, stepper, trust_icon};
 use crate::theme::*;
 
@@ -145,7 +146,7 @@ fn setup(
     app: &mut Kriko,
     plane: &Plane,
     machine: Option<&Machine>,
-    _window: &mut Window,
+    window: &mut Window,
     cx: &mut Context<Kriko>,
 ) -> Div {
     let motion = !app.reduce_motion;
@@ -351,32 +352,104 @@ fn setup(
             "Choose from Ollama's library. Ollama keeps downloaded files; download progress and errors appear here."
         } else { "Ollama is installed but not running. Start it to download a model." }));
     }
-    if app.live.local.catalogue_open {
-        catalogue = catalogue.child(div().flex().flex_wrap().gap(px(8.0))
-            .child(ghost("local-catalogue-refresh", if app.live.local.catalogue_loading { "Loading library" } else { "Refresh library" }).on_click(refresh_catalogue))
-            .child(ghost("local-catalogue-provider", "Open provider library and sizes").on_click(library)));
-        if !app.live.local.catalogue_error.is_empty() { catalogue = catalogue.child(row_desc(&app.live.local.catalogue_error)); }
-        if app.live.local.offered.is_empty() && !app.live.local.catalogue_loading { catalogue = catalogue.child(empty_note("No downloadable models loaded. Refresh the library.")); }
-        let mut choices = div().id("local-download-choices").max_h(px(320.0)).overflow_y_scroll().occlude().flex().flex_col().gap(px(8.0));
-        for (i, name) in app.live.local.offered.clone().iter().enumerate() {
-            let model = name.clone();
-            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+    // The library drawer: search, then each model with the parameter sizes it
+    // comes in. It is built only while open and slides in through `reveal`.
+    let open = app.live.local.catalogue_open;
+    let mut drawer_body = div().flex().flex_col().gap(px(12.0));
+    if open {
+        let raw_query = app.library_search.value.trim().to_string();
+        let query = raw_query.to_lowercase();
+        let search = app.input_field(Field::LibrarySearch, "local-library-search", "Search models by name or what they do", Some("search"), window, cx);
+        let loading = app.live.local.catalogue_loading;
+        let total = app.live.local.library.len();
+        let matches: Vec<LibraryModel> = app.live.local.library.iter()
+            .filter(|m| query.is_empty() || m.name.to_lowercase().contains(&query) || m.about.to_lowercase().contains(&query))
+            .cloned()
+            .collect();
+        let count_line = if loading && total == 0 {
+            "Reading Ollama's library".to_string()
+        } else if query.is_empty() {
+            format!("{total} models")
+        } else {
+            format!("{} of {total} models", matches.len())
+        };
+        let busy = matches!(&app.live.local.pull, Some(p) if p.phase == PullPhase::Running);
+        drawer_body = drawer_body
+            .child(search)
+            .child(div().flex().flex_wrap().items_center().gap(px(8.0))
+                .child(ghost("local-catalogue-refresh", if loading { "Loading library" } else { "Refresh library" }).h(px(36.0)).px(px(16.0)).text_size(px(12.0)).on_click(refresh_catalogue))
+                .child(ghost("local-catalogue-provider", "Open Ollama's library").h(px(36.0)).px(px(16.0)).text_size(px(12.0)).on_click(library))
+                .child(mono(&count_line, DIM)));
+        if !app.live.local.catalogue_error.is_empty() { drawer_body = drawer_body.child(row_desc(&app.live.local.catalogue_error)); }
+        if matches.is_empty() && !loading {
+            drawer_body = drawer_body.child(empty_note(if query.is_empty() {
+                "No downloadable models loaded. Refresh the library."
+            } else {
+                "No model in the library matches that search."
+            }));
+            // a name Ollama knows that the list does not show: `name:size` typed
+            if !raw_query.is_empty() && !raw_query.contains(' ') {
+                let typed = raw_query.clone();
+                let get_typed = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                    if matches!(&this.live.local.pull, Some(p) if p.phase == PullPhase::Running) { return; }
+                    this.local_get.set_value(typed.clone());
+                    this.local_pull(cx);
+                });
+                drawer_body = drawer_body.child(div().flex().items_center().gap(px(12.0))
+                    .child(ghost("local-get-typed", &format!("Get {raw_query}")).on_click(get_typed)));
+            }
+        }
+        let mut choices = div().id("local-download-choices").max_h(px(380.0)).overflow_y_scroll().occlude().flex().flex_col();
+        let shown: Vec<&LibraryModel> = matches.iter().take(60).collect();
+        for (i, m) in shown.iter().enumerate() {
+            let picked = app.live.local.library_size.get(&m.name).cloned().unwrap_or_default();
+            let target = if picked.is_empty() { m.name.clone() } else { format!("{}:{}", m.name, picked) };
+            let get_target = target.clone();
+            let get = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
                 if matches!(&this.live.local.pull, Some(p) if p.phase == PullPhase::Running) { return; }
-                this.local_get.set_value(model.clone());
+                this.local_get.set_value(get_target.clone());
                 this.local_pull(cx);
             });
-            choices = choices.child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap(px(16.0))
-                    .child(row_title(name))
-                    .child(ghost(("local-offered", i), "Get").on_click(pick)),
+            let mut left = div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(2.0)).child(row_title(&m.name));
+            if !m.about.is_empty() {
+                left = left.child(row_desc(&crate::screens::history::clip(&m.about, 140)));
+            }
+            let mut row = div().flex().flex_col().gap(px(10.0)).py(px(12.0)).child(
+                div().flex().items_start().justify_between().gap(px(16.0)).child(left).child(
+                    if busy { ghost(("local-offered", i), "Busy").h(px(36.0)).px(px(16.0)).text_size(px(12.0)).into_any_element() } else { ghost(("local-offered", i), "Get").h(px(36.0)).px(px(16.0)).text_size(px(12.0)).on_click(get).into_any_element() },
+                ),
             );
+            if !m.sizes.is_empty() {
+                let default_name = m.name.clone();
+                let default_pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                    this.live.local.library_size.remove(&default_name);
+                    cx.notify();
+                });
+                let mut sizes = div().flex().flex_wrap().items_center().gap(px(6.0))
+                    .child(mono("SIZE", DIM))
+                    .child(option_chip(gpui::ElementId::named_usize(format!("lib-default-{i}"), 0), "default", picked.is_empty()).on_click(default_pick));
+                for (si, size) in m.sizes.iter().enumerate() {
+                    let (name, want) = (m.name.clone(), size.clone());
+                    let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                        this.live.local.library_size.insert(name.clone(), want.clone());
+                        cx.notify();
+                    });
+                    sizes = sizes.child(option_chip(gpui::ElementId::named_usize(format!("lib-size-{i}"), si + 1), &size.to_uppercase(), picked == *size).on_click(pick));
+                }
+                row = row.child(sizes);
+            }
+            row = row.child(mono(&format!("downloads {target}"), DIM));
+            choices = choices.child(row);
+            if i + 1 < shown.len() {
+                choices = choices.child(hairline());
+            }
         }
-        catalogue = catalogue.child(choices);
+        if matches.len() > shown.len() {
+            choices = choices.child(div().pt(px(8.0)).child(mono(&format!("Showing the first {}. Search to narrow the list.", shown.len()), DIM)));
+        }
+        drawer_body = drawer_body.child(choices);
     }
+    catalogue = catalogue.child(reveal(drawer_body, "local-library-reveal", open, 760.0, motion));
     if let Some(p) = app.live.local.pull.clone() {
         let cancel = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_pull_cancel(cx));
         catalogue = catalogue.child(match p.phase {
