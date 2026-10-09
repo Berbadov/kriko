@@ -118,6 +118,23 @@ pub const COPILOT: Mark = Mark {
     palette: &[INK, ICE],
 };
 
+pub const CODEX: Mark = Mark {
+    // Codex's app icon: the rounded cloud with a terminal prompt cut into it,
+    // the `>` and the `_` in white on the blue-violet body.
+    rows: &[
+        "...11111...",
+        ".111111111.",
+        "11221111111",
+        "11122111111",
+        "11112211111",
+        "11122111111",
+        "11221122211",
+        ".111111111.",
+        "...11111...",
+    ],
+    palette: &[0x7b86ff, 0xffffff],
+};
+
 pub const CURSOR: Mark = Mark {
     // Rasterised from the official mark (Cursor, 2025, simple-icons): the
     // cube seen corner-on, its top and left faces lit, the cursor's
