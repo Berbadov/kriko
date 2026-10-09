@@ -78,12 +78,16 @@ Installed lookups run on your computer. Online research sends its questions and 
 
 **Release 1.1.0 baseline:** we measured three fixed research cases per requested model on the release computer. Version 1.1.2 fixes local evidence handling and CLI research; the older measurements below do not include those fixes. Results and account availability are recorded in [the benchmark report](docs/benchmarks/README.md), together with the exact model IDs and commands to repeat the runs.
 
-| Model | Completed cases | Median time | Grounded risk findings |
-|---|---:|---:|---:|
-| Haiku 5.5 | 0/3 — model/budget error; retry account had no credits | — | — |
-| Gemma local agent (`gemma3n:e2b`) | 3/3 | 24.7 s | 0; unsupported candidates were rejected |
-| GPT 6 Luna | 0/3 — subscription inactive; retry account had no credits | — | — |
-| GLM 5.3 through Mistral (`zai-glm-5-3`) | 3/3 | 63.0 s | 17 |
+| Model | Cases completed | Median time | Grounded findings |
+|:---|:---:|:---:|:---:|
+| **GLM 5.3** via Mistral<br><sub>`zai-glm-5-3`</sub> | ✅ 3 / 3 | 63.0 s | **17** |
+| **Gemma** local agent<br><sub>`gemma3n:e2b`</sub> | ✅ 3 / 3 | 24.7 s | 0 <sup>1</sup> |
+| **Haiku 5.5** | ⚠️ not completed <sup>2</sup> | n/a | n/a |
+| **GPT 6 Luna** | ⚠️ not completed <sup>3</sup> | n/a | n/a |
+
+<sup>1</sup> Gemma proposed candidates, but none passed the quote check, so none are counted.<br>
+<sup>2</sup> 0 of 3 cases ran: model/budget error, and the retry account had no credits.<br>
+<sup>3</sup> 0 of 3 cases ran: subscription inactive, and the retry account had no credits.
 
 Measured on Windows 11 with an RTX 3060 Laptop GPU (6 GB). A grounded finding passed the quote check; it is not independent proof of a fault. Hosted cost was unavailable for GLM, so no dollar figure is claimed.
 
@@ -93,12 +97,14 @@ These are small samples of the complete research workflow, including search and 
 
 Measured on 9 October 2026, three separate processes and three fresh chats per CLI:
 
-| Agent / model | Local launch (`--help`), median | Fresh one-word reply, median |
-|---|---:|---:|
-| Claude Code / Haiku | 0.38 s | 3.93 s |
-| Codex / GPT 6 Luna | 0.08 s | 4.36 s |
-| Antigravity / Gemini 3.8 Flash low | 0.36 s | 7.74 s |
-| Mistral / GLM 5.3 high | 0.59 s | 15.23 s |
+| Agent | Model | Launch (`--help`) | First reply |
+|:---|:---|---:|---:|
+| **Claude Code** | Haiku | 0.38 s | **3.93 s** |
+| **Codex** | GPT 6 Luna | 0.08 s | 4.36 s |
+| **Antigravity** | Gemini 3.8 Flash (low) | 0.36 s | 7.74 s |
+| **Mistral** | GLM 5.3 (high) | 0.59 s | 15.23 s |
+
+<sub>Medians of three runs. "First reply" is a fresh one-word answer in a new chat.</sub>
 
 All 12 replies completed. These are startup checks, not research scores: the reply times also include authentication, agent setup, network latency, and model generation. Keeping a terminal open cannot remove most of that wait. GLM varied from 12.55 to 35.23 seconds. Every reply used a new chat. [Raw measurements](docs/benchmarks/cli-startup-1.1.2.json) include the CLI-reported token totals; even a short answer includes the agent's initial instructions.
 
