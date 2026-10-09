@@ -6,7 +6,7 @@
 
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, Styled, Window};
 
-use crate::app::Kriko;
+use crate::app::{Field, Kriko};
 use crate::live::run::{mark_for, AgentEntry, Harness, RunState, Target};
 use crate::marks::{mark_tile, phase_beat, Phase};
 use crate::screens::run::option_chip;
@@ -50,7 +50,7 @@ fn entry_phase(app: &Kriko, e: &AgentEntry) -> Phase {
     }
 }
 
-pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
+pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
     let motion = !app.reduce_motion;
     let entries = app.live.run.agent_entries();
     let loaded = app.live.run.prefs_loaded || app.live.run.targets_loaded;
@@ -73,10 +73,10 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                     .items_center()
                     .pb(px(10.0))
                     .child(div().flex_1().min_w(px(160.0)).child(th("Agent")))
-                    .child(div().w(px(200.0)).child(th("Runs checks")))
-                    .child(div().w(px(140.0)).child(th("MCP")))
-                    .child(div().w(px(80.0)).child(th("Recent runs")))
-                    .child(div().w(px(72.0)).child(th("Order"))),
+                    .child(div().w(px(200.0)).flex_none().child(th("Runs checks")))
+                    .child(div().w(px(140.0)).flex_none().child(th("MCP")))
+                    .child(div().w(px(100.0)).flex_none().child(th("Recent runs")))
+                    .child(div().w(px(168.0)).flex_none().child(th("Order"))),
             )
             .child(hairline());
 
@@ -149,15 +149,15 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
                         ),
                 )
                 .child(div().w(px(200.0)).flex_none().child(runs_cell))
-                .child(div().w(px(140.0)).child(mcp_cell))
+                .child(div().w(px(140.0)).flex_none().child(mcp_cell))
                 .child(
                     div()
-                        .w(px(80.0))
+                        .w(px(100.0)).flex_none()
                         .child(mono(&app.live.run.runs_of(&e.id).to_string(), INK_2)),
                 )
-                .child(div().flex().gap(px(4.0))
-                    .when(i > 0, |d| d.child(ghost(("agent-up", i), "Up").on_click(up)))
-                    .when(i + 1 < entries.len(), |d| d.child(ghost(("agent-down", i), "Down").on_click(down))));
+                .child(div().w(px(168.0)).flex_none().flex().justify_end().gap(px(4.0))
+                    .when(i > 0, |d| d.child(ghost(("agent-up", i), "Up").on_click(move |ev,w,cx| { cx.stop_propagation(); up(ev,w,cx); })))
+                    .when(i + 1 < entries.len(), |d| d.child(ghost(("agent-down", i), "Down").on_click(move |ev,w,cx| { cx.stop_propagation(); down(ev,w,cx); }))));
             table = table.child(row);
             if i + 1 < entries.len() {
                 table = table.child(hairline());
@@ -165,14 +165,14 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
         }
 
         let detail = match picked {
-            Some(e) => detail_card(app, &e, motion, cx),
+            Some(e) => detail_card(app, &e, motion, window, cx),
             None => card(),
         };
         div()
             .flex()
             .gap(px(24.0))
             .items_start()
-            .min_w(px(980.0))
+            .min_w(px(1160.0))
             .child(div().flex_1().min_w(px(0.0)).child(table))
             .child(div().w(px(320.0)).flex_none().child(detail))
     };
@@ -200,7 +200,7 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
             this.toggle_source_kind(kind.clone(), cx);
             cx.notify();
         });
-        kinds = kinds.child(div().w(px(220.0)).min_w(px(0.0)).child(option_chip(("source-kind", i), words, on).h_auto().min_h(px(30.0)).py(px(8.0)).on_click(toggle)));
+        kinds = kinds.child(div().w(px(270.0)).min_w(px(0.0)).child(option_chip(("source-kind", i), words, on).w_full().whitespace_normal().h_auto().min_h(px(30.0)).py(px(8.0)).on_click(toggle)));
     }
     let mut counts = div().flex().flex_wrap().gap(px(6.0));
     for (i, n) in [0u32, 3, 5, 10, 20, 40].into_iter().enumerate() {
@@ -226,7 +226,7 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         .child(counts)
 }
 
-fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko>) -> Div {
+fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let phase = entry_phase(app, e);
     let mut c = card()
         .flex()
@@ -286,7 +286,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
                 }
                 let models = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.open_agent_models(cx));
                 c = c.child(ghost("agent-models-drawer", if app.live.run.model_drawer { "Close model and effort choices" } else { "Models and effort" }).on_click(models));
-                if app.live.run.model_drawer { c = c.child(well().p(px(12.0)).child(dials(h, cx))); }
+                c = c.child(reveal(well().p(px(12.0)).child(dials(app, h, window, cx)), format!("agent-dials-{}", e.id), app.live.run.model_drawer, 440.0, motion));
             }
             RunState::Unusable(why) => c = c.child(row_desc(why)),
             RunState::Missing { hint, url } => {
@@ -406,16 +406,16 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
             c = c.child(div().flex().gap(px(8.0))
                 .child(ghost("agent-check-logs", if app.live.run.verify_log_open { "Hide logs" } else { "Show logs" }).on_click(toggle))
                 .child(ghost("agent-check-copy", "Copy log").on_click(copy)));
-            if app.live.run.verify_log_open { c = c.child(
+            c = c.child(reveal(
                 well()
-                    .id("agent-check-log-scroll").overflow_y_scroll()
+                    .id("agent-check-log-scroll").overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                     .max_h(px(220.0))
                     .p(px(12.0))
                     .font_family(MONO)
                     .text_size(px(12.0))
                     .text_color(rgb(INK_2))
                     .child(v.log.clone()),
-            ); }
+            "agent-check-log-reveal", app.live.run.verify_log_open, 245.0, motion));
         }
         if !v.ok && !v.detail.is_empty() {
             c = c.child(row_desc(&v.detail));
@@ -428,14 +428,21 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
 /// thinks. Each lists what the engine found for this machine (the provider's
 /// own model list, the CLI's own `--help` effort levels); "Default" leaves
 /// the choice to the agent. A dial the agent does not have is not drawn.
-fn dials(h: &Harness, cx: &mut Context<Kriko>) -> Div {
+fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let mut out = div().flex().flex_col().gap(px(10.0));
-    if h.llm_selectable && (!h.llms.is_empty() || !h.llm.is_empty()) {
+    if h.llm_selectable {
         let mut names: Vec<String> = h.llms.clone();
         if !h.llm.is_empty() && !names.contains(&h.llm) {
             names.insert(0, h.llm.clone());
         }
-        let mut row = div().flex().flex_wrap().gap(px(6.0));
+        out = out.child(app.input_field(Field::ModelSearch, "agent-model-search", "Search models or type an ID", Some("search"), window, cx));
+        if !app.model_search.value.trim().is_empty() {
+            let id = h.id.clone(); let typed = app.model_search.value.trim().to_string();
+            out = out.child(ghost("agent-model-typed", "Use typed model").on_click(cx.listener(move |this,_,_,cx| this.pick_agent_model(id.clone(),typed.clone(),cx))));
+        }
+        let query = app.model_search.value.trim().to_lowercase();
+        names.retain(|name| query.is_empty() || name.to_lowercase().contains(&query));
+        let mut row = div().id("agent-model-list").h(px(220.0)).min_h(px(0.0)).overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation()).flex().flex_col().gap(px(6.0));
         // The local model has no "default" of its own: the server runs one.
         if h.id != "local" {
             let id = h.id.clone();
@@ -451,7 +458,8 @@ fn dials(h: &Harness, cx: &mut Context<Kriko>) -> Div {
                 this.pick_agent_model(id.clone(), model.clone(), cx);
                 cx.notify();
             });
-            row = row.child(option_chip(("agent-model", i), name, *name == h.llm).on_click(pick));
+            row = row.child(option_chip(("agent-model", i), name, *name == h.llm)
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), *name == h.llm, 6.0, !app.reduce_motion)).on_click(pick));
         }
         out = out.child(hairline()).child(eyebrow("Model")).child(row);
         if !h.llms_note.is_empty() {
@@ -472,7 +480,8 @@ fn dials(h: &Harness, cx: &mut Context<Kriko>) -> Div {
                 this.pick_agent_effort(id.clone(), effort.clone(), cx);
                 cx.notify();
             });
-            row = row.child(option_chip(("agent-effort", i), level, *level == h.effort).on_click(pick));
+            row = row.child(option_chip(("agent-effort", i), level, *level == h.effort)
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, !app.reduce_motion)).on_click(pick));
         }
         out = out.child(hairline()).child(eyebrow("Effort")).child(row);
         if !h.effort_hint.is_empty() {

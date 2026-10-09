@@ -287,7 +287,8 @@ pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
                 .top_0()
                 .left_0()
                 .size_full()
-                .object_fit(ObjectFit::Cover),
+                .object_fit(ObjectFit::Cover)
+                .opacity(0.62),
         )
         .child(
             div()
@@ -1165,6 +1166,58 @@ pub fn nav_item(
 }
 
 /// The brand block on top of the sidebar: flat brand rectangle, white wordmark.
+pub fn reveal(child: impl IntoElement, id: impl Into<SharedString>, open: bool, height: f32, motion: bool) -> gpui::AnyElement {
+    Reveal { id: gpui::ElementId::Name(id.into()), child: Some(child.into_any_element()), open, height, motion }.into_any_element()
+}
+
+struct Reveal {
+    id: gpui::ElementId,
+    child: Option<gpui::AnyElement>,
+    open: bool,
+    height: f32,
+    motion: bool,
+}
+
+struct RevealState {
+    from: f32,
+    target: f32,
+    start: std::time::Instant,
+}
+
+impl gpui::IntoElement for Reveal {
+    type Element = Self;
+    fn into_element(self) -> Self { self }
+}
+
+impl gpui::Element for Reveal {
+    type RequestLayoutState = gpui::AnyElement;
+    type PrepaintState = ();
+    fn id(&self) -> Option<gpui::ElementId> { Some(self.id.clone()) }
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
+    fn request_layout(&mut self, id: Option<&gpui::GlobalElementId>, _: Option<&gpui::InspectorElementId>, window: &mut gpui::Window, cx: &mut gpui::App) -> (gpui::LayoutId, Self::RequestLayoutState) {
+        window.with_element_state(id.unwrap(), |state: Option<RevealState>, window| {
+            let target = if self.open { 1.0 } else { 0.0 };
+            let mut state = state.unwrap_or(RevealState { from: 0.0, target, start: std::time::Instant::now() });
+            let progress = (state.start.elapsed().as_secs_f32() / 0.26).min(1.0);
+            let eased = progress * progress * (3.0 - 2.0 * progress);
+            let current = state.from + (state.target - state.from) * eased;
+            if target != state.target {
+                state.from = current;
+                state.target = target;
+                state.start = std::time::Instant::now();
+            }
+            let value = if self.motion { current } else { target };
+            if self.motion && (value - target).abs() > 0.001 { window.request_animation_frame(); }
+            let mut child = div().flex().flex_col().flex_none().min_h(px(0.0)).overflow_hidden()
+                .max_h(px(self.height * value)).opacity(value)
+                .child(self.child.take().unwrap()).into_any_element();
+            ((child.request_layout(window, cx), child), state)
+        })
+    }
+    fn prepaint(&mut self, _: Option<&gpui::GlobalElementId>, _: Option<&gpui::InspectorElementId>, _: gpui::Bounds<gpui::Pixels>, child: &mut Self::RequestLayoutState, window: &mut gpui::Window, cx: &mut gpui::App) { child.prepaint(window, cx); }
+    fn paint(&mut self, _: Option<&gpui::GlobalElementId>, _: Option<&gpui::InspectorElementId>, _: gpui::Bounds<gpui::Pixels>, child: &mut Self::RequestLayoutState, _: &mut (), window: &mut gpui::Window, cx: &mut gpui::App) { child.paint(window, cx); }
+}
+
 pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
     div()
         .bg(rgb(BRAND))
@@ -1175,11 +1228,11 @@ pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
         .flex_col()
         .gap(px(8.0))
         .child(
-            svg()
+            div().flex().items_center().gap(px(10.0)).child(svg()
                 .path(SharedString::from(wordmark))
                 .w(px(66.4))
                 .h(px(22.0))
-                .text_color(rgb(0xffffff)),
+                .text_color(rgb(0xffffff))).child(div().font_family(MONO).text_size(px(10.0)).text_color(rgb(ICE)).px(px(6.0)).py(px(3.0)).border_1().border_color(rgba(0xffffff59)).rounded(px(4.0)).child("BETA")),
         )
         .child(
             div()

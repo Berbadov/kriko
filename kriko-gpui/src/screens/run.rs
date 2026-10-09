@@ -27,6 +27,7 @@ pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> 
     let base = div()
         .id(id)
         .h(px(30.0))
+        .flex_none()
         .px(px(12.0))
         .flex()
         .items_center()
@@ -34,6 +35,7 @@ pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> 
         .font_family(MONO)
         .text_size(px(12.0))
         .cursor_pointer()
+        .active(|s| s.opacity(0.75).mt(px(2.0)))
         .child(text.to_string());
     if chosen {
         base.text_color(rgb(0xffffff))

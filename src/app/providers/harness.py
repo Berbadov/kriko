@@ -64,6 +64,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import tomllib
 import time
 from contextlib import contextmanager
 import threading
@@ -403,7 +404,7 @@ def _claude_args() -> tuple[str, ...]:
 
 #: In preference order. The first *usable* one found on PATH is the one used,
 #: and `/api/research-planes` reports which.
-KNOWN = (
+KNOWN: tuple[Harness, ...] = (
     Harness(
         "claude-code",
         "Claude Code",
@@ -578,7 +579,7 @@ KNOWN = (
     #   out of. It carries no usage, so this plane's cost columns stay NULL
     #   rather than being filled with a guess.
     Harness(
-        "mistral-vibe", "Mistral Vibe", "vibe",
+        "mistral-vibe", "Mistral", "vibe",
         ("--output", "streaming", "--agent", "auto-approve", "--trust",
          "--enabled-tools", "web_search", "--enabled-tools", "web_fetch"),
         download_url="https://docs.mistral.ai/vibe/code/cli/install-setup",
@@ -597,6 +598,11 @@ KNOWN = (
         # so `VIBE_ACTIVE_MODEL` is the per-run switch, read off
         # `vibe/core/config/layers/environment.py` rather than invented.
         model_env="VIBE_ACTIVE_MODEL",
+        model_source="vibe-config",
+        effort_flag="vibe-thinking",
+        # This CLI's Mistral backend maps low to `none` (rejected by GLM)
+        # and medium/high/max to `high`; only expose the effective level.
+        effort_choices=("high",),
         # No list either: `vibe` has no `models` command and its `--help`
         # names none, so the field is free text rather than a list typed here.
         model_hint="a Mistral model alias — the CLI judges it, not Kriko",
@@ -839,6 +845,11 @@ def _locate(one: Harness) -> str:
                 found = f"{stem}.{suffix.lower()}"
         return found
     home = Path.home()
+    if one.id == "codex" and os.name == "nt":
+        packaged = home / "AppData" / "Local" / "OpenAI" / "Codex" / "bin"
+        candidates = list(packaged.glob("*/codex.exe"))
+        if candidates:
+            return str(max(candidates, key=lambda p: p.stat().st_mtime))
     roots = [Path(d) for d in os.environ.get(DIRS_ENV, "").split(os.pathsep) if d]
     roots += [home / part for part in one.homes]
     for root in roots:
@@ -851,6 +862,15 @@ def _locate(one: Harness) -> str:
                 continue
     return ""
 
+
+# The desktop roster requested by the reader. Each invocation starts a new chat.
+KNOWN = tuple(h for h in KNOWN if h.id in {"claude-code", "antigravity-cli", "mistral-vibe"}) + (
+    Harness("codex", "Codex", "codex", ("exec", "--json", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only"),
+            protocol="codex", model_flag="--model", model_unlisted=True,
+            effort_flag="codex-thinking", effort_choices=("low", "medium", "high", "xhigh"),
+            model_source="codex-cache", download_url="https://developers.openai.com/codex/cli",
+            install_hint="npm install -g @openai/codex", needs_account="your ChatGPT account; sign in with codex login"),
+)
 
 def available() -> list[Harness]:
     """Which harness CLIs this machine can actually start *and* sandbox."""
@@ -1063,6 +1083,8 @@ def efforts_for(one: Harness) -> list[str]:
     """
     if one.unusable or not one.effort_flag:
         return []
+    if one.protocol in {"vibe", "codex"}:
+        return list(one.effort_choices)
     executable = locate(one)
     if not executable:
         return []
@@ -1277,7 +1299,20 @@ def models_for(one: Harness, *, fresh: bool = False, behind: bool = False) -> li
             at, names = cached
             if time.monotonic() - at < (MODELS_TTL if names else _MODELS_TTL_EMPTY):
                 return list(names)
-        if one.model_source == "help":
+        if one.model_source == "vibe-config":
+            try:
+                config = tomllib.loads((Path.home() / ".vibe" / "config.toml").read_text(encoding="utf-8"))
+                names = list(dict.fromkeys(str(row.get("alias") or row.get("name")) for row in config.get("models", []) if isinstance(row, dict) and (row.get("alias") or row.get("name"))))
+            except (OSError, ValueError):
+                names = []
+        elif one.model_source == "codex-cache":
+            try:
+                cached_models = json.loads((Path.home() / ".codex" / "models_cache.json").read_text(encoding="utf-8"))
+                names = [row["slug"] for row in cached_models.get("models", [])
+                         if isinstance(row, dict) and row.get("slug") and row.get("visibility", "list") == "list"]
+            except (OSError, ValueError, TypeError):
+                names = []
+        elif one.model_source == "help":
             # `--help` is cached for the process, and a binary that changed
             # under it (an update) or a reader pressing Re-ask needs it read
             # again — its flags as much as its names.
@@ -1379,6 +1414,12 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
     reader's tools through — otherwise the vector is exactly what it was.
     """
     executable = locate(one) or one.executable
+    if one.protocol == "codex":
+        return [executable, *one.args, "--ignore-user-config", "--ignore-rules",
+                "-c", 'approval_policy="never"', "-c", 'web_search="live"',
+                "-c", "features.shell_tool=false",
+                *(["--model", model] if model else []),
+                *(["-c", f'model_reasoning_effort="{effort}"'] if effort else [])]
     supported = declared(executable)
     args = one.args
     if one.needs_in_help and one.plain_args:
@@ -1394,7 +1435,7 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
     # Refused rather than dropped, on the same reasoning as the model above: a
     # reader who asked for `low` and silently got the CLI's default has been
     # billed for a choice they did not make, and the run looks identical.
-    if effort and (not one.effort_flag or one.effort_flag not in supported):
+    if effort and one.protocol != "vibe" and (not one.effort_flag or one.effort_flag not in supported):
         raise NoHarness(
             f"{one.label} has no per-run effort switch on this machine — "
             f"effort choices for it are refused, never silently run as the default")
@@ -1408,7 +1449,7 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
               for part in (flag, value)),
             *attach,
             *([one.model_flag, model] if model and one.model_flag else []),
-            *([one.effort_flag, effort] if effort else []),
+            *([one.effort_flag, effort] if effort and one.protocol != "vibe" else []),
             *scale_args(one, max_documents=max_documents,
                         budget_usd=budget_usd, supported=supported)]
 
@@ -2197,7 +2238,23 @@ class HarnessResearcher(AgentResearcher):
         # drops it.
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
         prompt = self.brief(task) + "\n" + self._contract()
-        reply = self._run(prompt)
+        if self.harness.id in {"antigravity-cli", "mistral-vibe", "codex"}:
+            from app.providers import exa_mcp, fetch
+            from app.providers.local_agent import LocalAsker
+            def complete(brief):
+                return self._run("Answer ONLY from supplied pages. Do not call tools or run commands.\n" + brief)
+            # An explicit cap keeps the CLI prompt below Windows' argv limit.
+            setattr(complete, "prompt_chars_allowed", lambda: 22000)
+            agent = LocalAsker(lambda _: "[]", complete, exa_mcp.search_with_fallback(), fetch.reader(),
+                               model=self.requested_model or self.harness.id, search_provider="exa-mcp",
+                               given_queries=list(task.queries)[:3] or [f"{task.subject_label} failures owner reports"], parallel_search=True)
+            agent.max_pages = max(1, task.max_documents or 3)
+            agent.on_action, agent.check_cancelled = self.on_action, self.check_cancelled
+            reply = agent.ask(prompt)
+            self.sources, self.telemetry = agent.sources, agent.telemetry
+            self.search_provider = "exa-mcp"
+        else:
+            reply = self._run(prompt)
         payload = _payload(reply)
         reported = payload.get("queries")
         self.queries_run = [
@@ -2275,6 +2332,36 @@ class HarnessResearcher(AgentResearcher):
     def extract(self, task: ResearchTask, document: Document) -> list[Finding]:
         """What `gather` already parsed, per document. No second model call."""
         return list(self._by_url.get(document.url, ()))
+
+    def ask_quick(self, product: str, *, principle: str = "", page=None, packs: str = "", attributes: str = "") -> str:
+        if self.harness.id == "claude-code":
+            from app import quicklook
+            return self.ask(quicklook.brief(product, principle, page, packs, attributes)
+                            + getattr(self, "source_instructions", ""))
+        from app.providers import exa_mcp, fetch
+        from app.providers.local_agent import LocalAsker
+        # The host gathers evidence, then the CLI answers in a fresh, neutral
+        # session. It never needs a shell command to research a product.
+        calls = [0]
+        def complete(prompt):
+            calls[0] += 1
+            return self._run("Use ONLY the supplied evidence. Do not call tools, run commands, or search. "
+                             "Return the requested JSON object directly.\n" + prompt)
+        agent = LocalAsker(lambda _: "[]", complete, exa_mcp.search_with_fallback(), fetch.reader(),
+                           model=self.requested_model or self.harness.id, search_provider="exa-mcp",
+                           given_queries=[f"{product} problems owner reports", f"{product} failures review"],
+                           parallel_search=True)
+        agent.max_pages = max(1, self.max_documents or 3)
+        agent.on_action = self.on_action
+        agent.check_cancelled = self.check_cancelled
+        agent.source_instructions = getattr(self, "source_instructions", "")
+        try:
+            return agent.ask_quick(product, principle=principle, page=page, packs=packs, attributes=attributes)
+        finally:
+            self.sources = agent.sources
+            self.telemetry = agent.telemetry
+            self.telemetry["model_calls"] = calls[0]
+            self.search_provider = "exa-mcp"
 
     def ask(self, prompt: str) -> str:
         """One prompt, one reply, for a job that is not research.
@@ -2438,10 +2525,33 @@ class HarnessResearcher(AgentResearcher):
                 # and no schema of Mistral's for Kriko to keep in step with.
                 config = home / ".vibe"
                 config.mkdir(parents=True)
-                (config / "config.toml").write_text(
-                    'enable_update_checks = false\nenable_telemetry = false\n'
-                    'mcp_servers = []\ndisabled_skills = ["*"]\n', encoding="utf-8"
-                )
+                try:
+                    own = tomllib.loads((Path.home() / ".vibe" / "config.toml").read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    own = {}
+                chosen = self.requested_model or str(own.get("active_model") or "")
+                if chosen:
+                    self.model = chosen
+                rows = own.get("models") or []
+                text = 'enable_update_checks = false\nenable_telemetry = false\nmcp_servers = []\ndisabled_skills = ["*"]\n'
+                if chosen:
+                    text += "active_model = " + json.dumps(chosen) + "\n"
+                if self.requested_effort and not any(isinstance(r, dict) and r.get("alias") == chosen for r in rows) and chosen:
+                    rows = [*rows, {"alias": chosen}]
+                for row in rows:
+                    if not isinstance(row, dict):
+                        continue
+                    text += "\n[[models]]\n"
+                    for key in ("name", "provider", "alias", "thinking"):
+                        value = row.get(key)
+                        if key == "thinking" and (row.get("alias") == chosen or row.get("name") == chosen) and self.requested_effort:
+                            value = self.requested_effort
+                        if isinstance(value, str):
+                            text += key + " = " + json.dumps(value) + "\n"
+                    if "thinking" not in row and self.requested_effort and row.get("alias") == chosen:
+                        text += "thinking = " + json.dumps(self.requested_effort) + "\n"
+                text += "\n[session_logging]\ngenerate_titles = false\nsave_dir = " + json.dumps(str(config / "sessions")) + "\n"
+                (config / "config.toml").write_text(text, encoding="utf-8")
                 self._run_env["VIBE_HOME"] = str(config)
                 # The CLI reads its key from the environment, and the
                 # environment this run inherits is the reader's own. Carried
@@ -2468,6 +2578,24 @@ class HarnessResearcher(AgentResearcher):
             try:
                 yield
             finally:
+                if self.harness.protocol == "vibe":
+                    # These files belong to this invocation's temporary home;
+                    # never count another chat or read the user's session log.
+                    for metadata in (config / "sessions").rglob("meta.json"):
+                        try:
+                            stats = json.loads(metadata.read_text(encoding="utf-8")).get("stats", {})
+                            count = int(stats.get("session_prompt_tokens", 0)) + int(stats.get("session_completion_tokens", 0))
+                            # Current Vibe stores cumulative usage in versioned
+                            # projections. Count the latest measurement once,
+                            # never sum historical snapshots of the same chat.
+                            for projection in (metadata.parent / "generations").glob("*/projection-state.json"):
+                                snapshot = json.loads(projection.read_text(encoding="utf-8")).get("snapshot", {})
+                                usage = snapshot.get("session", {}).get("tokenUsage") or {}
+                                count = max(count, int(usage.get("inputTokens", 0)) + int(usage.get("outputTokens", 0)))
+                            if count > 0:
+                                self.tokens_used = (self.tokens_used or 0) + count
+                        except (OSError, ValueError, TypeError):
+                            pass
                 self._run_env = {}
                 self._run_cwd = None
                 self._reader_config = ""
@@ -3351,6 +3479,22 @@ class HarnessResearcher(AgentResearcher):
         reply that is not JSON at all is handed back as prose rather than
         discarded — the findings fence may still be in it.
         """
+        if self.harness.protocol == "codex":
+            answer = ""
+            for line in stdout.splitlines():
+                try:
+                    event = json.loads(line)
+                except ValueError:
+                    continue
+                if event.get("type") == "turn.failed":
+                    raise RuntimeError(str(event.get("error") or "Codex turn failed"))
+                item = event.get("item") or {}
+                if event.get("type") == "item.completed" and item.get("type") == "agent_message":
+                    answer = item.get("text") or answer
+                if event.get("type") == "turn.completed":
+                    usage = event.get("usage") or {}
+                    self.tokens_used = (self.tokens_used or 0) + _int(usage.get("input_tokens")) + _int(usage.get("output_tokens"))
+            return answer
         if self.harness.protocol == "vibe":
             return self._unwrap_vibe(stdout)
         if self.harness.protocol == "copilot":

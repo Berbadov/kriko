@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.1.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.1.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Download for Windows](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,8 +34,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.1.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.1.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep both programs together, and open `kriko.exe`. |
+| `kriko-1.1.1-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.1.1-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep both programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start, including its catalogs. You don't need to install Python, Node, or Rust.
 
@@ -62,6 +62,8 @@ When the product isn't covered, try **Quick look** with a configured agent. You 
 
 Open **Agents** to select an installed agent and its model, then **Check connection**. For a local model, use **Local LLM** to choose a downloaded model. For a paid API, add its key in **Settings** and choose its model.
 
+The beta desktop supports **Claude Code, Codex, Antigravity, Mistral, and Local agent**. Search the model picker to find a model quickly. Each CLI research call starts a fresh chat.
+
 Your model choices come from the provider or runtime. You can adjust a research run before starting it, follow its log, answer an agent's question, and stop it from the live panel.
 
 ## Your data stays with you
@@ -74,7 +76,7 @@ Installed lookups run on your computer. Online research sends its questions and 
 
 ## Model benchmarks
 
-We measured three fixed research cases per requested model on the release computer. Results and account availability are recorded in [the benchmark report](docs/benchmarks/README.md), together with the exact model IDs and commands to repeat the runs.
+**Release 1.1.0 baseline:** we measured three fixed research cases per requested model on the release computer. Version 1.1.1 fixes local evidence handling and CLI research; the older measurements below do not include those fixes. Results and account availability are recorded in [the benchmark report](docs/benchmarks/README.md), together with the exact model IDs and commands to repeat the runs.
 
 | Model | Completed cases | Median time | Grounded risk findings |
 |---|---:|---:|---:|
