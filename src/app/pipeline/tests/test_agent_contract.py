@@ -3,9 +3,9 @@
 Two hand-maintained copies of the prompt (.claude/ and .opencode/) meant the
 harness a run happened to use decided which rules the agent was told about —
 the same drift that let a rule live in a test but not in the write gate. The
-body lives in packs/cars/pipeline/agent/kriko_research.md; these tests fail when a
-checked-in harness file is stale, and when the contract stops describing the
-tools the server actually exposes.
+body lives in packs/cars/pipeline/agent/kriko_research.md. Harness files are
+generated locally and are not shipped in a checkout; these tests exercise the
+renderer in isolation and check the contract against the actual server tools.
 """
 
 import re
@@ -14,13 +14,23 @@ from app import mcp_server as server
 from packs.cars.pipeline.agent import render
 
 
-def test_checked_in_harness_files_match_the_contract():
-    stale = render.stale()
-    assert stale == [], (
-        "stale agent files: "
-        + ", ".join(str(p) for p in stale)
-        + " — run: python -m packs.cars.pipeline.agent.render"
-    )
+def test_generated_harness_files_match_the_contract(tmp_path, monkeypatch):
+    targets = {
+        name: (tmp_path / name / path.name, frontmatter)
+        for name, (path, frontmatter) in render.TARGETS.items()
+    }
+    monkeypatch.setattr(render, "TARGETS", targets)
+    paths = [path for path, _ in targets.values()]
+    assert render.stale() == paths
+    assert render.write_all() == paths
+    assert render.stale() == []
+    assert render.write_all() == []
+    for name, (path, _) in targets.items():
+        assert path.read_text(encoding="utf-8") == render.rendered(name)
+    paths[0].write_text("outdated contract", encoding="utf-8")
+    assert render.stale() == [paths[0]]
+    assert render.write_all() == [paths[0]]
+    assert render.stale() == []
 
 
 def test_every_tool_the_contract_grants_exists_on_the_server():
