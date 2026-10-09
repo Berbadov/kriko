@@ -711,7 +711,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex_wrap()
                 .gap(px(24.0))
                 .items_start()
-                .child(div().id("bench-agent-table-scroll").flex_1().min_w(px(560.0)).overflow_x_scroll().occlude().child(agents.min_w(px(880.0))))
+                .child(div().id("bench-agent-table-scroll").flex_1().min_w(px(560.0)).overflow_x_scroll().map(horizontal_wheel).child(agents.min_w(px(880.0))))
                 .child(div().flex_1().min_w(px(360.0)).child(history)),
         )
         .child(bars)

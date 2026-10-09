@@ -180,6 +180,18 @@ pub fn hairline() -> Div {
     div().w_full().h(px(1.0)).bg(rgba(HAIRLINE))
 }
 
+/// Sideways tables consume horizontal wheels while vertical wheels reach the
+/// surrounding page. Occluding this hitbox would block both axes.
+pub fn horizontal_wheel<T: Styled + gpui::InteractiveElement>(mut element: T) -> T {
+    element.style().restrict_scroll_to_axis = Some(true);
+    element.on_scroll_wheel(|event, window, cx| {
+        let delta = event.delta.pixel_delta(window.line_height());
+        if delta.x.abs() > delta.y.abs() {
+            cx.stop_propagation();
+        }
+    })
+}
+
 /// Mono eyebrow label: 11px capitals in DIM.
 pub fn eyebrow(label: &str) -> Div {
     div()
