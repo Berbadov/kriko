@@ -83,6 +83,39 @@ _LINK = re.compile(r"\[([^\]]*)\]\((?:[^()]|\([^)]*\))*\)")
 _BARE_DATA = re.compile(r"data:[a-z]+/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+")
 
 
+#: UTF-8 read as Windows-1252 leaves these marks: `â€"` for a dash or quote,
+#: `Ã©` for an accented letter. A reader service that does it hands the model
+#: (and the reader's screen, in every quote) `trigger—it` as `triggerâ€”it`.
+_MOJIBAKE = re.compile("[ÂÃâ][\u0080-¿ŒœŠšŸŽžƒˆ˜–-›€™]")
+
+
+def _unmangle_line(line: str) -> str:
+    if not _MOJIBAKE.search(line):
+        return line
+    raw = bytearray()
+    for char in line:
+        try:
+            raw += char.encode("cp1252")
+        except UnicodeEncodeError:
+            if ord(char) > 255:
+                return line
+            raw.append(ord(char))
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return line
+
+
+def unmangle(text: str) -> str:
+    """Undo UTF-8 that a service decoded as Windows-1252, line by line.
+
+    A line is only changed when it shows the telltale pairs *and* the repaired
+    bytes are valid UTF-8, so a page that really says `Ã©` in one line is left
+    as it is and never costs the lines around it.
+    """
+    return "\n".join(_unmangle_line(line) for line in text.split("\n"))
+
+
 def plain(text: str) -> str:
     """Markdown's addresses out, its words kept.
 
@@ -93,6 +126,7 @@ def plain(text: str) -> str:
     filter the plain fetch uses drops the menus (a run of lines that are
     each one link).
     """
+    text = unmangle(text)
     text = _IMAGE.sub(lambda m: m.group(1), text)
     text = _LINK.sub(lambda m: LINK_OPEN + m.group(1) + LINK_CLOSE, text)
     text = _BARE_DATA.sub("", text)
