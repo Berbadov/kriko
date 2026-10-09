@@ -7,14 +7,14 @@
 
 use gpui::{div, point, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Styled, Window};
 
-use crate::app::{Kriko, Tab};
+use crate::app::{Field, Kriko, Tab};
 use crate::live::local::{batches, change, BenchPhase, BenchRun, Batch, Machine};
 use crate::marks::{self, mark_glyph, Mark, Phase};
 use crate::screens::local::pill;
 use crate::screens::{empty_note, mono, plate_s, row_desc, row_title, th};
 use crate::theme::*;
 
-fn setup(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
+fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let b = &app.live.local.bench;
     let mut result = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Run setup"))
         .child(row_desc("Each case asks for product risks, searches and reads evidence, then scores the answer against the versioned expected findings and forbidden claims. Generation controls below apply to local inference; other agents use their own supported defaults."));
@@ -47,6 +47,7 @@ fn setup(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         temp = temp.child(pill(("bench-temperature", i), &value.to_string(), b.temperature == value).on_click(pick));
     }
     result = result.child(temp).child(hairline()).child(eyebrow("Agents and served models"));
+    result = result.child(app.input_field(Field::BenchModelSearch, "bench-model-search", "Search this agent's models", Some("search"), window, cx));
     for (i, entry) in app.live.run.agent_entries().iter().enumerate() {
         let Some(h) = &entry.harness else { continue };
         if !matches!(h.state, crate::live::run::RunState::Ready) { continue; }
@@ -58,10 +59,15 @@ fn setup(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
             b.picked = vec![if id == "local" { "local" } else if id.ends_with("-api") { "api" } else { "harness" }.to_string()];
             b.phase = BenchPhase::Idle; cx.notify();
         });
-        let mut row = div().flex().flex_wrap().gap(px(8.0))
+        let row = div().flex().flex_wrap().gap(px(8.0))
             .child(plate_s(("bench-agent-pick", i), &entry.label).on_click(select_agent))
             .child(row_desc(&format!("{} · {}", entry.id, if h.llm.is_empty() { "agent default" } else { &h.llm })));
-        for (n, model) in h.llms.iter().enumerate() {
+        result = result.child(row);
+        if b.harness != entry.id { continue; }
+        let query = app.bench_model_search.value.trim().to_lowercase();
+        let mut row = div().id("bench-model-options").h(px(180.0)).overflow_y_scroll().on_scroll_wheel(|_,_,cx| cx.stop_propagation())
+            .flex().flex_col().gap(px(6.0));
+        for (n, model) in h.llms.iter().enumerate().filter(|(_,m)| query.is_empty() || m.to_lowercase().contains(&query)) {
             let chosen = model.clone(); let agent = entry.id.clone();
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
                 let b = &mut this.live.local.bench;
@@ -88,8 +94,7 @@ fn setup(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         result = result.child(div().flex().flex_col().gap(px(4.0))
             .child(pill(("bench-case-pick", i), &crate::api::s(case, "product"), selected).on_click(pick))
             .child(row_desc(&format!("Expected: {} · forbidden: {}",
-                case.get("must_find").map(|v| v.to_string()).unwrap_or_default(),
-                case.get("must_not_find").map(|v| v.to_string()).unwrap_or_default()))));
+                case_words(case, "must_find"), case_words(case, "must_not_find")))));
     }
     result.child(row_desc("Correctness: expected findings matched / expected findings. Unsupported rate: unsupported findings / produced findings. Source coverage and accuracy are not independently measured by this test set. Task token rate includes input and output over total task time; it is not inference speed. n/a means not measured."))
 }
@@ -259,7 +264,7 @@ fn machine_cells(m: Option<&Machine>) -> Vec<(&'static str, String)> {
     ]
 }
 
-pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
     let bench = app.live.local.bench.clone();
     let b = &bench;
@@ -276,7 +281,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
     let press = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.bench_press(cx));
     let all = batches(&b.runs);
     let running = matches!(b.phase, BenchPhase::Running { .. });
-    let setup_panel = setup(app, cx);
+    let setup_panel = setup(app, window, cx);
     let mut progress_panel = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Live progress"));
     let jobs: Vec<_> = app.live.run.jobs.iter().filter(|j| j.kind == "bench").take(5).cloned().collect();
     if jobs.is_empty() { progress_panel = progress_panel.child(empty_note("No benchmark task yet.")); }
@@ -441,7 +446,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
             &take(|x| x.median_usd),
         ))
         .child(headline(
-            "Claims accepted",
+            "Evidence kept",
             &latest.acceptance.map(|a| format!("{:.0}", a * 100.0)).unwrap_or_else(|| "n/a".into()),
             "%",
             change(latest.acceptance, before.as_ref().and_then(accept)),
@@ -449,11 +454,12 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
             &take(|x| x.acceptance),
         ));
 
+    let mine: Vec<&BenchRun> = b.runs.iter().filter(|r| r.batch_id == latest.id).collect();
     // ---- the agents, side by side ----
     let mut agents = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(12.0)).child(eyebrow("Agents on this machine")))
+        .child(div().mb(px(12.0)).child(eyebrow("All recorded runs by agent")))
         .child(
             div()
                 .flex()
@@ -464,7 +470,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .child(div().w(px(180.0)).child(th("Task tokens / s")))
                 .child(div().w(px(112.0)).child(th("Claims / run")))
                 .child(div().w(px(84.0)).child(th("Finished")))
-                .child(div().w(px(96.0)).child(th("Ungrounded"))),
+                .child(div().w(px(96.0)).child(th("Trap claims"))),
         )
         .child(hairline());
     let speeds: Vec<Option<f64>> = b
@@ -622,7 +628,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
         });
 
     // ---- the latest benchmark, run by run ----
-    let mine: Vec<&BenchRun> = b.runs.iter().filter(|r| r.batch_id == latest.id).collect();
+
     let mut variation = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Repeated case variation"))
         .child(row_desc("Elapsed range includes the entire task. Compare repeated samples of the same case and agent; these are not inference-speed measurements."));
     let mut groups = std::collections::BTreeMap::<(String, String, String), Vec<&BenchRun>>::new();
@@ -636,11 +642,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
         };
         variation = variation.child(row_desc(&format!("{subject} · {plane} / {llm} · n={} · failures {failed}/{} · {range}", runs.len(), runs.len())));
     }
-    if let Some(scored) = b.snapshot.get("scored").and_then(|v| v.get("groups")) {
-        variation = variation.child(row_desc("Correctness and unsupported-rate counts with Wilson intervals, grouped by agent, model, protocol and test-set version:"))
-            .child(well().id("bench-score-intervals").max_h(px(240.0)).overflow_y_scroll().p(px(12.0))
-                .child(row_desc(&serde_json::to_string_pretty(scored).unwrap_or_default())));
-    }
+    variation = variation.child(row_desc("Expected findings = the known issues this case should report. Traps = deliberately forbidden or known-absent claims. Rejected = candidates the evidence gate removed, not proven hallucinations. A finished run can still find none of the expected issues."));
     let slowest = mine.iter().filter_map(|r| r.ms).fold(1.0f64, f64::max);
     let mut bars = card().flex().flex_col();
     bars = bars.child(div().mb(px(12.0)).child(eyebrow("Latest benchmark, run by run")));
@@ -678,14 +680,14 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                         ))
                         .child(div().w(px(72.0)).flex().justify_end().child(mono(&seconds(r.ms), INK))),
                 )
+                .child(mono("Elapsed time relative to the slowest case in this batch", DIM))
                 .child(led_bar(
                     r.ms.map(|m| (m / slowest * 100.0) as f32).unwrap_or(0.0),
                     28,
                     if failed { DANGER } else if i == 0 { ICE } else { LED_DIM },
                 ))
-                .child(plate_s(("bench-case-detail", i), "Answer, evidence, score and settings").on_click(detail))
-                .when(b.detail == Some(i), |d| d.child(well().id(("bench-detail-scroll", i)).max_h(px(400.0)).overflow_y_scroll()
-                    .p(px(12.0)).child(row_desc(&serde_json::to_string_pretty(&r.raw).unwrap_or_default())))),
+                .child(plate_s(("bench-case-detail", i), "View answer and score").on_click(detail))
+                .child(reveal(run_detail(r, i, cx), format!("bench-answer-{i}"), b.detail == Some(i), 650.0, motion)),
         );
         if i + 1 < mine.len() {
             bars = bars.child(crate::theme::hairline());
@@ -700,6 +702,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
         .child(setup_panel)
         .child(progress_panel)
         .child(row_title("Results"))
+        .child(latest_score(&mine))
         .child(heads)
         .child(
             div()
@@ -707,7 +710,7 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .flex_wrap()
                 .gap(px(24.0))
                 .items_start()
-                .child(div().flex_1().min_w(px(560.0)).child(agents))
+                .child(div().id("bench-agent-table-scroll").flex_1().min_w(px(560.0)).overflow_x_scroll().child(agents.min_w(px(880.0))))
                 .child(div().flex_1().min_w(px(360.0)).child(history)),
         )
         .child(bars)
@@ -720,4 +723,65 @@ pub fn benchmark(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>)
                 .child(div().size(px(6.0)).rounded(px(1.5)).bg(rgba(0xbfe4ff99)))
                 .child(mono("Ice is better than the benchmark before, red is worse. n/a means the engine did not measure it.", DIM)),
         )
+}
+
+fn case_words(case: &crate::api::Value, key: &str) -> String {
+    let words: Vec<String> = crate::api::arr(case,key).iter().map(|v| if let Some(s)=v.as_str() { s.to_string() } else { crate::api::s(v,"claim") }).filter(|s| !s.is_empty()).collect();
+    if words.is_empty() { "none specified".into() } else { words.join("; ") }
+}
+
+fn score_words(raw: &crate::api::Value) -> String {
+    let Some(gold) = raw.get("gold").filter(|g| !g.is_null()) else { return "This older run was not scored against expected answers.".into(); };
+    let found = crate::api::arr(gold,"found").len(); let missed=crate::api::arr(gold,"missed").len();
+    let traps = crate::api::arr(gold,"hallucinated").len();
+    format!("Expected issues found: {found}/{} · missed: {missed} · forbidden claims in the final answer: {traps}", found+missed)
+}
+
+fn latest_score(runs: &[&BenchRun]) -> Div {
+    let completed = runs.iter().filter(|r| r.error.is_empty()).count();
+    let mut passed=0;
+    let mut found=0; let mut wanted=0; let mut traps=0; let mut attempted=0; let mut attempted_scored=0; let mut scored=0;
+    let mut tokens=0.0; let mut measured=0;
+    for run in runs {
+        if let Some(g)=run.raw.get("gold").filter(|g| !g.is_null()) {
+            if run.error.is_empty() && crate::api::arr(g,"missed").is_empty() && crate::api::arr(g,"hallucinated").is_empty() { passed+=1; }
+            scored+=1; found+=crate::api::arr(g,"found").len(); wanted+=crate::api::arr(g,"found").len()+crate::api::arr(g,"missed").len(); traps+=crate::api::arr(g,"hallucinated").len();
+        }
+        if let Some(g)=run.raw.get("attempted_gold").filter(|g| !g.is_null()) { attempted_scored+=1; attempted+=crate::api::arr(g,"hallucinated").len(); }
+        if let Some(t)=run.tokens { tokens+=t; measured+=1; }
+    }
+    card().flex().flex_col().gap(px(10.0)).child(eyebrow("Benchmark score explained"))
+        .child(row_desc(&format!("Completed {completed}/{} runs. {}", runs.len(), if wanted>0 { format!("Found {found}/{wanted} expected issues ({:.0}%).", found as f64/wanted as f64*100.0) } else { "Expected-answer success rate was not measured.".into() })))
+        .child(row_desc(&format!("Passed all expected-answer checks: {passed}/{scored} scored runs. A pass requires no missing expected issue and no forbidden claim.")))
+        .child(row_desc(&format!("Forbidden claims in scored answers: {traps} ({scored} scored runs). {}", if attempted_scored>0 { format!("Final candidates contained {attempted} forbidden claims before filtering, across {attempted_scored} measured runs.") } else { "Attempts before filtering were not recorded in these older runs.".into() })))
+        .child(row_desc(&format!("Tokens burned: {}. Counts include input and output; missing usage is not zero.", if measured>0 { format!("{tokens:.0} across {measured}/{} measured runs",runs.len()) } else { "not reported by this agent".into() })))
+        .child(row_desc("Evidence kept measures quote checks. It does not mean the answer is complete or correct. Trap scoring compares wording against the versioned case list; it is not an independent accuracy audit."))
+}
+
+fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
+    let detail=r.raw.get("detail").cloned().unwrap_or(crate::api::Value::Null);
+    let answer=detail.get("answer").cloned().unwrap_or(crate::api::Value::Null);
+    let mut d=well().id(("bench-answer-scroll",i)).h(px(400.0)).overflow_y_scroll().on_scroll_wheel(|_,_,cx|cx.stop_propagation())
+        .p(px(16.0)).flex().flex_col().gap(px(12.0))
+        .child(row_desc(&score_words(&r.raw)).flex_none())
+        .child(row_desc(&format!("{} · tokens: {} · {} risks backed by evidence · {} candidates rejected", seconds(r.ms), r.tokens.map(|v|format!("{v:.0}")).unwrap_or_else(||"not reported".into()),r.accepted,r.refused)));
+    if !r.error.is_empty() { d=d.child(row_desc(&r.error)); }
+    if let Some(g)=r.raw.get("gold") {
+        for (key,label) in [("found","Found"),("missed","Missed"),("hallucinated","Forbidden claim"),("unlisted","Additional finding")] {
+            for item in crate::api::arr(g,key) { d=d.child(row_desc(&format!("{label}: {}",item.as_str().unwrap_or("unreported"))).flex_none()); }
+        }
+    }
+    let risks=crate::api::arr(&answer,"risks");
+    if risks.is_empty() && r.error.is_empty() { d=d.child(row_desc("No risk passed the evidence checks. This is not proof that the product has no problems.")); }
+    for (risk_index, risk) in risks.iter().enumerate() {
+        d=d.child(hairline()).child(row_title(&crate::api::s(risk,"title")).flex_none()).child(row_desc(&crate::api::s(risk,"body")).flex_none());
+        for source in crate::api::arr(risk,"sources") {
+            let url=crate::api::s(source,"url"); let link=url.clone();
+            d=d.child(mono(&crate::api::s(source,"quote"),INK_2).flex_none())
+                .child(div().id(gpui::ElementId::named_usize(format!("bench-source-{i}-{risk_index}-{url}"),0)).cursor_pointer().child(mono(&url,ICE)).on_click(move |_,_,cx|cx.open_url(&link)));
+        }
+    }
+    d=d.child(hairline()).child(row_desc(&format!("Settings used: {}", detail.get("settings").map(|s| format!("{} pages · {} reply tokens · {} s timeout · agent {}",crate::api::n(s,"max_documents").map(|v|v.to_string()).unwrap_or_else(||"run default".into()),crate::api::n(s,"max_tokens").map(|v|v.to_string()).unwrap_or_else(||"default".into()),crate::api::n(s,"timeout_seconds").map(|v|v.to_string()).unwrap_or_else(||"default".into()),crate::api::s(s,"harness"))).unwrap_or_else(||"not recorded".into()))).flex_none());
+    let copy=r.raw.to_string();
+    d.child(plate_s(("bench-copy-record",i),"Copy full technical record").on_click(move |_,_,cx|cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy.clone()))).flex_none())
 }

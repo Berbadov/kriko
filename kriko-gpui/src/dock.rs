@@ -252,7 +252,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .id(("dock-log-text", i))
                         .min_h(px(0.0))
                         .max_h(px(180.0))
-                        .overflow_y_scroll()
+                        .overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                         .font_family(MONO)
                         .text_size(px(10.0))
                         .text_color(rgb(MUTED))
@@ -291,7 +291,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                 .min_h(px(0.0))
                 .flex_col()
                 .gap(px(10.0))
-                .overflow_y_scroll()
+                .overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                 .children(log_rows),
         );
 
@@ -421,7 +421,8 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                 .flex_none()
                 .items_center()
                 .justify_between()
-                .child(eyebrow("Live actions"))
+                .child(div().flex().flex_col().gap(px(8.0)).child(eyebrow("Live actions"))
+                    .child(ghost("live-minimise", "Minimise").on_click(cx.listener(|this, _, _, cx| { this.dock_open = false; cx.notify(); }))))
                 .child(
                     div()
                         .flex()
@@ -437,7 +438,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .child(tag("dock-live", TagState::Live, "Live", motion).flex_none()),
                 ),
         )
-        .when(app.dock_logs_open, |d| d.child(log_drawer))
+        .child(reveal(log_drawer, "dock-log-reveal", app.dock_logs_open, 280.0, motion))
         .when(!requests.is_empty(), |d| {
             // The block pops in when a job starts asking: the count rides
             // the id, so a new question remounts it and the fade replays.
@@ -475,7 +476,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                 .min_h(px(0.0))
                 .flex_col()
                 .gap(px(16.0))
-                .overflow_y_scroll()
+                .overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                 .child(
                     div()
                         .flex()

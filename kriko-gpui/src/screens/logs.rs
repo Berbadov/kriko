@@ -35,7 +35,7 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
     let elapsed = parse_utc(&job.created_at).map(|start| {
         (parse_utc(&job.finished_at).unwrap_or_else(now_secs) - start).max(0)
     });
-    let mut result = div().flex().flex_col().gap(px(10.0))
+    let result = div().flex().flex_col().gap(px(10.0))
         .child(div().flex().flex_wrap().items_center().gap(px(10.0))
             .child(tag(format!("task-state-{id}"), if !job.done && job.state == "running" { TagState::Live }
                 else if matches!(job.state.as_str(), "failed" | "interrupted") { TagState::Block }
@@ -45,7 +45,6 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
             kind_word(&job.kind), if job.harness.is_empty() { job.backend.as_str() } else { job.harness.as_str() },
             if job.model.is_empty() { "Model not reported" } else { &job.model },
             job.message, elapsed.map(|n| format!("{n} s")).unwrap_or_else(|| "Time unavailable".into()))));
-    if !open { return result; }
     let kinds = ["", "search", "source", "finding", "problem"];
     let labels = ["All", "Search", "Sources", "Findings", "Problems"];
     let selected = level.min(4);
@@ -61,10 +60,10 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
         controls = controls.child(plate_s(gpui::ElementId::named_usize(format!("log-filter-{id}"), i), label)
             .when(selected == i, |b| b.border_color(rgb(ICE))).on_click(pick));
     }
-    result = result.child(controls.child(plate_s(gpui::ElementId::named_usize(format!("log-copy-{id}"), 0), "Copy log").on_click(copy)));
-    let mut body = div().id(gpui::ElementId::named_usize(format!("log-scroll-{id}"), 0)).track_scroll(&scroll).overflow_y_scroll()
-        .max_h(px(280.0)).min_h(px(40.0)).p(px(12.0)).bg(rgb(WELL)).flex().flex_col().gap(px(5.0));
+    let controls = controls.child(plate_s(gpui::ElementId::named_usize(format!("log-copy-{id}"), 0), "Copy log").on_click(copy));
+    let mut body = div().id(gpui::ElementId::named_usize(format!("log-scroll-{id}"), 0)).track_scroll(&scroll).overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+        .h(px(280.0)).flex_none().min_h(px(40.0)).p(px(12.0)).bg(rgb(WELL)).flex().flex_col().gap(px(5.0));
     if lines.is_empty() { body = body.child(empty_note(if job.done { "No log entries for this filter." } else { "Waiting for log entries." })); }
-    for line in lines { body = body.child(mono(&line.text, INK_2)); }
-    result.child(body)
+    for line in lines { body = body.child(mono(&line.text, INK_2).flex_none()); }
+    result.child(reveal(div().flex().flex_col().gap(px(10.0)).child(controls).child(body), format!("log-disclosure-{id}"), open, 350.0, !app.reduce_motion))
 }
