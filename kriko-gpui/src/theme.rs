@@ -1234,7 +1234,8 @@ pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
                 .path(SharedString::from(wordmark))
                 .w(px(66.4))
                 .h(px(22.0))
-                .text_color(rgb(0xffffff))).child(div().font_family(MONO).text_size(px(10.0)).text_color(rgb(ICE)).px(px(6.0)).py(px(3.0)).border_1().border_color(rgba(0xffffff59)).rounded(px(4.0)).child("BETA")),
+                .flex_none()
+                .text_color(rgb(0xffffff))).child(div().flex_none().font_family(MONO).text_size(px(10.0)).text_color(rgb(ICE)).px(px(6.0)).py(px(3.0)).border_1().border_color(rgba(0xffffff59)).rounded(px(4.0)).child("BETA")),
         )
         .child(
             div()
