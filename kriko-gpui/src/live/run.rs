@@ -635,6 +635,7 @@ impl State {
         // the reader's arrangement wins: the named ones first in that order,
         // anything unnamed after, where the engine listed it
         let place = |id: &str| self.agent_order.iter().position(|o| o == id);
+        out.retain(|e| matches!(e.id.as_str(), "local" | "claude-code" | "codex" | "antigravity-cli" | "mistral-vibe"));
         out.sort_by_key(|e| (place(&e.id).unwrap_or(usize::MAX), e.label.clone()));
         out
     }
@@ -1098,6 +1099,7 @@ impl Kriko {
     }
 
     pub fn select_agent(&mut self, id: String) {
+        self.model_search.set_value(String::new());
         self.live.run.agent_selected = id;
         self.live.run.agent_note.clear();
     }
@@ -1180,7 +1182,7 @@ impl Kriko {
         self.live.run.model_drawer = !opening;
         cx.notify();
         if !opening {
-            self.fetch(cx, move || api::get("/api/prefs?fresh=true"), |this, reply, _| {
+            self.fetch(cx, move || api::get("/api/prefs"), |this, reply, _| {
                 this.note(&reply);
                 if let Ok(v) = reply {
                     this.apply_prefs(&v);
@@ -1198,7 +1200,6 @@ impl Kriko {
             format!("harness_model_{}", id.replace('-', "_"))
         };
         let body = serde_json::json!({ key: model });
-        self.live.run.model_drawer = false;
         self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
             this.note(&reply);
             match reply {

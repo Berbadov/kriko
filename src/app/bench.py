@@ -215,6 +215,8 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
     row.update(columns)
     run_settings = run_settings or {}
     row["detail"] = {"case": case, "settings": run_settings, "answer": None}
+    # A failed case still belongs in the expected-answer denominator.
+    row["gold"] = gold_mod.judge(case, [])
     silent = _Silent(check_cancelled)
     silent.check()
     started = time.perf_counter()
@@ -252,6 +254,7 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
         raise
     except Exception as exc:  # noqa: BLE001 - a failed case is a measurement
         row["ms"] = int((time.perf_counter() - started) * 1000)
+        row["tokens"] = getattr(researcher, "tokens_used", None)
         row["error"] = f"{type(exc).__name__}: {exc}"
         row["detail"].update(error=row["error"], error_code=getattr(exc, "code", ""),
                              runtime=getattr(researcher, "runtime", {}),
@@ -267,11 +270,15 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
                          telemetry=getattr(researcher, "telemetry", {}))
     produced = [
         {"title": one.get("title", ""), "domain": one.get("domain", ""),
-         "quote": one.get("quote", "")}
+         "quote": (one.get("sources") or [{}])[0].get("quote", one.get("quote", ""))}
         for one in (found.get("risks") or [])
     ]
     judged = gold_mod.judge(case, produced)
     row["gold"] = judged
+    from app.packauthor import _payload
+    raw_answer = _payload(reply)
+    candidates = raw_answer.get("risks", []) if isinstance(raw_answer, dict) else []
+    row["attempted_gold"] = gold_mod.judge(case, [one for one in candidates if isinstance(one, dict)])
     row["model"] = str(getattr(researcher, "requested_model", "")
                        or getattr(researcher, "model", "") or model or plane)
     row["search_provider"] = (
@@ -447,7 +454,7 @@ def _run_specific(
 
         produced = [
             {"title": one.get("title", ""), "domain": one.get("domain", ""),
-             "quote": one.get("quote", "")}
+             "quote": (one.get("sources") or [{}])[0].get("quote", one.get("quote", ""))}
             for one in (result.get("accepted") or [])
         ]
         row["gold"] = gold.judge(case, produced)

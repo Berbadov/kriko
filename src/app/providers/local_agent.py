@@ -21,6 +21,8 @@ web differs.
 """
 
 import json
+import re
+from collections.abc import Callable
 import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 
@@ -61,11 +63,11 @@ PLAN_CHARS = 1500
 QUERY_WORDS = 15
 
 QUERY_SCHEMA = {"type": "array", "items": {"type": "string"}}
-QUICK_SCHEMA = {"type": "object", "properties": {
+QUICK_SCHEMA: dict = {"type": "object", "properties": {
     "assumed": {"type": "string"}, "category": {"type": "string"}, "pack": {"type": "string"},
     "risks": {"type": "array", "items": {"type": "object", "properties": {
-        key: {"type": "string"} for key in ("title", "why", "check", "severity", "url", "quote")},
-        "required": ["title", "url", "quote"]}},
+        key: {"type": "string"} for key in ("title", "why", "check", "severity", "url", "quote", "evidence_id")},
+        "required": ["title", "evidence_id"]}},
     "specs": {"type": "array", "items": {"type": "object", "properties": {
         key: {"type": "string"} for key in ("name", "value", "url")}, "required": ["name", "value", "url"]}}},
     "required": ["risks", "specs"]}
@@ -124,8 +126,9 @@ class LocalAsker:
         self.search_provider = search_provider
         self.url = url
         self.sources: dict[str, str] = {}
-        self.on_action = None
-        self.check_cancelled = None
+        self._evidence: dict[str, tuple[str, str]] = {}
+        self.on_action: Callable[[str], None] | None = None
+        self.check_cancelled: Callable[[], None] | None = None
         self.replies = None
         self.note = ""
         self.max_pages = MAX_PAGES
@@ -171,7 +174,7 @@ class LocalAsker:
                   + ", ".join(url for url, _ in pages))
         self._check()
         pages = self._fit(prompt, pages, queries)
-        blocks = "\n\n".join(f"### URL: {url}\n\n{text}" for url, text in pages)
+        blocks = self._blocks(pages) if self.identity else "\n\n".join(f"### URL: {url}\n{text}" for url, text in pages)
         return self._complete(prompt + _PAGES_HEAD + blocks + self._reply_budget())
 
     def ask_quick(self, product: str, *, principle: str = "", page: dict | None = None,
@@ -190,14 +193,17 @@ class LocalAsker:
         brief = (
             f"Research this exact product: {product}\n{pagefacts.block(page)[:1000]}\n"
             "Answer ONLY one JSON object with assumed, category, pack, specs, risks. "
-            "specs: [{name,value,url}]. risks: [{title,why,check,severity,url,quote}]. "
-            "At most 3 risks. Each quote must be copied from a provided source. "
+            "specs: [{name,value,url}]. risks: [{title,why,check,severity,evidence_id}]. "
+            "At most 3 risks. Cite evidence_id (such as E1) from a provided passage. "
+            "Keep titles under 8 words; why and check each one complete sentence under 20 words. "
+            "Never translate or reconstruct a quote. A passage about a different product "
+            "or a general feature cannot support a fault in this product. "
             "Use empty arrays when evidence supports nothing. Do not invent sources.\n"
             + self.source_instructions + "\n"
             + (f"Worth saying: {principle[:1200]}\n" if principle else "")
             + (f"Installed packs: {packs[:500]}\n" if packs else "")
             + (f"Specification names: {attributes[:300]}\n" if attributes else ""))
-        reply = self.ask(brief)
+        reply = self._resolve_evidence(self.ask(brief))
         raw = _payload(reply)
         parsed = quicklook.parse(reply, self.sources)
         if (isinstance(raw, dict) and isinstance(raw.get("risks"), list)
@@ -215,8 +221,8 @@ class LocalAsker:
                 more = self._read(learned)
                 combined = list(dict([*self.sources.items(), *more]).items())[:self.max_pages]
                 fitted = self._fit(brief, combined, self.telemetry["queries"])
-                blocks = "\n\n".join(f"### URL: {url}\n{text}" for url, text in fitted)
-                reply = self._complete(brief + _PAGES_HEAD + blocks + self._reply_budget())
+                blocks = self._blocks(fitted)
+                reply = self._resolve_evidence(self._complete(brief + _PAGES_HEAD + blocks + self._reply_budget()))
                 raw = _payload(reply)
                 parsed = quicklook.parse(reply, self.sources)
         needs_repair = not isinstance(raw, dict) or not isinstance(raw.get("risks"), list)
@@ -229,11 +235,12 @@ class LocalAsker:
             # budget. The gate still sees exactly the pages the socket saw.
             previous = "\nPrevious answer:\n" + reply[:1200]
             fitted = self._fit(repair + previous, list(self.sources.items()), self.telemetry["queries"])
-            blocks = "\n\n".join(f"### URL: {url}\n{text}" for url, text in fitted)
-            reply = self._complete(repair + previous + _PAGES_HEAD + blocks + self._reply_budget())
+            blocks = self._blocks(fitted)
+            reply = self._resolve_evidence(self._complete(repair + previous + _PAGES_HEAD + blocks + self._reply_budget()))
             raw = _payload(reply)
             parsed = quicklook.parse(reply, self.sources)
         if not isinstance(raw, dict) or not isinstance(raw.get("risks"), list):
+            self.telemetry["last_reply"] = reply[-4000:]
             raise LocalInferenceError("The local model did not produce valid answer JSON after one repair. Retry with a larger model or reply budget.", code="invalid_json")
         self.telemetry.update(
             model_calls=sum(getattr(part, "calls", 0) for part in (self._plan, self._complete)),
@@ -253,7 +260,7 @@ class LocalAsker:
                     "Do not add claims. These model opinions do not replace exact quote checks.\n"
                     + json.dumps(parsed["risks"], ensure_ascii=False))
                 fitted = self._fit(verify, list(original_sources.items()), self.telemetry["queries"])
-                blocks = "\n\n".join(f"### URL: {url}\n{text}" for url, text in fitted)
+                blocks = self._blocks(fitted)
                 set_schema(VERIFY_SCHEMA)
                 check = _payload(self._complete(verify + _PAGES_HEAD + blocks + self._reply_budget()))
                 self.telemetry["self_verify"] = check if isinstance(check, dict) and isinstance(check.get("verdicts"), list) else {"status": "invalid_output"}
@@ -270,6 +277,58 @@ class LocalAsker:
                                    self.runtime.get("settings", {}))
         self._say(f"verified {len(parsed['risks'])} risk(s); {parsed['dropped']} unsupported item(s) rejected")
         return reply
+
+    def _blocks(self, pages: list[tuple[str, str]]) -> str:
+        # The model selects an evidence passage; the engine copies its bytes.
+        # No fuzzy quote repair or translation can create a source sentence.
+        self._evidence = {}
+        blocks = []
+        for url, text in pages:
+            blocks.append(f"SOURCE URL: {url}")
+            pieces = re.split(r"(?<=[.!?])\s+|\n+", text)
+            for piece in pieces:
+                piece = piece.strip()
+                if len(piece) < 30:
+                    continue
+                # Fixed-size slices also cover pages whose reader emits one line.
+                for start in range(0, len(piece), 480):
+                    quote = piece[start:start + 480]
+                    if len(quote) < 30:
+                        continue
+                    evidence_id = f"E{len(self._evidence) + 1}"
+                    self._evidence[evidence_id] = (url, quote)
+                    blocks.append(f"[{evidence_id}] {quote}")
+        if self.identity:
+            import copy
+            schema = copy.deepcopy(QUICK_SCHEMA)
+            risk = schema["properties"]["risks"]["items"]
+            risk["properties"] = {key: {"type": "string", "maxLength": 180}
+                                  for key in ("title", "why", "check", "severity")}
+            risk["properties"]["evidence_id"] = {"type": "string", "enum": list(self._evidence)}
+            risk["additionalProperties"] = False
+            schema["properties"]["risks"]["maxItems"] = 3
+            schema["properties"]["specs"]["maxItems"] = 3
+            schema["additionalProperties"] = False
+            getattr(self._complete, "set_schema", lambda _: None)(schema)
+        return "\n".join(blocks)
+
+    def _resolve_evidence(self, reply: str) -> str:
+        from app.packauthor import _payload
+        found = _payload(reply)
+        if not isinstance(found, dict):
+            from app.quicklook import closed
+            found = closed(reply)
+        if not isinstance(found, dict):
+            self.telemetry["last_reply"] = reply[-4000:]
+            return reply
+        for risk in found.get("risks") or []:
+            if not isinstance(risk, dict):
+                continue
+            evidence_id = str(risk.get("evidence_id") or "").strip()
+            if evidence_id:
+                url, quote = getattr(self, "_evidence", {}).get(evidence_id, ("", ""))
+                risk["url"], risk["quote"] = url, quote
+        return json.dumps(found, ensure_ascii=False)
 
     def _reply_budget(self) -> str:
         """The reply's length limit, said to the model.
@@ -303,7 +362,7 @@ class LocalAsker:
         allowed = getattr(self._complete, "prompt_chars_allowed", None)
         if not callable(allowed):
             return pages
-        room = allowed() - len(prompt) - len(_PAGES_HEAD) - len(self._reply_budget())
+        room = allowed() - len(prompt) - len(_PAGES_HEAD) - len(self._reply_budget()) - 500
         count = len(pages)
         while count > 1 and room // count < MIN_SHARE:
             count -= 1
@@ -324,6 +383,10 @@ class LocalAsker:
         # invent its own would quietly change what the run measured.
         if self.given_queries:
             return list(self.given_queries)[:QUERIES]
+        if self.identity:
+            # A quick check already has its exact subject. Avoid a separate
+            # CPU inference just to restate that subject as search queries.
+            return [f"{self.identity} problems owner reports", f"{self.identity} failures review"]
         task = prompt[:PLAN_CHARS]
         queries = self._usable(self._plan(_QUERY_ASK.format(n=QUERIES, task=task)))
         if not queries:
@@ -337,8 +400,8 @@ class LocalAsker:
                 "propose any search query, so nothing was searched. A larger "
                 "model follows this kind of instruction more reliably.")
         if self.identity:
-            identity = self.identity.casefold().split()
-            queries = [query if all(word in query.casefold() for word in identity)
+            identity = set(re.findall(r"\w+", self.identity.casefold()))
+            queries = [query if len(identity & set(re.findall(r"\w+", query.casefold()))) >= max(2, len(identity) // 2)
                        else f"{self.identity} {query}" for query in queries]
         return queries
 

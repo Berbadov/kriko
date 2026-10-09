@@ -4,7 +4,7 @@
 //! method over one state struct.
 
 use gpui::{
-    div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle, IntoElement,
+    AnimationExt, div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle, IntoElement,
     KeyDownEvent, ParentElement, Render, Stateful, Styled, Window, WindowControlArea,
 };
 
@@ -159,6 +159,8 @@ pub enum Field {
     LocalSearch,
     LocalGet,
     ExtensionPort,
+    ModelSearch,
+    BenchModelSearch,
 }
 
 pub struct InputState {
@@ -323,6 +325,9 @@ pub struct Kriko {
     pub local_search: InputState,
     pub local_get: InputState,
     pub extension_port_input: InputState,
+    pub model_search: InputState,
+    pub bench_model_search: InputState,
+    pub sidebar_collapsed: bool,
 }
 
 
@@ -367,6 +372,9 @@ impl Kriko {
             local_search: InputState::new(cx),
             local_get: InputState::new(cx),
             extension_port_input,
+            model_search: InputState::new(cx),
+            bench_model_search: InputState::new(cx),
+            sidebar_collapsed: false,
         };
         // A verification hook: KRIKO_VERIFY seeds one page's state so it can
         // be captured without driving the mouse on a busy desktop.
@@ -460,6 +468,8 @@ impl Kriko {
             Field::LocalSearch => &self.local_search,
             Field::LocalGet => &self.local_get,
             Field::ExtensionPort => &self.extension_port_input,
+            Field::ModelSearch => &self.model_search,
+            Field::BenchModelSearch => &self.bench_model_search,
         }
     }
 
@@ -479,6 +489,8 @@ impl Kriko {
             Field::LocalSearch => &mut self.local_search,
             Field::LocalGet => &mut self.local_get,
             Field::ExtensionPort => &mut self.extension_port_input,
+            Field::ModelSearch => &mut self.model_search,
+            Field::BenchModelSearch => &mut self.bench_model_search,
         }
     }
 
@@ -636,12 +648,12 @@ impl Kriko {
                     .mb(px(4.0))
                     .px(px(12.0))
                     .flex_none()
-                    .child(eyebrow(group.label)),
+                    .when(!self.sidebar_collapsed, |d| d.child(eyebrow(group.label))),
             );
             for item in group.items {
                 let key = item.key;
                 let current = self.tab.key() == key;
-                let row = nav_item(key, item.icon, item.label, current, item.count, item.badge)
+                let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { item.count }, if self.sidebar_collapsed { None } else { item.badge })
                     .flex_none()
                     .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
                         this.tab = Tab::from_key(key);
@@ -652,14 +664,17 @@ impl Kriko {
             }
         }
         div()
-            .w(px(SIDEBAR_W))
+            .w(px(if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W }))
+            .overflow_hidden()
             .flex_none()
             .bg(rgb(SURFACE_1))
             .border_r_1()
             .border_color(rgba(HAIRLINE))
             .flex()
             .flex_col()
-            .child(brand_block("kriko-wordmark-white.svg", "local product knowledge"))
+            .when(!self.sidebar_collapsed, |d| d.child(brand_block("kriko-wordmark-white.svg", "local product knowledge")))
+            .child(div().p(px(8.0)).child(ghost("sidebar-minimise", if self.sidebar_collapsed { ">" } else { "Minimise sidebar" })
+                .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
             .child(nav)
     }
 }
@@ -849,8 +864,24 @@ impl Render for Kriko {
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
         let sidebar = self.sidebar(cx);
+        let collapsed = self.sidebar_collapsed;
+        let sidebar = if !self.reduce_motion {
+            sidebar.with_animation(gpui::ElementId::named_usize("sidebar-slide", collapsed as usize),
+                gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
+                    let t = t * t * (3.0 - 2.0 * t);
+                    d.w(px(if collapsed { SIDEBAR_W + (76.0 - SIDEBAR_W) * t } else { 76.0 + (SIDEBAR_W - 76.0) * t }))
+                }).into_any_element()
+        } else { sidebar.into_any_element() };
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
+        let open = self.dock_open;
+        let dock_wrap = div().flex_none().h_full().overflow_hidden().w(px(if open { 300.0 } else { 0.0 })).child(dock);
+        let dock_wrap = if !self.reduce_motion {
+            dock_wrap.with_animation(gpui::ElementId::named_usize("live-slide", open as usize),
+                gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
+                    let t = t * t * (3.0 - 2.0 * t); d.w(px(300.0 * if open { t } else { 1.0 - t }))
+                }).into_any_element()
+        } else { dock_wrap.into_any_element() };
         let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
             .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead()));
         div()
@@ -907,14 +938,14 @@ impl Render for Kriko {
                                     .px(px(40.0))
                                     .pt(px(20.0))
                                     .pb(px(48.0))
-                                    .child(content),
+                                    .child(reveal(content, format!("page-{}", tab.key()), true, 100000.0, !self.reduce_motion)),
                             ),
                     )
                     // The bar floats on the sky, after the page so it
                     // paints on top of the hero it blends into.
                     .child(titlebar),
             )
-            .when(self.dock_open, |row| row.child(dock))
+            .child(dock_wrap)
             .into_any_element()
     }
 }

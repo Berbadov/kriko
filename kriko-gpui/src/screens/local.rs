@@ -880,6 +880,7 @@ pub fn pill(id: impl Into<gpui::ElementId>, label: &str, picked: bool) -> gpui::
     div()
         .id(id)
         .h(px(34.0))
+        .flex_none()
         .px(px(14.0))
         .flex()
         .items_center()
@@ -890,5 +891,6 @@ pub fn pill(id: impl Into<gpui::ElementId>, label: &str, picked: bool) -> gpui::
         .text_color(rgb(if picked { ICE } else { MUTED }))
         .when(picked, |d| d.bg(rgb(WELL)).border_1().border_color(rgba(BORDER_CONTROL)))
         .hover(|s| s.text_color(rgb(INK)))
-        .child(label.to_uppercase())
+        .active(|s| s.opacity(0.75).mt(px(2.0)))
+        .child(label.to_string())
 }
