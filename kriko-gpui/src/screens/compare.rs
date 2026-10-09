@@ -22,6 +22,7 @@ use crate::theme::*;
 fn mark_for(id: &str) -> &'static marks::Mark {
     match id {
         "claude-code" => &marks::CLAUDE,
+        "codex" => &marks::CODEX,
         "opencode" => &marks::OPENCODE,
         "antigravity-cli" => &marks::ANTIGRAVITY,
         "mistral-vibe" => &marks::MISTRAL,

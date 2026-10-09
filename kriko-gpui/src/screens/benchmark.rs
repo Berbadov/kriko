@@ -219,6 +219,7 @@ fn mark_for(plane: &str, llm: &str, local_server: &str) -> &'static Mark {
     let id = llm.to_lowercase();
     for (needle, mark) in [
         ("claude", &marks::CLAUDE),
+        ("codex", &marks::CODEX),
         ("opencode", &marks::OPENCODE),
         ("antigravity", &marks::ANTIGRAVITY),
         ("agy", &marks::ANTIGRAVITY),

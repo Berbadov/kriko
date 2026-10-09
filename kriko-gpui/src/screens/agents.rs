@@ -9,7 +9,7 @@ use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, S
 use crate::app::{Field, Kriko};
 use crate::live::run::{mark_for, AgentEntry, Harness, RunState, Target};
 use crate::marks::{mark_tile, phase_beat, Phase};
-use crate::screens::run::option_chip;
+use crate::screens::run::{option_chip, option_chip_wrapping};
 use crate::screens::{empty_note, mono, row_desc, row_title, th};
 use crate::theme::*;
 
@@ -177,13 +177,13 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .child(div().w(px(320.0)).flex_none().child(detail))
     };
 
+    // only the table scrolls sideways; the options card below stays put
     div()
-        .id("agents-row-scroll")
-        .overflow_x_scroll().occlude()
+        .id("agents-screen")
         .flex()
         .flex_col()
         .gap(px(24.0))
-        .child(body)
+        .child(div().id("agents-row-scroll").overflow_x_scroll().occlude().child(body))
         .when(app.live.run.prefs_loaded, |d| d.child(research_card(app, cx)))
 }
 
@@ -200,7 +200,7 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
             this.toggle_source_kind(kind.clone(), cx);
             cx.notify();
         });
-        kinds = kinds.child(div().w(px(270.0)).min_w(px(0.0)).child(option_chip(("source-kind", i), words, on).w_full().whitespace_normal().h_auto().min_h(px(30.0)).py(px(8.0)).on_click(toggle)));
+        kinds = kinds.child(div().w(px(270.0)).min_w(px(0.0)).child(option_chip_wrapping(("source-kind", i), words, on).w_full().on_click(toggle)));
     }
     let mut counts = div().flex().flex_wrap().gap(px(6.0));
     for (i, n) in [0u32, 3, 5, 10, 20, 40].into_iter().enumerate() {
