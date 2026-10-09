@@ -24,7 +24,28 @@ const PHASES: [&str; 4] = ["QUEUED", "READING", "GROUNDING", "STORED"];
 /// A small choice chip: one answer to a question, one agent to pick. The
 /// chosen one runs in the brand blue.
 pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> Stateful<Div> {
-    let base = div()
+    chip_skin(chip_base(id), chosen).child(text.to_string())
+}
+
+/// A chip for a label that may be longer than the room it is given (words
+/// from the engine): the text wraps inside the chip and the chip grows to
+/// fit, instead of running out past its border.
+pub fn option_chip_wrapping(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> Stateful<Div> {
+    chip_skin(chip_base(id), chosen)
+        .h_auto()
+        .min_h(px(30.0))
+        .py(px(7.0))
+        .child(
+            div()
+                .flex_1()
+                .min_w(px(0.0))
+                .whitespace_normal()
+                .child(text.to_string()),
+        )
+}
+
+fn chip_base(id: impl Into<gpui::ElementId>) -> Stateful<Div> {
+    div()
         .id(id)
         .h(px(30.0))
         .flex_none()
@@ -36,7 +57,9 @@ pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> 
         .text_size(px(12.0))
         .cursor_pointer()
         .active(|s| s.opacity(0.75))
-        .child(text.to_string());
+}
+
+fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
     if chosen {
         base.text_color(rgb(0xffffff))
             .border_1()

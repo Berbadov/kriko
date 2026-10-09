@@ -449,6 +449,7 @@ pub fn mark_for(id: &str) -> &'static Mark {
     match id {
         "claude-code" => &marks::CLAUDE,
         "claude-desktop" => &marks::CLAUDE_DESKTOP,
+        "codex" => &marks::CODEX,
         "opencode" => &marks::OPENCODE,
         "antigravity-cli" => &marks::ANTIGRAVITY,
         "mistral-vibe" | "mistral-api" => &marks::MISTRAL,
@@ -531,6 +532,8 @@ pub struct State {
     pub verifying: bool,
     pub verify: Option<Verify>,
     pub verify_log_open: bool,
+    /// Preference saves sent and not yet answered; see `put_prefs`.
+    pub prefs_pending: usize,
 }
 
 impl State {
@@ -943,25 +946,38 @@ impl Kriko {
         }
         self.live.run.research_kinds = kinds.clone();
         let body = serde_json::json!({ "research_source_kinds": kinds.join(",") });
-        self.save_research_options(body, cx);
+        self.put_prefs(body, "Saved. Every agent run reads these.", cx);
     }
 
     /// Set the most sources an agent run reads; 0 leaves it to the run.
     pub fn pick_source_count(&mut self, count: u32, cx: &mut Context<Self>) {
         self.live.run.research_sources = count;
         let body = serde_json::json!({ "research_sources": count.to_string() });
-        self.save_research_options(body, cx);
+        self.put_prefs(body, "Saved. Every agent run reads these.", cx);
     }
 
-    fn save_research_options(&mut self, body: Value, cx: &mut Context<Self>) {
-        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
+    /// Store one preference. The screen already shows the choice, so the click
+    /// is felt at once; this tells the engine. Only the last of several quick
+    /// answers redraws from the engine's copy, so a second click is never
+    /// undone by the first one's reply, and a refusal puts the screen back to
+    /// what the engine holds.
+    fn put_prefs(&mut self, body: Value, saved: &'static str, cx: &mut Context<Self>) {
+        self.live.run.prefs_pending += 1;
+        cx.notify();
+        self.fetch(cx, move || api::put("/api/prefs", body), move |this, reply, cx| {
             this.note(&reply);
+            this.live.run.prefs_pending = this.live.run.prefs_pending.saturating_sub(1);
             match reply {
                 Ok(v) => {
-                    this.apply_prefs(&v);
-                    this.live.run.agent_note = "Saved. Every agent run reads these.".into();
+                    if this.live.run.prefs_pending == 0 {
+                        this.apply_prefs(&v);
+                    }
+                    this.live.run.agent_note = saved.into();
                 }
-                Err(e) => this.live.run.agent_note = e.message,
+                Err(e) => {
+                    this.live.run.agent_note = format!("Not saved: {}", e.message);
+                    this.refresh_agents(cx);
+                }
             }
         });
     }
@@ -1132,17 +1148,9 @@ impl Kriko {
 
     /// Use for runs: the single preferred agent, stored by the engine.
     pub fn prefer_agent(&mut self, id: String, cx: &mut Context<Self>) {
-        let body = serde_json::json!({ "preferred_harness": id });
-        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
-            this.note(&reply);
-            match reply {
-                Ok(v) => {
-                    this.apply_prefs(&v);
-                    this.live.run.agent_note = "Checks will run with this agent.".into();
-                }
-                Err(e) => this.live.run.agent_note = e.message,
-            }
-        });
+        let body = serde_json::json!({ "preferred_harness": id.clone() });
+        self.live.run.preferred = id;
+        self.put_prefs(body, "Checks will run with this agent.", cx);
     }
 
     /// Move one agent up or down in the reader's arrangement, and keep it.
@@ -1168,12 +1176,8 @@ impl Kriko {
         }
         order.swap(at, to as usize);
         let body = serde_json::json!({ "agent_order": order.join(",") });
-        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
-            this.note(&reply);
-            if let Ok(v) = reply {
-                this.apply_prefs(&v);
-            }
-        });
+        self.live.run.agent_order = order;
+        self.put_prefs(body, "Saved. The agents keep this order.", cx);
     }
 
     /// The model drawer: the provider's own list, asked for when it opens.
@@ -1199,33 +1203,21 @@ impl Kriko {
         } else {
             format!("harness_model_{}", id.replace('-', "_"))
         };
-        let body = serde_json::json!({ key: model });
-        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
-            this.note(&reply);
-            match reply {
-                Ok(v) => {
-                    this.apply_prefs(&v);
-                    this.live.run.agent_note = "Saved. New runs use this model.".into();
-                }
-                Err(e) => this.live.run.agent_note = e.message,
-            }
-        });
+        let body = serde_json::json!({ key: model.clone() });
+        if let Some(h) = self.live.run.harnesses.iter_mut().find(|h| h.id == id) {
+            h.llm = model;
+        }
+        self.put_prefs(body, "Saved. New runs use this model.", cx);
     }
 
     /// Pick how hard one provider thinks; empty is its own default.
     pub fn pick_agent_effort(&mut self, id: String, effort: String, cx: &mut Context<Self>) {
         let key = format!("harness_effort_{}", id.replace('-', "_"));
-        let body = serde_json::json!({ key: effort });
-        self.fetch(cx, move || api::put("/api/prefs", body), |this, reply, _| {
-            this.note(&reply);
-            match reply {
-                Ok(v) => {
-                    this.apply_prefs(&v);
-                    this.live.run.agent_note = "Saved. New runs use this effort.".into();
-                }
-                Err(e) => this.live.run.agent_note = e.message,
-            }
-        });
+        let body = serde_json::json!({ key: effort.clone() });
+        if let Some(h) = self.live.run.harnesses.iter_mut().find(|h| h.id == id) {
+            h.effort = effort;
+        }
+        self.put_prefs(body, "Saved. New runs use this effort.", cx);
     }
 
     /// Check connection: the engine starts its own MCP server and reports

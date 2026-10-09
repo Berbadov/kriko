@@ -14,6 +14,7 @@ every layer.
 import json
 import re
 import time
+from html import unescape as html_unescape
 import urllib.error
 import urllib.request
 
@@ -162,11 +163,39 @@ def _error_text(body: bytes) -> str:
 
 _LIBRARY = "https://ollama.com/library"
 _LIBRARY_NAMES = re.compile(r'href=["\']/library/([A-Za-z0-9_.:-]+)["\']')
-_library_cache: tuple[float, list[str]] | None = None
+#: A parameter-size badge on the provider's page: `1b`, `270m`, `8x7b`, `e2b`.
+#: Lowercase on purpose: the pull count beside it reads `85.1M`, and is not one.
+_LIBRARY_SIZE = re.compile(r">\s*(e?\d+(?:\.\d+)?(?:x\d+(?:\.\d+)?)?[bm])\s*</span>")
+_LIBRARY_ABOUT = re.compile(r"<p[^>]*break-words[^>]*>(.*?)</p>", re.S)
+_library_cache: tuple[float, list[dict]] | None = None
 
 
-def available(*, opener=None, fresh: bool = False) -> list[str]:
-    """Read the provider's public names only when the reader opens the drawer.
+def _library_rows(html: str) -> list[dict]:
+    """`name`, `sizes` and `about` for each model on the provider's page.
+
+    Sizes are the page's own badges, read off the markup between one model's
+    link and the next, so a model the provider adds later is covered with no
+    list kept here.
+    """
+    spots = [(m.start(), m.group(1)) for m in _LIBRARY_NAMES.finditer(html)]
+    rows: dict[str, dict] = {}
+    for at, (start, name) in enumerate(spots):
+        end = spots[at + 1][0] if at + 1 < len(spots) else len(html)
+        chunk = html[start:end]
+        row = rows.setdefault(name, {"name": name, "sizes": [], "about": ""})
+        for size in _LIBRARY_SIZE.findall(chunk):
+            if size not in row["sizes"] and len(row["sizes"]) < 16:
+                row["sizes"].append(size)
+        if not row["about"]:
+            found = _LIBRARY_ABOUT.search(chunk)
+            if found:
+                text = re.sub(r"<[^>]+>", "", found.group(1))
+                row["about"] = " ".join(html_unescape(text).split())[:200]
+    return list(rows.values())[:100]
+
+
+def library(*, opener=None, fresh: bool = False) -> list[dict]:
+    """The provider's public models, read only when the reader opens the drawer.
 
     Keep successful reads for six hours; failed reads are retryable. The HTML
     never enters an inference prompt. No provider model names live in the UI.
@@ -174,15 +203,20 @@ def available(*, opener=None, fresh: bool = False) -> list[str]:
     global _library_cache
     now = time.monotonic()
     if not fresh and _library_cache is not None and now - _library_cache[0] < 21600:
-        return list(_library_cache[1])
+        return [dict(row) for row in _library_cache[1]]
     opener = opener or urllib.request.urlopen
     try:
         with opener(_LIBRARY, timeout=8) as response:
             html = response.read(2_000_000).decode("utf-8", "replace")
-        names = list(dict.fromkeys(_LIBRARY_NAMES.findall(html)))[:100]
-        if not names:
+        rows = _library_rows(html)
+        if not rows:
             raise RuntimeError("Ollama's library returned no model choices. Open the provider library or retry.")
     except (OSError, ValueError) as error:
         raise RuntimeError(f"Could not read Ollama's model library: {error}") from error
-    _library_cache = (now, names)
-    return list(names)
+    _library_cache = (now, rows)
+    return [dict(row) for row in rows]
+
+
+def available(*, opener=None, fresh: bool = False) -> list[str]:
+    """Just the names of `library`, for a caller that wants nothing else."""
+    return [row["name"] for row in library(opener=opener, fresh=fresh)]
