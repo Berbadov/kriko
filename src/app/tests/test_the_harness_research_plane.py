@@ -1724,14 +1724,16 @@ _CLAUDE_HELP = """
 """
 
 
-def test_claude_models_are_read_off_its_own_help_not_written_here(monkeypatch):
-    """No list lives in Kriko: a written one offered `haiku` after the CLI had
-    stopped naming it, and never offered the model the CLI did name."""
+def test_claude_help_examples_include_the_documented_fast_models(monkeypatch):
+    """Help examples remain selectable alongside the documented Haiku choices;
+    an example list is not the CLI's complete model catalogue."""
     claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
     monkeypatch.setattr(harness_mod, "locate", lambda one: "/usr/bin/claude")
     monkeypatch.setattr(harness_mod, "helptext", lambda _: _CLAUDE_HELP)
     monkeypatch.setattr(harness_mod, "_MODELS", {})
-    assert harness_mod.models_for(claude) == ["fable", "opus", "sonnet", "claude-fable-5"]
+    assert harness_mod.models_for(claude) == [
+        *harness_mod.CLAUDE_FAST_MODELS, "fable", "opus", "sonnet", "claude-fable-5",
+    ]
 
 
 def test_an_updated_or_reasked_claude_has_its_help_read_again(monkeypatch):
