@@ -183,7 +183,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex()
         .flex_col()
         .gap(px(24.0))
-        .child(div().id("agents-row-scroll").overflow_x_scroll().occlude().child(body))
+        .child(div().id("agents-row-scroll").flex_none().overflow_x_scroll().map(horizontal_wheel).child(body))
         .when(app.live.run.prefs_loaded, |d| d.child(research_card(app, cx)))
 }
 
@@ -286,7 +286,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                 }
                 let models = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.open_agent_models(cx));
                 c = c.child(ghost("agent-models-drawer", if app.live.run.model_drawer { "Close model and effort choices" } else { "Models and effort" }).on_click(models));
-                c = c.child(reveal(well().p(px(12.0)).child(dials(app, h, window, cx)), format!("agent-dials-{}", e.id), app.live.run.model_drawer, 440.0, motion));
+                c = c.child(reveal(well().p(px(12.0)).child(dials(app, h, window, cx)), format!("agent-dials-{}", e.id), app.live.run.model_drawer, 800.0, motion));
             }
             RunState::Unusable(why) => c = c.child(row_desc(why)),
             RunState::Missing { hint, url } => {
