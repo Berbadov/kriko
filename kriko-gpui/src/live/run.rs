@@ -386,7 +386,7 @@ pub enum RunState {
     /// Found on this machine but not usable; the engine says why.
     Unusable(String),
     /// Not installed; the engine's hint on how.
-    Missing { hint: String, url: String },
+    Missing { hint: String, url: String, can_install: bool },
 }
 
 #[derive(Clone, Debug)]
@@ -730,7 +730,11 @@ fn harnesses_from(v: &Value) -> Vec<Harness> {
         .collect();
     out.extend(api::arr(v, "unusable").iter().map(|h| from_row(h, RunState::Unusable(api::s(h, "why")))));
     out.extend(api::arr(v, "missing").iter().map(|h| {
-        from_row(h, RunState::Missing { hint: api::s(h, "install_hint"), url: api::s(h, "download_url") })
+        from_row(h, RunState::Missing {
+            hint: api::s(h, "install_hint"),
+            url: api::s(h, "download_url"),
+            can_install: api::b(h, "can_install"),
+        })
     }));
     out
 }
