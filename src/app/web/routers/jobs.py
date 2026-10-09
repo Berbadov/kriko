@@ -166,6 +166,16 @@ def start_update(body: UpdateRequest, runner=Depends(get_jobs)):
     return _submit(runner, "pack_update", body.model_dump())
 
 
+@router.post("/agents/{agent_id}/install")
+def install_agent(agent_id: str, runner=Depends(get_jobs)):
+    """Install this agent for the reader (or, for `local`, Ollama and a small model)."""
+    from app import agentinstall
+
+    if not agentinstall.can_install(agent_id):
+        raise HTTPException(404, f"there is no one-click install for {agent_id!r}")
+    return _submit(runner, "agent_install", {"agent_id": agent_id})
+
+
 @router.get("/jobs")
 def list_jobs(
     limit: int = Query(30, ge=1, le=200),
