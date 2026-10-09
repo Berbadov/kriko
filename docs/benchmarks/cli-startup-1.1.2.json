@@ -1,0 +1,162 @@
+{
+  "date": "2026-10-09",
+  "platform": "Windows 11, release computer",
+  "samples_per_cli": 3,
+  "prompt": "Reply with exactly READY. Do not use any tools.",
+  "concurrency": 4,
+  "notes": "Help measures process-to-exit, not authentication. Fresh replies use the normal Kriko CLI runner; this includes setup, network and generation. CLI token totals include initial agent instructions. No web research was performed. Codex measured after the other CLIs completed.",
+  "results": [
+    {
+      "agent": "claude-code",
+      "model": "haiku",
+      "effort": "low",
+      "help_launches": [
+        {
+          "seconds": 0.425,
+          "exit": 0
+        },
+        {
+          "seconds": 0.384,
+          "exit": 0
+        },
+        {
+          "seconds": 0.3,
+          "exit": 0
+        }
+      ],
+      "fresh_replies": [
+        {
+          "seconds": 4.674,
+          "ready": true,
+          "tokens": 6825
+        },
+        {
+          "seconds": 3.931,
+          "ready": true,
+          "tokens": 6823
+        },
+        {
+          "seconds": 3.806,
+          "ready": true,
+          "tokens": 6832
+        }
+      ],
+      "median_help_seconds": 0.384,
+      "median_fresh_reply_seconds": 3.931
+    },
+    {
+      "agent": "antigravity-cli",
+      "model": "gemini-3.8-flash-low",
+      "effort": "",
+      "help_launches": [
+        {
+          "seconds": 0.419,
+          "exit": 0
+        },
+        {
+          "seconds": 0.36,
+          "exit": 0
+        },
+        {
+          "seconds": 0.229,
+          "exit": 0
+        }
+      ],
+      "fresh_replies": [
+        {
+          "seconds": 11.234,
+          "ready": true,
+          "tokens": 11814
+        },
+        {
+          "seconds": 6.481,
+          "ready": true,
+          "tokens": 11812
+        },
+        {
+          "seconds": 7.743,
+          "ready": true,
+          "tokens": 11819
+        }
+      ],
+      "median_help_seconds": 0.36,
+      "median_fresh_reply_seconds": 7.743
+    },
+    {
+      "agent": "mistral-vibe",
+      "model": "glm-5-3",
+      "effort": "high",
+      "help_launches": [
+        {
+          "seconds": 0.902,
+          "exit": 0
+        },
+        {
+          "seconds": 0.476,
+          "exit": 0
+        },
+        {
+          "seconds": 0.594,
+          "exit": 0
+        }
+      ],
+      "fresh_replies": [
+        {
+          "seconds": 15.23,
+          "ready": true,
+          "tokens": 6723
+        },
+        {
+          "seconds": 12.553,
+          "ready": true,
+          "tokens": 6723
+        },
+        {
+          "seconds": 35.225,
+          "ready": true,
+          "tokens": 6729
+        }
+      ],
+      "median_help_seconds": 0.594,
+      "median_fresh_reply_seconds": 15.23
+    },
+    {
+      "agent": "codex",
+      "model": "gpt-6-luna",
+      "effort": "low",
+      "help_launches": [
+        {
+          "seconds": 0.135,
+          "exit": 0
+        },
+        {
+          "seconds": 0.082,
+          "exit": 0
+        },
+        {
+          "seconds": 0.072,
+          "exit": 0
+        }
+      ],
+      "fresh_replies": [
+        {
+          "seconds": 6.177,
+          "ready": true,
+          "tokens": 13523
+        },
+        {
+          "seconds": 4.355,
+          "ready": true,
+          "tokens": 12935
+        },
+        {
+          "seconds": 4.252,
+          "ready": true,
+          "tokens": 13519
+        }
+      ],
+      "median_help_seconds": 0.082,
+      "median_fresh_reply_seconds": 4.355
+    }
+  ]
+}

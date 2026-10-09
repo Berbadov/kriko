@@ -154,7 +154,7 @@ a = Analysis(
     + mcp_submodules()
     + kriko_submodules(),
     hookspath=[],
-    runtime_hooks=[],
+    runtime_hooks=[str(ROOT / "packaging" / "restore_stdio.py")],
     # See FROZEN_EXCLUDES for why each is here.
     excludes=list(FROZEN_EXCLUDES),
     noarchive=False,
@@ -173,11 +173,8 @@ exe = EXE(
     debug=False,
     strip=False,
     upx=False,
-    # console=True, deliberately, even though this is a GUI app's child.
-    # PyInstaller's windowed mode leaves `sys.stdout` as None on Windows, and
-    # the first thing this binary does is print its port — the handshake would
-    # raise before the server ever started. The terminal window is suppressed
-    # on the spawning side instead: `kriko-gpui/src/engine.rs` creates the
-    # child with CREATE_NO_WINDOW, so nothing flashes.
-    console=True,
+    # A GUI-subsystem binary cannot allocate a flashing console when a CLI
+    # starts --mcp. The runtime hook restores inherited pipes for both the
+    # engine's port handshake and MCP's bidirectional stdio protocol.
+    console=sys.platform != "win32",
 )

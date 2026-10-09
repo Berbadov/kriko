@@ -419,7 +419,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         }
         _ => div()
             .id("browse-table-scroll")
-            .overflow_x_scroll()
+            .overflow_x_scroll().occlude()
             .child(table.min_w(px(520.0)))
             .into_any_element(),
     };
@@ -493,7 +493,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .child(
             div()
                 .id("browse-row-scroll")
-                .overflow_x_scroll()
+                .overflow_x_scroll().occlude()
                 .child(
                     div()
                         .flex()
