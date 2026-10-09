@@ -1422,7 +1422,7 @@ mod tests {
         s.harnesses = harnesses_from(&json!({"harnesses": [{"id": "claude-code", "label": "Claude Code"}]}));
         s.targets = targets_from(&json!({"targets": [
             {"id": "claude-code", "label": "Claude Code", "state": "connected", "skill": {"supported": true}},
-            {"id": "cursor", "label": "Cursor", "state": "absent"}]}));
+            {"id": "codex", "label": "Codex", "state": "absent"}]}));
         let all = s.agent_entries();
         assert_eq!(all.len(), 2);
         assert!(all[0].harness.is_some() && all[0].target.is_some());
@@ -1433,13 +1433,13 @@ mod tests {
     fn the_readers_arrangement_of_the_agents_wins() {
         let mut s = State::default();
         s.harnesses = harnesses_from(&json!({"harnesses": [
-            {"id": "a", "label": "A"}, {"id": "b", "label": "B"}]}));
+            {"id": "claude-code", "label": "Claude Code"}, {"id": "codex", "label": "Codex"}]}));
         let ids = |s: &State| s.agent_entries().iter().map(|e| e.id.clone()).collect::<Vec<_>>();
-        assert_eq!(ids(&s), vec!["a", "b"]);
-        s.agent_order = vec!["b".to_string()];
-        assert_eq!(ids(&s), vec!["b", "a"]);
+        assert_eq!(ids(&s), vec!["claude-code", "codex"]);
+        s.agent_order = vec!["codex".to_string()];
+        assert_eq!(ids(&s), vec!["codex", "claude-code"]);
         s.agent_order = vec!["ghost".to_string()];
-        assert_eq!(ids(&s), vec!["a", "b"]);
+        assert_eq!(ids(&s), vec!["claude-code", "codex"]);
     }
 
     #[test]
@@ -1460,14 +1460,14 @@ mod tests {
         let mut s = State::default();
         s.harnesses = harnesses_from(&json!({"harnesses": [
             {"id": "claude-code", "label": "Claude Code"},
-            {"id": "opencode", "label": "OpenCode"}
+            {"id": "mistral-vibe", "label": "Mistral"}
         ]}));
         s.targets = targets_from(&json!({"targets": [
-            {"id": "cursor", "label": "Cursor", "state": "absent"}
+            {"id": "codex", "label": "Codex", "state": "absent"}
         ]}));
-        s.agent_order = vec!["cursor".into(), "opencode".into()];
+        s.agent_order = vec!["codex".into(), "mistral-vibe".into()];
         let ids: Vec<String> = s.agent_entries().into_iter().map(|e| e.id).collect();
-        assert_eq!(ids, ["cursor", "opencode", "claude-code"]);
+        assert_eq!(ids, ["codex", "mistral-vibe", "claude-code"]);
     }
 
 }
