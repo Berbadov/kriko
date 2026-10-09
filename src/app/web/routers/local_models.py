@@ -40,8 +40,12 @@ def local_models(request: Request, available: bool = False, fresh: bool = False)
         payload["library_url"] = "https://ollama.com/library"
         try:
             payload["available"] = modelpull.available(fresh=fresh)
+            # the rows (sizes, one line about each) come from the read the
+            # line above just made, so this is the cache and not a second fetch
+            payload["library"] = modelpull.library()
         except RuntimeError as error:
             payload["available"] = []
+            payload["library"] = []
             payload["catalogue_error"] = str(error)
     return payload
 
