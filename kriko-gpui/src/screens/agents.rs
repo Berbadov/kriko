@@ -72,7 +72,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     .flex()
                     .items_center()
                     .pb(px(10.0))
-                    .child(div().flex_1().min_w(px(160.0)).child(th("Agent")))
+                    .child(div().flex_1().min_w(px(180.0)).child(th("Agent")))
                     .child(div().w(px(200.0)).flex_none().child(th("Runs checks")))
                     .child(div().w(px(140.0)).flex_none().child(th("MCP")))
                     .child(div().w(px(100.0)).flex_none().child(th("Recent runs")))
@@ -124,7 +124,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .child(
                     div()
                         .flex_1()
-                        .min_w(px(160.0))
+                        .min_w(px(180.0))
                         .flex()
                         .items_center()
                         .gap(px(12.0))
@@ -168,16 +168,20 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             Some(e) => detail_card(app, &e, motion, window, cx),
             None => card(),
         };
+        // The detail card drops below the table when the window is too narrow
+        // for both (a 2K display at 125% scaling is about 1260 px of content),
+        // instead of running off the right edge.
         div()
             .flex()
+            .flex_wrap()
             .gap(px(24.0))
             .items_start()
-            .min_w(px(1160.0))
-            .child(div().flex_1().min_w(px(0.0)).child(table))
+            .w_full()
+            .child(div().flex_1().min_w(px(840.0)).child(table))
             .child(div().w(px(320.0)).flex_none().child(detail))
     };
 
-    // only the table scrolls sideways; the options card below stays put
+    // only the table scrolls sideways, and only in a very narrow window; the options card below stays put
     div()
         .id("agents-screen")
         .flex()
@@ -224,6 +228,36 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         .child(kinds)
         .child(eyebrow("Sources per run"))
         .child(counts)
+}
+
+/// The one-click install for an agent that is not there, and how it is going.
+/// The local agent's click does more: Ollama if it is missing, then a small model.
+fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kriko>) -> Div {
+    let job = app.live.knowledge.agent_install.as_ref().filter(|(id, _)| *id == e.id).map(|(_, v)| v.clone());
+    let busy = job.as_ref().is_some_and(|v| !v.done);
+    let id = e.id.clone();
+    let label = if e.id == "local" { "Set up the small local model" } else { "Install" };
+    let mut block = div().flex().flex_col().gap(px(8.0));
+    if offered && !busy {
+        block = block.child(div().child(
+            key(("agent-install", 0usize), label)
+                .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.install_agent(id.clone(), cx))),
+        ));
+    }
+    if let Some(v) = job {
+        let (state, word) = if !v.done {
+            (TagState::Need, "Installing")
+        } else if v.state == "succeeded" {
+            (TagState::Live, "Installed")
+        } else {
+            (TagState::Block, "Install failed")
+        };
+        block = block.child(div().flex().child(tag("agent-install-state", state, word, !app.reduce_motion)));
+        if !v.message.is_empty() {
+            block = block.child(row_desc(&v.message));
+        }
+    }
+    block
 }
 
 fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
@@ -288,11 +322,20 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                 c = c.child(ghost("agent-models-drawer", if app.live.run.model_drawer { "Close model and effort choices" } else { "Models and effort" }).on_click(models));
                 c = c.child(reveal(well().p(px(12.0)).child(dials(app, h, window, cx)), format!("agent-dials-{}", e.id), app.live.run.model_drawer, 800.0, motion));
             }
-            RunState::Unusable(why) => c = c.child(row_desc(why)),
-            RunState::Missing { hint, url } => {
+            RunState::Unusable(why) => {
+                c = c.child(row_desc(why));
+                // a model server that is up but holds no model: one click fixes it
+                if e.id == "local" {
+                    c = c.child(install_block(app, e, true, cx));
+                }
+            }
+            RunState::Missing { hint, url, can_install } => {
                 c = c.child(row_desc(if hint.is_empty() { "Not found on this machine." } else { hint }));
+                if *can_install {
+                    c = c.child(install_block(app, e, true, cx));
+                }
                 if !url.is_empty() {
-                    c = c.child(mono(url, DIM));
+                    c = c.child(div().min_w(px(0.0)).truncate().child(mono(url, DIM)));
                 }
             }
         }

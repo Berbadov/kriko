@@ -90,6 +90,8 @@ def claims(kind: str, params: dict) -> frozenset[str]:
         return _named("compare", params.get("draft_id"))
     if kind == "model_pull":
         return _named("model", params.get("model"))
+    if kind == "agent_install":
+        return _named("agent", params.get("agent_id"))
     return frozenset({EVERYTHING})
 
 

@@ -4,9 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kriko"
-version = "1.1.5"
+version = "1.1.6"
 description = "A local-first, open knowledge engine for manufactured products"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 # Lowered from ">=3.14" on 2026-09-14 (B110). The floor was unsatisfiable in
 # practice: 3.13 was refused by this line, and 3.14.0rc2 — the only 3.14 many
 # platforms can fetch today — breaks the `pydantic` pinned in
