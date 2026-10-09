@@ -62,6 +62,7 @@ import re
 import shutil
 import signal
 import subprocess
+from app.loginpath import child_env, login_path
 from app.winprocess import hidden_startup
 import sys
 import tempfile
@@ -736,6 +737,19 @@ def _ensure_opencode_agent() -> None:
 #: environment variable beats a support thread.
 DIRS_ENV = "KRIKO_HARNESS_DIRS"
 
+#: Other places a CLI lands that a login `PATH` may still not list (a version
+#: manager's shim folder, a package manager's link folder). A fallback only,
+#: after `PATH` and the registry's, so a wrong entry costs one missed probe.
+_EXTRA_HOMES = (
+    ".volta/bin",
+    ".bun/bin",
+    ".cargo/bin",
+    "AppData/Local/pnpm",
+    "AppData/Local/Microsoft/WinGet/Links",
+    "AppData/Local/Microsoft/WindowsApps",
+    "scoop/shims",
+)
+
 #: Executable suffixes to try on Windows, where `claude` is `claude.exe` and an
 #: npm-installed one is `claude.cmd`. Empty string first: a bare name is right
 #: everywhere else, and on Windows `shutil.which` has already handled PATHEXT.
@@ -801,7 +815,7 @@ def locate(one: Harness) -> str:
     # `Path.home()` build a `WindowsPath`, which cannot be instantiated on a
     # POSIX runner at all (NotImplementedError, before `_locate` runs).
     # `expanduser` reads the same env vars and works on both.
-    key = (one.executable, one.homes, os.environ.get("PATH", ""),
+    key = (one.executable, one.homes, login_path(),
            os.environ.get(DIRS_ENV, ""), os.path.expanduser("~"))
     now = time.monotonic()
     hit = _LOCATED.get(key)
@@ -832,7 +846,9 @@ def _locate(one: Harness) -> str:
     with pack coverage — and it is a *fallback*, so a wrong guess in it costs
     nothing.
     """
-    found = shutil.which(one.executable)
+    # The process's PATH first, then what a fresh login would add: a CLI the
+    # reader installed after this app started is on the registry's PATH only.
+    found = shutil.which(one.executable) or shutil.which(one.executable, path=login_path())
     if found:
         # PATHEXT is conventionally spelled in upper case
         # (".COM;.EXE;.BAT;.CMD") and `shutil.which` returns whatever case
@@ -848,11 +864,12 @@ def _locate(one: Harness) -> str:
     home = Path.home()
     if one.id == "codex" and os.name == "nt":
         packaged = home / "AppData" / "Local" / "OpenAI" / "Codex" / "bin"
-        candidates = list(packaged.glob("*/codex.exe"))
+        candidates = sorted(packaged.glob("*/codex.exe"))
         if candidates:
             return str(max(candidates, key=lambda p: p.stat().st_mtime))
     roots = [Path(d) for d in os.environ.get(DIRS_ENV, "").split(os.pathsep) if d]
-    roots += [home / part for part in one.homes]
+    roots += [home / part for part in (*one.homes, *_EXTRA_HOMES)]
+    roots += sorted(home.glob("AppData/Roaming/Python/Python*/Scripts"), reverse=True)
     for root in roots:
         for suffix in _SUFFIXES:
             candidate = root / f"{one.executable}{suffix}"
@@ -930,7 +947,7 @@ def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True, encoding="utf-8", errors="replace",
-            env={**os.environ, **CHILD_ENCODING_ENV},
+            env={**child_env(extra_dirs=(str(Path(executable).parent),) if os.path.isabs(executable) else ()), **CHILD_ENCODING_ENV},
             start_new_session=True,
             startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
@@ -2590,14 +2607,14 @@ class HarnessResearcher(AgentResearcher):
                 if self.harness.protocol == "vibe":
                     # These files belong to this invocation's temporary home;
                     # never count another chat or read the user's session log.
-                    for metadata in (config / "sessions").rglob("meta.json"):
+                    for metadata in (config / "sessions").rglob("meta.json"):  # any-order: each file is counted once, the sum does not depend on order
                         try:
                             stats = json.loads(metadata.read_text(encoding="utf-8")).get("stats", {})
                             count = int(stats.get("session_prompt_tokens", 0)) + int(stats.get("session_completion_tokens", 0))
                             # Current Vibe stores cumulative usage in versioned
                             # projections. Count the latest measurement once,
                             # never sum historical snapshots of the same chat.
-                            for projection in (metadata.parent / "generations").glob("*/projection-state.json"):
+                            for projection in (metadata.parent / "generations").glob("*/projection-state.json"):  # any-order: the largest measurement wins
                                 snapshot = json.loads(projection.read_text(encoding="utf-8")).get("snapshot", {})
                                 usage = snapshot.get("session", {}).get("tokenUsage") or {}
                                 count = max(count, int(usage.get("inputTokens", 0)) + int(usage.get("outputTokens", 0)))
@@ -2893,7 +2910,7 @@ class HarnessResearcher(AgentResearcher):
                 encoding="utf-8",
                 errors="replace",
                 bufsize=1,
-                env={**os.environ, **CHILD_ENCODING_ENV, **self.harness.env, **self._run_env},
+                env={**child_env(extra_dirs=(str(Path(command[0]).parent),) if os.path.isabs(command[0]) else ()), **CHILD_ENCODING_ENV, **self.harness.env, **self._run_env},
                 cwd=self._run_cwd or os.path.expanduser("~"),
                 shell=self._needs_shell(command),
                 startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
