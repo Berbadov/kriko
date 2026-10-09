@@ -408,10 +408,11 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
                 model = prefs.for_harness(conn, agent.id)
             finally:
                 conn.close()
-    # A model name from another provider's namespace — chosen for a CLI, say —
-    # would be a 400 from Mistral. The agent's own default is the honest
-    # substitute, and the run's log line names the model that ran.
-    if model.strip() and modelcatalogue.provider_for(model.strip(), KRIKO_HOME) != agent.key:
+    # A catalogue row from another provider is incompatible. An unpriced
+    # name can be a newly served model: the selected endpoint judges it,
+    # rather than silently benchmarking the agent's default instead.
+    row = modelcatalogue.load(KRIKO_HOME).get(model.strip())
+    if row and row.get("provider") != agent.key:
         model = ""
     return apiagent.ApiAgentResearcher(
         agent, model=model.strip(), home=KRIKO_HOME,
