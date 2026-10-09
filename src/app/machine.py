@@ -20,6 +20,7 @@ import os
 import platform
 import shutil
 import subprocess
+from app.winprocess import hidden_startup
 import threading
 import time
 import sys
@@ -43,7 +44,7 @@ def _smi(run=subprocess.run) -> dict:
         done = run(
             [exe, "--query-gpu=name,memory.total,memory.used",
              "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=SMI_TIMEOUT, creationflags=flags,
+            capture_output=True, text=True, timeout=SMI_TIMEOUT, startupinfo=hidden_startup(), creationflags=flags,
         )
     except (OSError, subprocess.SubprocessError):
         return empty

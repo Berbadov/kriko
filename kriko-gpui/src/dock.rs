@@ -252,7 +252,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .id(("dock-log-text", i))
                         .min_h(px(0.0))
                         .max_h(px(180.0))
-                        .overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                        .overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                         .font_family(MONO)
                         .text_size(px(10.0))
                         .text_color(rgb(MUTED))
@@ -291,7 +291,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                 .min_h(px(0.0))
                 .flex_col()
                 .gap(px(10.0))
-                .overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                .overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                 .children(log_rows),
         );
 
@@ -406,6 +406,8 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
     let loaded = app.live.run.jobs_loaded;
     div()
         .id("dock-scroll")
+        .h_full()
+        .min_h(px(0.0))
         .w(px(300.0))
         .flex_none()
         .bg(rgb(SURFACE_1))
@@ -421,8 +423,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                 .flex_none()
                 .items_center()
                 .justify_between()
-                .child(div().flex().flex_col().gap(px(8.0)).child(eyebrow("Live actions"))
-                    .child(ghost("live-minimise", "Minimise").on_click(cx.listener(|this, _, _, cx| { this.dock_open = false; cx.notify(); }))))
+                .child(eyebrow("Live actions").flex_none())
                 .child(
                     div()
                         .flex()
@@ -433,6 +434,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                 "dock-logs-toggle",
                                 if app.dock_logs_open { "Hide logs" } else { "Logs" },
                             )
+                            .h(px(32.0)).px(px(12.0)).text_size(px(12.0))
                             .on_click(toggle_logs),
                         )
                         .child(tag("dock-live", TagState::Live, "Live", motion).flex_none()),
@@ -476,7 +478,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                 .min_h(px(0.0))
                 .flex_col()
                 .gap(px(16.0))
-                .overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                .overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                 .child(
                     div()
                         .flex()

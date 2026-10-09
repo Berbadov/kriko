@@ -35,17 +35,14 @@ pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> 
         .font_family(MONO)
         .text_size(px(12.0))
         .cursor_pointer()
-        .active(|s| s.opacity(0.75).mt(px(2.0)))
+        .active(|s| s.opacity(0.75))
         .child(text.to_string());
     if chosen {
         base.text_color(rgb(0xffffff))
             .border_1()
             .border_color(rgba(0xffffff40))
-            .bg(linear_gradient(
-                180.0,
-                linear_color_stop(hsla(BRAND_HOVER), 0.0),
-                linear_color_stop(hsla(BRAND_LOW), 1.0),
-            ))
+            .bg(rgb(BRAND))
+            .hover(|s| s.bg(rgb(BRAND_HOVER)))
     } else {
         base.text_color(rgb(INK_2))
             .border_1()

@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.1.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.1.2-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Download for Windows](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,8 +34,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.1.1-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.1.1-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep both programs together, and open `kriko.exe`. |
+| `kriko-1.1.2-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.1.2-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep both programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start, including its catalogs. You don't need to install Python, Node, or Rust.
 
@@ -76,7 +76,7 @@ Installed lookups run on your computer. Online research sends its questions and 
 
 ## Model benchmarks
 
-**Release 1.1.0 baseline:** we measured three fixed research cases per requested model on the release computer. Version 1.1.1 fixes local evidence handling and CLI research; the older measurements below do not include those fixes. Results and account availability are recorded in [the benchmark report](docs/benchmarks/README.md), together with the exact model IDs and commands to repeat the runs.
+**Release 1.1.0 baseline:** we measured three fixed research cases per requested model on the release computer. Version 1.1.2 fixes local evidence handling and CLI research; the older measurements below do not include those fixes. Results and account availability are recorded in [the benchmark report](docs/benchmarks/README.md), together with the exact model IDs and commands to repeat the runs.
 
 | Model | Completed cases | Median time | Grounded risk findings |
 |---|---:|---:|---:|
@@ -88,6 +88,19 @@ Installed lookups run on your computer. Online research sends its questions and 
 Measured on Windows 11 with an RTX 3060 Laptop GPU (6 GB). A grounded finding passed the quote check; it is not independent proof of a fault. Hosted cost was unavailable for GLM, so no dollar figure is claimed.
 
 These are small samples of the complete research workflow, including search and reading. They describe this machine and these accounts; they don't establish a general model ranking. Failed requests are reported separately from successful answer times.
+
+### CLI startup on this computer
+
+Measured on 9 October 2026, three separate processes and three fresh chats per CLI:
+
+| Agent / model | Local launch (`--help`), median | Fresh one-word reply, median |
+|---|---:|---:|
+| Claude Code / Haiku | 0.38 s | 3.93 s |
+| Codex / GPT 6 Luna | 0.08 s | 4.36 s |
+| Antigravity / Gemini 3.8 Flash low | 0.36 s | 7.74 s |
+| Mistral / GLM 5.3 high | 0.59 s | 15.23 s |
+
+All 12 replies completed. These are startup checks, not research scores: the reply times also include authentication, agent setup, network latency, and model generation. Keeping a terminal open cannot remove most of that wait. GLM varied from 12.55 to 35.23 seconds. Every reply used a new chat. [Raw measurements](docs/benchmarks/cli-startup-1.1.2.json) include the CLI-reported token totals; even a short answer includes the agent's initial instructions.
 
 ## Get help
 

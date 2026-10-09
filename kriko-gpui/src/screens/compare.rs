@@ -1559,7 +1559,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             div()
                 .id("picker-scroll")
                 .max_h(px(260.0))
-                .overflow_y_scroll()
+                .overflow_y_scroll().occlude()
                 .flex()
                 .flex_col()
                 .child(list)
@@ -1844,7 +1844,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .child(
             div()
                 .id("compare-table-scroll")
-                .overflow_x_scroll()
+                .overflow_x_scroll().occlude()
                 .child(table(app, window, cx).min_w(px(860.0))),
         )
         .child(questions_card);

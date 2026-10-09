@@ -169,14 +169,9 @@ pub fn plate_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .cursor_pointer()
         .border_1()
         .border_color(rgb(BEZEL_EDGE))
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(hsla(BEZEL_HI), 0.0),
-            linear_color_stop(hsla(BEZEL_LO), 1.0),
-        ))
-        .shadow(vec![shadow(0x00000099, 0.0, 4.0, 10.0, 0.0)])
-        .hover(|s| s.text_color(rgb(INK)))
-        .active(|s| s.mt(px(1.0)).shadow(vec![]))
+        .bg(rgb(BEZEL_LO))
+        .hover(|s| s.bg(rgb(BEZEL_HI)).text_color(rgb(INK)))
+        .active(|s| s.bg(rgb(WELL)))
         .child(label.to_uppercase())
 }
 

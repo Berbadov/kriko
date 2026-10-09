@@ -61,7 +61,7 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
             .when(selected == i, |b| b.border_color(rgb(ICE))).on_click(pick));
     }
     let controls = controls.child(plate_s(gpui::ElementId::named_usize(format!("log-copy-{id}"), 0), "Copy log").on_click(copy));
-    let mut body = div().id(gpui::ElementId::named_usize(format!("log-scroll-{id}"), 0)).track_scroll(&scroll).overflow_y_scroll().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+    let mut body = div().id(gpui::ElementId::named_usize(format!("log-scroll-{id}"), 0)).track_scroll(&scroll).overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
         .h(px(280.0)).flex_none().min_h(px(40.0)).p(px(12.0)).bg(rgb(WELL)).flex().flex_col().gap(px(5.0));
     if lines.is_empty() { body = body.child(empty_note(if job.done { "No log entries for this filter." } else { "Waiting for log entries." })); }
     for line in lines { body = body.child(mono(&line.text, INK_2).flex_none()); }
