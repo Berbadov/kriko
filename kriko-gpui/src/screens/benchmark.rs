@@ -65,7 +65,7 @@ fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         result = result.child(row);
         if b.harness != entry.id { continue; }
         let query = app.bench_model_search.value.trim().to_lowercase();
-        let mut row = div().id("bench-model-options").h(px(180.0)).overflow_y_scroll().on_scroll_wheel(|_,_,cx| cx.stop_propagation())
+        let mut row = div().id("bench-model-options").h(px(180.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_,_,cx| cx.stop_propagation())
             .flex().flex_col().gap(px(6.0));
         for (n, model) in h.llms.iter().enumerate().filter(|(_,m)| query.is_empty() || m.to_lowercase().contains(&query)) {
             let chosen = model.clone(); let agent = entry.id.clone();
@@ -710,7 +710,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex_wrap()
                 .gap(px(24.0))
                 .items_start()
-                .child(div().id("bench-agent-table-scroll").flex_1().min_w(px(560.0)).overflow_x_scroll().child(agents.min_w(px(880.0))))
+                .child(div().id("bench-agent-table-scroll").flex_1().min_w(px(560.0)).overflow_x_scroll().occlude().child(agents.min_w(px(880.0))))
                 .child(div().flex_1().min_w(px(360.0)).child(history)),
         )
         .child(bars)
@@ -761,7 +761,7 @@ fn latest_score(runs: &[&BenchRun]) -> Div {
 fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
     let detail=r.raw.get("detail").cloned().unwrap_or(crate::api::Value::Null);
     let answer=detail.get("answer").cloned().unwrap_or(crate::api::Value::Null);
-    let mut d=well().id(("bench-answer-scroll",i)).h(px(400.0)).overflow_y_scroll().on_scroll_wheel(|_,_,cx|cx.stop_propagation())
+    let mut d=well().id(("bench-answer-scroll",i)).h(px(400.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_,_,cx|cx.stop_propagation())
         .p(px(16.0)).flex().flex_col().gap(px(12.0))
         .child(row_desc(&score_words(&r.raw)).flex_none())
         .child(row_desc(&format!("{} · tokens: {} · {} risks backed by evidence · {} candidates rejected", seconds(r.ms), r.tokens.map(|v|format!("{v:.0}")).unwrap_or_else(||"not reported".into()),r.accepted,r.refused)));

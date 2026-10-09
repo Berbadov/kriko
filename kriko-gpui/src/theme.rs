@@ -64,6 +64,7 @@ pub fn shadow(hex_rgba: u32, dx: f32, dy: f32, blur: f32, spread: f32) -> BoxSha
 }
 
 /// The soft drop shadow a glass card casts over the ground.
+#[allow(dead_code)]
 pub fn card_shadow() -> Vec<BoxShadow> {
     vec![shadow(0x00000066, 0.0, 12.0, 32.0, 0.0)]
 }
@@ -133,13 +134,12 @@ pub enum LedAnim {
 
 // ---- surfaces ----
 
-/// Glass card: translucent fill over the ground, soft shadow.
+/// Flat glass card from the current design reference.
 pub fn card() -> Div {
     div()
         .bg(rgba(GLASS_1))
         .rounded(px(20.0))
         .p(px(24.0))
-        .shadow(card_shadow())
 }
 
 /// Recessed well: darker fill and a hairline ring.
@@ -366,7 +366,7 @@ pub fn embedded(path: SharedString) -> gpui::ImageSource {
 /// of the band and is gone by its middle, so the sky on the right is
 /// untouched. The title names the page rather than filling it (the reader:
 /// "page titles takes too much space, but i dont wanna lose the sky").
-pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str) -> Div {
+pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str, motion: bool) -> Div {
     let plan = sky.ink();
     let shade = |a: f32| Hsla { a, ..hsla(plan.shade) };
     let accent = if plan.accent_reads { BRAND_BRIGHT } else { plan.ink };
@@ -408,14 +408,7 @@ pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str) -> Div {
                         .child(div().text_color(rgb(plan.ink)).opacity(0.8).child(crumb.to_uppercase())),
                 )
                 .child(
-                    div()
-                        .mt(px(6.0))
-                        .font_family(DISPLAY)
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(34.0))
-                        .line_height(px(38.0))
-                        .text_color(rgb(plan.ink))
-                        .child(title.to_uppercase()),
+                    title_wipe(title, plan.ink, motion),
                 )
                 .when(!lead.is_empty(), |d| {
                     d.child(
@@ -431,6 +424,19 @@ pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str) -> Div {
                     )
                 }),
         )
+}
+
+fn title_wipe(title: &str, ink: u32, motion: bool) -> gpui::AnyElement {
+    let text = div().font_family(DISPLAY).font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(34.0)).line_height(px(38.0)).text_color(rgb(ink))
+        .whitespace_nowrap().child(title.to_uppercase());
+    let clip = div().mt(px(6.0)).h(px(38.0)).w_full().overflow_hidden().child(text);
+    if motion {
+        clip.with_animation(gpui::ElementId::Name(format!("title-{title}").into()),
+            Animation::new(std::time::Duration::from_millis(420)),
+            |d, t| d.w(relative((t * 14.0).floor() / 14.0)),
+        ).into_any_element()
+    } else { clip.into_any_element() }
 }
 
 // ---- the merged window top bar ----
@@ -487,7 +493,7 @@ pub fn titlebar() -> Stateful<Div> {
 
 // ---- controls ----
 
-/// Primary action: blue key with a 3px lip that drops on press.
+/// Flat primary action; a press changes its fill without moving the layout.
 pub fn key(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
@@ -503,17 +509,9 @@ pub fn key(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .text_color(rgb(0xffffff))
         .text_size(px(15.0))
         .cursor_pointer()
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(hsla(BRAND_HOVER), 0.0),
-            linear_color_stop(hsla(BRAND_LOW), 1.0),
-        ))
-        .shadow(vec![
-            shadow(0x0f2a9cff, 0.0, 3.0, 0.0, 0.0),
-            shadow(0x00000080, 0.0, 10.0, 20.0, 0.0),
-        ])
-        .hover(|s| s.opacity(0.9))
-        .active(|s| s.mt(px(3.0)).shadow(vec![shadow(0x00000080, 0.0, 2.0, 6.0, 0.0)]))
+        .bg(rgb(BRAND))
+        .hover(|s| s.bg(rgb(BRAND_HOVER)))
+        .active(|s| s.bg(rgb(BRAND_LOW)))
         .child(label.to_uppercase())
 }
 
@@ -605,14 +603,9 @@ pub fn plate_wide(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> 
         .cursor_pointer()
         .border_1()
         .border_color(rgb(BEZEL_EDGE))
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(hsla(BEZEL_HI), 0.0),
-            linear_color_stop(hsla(BEZEL_LO), 1.0),
-        ))
-        .shadow(vec![shadow(0x00000099, 0.0, 6.0, 16.0, 0.0)])
-        .hover(|s| s.text_color(rgb(INK)))
-        .active(|s| s.mt(px(2.0)).shadow(vec![]))
+        .bg(rgb(BEZEL_LO))
+        .hover(|s| s.bg(rgb(BEZEL_HI)).text_color(rgb(INK)))
+        .active(|s| s.bg(rgb(WELL)))
         .child(
             well()
                 .size(px(54.0))
@@ -692,13 +685,16 @@ pub fn led_matrix_anim(
         .flat_map(|r| r.chars())
         .filter(|c| *c == '#')
         .count();
-    let mut grid = div().flex().flex_col().gap(px(gap));
+    let columns = rows.iter().map(|r| r.len()).max().unwrap_or(0);
+    let width = columns as f32 * dot + columns.saturating_sub(1) as f32 * gap;
+    let height = rows.len() as f32 * dot + rows.len().saturating_sub(1) as f32 * gap;
+    let mut grid = div().w(px(width)).h(px(height)).flex_none().flex().flex_col().gap(px(gap));
     let mut index = 0usize;
     for r in rows {
-        let mut line = div().flex().gap(px(gap));
+        let mut line = div().w(px(width)).h(px(dot)).flex_none().flex().gap(px(gap));
         for ch in r.chars() {
             let lit = ch == '#';
-            let d = div().size(px(dot)).rounded(px(1.5));
+            let d = div().size(px(dot)).flex_none().rounded(px(1.5));
             let d: gpui::AnyElement = if lit {
                 let base = d.bg(rgb(color)).shadow(vec![BoxShadow {
                     color: hsla(color),
@@ -1092,6 +1088,7 @@ pub fn icon(name: &str, size: f32) -> Svg {
     svg()
         .path(SharedString::from(format!("icons/{name}.svg")))
         .size(px(size))
+        .flex_none()
 }
 
 /// Sidebar item. `current` draws the recessed well with ice text.
@@ -1132,8 +1129,8 @@ pub fn nav_item(
                 .flex_none()
                 .text_color(rgb(if current { ICE } else { MUTED })),
         )
-        .child(div().child(label.to_string()))
-        .child(div().flex_1());
+        .when(label.is_empty(), |d| d.px(px(0.0)).gap(px(0.0)).justify_center())
+        .when(!label.is_empty(), |d| d.child(div().child(label.to_string())).child(div().flex_1()));
     let base = match count {
         Some(c) => base.child(
             div()
@@ -1168,6 +1165,22 @@ pub fn nav_item(
 /// The brand block on top of the sidebar: flat brand rectangle, white wordmark.
 pub fn reveal(child: impl IntoElement, id: impl Into<SharedString>, open: bool, height: f32, motion: bool) -> gpui::AnyElement {
     Reveal { id: gpui::ElementId::Name(id.into()), child: Some(child.into_any_element()), open, height, motion }.into_any_element()
+}
+
+/// Page arrival keeps the natural layout while fading and rising twelve pixels.
+/// Unlike a drawer, it never clips a long page through a changing max-height.
+pub fn arrive(child: impl IntoElement, id: impl Into<SharedString>, motion: bool) -> gpui::AnyElement {
+    let base = div().relative().flex_none().child(child);
+    if motion {
+        base.with_animation(
+            gpui::ElementId::Name(id.into()),
+            Animation::new(std::time::Duration::from_millis(260)),
+            |d, t| {
+                let t = t * t * (3.0 - 2.0 * t);
+                d.opacity(t).top(px(12.0 * (1.0 - t)))
+            },
+        ).into_any_element()
+    } else { base.into_any_element() }
 }
 
 struct Reveal {

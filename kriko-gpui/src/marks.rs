@@ -331,12 +331,14 @@ fn mark_dots(
         .count()
         .max(1);
     let animated = motion && !matches!(phase, Phase::Idle | Phase::Off);
-    let mut grid = div().flex().flex_col().gap(px(gap)).flex_none();
+    let width = w as f32 * dot + w.saturating_sub(1) as f32 * gap;
+    let height = h as f32 * dot + h.saturating_sub(1) as f32 * gap;
+    let mut grid = div().w(px(width)).h(px(height)).flex().flex_col().gap(px(gap)).flex_none();
     let mut rank = 0usize;
     for (ry, row) in mark.rows.iter().enumerate() {
-        let mut line = div().flex().gap(px(gap));
+        let mut line = div().w(px(width)).h(px(dot)).flex_none().flex().gap(px(gap));
         for (rx, ch) in row.chars().enumerate() {
-            let base = div().size(px(dot)).rounded(px((dot * 0.35).round().max(1.0)));
+            let base = div().size(px(dot)).flex_none().rounded(px((dot * 0.35).round().max(1.0)));
             let slot = ch.to_digit(10).map(|d| d as usize);
             let cell: gpui::AnyElement = match slot {
                 Some(s) if s >= 1 => {

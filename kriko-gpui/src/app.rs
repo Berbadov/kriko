@@ -640,7 +640,7 @@ impl Kriko {
             .gap(px(2.0))
             .flex_1()
             .min_h(px(0.0))
-            .overflow_y_scroll();
+            .overflow_y_scroll().occlude();
         for (gi, group) in data::NAV.iter().enumerate() {
             nav = nav.child(
                 div()
@@ -673,7 +673,7 @@ impl Kriko {
             .flex()
             .flex_col()
             .when(!self.sidebar_collapsed, |d| d.child(brand_block("kriko-wordmark-white.svg", "local product knowledge")))
-            .child(div().p(px(8.0)).child(ghost("sidebar-minimise", if self.sidebar_collapsed { ">" } else { "Minimise sidebar" })
+            .child(div().p(px(8.0)).flex().justify_center().child(ghost("sidebar-minimise", if self.sidebar_collapsed { ">" } else { "Minimise sidebar" }).when(self.sidebar_collapsed, |d| d.w(px(52.0)).px(px(0.0)))
                 .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
             .child(nav)
     }
@@ -883,7 +883,7 @@ impl Render for Kriko {
                 }).into_any_element()
         } else { dock_wrap.into_any_element() };
         let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
-            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead()));
+            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), !self.reduce_motion));
         div()
             .id("kriko-root")
             .size_full()
@@ -938,7 +938,7 @@ impl Render for Kriko {
                                     .px(px(40.0))
                                     .pt(px(20.0))
                                     .pb(px(48.0))
-                                    .child(reveal(content, format!("page-{}", tab.key()), true, 100000.0, !self.reduce_motion)),
+                                    .child(arrive(content, format!("page-{}", tab.key()), !self.reduce_motion)),
                             ),
                     )
                     // The bar floats on the sky, after the page so it

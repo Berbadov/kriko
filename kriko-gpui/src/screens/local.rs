@@ -357,7 +357,7 @@ fn setup(
             .child(ghost("local-catalogue-provider", "Open provider library and sizes").on_click(library)));
         if !app.live.local.catalogue_error.is_empty() { catalogue = catalogue.child(row_desc(&app.live.local.catalogue_error)); }
         if app.live.local.offered.is_empty() && !app.live.local.catalogue_loading { catalogue = catalogue.child(empty_note("No downloadable models loaded. Refresh the library.")); }
-        let mut choices = div().id("local-download-choices").max_h(px(320.0)).overflow_y_scroll().flex().flex_col().gap(px(8.0));
+        let mut choices = div().id("local-download-choices").max_h(px(320.0)).overflow_y_scroll().occlude().flex().flex_col().gap(px(8.0));
         for (i, name) in app.live.local.offered.clone().iter().enumerate() {
             let model = name.clone();
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
