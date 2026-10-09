@@ -1210,7 +1210,9 @@ impl gpui::Element for Reveal {
             if self.motion && (value - target).abs() > 0.001 { window.request_animation_frame(); }
             let mut child = div().flex().flex_col().flex_none().min_h(px(0.0)).overflow_hidden()
                 .max_h(px(self.height * value)).opacity(value)
-                .child(self.child.take().unwrap()).into_any_element();
+                // Clip a naturally sized child during the transition. Squeezing
+                // its SVGs to zero makes GPUI reject their render requests.
+                .child(div().flex_none().child(self.child.take().unwrap())).into_any_element();
             ((child.request_layout(window, cx), child), state)
         })
     }
