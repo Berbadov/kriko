@@ -1177,3 +1177,28 @@ def test_the_request_template_asks_where_and_done_when():
     assert not missing, (
         f"{template.relative_to(REPO)} no longer asks for {missing}; every "
         "request needs them, per docs/DOCTRINE.md §1.")
+
+
+def test_every_child_process_of_the_windowless_sidecar_hides_its_console():
+    """The sidecar is a GUI-subsystem exe on Windows: any console child it starts
+    without CREATE_NO_WINDOW (or DETACHED_PROCESS) flashes a terminal window.
+    Every subprocess spawn under src/ must pass `creationflags`."""
+    bad = []
+    for path in (SRC / "app").rglob("*.py"):
+        if "/tests/" in path.as_posix():
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr in {"run", "Popen", "check_output", "check_call", "call"}
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "subprocess"
+                and not any(k.arg == "creationflags" for k in node.keywords)
+            ):
+                bad.append(f"{_rel(path)}:{node.lineno}")
+    assert not bad, (
+        "subprocess spawn without creationflags (flashes a console on Windows): "
+        + ", ".join(bad)
+        + ". Pass startupinfo=hidden_startup(), creationflags=CREATE_NO_WINDOW."
+    )
