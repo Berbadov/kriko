@@ -1041,6 +1041,12 @@ _MODELS: dict[tuple[str, str, float], tuple[float, list[str]]] = {}
 _MODELS_LOCK = threading.Lock()
 _ASKING: dict[str, threading.Lock] = {}
 
+# Claude's --model help quotes examples, not its complete model catalogue.
+# Keep the documented fast alias and an explicit Haiku 5.5 pin selectable.
+# Full IDs are accepted by --model; the CLI/account decides availability.
+# https://code.claude.com/docs/en/model-config (Haiku 5.5: CLI >= 2.1.293).
+CLAUDE_FAST_MODELS = ("claude-haiku-5-5", "haiku")
+
 
 def _from_help(text: str, flag: str) -> list[str]:
     """The names the `flag` entry of a `--help` quotes, in the order it quotes them.
@@ -1323,6 +1329,8 @@ def models_for(one: Harness, *, fresh: bool = False, behind: bool = False) -> li
                 _HELP.pop(executable, None)
                 _DECLARED.pop(executable, None)
             names = _from_help(helptext(executable), one.model_flag)
+            if one.id == "claude-code":
+                names = list(dict.fromkeys((*CLAUDE_FAST_MODELS, *names)))
         else:
             names = _from_models_command(one, executable)
         with _MODELS_LOCK:
