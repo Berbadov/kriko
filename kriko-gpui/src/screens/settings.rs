@@ -287,7 +287,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
 
     div()
         .id("settings-scroll")
-        .overflow_x_scroll().occlude()
+        .overflow_x_scroll().map(horizontal_wheel)
         .child(
             div()
                 .flex()
