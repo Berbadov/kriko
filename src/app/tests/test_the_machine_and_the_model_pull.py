@@ -321,6 +321,19 @@ def test_downloadable_models_come_from_provider_data_and_cache_success(monkeypat
         modelpull.available(opener=lambda *a, **kw: io.BytesIO(b"changed provider page"), fresh=True)
 
 
+def test_the_library_rows_carry_sizes_and_a_line_and_not_the_pull_count():
+    page = (
+        '<li><a href="/library/tiny" class="x"><h2><span>tiny</span></h2>'
+        '<p class="max-w-lg break-words">Small &amp; quick.</p>'
+        '<span class="b">tools</span><span class="b">1b</span><span class="b">270m</span>'
+        '<span class="b">8x7b</span><span>85.1M</span><span>Pulls</span></a></li>'
+        '<li><a href="/library/plain"><span>plain</span></a></li>'
+    )
+    rows = modelpull._library_rows(page)
+    assert rows[0] == {"name": "tiny", "sizes": ["1b", "270m", "8x7b"], "about": "Small & quick."}
+    assert rows[1] == {"name": "plain", "sizes": [], "about": ""}
+
+
 def test_catalogue_is_opt_in_and_reports_provider_failure(client, monkeypatch):
     monkeypatch.setattr(modelpull, "ollama_base", lambda path=None: "")
     calls = []

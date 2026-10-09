@@ -6,7 +6,8 @@
 use gpui::{div, prelude::*, px, rgb, rgba, Animation, AnimationExt, ClickEvent, Context, Div, Window};
 
 use crate::app::{Field, Kriko};
-use crate::screens::{empty_note, mono, row_desc, row_title, total_card, plate_s};
+use crate::screens::run::option_chip;
+use crate::screens::{empty_note, filter_btn, mono, row_desc, row_title, total_card};
 use crate::theme::*;
 
 /// The smooth settle the whole page shares: a fade with a stagger.
@@ -57,18 +58,26 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let reset = cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_pack.clear(); this.overview_status.clear(); this.overview_product.clear(); this.overview_search.set_value(String::new()); cx.notify(); });
     let mut controls = div().flex().flex_col().gap(px(12.0)).child(
         div().flex().flex_wrap().gap(px(10.0)).child(search)
-            .child(plate_s("overview-filters", &format!("Filters · {active} active")).on_click(toggle))
-            .child(plate_s("overview-reset", "Reset filters").on_click(reset)))
+            .child(filter_btn("overview-filters", &format!("Filters · {active} active"), app.overview_filters_open, true).on_click(toggle))
+            .child(filter_btn("overview-reset", "Reset filters", false, false).on_click(reset)))
         .child(row_desc(&format!("{matches} matching records · Pack: {} · Status: {} · Product: {}",
             if pack_pick.is_empty() { "All" } else { &pack_pick }, if status_pick.is_empty() { "All" } else { &status_pick },
             if product_pick.is_empty() { "All" } else { product_pick.split_once('\n').map(|(_,label)| label).unwrap_or(&product_pick) })));
+    // always mounted so the panel can slide; the negative margin takes back
+    // the gap a closed, zero-height panel would leave
+    let mut panel = div().pt(px(12.0));
     if app.overview_filters_open {
-        let mut drawer = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Overview filters"));
+        let close = cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_filters_open = false; cx.notify(); });
+        let mut drawer = card().flex().flex_col().gap(px(12.0)).child(
+            div().flex().items_center().justify_between()
+                .child(eyebrow("Overview filters"))
+                .child(filter_btn("overview-filter-close", "Close", false, false).on_click(close)),
+        );
         let mut choices = div().flex().flex_wrap().gap(px(8.0));
         for (i, (id, label)) in std::iter::once((String::new(), "All packs".to_string())).chain(k.packs.iter().map(|p| (p.id.clone(), p.name.clone()))).enumerate() {
             let selected = id == pack_pick;
             let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| { this.overview_pack = id.clone(); cx.notify(); });
-            choices = choices.child(plate_s(("overview-pack",i), &label).when(selected, |b| b.border_color(rgb(ICE))).on_click(pick));
+            choices = choices.child(option_chip(("overview-pack", i), &label, selected).on_click(pick));
         }
         drawer = drawer.child(eyebrow("Pack")).child(choices);
         let mut products = std::collections::BTreeMap::<String, String>::new();
@@ -83,18 +92,19 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         for (i, (id, label)) in products.into_iter().enumerate() {
             let selected = id == product_pick;
             let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| { this.overview_product = id.clone(); cx.notify(); });
-            product_choices = product_choices.child(plate_s(("overview-product", i), &label).when(selected, |b| b.border_color(rgb(ICE))).on_click(pick));
+            product_choices = product_choices.child(option_chip(("overview-product", i), &label, selected).on_click(pick));
         }
         drawer = drawer.child(eyebrow("Product")).child(product_choices);
         let mut choices = div().flex().flex_wrap().gap(px(8.0));
         for (i, (id, label)) in [("", "All records"), ("enabled", "Enabled packs"), ("disabled", "Disabled packs"), ("unresearched", "No claims"), ("thin", "Thin evidence"), ("disputed", "Disputed")].iter().enumerate() {
             let id = id.to_string(); let selected = id == status_pick;
             let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| { this.overview_status = id.clone(); cx.notify(); });
-            choices = choices.child(plate_s(("overview-status",i), label).when(selected, |b| b.border_color(rgb(ICE))).on_click(pick));
+            choices = choices.child(option_chip(("overview-status", i), label, selected).on_click(pick));
         }
-        drawer = drawer.child(eyebrow("Status")).child(choices).child(plate_s("overview-filter-close", "Close").on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_filters_open = false; cx.notify(); })));
-        controls = controls.child(drawer);
+        drawer = drawer.child(eyebrow("Status")).child(choices);
+        panel = panel.child(drawer);
     }
+    controls = controls.child(div().mt(px(-12.0)).child(reveal(panel, "overview-filters-reveal", app.overview_filters_open, 1000.0, !app.reduce_motion)));
     if matches == 0 && k.packs_loaded { controls = controls.child(empty_note("No record matches. Reset the filters or change the search.")); }
 
     if !k.packs_loaded {

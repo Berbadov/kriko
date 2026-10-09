@@ -175,6 +175,34 @@ pub fn plate_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .child(label.to_uppercase())
 }
 
+/// A control in a filter bar: flat glass with a control ring that lights when
+/// the panel it opens is showing. `chevron` marks the ones that open a panel.
+pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevron: bool) -> Stateful<Div> {
+    div()
+        .id(id)
+        .h(px(40.0))
+        .px(px(14.0))
+        .flex()
+        .flex_none()
+        .items_center()
+        .justify_center()
+        .gap(px(8.0))
+        .rounded(px(10.0))
+        .font_family(MONO)
+        .text_size(px(12.0))
+        .cursor_pointer()
+        .text_color(rgb(if open { ICE } else { INK_2 }))
+        .bg(rgba(GLASS_1))
+        .border_1()
+        .border_color(rgba(BORDER_CONTROL))
+        .when(open, |s| s.border_color(rgb(ICE)))
+        .hover(|s| s.bg(rgba(GLASS_2)).text_color(rgb(INK)))
+        .child(label.to_uppercase())
+        .when(chevron, |s| {
+            s.child(icon(if open { "collapse" } else { "chevron-down" }, 12.0).text_color(rgb(MUTED)))
+        })
+}
+
 // ---- compare + local helpers ----
 
 /// One spec cell's trust status icon: BACKED (check), DISPUTED (bang),
