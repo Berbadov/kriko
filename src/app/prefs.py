@@ -427,7 +427,8 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
         for one in harness.KNOWN
         if one.id not in have and not one.unusable
     ]
-    api_rows, api_missing = [], []
+    api_rows: list[dict] = []
+    api_missing: list[dict] = []
     local_ready, local_unusable, local_missing = local_agent_rows(conn)
     installed += local_ready
     unusable += local_unusable
