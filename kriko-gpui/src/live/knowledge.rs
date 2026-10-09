@@ -163,6 +163,19 @@ pub struct State {
     pub key_provider: Option<String>,
     pub erase_confirm: bool,
     pub erase_busy: bool,
+    // App updates (`/api/app-update`)
+    pub app_update: Option<AppUpdate>,
+    pub app_update_note: Option<String>,
+    pub app_update_busy: bool,
+}
+
+/// What the releases page says about the app itself.
+#[derive(Clone, Default)]
+pub struct AppUpdate {
+    pub newer: bool,
+    pub version: String,
+    pub notes: String,
+    pub error: String,
 }
 
 /// The engine's own ceiling (`prefs.MAX_RUN_CONCURRENCY`); it clamps too.
@@ -176,6 +189,7 @@ impl Kriko {
         self.refresh_packs(cx);
         self.refresh_thin(cx);
         self.refresh_updates(cx);
+        self.check_app_update(cx);
         self.refresh_sites(cx);
         self.refresh_extension(cx);
         self.refresh_settings(cx);
@@ -589,7 +603,13 @@ impl Kriko {
         .to_string());
         self.fetch(
             cx,
-            move || api::post(&format!("/api/extension/{action}"), serde_json::json!({})),
+            move || {
+                // The engine only names the folder; this process opens it, because
+                // a window the background engine opens is not the foreground one and
+                // Windows leaves it behind the app.
+                let url = if action == "reveal" { "/api/extension/reveal?spawn=false".to_string() } else { format!("/api/extension/{action}") };
+                api::post(&url, serde_json::json!({}))
+            },
             move |this, reply, cx| {
                 this.note(&reply);
                 this.live.knowledge.ext_notice = Some(match reply {
@@ -597,7 +617,14 @@ impl Kriko {
                         "stage" => format!("Staged version {} at {}.", api::s(&v, "version"), api::s(&v, "path")),
                         "reveal" => {
                             let e = api::s(&v, "error");
-                            if e.is_empty() { "Opened the folder.".into() } else { e }
+                            let path = api::s(&v, "path");
+                            if !e.is_empty() {
+                                e
+                            } else if let Err(cause) = std::process::Command::new("explorer.exe").arg(&path).spawn() {
+                                format!("Could not open {path}: {cause}")
+                            } else {
+                                format!("Opened {path}.")
+                            }
                         }
                         _ => {
                             let e = api::s(&v, "error");
@@ -609,6 +636,45 @@ impl Kriko {
                 this.refresh_extension(cx);
             },
         );
+    }
+
+    /// Ask whether a newer app exists. Quiet on failure: the About screen says why.
+    pub fn check_app_update(&mut self, cx: &mut Context<Self>) {
+        self.live.knowledge.app_update_note = Some("Checking for updates.".into());
+        self.fetch(cx, || api::get("/api/app-update"), |this, reply, _| {
+            this.live.knowledge.app_update_note = None;
+            if let Ok(v) = reply {
+                this.live.knowledge.app_update = Some(AppUpdate {
+                    newer: api::b(&v, "newer"),
+                    version: api::s(&v, "version"),
+                    notes: api::s(&v, "notes"),
+                    error: api::s(&v, "error"),
+                });
+            }
+        });
+    }
+
+    /// Download the verified installer, run it and step aside: the installer
+    /// stops this app and the engine, replaces them, and the Start menu opens the new one.
+    pub fn install_app_update(&mut self, cx: &mut Context<Self>) {
+        if self.live.knowledge.app_update_busy {
+            return;
+        }
+        self.live.knowledge.app_update_busy = true;
+        self.live.knowledge.app_update_note = Some("Downloading the update and checking it.".into());
+        self.fetch(cx, || api::post("/api/app-update/download", serde_json::json!({})), |this, reply, cx| {
+            this.live.knowledge.app_update_busy = false;
+            match reply {
+                Ok(v) => {
+                    let path = api::s(&v, "path");
+                    match run_installer_then_reopen(&path) {
+                        Ok(()) => Self::quit(cx),
+                        Err(cause) => this.live.knowledge.app_update_note = Some(format!("Could not start the installer: {cause}")),
+                    }
+                }
+                Err(e) => this.live.knowledge.app_update_note = Some(e.message),
+            }
+        });
     }
 
     pub fn save_extension_port(&mut self, cx: &mut Context<Self>) {
@@ -832,6 +898,29 @@ pub fn ago(iso: &str) -> String {
         }
         None => String::new(),
     }
+}
+
+/// Runs the installer, then opens the app again from the same place. One
+/// hidden shell does both, because this process is about to quit and the MSI
+/// does not relaunch what it replaced.
+#[cfg(windows)]
+fn run_installer_then_reopen(msi: &str) -> std::io::Result<()> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    let exe = std::env::current_exe()?;
+    std::process::Command::new("cmd.exe")
+        .raw_arg(format!(
+            "/C msiexec.exe /i \"{msi}\" /passive /norestart && start \"\" \"{}\"",
+            exe.display()
+        ))
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn()
+        .map(|_| ())
+}
+
+#[cfg(not(windows))]
+fn run_installer_then_reopen(_msi: &str) -> std::io::Result<()> {
+    Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "the installer is for Windows"))
 }
 
 pub fn ago_seconds(s: f64) -> String {

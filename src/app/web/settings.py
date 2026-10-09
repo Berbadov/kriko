@@ -105,6 +105,9 @@ class Settings:
     #: says so rather than implying an in-app switch that does not exist.
     #: Overridable so a fork does not send its readers here.
     releases_url: str = "https://github.com/Berbadov/kriko/releases"
+    #: Where the app asks which release is newest (`app/appupdate.py`). The
+    #: reader chooses to install it; nothing is downloaded by asking.
+    app_release_api_url: str = "https://api.github.com/repos/Berbadov/kriko/releases/latest"
     #: Did this process get `EXTENSION_PORT`? Only the sidecar knows — it tries
     #: the bind and carries on without it, because failing to start over a
     #: convenience socket would be worse than losing the socket. But the

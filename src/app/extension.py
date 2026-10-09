@@ -285,7 +285,7 @@ def reveal(path: Path) -> str:
     them the path, which is the part they actually need.
     """
     if sys.platform.startswith("win"):
-        command = ["explorer", "/select,", str(path)]
+        command = ["explorer", str(path)]
     elif sys.platform == "darwin":
         command = ["open", str(path)]
     else:
