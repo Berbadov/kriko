@@ -167,6 +167,8 @@ pub struct State {
     pub app_update: Option<AppUpdate>,
     pub app_update_note: Option<String>,
     pub app_update_busy: bool,
+    /// The agent being installed for the reader, and how the job stands.
+    pub agent_install: Option<(String, JobView)>,
 }
 
 /// What the releases page says about the app itself.
@@ -418,6 +420,30 @@ impl Kriko {
         );
     }
 
+    /// Install an agent for the reader (for `local`: Ollama and a small model).
+    pub fn install_agent(&mut self, agent_id: String, cx: &mut Context<Self>) {
+        let pending = |message: &str, state: &str, done: bool| JobView {
+            state: state.into(),
+            message: message.into(),
+            done,
+        };
+        self.live.knowledge.agent_install = Some((agent_id.clone(), pending("Starting the install.", "queued", false)));
+        let id = agent_id.clone();
+        self.fetch(
+            cx,
+            move || api::post(&format!("/api/agents/{}/install", api::seg(&id)), serde_json::json!({})),
+            move |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => this.follow_job(api::s(&v, "job_id"), Followed::AgentInstall(agent_id), cx),
+                    Err(e) => {
+                        this.live.knowledge.agent_install = Some((agent_id, pending(&e.message, "failed", true)))
+                    }
+                }
+            },
+        );
+    }
+
     // ---- jobs ----
 
     /// Polls `GET /api/jobs/{id}` every ~700 ms until it is done, keeping
@@ -451,9 +477,16 @@ impl Kriko {
                         Followed::SiteRegister(host) => {
                             this.live.knowledge.site_job = Some((host.clone(), view))
                         }
+                        Followed::AgentInstall(id) => {
+                            this.live.knowledge.agent_install = Some((id.clone(), view))
+                        }
                     }
                     if done {
                         match which {
+                            Followed::AgentInstall(_) => {
+                                this.refresh_run(cx);
+                                this.refresh_local(cx);
+                            }
                             Followed::PackUpdate => {
                                 this.refresh_packs(cx);
                                 this.refresh_thin(cx);
@@ -859,6 +892,7 @@ impl State {
 pub enum Followed {
     PackUpdate,
     SiteRegister(String),
+    AgentInstall(String),
 }
 
 // ---- small helpers ----
