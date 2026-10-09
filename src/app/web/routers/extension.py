@@ -523,16 +523,21 @@ def stage(request: Request) -> dict:
 
 
 @router.post("/reveal")
-def reveal(request: Request) -> dict:
+def reveal(request: Request, spawn: bool = True) -> dict:
     """Open the staged folder in the file manager.
 
     A convenience with a fallback, never a requirement: the response carries
     the path either way, because the reader's next action is pasting it.
+
+    `spawn=false` only answers with the path. The desktop shell asks for that
+    and opens the folder itself: a window opened by this background process
+    is not the foreground one, so Windows leaves it behind the app and the
+    button looks dead.
     """
     target = _target(request)
     if not target.is_dir():
         raise HTTPException(status_code=409, detail="nothing staged yet — add it first")
-    return {"path": str(target), "error": extension.reveal(target)}
+    return {"path": str(target), "error": extension.reveal(target) if spawn else ""}
 
 
 def _landing(store, app_conn, base_url: str) -> str:
