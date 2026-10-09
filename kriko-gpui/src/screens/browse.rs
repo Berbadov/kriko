@@ -9,7 +9,8 @@ use gpui::{div, prelude::*, px, rgb, rgba, ClickEvent, Context, Div, FontWeight,
 use crate::app::{Field, Kriko};
 use crate::live::history::{Evidence, State, Subject};
 use crate::screens::history::{clip, severity_word_chip};
-use crate::screens::{empty_note, mono, plate_s, segmented, th};
+use crate::screens::run::option_chip;
+use crate::screens::{empty_note, filter_btn, mono, plate_s, segmented, th};
 use crate::theme::*;
 
 /// A catalog's name, from the filter options the engine sent; its id when
@@ -183,9 +184,12 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         this.browse_filters_open = !this.browse_filters_open;
         cx.notify();
     });
-    let filter_button = plate_s(
+    let filters_open = app.browse_filters_open && !filters.is_empty();
+    let filter_button = filter_btn(
         "browse-filter-toggle",
         &format!("Filters · {active_filters} active"),
+        filters_open,
+        true,
     )
     .on_click(toggle_filters);
     let close_filters = cx.listener(|this, _: &ClickEvent, _w, cx| {
@@ -202,7 +206,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .items_center()
                 .justify_between()
                 .child(eyebrow("Browse filters"))
-                .child(plate_s("browse-filter-close", "Close").on_click(close_filters)),
+                .child(filter_btn("browse-filter-close", "Close", false, false).on_click(close_filters)),
         );
     for (i, filter) in filters.iter().enumerate() {
         let selected = picks.get(i).copied().unwrap_or(0);
@@ -221,13 +225,11 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| {
                 this.pick_browse_filter(i, choice, cx);
             });
-            let control = plate_s(
+            let control = option_chip(
                 gpui::ElementId::named_usize(format!("browse-filter-{i}"), choice),
                 &label,
+                is_selected,
             )
-            .when(is_selected, |button| {
-                button.bg(rgb(WELL)).text_color(rgb(ICE)).border_color(rgb(ICE))
-            })
             .on_click(pick);
             row = row.child(control);
         }
@@ -237,7 +239,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         let clear = cx.listener(|this, _: &ClickEvent, _w, cx| {
             this.clear_browse_filters(cx);
         });
-        filter_drawer = filter_drawer.child(plate_s("browse-filter-clear", "Clear filters").on_click(clear));
+        filter_drawer = filter_drawer.child(div().flex().child(filter_btn("browse-filter-clear", "Clear filters", false, false).on_click(clear)));
     }
 
     let view_switch = segmented(
@@ -489,7 +491,15 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex_col()
         .gap(px(24.0))
         .child(head)
-        .when(app.browse_filters_open && !filters.is_empty(), |d| d.child(filter_drawer))
+        // always mounted so it can slide; the negative margin takes back the
+        // page gap a closed, zero-height panel would otherwise leave
+        .child(div().mt(px(-24.0)).child(reveal(
+            div().pt(px(24.0)).child(if filters_open { filter_drawer.into_any_element() } else { div().into_any_element() }),
+            "browse-filters-reveal",
+            filters_open,
+            900.0,
+            motion,
+        )))
         .child(
             div()
                 .id("browse-row-scroll")

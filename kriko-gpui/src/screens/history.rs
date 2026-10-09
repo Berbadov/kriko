@@ -14,7 +14,8 @@ use gpui::{
 use crate::app::{Field, Kriko, SpanFilter};
 use crate::data;
 use crate::live::history::{ago, month_buckets, now_secs, ClaimView};
-use crate::screens::{empty_note, mono, plate_s, row_desc, th};
+use crate::screens::run::option_chip;
+use crate::screens::{empty_note, filter_btn, mono, plate_s, row_desc, th};
 use crate::theme::*;
 
 /// `text` on one line, cut to `n` characters with an ellipsis when longer.
@@ -171,9 +172,10 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         cx,
     );
 
-    let mut controls = div().flex().flex_col().gap(px(12.0)).mb(px(24.0));
-    let mut bar = div().flex().flex_wrap().items_center().gap(px(10.0))
+    let mut controls = div().flex().flex_col().mb(px(24.0));
+    let mut bar = div().flex().flex_wrap().items_center().gap(px(10.0)).pb(px(12.0))
         .child(div().flex_1().min_w(px(220.0)).child(search));
+    let open_field = app.live.history.filter_open.clone();
     let filters = [
         ("pack", format!("Pack · {}", app.live.history.pack_word())),
         ("time", format!("Date · {}", app.history_span.word())),
@@ -181,12 +183,13 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         ("status", format!("Status · {}", if app.live.history.record_status.is_empty() { "All" } else { &app.live.history.record_status })),
     ];
     for (i, (field, label)) in filters.iter().enumerate() {
+        let is_open = open_field.as_deref() == Some(*field);
         let field = field.to_string();
         let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
             this.live.history.filter_open = if this.live.history.filter_open.as_deref() == Some(&field) { None } else { Some(field.clone()) };
             cx.notify();
         });
-        bar = bar.child(plate_s(("history-filter", i), label).on_click(toggle));
+        bar = bar.child(filter_btn(("history-filter", i), label, is_open, true).on_click(toggle));
     }
     let clear = cx.listener(|this, _: &ClickEvent, _w, cx| {
         this.live.history.pack = None;
@@ -194,8 +197,17 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         this.history_span = SpanFilter::All; this.history_search.set_value(String::new()); this.page = 0;
         cx.notify();
     });
-    controls = controls.child(bar.child(plate_s("history-filter-reset", "Reset filters").on_click(clear)));
-    if let Some(field) = app.live.history.filter_open.clone() {
+    controls = controls.child(bar.child(filter_btn("history-filter-reset", "Reset filters", false, false).on_click(clear)));
+    // The panel is always mounted so it can slide open; closed, it is empty.
+    let mut panel = div().flex().flex_col().pb(px(12.0));
+    if let Some(field) = open_field.clone() {
+        let current: String = match field.as_str() {
+            "pack" => app.live.history.pack.clone().unwrap_or_default(),
+            "time" => match app.history_span { SpanFilter::All => "0", SpanFilter::Month => "1", SpanFilter::Quarter => "2", SpanFilter::Half => "3" }.to_string(),
+            "kind" => app.live.history.record_kind.clone(),
+            "status" => app.live.history.record_status.clone(),
+            _ => String::new(),
+        };
         let mut choices: Vec<(String, String)> = vec![(String::new(), "All".into())];
         match field.as_str() {
             "pack" => choices.extend(app.live.history.pack_options()),
@@ -204,9 +216,16 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             "status" => choices.extend(["queued", "running", "succeeded", "failed", "cancelled", "interrupted", "waiting", "researching", "done", "removed"].map(|v| (v.into(),v.into()))),
             _ => {}
         }
-        let mut drawer = card().flex().flex_col().gap(px(10.0)).child(eyebrow(&format!("Choose {field}")));
+        let title = match field.as_str() { "pack" => "pack", "time" => "date", "kind" => "kind", _ => "status" };
+        let close = cx.listener(|this, _: &ClickEvent, _w, cx| { this.live.history.filter_open = None; cx.notify(); });
+        let mut drawer = card().flex().flex_col().gap(px(14.0)).child(
+            div().flex().items_center().justify_between()
+                .child(eyebrow(&format!("Filter by {title}")))
+                .child(filter_btn("history-filter-close", "Close", false, false).on_click(close)),
+        );
         let mut options = div().flex().flex_wrap().gap(px(8.0));
         for (i, (value, label)) in choices.iter().enumerate() {
+            let picked = *value == current;
             let value = value.clone(); let field = field.clone();
             let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| {
                 match field.as_str() {
@@ -217,11 +236,11 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 }
                 this.page = 0; this.live.history.filter_open = None; this.live.history.open = None; cx.notify();
             });
-            options = options.child(plate_s(("history-filter-option",i),label).on_click(pick));
+            options = options.child(option_chip(("history-filter-option", i), label, picked).on_click(pick));
         }
-        drawer = drawer.child(options).child(plate_s("history-filter-close", "Close").on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.live.history.filter_open = None; cx.notify(); })));
-        controls = controls.child(drawer);
+        panel = panel.child(drawer.child(options));
     }
+    controls = controls.child(reveal(panel, "history-filter-reveal", open_field.is_some(), 520.0, motion));
 
     // ---- filtering ----
     let now = now_secs();

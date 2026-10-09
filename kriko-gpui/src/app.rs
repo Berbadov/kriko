@@ -161,6 +161,7 @@ pub enum Field {
     ExtensionPort,
     ModelSearch,
     BenchModelSearch,
+    LibrarySearch,
 }
 
 pub struct InputState {
@@ -327,6 +328,7 @@ pub struct Kriko {
     pub extension_port_input: InputState,
     pub model_search: InputState,
     pub bench_model_search: InputState,
+    pub library_search: InputState,
     pub sidebar_collapsed: bool,
 }
 
@@ -374,6 +376,7 @@ impl Kriko {
             extension_port_input,
             model_search: InputState::new(cx),
             bench_model_search: InputState::new(cx),
+            library_search: InputState::new(cx),
             sidebar_collapsed: false,
         };
         // A verification hook: KRIKO_VERIFY seeds one page's state so it can
@@ -410,6 +413,12 @@ impl Kriko {
             }
         })
         .detach();
+        // An engine that answered before the window existed (an attach, or a
+        // quick restart) never shows the pulse a change to Ready, so the first
+        // read of everything happens here instead of never.
+        if matches!(app.engine, engine::Status::Ready { .. }) {
+            app.refresh_all(cx);
+        }
         app
     }
 
@@ -470,6 +479,7 @@ impl Kriko {
             Field::ExtensionPort => &self.extension_port_input,
             Field::ModelSearch => &self.model_search,
             Field::BenchModelSearch => &self.bench_model_search,
+            Field::LibrarySearch => &self.library_search,
         }
     }
 
@@ -491,6 +501,7 @@ impl Kriko {
             Field::ExtensionPort => &mut self.extension_port_input,
             Field::ModelSearch => &mut self.model_search,
             Field::BenchModelSearch => &mut self.bench_model_search,
+            Field::LibrarySearch => &mut self.library_search,
         }
     }
 

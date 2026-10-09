@@ -957,8 +957,8 @@ pub fn switch_anim(id: impl Into<gpui::ElementId>, on: bool, motion: bool) -> St
         .bg(rgb(if on { ICE } else { LED_OFF }));
     let knob_base = div()
         .absolute()
-        .top(px(3.0))
-        .w(px(26.0))
+        .top(px(2.0))
+        .w(px(24.0))
         .h(px(24.0))
         .rounded(px(12.0))
         .border_1()
@@ -985,14 +985,15 @@ pub fn switch_anim(id: impl Into<gpui::ElementId>, on: bool, motion: bool) -> St
                 Animation::new(std::time::Duration::from_millis(200)),
                 move |el, t| {
                     let m = ease_mech(t);
-                    let x = if on { travel * m } else { travel * (1.0 - m) };
+                    // a 2px margin to the track wall on both sides
+                    let x = 2.0 + if on { travel * m } else { travel * (1.0 - m) };
                     el.left(px(x))
                 },
             )
             .into_any_element()
     } else {
         knob_base
-            .left(px(if on { travel } else { 0.0 }))
+            .left(px(2.0 + if on { travel } else { 0.0 }))
             .into_any_element()
     };
     // flex_none: in a narrow column the label beside it would otherwise

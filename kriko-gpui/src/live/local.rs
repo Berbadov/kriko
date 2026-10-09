@@ -185,6 +185,15 @@ pub struct Bench {
     pub snapshot: Value,
 }
 
+/// One downloadable model as the provider's library lists it: its name, the
+/// parameter sizes it comes in and a line about it, all read by the engine.
+#[derive(Default, Clone)]
+pub struct LibraryModel {
+    pub name: String,
+    pub sizes: Vec<String>,
+    pub about: String,
+}
+
 #[derive(Default)]
 pub struct State {
     pub loaded: bool,
@@ -193,6 +202,10 @@ pub struct State {
     pub held: Option<Vec<Held>>,
     /// Downloadable names from the provider's library.
     pub offered: Vec<String>,
+    /// The same models with their sizes; what the library drawer draws.
+    pub library: Vec<LibraryModel>,
+    /// The size picked for each library model, by model name.
+    pub library_size: std::collections::HashMap<String, String>,
     pub catalogue_open: bool,
     pub catalogue_loading: bool,
     pub catalogue_error: String,
@@ -465,6 +478,21 @@ impl Kriko {
             match reply {
                 Ok(value) => {
                     this.live.local.offered = strings(&value, "available");
+                    this.live.local.library = api::arr(&value, "library")
+                        .iter()
+                        .map(|row| LibraryModel {
+                            name: api::s(row, "name"),
+                            sizes: strings(row, "sizes"),
+                            about: api::s(row, "about"),
+                        })
+                        .filter(|m| !m.name.is_empty())
+                        .collect();
+                    // an engine that sends only names still fills the drawer
+                    if this.live.local.library.is_empty() {
+                        this.live.local.library = this.live.local.offered.iter()
+                            .map(|n| LibraryModel { name: n.clone(), ..Default::default() })
+                            .collect();
+                    }
                     this.live.local.catalogue_error = api::s(&value, "catalogue_error");
                 }
                 Err(error) => { this.live.local.catalogue_error = error.to_string(); }
@@ -556,12 +584,23 @@ impl Kriko {
 
     /// Points the plane at a running server and keeps the choice.
     pub fn local_use_server(&mut self, url: String, cx: &mut Context<Self>) {
+        // the card moves to the new server now; the engine's answer, a probe
+        // of every server, confirms it a moment later
+        if let Some(plane) = self.live.local.plane.as_mut() {
+            plane.url = url.clone();
+            if let Some(server) = plane.servers.iter().find(|s| s.url == url) {
+                plane.name = server.name.clone();
+            }
+        }
         self.local_url.set_value(url);
         self.live.local.model_pick = None;
         self.local_save(cx);
     }
 
     pub fn local_use_model(&mut self, name: String, cx: &mut Context<Self>) {
+        if let Some(plane) = self.live.local.plane.as_mut() {
+            plane.model = name.clone();
+        }
         self.live.local.model_pick = Some(name);
         self.local_save(cx);
     }
@@ -605,6 +644,8 @@ impl Kriko {
             message: "Asking Ollama".to_string(),
             phase: PullPhase::Running,
         });
+        // the Downloading state shows on the click, not when the engine answers
+        cx.notify();
         self.fetch(
             cx,
             move || api::post("/api/local-models/pull", serde_json::json!({"runtime": "ollama", "model": ask})),
