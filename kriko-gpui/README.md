@@ -235,10 +235,13 @@ shortcuts and Add/Remove Programs in one go.
 
 ## Fonts and images
 
-`assets/fonts` holds Barlow Condensed 600/700, DM Sans 400/600 and JetBrains
-Mono 400/600 — the three faces of the design — registered at startup by
-`theme::register_fonts` under app-scoped family names (`Kriko Display`,
-`Kriko Sans`, `Kriko Mono`). The scoped names matter: a machine
+`assets/fonts` holds Barlow Condensed 600/700 and DM Sans 400/600 — the two
+faces of the design — registered at startup by `theme::register_fonts` under
+app-scoped family names (`Kriko Display`, `Kriko Sans`). Labels, crumbs and
+figures wear DM Sans (`theme::MONO` is `SANS`, on purpose: the reader did not
+like the fixed-width face); only a run's log is set in the machine's own
+fixed-width face (`theme::CODE`), so nothing is embedded for it. The scoped
+names matter: a machine
 with, say, a system "Barlow" installed would otherwise shadow the embedded
 face. The hero sky is the dithered band (`sky-dim`, `sky-hero`, `sky-wide`,
 loaded through `Resource::Embedded`, never through a path or URI) over a
