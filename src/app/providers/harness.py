@@ -1466,12 +1466,16 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
     """
     executable = locate(one) or one.executable
     if one.protocol == "codex":
+        if effort and effort not in one.effort_choices:
+            raise NoHarness(f"{one.label} does not support effort {effort!r}")
         return [executable, *one.args, "--ignore-user-config", "--ignore-rules",
                 "-c", 'approval_policy="never"', "-c", 'web_search="live"',
                 "-c", "features.shell_tool=false",
                 *(["--model", model] if model else []),
                 *(["-c", f'model_reasoning_effort="{effort}"'] if effort else [])]
     supported = declared(executable)
+    if effort and one.effort_choices and effort not in one.effort_choices:
+        raise NoHarness(f"{one.label} does not support effort {effort!r}")
     args = one.args
     if one.needs_in_help and one.plain_args:
         if one.needs_in_help not in helptext(executable):
@@ -2050,6 +2054,11 @@ def narrate(event: dict) -> str:
     if isinstance(event.get("type"), str) and "." in event["type"] and "data" in event:
         return _narrate_copilot(event)
     kind = event.get("type")
+    if kind == "item.completed":
+        item = event.get("item")
+        if isinstance(item, dict) and item.get("type") == "agent_message":
+            return _short(str(item.get("text") or ""))
+        return ""
     if kind in QUIET_EVENTS:
         return ""
     if kind == "system":

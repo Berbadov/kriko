@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
-from app import matching, operations, sites
+from app import matching, operations, productscope, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.history import label_for
@@ -506,6 +506,8 @@ def _read_any_site(store, body: ScrapeRequest, vocabulary):
 
     name = _page_name(body)
     hits = by_name(store, name, limit=50) if name else []
+    hits = productscope.filter_hits(hits, name, body.fields,
+                                   load_adapters(store, any_site=True))
     identity = agreed_identity(hits)
     if identity:
         spec = {"id": "name", "pack_id": hits[0]["pack_id"]}

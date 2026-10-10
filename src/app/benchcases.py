@@ -15,17 +15,16 @@ never ranked together (see `bench.readout`).
 
 Each case is a product with ground truth: what a competent run should find,
 what it must not claim, and the search queries that reach the sources. The
-products are deliberately ordinary and span more than one category, so the
-set cannot be read as being about any pack.
+default products are fictional and span more than one category; their fixed
+documents define the answer. The separately selected web suite keeps the
+legacy real-product cases, whose live sources and older answer keys can drift.
 """
 
 import json
 import pathlib
+from app.precisioncases import SET_ID as SET_ID, SET_VERSION as SET_VERSION
 
 #: The set's own identity, recorded on every run that measures it.
-SET_ID = "kriko-fixed"
-SET_VERSION = "2026.10.1"
-
 #: Where the set ships. Beside this module, one file, so a new set is a
 #: version bump plus a diff a reviewer can read.
 _FILE = pathlib.Path(__file__).with_name("benchcases.json")
@@ -35,15 +34,18 @@ _FILE = pathlib.Path(__file__).with_name("benchcases.json")
 KIND = "fixed"
 
 
-def load() -> list[dict]:
+def load(suite: str = "precision") -> list[dict]:
     """Every case in the set, in file order.
 
     In file order on purpose: the set is versioned, and a stable order is
     part of what the version promises. `limit` is the caller's, applied
     after, so "the first three" is the same three on every machine.
     """
+    if suite not in ("precision", "web"):
+        raise ValueError(f"unknown benchmark suite: {suite}")
+    path = _FILE.with_name("benchprecision.json") if suite == "precision" else _FILE
     try:
-        raw = json.loads(_FILE.read_text(encoding="utf-8"))
+        raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
     cases = []
@@ -54,6 +56,10 @@ def load() -> list[dict]:
         if not name:
             continue
         cases.append({
+            **{key: one[key] for key in (
+                "documents", "supported", "expected_specs", "requested_specs", "expect_abstention",
+                "dimension", "mode") if key in one},
+            "set_id": raw["id"], "set_version": raw["version"],
             "id": str(one.get("id") or name.lower().replace(" ", "-")),
             "kind": KIND,
             "product": name,
@@ -78,10 +84,7 @@ def load() -> list[dict]:
     return cases
 
 
-def case_rows(limit: int) -> list[dict]:
+def case_rows(limit: int, suite: str = "precision") -> list[dict]:
     """The first `limit` cases, each stamped with the set's identity."""
-    found = load()[: max(1, min(limit, 50))]
-    for case in found:
-        case["set_id"] = SET_ID
-        case["set_version"] = SET_VERSION
+    found = load(suite)[: max(1, min(limit, 50))]
     return found

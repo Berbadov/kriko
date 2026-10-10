@@ -38,7 +38,8 @@ API_VERSION = "2023-06-01"
 MAX_TOKENS = 8192
 
 
-def completer(api_key: str = "", base_url: str = "", model: str = ""):
+def completer(api_key: str = "", base_url: str = "", model: str = "",
+              max_tokens: int | None = None):
     """`complete(prompt) -> the model's reply as a string`.
 
     Empty on any failure, because `extract` already reads a reply it cannot
@@ -61,7 +62,7 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
             endpoint,
             {
                 "model": name,
-                "max_tokens": MAX_TOKENS,
+                "max_tokens": max_tokens if max_tokens is not None else MAX_TOKENS,
                 # Extraction is transcription against a JSON contract, not a
                 # creative task: the quote must come back byte-identical or the
                 # grounding check refuses the finding. Same reasoning, and the
@@ -75,6 +76,11 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
         # cost tokens, and a total that only counted the usable answers would
         # make a run of unparseable replies look free.
         usage = body.get("usage")
+        if not isinstance(usage, dict) or not all(
+                isinstance(usage.get(k), int) and not isinstance(usage.get(k), bool)
+                for k in ("input_tokens", "output_tokens")):
+            complete.usage_complete = False
+        complete.last_finish_reason = "length" if body.get("stop_reason") == "max_tokens" else str(body.get("stop_reason") or "")
         if isinstance(usage, dict):
             _add(complete, "tokens_in", usage.get("input_tokens"))
             _add(complete, "tokens_out", usage.get("output_tokens"))
@@ -99,6 +105,8 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
     #: None, not 0 — "nobody counted" and "it was free" are different facts,
     #: and only one of them should ever reach a cost report.
     complete.tokens_used = None
+    complete.usage_complete = True
+    complete.last_finish_reason = ""
     complete.tokens_in = None
     complete.tokens_out = None
     complete.model = name

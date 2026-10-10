@@ -1952,15 +1952,33 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             "telemetry": getattr(researcher, "telemetry", {}),
             "runtime": getattr(researcher, "runtime", {})})
         raise
+    stages = getattr(researcher, "metrics", [])
+    for stage in stages:
+        def counted(key, stage=stage):
+            return str(stage[key]) if stage.get(key) is not None else "unmeasured"
+        progress.log(f"{stage['stage']}: {stage['ms'] / 1000:.3f}s; "
+                     f"input {counted('tokens_in')}, output {counted('tokens_out')}, "
+                     f"total {counted('tokens_used')} tokens"
+                     + ("; failed" if stage.get("failed") else ""))
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
     found = quicklook.parse(reply, getattr(researcher, "sources", None))
     kept = len(found["risks"])
+    # The local agent's own verdict on its answer (the self-check component):
+    # kept beside the cards, not enforced — the mechanical half (a quote not
+    # in its page) is already dropped above, this says which of the kept ones
+    # their own pages do not carry.
+    verification = getattr(researcher, "verification", None)
+    if isinstance(verification, dict) and verification.get("unsupported"):
+        progress.log("self-check: " + "; ".join(
+            f"{one.get('title') or 'a risk'} ({one.get('reason') or 'not carried'})"
+            for one in verification["unsupported"] if isinstance(one, dict)))
     spent = getattr(researcher, "spent", None)
     billed = getattr(researcher, "cost_basis", "") == "per_token"
-    progress.set(1.0, (
-        f"{kept} risk(s) found" if kept else "nothing it could source in the time")
+    result_message = quicklook.outcome(
+        reply, found, finish_reason=str(getattr(researcher, "last_finish_reason", "")))
+    progress.set(1.0, result_message
         + (f", {found['dropped']} unsourced dropped" if found["dropped"] else "")
         + ((f", ${spent:.2f}" if spent is not None else ", cost unknown") if billed else ""))
     return {
@@ -1976,6 +1994,12 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "runtime": getattr(researcher, "runtime", {}),
         "diagnostic": {"code": "answer" if kept or found["specs"] else "no_supported_findings",
                        "message": "" if kept or found["specs"] else "Pages were read, but no supported findings were kept."},
+        "measurement": {
+            "tokens_in": getattr(researcher, "tokens_in", None),
+            "tokens_out": getattr(researcher, "tokens_out", None),
+            "usage_complete": getattr(researcher, "usage_complete", None),
+            "stages": stages,
+        },
     }
 
 
@@ -2706,11 +2730,16 @@ def bench(settings, params: dict, progress: Progress) -> dict:
 
     conn = connect(settings.store_path)
     try:
-        chosen = [
+        requested = [
             one.strip()
             for one in str(params.get("planes") or "").split(",")
             if one.strip()
-        ] or bench_mod.planes_available(settings)
+        ]
+        chosen = requested or bench_mod.planes_available(settings, controlled=params.get("suite", "precision") == "precision")
+        if params.get("suite") == "web":
+            if "api" in requested:
+                raise ValueError("live web benchmarks require the local or harness plane; use configuration accuracy for direct API models")
+            chosen = [plane for plane in chosen if plane != "api"]
         if not chosen:
             raise ValueError(
                 "no plane can run here: install a coding-agent CLI for the "
@@ -2725,7 +2754,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         # their own bar; it is never the default.
         from app import benchcases
         selected = params.get("case_ids") or []
-        found = benchcases.case_rows(50 if selected else limit)
+        found = benchcases.case_rows(50 if selected else limit, str(params.get("suite") or "precision"))
         if selected:
             found = [one for one in found if one["id"] in selected]
             if not found:
@@ -2810,7 +2839,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         protocol=protocol,
                         max_documents=int(params.get("max_documents") or 3),
                         budget_usd=float(
-                            params.get("budget_usd") or bench_mod.DEFAULT_BUDGET_USD
+                            params.get("budget_usd", bench_mod.DEFAULT_BUDGET_USD)
                         ),
                         batch_id=batch_id,
                         search=search,
@@ -3233,7 +3262,13 @@ def agent_install(settings, params: dict, progress: Progress) -> dict:
     return agentinstall.install(settings, params, progress)
 
 
+def ollama_start(settings, params: dict, progress: Progress) -> dict:
+    from app import agentinstall
+    return agentinstall.start_local(progress)
+
+
 HANDLERS = {
+    "ollama_start": ollama_start,
     "agent_install": agent_install,
     "research": research,
     "bench": bench,

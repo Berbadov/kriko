@@ -508,7 +508,7 @@ def test_each_usable_harness_can_take_its_own_model(client):
     client.put("/api/prefs", json={"harness_model_claude_code": "sonnet"})
     chosen = client.get("/api/prefs").json()["chosen"]
     assert chosen["harness_model_claude_code"] == "sonnet"
-    assert chosen["harness_model_opencode"] == ""
+    assert chosen["harness_model_codex"] == ""
     assert chosen["harness_model_antigravity_cli"] == ""
     harnesses = client.get("/api/prefs").json()["harnesses"]
     for one in harnesses:

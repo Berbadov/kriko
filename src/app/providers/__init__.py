@@ -29,7 +29,7 @@ cost". These functions make one request and return its result.
 from app.providers import exa, fetch, harness, llm
 
 
-def completer_for(model: str):
+def completer_for(model: str, *, max_tokens: int | None = None):
     """The adapter that speaks to whoever serves this model.
 
     Routed on the *model name* rather than on a provider setting, because the
@@ -47,12 +47,13 @@ def completer_for(model: str):
     from app.web.settings import KRIKO_HOME
 
     provider = modelcatalogue.provider_for(model, KRIKO_HOME)
+    options: dict = {"max_tokens": max_tokens} if max_tokens is not None else {}
     if provider not in modelcatalogue.ADAPTERS:
         raise MissingKey(f"no completion adapter for {provider}")
     if provider == "mistral":
         from app.providers import mistral
 
-        return mistral.completer(model=model)
+        return mistral.completer(model=model, **options)
     if provider == "anthropic":
         # The prefix check is a fallback for a model released after the
         # reader's catalogue was written: `claude-` is Anthropic's own
@@ -60,8 +61,8 @@ def completer_for(model: str):
         # ever fail.
         from app.providers import anthropic_llm
 
-        return anthropic_llm.completer(model=model)
-    return llm.completer(model=model)
+        return anthropic_llm.completer(model=model, **options)
+    return llm.completer(model=model, **options)
 
 
 __all__ = [

@@ -406,6 +406,9 @@ impl Kriko {
             Ok("agents") => {
                 app.tab = Tab::Agents;
             }
+            Ok("benchmark") => {
+                app.tab = Tab::Benchmark;
+            }
             Ok("dock") => {
                 app.dock_reply_open = true;
             }
@@ -440,13 +443,13 @@ impl Kriko {
     fn pulse(&mut self, cx: &mut Context<Self>) {
         for action in shell::poll_tray() {
             match action {
-                shell::TrayAction::Open => shell::show_window(),
+                shell::TrayAction::Open => shell::show_window(cx),
                 shell::TrayAction::Quit => Self::quit(cx),
             }
         }
         for event in engine::take_events() {
             match event {
-                engine::ShellEvent::Focus(_route) => shell::show_window(),
+                engine::ShellEvent::Focus(_route) => shell::show_window(cx),
                 engine::ShellEvent::Hide => shell::hide_window(),
                 engine::ShellEvent::Quit => Self::quit(cx),
             }

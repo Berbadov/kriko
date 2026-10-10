@@ -348,6 +348,25 @@ def test_a_spawned_frozen_binary_is_ended_by_tree(script: Path):
     if "subprocess.Popen" not in text:
         pytest.skip(f"{script.name} spawns nothing")
     tree_aware = "/T" in text or "pkill" in text
+    # A new smoke can reuse the existing process cleanup instead of copying
+    # it. Verify the imported helper's body and an actual call, rather than
+    # requiring a taskkill string in every consumer.
+    syntax = ast.parse(text)
+    calls = {node.func.id for node in ast.walk(syntax)
+             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)}
+    for node in ast.walk(syntax):
+        if not isinstance(node, ast.ImportFrom) or not node.module or "." in node.module:
+            continue
+        helper_path = script.parent / f"{node.module}.py"
+        if not helper_path.is_file():
+            continue
+        helper_text = helper_path.read_text(encoding="utf-8")
+        functions = {fn.name: ast.get_source_segment(helper_text, fn) or ""
+                     for fn in ast.parse(helper_text).body if isinstance(fn, ast.FunctionDef)}
+        for imported in node.names:
+            implementation = functions.get(imported.name, "")
+            if (imported.asname or imported.name) in calls and "/T" in implementation:
+                tree_aware = True
     lone_terminate = [
         n
         for n, line in enumerate(text.splitlines(), start=1)

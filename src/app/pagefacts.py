@@ -56,10 +56,20 @@ the page in the site's own words:
 
 {rows or "* (no labelled facts)"}{said}
 
-**Settle the exact version from these yourself.** Power, size, year, trim and
-the other specs on the page usually pin down the precise model or component
-code; where they do not name it, one search from them will. The reader is a
-buyer, not a technician: never ask them for a code, a part number, or anything
-they would have to look up. If the facts still leave two versions open, take
-the more likely one and say which, and why, in your answer.
+**Resolve the exact version from evidence.** Preserve every explicit SKU,
+part number, revision, year and market exactly. Search using these facts when
+more identity evidence is needed. A year or family name alone does not prove
+a component code. If several configurations remain possible, state that gap
+and omit risks and compatibility statements that depend on the missing code.
+Do not silently select the more likely configuration. The reader should not
+need to look up a technical code to receive the findings already supported.
+When evidence is missing, never ask them for a code as a prerequisite to
+showing the supported findings; state which configuration details remain unknown.
+
+**Research the item being sold.** Compatibility, fitment, accessory and
+consumable relationships name a different item that this product is used with.
+Do not transfer that host's identity, specifications or reliability warnings
+to the offered product. Keep fitment facts as context, and state uncertainty
+when the offered part's own manufacturer code is missing. A retailer SKU is
+not proof of a manufacturer's part number.
 """

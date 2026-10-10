@@ -17,7 +17,13 @@ use crate::theme::*;
 fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let b = &app.live.local.bench;
     let mut result = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Run setup"))
-        .child(row_desc("Each case asks for product risks, searches and reads evidence, then scores the answer against the versioned expected findings and forbidden claims. Generation controls below apply to local inference; other agents use their own supported defaults."));
+        .child(row_desc("Configuration accuracy uses the same fictional documents on each plane, with exact codes, years, revisions, markets and missing information. Live web research uses changing search results. These development cases measure behavior; they do not establish real-world coverage."));
+    let mut suites = div().flex().flex_wrap().gap(px(8.0));
+    for (id, label) in [("precision", "Configuration accuracy"), ("web", "Live web research")] {
+        let selected = b.suite == id || (b.suite.is_empty() && id == "precision");
+        suites = suites.child(pill(gpui::ElementId::Name(format!("bench-suite-{id}").into()), label, selected).on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.bench_pick_suite(id.into(), cx))));
+    }
+    result = result.child(suites);
     for (name, key, values, current) in [
         ("First cases (or choose below)", "cases", vec![1, 3, 5, 10], b.case_count),
         ("Pages per case", "documents", vec![1, 3, 5, 10, 20], b.documents),
@@ -402,6 +408,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             .gap(px(24.0))
             .child(start_panel)
             .child(setup_panel)
+            .child(accuracy(&app.live.local.bench))
             .child(progress_panel)
             .child(empty_note("Nothing has been benchmarked here yet. Run one to see how an agent does."));
     }
@@ -701,6 +708,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .gap(px(24.0))
         .child(start_panel)
         .child(setup_panel)
+        .child(accuracy(&app.live.local.bench))
         .child(progress_panel)
         .child(row_title("Results"))
         .child(latest_score(&mine))
@@ -735,7 +743,40 @@ fn score_words(raw: &crate::api::Value) -> String {
     let Some(gold) = raw.get("gold").filter(|g| !g.is_null()) else { return "This older run was not scored against expected answers.".into(); };
     let found = crate::api::arr(gold,"found").len(); let missed=crate::api::arr(gold,"missed").len();
     let traps = crate::api::arr(gold,"hallucinated").len();
-    format!("Expected issues found: {found}/{} · missed: {missed} · forbidden claims in the final answer: {traps}", found+missed)
+    let specs = crate::api::arr(gold,"spec_errors").len() + crate::api::arr(gold,"spec_missed").len();
+    let abstention = match gold.get("abstention_correct").and_then(|v| v.as_bool()) {
+        Some(true) => " · correct abstention", Some(false) => " · failed abstention", None => "",
+    };
+    format!("Expected issues found: {found}/{} · missed: {missed} · forbidden claims: {traps} · specification errors or misses: {specs}{abstention}", found+missed)
+}
+
+fn gold_passed(gold: &crate::api::Value) -> bool {
+    // New configuration records include specifications and applicability in
+    // the engine's verdict. Older issue-only records have no pass field.
+    gold.get("pass").and_then(|v| v.as_bool()).unwrap_or_else(||
+        crate::api::arr(gold,"missed").is_empty() && crate::api::arr(gold,"hallucinated").is_empty())
+}
+
+#[cfg(test)]
+mod score_tests {
+    use super::{gold_passed, score_words};
+    use serde_json::json;
+
+    #[test]
+    fn a_correct_fault_with_a_wrong_specification_still_fails() {
+        let raw = json!({"gold": {"pass": false, "found": ["coolant pump leak"],
+            "missed": [], "hallucinated": [], "spec_errors": ["timing drive: EN-20B"],
+            "spec_missed": ["timing drive"]}});
+        assert!(!gold_passed(&raw["gold"]));
+        assert!(score_words(&raw).contains("specification errors or misses: 2"));
+    }
+
+    #[test]
+    fn legacy_issue_only_runs_remain_readable() {
+        assert!(gold_passed(&json!({"found": ["leak"], "missed": [], "hallucinated": []})));
+        assert!(!gold_passed(&json!({"missed": ["leak"], "hallucinated": []})));
+        assert!(!gold_passed(&json!({"missed": [], "hallucinated": ["host fault"]})));
+    }
 }
 
 fn latest_score(runs: &[&BenchRun]) -> Div {
@@ -745,7 +786,7 @@ fn latest_score(runs: &[&BenchRun]) -> Div {
     let mut tokens=0.0; let mut measured=0;
     for run in runs {
         if let Some(g)=run.raw.get("gold").filter(|g| !g.is_null()) {
-            if run.error.is_empty() && crate::api::arr(g,"missed").is_empty() && crate::api::arr(g,"hallucinated").is_empty() { passed+=1; }
+            if run.error.is_empty() && gold_passed(g) { passed+=1; }
             scored+=1; found+=crate::api::arr(g,"found").len(); wanted+=crate::api::arr(g,"found").len()+crate::api::arr(g,"missed").len(); traps+=crate::api::arr(g,"hallucinated").len();
         }
         if let Some(g)=run.raw.get("attempted_gold").filter(|g| !g.is_null()) { attempted_scored+=1; attempted+=crate::api::arr(g,"hallucinated").len(); }
@@ -753,10 +794,35 @@ fn latest_score(runs: &[&BenchRun]) -> Div {
     }
     card().flex().flex_col().gap(px(10.0)).child(eyebrow("Benchmark score explained"))
         .child(row_desc(&format!("Completed {completed}/{} runs. {}", runs.len(), if wanted>0 { format!("Found {found}/{wanted} expected issues ({:.0}%).", found as f64/wanted as f64*100.0) } else { "Expected-answer success rate was not measured.".into() })))
-        .child(row_desc(&format!("Passed all expected-answer checks: {passed}/{scored} scored runs. A pass requires no missing expected issue and no forbidden claim.")))
+        .child(row_desc(&format!("Passed all expected-answer checks: {passed}/{scored} scored runs. Configuration checks include issues, specifications, applicability and abstention; older records score issues only.")))
         .child(row_desc(&format!("Forbidden claims in scored answers: {traps} ({scored} scored runs). {}", if attempted_scored>0 { format!("Final candidates contained {attempted} forbidden claims before filtering, across {attempted_scored} measured runs.") } else { "Attempts before filtering were not recorded in these older runs.".into() })))
         .child(row_desc(&format!("Tokens burned: {}. Counts include input and output; missing usage is not zero.", if measured>0 { format!("{tokens:.0} across {measured}/{} measured runs",runs.len()) } else { "not reported by this agent".into() })))
         .child(row_desc("Evidence kept measures quote checks. It does not mean the answer is complete or correct. Trap scoring compares wording against the versioned case list; it is not an independent accuracy audit."))
+}
+
+fn accuracy(b: &crate::live::local::Bench) -> Div {
+    let mut panel = card().flex().flex_col().gap(px(12.0))
+        .child(eyebrow("Configuration accuracy and usage"))
+        .child(row_desc("Scores inspect proposed claims before source filtering. Empty answers still lose recall. Timings include failed attempts; missing token usage and prices remain unmeasured. Results stay separate by test set, model and protocol."));
+    let rows = crate::api::arr(&b.snapshot, "readout");
+    if rows.is_empty() { return panel.child(empty_note("Run the configuration suite to measure unsupported claims, specifications, abstention, time and tokens.")); }
+    for r in rows {
+        let mut record = well().p(px(12.0)).flex().flex_col().gap(px(8.0))
+            .child(row_title(&format!("{} · {}", crate::api::s(r, "plane"), crate::api::s(r, "llm"))))
+            .child(mono(&format!("{} {} · {} · {} runs", crate::api::s(r, "set_id"), crate::api::s(r, "set_version"), crate::api::s(r, "protocol"), crate::api::n(r, "runs").unwrap_or(0.0)), DIM));
+        let mut scores = div().flex().flex_wrap().gap(px(16.0));
+        for (label, key) in [("Unsupported claims", "hallucination_rate"), ("Expected facts found", "recall"), ("Specifications found", "spec_recall"), ("Correct abstention", "abstention_accuracy")] {
+            let value = crate::api::n(r, key).map(|v| format!("{:.1}%", v * 100.0)).unwrap_or_else(|| "unmeasured".into());
+            scores = scores.child(div().flex().flex_col().gap(px(3.0)).child(row_desc(label)).child(mono(&value, INK)));
+        }
+        record = record.child(scores)
+            .child(mono(&format!("Time p50 {} · p95 {}", seconds(crate::api::n(r, "latency_p50_ms")), seconds(crate::api::n(r, "latency_p95_ms"))), MUTED));
+        let count = |key| crate::api::n(r, key).map(|v| format!("{v:.0}")).unwrap_or_else(|| "unmeasured".into());
+        record = record.child(row_desc(&format!("Tokens: {} total · {} input · {} output · {} per run · {} runs with partial usage", count("tokens_total"), count("tokens_in"), count("tokens_out"), count("tokens_mean"), count("partial_usage_runs"))))
+            .child(row_desc(&crate::api::s(r, "note")));
+        panel = panel.child(record);
+    }
+    panel
 }
 
 fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
@@ -768,7 +834,7 @@ fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Statefu
         .child(row_desc(&format!("{} · tokens: {} · {} risks backed by evidence · {} candidates rejected", seconds(r.ms), r.tokens.map(|v|format!("{v:.0}")).unwrap_or_else(||"not reported".into()),r.accepted,r.refused)));
     if !r.error.is_empty() { d=d.child(row_desc(&r.error)); }
     if let Some(g)=r.raw.get("gold") {
-        for (key,label) in [("found","Found"),("missed","Missed"),("hallucinated","Forbidden claim"),("unlisted","Additional finding")] {
+        for (key,label) in [("found","Found"),("missed","Missed"),("hallucinated","Forbidden claim"),("unlisted","Additional finding"),("spec_errors","Incorrect specification"),("spec_missed","Missing specification")] {
             for item in crate::api::arr(g,key) { d=d.child(row_desc(&format!("{label}: {}",item.as_str().unwrap_or("unreported"))).flex_none()); }
         }
     }

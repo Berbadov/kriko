@@ -8,6 +8,7 @@ use gpui::{div, prelude::*, px, rgb, Context, Div, Stateful, Styled, Window};
 use crate::app::{Field, Kriko};
 use crate::live::knowledge::RUNS_MAX;
 use crate::screens::{empty_note, mono, plate_s, row_desc, row_title, segmented};
+use crate::startup::Mode as StartupMode;
 use crate::theme::*;
 
 /// One row of a card: title + description left, a control right.
@@ -70,12 +71,17 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let k = &app.live.knowledge;
 
     // ---- general ----
-    let login = switch_anim("sw-launch", k.launch_at_login, motion).on_click(cx.listener(
-        |this, _: &gpui::ClickEvent, _w, cx| {
-            let on = !this.live.knowledge.launch_at_login;
-            this.set_launch_at_login(on, cx);
-        },
-    ));
+    let mut login = div().flex().gap(px(6.0)).opacity(if k.startup_busy { 0.5 } else { 1.0 });
+    for (id, label, mode) in [
+        ("startup-off", "Off", StartupMode::Off),
+        ("startup-window", "Window", StartupMode::Window),
+        ("startup-tray", "Tray", StartupMode::Tray),
+    ] {
+        let button = if k.startup_mode == mode { key(id, label) } else { ghost(id, label) };
+        login = login.child(button.px(px(10.0)).h(px(34.0)).on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.set_startup_mode(mode, cx);
+        })));
+    }
     let reduce = switch_anim("sw-motion", app.reduce_motion, motion).on_click(cx.listener(
         |this, _: &gpui::ClickEvent, _w, cx| {
             let on = !this.reduce_motion;
@@ -94,7 +100,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .child(hairline())
         .child(row(
             "Launch at login",
-            "Start Kriko when you sign in to Windows",
+            "Open the window or keep Kriko in the tray when Windows starts",
             login.into_any_element(),
         ))
         .child(hairline())

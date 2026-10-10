@@ -18,6 +18,7 @@ mod live;
 mod marks;
 mod screens;
 mod shell;
+mod startup;
 mod theme;
 mod text_input;
 
@@ -137,12 +138,17 @@ impl gpui::AssetSource for Assets {
 
 fn main() {
     init_logger();
+    let background = std::env::args_os().skip(1).any(|arg| arg == "--background");
+    // Verification uses an isolated engine/store and must not be redirected
+    // to the reader's installed app. Normal launches remain single-instance.
+    let review = std::env::var("KRIKO_VERIFY").map(|page| matches!(page.as_str(),
+        "compare" | "risks" | "local" | "agents" | "dock" | "benchmark")).unwrap_or(false);
     // a second launch raises the first and leaves: one engine per machine
-    if shell::raise_running_instance() {
+    if !review && shell::raise_running_instance(!background) {
         return;
     }
     engine::start();
-    Application::new().with_assets(Assets).run(|cx: &mut App| {
+    Application::new().with_assets(Assets).run(move |cx: &mut App| {
         register_fonts(
             cx,
             FONTS
@@ -167,11 +173,17 @@ fn main() {
             ),
             size: size(px(width), px(height)),
         };
+        shell::build_tray();
+        // Create hidden from the start: hiding after creation flashes a window.
+        // A failed tray must leave a visible way to reach and quit the app.
+        let visible = !background || !shell::has_tray();
         let opts = WindowOptions {
+            show: visible,
+            focus: visible,
             window_bounds: Some(WindowBounds::Windowed(bounds)),
             window_min_size: Some(size(px(940.0), px(640.0))),
             titlebar: Some(TitlebarOptions {
-                title: Some(SharedString::from("Kriko")),
+                title: Some(SharedString::from(if review { "Kriko — Review" } else { "Kriko" })),
                 // no system titlebar: the app draws its own, merged into the
                 // window, with minimize / restore / close on the right
                 appears_transparent: true,
@@ -180,7 +192,6 @@ fn main() {
             app_id: Some(SharedString::from("kriko").to_string()),
             ..Default::default()
         };
-        shell::build_tray();
         // Quit from anywhere (tray, engine, keyboard) ends the engine first
         cx.on_app_quit(|_cx| {
             engine::stop();
