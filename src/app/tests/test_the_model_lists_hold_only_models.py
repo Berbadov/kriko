@@ -17,6 +17,7 @@ The two captures below are the CLIs' own output, taken on 2026-09-29.
 """
 
 import sys
+from dataclasses import replace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -60,7 +61,8 @@ OPENCODE_MODELS = (
 
 
 def _row(one_id: str) -> harness_mod.Harness:
-    return next(one for one in harness_mod.KNOWN if one.id == one_id)
+    from app.tests.harness_fixtures import row
+    return row(one_id)
 
 
 def _answering(monkeypatch, text: str) -> None:
@@ -127,7 +129,7 @@ def test_models_come_from_the_whole_output_of_the_models_command(monkeypatch):
 
 
 def test_a_cli_with_no_listing_command_says_it_lists_no_models():
-    vibe = _row("mistral-vibe")
+    vibe = replace(_row("mistral-vibe"), model_source="")
     assert harness_mod.models_note(vibe, []) == "This CLI does not list its models"
 
 
@@ -156,7 +158,7 @@ def _settings(tmp_path) -> Settings:
 @pytest.fixture
 def two_clis(monkeypatch):
     """Antigravity (lists) and Vibe (lists nothing), the rest of the world stubbed."""
-    agy, vibe = _row("antigravity-cli"), _row("mistral-vibe")
+    agy, vibe = _row("antigravity-cli"), replace(_row("mistral-vibe"), model_source="")
     monkeypatch.setattr(harness_mod, "available", lambda: [agy, vibe])
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
     monkeypatch.setattr(harness_mod, "efforts_for", lambda one: [])

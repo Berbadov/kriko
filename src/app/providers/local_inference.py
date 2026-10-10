@@ -123,6 +123,8 @@ class OpenAICompatSocket:
         #: plane to say *why* a reply was short instead of guessing.
         self.last_finish_reason = ""
         self.truncated = 0
+        self.usage_complete = True
+        self.last_usage_complete = False
         self._context: int | None = None
 
     def __call__(self, prompt: str) -> str:
@@ -240,7 +242,7 @@ class OpenAICompatSocket:
         """How many characters of prompt fit beside the reply budget."""
         reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
         tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
-        return max(1000, int(tokens * CHARS_PER_TOKEN))
+        return max(0, int(tokens * CHARS_PER_TOKEN))
 
     def _ask_context(self) -> int | None:
         def get(path: str):
@@ -305,7 +307,12 @@ class OpenAICompatSocket:
 
     def _count(self, payload) -> None:
         usage = payload.get("usage") if isinstance(payload, dict) else None
+        self.last_usage_complete = isinstance(usage, dict) and (
+            isinstance(usage.get("total_tokens"), int) and not isinstance(usage.get("total_tokens"), bool)
+            or all(isinstance(usage.get(key), int) and not isinstance(usage.get(key), bool)
+                   for key in ("prompt_tokens", "completion_tokens")))
         if not isinstance(usage, dict):
+            self.usage_complete = False
             return
         for field, key in (("tokens_in", "prompt_tokens"),
                            ("tokens_out", "completion_tokens")):
@@ -315,6 +322,11 @@ class OpenAICompatSocket:
         total = usage.get("total_tokens")
         if isinstance(total, int) and not isinstance(total, bool):
             self.tokens_used = (self.tokens_used or 0) + total
+        elif all(isinstance(usage.get(key), int) and not isinstance(usage.get(key), bool)
+                 for key in ("prompt_tokens", "completion_tokens")):
+            self.tokens_used = (self.tokens_used or 0) + usage["prompt_tokens"] + usage["completion_tokens"]
+        else:
+            self.usage_complete = False
 
     def _refused(self, error: urllib.error.HTTPError) -> LocalInferenceError:
         detail = ""

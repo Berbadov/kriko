@@ -1289,6 +1289,10 @@
 
   // Toolbar action sends TOGGLE_HOVER_LITE via chrome.tabs.sendMessage.
   chrome.runtime.onMessage.addListener((request) => {
+    if (request?.type === "KRIKO_SESSION_UPDATE" && request.url === location.href) {
+      if (request.stage) { state.stage = request.stage; renderStatus(); }
+      if (request.result) applyEntry(request.result);
+    }
     if (request && request.type === "TOGGLE_HOVER_LITE") {
       togglePanel();
     }

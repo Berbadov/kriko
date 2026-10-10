@@ -11,6 +11,7 @@ use gpui::Context;
 use crate::api::{self, Value};
 use crate::app::{Kriko, Tab};
 use crate::engine;
+use crate::startup::{self, Mode as StartupMode};
 
 // ---- the shapes the screens draw ----
 
@@ -106,6 +107,8 @@ pub struct ExtStatus {
     pub staged: bool,
     pub staged_version: String,
     pub path: String,
+    pub firefox_path: String,
+    pub firefox_staged: bool,
     pub port: i64,
     pub port_is_ours: bool,
     pub browsers: Vec<Browser>,
@@ -157,7 +160,9 @@ pub struct State {
     pub keys_loaded: bool,
     pub keys: Vec<KeyRow>,
     pub keys_path: String,
-    pub launch_at_login: bool,
+    pub startup_mode: StartupMode,
+    pub startup_busy: bool,
+    pub startup_revision: u64,
     pub settings_notice: Option<String>,
     /// The provider the key field is being typed for.
     pub key_provider: Option<String>,
@@ -183,7 +188,6 @@ pub struct AppUpdate {
 /// The engine's own ceiling (`prefs.MAX_RUN_CONCURRENCY`); it clamps too.
 pub const RUNS_MAX: usize = 4;
 
-const REG_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const REG_VALUE: &str = "Kriko";
 
 impl Kriko {
@@ -196,9 +200,7 @@ impl Kriko {
         self.refresh_extension(cx);
         self.refresh_settings(cx);
         self.refresh_keys(cx);
-        self.fetch(cx, || login_item_is_set(REG_VALUE), |this, on, _| {
-            this.live.knowledge.launch_at_login = on;
-        });
+        self.refresh_startup(cx);
         self.live.knowledge.loaded = true;
     }
 
@@ -224,6 +226,7 @@ impl Kriko {
                 self.refresh_settings(cx);
                 self.refresh_keys(cx);
                 self.refresh_health(cx);
+                self.refresh_startup(cx);
             }
             _ => {}
         }
@@ -602,6 +605,7 @@ impl Kriko {
             this.note(&reply);
             if let Ok(v) = reply {
                 let compat = v.get("compatibility").cloned().unwrap_or(Value::Null);
+                let firefox = v.get("firefox").cloned().unwrap_or(Value::Null);
                 let hits = api::arr(&v, "sightings").iter().map(|s| int(s, "hits")).sum();
                 this.live.knowledge.ext = Some(ExtStatus {
                     available: api::b(&v, "available"),
@@ -609,6 +613,8 @@ impl Kriko {
                     staged: api::b(&v, "staged"),
                     staged_version: api::s(&v, "staged_version"),
                     path: api::s(&v, "path"),
+                    firefox_path: api::s(&firefox, "manifest_path"),
+                    firefox_staged: api::b(&firefox, "staged"),
                     port: int(&v, "port"),
                     port_is_ours: api::b(&v, "port_is_ours"),
                     browsers: api::arr(&v, "browsers")
@@ -629,8 +635,8 @@ impl Kriko {
     /// One of the three extension actions: `stage`, `reveal` or `launch`.
     pub fn extension_action(&mut self, action: &'static str, cx: &mut Context<Self>) {
         self.live.knowledge.ext_notice = Some(match action {
-            "stage" => "Copying the extension into place.",
-            "reveal" => "Opening the folder.",
+            "stage" | "firefox/stage" => "Preparing the extension.",
+            "reveal" | "firefox/reveal" => "Showing the extension files.",
             _ => "Opening a browser.",
         }
         .to_string());
@@ -647,8 +653,9 @@ impl Kriko {
                 this.note(&reply);
                 this.live.knowledge.ext_notice = Some(match reply {
                     Ok(v) => match action {
+                        "firefox/stage" => format!("{}. Package: {}", api::s(&v, "note"), api::s(&v, "package_path")),
                         "stage" => format!("Staged version {} at {}.", api::s(&v, "version"), api::s(&v, "path")),
-                        "reveal" => {
+                        "reveal" | "firefox/reveal" => {
                             let e = api::s(&v, "error");
                             let path = api::s(&v, "path");
                             if !e.is_empty() {
@@ -792,17 +799,37 @@ impl Kriko {
 
     /// Writes or removes the Run value, then reads it back so the switch
     /// shows what Windows holds.
-    pub fn set_launch_at_login(&mut self, on: bool, cx: &mut Context<Self>) {
-        self.live.knowledge.launch_at_login = on;
+    pub fn refresh_startup(&mut self, cx: &mut Context<Self>) {
+        if self.live.knowledge.startup_busy { return; }
+        let revision = self.live.knowledge.startup_revision;
+        self.fetch(cx, || startup::read(REG_VALUE), move |this, reply, _| {
+            if this.live.knowledge.startup_busy || this.live.knowledge.startup_revision != revision { return; }
+            match reply {
+                Ok(mode) => this.live.knowledge.startup_mode = mode,
+                Err(error) => this.live.knowledge.settings_notice = Some(error),
+            }
+        });
+    }
+
+    pub fn set_startup_mode(&mut self, mode: StartupMode, cx: &mut Context<Self>) {
+        if self.live.knowledge.startup_busy { return; }
+        self.live.knowledge.startup_busy = true;
+        self.live.knowledge.startup_revision += 1;
+        cx.notify();
         self.fetch(
             cx,
             move || {
-                let done = if on { login_item_set(REG_VALUE) } else { login_item_clear(REG_VALUE) };
-                (done, login_item_is_set(REG_VALUE))
+                let done = startup::write(REG_VALUE, mode);
+                (done, startup::read(REG_VALUE))
             },
             |this, (done, now), _| {
-                this.live.knowledge.launch_at_login = now;
-                this.live.knowledge.settings_notice = done.err();
+                this.live.knowledge.startup_busy = false;
+                let read_error = now.as_ref().err().cloned();
+                match now {
+                    Ok(mode) => this.live.knowledge.startup_mode = mode,
+                    Err(error) => this.live.knowledge.settings_notice = Some(error),
+                }
+                this.live.knowledge.settings_notice = done.err().or(read_error);
             },
         );
     }
@@ -985,55 +1012,6 @@ fn epoch_seconds(iso: &str) -> Option<i64> {
     Some(days * 86_400 + hh * 3600 + mm * 60 + ss)
 }
 
-// ---- launch at login (Windows: HKCU Run value) ----
-
-#[cfg(windows)]
-fn reg(args: &str) -> std::io::Result<std::process::Output> {
-    use std::os::windows::process::CommandExt;
-    std::process::Command::new("reg")
-        .raw_arg(args)
-        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
-        .output()
-}
-
-#[cfg(windows)]
-pub fn login_item_is_set(name: &str) -> bool {
-    reg(&format!("query \"{REG_KEY}\" /v \"{name}\"")).map(|o| o.status.success()).unwrap_or(false)
-}
-
-#[cfg(windows)]
-pub fn login_item_set(name: &str) -> Result<(), String> {
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let out = reg(&format!(
-        "add \"{REG_KEY}\" /v \"{name}\" /t REG_SZ /d \"\\\"{}\\\"\" /f",
-        exe.display()
-    ))
-    .map_err(|e| e.to_string())?;
-    if out.status.success() { Ok(()) } else { Err("Windows would not take the login entry.".into()) }
-}
-
-#[cfg(windows)]
-pub fn login_item_clear(name: &str) -> Result<(), String> {
-    if !login_item_is_set(name) {
-        return Ok(());
-    }
-    let out = reg(&format!("delete \"{REG_KEY}\" /v \"{name}\" /f")).map_err(|e| e.to_string())?;
-    if out.status.success() { Ok(()) } else { Err("Windows would not remove the login entry.".into()) }
-}
-
-#[cfg(not(windows))]
-pub fn login_item_is_set(_name: &str) -> bool {
-    false
-}
-#[cfg(not(windows))]
-pub fn login_item_set(_name: &str) -> Result<(), String> {
-    Err("Launch at login is only wired on Windows.".into())
-}
-#[cfg(not(windows))]
-pub fn login_item_clear(_name: &str) -> Result<(), String> {
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1055,13 +1033,5 @@ mod tests {
         assert_eq!(ago_seconds(3.0 * 86_400.0), "3 d ago");
     }
 
-    #[cfg(windows)]
-    #[test]
-    fn the_login_item_round_trips() {
-        let name = "KrikoTestLoginItem";
-        assert!(login_item_set(name).is_ok());
-        assert!(login_item_is_set(name));
-        assert!(login_item_clear(name).is_ok());
-        assert!(!login_item_is_set(name));
-    }
+
 }

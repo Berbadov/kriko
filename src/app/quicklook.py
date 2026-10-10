@@ -31,9 +31,29 @@ MAX_SPECS = 10
 #: What the panel's card knows how to colour. Anything else reads as `medium`.
 SEVERITIES = ("high", "medium", "low")
 
+# The local runtime can enforce this shape while it generates the answer.
+# Empty lists remain valid: a schema must never force an unsupported claim.
+REPLY_SCHEMA: dict = {
+    "type": "object",
+    "properties": {
+        **{key: {"type": "string"} for key in ("assumed", "category", "pack")},
+        "specs": {"type": "array", "maxItems": MAX_SPECS, "items": {
+            "type": "object", "properties": {
+                key: {"type": "string"} for key in ("name", "value", "url")},
+            "required": ["name", "value", "url"]}},
+        "risks": {"type": "array", "maxItems": MAX_RISKS, "items": {
+            "type": "object", "properties": {
+                **{key: {"type": "string"} for key in
+                   ("title", "why", "check", "url", "quote")},
+                "severity": {"type": "string", "enum": list(SEVERITIES)}},
+            "required": ["title", "why", "url", "quote", "severity"]}},
+    },
+    "required": ["risks", "specs"],
+}
+
 
 def brief(product: str, principle: str = "", page: dict | None = None,
-          packs: str = "", attributes: str = "") -> str:
+          packs: str = "", attributes: str = "", *, compact: bool = False) -> str:
     """The quick pass, as instructions. Fast on purpose: a few searches, no essay.
 
     `page` is what the listing itself says (`app.pagefacts`, B150): the
@@ -66,6 +86,20 @@ def brief(product: str, principle: str = "", page: dict | None = None,
         f"{attributes.strip()}\n"
         if attributes.strip() else ""
     )
+    if compact:
+        return (
+            f"# Quick look: what is known to go wrong with this one?\n\n{product}\n"
+            f"{listing}{bar}{belongs}{named}\n"
+            "Use only the fetched pages below. Be specific to this variant. "
+            "Return one JSON object, with short fields and at most two risks "
+            "and three specifications. Every risk needs an exact URL and a "
+            "verbatim quote from that page. Leave unsupported items out. "
+            "Use empty lists if the pages provide no evidence. State any "
+            "variant assumption in assumed. Shape:\n"
+            '{"assumed":"", "category":"", "pack":"", '
+            '"specs":[{"name":"", "value":"", "url":""}], '
+            '"risks":[{"title":"", "why":"", "check":"", '
+            '"severity":"medium", "url":"", "quote":""}]}\n')
     return f"""# Quick look: what is known to go wrong with this one?
 
     {product}
@@ -78,8 +112,9 @@ friend would in a chat: fast, specific, sourced.
   refuses you does not count toward the three. Stop there.
 * {REFUSED_PAGE}
 * Be specific to this exact variant. Skip anything true of every product like it.
-* If the name leaves the variant open, pick the most likely one and say which
-  in `assumed`. Do not ask; there is no one to answer.
+* If the name leaves the variant open, state what is missing in `assumed`.
+  Omit claims that depend on an unproven configuration. Do not guess a part
+  code or assume that a nearby revision, year or market has the same fault.
 {bar}{belongs}
 ## Every risk needs its page
 
@@ -260,3 +295,61 @@ def closed(reply: str) -> dict | None:
 def _line(value) -> str:
     """A short single-line answer, or "". Never more than a name's worth."""
     return " ".join(str(value or "").split())[:80]
+
+
+def outcome(reply: str, found: dict, *, finish_reason: str = "") -> str:
+    """Explain an empty result without claiming that a deadline expired."""
+    from app.packauthor import _payload
+
+    if found.get("risks"):
+        return f"{len(found['risks'])} risk(s) found"
+    if found.get("dropped"):
+        return "no risks kept: the proposed claims did not pass the source checks"
+    if found.get("specs"):
+        return f"{len(found['specs'])} specification(s) found; no sourced risks"
+    payload = _payload(reply) or closed(reply)
+    if not isinstance(payload, dict) or not any(
+            isinstance(payload.get(key), list) for key in ("risks", "specs")):
+        return ("the local answer was cut off; retry with a shorter answer or more context"
+                if finish_reason == "length" else
+                "the agent returned an unreadable answer; retry Quick Look")
+    return "the pages read did not yield any sourced findings"
+
+
+def follow_up(question: str, assumed: str, risks: list[dict],
+              specs: list[dict]) -> str:
+    """A reader's follow-up, answered from the quick look's own findings.
+
+    The panel's question box (#112). No search, no new pages: the answer is
+    what this quick look found, and if the findings do not answer it the reply
+    says exactly that — the Sources drawer is where going further belongs.
+    """
+    lines = [
+        "A quick look at a product found the findings below. The reader asks a",
+        "follow-up question. Answer it using only these findings; quote nothing",
+        "you do not see here. If they do not answer the question, say exactly",
+        "that in one sentence and stop. Plain text, no markdown, under 120 words.",
+        "",
+        f"The reader asks: {question.strip()}",
+    ]
+    if assumed.strip():
+        lines.append(f"The product was taken as: {assumed.strip()}")
+    lines.append("")
+    lines.append("## The findings")
+    for one in risks:
+        if not isinstance(one, dict):
+            continue
+        title = str(one.get("title") or "").strip()
+        if not title:
+            continue
+        lines.append(f"- {title} ({one.get('severity') or 'unknown'}): "
+                     f"{str(one.get('body') or '').strip()}")
+        if str(one.get("advice") or "").strip():
+            lines.append(f"  Worth checking: {str(one['advice']).strip()}")
+        for src in one.get("sources") or []:
+            lines.append(f"  Source: {src.get('domain', '')} {src.get('url', '')} — "
+                         f"\u201c{str(src.get('quote') or '').strip()}\u201d")
+    for one in specs:
+        if isinstance(one, dict) and one.get("name") and one.get("value"):
+            lines.append(f"- {one['name']}: {one['value']} ({one.get('domain', '')})")
+    return "\n".join(lines)

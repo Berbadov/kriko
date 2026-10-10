@@ -351,7 +351,7 @@ def test_the_job_refuses_rather_than_measuring_nothing(settings, store, monkeypa
     """A benchmark with no plane available is a sentence, not an empty table."""
     from app.web import tasks
 
-    monkeypatch.setattr(bench, "planes_available", lambda settings: [])
+    monkeypatch.setattr(bench, "planes_available", lambda settings, **kwargs: [])
     with pytest.raises(ValueError) as raised:
         tasks.bench(settings, {}, bench._Silent())
     assert "no plane" in str(raised.value)

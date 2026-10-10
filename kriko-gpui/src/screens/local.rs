@@ -172,11 +172,11 @@ fn setup(
         .flex_wrap()
         .child(step_cell(
             1,
-            "Runtime",
+            "Model app",
             if runtime_ready {
                 format!("{up_name}, running")
             } else {
-                "Start what serves the model".to_string()
+                "Install or start Ollama".to_string()
             },
             runtime_ready,
             current == 0,
@@ -202,7 +202,7 @@ fn setup(
                 .items_center()
                 .justify_between()
                 .gap(px(12.0))
-                .child(eyebrow("Set up a local model"))
+                .child(eyebrow("Use AI on this computer"))
                 .child(if current == 2 {
                     tag("local-setup-done", TagState::Done, "Ready", motion)
                 } else {
@@ -214,7 +214,21 @@ fn setup(
                     )
                 }),
         )
+        .child(row_desc("A local model is an AI that answers on your computer. Ollama is the app that runs it; a model is the downloaded file it needs. Research can still search the web."))
         .child(row_desc(if plane.ready { &plane.line } else { &plane.reason }))
+        .when(!model_ready, |d| {
+            let job = app.live.knowledge.agent_install.as_ref().filter(|(id, _)| id == "local");
+            let busy = job.map(|(_, job)| !job.done).unwrap_or(false);
+            d.child(row_desc("Start here: Kriko can install Ollama, download a small starter model, and choose it for you. Allow about 6 GB of free space and keep an internet connection during setup. Larger models need more space and memory."))
+                .child(div().flex().flex_wrap().gap(px(8.0))
+                    .child(key("local-guided-setup", if busy { "Setting up Ollama…" } else { "Set up Ollama and a starter model" }).opacity(if busy { 0.5 } else { 1.0 }).on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                        if this.live.knowledge.agent_install.as_ref().map(|(_, j)| !j.done).unwrap_or(false) { return; }
+                        this.install_agent("local".into(), cx);
+                    })))
+                    .child(ghost("local-ollama-download", "Download Ollama manually").on_click(|_, _, cx| cx.open_url("https://ollama.com/download/windows"))))
+                .children(job.map(|(_, j)| row_desc(&format!("{}: {}", j.state, j.message))))
+                .child(row_desc("Manual setup: download Ollama from its official site, run the installer, then return here and press Check again. Next, choose a model below. A small model can miss details; try a larger one when your computer has room."))
+        })
         .child(steps);
 
     // ---- runtimes ----
@@ -229,7 +243,7 @@ fn setup(
                 .justify_between()
                 .gap(px(12.0))
                 .pb(px(8.0))
-                .child(eyebrow("1 · Runtime"))
+                .child(eyebrow("1 · App that runs the model"))
                 .child(
                     div()
                         .flex()
@@ -279,6 +293,11 @@ fn setup(
             tag(format!("rt-inuse-{i}"), TagState::Live, "In use", motion).into_any_element()
         } else if server.up {
             ghost(("rt-use", i), "Use").on_click(use_it).into_any_element()
+        } else if server.name == "Ollama" && installed {
+            ghost(("rt-start", i), if app.live.local.runtime_starting { "Starting…" } else { "Start Ollama" })
+                .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_start_ollama(cx))).into_any_element()
+        } else if server.name == "Ollama" {
+            ghost(("rt-download", i), "Download Ollama").on_click(|_, _, cx| cx.open_url("https://ollama.com/download/windows")).into_any_element()
         } else {
             div().into_any_element()
         };
@@ -344,8 +363,7 @@ fn setup(
         .child(hairline());
     if !ollama_installed && !ollama_up {
         catalogue = catalogue.child(row_desc(
-            "Kriko downloads models through Ollama, and Ollama is not on this machine. \
-             Get a model in the program you run instead, then check again.",
+            "Install Ollama with the setup button above, then choose a model here. If you use another model app, download a model in that app and press Check again.",
         ));
     } else {
         catalogue = catalogue.child(row_desc(if ollama_up {

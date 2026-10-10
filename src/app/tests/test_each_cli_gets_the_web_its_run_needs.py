@@ -41,7 +41,8 @@ AGY_MODELS = [
 
 
 def _one(ident: str):
-    return next(h for h in harness_mod.KNOWN if h.id == ident)
+    from app.tests.harness_fixtures import row
+    return row(ident)
 
 
 # ── opencode: the question nobody was there to answer ───────────────────────

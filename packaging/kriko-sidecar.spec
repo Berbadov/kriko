@@ -128,9 +128,9 @@ a = Analysis(
         (str(STATIC), "app/web/static"),
         (str(ROOT / "src" / "kriko" / "store" / "schema.sql"), "kriko/store"),
         (str(ROOT / "src" / "app" / "models.toml"), "app"),
-        # B185: the benchmark's fixed test set, read from disk beside
-        # benchcases.py. Without it a frozen install answers "no cases".
-        (str(ROOT / "src" / "app" / "benchcases.json"), "app"),
+        # Versioned benchmark corpora are read beside their modules. Discover
+        # all app JSON resources so a new suite cannot disappear when frozen.
+        *((str(resource), "app") for resource in sorted((ROOT / "src" / "app").glob("*.json"))),
         (str(EXTENSION), "app/extension_src"),
         *((str(pack), "app/packs_bundled") for pack in PACKS),
     ],

@@ -63,6 +63,10 @@ COPILOT_FAILURE = _stream(
 #: `test_every_protocol_a_row_names_has_a_parser` below, which is the cheapest
 #: possible moment to discover that nothing can read its output.
 FETCHED = {
+    # Codex's documented item.completed envelope carries assistant prose.
+    # This proves the envelope is readable, not that a web tool succeeded.
+    "codex": {"type": "item.completed", "item": {
+        "id": "item_3", "type": "agent_message", "text": "Read https://example.com"}},
     "claude": {"type": "assistant", "message": {"content": [
         {"type": "tool_use", "name": "WebFetch",
          "input": {"url": "https://example.com"}}]}},
@@ -83,7 +87,8 @@ FETCHED = {
 
 
 def _copilot() -> harness.Harness:
-    return next(one for one in harness.KNOWN if one.id == "github-copilot")
+    from app.tests.harness_fixtures import row
+    return row("github-copilot")
 
 
 def _reader(one: harness.Harness) -> harness.HarnessResearcher:

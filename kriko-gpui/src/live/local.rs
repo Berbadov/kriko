@@ -160,6 +160,7 @@ impl Default for BenchPhase {
 
 #[derive(Default, Clone)]
 pub struct Bench {
+    pub suite: String,
     pub loaded: bool,
     pub runs: Vec<BenchRun>,
     pub summary: Vec<BenchRow>,
@@ -217,6 +218,7 @@ pub struct State {
     pub note: Option<String>,
     pub checking: bool,
     pub pull: Option<Pull>,
+    pub runtime_starting: bool,
     pub bench: Bench,
 }
 
@@ -470,6 +472,26 @@ impl Kriko {
 
     }
 
+    pub fn local_start_ollama(&mut self, cx: &mut Context<Self>) {
+        if self.live.local.runtime_starting { return; }
+        self.live.local.runtime_starting = true;
+        self.fetch(cx, || api::post("/api/local-models/start", serde_json::json!({})), |this, reply, cx| {
+            match reply {
+                Ok(v) => this.follow_local_job(cx, api::s(&v, "job_id"), |this, job, cx| {
+                    this.live.local.note = Some(job.message.clone());
+                    if job.done {
+                        this.live.local.runtime_starting = false;
+                        this.local_check_again(cx);
+                    }
+                }),
+                Err(e) => {
+                    this.live.local.runtime_starting = false;
+                    this.live.local.note = Some(e.message);
+                }
+            }
+        });
+    }
+
     pub fn refresh_local_catalogue(&mut self, cx: &mut Context<Self>) {
         if self.live.local.catalogue_loading { return; }
         self.live.local.catalogue_loading = true;
@@ -706,7 +728,8 @@ impl Kriko {
     // ---- the benchmark ----
 
     pub fn refresh_bench(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::get("/api/bench?limit=100"), |this, reply, _| {
+        let suite = if self.live.local.bench.suite.is_empty() { "precision".to_string() } else { self.live.local.bench.suite.clone() };
+        self.fetch(cx, move || api::get(&format!("/api/bench?limit=100&suite={suite}")), |this, reply, _| {
             this.note(&reply);
             let Ok(v) = reply else { return };
             let b = &mut this.live.local.bench;
@@ -715,6 +738,7 @@ impl Kriko {
                 b.timeout = 240; b.max_tokens = 1024;
             }
             b.snapshot = v.clone();
+            if b.suite.is_empty() { b.suite = "precision".into(); }
             b.runs = api::arr(&v, "runs").iter().map(run_from).collect();
             b.summary = api::arr(&v, "summary")
                 .iter()
@@ -767,6 +791,7 @@ impl Kriko {
     /// cases, three documents each, twenty cents a case, one repetition.
     fn bench_body(&self) -> Value {
         serde_json::json!({
+            "suite": if self.live.local.bench.suite.is_empty() { "precision" } else { &self.live.local.bench.suite },
             "planes": self.live.local.bench.picked.join(", "),
             "pack_id": "",
             "cases": self.live.local.bench.case_count.max(1),
@@ -796,6 +821,17 @@ impl Kriko {
         }
         // a different grid is a different price
         b.phase = BenchPhase::Idle;
+        cx.notify();
+    }
+
+    pub fn bench_pick_suite(&mut self, suite: String, cx: &mut Context<Self>) {
+        let b = &mut self.live.local.bench;
+        if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+        b.suite = suite;
+        b.case_ids.clear();
+        b.phase = BenchPhase::Idle;
+        if b.suite == "web" { b.picked.retain(|p| p != "api"); }
+        self.refresh_bench(cx);
         cx.notify();
     }
 

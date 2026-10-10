@@ -169,19 +169,11 @@ def spend_for(app_state_path, model: str) -> Spend:
 
 
 def readout(raw_rows: list[dict], summary: list[dict]) -> list[dict]:
-    """What the sweep is *for*, one row per model (B126 §7/§2 of the design).
+    """Measured quality and resources per set/version/plane/model/protocol/search.
 
-    "batch size, context, preamble" is not a screen a reader can act on
-    without the two numbers that decide whether to act on it at all: what it
-    costs and how often it lies. So this joins the chosen protocol's own
-    shape against the gold-graded rows for the same model — `raw_rows` is
-    `state.bench_runs()`'s output, which carries each row's `gold` verdict and
-    `usd`; `summary` is `state.bench_summary()`, which `choose` already reads.
-
-    One row per model that has *any* measurement, chosen or not: a model with
-    fewer than `MIN_RUNS` still belongs on the screen, with `spend` reported
-    as `STANDARD` and `note` saying why — "not yet measured" has to be a row a
-    reader sees, not a silent gap.
+    Unknown spend and partial token usage never become zero. Failed attempts
+    contribute latency and reported spend, but do not pretend to be graded
+    answers. ``summary`` remains accepted for callers of the older interface.
     """
     # B185: runs scored on different test sets are never ranked together.
     # Each set gets its own rows, labelled with the set it measured, and an
@@ -204,52 +196,91 @@ def readout(raw_rows: list[dict], summary: list[dict]) -> list[dict]:
 
 def _readout_one(raw_rows: list[dict], summary: list[dict],
                  set_key: tuple[str, str] = ("", "")) -> list[dict]:
-    models = sorted({row.get("model") or "" for row in raw_rows if row.get("model")})
+    import math
+    import statistics
+
+    configurations = sorted({
+        (str(row.get("model") or ""), str(row.get("plane") or ""),
+         str(row.get("protocol") or STANDARD.name),
+         str(row.get("search_provider") or ""))
+        for row in raw_rows if row.get("model")})
     out = []
-    for model in models:
-        spend = choose(summary, model)
+    for model, plane, protocol, search in configurations:
+        spend = BY_NAME.get(protocol)
         mine = [row for row in raw_rows if (row.get("model") or "") == model
-                and (row.get("protocol") or STANDARD.name) == spend.name]
-        graded = [row for row in mine if row.get("gold")]
-        accepted = sum(int(row.get("accepted") or 0) for row in mine)
+                and (row.get("plane") or "") == plane
+                and (row.get("protocol") or STANDARD.name) == protocol
+                and (row.get("search_provider") or "") == search]
+        graded = [row for row in mine if row.get("gold") and not row.get("error")]
         hallucinated = sum(
             len((row.get("gold") or {}).get("hallucinated") or []) for row in graded
         )
+        produced = sum(int((row.get("gold") or {}).get(
+            "raw_produced", row.get("findings") or row.get("accepted") or 0))
+            for row in graded)
+        found = sum(len(row["gold"].get("found") or []) for row in graded)
+        wanted = found + sum(len(row["gold"].get("missed") or []) for row in graded)
         priced = [row for row in mine if row.get("usd") is not None]
         usd_total = sum(float(row["usd"]) for row in priced)
-        searches = [row.get("search_provider") or "" for row in mine
-                    if row.get("search_provider")]
-        measured = any(
-            (row.get("model") or "") == model
-            and (row.get("protocol") or "") == STANDARD.name
-            for row in summary
-        )
+        priced_accepted = sum(int(row.get("accepted") or 0) for row in priced)
+        counted = [row for row in mine if row.get("tokens") is not None and
+                   (row.get("measurement") or (row.get("gold") or {}).get("measurement", {})).get("usage_complete") is not False]
+        counted_accepted = sum(int(row.get("accepted") or 0) for row in counted)
+        latencies = sorted(float(row["ms"]) for row in mine if row.get("ms") is not None)
+        abstentions = [row["gold"] for row in graded if row["gold"].get("abstention_expected")]
+        specs_found = sum(len(row["gold"].get("spec_found") or []) for row in graded)
+        specs_wanted = specs_found + sum(len(row["gold"].get("spec_missed") or []) for row in graded)
+        measurements = [row.get("measurement") or (row.get("gold") or {}).get("measurement", {})
+                        for row in mine]
         out.append({
             "model": model,
+            "plane": plane,
             "set_id": set_key[0],
             "set_version": set_key[1],
-            "protocol": spend.name,
-            "batch_size": spend.batch_size,
-            "context_chars": spend.context_chars,
-            "preamble": spend.preamble,
-            "search_provider": max(set(searches), key=searches.count) if searches else "",
+            "protocol": protocol,
+            "batch_size": spend.batch_size if spend else 0,
+            "context_chars": spend.context_chars if spend else 0,
+            "preamble": spend.preamble if spend else "",
+            "search_provider": search,
             # A price only when at least two runs actually counted one — one
             # priced run is an anecdote wearing a decimal point, the same rule
             # `app/costs.py` applies to a spend estimate.
             "usd_per_accepted_claim": (
-                round(usd_total / accepted, 4)
-                if len(priced) >= MIN_RUNS and accepted else None
+                round(usd_total / priced_accepted, 4)
+                if len(priced) >= MIN_RUNS and priced_accepted else None
             ),
             "hallucination_rate": (
-                round(hallucinated / accepted, 3) if accepted else None
+                round(hallucinated / produced, 3) if produced else None
             ),
             "hallucination_interval": (
-                _wilson(hallucinated, accepted) if accepted else None
+                _wilson(hallucinated, produced) if produced else None
             ),
+            "recall": round(found / wanted, 3) if wanted else None,
+            "raw_produced": produced,
+            "accepted": sum(int(row.get("accepted") or 0) for row in mine),
+            "quote_errors": sum(int(row["gold"].get("unsupported_quotes") or 0) for row in graded),
+            "spec_recall": round(specs_found / specs_wanted, 3) if specs_wanted else None,
+            "spec_errors": sum(len(row["gold"].get("spec_errors") or []) for row in graded),
+            "abstention_accuracy": (round(sum(bool(g.get("abstention_correct")) for g in abstentions)
+                                           / len(abstentions), 3) if abstentions else None),
+            "passed": sum(row["gold"].get("pass") is True for row in graded),
+            "graded_runs": len(graded),
+            "failed_runs": sum(bool(row.get("error")) for row in mine),
+            "latency_p50_ms": statistics.median(latencies) if latencies else None,
+            "latency_p95_ms": latencies[max(0, math.ceil(len(latencies) * .95) - 1)] if latencies else None,
+            "tokens_total": sum(int(row["tokens"]) for row in counted) if counted else None,
+            "tokens_mean": round(sum(int(row["tokens"]) for row in counted) / len(counted), 1) if counted else None,
+            "counted_runs": len(counted),
+            "partial_usage_runs": sum(m.get("usage_complete") is False for m in measurements),
+            "tokens_per_accepted_claim": (round(sum(int(row["tokens"]) for row in counted)
+                                               / counted_accepted, 1) if counted_accepted else None),
+            "tokens_in": sum(m["tokens_in"] for m in measurements if m.get("tokens_in") is not None)
+                         if any(m.get("tokens_in") is not None for m in measurements) else None,
+            "tokens_out": sum(m["tokens_out"] for m in measurements if m.get("tokens_out") is not None)
+                          if any(m.get("tokens_out") is not None for m in measurements) else None,
             "runs": len(mine),
-            "note": "" if measured else (
-                "fewer than 2 runs measured for this model — showing the "
-                "known-good default, not a chosen protocol"
+            "note": "" if len(mine) >= MIN_RUNS else (
+                "fewer than 2 runs measured for this configuration; repeat before comparing"
             ),
         })
     return out

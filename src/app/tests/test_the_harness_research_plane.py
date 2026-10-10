@@ -42,6 +42,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from dataclasses import replace
 
 import pytest
 
@@ -269,6 +270,7 @@ def test_every_offered_harness_has_a_tool_grant():
             or "--agent" in one.args
             or "--available-tools" in one.args
             or one.protocol == "agy"
+            or (one.protocol == "codex" and "--sandbox" in one.args and "read-only" in one.args)
         )
         assert has_grant or one.unusable, (
             f"{one.id} is offered with no way to restrict its tools"
@@ -610,7 +612,7 @@ def test_the_login_hint_names_the_cli_that_failed():
     """B146: a Mistral Vibe login failure told the reader to run `claude`."""
     vibe = next(one for one in harness_mod.KNOWN if one.id == "mistral-vibe")
     said = harness_mod._hint("error: not logged in", vibe)
-    assert "`vibe`" in said and "Mistral Vibe" in said
+    assert "`vibe`" in said and vibe.label in said
     assert "claude" not in said.lower()
     assert "{" not in harness_mod._hint("usage limit reached")
 
@@ -1659,11 +1661,9 @@ def test_unverified_headless_entries_are_not_driven(monkeypatch):
         if word.startswith("-")
     )
     monkeypatch.setattr(harness_mod, "declared", lambda _: every_flag)
+    unsupported = replace(harness_mod.KNOWN[0], id="unverified-fixture", unusable="Unverified fixture flags")
+    monkeypatch.setattr(harness_mod, "KNOWN", (*harness_mod.KNOWN, unsupported))
     unverified = [h for h in harness_mod.KNOWN if h.unusable]
-    assert unverified, (
-        "every known CLI now claims to be verified — which is either true, "
-        "and this test should go, or a row lost its reason by accident"
-    )
     for one in unverified:
         assert one.unusable.strip(), f"{one.id} must carry its unverified reason"
         with pytest.raises(NoHarness):
@@ -1780,8 +1780,8 @@ def test_model_lists_are_cached_and_asked_concurrently(monkeypatch):
         clock.sleep(0.3)
         return [f"{one.id}/x"]
 
-    two = [h for h in harness_mod.KNOWN if h.model_source == "models"]
-    assert len(two) >= 2
+    listing = next(h for h in harness_mod.KNOWN if h.model_source == "models")
+    two = [listing, replace(listing, id="listing-fixture", executable="listing-fixture")]
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
     monkeypatch.setattr(harness_mod, "_from_models_command", slow)
     monkeypatch.setattr(harness_mod, "_MODELS", {})
@@ -1820,7 +1820,8 @@ def test_a_model_reaches_the_vector_only_through_a_verified_flag(monkeypatch):
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
     claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
     assert harness_mod.command_for(claude, model="sonnet")[-2:] == ["--model", "sonnet"]
-    opencode = next(h for h in harness_mod.KNOWN if h.id == "opencode")
+    from app.tests.harness_fixtures import row
+    opencode = row("opencode")
     assert harness_mod.command_for(opencode, model="anthropic/x")[-2:] == ["--model", "anthropic/x"]
     agy = next(h for h in harness_mod.KNOWN if h.id == "antigravity-cli")
     assert harness_mod.command_for(agy, model="m")[-2:] == ["--model", "m"]

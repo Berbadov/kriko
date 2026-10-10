@@ -109,12 +109,19 @@ async def lifespan(app: FastAPI):
     # (B151). The extension reloads itself when the digest below is not its
     # own, so an app update reaches the browser without the reader's hands.
     app.state.extension_staged_digest = ""
+    app.state.firefox_staged_digest = ""
     try:
         target = ext.target_for(app.state.settings.store_path)
         if ext.refresh(ext.source_dir(), target):
             log.info("restaged the extension at %s", target)
         if (target / "manifest.json").is_file():
             app.state.extension_staged_digest = ext.content_digest(target)
+        firefox = ext.target_for(app.state.settings.store_path, "firefox")
+        if ext.refresh(ext.source_dir(), firefox, "firefox"):
+            ext.package(firefox, firefox.with_suffix(".xpi"))
+            log.info("restaged the Firefox add-on at %s", firefox)
+        if (firefox / "manifest.json").is_file():
+            app.state.firefox_staged_digest = ext.content_digest(firefox)
     except Exception:
         log.warning("could not refresh the staged extension", exc_info=True)
 
@@ -327,7 +334,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # fetches are exempt from CORS via `host_permissions`, but the
         # allowlist is what makes that not a thing to remember.
         response.headers[ext.MINIMUM_HEADER] = ext.MINIMUM_VERSION
-        staged = getattr(app.state, "extension_staged_digest", "")
+        digest_name = "firefox_staged_digest" if origin.startswith("moz-extension://") else "extension_staged_digest"
+        staged = getattr(app.state, digest_name, "")
         if staged:
             response.headers[ext.STAGED_HEADER] = staged
         response.headers["access-control-expose-headers"] = (

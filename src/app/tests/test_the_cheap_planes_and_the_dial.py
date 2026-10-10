@@ -37,7 +37,8 @@ from app.providers.harness import HarnessResearcher
 
 
 def _one(ident: str):
-    return next(h for h in harness_mod.KNOWN if h.id == ident)
+    from app.tests.harness_fixtures import row
+    return row(ident)
 
 
 # ── the depth dial, all the way down ─────────────────────────────────────────

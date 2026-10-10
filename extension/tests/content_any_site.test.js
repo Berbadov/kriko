@@ -60,3 +60,14 @@ test("a broken JSON-LD block is skipped, not fatal (B149)", () => {
   assert.equal(scrape.product.name, "Thing X1");
   assert.equal(scrape.fields["ld:brand"], "Acme");
 });
+
+test("the reported Megane maintenance listing retains the filter's brand and SKU", () => {
+  const s = page("trendyol_filter.html", "https://www.trendyol.com/bosch/mann-filter-renault-megane-4-1-5-dci-filtre-bakim-seti-2016-2022-3kp-hava-yag-karbonlu-p-1097943932");
+  const scrape = s.buildScrape([], {});
+  assert.equal(scrape.product.typed, true);
+  assert.equal(scrape.fields["ld:@type"], "product");
+  assert.equal(scrape.fields["ld:brand"], "Bosch");
+  assert.equal(scrape.fields["ld:sku"], "1097943932");
+  assert.equal(scrape.fields["ld:pattern"], "Oto Filtre Set");
+  assert.equal(scrape.fields["ld:model"], undefined);
+});

@@ -27,6 +27,13 @@ import time
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 
 from app.providers.local_inference import LocalInferenceError
+from app.providers import local_components
+from app.providers.local_components import evidence, identity
+from app.providers.local_components import plan as plan, triage as triage, verify as verify
+
+REASONING_EFFORT = "none"
+REPLY_MAX_TOKENS = 1024
+
 from kriko.research.politeness import LocalSearchError
 from kriko.research.window import focus
 
@@ -110,7 +117,12 @@ class LocalAsker:
     def __init__(self, plan, complete, search, fetch, *, model: str,
                  search_provider: str, url: str = "",
                  given_queries: list[str] | None = None,
-                 parallel_search: bool = False):
+                 parallel_search: bool = False,
+                 given_sources: dict[str, str] | None = None,
+                 requested_specs: list[str] | None = None):
+        self.given_sources = given_sources
+        self.requested_specs = requested_specs
+        self.metrics: list[dict] = []
         self.given_queries = [str(one).strip() for one in (given_queries or [])
                               if str(one).strip()]
         #: True only for a hosted search service built to take concurrent
@@ -118,8 +130,8 @@ class LocalAsker:
         #: from the reader's own address, and a burst there is how a run
         #: earns a CAPTCHA, so it stays one query at a time.
         self.parallel_search = parallel_search
-        self._plan = plan
-        self._complete = complete
+        self._plan = _MeasuredSocket(plan, self, "plan")
+        self._complete = self._plan if plan is complete else _MeasuredSocket(complete, self, "answer")
         self._search = search
         self._fetch = fetch
         self.model = model
@@ -139,12 +151,49 @@ class LocalAsker:
 
     @property
     def tokens_used(self) -> int | None:
-        total = None
-        for part in (self._plan, self._complete):
-            value = getattr(part, "tokens_used", None)
+        return self._tokens("tokens_used")
+
+    @property
+    def tokens_in(self) -> int | None:
+        return self._tokens("tokens_in")
+
+    @property
+    def tokens_out(self) -> int | None:
+        return self._tokens("tokens_out")
+
+    @property
+    def usage_complete(self) -> bool:
+        return all(getattr(part, "usage_complete", True)
+                   for part in (self._plan, self._complete))
+
+    def _tokens(self, key: str) -> int | None:
+        values = []
+        for part in {id(self._plan): self._plan,
+                     id(self._complete): self._complete}.values():
+            value = getattr(part, key, None)
             if isinstance(value, int) and not isinstance(value, bool):
-                total = (total or 0) + value
-        return total
+                values.append(value)
+        return sum(values) if values else None
+
+    def _measured(self, stage, socket, call):
+        before = {key: getattr(socket, key, None)
+                  for key in ("tokens_in", "tokens_out", "tokens_used")}
+        started = time.perf_counter()
+        failed = False
+        try:
+            return call()
+        except Exception:
+            failed = True
+            raise
+        finally:
+            row = {"stage": stage, "ms": round(
+                (time.perf_counter() - started) * 1000, 3), "failed": failed}
+            for key, value in before.items():
+                now = getattr(socket, key, None)
+                row[key] = (now - (value or 0) if getattr(socket, "last_usage_complete", True)
+                            and isinstance(now, int)
+                            and not isinstance(now, bool) else None)
+            self.metrics.append(row)
 
     def _say(self, line: str) -> None:
         self.telemetry["stages"].append({"elapsed_ms": int((time.monotonic() - getattr(self, "_started", time.monotonic())) * 1000), "message": line})
@@ -156,11 +205,28 @@ class LocalAsker:
             self.check_cancelled()
 
     def ask(self, prompt: str) -> str:
+        if self.given_sources is not None or prompt.startswith("# Quick look:"):
+            delegated = local_components.LocalAsker(
+                self._plan.socket, self._complete.socket, self._search, self._fetch,
+                model=self.model, search_provider=self.search_provider, url=self.url,
+                given_queries=self.given_queries, parallel_search=self.parallel_search,
+                given_sources=self.given_sources, requested_specs=self.requested_specs)
+            delegated.on_action = self.on_action
+            delegated.check_cancelled = self.check_cancelled
+            delegated.replies = self.replies
+            try:
+                return delegated.ask(prompt)
+            finally:
+                self.sources = delegated.sources
+                self.metrics = delegated.metrics
+                self.verification = delegated.verification
+                self.telemetry.update(stages=delegated.metrics, verification=delegated.verification)
+        self.metrics = []
         self._started = time.monotonic()
         self._check()
         self._say(f"asking {self.model} at {self.url or 'this machine'}; "
                   f"searching through {self.search_provider}")
-        queries = self._queries(prompt)
+        queries = identity.anchor_queries(prompt, self._queries(prompt))
         self.telemetry["queries"] = queries
         self._say("searching: " + "; ".join(queries))
         pages = self._read(queries)
@@ -199,7 +265,7 @@ class LocalAsker:
             "Never translate or reconstruct a quote. A passage about a different product "
             "or a general feature cannot support a fault in this product. "
             "Use empty arrays when evidence supports nothing. Do not invent sources.\n"
-            + self.source_instructions + "\n"
+            + identity.GUIDANCE + self.source_instructions + "\n"
             + (f"Worth saying: {principle[:1200]}\n" if principle else "")
             + (f"Installed packs: {packs[:500]}\n" if packs else "")
             + (f"Specification names: {attributes[:300]}\n" if attributes else ""))
@@ -285,7 +351,7 @@ class LocalAsker:
         blocks = []
         for url, text in pages:
             blocks.append(f"SOURCE URL: {url}")
-            pieces = re.split(r"(?<=[.!?])\s+|\n+", text)
+            pieces = evidence.quotes(text, self.identity, limit=48)
             for piece in pieces:
                 piece = piece.strip()
                 if len(piece) < 30:
@@ -521,3 +587,21 @@ class LocalAsker:
                 pages.append((url, text))
                 self.sources[url] = text
         return pages
+
+
+class _MeasuredSocket:
+    """Keep the socket API intact while accounting for each actual call."""
+    def __init__(self, socket, owner, stage):
+        object.__setattr__(self, "socket", socket)
+        object.__setattr__(self, "owner", owner)
+        object.__setattr__(self, "stage", stage)
+
+    def __getattr__(self, name):
+        return getattr(self.socket, name)
+
+    def __setattr__(self, name, value):
+        setattr(self.socket, name, value)
+
+    def __call__(self, prompt):
+        stage = "verify" if prompt.startswith("Check evidence for ") else self.stage
+        return self.owner._measured(stage, self.socket, lambda: self.socket(prompt))
