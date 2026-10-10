@@ -18,9 +18,8 @@ for reasons unrelated to the build ends up disabled. What the app does with
 the engine is *reported* (was `kriko-sidecar` started as its child) and never
 asserted; `smoke_sidecar.py` covers the engine itself.
 
-A second Kriko exits at once when one is already open (one Kriko per
-machine), which this reports as the failure it would otherwise hide: close the
-running one, or it is the running one that was tested.
+The isolated review mode bypasses the normal single-instance redirect, so an
+already installed Kriko cannot accidentally be the executable being tested.
 """
 
 import os
@@ -103,8 +102,13 @@ def main(argv: list[str]) -> int:
         "KRIKO_STORE": str(Path(scratch.name) / "knowledge.sqlite"),
         "KRIKO_APP_STATE": str(Path(scratch.name) / "app.sqlite"),
         "KRIKO_ANALYSES_LOG": str(Path(scratch.name) / "analyses.jsonl"),
+        "KRIKO_LOG": str(Path(scratch.name) / "engine.log"),
         "RUST_BACKTRACE": "1",
+        # This smoke must start the tested binary even while an installed app
+        # is open; its store above and its title remain separate.
+        "KRIKO_VERIFY": "benchmark",
     }
+    environment.pop("KRIKO_URL", None)
     process = subprocess.Popen(
         [str(binary)],
         stdout=subprocess.PIPE,

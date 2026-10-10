@@ -40,6 +40,12 @@ def test_the_local_agent_installs_ollama_and_an_unknown_agent_has_no_install():
     assert not agentinstall.can_install("no-such-agent")
 
 
+def test_the_current_registered_install_wins_over_an_obsolete_path(monkeypatch):
+    monkeypatch.setattr(agentinstall, "_registered_ollama_exe", lambda: "D:/local/Ollama/ollama.exe")
+    monkeypatch.setattr(agentinstall.shutil, "which", lambda *a, **k: "C:/old/Ollama/ollama.exe")
+    assert agentinstall._ollama_exe() == "D:/local/Ollama/ollama.exe"
+
+
 def test_a_cli_install_runs_its_script_then_looks_for_the_cli(monkeypatch, tmp_path):
     ran = []
     monkeypatch.setattr(agentinstall, "_run", lambda script, progress: ran.append(script))
@@ -57,6 +63,7 @@ def test_an_install_that_leaves_the_cli_unfindable_says_so(monkeypatch):
 
 
 def test_the_local_setup_skips_what_is_already_there(monkeypatch):
+    monkeypatch.setattr(agentinstall, "_verify_local", lambda *a: None)
     monkeypatch.setattr(agentinstall, "_answers", lambda base: True)
     monkeypatch.setattr(agentinstall.modelpull, "ollama_base", lambda path=None: "")
     monkeypatch.setattr(agentinstall.modelpull, "installed", lambda base: [{"name": agentinstall.STARTER_MODEL}])
@@ -67,6 +74,7 @@ def test_the_local_setup_skips_what_is_already_there(monkeypatch):
 
 
 def test_the_local_setup_downloads_the_starter_model_when_ollama_has_none(monkeypatch):
+    monkeypatch.setattr(agentinstall, "_verify_local", lambda *a: None)
     pulled = []
     monkeypatch.setattr(agentinstall, "_answers", lambda base: True)
     monkeypatch.setattr(agentinstall.modelpull, "ollama_base", lambda path=None: "http://127.0.0.1:11434")

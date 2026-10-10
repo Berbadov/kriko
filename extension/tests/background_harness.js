@@ -28,7 +28,7 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // file growing a site for the suite's sake.
 function loadBackground({
   routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
-  grantedOrigins = [], responseHeaders = {}, loadedDigest = "", manifest = null,
+  grantedOrigins = [], responseHeaders = {}, loadedDigest = "", manifest = null, firefox = false,
 } = {}) {
   const state = {
     session: {},
@@ -74,6 +74,7 @@ function loadBackground({
   const permissionListeners = [];
   const installedListeners = [];
   const startupListeners = [];
+  const storageListeners = [];
 
   const area = (bucket) => ({
     async get(keys) {
@@ -115,7 +116,8 @@ function loadBackground({
       commands: {
         onCommand: { addListener: (fn) => commandListeners.push(fn) },
       },
-      storage: { session: area(state.session), local: area(state.local) },
+      storage: { session: area(state.session), local: area(state.local),
+        onChanged: { addListener: (fn) => storageListeners.push(fn) } },
       tabs: {
         onUpdated: { addListener() {} },
         async query() { return [{ id: 1 }]; },
@@ -219,6 +221,13 @@ function loadBackground({
     },
   };
   sandbox.self = sandbox;
+  if (firefox) {
+    sandbox.browser = sandbox.chrome;
+    sandbox.browser.runtime.getBrowserInfo = async () => ({ name: "Firefox" });
+    delete sandbox.browser.storage.session.setAccessLevel;
+    // Firefox's chrome namespace cannot be used for Promise-based work.
+    sandbox.chrome = new Proxy({}, { get() { throw new Error("Use Firefox Promise APIs"); } });
+  }
   vm.createContext(sandbox);
   // Staging stamps the worker with the digest of its own files; the source
   // carries a blank one. `loadedDigest` is that stamp, for a test that needs it.
@@ -229,7 +238,7 @@ function loadBackground({
                   { filename: "background.js" });
 
   return { sandbox, state, messageListeners, commandListeners, clickListeners,
-           alarmListeners, permissionListeners, installedListeners, startupListeners };
+           alarmListeners, permissionListeners, installedListeners, startupListeners, storageListeners };
 }
 
 // Calling a message listener the way Chrome does: one shot at

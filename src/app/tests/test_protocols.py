@@ -193,7 +193,7 @@ def test_readout_reports_not_yet_measured_rather_than_a_fabricated_number():
     rows = protocols.readout(raw, [])
     assert len(rows) == 1
     row = rows[0]
-    assert row["protocol"] == STANDARD.name
+    assert row["protocol"] == "wide"
     assert row["usd_per_accepted_claim"] is None
     assert "not yet measured" in row["note"] or "fewer than" in row["note"]
 

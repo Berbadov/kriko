@@ -753,6 +753,16 @@ test("a pack update changes the cache signature even when the scrape has not", a
   assert.notEqual(before, after);
 });
 
+test("changing sold-product identity invalidates the analysis cache", () => {
+  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+  const before = h.sandbox._scrapeSignature({ ...SCRAPE, product: { name: "Host" } }, ADAPTERS);
+  const after = h.sandbox._scrapeSignature({ ...SCRAPE, product: { name: "Filter for Host" } }, ADAPTERS);
+  assert.notEqual(before, after);
+  const legacy = h.sandbox._stableHash({ title: SCRAPE.title || "", fields: SCRAPE.fields || {},
+    packs: ADAPTERS.map((a) => `${a.pack_id}@${a.version || ""}`).sort() });
+  assert.notEqual(after, legacy);
+});
+
 test("a missing verdict is empty rather than invented", async () => {
   // An older engine sends none. The panel must be able to tell "this engine
   // did not say" from "this engine said unrecognised" — the second is an

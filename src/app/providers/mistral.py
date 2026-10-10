@@ -219,7 +219,7 @@ def converse(prompt: str, *, model: str = "", api_key: str = "",
     return reply
 
 
-def completer(model: str = ""):
+def completer(model: str = "", max_tokens: int | None = None):
     """`complete(prompt)` for the paid plane, on Mistral's chat endpoint.
 
     The endpoint speaks the OpenAI wire format, so this is the existing
@@ -228,4 +228,4 @@ def completer(model: str = ""):
     from app.providers import llm
 
     return llm.completer(api_key=require("mistral"), base_url=base_url(),
-                         model=model or DEFAULT_MODEL)
+                         model=model or DEFAULT_MODEL, max_tokens=max_tokens)

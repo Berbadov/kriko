@@ -319,7 +319,7 @@ def cmd_bench(args, store) -> int:
     # still run with --pack, so an author can measure their own bar.
     from app import benchcases
 
-    found = benchcases.case_rows(args.cases)
+    found = benchcases.case_rows(args.cases, getattr(args, "suite", "precision"))
     if not found:
         found = bench_mod.cases(store, pack_id=args.pack or "", limit=args.cases)
     if not found:
@@ -714,6 +714,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(fn=cmd_lookup)
 
     p = sub.add_parser("bench", help="measure the research planes on the same cases")
+    p.add_argument("--suite", choices=("precision", "web"), default="precision",
+                   help="controlled configuration evidence, or legacy live web research")
     p.add_argument("--plane", action="append", default=[],
                    help="harness | api (repeatable; default: whatever runs here)")
     p.add_argument("--cases", type=int, default=3, help="how many subjects")

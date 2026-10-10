@@ -1955,6 +1955,7 @@ def bench_runs(conn: sqlite3.Connection, *, limit: int = 100) -> list[dict]:
             one["gold"] = json.loads(one.pop("gold_json") or "null")
         except ValueError:
             one["gold"] = None
+        one["measurement"] = (one["gold"] or {}).get("measurement", {})
         out.append(one)
     return out
 
