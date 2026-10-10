@@ -15,17 +15,12 @@
 //   * Nothing here interprets a field. If you find yourself adding a branch on
 //     what a label means, it belongs in the pack's adapter JSON.
 
+// Firefox exposes Promise APIs on browser; Chromium uses chrome.
+const extensionApi = typeof browser !== "undefined" ? browser : chrome;
+const IS_FIREFOX = typeof extensionApi.runtime.getBrowserInfo === "function";
+
 const DEFAULT_API_BASE = "http://127.0.0.1:8787";
 const LOADED_CONTENT_DIGEST = "";
-const CONNECTION_ALARM = "kriko-connection";
-const CONNECTION_PERIOD_MINUTES = 1;
-const ACTION_ICONS = {
-  online: { 16: "assets/icons/icon-16.png", 32: "assets/icons/icon-32.png",
-            48: "assets/icons/icon-48.png" },
-  offline: { 16: "assets/icons/icon-offline-16.png",
-             32: "assets/icons/icon-offline-32.png",
-             48: "assets/icons/icon-offline-48.png" },
-};
 
 //: How many rows one search may return to the panel. The engine allows up to
 //: 50; a floating panel beside a listing is a list somebody scans, and the
@@ -50,7 +45,7 @@ const STAGE_KEY_PREFIX = "kriko_stage_";
  *  because the thing narrating it did. */
 async function _stage(url, name, detail = "") {
   try {
-    await chrome.storage.session.set({
+    await extensionApi.storage.session.set({
       [STAGE_KEY_PREFIX + url]: { name, detail, at: Date.now() },
     });
   } catch (_) {
@@ -79,8 +74,8 @@ const inFlightByStorageKey = new Map();
 let nextRunId = 1;
 let adaptersCache = null;
 
-// Expose chrome.storage.session to content scripts. The Hover Lite panel is a
-// content script and relies on chrome.storage.onChanged (session area) to learn
+// Expose extensionApi.storage.session to content scripts. The Hover Lite panel is a
+// content script and relies on extensionApi.storage.onChanged (session area) to learn
 // when a background analysis lands — runtime.sendMessage broadcasts never reach
 // content scripts. Session storage is restricted to trusted contexts by
 // default, so without this the hover panel silently misses results that arrive
@@ -88,7 +83,7 @@ let adaptersCache = null;
 // service-worker top level so it re-applies on every worker startup.
 function _ensureSessionAccessLevel() {
   try {
-    chrome.storage.session
+    extensionApi.storage.session
       .setAccessLevel({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" })
       .catch(() => {});
   } catch (_) {
@@ -97,7 +92,30 @@ function _ensureSessionAccessLevel() {
 }
 _ensureSessionAccessLevel();
 
-chrome.runtime.onInstalled.addListener(_ensureSessionAccessLevel);
+extensionApi.runtime.onInstalled.addListener(_ensureSessionAccessLevel);
+
+// Firefox keeps session storage private to extension pages and has no
+// setAccessLevel API. Deliver only this tab's result/stage through messaging.
+// Page data stays in session memory rather than persistent local storage.
+if (IS_FIREFOX) {
+  extensionApi.storage.onChanged.addListener((changes, area) => {
+    if (area !== "session") return;
+    void (async () => {
+      const tabs = await extensionApi.tabs.query({});
+      for (const tab of tabs) {
+        if (!tab.url || tab.id === undefined) continue;
+        const result = changes[STORAGE_KEY_PREFIX + tab.url]?.newValue;
+        const stage = changes[STAGE_KEY_PREFIX + tab.url]?.newValue;
+        if (result === undefined && stage === undefined) continue;
+        try {
+          await extensionApi.tabs.sendMessage(tab.id, {
+            type: "KRIKO_SESSION_UPDATE", url: tab.url, result, stage,
+          });
+        } catch (_) { /* A permitted tab may not have a panel loaded yet. */ }
+      }
+    })().catch(() => {});
+  });
+}
 
 // Hover Lite is the only in-page surface, and there are two ways to reach it.
 //
@@ -107,7 +125,7 @@ chrome.runtime.onInstalled.addListener(_ensureSessionAccessLevel);
 async function toggleHoverLite(tab) {
   if (!tab || !tab.id) return false;
   try {
-    await chrome.tabs.sendMessage(tab.id, { type: "TOGGLE_HOVER_LITE" });
+    await extensionApi.tabs.sendMessage(tab.id, { type: "TOGGLE_HOVER_LITE" });
     return true;
   } catch (_) {
     // Content script not present (e.g. chrome:// or unsupported host) — ignore.
@@ -132,7 +150,7 @@ async function toggleHoverLite(tab) {
 // tab, at that moment. No new host permission is requested, nothing is read
 // from the page, and the URL leaves the browser only because the reader
 // pressed a button meaning "tell Kriko about this page".
-chrome.action.onClicked.addListener((tab) => { void onToolbarClick(tab); });
+extensionApi.action.onClicked.addListener((tab) => { void onToolbarClick(tab); });
 
 async function onToolbarClick(tab) {
   // Asked before anything is awaited: Chrome accepts `permissions.request`
@@ -160,8 +178,8 @@ const EVERY_SITE = "https://*/*";
 const ANY_SITE_SCRIPT_ID = "kriko-anysite";
 let everySiteGranted = null;   // unknown until asked; the worker restarts often
 
-if (chrome.permissions && chrome.permissions.contains) {
-  chrome.permissions.contains({ origins: [EVERY_SITE] })
+if (extensionApi.permissions && extensionApi.permissions.contains) {
+  extensionApi.permissions.contains({ origins: [EVERY_SITE] })
     .then((yes) => { everySiteGranted = Boolean(yes); })
     .catch(() => {});
 }
@@ -169,12 +187,12 @@ if (chrome.permissions && chrome.permissions.contains) {
 function _askEverySiteOnce(tab) {
   const url = String((tab && tab.url) || "");
   if (everySiteGranted === true || !/^https:/i.test(url)) return null;
-  if (!chrome.permissions || !chrome.permissions.request) return null;
+  if (!extensionApi.permissions || !extensionApi.permissions.request) return null;
   // Not on a site the package already runs on: the panel works there, and a
   // prompt on the reader's usual site would be asking for nothing they need.
   if (staticSiteHosts().has(_hostOf(url))) return null;
   try {
-    return Promise.resolve(chrome.permissions.request({ origins: [EVERY_SITE] }))
+    return Promise.resolve(extensionApi.permissions.request({ origins: [EVERY_SITE] }))
       .then((yes) => { everySiteGranted = Boolean(yes); return yes; })
       .catch(() => false);
   } catch (_) {
@@ -187,9 +205,9 @@ function _askEverySiteOnce(tab) {
 // accepted — declining costs the automatic answer, never the button.
 async function _openPanelHere(tab) {
   const url = String((tab && tab.url) || "");
-  if (!tab || !tab.id || !/^https:/i.test(url) || !chrome.scripting) return false;
+  if (!tab || !tab.id || !/^https:/i.test(url) || !extensionApi.scripting) return false;
   try {
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: SITE_SCRIPTS });
+    await extensionApi.scripting.executeScript({ target: { tabId: tab.id }, files: SITE_SCRIPTS });
   } catch (_) {
     return false;    // a page Chrome keeps extensions out of (the web store, say)
   }
@@ -227,7 +245,7 @@ async function reportUnreadableSite(tab) {
           + "permission yet. Open Kriko's extension options and press Grant: "
           + "only the extension can ask.",
         );
-        if (chrome.runtime.openOptionsPage) chrome.runtime.openOptionsPage();
+        if (extensionApi.runtime.openOptionsPage) extensionApi.runtime.openOptionsPage();
         return true;
       }
       if (row && row.state === "refused") {
@@ -238,7 +256,7 @@ async function reportUnreadableSite(tab) {
       // here — and only here — a reload really is the missing step, and we do
       // it rather than asking for it.
       await notify(tab, "Kriko reads this site. Reloading to show the panel…");
-      if (chrome.tabs && chrome.tabs.reload) await chrome.tabs.reload(tab.id);
+      if (extensionApi.tabs && extensionApi.tabs.reload) await extensionApi.tabs.reload(tab.id);
       return true;
     }
     await notify(
@@ -253,13 +271,13 @@ async function reportUnreadableSite(tab) {
 }
 
 // One line of feedback, in the page, with no content script required.
-// `chrome.scripting.executeScript` under `activeTab` is granted by the click
+// `extensionApi.scripting.executeScript` under `activeTab` is granted by the click
 // itself; a toast that needs a permission the reader has not given would be a
 // message they never see.
 async function notify(tab, text) {
-  if (!tab || !tab.id || !chrome.scripting) return;
+  if (!tab || !tab.id || !extensionApi.scripting) return;
   try {
-    await chrome.scripting.executeScript({
+    await extensionApi.scripting.executeScript({
       target: { tabId: tab.id },
       func: (message) => {
         const box = document.createElement("div");
@@ -289,10 +307,10 @@ async function notify(tab, text) {
 //
 // Unlike the toolbar click there is no tab argument: a command fires at the
 // browser, so the active tab has to be asked for.
-if (chrome.commands && chrome.commands.onCommand) {
-  chrome.commands.onCommand.addListener(async (command) => {
+if (extensionApi.commands && extensionApi.commands.onCommand) {
+  extensionApi.commands.onCommand.addListener(async (command) => {
     if (command !== "toggle-panel") return;
-    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const tabs = await extensionApi.tabs.query({ active: true, currentWindow: true });
     await onToolbarClick(tabs[0]);
   });
 }
@@ -318,7 +336,7 @@ function _normalizeBaseUrl(value) {
 }
 
 async function apiBase() {
-  const stored = await chrome.storage.local.get(["krikoApiBaseUrl"]);
+  const stored = await extensionApi.storage.local.get(["krikoApiBaseUrl"]);
   return _normalizeBaseUrl(stored.krikoApiBaseUrl) || DEFAULT_API_BASE;
 }
 
@@ -402,7 +420,7 @@ function hostHasAnyAdapter(url, adapters) {
 // turn every lookup into an OPTIONS the app does not answer.
 function _ownVersion() {
   try {
-    return String(chrome.runtime.getManifest().version || "");
+    return String(extensionApi.runtime.getManifest().version || "");
   } catch (_) {
     return "";
   }
@@ -448,38 +466,6 @@ async function _fetchApp(url, init) {
   }
 }
 
-// Chrome suspends this worker while it is idle. The toolbar icon is browser
-// state, not worker memory, so refresh it on browser startup and a short alarm.
-// A separate icon leaves the per-tab risk count and question/error badges alone.
-let connectionProbe = null;
-async function refreshConnectionIcon() {
-  if (connectionProbe) return connectionProbe;
-  connectionProbe = (async () => {
-    let connected = false;
-    let version = "";
-    try {
-      const response = await _fetchApp(`${await apiBase()}/api/health`);
-      if (response.ok) {
-        const health = await response.json();
-        connected = health?.ok === true;
-        version = String(health?.version || "");
-      }
-    } catch (_) {
-      // No listener is the ordinary state before Kriko starts.
-    }
-    await chrome.action.setIcon({ path: connected ? ACTION_ICONS.online : ACTION_ICONS.offline });
-    await chrome.action.setTitle({ title: connected
-      ? `Kriko ${version}: connected. Click to open the panel.`
-      : "Kriko: app is not running. Open Kriko to connect." });
-    return connected;
-  })();
-  try {
-    return await connectionProbe;
-  } finally {
-    connectionProbe = null;
-  }
-}
-
 // ── the other half of the handshake ─────────────────────────────────────
 //
 // The app answers with the oldest extension it can talk to, on every
@@ -513,13 +499,13 @@ async function _noteStaged(response) {
   }
   if (!staged || !LOADED_CONTENT_DIGEST || staged === LOADED_CONTENT_DIGEST) return;
   try {
-    const got = await chrome.storage.local.get(SELF_RELOAD_KEY);
+    const got = await extensionApi.storage.local.get(SELF_RELOAD_KEY);
     const last = got && got[SELF_RELOAD_KEY];
     if (last && last.digest === staged && Date.now() - last.at < SELF_RELOAD_QUIET_MS) return;
-    await chrome.storage.local.set({
+    await extensionApi.storage.local.set({
       [SELF_RELOAD_KEY]: { digest: staged, at: Date.now(), pending: true },
     });
-    chrome.runtime.reload();
+    extensionApi.runtime.reload();
   } catch (_) {
     // A worker that cannot reload keeps working on the files it has.
   }
@@ -527,20 +513,26 @@ async function _noteStaged(response) {
 
 // After a self-reload the listing tabs still hold the old content script,
 // cut off from this worker. Refresh them so the panel on screen is the new one.
-chrome.runtime.onInstalled.addListener(async (details) => {
+extensionApi.runtime.onInstalled.addListener(async (details) => {
   if (!details || details.reason !== "update") return;
   try {
-    const got = await chrome.storage.local.get(SELF_RELOAD_KEY);
+    const got = await extensionApi.storage.local.get(SELF_RELOAD_KEY);
     const last = got && got[SELF_RELOAD_KEY];
     if (!last || !last.pending) return;
-    await chrome.storage.local.set({ [SELF_RELOAD_KEY]: { ...last, pending: false } });
+    await extensionApi.storage.local.set({ [SELF_RELOAD_KEY]: { ...last, pending: false } });
     const patterns = [];
-    for (const entry of chrome.runtime.getManifest().content_scripts || []) {
+    for (const entry of extensionApi.runtime.getManifest().content_scripts || []) {
+      for (const one of entry.matches || []) if (!patterns.includes(one)) patterns.push(one);
+    }
+    // Releases use dynamic registration after permission is granted.
+    const registered = await extensionApi.scripting.getRegisteredContentScripts();
+    for (const entry of registered) {
+      if (!entry.id?.startsWith("kriko-")) continue;
       for (const one of entry.matches || []) if (!patterns.includes(one)) patterns.push(one);
     }
     if (!patterns.length) return;
-    for (const tab of await chrome.tabs.query({ url: patterns })) {
-      if (tab && tab.id !== undefined) chrome.tabs.reload(tab.id);
+    for (const tab of await extensionApi.tabs.query({ url: patterns })) {
+      if (tab && tab.id !== undefined) extensionApi.tabs.reload(tab.id);
     }
   } catch (_) {
     // Nothing to refresh is the common case.
@@ -587,7 +579,7 @@ async function _noteMinimum(response) {
     stale: _olderThan(parseVersion(mine), parseVersion(floor)),
   };
   try {
-    await chrome.storage.local.set({ [COMPAT_KEY]: record });
+    await extensionApi.storage.local.set({ [COMPAT_KEY]: record });
   } catch (_) {
     // Nothing to do and nothing lost: the next response says it again.
   }
@@ -595,7 +587,7 @@ async function _noteMinimum(response) {
 
 async function readCompat() {
   try {
-    const stored = await chrome.storage.local.get([COMPAT_KEY]);
+    const stored = await extensionApi.storage.local.get([COMPAT_KEY]);
     return stored[COMPAT_KEY] || null;
   } catch (_) {
     return null;
@@ -634,7 +626,7 @@ async function fetchAdapters() {
 // becomes exactly one match pattern. No hostname list lives in this file, and
 // none should ever be added to it.
 //
-// *Synchronisation.* `chrome.scripting` holds the registration, not this
+// *Synchronisation.* `extensionApi.scripting` holds the registration, not this
 // worker's memory — an MV3 worker is stopped and restarted constantly, and a
 // registration that lived in a variable would evaporate with it. So every
 // sync reads back what Chrome currently has (`getRegisteredContentScripts`)
@@ -709,7 +701,7 @@ function siteToPattern(site) {
 // runtime rather than repeated here, so trimming a static block cannot leave
 // a site silently uncovered by both mechanisms.
 function staticSiteHosts() {
-  const manifest = chrome.runtime.getManifest ? chrome.runtime.getManifest() : {};
+  const manifest = extensionApi.runtime.getManifest ? extensionApi.runtime.getManifest() : {};
   const hosts = new Set();
   for (const block of manifest.content_scripts || []) {
     for (const pattern of block.matches || []) {
@@ -741,18 +733,18 @@ function wantedSites(rows) {
 }
 
 async function _granted(pattern) {
-  if (!chrome.permissions || !chrome.permissions.contains) return false;
+  if (!extensionApi.permissions || !extensionApi.permissions.contains) return false;
   try {
-    return await chrome.permissions.contains({ origins: [pattern] });
+    return await extensionApi.permissions.contains({ origins: [pattern] });
   } catch (_) {
     return false;
   }
 }
 
 async function _registeredSiteScripts() {
-  if (!chrome.scripting || !chrome.scripting.getRegisteredContentScripts) return [];
+  if (!extensionApi.scripting || !extensionApi.scripting.getRegisteredContentScripts) return [];
   try {
-    const all = await chrome.scripting.getRegisteredContentScripts();
+    const all = await extensionApi.scripting.getRegisteredContentScripts();
     return (all || []).filter((s) => String(s.id).startsWith(SITE_SCRIPT_PREFIX));
   } catch (_) {
     return [];
@@ -761,7 +753,7 @@ async function _registeredSiteScripts() {
 
 async function _writeSiteStatus(record) {
   try {
-    await chrome.storage.local.set({ [SITE_SYNC_KEY]: record });
+    await extensionApi.storage.local.set({ [SITE_SYNC_KEY]: record });
   } catch (_) {
     // A status nobody can read is not a reason to undo a registration.
   }
@@ -769,7 +761,7 @@ async function _writeSiteStatus(record) {
 
 async function readSiteStatus() {
   try {
-    const stored = await chrome.storage.local.get([SITE_SYNC_KEY]);
+    const stored = await extensionApi.storage.local.get([SITE_SYNC_KEY]);
     return stored[SITE_SYNC_KEY] || null;
   } catch (_) {
     return null;
@@ -828,9 +820,9 @@ async function syncSites({ fresh = false } = {}) {
   // exists cannot be registered over — `registerContentScripts` rejects the
   // whole call on a duplicate, which would take the new sites down with it.
   const stale = existing.map((s) => s.id).filter((id) => !keep.has(id));
-  if (stale.length && chrome.scripting.unregisterContentScripts) {
+  if (stale.length && extensionApi.scripting.unregisterContentScripts) {
     try {
-      await chrome.scripting.unregisterContentScripts({ ids: stale });
+      await extensionApi.scripting.unregisterContentScripts({ ids: stale });
     } catch (_) {
       // Already gone, or never there. Either way the desired end state is
       // what the next block establishes.
@@ -842,7 +834,7 @@ async function syncSites({ fresh = false } = {}) {
   for (const entry of wanted) {
     if (!missing.includes(entry.id)) continue;
     try {
-      await chrome.scripting.registerContentScripts([{
+      await extensionApi.scripting.registerContentScripts([{
         id: entry.id,
         matches: [entry.pattern],
         js: SITE_SCRIPTS,
@@ -879,12 +871,12 @@ async function syncSites({ fresh = false } = {}) {
 // every host something else already injects on — the manifest's and each
 // `kriko-site-` registration's — so no page ever runs the panel twice.
 async function _syncAnySite() {
-  if (!chrome.scripting || !chrome.scripting.getRegisteredContentScripts) return;
+  if (!extensionApi.scripting || !extensionApi.scripting.getRegisteredContentScripts) return;
   const granted = await _granted(EVERY_SITE);
   everySiteGranted = granted;
   let all = [];
   try {
-    all = (await chrome.scripting.getRegisteredContentScripts()) || [];
+    all = (await extensionApi.scripting.getRegisteredContentScripts()) || [];
   } catch (_) {
     return;
   }
@@ -898,14 +890,14 @@ async function _syncAnySite() {
     && JSON.stringify([...(current.excludeMatches || [])].sort()) === JSON.stringify(exclude);
   if (current && (!granted || !same)) {
     try {
-      await chrome.scripting.unregisterContentScripts({ ids: [ANY_SITE_SCRIPT_ID] });
+      await extensionApi.scripting.unregisterContentScripts({ ids: [ANY_SITE_SCRIPT_ID] });
     } catch (_) {
       // Already gone.
     }
   }
   if (!granted || same) return;
   try {
-    await chrome.scripting.registerContentScripts([{
+    await extensionApi.scripting.registerContentScripts([{
       id: ANY_SITE_SCRIPT_ID,
       matches: [EVERY_SITE],
       excludeMatches: exclude,
@@ -956,36 +948,27 @@ async function _reportActivation(sites) {
 // The alarm is the one that matters: the app is started and stopped
 // independently of the browser, so the first sync after install almost always
 // fails, and something has to try again without the reader doing anything.
-chrome.runtime.onInstalled.addListener(() => {
+extensionApi.runtime.onInstalled.addListener(() => {
   void syncSites({ fresh: true });
-  void refreshConnectionIcon();
 });
-if (chrome.runtime.onStartup) {
-  chrome.runtime.onStartup.addListener(() => {
-    void syncSites({ fresh: true });
-    void refreshConnectionIcon();
-  });
+if (extensionApi.runtime.onStartup) {
+  extensionApi.runtime.onStartup.addListener(() => { void syncSites({ fresh: true }); });
 }
-if (chrome.alarms) {
-  chrome.alarms.create(SITE_SYNC_ALARM, {
+if (extensionApi.alarms) {
+  extensionApi.alarms.create(SITE_SYNC_ALARM, {
     periodInMinutes: SITE_SYNC_PERIOD_MINUTES,
     delayInMinutes: 1,
   });
-  chrome.alarms.create(CONNECTION_ALARM, {
-    periodInMinutes: CONNECTION_PERIOD_MINUTES,
-    delayInMinutes: 1,
-  });
-  chrome.alarms.onAlarm.addListener((alarm) => {
+  extensionApi.alarms.onAlarm.addListener((alarm) => {
     if (alarm && alarm.name === SITE_SYNC_ALARM) void syncSites({ fresh: true });
-    if (alarm && alarm.name === CONNECTION_ALARM) void refreshConnectionIcon();
   });
 }
 // A grant is the event the pending list was waiting for, and a revocation has
 // to take the injection with it — an extension still running on a site the
 // reader took back is the worst failure available here.
-if (chrome.permissions && chrome.permissions.onAdded) {
-  chrome.permissions.onAdded.addListener(() => { void syncSites(); });
-  chrome.permissions.onRemoved.addListener(() => { void syncSites(); });
+if (extensionApi.permissions && extensionApi.permissions.onAdded) {
+  extensionApi.permissions.onAdded.addListener(() => { void syncSites(); });
+  extensionApi.permissions.onRemoved.addListener(() => { void syncSites(); });
 }
 
 // ── the answer, in the shape the panel renders ──────────────────────────
@@ -1164,12 +1147,12 @@ function _isFreshCachedEntry(entry, signature) {
 
 async function _readCachedAnalysis(url, signature) {
   const cacheKey = _localCacheKey(url);
-  const data = await chrome.storage.local.get(cacheKey);
+  const data = await extensionApi.storage.local.get(cacheKey);
   const entry = data[cacheKey];
   if (_isFreshCachedEntry(entry, signature)) return entry;
   if (entry) {
     try {
-      await chrome.storage.local.remove(cacheKey);
+      await extensionApi.storage.local.remove(cacheKey);
     } catch (error) {
       console.warn("[kriko] local result cache cleanup failed", error?.message || error);
     }
@@ -1180,7 +1163,7 @@ async function _readCachedAnalysis(url, signature) {
 async function _writeCachedAnalysis(url, entry) {
   if (!entry || entry.ok !== true) return;
   try {
-    await chrome.storage.local.set({ [_localCacheKey(url)]: entry });
+    await extensionApi.storage.local.set({ [_localCacheKey(url)]: entry });
   } catch (error) {
     console.warn("[kriko] local result cache write failed", error?.message || error);
   }
@@ -1200,8 +1183,8 @@ async function _updateBadgeForResult(result, tabId) {
     badgeColor = "#a3641a"; // medium orange
   }
 
-  await chrome.action.setBadgeText({ text: badgeText, tabId });
-  await chrome.action.setBadgeBackgroundColor({ color: badgeColor, tabId });
+  await extensionApi.action.setBadgeText({ text: badgeText, tabId });
+  await extensionApi.action.setBadgeBackgroundColor({ color: badgeColor, tabId });
 }
 
 // ── scraping ────────────────────────────────────────────────────────────
@@ -1214,21 +1197,21 @@ async function _requestScrape(tabId, labels, panel) {
   // week's rules would be invisible.
   const ask = { type: "GET_SCRAPE", labels, panel };
   try {
-    const reply = await chrome.tabs.sendMessage(tabId, ask);
+    const reply = await extensionApi.tabs.sendMessage(tabId, ask);
     if (reply && reply.ok) return reply;
   } catch (_) {
     // Content script not responding — inject it below.
   }
 
   try {
-    await chrome.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
+    await extensionApi.scripting.executeScript({ target: { tabId }, files: ["content.js"] });
   } catch (_) {
     return null;   // chrome:// or otherwise restricted
   }
 
   await new Promise((resolve) => setTimeout(resolve, 300));
   try {
-    return await chrome.tabs.sendMessage(tabId, ask);
+    return await extensionApi.tabs.sendMessage(tabId, ask);
   } catch (_) {
     return null;
   }
@@ -1297,19 +1280,20 @@ async function runAnalysisForTab(tabId, url, { fresh = false, auto = false } = {
 // them; the agent settles the exact version from them instead of asking.
 // Trimmed here as well as on the server: session storage is small.
 const PAGE_FACTS_PREFIX = "krikoFacts:";
-const PAGE_FACTS_MAX = 40;
+const PAGE_FACTS_MAX = 120;
 
 async function _keepPageFacts(url, scrape) {
   try {
     const facts = {};
     for (const [label, value] of Object.entries((scrape && scrape.fields) || {})) {
       if (Object.keys(facts).length >= PAGE_FACTS_MAX) break;
-      const k = String(label || "").slice(0, 80);
-      const v = String(value == null ? "" : value).slice(0, 200);
+      const k = String(label || "").slice(0, 120);
+      const v = String(value == null ? "" : value).slice(0, 500);
+      if (k === "ld:@type") continue;
       if (k && v) facts[k] = v;
     }
-    const description = String((scrape && scrape.description) || "").slice(0, 1500);
-    await chrome.storage.session.set({ [PAGE_FACTS_PREFIX + url]: { facts, description } });
+    const description = String((scrape && scrape.description) || "").slice(0, 8000);
+    await extensionApi.storage.session.set({ [PAGE_FACTS_PREFIX + url]: { facts, description } });
   } catch (_) {
     // A listing whose facts could not be kept still gets researched by name.
   }
@@ -1318,7 +1302,7 @@ async function _keepPageFacts(url, scrape) {
 async function _pageFacts(url) {
   try {
     const key = PAGE_FACTS_PREFIX + url;
-    const got = await chrome.storage.session.get(key);
+    const got = await extensionApi.storage.session.get(key);
     return (got && got[key]) || null;
   } catch (_) {
     return null;
@@ -1388,7 +1372,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       // happened, and a reader who pressed Refresh wants to know whether
       // they got a fresh answer or the one they already had.
       await _stage(url, "cached", "");
-      await chrome.storage.session.set({ [storageKey]: cachedEntry });
+      await extensionApi.storage.session.set({ [storageKey]: cachedEntry });
       await _updateBadgeForResult(cachedEntry.result, tabId);
       return cachedEntry.result;
     }
@@ -1428,7 +1412,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     // an answer while the narration still claims to be asking for it.
     await _stage(url, "done",
       String(Array.isArray(result.claims) ? result.claims.length : 0));
-    await chrome.storage.session.set({ [storageKey]: entry });
+    await extensionApi.storage.session.set({ [storageKey]: entry });
     await _writeCachedAnalysis(url, entry);
     await _updateBadgeForResult(result, tabId);
     timings.total_ms = _elapsed(totalStartedAt);
@@ -1447,21 +1431,21 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     if (error.hostKnown) errEntry.hostKnown = true;
     if (error.productName) errEntry.productName = error.productName;
     if (scrape) errEntry.listing = { ...(scrape.listing || {}), title: scrape.title || "" };
-    await chrome.storage.session.set({ [storageKey]: errEntry });
+    await extensionApi.storage.session.set({ [storageKey]: errEntry });
     // NO_ADAPTER is not a failure — it's most pages on the internet, which is
     // exactly why the badge used to paint a red "!" on every non-listing page
     // of the one site Kriko *does* read (extension-5, B145 audit). A page
     // this extension was never going to have an opinion on gets no badge.
     if (error.code === "NO_ADAPTER") {
-      await chrome.action.setBadgeText({ text: "", tabId });
+      await extensionApi.action.setBadgeText({ text: "", tabId });
     } else if (error.code === "UNKNOWN_PRODUCT") {
       // Not a failure either: a product nothing installed covers yet, one
       // click from being researched. A question, not an alarm.
-      await chrome.action.setBadgeText({ text: "?", tabId });
-      await chrome.action.setBadgeBackgroundColor({ color: "#5b6472", tabId });
+      await extensionApi.action.setBadgeText({ text: "?", tabId });
+      await extensionApi.action.setBadgeBackgroundColor({ color: "#5b6472", tabId });
     } else {
-      await chrome.action.setBadgeText({ text: "!", tabId });
-      await chrome.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
+      await extensionApi.action.setBadgeText({ text: "!", tabId });
+      await extensionApi.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
     }
     throw error;
   }
@@ -1477,11 +1461,11 @@ async function refreshAnswer(tabId, url, lookupId) {
   if (!row || !row.refreshed || !row.response) return null;
   const result = toViewModel(row.response, await apiBase());
   const storageKey = STORAGE_KEY_PREFIX + url;
-  const got = await chrome.storage.session.get(storageKey);
+  const got = await extensionApi.storage.session.get(storageKey);
   const entry = got && got[storageKey];
   if (entry && entry.ok) {
     const next = { ...entry, result, fetchedAt: Date.now() };
-    await chrome.storage.session.set({ [storageKey]: next });
+    await extensionApi.storage.session.set({ [storageKey]: next });
     await _writeCachedAnalysis(url, next);
   }
   if (tabId) await _updateBadgeForResult(result, tabId);
@@ -1597,7 +1581,7 @@ async function openInApp(route, fallbackUrl) {
   }
 
   if (fallbackUrl) {
-    await chrome.tabs.create({ url: fallbackUrl });
+    await extensionApi.tabs.create({ url: fallbackUrl });
     return { ok: true, raised: false, fallback: true, delivery };
   }
   // Nothing to raise and nowhere to fall back to. Still not an error: the
@@ -1608,7 +1592,34 @@ async function openInApp(route, fallbackUrl) {
 
 // ── messages ────────────────────────────────────────────────────────────
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (IS_FIREFOX && ["SAVE_FOLLOW_UPS", "RESTORE_FOLLOW_UPS"].includes(request.type)) {
+    // Derive the key from the sending tab, never a caller-supplied URL.
+    if (!sender.tab?.url) { sendResponse({ ok: false }); return; }
+    const key = `kriko_followups_${sender.tab.url}`;
+    const action = request.type === "SAVE_FOLLOW_UPS"
+      ? extensionApi.storage.session.set({ [key]: request.value })
+      : extensionApi.storage.session.get(key);
+    action.then((bag) => sendResponse({ ok: true, value: bag?.[key] }))
+      .catch(() => sendResponse({ ok: false }));
+    return true;
+  }
+  if (request.type === "PREPARE_QUICK_SEARCH") {
+    const run = async () => {
+      const tab = sender.tab || (await extensionApi.tabs.query({ active: true, currentWindow: true }))[0];
+      if (!tab?.id) throw new Error("No active tab found.");
+      const url = tab.url || request.payload?.url;
+      const adapters = await fetchAdapters();
+      const adapter = adapterFor(url, adapters);
+      const reply = await _requestScrape(tab.id, adapter?.labels || [], adapter?.local_panel || {});
+      if (!reply?.ok || !reply.payload) throw new Error("Unable to read this page.");
+      const scrape = reply.payload;
+      await _keepPageFacts(url, scrape);
+      return { ok: true, name: scrape.product?.name || scrape.title || "" };
+    };
+    run().then(sendResponse).catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
   if (request.type === "ANALYZE") {
     const url = request.payload?.url;
     if (!url) {
@@ -1619,7 +1630,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const run = async () => {
       let tabId = sender.tab?.id;
       if (!tabId) {
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        const tabs = await extensionApi.tabs.query({ active: true, currentWindow: true });
         tabId = tabs[0]?.id;
       }
       if (!tabId) throw new Error("No active tab found.");
@@ -1728,10 +1739,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: false, error: "Enter a product name or select a subject." });
       return false;
     }
-    const body = subject_id ? { subject_id } : { q, allow_draft: input.allow_draft === true };
+    const body = subject_id
+      ? { subject_id }
+      : {
+          q,
+          allow_draft: input.allow_draft === true,
+          // #114: a quick look is an answer, not a bundle. The deeper draft
+          // (and its install) starts only from the panel's Build press.
+          quick: input.quick !== false,
+          deepen: input.deepen === true,
+        };
     // B148: the listing's own address, so the quick look is held to the bar
     // of the pack whose site this is.
     if (!subject_id && typeof input.url === "string" && input.url) body.url = input.url.slice(0, 2000);
+    if (Number.isInteger(input.max_documents)) body.max_documents = Math.max(1, Math.min(50, input.max_documents));
+    if (Number.isInteger(input.context_chars)) body.context_chars = Math.max(800, Math.min(40000, input.context_chars));
     if (Number.isFinite(input.cap) && input.cap > 0) body.cap = input.cap;
     (body.url ? _pageFacts(body.url) : Promise.resolve(null))
       .then((page) => {
@@ -1896,6 +1918,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // async
   }
 
+  // #112: a follow-up question about a finished quick look. The plane is the
+  // quick look's own; the exchange is read back with QUICK_ASKS below.
+  if (request.type === "QUICK_ASK") {
+    const jobId = String(request.payload?.job_id || "").trim();
+    const q = String(request.payload?.q || "").trim();
+    if (!jobId || !q) {
+      sendResponse({ ok: false, error: "Name the quick look and the question." });
+      return false;
+    }
+    _postApp(`/api/extension/quick-look/${encodeURIComponent(jobId)}/ask`, { q })
+      .then((job) => sendResponse({ ok: true, job }))
+      .catch((error) => sendResponse({
+        ok: false, status: error.status, code: error.code, error: error.message }));
+    return true; // async
+  }
+
+  if (request.type === "QUICK_ASKS") {
+    const jobId = String(request.payload?.job_id || "").trim();
+    if (!jobId) {
+      sendResponse({ ok: false, error: "Missing job_id" });
+      return false;
+    }
+    _getApp(`/api/extension/quick-look/${encodeURIComponent(jobId)}/asks`)
+      .then((reply) => sendResponse({ ok: true, asks: reply.asks || [] }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
+    return true; // async
+  }
+
   /* What the rest of Kriko is doing, right now.
    *
    * The panel could see its own run and nothing else — so a reader whose
@@ -1926,7 +1977,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // consumes the value is a settings screen that can save something the
   // extension then ignores, silently.
   if (request.type === "GET_API_BASE") {
-    chrome.storage.local
+    extensionApi.storage.local
       .get(["krikoApiBaseUrl"])
       .then((stored) => sendResponse({
         ok: true,
@@ -1949,8 +2000,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // Empty means "go back to the default", which is a removal rather than
       // a stored empty string: `apiBase()` falls back on a missing key, and
       // storing "" would be a value that reads as a choice.
-      if (base) await chrome.storage.local.set({ krikoApiBaseUrl: base });
-      else await chrome.storage.local.remove("krikoApiBaseUrl");
+      if (base) await extensionApi.storage.local.set({ krikoApiBaseUrl: base });
+      else await extensionApi.storage.local.remove("krikoApiBaseUrl");
       const stored = base || "";
       adaptersCache = null; // the old app's adapter list is not this one's
       const effective = base || DEFAULT_API_BASE;
@@ -2020,7 +2071,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // listening — and the options page is otherwise buried in the browser's
     // own extension manager.
     try {
-      chrome.runtime.openOptionsPage();
+      extensionApi.runtime.openOptionsPage();
       sendResponse({ ok: true });
     } catch (error) {
       sendResponse({ ok: false, error: error.message });
@@ -2036,7 +2087,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     const storageKey = STORAGE_KEY_PREFIX + url;
-    chrome.storage.session
+    extensionApi.storage.session
       .get(storageKey)
       .then((data) => {
         const entry = data[storageKey];
@@ -2053,8 +2104,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // ── clear the badge on navigation ───────────────────────────────────────
-chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+extensionApi.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === "loading") {
-    chrome.action.setBadgeText({ text: "", tabId }).catch(() => {});
+    extensionApi.action.setBadgeText({ text: "", tabId }).catch(() => {});
   }
 });

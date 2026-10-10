@@ -7,8 +7,7 @@ There are two marks and one design, and the split is the point.
 art that happens to be written as SVG. At the sizes it was drawn for it is the
 right answer and antialiasing is the wrong one: a hairline K closes into a
 smudge at 16px, so the mark is mass, and smearing the grid is how you lose it.
-That is what the extension's toolbar icons are still rendered from, by an
-exact-integer nearest-neighbour scale.
+
 
 `extension/assets/logo-mark-large.svg` is the same letter with room to be one.
 The 1024px master is a 16-cell grid taken that far: eight hard blocks with a
@@ -28,8 +27,9 @@ carry the risk.
 
     python packaging/render_icon.py
 
-Writes `packaging/icon-master.png`, the 1024px master, the two copies the
-frontend serves, and the extension's toolbar icons. The desktop app's own
+Writes `packaging/icon-master.png`, the 1024px master, and the two copies the
+frontend serves; and copies the extension's toolbar icons out of the desktop
+icon. The desktop app's own
 `kriko-gpui/assets/kriko.ico` is a separate, hand-drawn tile (the white K on
 the brand blue, rounded) that the exe and the installer both read; it is not
 derived here, and `test_the_desktop_icon_is_a_whole_ico` holds its shape.
@@ -234,36 +234,38 @@ def smooth_png(shapes, side: int, size: int) -> bytes:
 
 
 
-#: The extension's toolbar icons, and the scale each is rendered at. Every
-#: size Chrome asks for is a whole multiple of the 16-cell grid, which is why
-#: this list is these four numbers and not any four numbers.
-#:
-#: **These were hand-drawn until 0.10.0, and that is the thing that changed.**
-#: A rasterised glyph beside a grid of rects is two people drawing one letter,
-#: and `test_the_app_and_the_extension_show_the_same_letter` existed to catch
-#: them diverging. Deriving both from one source does not catch divergence —
-#: it makes it unrepresentable, which is the better half of that bargain. What
-#: the test now guards is that somebody re-ran this after editing the mark.
-#:
-#: Still the grid, and deliberately: 128px is the largest of these and it is a
-#: toolbar tile, where the blocks read as a mark rather than as a low-res
-#: accident. The large drawing takes over at the app icon, which is the size
-#: that was actually ugly.
-EXTENSION_ICONS = {16: 1, 32: 2, 48: 3, 128: 8}
+#: The extension's toolbar icons are the desktop app's own icon, not a render.
+#: Since 1.0.1 the product has one mark, the white K on the brand plate that
+#: `kriko-gpui/assets/kriko.ico` carries for the exe, the taskbar and the
+#: installer. That file already holds a PNG at every size the manifest asks
+#: for, so the toolbar copies those bytes out rather than drawing a second
+#: version of the letter that could drift from the first.
+EXTENSION_ICONS = (16, 32, 48, 128)
 EXTENSION_DIR = REPO / "extension" / "assets" / "icons"
-#: The one the role check reads back. 32 because that is the size a toolbar
-#: actually shows, so it is the rendering a mistake would be visible in.
-EXTENSION_ICON = EXTENSION_DIR / "icon-32.png"
+DESKTOP_ICO = REPO / "kriko-gpui" / "assets" / "kriko.ico"
 
 
-def offline_grid(pixels: list[list[tuple[int, int, int, int]]]) -> list[list[tuple[int, int, int, int]]]:
-    """Keep the same small K, muted while the local app is unreachable."""
-    ground = pixels[0][0]
-    return [
-        [(37, 43, 53, 255) if pixel == ground else (137, 147, 162, 255)
-         for pixel in row]
-        for row in pixels
-    ]
+PNG_SIGNATURE = bytes([0x89]) + b"PNG" + bytes([13, 10, 26, 10])
+
+
+def ico_images(data: bytes) -> dict[int, bytes]:
+    """Every PNG image in an ICO, by its side length.
+
+    An ICO is a 6-byte header and one 16-byte entry per image (width, height,
+    ..., size, offset); a width byte of 0 means 256. Only PNG entries are
+    returned: a BMP entry would need a second decoder, and the desktop icon
+    has none.
+    """
+    count = struct.unpack("<HHH", data[:6])[2]
+    images = {}
+    for at in range(count):
+        width, _, _, _, _, _, size, offset = struct.unpack(
+            "<BBBBHHII", data[6 + 16 * at: 22 + 16 * at]
+        )
+        blob = data[offset: offset + size]
+        if blob[:8] == PNG_SIGNATURE:
+            images[width or 256] = blob
+    return images
 
 
 def decode(data: bytes) -> tuple[int, int, bytes]:
@@ -395,16 +397,13 @@ def main() -> None:
     print(f"{LARGE_SOURCE.name} -> {WEB_LARGE_TARGET}")
 
     EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
-    disconnected = offline_grid(pixels)
-    for size, scale in sorted(EXTENSION_ICONS.items()):
-        if side * scale != size:
-            raise ValueError(f"{size}px is not {side} cells at {scale}x")
-        (EXTENSION_DIR / f"icon-{size}.png").write_bytes(png(pixels, scale))
-        (EXTENSION_DIR / f"icon-offline-{size}.png").write_bytes(
-            png(disconnected, scale)
-        )
-    print(f"{SOURCE.name} -> {EXTENSION_DIR}/icon-"
-          f"{{{','.join(str(one) for one in sorted(EXTENSION_ICONS))}}}.png")
+    images = ico_images(DESKTOP_ICO.read_bytes())
+    for size in EXTENSION_ICONS:
+        if size not in images:
+            raise ValueError(f"{DESKTOP_ICO.name} has no {size}px PNG image")
+        (EXTENSION_DIR / f"icon-{size}.png").write_bytes(images[size])
+    print(f"{DESKTOP_ICO.name} -> {EXTENSION_DIR}/icon-"
+          f"{{{','.join(str(one) for one in EXTENSION_ICONS)}}}.png")
 
 
 if __name__ == "__main__":

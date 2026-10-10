@@ -23,14 +23,12 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // test has to be able to set it.
 function loadBackground({
   routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
-  grantedOrigins = [], responseHeaders = {}, loadedDigest = "",
+  grantedOrigins = [], responseHeaders = {}, loadedDigest = "", firefox = false,
 } = {}) {
   const state = {
     session: {},
     local: {},
     badge: {},
-    toolbarIcon: null,
-    toolbarTitle: "",
     // Every request the worker made, in order — the wire contract under test.
     requests: [],
     // Every message it sent to a content script.
@@ -68,7 +66,7 @@ function loadBackground({
   const alarmListeners = [];
   const permissionListeners = [];
   const installedListeners = [];
-  const startupListeners = [];
+  const storageListeners = [];
 
   const area = (bucket) => ({
     async get(keys) {
@@ -95,7 +93,7 @@ function loadBackground({
       runtime: {
         onInstalled: { addListener: (fn) => installedListeners.push(fn) },
         reload() { state.selfReloads += 1; },
-        onStartup: { addListener: (fn) => startupListeners.push(fn) },
+        onStartup: { addListener() {} },
         // The worker reads the packaged manifest to find out which sites it
         // does *not* need to register — so the harness hands it the real
         // file, not a summary of it. A manifest edit that drops a static
@@ -109,7 +107,8 @@ function loadBackground({
       commands: {
         onCommand: { addListener: (fn) => commandListeners.push(fn) },
       },
-      storage: { session: area(state.session), local: area(state.local) },
+      storage: { session: area(state.session), local: area(state.local),
+        onChanged: { addListener: (fn) => storageListeners.push(fn) } },
       tabs: {
         onUpdated: { addListener() {} },
         async query() { return [{ id: 1 }]; },
@@ -169,8 +168,6 @@ function loadBackground({
         onClicked: { addListener: (fn) => clickListeners.push(fn) },
         async setBadgeText({ text, tabId }) { state.badge[tabId] = text; },
         async setBadgeBackgroundColor() {},
-        async setIcon({ path }) { state.toolbarIcon = path; },
-        async setTitle({ title }) { state.toolbarTitle = title; },
       },
     },
     fetch: async (url, init) => {
@@ -213,6 +210,13 @@ function loadBackground({
     },
   };
   sandbox.self = sandbox;
+  if (firefox) {
+    sandbox.browser = sandbox.chrome;
+    sandbox.browser.runtime.getBrowserInfo = async () => ({ name: "Firefox" });
+    delete sandbox.browser.storage.session.setAccessLevel;
+    // Firefox's chrome namespace cannot be used for Promise-based work.
+    sandbox.chrome = new Proxy({}, { get() { throw new Error("Use Firefox Promise APIs"); } });
+  }
   vm.createContext(sandbox);
   // Staging stamps the worker with the digest of its own files; the source
   // carries a blank one. `loadedDigest` is that stamp, for a test that needs it.
@@ -223,7 +227,7 @@ function loadBackground({
                   { filename: "background.js" });
 
   return { sandbox, state, messageListeners, commandListeners, clickListeners,
-           alarmListeners, permissionListeners, installedListeners, startupListeners };
+           alarmListeners, permissionListeners, installedListeners, storageListeners };
 }
 
 // Calling a message listener the way Chrome does: one shot at

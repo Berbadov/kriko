@@ -1,0 +1,1 @@
+Sites: allow-list with an add field, how many stored claims came from each site, state and an allow switch. No trust grade. Pages open with a dithered-sky hero (one PNG, the dither performs the fade into `ground`), then glass cards on the grid, with the Working agents rail fixed at 320 px on the right. The consumer provides the data. No page ranks, rates or recommends a product.

@@ -150,6 +150,25 @@ def installed(base: str, *, opener=urllib.request.urlopen) -> list[dict]:
     return out
 
 
+def delete(base: str, model: str, *, opener=urllib.request.urlopen) -> None:
+    """Remove one named model from the Ollama server that owns it."""
+    if not valid_name(model):
+        raise ValueError("That is not a model name Ollama would accept.")
+    request = urllib.request.Request(
+        base.rstrip("/") + "/api/delete",
+        data=json.dumps({"name": model}).encode("utf-8"),
+        headers={"content-type": "application/json"},
+        method="DELETE",
+    )
+    try:
+        with opener(request, timeout=PROBE_TIMEOUT) as response:
+            response.read()
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(_error_text(exc.read()) or f"Ollama answered HTTP {exc.code}") from exc
+    except OSError as exc:
+        raise RuntimeError(f"Ollama did not answer at {base}: {exc}") from exc
+
+
 def _error_text(body: bytes) -> str:
     try:
         said = json.loads(body.decode("utf-8", "replace"))

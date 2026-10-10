@@ -88,10 +88,15 @@ LOCAL_URL = "local_url"
 LOCAL_MODEL = "local_model"
 LOCAL_SEARCH_URL = "local_search_url"
 LOCAL_TIMEOUT = "local_timeout"
-LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT)
+LOCAL_CONTEXT_TOKENS = "local_context_tokens"
+LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT, LOCAL_CONTEXT_TOKENS)
+
+#: The Agents screen's order, comma-separated harness ids, newest first as
+#: the reader arranged them; empty means the engine's own order.
+AGENT_ORDER = "agent_order"
 
 KEYS = (HARNESS, MODEL, SEARCH, *ROLE_KEYS,
-        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS)
+        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, AGENT_ORDER)
 
 
 def for_role(conn, role: str, override: str = "") -> str:

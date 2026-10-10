@@ -87,7 +87,7 @@ impl Tab {
             Tab::Compare => "check / compare",
             Tab::Extension => "check / browser extension",
             Tab::Overview => "knowledge / overview",
-            Tab::Browse => "knowledge / browse",
+            Tab::Browse => "knowledge / subjects",
             Tab::Sites => "system / sites",
             Tab::Activity => "system / activity",
             Tab::Agents => "system / agents",
@@ -102,6 +102,8 @@ impl Tab {
         match self {
             Tab::Extension => "Browser extension",
             Tab::Local => "Local LLM",
+            Tab::Run => "Quick Look",
+            Tab::Browse => "Subjects",
             _ => self.key(),
         }
     }
@@ -109,7 +111,7 @@ impl Tab {
     fn lead(self) -> &'static str {
         match self {
             Tab::Home => "Recent work, saved drafts, and where the knowledge stands.",
-            Tab::Run => "One check, from question to stored claims, every step in the open.",
+            Tab::Run => "A fast, sourced product check, researched by the model on this computer.",
             Tab::History => "Every check you have run, with the evidence it was based on.",
             Tab::Compare => "Up to three subjects side by side, attribute by attribute.",
             Tab::Extension => "Send pages from your browser straight into Kriko's knowledge.",
@@ -119,7 +121,7 @@ impl Tab {
             Tab::Activity => "What Kriko did today, and what is waiting for you.",
             Tab::Agents => "The coding agents on this machine that can reach Kriko.",
             Tab::Benchmark => "How the agents and planes do on a fixed test set, here.",
-            Tab::Local => "Choose a model on this machine and see where its answers come from.",
+            Tab::Local => "A local model, for checks that never leave this machine.",
             Tab::Settings => "Control how Kriko starts, reads and stores things.",
             Tab::About => "Kriko. Local product knowledge.",
         }
@@ -155,15 +157,21 @@ pub enum Field {
     CompareAsk,
     BoardNote,
     RunSearch,
+    QuickLookProduct,
+    QuickLookQuestion,
     LocalUrl,
     LocalSearch,
     LocalGet,
-    ExtensionPort,
 }
 
 pub struct InputState {
     pub value: String,
     pub handle: FocusHandle,
+    /// Character offset from the start; `None` tracks the end after a
+    /// programmatic value update.
+    pub cursor: Option<usize>,
+    /// Character offsets, sorted only when read for drawing/editing.
+    pub selection: Option<(usize, usize)>,
 }
 
 impl InputState {
@@ -171,6 +179,8 @@ impl InputState {
         Self {
             value: String::new(),
             handle: cx.focus_handle(),
+            cursor: None,
+            selection: None,
         }
     }
 }
@@ -203,15 +213,6 @@ impl SpanFilter {
             SpanFilter::Month => 30,
             SpanFilter::Quarter => 90,
             SpanFilter::Half => 180,
-        }
-    }
-
-    pub fn next(self) -> Self {
-        match self {
-            SpanFilter::All => SpanFilter::Month,
-            SpanFilter::Month => SpanFilter::Quarter,
-            SpanFilter::Quarter => SpanFilter::Half,
-            SpanFilter::Half => SpanFilter::All,
         }
     }
 }
@@ -252,14 +253,17 @@ pub struct Kriko {
     pub browse_view: usize,
     pub browse_view_prev: usize,
     pub browse_page: usize,
-    pub browse_page_size: usize,
-    pub browse_filters_open: bool,
     // run: the subject search that starts a check
     pub run_search: InputState,
+    /// Product name for a local-first Quick Look.
+    pub quicklook_product: InputState,
+    pub quicklook_question: InputState,
     // the live actions dock
     pub dock_reply: InputState,
     /// The reply drawer: closed unless you are answering an agent.
     pub dock_reply_open: bool,
+    /// The full live agent logs drawer in the dock.
+    pub dock_logs_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
     pub dock_open: bool,
     // compare: the engine's own rows live in `live.compare`
@@ -270,14 +274,11 @@ pub struct Kriko {
     pub local_url: InputState,
     pub local_search: InputState,
     pub local_get: InputState,
-    pub extension_port_input: InputState,
 }
 
 
 impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
-        let mut extension_port_input = InputState::new(cx);
-        extension_port_input.value = engine::configured_extension_port().to_string();
         let mut app = Self {
             tab: Tab::Home,
             engine: engine::status(),
@@ -293,11 +294,12 @@ impl Kriko {
             browse_view: 0,
             browse_view_prev: 0,
             browse_page: 0,
-            browse_page_size: 25,
-            browse_filters_open: false,
             run_search: InputState::new(cx),
+            quicklook_product: InputState::new(cx),
+            quicklook_question: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
+            dock_logs_open: false,
             dock_feed: Vec::new(),
             dock_open: true,
             compare_note_input: InputState::new(cx),
@@ -305,7 +307,6 @@ impl Kriko {
             local_url: InputState::new(cx),
             local_search: InputState::new(cx),
             local_get: InputState::new(cx),
-            extension_port_input,
         };
         // A verification hook: KRIKO_VERIFY seeds one page's state so it can
         // be captured without driving the mouse on a busy desktop.
@@ -319,15 +320,14 @@ impl Kriko {
             Ok("agents") => {
                 app.tab = Tab::Agents;
             }
+            Ok("benchmark") => {
+                app.tab = Tab::Benchmark;
+            }
             Ok("dock") => {
                 app.dock_reply_open = true;
             }
             _ => {}
         }
-        shell::set_tray_status(
-            matches!(app.engine, engine::Status::Ready { .. }),
-            matches!(app.engine, engine::Status::Failed { .. }),
-        );
         // The pulse: the engine's state, the tray, and what the engine asks
         // of the window, read ten times a second. Each read is a lock and a
         // channel peek, so the pulse costs nothing while nothing happens.
@@ -347,23 +347,19 @@ impl Kriko {
     fn pulse(&mut self, cx: &mut Context<Self>) {
         for action in shell::poll_tray() {
             match action {
-                shell::TrayAction::Open => shell::show_window(),
+                shell::TrayAction::Open => shell::show_window(cx),
                 shell::TrayAction::Quit => Self::quit(cx),
             }
         }
         for event in engine::take_events() {
             match event {
-                engine::ShellEvent::Focus(_route) => shell::show_window(),
+                engine::ShellEvent::Focus(_route) => shell::show_window(cx),
                 engine::ShellEvent::Hide => shell::hide_window(),
                 engine::ShellEvent::Quit => Self::quit(cx),
             }
         }
         let now = engine::status();
         if now != self.engine {
-            shell::set_tray_status(
-                matches!(now, engine::Status::Ready { .. }),
-                matches!(now, engine::Status::Failed { .. }),
-            );
             let became_ready = matches!(now, engine::Status::Ready { .. })
                 && !matches!(self.engine, engine::Status::Ready { .. });
             self.engine = now;
@@ -394,10 +390,11 @@ impl Kriko {
             Field::CompareAsk => &self.compare_question_input,
             Field::BoardNote => &self.compare_note_input,
             Field::RunSearch => &self.run_search,
+            Field::QuickLookProduct => &self.quicklook_product,
+            Field::QuickLookQuestion => &self.quicklook_question,
             Field::LocalUrl => &self.local_url,
             Field::LocalSearch => &self.local_search,
             Field::LocalGet => &self.local_get,
-            Field::ExtensionPort => &self.extension_port_input,
         }
     }
 
@@ -412,24 +409,77 @@ impl Kriko {
             Field::CompareAsk => &mut self.compare_question_input,
             Field::BoardNote => &mut self.compare_note_input,
             Field::RunSearch => &mut self.run_search,
+            Field::QuickLookProduct => &mut self.quicklook_product,
+            Field::QuickLookQuestion => &mut self.quicklook_question,
             Field::LocalUrl => &mut self.local_url,
             Field::LocalSearch => &mut self.local_search,
             Field::LocalGet => &mut self.local_get,
-            Field::ExtensionPort => &mut self.extension_port_input,
         }
+    }
+
+    fn selection_bounds(state: &InputState) -> Option<(usize, usize)> {
+        let count = state.value.chars().count();
+        state.selection.map(|(a, b)| (a.min(b).min(count), a.max(b).min(count)))
+            .filter(|(a, b)| a != b)
+    }
+
+    fn insert_text(state: &mut InputState, text: &str, limit: usize) {
+        let chars: Vec<char> = state.value.chars().collect();
+        let (start, end) = Self::selection_bounds(state)
+            .unwrap_or_else(|| { let at = state.cursor.unwrap_or(chars.len()).min(chars.len()); (at, at) });
+        let room = limit.saturating_sub(chars.len().saturating_sub(end - start));
+        let inserted: Vec<char> = text.chars().take(room).collect();
+        let mut next = Vec::with_capacity(chars.len() - (end - start) + inserted.len());
+        next.extend_from_slice(&chars[..start]);
+        next.extend(inserted.iter().copied());
+        next.extend_from_slice(&chars[end..]);
+        state.value = next.into_iter().collect();
+        state.cursor = Some(start + inserted.len());
+        state.selection = None;
+    }
+
+    fn delete_selection(state: &mut InputState) -> bool {
+        let Some((start, end)) = Self::selection_bounds(state) else { return false };
+        let chars: Vec<char> = state.value.chars().collect();
+        state.value = chars[..start].iter().chain(chars[end..].iter()).collect();
+        state.cursor = Some(start);
+        state.selection = None;
+        true
     }
 
     fn handle_key(this: &mut Kriko, field: Field, event: &KeyDownEvent, cx: &mut Context<Kriko>) {
         let ks = &event.keystroke;
-        // Ctrl+V pastes into the two fields that take a pasted value.
-        if ks.modifiers.control
-            && ks.key.as_str() == "v"
-            && matches!(field, Field::SitesAdd | Field::KeyValue)
-        {
+        let command = ks.modifiers.control || ks.modifiers.platform;
+        // Every app field accepts clipboard editing; the custom GPUI field
+        // keeps its own cursor and selection so these shortcuts work alike.
+        if command && ks.key.as_str() == "v" {
             if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
                 let line = text.lines().next().unwrap_or("").trim().to_string();
-                this.input_mut(field).value.push_str(&line);
+                let state = this.input_mut(field);
+                let limit = if matches!(field, Field::QuickLookProduct | Field::QuickLookQuestion) { 300 } else { 200 };
+                Self::insert_text(state, &line, limit);
                 cx.notify();
+            }
+            return;
+        }
+        if command && ks.key.as_str() == "a" {
+            let state = this.input_mut(field);
+            let count = state.value.chars().count();
+            state.selection = (count > 0).then_some((0, count));
+            state.cursor = Some(count);
+            cx.notify();
+            return;
+        }
+        if command && matches!(ks.key.as_str(), "c" | "x") {
+            let state = this.input_mut(field);
+            if let Some((start, end)) = Self::selection_bounds(state) {
+                let chars: Vec<char> = state.value.chars().collect();
+                let selected: String = chars[start..end].iter().collect();
+                cx.write_to_clipboard(gpui::ClipboardItem::new_string(selected));
+                if ks.key.as_str() == "x" {
+                    Self::delete_selection(state);
+                    cx.notify();
+                }
             }
             return;
         }
@@ -445,6 +495,15 @@ impl Kriko {
         // Enter in the Run search looks the subject up.
         if ks.key.as_str() == "enter" && field == Field::RunSearch {
             this.search_subjects(cx);
+            cx.notify();
+            return;
+        }
+        if ks.key.as_str() == "enter" && matches!(field, Field::QuickLookProduct | Field::QuickLookQuestion) {
+            if field == Field::QuickLookQuestion {
+                this.start_quick_ask(cx);
+            } else {
+                this.start_quick_look(cx);
+            }
             cx.notify();
             return;
         }
@@ -479,10 +538,6 @@ impl Kriko {
             this.local_pull(cx);
             return;
         }
-        if ks.key.as_str() == "enter" && field == Field::ExtensionPort {
-            this.save_extension_port(cx);
-            return;
-        }
         // Enter on the compare question asks it, the same as the Ask key.
         if ks.key.as_str() == "enter" && field == Field::CompareAsk {
             this.ask_compare_question(cx);
@@ -490,16 +545,56 @@ impl Kriko {
             return;
         }
         let state = this.input_mut(field);
+        if matches!(ks.key.as_str(), "left" | "right" | "home" | "end") {
+            let count = state.value.chars().count();
+            let position = state.cursor.unwrap_or(count).min(count);
+            let collapse = Self::selection_bounds(state).map(|(a, b)| {
+                if ks.key.as_str() == "left" || ks.key.as_str() == "home" { a } else { b }
+            });
+            let next = match ks.key.as_str() {
+                "left" => collapse.unwrap_or_else(|| position.saturating_sub(1)),
+                "right" => collapse.unwrap_or_else(|| (position + 1).min(count)),
+                "home" => 0,
+                "end" => count,
+                _ => position,
+            };
+            if ks.modifiers.shift {
+                let anchor = state.selection.map(|(a, b)| if position == a { b } else { a }).unwrap_or(position);
+                state.selection = (anchor != next).then_some((anchor.min(next), anchor.max(next)));
+            } else {
+                state.selection = None;
+            }
+            state.cursor = Some(next);
+            cx.notify();
+            return;
+        }
         match ks.key.as_str() {
             "backspace" => {
-                state.value.pop();
+                if !Self::delete_selection(state) {
+                    let count = state.value.chars().count();
+                    let at = state.cursor.unwrap_or(count).min(count);
+                    if at > 0 {
+                        state.cursor = Some(at - 1);
+                        state.selection = Some((at - 1, at));
+                        Self::delete_selection(state);
+                    }
+                }
             }
-            "space" => state.value.push(' '),
+            "delete" => {
+                if !Self::delete_selection(state) {
+                    let count = state.value.chars().count();
+                    let at = state.cursor.unwrap_or(count).min(count);
+                    if at < count {
+                        state.selection = Some((at, at + 1));
+                        Self::delete_selection(state);
+                    }
+                }
+            }
+            "space" => Self::insert_text(state, " ", if matches!(field, Field::QuickLookProduct | Field::QuickLookQuestion) { 300 } else { 200 }),
             "escape" => {}
             key if key.chars().count() == 1 => {
-                if state.value.len() < 200 {
-                    state.value.push_str(key);
-                }
+                let limit = if matches!(field, Field::QuickLookProduct | Field::QuickLookQuestion) { 300 } else { 200 };
+                Self::insert_text(state, key, limit);
             }
             _ => {}
         }
@@ -526,21 +621,56 @@ impl Kriko {
         let focused = state.handle.is_focused(window);
         let value = state.value.clone();
         let empty = value.is_empty();
+        let shown_value = if field == Field::KeyValue {
+            "•".repeat(value.chars().count())
+        } else {
+            value.clone()
+        };
+        let chars: Vec<char> = shown_value.chars().collect();
+        let position = state.cursor.unwrap_or(chars.len()).min(chars.len());
+        let selection = Self::selection_bounds(state);
         let listener = cx.listener(move |this, event: &KeyDownEvent, _w, cx| {
             Self::handle_key(this, field, event, cx);
         });
-        let caret_base = div().w(px(2.0)).h(px(20.0)).bg(rgb(INK));
-        let caret: gpui::AnyElement = if self.reduce_motion {
-            caret_base.into_any_element()
-        } else {
-            caret_base
-                .with_animation(
+        let caret = || -> gpui::AnyElement {
+            let base = div().w(px(2.0)).h(px(20.0)).bg(rgb(INK));
+            if self.reduce_motion {
+                base.into_any_element()
+            } else {
+                base.with_animation(
                     "blink",
                     Animation::new(std::time::Duration::from_millis(1100)).repeat(),
                     |el, t| el.opacity(if t < 0.5 { 1.0 } else { 0.0 }),
-                )
-                .into_any_element()
+                ).into_any_element()
+            }
         };
+        let mut text = div()
+            .flex_1()
+            .min_w(px(0.0))
+            .flex()
+            .items_center()
+            .font_family(SANS)
+            .text_size(px(16.0));
+        if empty {
+            if focused { text = text.child(caret()); }
+            text = text.child(div().text_color(rgb(DIM)).child(placeholder.to_string()));
+        } else if let Some((start, end)) = selection {
+            text = text.child(chars[..start].iter().collect::<String>());
+            if focused && position == start { text = text.child(caret()); }
+            text = text.child(
+                div()
+                    .rounded(px(2.0))
+                    .bg(rgb(ICE))
+                    .text_color(rgb(GROUND))
+                    .child(chars[start..end].iter().collect::<String>()),
+            );
+            if focused && position != start { text = text.child(caret()); }
+            text = text.child(chars[end..].iter().collect::<String>());
+        } else {
+            text = text.child(chars[..position].iter().collect::<String>());
+            if focused { text = text.child(caret()); }
+            text = text.child(chars[position..].iter().collect::<String>());
+        }
         div()
             .id(id)
             .track_focus(&state.handle)
@@ -562,22 +692,7 @@ impl Kriko {
                     .flex_none()
                     .text_color(rgb(if empty { DIM } else { MUTED }))
             }))
-            .child(if empty {
-                div()
-                    .font_family(SANS)
-                    .text_size(px(16.0))
-                    .text_color(rgb(DIM))
-                    .child(placeholder.to_string())
-                    .into_any_element()
-            } else {
-                div()
-                    .font_family(SANS)
-                    .text_size(px(16.0))
-                    .text_color(rgb(INK))
-                    .child(value)
-                    .into_any_element()
-            })
-            .when(focused, |d| d.child(caret))
+            .child(text)
     }
 
     // ---- sidebar ----
@@ -631,8 +746,9 @@ impl Kriko {
 
 impl Kriko {
     /// The floating top bar. The strip between the sidebar and the LIVE
-    /// toggle is the drag area. GPUI maps its Drag hitbox to the native
-    /// caption hit test, so Windows owns the move gesture. It
+    /// toggle is the drag area: a plain client strip that hands its press
+    /// to Windows as a caption press, because GPUI 0.2.2 cannot start a
+    /// move itself and the platform caption area gets swallowed. It
     /// carries no brand: the sidebar says kriko once, the page head says
     /// where you are.
     /// What the window shows until the engine answers, and instead of a
@@ -732,6 +848,7 @@ impl Kriko {
         });
 
         let zoom_icon = if maximized { "restore" } else { "maximize" };
+        let needs_you = self.live.run.needs_you().len();
 
         titlebar()
             .child(
@@ -777,7 +894,15 @@ impl Kriko {
                                         MUTED
                                     }))
                                     .child(if self.dock_open { "LIVE ON" } else { "LIVE OFF" }),
-                            ),
+                            )
+                            .when(needs_you > 0, |d| {
+                                d.child(tag(
+                                    "titlebar-needs-you",
+                                    TagState::Need,
+                                    &format!("? {needs_you}"),
+                                    !self.reduce_motion,
+                                ))
+                            }),
                     )
                     .child(
                         titlebar_button("win-min", "minus", false)
@@ -807,6 +932,24 @@ impl Render for Kriko {
         let sidebar = self.sidebar(cx);
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
+        let api_error_banner: Option<gpui::AnyElement> = self.live.problem.as_ref().map(|problem| {
+            let message = problem.clone();
+            let retry = cx.listener(|this, _: &ClickEvent, _w, cx| this.refresh_all(cx));
+            div()
+                .mx(px(40.0))
+                .mt(px(16.0))
+                .p(px(12.0))
+                .flex()
+                .items_center()
+                .gap(px(12.0))
+                .rounded(px(10.0))
+                .bg(rgb(DANGER_WASH))
+                .border_1()
+                .border_color(rgb(DANGER))
+                .child(div().flex_1().min_w(px(0.0)).text_color(rgb(INK)).child(message))
+                .child(screens::plate_s("api-error-retry", "Retry").on_click(retry))
+                .into_any_element()
+        });
         let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
             .child(page_head(tab.crumb(), tab.title(), tab.lead()));
         div()
@@ -855,6 +998,7 @@ impl Render for Kriko {
                             // overflows and scrolls instead of every
                             // child being squeezed to fit.
                             .child(hero.flex_none())
+                            .children(api_error_banner)
                             .child(
                                 div()
                                     .flex()

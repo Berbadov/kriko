@@ -136,7 +136,7 @@ class LocalNotReady(RuntimeError):
     what to do. A failed job with that text, never a run of "0 claims"."""
 
 
-def _local_plan(params: dict, *, with_search: bool = True) -> dict:
+def _local_plan(params: dict) -> dict:
     """What a local run uses, resolved off the running server (B171).
 
     The run's own `model` counts only when the server lists it: the Run screen
@@ -149,7 +149,6 @@ def _local_plan(params: dict, *, with_search: bool = True) -> dict:
         params.get("app_state_path"),
         url=str(params.get("llm_base_url") or ""),
         search_url=str(params.get("search_base_url") or ""),
-        with_search=with_search,
     )
     if not plan["ready"]:
         raise LocalNotReady(plan["reason"])
@@ -189,6 +188,9 @@ def _local_asker(settings, params: dict, progress: Progress):
         base_url=plan["url"], serving_name=plan["model"],
         search_base_url=plan["search_url"], search_kind=plan["search_kind"],
         timeout=plan["timeout"],
+        runtime_options=plan.get("runtime_options"),
+        max_documents=int(params.get("max_documents") or 5),
+        context_chars=int(params.get("context_chars") or 6000),
         given_queries=[str(one).strip() for one in (params.get("queries") or [])
                        if str(one).strip()])
     progress.log(f"local plane: {plan['line']}")
@@ -196,24 +198,6 @@ def _local_asker(settings, params: dict, progress: Progress):
     researcher.check_cancelled = progress.check
     researcher.replies = progress.replies
     return researcher
-
-
-def _local_compare_completer(settings, params: dict, progress: Progress):
-    """A saved comparison needs the local model, not a search service.
-
-    The checks have already been read and grounded. Asking the web again
-    spends a planning call, search calls and page context on unrelated pages.
-    This socket sees only the stored table and cannot quietly replace it.
-    """
-    from app.providers.local_inference import OpenAICompatSocket
-
-    plan = _local_plan({**params, "app_state_path": settings.app_state_path},
-                       with_search=False)
-    progress.log(f"local comparison: {plan['line']}; using saved checks only")
-    return OpenAICompatSocket(
-        plan["url"], plan["model"], timeout=plan["timeout"],
-        max_tokens=2048, reasoning_effort="none",
-    )
 
 
 def _researcher(params: dict):
@@ -267,6 +251,7 @@ def _researcher(params: dict):
             search_base_url=plan["search_url"],
             search_kind=plan["search_kind"],
             timeout=plan["timeout"],
+            runtime_options=plan.get("runtime_options"),
             engine=sources and next(iter(sources)) or "",
             scheduler=PolitenessScheduler(sources or {"duckduckgo": 3.5}),
         )
@@ -1834,27 +1819,51 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         packs = ""
     progress.set(0.1, f"a quick look at {product}")
     reply = researcher.ask(
-        quicklook.brief(product, principle, params.get("page"), packs, attributes))
+        quicklook.brief(product, principle, params.get("page"), packs, attributes,
+                        compact=getattr(researcher, "name", "") == "local",
+                        max_sources=int(params.get("max_documents") or 5)))
+    stages = getattr(researcher, "metrics", [])
+    for stage in stages:
+        def counted(key, stage=stage):
+            return str(stage[key]) if stage.get(key) is not None else "unmeasured"
+        progress.log(f"{stage['stage']}: {stage['ms'] / 1000:.3f}s; "
+                     f"input {counted('tokens_in')}, output {counted('tokens_out')}, "
+                     f"total {counted('tokens_used')} tokens"
+                     + ("; failed" if stage.get("failed") else ""))
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
     found = quicklook.parse(reply, getattr(researcher, "sources", None))
-    kept = len(found["risks"])
+    # A source containing the quotation can still fail to support the claim.
+    verification = getattr(researcher, "verification", None)
+    if isinstance(verification, dict) and verification.get("unsupported"):
+        found = quicklook.apply_verification(found, verification)
+        progress.log("self-check: " + "; ".join(
+            f"{one.get('title') or 'a risk'} ({one.get('reason') or 'not carried'})"
+            for one in verification["unsupported"] if isinstance(one, dict)))
     spent = getattr(researcher, "spent", None)
     billed = getattr(researcher, "cost_basis", "") == "per_token"
-    progress.set(1.0, (
-        f"{kept} risk(s) found" if kept else "nothing it could source in the time")
+    result_message = quicklook.outcome(
+        reply, found, finish_reason=str(getattr(researcher, "last_finish_reason", "")))
+    progress.set(1.0, result_message
         + (f", {found['dropped']} unsourced dropped" if found["dropped"] else "")
         + ((f", ${spent:.2f}" if spent is not None else ", cost unknown") if billed else ""))
     return {
         "product": product,
         **found,
+        "verification": verification,
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
         "harness": getattr(getattr(researcher, "harness", None), "id", ""),
         "model": str(getattr(researcher, "model", "") or ""),
         "cost_basis": getattr(researcher, "cost_basis", "subscription"),
         "spent_usd": spent if billed else None,
         "tokens_used": getattr(researcher, "tokens_used", None),
+        "measurement": {
+            "tokens_in": getattr(researcher, "tokens_in", None),
+            "tokens_out": getattr(researcher, "tokens_out", None),
+            "usage_complete": getattr(researcher, "usage_complete", None),
+            "stages": stages,
+        },
     }
 
 
@@ -1897,6 +1906,64 @@ QUICK_WAIT_SECONDS = QUICK_LOOK_TIMEOUT_SECONDS + 60
 #: moment after this job, so a longer silence means there is none (a retry, or
 #: a caller that started this job alone).
 QUICK_APPEAR_SECONDS = 5.0
+QUICK_POLL_SECONDS = 0.2
+
+
+def quick_ask(settings, params: dict, progress: Progress) -> dict:
+    """A follow-up question about a finished quick look, answered from it.
+
+    The panel's question box (#112). No search, no new pages: the reply is
+    the quick look's own findings or an explicit "these do not answer that",
+    on the same plane the quick look ran on. A job rather than a reply because
+    a local model on a CPU takes minutes, and the exchange is what the reader
+    comes back for — the rows survive the panel closing.
+    """
+    from app import quicklook as quicklook_mod
+    from app.providers import harness_researcher
+
+    quick_id = str(params.get("quick_job_id") or "").strip()
+    question = str(params.get("q") or "").strip()
+    if not quick_id or not question:
+        raise ValueError("a follow-up names its quick look and its question")
+    conn = connect(settings.app_state_path)
+    try:
+        row = state.get_job(conn, quick_id)
+    finally:
+        conn.close()
+    if row is None or row.get("kind") != "quick_look" or not row.get("done"):
+        raise ValueError(f"no finished quick look {quick_id} to ask about")
+
+    quick_params = row.get("params") or {}
+    product = str(quick_params.get("product") or "").strip()
+    progress.set(0.2, f"answering from the quick look at {product}")
+    if _use_local_ask(settings, params):
+        researcher = _local_asker(settings, params, progress)
+    else:
+        researcher = harness_researcher(
+            preferred=str(params.get("harness") or ""),
+            app_state_path=settings.app_state_path,
+            timeout=QUICK_LOOK_TIMEOUT_SECONDS,
+            effort="low",
+        )
+    _cap_agent(researcher, params)
+    researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
+
+    found = row.get("result") or {}
+    reply = researcher.ask(quicklook_mod.follow_up(
+        question,
+        str(found.get("assumed") or ""),
+        found.get("risks") or [],
+        found.get("specs") or [],
+    ))
+    progress.check()
+    progress.set(1.0, "answered")
+    return {
+        "product": product,
+        "q": question,
+        "answer": str(reply or "").strip(),
+        "quick_job_id": quick_id,
+    }
 QUICK_POLL_SECONDS = 0.2
 
 
@@ -2569,11 +2636,16 @@ def bench(settings, params: dict, progress: Progress) -> dict:
 
     conn = connect(settings.store_path)
     try:
-        chosen = [
+        requested = [
             one.strip()
             for one in str(params.get("planes") or "").split(",")
             if one.strip()
-        ] or bench_mod.planes_available(settings)
+        ]
+        chosen = requested or bench_mod.planes_available(settings, controlled=params.get("suite", "precision") == "precision")
+        if params.get("suite") == "web":
+            if "api" in requested:
+                raise ValueError("live web benchmarks require the local or harness plane; use configuration accuracy for direct API models")
+            chosen = [plane for plane in chosen if plane != "api"]
         if not chosen:
             raise ValueError(
                 "no plane can run here: install a coding-agent CLI for the "
@@ -2587,7 +2659,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         # A pack's gold set still runs when named, so an author can measure
         # their own bar; it is never the default.
         from app import benchcases
-        found = benchcases.case_rows(limit)
+        found = benchcases.case_rows(limit, str(params.get("suite") or "precision"))
         graded = bool(found)
         if not found:
             found = bench_mod.gold_cases(conn, pack_id=pack_id, limit=limit)
@@ -2640,7 +2712,8 @@ def bench(settings, params: dict, progress: Progress) -> dict:
         # harness CLIs' names with the paid catalogue's made runs that could
         # only fail.
         runs_of = bench_mod.pairs(
-            chosen, [one for one in models_asked if one], bench_mod.llm_owners(),
+            chosen, [one for one in models_asked if one],
+            bench_mod.llm_owners(settings.app_state_path) if any(models_asked) else {},
         )
         total = (
             len(found) * len(runs_of) * len(protocols_asked)
@@ -2668,7 +2741,7 @@ def bench(settings, params: dict, progress: Progress) -> dict:
                         protocol=protocol,
                         max_documents=int(params.get("max_documents") or 3),
                         budget_usd=float(
-                            params.get("budget_usd") or bench_mod.DEFAULT_BUDGET_USD
+                            params.get("budget_usd", bench_mod.DEFAULT_BUDGET_USD)
                         ),
                         batch_id=batch_id,
                         search=search,
@@ -2779,26 +2852,7 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     progress.set(0.05, "lining up the shortlist")
     for stored in answers:
         progress.log(f"{stored['label']}: {len(stored['response'].get('claims') or [])} known risk(s)")
-    local = _use_local_ask(settings, params)
-    agent: dict = {}
-    if local:
-        completer = _local_compare_completer(settings, params, progress)
-        brief = _compare_brief(
-            question, answers,
-            max_chars=max(3000, completer.context_chars - 2500),
-        )
-        progress.log(f"comparison brief: {len(brief)} characters from saved checks; no web search")
-        progress.set(0.2, f"asking: {question[:120]}")
-        reply = completer(brief).strip()
-        progress.check()
-    else:
-        brief = _compare_brief(question, answers)
-
-        def report_agent(identity: dict) -> None:
-            agent.update(identity)
-
-        reply = _ask_about_checks(settings, params, progress, brief,
-                                  on_agent=report_agent)
+    reply = _ask_about_checks(settings, params, progress, _compare_brief(question, answers))
     progress.log(reply[:4000] or "(the agent printed nothing)")
     progress.set(0.9, "writing the answer down")
     app_state = state.connect(settings.app_state_path)
@@ -2810,20 +2864,7 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     if not row:
         raise ValueError("the question is gone — the draft was deleted while it ran")
     progress.set(1.0, "answered" if reply else "the agent printed nothing")
-    source_summary = [
-        {"name": str(stored["label"]),
-         "risks": len(stored["response"].get("claims") or [])}
-        for stored in answers
-    ]
-    return {
-        "draft_id": draft_id, "question_id": question_id, "answer": reply,
-        "source": "saved checks", "saved_checks": source_summary,
-        "brief_chars": len(brief), "web_searches": 0 if local else None,
-        "model": str(getattr(completer, "model", "") if local else agent.get("model", "")),
-        "tokens_used": getattr(completer, "tokens_used", None) if local else None,
-        "tokens_in": getattr(completer, "tokens_in", None) if local else None,
-        "tokens_out": getattr(completer, "tokens_out", None) if local else None,
-    }
+    return {"draft_id": draft_id, "question_id": question_id, "answer": reply}
 
 
 def lookup_ask(settings, params: dict, progress: Progress) -> dict:
@@ -2881,7 +2922,6 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     local = _use_local_ask(settings, params)
     if local:
         researcher = _local_asker(settings, params, progress)
-
     else:
         if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
             raise ValueError(
@@ -2915,9 +2955,7 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     return reply
 
 
-
-def _compare_brief(question: str, answers: list[dict], *,
-                   max_chars: int | None = None) -> str:
+def _compare_brief(question: str, answers: list[dict]) -> str:
     """The table the question is about, as the agent's own reading material.
 
     Every word of it comes from the stored answers themselves — labels,
@@ -2932,13 +2970,9 @@ def _compare_brief(question: str, answers: list[dict], *,
         "",
         "Answer about the products below, using their recorded risks and "
         "specifications. Where the records do not answer the question, say "
-        "so plainly rather than guessing. Do not invent risks. A product "
-        "with no recorded risk is not proven risk-free. Name the product and "
-        "recorded risk behind each conclusion.",
+        "so plainly rather than guessing. Do not invent risks.",
         "",
     ]
-    if max_chars is not None:
-        return _compact_compare_brief(lines, question, answers, max_chars)
     for stored in answers:
         response = stored["response"]
         lines.append(f"## {stored['label']}")
@@ -2962,71 +2996,6 @@ def _compare_brief(question: str, answers: list[dict], *,
                 lines.append(f"- {key}: {value}{(' ' + unit) if unit else ''}")
         lines.append("")
     return "\n".join(lines)
-
-
-def _compact_compare_brief(lines: list[str], question: str,
-                           answers: list[dict], max_chars: int) -> str:
-    """Give each product a fair share of a small model's context.
-
-    Claim order is the lookup's ranking. Question word overlap brings a
-    directly relevant claim forward without another model call. Anything
-    omitted is counted, so a short brief cannot masquerade as full coverage.
-    """
-    import re
-
-    words = {w for w in re.findall(r"\w{2,}", question.casefold())
-             if w not in {"which", "what", "this", "that", "with", "from", "these", "about"}}
-    lines.insert(-1, "Severity order, most to least serious: critical > high > medium > low. "
-                 "For a severity comparison, check that order before deciding. "
-                 "Severity alone does not establish repair cost.")
-    # Long questions compete with all four product sections for one context.
-    # Keep enough room for every product before deciding how much to retain.
-    fixed_head = len("\n".join(lines)) - len(question)
-    question_room = max(200, max_chars - fixed_head - len(answers) * 260)
-    if len(question) > question_room:
-        lines[1] = f"QUESTION: {question[:question_room - 23]} [question truncated]"
-    head = "\n".join(lines)
-    share = max(0, (max_chars - len(head) - len(answers) * 2)
-                // max(1, len(answers)))
-    sections = []
-    for stored in answers:
-        response = stored["response"]
-        claims = response.get("claims") or []
-        title = f"## {str(stored['label'])[:120]}"
-        section = [title, f"Recorded risks: {len(claims)} total."]
-        room = share - len("\n".join(section)) - 80
-        units = _context_units_of(response)
-        for key, value in sorted((response.get("context") or {}).items()):
-            item = f"- {str(key)[:80]}: {str(value)[:120]} {str(units.get(key, ''))[:30]}".rstrip()
-            if len(item) + 1 > room:
-                break
-            section.append(item)
-            room -= len(item) + 1
-        ranked = sorted(enumerate(claims), key=lambda pair: (
-            -len(words & set(re.findall(r"\w{2,}",
-                " ".join(str(pair[1].get(k) or "") for k in ("title", "body", "advice")).casefold()))),
-            pair[0],
-        ))
-        shown = 0
-        for _, claim in ranked:
-            item = (f"- [{str(claim.get('severity') or '')[:20]}] "
-                    f"{str(claim.get('title') or '')[:160]}: "
-                    f"{str(claim.get('body') or '')[:340]}")
-            if claim.get("advice"):
-                item += f" (advice: {str(claim['advice'])[:180]})"
-            if len(item) + 1 > room:
-                continue
-            section.append(item)
-            room -= len(item) + 1
-            shown += 1
-        if shown < len(claims):
-            section.append(f"Risks shown: {shown} of {len(claims)}; {len(claims) - shown} "
-                           "recorded risks omitted from this brief.")
-        else:
-            section.append(f"Risks shown: all {len(claims)} recorded risks. "
-                           "Unrecorded risks may still exist.")
-        sections.append("\n".join(section))
-    return head + "\n" + "\n\n".join(sections)
 
 
 def _context_units_of(response: dict) -> dict:
@@ -3060,6 +3029,7 @@ HANDLERS = {
     "pack_build": pack_build,
     "pack_author": pack_author,
     "quick_look": quick_look,
+    "quick_ask": quick_ask,
     "pack_amend": pack_amend,
     "verify": verify,
     "site_register": site_register,

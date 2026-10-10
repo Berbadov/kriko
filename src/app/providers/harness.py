@@ -86,9 +86,9 @@ SEARCH_TOOLS = ("WebSearch", "WebFetch")
 #: is granted: search was never refused, and a second search tool is only a
 #: second place to spend the run's budget. The tool names are read off the
 #: server's own `tools/list`, not written from memory.
-READER_SERVER = "exa"
-READER_URL = "https://mcp.exa.ai/mcp"
-READER_TOOLS = ("web_fetch_exa",)
+READER_SERVER = "parallel"
+READER_URL = "https://search.parallel.ai/mcp"
+READER_TOOLS = ("web_fetch",)
 
 #: Where the per-run config is written, inside the run's own folder.
 READER_CONFIG_FILE = "kriko-page-reader.mcp.json"
@@ -911,6 +911,7 @@ def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
             text=True, encoding="utf-8", errors="replace",
             env={**os.environ, **CHILD_ENCODING_ENV},
             start_new_session=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except Exception:  # noqa: BLE001 — a CLI that will not start declares nothing
         return ""
@@ -2766,6 +2767,7 @@ class HarnessResearcher(AgentResearcher):
                 # deadline, still holding the reader's subscription on a
                 # search that will never be read.
                 start_new_session=True,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
         except FileNotFoundError as exc:
             raise NoHarness(
@@ -3135,6 +3137,7 @@ class HarnessResearcher(AgentResearcher):
                 subprocess.run(
                     ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
                     capture_output=True, timeout=10,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
             else:
                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)

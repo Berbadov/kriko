@@ -14,12 +14,6 @@ from app.providers import local_agent
 from app.providers.local_inference import LocalInferenceError
 
 
-@pytest.fixture(autouse=True)
-def short_pages_count(monkeypatch):
-    """The stub pages here are a few words; a real page is not."""
-    monkeypatch.setattr(local_agent, "MIN_PAGE_CHARS", 0)
-
-
 class Plan:
     """The socket that proposes queries; scripted per test."""
 
@@ -145,236 +139,268 @@ def test_pages_are_read_side_by_side_not_one_after_another():
         model="m", search_provider="stub")
     asker.on_action = lambda line: None
     asker.ask("widget")
-    assert len(complete.prompts) == 1
+    # One answer prompt carrying every page. The self-check after it, and the
+    # shape repair an empty reply earns, are further calls by design; the
+    # answer is still one completion, not one per page.
+    answers = [one for one in complete.prompts
+               if "These are the only sources you have" in one
+               and "Your last reply" not in one]
+    assert len(answers) == 1
 
 
-def test_the_searches_go_out_together_on_a_hosted_search():
-    """Three queries, three searches in flight at once, not one by one."""
-    inside: list[int] = []
-    lock = threading.Lock()
-    all_in = threading.Event()
+class Scripted:
+    """A socket with one reply per call, for the rounds that ask twice."""
 
-    def gate():
-        with lock:
-            inside.append(1)
-            if len(inside) >= 3:
-                all_in.set()
-        assert all_in.wait(5.0), "searches ran one at a time"
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.prompts = []
 
-    plan = Plan('["q1", "q2", "q3"]')
+    def __call__(self, prompt):
+        self.prompts.append(prompt)
+        reply = self.replies.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+
+def test_a_broken_json_plan_reply_is_repaired_not_fatal():
+    plan = Scripted(["i will help you search!", "ok, searching now", '["q1"]'])
+    complete = Complete()
     asker = local_agent.LocalAsker(
-        plan, Complete(),
-        searcher([{"url": "https://a.test/1", "title": "A"}], gate=gate),
+        plan, complete,
+        searcher([{"url": f"https://a.test/{n}", "title": str(n)}
+                   for n in range(3)]),
+        reader({f"https://a.test/{n}": f"text {n}" for n in range(3)}),
+        model="m", search_provider="stub")
+    said = []
+    asker.on_action = said.append
+    asker.ask("widget problems")
+    # Three asks of the planner: the first reply, the repair re-ask, the
+    # one that held the shape. Round one found three pages, so no fourth
+    # (the round-two refinement) was ever needed.
+    assert len(plan.prompts) == 3
+    assert "Your last reply" in plan.prompts[1]
+    assert any(line.startswith("query reply was not a JSON array")
+               for line in said)
+    assert "text 0" in complete.prompts[0]
+
+
+def test_a_model_that_never_holds_the_shape_falls_back_to_plain_queries():
+    asked = []
+    plan = Scripted(["no", "still no", "no json at all"])
+    complete = Complete()
+    asker = local_agent.LocalAsker(
+        plan, complete,
+        searcher([{"url": "https://a.test/1", "title": "A"}], started=asked),
         reader({"https://a.test/1": "text"}),
-        model="m", search_provider="stub", parallel_search=True)
-    asker.on_action = lambda line: None
-    asker.ask("widget")
-    assert len(inside) == 3
+        model="m", search_provider="stub")
+    said = []
+    asker.on_action = said.append
+    task = ("# Quick look: what is known to go wrong with this one?\n\n"
+            "    Acme Widget Pro W200\n\nSomeone is looking at this.")
+    asker.ask(task)
+    assert asked[:3] == ["Acme Widget Pro W200 problems",
+                         "Acme Widget Pro W200 failures",
+                         "Acme Widget Pro W200 owner reports"]
+    assert any(line.startswith("fell back to plain queries") for line in said)
 
 
-def test_a_local_scraper_is_searched_one_query_at_a_time():
-    """No burst at a public search engine from the reader's own address."""
-    inside = [0]
-    most = [0]
-    lock = threading.Lock()
+def test_the_second_round_searches_what_the_first_missed():
+    asked = []
 
     def search(query, limit):
-        with lock:
-            inside[0] += 1
-            most[0] = max(most[0], inside[0])
-        import time
-        time.sleep(0.05)
-        with lock:
-            inside[0] -= 1
-        return [{"url": f"https://a.test/{query}", "title": query}]
+        asked.append(query)
+        if "problems" in query:
+            return [{"url": "https://a.test/only", "title": "one"}]
+        return [{"url": "https://a.test/new", "title": "new"}]
 
+    plan = Scripted(['["widget problems"]', '["widget teardown"]'])
+    complete = Complete()
     asker = local_agent.LocalAsker(
-        Plan('["q1", "q2", "q3"]'), Complete(), search,
-        reader({f"https://a.test/q{i}": "text" for i in (1, 2, 3)}),
-        model="m", search_provider="openserp")
-    asker.on_action = lambda line: None
-    asker.ask("widget")
-    assert most[0] == 1
-
-
-def test_only_the_hosted_search_is_asked_in_parallel(monkeypatch):
-    from app import providers
-    from app.providers import exa_mcp, openserp
-
-    monkeypatch.setattr(exa_mcp, "search_with_fallback", lambda: (lambda q, n: []))
-    monkeypatch.setattr(openserp, "searcher", lambda base: (lambda q, n: []))
-    hosted = providers.local_asker(base_url="http://127.0.0.1:1", serving_name="m",
-                                   search_kind="exa")
-    scraped = providers.local_asker(base_url="http://127.0.0.1:1", serving_name="m")
-    assert hosted.parallel_search and not scraped.parallel_search
-
-
-def test_a_page_that_never_answers_does_not_hold_the_run(monkeypatch):
-    """The slow page is abandoned at the deadline; the others are read."""
-    monkeypatch.setattr(local_agent, "READ_DEADLINE", 0.5)
-    stuck = threading.Event()
-    said: list[str] = []
-
-    def fetch(url):
-        if url.endswith("/slow"):
-            stuck.wait(10.0)
-            return "too late"
-        return "the readable page"
-
-    asker = local_agent.LocalAsker(
-        Plan('["q"]'), Complete(),
-        searcher([{"url": "https://a.test/slow", "title": "S"},
-                  {"url": "https://a.test/fast", "title": "F"}]),
-        fetch, model="m", search_provider="stub")
+        plan, complete, search,
+        reader({"https://a.test/only": "the one readable page",
+                "https://a.test/new": "the page round two found"}),
+        model="m", search_provider="stub")
+    said = []
     asker.on_action = said.append
-    import time
-    started = time.monotonic()
     asker.ask("widget")
-    stuck.set()
-    assert time.monotonic() - started < 5.0
-    assert list(asker.sources) == ["https://a.test/fast"]
-    assert any("slow page" in line for line in said)
+    # One readable page after round one, so round two ran, and its query
+    # found a page round one's query never named.
+    assert asked == ["widget problems", "widget teardown"]
+    assert any(line.startswith("searching again") for line in said)
+    prompt = complete.prompts[0]
+    assert "the one readable page" in prompt
+    assert "the page round two found" in prompt
 
 
-def test_a_long_page_is_cut_around_the_queries_not_from_the_top():
-    """The window a small model reads is the page's part about the subject.
+def test_a_full_first_round_never_pays_for_a_second():
+    asked = []
 
-    The kept text is also what the quotes are checked against, so a quote
-    from the part the model never saw is still refused.
-    """
-    menu = "\n\n".join(f"Menu entry number {i} of the site" for i in range(400))
-    page = ("Widget page\n\n" + menu
-            + "\n\nThe widget gearbox fails at 60 000 km, owners report.")
+    def search(query, limit):
+        asked.append(query)
+        return [{"url": f"https://a.test/{n}", "title": str(n)}
+                for n in range(3)][:limit]
+
+    plan = Scripted(['["q1"]', '["should never be asked"]'])
+    complete = Complete()
     asker = local_agent.LocalAsker(
-        Plan('["widget gearbox fails"]'), Complete(),
-        searcher([{"url": "https://a.test/1", "title": "A"}]),
-        reader({"https://a.test/1": page}),
+        plan, complete, search,
+        reader({f"https://a.test/{n}": f"page {n}" for n in range(3)}),
         model="m", search_provider="stub")
     asker.on_action = lambda line: None
     asker.ask("widget")
-    kept = asker.sources["https://a.test/1"]
-    assert len(kept) <= local_agent.PAGE_CHARS
-    assert "gearbox fails at 60 000 km" in kept
-    assert kept.startswith("Widget page")
+    assert asked == ["q1"]
+    assert len(plan.prompts) == 1
 
 
-def test_a_stub_page_is_a_miss_and_a_spare_takes_its_place(monkeypatch):
-    """A cookie wall or an 'access denied' is not one of the pages read."""
-    monkeypatch.setattr(local_agent, "MIN_PAGE_CHARS", 80)
-    monkeypatch.setattr(local_agent, "MAX_PAGES", 1)
+def test_pages_are_sized_to_the_model_s_own_context():
+    long_text = "battery drains fast on this device " * 120
+    other_text = "unrelated shipping policy boilerplate " * 120
+    plan = Plan('["q"]')
+    complete = Complete()
+    complete.context_chars = 5000
     asker = local_agent.LocalAsker(
-        Plan('["q"]'), Complete(),
-        searcher([{"url": "https://a.test/wall", "title": "W"},
-                  {"url": "https://a.test/real", "title": "R"}]),
-        reader({"https://a.test/wall": "Access denied",
-                "https://a.test/real": "A real page. " * 30}),
+        plan, complete,
+        searcher([{"url": f"https://a.test/{i}", "title": str(i)}
+                  for i in range(local_agent.MAX_PAGES)]),
+        reader({f"https://a.test/{i}":
+                long_text if i == 0 else other_text
+                for i in range(local_agent.MAX_PAGES)}),
         model="m", search_provider="stub")
     asker.on_action = lambda line: None
-    asker.ask("widget")
-    assert list(asker.sources) == ["https://a.test/real"]
+    asker.ask("battery")
+    # The task, source instructions, URL headings, and reply all need room.
+    # Evidence must remain identical to what the answer prompt showed.
+    assert len(asker.sources) == 2
+    assert len(complete.prompts[0]) + local_agent.triage.REPLY_ROOM <= 5000
+    shown = [asker.sources[url] for url, _ in
+             sorted(asker.sources.items())]
+    for text in shown:
+        assert text in complete.prompts[0]
 
 
-class Fitted(Complete):
-    """A completion socket that knows its window, as the real one does."""
-
-    max_tokens = 100
-
-    def __init__(self, allowed: int):
-        super().__init__()
-        self.allowed = allowed
-
-    def prompt_chars_allowed(self) -> int:
-        return self.allowed
-
-    def context_tokens(self) -> int:
-        return 4096
+def test_triage_prefers_the_page_that_matches_the_task():
+    pages = [("https://a.test/away", "unrelated words entirely"),
+             ("https://a.test/battery", "battery life is short")]
+    chosen = local_agent.triage.choose(
+        pages, task="battery", queries=[], budget=3500 + len("battery"),
+        at_most=local_agent.MAX_PAGES, page_cap=local_agent.PAGE_CHARS)
+    assert [url for url, _ in chosen] == ["https://a.test/battery"]
 
 
-def test_the_prompt_is_fitted_to_the_models_window():
-    """A server cuts an overflowing prompt from the front, silently; the
-    front is the instructions. So the pages share what the brief leaves,
-    and the sources are exactly what was shown."""
-    long_page = "\n\n".join(f"Paragraph {i} about the widget gearbox." for i in range(400))
-    complete = Fitted(allowed=6000)
+def test_a_prose_answer_is_asked_again_for_the_json_shape():
+    """The small model's prose answer: real risks, no JSON object, nothing a
+    door can render. One bounded re-ask — the same repair the planner does
+    for queries — and the answer that comes back shaped wins."""
+    plan = Plan('["q"]')
+    prose = "Here are the risks I found, in prose, with no JSON anywhere."
+    fenced = '```json {"risks": []} ```'
+    verdict = '{"unsupported": [], "note": "carried"}'
+    complete = Scripted([prose, fenced, verdict])
     asker = local_agent.LocalAsker(
-        Plan('["widget gearbox"]'), complete,
-        searcher([{"url": f"https://a.test/{i}", "title": str(i)} for i in range(3)]),
-        reader({f"https://a.test/{i}": long_page for i in range(3)}),
+        plan, complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "text"}),
+        model="m", search_provider="stub")
+    said = []
+    asker.on_action = said.append
+    got = asker.ask("widget problems")
+    # The answer, its shape repair, the self-check: three calls, in order.
+    assert got == fenced
+    assert len(complete.prompts) == 3
+    assert "no JSON object" in complete.prompts[1]
+    assert "in prose" in complete.prompts[1]
+    assert any("asking for the shape again" in line for line in said)
+
+
+def test_a_prose_answer_twice_keeps_the_first_reply():
+    plan = Plan('["q"]')
+    prose = "prose risks, no JSON"
+    complete = Scripted([prose, "still prose, still no JSON"])
+    asker = local_agent.LocalAsker(
+        plan, complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "text"}),
+        model="m", search_provider="stub")
+    said = []
+    asker.on_action = said.append
+    got = asker.ask("widget problems")
+    assert got == prose
+    assert any("keeping the first" in line for line in said)
+
+
+def test_a_bare_json_answer_never_pays_for_a_shape_repair():
+    """Bare JSON is a less careful model, not a broken reply: the fence
+    reader takes it, so the repair never runs."""
+    plan = Plan('["q"]')
+    bare = '{"risks": []}'
+    verdict = '{"unsupported": [], "note": ""}'
+    complete = Scripted([bare, verdict])
+    asker = local_agent.LocalAsker(
+        plan, complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "text"}),
         model="m", search_provider="stub")
     asker.on_action = lambda line: None
-    asker.ask("widget")
-    assert len(complete.prompts[0]) <= 6000
-    shown = complete.prompts[0]
-    for text in asker.sources.values():
-        assert text in shown
+    got = asker.ask("widget problems")
+    assert got == bare
+    assert len(complete.prompts) == 2
 
 
-def test_too_small_a_window_shows_fewer_pages_whole_enough_to_quote():
-    long_page = "\n\n".join(f"Paragraph {i} about the widget gearbox." for i in range(400))
-    complete = Fitted(allowed=local_agent.MIN_SHARE * 2 + 1500)
+def test_the_self_check_runs_and_its_verdict_is_kept():
+    plan = Plan('["q"]')
+    answer = '```json {"risks": []} ```'
+    verdict = ('{"unsupported": [{"title": "battery", "reason": '
+               '"the page is about another variant"}], "note": "thin"}')
+    complete = Scripted([answer, verdict])
     asker = local_agent.LocalAsker(
-        Plan('["widget gearbox"]'), complete,
-        searcher([{"url": f"https://a.test/{i}", "title": str(i)} for i in range(5)]),
-        reader({f"https://a.test/{i}": long_page for i in range(5)}),
+        plan, complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "text"}),
         model="m", search_provider="stub")
-    asker.on_action = lambda line: None
-    asker.ask("widget")
-    assert 1 <= len(asker.sources) < 5
-    assert all(len(text) >= local_agent.MIN_SHARE // 2 for text in asker.sources.values())
+    said = []
+    asker.on_action = said.append
+    got = asker.ask("widget problems")
+    assert got == answer
+    assert len(complete.prompts) == 2
+    assert "You are checking an answer" in complete.prompts[1]
+    assert any("reads its own answer" in line for line in said)
+    assert asker.verification == {
+        "unsupported": [{"title": "battery",
+                          "reason": "the page is about another variant"}],
+        "note": "thin"}
+    assert "1 risk(s) not carried" in said[-1]
 
 
-def test_the_reply_budget_is_said_to_the_model():
-    complete = Fitted(allowed=100_000)
+def test_a_broken_self_check_never_kills_the_answer():
+    plan = Plan('["q"]')
+    answer = '```json {"risks": []} ```'
+    complete = Scripted([answer, RuntimeError("out of memory")])
     asker = local_agent.LocalAsker(
-        Plan('["q"]'), complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
-        reader({"https://a.test/1": "text"}), model="m", search_provider="stub")
-    asker.on_action = lambda line: None
-    asker.ask("widget")
-    assert "about 60 words" in complete.prompts[0]
+        plan, complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "text"}),
+        model="m", search_provider="stub")
+    said = []
+    asker.on_action = said.append
+    got = asker.ask("widget problems")
+    assert got == answer
+    assert asker.verification["error"] == "out of memory"
+    assert any("self-check could not run" in line for line in said)
 
 
-def test_a_url_or_a_sentence_is_not_a_query_and_the_planner_is_asked_again():
-    """Measured on a 3B model: its "query" was a url from the reply format."""
-    replies = iter(['["https://www.example.test/review", "www.example.test"]',
-                    '["widget gearbox failure", "widget owners forum"]'])
-    prompts: list[str] = []
-
-    def planner(prompt):
-        prompts.append(prompt)
-        return next(replies)
-
-    asked: list[str] = []
+def test_a_model_cut_off_before_it_writes_falls_back_to_plain_queries():
+    """The reasoning-budget cutoff: the server answers, `finish_reason`
+    "length", nothing written. The old script died at its first call; the
+    plain queries take the search so the model still gets its run."""
+    asked = []
+    plan = Scripted([local_agent.plan.LocalInferenceError("cut off at 1024")])
+    complete = Complete()
     asker = local_agent.LocalAsker(
-        planner, Complete(),
+        plan, complete,
         searcher([{"url": "https://a.test/1", "title": "A"}], started=asked),
-        reader({"https://a.test/1": "text"}), model="m", search_provider="stub")
-    asker.on_action = lambda line: None
-    asker.ask("widget")
-    assert len(prompts) == 2
-    assert asked == ["widget gearbox failure", "widget owners forum"]
-    assert local_agent.LocalAsker._usable('["' + "word " * 20 + '"]') == []
-
-
-def test_the_socket_asks_the_server_for_its_window(monkeypatch):
-    """Ollama says it in `/api/ps`; nothing answering is the 4k default."""
-    import io
-    import json as _json
-
-    from app.providers import local_inference
-
-    socket = local_inference.OpenAICompatSocket("http://127.0.0.1:1", "m:3b")
-    answers = {"/api/ps": {"models": [{"name": "m:3b", "context_length": 8192}]}}
-
-    def urlopen(url, timeout=0):
-        path = url.removeprefix("http://127.0.0.1:1")
-        if path not in answers:
-            raise OSError("nothing here")
-        return io.BytesIO(_json.dumps(answers[path]).encode())
-
-    monkeypatch.setattr(local_inference.urllib.request, "urlopen", urlopen)
-    assert socket.context_tokens() == 8192
-    allowed = socket.prompt_chars_allowed()
-    assert allowed == int((8192 - socket.max_tokens - 128) * local_inference.CHARS_PER_TOKEN)
-
-    silent = local_inference.OpenAICompatSocket("http://127.0.0.1:1", "other")
-    assert silent.context_tokens() == local_inference.DEFAULT_CONTEXT_TOKENS
+        reader({"https://a.test/1": "text"}),
+        model="m", search_provider="stub")
+    said = []
+    asker.on_action = said.append
+    task = ("# Quick look: what is known to go wrong with this one?\n\n"
+            "    Acme Widget Pro W200\n")
+    asker.ask(task)
+    assert asked[0] == "Acme Widget Pro W200 problems"
+    assert any("falling back to plain queries" in line for line in said)
+    assert "text" in complete.prompts[0]

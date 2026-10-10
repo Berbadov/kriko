@@ -1,10 +1,10 @@
 # Kriko for GPUI
 
-The desktop app: Rust and GPUI 0.2.2 on the Kriko design system. It supervises
-the engine (the sidecar) and draws every screen from the engine's HTTP API; it
-holds no engine logic. The browser extension stays TypeScript and is untouched
-by this crate. Palette tokens live in `src/theme.rs`, and the diagrams in these
-documents wear them (see `docs/STYLE.md`).
+The desktop app: Rust and GPUI 0.2.2 on the Kriko design system. It
+supervises the engine (the sidecar) and draws every screen from the engine's
+HTTP API; it holds no engine logic. The browser extension stays TypeScript
+and this crate does not touch it. Palette tokens live in `src/theme.rs`, and
+the diagrams in these documents use them (see `docs/STYLE.md`).
 
 Run it from a source checkout:
 
@@ -12,19 +12,19 @@ Run it from a source checkout:
 cargo run --release
 ```
 
-Everything it draws — the three fonts, the nav icons, the dithered sky images,
-the wordmark — is embedded in the binary with `include_bytes!`, so the exe
-runs from any working directory with no asset paths to install.
+Everything it draws — the three fonts, the nav icons, the dithered sky
+images, the wordmark — is embedded in the binary with `include_bytes!`, so
+the exe runs from any working directory with no asset paths to install.
 
 ## Layout
 
 - `src/theme.rs` — the whole look: colour tokens, shadows, and the small
   builders (key, plate, well, LED matrix, tag, verdict, meter, switch, agent
-  tile, hero, frost, input, keycap, badge, titlebar). Written against only
-  the primitives GPUI has: fills, gradients, 1px borders, outer shadows,
-  images, SVG alpha masks. No backdrop blur, no inset shadows, no text-shadow.
+  tile, hero, frost, input, keycap, badge, titlebar). It uses only the
+  primitives GPUI has: fills, gradients, 1px borders, outer shadows, images,
+  SVG alpha masks. No backdrop blur, no inset shadows, no text-shadow.
 - `src/dock.rs` — the live actions bar: the needs-you requests with their
-  answering keys, the working-now lanes, the feed, and the reply field.
+  answer keys, the working-now lanes, the feed, and the reply field.
 - `src/app.rs` — the shell: the sidebar (brand block, nav groups, the
   needs-you badge on Activity), the hero with the page head, keyboard
   actions, and the text fields.
@@ -36,7 +36,7 @@ runs from any working directory with no asset paths to install.
 - `src/api.rs` — the engine's HTTP API from the window's side: loopback only,
   one blocking request at a time, called through `Kriko::fetch`.
 - `src/screens/*` — one file per tab, each a function over the shared
-  `Kriko` state; every change goes through `cx.listener`, so the app
+  `Kriko` state. Every change goes through `cx.listener`, so the app
   re-renders from one place.
 
 ## The engine: how the app starts it and ends it
@@ -68,7 +68,7 @@ flowchart TD
     A{"KRIKO_URL set?"}:::plain -->|yes| B["Attach to it, start nothing"]:::ice
     A -->|no| C{"kriko-sidecar.exe<br/>beside kriko.exe?"}:::plain
     C -->|yes| D["Start it (installed layout)"]:::brand
-    C -->|no| E{"Engine already answering<br/>on the selected extension port?"}:::plain
+    C -->|no| E{"Engine already answering<br/>on the extension port 8787?"}:::plain
     E -->|yes| F["Attach to it"]:::ice
     E -->|no| G["python -m app.sidecar<br/>(KRIKO_PYTHON picks the interpreter)"]:::plain
     D --> H["Poll /api/health"]:::plain
@@ -88,12 +88,12 @@ flowchart TD
 | Moment | What happens |
 |---|---|
 | Handshake | The first stdout line holding `KRIKO_PORT` names a port the engine already holds. |
-| Crash belt | `--exit-with-parent` makes the engine watch its stdin. The app keeps the write end for the whole run, so if the app dies in any way, the pipe closes and the engine follows. |
+| Crash protection | `--exit-with-parent` makes the engine watch its stdin. The app keeps the write end for the whole run, so if the app dies in any way, the pipe closes and the engine follows. |
 | Failure | The engine could not start, never answered, or stopped: the window shows its stderr tail (24 KiB kept). If it said nothing, the exit code. |
 | Close the window | Hides it. The engine keeps serving, because the extension needs it. Without a tray, closing quits instead. |
 | Quit (tray: Open, Quit) | Ends the engine, then the app. On Windows the kill is a tree kill (`taskkill /F /T`), because a one-file bundle re-executes: the pid spawned is the bootloader. |
 | Attached engine | Left alone on exit. It was not ours to end. |
-| Second launch | Raises the first window and exits before starting a second engine. |
+| Second launch | Raises the first window and exits before it starts a second engine. |
 
 ## The window and the dock
 
@@ -103,9 +103,9 @@ and minimize / restore / close sit on the right as Kriko-style wells. The
 restore icon flips to the maximize icon with the window state.
 
 The live actions dock is the right-hand bar, on every tab (the LIVE ON/OFF
-toggle in the titlebar collapses it): needs-you requests each carry their
-answer key (Sign in, Allow, Approve), the working lanes show live meters,
-and the reply field at the bottom posts straight into the feed.
+toggle in the titlebar collapses it). Needs-you requests each carry their
+answer key (Sign in, Allow, Approve), the working lanes show live meters, and
+the reply field at the bottom posts straight into the feed.
 
 ## The screens
 
@@ -124,7 +124,7 @@ Overview (totals, packs with switches, support, gaps), Browse (table plus the
 evidence drawer), Sites (add field, trust grades), Benchmark (wide run plate,
 LED bars), About.
 
-Compare and Local LLM are the workbenches, and carry the most:
+Compare and Local LLM are the workbenches, and they carry the most:
 
 - **Compare** — named drafts (new / save / delete), four pick-a-check slots,
   the answer slab said from the lined-up columns, the specifications and the
@@ -145,9 +145,9 @@ Compare and Local LLM are the workbenches, and carry the most:
   permissions (read pages, take part in Run, answer questions) and a
   reconnect key.
 
-Setting `KRIKO_VERIFY=compare|risks|local|agents|dock` seeds one page's state at
-startup (tab, board with strokes and a note, open sections, finished test)
-so it can be captured without driving the mouse on a busy desktop.
+Setting `KRIKO_VERIFY=compare|risks|local|agents|dock` seeds one page's state
+at startup (tab, board with strokes and a note, open sections, finished test)
+so a capture needs no mouse on a busy desktop.
 
 ## Motion
 
@@ -157,14 +157,14 @@ freezes every one of them:
 - **Boot** — live tags' LED dots wake with the staggered k-boot flicker.
 - **Blink** — needs-you tags pulse; a live meter's leading segment pulses
   while a run is in flight.
-- **The switch knob** slides through the --ease-mech overshoot; flipping it
-  remounts the knob and the slide replays from the other side.
-- **The segmented thumb** slides the same way when a view is picked.
+- **The switch knob** slides through the --ease-mech overshoot. Flipping it
+  remounts the knob, and the slide replays from the other side.
+- **The segmented thumb** slides the same way when you pick a view.
 
 GPUI has no keyframes, so each animation rides `with_animation` on an element
-whose id carries the state it depends on — change the state, the element
-remounts, the animation replays. The overshoot is applied inside the
-animator (an easing function must stay within 0.0..=1.0 or the dev build's
+whose id carries the state it depends on. Change the state, the element
+remounts, the animation replays. The animator applies the overshoot inside
+itself (an easing function must stay within 0.0..=1.0, or the dev build's
 assert fires).
 
 ## Build the installer
@@ -202,32 +202,32 @@ Under `builds/` it leaves:
 | `kriko-<version>-x86_64.msi` | The per-user installer: no administrator prompt, installs under `%LOCALAPPDATA%\Programs\Kriko`. Start-menu shortcuts "Kriko" and "Kriko Console", a desktop shortcut, the Kriko icon. No PATH entry. Upgrade-aware: a newer MSI replaces an older one, and an older one refuses. |
 | `kriko-<version>-win64-portable.zip` | `kriko.exe` and `kriko-sidecar.exe`, no install. Everything the app draws is embedded, so it runs from anywhere. |
 
-`<version>` is the tree's (`tools/bump.py --show`); `-Version` is a check, not a
-stamp. Both programs ship in each, because the app starts the engine from the
-folder it sits in. The installer stops a running Kriko first (the app, then
-the engine; both tree kills), because a live sidecar maps its own image and
-fails the copy. `kriko-gpui/wix/main.wxs` holds why.
+`<version>` is the tree's (`tools/bump.py --show`); `-Version` is a check, not
+a stamp. Both programs ship in each file, because the app starts the engine
+from the folder it sits in. The installer stops a running Kriko first (the
+app, then the engine; both tree kills), because a live sidecar maps its own
+image and fails the copy. `kriko-gpui/wix/main.wxs` holds why.
 
 The MSI step needs the WiX 3 toolset (`candle`/`light`) and `cargo install
 cargo-wix`. If WiX is not on PATH or in `WIX`, pass its folder:
 `.\package.ps1 -WixBin C:\path\to\wix314`. The exe carries the brand icon via
-`build.rs` (winresource), so the taskbar and shortcuts show the mark without
-any extra files. The installer is unsigned: SmartScreen warns on first run.
+`build.rs` (winresource), so the taskbar and shortcuts show the mark with no
+extra files. The installer is unsigned: SmartScreen warns on first run.
 
 The icon (`assets/kriko.ico`) is the white K mark on the flat brand blue
-`#1f4fff`, on a smooth rounded square, no sharp corners, at every size
-from 16 to 256 px. It is the one file the exe and the installer both read,
-so replacing it and re-running `package.ps1` updates the taskbar, the
+`#1f4fff`, on a smooth rounded square, no sharp corners, at every size from
+16 to 256 px. It is the one file the exe and the installer both read, so
+replacing it and running `package.ps1` again updates the taskbar, the
 shortcuts and Add/Remove Programs in one go.
 
 ## Interactions
 
 - Every nav item switches tabs; Home's "Start check" goes to Run, Activity's
-  "Open agents" to Agents, the callouts lead where they promise.
+  "Open agents" to Agents, and the callouts lead where they promise.
 - The text fields take focus on click, type, backspace, and blink a caret;
   Reduce motion (Settings) stops the blink.
-- History's search and filters narrow the rows live; the plates cycle
-  verdict and pack; pagination pages through the matches.
+- History's search and filters narrow the rows live; the plates cycle verdict
+  and pack; pagination pages through the matches.
 - The switches toggle real state (packs, models, agents, privacy).
 - Ctrl+N / Ctrl+K / Ctrl+B are bound app-wide, matching the Shortcuts card.
 - The danger zone asks twice, then shows what was removed and links to
@@ -236,16 +236,15 @@ shortcuts and Add/Remove Programs in one go.
 ## Fonts and images
 
 `assets/fonts` holds Barlow Condensed 600/700, DM Sans 400/600 and JetBrains
-Mono 400/600 — the three faces of the design — registered at startup by
-`theme::register_fonts` under app-scoped family names (`Kriko Display`,
-`Kriko Sans`, `Kriko Mono`). The scoped names matter: a machine
-with, say, a system "Barlow" installed would otherwise shadow the embedded
-face. The hero sky is the dithered band (`sky-dim`, `sky-hero`, `sky-wide`,
-loaded through `Resource::Embedded`, never through a path or URI) over a
-matching gradient in `theme::hero`, so the fades into the titlebar above
-and the content below stay smooth; nav icons are 24x24 stroke SVGs tinted
-by `text_color` at 18px.
+Mono 400/600 — the three faces of the design. `theme::register_fonts`
+registers them at startup under app-scoped family names (`Kriko Display`,
+`Kriko Sans`, `Kriko Mono`). The scoped names matter: a machine with, say, a
+system "Barlow" installed would otherwise shadow the embedded face. The hero
+sky is the dithered band (`sky-dim`, `sky-hero`, `sky-wide`, loaded through
+`Resource::Embedded`, never through a path or URI) over a matching gradient
+in `theme::hero`, so the fades into the titlebar above and the content below
+stay smooth. Nav icons are 24x24 stroke SVGs tinted by `text_color` at 18px.
 
 A stderr logger is installed at startup because GPUI reports asset and font
-failures through the `log` crate; without a logger those failures are silent
-(and they were: two shipped that way and were only found by logging).
+failures through the `log` crate. Without a logger those failures are silent
+— and they were: two shipped that way, and logging found them.

@@ -95,7 +95,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, _cx: &mut Context<Kriko>) ->
                 .line_height(px(20.0))
                 .text_color(rgb(MUTED))
                 .child(
-                    "A check runs locally: agents read, claims are grounded against the store, and the verdict names its evidence. Nothing is uploaded.",
+                    "Quick Look can run model inference on this device. Web searches still go to the configured search service. If you choose a hosted model provider, the product query and page text sent for analysis go to that provider. Saved claims and sources stay in this local store.",
                 ),
         );
 

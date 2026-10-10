@@ -1,0 +1,3 @@
+Use for mutually exclusive choices of 2 to 5 options, usually view modes. A recessed `well` rail with `shadow-well` holds 56 by 40px segments, each a 5x5 LED glyph (list, grid, columns, wide). A graphite thumb (`bezel-hi` to `bezel-lo`) sits under the selected segment and slides to the next in `--dur-base` on `--ease-mech`, a short overshoot like a detent. The selected glyph lights `ice` with a glow; the rest sit at `led-dim`.
+
+The consumer provides the glyphs, an accessible label per segment and the group label, uses `role=radiogroup` and `role=radio` with `aria-checked`, and moves selection with arrow keys. Labels are icons only when the choice is a universal view mode; otherwise add words.

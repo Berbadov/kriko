@@ -70,6 +70,23 @@ def fetch(port: int, path: str) -> dict:
         return json.load(r)
 
 
+def benchmark_ok(port: int) -> bool:
+    """The packaged configuration corpus exists, rather than only its code."""
+    bench = fetch(port, "/api/bench")
+    test_set = bench.get("test_set") or {}
+    cases = test_set.get("cases") or []
+    suites = {row.get("id") for row in bench.get("suites", [])}
+    if not cases or not all(case.get("mode") == "controlled" and case.get("documents")
+                            for case in cases) or not {"precision", "web"} <= suites:
+        print("configuration benchmark corpus missing or wrong in frozen sidecar")
+        return False
+    if any(case.get("set_version") != test_set.get("version") for case in cases):
+        print("configuration benchmark version disagrees with its cases")
+        return False
+    print(f"benchmark corpus ok: {test_set.get('id')} {test_set.get('version')}, {len(cases)} cases")
+    return True
+
+
 def post(port: int, path: str, body: dict) -> dict:
     request = urllib.request.Request(
         f"http://127.0.0.1:{port}{path}",
@@ -309,21 +326,36 @@ def main(argv: list[str]) -> int:
             print("the sidecar carries no browser extension -- check the spec's datas")
             return 1
         print(f"extension ok: version {ext.get('version')}")
+        firefox = post(port, "/api/extension/firefox/stage", {})
+        manifest_path = Path(firefox.get("path", "")) / "manifest.json"
+        if "error" in firefox or not manifest_path.is_file():
+            print(f"frozen Firefox staging failed: {firefox}")
+            return 1
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("background") != {"scripts": ["background.js"]} or firefox.get("signed") is not False:
+            print("frozen Firefox manifest or signing status is wrong")
+            return 1
+        import zipfile
+        with zipfile.ZipFile(firefox["package_path"]) as archive:
+            if json.loads(archive.read("manifest.json")) != manifest:
+                print("frozen Firefox archive disagrees with its staged manifest")
+                return 1
+        print("Firefox ok: separate event-page manifest and unsigned XPI")
 
-        # The knowledge, on a store this run created two seconds ago. Empty
-        # here means one of three things went wrong and every one of them
-        # ships as a knowledge engine with no knowledge: the spec's datas lost
-        # the artifacts, the build never made them, or the seeder in
-        # `app/bundledpacks.py` did not run at startup. A reader cannot tell
-        # those apart from an app that opens onto nothing, so the build does.
+        # A fresh release store has no preinstalled catalogs or site adapters.
         packs = fetch(port, "/api/packs")
         carried = packs.get("items") if isinstance(packs, dict) else packs
-        if not carried:
-            print("the sidecar installed no bundled packs into a fresh store "
-                  "-- check the spec's datas entry and build_packs.py")
+        if carried != []:
+            print(f"the sidecar preinstalled catalogs into a fresh store: {packs}")
             return 1
-        print("packs ok: " + ", ".join(
-            f"{row.get('pack_id')} {row.get('version')}" for row in carried))
+        adapters = fetch(port, "/api/adapters")
+        if adapters != []:
+            print(f"the sidecar preinstalled site adapters: {adapters}")
+            return 1
+        print("fresh store ok: no preinstalled catalogs or sites")
+
+        if not benchmark_ok(port):
+            return 1
 
         # Beyond liveness. Each of these fails *only* when freezing dropped
         # something, and each drops a different module graph:

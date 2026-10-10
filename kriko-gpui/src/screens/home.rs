@@ -12,14 +12,16 @@ use gpui::{
 use crate::app::{Kriko, Tab};
 use crate::live::history::{ago, month_buckets, now_secs, Item};
 use crate::screens::history::clip;
-use crate::screens::{empty_note, mono, plate_s};
+use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
 use crate::theme::*;
 
 /// One recent check: what it was about, which catalog, when. Info, no verdict.
 fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Stateful<Div> {
+    let id = check.id.clone();
     let open_history = cx.listener(move |this, _: &ClickEvent, _w, cx| {
         this.tab = Tab::History;
         this.page = 0;
+        this.toggle_history_open(id.clone(), cx);
         cx.notify();
     });
     div()
@@ -64,10 +66,16 @@ fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Sta
 
 /// A saved comparison draft, openable straight into Compare. `subjects` are
 /// the products' names, read from the history by lookup id.
-fn draft_row(cx: &mut Context<Kriko>, i: usize, name: &str, subjects: &str) -> Stateful<Div> {
-    // Compare loads its own drafts; Home only takes you there.
+fn draft_row(cx: &mut Context<Kriko>, i: usize, id: &str, name: &str, subjects: &str) -> Stateful<Div> {
+    let id = id.to_string();
     let open_draft = cx.listener(move |this, _: &ClickEvent, _w, cx| {
         this.tab = Tab::Compare;
+        if this.live.compare.drafts_loaded {
+            this.select_draft(&id, cx);
+        } else {
+            this.live.compare.pending_draft = Some(id.clone());
+            this.load_drafts(false, cx);
+        }
         cx.notify();
     });
     div()
@@ -208,6 +216,11 @@ fn bar_rows(rows: &[(String, f32, String)]) -> Div {
 }
 
 pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let open_quicklook = cx.listener(|this, _: &ClickEvent, _w, cx| {
+        this.tab = Tab::Run;
+        this.on_open_tab(cx);
+        cx.notify();
+    });
     let open_history = cx.listener(|this, _: &ClickEvent, _w, cx| {
         this.tab = Tab::History;
         this.page = 0;
@@ -249,7 +262,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
         drafts = drafts.child(empty_note("No saved comparisons yet."));
     } else {
         let n = h.drafts.len();
-        let rows: Vec<(String, String)> = h
+        let rows: Vec<(String, String, String)> = h
             .drafts
             .iter()
             .map(|d| {
@@ -260,12 +273,12 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
                 } else {
                     names.join(" · ")
                 };
-                (d.name.clone(), line)
+                (d.id.clone(), d.name.clone(), line)
             })
             .collect();
-        for (i, (name, line)) in rows.iter().enumerate() {
+        for (i, (id, name, line)) in rows.iter().enumerate() {
             drafts = drafts
-                .child(draft_row(cx, i, name, line))
+                .child(draft_row(cx, i, id, name, line))
                 .when(i + 1 < n, |d| d.child(hairline()));
         }
     }
@@ -334,6 +347,24 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
         .flex()
         .flex_col()
         .gap(px(24.0))
+        .child(
+            card()
+                .flex()
+                .items_center()
+                .gap(px(20.0))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(eyebrow("Start here"))
+                        .child(row_title("Quick Look"))
+                        .child(row_desc("Check a product with sourced research from your local model. Web searches use your configured search service.")),
+                )
+                .child(plate_s("home-quicklook", "Start a Quick Look").on_click(open_quicklook)),
+        )
         .child(
             div()
                 .flex()

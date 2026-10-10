@@ -153,7 +153,7 @@ def test_the_phone_on_the_same_site_is_still_read_by_the_phone_pack(client):
 
 
 def test_facts_are_trimmed_to_what_a_prompt_can_carry():
-    many = {f"row {n}": "x" * 500 for n in range(100)}
+    many = {f"row {n}": "x" * 900 for n in range(200)}
     page = pagefacts.clean({"ld:@type": "car", **many}, "d" * 9000)
     assert len(page["facts"]) == pagefacts.MAX_FACTS
     assert "ld:@type" not in page["facts"]

@@ -1,0 +1,5 @@
+Use five button types. The **key** is the only primary: `label` type (uppercase condensed) as a flat `brand` fill with `on-brand` text. Hover moves to `brand-hover` and pressed to `brand-low` (90ms); there is no gradient, lip, drop shadow or travel. One key per view, beside the page title.
+
+The **plate** is the graphite secondary: a flat `bezel-lo` fill with a 1px `bezel-edge`, label in `ink-2`; hover lifts the fill to `bezel-hi` and the label to `ink`, pressed drops to `well`. The wide plate carries a 48px LED tile on the left and a centred label for hero actions (Start run). Then flat **glass** (`glass-2`), **ghost** (`border-control` outline) and **danger** (`danger-wash`, `danger` text) for low-emphasis, repeated and destructive actions.
+
+The consumer provides a short verb label and, for the wide plate, a glyph for the tile. Focus is a 2px `ice` outline offset 3px. Never two keys in one row; never a key inside a card header next to a plate of equal weight. On a `brand` blue hero the key flips to an `on-brand` fill with `brand-deep` text, since a blue key on blue has no edge.

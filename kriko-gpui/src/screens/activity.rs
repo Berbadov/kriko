@@ -7,10 +7,9 @@
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
-use crate::live::history::{ago, feed_kind, now_secs};
-use crate::live::run::kind_word;
+use crate::live::history::{ago, feed_kind, now_secs, Op};
 use crate::screens::history::clip;
-use crate::screens::{empty_note, mono, row_desc, row_title};
+use crate::screens::{empty_note, mono, plate_s};
 use crate::theme::*;
 
 /// An operation's name as words: `pack_update` reads "Pack update".
@@ -40,6 +39,45 @@ fn took(ms: Option<f64>) -> String {
         Some(ms) if ms < 1000.0 => format!(" · {} ms", ms as i64),
         Some(ms) => format!(" · {:.1} s", ms / 1000.0),
     }
+}
+
+/// What one operation says about itself, read as a sentence.
+fn op_text(op: &Op) -> String {
+    let mut text = format!("{} {}", words(&op.name), op.state);
+    if !op.note.is_empty() {
+        text.push_str(&format!(": {}", clip(&op.note, 110)));
+    }
+    if !op.harness.is_empty() {
+        text.push_str(&format!(" · with {}", op.harness));
+    }
+    if !op.model.is_empty() {
+        text.push_str(&format!(" · model {}", op.model));
+    }
+    text.push_str(&took(op.ms));
+    text
+}
+
+/// The job log an expanded row unfolds into, newest line last.
+fn op_log_block(app: &Kriko, op: &Op) -> Div {
+    let mut block = well().mt(px(6.0)).p(px(12.0)).flex().flex_col().gap(px(6.0));
+    let Some(lines) = app.live.history.op_logs.get(&op.op_id) else {
+        return block.child(mono("Reading the log.", MUTED));
+    };
+    if lines.is_empty() {
+        return block.child(mono("This job left no log.", MUTED));
+    }
+    block = block.child(mono(&format!("{} lines", lines.len()), DIM));
+    let mut list = div().id("activity-log-lines").max_h(px(280.0)).overflow_y_scroll().flex().flex_col();
+    for line in lines {
+        list = list.child(
+            div()
+                .font_family(MONO)
+                .text_size(px(12.0))
+                .text_color(rgb(if line.kind == "problem" { 0xffb86b } else { INK_2 }))
+                .child(line.text.clone()),
+        );
+    }
+    block.child(list)
 }
 
 pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
@@ -82,19 +120,16 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let query = app.activity_filter.value.to_lowercase();
     let now = now_secs();
     let h = &app.live.history;
-    let entries: Vec<(String, String, &'static str, TagState)> = h
+    let open = h.op_open;
+    let shown: Vec<&Op> = h
         .ops
         .iter()
-        .map(|op| {
-            let mut text = format!("{} {}", words(&op.name), op.state);
-            if !op.note.is_empty() {
-                text.push_str(&format!(": {}", clip(&op.note, 110)));
+        .filter(|op| {
+            if query.is_empty() {
+                return true;
             }
-            text.push_str(&took(op.ms));
-            (ago(op.ts, now), text, feed_kind(op), tag_state(&op.state))
-        })
-        .filter(|(_, text, kind, _)| {
-            query.is_empty() || text.to_lowercase().contains(&query) || kind.contains(&query)
+            let text = op_text(op);
+            text.to_lowercase().contains(&query) || feed_kind(op).contains(&query)
         })
         .collect();
 
@@ -103,7 +138,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
 
     if !h.ops_loaded {
         feed = feed.child(empty_note("Reading the activity from the engine."));
-    } else if entries.is_empty() {
+    } else if shown.is_empty() {
         feed = feed.child(
             div()
                 .py(px(40.0))
@@ -126,9 +161,13 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         );
     }
 
-    let count = entries.len();
-    for (ri, (when, text, kind, state)) in entries.into_iter().enumerate() {
-        let row = div()
+    let count = shown.len();
+    for (ri, op) in shown.into_iter().enumerate() {
+        let when = ago(op.ts, now);
+        let text = op_text(op);
+        let kind = feed_kind(op);
+        let state = tag_state(&op.state);
+        let mut row = div()
             .flex()
             .items_center()
             .gap(px(16.0))
@@ -151,63 +190,43 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     .child(text),
             )
             .child(tag(format!("activity-feed-{ri}"), state, kind, motion));
-        feed = feed.child(row);
+        if !op.job_id.is_empty() {
+            let (op_id, job_id) = (op.op_id, op.job_id.clone());
+            let unfold = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.open_op_log(op_id, job_id.clone(), cx);
+            });
+            row = row.child(
+                plate_s(
+                    gpui::ElementId::named_usize("activity-log", ri),
+                    if open == Some(op.op_id) { "Hide log" } else { "Log" },
+                )
+                .on_click(unfold),
+            );
+        }
+        let mut block = div().flex().flex_col().child(row);
+        if open == Some(op.op_id) && !op.job_id.is_empty() {
+            block = block.child(op_log_block(app, op));
+        }
+        feed = feed.child(block);
         if ri + 1 < count {
             feed = feed.child(hairline());
         }
     }
-
-    // Agent runs have a richer job record than the operations feed above:
-    // name the agent/model and let the reader open the complete answer/log.
-    let recent_jobs: Vec<_> = app.live.run.jobs.iter()
-        .filter(|job| job.is_research_like() || job.kind == "compare_ask")
-        .take(20)
-        .collect();
-    let mut runs = card().flex().flex_col().gap(px(10.0))
-        .child(div().mb(px(4.0)).child(eyebrow("Agent runs")));
-    if recent_jobs.is_empty() {
-        runs = runs.child(empty_note(if app.live.run.jobs_loaded {
-            "No agent runs yet."
-        } else {
-            "Reading completed and running agent jobs."
-        }));
-    }
-    for (i, job) in recent_jobs.iter().enumerate() {
-        if i > 0 { runs = runs.child(hairline()); }
-        let id = job.id.clone();
-        let open = app.live.run.activity_log_open.as_deref() == Some(job.id.as_str());
-        let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.live.run.activity_log_open = if this.live.run.activity_log_open.as_deref() == Some(id.as_str()) {
-                None
-            } else {
-                Some(id.clone())
-            };
+    if h.ops_has_older {
+        let older = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+            this.load_older_activity(cx);
             cx.notify();
         });
-        let agent = if job.harness.is_empty() { "Agent not reported" } else { &job.harness };
-        let model = if job.model.is_empty() { "model not reported" } else { &job.model };
-        let line = format!("{} · {} · {} · {}", kind_word(&job.kind), agent, model, job.state);
-        runs = runs.child(
-            div().flex().items_center().gap(px(12.0))
-                .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(3.0))
-                    .child(row_title(&app.live.run.task(job)))
-                    .child(row_desc(&line)))
-                .child(ghost(("activity-run", i), if open { "Hide details" } else { "View details" }).on_click(toggle)),
+        feed = feed.child(
+            div()
+                .pt(px(14.0))
+                .flex()
+                .justify_center()
+                .child(plate_s(
+                    "activity-older",
+                    if h.ops_older_inflight { "Loading" } else { "Load older activity" },
+                ).on_click(older)),
         );
-        if open {
-            if !job.answer.is_empty() {
-                runs = runs.child(row_desc(&format!("Answer: {}", job.answer)));
-            } else if job.done && !job.no_answer_why.is_empty() {
-                runs = runs.child(row_desc(&format!("No answer: {}", job.no_answer_why)));
-            }
-            let log = if !job.log.is_empty() {
-                job.log.clone()
-            } else {
-                job.feed.iter().map(|line| line.text.as_str()).collect::<Vec<_>>().join("\n")
-            };
-            runs = runs.child(well().p(px(12.0)).font_family(MONO).text_size(px(12.0))
-                .text_color(rgb(INK_2)).child(if log.is_empty() { "This run left no log.".to_string() } else { log }));
-        }
     }
 
     div()
@@ -215,7 +234,6 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .flex_col()
         .gap(px(24.0))
         .children(callout)
-        .child(runs)
         .child(div().flex().child(filter))
         .child(feed)
 }

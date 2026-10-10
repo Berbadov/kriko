@@ -4,8 +4,9 @@ Four pictures, one per question people actually ask.
 
 ## How does a page find its catalog?
 
-A page is matched on its identity keys, never on its title. Exact on every key
-is *recognised*; a near miss is *probably*; anything else says why it failed.
+The engine matches a page on its identity keys, never on its title. An exact
+match on every key is *recognised*; a near miss is *probably*; anything else
+says why it failed.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -33,14 +34,14 @@ flowchart TD
     class B1,J danger
 ```
 
-The floors (`match_floor`, `match_probable` in the pack's `gates.yaml`) belong
-to the pack. There is no silent no: `POST /api/diagnose/identity` returns the
-whole weighing, and the panel shows a short form of it.
+The floors (`match_floor`, `match_probable` in the pack's `gates.yaml`)
+belong to the pack. There is no silent no: `POST /api/diagnose/identity`
+returns the whole weighing, and the panel shows a short form of it.
 
 ## Where does a catalog come from?
 
-You name a category; an agent proposes a draft; you read it and decide. The run
-never waits on a question, because every question carries a default.
+You name a category; an agent proposes a draft; you read it and decide. The
+run never waits on a question, because every question carries a default.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -65,14 +66,14 @@ flowchart LR
     class H danger
 ```
 
-The agent proposes and Kriko writes: a confined directory, fixed file names,
-nothing executable. The identification pass states the scope it assumed on the
-pack itself rather than stopping to ask, so an assumption is visible instead of
-invisible.
+The agent proposes and Kriko writes: a closed directory, fixed file names,
+nothing executable. The identification pass states the scope it assumed on
+the pack itself, and it does not stop to ask. An assumption you can read is
+better than one you cannot.
 
 ## What happens during a run?
 
-Four stages, and the last one records what was refused.
+Four stages. The last one records what was refused.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -92,15 +93,15 @@ flowchart LR
     class STOP danger
 ```
 
-The refusals are the point: without them, keeping nothing looks like keeping
-everything. An ungrounded quote is refused, always. An early stop is the cost
-cap, and the work already done stays as a partial rather than dying with the
-request.
+The refusals are the point. Without them, keeping nothing looks like keeping
+everything. The engine always refuses an ungrounded quote. An early stop is
+the cost cap: the work already done stays as a partial result, and it does
+not die with the request.
 
 ## What is each part of the code?
 
-Imports flow one way, down the fan. The desktop app is a supervisor over HTTP,
-not a second engine.
+Imports flow one way, down the fan. The desktop app monitors the engine over
+HTTP; it is not a second engine.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -119,9 +120,9 @@ flowchart TD
     class T,U,A,P,PL,PP plain
 ```
 
-The engine importing anything above it is the unforgivable violation: the greps
-are in `CLAUDE.md` and an AST test holds them. A pack is consumed through the
-store, never imported.
+For the engine to import anything above it is the one violation the project
+does not accept. The grep checks are in `CLAUDE.md`, and an AST test holds
+them. A pack is consumed through the store, never imported.
 
 ## Where do things live on disk?
 
@@ -133,8 +134,8 @@ store, never imported.
 | `~/.kriko/drafts/` | Agent proposals, before install | yes |
 | `~/.kriko/env` | Research keys, written by the app's Settings screen | yes |
 
-Two databases, on purpose: uninstalling a pack cannot drop history, and history
-cannot change a pack's `content_digest`.
+Two databases, on purpose: to uninstall a pack cannot drop history, and
+history cannot change a pack's `content_digest`.
 
 ## Next
 

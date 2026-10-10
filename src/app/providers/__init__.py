@@ -29,7 +29,7 @@ cost". These functions make one request and return its result.
 from app.providers import exa, fetch, harness, llm
 
 
-def completer_for(model: str):
+def completer_for(model: str, *, max_tokens: int | None = None):
     """The adapter that speaks to whoever serves this model.
 
     Routed on the *model name* rather than on a provider setting, because the
@@ -47,12 +47,13 @@ def completer_for(model: str):
     from app.web.settings import KRIKO_HOME
 
     provider = modelcatalogue.provider_for(model, KRIKO_HOME)
+    options: dict = {"max_tokens": max_tokens} if max_tokens is not None else {}
     if provider not in modelcatalogue.ADAPTERS:
         raise MissingKey(f"no completion adapter for {provider}")
     if provider == "mistral":
         from app.providers import mistral
 
-        return mistral.completer(model=model)
+        return mistral.completer(model=model, **options)
     if provider == "anthropic":
         # The prefix check is a fallback for a model released after the
         # reader's catalogue was written: `claude-` is Anthropic's own
@@ -60,8 +61,8 @@ def completer_for(model: str):
         # ever fail.
         from app.providers import anthropic_llm
 
-        return anthropic_llm.completer(model=model)
-    return llm.completer(model=model)
+        return anthropic_llm.completer(model=model, **options)
+    return llm.completer(model=model, **options)
 
 
 __all__ = [
@@ -420,9 +421,20 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
 
 
 def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
-                 search_kind: str, timeout: float, schema):
-    """The sockets both local doors share: a completion and a search."""
-    from app.providers import exa_mcp, local_inference, openserp
+                 search_kind: str, timeout: float, schema,
+                 max_tokens: int | None = None,
+                 reasoning_effort: str = "",
+                 runtime_options: dict | None = None):
+    """The sockets both local doors share: a completion and a search.
+
+    `max_tokens` is the caller's own headroom for the model's *reasoning*: a
+    model that thinks before it writes spends the reply's first tokens on
+    thinking, and the socket's default cap cut one off before it wrote
+    anything at all (finish_reason "length", an empty reply, a dead run).
+    `reasoning_effort` says *how hard* to think, the cheaper half of the same
+    problem.
+    """
+    from app.providers import exa_mcp, local_inference, openserp, websearch
 
     if not serving_name.strip():
         raise ValueError(
@@ -432,20 +444,26 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
         raise ValueError("the local plane needs the address of a model server")
     complete = local_inference.OpenAICompatSocket(
         base_url, serving_name, timeout=timeout or local_inference.DEFAULT_TIMEOUT,
-        response_json_schema=schema)
+        response_json_schema=schema,
+        reasoning_effort=reasoning_effort,
+        runtime_options=runtime_options,
+        **({"max_tokens": max_tokens} if max_tokens is not None else {}))
     if search_kind == "exa":
         return complete, exa_mcp.search_with_fallback(), "exa-mcp"
+    if search_kind == "web":
+        return complete, websearch.default_searcher(), "web-search"
     return complete, openserp.searcher(search_base_url), "openserp"
 
 
 def local_researcher(*, base_url: str = "", serving_name: str = "",
                      search_base_url: str = "", engine: str = "",
                      scheduler=None, spend=None, model: str = "",
-                     search_kind: str = "openserp", timeout: float = 0.0):
+                     search_kind: str = "openserp", timeout: float = 0.0,
+                     runtime_options: dict | None = None):
     """The free plane that gathers: this machine's own sockets do the work.
 
     A local inference server completes, a search service searches (OpenSERP
-    when it answers, else Exa's free hosted search, decision D3), the stock
+    when it answers, else direct web search), the stock
     reader reads. Nothing here costs a key or a subscription, so unlike
     `api_researcher` there is no `MissingKey` to raise and no budget to
     enforce — but there *is* politeness, and the scheduler is passed in by the
@@ -467,7 +485,7 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
     complete, search, provider = _local_parts(
         base_url=base_url, serving_name=name, search_base_url=search_base_url,
         search_kind=search_kind, timeout=timeout,
-        schema=local_inference.FINDINGS_SCHEMA)
+        schema=local_inference.FINDINGS_SCHEMA, runtime_options=runtime_options)
     researcher = LocalPlane(
         search, fetch.reader(), complete, scheduler=scheduler, spend=spend,
     )
@@ -480,7 +498,9 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
 
 def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
                 search_kind: str = "openserp", timeout: float = 0.0,
-                given_queries: list[str] | None = None):
+                given_queries: list[str] | None = None,
+                max_documents: int = 5, context_chars: int = 6000,
+                runtime_options: dict | None = None):
     """The local model as something that can `ask` (B171): the quick look, the
     pack author and the pack amend take it when no coding agent is there.
 
@@ -492,12 +512,18 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
     complete, search, provider = _local_parts(
         base_url=base_url, serving_name=serving_name,
         search_base_url=search_base_url, search_kind=search_kind,
-        timeout=timeout, schema="")
+        timeout=timeout, schema="",
+        max_tokens=local_agent.REPLY_MAX_TOKENS,
+        runtime_options=runtime_options,
+        reasoning_effort=local_agent.REASONING_EFFORT)
     plan = local_inference.OpenAICompatSocket(
         base_url, serving_name,
         timeout=timeout or local_inference.DEFAULT_TIMEOUT,
+        max_tokens=local_agent.PLAN_MAX_TOKENS,
+        reasoning_effort=local_agent.REASONING_EFFORT,
+        runtime_options=runtime_options,
         response_json_schema=local_agent.QUERY_SCHEMA)
     return local_agent.LocalAsker(
         plan, complete, search, fetch.reader(), model=serving_name,
         search_provider=provider, url=base_url, given_queries=given_queries,
-        parallel_search=provider == "exa-mcp")
+        parallel_search=False, max_pages=max_documents, page_chars=context_chars)

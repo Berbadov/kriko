@@ -32,18 +32,6 @@ const adapter = (site, extra = {}) => ({
   id: site.split(".")[0], site, match: [`*${site}/*`], fields: {}, ...extra,
 });
 
-// A host the static manifest genuinely covers, read off the manifest rather
-// than named, so trimming a static block moves this test with it.
-function aStaticHost() {
-  for (const block of MANIFEST.content_scripts || []) {
-    for (const pattern of block.matches || []) {
-      const host = pattern.split("://")[1].split("/")[0].replace(/^\*\./, "");
-      if (host) return host;
-    }
-  }
-  throw new Error("the manifest injects nowhere at all");
-}
-
 // An event listener registered with `void syncSites()` answers nobody — an
 // alarm and a permission grant are fire-and-forget by nature, and there is no
 // handle to await. So the test drains the microtask queue instead, which is
@@ -98,16 +86,12 @@ test("a granted site is registered, with the panel's scripts in order",
     assert.equal(script.persistAcrossSessions, true);
   });
 
-test("a site the package already injects on is never registered again",
+test("the release ships no preset site permissions or injection targets",
   async () => {
-    const host = aStaticHost();
-    const h = loadBackground({
-      routes: { [ADAPTERS]: [adapter(host)] },
-      grantedOrigins: [`https://*.${host}/*`],
-    });
+    assert.deepEqual(MANIFEST.content_scripts, []);
+    assert.deepEqual(MANIFEST.host_permissions, ["http://127.0.0.1/*"]);
+    const h = loadBackground({ routes: { [ADAPTERS]: [] } });
     const reply = await sync(h);
-    // Not an error and not a warning — it is already covered. Registering it
-    // would inject every content script twice on the one site that works.
     assert.deepEqual(h.state.registered, []);
     assert.equal(reply.status.sites.length, 0);
   });

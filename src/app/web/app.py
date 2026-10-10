@@ -25,7 +25,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import agentconfig, agentskill, bundledpacks, extension as ext, logs, packautoupdate
+from app import agentconfig, agentskill, extension as ext, logs, packautoupdate
 from app import modelcatalogue
 from app.web.settings import KRIKO_HOME
 from app.web import origins, pipeline
@@ -86,34 +86,27 @@ def _shipped_extension_version() -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # The knowledge the installer carries, first: a fresh install used to open
-    # onto an empty store, and anything the schedule might tick has to have
-    # something to tick against. Guarded like every other startup step —
-    # bundled knowledge is a convenience over a working store, never a
-    # precondition for one, and a store the reader already filled themselves
-    # is a store where this does nothing at all.
-    try:
-        app.state.seeded = bundledpacks.seed(
-            app.state.settings.store_path,
-            app_state_path=app.state.settings.app_state_path)
-        for row in app.state.seeded:
-            if row["action"] in ("installed", "upgraded"):
-                log.info("%s bundled pack %s %s",
-                         row["action"], row["pack_id"], row["version"])
-    except Exception:
-        app.state.seeded = []
-        log.warning("could not install the bundled packs", exc_info=True)
+    # Startup never installs release defaults. Existing user catalogs remain
+    # in their store; fresh installations populate it through research/import.
+    app.state.seeded = []
 
     # The extension the browser loads, brought up to the one this app carries
     # (B151). The extension reloads itself when the digest below is not its
     # own, so an app update reaches the browser without the reader's hands.
     app.state.extension_staged_digest = ""
+    app.state.firefox_staged_digest = ""
     try:
         target = ext.target_for(app.state.settings.store_path)
         if ext.refresh(ext.source_dir(), target):
             log.info("restaged the extension at %s", target)
         if (target / "manifest.json").is_file():
             app.state.extension_staged_digest = ext.content_digest(target)
+        firefox = ext.target_for(app.state.settings.store_path, "firefox")
+        if ext.refresh(ext.source_dir(), firefox, "firefox"):
+            ext.package(firefox, firefox.with_suffix(".xpi"))
+            log.info("restaged the Firefox add-on at %s", firefox)
+        if (firefox / "manifest.json").is_file():
+            app.state.firefox_staged_digest = ext.content_digest(firefox)
     except Exception:
         log.warning("could not refresh the staged extension", exc_info=True)
 
@@ -325,7 +318,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # fetches are exempt from CORS via `host_permissions`, but the
         # allowlist is what makes that not a thing to remember.
         response.headers[ext.MINIMUM_HEADER] = ext.MINIMUM_VERSION
-        staged = getattr(app.state, "extension_staged_digest", "")
+        digest_name = "firefox_staged_digest" if origin.startswith("moz-extension://") else "extension_staged_digest"
+        staged = getattr(app.state, digest_name, "")
         if staged:
             response.headers[ext.STAGED_HEADER] = staged
         response.headers["access-control-expose-headers"] = (
@@ -438,7 +432,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # after they have decided something is broken — too late to be the
             # thing that tells them.
             "shell_attached": bool(app.state.settings.shell_attached),
-            "extension_port": app.state.settings.extension_port,
+            "extension_port": EXTENSION_PORT,
             # The extension's half of the handshake. It reads this on its own
             # schedule and compares its manifest against the floor, because
             # the app cannot make the browser do anything — only say what it
@@ -476,8 +470,7 @@ def main(argv=None) -> int:
     # that had simply never tried to bind it, because nobody had probed. Set
     # it honestly: this process holds EXTENSION_PORT exactly when it is the
     # port it was asked to serve on.
-    selected_port = int(os.environ.get("KRIKO_EXTENSION_PORT", EXTENSION_PORT))
-    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if args.port == selected_port else "0"
+    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if args.port == EXTENSION_PORT else "0"
     # Each CLI's and each keyed provider's LLM list, asked once in the
     # background: `agy models` takes seconds, and the Agents screen should not
     # be the one that pays for it.

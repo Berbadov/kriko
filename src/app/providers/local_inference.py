@@ -95,7 +95,8 @@ class OpenAICompatSocket:
                  context_chars: int = 12000,
                  max_tokens: int | None = DEFAULT_MAX_TOKENS,
                  response_json_schema: dict | str = "",
-                 reasoning_effort: str = ""):
+                 reasoning_effort: str = "",
+                 runtime_options: dict | None = None):
         self.base_url = base_url.rstrip("/").removesuffix("/v1")
         self.serving_name = serving_name
         self.timeout = timeout
@@ -103,6 +104,7 @@ class OpenAICompatSocket:
         self.context_chars = context_chars
         self.max_tokens = max_tokens
         self.reasoning_effort = reasoning_effort.strip()
+        self.runtime_options = dict(runtime_options or {})
         if isinstance(response_json_schema, str):
             response_json_schema = (json.loads(response_json_schema)
                                     if response_json_schema.strip() else {})
@@ -118,6 +120,8 @@ class OpenAICompatSocket:
         #: plane to say *why* a reply was short instead of guessing.
         self.last_finish_reason = ""
         self.truncated = 0
+        self.usage_complete = True
+        self.last_usage_complete = False
         self._context: int | None = None
 
     def __call__(self, prompt: str) -> str:
@@ -213,6 +217,10 @@ class OpenAICompatSocket:
         `DEFAULT_CONTEXT_TOKENS` when none answers. Kept once found; not
         kept while unknown, since Ollama only lists a model once loaded.
         """
+        configured = self.runtime_options.get("num_ctx")
+        if isinstance(configured, int) and not isinstance(configured, bool) and configured > 0:
+            # Sent on every native Ollama call, including the planning call.
+            return configured
         if self._context:
             return self._context
         found = self._ask_context()
@@ -224,7 +232,7 @@ class OpenAICompatSocket:
         """How many characters of prompt fit beside the reply budget."""
         reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
         tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
-        return max(1000, int(tokens * CHARS_PER_TOKEN))
+        return max(0, int(tokens * CHARS_PER_TOKEN))
 
     def _ask_context(self) -> int | None:
         def get(path: str):
@@ -255,18 +263,45 @@ class OpenAICompatSocket:
         return None
 
     def _post(self, body: dict) -> dict:
+        native = bool(self.runtime_options)
+        if native:
+            # Ollama's OpenAI surface cannot set context size. The native
+            # chat surface accepts per-request options without changing the
+            # model or the server's persistent configuration.
+            options = {**self.runtime_options, "temperature": body["temperature"]}
+            if "max_tokens" in body:
+                options["num_predict"] = body["max_tokens"]
+            request_body = {"model": body["model"], "messages": body["messages"],
+                            "stream": False, "options": options}
+            if "response_format" in body:
+                request_body["format"] = body["response_format"]["json_schema"]["schema"]
+            if body.get("reasoning_effort") == "none":
+                request_body["think"] = False
+        else:
+            request_body = body
         request = urllib.request.Request(
-            self.base_url + "/v1/chat/completions",
-            data=json.dumps(body).encode("utf-8"),
+            self.base_url + ("/api/chat" if native else "/v1/chat/completions"),
+            data=json.dumps(request_body).encode("utf-8"),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
         with urllib.request.urlopen(request, timeout=self.timeout) as resp:
-            return json.loads(resp.read().decode("utf-8", "replace"))
+            payload = json.loads(resp.read().decode("utf-8", "replace"))
+        if native:
+            return {"choices": [{"message": payload.get("message") or {},
+                                  "finish_reason": payload.get("done_reason") or "stop"}],
+                    "usage": {"prompt_tokens": payload.get("prompt_eval_count"),
+                              "completion_tokens": payload.get("eval_count")}}
+        return payload
 
     def _count(self, payload) -> None:
         usage = payload.get("usage") if isinstance(payload, dict) else None
+        self.last_usage_complete = isinstance(usage, dict) and (
+            isinstance(usage.get("total_tokens"), int) and not isinstance(usage.get("total_tokens"), bool)
+            or all(isinstance(usage.get(key), int) and not isinstance(usage.get(key), bool)
+                   for key in ("prompt_tokens", "completion_tokens")))
         if not isinstance(usage, dict):
+            self.usage_complete = False
             return
         for field, key in (("tokens_in", "prompt_tokens"),
                            ("tokens_out", "completion_tokens")):
@@ -276,6 +311,11 @@ class OpenAICompatSocket:
         total = usage.get("total_tokens")
         if isinstance(total, int) and not isinstance(total, bool):
             self.tokens_used = (self.tokens_used or 0) + total
+        elif all(isinstance(usage.get(key), int) and not isinstance(usage.get(key), bool)
+                 for key in ("prompt_tokens", "completion_tokens")):
+            self.tokens_used = (self.tokens_used or 0) + usage["prompt_tokens"] + usage["completion_tokens"]
+        else:
+            self.usage_complete = False
 
     def _refused(self, error: urllib.error.HTTPError) -> LocalInferenceError:
         detail = ""

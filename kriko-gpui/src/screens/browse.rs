@@ -8,7 +8,7 @@ use gpui::{div, prelude::*, px, rgb, rgba, ClickEvent, Context, Div, FontWeight,
 
 use crate::app::{Field, Kriko};
 use crate::live::history::{Evidence, State, Subject};
-use crate::screens::history::{clip, severity_word_chip};
+use crate::screens::history::{clip, drawer_ctrl, drawer_option, severity_word_chip};
 use crate::screens::{empty_note, mono, plate_s, segmented, th};
 use crate::theme::*;
 
@@ -175,69 +175,47 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         cx,
     );
 
-    // ---- explicit filters in a collapsible drawer ----
-    let filters = app.live.history.filters.clone();
-    let picks = app.live.history.filter_pick.clone();
-    let active_filters = picks.iter().filter(|pick| **pick > 0).count();
-    let toggle_filters = cx.listener(|this, _: &ClickEvent, _w, cx| {
-        this.browse_filters_open = !this.browse_filters_open;
-        cx.notify();
-    });
-    let filter_button = plate_s(
-        "browse-filter-toggle",
-        &format!("Filters · {active_filters} active"),
-    )
-    .on_click(toggle_filters);
-    let close_filters = cx.listener(|this, _: &ClickEvent, _w, cx| {
-        this.browse_filters_open = false;
-        cx.notify();
-    });
-    let mut filter_drawer = card()
-        .flex()
-        .flex_col()
-        .gap(px(16.0))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .child(eyebrow("Browse filters"))
-                .child(plate_s("browse-filter-close", "Close").on_click(close_filters)),
-        );
-    for (i, filter) in filters.iter().enumerate() {
-        let selected = picks.get(i).copied().unwrap_or(0);
-        let mut choices = vec![(0, "All".to_string())];
-        choices.extend(
-            filter
-                .options
-                .iter()
-                .enumerate()
-                .map(|(option, (_, label))| (option + 1, label.clone())),
-        );
-        let mut row = div().flex().items_center().flex_wrap().gap(px(8.0));
-        row = row.child(div().w(px(120.0)).child(eyebrow(&filter.label)));
-        for (choice, label) in choices {
-            let is_selected = selected == choice;
-            let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                this.pick_browse_filter(i, choice, cx);
+    // ---- the filters, as the engine describes them, each a drawer ----
+    let mut filter_row = div().flex().items_center().gap(px(12.0)).flex_wrap();
+    {
+        let h = &app.live.history;
+        for (i, f) in h.filters.iter().enumerate() {
+            let pick = h.filter_pick.get(i).copied().unwrap_or(0);
+            let word = if pick == 0 {
+                "ALL".to_string()
+            } else {
+                clip(&f.options[pick - 1].1, 22).to_uppercase()
+            };
+            let open = h.filter_drawer == Some(i);
+            let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                this.open_browse_filter(i, cx);
             });
-            let control = plate_s(
-                gpui::ElementId::named_usize(format!("browse-filter-{i}"), choice),
-                &label,
-            )
-            .when(is_selected, |button| {
-                button.bg(rgb(WELL)).text_color(rgb(ICE)).border_color(rgb(ICE))
-            })
-            .on_click(pick);
-            row = row.child(control);
+            filter_row = filter_row.child(
+                drawer_ctrl(gpui::ElementId::named_usize("browse-filter", i), &f.label.to_uppercase(), &word, open)
+                    .on_click(toggle),
+            );
         }
-        filter_drawer = filter_drawer.child(row);
     }
-    if active_filters > 0 {
-        let clear = cx.listener(|this, _: &ClickEvent, _w, cx| {
-            this.clear_browse_filters(cx);
-        });
-        filter_drawer = filter_drawer.child(plate_s("browse-filter-clear", "Clear filters").on_click(clear));
+    let mut filters_col = div().flex().flex_col().gap(px(10.0)).child(filter_row);
+    if let Some(i) = app.live.history.filter_drawer {
+        if let Some(f) = app.live.history.filters.get(i) {
+            let picked = app.live.history.filter_pick.get(i).copied().unwrap_or(0);
+            let mut panel = well().p(px(8.0)).flex().flex_col().gap(px(2.0));
+            let pick_all = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                this.pick_browse_filter(i, 0, cx);
+            });
+            panel = panel
+                .child(drawer_option(gpui::ElementId::named_usize("browse-filter-all", i), "ALL", picked == 0).on_click(pick_all));
+            for (oi, (_, label)) in f.options.iter().enumerate() {
+                let want = oi + 1;
+                let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                    this.pick_browse_filter(i, want, cx);
+                });
+                panel = panel
+                    .child(drawer_option(gpui::ElementId::named_usize("browse-filter-opt", i * 1000 + oi), label, picked == want).on_click(pick));
+            }
+            filters_col = filters_col.child(panel);
+        }
     }
 
     let view_switch = segmented(
@@ -260,7 +238,6 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .gap(px(16.0))
         .flex_wrap()
         .child(div().flex_1().min_w(px(280.0)).child(search))
-        .child(filter_button)
         .child(view_switch);
 
     if !app.live.history.subjects_loaded {
@@ -424,72 +401,72 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .into_any_element(),
     };
 
-    let page_size = app.browse_page_size.max(1);
-    let page_count = h.subjects_total.div_ceil(page_size).max(1);
-    let page = app.browse_page.min(page_count - 1);
-    let page_start = if h.subjects_total == 0 { 0 } else { page * page_size + 1 };
-    let page_end = (page * page_size + rows.len()).min(h.subjects_total);
-    let page_summary = if h.subjects_total == 0 {
-        "0 subjects".to_string()
+    let drawer = drawer(app, motion);
+
+    let total = app.live.history.subjects_total.max(0) as usize;
+    let page = app.browse_page;
+    let pages = if total == 0 {
+        1
+    } else {
+        (total + crate::data::BROWSE_PAGE_SIZE - 1) / crate::data::BROWSE_PAGE_SIZE
+    };
+    let shown = rows.len();
+    let count_text = if shown <= 1 {
+        format!("{} of {} · best evidence first", shown, total)
     } else {
         format!(
-            "Showing {page_start}–{page_end} of {} · page {} of {page_count}",
-            h.subjects_total,
-            page + 1
+            "{}-{} of {} · best evidence first",
+            page * crate::data::BROWSE_PAGE_SIZE + 1,
+            page * crate::data::BROWSE_PAGE_SIZE + shown,
+            total
         )
     };
-    let previous = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-        this.browse_page_changed(this.browse_page.saturating_sub(1), this.browse_page_size, cx);
+    let prev = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+        this.turn_browse_page(-1, cx);
     });
     let next = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-        this.browse_page_changed(this.browse_page + 1, this.browse_page_size, cx);
+        this.turn_browse_page(1, cx);
     });
-    let mut page_sizes = div().flex().items_center().gap(px(6.0));
-    page_sizes = page_sizes.child(mono("ROWS", MUTED));
-    for size in [10usize, 25, 50, 100] {
-        let pick_size = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-            this.browse_page_changed(0, size, cx);
-        });
-        let button = plate_s(gpui::ElementId::named_usize("browse-page-size", size), &size.to_string())
-            .when(size == page_size, |button| {
-                button.bg(rgb(WELL)).text_color(rgb(ICE)).border_color(rgb(ICE))
-            })
-            .on_click(pick_size);
-        page_sizes = page_sizes.child(button);
-    }
     let pagination = div()
+        .mt(px(16.0))
+        .pt(px(16.0))
         .flex()
         .items_center()
         .justify_between()
-        .flex_wrap()
-        .gap(px(12.0))
-        .child(mono(&page_summary, MUTED))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .child(page_sizes)
-                .child(
-                    plate_s("browse-page-previous", "Previous")
-                        .when(page == 0, |button| button.opacity(0.4))
-                        .on_click(previous),
-                )
-                .child(
-                    plate_s("browse-page-next", "Next")
-                        .when(page + 1 >= page_count, |button| button.opacity(0.4))
-                        .on_click(next),
-                ),
-        );
-
-    let drawer = drawer(app, motion);
+        .when(total > 0, |d| {
+            d.child(
+                div()
+                    .font_family(MONO)
+                    .text_size(px(12.0))
+                    .text_color(rgb(MUTED))
+                    .child(count_text),
+            )
+        })
+        .when(total > 0, |d| {
+            d.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(12.0))
+                    .child(
+                        plate_s("browse-prev", "Previous")
+                            .when(page == 0, |b| b.opacity(0.4))
+                            .on_click(prev),
+                    )
+                    .child(
+                        plate_s("browse-next", "Next")
+                            .when(page + 1 >= pages, |b| b.opacity(0.4))
+                            .on_click(next),
+                    ),
+            )
+        });
 
     div()
         .flex()
         .flex_col()
         .gap(px(24.0))
         .child(head)
-        .when(app.browse_filters_open && !filters.is_empty(), |d| d.child(filter_drawer))
+        .when(!app.live.history.filters.is_empty(), |d| d.child(filters_col))
         .child(
             div()
                 .id("browse-row-scroll")
@@ -500,9 +477,16 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                         .gap(px(24.0))
                         .items_start()
                         .min_w(px(904.0))
-                        .child(div().flex_1().min_w(px(0.0)).child(body))
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_w(px(0.0))
+                                .flex()
+                                .flex_col()
+                                .child(body)
+                                .child(pagination),
+                        )
                         .child(div().w(px(320.0)).flex_none().child(drawer)),
                 ),
         )
-        .child(pagination)
 }

@@ -48,6 +48,7 @@ test("a folder that cannot be loaded does not loop the reload", async () => {
 
 test("after its own reload it refreshes the listing tabs left on the old script", async () => {
   const h = loadBackground({ routes: ROUTES });
+  h.state.registered.push({ id: "kriko-anysite", matches: ["https://*/*"] });
   h.state.local.krikoSelfReload = { digest: NEW, at: Date.now(), pending: true };
   for (const fn of h.installedListeners) await fn({ reason: "update" });
   assert.deepEqual(h.state.tabsReloaded, [1]);

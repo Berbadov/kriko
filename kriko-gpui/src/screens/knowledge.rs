@@ -87,12 +87,29 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
 
     // ---- packs with switches; the meter is each pack's share of subjects ----
     let max_subjects = k.packs.iter().map(|p| p.subjects).max().unwrap_or(1).max(1) as f32;
+    let switching = k.switching.is_some();
+    let choose_pack = cx.listener(|this, _: &ClickEvent, _w, cx| this.choose_pack_file(cx));
     let mut packs = card().flex().flex_col();
-    packs = packs.child(div().mb(px(4.0)).child(eyebrow("Packs")));
+    packs = packs.child(
+        div()
+            .flex()
+            .items_center()
+            .justify_between()
+            .gap(px(12.0))
+            .mb(px(4.0))
+            .child(eyebrow("Packs"))
+            .child(crate::screens::plate_s(
+                "knowledge-import-pack",
+                if k.pack_installing { "Installing" } else { "Import .kpack" },
+            ).on_click(choose_pack)),
+    );
     packs = packs.child(hairline());
+    if let Some(note) = &k.pack_install_note {
+        packs = packs.child(row_desc(note));
+    }
     if k.packs.is_empty() {
         packs = packs.child(div().pt(px(12.0)).child(empty_note(
-            "No packs are installed. Install one from Browse and its knowledge lands here.",
+            "No packs are installed. Import a trusted .kpack file to add local product knowledge.",
         )));
     }
     for (i, pack) in k.packs.iter().enumerate() {
@@ -114,6 +131,7 @@ pub fn overview(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) 
                 .justify_between()
                 .gap(px(24.0))
                 .when(!pack.enabled, |s| s.opacity(0.5))
+                .when(switching && k.switching.as_deref() != Some(pack.id.as_str()), |s| s.opacity(0.35))
                 .child(
                     div()
                         .flex()

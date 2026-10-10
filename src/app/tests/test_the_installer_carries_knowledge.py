@@ -237,11 +237,26 @@ def test_which_packs_the_build_carries_is_discovered_rather_than_listed():
     assert "cars" in found and "drill" in found
 
 
-def test_the_installer_spec_carries_the_artifacts_the_build_writes():
+def test_release_builds_do_not_carry_or_require_catalog_artifacts():
     spec = (REPO / "packaging" / "kriko-sidecar.spec").read_text(encoding="utf-8")
 
-    # PyInstaller cannot see a file nothing imports, and the failure mode is a
-    # green build that ships an empty engine. The spec refuses to freeze
-    # without them; this is the check that it still asks.
-    assert "packs_bundled" in spec
-    assert 'glob("*.kpack")' in spec
+    assert "packs_bundled" not in spec
+    assert 'glob("*.kpack")' not in spec
+    for path in ("kriko-gpui/package.ps1", ".github/workflows/desktop.yml"):
+        assert "packaging/build_packs.py" not in (REPO / path).read_text(encoding="utf-8")
+
+
+def test_startup_does_not_seed_even_if_old_release_artifacts_are_present(carried, tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from app.web.app import create_app
+    from app.web.settings import Settings
+
+    _artifact(carried / "old.kpack", "old.default", "1.0.0")
+    monkeypatch.setattr("app.agentconfig.refresh_skills", lambda *args: 0)
+    monkeypatch.setattr("app.web.app.KRIKO_HOME", tmp_path)
+    app = create_app(Settings(store_path=tmp_path / "knowledge.sqlite",
+        app_state_path=tmp_path / "app.sqlite", analysis_log_path=tmp_path / "analyses.jsonl"))
+    with TestClient(app) as client:
+        assert client.get("/api/packs").json() == []
+        assert client.get("/api/adapters").json() == []
+        assert app.state.seeded == []

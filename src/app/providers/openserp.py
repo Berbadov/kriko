@@ -6,7 +6,7 @@ The wire shape is deliberately thin — one GET, JSON out — and exactly
 OpenSERP's: `GET /mega/search?text=...&engines=...&limit=...` answered with
 `results: [{url, title, domain}]`. Another SERP works only if it serves that
 same path and shape; SearXNG, for one, does not (it answers `/search?q=`).
-When no OpenSERP answers, the plane searches through `exa_mcp.py` instead.
+When no OpenSERP answers, the plane uses `websearch.py` instead.
 
 What this adapter adds over pointing the paid plane's Exa socket at a
 localhost URL is the failure contract: a SERP that answers with a challenge

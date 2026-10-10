@@ -11,8 +11,8 @@ use gpui::{
     MouseButton, PaintQuad, Pixels, SharedString, Styled, Window,
 };
 
-use crate::app::{Field, Kriko, Tab};
-use crate::live::compare::{self as live, Check, Level, Loaded, Note, QState, QuestionRun, MAX_SLOTS};
+use crate::app::{Field, Kriko};
+use crate::live::compare::{self as live, Check, Level, Loaded, Note, QState, MAX_SLOTS};
 use crate::marks::{self, mark_tile, phase_beat, Phase};
 use crate::screens::{empty_note, mono, plate_s, row_desc, th, trust_icon};
 use crate::theme::*;
@@ -175,10 +175,16 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         cx.notify();
     });
     let clear = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.live.compare.strokes.clear();
-        this.live.compare.notes.clear();
-        this.live.compare.note_open = None;
-        this.save_board_soon(cx);
+        let board = &mut this.live.compare;
+        if board.board_clear_armed {
+            board.strokes.clear();
+            board.notes.clear();
+            board.note_open = None;
+            board.board_clear_armed = false;
+            this.save_board_soon(cx);
+        } else if !board.strokes.is_empty() || !board.notes.is_empty() {
+            board.board_clear_armed = true;
+        }
         cx.notify();
     });
     let close = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -207,7 +213,7 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
                 .on_click(pick_tool(1)),
         )
         .child(plate_s("board-undo", "Undo mark").on_click(undo))
-        .child(plate_s("board-clear", "Clear").on_click(clear))
+        .child(plate_s("board-clear", if app.live.compare.board_clear_armed { "Clear board?" } else { "Clear" }).on_click(clear))
         .child(plate_s("board-close", "Close").on_click(close));
 
     // The canvas that paints every stroke: fractions land wherever the
@@ -1248,56 +1254,6 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         .child(keys)
 }
 
-fn question_run_detail(run: &QuestionRun) -> Div {
-    let mut detail = div().pl(px(24.0)).flex().flex_col().gap(px(5.0));
-    if !run.state.is_empty() {
-        let stage = if run.state == "succeeded" { "Complete" }
-            else if run.state == "failed" { "Failed" }
-            else if run.state == "cancelled" { "Cancelled" }
-            else { "In progress" };
-        detail = detail.child(mono(
-            &format!("{} · {:.0}% · {}", stage, (run.progress * 100.0).clamp(0.0, 100.0), run.message),
-            MUTED,
-        ));
-    }
-    if !run.saved_checks.is_empty() {
-        let sources = run.saved_checks.iter()
-            .map(|(name, risks)| format!("{name} ({risks} known risks)"))
-            .collect::<Vec<_>>().join(" · ");
-        detail = detail.child(mono(&format!("Saved checks behind answer: {sources}"), MUTED));
-    } else if run.state == "succeeded" {
-        detail = detail.child(mono("Saved check summary was not recorded for this answer", DIM));
-    }
-    if !run.steps.is_empty() {
-        detail = detail.child(mono("STEPS", DIM));
-        for step in &run.steps {
-            detail = detail.child(mono(&format!("• {step}"), MUTED));
-        }
-    }
-    if !run.model.is_empty() {
-        detail = detail.child(mono(&format!("Model: {}", run.model), MUTED));
-    } else if run.state == "succeeded" {
-        detail = detail.child(mono("Model name not reported by this agent", DIM));
-    }
-    if run.state == "succeeded" {
-        let usage = match run.tokens_used {
-            Some(total) => {
-                let parts = match (run.tokens_in, run.tokens_out) {
-                    (Some(input), Some(output)) => format!(" ({input} in, {output} out)"),
-                    _ => String::new(),
-                };
-                format!("{total} tokens{parts}")
-            }
-            None => "Token use not reported by this agent".to_string(),
-        };
-        let brief = run.brief_chars.map(|n| format!(" · {n} brief characters (some risks may be omitted)"))
-            .unwrap_or_default();
-        let search = if run.no_web_search { " · no new web search" } else { "" };
-        detail = detail.child(mono(&format!("{usage}{brief}{search}"), MUTED));
-    }
-    detail
-}
-
 pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
 
@@ -1313,6 +1269,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .flex_wrap()
         .child(mono("DRAFTS", DIM));
     let open_draft = app.live.compare.draft.clone();
+    let switch_pending = app.live.compare.switch_draft_armed.clone();
     for (i, draft) in app.live.compare.drafts.iter().enumerate() {
         let id = draft.draft_id.clone();
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -1337,7 +1294,11 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .when(!current, |s| {
                     s.text_color(rgb(MUTED)).hover(|h| h.bg(rgba(GLASS_1)).text_color(rgb(INK)))
                 })
-                .child(draft.name.clone())
+                .child(if switch_pending.as_deref() == Some(draft.draft_id.as_str()) {
+                    format!("Discard & open {}?", draft.name)
+                } else {
+                    draft.name.clone()
+                })
                 .on_click(pick),
         );
     }
@@ -1359,6 +1320,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         cx.notify();
     });
     let unsaved = app.draft_unsaved();
+    let switch_armed = app.live.compare.switch_draft_armed.is_some();
     drafts_row = drafts_row
         .child(plate_s("draft-new", "+ New").on_click(new_draft))
         .child(plate_s("draft-save", "Save").on_click(save_draft))
@@ -1366,6 +1328,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             d.child(plate_s("draft-delete", "Delete").on_click(delete_draft))
         })
         .when(unsaved, |d| d.child(mono("UNSAVED SLOTS", DIM)))
+        .when(switch_armed, |d| d.child(mono("Press the selected draft again to discard these changes.", 0xffb86b)))
         .child(div().flex_1().min_w(px(0.0)))
         .child(
             div()
@@ -1608,14 +1571,20 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .child(mono("COUNTED FROM THE COLUMNS BELOW · NOT A RANKING", DIM))
     });
 
-    // ---- the agent: which one answers, and the saved checks it reads ----
+    // ---- the agent: which one answers, and everything it sees ----
     let spec_n = live::spec_rows(&ready).len();
     let risk_n = live::risk_rows(&ready).len();
+    let notes_n = app.live.compare.notes.iter().filter(|n| !n.text.trim().is_empty()).count();
+    let marks_n = app.marks_now().len();
+    let strokes_n = app.live.compare.strokes.len();
     let attached = format!(
-        "saved checks: {} · {} spec rows · {} known risks",
+        "attached: {} checks · {} spec rows · {} risks · {} notes · {} marks · {} strokes",
         ready.iter().flatten().count(),
         spec_n,
         risk_n,
+        notes_n,
+        marks_n,
+        strokes_n,
     );
     let waiting_answer = app.live.compare.asking || app.live.compare.questions.iter().any(|q| q.answer.is_none() && !app.live.compare.failed.contains_key(&q.question_id));
     let mut agent_row = div().flex().items_center().gap(px(8.0)).flex_wrap();
@@ -1640,30 +1609,12 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .on_click(pick),
         );
     }
-    let local_model = app.live.local.plane.as_ref()
-        .filter(|p| p.ready)
-        .map(|p| p.model.clone());
-    if let Some(model) = &local_model {
-        let pick = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-            this.live.compare.harness = "local".to_string();
-            cx.notify();
-        });
-        agent_row = agent_row.child(
-            agent_key(
-                "cmp-agent-local", "cmp-agent-local-tile", "local",
-                &format!("Local · {model}"),
-                app.live.compare.harness == "local" ||
-                    (app.live.compare.harness.is_empty() && app.live.compare.harnesses.is_empty()),
-                waiting_answer, motion,
-            ).on_click(pick),
-        );
-    }
 
     // ---- follow-up questions ----
     let ask_input = app.input_field(
         Field::CompareAsk,
         "compare-ask",
-        "Ask about this shortlist...",
+        "Ask your agent about this shortlist...",
         Some("agents"),
         window,
         cx,
@@ -1706,10 +1657,18 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .and_then(|id| app.live.compare.drafts.iter().find(|d| d.draft_id == *id))
         .map(|d| d.name.clone())
         .unwrap_or_default();
+    let agent_label = app
+        .live
+        .compare
+        .harnesses
+        .iter()
+        .find(|(id, _)| *id == app.live.compare.harness)
+        .map(|(_, l)| l.clone())
+        .unwrap_or_else(|| "your agent".to_string());
     let mut questions = div().flex().flex_col().gap(px(10.0));
     for (qi, q) in app.live.compare.questions.iter().enumerate() {
         let failure = app.live.compare.failed.get(&q.question_id);
-        let run = app.live.compare.question_runs.get(&q.job_id);
+        let line = app.live.compare.job_line.get(&q.job_id);
         questions = questions.child(
             well()
                 .p(px(14.0))
@@ -1764,10 +1723,6 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             motion,
                         )))
                         .child(row_desc(why)),
-                    (None, None) if run.is_some_and(|r| r.state == "succeeded") => div()
-                        .pl(px(24.0))
-                        .child(tag(format!("compare-empty-{qi}"), TagState::Need,
-                            "no text returned", motion)),
                     (None, None) => div()
                         .pl(px(24.0))
                         .flex()
@@ -1776,11 +1731,11 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .child(div().flex().items_center().gap(px(8.0)).child(tag(
                             format!("compare-asking-{qi}"),
                             TagState::Live,
-                            "answering",
+                            &format!("asking {agent_label}"),
                             motion,
-                        ))),
+                        )))
+                        .children(line.map(|l| mono(l, MUTED))),
                 })
-                .children(run.map(question_run_detail))
                 .child(mono(
                     &format!(
                         "kept with {} · asked {}",
@@ -1796,18 +1751,12 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .flex()
         .flex_col()
         .gap(px(12.0))
-        .child(eyebrow("Ask about this comparison"))
+        .child(eyebrow("Ask your agent"))
         .child(row_desc(
-            "Ask from the saved checks in these slots. The local model reads a short, relevant brief without searching the web. Asking saves the slots to this draft first.",
+            "A question about this shortlist. The agent reads the saved checks in the slots; asking saves the slots to the draft first.",
         ))
-        .child(if app.live.compare.harnesses.is_empty() && local_model.is_none() {
-            let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-                this.tab = Tab::Local;
-                cx.notify();
-            });
-            div().flex().items_center().gap(px(12.0))
-                .child(empty_note("No agent or local model is ready."))
-                .child(ghost("compare-open-local", "Set up Local LLM").on_click(open_local))
+        .child(if app.live.compare.harnesses.is_empty() {
+            empty_note("No agent is ready on this machine. Settings shows which ones Kriko can start.")
                 .into_any_element()
         } else {
             agent_row.into_any_element()

@@ -26,7 +26,7 @@
 # and every one is invisible to PyInstaller's import graph: the built frontend
 # (src/app/web/static/, or the app 404s on its own UI), the store's DDL
 # (src/kriko/store/schema.sql, or every query raises FileNotFoundError), the
-# browser extension, the first-party packs, and the shipped model catalogue
+# browser extension and the shipped model catalogue
 # (src/app/models.toml, or install_default() throws FileNotFoundError on every
 # frozen startup and every screen that prices a run shows "cost unknown"). The
 # DDL was found by running this build, not by reading the code; models.toml
@@ -70,24 +70,8 @@ STATIC = ROOT / "src" / "app" / "web" / "static"
 # mirrors by copying the directory and letting the staging step filter.
 EXTENSION = ROOT / "extension"
 
-# The first-party knowledge travels inside the sidecar too, unpacked to
-# `app/packs_bundled` where `app/bundledpacks.py` looks for it, and startup
-# installs whatever the store is missing or behind on. Until 0.7.1 the
-# installer carried none, so a fresh install opened onto an empty store — and,
-# worse, a defect whose fix lives in a pack's rows could not be delivered by
-# any release at all: B101's new alias tier shipped its engine half while the
-# reader's installed cars 0.1.1 kept producing the searches that found nothing.
-# Every file is listed rather than globbed because PyInstaller's `datas` takes
-# paths, not patterns.
-PACKS = sorted((ROOT / "dist").glob("*.kpack"))
-
-if not PACKS:
-    raise SystemExit(
-        "dist/ carries no .kpack — the app ships its first-party knowledge and "
-        "an install with none opens onto an empty store. Build them first:\n"
-        "  python -m app.cli build packs/cars  --out dist/cars.kpack\n"
-        "  python -m app.cli build packs/drill --out dist/drill.kpack"
-    )
+# Releases start without catalogs or site adapters. Research and explicit
+# installs populate the user's store; stray dist/*.kpack files are not shipped.
 
 if not (EXTENSION / "manifest.json").exists():
     raise SystemExit(
@@ -128,11 +112,10 @@ a = Analysis(
         (str(STATIC), "app/web/static"),
         (str(ROOT / "src" / "kriko" / "store" / "schema.sql"), "kriko/store"),
         (str(ROOT / "src" / "app" / "models.toml"), "app"),
-        # B185: the benchmark's fixed test set, read from disk beside
-        # benchcases.py. Without it a frozen install answers "no cases".
-        (str(ROOT / "src" / "app" / "benchcases.json"), "app"),
+        # Versioned benchmark corpora are read beside their modules. Discover
+        # all app JSON resources so a new suite cannot disappear when frozen.
+        *((str(resource), "app") for resource in sorted((ROOT / "src" / "app").glob("*.json"))),
         (str(EXTENSION), "app/extension_src"),
-        *((str(pack), "app/packs_bundled") for pack in PACKS),
     ],
     hiddenimports=[
         "uvicorn.logging",

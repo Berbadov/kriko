@@ -7,8 +7,8 @@ so the run resolves its address and model through `resolve` too.
 
 Ready means a model server answers *and* serves a model. The server's own list
 is the only source of model names; nothing here knows what a good model is. The
-search half never blocks readiness: OpenSERP when it answers, otherwise Exa's
-free hosted search (decision D3), so a local model alone is enough to run.
+search half never blocks readiness: OpenSERP when it answers, otherwise direct
+web search with provider cooldowns, so a local model alone is enough to run.
 """
 
 from app import prefs
@@ -87,11 +87,19 @@ def resolve(app_state_path=None, *, url: str = "", model: str = "",
                 break
 
     search = {
-        "search_kind": "openserp" if searching else "exa",
+        "search_kind": "openserp" if searching else "web",
         "search_url": discovery.base_of(want_search) or discovery.SEARCH_DEFAULT_URL,
         "search_label": ("the search service on this machine" if searching
-                         else "Exa's free hosted search"),
+                         else "direct web search (DuckDuckGo / Bing / Brave)"),
     }
+    runtime_options = {}
+    if chosen and chosen["name"] == "Ollama":
+        try:
+            context = int(mine[prefs.LOCAL_CONTEXT_TOKENS])
+        except (ValueError, TypeError):
+            context = 0
+        if 512 <= context <= 262144:
+            runtime_options["num_ctx"] = context
     out = {
         "servers": servers,
         "url": chosen["url"] if chosen else "",
@@ -99,6 +107,7 @@ def resolve(app_state_path=None, *, url: str = "", model: str = "",
         "models": chosen["models"] if chosen else [],
         "model": "",
         "timeout": timeout_of(mine[prefs.LOCAL_TIMEOUT]),
+        "runtime_options": runtime_options,
         "ready": False,
         "reason": "",
         "line": "",

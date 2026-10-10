@@ -1,0 +1,109 @@
+{
+  "v": 3,
+  "assetGroups": {
+    "Agents": {
+      "files": {},
+      "name": "Agents",
+      "order": []
+    },
+    "Logos": {
+      "files": {
+        "kriko-mark-brand.svg": {
+          "blob": "0d9bd8e1738c1cf2771791dd91ab2a30",
+          "name": "kriko-mark-brand.svg",
+          "size": 627,
+          "type": "image/svg+xml"
+        },
+        "kriko-mark-white.svg": {
+          "blob": "1661a010c62f29d4d981f07aef951a17",
+          "name": "kriko-mark-white.svg",
+          "size": 627,
+          "type": "image/svg+xml"
+        },
+        "kriko-wordmark-black.svg": {
+          "blob": "6a850241e82dfec1e674b47c6c096135",
+          "name": "kriko-wordmark-black.svg",
+          "size": 1326,
+          "type": "image/svg+xml"
+        },
+        "kriko-wordmark-white.svg": {
+          "blob": "fa416f6cdadb50fa47e944ecb3967ead",
+          "name": "kriko-wordmark-white.svg",
+          "size": 1326,
+          "type": "image/svg+xml"
+        }
+      },
+      "name": "Logos",
+      "order": [
+        "kriko-wordmark-white.svg",
+        "kriko-wordmark-black.svg",
+        "kriko-mark-white.svg",
+        "kriko-mark-brand.svg"
+      ],
+      "tile": "l"
+    },
+    "Other": {
+      "files": {},
+      "name": "Other",
+      "order": []
+    },
+    "Sky": {
+      "files": {
+        "sky-dim.png": {
+          "blob": "944fbc12266ba716095a10725520a874",
+          "name": "sky-dim.png",
+          "size": 6133,
+          "type": "image/png"
+        },
+        "sky-hero.png": {
+          "blob": "35d2c5d29c8060c29752c07f30652611",
+          "name": "sky-hero.png",
+          "size": 12588,
+          "type": "image/png"
+        },
+        "sky-wide.png": {
+          "blob": "c4defa4c303ab4e8e9741b305e12f0c6",
+          "name": "sky-wide.png",
+          "size": 8340,
+          "type": "image/png"
+        }
+      },
+      "name": "Sky",
+      "order": [
+        "sky-hero.png",
+        "sky-wide.png",
+        "sky-dim.png"
+      ],
+      "tile": "l"
+    }
+  },
+  "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-10-01T18:34:28Z",
+    "v": 1
+  },
+  "docs": {
+    "readme": "project/README.md",
+    "sections": [
+      "project/Gpui.md",
+      "project/Motion.md"
+    ]
+  },
+  "groups": [
+    "Logos",
+    "Agents",
+    "Sky",
+    "Other"
+  ],
+  "lastChange": {
+    "at": "2026-10-09T00:00:00Z",
+    "by": "bee",
+    "note": "Flat buttons (3D key and plate removed), Web group: site and marketplace drafts",
+    "via": "Claude (Cowork)"
+  },
+  "layout": "files",
+  "libraries": [],
+  "namespace": "Kriko",
+  "sections": {},
+  "title": "KRIKO"
+}

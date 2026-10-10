@@ -5,9 +5,8 @@
 
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
 
-use crate::app::{Field, Kriko, Tab};
+use crate::app::{Field, Kriko};
 use crate::live::local::{Held, Machine, Plane, PullPhase};
-use crate::live::run;
 use crate::marks::{self, mark_tile, Mark, Phase};
 use crate::screens::{empty_note, mono, row_desc, row_title, stepper, trust_icon};
 use crate::theme::*;
@@ -527,29 +526,18 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                 .child(eyebrow("Models"))
                 .child(mono(&format!("{} on {}", plane.models.len(), if plane.name.is_empty() { "the server" } else { &plane.name }), DIM)),
         )
-        .child(hairline())
-        .child(row_desc(
-            "Start with 4B or smaller for modest hardware. Every model on the server stays available below, including larger ones for machines with more VRAM.",
-        ));
+        .child(hairline());
     if plane.models.is_empty() {
         return models.child(div().pt(px(12.0)).child(empty_note(
             "No model is downloaded on the server Kriko is using. Get one above.",
         )));
     }
-    for group in 0..3 {
-      let members: Vec<_> = plane.models.iter().enumerate().filter(|(_, name)| {
-          let info = held.iter().find(|h| &h.name == *name);
-          model_group(info.and_then(|h| h.params.as_deref()), name) == group
-      }).collect();
-      if members.is_empty() {
-          continue;
-      }
-      models = models.child(div().pt(px(14.0)).child(mono(match group {
-          0 => "4B AND SMALLER",
-          1 => "LARGER MODELS",
-          _ => "SIZE NOT REPORTED",
-      }, DIM)));
-      for (i, name) in members {
+    if let Some(note) = &app.live.local.models_note {
+        models = models.child(row_desc(note));
+    } else if app.live.local.delete_armed.is_some() {
+        models = models.child(row_desc("Press Remove? again to confirm. Models currently in use must be switched first."));
+    }
+    for (i, name) in plane.models.iter().enumerate() {
         let info = held.iter().find(|h| &h.name == name);
         let in_use = *name == plane.model;
         let fit: Option<bool> = match (info.and_then(|h| h.size_bytes), vram_bytes) {
@@ -568,11 +556,29 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
         let use_it = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.local_use_model(pick_name.clone(), cx);
         });
-        let right: gpui::AnyElement = if in_use {
-            tag(format!("local-model-{i}"), TagState::Live, "In use", motion).into_any_element()
+        let can_remove = plane.name == "Ollama" && info.is_some() && !in_use;
+        let remove_name = name.clone();
+        let remove = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.local_remove_model(remove_name.clone(), cx);
+        });
+        let armed = app.live.local.delete_armed.as_deref() == Some(name.as_str());
+        let removing = app.live.local.deleting.as_deref() == Some(name.as_str());
+        let mut controls = div().flex().items_center().gap(px(8.0));
+        if in_use {
+            controls = controls.child(tag(format!("local-model-{i}"), TagState::Live, "In use", motion));
         } else {
-            ghost(("model-use", i), "Use").on_click(use_it).into_any_element()
-        };
+            controls = controls.child(ghost(("model-use", i), "Use").on_click(use_it));
+        }
+        if can_remove {
+            controls = controls.child(if removing {
+                tag(format!("local-model-removing-{i}"), TagState::Live, "Removing", motion).into_any_element()
+            } else {
+                ghost(("local-model-remove", i), if armed { "Remove?" } else { "Remove" })
+                    .on_click(remove)
+                    .into_any_element()
+            });
+        }
+        let right: gpui::AnyElement = controls.into_any_element();
         models = models.child(
             div()
                 .py(px(14.0))
@@ -617,40 +623,11 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                 )
                 .child(div().flex_none().child(right)),
         );
-        models = models.child(hairline());
-      }
+        if i + 1 < plane.models.len() {
+            models = models.child(hairline());
+        }
     }
     models
-}
-
-/// Group by the server's parameter count when it supplies one. The model name
-/// is only a fallback for runtimes that list names without Ollama's details.
-fn model_group(params: Option<&str>, name: &str) -> usize {
-    let size = params.and_then(parse_billions).or_else(|| {
-        name.split([':', '-', '_']).rev().find_map(parse_billions)
-    });
-    match size {
-        Some(n) if n <= 4.0 => 0,
-        Some(_) => 1,
-        None => 2,
-    }
-}
-
-fn parse_billions(raw: &str) -> Option<f64> {
-    raw.trim().to_ascii_lowercase().strip_suffix('b')?.parse().ok()
-}
-
-#[cfg(test)]
-mod model_group_tests {
-    use super::model_group;
-
-    #[test]
-    fn installed_small_and_large_models_remain_visible_in_their_groups() {
-        assert_eq!(model_group(Some("4.0B"), "any-model"), 0);
-        assert_eq!(model_group(Some("27B"), "any-model"), 1);
-        assert_eq!(model_group(None, "another:70b"), 1);
-        assert_eq!(model_group(None, "custom-model"), 2);
-    }
 }
 
 pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
@@ -743,74 +720,11 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     let guide = setup(app, &plane, machine.as_ref(), window, cx);
     let server = server_card(app, &plane, window, cx);
     let models = model_card(app, &plane, &held, machine.as_ref(), cx);
-    let open_compare = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.tab = Tab::Compare;
-        this.refresh_compare(cx);
-        cx.notify();
-    });
-    let open_run = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.tab = Tab::Run;
-        this.refresh_jobs(cx);
-        cx.notify();
-    });
-    let use_card = card().flex().flex_col().gap(px(10.0))
-        .child(eyebrow("Use and inspect"))
-        .child(row_desc(if plane.ready {
-            "Ask the local model about saved checks in Compare. The answer stays with the draft, including its model, source summary, and reported token use. Open a local run below for its log, cited pages, and self-check verdict."
-        } else {
-            "Start a runtime and pick a model above. Compare will then offer it beside connected agents."
-        }))
-        .child(div().flex().gap(px(10.0)).flex_wrap()
-            .child(key("local-open-compare", "Open Compare").on_click(open_compare))
-            .child(ghost("local-open-run", "View runs").on_click(open_run)));
-    let refresh_work = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_jobs(cx));
-    let recent_jobs: Vec<_> = app.live.run.jobs.iter()
-        .filter(|j| j.backend == "local" || j.harness == "local")
-        .take(5).cloned().collect();
-    let mut work = card().flex().flex_col().gap(px(10.0))
-        .child(div().flex().items_center().justify_between()
-            .child(eyebrow("Recent local work"))
-            .child(ghost("local-refresh-work", "Refresh").on_click(refresh_work)))
-        .child(hairline());
-    if !app.live.run.jobs_loaded {
-        work = work.child(empty_note("Reading recent jobs from the engine."));
-    } else if recent_jobs.is_empty() {
-        work = work.child(empty_note("No local work in the recent jobs yet. Ask from Compare to see an answer and its steps here."));
-    }
-    for (i, job) in recent_jobs.iter().enumerate() {
-        let id = job.id.clone();
-        let open = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.live.run.pinned = Some(id.clone());
-            this.tab = Tab::Run;
-            this.refresh_jobs(cx);
-            cx.notify();
-        });
-        let title = if !job.question.is_empty() { job.question.clone() }
-            else if !job.product.is_empty() { job.product.clone() }
-            else { run::kind_word(&job.kind) };
-        let state = match job.state.as_str() {
-            "succeeded" => TagState::Done,
-            "failed" | "interrupted" => TagState::Block,
-            "running" => TagState::Live,
-            _ => TagState::Queue,
-        };
-        work = work.child(div().id(("local-work", i))
-            .py(px(10.0)).flex().items_center().gap(px(12.0))
-            .cursor_pointer().hover(|s| s.bg(rgba(GLASS_1)))
-            .on_click(open)
-            .child(tag(format!("local-work-state-{i}"), state, &job.state, motion))
-            .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(2.0))
-                .child(row_title(&title))
-                .child(mono(&format!("{} · {}", run::kind_word(&job.kind), job.message), MUTED)))
-            .child(mono(&run::ago(&job.created_at), DIM)));
-    }
     div()
         .flex()
         .flex_col()
         .gap(px(24.0))
         .child(guide)
-        .child(use_card)
-        .child(work)
         .child(server)
         .child(models)
         .child(

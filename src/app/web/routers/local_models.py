@@ -50,3 +50,24 @@ def pull_model(body: PullRequest, runner=Depends(get_jobs)) -> dict:
         raise HTTPException(422, "That is not a model name Ollama would accept.")
     job_id = runner.submit("model_pull", {"runtime": "ollama", "model": model})
     return {"job_id": job_id, "kind": "model_pull"}
+
+
+@router.delete("/local-models/{model:path}")
+def delete_model(model: str, request: Request) -> dict:
+    """Remove an Ollama model after the client confirms the exact name."""
+    model = model.strip()
+    if not modelpull.valid_name(model):
+        raise HTTPException(422, "That is not a model name Ollama would accept.")
+    base = modelpull.ollama_base(request.app.state.settings.app_state_path)
+    if not base:
+        raise HTTPException(503, "Ollama is not answering; no model was removed.")
+    from app import localplane
+
+    plan = localplane.resolve(request.app.state.settings.app_state_path, with_search=False)
+    if model == plan.get("model") and base == plan.get("url"):
+        raise HTTPException(409, "Select another local model before removing the one in use.")
+    try:
+        modelpull.delete(base, model)
+    except (RuntimeError, ValueError) as exc:
+        raise HTTPException(502, str(exc)) from exc
+    return {"removed": model, "runtime": "ollama"}

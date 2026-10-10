@@ -56,7 +56,9 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     // the job in flight, or the last thing that went wrong
     let mut status = div().flex().flex_col().gap(px(4.0));
-    if let Some((host, job)) = &k.site_job {
+    let mut jobs: Vec<_> = k.site_jobs.iter().collect();
+    jobs.sort_by(|a, b| a.0.cmp(b.0));
+    for (host, job) in jobs {
         let said = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
         status = status.child(mono(
             &format!("{host}: {said}"),

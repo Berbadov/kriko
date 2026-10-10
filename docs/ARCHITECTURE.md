@@ -1,16 +1,17 @@
 # Architecture, a reading map
 
-Find the file that answers your question. Kriko is a local-first knowledge
-engine for manufactured products: it answers *what is known to go wrong with
-this specific one* from installed catalogs. One invariant explains the layout:
-**`kriko/` knows no category.** A new category is a data change (a directory
-under `packs/`), never an engine change. The invariant is a test, not a
-convention: `src/kriko/tests/test_core_is_domain_free.py` walks `kriko/`'s AST
-and fails on category-shaped vocabulary.
+Use this page to find the file that answers your question. Kriko is a
+local-first knowledge engine for manufactured products: it answers *what is
+known to go wrong with this specific one* from installed catalogs. One
+invariant explains the layout: **`kriko/` knows no category.** A new category
+is a data change (a directory under `packs/`), never an engine change. The
+invariant is a test, not a convention:
+`src/kriko/tests/test_core_is_domain_free.py` walks `kriko/`'s AST and fails on
+category-shaped vocabulary.
 
 ## Which package may import which?
 
-Dependencies point down and in, never up or sideways. Where this and the
+Dependencies point down and in, never up or sideways. Where this page and the
 layering principle in `CLAUDE.md` disagree, `CLAUDE.md` wins.
 
 ```mermaid
@@ -37,7 +38,7 @@ flowchart TD
 
 | Package | Owns | Read first |
 |---|---|---|
-| `kriko-gpui/` | The desktop app (Rust, GPUI): supervises the sidecar, draws the interface over HTTP, no engine logic | `kriko-gpui/README.md`, then `kriko-gpui/src/engine.rs` |
+| `kriko-gpui/` | The desktop app (Rust, GPUI): starts and stops the sidecar, draws the interface over HTTP, holds no engine logic | `kriko-gpui/README.md`, then `kriko-gpui/src/engine.rs` |
 | `ui/` | Svelte source; `npm --prefix ui run build` writes `src/app/web/static/` | `ui/src/lib/shell/nav.ts`, the one route table the rail, the palette and the router all read |
 | `src/app/` | Interfaces: CLI, FastAPI dashboard, MCP server, operator TUI; the frozen sidecar entry | `src/app/cli.py`, `src/app/sidecar.py` |
 | `src/app/pipeline/` | Drivers that orchestrate a category's ledger and remediate its gaps | `src/app/pipeline/ledger_run.py` |
@@ -49,14 +50,15 @@ flowchart TD
 ### `ui/`, the frontend
 
 Svelte 5 and Vite, built into `src/app/web/static/`. A hash-routed shell over
-the route table in `lib/shell/nav.ts`, which also holds the alias words so a
-retired screen's address still opens whatever absorbed it. `styles/` holds the
-tokens and the one theme (`themes/panel.css`); `lib/` the typed API client
-plus pure derivation (`report.ts`, `verdict.ts`, `compare.ts`, `health.ts`,
-`fields.ts`, `homeSeries.ts`); `routes/` one component per destination. Only
-the report surface is editorial (68ch, a print sheet).
+the route table in `lib/shell/nav.ts`. That table also holds the alias words,
+so the address of a retired screen still opens the screen that absorbed it.
+`styles/` holds the tokens and the one theme (`themes/panel.css`); `lib/`
+holds the typed API client plus pure derivation (`report.ts`, `verdict.ts`,
+`compare.ts`, `health.ts`, `fields.ts`, `homeSeries.ts`); `routes/` holds one
+component per destination. Only the report surface is editorial (68ch, a
+print sheet).
 
-## Chasing a question? Read these
+## Which question takes you to which file?
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -77,18 +79,18 @@ flowchart LR
 
 The paths in the diagram are shortened; the full ones follow.
 
-**A listing becomes a card.** `extension/content.js` scrapes and messages the
-background worker, which `POST`s to `/api/analyze`
-(`src/app/web/routers/analyze.py`). That turns the scrape into a `Query`
-through `kriko.adapters.adapt()`, resolves subjects in
+**A listing becomes a card.** `extension/content.js` scrapes and messages
+the background worker, which `POST`s to `/api/analyze`
+(`src/app/web/routers/analyze.py`). That router turns the scrape into a
+`Query` through `kriko.adapters.adapt()`, resolves subjects in
 `src/kriko/lookup/match.py`, and reads ranked claims from
 `src/kriko/lookup/__init__.py`.
 
 **Why a claim did or did not show.** `src/kriko/lookup/rank.py`
 (`relevance()`, `explain()`), `src/kriko/lookup/conditions.py` (`evaluate()`),
 `src/kriko/gates.py` (`structural_reasons()`, `is_specific()`), and
-`lookup/tree.py` for the support read, which carries no score. A claim ranked
-low goes to `tree.py`, then to `src/app/web/routers/health.py`.
+`lookup/tree.py` for the support read, which carries no score. A claim
+ranked low goes to `tree.py`, then to `src/app/web/routers/health.py`.
 
 **What a catalog contains.** `docs/PACK_CONTRACT.md`, then `packs/drill/`,
 then `src/kriko/pack/manifest.py` (`load()`).
@@ -96,8 +98,8 @@ then `src/kriko/pack/manifest.py` (`load()`).
 **Build and install.** `src/kriko/pack/build.py` (`build()` and its `_emit_*`
 stages) turns a directory into a `.kpack`; `src/kriko/store/packstore.py`
 (`install()`, `activate()`) puts it in the store. A pack with its own legacy
-data shapes may carry a parallel builder, which is a migration rather than the
-general path.
+data shapes may carry a parallel builder. That builder is a migration, not
+the general path.
 
 **Evidence.** A category's `pipeline/ledger/acquire.py` fetches, and
 `ingest.py` is a thin adapter over the engine's `src/kriko/ledger/db.py`.
@@ -106,8 +108,8 @@ machinery, and `src/app/pipeline/ledger_run.py` drives the stages.
 
 **Refusals.** `src/app/mcp_server.py` (`submit_findings()`, which grounds
 every quote first), `src/kriko/gates.py` (`gate_reason()`,
-`structural_reasons()`), and the pack's own routine vocabulary, which is data
-rather than Python.
+`structural_reasons()`), and the pack's own routine vocabulary, which is
+data rather than Python.
 
 ## Which command starts what?
 
@@ -128,9 +130,9 @@ rather than Python.
 
 ## How do I run things?
 
-- Repo venv, not bare `python`: `.venv/bin/python` on POSIX,
+- Use the repo venv, not bare `python`: `.venv/bin/python` on POSIX,
   `.venv\Scripts\python.exe` on Windows.
-- Full suite, no arguments: `python -m pytest` (`pytest.ini` pins
-  `testpaths`; see `docs/DOCTRINE.md`).
-- A catalog: `kriko build packs/<name>`, then `kriko packs`. The full
-  walkthrough is `docs/USAGE.md`.
+- Run the full suite with no arguments: `python -m pytest` (`pytest.ini`
+  pins `testpaths`; see `docs/DOCTRINE.md`).
+- Build a catalog with `kriko build packs/<name>`, then list with `kriko
+  packs`. The full walkthrough is `docs/USAGE.md`.
