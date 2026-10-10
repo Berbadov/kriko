@@ -62,3 +62,9 @@ def pull_model(body: PullRequest, runner=Depends(get_jobs)) -> dict:
         raise HTTPException(422, "That is not a model name Ollama would accept.")
     job_id = runner.submit("model_pull", {"runtime": "ollama", "model": model})
     return {"job_id": job_id, "kind": "model_pull"}
+
+
+@router.post("/local-models/start")
+def start_ollama(runner=Depends(get_jobs)) -> dict:
+    job_id = runner.submit("ollama_start", {})
+    return {"job_id": job_id, "kind": "ollama_start"}
