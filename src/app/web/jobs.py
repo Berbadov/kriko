@@ -55,7 +55,7 @@ from app.web import state
 
 #: Kinds that never write the store or a pack directory, and are short enough
 #: that queueing them behind long work would defeat them.
-QUICK_KINDS = frozenset({"quick_look", "lookup_ask"})
+QUICK_KINDS = frozenset({"quick_look", "quick_ask", "lookup_ask"})
 
 #: The claim that overlaps every other: a job holding it runs alone.
 EVERYTHING = "*"

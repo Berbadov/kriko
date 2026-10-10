@@ -1969,12 +1969,12 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     # nothing, and `None` tells the parser there is nothing to check against.
     found = quicklook.parse(reply, getattr(researcher, "sources", None))
     kept = len(found["risks"])
-    # The local agent's own verdict on its answer (the self-check component):
-    # kept beside the cards, not enforced — the mechanical half (a quote not
-    # in its page) is already dropped above, this says which of the kept ones
-    # their own pages do not carry.
+    # A source containing the quotation can still fail to support the claim.
     verification = getattr(researcher, "verification", None)
     if isinstance(verification, dict) and verification.get("unsupported"):
+        found = quicklook.apply_verification(found, verification)
+
+        kept = len(found["risks"])
         progress.log("self-check: " + "; ".join(
             f"{one.get('title') or 'a risk'} ({one.get('reason') or 'not carried'})"
             for one in verification["unsupported"] if isinstance(one, dict)))
@@ -1988,6 +1988,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     return {
         "product": product,
         **found,
+        "verification": verification,
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
         "harness": getattr(getattr(researcher, "harness", None), "id", ""),
         "model": str(getattr(researcher, "model", "") or ""),
@@ -2047,6 +2048,64 @@ QUICK_WAIT_SECONDS = QUICK_LOOK_TIMEOUT_SECONDS + 60
 #: a caller that started this job alone).
 QUICK_APPEAR_SECONDS = 5.0
 QUICK_POLL_SECONDS = 0.2
+
+
+def quick_ask(settings, params: dict, progress: Progress) -> dict:
+    """A follow-up question about a finished quick look, answered from it.
+
+    The panel's question box (#112). No search, no new pages: the reply is
+    the quick look's own findings or an explicit "these do not answer that",
+    on the same plane the quick look ran on. A job rather than a reply because
+    a local model on a CPU takes minutes, and the exchange is what the reader
+    comes back for — the rows survive the panel closing.
+    """
+    from app import quicklook as quicklook_mod
+    from app.providers import harness_researcher
+
+    quick_id = str(params.get("quick_job_id") or "").strip()
+    question = str(params.get("q") or "").strip()
+    if not quick_id or not question:
+        raise ValueError("a follow-up names its quick look and its question")
+    conn = connect(settings.app_state_path)
+    try:
+        row = state.get_job(conn, quick_id)
+    finally:
+        conn.close()
+    if row is None or row.get("kind") != "quick_look" or not row.get("done"):
+        raise ValueError(f"no finished quick look {quick_id} to ask about")
+
+    quick_params = row.get("params") or {}
+    product = str(quick_params.get("product") or "").strip()
+    progress.set(0.2, f"answering from the quick look at {product}")
+    if _use_local_ask(settings, params):
+        researcher = _local_asker(settings, params, progress)
+    else:
+        researcher = harness_researcher(
+            preferred=str(params.get("harness") or ""),
+            app_state_path=settings.app_state_path,
+            timeout=QUICK_LOOK_TIMEOUT_SECONDS,
+            effort="low",
+        )
+    _cap_agent(researcher, params)
+    researcher.on_action = progress.log
+    researcher.check_cancelled = progress.check
+
+    found = row.get("result") or {}
+    reply = researcher.ask(quicklook_mod.follow_up(
+        question,
+        str(found.get("assumed") or ""),
+        found.get("risks") or [],
+        found.get("specs") or [],
+    ))
+    progress.check()
+    progress.set(1.0, "answered")
+    return {
+        "product": product,
+        "q": question,
+        "answer": str(reply or "").strip(),
+        "quick_job_id": quick_id,
+    }
+
 
 
 def _await_quick_look(settings, progress: Progress, params: dict | None = None) -> dict:
@@ -3057,7 +3116,6 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     local = _use_local_ask(settings, params)
     if local:
         researcher = _local_asker(settings, params, progress)
-
     else:
         if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
             raise ValueError(
@@ -3089,7 +3147,6 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     reply = researcher.ask(brief).strip()
     progress.check()
     return reply
-
 
 
 def _compare_brief(question: str, answers: list[dict], *,
@@ -3281,6 +3338,7 @@ HANDLERS = {
     "pack_build": pack_build,
     "pack_author": pack_author,
     "quick_look": quick_look,
+    "quick_ask": quick_ask,
     "pack_amend": pack_amend,
     "verify": verify,
     "site_register": site_register,

@@ -89,6 +89,9 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
             if let Some(answer) = answer_card(job) {
                 page = page.child(answer);
             }
+            if job.kind == "quick_look" && job.done {
+                page = page.child(follow_up_card(app, job.id.clone(), window, cx));
+            }
             if job.attention.is_some() {
                 page = page.child(questions_card(app, job, cx));
             }
@@ -217,6 +220,47 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
         }
     }
     Some(card)
+}
+
+/// #112: the follow-up exchange on a finished quick look, answered from its
+/// own findings on the same plane the look ran on.
+fn follow_up_card(
+    app: &mut Kriko,
+    job_id: String,
+    window: &mut Window,
+    cx: &mut Context<Kriko>,
+) -> Div {
+    let ask = app.input_field(Field::QuickAsk, "quick-ask-input", "Ask about this quick look", Some("search"), window, cx);
+    let go = cx.listener({
+        let job_id = job_id.clone();
+        move |this, _: &gpui::ClickEvent, _w, cx| {
+            let question = this.quick_ask_input.value.trim().to_string();
+            if !question.is_empty() {
+                this.start_quick_ask(cx);
+                this.quick_ask_input.value.clear();
+            }
+            let _ = &job_id;
+            cx.notify();
+        }
+    });
+    let mut c = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Ask a follow-up"))
+        .child(row_desc("Answered from this quick look's findings; no new pages are read."));
+    for a in app.live.run.quick_asks.iter() {
+        c = c.child(row_title(&a.question));
+        if a.done {
+            c = c.child(row_desc(if a.answer.is_empty() { "No answer." } else { &a.answer }));
+        } else {
+            c = c.child(row_desc("Answering\u{2026}"));
+        }
+    }
+    if let Some(note) = app.live.run.quick_ask_note.clone() {
+        c = c.child(row_desc(&note));
+    }
+    c.child(
+        div().flex().items_center().gap(px(8.0))
+            .child(ask)
+            .child(key("quick-ask-go", if app.live.run.quick_asking { "Asking" } else { "Ask" }).on_click(go)),
+    )
 }
 
 fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {

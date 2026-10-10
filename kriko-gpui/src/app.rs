@@ -164,6 +164,7 @@ pub enum Field {
     ModelSearch,
     BenchModelSearch,
     LibrarySearch,
+    QuickAsk,
 }
 
 pub struct InputState {
@@ -331,6 +332,7 @@ pub struct Kriko {
     pub model_search: InputState,
     pub bench_model_search: InputState,
     pub library_search: InputState,
+    pub quick_ask_input: InputState,
     pub sidebar_collapsed: bool,
     /// The page's scroll, eased. A wheel notch moves `scroll_target`; each
     /// frame `scroll_shown` closes on it and is what the page is drawn at.
@@ -387,6 +389,7 @@ impl Kriko {
             model_search: InputState::new(cx),
             bench_model_search: InputState::new(cx),
             library_search: InputState::new(cx),
+            quick_ask_input: InputState::new(cx),
             sidebar_collapsed: false,
             main_scroll: gpui::ScrollHandle::new(),
             scroll_target: 0.0,
@@ -498,6 +501,7 @@ impl Kriko {
             Field::ModelSearch => &self.model_search,
             Field::BenchModelSearch => &self.bench_model_search,
             Field::LibrarySearch => &self.library_search,
+            Field::QuickAsk => &self.quick_ask_input,
         }
     }
 
@@ -520,6 +524,7 @@ impl Kriko {
             Field::ModelSearch => &mut self.model_search,
             Field::BenchModelSearch => &mut self.bench_model_search,
             Field::LibrarySearch => &mut self.library_search,
+            Field::QuickAsk => &mut self.quick_ask_input,
         }
     }
 

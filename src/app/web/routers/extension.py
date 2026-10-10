@@ -502,6 +502,63 @@ def _running_version(sightings: list[dict]) -> str:
     return ""
 
 
+class QuickAskRequest(BaseModel):
+    q: str = Field(min_length=1, max_length=500)
+
+
+@router.post("/quick-look/{job_id}/ask")
+def ask_quick_look(
+    job_id: str, body: QuickAskRequest,
+    conn=Depends(get_app_state), runner=Depends(get_jobs),
+) -> dict:
+    """A follow-up question about a finished quick look, as a job (#112).
+
+    The plane is the quick look's own, carried from its stored params, so the
+    answer comes from wherever the findings came from \u2014 never a surprise bill
+    on a different agent.
+    """
+    row = state.get_job(conn, job_id)
+    if row is None or row.get("kind") != "quick_look":
+        raise HTTPException(404, f"no quick look {job_id}")
+    if not row.get("done"):
+        raise HTTPException(409, f"the quick look is still {row.get('state')}")
+    quick = row.get("params") or {}
+    params = {
+        "quick_job_id": job_id,
+        "q": body.q.strip(),
+        "backend": str(quick.get("backend") or ""),
+        "harness": str(quick.get("harness") or ""),
+        "model": str(quick.get("model") or ""),
+        "budget_usd": 0.0,
+    }
+    job = runner.submit("quick_ask", params)
+    return {"job_id": job, "kind": "quick_ask", "quick_job_id": job_id}
+
+
+@router.get("/quick-look/{job_id}/asks")
+def quick_look_asks(job_id: str, conn=Depends(get_app_state)) -> dict:
+    """The follow-up exchange of one quick look, oldest first.
+
+    Read on panel open, so a reload puts the conversation back the way it was
+    \u2014 the asks are durable rows, this is only their order.
+    """
+    asks = []
+    for row in reversed(state.list_jobs(conn, 200)):
+        if row.get("kind") != "quick_ask":
+            continue
+        if str((row.get("params") or {}).get("quick_job_id") or "") != job_id:
+            continue
+        result = row.get("result") or {}
+        asks.append({
+            "job_id": row["job_id"],
+            "q": str((row.get("params") or {}).get("q") or ""),
+            "answer": str(result.get("answer") or "") if row.get("done") else "",
+            "state": row.get("state") or "",
+            "done": bool(row.get("done")),
+        })
+    return {"asks": asks}
+
+
 @router.post("/stage")
 def stage(request: Request) -> dict:
     """Put a loadable copy of the extension on disk and say where.
