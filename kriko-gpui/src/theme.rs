@@ -44,7 +44,15 @@ pub const FROST: u32 = 0xecf1ffeb;
 // ---- font families (registered at startup from the embedded .ttf files) ----
 pub const DISPLAY: &str = "Kriko Display";
 pub const SANS: &str = "Kriko Sans";
-pub const MONO: &str = "Kriko Mono";
+/// What used to be set in a fixed-width face (eyebrows, crumbs, counts, paths)
+/// wears the body face: the reader did not like the mono, "appears on
+/// technical places". The name stays so a call site says what the text *is*
+/// (a label, a figure) and the face stays one decision, here.
+pub const MONO: &str = SANS;
+/// The one place a fixed-width face is still right: text that is code, such
+/// as a run's log, where the columns line up. The machine's own, so nothing
+/// is shipped for it.
+pub const CODE: &str = "Consolas";
 
 pub fn register_fonts(cx: &mut gpui::App, fonts: Vec<std::borrow::Cow<'static, [u8]>>) {
     cx.text_system().add_fonts(fonts).expect("fonts");
@@ -322,7 +330,7 @@ pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
                 .bottom_0()
                 .left_0()
                 .w_full()
-                .h(px(150.0))
+                .h(px((height * 0.5).min(150.0)))
                 .bg(linear_gradient(
                     180.0,
                     linear_color_stop(Hsla { a: 0.0, ..hsla(GROUND) }, 0.0),
@@ -406,43 +414,45 @@ pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str, motion: bool) -
             div()
                 .relative()
                 .px(px(40.0))
-                .pt(px(60.0))
+                .pt(px(46.0))
                 .flex()
                 .flex_col()
                 .child(
+                    // One line over the title: where you are, and what the
+                    // page is for, cut off rather than wrapped.
                     div()
                         .flex()
                         .items_center()
                         .gap(px(8.0))
                         .font_family(MONO)
                         .text_size(px(12.0))
-                        .child(div().text_color(rgb(accent)).child("kriko /"))
-                        .child(div().text_color(rgb(plan.ink)).opacity(0.8).child(crumb.to_uppercase())),
+                        .child(div().flex_none().text_color(rgb(accent)).child("kriko /"))
+                        .child(div().flex_none().text_color(rgb(plan.ink)).opacity(0.8).child(crumb.to_uppercase()))
+                        .when(!lead.is_empty(), |d| {
+                            d.child(
+                                div()
+                                    .flex_1()
+                                    .min_w(px(0.0))
+                                    .overflow_hidden()
+                                    .whitespace_nowrap()
+                                    .text_ellipsis()
+                                    .text_color(rgb(plan.ink))
+                                    .opacity(0.62)
+                                    .child(format!("\u{00b7}  {lead}")),
+                            )
+                        }),
                 )
                 .child(
                     title_wipe(title, plan.ink, motion),
-                )
-                .when(!lead.is_empty(), |d| {
-                    d.child(
-                        div()
-                            .mt(px(10.0))
-                            .max_w(px(560.0))
-                            .font_family(SANS)
-                            .text_size(px(15.0))
-                            .line_height(px(22.0))
-                            .text_color(rgb(plan.ink))
-                            .opacity(0.88)
-                            .child(lead.to_string()),
-                    )
-                }),
+                ),
         )
 }
 
 fn title_wipe(title: &str, ink: u32, motion: bool) -> gpui::AnyElement {
     let text = div().font_family(DISPLAY).font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(34.0)).line_height(px(38.0)).text_color(rgb(ink))
+        .text_size(px(26.0)).line_height(px(30.0)).text_color(rgb(ink))
         .whitespace_nowrap().child(title.to_uppercase());
-    let clip = div().mt(px(6.0)).h(px(38.0)).w_full().overflow_hidden().child(text);
+    let clip = div().mt(px(4.0)).h(px(30.0)).w_full().overflow_hidden().child(text);
     if motion {
         clip.with_animation(gpui::ElementId::Name(format!("title-{title}").into()),
             Animation::new(std::time::Duration::from_millis(420)),
