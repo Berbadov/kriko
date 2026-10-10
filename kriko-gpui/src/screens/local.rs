@@ -219,7 +219,7 @@ fn setup(
         .when(!model_ready, |d| {
             let job = app.live.knowledge.agent_install.as_ref().filter(|(id, _)| id == "local");
             let busy = job.map(|(_, job)| !job.done).unwrap_or(false);
-            d.child(row_desc("Start here: Kriko can install Ollama, download a small starter model, and choose it for you. Allow about 6 GB of free space and keep an internet connection during setup. Larger models need more space and memory."))
+            d.child(row_desc("Start here: Kriko can install Ollama, download a model sized to this computer, and choose it for you. Allow about 6 GB of free space and keep an internet connection during setup. Larger models need more space and memory."))
                 .child(div().flex().flex_wrap().gap(px(8.0))
                     .child(key("local-guided-setup", if busy { "Setting up Ollama…" } else { "Set up Ollama and a starter model" }).opacity(if busy { 0.5 } else { 1.0 }).on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
                         if this.live.knowledge.agent_install.as_ref().map(|(_, j)| !j.done).unwrap_or(false) { return; }
