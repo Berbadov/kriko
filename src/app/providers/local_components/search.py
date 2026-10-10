@@ -23,6 +23,49 @@ RAW_CHARS = 40000
 AT_ONCE = 4
 
 
+#: The most pages one site may supply to a run. A forum thread that tops every
+#: query used to fill the whole reading list, so the model read one opinion
+#: five times and called it research.
+PER_HOST = 2
+
+#: Candidates beyond `limit`, read only to replace a page that would not load.
+SPARES = 3
+
+
+def host_of(url: str) -> str:
+    """The site a page belongs to: lower-cased, without a leading ``www.``."""
+    from urllib.parse import urlsplit
+
+    host = urlsplit(url).netloc.casefold().rsplit("@", 1)[-1]
+    return host.removeprefix("www.")
+
+
+def diversify(hit_lists, limit: int, *, seen: set, per_host: int = PER_HOST) -> list[str]:
+    """Urls worth reading, one query's best hit after another's, a site at most `per_host` times.
+
+    Taking each query's hits in order let the first query fill the list and
+    let one site fill the rest. Round-robin by rank gives every query its best
+    page before any gets its second, and the per-site cap makes the list a
+    spread of sources rather than a depth of one. A url already in ``seen`` is
+    skipped, and the ones chosen are added to it.
+    """
+    wanted: list[str] = []
+    per_site: dict[str, int] = {}
+    depth = max((len(hits) for hits in hit_lists), default=0)
+    for rank in range(depth):
+        for hits in hit_lists:
+            if rank >= len(hits) or len(wanted) >= limit:
+                continue
+            url = str(hits[rank].get("url", "")).strip()
+            site = host_of(url)
+            if not url or url in seen or per_site.get(site, 0) >= per_host:
+                continue
+            seen.add(url)
+            per_site[site] = per_site.get(site, 0) + 1
+            wanted.append(url)
+    return wanted
+
+
 def gather(search, fetch, queries, *, seen: set, searched: set,
            limit: int, hits_per_query: int, say=None, check=None,
            parallel: bool = False):
@@ -33,6 +76,10 @@ def gather(search, fetch, queries, *, seen: set, searched: set,
     with every query this run has searched, so the second round pays only for
     queries the first never asked. Returns ``(pages, wanted)`` where
     ``wanted`` is the urls this round tried, for the log line.
+
+    The urls come from `diversify`, with `SPARES` beyond ``limit``: a page that
+    will not load is replaced by the next candidate instead of leaving the
+    run with fewer sources than it asked for.
     """
     wanted: list[str] = []
     pending = []
@@ -60,20 +107,23 @@ def gather(search, fetch, queries, *, seen: set, searched: set,
             if check is not None:
                 check()
             results.append(hits_for(query))
-    for hits, failure in results:
+    for _, failure in results:
         if check is not None:
             check()
         if failure and say is not None:
             say(failure)
-        for hit in hits:
-            url = str(hit.get("url", "")).strip()
-            if not url or url in seen or len(wanted) >= limit:
-                continue
-            seen.add(url)
-            wanted.append(url)
+    wanted = diversify([hits for hits, _ in results], limit + SPARES, seen=seen)
     if not wanted:
         return [], []
-    return fetch_pages(fetch, wanted, say=say), wanted
+    pages = fetch_pages(fetch, wanted[:limit], say=say)
+    spares = wanted[limit:]
+    while len(pages) < limit and spares:
+        if check is not None:
+            check()
+        more = spares[:limit - len(pages)]
+        spares = spares[len(more):]
+        pages += fetch_pages(fetch, more, say=say)
+    return pages, wanted
 
 
 def fetch_pages(fetch, urls, *, say=None) -> list[tuple[str, str]]:
