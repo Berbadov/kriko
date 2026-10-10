@@ -229,7 +229,7 @@ def _use_local_ask(settings, params: dict) -> bool:
 
 def _local_asker(settings, params: dict, progress: Progress):
     """The local model as the job's researcher, wired like a harness one."""
-    from app.providers import local_asker
+    from app.providers import local_agent, local_asker
 
     plan = _local_plan({**params, "app_state_path": settings.app_state_path})
     researcher = local_asker(
@@ -247,7 +247,11 @@ def _local_asker(settings, params: dict, progress: Progress):
     researcher.replies = progress.replies
     researcher.runtime = plan.get("runtime", {})
     source_options = _research_options(params, settings.app_state_path)
-    researcher.max_pages = max(1, min(int(source_options["sources"] or 3), 40))
+    # Three pages was the default and was the "sticks to one resource": two of
+    # them from one forum left the model one opinion to summarise. The page
+    # count the reader chose wins; with none chosen the agent's own default
+    # (`local_agent.MAX_PAGES`) applies.
+    researcher.max_pages = max(1, min(int(source_options["sources"] or local_agent.MAX_PAGES), 40))
     researcher.source_instructions = _source_kinds_line(source_options["kinds"])
     return researcher
 
