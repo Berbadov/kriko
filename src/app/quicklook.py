@@ -53,7 +53,8 @@ REPLY_SCHEMA: dict = {
 
 
 def brief(product: str, principle: str = "", page: dict | None = None,
-          packs: str = "", attributes: str = "", *, compact: bool = False) -> str:
+          packs: str = "", attributes: str = "", *, compact: bool = False,
+          max_sources: int = 5) -> str:
     """The quick pass, as instructions. Fast on purpose: a few searches, no essay.
 
     `page` is what the listing itself says (`app.pagefacts`, B150): the
@@ -69,6 +70,7 @@ def brief(product: str, principle: str = "", page: dict | None = None,
     """
     from app import pagefacts
 
+    max_sources = max(1, min(50, int(max_sources)))
     listing = pagefacts.block(page)
     bar = (
         f"\n## What is worth saying\n\nThe installed pack's own bar, verbatim:\n\n"
@@ -91,11 +93,14 @@ def brief(product: str, principle: str = "", page: dict | None = None,
             f"# Quick look: what is known to go wrong with this one?\n\n{product}\n"
             f"{listing}{bar}{belongs}{named}\n"
             "Use only the fetched pages below. Be specific to this variant. "
-            "Return one JSON object, with short fields and at most two risks "
-            "and three specifications. Every risk needs an exact URL and a "
+            f"Return one JSON object, with short fields and at most {MAX_RISKS} risks "
+            f"and {MAX_SPECS} specifications. Every risk needs an exact URL and a "
             "verbatim quote from that page. Leave unsupported items out. "
             "Use empty lists if the pages provide no evidence. State any "
-            "variant assumption in assumed. Shape:\n"
+            "variant assumption in assumed. Mileage, age, ordinary wear and "
+            "hypothetical failures alone are not documented product faults. "
+            "Name a specific failing component or mechanism and the source's "
+            "applicability to this variant. Shape:\n"
             '{"assumed":"", "category":"", "pack":"", '
             '"specs":[{"name":"", "value":"", "url":""}], '
             '"risks":[{"title":"", "why":"", "check":"", '
@@ -108,10 +113,14 @@ Someone is looking at this exact product right now and wants to know what to
 worry about **before** they spend money on it. Answer the way a knowledgeable
 friend would in a chat: fast, specific, sourced.
 
-* Do **two to four** web searches. Open **at most three** pages; a page that
-  refuses you does not count toward the three. Stop there.
+* Use varied searches for failures, owner reports, recalls, service notices
+  and repair evidence. Open **at most {max_sources}** distinct pages; a page
+  that refuses you does not count toward the limit. Stop at that limit.
 * {REFUSED_PAGE}
 * Be specific to this exact variant. Skip anything true of every product like it.
+* Mileage, age, ordinary wear and hypothetical failures alone are not
+  documented faults. Name the failing component or mechanism and establish
+  the source's applicability to this variant.
 * If the name leaves the variant open, state what is missing in `assumed`.
   Omit claims that depend on an unproven configuration. Do not guess a part
   code or assume that a nearby revision, year or market has the same fault.
@@ -226,10 +235,7 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         name, value = _line(raw.get("name")), _line(raw.get("value"))
         url = str(raw.get("url") or "").strip()
         host = urlparse(url).netloc if url.startswith(("http://", "https://")) else ""
-        if sources is not None and url not in sources:
-            dropped += 1
-            continue
-        if name and value and host:
+        if name and value and host and (sources is None or url in sources):
             specs.append({"name": name, "value": value, "url": url,
                           "domain": host.removeprefix("www.")})
 
@@ -241,6 +247,16 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         "risks": risks,
         "dropped": dropped,
     }
+
+
+def apply_verification(found: dict, verdict: dict) -> dict:
+    """Remove risks the evidence check explicitly rejects before rendering."""
+    rejected = {str(one.get("title") or "").strip().casefold()
+                for one in verdict.get("unsupported") or [] if isinstance(one, dict)}
+    kept = [risk for risk in found.get("risks", [])
+            if risk["title"].strip().casefold() not in rejected]
+    return {**found, "risks": kept,
+            "dropped": found.get("dropped", 0) + len(found.get("risks", [])) - len(kept)}
 
 
 def closed(reply: str) -> dict | None:

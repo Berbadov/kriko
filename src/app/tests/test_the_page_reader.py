@@ -219,7 +219,7 @@ def test_the_quick_look_does_not_count_a_refused_page_as_an_opened_one():
     """The reader's log: "Three of my page fetches returned 403 errors, which
     used up my three page opens." The budget is for pages that load."""
     text = quicklook.brief("A thing")
-    budget = next(item for item in text.split("\n* ") if "at most three" in item)
+    budget = next(item for item in text.split("\n* ") if "at most" in item and "distinct pages" in item)
     assert "refuses" in budget and "does not count" in budget
     assert "—" not in budget
     assert text.count(REFUSED_PAGE) == 1
