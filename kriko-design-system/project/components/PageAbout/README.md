@@ -1,0 +1,1 @@
+About: the wordmark in the hero, install facts as mono key-value rows and the product promise in two sentences. Pages open with a dithered-sky hero (one PNG, the dither performs the fade into `ground`), then glass cards on the grid, with the Working agents rail fixed at 320 px on the right. The consumer provides the data. No page ranks, rates or recommends a product.

@@ -1,0 +1,28 @@
+<!-- @dsCard height=288 -->
+<!doctype html><meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=DM+Sans:wght@400&display=swap">
+<style>
+html,body{margin:0;background:var(--ground)}
+.cover{position:relative;width:960px;height:288px;overflow:hidden;background:var(--ground)}
+svg{position:absolute;inset:0}
+.brand{fill:var(--brand)}.deep{fill:var(--brand-deep)}.ice{fill:var(--ice)}.bright{fill:var(--brand-bright)}.glass{fill:var(--glass-3)}.px{fill:var(--ground)}
+.b{rx:var(--radius-lg)}
+.txt{position:absolute;left:40px;bottom:40px;width:400px}
+h1{margin:0;font:700 120px/.95 var(--font-display);letter-spacing:-.01em;color:var(--ink)}
+p{margin:16px 0 0;font:400 14px/20px var(--font-sans);color:var(--muted)}
+</style>
+<div class="cover">
+<svg width="960" height="288" viewBox="0 0 960 288">
+<!-- blocks: brand 240x208 slab, ice 112x128, brand-deep 112x128, brand-bright 240x176 bleeding bottom, brand-deep 240x96; all one hue, stepped by lightness
+ arrangement: staggered stack, tall blue slab leading, satellites bleeding off top, right and bottom
+ pattern: pixel stair (16px squares, ground cut out of the brand slab) from the Mistral block grid and the dithered sky of reference 1
+ radii: radius-lg on blocks, square pixels; steps 16/24/32 -->
+<rect class="brand b" x="480" y="-16" width="240" height="208"/>
+<rect class="ice b" x="736" y="-16" width="112" height="128"/>
+<rect class="deep b" x="864" y="-16" width="112" height="128"/>
+<rect class="bright b" x="736" y="128" width="240" height="176"/>
+<rect class="deep b" x="480" y="208" width="240" height="96"/>
+<rect class="px" x="704" y="176" width="16" height="16"/><rect class="px" x="704" y="160" width="16" height="16"/><rect class="px" x="688" y="160" width="16" height="16"/><rect class="px" x="704" y="144" width="16" height="16"/><rect class="px" x="688" y="144" width="16" height="16"/><rect class="px" x="672" y="144" width="16" height="16"/><rect class="px" x="704" y="128" width="16" height="16"/><rect class="px" x="688" y="128" width="16" height="16"/><rect class="px" x="672" y="128" width="16" height="16"/><rect class="px" x="656" y="128" width="16" height="16"/><rect class="px" x="704" y="112" width="16" height="16"/><rect class="px" x="688" y="112" width="16" height="16"/><rect class="px" x="672" y="112" width="16" height="16"/><rect class="px" x="656" y="112" width="16" height="16"/><rect class="px" x="640" y="112" width="16" height="16"/><rect class="px" x="704" y="96" width="16" height="16"/><rect class="px" x="688" y="96" width="16" height="16"/><rect class="px" x="672" y="96" width="16" height="16"/><rect class="px" x="656" y="96" width="16" height="16"/><rect class="px" x="640" y="96" width="16" height="16"/><rect class="px" x="624" y="96" width="16" height="16"/>
+</svg>
+<div class="txt"><h1>KRIKO</h1><p>Local orchestration and evidence for coding agents.</p></div>
+</div>

@@ -1,7 +1,7 @@
 # Kriko, usage
 
-Run it, load the extension, connect an agent, grow the knowledge. The mechanism
-is in [INTERNALS.md](INTERNALS.md).
+Run it, load the extension, connect an agent, grow the knowledge. The
+mechanism is in [INTERNALS.md](INTERNALS.md).
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -24,9 +24,9 @@ flowchart LR
 
 ## 1. Run it
 
-Install `kriko-<version>-x86_64.msi` (a per-user install with no admin prompt)
-and launch it. `kriko-gpui/package.ps1` builds it; the `desktop` workflow runs
-the same recipe. See `kriko-gpui/README.md`, and
+Install `kriko-<version>-x86_64.msi` (a per-user install with no admin
+prompt) and launch it. `kriko-gpui/package.ps1` builds it; the `desktop`
+workflow runs the same recipe. See `kriko-gpui/README.md`, and
 [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md) for the steps. From a checkout:
 
 ```bash
@@ -34,44 +34,31 @@ the same recipe. See `kriko-gpui/README.md`, and
 curl http://127.0.0.1:8787/api/health  # {"ok":true,"store":...,"app_state":...}
 ```
 
-On Windows, closing the window leaves Kriko in the system tray so the browser
-extension can keep using the engine. Open it again from the tray or the desktop
-shortcut. Choose **Quit Kriko** in the tray to stop the engine too. The tray
-tooltip says whether the engine is ready, still starting, or stopped.
-
-> Port 8787 taken? In the desktop app's **Browser extension** screen, enter a
-> free port and choose **Save port and restart engine**. Then open the browser
-> extension's settings and set its address to the one shown in the app, such
-> as `http://127.0.0.1:8790`. The choice survives desktop restarts. A port
-> conflict leaves the app open and marks the extension listener unavailable.
+> Port 8787 taken? The extension only talks to 8787. The desktop app opens
+> anyway and logs to stderr. Stop whatever else is listening.
 
 ## 2. The browser extension
 
-**From the app:** Check, then Browser extension, then stage the files. They
-land under `~/.kriko/extension/`, and the page turns green when the extension
-first reaches the app.
+**From the app:** open Check, then Browser extension, then stage the files.
+They land under `~/.kriko/extension/`, and the page turns green when the
+extension first reaches the app.
 
 **From a checkout:** `chrome://extensions`, Developer mode, Load unpacked,
 select `extension/`. Open a page an adapter can read; the panel appears after
 about 1.5 seconds.
 
-The small toolbar icon is coloured when the app answers and muted when it
-cannot be reached. Chrome refreshes that state about once a minute. Any number
-or question mark on the icon describes the current page, not the connection.
-Click the icon to open the panel on the page.
-
-> After an app update, or any change under `extension/`: stage again, then the
-> browser's Reload (the circular arrow on the extension's card at
+> After an app update, or any change under `extension/`: stage again, then
+> press the browser's Reload (the circular arrow on the extension's card at
 > `chrome://extensions`).
 
-> The panel is missing on a page it used to read? App, then System, then Sites
-> says which of the two it is: the site needs a permission the browser has not
-> granted, or no adapter reads it yet.
+> The panel is missing on a page it used to read? App, then System, then
+> Sites says which of the two it is: the site needs a permission the browser
+> has not granted, or no adapter reads it yet.
 
 ## 3. Connect a coding agent
 
-The default plane costs nothing extra, because the reading is done by an agent
-you already pay for. Open System, then Agents, and use the one action on that
+The default plane costs nothing extra, because an agent you already pay for
+does the reading. Open System, then Agents, and use the one action on that
 agent's row to connect it.
 
 | State | Meaning |
@@ -95,12 +82,12 @@ flowchart TD
     classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
 ```
 
-*Verify* runs a real MCP handshake and tool listing, and shows each step's
-result. Restart the agent afterwards. The research skill is assembled from the
-installed catalogs and served at `GET /api/agent-skill`; it names no screen, no
-product, no harness and no model, and `src/app/agentskill.py` writes a content
-digest so the app can tell when the copy on disk has fallen behind. One binary
-serves both roles:
+*Verify* runs a real MCP handshake and tool listing, and shows the result of
+each step. Restart the agent afterwards. The research skill is assembled from
+the installed catalogs and served at `GET /api/agent-skill`. It names no
+screen, no product, no harness and no model, and `src/app/agentskill.py`
+writes a content digest so the app can tell when the copy on disk has fallen
+behind. One binary serves both roles:
 
 ```bash
 kriko-sidecar --mcp --store ~/.kriko/knowledge.sqlite   # installed
@@ -111,17 +98,17 @@ The tool list lives in `src/app/mcp_server.py`. Findings enter as drafts
 through `app/findings.py`, which refuses a quote that is not in the document
 the agent says it read.
 
-**A local model instead.** System, then Settings, sets the address of a model
-server running on this machine and which model to use. The plane reports
-whether it is ready, and a run started without naming a plane uses it first.
+**A local model instead.** System, then Settings, sets the address of a
+model server on this machine and which model to use. The plane reports
+whether it is ready, and a run started without a named plane uses it first.
 The one thing it cannot do alone is search: it uses a hosted keyless search
 until a local search service is available.
 
 ## 4. Terminal
 
-Store-only commands need no server; the rest attach to a running app or start
-an engine for one command (`--no-start` fails instead, `--url` or `KRIKO_URL`
-picks one).
+Store-only commands need no server. The rest attach to a running app, or
+start an engine for one command (`--no-start` fails instead, `--url` or
+`KRIKO_URL` picks one).
 
 | Command | Does |
 |---|---|
@@ -138,7 +125,7 @@ picks one).
 
 ## 5. Add a product to a catalog
 
-The default path costs nothing extra: hand the agent the product and let it
+The default path costs nothing extra: give the agent the product and let it
 work.
 
 ```
@@ -162,19 +149,20 @@ sequenceDiagram
     Note over D: kriko build, then install
 ```
 
-The agent looks up the variants first, because naming is cheap and research is
-what is expensive, and Kriko writes down the products the agent did not cover
-rather than losing them. What comes back is a draft on disk: data only, nothing
+The agent looks up the variants first. Naming is cheap; research is what
+costs. Kriko writes down the products the agent did not cover, rather than
+losing them. What comes back is a draft on disk: data only, nothing
 executable.
 
-The server refuses what a prompt could only ask for, so do not retry a refusal
-reworded: a quote that is not in the submitted document text, a figure with no
-source, a value nobody can derive, a lineup that does not match the category,
-and rows the pack's own bar excludes. A refusal names the fix.
+The server refuses what a prompt could only ask for, so do not retry a
+refusal with new words: a quote that is not in the submitted document text, a
+figure with no source, a value nobody can derive, a lineup that does not
+match the category, and rows the pack's own bar excludes. A refusal names
+the fix.
 
-**Manual fallback**, which is what the agent drives. The ledger stages are the
-same for every pack; anything a pack adds on top (catalog discovery, its own
-validators, its agent files) is that pack's business and is listed in its
+**Manual fallback**, which is what the agent drives. The ledger stages are
+the same for every pack. Anything a pack adds on top (catalog discovery, its
+own validators, its agent files) is that pack's business, listed in its
 `README.md` with its own arguments.
 
 ```bash
@@ -193,8 +181,8 @@ kriko packs
 | `python -m app.pipeline.panel` | Spend, cost to finish, coverage, recent runs. Check it before any paid run |
 | `python -m app.pipeline.process --help` | End-to-end driver for one product, in whatever identity keys that pack declares; `--skip-extraction` replays cached candidates for free |
 
-Processing writes YAML. Nothing serves until the catalog is rebuilt and
-installed. Statuses are pipeline-owned, so never hand-edit `status`.
+Processing writes YAML. Nothing serves until you rebuild and install the
+catalog. The pipeline owns the statuses, so never hand-edit `status`.
 
 ## What a reader sees
 
@@ -218,8 +206,8 @@ flowchart LR
     classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
 ```
 
-Only claims with at least one grounded source are served, and a single-source
-report is always labelled as a report.
+Only claims with at least one grounded source are served, and a
+single-source report is always labelled as a report.
 
 ## Check the store
 

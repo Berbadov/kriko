@@ -8,7 +8,8 @@ minutes of work and, on the paid plane, real money — both of which are reasons
 long work is a row here rather than a request that hangs.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from typing import Literal
 from pydantic import AliasChoices, BaseModel, Field
 
 from app.web import state
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/api", tags=["bench"])
 
 
 class BenchRequest(BaseModel):
+    suite: Literal["precision", "web"] = "precision"
     #: Comma-separated, or empty for "whatever this machine can run". Named
     #: rather than discovered when a reader wants one plane measured again —
     #: re-running the whole grid to re-measure one of them is how a benchmark
@@ -77,6 +79,14 @@ def read_bench(
             "version": benchcases.SET_VERSION,
             "cases": benchcases.case_rows(50),
         },
+        "suites": [
+            {"id": "precision", "label": "Configuration accuracy",
+             "description": "Fixed fictional documents: codes, revisions, years, "
+                            "markets and abstention. No web search."},
+            {"id": "web", "label": "Live web research",
+             "description": "Legacy product cases; search results change over time. "
+                            "Answer keys require source auditing. Local or harness only."},
+        ],
         # What a plane *is*, in one line each (B185): the reader's sentence
         # was "explain the planes (they exist but explain nothing)".
         "plane_meanings": {
@@ -145,7 +155,7 @@ def _served(row: dict) -> dict:
 
 @router.post("/bench/estimate")
 def estimate_bench(
-    body: BenchRequest, conn=Depends(get_app_state), store=Depends(get_store),
+    body: BenchRequest, request: Request, conn=Depends(get_app_state), store=Depends(get_store),
 ) -> dict:
     """What this grid would run and roughly what it would cost. Runs nothing.
 
@@ -164,9 +174,10 @@ def estimate_bench(
         bench.validate(params)
     except ValueError as exc:
         raise HTTPException(422, str(exc))
-    found = bench.cases(store, pack_id=params.get("pack_id") or "",
-                        limit=int(params.get("cases") or bench.DEFAULT_CASES))
-    return bench.estimate(conn, params, len(found))
+    from app import benchcases
+    found = benchcases.case_rows(int(params.get("cases") or bench.DEFAULT_CASES),
+                                params.get("suite") or "precision")
+    return bench.estimate(conn, params, len(found), app_state_path=request.app.state.settings.app_state_path)
 
 
 #: Where saved grids live. One settings key holding a JSON object rather than a

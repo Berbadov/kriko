@@ -240,6 +240,7 @@
 .lite-body {
   flex: 1 1 auto;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 16px 18px 24px;
   display: flex;
   flex-direction: column;
@@ -1386,8 +1387,8 @@
 /* One row, in the panel's own face: `font: inherit` took the size of
    whatever the panel sat inside, so these read larger than every other
    control here (B152.5). */
-.lite-product-actions { display: flex; gap: 6px; }
-.lite-product-actions button { flex: 1 1 0; }
+.lite-product-actions { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+.lite-product-actions button { flex: 1 1 145px; min-width: 0; white-space: normal; line-height: 1.25; }
 .lite-product-actions button, .lite-research button, .lite-search-research {
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1553,11 +1554,72 @@
 .lite-quick { display: grid; gap: 8px; margin: 10px 0; }
 .lite-quick-assumed { margin: 0; color: var(--fg-muted); font-size: 12px; }
 .lite-quick-cards { display: grid; gap: 8px; }
+/* #116: the specs it read, the way a researched product shows its figures. */
+.lite-quick-specs { display: grid; gap: 4px; }
+.lite-quick-spec {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 8px;
+  font-size: 12px; text-decoration: none; color: var(--fg-body);
+  border-left: 2px solid var(--border); padding-left: 8px;
+}
+.lite-quick-spec:hover { border-left-color: var(--accent); }
+.lite-quick-spec-name { color: var(--fg-muted); }
+.lite-quick-spec-site { color: var(--fg-muted); font-size: 10.5px; }
+.lite-quick-dropped { margin: 0; color: var(--fg-muted); font-size: 11px; }
 .lite-quick-src {
   margin: 8px 0 0; padding: 6px 10px; border-left: 2px solid var(--accent);
   color: var(--fg-body); font-size: 12px; font-style: italic;
 }
 .lite-quick-src a { color: var(--accent); font-style: normal; }
+
+/* #115: the pages the quick look read, folded away until asked for. */
+.lite-quick-sources-toggle {
+  justify-self: start; font-size: 11px; color: var(--fg-muted);
+  background: none; border: none; padding: 0; cursor: pointer;
+  text-decoration: underline dotted;
+}
+.lite-quick-sources { display: grid; gap: 6px; padding: 6px 0; }
+.lite-quick-source {
+  display: grid; gap: 1px; color: var(--fg-body); font-size: 12px;
+  text-decoration: none; border-left: 2px solid var(--border); padding-left: 8px;
+}
+.lite-quick-source:hover { border-left-color: var(--accent); }
+.lite-quick-source-site { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+.lite-quick-source-about { color: var(--fg-body); }
+.lite-quick-source-link {
+  color: var(--fg-muted); font-size: 10.5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* #114: the pack is built because the reader pressed for it. */
+.lite-quick-build {
+  justify-self: start; font-size: 12px; color: var(--fg-body);
+  background: none; border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 10px; cursor: pointer;
+}
+.lite-quick-build:hover { border-color: var(--accent); color: var(--accent); }
+
+/* #112: the follow-up exchange on a quick look. */
+.lite-follow { display: grid; gap: 8px; margin: 10px 0; }
+.lite-follow-lede { margin: 0; color: var(--fg-muted); font-size: 11px; }
+.lite-follow-a {
+  display: grid; gap: 2px; padding: 6px 10px;
+  border-left: 2px solid var(--border); font-size: 12px;
+}
+.lite-follow-q { margin: 0; color: var(--fg-body); font-weight: 600; }
+.lite-follow-answer { margin: 0; color: var(--fg-muted); }
+.lite-follow-row { display: flex; gap: 6px; }
+.lite-follow-input {
+  flex: 1; min-width: 0; font-size: 12px; padding: 5px 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: none; color: var(--fg-body);
+}
+.lite-follow-input:focus { outline: none; border-color: var(--accent); }
+.lite-follow-ask {
+  font-size: 12px; padding: 5px 10px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: none; color: var(--fg-body);
+}
+.lite-follow-ask:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.lite-follow-ask:disabled, .lite-follow-input:disabled { opacity: 0.5; cursor: default; }
 
 /* ═════════════════════════════════════════════
    The Kriko design system, worn by the panel

@@ -174,6 +174,7 @@ pub struct Detail {
 
 #[derive(Clone)]
 pub struct Draft {
+    pub id: String,
     pub name: String,
     pub lookup_ids: Vec<String>,
 }
@@ -243,6 +244,7 @@ pub struct FilterDef {
 
 #[derive(Clone)]
 pub struct Op {
+    pub op_id: i64,
     pub ts: Option<i64>,
     pub door: String,
     pub kind: String,
@@ -250,6 +252,105 @@ pub struct Op {
     pub state: String,
     pub ms: Option<f64>,
     pub note: String,
+    pub job_id: String,
+    pub harness: String,
+    pub model: String,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
+pub enum Kind {
+    #[default]
+    Check,
+    Run,
+    Queue,
+    Build,
+}
+
+impl Kind {
+    pub const ALL: [Kind; 4] = [Kind::Check, Kind::Run, Kind::Queue, Kind::Build];
+
+    pub fn word(self) -> &'static str {
+        match self {
+            Kind::Check => "CHECKS",
+            Kind::Run => "RUNS",
+            Kind::Queue => "QUEUE-UPS",
+            Kind::Build => "PACK BUILDS",
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct JobRow {
+    pub id: String,
+    pub kind: String,
+    pub state: String,
+    pub done: bool,
+    pub label: String,
+    pub message: String,
+    pub ts: Option<i64>,
+}
+
+impl JobRow {
+    pub fn state_word(&self) -> &'static str {
+        if !self.done {
+            return "RUNNING";
+        }
+        match self.state.as_str() {
+            "succeeded" => "SUCCEEDED",
+            "failed" | "interrupted" => "FAILED",
+            "cancelled" => "CANCELLED",
+            _ => "DONE",
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct QueueRow {
+    pub id: String,
+    pub name: String,
+    pub url: String,
+    pub origin: String,
+    pub state: String,
+    pub ts: Option<i64>,
+}
+
+fn job_row_from(v: &Value) -> JobRow {
+    let params = v.get("params").cloned().unwrap_or(Value::Null);
+    let mut label = api::s(&params, "product");
+    if label.is_empty() {
+        label = api::s(&params, "category");
+    }
+    if label.is_empty() {
+        label = api::s(&params, "pack_id");
+    }
+    if label.is_empty() {
+        label = api::s(&params, "name");
+    }
+    JobRow {
+        id: api::s(v, "job_id"),
+        kind: api::s(v, "kind"),
+        state: api::s(v, "state"),
+        done: api::b(v, "done"),
+        label,
+        message: api::s(v, "message"),
+        ts: parse_utc(&api::s(v, "created_at")),
+    }
+}
+
+fn queue_row_from(v: &Value) -> QueueRow {
+    QueueRow {
+        id: api::s(v, "queue_id"),
+        name: api::s(v, "name"),
+        url: api::s(v, "url"),
+        origin: api::s(v, "origin"),
+        state: api::s(v, "state"),
+        ts: parse_utc(&api::s(v, "added_at")),
+    }
+}
+
+fn within_span(ts: Option<i64>, span_days: u32, now: i64) -> bool {
+    let Some(ts) = ts else { return false };
+    span_days == u32::MAX || now - ts <= span_days as i64 * 86400
 }
 
 #[derive(Default)]
@@ -263,6 +364,17 @@ pub struct State {
     pub detail: Option<Detail>,
     /// The check whose Forget key was pressed once.
     pub forget_armed: Option<String>,
+    /// Which history is shown: checks, runs, queue-ups or pack builds.
+    pub kind: Kind,
+    /// The job/queue state History is narrowed to; None is all of them.
+    pub status: Option<String>,
+    /// Which filter drawer is open; None is all closed.
+    pub drawer: Option<&'static str>,
+    /// Every job the engine kept, newest first; runs and builds are picked
+    /// out of this by kind.
+    pub jobs: Vec<JobRow>,
+    /// The research queue, oldest first, every state it holds.
+    pub queue: Vec<QueueRow>,
     // Home
     pub drafts_loaded: bool,
     pub drafts: Vec<Draft>,
@@ -271,11 +383,14 @@ pub struct State {
     // Browse
     pub subjects_loaded: bool,
     pub subjects: Vec<Subject>,
-    pub subjects_total: usize,
+    pub subjects_total: i64,
     pub subjects_asked: String,
+    pub subjects_count_asked: String,
     pub filters: Vec<FilterDef>,
     /// Per filter, the picked option (0 is all).
     pub filter_pick: Vec<usize>,
+    /// Which Browse filter's drawer is open; None is all closed.
+    pub filter_drawer: Option<usize>,
     pub subject_sel: Option<String>,
     pub subject_detail: Option<SubjectDetail>,
     pub subject_evidence: Option<Vec<Evidence>>,
@@ -283,6 +398,12 @@ pub struct State {
     // Activity
     pub ops_loaded: bool,
     pub ops: Vec<Op>,
+    pub ops_has_older: bool,
+    pub ops_older_inflight: bool,
+    /// The Activity row whose job log is expanded, and the logs fetched for
+    /// the rows that have been.
+    pub op_open: Option<i64>,
+    pub op_logs: std::collections::HashMap<i64, Vec<crate::live::run::FeedLine>>,
     /// What the first job that put a question to the reader says.
     pub attention: Option<String>,
     pub ops_polled: Option<Instant>,
@@ -304,18 +425,6 @@ impl State {
         }
         out.sort_by(|a, b| a.1.to_lowercase().cmp(&b.1.to_lowercase()));
         out
-    }
-
-    /// The next catalog in the cycle: all, then each present one, then all.
-    pub fn next_pack(&self) -> Option<String> {
-        let options = self.pack_options();
-        match &self.pack {
-            None => options.first().map(|p| p.0.clone()),
-            Some(cur) => {
-                let at = options.iter().position(|p| &p.0 == cur)?;
-                options.get(at + 1).map(|p| p.0.clone())
-            }
-        }
     }
 
     /// The word the pack plate shows.
@@ -358,29 +467,95 @@ impl State {
             .collect()
     }
 
+    pub fn job_rows(&self, kinds: &[&str], query: &str, span_days: u32, now: i64) -> Vec<usize> {
+        let query = query.to_lowercase();
+        self.jobs
+            .iter()
+            .enumerate()
+            .filter(|(_, j)| {
+                let ok_kind = kinds.contains(&j.kind.as_str());
+                let ok_status = self
+                    .status
+                    .as_deref()
+                    .map_or(true, |want| j.state_word() == want);
+                let ok_query = query.is_empty()
+                    || j.label.to_lowercase().contains(&query)
+                    || j.message.to_lowercase().contains(&query);
+                ok_kind && ok_status && ok_query && within_span(j.ts, span_days, now)
+            })
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    pub fn queue_rows(&self, query: &str, span_days: u32, now: i64) -> Vec<usize> {
+        let query = query.to_lowercase();
+        self.queue
+            .iter()
+            .enumerate()
+            .filter(|(_, q)| {
+                let ok_status = self.status.as_deref().map_or(true, |want| {
+                    q.state.to_uppercase() == want
+                });
+                let ok_query = query.is_empty()
+                    || q.name.to_lowercase().contains(&query)
+                    || q.origin.to_lowercase().contains(&query);
+                ok_status && ok_query && within_span(q.ts, span_days, now)
+            })
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    /// The rows of the history the screen is on, already filtered: checks,
+    /// runs, queue-ups or pack builds, one list per kind.
+    pub fn rows_now(&self, kind: Kind, query: &str, span_days: u32, now: i64) -> Vec<usize> {
+        match kind {
+            Kind::Check => self.filtered(query, span_days, now),
+            Kind::Run => self.job_rows(&["research", "agenda_run"], query, span_days, now),
+            Kind::Build => {
+                self.job_rows(&["pack_build", "pack_author", "pack_amend"], query, span_days, now)
+            }
+            Kind::Queue => self.queue_rows(query, span_days, now),
+        }
+    }
+
     /// The label of a check by its lookup id, for a draft's product names.
     pub fn label_of(&self, id: &str) -> Option<&str> {
         self.items.iter().find(|i| i.id == id).map(|i| i.label.as_str())
     }
 
-    /// The query string for `/api/subjects`, from the search text and the
-    /// filters picked. It doubles as the key a reply must still match.
-    pub fn subjects_url(&self, query: &str, page: usize, page_size: usize) -> String {
-        let size = page_size.clamp(1, 200);
-        let offset = page.saturating_mul(size);
-        let mut url = format!("/api/subjects?paged=true&limit={size}&offset={offset}");
+    /// The search text and every picked filter, as `/api/subjects` query
+    /// arguments.
+    fn subject_args(&self, query: &str) -> String {
+        let mut args = String::new();
         if !query.trim().is_empty() {
-            url.push_str(&format!("&q={}", api::seg(query.trim())));
+            args.push_str(&format!("&q={}", api::seg(query.trim())));
         }
         for (i, f) in self.filters.iter().enumerate() {
             let pick = self.filter_pick.get(i).copied().unwrap_or(0);
             if pick > 0 {
                 if let Some((value, _)) = f.options.get(pick - 1) {
-                    url.push_str(&format!("&{}={}", f.param, api::seg(value)));
+                    args.push_str(&format!("&{}={}", f.param, api::seg(value)));
                 }
             }
         }
-        url
+        args
+    }
+
+    /// One page of `/api/subjects`. It doubles as the key a reply must still
+    /// match.
+    pub fn subjects_url(&self, query: &str, page: usize) -> String {
+        format!(
+            "/api/subjects?limit={}&offset={}{}",
+            crate::data::BROWSE_PAGE_SIZE,
+            page * crate::data::BROWSE_PAGE_SIZE,
+            self.subject_args(query)
+        )
+    }
+
+    /// How many subjects the same search and filters match, for the page
+    /// controls.
+    pub fn subjects_count_url(&self, query: &str) -> String {
+        format!("/api/subjects/count{}", self.subject_args(query).replacen('&', "?", 1))
     }
 }
 
@@ -485,7 +660,9 @@ pub fn feed_kind(op: &Op) -> &'static str {
 }
 
 fn op_from(v: &Value) -> Op {
+    let params = serde_json::from_str::<Value>(&api::s(v, "job_params")).unwrap_or(Value::Null);
     Op {
+        op_id: api::n(v, "op_id").unwrap_or(0.0) as i64,
         ts: parse_utc(&api::s(v, "started_at")),
         door: api::s(v, "door"),
         kind: api::s(v, "kind"),
@@ -496,6 +673,9 @@ fn op_from(v: &Value) -> Op {
             let note = api::s(v, "note");
             if note.is_empty() { api::s(v, "error") } else { note }
         },
+        job_id: api::s(v, "job_id"),
+        harness: api::s(&params, "harness"),
+        model: api::s(&params, "model"),
     }
 }
 
@@ -518,12 +698,27 @@ impl Kriko {
                 }
             }
         });
+        self.fetch(cx, || api::get("/api/jobs?limit=200"), |this, reply, _| {
+            this.note(&reply);
+            if let Ok(v) = reply {
+                this.live.history.jobs =
+                    api::arr(&v, "items").iter().map(job_row_from).collect();
+            }
+        });
+        self.fetch(cx, || api::get("/api/queue"), |this, reply, _| {
+            this.note(&reply);
+            if let Ok(v) = reply {
+                this.live.history.queue =
+                    api::arr(&v, "items").iter().map(queue_row_from).collect();
+            }
+        });
         self.fetch(cx, || api::get("/api/compare-drafts"), |this, reply, _| {
             this.note(&reply);
             if let Ok(v) = reply {
                 this.live.history.drafts = api::arr(&v, "items")
                     .iter()
                     .map(|d| Draft {
+                        id: api::s(d, "draft_id"),
                         name: api::s(d, "name"),
                         lookup_ids: api::arr(d, "lookup_ids").iter().filter_map(|x| x.as_str().map(String::from)).collect(),
                     })
@@ -606,6 +801,7 @@ impl Kriko {
 
     /// The filters first (once), then the subjects they and the search ask for.
     pub fn refresh_subjects(&mut self, cx: &mut Context<Self>) {
+
         if self.live.history.filters.is_empty() {
             self.fetch(cx, || api::get("/api/subjects/filters"), |this, reply, cx| {
                 this.note(&reply);
@@ -632,12 +828,11 @@ impl Kriko {
     }
 
     fn load_subjects(&mut self, cx: &mut Context<Self>) {
-        let url = self.live.history.subjects_url(
-            &self.browse_search.value,
-            self.browse_page,
-            self.browse_page_size,
-        );
+        let url = self.live.history.subjects_url(&self.browse_search.value, self.browse_page);
+        let count = self.live.history.subjects_count_url(&self.browse_search.value);
         self.live.history.subjects_asked = url.clone();
+        self.live.history.subjects_count_asked = count.clone();
+        let count_path = count.clone();
         let path = url.clone();
         self.fetch(cx, move || api::get(&path), move |this, reply, _| {
             this.note(&reply);
@@ -647,7 +842,7 @@ impl Kriko {
             }
             if let Ok(v) = reply {
                 let h = &mut this.live.history;
-                h.subjects = api::arr(&v, "items")
+                h.subjects = api::arr(&v, "")
                     .iter()
                     .map(|s| Subject {
                         id: api::s(s, "subject_id"),
@@ -657,25 +852,41 @@ impl Kriko {
                         claims: api::n(s, "claims").unwrap_or(0.0) as i64,
                     })
                     .collect();
-                h.subjects_total = api::n(&v, "total")
-                    .unwrap_or(h.subjects.len() as f64)
-                    .max(0.0) as usize;
                 h.subjects_loaded = true;
             }
         });
+        self.fetch(cx, move || api::get(&count_path), move |this, reply, _| {
+            this.note(&reply);
+            if this.live.history.subjects_count_asked != count {
+                return;
+            }
+            if let Ok(v) = reply {
+                this.live.history.subjects_total = api::n(&v, "count").unwrap_or(0.0) as i64;
+            }
+        });
+    }
+
+    /// Turn the Browse list one page, then read that page from the engine.
+    pub fn turn_browse_page(&mut self, step: i64, cx: &mut Context<Self>) {
+        let total = self.live.history.subjects_total.max(0) as usize;
+        let pages = (total + crate::data::BROWSE_PAGE_SIZE - 1) / crate::data::BROWSE_PAGE_SIZE;
+        let want = (self.browse_page as i64 + step).clamp(0, pages.saturating_sub(1) as i64) as usize;
+        if want != self.browse_page {
+            self.browse_page = want;
+            self.load_subjects(cx);
+        }
     }
 
     /// Called after every key in the Browse search: asks the server once the
     /// typing has stopped for a quarter of a second.
     pub fn browse_search_typed(&mut self, cx: &mut Context<Self>) {
         self.live.history.search_seq += 1;
-        self.browse_page = 0;
-        self.clear_browse_selection();
         let seq = self.live.history.search_seq;
         cx.spawn(async move |this, cx| {
             cx.background_executor().timer(Duration::from_millis(250)).await;
             this.update(cx, |this, cx| {
                 if this.live.history.search_seq == seq {
+                    this.browse_page = 0;
                     this.load_subjects(cx);
                 }
             })
@@ -684,46 +895,25 @@ impl Kriko {
         .detach();
     }
 
-    /// Select one explicit Browse filter value; 0 means no filter.
+    /// Open or close one Browse filter's drawer.
+    pub fn open_browse_filter(&mut self, i: usize, cx: &mut Context<Self>) {
+        self.live.history.filter_drawer = if self.live.history.filter_drawer == Some(i) {
+            None
+        } else {
+            Some(i)
+        };
+        cx.notify();
+    }
+
+    /// Pick an option in one Browse filter (0 is all), close its drawer and
+    /// ask the engine for the narrowed subjects.
     pub fn pick_browse_filter(&mut self, i: usize, pick: usize, cx: &mut Context<Self>) {
-        let h = &mut self.live.history;
-        let Some(f) = h.filters.get(i) else { return };
-        if pick > f.options.len() { return; }
-        let Some(current) = h.filter_pick.get_mut(i) else { return };
-        if *current == pick { return; }
-        *current = pick;
-        self.browse_page = 0;
-        self.clear_browse_selection();
-        self.load_subjects(cx);
-    }
-
-    /// Reset every Browse filter, including selections hidden in the drawer.
-    pub fn clear_browse_filters(&mut self, cx: &mut Context<Self>) {
-        if self.live.history.filter_pick.iter().all(|pick| *pick == 0) {
-            return;
+        if let Some(p) = self.live.history.filter_pick.get_mut(i) {
+            *p = pick;
         }
-        self.live.history.filter_pick.fill(0);
+        self.live.history.filter_drawer = None;
         self.browse_page = 0;
-        self.clear_browse_selection();
         self.load_subjects(cx);
-    }
-
-    /// Change the Browse page or page size and request only that slice.
-    pub fn browse_page_changed(&mut self, page: usize, page_size: usize, cx: &mut Context<Self>) {
-        let size = page_size.clamp(1, 200);
-        let pages = self.live.history.subjects_total.div_ceil(size).max(1);
-        self.browse_page_size = size;
-        self.browse_page = page.min(pages - 1);
-        self.clear_browse_selection();
-        self.load_subjects(cx);
-    }
-
-    /// Clear the selected subject when the visible result slice changes.
-    fn clear_browse_selection(&mut self) {
-        let h = &mut self.live.history;
-        h.subject_sel = None;
-        h.subject_detail = None;
-        h.subject_evidence = None;
     }
 
     /// Picks a subject for the drawer and reads it and its evidence.
@@ -759,6 +949,9 @@ impl Kriko {
     // ---- Activity ----
 
     pub fn refresh_activity(&mut self, cx: &mut Context<Self>) {
+        if self.live.history.ops_inflight {
+            return;
+        }
         self.live.history.ops_inflight = true;
         self.live.history.ops_polled = Some(Instant::now());
         self.fetch(cx, || api::get("/api/operations?limit=100"), |this, reply, _| {
@@ -766,7 +959,19 @@ impl Kriko {
             let h = &mut this.live.history;
             h.ops_inflight = false;
             if let Ok(v) = reply {
-                h.ops = api::arr(&v, "items").iter().map(op_from).collect();
+                let incoming: Vec<Op> = api::arr(&v, "items").iter().map(op_from).collect();
+                if h.ops_loaded {
+                    let mut merged: std::collections::HashMap<i64, Op> =
+                        std::mem::take(&mut h.ops).into_iter().map(|op| (op.op_id, op)).collect();
+                    for op in incoming {
+                        merged.insert(op.op_id, op);
+                    }
+                    h.ops = merged.into_values().collect();
+                    h.ops.sort_by(|a, b| b.op_id.cmp(&a.op_id));
+                } else {
+                    h.ops_has_older = incoming.len() == 100;
+                    h.ops = incoming;
+                }
                 h.ops_loaded = true;
             }
         });
@@ -778,6 +983,63 @@ impl Kriko {
                     .filter_map(|j| j.get("attention").filter(|a| !a.is_null()))
                     .map(|a| api::s(a, "say"))
                     .find(|s| !s.is_empty());
+            }
+        });
+    }
+
+    /// Load the next older page, keeping the rows already visible in place.
+    pub fn load_older_activity(&mut self, cx: &mut Context<Self>) {
+        let h = &mut self.live.history;
+        if h.ops_older_inflight || !h.ops_has_older {
+            return;
+        }
+        let Some(before) = h.ops.iter().map(|op| op.op_id).min() else { return };
+        h.ops_older_inflight = true;
+        let path = format!("/api/operations?limit=100&before_id={before}");
+        self.fetch(cx, move || api::get(&path), |this, reply, _| {
+            this.note(&reply);
+            let h = &mut this.live.history;
+            h.ops_older_inflight = false;
+            if let Ok(v) = reply {
+                let older: Vec<Op> = api::arr(&v, "items").iter().map(op_from).collect();
+                h.ops_has_older = older.len() == 100;
+                let mut merged: std::collections::HashMap<i64, Op> =
+                    std::mem::take(&mut h.ops).into_iter().map(|op| (op.op_id, op)).collect();
+                for op in older {
+                    merged.entry(op.op_id).or_insert(op);
+                }
+                h.ops = merged.into_values().collect();
+                h.ops.sort_by(|a, b| b.op_id.cmp(&a.op_id));
+            }
+        });
+    }
+
+    /// Expand one Activity row into the log of the job behind it; the same
+    /// press on the open row folds it back.
+    pub fn open_op_log(&mut self, op_id: i64, job_id: String, cx: &mut Context<Self>) {
+        if self.live.history.op_open == Some(op_id) {
+            self.live.history.op_open = None;
+            cx.notify();
+            return;
+        }
+        self.live.history.op_open = Some(op_id);
+        cx.notify();
+        let path = format!("/api/jobs/{}", api::seg(&job_id));
+        self.fetch(cx, move || api::get(&path), move |this, reply, _| {
+            this.note(&reply);
+            if let Ok(v) = reply {
+                let log = api::s(&v, "log");
+                let lines: Vec<crate::live::run::FeedLine> = log
+                    .lines()
+                    .flat_map(|r| r.split("; "))
+                    .map(str::trim)
+                    .filter(|l| !l.is_empty())
+                    .map(|l| crate::live::run::FeedLine {
+                        kind: crate::live::run::event_kind(l),
+                        text: crate::live::run::clip(l, 220),
+                    })
+                    .collect();
+                this.live.history.op_logs.insert(op_id, lines);
             }
         });
     }
@@ -866,13 +1128,51 @@ mod tests {
         };
         let mut s = State { items: vec![item("a", "x.b"), item("b", "x.a")], ..Default::default() };
         assert_eq!(s.pack_word(), "ALL");
-        s.pack = s.next_pack();
-        assert_eq!(s.pack.as_deref(), Some("x.a"));
+        s.pack = Some("x.a".into());
         assert_eq!(s.filtered("", u32::MAX, 0), vec![1]);
-        s.pack = s.next_pack();
-        assert_eq!(s.pack.as_deref(), Some("x.b"));
-        s.pack = s.next_pack();
-        assert_eq!(s.pack, None);
+        s.pack = Some("x.b".into());
+        assert_eq!(s.filtered("", u32::MAX, 0), vec![0]);
+        s.pack = None;
+        assert_eq!(s.filtered("", u32::MAX, 0), vec![0, 1]);
+    }
+
+    #[test]
+    fn the_kinds_are_held_apart() {
+        let job = |kind: &str, state: &str, done: bool| JobRow {
+            id: format!("{kind}-{state}"),
+            kind: kind.into(),
+            state: state.into(),
+            done,
+            label: format!("{kind} {state}"),
+            message: String::new(),
+            ts: Some(0),
+        };
+        let queued = |name: &str, state: &str| QueueRow {
+            id: name.into(),
+            name: name.into(),
+            url: String::new(),
+            origin: String::new(),
+            state: state.into(),
+            ts: Some(0),
+        };
+        let mut s = State::default();
+        s.jobs = vec![
+            job("research", "succeeded", true),
+            job("pack_build", "failed", true),
+            job("agenda_run", "running", false),
+        ];
+        s.queue = vec![queued("one", "waiting"), queued("two", "done")];
+        assert_eq!(s.rows_now(Kind::Run, "", u32::MAX, 0), vec![0, 2]);
+        assert_eq!(s.rows_now(Kind::Build, "", u32::MAX, 0), vec![1]);
+        assert_eq!(s.rows_now(Kind::Queue, "", u32::MAX, 0), vec![0, 1]);
+        s.status = Some("RUNNING".into());
+        assert_eq!(s.rows_now(Kind::Run, "", u32::MAX, 0), vec![2]);
+        assert_eq!(s.rows_now(Kind::Build, "", u32::MAX, 0), Vec::<usize>::new());
+        s.status = Some("DONE".into());
+        assert_eq!(s.rows_now(Kind::Queue, "", u32::MAX, 0), vec![1]);
+        s.status = None;
+        s.jobs[2].label = "the second run".into();
+        assert_eq!(s.rows_now(Kind::Run, "second", u32::MAX, 0), vec![2]);
     }
 
     #[test]
@@ -884,6 +1184,15 @@ mod tests {
             options: vec![("a.b".into(), "A".into())],
         }];
         s.filter_pick = vec![1];
-        assert_eq!(s.subjects_url(" k9k engine ", 2, 25), "/api/subjects?paged=true&limit=25&offset=50&q=k9k%20engine&pack_id=a.b");
+        assert_eq!(
+            s.subjects_url(" k9k engine ", 2),
+            "/api/subjects?limit=8&offset=16&q=k9k%20engine&pack_id=a.b"
+        );
+        assert_eq!(
+            s.subjects_count_url(" k9k engine "),
+            "/api/subjects/count?q=k9k%20engine&pack_id=a.b"
+        );
+        s.filter_pick = vec![0];
+        assert_eq!(s.subjects_count_url(""), "/api/subjects/count");
     }
 }

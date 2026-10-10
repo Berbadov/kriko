@@ -184,7 +184,7 @@ test("deeper research progress keeps quick-look cards expanded without blinking"
     if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "quick", kind: "quick_look" } };
     if (m.type === "JOB_STATUS") return m.payload.job_id === "quick"
       ? { ok: true, job: { kind: "quick_look", state: "succeeded", done: true,
-          result: { risks: [claim("Quick risk")], deepen_job_id: "deep" } } }
+          result: { risks: [claim("Quick risk")] } } }
       : { ok: true, job: { state: "running", progress, message: "Reading sources" } };
     return { ok: true, items: [] };
   } });
@@ -196,9 +196,13 @@ test("deeper research progress keeps quick-look cards expanded without blinking"
   const card = p.shadow().querySelector(".lite-quick .lite-rc");
   assert.ok(card);
   card.querySelector(".lite-rc-toggle").click();
-  progress = 0.5;
+  // #114: no deep run is followed on its own any more, so nothing re-renders
+  // the quick-look cards at all — the expanded state simply stays.
   p.flushTimers();
   assert.ok(card.isConnected, "a progress poll replaced the quick-look card");
   assert.equal(card.dataset.open, "1");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /50%/);
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent,
+    /1 thing to know, from a quick look/);
+  // The pack is drafted and installed only by the explicit Build press.
+  assert.ok(p.shadow().querySelector(".lite-quick-build"), "the Build press is offered");
 });

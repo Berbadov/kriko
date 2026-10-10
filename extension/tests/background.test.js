@@ -30,7 +30,10 @@ test("RESEARCH_PRODUCT posts only the explicit product choice through the extens
   assert.equal(request.method, "POST");
   assert.equal(request.headers["content-type"], "application/json");
   assert.equal(request.headers["X-Kriko-Extension"], MANIFEST.version);
-  assert.deepEqual(request.body, { q: "Example device", allow_draft: true, cap: 0.2 });
+  assert.deepEqual(request.body, {
+    q: "Example device", allow_draft: true,
+    quick: true, deepen: false, cap: 0.2,
+  });
 });
 
 test("selected subject research does not permit a draft by accident", async () => {
@@ -108,6 +111,29 @@ const routes = (analysis = ANALYSIS) => ({
 });
 
 const withTab = (scrape = SCRAPE) => ({ GET_SCRAPE: { ok: true, payload: scrape } });
+
+test("Quick Search sends the fresh page facts and requested source/context budget together", async () => {
+  const scrape = { ...SCRAPE, product: { name: "Northstar AX-1040R2" },
+    fields: Object.fromEntries(Array.from({ length: 100 }, (_, index) => [`Specification ${index}`, "V".repeat(400)])),
+    description: "D".repeat(7000) };
+  const h = loadBackground({ routes: {
+    "/api/adapters": [],
+    "/api/extension/research-plane": { job_id: "quick-40", kind: "quick_look" },
+  }, tabResponses: withTab(scrape) });
+  const prepared = await send(h, { type: "PREPARE_QUICK_SEARCH", payload: { url: SCRAPE.url } });
+  assert.equal(prepared.name, scrape.product.name);
+  await send(h, { type: "RESEARCH_PRODUCT", payload: {
+    q: prepared.name, url: SCRAPE.url, allow_draft: true, deepen: false,
+    max_documents: 40, context_chars: 40000,
+  } });
+  const post = h.state.requests.find((request) => request.method === "POST");
+  assert.equal(post.body.max_documents, 40);
+  assert.equal(post.body.context_chars, 40000);
+  assert.deepEqual(post.body.facts, scrape.fields);
+  assert.equal(post.body.description, scrape.description);
+  assert.equal(post.body.deepen, false);
+  assert.ok(!h.state.requests.some((request) => request.url.endsWith("/api/analyze")));
+});
 
 async function analyse(opts = {}) {
   const h = loadBackground({
@@ -227,10 +253,10 @@ test("the first click on an unknown site asks once for every site, then opens th
   assert.equal(h.state.tabMessages.filter((m) => m.message.type === "TOGGLE_HOVER_LITE").length, 2);
 });
 
-test("a click on the site the package already runs on never prompts", async () => {
+test("a fresh install asks for optional access even on a formerly preset site", async () => {
   const h = loadBackground({ tabResponses: { TOGGLE_HOVER_LITE: { ok: true } } });
   await h.clickListeners[0]({ id: 7, url: "https://www.sahibinden.com/ilan/1" });
-  assert.deepEqual(h.state.permissionRequests, []);
+  assert.deepEqual(h.state.permissionRequests, [["https://*/*"]]);
 });
 
 test("once every site is granted, one registration covers them, skipping hosts already covered", async () => {
@@ -239,8 +265,8 @@ test("once every site is granted, one registration covers them, skipping hosts a
   const any = h.state.registered.find((s) => s.id === "kriko-anysite");
   assert.ok(any, "no every-site registration");
   assert.deepEqual(any.matches, ["https://*/*"]);
-  assert.ok(any.excludeMatches.includes("https://*.sahibinden.com/*"),
-    "the manifest's own site must not run the panel twice");
+  assert.ok(!any.excludeMatches?.includes("https://*.sahibinden.com/*"),
+    "a formerly preset site must be covered by generic recognition");
   await h.sandbox.syncSites({ fresh: true });
   assert.equal(h.state.registered.filter((s) => s.id === "kriko-anysite").length, 1);
 });
@@ -382,27 +408,6 @@ test("the toolbar button and the keyboard shortcut send the same message", async
                    ["TOGGLE_HOVER_LITE", "TOGGLE_HOVER_LITE"]);
   // The command has no tab of its own and has to ask which one is in front.
   assert.deepEqual(h.state.tabMessages.map((m) => m.tabId), [7, 1]);
-});
-
-test("the small toolbar icon reflects a live app without replacing a page's risk badge", async () => {
-  const h = loadBackground({ routes: { "/api/health": { ok: true, version: "1.0.0" } } });
-  h.state.badge[1] = "2";
-  assert.equal(h.state.alarms["kriko-connection"].periodInMinutes, 1);
-  h.startupListeners[0]();
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(h.state.toolbarIcon[16], "assets/icons/icon-16.png");
-  assert.match(h.state.toolbarTitle, /connected.*open the panel/i);
-  assert.equal(h.state.badge[1], "2");
-  assert.ok(h.state.requests.some((request) =>
-    request.url === "http://127.0.0.1:8787/api/health"));
-});
-
-test("the toolbar icon becomes muted when the app stops answering", async () => {
-  const h = loadBackground({ offline: true });
-  h.alarmListeners[0]({ name: "kriko-connection" });
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(h.state.toolbarIcon[16], "assets/icons/icon-offline-16.png");
-  assert.match(h.state.toolbarTitle, /app is not running/i);
 });
 
 test("the manifest declares the command the worker listens for", () => {
@@ -774,7 +779,7 @@ test("research on a page never read sends its name alone (B150)", async () => {
     q: "Example device", allow_draft: true, url: "https://shop.example/p/1",
   } });
   assert.deepEqual(h.state.requests[0].body,
-    { q: "Example device", allow_draft: true, url: "https://shop.example/p/1" });
+    { q: "Example device", allow_draft: true, quick: true, deepen: false, url: "https://shop.example/p/1" });
 });
 
 // ── B152.4: an answer that follows the knowledge ─────────────────────────

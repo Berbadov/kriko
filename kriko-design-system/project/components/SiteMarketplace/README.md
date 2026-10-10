@@ -1,0 +1,1 @@
+Data pack marketplace: short hero, search and sort, category chips, a two-column grid of pack cards and a sticky detail panel with attributes, claim types and the install command. Packs describe what to look for, never findings. No ratings, stars, download counts or "popular" sort; trust words describe the file (signed, unsigned, draft), not its quality.

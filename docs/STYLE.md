@@ -1,60 +1,86 @@
 # How Kriko's docs are written
 
-Rules, not taste. A page that breaks one is wrong. They exist because the docs
-outgrew their author, and "it is all in the docs" is false of a page nobody
-opens.
+These are rules, not taste. A page that does not follow them is wrong. The
+rules exist because the docs outgrew their author, and "it is all in the docs"
+is false of a page nobody opens.
 
 1. **Lead with the task.**
-   Title pages and sections by what the reader is doing ("Install it on
-   Windows"), not by what the thing is ("Extension architecture"). The first
-   sentence answers the heading; background comes after, or never.
-2. **One page per job.** One sitting's work per page.
-   Split two jobs; fold half a job into its neighbour.
-   Pages that exist for completeness get deleted: completeness is the code's
-   job.
-3. **Short sentences.** One idea each; split on "which" and "and".
-   No filler ("The store is SQLite", not "It is worth noting that...").
-4. **Show it.** An example beats a description; a pasteable command beats an
-   example. Show what it prints when it works, because a command with no
-   expected output is half an instruction.
-5. **Scannable in a minute.** Headings, first lines and code blocks carry the
-   shape. Tables over paragraphs; lists over tables for incomparable items;
-   never a wall.
-6. **Say the failure.** Every fallible setup step shows the failure and the fix,
-   in a blockquote under the step, not in a bottom troubleshooting section the
-   reader reaches after guessing.
+   Give titles and sections the reader's job ("Install it on Windows"), not
+   the thing itself ("Extension architecture"). The first sentence answers
+   the heading. Background comes after, or not at all.
+2. **One page per job.** One sitting of work per page. Split a page that
+   holds two jobs. Delete a page that only exists for completeness: the code
+   owns completeness.
+3. **Simplified Technical English.** Every sentence obeys the STE rules in
+   [the language section](#the-language-asd-ste100). One idea per sentence,
+   approved words, no idioms.
+4. **Show it.** An example is better than a description; a command the
+   reader can paste is better than an example. Show what the command prints
+   when it works, because a command with no expected output is half an
+   instruction.
+5. **Scannable in a minute.** Headings, first lines and code blocks carry
+   the shape. Use tables before paragraphs; use lists before tables for
+   items the reader cannot compare. Never write a wall of text.
+6. **Say the failure.** Each setup step that can fail shows the failure and
+   its fix, in a blockquote under the step. Do not put them in a
+   troubleshooting section the reader reaches only after they guess.
 7. **Diagrams for structure, prose for reasons.**
-   Diagram the shapes (sequences, layerings, branched decisions), not the
-   sentences: two boxes and an arrow is a slow sentence.
-   **Mermaid only.** Text survives rebases and diffs, and artifacts and GitHub
-   render it.
-8. **Write for the stranger.** No "as discussed above" across pages.
-   Link with a description ("see [the pack contract](PACK_CONTRACT.md) for what
-   a pack must contain"), never "see [here](PACK_CONTRACT.md)".
-9. **British English, the product's words.** Colour, behaviour, recognise.
-   Use the on-screen word (*risk*, not *claim*, where the reader says risk) and
-   give the code's word once in brackets on first use.
+   Diagram the shapes (sequences, layers, branched decisions), not the
+   sentences. Two boxes and an arrow is a slow sentence.
+   **Mermaid only.** Text survives rebases and diffs, and GitHub renders it.
+8. **Write for the stranger.** No "as discussed above" across pages. When
+   you link, say what the link holds: "see [the pack contract](PACK_CONTRACT.md)
+   for what a pack must contain", never "see [here](PACK_CONTRACT.md)".
+9. **British English, and the product's words.** Colour, behaviour,
+   recognise. Use the word the screen shows (*risk*, not *claim*), and give
+   the code's word once, in brackets, at first use.
 10. **Every install doc stands alone.**
-    Real paths, real commands, all prerequisites, no assumed checkout (unless
-    it is for contributors). Test by reading as a stranger: a step that needs
-    something unmentioned is broken.
-11. **No category, no vendor.** A document names no product type, no catalog
-    and no brand; and no model, no agent product and no search provider. Roles
-    instead: *a coding agent CLI*, *a local model server*, *a hosted search*.
-    A name in a document is a promise to every reader, and this project's
-    answers change per machine: the model list is read from the installed CLI at
-    runtime precisely because a typed list is stale within days. A path under
-    `packs/<name>/` is a location, not a category claim, and stays. A worked
-    example built on one category is a claim, and goes.
-12. **No document is a status list.** Open work is GitHub issues (mirrored
-    to Linear), never a file in the repo. Finished work is a commit, and its message carries the
-    reasoning, so no document can drift away from the tree.
+    Real paths, real commands, all prerequisites, no assumed checkout
+    (unless the page is for contributors). Read it as a stranger: a step
+    that needs something the page does not name is broken.
+11. **No category, no vendor.** A document names no product type, no
+    catalog and no brand; and no model, no agent product and no search
+    provider. Use roles: *a coding agent CLI*, *a local model server*, *a
+    hosted search*. A name in a document is a promise to every reader, and
+    this project's answers change per machine: the model list comes from
+    the installed CLI at runtime, because a typed list is stale within
+    days. A path under `packs/<name>/` is a location, not a category claim,
+    and stays. A worked example built on one category is a claim, and goes.
+12. **No document is a status list.** Open work lives in GitHub issues
+    (mirrored to Linear), never in a file in the repo. Finished work is a
+    commit, and the commit message holds the reasoning, so no document can
+    drift away from the tree.
+
+## The language: ASD-STE100
+
+The docs use Simplified Technical English, per the ASD-STE100 specification.
+The rules below are the ones that shape these pages:
+
+| Rule | Do this | Not this |
+|---|---|---|
+| Approved words | Use plain, approved words, one meaning each | Jargon, corporate words, invented verbs |
+| Sentence length | Keep to 20 words, one idea | Long sentences joined with "which", "and", "while" |
+| Procedures | Write the imperative: "Open the file." | "The file should be opened." |
+| Facts | Write simple present: "The store holds claims." | "The store will be holding claims." |
+| Verb forms | No `-ing` after a preposition: "Before you close the window" | "Before closing the window" |
+| Idioms | Say the thing itself: "fails", "stops" | "crash belt", "red line", "the smell", "load-bearing" |
+| Strength | "must" for a requirement, imperative for an instruction | "shall", "should", "might be" |
+| Articles | Keep them: "Close **the** window" | "Close window" |
+| Voice | Active: "The engine refuses the claim" | "The claim is refused by the engine" |
+
+Technical names are exempt: file paths, commands, code words and the
+glossary's words (`pack`, `claim`, `plane`, `bar`, `lineup`, `draft`) keep
+their exact forms. Where a glossary word has a plain-English meaning, say it
+once in [GLOSSARY.md](GLOSSARY.md).
+
+If a sentence needs "and" twice, split it. If a paragraph holds more than
+six sentences, split it.
 
 ## Draw a diagram in the app's colours
 
-Every Mermaid diagram wears the desktop app's palette, so a page reads as part
-of the same product. The values come from `kriko-gpui/src/theme.rs`; if a
-token moves there, it moves here.
+Every Mermaid diagram uses the desktop app's palette, so a page reads as
+part of the same product. The values come from `kriko-gpui/src/theme.rs`; if
+a token moves there, it moves here.
 
 Start every diagram with this line, unchanged:
 
@@ -77,14 +103,14 @@ classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
 | `brand` | `BRAND` `#1F4FFF` | The thing the diagram is about; one or two nodes |
 | `plain` | `SURFACE_1` `#090E1B` | Everything else |
 | `ice` | `ICE` `#BFE4FF` | What the reader sees or types: a screen, a command, a result |
-| `danger` | `DANGER` `#FF6B5E` | A refusal, a failure, a red line |
+| `danger` | `DANGER` `#FF6B5E` | A refusal, a failure, a limit that must not be crossed |
 | `mark` | the mark's arm `#E8C04B` | At most one node: the answer, the risk shown |
 
-Lines are `BRAND_BRIGHT` (`#86A3FF`), which reads on GitHub's light and dark
+Lines use `BRAND_BRIGHT` (`#86A3FF`), which reads on GitHub's light and dark
 pages alike. Do not set `background`: GitHub draws the page behind the
 diagram.
 
 ## Exempt
 
-- **Code comments** — answer "why is this like this", at whatever length that
-  takes.
+- **Code comments** — they answer "why is this like this", at whatever
+  length that takes.

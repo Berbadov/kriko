@@ -30,6 +30,7 @@ argument that put the two SQLite files there.
 """
 
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -202,7 +203,23 @@ def content_files(source: Path) -> list[str]:
     return sorted(files)
 
 
-def content_digest(source: Path) -> str:
+def firefox_manifest(content: bytes) -> bytes:
+    """Derive the Firefox event-page manifest from the shared extension."""
+    manifest = json.loads(content)
+    manifest["background"] = {"scripts": ["background.js"]}
+    manifest["browser_specific_settings"] = {"gecko": {
+        "id": "kriko@kriko.local",
+        "strict_min_version": "140.0",
+        # Page information leaves the browser for the desktop engine, even
+        # when both are on the same computer. Mozilla's definition includes it.
+        "data_collection_permissions": {"required": ["browsingActivity", "websiteContent"]},
+    }, "gecko_android": {"strict_min_version": "142.0"}}
+    for resource in manifest.get("web_accessible_resources", []):
+        resource.pop("use_dynamic_url", None)
+    return (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def content_digest(source: Path, browser: str = "chromium") -> str:
     try:
         if not (source / "manifest.json").is_file():
             return ""
@@ -210,6 +227,8 @@ def content_digest(source: Path) -> str:
         for name in content_files(source):
             digest.update(name.encode("utf-8") + b"\0")
             content = (source / name).read_bytes()
+            if name == "manifest.json" and browser == "firefox":
+                content = firefox_manifest(content)
             if name == "background.js":
                 content = _DIGEST_STAMP.sub(b'const LOADED_CONTENT_DIGEST = "";', content)
             digest.update(content)
@@ -219,7 +238,7 @@ def content_digest(source: Path) -> str:
         return ""
 
 
-def stage(source: Path, target: Path) -> list[str]:
+def stage(source: Path, target: Path, browser: str = "chromium") -> list[str]:
     """Copy the extension to `target`, replacing whatever is there.
 
     Replacing, not merging: a file the extension no longer ships must not
@@ -229,6 +248,10 @@ def stage(source: Path, target: Path) -> list[str]:
     currently loaded is how you get an extension pointing at an inode nothing
     else refers to.
     """
+    if browser not in ("chromium", "firefox"):
+        raise ValueError("Unknown extension browser")
+    if source.resolve() == target.resolve() or target.resolve() in source.resolve().parents:
+        raise ValueError("The source extension or its parent cannot be a staging directory")
     target.mkdir(parents=True, exist_ok=True)
     for entry in target.iterdir():  # any-order: emptying a directory, not reading it
         shutil.rmtree(entry) if entry.is_dir() else entry.unlink()
@@ -244,6 +267,9 @@ def stage(source: Path, target: Path) -> list[str]:
         else:
             shutil.copy2(src, dst)
         written.append(name)
+    if browser == "firefox":
+        manifest = target / "manifest.json"
+        manifest.write_bytes(firefox_manifest(manifest.read_bytes()))
     background = target / "background.js"
     if background.is_file():
         stamp = f'const LOADED_CONTENT_DIGEST = "{content_digest(target)}";'.encode("ascii")
@@ -251,12 +277,13 @@ def stage(source: Path, target: Path) -> list[str]:
     return written
 
 
-def target_for(store_path: Path) -> Path:
+def target_for(store_path: Path, browser: str = "chromium") -> Path:
     """Where this installation stages the extension the browser loads."""
-    return env_override() or staged_dir(home_of(store_path))
+    base = env_override() or staged_dir(home_of(store_path))
+    return base.with_name(base.name + "-firefox") if browser == "firefox" else base
 
 
-def refresh(source: Path | None, target: Path) -> bool:
+def refresh(source: Path | None, target: Path, browser: str = "chromium") -> bool:
     """Restage when the app carries different files than the browser loads (B151).
 
     An app update replaced the carried extension and left the staged copy —
@@ -268,33 +295,48 @@ def refresh(source: Path | None, target: Path) -> bool:
     """
     if source is None or not (target / "manifest.json").is_file():
         return False
-    carried = content_digest(source)
+    carried = content_digest(source, browser)
     if not carried or carried == content_digest(target):
         return False
-    stage(source, target)
+    stage(source, target, browser)
     return True
 
 
+def package(staged: Path, output: Path) -> Path:
+    """Write an unsigned XPI containing only browser files, at the ZIP root."""
+    import zipfile
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = output.with_suffix(".tmp")
+    with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name in content_files(staged):
+            archive.write(staged / name, name)
+    temporary.replace(output)
+    return output
+
+
 def reveal(path: Path) -> str:
-    """Show the extension folder in the platform's file manager.
+    """Open `path`'s folder with `path` selected, ready to drag.
 
     Best-effort by design, and it returns what it tried rather than raising: a
     machine with no file manager (a headless test box, a stripped container) is
     not a failure the reader needs a red banner for — the page has already shown
-    them the path, which is the part they actually need.
+    them the path, which is the part they actually need. Opening the folder
+    itself is the wrong destination: dragged from inside it, there is nothing
+    to drop onto the browser's extensions page.
     """
     if sys.platform.startswith("win"):
-        command = ["explorer", "/select,", str(path)]
+        command = ["explorer", f"/select,{path}"]
     elif sys.platform == "darwin":
-        command = ["open", str(path)]
+        command = ["open", "-R", str(path)]
     else:
-        command = ["xdg-open", str(path)]
+        command = ["xdg-open", str(path.parent)]
     try:
         subprocess.Popen(
             command,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=not sys.platform.startswith("win"),
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
     except OSError as cause:
         return f"could not open a file manager: {cause}"

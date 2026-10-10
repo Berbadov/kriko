@@ -226,7 +226,8 @@ def research_client(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("identity", [{"q": "Widget One"}, {"subject_id": "one"}])
 @pytest.mark.parametrize("cap,expected", [(None, 0.20), (0.05, 0.05), (100, 0.20)])
-def test_post_research_plane_contract(research_client, identity, cap, expected):
+@pytest.mark.parametrize("limits", [{}, {"max_documents": 40, "context_chars": 40000}])
+def test_post_research_plane_contract(research_client, identity, cap, expected, limits):
     from app.web.deps import get_jobs
 
     calls = []
@@ -236,7 +237,7 @@ def test_post_research_plane_contract(research_client, identity, cap, expected):
         return "job-probe"
 
     research_client.app.dependency_overrides[get_jobs] = lambda: SimpleNamespace(submit=submit)
-    body = {**identity, "model": "selected-model", "search": "selected-search"}
+    body = {**identity, "model": "selected-model", "search": "selected-search", **limits}
     if cap is not None:
         body["cap"] = cap
     response = research_client.post("/api/extension/research-plane", json=body)
@@ -250,6 +251,8 @@ def test_post_research_plane_contract(research_client, identity, cap, expected):
         "subject_id": "one", "pack_id": "probe", "backend": "api",
         "model": "selected-model", "search": "selected-search",
         "budget_usd": expected,
+        "max_documents": limits.get("max_documents", 5),
+        "context_chars": limits.get("context_chars", 6000),
     })]
 
 
@@ -260,6 +263,9 @@ def test_post_research_plane_contract(research_client, identity, cap, expected):
     {"subject_id": "one", "cap": -1},
     {"subject_id": "one", "cap": "NaN"},
     {"subject_id": "one", "cap": "Infinity"},
+    {"subject_id": "one", "max_documents": 0},
+    {"subject_id": "one", "max_documents": 51},
+    {"subject_id": "one", "context_chars": 40001},
 ])
 def test_post_research_plane_rejects_invalid_input(research_client, body):
     assert research_client.post("/api/extension/research-plane", json=body).status_code == 422
@@ -418,6 +424,34 @@ def test_post_research_plane_cancel_after_start_keeps_gathered_work(
     assert runs[0]["outcome"] == "cancelled"
 
 
+def test_local_unknown_listing_quick_only_submits_an_answer_without_building(
+    research_client, monkeypatch,
+):
+    from app import localplane
+    from app.providers import harness
+    from app.web.deps import get_jobs
+
+    monkeypatch.setattr(harness, "available", lambda: [])
+    monkeypatch.setattr(localplane, "resolve", lambda *a, **kw: {
+        "ready": True, "model": "fixture-local", "line": "Local model ready", "reason": ""})
+    calls = []
+
+    def submit(kind, params):
+        calls.append((kind, params))
+        return "quick-only"
+
+    research_client.app.dependency_overrides[get_jobs] = lambda: SimpleNamespace(submit=submit)
+    reply = research_client.post("/api/extension/research-plane", json={
+        "q": "Unknown Widget", "allow_draft": True, "quick": True, "deepen": False,
+        "url": "https://example.org/widget", "facts": {"ld:name": "Unknown Widget"},
+    })
+    assert reply.status_code == 200, reply.text
+    assert reply.json()["deepen_job_id"] == ""
+    assert [kind for kind, _ in calls] == ["quick_look"]
+    assert calls[0][1]["backend"] == "local"
+    assert calls[0][1]["pack_id"] == ""
+
+
 @pytest.mark.parametrize("allow_draft,expected", [(False, 404), (True, 503)])
 def test_unknown_product_never_falls_back_to_paid_research(
     research_client, monkeypatch, allow_draft, expected,
@@ -461,6 +495,35 @@ def test_draft_opt_in_keeps_known_products_on_research(research_client, identity
     assert response.status_code == 200
     assert response.json()["kind"] == "research"
     assert calls == ["research"]
+
+
+@pytest.mark.parametrize("product", ["Widget One", "Unknown Widget"])
+@pytest.mark.parametrize("backend", ["local", "harness"])
+def test_quick_search_reads_the_web_for_known_and_unknown_products(research_client, monkeypatch, product, backend):
+    from app import localplane
+    from app.providers import harness
+    from app.web.deps import get_jobs
+
+    monkeypatch.setattr(harness, "available", lambda: [harness.KNOWN[0]] if backend == "harness" else [])
+    monkeypatch.setattr(localplane, "resolve", lambda *args, **kwargs: {
+        "ready": backend == "local", "line": "Local model ready", "model": "test", "reason": ""})
+    calls = []
+    def submit(kind, params):
+        calls.append((kind, params))
+        return "quick-search"
+    research_client.app.dependency_overrides[get_jobs] = lambda: SimpleNamespace(submit=submit)
+    response = research_client.post("/api/extension/research-plane", json={
+        "q": product, "allow_draft": True, "deepen": False,
+        "facts": {"Revision": "R2"}, "description": "Product details",
+        "max_documents": 40, "context_chars": 40000,
+    })
+    assert response.status_code == 200, response.text
+    assert response.json()["kind"] == "quick_look"
+    assert len(calls) == 1 and calls[0][0] == "quick_look"
+    params = calls[0][1]
+    assert params["product"] == product
+    assert params["page"] == {"facts": {"Revision": "R2"}, "description": "Product details"}
+    assert params["max_documents"] == 40 and params["context_chars"] == 40000
 
 
 @pytest.mark.parametrize("value", ["false", "true", 1, None])

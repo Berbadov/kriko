@@ -174,7 +174,36 @@ def _asker(settings, params: dict, progress):
     """
     from app.web import tasks
     backend = str(params.get("backend") or "").lower()
+    if backend == "api":
+        from app.providers import completer_for, llm, _preferred_model
+        from app.providers.completion_asker import CompletionAsker
+        name = llm.model_name(params.get("model") or _preferred_model(settings.app_state_path))
+        if params.get("evidence") is None:
+            # The web suite needs an agent that can search, not an extraction
+            # researcher whose only interface is gather/extract.
+            raise ValueError("the web suite requires the local or harness plane; "
+                             "use the precision suite to compare direct API models")
+        return CompletionAsker(completer_for(name, max_tokens=1024),
+                               budget_usd=float(params.get("budget_usd", DEFAULT_BUDGET_USD)))
     if backend == "local":
+        if params.get("evidence") is not None:
+            from app import localplane
+            from app.providers.local_agent import LocalAsker, REASONING_EFFORT, REPLY_MAX_TOKENS
+            from app.providers.local_inference import OpenAICompatSocket
+
+            resolved = localplane.resolve(settings.app_state_path, with_search=False)
+            if not resolved["ready"]:
+                raise RuntimeError(resolved["reason"])
+            asked = params.get("model") or resolved["model"]
+            if asked not in resolved["models"]:
+                raise ValueError(f"local server does not list requested model {asked!r}")
+            complete = OpenAICompatSocket(
+                resolved["url"], asked, timeout=FIXED_CASE_TIMEOUT_SECONDS,
+                max_tokens=REPLY_MAX_TOKENS, reasoning_effort=REASONING_EFFORT)
+            return LocalAsker(
+                complete, complete, None, None, model=asked,
+                search_provider="supplied-corpus", url=resolved["url"],
+                given_sources=params["evidence"], requested_specs=params.get("requested_specs"))
         return tasks._local_asker(settings, params, progress)
     return tasks._researcher({**params, "backend": backend})
 
@@ -209,9 +238,17 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
         row["error"] = error
         return row
     row.update(columns)
+    row["protocol"] = {"local": "local-extractive-v2", "api": "direct-completion",
+                       "harness": "harness"}.get(plane, plane)
+    from app import precisionbench
+    evidence = ({one["url"]: one["text"] for one in case["documents"]}
+                if case.get("mode") == "controlled" else None)
+    if evidence is not None:
+        row["search_provider"] = "supplied-corpus"
     silent = _Silent(check_cancelled)
     silent.check()
     started = time.perf_counter()
+    researcher = None
     try:
         researcher = _asker(settings, {
             "backend": plane, "protocol": protocol, "search": search,
@@ -220,29 +257,43 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
             "app_state_path": settings.app_state_path,
             "timeout_seconds": FIXED_CASE_TIMEOUT_SECONDS,
             "queries": case.get("queries") or [],
+            "evidence": evidence,
+            "requested_specs": case.get("requested_specs") if evidence is not None else None,
         }, silent)
         if hasattr(researcher, "on_action"):
             researcher.on_action = silent.log
         if hasattr(researcher, "check_cancelled"):
             researcher.check_cancelled = silent.check
-        reply = researcher.ask(quicklook.brief(
-            case.get("product") or case["id"], "", None,
-            "", ""))
+        task = (precisionbench.brief(case) if evidence is not None else
+                quicklook.brief(case.get("product") or case["id"], "", None, "", ""))
+        if evidence is not None and plane != "local":
+            task += "\n## Supplied documents\n" + "\n\n".join(
+                f"### URL: {url}\n\n{text}" for url, text in evidence.items())
+        reply = researcher.ask(task)
         silent.check()
     except Cancelled:
         raise
     except Exception as exc:  # noqa: BLE001 - a failed case is a measurement
         row["ms"] = int((time.perf_counter() - started) * 1000)
         row["error"] = f"{type(exc).__name__}: {exc}"
+        _fixed_measurement(row, researcher, model or plane)
         return row
     row["ms"] = int((time.perf_counter() - started) * 1000)
-    found = quicklook.parse(reply, getattr(researcher, "sources", None))
+    sources = evidence if evidence is not None else getattr(researcher, "sources", None)
+    found = quicklook.parse(reply, sources)
     produced = [
         {"title": one.get("title", ""), "domain": one.get("domain", ""),
-         "quote": one.get("quote", "")}
+         "quote": (one.get("sources") or [{}])[0].get("quote", "")}
         for one in (found.get("risks") or [])
     ]
-    judged = gold_mod.judge(case, produced)
+    raw_risks = precisionbench.risks(reply)
+    judged = (precisionbench.judge(case, reply, evidence) if evidence is not None
+              else gold_mod.judge(case, raw_risks))
+    judged["raw_produced"] = len(raw_risks) if evidence is None else judged["raw_produced"]
+    judged["proposed_risks"] = raw_risks
+    judged["proposed_specs"] = precisionbench.payload(reply).get("specs", [])
+    judged["delivered"] = gold_mod.judge(case, produced) if evidence is None else {
+        "accepted": len(produced), "dropped": int(found.get("dropped") or 0)}
     row["gold"] = judged
     row["model"] = str(getattr(researcher, "model", "") or "") or plane
     row["search_provider"] = (
@@ -255,7 +306,27 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
     row["refused"] = int(found.get("dropped") or 0)
     row["findings"] = row["accepted"] + row["refused"]
     row["note"] = ""
+    row["documents"] = len(sources or {})
+    _fixed_measurement(row, researcher, model or plane)
     return row
+
+
+def _fixed_measurement(row: dict, researcher, fallback: str) -> None:
+    """Keep failed attempts' spend too, and persist details inside gold_json."""
+    row["model"] = str(getattr(researcher, "model", "") or fallback)
+    row["tokens"] = getattr(researcher, "tokens_used", None)
+    measurement = {
+        "tokens_in": getattr(researcher, "tokens_in", None),
+        "tokens_out": getattr(researcher, "tokens_out", None),
+        "stages": getattr(researcher, "metrics", []),
+        "finish_reason": getattr(researcher, "last_finish_reason", ""),
+        "verification": getattr(researcher, "verification", None),
+        "cost_basis": getattr(researcher, "cost_basis", "unknown"),
+        "usage_complete": getattr(researcher, "usage_complete", row.get("tokens") is not None),
+    }
+    row.setdefault("gold", {})["measurement"] = measurement
+    if getattr(researcher, "cost_basis", "") == "per_token":
+        row["usd"] = getattr(researcher, "spent", None)
 
 
 def run_case(
@@ -719,23 +790,25 @@ def scored(rows: list[dict]) -> dict:
     groups: dict[tuple, dict] = {}
     for row in rows:
         judged = row.get("gold")
-        if not judged:
+        if not judged or row.get("error"):
             continue
         key = (row.get("plane", ""), row.get("model", ""), row.get("protocol", ""),
-               str(row.get("set_id") or ""), str(row.get("set_version") or ""))
+               str(row.get("set_id") or ""), str(row.get("set_version") or ""),
+               str(row.get("search_provider") or ""))
         seen = groups.setdefault(key, {
             "plane": key[0], "model": key[1], "protocol": key[2],
             "runs": 0, "found": 0, "wanted": 0, "produced": 0, "hallucinated": 0,
             "set_id": key[3], "set_version": key[4],
+            "search_provider": key[5],
         })
         seen["runs"] += 1
         seen["found"] += len(judged.get("found") or [])
         seen["wanted"] += len(judged.get("found") or []) + len(judged.get("missed") or [])
-        seen["produced"] += (
+        seen["produced"] += judged.get("raw_produced", (
             len(judged.get("found") or [])
             + len(judged.get("unlisted") or [])
             + len(judged.get("hallucinated") or [])
-        )
+        ))
         seen["hallucinated"] += len(judged.get("hallucinated") or [])
 
     out = []
@@ -846,7 +919,7 @@ def validate(params: dict) -> dict:
     }
 
 
-def llm_owners() -> dict[str, set[str]]:
+def llm_owners(app_state_path=None) -> dict[str, set[str]]:
     """Which plane each LLM name belongs to, as this machine names them.
 
     The harness plane's names come from its CLIs (`harness.models_for`), the
@@ -864,6 +937,9 @@ def llm_owners() -> dict[str, set[str]]:
             owners.setdefault(name, set()).add("harness")
     for name in modelcatalogue.load():
         owners.setdefault(name, set()).add("api")
+    from app import localplane
+    for name in localplane.resolve(app_state_path, with_search=False)["models"]:
+        owners.setdefault(name, set()).add("local")
     return owners
 
 
@@ -913,7 +989,7 @@ def grid(params: dict, case_count: int,
             "paid_runs": per_pair * sum(1 for plane, _ in runs_of if plane == "api")}
 
 
-def estimate(conn, params: dict, case_count: int) -> dict:
+def estimate(conn, params: dict, case_count: int, *, app_state_path=None) -> dict:
     """What this grid is likely to cost, before anybody presses it.
 
     "Benchmarking everything costs a lot. I need to scope it." Scoping without
@@ -928,7 +1004,8 @@ def estimate(conn, params: dict, case_count: int) -> dict:
     from app import costs
 
     validate(params)
-    shape = grid(params, case_count, llm_owners())
+    owners = llm_owners(app_state_path) if split_axis(params, "models", "llms") else {}
+    shape = grid(params, case_count, owners)
     per_run = costs.estimate(conn, plane="api")
     usd, tokens = per_run.get("usd"), per_run.get("tokens")
     priced = shape["runs"]
@@ -948,7 +1025,7 @@ def estimate(conn, params: dict, case_count: int) -> dict:
     }
 
 
-def planes_available(settings) -> list[str]:
+def planes_available(settings, *, controlled: bool = False) -> list[str]:
     """Which planes this machine can actually run, in the order to run them.
 
     `agent` is excluded and that is not an oversight: its `gather` returns
@@ -966,10 +1043,12 @@ def planes_available(settings) -> list[str]:
     # Both keys, not either: `keys.ready()` is the same check the API card
     # uses, and half-configured is a run that fails on its first document
     # rather than a degraded plane worth measuring.
-    if keys.ready():
+    if (any(one["present"] for one in keys.status()
+            if one["id"] in keys.COMPLETION_PROVIDERS) if controlled else keys.ready()):
         found.append("api")
     from app import localplane
 
-    if localplane.is_ready():
+    if (localplane.resolve(settings.app_state_path, with_search=False)["ready"]
+            if controlled else localplane.is_ready()):
         found.append("local")
     return found

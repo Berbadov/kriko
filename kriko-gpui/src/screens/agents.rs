@@ -9,7 +9,8 @@ use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, S
 use crate::app::Kriko;
 use crate::live::run::{mark_for, AgentEntry, RunState, Target};
 use crate::marks::{mark_tile, phase_beat, Phase};
-use crate::screens::{empty_note, mono, row_desc, row_title, th};
+use crate::screens::history::{drawer_ctrl, drawer_option};
+use crate::screens::{empty_note, mono, plate_s, row_desc, row_title, th};
 use crate::theme::*;
 
 /// How an agent stands as a runner of checks: the tag state and its word.
@@ -162,11 +163,12 @@ pub fn agents(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) ->
         };
         div()
             .flex()
+            .flex_wrap()
             .gap(px(24.0))
             .items_start()
-            .min_w(px(980.0))
-            .child(div().flex_1().min_w(px(0.0)).child(table))
-            .child(div().w(px(320.0)).flex_none().child(detail))
+            .min_w(px(0.0))
+            .child(div().flex_1().min_w(px(420.0)).child(table))
+            .child(div().flex_1().min_w(px(320.0)).max_w(px(480.0)).child(detail))
     };
 
     div().id("agents-row-scroll").overflow_x_scroll().child(body)
@@ -192,13 +194,39 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
                 ))
                 .child(
                     div()
+                        .flex_1()
+                        .min_w(px(0.0))
                         .flex()
                         .flex_col()
                         .gap(px(4.0))
                         .child(row_title(&e.label))
                         .child(mono(&e.id, MUTED))
                         .child(phase_beat(&format!("agents-detail-beat-{}", e.id), phase, motion)),
-                ),
+                )
+                .child({
+                    let up = e.id.clone();
+                    let down = e.id.clone();
+                    let up_click = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                        this.order_agent(up.clone(), -1, cx);
+                        cx.notify();
+                    });
+                    let down_click = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                        this.order_agent(down.clone(), 1, cx);
+                        cx.notify();
+                    });
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(
+                            plate_s("agents-up", "Up")
+                                .on_click(up_click),
+                        )
+                        .child(
+                            plate_s("agents-down", "Down")
+                                .on_click(down_click),
+                        )
+                }),
         );
 
     // ---- runs checks ----
@@ -216,6 +244,60 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
                     .child(tag("agents-detail-run", state, word, motion))
                     .when(chosen, |d| d.child(chip("used for runs"))),
             );
+        // ---- the model drawer: what this provider serves, asked for now ----
+        if h.llm_selectable {
+            let open = app.live.run.model_drawer;
+            let word = if h.llm.is_empty() {
+                "DEFAULT".to_string()
+            } else {
+                crate::screens::history::clip(&h.llm, 26).to_uppercase()
+            };
+            let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.open_agent_models(cx);
+            });
+            c = c.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.0))
+                    .child(drawer_ctrl("agent-model", "MODEL", &word, open).on_click(toggle))
+                    .when(open, |d| {
+                        let mut panel = well().p(px(8.0)).flex().flex_col().gap(px(2.0));
+                        let id = e.id.clone();
+                        let pick_default = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                            this.pick_agent_model(id.clone(), String::new(), cx);
+                        });
+                        panel = panel.child(
+                            drawer_option("agent-model-default", "Its own default", h.llm.is_empty())
+                                .on_click(pick_default),
+                        );
+                        if !h.llms.is_empty() {
+                            let mut models = h.llms.clone();
+                            models.dedup();
+                            for (mi, m) in models.iter().enumerate() {
+                                let (id, want) = (e.id.clone(), m.clone());
+                                let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                                    this.pick_agent_model(id.clone(), want.clone(), cx);
+                                });
+                                panel = panel.child(
+                                    drawer_option(gpui::ElementId::named_usize("agent-model-opt", mi), m, h.llm == *m)
+                                        .on_click(pick),
+                                );
+                            }
+                        } else {
+                            panel = panel.child(mono(
+                                if h.llms_note.is_empty() {
+                                    "Asking this provider what it serves."
+                                } else {
+                                    &h.llms_note
+                                },
+                                MUTED,
+                            ));
+                        }
+                        d.child(panel)
+                    }),
+            );
+        }
         match &h.state {
             RunState::Ready => {
                 let runs = app.live.run.runs_of(&e.id);
@@ -290,35 +372,37 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
         this.verify_agents(cx);
         cx.notify();
     });
-    c = c.child(hairline()).child(
+    c = c.child(hairline()).child(if app.live.run.verifying {
         div()
             .flex()
             .items_center()
             .gap(px(10.0))
-            .child(
-                ghost(
-                    "agent-verify",
-                    if app.live.run.verifying { "Checking" } else { "Check connection" },
-                )
-                .on_click(verify),
-            )
+            .py(px(6.0))
+            .child(led_ripple("agent-verify-live", motion))
+            .child(mono("Calling the MCP server...", INK_2))
+            .child(div().flex_1())
+            .child(led_matrix_anim(
+                "agent-verify-pace",
+                &QUEUE5,
+                LED_DIM,
+                3.0,
+                1.0,
+                LedAnim::Boot,
+                motion,
+            ))
+    } else {
+        div()
+            .flex()
+            .items_center()
+            .gap(px(10.0))
+            .child(ghost("agent-verify", "Check connection").on_click(verify))
             .child(
                 div()
                     .flex_1()
                     .min_w(px(0.0))
                     .child(row_desc("Starts Kriko's MCP server and asks it who it is.")),
-            ),
-    );
-    if app.live.run.verifying {
-        c = c.child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(10.0))
-                .child(led_ripple("agent-verify-progress", motion))
-                .child(row_desc("Checking the configured command and available tools…")),
-        );
-    }
+            )
+    });
     if let Some(v) = &app.live.run.verify {
         let mut steps = div().flex().flex_col().gap(px(6.0));
         for (i, (step, state)) in v.steps.iter().enumerate() {
@@ -337,24 +421,38 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, cx: &mut Context<Kriko
             );
         }
         c = c.child(steps);
-        c = c.child(row_desc(&format!(
-            "{} · {} ms",
-            if v.ok { "Connection check passed" } else { "Connection check failed" },
-            v.ms
-        )));
-        if !v.log.is_empty() {
-            c = c.child(
-                well()
-                    .max_h(px(220.0))
-                    .p(px(12.0))
-                    .font_family(MONO)
-                    .text_size(px(12.0))
-                    .text_color(rgb(INK_2))
-                    .child(v.log.clone()),
-            );
+        if v.ms > 0 {
+            let word = if v.ok {
+                format!("answered in {} ms", v.ms)
+            } else {
+                format!("gave up after {} ms", v.ms)
+            };
+            c = c.child(mono(&word, MUTED));
         }
         if !v.ok && !v.detail.is_empty() {
             c = c.child(row_desc(&v.detail));
+        }
+        if !v.log.is_empty() {
+            let mut log = div()
+                .id("agent-verify-log")
+                .mt(px(4.0))
+                .max_h(px(220.0))
+                .overflow_y_scroll()
+                .p(px(12.0))
+                .flex()
+                .flex_col()
+                .gap(px(4.0))
+                .rounded(px(10.0))
+                .border_1()
+                .border_color(rgba(HAIRLINE));
+            for line in v.log.lines() {
+                let failed = line.contains(": failed") || v.detail.contains(line);
+                log = log.child(mono(
+                    line,
+                    if line.starts_with('$') { ICE } else if failed { 0xffb86b } else { INK_2 },
+                ));
+            }
+            c = c.child(log);
         }
     }
     c

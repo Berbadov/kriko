@@ -60,11 +60,13 @@ def list_operations(
     request: Request,
     limit: int = Query(50, ge=1, le=500),
     after_id: int = Query(0, ge=0),
+    before_id: int = Query(0, ge=0),
     watch: str = Query(""),
     conn=Depends(get_app_state),
 ) -> dict:
     items = state.operations(
-        conn, limit=limit, after_id=after_id, watching=_watched(watch)
+        conn, limit=limit, after_id=after_id, before_id=before_id,
+        watching=_watched(watch)
     )
     return {
         "items": items,

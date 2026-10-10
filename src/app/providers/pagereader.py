@@ -35,9 +35,9 @@ PARALLEL_ENDPOINT = "https://search.parallel.ai/mcp"
 PARALLEL_TOOL = "web_fetch"
 PROTOCOL = "2025-06-18"
 
-#: Kept for the harness plane's per-run config, which names one door.
-ENDPOINT = EXA_ENDPOINT
-TOOL = EXA_TOOL
+#: The optional hosted reader; Exa is available only when explicitly requested.
+ENDPOINT = PARALLEL_ENDPOINT
+TOOL = PARALLEL_TOOL
 
 #: `extract` truncates to 12 000 characters, so more than this is paying a
 #: courtesy for text the run will never read.
@@ -188,8 +188,8 @@ def _asked(target: str, tool: str, url: str) -> str:
 def read(url: str, endpoint: str = "") -> str:
     """The page's text through the hosted readers, "" when none read it.
 
-    Exa first, Parallel second: one initialize and one call per page per
-    reader, so a kept session would be state whose lifetime nobody owns.
+    Parallel is the optional fallback after direct fetching. Exa's legacy
+    endpoint is available only to a caller that explicitly passes it.
     "" on every failure, so the ladder in `fetch.py` can simply fall
     through and report the page unread rather than half-read.
     """
@@ -197,10 +197,9 @@ def read(url: str, endpoint: str = "") -> str:
         return ""
     if urlsplit(url).netloc == urlsplit(EXA_ENDPOINT).netloc:
         return ""
-    if endpoint:
+    if endpoint and endpoint != PARALLEL_ENDPOINT:
         return plain(parse(_asked(endpoint, EXA_TOOL, url), url))[:MAX_CHARACTERS]
     for target, tool, lift in (
-        (EXA_ENDPOINT, EXA_TOOL, parse),
         (PARALLEL_ENDPOINT, PARALLEL_TOOL, parse_parallel),
     ):
         page = plain(lift(_asked(target, tool, url), url))

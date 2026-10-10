@@ -16,6 +16,7 @@ from app import extension, keys, sites
 from app.web import state
 from app.web.deps import get_app_state, get_jobs, get_store
 from app.web.routers.research import resolve_research_subject
+from app.web.settings import EXTENSION_PORT
 from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher
 
@@ -73,6 +74,7 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
     """
     source = extension.source_dir()
     target = _target(request)
+    firefox_target = extension.target_for(request.app.state.settings.store_path, "firefox")
     staged = (target / "manifest.json").is_file()
     sightings = state.extension_sightings(conn)
     ages = [age for row in sightings if (age := _age(row["last_at"])) is not None]
@@ -92,11 +94,18 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
             for row in sightings
         ],
         "path": str(target),
+        "firefox": {
+            "path": str(firefox_target),
+            "manifest_path": str(firefox_target / "manifest.json"),
+            "package_path": str(firefox_target.with_suffix(".xpi")),
+            "staged": (firefox_target / "manifest.json").is_file(),
+            "signed": False,
+        },
         # The extension cannot be told a port, so it hardcodes this one. If
         # something else on the machine holds it the extension will install
         # perfectly and reach nothing, which looks identical to a bad install
         # from the reader's side — so the page gets told, rather than guessing.
-        "port": request.app.state.settings.extension_port,
+        "port": EXTENSION_PORT,
         "port_is_ours": bool(request.app.state.settings.extension_port_bound),
         "browsers": extension.browsers(),
         "sightings": sightings,
@@ -127,7 +136,8 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
             _running_version(sightings),
             extension.version(source) if source else "",
             loaded_digest=_loaded_digest(request, sightings),
-            carried_digest=extension.content_digest(source) if source else "",
+            carried_digest=extension.content_digest(source, "firefox" if sightings and
+                sightings[0]["origin"].startswith("moz-extension://") else "chromium") if source else "",
         ),
     }
 
@@ -195,10 +205,19 @@ def research_plane(request: Request) -> dict:
 class ExtensionResearchRequest(BaseModel):
     q: str = Field("", max_length=500)
     subject_id: str = Field("", max_length=200)
+    harness: str = Field("", max_length=200)
     model: str = Field("", max_length=200)
     search: str = Field("", max_length=64)
     cap: float | None = Field(None, gt=0, allow_inf_nan=False)
     allow_draft: bool = Field(False, strict=True)
+    #: Queue runs need the installed draft; the listing's quick-look card is
+    #: useful in the browser panel but would start a second visible job here.
+    quick: bool = Field(True, strict=True)
+    #: Whether this press also authors the pack. The listing's own Research
+    #: press leaves it off: a quick look is an answer, not a bundle — the pack
+    #: is drafted and installed only by the panel's explicit Build press.
+    #: Queue runs imply it (`quick: false`).
+    deepen: bool = Field(True, strict=True)
     #: The listing the reader is on, so the quick look can hold itself to the
     #: pack whose site this is (its `research/principle.md`). Optional.
     url: str = Field("", max_length=2000)
@@ -207,7 +226,9 @@ class ExtensionResearchRequest(BaseModel):
     #: rather than asking the reader for an engine code they may not know.
     #: Trimmed by `app.pagefacts.clean`; both optional.
     facts: dict[str, str] = Field(default_factory=dict)
-    description: str = Field("", max_length=5000)
+    description: str = Field("", max_length=8000)
+    max_documents: int = Field(5, ge=1, le=50)
+    context_chars: int = Field(6000, ge=800, le=40000)
 
 
 def _listing_pack(store, conn, url: str, facts: dict, title: str) -> str:
@@ -247,134 +268,21 @@ def start_research_plane(
     store=Depends(get_store), runner=Depends(get_jobs),
     conn=Depends(get_app_state),
 ) -> dict:
+    if body.quick and not body.deepen and body.allow_draft and body.q.strip():
+        # Quick Search always reads the web, even for an installed product.
+        return _start_product_search(body, request, store, runner, conn)
     try:
         subject = resolve_research_subject(store, q=body.q, subject_id=body.subject_id)
     except HTTPException as exc:
         if exc.status_code != 404 or not body.allow_draft or not body.q.strip():
             raise
-        from app import prefs
-        from app.providers import apiagent, harness
-
-        installed = harness.available()
-        stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
-        # An API agent counts only once picked: it bills per token, and a
-        # key saved for something else is not a yes to that (B153).
-        picked_api = stored in {one.id for one in apiagent.available()}
-        # The model on this computer (B171, B172): first for a reader who has
-        # picked no agent, and the only door for one who has none at all.
-        from app import localplane
-
-        local = localplane.resolve(
-            getattr(request.app.state.settings, "app_state_path", None),
-            with_search=False)
-        if local["ready"] and (not stored or (not installed and not picked_api)):
-            from app import pagefacts
-
-            page = pagefacts.clean(body.facts, body.description)
-            params = {
-                "category": body.q.strip(), "product": body.q.strip(),
-                "harness": "", "backend": "local", "install": True,
-                "page": page, "budget_usd": 0.0,
-            }
-            deepen = runner.submit("pack_author", params)
-            pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
-            quick = runner.submit("quick_look", {
-                "product": body.q.strip(), "harness": "", "backend": "local",
-                "pack_id": pack_id, "deepen_job_id": deepen, "page": page,
-                "budget_usd": 0.0,
-            })
-            return {
-                "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
-                "backend": "local", "harness": "", "cost_basis": "self_hosted",
-                "budget_usd": None, "why": local["line"],
-                "note": f"Runs on {local['model']} on this computer: no key and "
-                        "no subscription. It can be slow on a CPU. A quick answer "
-                        "first; the deeper research keeps going and installs "
-                        "itself when done.",
-            }
-        if not installed and not picked_api:
-            raise HTTPException(503, (
-                "Product drafts need an agent. Install a coding-agent CLI, pick "
-                "the Mistral API agent in Settings → Agents (it needs a Mistral "
-                "key), or run a local model server with a model downloaded. "
-                + local["reason"] + " No API research was started."
-            )) from exc
-        # Decided once, here, and then both reported and obeyed.
-        #
-        # Passing `available[0].id` was passing it *explicitly*, and an
-        # explicit harness beats the stored one — so the reader who chose
-        # another agent precisely to stop spending Claude tokens got Claude
-        # Code every time the extension researched a product, while this reply
-        # named the choice it had just overridden. The order below is the fix
-        # for that: the stored preference wins whenever it names something
-        # actually installed.
-        #
-        # Leaving the *job* empty and letting `harness_researcher` work it out
-        # again is not the fix, though — it is the same decision made twice
-        # from two copies of one rule, so the reply can promise one agent while
-        # the run uses another the day the two copies drift. Sending `selected`
-        # is what this reply already claims happened.
-        from app import pagefacts
-
-        page = pagefacts.clean(body.facts, body.description)
-        if picked_api or stored in {one.id for one in installed}:
-            selected = stored
-        else:
-            selected = installed[0].id
-        billed = selected in apiagent.BY_ID
-        # Each job carries its own ceiling, because each is a separate bill:
-        # the quick look at this door's cap, the deeper draft at the agent's.
-        quick_budget = EXTENSION_RESEARCH_BUDGET_USD if billed else 0.0
-        deep_budget = apiagent.DEFAULT_BUDGET_USD if billed else 0.0
-        params = {
-            # The listing's own title is the product. Which category pack it
-            # joins is decided by the run, from the installed packs (B169),
-            # so the title is only the fallback name for a new one.
-            "category": body.q.strip(), "product": body.q.strip(),
-            "harness": selected, "backend": "harness",
-            # The reader's answer, asked directly: "yes it should install
-            # itslef" (B148). Only this door asks for it; the app's own New
-            # pack form still leaves the press to the reader.
-            "install": True,
-            "page": page,
-            "budget_usd": deep_budget,
-        }
-        # Quick answer, then deepen (B148): the reader's choice. The draft is
-        # the deep half and starts first so the quick one can point at it;
-        # the quick look runs in its own lane (`jobs.QUICK_KINDS`) and is the
-        # id the panel follows.
-        deepen = runner.submit("pack_author", params)
-        pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
-        quick = runner.submit("quick_look", {
-            "product": body.q.strip(), "harness": selected,
-            "pack_id": pack_id, "deepen_job_id": deepen, "page": page,
-            "budget_usd": quick_budget,
-        })
-        if billed:
-            label = apiagent.BY_ID[selected].label
-            return {
-                "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
-                "backend": "harness", "harness": selected,
-                "cost_basis": "per_token",
-                "budget_usd": round(quick_budget + deep_budget, 2),
-                # "About": each ceiling refuses the next request once spent,
-                # and the request in flight can finish a little past it.
-                "note": f"Bills your {label} key: about ${quick_budget:.2f} for the "
-                        f"quick answer and ${deep_budget:.2f} for the deeper draft, "
-                        "which keeps going and installs itself when done.",
-            }
-        return {
-            "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
-            "backend": "harness", "harness": selected,
-            "cost_basis": "subscription", "budget_usd": None,
-            "note": "Uses your harness subscription. A quick answer first; the "
-                    "deeper research keeps going and installs itself when done.",
-        }
+        return _start_product_search(body, request, store, runner, conn)
     plane = research_plane(request)
     budget = min(body.cap or EXTENSION_RESEARCH_BUDGET_USD,
                  EXTENSION_RESEARCH_BUDGET_USD)
     params = {
         **subject, "backend": plane["backend"],
+        "max_documents": body.max_documents, "context_chars": body.context_chars,
         "model": body.model, "search": body.search,
         "budget_usd": budget if plane["cost_basis"] == "per_token" else 0.0,
     }
@@ -384,11 +292,249 @@ def start_research_plane(
     }
 
 
+def _start_product_search(body, request, store, runner, conn) -> dict:
+    from app import prefs
+    from app.providers import apiagent, harness
+
+    installed = harness.available()
+    stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
+    requested = body.harness.strip()
+    api_ids = {one.id for one in apiagent.available()}
+    installed_ids = {one.id for one in installed}
+    if requested and requested not in api_ids | installed_ids:
+        raise HTTPException(503, f"The selected research agent is not available: {requested}")
+    # An API agent counts only once picked: it bills per token, and a
+    # key saved for something else is not a yes to that (B153).
+    picked_api = (requested in api_ids) if requested else stored in api_ids
+    # The model on this computer (B171, B172): first for a reader who has
+    # picked no agent, and the only door for one who has none at all.
+    from app import localplane
+
+    local = localplane.resolve(
+        getattr(request.app.state.settings, "app_state_path", None),
+        with_search=False)
+    if not requested and local["ready"] and (not stored or (not installed and not picked_api)):
+        from app import pagefacts
+
+        page = pagefacts.clean(body.facts, body.description)
+        params = {
+            "category": body.q.strip(), "product": body.q.strip(),
+            "harness": "", "backend": "local", "install": True,
+            "page": page, "budget_usd": 0.0,
+            "max_documents": body.max_documents, "context_chars": body.context_chars,
+        }
+        want_deepen = body.deepen or not body.quick
+        deepen = runner.submit("pack_author", params) if want_deepen else ""
+        if not body.quick:
+            return {
+                "job_id": deepen, "kind": "pack_author", "backend": "local",
+                "harness": "", "cost_basis": "self_hosted", "budget_usd": 0.0,
+                "why": local["line"],
+                "note": "Runs on the local model and installs its product research when done.",
+            }
+        pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
+        if not want_deepen:
+            quick = runner.submit("quick_look", {
+                "product": body.q.strip(), "harness": "", "backend": "local",
+                "pack_id": pack_id, "page": page,
+                "max_documents": body.max_documents, "context_chars": body.context_chars,
+                "budget_usd": 0.0,
+            })
+            return {
+                "job_id": quick, "kind": "quick_look", "deepen_job_id": "",
+                "backend": "local", "harness": "", "cost_basis": "self_hosted",
+                "budget_usd": None, "why": local["line"],
+                "note": f"Runs on {local['model']} on this computer: no key and "
+                        "no subscription. It can be slow on a CPU. One quick "
+                        "answer; a pack is built only by the Build press.",
+            }
+        quick = runner.submit("quick_look", {
+            "product": body.q.strip(), "harness": "", "backend": "local",
+            "pack_id": pack_id, "deepen_job_id": deepen, "page": page,
+            "max_documents": body.max_documents, "context_chars": body.context_chars,
+            "budget_usd": 0.0,
+        })
+        return {
+            "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
+            "backend": "local", "harness": "", "cost_basis": "self_hosted",
+            "budget_usd": None, "why": local["line"],
+            "note": f"Runs on {local['model']} on this computer: no key and "
+                    "no subscription. It can be slow on a CPU. A quick answer "
+                    "first; the deeper research keeps going and installs "
+                    "itself when done.",
+        }
+    if not installed_ids and not picked_api:
+        raise HTTPException(503, (
+            "Product drafts need an agent. Install a coding-agent CLI, pick "
+            "the Mistral API agent in Settings → Agents (it needs a Mistral "
+            "key), or run a local model server with a model downloaded. "
+            + local["reason"] + " No API research was started."
+        ))
+    # Decided once, here, and then both reported and obeyed.
+    #
+    # Passing `available[0].id` was passing it *explicitly*, and an
+    # explicit harness beats the stored one — so the reader who chose
+    # another agent precisely to stop spending Claude tokens got Claude
+    # Code every time the extension researched a product, while this reply
+    # named the choice it had just overridden. The order below is the fix
+    # for that: the stored preference wins whenever it names something
+    # actually installed.
+    #
+    # Leaving the *job* empty and letting `harness_researcher` work it out
+    # again is not the fix, though — it is the same decision made twice
+    # from two copies of one rule, so the reply can promise one agent while
+    # the run uses another the day the two copies drift. Sending `selected`
+    # is what this reply already claims happened.
+    from app import pagefacts
+
+    page = pagefacts.clean(body.facts, body.description)
+    if requested:
+        selected = requested
+    elif picked_api or stored in installed_ids:
+        selected = stored
+    else:
+        selected = installed[0].id
+    billed = selected in apiagent.BY_ID
+    # Each job carries its own ceiling, because each is a separate bill:
+    # the quick look at this door's cap, the deeper draft at the agent's.
+    quick_budget = min(body.cap or EXTENSION_RESEARCH_BUDGET_USD,
+                       EXTENSION_RESEARCH_BUDGET_USD) if billed else 0.0
+    deep_budget = apiagent.DEFAULT_BUDGET_USD if billed else 0.0
+    params = {
+        # The listing's own title is the product. Which category pack it
+        # joins is decided by the run, from the installed packs (B169),
+        # so the title is only the fallback name for a new one.
+        "category": body.q.strip(), "product": body.q.strip(),
+        "harness": selected, "backend": "harness",
+        # The reader's answer, asked directly: "yes it should install
+        # itslef" (B148). Only this door asks for it; the app's own New
+        # pack form still leaves the press to the reader.
+        "install": True,
+        "page": page,
+        "max_documents": body.max_documents, "context_chars": body.context_chars,
+        "budget_usd": deep_budget,
+    }
+    # Quick answer, then deepen (B148): the reader's choice. The draft is
+    # the deep half and starts first so the quick one can point at it;
+    # the quick look runs in its own lane (`jobs.QUICK_KINDS`) and is the
+    # id the panel follows. The listing's own press stops at the quick
+    # answer — the pack is drafted and installed by the Build press.
+    want_deepen = body.deepen or not body.quick
+    deepen = runner.submit("pack_author", params) if want_deepen else ""
+    if not body.quick:
+        if billed:
+            label = apiagent.BY_ID[selected].label
+            return {
+                "job_id": deepen, "kind": "pack_author", "backend": "harness",
+                "harness": selected, "cost_basis": "per_token",
+                "budget_usd": deep_budget,
+                "note": f"Bills your {label} key: about ${deep_budget:.2f} for the product research.",
+            }
+        return {
+            "job_id": deepen, "kind": "pack_author", "backend": "harness",
+            "harness": selected, "cost_basis": "subscription", "budget_usd": None,
+            "note": "Uses your harness subscription and installs its product research when done.",
+        }
+    pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
+    quick = runner.submit("quick_look", {
+        "product": body.q.strip(), "harness": selected,
+        "pack_id": pack_id, "deepen_job_id": deepen, "page": page,
+        "max_documents": body.max_documents, "context_chars": body.context_chars,
+        "budget_usd": quick_budget,
+    })
+    if billed:
+        label = apiagent.BY_ID[selected].label
+        note = (
+            f"Bills your {label} key: about ${quick_budget:.2f} for the quick answer"
+            + (
+                f" and ${deep_budget:.2f} for the deeper draft, which keeps going "
+                "and installs itself when done."
+                if want_deepen
+                else ". A pack is built only by the Build press."
+            )
+        )
+        return {
+            "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
+            "backend": "harness", "harness": selected,
+            "cost_basis": "per_token",
+            "budget_usd": round(quick_budget + (deep_budget if want_deepen else 0.0), 2),
+            "note": note,
+        }
+    return {
+        "job_id": quick, "kind": "quick_look", "deepen_job_id": deepen,
+        "backend": "harness", "harness": selected,
+        "cost_basis": "subscription", "budget_usd": None,
+        "note": "Uses your harness subscription. A quick answer first"
+        + (
+            "; the deeper research keeps going and installs itself when done."
+            if want_deepen
+            else ". A pack is built only by the Build press."
+        ),
+    }
+
+
 def _running_version(sightings: list[dict]) -> str:
     for row in sightings:  # newest contact first
         if row.get("version"):
             return str(row["version"])
     return ""
+
+
+class QuickAskRequest(BaseModel):
+    q: str = Field(min_length=1, max_length=500)
+
+
+@router.post("/quick-look/{job_id}/ask")
+def ask_quick_look(
+    job_id: str, body: QuickAskRequest,
+    conn=Depends(get_app_state), runner=Depends(get_jobs),
+) -> dict:
+    """A follow-up question about a finished quick look, as a job (#112).
+
+    The plane is the quick look's own, carried from its stored params, so the
+    answer comes from wherever the findings came from — never a surprise bill
+    on a different agent.
+    """
+    row = state.get_job(conn, job_id)
+    if row is None or row.get("kind") != "quick_look":
+        raise HTTPException(404, f"no quick look {job_id}")
+    if not row.get("done"):
+        raise HTTPException(409, f"the quick look is still {row.get('state')}")
+    quick = row.get("params") or {}
+    params = {
+        "quick_job_id": job_id,
+        "q": body.q.strip(),
+        "backend": str(quick.get("backend") or ""),
+        "harness": str(quick.get("harness") or ""),
+        "model": str(quick.get("model") or ""),
+        "budget_usd": 0.0,
+    }
+    job = runner.submit("quick_ask", params)
+    return {"job_id": job, "kind": "quick_ask", "quick_job_id": job_id}
+
+
+@router.get("/quick-look/{job_id}/asks")
+def quick_look_asks(job_id: str, conn=Depends(get_app_state)) -> dict:
+    """The follow-up exchange of one quick look, oldest first.
+
+    Read on panel open, so a reload puts the conversation back the way it was
+    — the asks are durable rows, this is only their order.
+    """
+    asks = []
+    for row in reversed(state.list_jobs(conn, 200)):
+        if row.get("kind") != "quick_ask":
+            continue
+        if str((row.get("params") or {}).get("quick_job_id") or "") != job_id:
+            continue
+        result = row.get("result") or {}
+        asks.append({
+            "job_id": row["job_id"],
+            "q": str((row.get("params") or {}).get("q") or ""),
+            "answer": str(result.get("answer") or "") if row.get("done") else "",
+            "state": row.get("state") or "",
+            "done": bool(row.get("done")),
+        })
+    return {"asks": asks}
 
 
 @router.post("/stage")
@@ -420,9 +566,34 @@ def stage(request: Request) -> dict:
     }
 
 
+@router.post("/firefox/stage")
+def stage_firefox(request: Request) -> dict:
+    source = extension.source_dir()
+    if source is None:
+        raise HTTPException(status_code=501, detail="This build does not carry the extension.")
+    target = extension.target_for(request.app.state.settings.store_path, "firefox")
+    try:
+        extension.stage(source, target, "firefox")
+        output = extension.package(target, target.with_suffix(".xpi"))
+    except (OSError, ValueError) as cause:
+        raise HTTPException(status_code=500, detail=f"Could not prepare the Firefox add-on: {cause}")
+    request.app.state.firefox_staged_digest = extension.content_digest(target)
+    return {"path": str(target), "version": extension.version(target), "package_path": str(output),
+            "signed": False, "note": "Ready for Load Temporary Add-on in Firefox. A permanent install needs Mozilla signing."}
+
+
+@router.post("/firefox/reveal")
+def reveal_firefox(request: Request) -> dict:
+    target = extension.target_for(request.app.state.settings.store_path, "firefox")
+    manifest = target / "manifest.json"
+    if not manifest.is_file():
+        raise HTTPException(status_code=409, detail="Prepare the Firefox add-on first.")
+    return {"path": str(manifest), "error": extension.reveal(manifest)}
+
+
 @router.post("/reveal")
 def reveal(request: Request) -> dict:
-    """Open the staged folder in the file manager.
+    """Open the staged folder's parent, the folder itself selected to drag.
 
     A convenience with a fallback, never a requirement: the response carries
     the path either way, because the reader's next action is pasting it.

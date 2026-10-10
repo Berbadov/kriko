@@ -1,0 +1,358 @@
+{
+  "id": "kriko-configuration",
+  "version": "2026.10.3",
+  "about": "Controlled fictional configuration cases. Documents are authoritative only within this synthetic experiment. This is not a benchmark of real product knowledge.",
+  "cases": [
+    {
+      "id": "pc-revision",
+      "product": "Fictional Northstar notebook AX-1040R2 (2021 EU)",
+      "queries": [
+        "Fictional Northstar notebook AX-1040R2 (2021 EU) documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "revision",
+      "documents": [
+        {
+          "url": "https://fixtures.example/pc-revision",
+          "text": "Synthetic service bulletin, not a real product. AX-1040R1 (2020) has cooling fan seizure. That report excludes AX-1040R2. AX-1040R2 units can develop a fractured charging connector. AX-1040R2 memory capacity is 16 GB; AX-1040R1 is 8 GB."
+        }
+      ],
+      "supported": [
+        {
+          "id": "connector-fracture",
+          "url": "https://fixtures.example/pc-revision",
+          "quote": "AX-1040R2 units can develop a fractured charging connector.",
+          "terms": [
+            [
+              "connector"
+            ],
+            [
+              "fractur",
+              "crack",
+              "break"
+            ]
+          ]
+        }
+      ],
+      "expected_specs": [
+        {
+          "name": "memory capacity",
+          "value": "16 GB",
+          "url": "https://fixtures.example/pc-revision"
+        }
+      ],
+      "requested_specs": [
+        "memory capacity"
+      ],
+      "must_find": [
+        {
+          "claim": "connector-fracture"
+        }
+      ],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": false
+    },
+    {
+      "id": "car-code-suffix",
+      "product": "Fictional Meridian car 2019 EU gearbox GX-07A",
+      "queries": [
+        "Fictional Meridian car 2019 EU gearbox GX-07A documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "code-suffix",
+      "documents": [
+        {
+          "url": "https://fixtures.example/car-code-suffix",
+          "text": "Synthetic fitment sheet. GX-07 (2014-2017) uses a dry clutch and has clutch shudder. GX-07A (2018-2020) uses a wet clutch; the dry-clutch shudder bulletin excludes GX-07A. GX-07A built from 2018 through 2020 can develop cooler seal leakage."
+        }
+      ],
+      "supported": [
+        {
+          "id": "cooler-leak",
+          "url": "https://fixtures.example/car-code-suffix",
+          "quote": "GX-07A built from 2018 through 2020 can develop cooler seal leakage.",
+          "terms": [
+            [
+              "cooler"
+            ],
+            [
+              "leak",
+              "seep"
+            ]
+          ]
+        }
+      ],
+      "expected_specs": [
+        {
+          "name": "clutch type",
+          "value": "wet",
+          "url": "https://fixtures.example/car-code-suffix",
+          "aliases": [
+            "wet clutch"
+          ]
+        }
+      ],
+      "requested_specs": [
+        "clutch type"
+      ],
+      "must_find": [
+        {
+          "claim": "cooler-leak"
+        }
+      ],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": false
+    },
+    {
+      "id": "pc-long-sku",
+      "product": "Fictional Northstar graphics board PX-6800XT-B 12GB rev 2",
+      "queries": [
+        "Fictional Northstar graphics board PX-6800XT-B 12GB rev 2 documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "long-sku",
+      "documents": [
+        {
+          "url": "https://fixtures.example/pc-long-sku",
+          "text": "Synthetic technical sheet. PX-6800XT has 8 GB. PX-6800XT-B revision 2 has 12 GB. The power socket melting notice is only for PX-6800XT-C revision 1 and explicitly excludes PX-6800XT-B. PX-6800XT-B has reported memory solder fractures under thermal cycling."
+        }
+      ],
+      "supported": [
+        {
+          "id": "memory-solder",
+          "url": "https://fixtures.example/pc-long-sku",
+          "quote": "PX-6800XT-B has reported memory solder fractures under thermal cycling.",
+          "terms": [
+            [
+              "memory",
+              "solder"
+            ],
+            [
+              "fractur",
+              "crack"
+            ]
+          ]
+        }
+      ],
+      "expected_specs": [
+        {
+          "name": "memory capacity",
+          "value": "12 GB",
+          "url": "https://fixtures.example/pc-long-sku"
+        }
+      ],
+      "requested_specs": [
+        "memory capacity"
+      ],
+      "must_find": [
+        {
+          "claim": "memory-solder"
+        }
+      ],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": false
+    },
+    {
+      "id": "car-market",
+      "product": "Fictional Meridian HZ-220 2020 EU engine EN-20B",
+      "queries": [
+        "Fictional Meridian HZ-220 2020 EU engine EN-20B documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "market",
+      "documents": [
+        {
+          "url": "https://fixtures.example/car-market",
+          "text": "Synthetic market bulletin. HZ-220 NA uses EN-20A and has timing chain stretch. EU units use EN-20B with a timing belt, so that chain notice does not apply to EU. HZ-220 EU units built in 2020 can develop coolant pump leakage."
+        }
+      ],
+      "supported": [
+        {
+          "id": "pump-leak",
+          "url": "https://fixtures.example/car-market",
+          "quote": "HZ-220 EU units built in 2020 can develop coolant pump leakage.",
+          "terms": [
+            [
+              "pump"
+            ],
+            [
+              "leak",
+              "seep"
+            ]
+          ]
+        }
+      ],
+      "expected_specs": [
+        {
+          "name": "timing drive",
+          "value": "belt",
+          "url": "https://fixtures.example/car-market"
+        }
+      ],
+      "requested_specs": [
+        "timing drive"
+      ],
+      "must_find": [
+        {
+          "claim": "pump-leak"
+        }
+      ],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": false
+    },
+    {
+      "id": "car-year-outside",
+      "product": "Fictional Meridian car 2021 gearbox GX-07A",
+      "queries": [
+        "Fictional Meridian car 2021 gearbox GX-07A documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "year-exclusion",
+      "documents": [
+        {
+          "url": "https://fixtures.example/car-year-outside",
+          "text": "Synthetic service notice. GX-07A cooler seal leakage affects build years 2018 through 2020 inclusive. Units built from 2021 onward use the corrected seal and are excluded from that notice. No other fault is documented here."
+        }
+      ],
+      "supported": [],
+      "expected_specs": [],
+      "requested_specs": [],
+      "must_find": [],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": true
+    },
+    {
+      "id": "missing-fitment",
+      "product": "Fictional Meridian car 2019, gearbox code unknown",
+      "queries": [
+        "Fictional Meridian car 2019, gearbox code unknown documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "missing-identity",
+      "documents": [
+        {
+          "url": "https://fixtures.example/missing-fitment",
+          "text": "Synthetic fitment table. The 2019 car can have either GX-07A or GX-08B; the year does not distinguish them. GX-07A has cooler leakage. GX-08B has bearing noise. No plate, VIN, or gearbox identifier is available for the requested car. Do not assume either gearbox."
+        }
+      ],
+      "supported": [],
+      "expected_specs": [],
+      "requested_specs": [],
+      "must_find": [],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": true
+    },
+    {
+      "id": "corrected-bulletin",
+      "product": "Fictional Northstar notebook AX-1040R2 2021",
+      "queries": [
+        "Fictional Northstar notebook AX-1040R2 2021 documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "superseded-source",
+      "documents": [
+        {
+          "url": "https://fixtures.example/corrected-bulletin",
+          "text": "Synthetic correction dated 2021-06-02, supersedes the 2021-05-01 bulletin. The earlier bulletin incorrectly listed AX-1040R2 for fan seizure. The correction says fan seizure applies only to AX-1040R1 and withdraws the AX-1040R2 fan claim. AX-1040R2 has a charging connector fracture notice."
+        }
+      ],
+      "supported": [
+        {
+          "id": "connector-fracture",
+          "url": "https://fixtures.example/corrected-bulletin",
+          "quote": "AX-1040R2 has a charging connector fracture notice.",
+          "terms": [
+            [
+              "connector"
+            ],
+            [
+              "fractur",
+              "crack",
+              "break"
+            ]
+          ]
+        }
+      ],
+      "expected_specs": [],
+      "requested_specs": [],
+      "must_find": [
+        {
+          "claim": "connector-fracture"
+        }
+      ],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": false
+    },
+    {
+      "id": "long-table",
+      "product": "Fictional Northstar notebook AX-1040R2 2021",
+      "queries": [
+        "Fictional Northstar notebook AX-1040R2 2021 documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "distractor-load",
+      "documents": [
+        {
+          "url": "https://fixtures.example/long-table",
+          "text": "Synthetic multi-SKU service table.\nTable row 0: AX-2000 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 1: AX-2001 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 2: AX-2002 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 3: AX-2003 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 4: AX-2004 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 5: AX-2005 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 6: AX-2006 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 7: AX-2007 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 8: AX-2008 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 9: AX-2009 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 10: AX-2010 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 11: AX-2011 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 12: AX-2012 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 13: AX-2013 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 14: AX-2014 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 15: AX-2015 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 16: AX-2016 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 17: AX-2017 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 18: AX-2018 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 19: AX-2019 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 20: AX-2020 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 21: AX-2021 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 22: AX-2022 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 23: AX-2023 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 24: AX-2024 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 25: AX-2025 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 26: AX-2026 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 27: AX-2027 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 28: AX-2028 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 29: AX-2029 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 30: AX-2030 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nTable row 31: AX-2031 revision 1 has a fan seizure notice; this is a different SKU and does not apply to AX-1040R2.\nAX-1040R2 units can develop a fractured charging connector."
+        }
+      ],
+      "supported": [
+        {
+          "id": "connector-fracture",
+          "url": "https://fixtures.example/long-table",
+          "quote": "AX-1040R2 units can develop a fractured charging connector.",
+          "terms": [
+            [
+              "connector"
+            ],
+            [
+              "fractur",
+              "crack",
+              "break"
+            ]
+          ]
+        }
+      ],
+      "expected_specs": [],
+      "requested_specs": [],
+      "must_find": [
+        {
+          "claim": "connector-fracture"
+        }
+      ],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": false
+    },
+    {
+      "id": "no-evidence",
+      "product": "Fictional Northstar AX-9099Z 2026",
+      "queries": [
+        "Fictional Northstar AX-9099Z 2026 documented failures"
+      ],
+      "mode": "controlled",
+      "dimension": "no-evidence",
+      "documents": [
+        {
+          "url": "https://fixtures.example/no-evidence",
+          "text": "Synthetic catalogue stub. AX-9099Z has no service reports, technical specifications, part mappings, or fitment records in this corpus. No conclusion about reliability follows from that absence."
+        }
+      ],
+      "supported": [],
+      "expected_specs": [],
+      "requested_specs": [],
+      "must_find": [],
+      "must_not_find": [],
+      "known_absent": [],
+      "expect_abstention": true
+    }
+  ]
+}

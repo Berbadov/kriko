@@ -47,6 +47,34 @@ pub struct Attention {
     pub questions: Vec<Question>,
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct QuickRisk {
+    pub title: String,
+    pub why: String,
+    pub check: String,
+    pub severity: String,
+    pub url: String,
+    pub domain: String,
+    pub quote: String,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct QuickSpec {
+    pub name: String,
+    pub value: String,
+    pub url: String,
+    pub domain: String,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct QuickAsk {
+    pub job_id: String,
+    pub question: String,
+    pub answer: String,
+    pub state: String,
+    pub done: bool,
+}
+
 #[derive(Clone, Debug)]
 pub struct Job {
     pub id: String,
@@ -65,13 +93,16 @@ pub struct Job {
     pub model: String,
     pub subject_id: String,
     pub product: String,
-    pub question: String,
-    pub result: Value,
     pub retry_of: String,
     pub attention: Option<Attention>,
     pub feed: Vec<FeedLine>,
     pub answer: String,
     pub no_answer_why: String,
+    pub quick_assumed: String,
+    pub quick_category: String,
+    pub quick_pack: String,
+    pub quick_risks: Vec<QuickRisk>,
+    pub quick_specs: Vec<QuickSpec>,
 }
 
 /// Where a job stands, in the four phases the stepper shows.
@@ -285,6 +316,28 @@ fn job_from(v: &Value) -> Job {
         }
     };
     let no_answer_why = api::s(&result, "note");
+    let quick_risks = api::arr(&result, "risks")
+        .iter()
+        .map(|r| QuickRisk {
+            title: api::s(r, "title"),
+            why: api::s(r, "why"),
+            check: api::s(r, "check"),
+            severity: api::s(r, "severity"),
+            url: api::s(r, "url"),
+            domain: api::s(r, "domain"),
+            quote: api::s(r, "quote"),
+        })
+        .collect();
+    let quick_specs = api::arr(&result, "specs")
+        .iter()
+        .map(|s| QuickSpec {
+            name: api::s(s, "name"),
+            value: api::s(s, "value"),
+            url: api::s(s, "url"),
+            domain: api::s(s, "domain"),
+        })
+        .collect();
+    let result_model = api::s(&result, "model");
     Job {
         id: api::s(v, "job_id"),
         kind: api::s(v, "kind"),
@@ -297,16 +350,19 @@ fn job_from(v: &Value) -> Job {
         finished_at: api::s(v, "finished_at"),
         harness: api::s(&params, "harness"),
         backend: api::s(&params, "backend"),
-        model: api::s(&params, "model"),
+        model: if result_model.is_empty() { api::s(&params, "model") } else { result_model },
         subject_id: api::s(&params, "subject_id"),
         product,
-        question: api::s(&params, "question"),
-        result: v.get("result").cloned().unwrap_or(Value::Null),
         retry_of: api::s(&params, "retry_of"),
         attention,
         feed,
         answer,
         no_answer_why,
+        quick_assumed: api::s(&result, "assumed"),
+        quick_category: api::s(&result, "category"),
+        quick_pack: api::s(&result, "pack"),
+        quick_risks,
+        quick_specs,
     }
 }
 
@@ -480,8 +536,6 @@ pub struct State {
     pub polling: bool,
     pub jobs: Vec<Job>,
     pub jobs_loaded: bool,
-    /// The Activity entry whose complete agent log is open.
-    pub activity_log_open: Option<String>,
     list_inflight: bool,
     detail_inflight: bool,
     last_list: Option<Instant>,
@@ -502,6 +556,14 @@ pub struct State {
     /// When the log's Copy plate was pressed, for its "Copied" flash.
     pub log_copied_at: Option<Instant>,
     pub start: Start,
+    pub quicklook_starting: bool,
+    pub quicklook_note: Option<String>,
+    pub quick_asks: Vec<QuickAsk>,
+    pub quick_asks_for: Option<String>,
+    pub quick_asks_loading: bool,
+    pub quick_asking: bool,
+    pub quick_ask_note: Option<String>,
+    last_quick_asks: Option<Instant>,
     // agents
     pub harnesses: Vec<Harness>,
     pub preferred: String,
@@ -579,8 +641,6 @@ impl State {
         let kind = kind_word(&job.kind);
         let subject = if !job.product.is_empty() {
             job.product.clone()
-        } else if !job.question.is_empty() {
-            job.question.clone()
         } else {
             self.labels.get(&job.subject_id).cloned().unwrap_or_default()
         };
@@ -783,6 +843,15 @@ impl Kriko {
         }
         if due(self.live.run.last_list, every) {
             self.refresh_jobs(cx);
+        }
+        if self.tab == Tab::Run {
+            if let Some(job) = self.live.run.current().filter(|j| j.kind == "quick_look" && j.done) {
+                if self.live.run.quick_asks_for.as_deref() != Some(job.id.as_str())
+                    || due(self.live.run.last_quick_asks, Duration::from_secs(2))
+                {
+                    self.refresh_quick_asks(job.id.clone(), cx);
+                }
+            }
         }
         if self.tab == Tab::Agents && due(self.live.run.last_agents, Duration::from_secs(10)) {
             self.refresh_agents(cx);
@@ -987,6 +1056,109 @@ impl Kriko {
         });
     }
 
+    /// Start the primary Quick Look flow. This is deliberately pinned to the
+    /// local plane, so a saved API key or coding-agent preference cannot turn
+    /// the button into a paid or remote run.
+    pub fn start_quick_look(&mut self, cx: &mut Context<Self>) {
+        let product = self.quicklook_product.value.trim().to_string();
+        if product.is_empty() || self.live.run.quicklook_starting {
+            return;
+        }
+        let Some(plane) = self.live.local.plane.as_ref() else {
+            self.live.run.quicklook_note = Some(
+                "Still checking whether a local model is ready. Try again in a moment.".into(),
+            );
+            return;
+        };
+        if !plane.ready {
+            self.live.run.quicklook_note = Some(
+                format!("Quick Look needs a ready local model. {}", plane.reason),
+            );
+            return;
+        }
+        let model = self.live.local.model_pick.clone().unwrap_or_else(|| plane.model.clone());
+        self.live.run.quicklook_starting = true;
+        self.live.run.quicklook_note = None;
+        let body = serde_json::json!({ "product": product, "backend": "local", "model": model });
+        self.fetch(cx, move || api::post("/api/quick-look", body), |this, reply, cx| {
+            this.note(&reply);
+            this.live.run.quicklook_starting = false;
+            match reply {
+                Ok(v) => {
+                    let id = api::s(&v, "job_id");
+                    if id.is_empty() {
+                        this.live.run.quicklook_note = Some("The engine accepted Quick Look without returning a job id.".into());
+                    } else {
+                        this.live.run.pinned = Some(id);
+                        this.live.run.detail = None;
+                        this.quicklook_product.value.clear();
+                        this.quicklook_question.value.clear();
+                        this.live.run.quick_asks.clear();
+                        this.live.run.quick_asks_for = None;
+                        this.live.run.quick_ask_note = None;
+                        this.live.run.quicklook_note = None;
+                        this.refresh_jobs(cx);
+                    }
+                }
+                Err(e) => this.live.run.quicklook_note = Some(e.message),
+            }
+        });
+    }
+
+    pub fn refresh_quick_asks(&mut self, quick_job_id: String, cx: &mut Context<Self>) {
+        if self.live.run.quick_asks_loading {
+            return;
+        }
+        self.live.run.quick_asks_loading = true;
+        self.live.run.last_quick_asks = Some(Instant::now());
+        let path = format!("/api/quick-look/{}/asks", api::seg(&quick_job_id));
+        self.fetch(cx, move || api::get(&path), move |this, reply, _| {
+            this.note(&reply);
+            this.live.run.quick_asks_loading = false;
+            if let Ok(v) = reply {
+                this.live.run.quick_asks = api::arr(&v, "asks")
+                    .iter()
+                    .map(|ask| QuickAsk {
+                        job_id: api::s(ask, "job_id"),
+                        question: api::s(ask, "q"),
+                        answer: api::s(ask, "answer"),
+                        state: api::s(ask, "state"),
+                        done: api::b(ask, "done"),
+                    })
+                    .collect();
+                this.live.run.quick_asks_for = Some(quick_job_id);
+            }
+        });
+    }
+
+    pub fn start_quick_ask(&mut self, cx: &mut Context<Self>) {
+        let question = self.quicklook_question.value.trim().to_string();
+        if question.is_empty() || self.live.run.quick_asking {
+            return;
+        }
+        let Some(job) = self.live.run.current().filter(|j| j.kind == "quick_look" && j.done) else {
+            self.live.run.quick_ask_note = Some("Finish a Quick Look before asking a follow-up.".into());
+            return;
+        };
+        let id = job.id.clone();
+        self.live.run.quick_asking = true;
+        self.live.run.quick_ask_note = None;
+        let path = format!("/api/quick-look/{}/ask", api::seg(&id));
+        let body = serde_json::json!({"q": question});
+        self.fetch(cx, move || api::post(&path, body), move |this, reply, cx| {
+            this.note(&reply);
+            this.live.run.quick_asking = false;
+            match reply {
+                Ok(_) => {
+                    this.quicklook_question.value.clear();
+                    this.live.run.quick_asks_for = Some(id.clone());
+                    this.refresh_quick_asks(id, cx);
+                }
+                Err(e) => this.live.run.quick_ask_note = Some(e.message),
+            }
+        });
+    }
+
     /// Start: `POST /api/research` for the picked subject with the chosen
     /// agent, then follow the job it answers with.
     pub fn start_check(&mut self, cx: &mut Context<Self>) {
@@ -1141,12 +1313,10 @@ impl Kriko {
         }
         self.live.run.verifying = true;
         self.live.run.verify = None;
-        let started = Instant::now();
-        self.fetch(cx, || api::post("/api/agent-verify", serde_json::json!({})), move |this, reply, _| {
+        self.fetch(cx, || api::post("/api/agent-verify", serde_json::json!({})), |this, reply, _| {
             this.note(&reply);
             let run = &mut this.live.run;
             run.verifying = false;
-            let elapsed_ms = started.elapsed().as_millis() as i64;
             match reply {
                 Ok(v) => {
                     run.verify = Some(Verify {
@@ -1157,11 +1327,11 @@ impl Kriko {
                             .collect(),
                         detail: api::s(&v, "detail"),
                         log: api::s(&v, "log"),
-                        ms: elapsed_ms,
+                        ms: api::n(&v, "ms").unwrap_or(0.0) as i64,
                     })
                 }
                 Err(e) => {
-                    run.verify = Some(Verify { ok: false, steps: Vec::new(), detail: e.message, ms: elapsed_ms, ..Default::default() })
+                    run.verify = Some(Verify { ok: false, steps: Vec::new(), detail: e.message, ..Default::default() })
                 }
             }
         });
@@ -1172,17 +1342,6 @@ impl Kriko {
 mod tests {
     use super::*;
     use serde_json::json;
-
-    #[test]
-    fn recent_local_jobs_keep_their_backend_and_question_for_navigation() {
-        let job = job_from(&json!({"job_id": "ask-1", "kind": "compare_ask",
-            "state": "succeeded", "done": true,
-            "params": {"backend": "local", "harness": "local",
-                "question": "Which has the lower known risk?"}}));
-        assert_eq!(job.backend, "local");
-        assert_eq!(job.question, "Which has the lower known risk?");
-        assert!(job.result.is_null());
-    }
 
     fn running(feed: Value) -> Job {
         job_from(&json!({

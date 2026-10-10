@@ -1930,6 +1930,7 @@ def bench_runs(conn: sqlite3.Connection, *, limit: int = 100) -> list[dict]:
             one["gold"] = json.loads(one.pop("gold_json") or "null")
         except ValueError:
             one["gold"] = None
+        one["measurement"] = (one["gold"] or {}).get("measurement", {})
         out.append(one)
     return out
 
@@ -2034,7 +2035,7 @@ MAX_WATCHED = 200
 #: has no job and gets NULLs, which is the truth about it and not a gap.
 _OPERATION_SELECT = (
     "SELECT o.*, j.message AS note, j.progress AS progress, "
-    "j.state AS job_state FROM operations o "
+    "j.state AS job_state, j.params_json AS job_params FROM operations o "
     "LEFT JOIN jobs j ON j.job_id = o.job_id AND o.job_id <> ''"
 )
 
@@ -2044,6 +2045,7 @@ def operations(
     *,
     limit: int = 50,
     after_id: int = 0,
+    before_id: int = 0,
     watching: Sequence[int] = (),
 ) -> list[dict]:
     """The newest operations, everything since `after_id`, and anything the
@@ -2068,7 +2070,12 @@ def operations(
     is open, which for a healthy installation is nought or one.
     """
     limit = max(1, min(limit, 500))
-    if after_id:
+    if before_id:
+        rows = conn.execute(
+            f"{_OPERATION_SELECT} WHERE o.op_id < ? ORDER BY o.op_id DESC LIMIT ?",
+            (before_id, limit),
+        ).fetchall()
+    elif after_id:
         rows = conn.execute(
             f"{_OPERATION_SELECT} WHERE o.op_id > ? ORDER BY o.op_id LIMIT ?",
             (after_id, limit),

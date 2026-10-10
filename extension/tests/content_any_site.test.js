@@ -25,7 +25,7 @@ test("an AutoScout24 listing reads as the car it carries (B149)", () => {
   assert.equal(scrape.fields["ld:model"], "EQA 350");
   assert.equal(scrape.fields["ld:productionDate"], "2024-03-01");
   assert.equal(scrape.fields["ld:vehicleTransmission"], "Automatic");
-  assert.equal(scrape.fields["ld:mileageFromOdometer"], "22270");
+  assert.equal(scrape.fields["ld:mileageFromOdometer"], "22270 KMT");
   assert.equal(scrape.fields["ld:mileageFromOdometer.unitText"], "KMT");
   assert.equal(scrape.fields["ld:vehicleEngine.fuelType"], "Electricity");
   // The outer listing's brand is still there, from the `Product` around it.

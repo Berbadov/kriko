@@ -60,7 +60,7 @@ class Stub:
             def do_POST(self):
                 size = int(self.headers.get("Content-Length") or 0)
                 body = json.loads(self.rfile.read(size) or b"{}")
-                if self.path == "/v1/chat/completions":
+                if self.path in ("/v1/chat/completions", "/api/chat"):
                     stub.chat_seen.append(body)
                     time.sleep(stub.delay)
                     status, reply = stub.chat.pop(0) if stub.chat else (
@@ -102,6 +102,23 @@ def completion(text: str, tokens=(3, 4)) -> tuple:
                  "usage": {"prompt_tokens": tokens[0],
                            "completion_tokens": tokens[1],
                            "total_tokens": sum(tokens)}}
+
+
+def test_ollama_applies_context_and_schema_on_the_native_chat_surface(stub):
+    stub.chat = [(200, {"message": {"content": '{"ok":true}'},
+                        "done_reason": "stop", "prompt_eval_count": 17,
+                        "eval_count": 9})]
+    schema = {"type": "object", "properties": {"ok": {"type": "boolean"}}}
+    complete = local_inference.OpenAICompatSocket(
+        stub.url, "qwen", runtime_options={"num_ctx": 16384},
+        response_json_schema=schema, reasoning_effort="none", max_tokens=1024)
+    assert complete.context_tokens() == 16384
+    assert complete("Read these sources") == '{"ok":true}'
+    sent = stub.chat_seen[0]
+    assert sent["options"]["num_ctx"] == 16384
+    assert sent["options"]["num_predict"] == 1024
+    assert sent["format"] == schema and sent["think"] is False
+    assert complete.tokens_used == 26 and complete.usage_complete
 
 
 @pytest.fixture
@@ -178,8 +195,8 @@ def test_ready_with_the_servers_own_model_list(machine, stub):
     # An embedding model cannot answer a prompt, so it is not the default.
     assert plan["model"] == "qwen3-4b"
     assert plan["url"] == stub.url
-    assert plan["search_kind"] == "exa"
-    assert "Exa's free hosted search" in plan["line"]
+    assert plan["search_kind"] == "web"
+    assert "direct web search" in plan["line"]
     assert plan["model"] in plan["line"]
 
 
@@ -234,6 +251,19 @@ def test_the_settings_are_read_from_the_app_database(machine, stub, tmp_path):
     conn.close()
     plan = localplane.resolve(path)
     assert (plan["url"], plan["model"], plan["timeout"]) == (stub.url, "b", 900.0)
+
+
+def test_saved_context_is_applied_only_to_ollama(monkeypatch, tmp_path):
+    path = tmp_path / "app.sqlite"
+    conn = state.connect(path)
+    prefs.write(conn, {prefs.LOCAL_CONTEXT_TOKENS: "16384"})
+    conn.close()
+    server = {"name": "Ollama", "url": "http://127.0.0.1:11434",
+              "up": True, "models": ["qwen"]}
+    monkeypatch.setattr(local_discovery, "discover", lambda *args: [server])
+    assert localplane.resolve(path, with_search=False)["runtime_options"] == {"num_ctx": 16384}
+    server["name"] = "LM Studio"
+    assert localplane.resolve(path, with_search=False)["runtime_options"] == {}
 
 
 # ── the wire ───────────────────────────────────────────────────────────────
@@ -482,6 +512,9 @@ def ready(monkeypatch, stub):
     stub.models = ["qwen3-4b"]
     monkeypatch.setattr(local_discovery, "discover", real_discover)
     monkeypatch.setattr(local_discovery, "search_answers", real_search_answers)
+    from app.providers import websearch
+    monkeypatch.setattr(websearch, "default_searcher", lambda: lambda query, limit:
+        exa_mcp.parse(stub.mcp_text)[:limit])
     return stub
 
 
@@ -617,8 +650,13 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
          "quote": "this sentence is on no page", "why": "x", "check": "y",
          "severity": "low"},
     ]}
+    # Four calls now, in order: the round-one queries, the round-two
+    # queries (one readable page after round one, so round two ran), the
+    # answer, and the self-check reading it against its page.
     ready.chat = [completion('["renault 1.5 dci timing chain"]'),
-                  completion(json.dumps(risks))]
+                  completion('["renault clio 1.5 dCi owner reports"]'),
+                  completion(json.dumps(risks)),
+                  completion('{"unsupported": [], "note": "carried"}')]
     path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})
     settings = type("S", (), {"store_path": tmp_path / "k.sqlite",
                               "app_state_path": path})()
@@ -633,7 +671,12 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
     assert result["cost_basis"] == "self_hosted" and result["model"] == "qwen3-4b"
     assert any("local plane: Ready" in line for line in progress.lines)
     assert ready.chat_seen[0]["model"] == "qwen3-4b"
-    assert "Pages you fetched" in ready.chat_seen[1]["messages"][0]["content"]
+    assert "Pages you fetched" in ready.chat_seen[2]["messages"][0]["content"]
+    assert "You are checking an answer" in ready.chat_seen[3]["messages"][0]["content"]
+    assert result["verification"]["unsupported"] == []
+    assert result["measurement"]["usage_complete"] is True
+    assert any(stage["stage"] == "answer" for stage in result["measurement"]["stages"])
+    assert any("answer:" in line and "input" in line and "tokens" in line for line in progress.lines)
 
 
 def test_with_no_agent_and_a_ready_model_the_quick_look_picks_local_by_itself(
@@ -676,7 +719,7 @@ def test_a_research_run_on_the_local_plane_builds_the_plane_from_the_server(
                                "model": "gpt-4o-mini"})
     assert plane.name == "local"
     assert plane.model == "qwen3-4b"          # the server's, not the Run screen's
-    assert plane.search_provider == "exa-mcp"
+    assert plane.search_provider == "web-search"
     assert plane._complete.base_url == ready.url
 
 

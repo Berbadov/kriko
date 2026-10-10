@@ -1,7 +1,7 @@
 # Kriko, internals
 
 Data flow, file paths and the invariants the code relies on. Package layering
-is in [ARCHITECTURE.md](ARCHITECTURE.md) and `CLAUDE.md`; this page is the
+is in [ARCHITECTURE.md](ARCHITECTURE.md) and `CLAUDE.md`. This page is the
 mechanism.
 
 ## The request path, serving plane
@@ -28,20 +28,20 @@ Serving never calls a model: `/api/analyze` reads the store.
 | Step | File | Rule |
 |---|---|---|
 | Scrape | `extension/content.js` | Raw `label -> value`, uninterpreted. `knownLabels` (from `GET /api/adapters`) only says which labels are worth digging for; the adapter decides what a label means (`kriko/adapters.py`). |
-| Panel rules | the adapter's `local_panel` block | Selectors, the site's own words and thresholds ride in the adapter, opaque to the engine, and are never compiled from pack patterns into a `RegExp`. `test_the_extension_speaks_no_sites_own_language` fails on a non-ASCII word in `extension/`. |
+| Panel rules | the adapter's `local_panel` block | Selectors, the site's own words and thresholds ride in the adapter, opaque to the engine, and the extension never compiles them from pack patterns into a `RegExp`. `test_the_extension_speaks_no_sites_own_language` fails on a non-ASCII word in `extension/`. |
 | Request | `extension/background.js` | Labels and panel travel per request, never cached. |
 | Endpoint | `src/app/web/app.py` | Always 200; an exception becomes `coverage_state: unavailable`. |
 | Identity | `src/kriko/lookup/match.py` | Matches on attribute overlap, never on `subject_id` equality. Narrowing is soft: an unmatched hint flags a contradiction, it never produces `no_match`. The result is a `Resolution` (`lookup/query.py`): `subject_ids`, `method` (`exact`/`ambiguous`/`no_match`), `notes`, `flags`. |
 | Claims | `src/kriko/lookup/__init__.py` | Reads `claim_variants`, `verified` and `is_current` only. |
-| Ranking | `src/app/web/routers/analyze.py` | Severity, times the pack's own gate, times detection (lower for a component that has to be seen rather than measured), times source trust (a null tier is neutral). Sorted by `relevance_score` and capped at `MAX_RISKS_PER_LISTING`. Every risk carries `why_shown`; the response adds `subsystems` beside the flat `risks`. |
+| Ranking | `src/app/web/routers/analyze.py` | Severity, times the pack's own gate, times detection (lower for a component you must see rather than measure), times source trust (a null tier is neutral). Sorted by `relevance_score` and capped at `MAX_RISKS_PER_LISTING`. Every risk carries `why_shown`; the response adds `subsystems` beside the flat `risks`. |
 | Render | `extension/hover_lite/hover_lite.js` | Risk cards plus local blocks. Alerts walk `listing.panel.alerts` in order, and `unless: [rule-id]` is an else-branch written as data. |
 
 **Claim health** (`kriko/lookup/tree.py`) keeps four signals per claim, and
 never combines them: contradiction (`stance='refutes'`), corroboration, best
 trust tier, and staleness (`sources.retrieved_at`). Read them at
 `GET /api/health/weakest` and `GET /api/health/subject/{subject_id}`, or
-through the `subject_health` and `weakest_claims` MCP tools. `stance` is
-written at acceptance (`app/findings.py`).
+through the `subject_health` and `weakest_claims` MCP tools. Acceptance writes
+`stance` (`app/findings.py`).
 
 ## The jobs plane
 
@@ -74,24 +74,24 @@ stateDiagram-v2
     interrupted --> [*]
 ```
 
-States are `queued`/`running`, then `succeeded`, `failed`, `cancelled` or
-`interrupted`; `recover()` marks a dead process's rows `interrupted` at
-startup. Cancel is cooperative (`Progress.check`) and kills the child process
-tree. `POST /api/jobs/{job_id}/say` queues a message from the reader and the
-handler reads it between steps, so a run can be answered while it runs.
-`research` feeds `app/findings.py`, the same grounding path as the MCP
+The states are `queued`/`running`, then `succeeded`, `failed`, `cancelled` or
+`interrupted`. At startup, `recover()` marks the rows of a dead process
+`interrupted`. Cancel is cooperative (`Progress.check`) and kills the child
+process tree. `POST /api/jobs/{job_id}/say` queues a message from the reader,
+and the handler reads it between steps, so a run can be answered while it
+runs. `research` feeds `app/findings.py`, the same grounding path as the MCP
 `submit_findings`; `pack_build` mirrors `kriko build`.
 
 ## API surfaces
 
 Each `app/web/routers/*.py` module is one surface.
 `test_docs_match_the_code.py` fails until every surface has an endpoint named
-in a document, because a surface nobody knows exists cannot be reasoned about.
+in a document, because you cannot reason about a surface nobody knows exists.
 
 | Surface | Endpoints | Notes |
 |---|---|---|
 | analyze | `POST /api/analyze`, `GET /api/adapters`, `GET /api/adapters/unmapped`, `POST /api/diagnose/identity` | The check itself, the adapters a page may use, the labels no adapter reads, and the full identity weighing behind a "not recognised". |
-| subjects | `GET /api/subjects`, `GET /api/subjects/{subject_id}`, `GET /api/subjects/{subject_id}/brief`, `GET /api/subjects/filters`, `GET /api/search` | Pack knowledge, the $0 brief, the filter vocabulary and the catalogue-wide search. |
+| subjects | `GET /api/subjects`, `GET /api/subjects/{subject_id}`, `GET /api/subjects/{subject_id}/brief`, `GET /api/subjects/filters`, `GET /api/search` | Pack knowledge, the $0 brief, the filter vocabulary and the catalog-wide search. |
 | query | `POST /api/lookup`, `GET /api/identity-keys/{pack_id}`, `GET /api/kinds` | A lookup, the keys a pack declares, the subject kinds it has. |
 | history | `GET /api/history`, `GET /api/history/{lookup_id}`, `GET /api/lookup/{lookup_id}`, `POST /api/lookups/{lookup_id}/notes`, `GET\|POST /api/lookups/{lookup_id}/checked`, `GET /api/lookups/{lookup_id}/triage`, `GET\|POST /api/settings` | Backed by `app.sqlite`. |
 | live | `GET /api/knowledge/clock`, `GET /api/lookup/{lookup_id}/refresh` | What changed in the store, and re-read one past check. |
@@ -107,11 +107,11 @@ in a document, because a surface nobody knows exists cannot be reasoned about.
 | sites | `GET /api/sites`, `GET /api/sites/activation`, `GET\|POST /api/sites/seen`, `GET\|DELETE /api/sites/{host}`, `GET\|POST /api/sites/{host}/activation`, `POST /api/sites/{host}/register` | A pack's adapter always beats a learned one (`app/sites.py`). |
 | control | `GET /api/status`, `GET /api/activity`, `GET /api/packs/{pack_id}/revisions`, `POST /api/packs/{pack_id}/activate`, `POST /api/packs/{pack_id}/rollback`, `GET /api/packs/{pack_id}/events` | Pack revisions and rollbacks, the activity lens, the install's own status. |
 | packs | `GET /api/packs`, `GET /api/packs/{pack_id}`, `POST /api/packs/install`, `GET\|PUT /api/packs/{pack_id}/enabled`, `GET /api/packs/{pack_id}/gaps`, `GET /api/packs/{pack_id}/vocabulary`, `POST /api/packs/scaffold`, `GET /api/packs/drafts`, `GET /api/packs/drafts/{slug}`, `POST /api/packs/drafts/{slug}/build`, `POST /api/packs/drafts/{slug}/amend`, `POST /api/packs/drafts/{slug}/install`, `GET /api/packs/drafts/{slug}/artifact`, `DELETE /api/packs/drafts/{slug}` | Drafts live in `~/.kriko/drafts/<slug>/`. An adapter is `adapters/*.json`, not `.yaml`. A draft with no `principle` or no `lineup` is refused, and a subject named by neither the line-up nor `coverage.out_of_scope` is quarantined in `research/coverage.yaml`. |
-| submissions | `GET /api/submissions` | Legible refusals only (`app/findings.py`). |
+| submissions | `GET /api/submissions` | Readable refusals only (`app/findings.py`). |
 | keys | `GET\|PUT /api/keys`, `POST /api/keys/test`, `DELETE /api/keys/{provider_id}` | Stored in `~/.kriko/env`. No response ever carries a key: presence, source and the last four only. `test` makes one cheap live call server-side, so a key never leaves the machine. |
 | agent | `GET /api/agent-config`, `GET /api/agent-targets`, `POST /api/agent-targets/{target_id}/connect`, `POST /api/agent-targets/{target_id}/skill`, `GET /api/agent-skill`, `POST /api/agent-verify` | `agent-verify` runs a real MCP `initialize` and `tools/list`. |
 | operations | `GET /api/operations`, `GET /api/operations/stream` | The any-door live feed of agent work (`docs/AGENT_OPERATIONS.md`). |
-| bench | `GET\|POST /api/bench`, `GET /api/bench/configs`, `GET /api/bench/configs/{name}`, `POST /api/bench/estimate` | The sweep runs on a throwaway copy of the store. `estimate` is a separate endpoint so that asking what a grid would cost can never start it. |
+| bench | `GET\|POST /api/bench`, `GET /api/bench/configs`, `GET /api/bench/configs/{name}`, `POST /api/bench/estimate` | The sweep runs on a throwaway copy of the store. `estimate` is a separate endpoint, so a question about cost can never start the run. |
 | machine | `GET /api/machine` | The GPU (name, VRAM total and used from `nvidia-smi`), system memory, the processor, and which local runtimes are installed with their path. A figure the machine does not report is `null`, never a guess. Cached for 60 seconds; `?fresh=true` skips the cache (`app/machine.py`). |
 | local-models | `GET /api/local-models`, `POST /api/local-models/pull` | `GET` is what Ollama holds, with the bytes, parameter count and quantisation it reports. `POST` starts a `model_pull` job: Ollama's own streamed `/api/pull`, progress as the share of bytes, cancel stops the stream, a failure carries Ollama's words. Ollama only; any other runtime is refused with where to get the model (`app/modelpull.py`). |
 | extension | `GET /api/extension`, `POST /api/extension/stage`, `POST /api/extension/reveal`, `POST /api/extension/launch`, `POST /api/extension/research-plane` | The staged directory, the version verdict, opening a browser with it, and the door a check starts from. |
@@ -120,9 +120,9 @@ in a document, because a surface nobody knows exists cannot be reasoned about.
 
 ## Interface state, `app.sqlite`
 
-Two SQLite files, on purpose. `~/.kriko/knowledge.sqlite` is the engine store;
-`~/.kriko/app.sqlite` (`src/app/web/state.py`) is interface state.
-Uninstalling a pack must not drop history, and history must not move a
+Two SQLite files, on purpose. `~/.kriko/knowledge.sqlite` is the engine
+store; `~/.kriko/app.sqlite` (`src/app/web/state.py`) is interface state.
+To uninstall a pack must not drop history, and history must not move a
 `content_digest`. `/api/health` reports both paths.
 
 ```mermaid
@@ -185,17 +185,17 @@ flowchart LR
     classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
 ```
 
-Only the store commands open the database directly; everything else goes over
-HTTP, because a second direct open is a second writer. Discovery order is
-`--url`, `KRIKO_URL`, `EXTENSION_PORT` (8787), then an in-process engine
-(`--no-start` fails instead of starting one).
+Only the store commands open the database directly. Everything else goes
+over HTTP, because a second direct open is a second writer. Discovery order
+is `--url`, `KRIKO_URL`, `EXTENSION_PORT` (8787), then an in-process engine
+(`--no-start` fails; it does not start one).
 
 **The operator console** (`src/app/tui/`) speaks the same HTTP API as the
 dashboard: `client.py` holds discovery and calls, `term.py` raw mode and the
 frame differ, `screen.py` is a pure function of state, `app.py` is the loop.
 Its tabs are Planes, Agenda, Jobs and Ops, and `s` hands the terminal to the
-PTY until Ctrl-]. It is reachable as `kriko tui` or `kriko-sidecar --tui`, and
-the Windows installer adds a Start-menu shortcut for it.
+PTY until Ctrl-]. Reach it as `kriko tui` or `kriko-sidecar --tui`; the
+Windows installer adds a Start-menu shortcut for it.
 
 ## The desktop shell
 
@@ -212,19 +212,20 @@ sequenceDiagram
     Note over G,S: on failure the window renders stderr
 ```
 
-`src/app/sidecar.py` binds port 0, prints `KRIKO_PORT <n>` first and hands the
-bound socket to uvicorn. `kriko-gpui/src/engine.rs` spawns it, polls
-`/api/health` while the window says it is starting; a failure renders stderr. `--mcp` runs
-the MCP stdio server from the same binary and `--exit-with-parent` is the crash
-belt. `packaging/kriko-sidecar.spec` freezes it,
-`packaging/smoke_sidecar.py` gates the handshake, health and frontend, and
-`.github/workflows/desktop.yml` is the hand-run installer recipe. The
-supervisor rules are in `CLAUDE.md` and `kriko-gpui/README.md`.
+`src/app/sidecar.py` binds port 0, prints `KRIKO_PORT <n>` first, and hands
+the bound socket to uvicorn. `kriko-gpui/src/engine.rs` spawns it and polls
+`/api/health` while the window says it is starting. A failure renders
+stderr. `--mcp` runs the MCP stdio server from the same binary, and
+`--exit-with-parent` ends the sidecar when the parent dies. The supervisor
+rules are in `CLAUDE.md` and `kriko-gpui/README.md`; the build pieces are
+`packaging/kriko-sidecar.spec` (freeze), `packaging/smoke_sidecar.py`
+(handshake, health and frontend gate) and `.github/workflows/desktop.yml`
+(the hand-run installer recipe).
 
 ## The knowledge plane, the ledger
 
-No human sign-off anywhere (`CLAUDE.md`, automation). The generic machinery is
-in `src/kriko/ledger/`; the policy is the pack's own, in
+No human sign-off anywhere (`CLAUDE.md`, automation). The generic machinery
+is in `src/kriko/ledger/`; the policy is the pack's own, in
 `packs/<name>/pipeline/`.
 
 ```mermaid
@@ -252,8 +253,8 @@ flowchart LR
 ## Data formats
 
 A **subject** is whatever the pack declares it to be. A mature pack's shape
-happens to carry a variant record and a claim record; neither name is required
-and neither is understood by the engine.
+happens to carry a variant record and a claim record. Neither name is
+required, and the engine understands neither.
 
 A claim, as one pack writes it (`packs/<name>/data/parts/**/*.yaml`):
 
@@ -281,11 +282,11 @@ in a document that was actually read.
 
 ## Invariants
 
-1. A subject's identity is permanent. A rename silently breaks every claim that
-   referenced it.
+1. A subject's identity is permanent. A rename silently breaks every claim
+   that referenced it.
 2. Pack data is the source of truth. Rebuild; never edit the store.
 3. Serving never calls a model or the ledger.
-4. Verdicts are pipeline-owned.
-5. Vocabulary is pack-owned. `kriko/` holds no category constant.
+4. The pipeline owns the verdicts.
+5. The pack owns the vocabulary. `kriko/` holds no category constant.
 6. Nothing is deployed: one process, two SQLite files, no container and no
    database server (`test_the_app_stays_standalone`).

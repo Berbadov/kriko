@@ -5,12 +5,13 @@
 //! returns an id and [`Kriko::follow_job`] polls it until it is done.
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::collections::HashMap;
 
 use gpui::Context;
 
 use crate::api::{self, Value};
 use crate::app::{Kriko, Tab};
-use crate::engine;
+use crate::startup::{self, Mode as StartupMode};
 
 // ---- the shapes the screens draw ----
 
@@ -105,6 +106,8 @@ pub struct ExtStatus {
     pub staged: bool,
     pub staged_version: String,
     pub path: String,
+    pub firefox_path: String,
+    pub firefox_staged: bool,
     pub port: i64,
     pub port_is_ours: bool,
     pub browsers: Vec<Browser>,
@@ -140,13 +143,15 @@ pub struct State {
     pub thin_quotes_loaded: bool,
     pub offers: Vec<Offer>,
     pub update_job: Option<JobView>,
+    pub pack_installing: bool,
+    pub pack_install_note: Option<String>,
     /// A pack the reader just switched, until the engine confirms.
     pub switching: Option<String>,
     // Sites
     pub sites_loaded: bool,
     pub registered: Vec<SiteReg>,
     pub requested: Vec<SiteReq>,
-    pub site_job: Option<(String, JobView)>,
+    pub site_jobs: HashMap<String, JobView>,
     pub sites_notice: Option<String>,
     // Extension
     pub ext: Option<ExtStatus>,
@@ -156,7 +161,9 @@ pub struct State {
     pub keys_loaded: bool,
     pub keys: Vec<KeyRow>,
     pub keys_path: String,
-    pub launch_at_login: bool,
+    pub startup_mode: StartupMode,
+    pub startup_busy: bool,
+    pub startup_revision: u64,
     pub settings_notice: Option<String>,
     /// The provider the key field is being typed for.
     pub key_provider: Option<String>,
@@ -164,7 +171,6 @@ pub struct State {
     pub erase_busy: bool,
 }
 
-const REG_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
 const REG_VALUE: &str = "Kriko";
 
 impl Kriko {
@@ -176,9 +182,7 @@ impl Kriko {
         self.refresh_extension(cx);
         self.refresh_settings(cx);
         self.refresh_keys(cx);
-        self.fetch(cx, || login_item_is_set(REG_VALUE), |this, on, _| {
-            this.live.knowledge.launch_at_login = on;
-        });
+        self.refresh_startup(cx);
         self.live.knowledge.loaded = true;
     }
 
@@ -198,12 +202,101 @@ impl Kriko {
             Tab::Settings => {
                 self.refresh_keys(cx);
                 self.refresh_health(cx);
+                self.refresh_startup(cx);
             }
             _ => {}
         }
     }
 
     // ---- Overview ----
+
+    /// Let the reader choose a `.kpack` artifact and install it through the
+    /// engine's verified pack importer. The selected file is read on the
+    /// background executor; its contents are uploaded, never its path.
+    pub fn choose_pack_file(&mut self, cx: &mut Context<Self>) {
+        if self.live.knowledge.pack_installing {
+            return;
+        }
+        self.live.knowledge.pack_installing = true;
+        self.live.knowledge.pack_install_note = Some("Choose a .kpack file…".into());
+        cx.notify();
+        let picker = cx.prompt_for_paths(gpui::PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: false,
+            prompt: Some("Choose a Kriko pack (.kpack)".into()),
+        });
+        cx.spawn(async move |this, cx| {
+            let selected = match picker.await {
+                Ok(Ok(Some(mut paths))) => paths.pop(),
+                Ok(Ok(None)) => None,
+                Ok(Err(e)) => {
+                    let message = format!("Could not open the file picker: {e}");
+                    let _ = this.update(cx, |this, cx| {
+                        this.live.knowledge.pack_installing = false;
+                        this.live.knowledge.pack_install_note = Some(message);
+                        cx.notify();
+                    });
+                    return;
+                }
+                Err(_) => {
+                    let _ = this.update(cx, |this, cx| {
+                        this.live.knowledge.pack_installing = false;
+                        this.live.knowledge.pack_install_note = Some("The file picker did not respond.".into());
+                        cx.notify();
+                    });
+                    return;
+                }
+            };
+            let Some(path) = selected else {
+                let _ = this.update(cx, |this, cx| {
+                    this.live.knowledge.pack_installing = false;
+                    this.live.knowledge.pack_install_note = None;
+                    cx.notify();
+                });
+                return;
+            };
+            let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+            if !name.to_lowercase().ends_with(".kpack") {
+                let _ = this.update(cx, |this, cx| {
+                    this.live.knowledge.pack_installing = false;
+                    this.live.knowledge.pack_install_note = Some("Choose a .kpack file.".into());
+                    cx.notify();
+                });
+                return;
+            }
+            let read = cx.background_executor().spawn(async move {
+                let size = std::fs::metadata(&path).map_err(|e| e.to_string())?.len();
+                if size == 0 || size > 512 * 1024 * 1024 {
+                    return Err("Pack files must be between 1 byte and 512 MB.".to_string());
+                }
+                std::fs::read(path).map_err(|e| e.to_string())
+            }).await;
+            let _ = this.update(cx, move |this, cx| match read {
+                Ok(bytes) => {
+                    this.live.knowledge.pack_install_note = Some(format!("Installing {name}…"));
+                    let path = format!("/api/packs/install?filename={}", api::seg(&name));
+                    this.fetch(cx, move || api::post_bytes(&path, "application/octet-stream", bytes), move |this, reply, cx| {
+                        this.note(&reply);
+                        this.live.knowledge.pack_installing = false;
+                        this.live.knowledge.pack_install_note = Some(match &reply {
+                            Ok(v) => format!("Installed {} v{}.", api::s(v.get("pack").unwrap_or(v), "name"), api::s(v.get("pack").unwrap_or(v), "version")),
+                            Err(e) => format!("Pack was not installed: {}", e.message),
+                        });
+                        if reply.is_ok() {
+                            this.refresh_packs(cx);
+                            this.refresh_thin(cx);
+                            this.refresh_health(cx);
+                        }
+                    });
+                }
+                Err(e) => {
+                    this.live.knowledge.pack_installing = false;
+                    this.live.knowledge.pack_install_note = Some(format!("Could not read {name}: {e}"));
+                }
+            });
+        }).detach();
+    }
 
     /// Packs, the totals of what is switched on, and the gaps of those packs.
     pub fn refresh_packs(&mut self, cx: &mut Context<Self>) {
@@ -268,6 +361,9 @@ impl Kriko {
 
     /// The pack switch: `POST /api/packs/{id}/enabled?enabled=` with no body.
     pub fn set_pack_enabled(&mut self, pack_id: String, enabled: bool, cx: &mut Context<Self>) {
+        if self.live.knowledge.switching.is_some() {
+            return;
+        }
         self.live.knowledge.switching = Some(pack_id.clone());
         self.fetch(
             cx,
@@ -424,7 +520,7 @@ impl Kriko {
                     match &which {
                         Followed::PackUpdate => this.live.knowledge.update_job = Some(view),
                         Followed::SiteRegister(host) => {
-                            this.live.knowledge.site_job = Some((host.clone(), view))
+                            this.live.knowledge.site_jobs.insert(host.clone(), view);
                         }
                     }
                     if done {
@@ -495,10 +591,10 @@ impl Kriko {
             return;
         }
         self.live.knowledge.sites_notice = None;
-        self.live.knowledge.site_job = Some((
+        self.live.knowledge.site_jobs.insert(
             host.clone(),
             JobView { state: "queued".into(), message: "Asking an agent to read the site.".into(), ..Default::default() },
-        ));
+        );
         let name = host.clone();
         self.fetch(
             cx,
@@ -511,10 +607,10 @@ impl Kriko {
                 match reply {
                     Ok(v) => {
                         this.refresh_sites(cx);
-                        this.follow_job(api::s(&v, "job_id"), Followed::SiteRegister(name), cx);
+                        this.follow_job(api::s(&v, "job_id"), Followed::SiteRegister(name.clone()), cx);
                     }
                     Err(e) => {
-                        this.live.knowledge.site_job = None;
+                        this.live.knowledge.site_jobs.remove(&name);
                         this.live.knowledge.sites_notice = Some(e.message);
                     }
                 }
@@ -544,6 +640,7 @@ impl Kriko {
             this.note(&reply);
             if let Ok(v) = reply {
                 let compat = v.get("compatibility").cloned().unwrap_or(Value::Null);
+                let firefox = v.get("firefox").cloned().unwrap_or(Value::Null);
                 let hits = api::arr(&v, "sightings").iter().map(|s| int(s, "hits")).sum();
                 this.live.knowledge.ext = Some(ExtStatus {
                     available: api::b(&v, "available"),
@@ -551,6 +648,8 @@ impl Kriko {
                     staged: api::b(&v, "staged"),
                     staged_version: api::s(&v, "staged_version"),
                     path: api::s(&v, "path"),
+                    firefox_path: api::s(&firefox, "manifest_path"),
+                    firefox_staged: api::b(&firefox, "staged"),
                     port: int(&v, "port"),
                     port_is_ours: api::b(&v, "port_is_ours"),
                     browsers: api::arr(&v, "browsers")
@@ -571,8 +670,8 @@ impl Kriko {
     /// One of the three extension actions: `stage`, `reveal` or `launch`.
     pub fn extension_action(&mut self, action: &'static str, cx: &mut Context<Self>) {
         self.live.knowledge.ext_notice = Some(match action {
-            "stage" => "Copying the extension into place.",
-            "reveal" => "Opening the folder.",
+            "stage" | "firefox/stage" => "Preparing the extension.",
+            "reveal" | "firefox/reveal" => "Showing the extension files.",
             _ => "Opening a browser.",
         }
         .to_string());
@@ -583,10 +682,11 @@ impl Kriko {
                 this.note(&reply);
                 this.live.knowledge.ext_notice = Some(match reply {
                     Ok(v) => match action {
+                        "firefox/stage" => format!("{}. Package: {}", api::s(&v, "note"), api::s(&v, "package_path")),
                         "stage" => format!("Staged version {} at {}.", api::s(&v, "version"), api::s(&v, "path")),
-                        "reveal" => {
+                        "reveal" | "firefox/reveal" => {
                             let e = api::s(&v, "error");
-                            if e.is_empty() { "Opened the folder.".into() } else { e }
+                            if e.is_empty() { "Opened the extension location in the file manager.".into() } else { e }
                         }
                         _ => {
                             let e = api::s(&v, "error");
@@ -598,33 +698,6 @@ impl Kriko {
                 this.refresh_extension(cx);
             },
         );
-    }
-
-    pub fn save_extension_port(&mut self, cx: &mut Context<Self>) {
-        let text = self.extension_port_input.value.trim();
-        let Ok(port) = text.parse::<u16>() else {
-            self.live.knowledge.ext_notice = Some("Choose a port from 1 to 65535.".into());
-            cx.notify();
-            return;
-        };
-        if std::env::var_os("KRIKO_URL").is_some() {
-            self.live.knowledge.ext_notice = Some(
-                "This window is attached to another engine. Change that engine's extension port instead.".into(),
-            );
-            cx.notify();
-            return;
-        }
-        match engine::set_extension_port(port) {
-            Ok(()) => {
-                self.live.knowledge.ext_notice = Some(format!(
-                    "Restarting the engine on port {port}. In the browser extension settings, set the app address to http://127.0.0.1:{port}."
-                ));
-                self.live.knowledge.ext = None;
-                engine::restart();
-            }
-            Err(error) => self.live.knowledge.ext_notice = Some(error),
-        }
-        cx.notify();
     }
 
     // ---- Settings ----
@@ -662,17 +735,37 @@ impl Kriko {
 
     /// Writes or removes the Run value, then reads it back so the switch
     /// shows what Windows holds.
-    pub fn set_launch_at_login(&mut self, on: bool, cx: &mut Context<Self>) {
-        self.live.knowledge.launch_at_login = on;
+    pub fn refresh_startup(&mut self, cx: &mut Context<Self>) {
+        if self.live.knowledge.startup_busy { return; }
+        let revision = self.live.knowledge.startup_revision;
+        self.fetch(cx, || startup::read(REG_VALUE), move |this, reply, _| {
+            if this.live.knowledge.startup_busy || this.live.knowledge.startup_revision != revision { return; }
+            match reply {
+                Ok(mode) => this.live.knowledge.startup_mode = mode,
+                Err(error) => this.live.knowledge.settings_notice = Some(error),
+            }
+        });
+    }
+
+    pub fn set_startup_mode(&mut self, mode: StartupMode, cx: &mut Context<Self>) {
+        if self.live.knowledge.startup_busy { return; }
+        self.live.knowledge.startup_busy = true;
+        self.live.knowledge.startup_revision += 1;
+        cx.notify();
         self.fetch(
             cx,
             move || {
-                let done = if on { login_item_set(REG_VALUE) } else { login_item_clear(REG_VALUE) };
-                (done, login_item_is_set(REG_VALUE))
+                let done = startup::write(REG_VALUE, mode);
+                (done, startup::read(REG_VALUE))
             },
             |this, (done, now), _| {
-                this.live.knowledge.launch_at_login = now;
-                this.live.knowledge.settings_notice = done.err();
+                this.live.knowledge.startup_busy = false;
+                let read_error = now.as_ref().err().cloned();
+                match now {
+                    Ok(mode) => this.live.knowledge.startup_mode = mode,
+                    Err(error) => this.live.knowledge.settings_notice = Some(error),
+                }
+                this.live.knowledge.settings_notice = done.err().or(read_error);
             },
         );
     }
@@ -831,55 +924,6 @@ fn epoch_seconds(iso: &str) -> Option<i64> {
     Some(days * 86_400 + hh * 3600 + mm * 60 + ss)
 }
 
-// ---- launch at login (Windows: HKCU Run value) ----
-
-#[cfg(windows)]
-fn reg(args: &str) -> std::io::Result<std::process::Output> {
-    use std::os::windows::process::CommandExt;
-    std::process::Command::new("reg")
-        .raw_arg(args)
-        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
-        .output()
-}
-
-#[cfg(windows)]
-pub fn login_item_is_set(name: &str) -> bool {
-    reg(&format!("query \"{REG_KEY}\" /v \"{name}\"")).map(|o| o.status.success()).unwrap_or(false)
-}
-
-#[cfg(windows)]
-pub fn login_item_set(name: &str) -> Result<(), String> {
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let out = reg(&format!(
-        "add \"{REG_KEY}\" /v \"{name}\" /t REG_SZ /d \"\\\"{}\\\"\" /f",
-        exe.display()
-    ))
-    .map_err(|e| e.to_string())?;
-    if out.status.success() { Ok(()) } else { Err("Windows would not take the login entry.".into()) }
-}
-
-#[cfg(windows)]
-pub fn login_item_clear(name: &str) -> Result<(), String> {
-    if !login_item_is_set(name) {
-        return Ok(());
-    }
-    let out = reg(&format!("delete \"{REG_KEY}\" /v \"{name}\" /f")).map_err(|e| e.to_string())?;
-    if out.status.success() { Ok(()) } else { Err("Windows would not remove the login entry.".into()) }
-}
-
-#[cfg(not(windows))]
-pub fn login_item_is_set(_name: &str) -> bool {
-    false
-}
-#[cfg(not(windows))]
-pub fn login_item_set(_name: &str) -> Result<(), String> {
-    Err("Launch at login is only wired on Windows.".into())
-}
-#[cfg(not(windows))]
-pub fn login_item_clear(_name: &str) -> Result<(), String> {
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -901,13 +945,5 @@ mod tests {
         assert_eq!(ago_seconds(3.0 * 86_400.0), "3 d ago");
     }
 
-    #[cfg(windows)]
-    #[test]
-    fn the_login_item_round_trips() {
-        let name = "KrikoTestLoginItem";
-        assert!(login_item_set(name).is_ok());
-        assert!(login_item_is_set(name));
-        assert!(login_item_clear(name).is_ok());
-        assert!(!login_item_is_set(name));
-    }
+
 }

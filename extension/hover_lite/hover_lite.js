@@ -2,7 +2,7 @@
    listing pages via Shadow DOM. The toolbar action toggles visibility.
 
    State machine:
-     idle      → no analysis run yet (button: "Analyze current page")
+     idle      → no analysis run yet (button: "Quick Search")
      analyzing → request in flight (skeleton + spinner)
      result    → AnalyzeResponse rendered
      error     → backend error message
@@ -105,6 +105,8 @@
     // it, which is what the reader would type into Research anyway.
     unknownProduct: "",
     researchContext: "",
+    researchSources: 5,
+    researchPageChars: 6000,
     researchJob: null,
     researchMessage: "",
     // B147: what the reader picked for the run's own questions, and what
@@ -115,6 +117,12 @@
     // B148: the quick look's answer, kept while the deeper run goes on.
     // `{ assumed, risks, dropped }` or null.
     researchQuick: null,
+    // #112: the follow-up exchange on that quick look, and whether one is
+    // being answered right now. Durable in the engine; cached in session
+    // storage so a reload puts the conversation back.
+    researchAsks: null,
+    researchAsking: false,
+    researchFollowQ: "",
     researchState: "",
     cancelling: false,
     /* Which step the run in flight has reached.
@@ -710,16 +718,18 @@
     state.researchOpen = true;
     state.researchJob = null;
     state.researchQuick = null;
+    state.researchAsks = null;
+    state.researchAsking = false;
+    state.researchFollowQ = "";
     state.researchState = "";
     state.researchMessage = "";
     requestResearchPlane();
     renderResearch();
+    restoreFollowUps();
   }
 
-  /* One button (B148). A name the packs know is researched into them; one
-   * they do not gets a quick look answered here in a minute or two, and the
-   * deeper draft run starts beside it. The reader used to choose between two
-   * buttons whose difference they had no way to know. */
+  /* Product Quick Search returns a web answer for both known and unknown
+   * products. Researching a selected catalog subject keeps its own path. */
   function startResearch() {
     if (state.researching || !state.researchPlane) return;
     const subject_id = state.researchTarget?.subject_id;
@@ -733,10 +743,13 @@
     state.researchTold = {};
     state.researchDraftAnswers = {};
     state.researchQuick = null;
+    state.researchAsks = null;
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
-      ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
+      ...(subject_id ? { subject_id } : { q, allow_draft: true, deepen: false, url: location.href }),
       ...(cap > 0 ? { cap } : {}),
+      max_documents: state.researchSources,
+      context_chars: state.researchPageChars,
     } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
         state.researching = null;
@@ -753,33 +766,165 @@
     });
   }
 
-  /* The quick look finished — well or not. Keep what it found, then follow
-   * the deeper run it started beside, so the panel keeps saying what is
-   * happening rather than ending on "done" while the real work goes on. */
+  /* The quick look finished — well or not. Keep what it found. No pack is
+   * started beside it: the reader's words were that a quick look is an
+   * answer, not a bundle — the pack is drafted and installed by the Build
+   * press, and nothing here decides that for them. */
   function quickLookDone(job) {
     const result = job.result || {};
     state.researchQuick = {
       assumed: result.assumed || "",
       risks: Array.isArray(result.risks) ? result.risks : [],
+      specs: Array.isArray(result.specs) ? result.specs : [],
       dropped: Number(result.dropped) || 0,
+      jobId: job.job_id,
     };
-    const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
     const found = state.researchQuick.risks.length;
-    const said = job.state === "succeeded"
-      ? (found ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look.`
-        : "The quick look found nothing it could source.")
+    const specs = state.researchQuick.specs.length;
+    state.researching = null;
+    state.researchState = "";
+    state.researchMessage = job.state === "succeeded"
+      ? (found
+        ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look.`
+        : specs ? `${specs} sourced specification${specs === 1 ? "" : "s"}; no supported defects found.`
+          : "The quick look found nothing it could source.")
       : "The quick look did not finish.";
-    if (!deepen) {
-      state.researching = null;
-      state.researchMessage = said;
-      renderResearch();
+    saveFollowUps();
+    renderResearch();
+    loadQuickAsks();
+  }
+
+  /* #112: the follow-up exchange on a quick look. The asks are durable rows
+   * in the engine (one job each); this cache is only so a reload puts the
+   * conversation back while the engine is asked again for the truth. */
+  function followUpKey() {
+    return `kriko_followups_${location.href}`;
+  }
+
+  function saveFollowUps() {
+    if (typeof browser !== "undefined" && !chrome.storage?.session?.setAccessLevel) {
+      if (!state.researchQuick) return;
+      chrome.runtime.sendMessage({ type: "SAVE_FOLLOW_UPS", value: {
+        quick: state.researchQuick, asks: state.researchAsks || [], name: state.researchName,
+      } }, () => { void chrome.runtime.lastError; });
       return;
     }
-    state.researchJob = { job_id: deepen, kind: "pack_author" };
-    state.researchState = "queued";
-    state.researchMessage = `${said} Digging deeper…`;
+    const area = chrome.storage?.session;
+    if (!area?.set || !state.researchQuick) return;
+    area.set({ [followUpKey()]: {
+      quick: state.researchQuick,
+      asks: state.researchAsks || [],
+      name: state.researchName,
+    } });
+  }
+
+  function restoreFollowUps() {
+    if (typeof browser !== "undefined" && !chrome.storage?.session?.setAccessLevel) {
+      if (state.researchQuick) return;
+      chrome.runtime.sendMessage({ type: "RESTORE_FOLLOW_UPS" }, (reply) => {
+        if (chrome.runtime.lastError || !hasQuickFindings(reply?.value?.quick)) return;
+        const saved = reply.value;
+        state.researchQuick = saved.quick;
+        state.researchAsks = Array.isArray(saved.asks) ? saved.asks : [];
+        if (saved.name) state.researchName = saved.name;
+        renderResearch();
+        loadQuickAsks();
+      });
+      return;
+    }
+    const area = chrome.storage?.session;
+    if (!area?.get || state.researchQuick) return;
+    area.get(followUpKey(), (bag) => {
+      const saved = bag?.[followUpKey()];
+      if (!hasQuickFindings(saved?.quick)) return;
+      state.researchQuick = saved.quick;
+      state.researchAsks = Array.isArray(saved.asks) ? saved.asks : [];
+      if (saved.name) state.researchName = saved.name;
+      renderResearch();
+      loadQuickAsks();
+    });
+  }
+
+  function hasQuickFindings(quick) {
+    return Boolean(quick?.risks?.length || quick?.specs?.length);
+  }
+
+  function loadQuickAsks() {
+    const jobId = state.researchQuick?.jobId;
+    if (!jobId) return;
+    chrome.runtime.sendMessage({ type: "QUICK_ASKS", payload: { job_id: jobId } }, (response) => {
+      if (chrome.runtime.lastError || !response?.ok) return;
+      state.researchAsks = response.asks || [];
+      saveFollowUps();
+      renderResearch();
+    });
+  }
+
+  function askQuick(question) {
+    const jobId = state.researchQuick?.jobId;
+    if (!question || state.researchAsking || !jobId) return;
+    state.researchAsking = true;
+    state.researchAsks = [...(state.researchAsks || []), { q: question, answer: "", done: false }];
+    state.researchFollowQ = "";
     renderResearch();
-    pollResearchJob(deepen);
+    chrome.runtime.sendMessage({ type: "QUICK_ASK", payload: { job_id: jobId, q: question } }, (response) => {
+      if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
+        state.researchAsking = false;
+        state.researchAsks = (state.researchAsks || []).filter((a) => a.done || a.q !== question);
+        state.researchMessage = response?.error || "Could not ask. Open Kriko and retry.";
+        renderResearch();
+        return;
+      }
+      pollAskJob(response.job.job_id);
+    });
+  }
+
+  function pollAskJob(jobId) {
+    chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
+      if (chrome.runtime.lastError || !response?.ok || !response.job) {
+        setTimeout(() => pollAskJob(jobId), 3000);
+        return;
+      }
+      const job = response.job;
+      const done = job.done || ["succeeded", "cancelled", "failed", "interrupted"].includes(job.state);
+      if (!done) {
+        setTimeout(() => pollAskJob(jobId), 1000);
+        return;
+      }
+      state.researchAsking = false;
+      loadQuickAsks();
+    });
+  }
+
+  /* The explicit build (#114): draft the pack from this research, and only
+   * because the reader pressed for it. Same door, same follow — the only
+   * difference is that this press is the decision. */
+  function buildPack() {
+    if (state.researching) return;
+    const q = state.researchName.trim();
+    if (!q) return;
+    state.researching = q;
+    state.researchState = "starting";
+    state.researchMessage = "Starting the pack draft…";
+    state.researchAnswers = {};
+    state.researchTold = {};
+    renderResearch();
+    chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
+      q, allow_draft: true, deepen: true, quick: false, url: location.href,
+    } }, (response) => {
+      if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
+        state.researching = null;
+        state.researchState = "failed";
+        state.researchMessage = response?.error || "Could not start the build. Open Kriko and retry.";
+        renderResearch();
+        return;
+      }
+      state.researchJob = response.job;
+      state.researchState = "queued";
+      state.researchMessage = "Drafting the pack…";
+      renderResearch();
+      pollResearchJob(response.job.job_id);
+    });
   }
 
   /* The run's question, answered with one click (B147).
@@ -851,10 +996,27 @@
     });
   }
 
+  /* The pages a quick look read (#115): every risk's source and every spec's
+   * page, distinct by address, each with the site and what it backed — so a
+   * reader who wants to go further can search it themselves. */
+  function quickPages(quick) {
+    const seen = new Map();
+    (quick?.risks || []).forEach((risk) => (risk.sources || []).forEach((s) => {
+      if (s?.url && !seen.has(s.url)) seen.set(s.url, { url: s.url, site: s.domain || s.url, about: risk.title || "" });
+    }));
+    (quick?.specs || []).forEach((spec) => {
+      if (spec?.url && !seen.has(spec.url)) seen.set(spec.url, { url: spec.url, site: spec.domain || spec.url, about: spec.name ? `${spec.name}: ${spec.value}` : "" });
+    });
+    return [...seen.values()];
+  }
+
   function renderResearch() {
     const slot = bodyEl?.querySelector(".lite-research-slot");
     if (!slot) return;
-    if (!state.researchOpen) { slot.innerHTML = ""; slot._researchMarkup = null; return; }
+    if (!state.researchOpen) { slot.innerHTML = ""; return; }
+    // Keep quick-look cards mounted while the surrounding controls change.
+    // Rebuilding them every progress poll replayed their entrance animation.
+    const previousQuick = slot.querySelector(".lite-quick");
     const busy = Boolean(state.researching);
     const target = state.researchTarget;
     const draft = state.researchJob?.kind === "pack_author";
@@ -866,15 +1028,39 @@
     const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
     const markup = `
       <section class="lite-research">
-        <strong>Research this product</strong>
+        <strong>Quick Search</strong>
         ${target ? `<p>${escapeHtml(target.label || target.subject_id)}</p>` : `
           <label>Product name<input class="lite-research-name" maxlength="350" ${busy ? "disabled" : ""} /></label>
-          <label>Context<textarea class="lite-research-context" maxlength="140" ${busy ? "disabled" : ""}></textarea></label>`}
+          <label>Context<textarea class="lite-research-context" maxlength="2000" ${busy ? "disabled" : ""}></textarea></label>`}
+        <label>Sources (maximum)<input class="lite-research-sources" type="number" min="1" max="50" value="${state.researchSources}" ${busy ? "disabled" : ""} /></label>
+        <label>Context per source<select class="lite-research-page-chars" ${busy ? "disabled" : ""}>
+          ${[6000, 12000, 20000, 40000].map((size) => `<option value="${size}" ${size === state.researchPageChars ? "selected" : ""}>${size.toLocaleString()} characters${size === 40000 ? " (maximum)" : ""}</option>`).join("")}
+        </select></label>
         <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
         <p class="lite-research-status" role="status"></p>
-        ${state.researchQuick?.risks.length ? `<div class="lite-quick">
+        ${hasQuickFindings(state.researchQuick) ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
+          ${(state.researchQuick.specs || []).length ? `<div class="lite-quick-specs">
+            ${state.researchQuick.specs.map((spec) => `<a class="lite-quick-spec" href="${escapeHtml(spec.url)}" target="_blank" rel="noopener noreferrer"><span class="lite-quick-spec-name">${escapeHtml(spec.name)}</span><span class="lite-quick-spec-value">${escapeHtml(spec.value)}</span><span class="lite-quick-spec-site">${escapeHtml(spec.domain || "")}</span></a>`).join("")}
+          </div>` : ""}
           <div class="lite-quick-cards"></div>
+          ${state.researchQuick.dropped ? `<p class="lite-quick-dropped">${state.researchQuick.dropped} line${state.researchQuick.dropped === 1 ? "" : "s"} it could not source were dropped.</p>` : ""}
+          ${quickPages(state.researchQuick).length ? `<button type="button" class="lite-quick-sources-toggle" data-count="${quickPages(state.researchQuick).length}">Show sources (${quickPages(state.researchQuick).length})</button>
+            <div class="lite-quick-sources" hidden>
+              ${quickPages(state.researchQuick).map((p) => `<a class="lite-quick-source" href="${escapeHtml(p.url)}" target="_blank" rel="noopener noreferrer"><span class="lite-quick-source-site">${escapeHtml(p.site)}</span>${p.about ? `<span class="lite-quick-source-about">${escapeHtml(p.about)}</span>` : ""}<span class="lite-quick-source-link">${escapeHtml(p.url)}</span></a>`).join("")}
+            </div>` : ""}
+          ${!busy && state.researchJob?.kind !== "pack_author" ? `<button type="button" class="lite-quick-build">Build a pack from this</button>` : ""}
+        </div>` : ""}
+        ${hasQuickFindings(state.researchQuick) && state.researchQuick.jobId ? `<div class="lite-follow">
+          <p class="lite-follow-lede">Ask a follow-up — answered from this quick look's findings.</p>
+          ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
+            <p class="lite-follow-q">${escapeHtml(a.q)}</p>
+            <p class="lite-follow-answer">${a.done ? escapeHtml(a.answer || "No answer.") : "Answering…"}</p>
+          </div>`).join("")}
+          <div class="lite-follow-row">
+            <input class="lite-follow-input" maxlength="500" placeholder="Ask about this quick look" ${state.researchAsking ? "disabled" : ""} />
+            <button type="button" class="lite-follow-ask" ${state.researchAsking ? "disabled" : ""}>${state.researchAsking ? "Asking…" : "Ask"}</button>
+          </div>
         </div>` : ""}
         ${asked.length ? `<div class="lite-asked" aria-live="polite">
           <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
@@ -893,7 +1079,7 @@
             ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
           </fieldset>`).join("")}
         </div>` : ""}
-        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Research again" : "Research this product"}</button>` : ""}
+        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Search again" : "Start Quick Search"}</button>` : ""}
         ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
         ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
         ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
@@ -918,6 +1104,12 @@
     slot.innerHTML = markup;
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
+    slot.querySelector(".lite-research-sources")?.addEventListener("input", (event) => {
+      state.researchSources = Math.max(1, Math.min(50, Number(event.target.value) || 5));
+    });
+    slot.querySelector(".lite-research-page-chars")?.addEventListener("change", (event) => {
+      state.researchPageChars = Number(event.target.value) || 6000;
+    });
     const name = slot.querySelector(".lite-research-name");
     if (name) {
       name.value = state.researchName;
@@ -929,7 +1121,31 @@
       context.addEventListener("input", () => { state.researchContext = context.value; });
     }
     slot.querySelector(".lite-research-start")?.addEventListener("click", () => startResearch());
-    const quickCards = slot.querySelector(".lite-quick-cards");
+    const quickSlot = slot.querySelector(".lite-quick");
+    if (previousQuick && quickSlot) {
+      quickSlot.replaceWith(previousQuick);
+    }
+    const quickCards = previousQuick ? null : slot.querySelector(".lite-quick-cards");
+    if (!previousQuick) {
+      const sourcesToggle = slot.querySelector(".lite-quick-sources-toggle");
+      sourcesToggle?.addEventListener("click", () => {
+        const list = sourcesToggle.parentElement?.querySelector(".lite-quick-sources");
+        if (!list) return;
+        list.hidden = !list.hidden;
+        const count = sourcesToggle.dataset.count || "0";
+        sourcesToggle.textContent = list.hidden ? `Show sources (${count})` : `Hide sources (${count})`;
+      });
+      slot.querySelector(".lite-quick-build")?.addEventListener("click", buildPack);
+    }
+    const followInput = slot.querySelector(".lite-follow-input");
+    if (followInput) {
+      followInput.value = state.researchFollowQ;
+      followInput.addEventListener("input", () => { state.researchFollowQ = followInput.value; });
+      followInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") askQuick(followInput.value.trim());
+      });
+      slot.querySelector(".lite-follow-ask")?.addEventListener("click", () => askQuick(followInput.value.trim()));
+    }
     (quickCards ? state.researchQuick.risks : []).forEach((risk, i) => {
       const wrap = document.createElement("div");
       wrap.className = "lite-claim-anim";
@@ -988,6 +1204,14 @@
     });
   }
 
+  function updateResearchProgress() {
+    const panel = bodyEl?.querySelector(".lite-research");
+    if (!panel) return;
+    panel.dataset.state = state.researchState || "";
+    const status = panel.querySelector(".lite-research-status");
+    if (status) status.textContent = state.researchMessage || "";
+  }
+
   // Progress shown in the gap card itself — the panel stays put, and the
   // reader watches the run land without ever leaving the listing they were
   // reading. Polled rather than pushed: the panel has no open connection to
@@ -998,18 +1222,21 @@
       if (state.researchJob?.job_id !== jobId || !state.researching) return;
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
         state.researchMessage = "Cannot check progress. The job may still be running; open its exact output below or cancel.";
-        renderResearch();
+        updateResearchProgress();
         setTimeout(() => pollResearchJob(jobId), 3000);
         return;
       }
       const job = response.job;
+      const oldQuestions = JSON.stringify(state.researchJob?.attention?.questions || []);
       state.researchJob = { ...state.researchJob, ...job, job_id: jobId };
+      const newQuestions = JSON.stringify(state.researchJob?.attention?.questions || []);
       state.researchState = job.state;
       const done = job.done || ["succeeded", "cancelled", "failed", "interrupted"].includes(job.state);
       if (!done) {
         const pct = Math.max(0, Math.min(100, Math.round((job.progress || 0) * 100)));
         state.researchMessage = `${job.message || job.state || "Researching"} · ${pct}%`;
-        renderResearch();
+        if (oldQuestions !== newQuestions) renderResearch();
+        else updateResearchProgress();
         setTimeout(() => pollResearchJob(jobId), 1000);
         return;
       }
@@ -1032,7 +1259,11 @@
       renderResearch();
       // B148: the pack the deep run installed is knowledge now, so the
       // listing is asked again and its cards arrive without a press.
-      if (job.state === "succeeded" && job.result?.installed) triggerAnalyze(true);
+      if (job.state === "succeeded" && job.result?.installed) {
+        state.researchOpen = false;
+        renderResearch();
+        triggerAnalyze(true);
+      }
     });
   }
 
@@ -1121,6 +1352,10 @@
 
   // Toolbar action sends TOGGLE_HOVER_LITE via chrome.tabs.sendMessage.
   chrome.runtime.onMessage.addListener((request) => {
+    if (request?.type === "KRIKO_SESSION_UPDATE" && request.url === location.href) {
+      if (request.stage) { state.stage = request.stage; renderStatus(); }
+      if (request.result) applyEntry(request.result);
+    }
     if (request && request.type === "TOGGLE_HOVER_LITE") {
       togglePanel();
     }
@@ -1206,7 +1441,15 @@
     // A press of either control is the reader asking again on purpose, so
     // both bypass the cache; the automatic run at page load calls
     // triggerAnalyze() directly with no argument and gets the cache.
-    ctaBtn.addEventListener("click", () => triggerAnalyze(true));
+    ctaBtn.addEventListener("click", () => {
+      researchSubject(null);
+      chrome.runtime.sendMessage({ type: "PREPARE_QUICK_SEARCH", payload: { url: location.href } }, (reply) => {
+        if (reply?.ok && reply.name && !state.researching) {
+          state.researchName = reply.name;
+          renderResearch();
+        }
+      });
+    });
     densityBtn.addEventListener("click", () => triggerAnalyze(true));
     searchBtn.addEventListener("click", () =>
       (state.searchOpen ? closeSearch() : openSearch()));
@@ -1418,7 +1661,7 @@
         <div class="lite-cta-wrap">
           <button type="button" class="lite-cta">
             <span class="lite-cta-icon">${iconSvg("scan", { size: 15 })}</span>
-            <span class="lite-cta-label">Analyze current page</span>
+            <span class="lite-cta-label">Quick Search</span>
           </button>
           <p class="lite-status">${escapeHtml(IDLE_HINT)}</p>
         </div>
@@ -1727,23 +1970,19 @@
   function renderCta() {
     if (!ctaBtn) return;
     const isAnalyzing = state.pipeline === "analyzing";
-    const hasResult   = state.pipeline === "result";
     ctaBtn.dataset.analyzing = isAnalyzing ? "1" : "0";
-    ctaBtn.disabled = isAnalyzing;
-    const iconName = isAnalyzing || hasResult ? "refresh" : "scan";
-    const label = isAnalyzing
-      ? "Analyzing…"
-      : (hasResult ? "Refresh analysis" : "Analyze current page");
+    ctaBtn.disabled = Boolean(state.researching);
+    const iconName = "search";
+    const label = state.researching ? "Searching…" : "Quick Search";
     const iconWrap = ctaBtn.querySelector(".lite-cta-icon");
     iconWrap.innerHTML = iconSvg(iconName, { size: 15 });
     iconWrap.classList.toggle("spin", isAnalyzing);
     ctaBtn.querySelector(".lite-cta-label").textContent = label;
     if (densityBtn) densityBtn.dataset.spinning = isAnalyzing ? "1" : "0";
-    // B152.8: once there is an answer the header's refresh icon is the one
-    // way to ask again; a second full-width "Refresh analysis" under it was
-    // the same control twice, pushing the risks down the panel.
+    // The header refreshes installed knowledge. Quick Search reads the web
+    // and stays available after an installed-knowledge answer arrives.
     const wrap = ctaBtn.closest(".lite-cta-wrap");
-    if (wrap) wrap.style.display = hasResult ? "none" : "";
+    if (wrap) wrap.style.display = "";
   }
 
   /* The step a run is on, in words that are true.
@@ -2062,6 +2301,17 @@
   function renderSearchResults() {
     const box = bodyEl && bodyEl.querySelector(".lite-search-results");
     if (!box) return;
+    const signature = JSON.stringify({
+      query: state.searchQuery,
+      busy: state.searchBusy,
+      error: state.searchError,
+      results: state.searchResults,
+    });
+    // renderBody can run for unrelated listing updates. Keep the search cards
+    // mounted when their data did not change so focus, scroll and card motion
+    // do not restart on every background refresh.
+    if (box.dataset.renderKey === signature) return;
+    box.dataset.renderKey = signature;
     box.innerHTML = "";
 
     if (state.searchBusy) {
@@ -2386,7 +2636,7 @@
       empty.className = "lite-empty";
       empty.innerHTML = `
         <span class="lite-empty-icon">${iconSvg("search", { size: 18 })}</span>
-        <div>No analysis yet. Press <b>Analyze current page</b>.</div>
+        <div>Search the web for this product with <b>Quick Search</b>.</div>
       `;
       claimsListEl.appendChild(empty);
       return;
@@ -2687,6 +2937,14 @@
     footerEl.hidden = false;
   }
 
+  function renderProductActions() {
+    const knownProduct = (state.result?.subjects || []).some((one) => one.kind === "product");
+    const find = bodyEl?.querySelector(".lite-find-product");
+    const research = bodyEl?.querySelector(".lite-research-product");
+    if (find) find.textContent = knownProduct ? "Search this product again" : "Find in installed packs";
+    if (research) research.hidden = knownProduct;
+  }
+
   function followupHere() {
     const id = state.pipeline === "result" && state.result?.lookup_id;
     if (!id) return null;
@@ -2847,6 +3105,7 @@
     renderCriticalAlerts();
     renderCta();
     renderStatus();
+    renderProductActions();
     renderSearch();
     renderLive();
     renderResearch();

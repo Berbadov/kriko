@@ -93,7 +93,8 @@ def test_a_page_that_answers_is_read_plainly(sites, monkeypatch):
 def test_a_refused_page_is_read_through_the_hosted_reader(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
-    sites.reader_text = f"# A page\nURL: {sites.url}\n\nThe page's own words.\n"
+    sites.reader_text = json.dumps({"results": [{"url": sites.url,
+        "excerpts": ["The page's own words."]}]})
     page = fetch.reader()(sites.url)
     assert "The page's own words." in page.text
     assert sites.reader_calls == 2
@@ -148,7 +149,7 @@ def test_a_non_http_url_is_never_sent_to_anyone():
     assert pagereader.read("file:///etc/passwd") == ""
 
 
-def test_the_second_reader_answers_when_the_first_is_dead(monkeypatch):
+def test_the_default_reader_answers_without_contacting_exa(monkeypatch):
     with socket.socket() as one:
         one.bind(("127.0.0.1", 0))
         dead = f"http://127.0.0.1:{one.getsockname()[1]}/mcp"
@@ -202,6 +203,14 @@ def test_the_second_reader_answers_when_the_first_is_dead(monkeypatch):
     finally:
         server.shutdown()
         server.server_close()
+
+
+def test_a_failed_default_reader_never_falls_back_to_exa(monkeypatch):
+    called = []
+    monkeypatch.setattr(pagereader, "_asked", lambda endpoint, tool, url:
+        called.append((endpoint, tool)) or "")
+    assert pagereader.read("https://page.test/x") == ""
+    assert called == [(pagereader.PARALLEL_ENDPOINT, pagereader.PARALLEL_TOOL)]
 
 
 def test_parallel_parse_takes_the_asked_page_and_joins_excerpts():

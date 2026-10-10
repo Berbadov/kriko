@@ -26,6 +26,10 @@ function loadPanel({
   // the feed is an aside: nearly every test wants it empty, and the two that
   // do not want it to be the only thing they are about.
   operationsResponse = { ok: true, feed: { items: [] } },
+  // The follow-up cache (#112) the panel keeps in chrome.storage.session.
+  // A reload keeps the same bag, so a test can prove the exchange survives.
+  sessionBag,
+  firefox = false,
 } = {}) {
   const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url, pretendToBeVisual: true });
 
@@ -66,10 +70,30 @@ function loadPanel({
       },
       storage: {
         onChanged: { addListener: (fn) => storageListeners.push(fn) },
+        // Mirror of the panel's own follow-up cache (#112): a plain bag the
+        // tests can seed and read, so "the exchange survives reload" is a
+        // testable claim rather than a hope.
+        session: (() => {
+          const bag = sessionBag || new Map();
+          return {
+            get(keys, callback) {
+              const names = Array.isArray(keys) ? keys : [keys];
+              const out = {};
+              names.forEach((name) => { if (bag.has(name)) out[name] = bag.get(name); });
+              callback(out);
+            },
+            set(items) { Object.entries(items).forEach(([k, v]) => bag.set(k, v)); },
+            _bag: bag,
+          };
+        })(),
       },
     },
   };
   // The panel pulls its icon/card renderers off window at load time.
+  if (firefox) {
+    sandbox.browser = { runtime: { getBrowserInfo() {} } };
+    delete sandbox.chrome.storage.session;
+  }
   dom.window.__KrikoPanelIcons = { iconSvg: () => "", domainIconSvg: () => "" };
   vm.createContext(sandbox);
   // The *real* card renderer, not a stub. The controls a test cares about —
@@ -96,6 +120,10 @@ function loadPanel({
   function deliverEntry(entry) {
     const key = "kriko_result_" + dom.window.location.href;
     for (const fn of storageListeners) fn({ [key]: { newValue: entry } }, "session");
+  }
+
+  function deliverFirefoxUpdate(update) {
+    for (const fn of runtimeListeners) fn({ type: "KRIKO_SESSION_UPDATE", url: dom.window.location.href, ...update });
   }
 
   function shadow() {
@@ -177,9 +205,9 @@ function loadPanel({
     return el;
   }
 
-  return { dom, openPanel, deliverEntry, deliverStage, footer, listing, claims,
+  return { dom, openPanel, deliverEntry, deliverStage, deliverFirefoxUpdate, footer, listing, claims,
            click, type, shadow, sent, errorText, pipeline, flushTimers,
-           statusText, liveRows };
+           statusText, liveRows, storage: sandbox.chrome.storage };
 }
 
 module.exports = { loadPanel };

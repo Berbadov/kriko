@@ -43,6 +43,11 @@ pub fn post(path: &str, body: Value) -> Reply {
     request("POST", path, Some(body))
 }
 
+/// Upload a local artifact as opaque bytes, such as an exported `.kpack`.
+pub fn post_bytes(path: &str, content_type: &str, body: Vec<u8>) -> Reply {
+    exchange("POST", path, Some(content_type), &body)
+}
+
 pub fn put(path: &str, body: Value) -> Reply {
     request("PUT", path, Some(body))
 }
@@ -64,6 +69,17 @@ pub fn seg(s: &str) -> String {
 }
 
 pub fn request(method: &str, path: &str, body: Option<Value>) -> Reply {
+    let payload = body.map(|b| b.to_string()).unwrap_or_default().into_bytes();
+    let has_body = !payload.is_empty() || method == "POST" || method == "PUT";
+    exchange(
+        method,
+        path,
+        if has_body { Some("application/json") } else { None },
+        &payload,
+    )
+}
+
+fn exchange(method: &str, path: &str, content_type: Option<&str>, payload: &[u8]) -> Reply {
     let base = engine::base().ok_or_else(|| err(0, "Kriko's engine is not running yet."))?;
     let (host, port) = engine::host_port(&base).map_err(|e| err(0, e))?;
     let addr = format!("{host}:{port}")
@@ -74,19 +90,18 @@ pub fn request(method: &str, path: &str, body: Option<Value>) -> Reply {
     // long enough for a slow lookup, short enough that a hung engine shows
     stream.set_read_timeout(Some(Duration::from_secs(60))).ok();
     stream.set_write_timeout(Some(Duration::from_secs(10))).ok();
-    let payload = body.map(|b| b.to_string()).unwrap_or_default();
     let mut head =
         format!("{method} {path} HTTP/1.0\r\nHost: {host}:{port}\r\nAccept: application/json\r\n");
-    if !payload.is_empty() || method == "POST" || method == "PUT" {
+    if let Some(content_type) = content_type {
         head.push_str(&format!(
-            "Content-Type: application/json\r\nContent-Length: {}\r\n",
-            payload.len()
+            "Content-Type: {content_type}\r\nContent-Length: {}\r\n",
+            payload.len(),
         ));
     }
     head.push_str("\r\n");
     stream
         .write_all(head.as_bytes())
-        .and_then(|_| stream.write_all(payload.as_bytes()))
+        .and_then(|_| stream.write_all(payload))
         .map_err(|e| err(0, format!("Could not reach Kriko's engine: {e}")))?;
     let mut raw = Vec::new();
     stream

@@ -795,7 +795,7 @@ test("pressing Analyze on a site nothing reads says so, and offers the fix", () 
   // §1.4 is about.
   const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER" } });
   p.openPanel();
-  p.click(".lite-cta");
+  p.click(".lite-btn-density");
 
   const box = p.shadow().querySelector(".lite-verdict");
   assert.equal(box.dataset.verdict, "no-adapter");
@@ -821,7 +821,7 @@ test("a product nothing installed knows gets its name and one research button (B
     },
   });
   p.openPanel();
-  p.click(".lite-cta");
+  p.click(".lite-btn-density");
 
   const box = p.shadow().querySelector(".lite-verdict");
   assert.equal(box.dataset.verdict, "unknown-product");
@@ -855,7 +855,7 @@ test("a known site's page that just isn't a listing gets a quieter card, no 'Add
   // never re-derives it from a site name.
   const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER", hostKnown: true } });
   p.openPanel();
-  p.click(".lite-cta");
+  p.click(".lite-btn-density");
 
   const box = p.shadow().querySelector(".lite-verdict");
   assert.equal(box.dataset.verdict, "no-adapter");
@@ -874,7 +874,7 @@ test("the empty state doesn't promise a run time it doesn't always keep", () => 
   const source = fs.readFileSync(
     path.join(__dirname, "..", "hover_lite", "hover_lite.js"), "utf8");
   assert.doesNotMatch(source, /under 2/);
-  assert.match(source, /No analysis yet/);
+  assert.match(source, /Quick Search/);
 });
 
 test("pressing Refresh asks background.js to bypass its own cache", () => {
@@ -884,7 +884,7 @@ test("pressing Refresh asks background.js to bypass its own cache", () => {
   // load — there was no way to tell it "no, actually ask this time".
   const p = loadPanel({ analyzeResponse: { ok: true, result: ENTRY.result } });
   p.openPanel();
-  p.click(".lite-cta");
+  p.click(".lite-btn-density");
 
   const asked = p.sent.filter((m) => m.type === "ANALYZE").pop();
   assert.equal(asked.payload.fresh, true);
@@ -893,7 +893,7 @@ test("pressing Refresh asks background.js to bypass its own cache", () => {
 test("it is not a red banner, because the reader did nothing wrong", () => {
   const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER" } });
   p.openPanel();
-  p.click(".lite-cta");
+  p.click(".lite-btn-density");
   assert.equal(p.pipeline(), "idle");
   assert.equal(p.errorText(), null);
 });
@@ -901,7 +901,7 @@ test("it is not a red banner, because the reader did nothing wrong", () => {
 test("an answer clears it — something read the page after all", () => {
   const p = loadPanel({ analyzeResponse: { ok: false, code: "NO_ADAPTER" } });
   p.openPanel();
-  p.click(".lite-cta");
+  p.click(".lite-btn-density");
   assert.ok(p.shadow().querySelector(".lite-verdict"));
   p.deliverEntry(ENTRY);
   assert.equal(p.shadow().querySelector(".lite-verdict"), null);
@@ -911,14 +911,19 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
   const RISK = { title: "Gearbox judder", body: "It judders.", advice: "Drive it cold.",
     severity: "high", strength: "reported", source_count: 1, domain: "example.org", quick: true,
     sources: [{ url: "https://example.org/a", domain: "example.org", quote: "it judders" }] };
+  let researchPresses = 0;
   const p = loadPanel({ workerResponse: (message) => {
     if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
     if (message.type === "RESEARCH_PRODUCT") {
-      return { ok: true, job: { job_id: "q1", kind: "quick_look", deepen_job_id: "d1" } };
+      researchPresses += 1;
+      return { ok: true, job: researchPresses === 1
+        ? { job_id: "q1", kind: "quick_look", deepen_job_id: "d1" }
+        : { job_id: "d1", kind: "pack_author" } };
     }
     if (message.type === "JOB_STATUS" && message.payload.job_id === "q1") {
       return { ok: true, job: { state: "succeeded", done: true, result: {
-        assumed: "the 1.6 diesel", risks: [RISK], dropped: 1, deepen_job_id: "d1" } } };
+        assumed: "the 1.6 diesel", risks: [RISK], dropped: 1, deepen_job_id: "d1",
+        specs: [{ name: "Year", value: "2019", url: "https://example.org/a", domain: "example.org" }] } } };
     }
     if (message.type === "JOB_STATUS") {
       return { ok: true, job: { state: "running", done: false, progress: 0.2, message: "reading" } };
@@ -929,7 +934,7 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
   p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
   p.click(".lite-research-product");
   const buttons = [...p.shadow().querySelectorAll(".lite-research button")].map((b) => b.textContent.trim());
-  assert.ok(buttons.includes("Research this product"), buttons.join(" | "));
+  assert.ok(buttons.includes("Start Quick Search"), buttons.join(" | "));
   assert.equal(p.shadow().querySelector(".lite-research-draft"), null, "one button, not two");
   p.type(".lite-research-name", "Mystery Car 1.6");
   p.click(".lite-research-start");
@@ -942,9 +947,31 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
   assert.match(slot.textContent, /Taken as: the 1\.6 diesel/);
   assert.match(slot.querySelector(".lite-quick-src").textContent, /it judders/);
   assert.equal(slot.querySelector(".lite-quick-src a").getAttribute("href"), "https://example.org/a");
-  // The panel moved on to the deep run rather than stopping at "done".
+  // #116: the specs it read show the way a researched product's figures do,
+  // and the lines it could not source are said, not hidden.
+  const spec = slot.querySelector(".lite-quick-spec");
+  assert.equal(spec.getAttribute("href"), "https://example.org/a");
+  assert.match(spec.textContent, /Year/);
+  assert.match(spec.textContent, /2019/);
+  assert.match(slot.querySelector(".lite-quick-dropped").textContent, /1 line/);
+  // #114: no pack is started beside the quick look. The panel stops at the
+  // answer and offers the build as an explicit press.
+  assert.ok(!p.sent.some((m) => m.type === "JOB_STATUS" && m.payload.job_id === "d1"),
+    "the deeper run must not be followed on its own");
+  assert.match(slot.querySelector(".lite-research-status").textContent, /1 thing to know/);
+  // #115: the pages it read are folded into a sources drawer.
+  assert.match(slot.querySelector(".lite-quick-sources-toggle").textContent, /Show sources \(1\)/);
+  p.click(".lite-quick-sources-toggle");
+  assert.equal(slot.querySelector(".lite-quick-sources").hidden, false);
+  assert.equal(slot.querySelector(".lite-quick-source").getAttribute("href"), "https://example.org/a");
+  assert.match(slot.querySelector(".lite-quick-source").textContent, /example\.org/);
+  // The pack is drafted and installed only by the Build press.
+  const presses = p.sent.filter((m) => m.type === "RESEARCH_PRODUCT").length;
+  p.click(".lite-quick-build");
+  const build = p.sent.filter((m) => m.type === "RESEARCH_PRODUCT")[presses];
+  assert.equal(build.payload.deepen, true, "the Build press asks for the deep run");
+  assert.equal(build.payload.quick, false, "the Build press starts no second quick look");
   assert.ok(p.sent.some((m) => m.type === "JOB_STATUS" && m.payload.job_id === "d1"));
-  assert.match(slot.querySelector(".lite-research-status").textContent, /reading/);
 });
 
 test("a deep run that installed its pack refreshes the listing (B148)", () => {
@@ -963,16 +990,150 @@ test("a deep run that installed its pack refreshes the listing (B148)", () => {
   p.type(".lite-research-name", "Mystery Car 1.6");
   const before = p.sent.filter((m) => m.type === "ANALYZE").length;
   p.click(".lite-research-start");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /installed/);
   assert.equal(p.sent.filter((m) => m.type === "ANALYZE").length, before + 1,
     "the listing was analysed again once the pack was in");
+  assert.equal(p.shadow().querySelector(".lite-research"), null,
+    "the research panel closed: the listing itself knows the product now");
 });
 
-test("an answer leaves one refresh control, the header's (B152.8)", () => {
+test("a quick look can be asked a follow-up, answered in the panel (#112)", () => {
+  const RISK = { title: "Gearbox judder", body: "It judders.", advice: "Drive it cold.",
+    severity: "high", strength: "reported", source_count: 1, domain: "example.org", quick: true,
+    sources: [{ url: "https://example.org/a", domain: "example.org", quote: "it judders" }] };
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "RESEARCH_PRODUCT") {
+      return { ok: true, job: { job_id: "q1", kind: "quick_look" } };
+    }
+    if (message.type === "JOB_STATUS" && message.payload.job_id === "q1") {
+      return { ok: true, job: { job_id: "q1", state: "succeeded", done: true, result: {
+        assumed: "the 1.6 diesel", risks: [RISK], dropped: 0 } } };
+    }
+    if (message.type === "JOB_STATUS" && message.payload.job_id === "a1") {
+      return { ok: true, job: { job_id: "a1", state: "succeeded", done: true, result: {
+        q: "Is it reliable?", answer: "The findings say it judders; drive it cold." } } };
+    }
+    if (message.type === "QUICK_ASK") {
+      assert.equal(message.payload.job_id, "q1");
+      assert.equal(message.payload.q, "Is it reliable?");
+      return { ok: true, job: { job_id: "a1", kind: "quick_ask" } };
+    }
+    if (message.type === "QUICK_ASKS") {
+      return { ok: true, asks: [{ job_id: "a1", q: "Is it reliable?",
+        answer: "The findings say it judders; drive it cold.", state: "succeeded", done: true }] };
+    }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Mystery Car 1.6");
+  p.click(".lite-research-start");
+  const slot = p.shadow().querySelector(".lite-research");
+  // The question box appears with the quick look.
+  assert.ok(slot.querySelector(".lite-follow-input"), "the follow-up box is offered");
+  p.type(".lite-follow-input", "Is it reliable?");
+  p.click(".lite-follow-ask");
+  assert.ok(p.sent.some((m) => m.type === "QUICK_ASK"), "the ask reached the background");
+  assert.ok(p.sent.some((m) => m.type === "JOB_STATUS" && m.payload.job_id === "a1"),
+    "the panel followed the ask to its answer");
+  assert.match(p.shadow().querySelector(".lite-follow-q").textContent, /Is it reliable\?/);
+  assert.match(p.shadow().querySelector(".lite-follow-answer").textContent, /judders/);
+});
+
+test("the follow-up exchange survives reload (#112)", () => {
+  const RISK = { title: "Gearbox judder", body: "It judders.", advice: "", severity: "high",
+    strength: "reported", source_count: 1, domain: "example.org", quick: true,
+    sources: [{ url: "https://example.org/a", domain: "example.org", quote: "it judders" }] };
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "RESEARCH_PRODUCT") {
+      return { ok: true, job: { job_id: "q1", kind: "quick_look" } };
+    }
+    if (message.type === "JOB_STATUS" && message.payload.job_id === "q1") {
+      return { ok: true, job: { job_id: "q1", state: "succeeded", done: true, result: {
+        assumed: "the 1.6 diesel", risks: [RISK], dropped: 0 } } };
+    }
+    if (message.type === "QUICK_ASKS") {
+      return { ok: true, asks: [{ job_id: "a1", q: "Is it reliable?",
+        answer: "It judders; drive it cold.", state: "succeeded", done: true }] };
+    }
+    return { ok: true };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Mystery Car 1.6");
+  p.click(".lite-research-start");
+  const saved = p.storage.session._bag.get(`kriko_followups_${p.dom.window.location.href}`);
+  assert.ok(saved?.quick?.risks?.length, "the quick look was cached for the reload");
+  // A reload: a fresh panel on the same listing, nothing in page state.
+  const again = loadPanel({ sessionBag: p.storage.session._bag, workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "harness", budget_usd: 0 } };
+    if (message.type === "QUICK_ASKS") {
+      return { ok: true, asks: [{ job_id: "a1", q: "Is it reliable?",
+        answer: "It judders; drive it cold.", state: "succeeded", done: true }] };
+    }
+    return { ok: true };
+  } });
+  again.openPanel();
+  again.deliverEntry({ ...GAP_ENTRY, result: { ...GAP_ENTRY.result, subjects: [] } });
+  again.click(".lite-research-product");
+  const slot = again.shadow().querySelector(".lite-research");
+  assert.match(slot.textContent, /Gearbox judder/, "the quick cards came back");
+  assert.match(slot.textContent, /Is it reliable\?/, "the exchange came back");
+  assert.match(slot.textContent, /It judders; drive it cold\./, "the answer came back");
+});
+
+test("an answer keeps Quick Search available beside the header lookup refresh", () => {
   const p = loadPanel({ analyzeResponse: { ok: true, result: ENTRY.result } });
   p.openPanel();
   p.deliverEntry(ENTRY);
   const wrap = p.shadow().querySelector(".lite-cta-wrap");
-  assert.equal(wrap.style.display, "none", "no second full-width Refresh under the header");
+  assert.equal(wrap.style.display, "");
+  assert.equal(wrap.querySelector(".lite-cta-label").textContent, "Quick Search");
   assert.ok(p.shadow().querySelector(".lite-btn-density"), "the header icon still asks again");
+});
+
+test("Quick Search reads the page into a web research form and sends source limits", () => {
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local", budget_usd: 0 } };
+    if (message.type === "PREPARE_QUICK_SEARCH") return { ok: true, name: "Northstar AX-1040R2" };
+    if (message.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "quick-40", kind: "quick_look" } };
+    return { ok: true };
+  }});
+  p.openPanel();
+  const lookupsBefore = p.sent.filter((message) => message.type === "ANALYZE").length;
+  p.click(".lite-cta");
+  assert.equal(p.shadow().querySelector(".lite-research-name").value, "Northstar AX-1040R2");
+  assert.equal(p.sent.filter((message) => message.type === "ANALYZE").length, lookupsBefore);
+  p.type(".lite-research-sources", "40");
+  const context = p.type(".lite-research-page-chars", "40000");
+  context.dispatchEvent(new p.dom.window.Event("change", { bubbles: true }));
+  p.click(".lite-research-start");
+  const request = p.sent.find((message) => message.type === "RESEARCH_PRODUCT");
+  assert.equal(request.payload.q, "Northstar AX-1040R2");
+  assert.equal(request.payload.max_documents, 40);
+  assert.equal(request.payload.context_chars, 40000);
+  assert.equal(request.payload.deepen, false);
+});
+
+test("Quick Search shows and restores sourced specifications without risk cards", () => {
+  const p = loadPanel({ workerResponse: (message) => {
+    if (message.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local", budget_usd: 0 } };
+    if (message.type === "PREPARE_QUICK_SEARCH") return { ok: true, name: "Northstar AX-1040R2" };
+    if (message.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "specs-only", kind: "quick_look" } };
+    if (message.type === "JOB_STATUS") return { ok: true, job: { job_id: "specs-only", state: "succeeded", done: true,
+      result: { risks: [], specs: [{ name: "Weight", value: "2 kg", url: "https://example.org/spec" }] } } };
+    return { ok: true };
+  }});
+  p.openPanel();
+  p.click(".lite-cta");
+  p.click(".lite-research-start");
+  assert.match(p.shadow().querySelector(".lite-quick-spec").textContent, /Weight2 kg/);
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /1 sourced specification/);
+  const again = loadPanel({ sessionBag: p.storage.session._bag });
+  again.openPanel();
+  again.click(".lite-cta");
+  assert.match(again.shadow().querySelector(".lite-quick-spec").textContent, /Weight2 kg/);
 });

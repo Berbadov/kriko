@@ -100,6 +100,7 @@ pub struct Pull {
 
 #[derive(Default, Clone)]
 pub struct BenchRun {
+    pub id: String,
     pub batch_id: String,
     pub at: String,
     pub subject: String,
@@ -111,6 +112,12 @@ pub struct BenchRun {
     pub accepted: f64,
     pub refused: f64,
     pub error: String,
+    pub configuration: String,
+    pub tokens_in: Option<f64>,
+    pub tokens_out: Option<f64>,
+    pub usage_complete: bool,
+    pub score: Value,
+    pub stages: Vec<Value>,
 }
 
 #[derive(Default, Clone)]
@@ -123,6 +130,29 @@ pub struct BenchRow {
     pub tokens: Option<f64>,
     pub accepted: f64,
     pub failures: f64,
+    pub set_label: String,
+    pub search: String,
+    pub p95_ms: Option<f64>,
+    pub counted_runs: f64,
+    pub recall: Option<f64>,
+    pub hallucination: Option<f64>,
+    pub spec_recall: Option<f64>,
+    pub abstention: Option<f64>,
+    pub cost_per_claim: Option<f64>,
+    pub tokens_in: Option<f64>,
+    pub tokens_out: Option<f64>,
+    pub partial_runs: f64,
+    pub passed: f64,
+    pub graded: f64,
+    pub raw_produced: f64,
+    pub spec_errors: f64,
+}
+
+#[derive(Default, Clone)]
+pub struct BenchSuite {
+    pub id: String,
+    pub label: String,
+    pub description: String,
 }
 
 #[derive(Default, Clone)]
@@ -166,9 +196,63 @@ pub struct Bench {
     pub planes: Vec<(String, String)>,
     pub picked: Vec<String>,
     pub set_label: String,
+    pub suite: String,
+    pub suites: Vec<BenchSuite>,
+    pub api_models: Vec<String>,
+    pub open_run: Option<String>,
     pub phase: BenchPhase,
     /// How the last job ended, in the engine's words.
     pub last: Option<String>,
+    /// The grid's knobs: cases from the set, documents per case,
+    /// repetitions of each measurement, and the spend ceiling per case.
+    pub cases: i64,
+    pub docs: i64,
+    pub reps: i64,
+    pub budget: f64,
+    /// The models the sweep is narrowed to; empty is whichever each plane
+    /// would pick.
+    pub models: Vec<String>,
+    /// Which of the grid's drawers is open.
+    pub drawer: Option<&'static str>,
+}
+
+impl Bench {
+    pub fn controlled(&self) -> bool {
+        self.suite != "web"
+    }
+
+    pub fn body(&self) -> Value {
+        let planes: Vec<&str> = self.picked.iter().map(String::as_str)
+            .filter(|p| self.controlled() || *p != "api").collect();
+        serde_json::json!({
+            "suite": if self.controlled() { "precision" } else { "web" },
+            "planes": planes.join(", "), "pack_id": "", "cases": self.cases,
+            "max_documents": self.docs, "budget_usd": self.budget,
+            "protocols": "", "reps": self.reps,
+            "llms": self.models.join(", "), "searches": "",
+        })
+    }
+
+    /// What a run of this grid will bench, as one sentence for the screen.
+    pub fn grid_word(&self) -> String {
+        let planes = if self.picked.is_empty() { "no plane".to_string() } else { self.picked.join(" and ") };
+        let models = if self.models.is_empty() {
+            "whichever model each plane would pick".to_string()
+        } else {
+            self.models.join(", ")
+        };
+        format!(
+            "{} case{} from {}, {}, {} time{}, on {} — {}",
+            self.cases,
+            if self.cases == 1 { "" } else { "s" },
+            if self.controlled() { self.set_label.split(" · ").next().unwrap_or("configuration accuracy").trim() } else { "live web research" },
+            if self.controlled() { "complete supplied documents".to_string() } else { format!("up to {} documents each", self.docs) },
+            self.reps,
+            if self.reps == 1 { "" } else { "s" },
+            planes,
+            models
+        )
+    }
 }
 
 #[derive(Default)]
@@ -186,6 +270,9 @@ pub struct State {
     pub note: Option<String>,
     pub checking: bool,
     pub pull: Option<Pull>,
+    pub delete_armed: Option<String>,
+    pub deleting: Option<String>,
+    pub models_note: Option<String>,
     pub bench: Bench,
 }
 
@@ -269,7 +356,9 @@ pub fn held_from(v: &Value) -> Vec<Held> {
 }
 
 fn run_from(v: &Value) -> BenchRun {
+    let measurement = v.get("measurement").cloned().unwrap_or(Value::Null);
     BenchRun {
+        id: api::s(v, "bench_id"),
         batch_id: api::s(v, "batch_id"),
         at: api::s(v, "at"),
         subject: api::s(v, "subject"),
@@ -281,6 +370,14 @@ fn run_from(v: &Value) -> BenchRun {
         accepted: api::n(v, "accepted").unwrap_or(0.0),
         refused: api::n(v, "refused").unwrap_or(0.0),
         error: api::s(v, "error"),
+        configuration: format!("{} {} · {} · {} · {} · {}", api::s(v, "set_id"),
+            api::s(v, "set_version"), api::s(v, "plane"), api::s(v, "llm"),
+            api::s(v, "protocol"), api::s(v, "search_provider")),
+        tokens_in: api::n(&measurement, "tokens_in"),
+        tokens_out: api::n(&measurement, "tokens_out"),
+        usage_complete: measurement.get("usage_complete").and_then(Value::as_bool).unwrap_or(true),
+        score: v.get("gold").cloned().unwrap_or(Value::Null),
+        stages: api::arr(&measurement, "stages").to_vec(),
     }
 }
 
@@ -295,6 +392,8 @@ pub struct Batch {
     pub median_tokens: Option<f64>,
     pub median_usd: Option<f64>,
     pub acceptance: Option<f64>,
+    pub hallucination: Option<f64>,
+    pub configuration: Vec<String>,
 }
 
 pub fn median(mut xs: Vec<f64>) -> Option<f64> {
@@ -306,8 +405,8 @@ pub fn median(mut xs: Vec<f64>) -> Option<f64> {
     Some(if n % 2 == 1 { xs[n / 2] } else { (xs[n / 2 - 1] + xs[n / 2]) / 2.0 })
 }
 
-/// Batches, newest first. A run that failed has no answer time worth
-/// averaging in, so only clean runs feed the medians.
+/// Batches, newest first. Attempt time includes failures; incomplete token
+/// counts are omitted. Configuration signatures keep unlike grids apart.
 pub fn batches(runs: &[BenchRun]) -> Vec<Batch> {
     let mut ordered: Vec<&BenchRun> = runs.iter().collect();
     ordered.sort_by(|a, b| b.at.cmp(&a.at));
@@ -320,15 +419,21 @@ pub fn batches(runs: &[BenchRun]) -> Vec<Batch> {
     ids.into_iter()
         .map(|id| {
             let mine: Vec<&&BenchRun> = ordered.iter().filter(|r| r.batch_id == id).collect();
-            let clean = mine.iter().filter(|r| r.error.is_empty());
+            let mut configuration: Vec<String> = mine.iter().map(|r| format!("{} · {}", r.configuration, r.subject)).collect();
+            configuration.sort();
+            let graded: Vec<_> = mine.iter().filter(|r| r.error.is_empty() && r.score.is_object()).collect();
+            let produced: f64 = graded.iter().filter_map(|r| api::n(&r.score, "raw_produced")).sum();
+            let unsupported: usize = graded.iter().map(|r| api::arr(&r.score, "hallucinated").len()).sum();
             let accepted: f64 = mine.iter().map(|r| r.accepted).sum();
             let refused: f64 = mine.iter().map(|r| r.refused).sum();
             Batch {
                 id: id.to_string(),
                 at: mine.first().map(|r| r.at.clone()).unwrap_or_default(),
-                median_ms: median(clean.clone().filter_map(|r| r.ms).collect()),
-                median_tokens: median(clean.clone().filter_map(|r| r.tokens).collect()),
-                median_usd: median(clean.filter_map(|r| r.usd).collect()),
+                median_ms: median(mine.iter().filter_map(|r| r.ms).collect()),
+                median_tokens: median(mine.iter().filter(|r| r.usage_complete).filter_map(|r| r.tokens).collect()),
+                median_usd: median(mine.iter().filter_map(|r| r.usd).collect()),
+                hallucination: if produced > 0.0 { Some(unsupported as f64 / produced) } else { None },
+                configuration,
                 acceptance: if accepted + refused > 0.0 {
                     Some(accepted / (accepted + refused))
                 } else {
@@ -436,6 +541,11 @@ impl Kriko {
         self.refresh_bench(cx);
         self.fetch(cx, || api::get("/api/prefs"), |this, reply, _| {
             if let Ok(v) = reply {
+                this.live.local.bench.api_models = v.get("models")
+                    .map(|m| api::arr(m, "offered")).unwrap_or(&[]).iter()
+                    .filter(|o| api::s(o, "unusable").is_empty()
+                        && !matches!(api::s(o, "provider").as_str(), "ollama" | "local"))
+                    .map(|o| api::s(o, "id")).collect();
                 let offered = v
                     .get("models")
                     .map(|m| api::arr(m, "offered"))
@@ -638,6 +748,44 @@ impl Kriko {
         );
     }
 
+    /// Remove a model held by Ollama. The first press arms the exact model;
+    /// the second sends the DELETE. The engine refuses removal of the model
+    /// currently selected for Quick Look.
+    pub fn local_remove_model(&mut self, model: String, cx: &mut Context<Self>) {
+        if self.live.local.deleting.is_some() {
+            return;
+        }
+        if self.live.local.delete_armed.as_deref() != Some(model.as_str()) {
+            self.live.local.delete_armed = Some(model);
+            self.live.local.models_note = None;
+            cx.notify();
+            return;
+        }
+        if self.live.local.plane.as_ref().is_some_and(|plane| plane.model == model) {
+            self.live.local.models_note = Some("Choose another model for Quick Look before removing this one.".into());
+            self.live.local.delete_armed = None;
+            cx.notify();
+            return;
+        }
+        self.live.local.deleting = Some(model.clone());
+        self.live.local.models_note = None;
+        let path = format!("/api/local-models/{}", api::seg(&model));
+        self.fetch(cx, move || api::delete(&path), move |this, reply, cx| {
+            this.note(&reply);
+            this.live.local.deleting = None;
+            this.live.local.delete_armed = None;
+            this.live.local.models_note = Some(match &reply {
+                Ok(_) => format!("Removed {model} from Ollama."),
+                Err(e) => format!("Could not remove {model}: {}", e.message),
+            });
+            if reply.is_ok() {
+                this.refresh_held(cx);
+                this.refresh_plane(false, cx);
+            }
+        });
+        cx.notify();
+    }
+
     // ---- the benchmark ----
 
     pub fn refresh_bench(&mut self, cx: &mut Context<Self>) {
@@ -646,17 +794,36 @@ impl Kriko {
             let Ok(v) = reply else { return };
             let b = &mut this.live.local.bench;
             b.runs = api::arr(&v, "runs").iter().map(run_from).collect();
-            b.summary = api::arr(&v, "summary")
+            // The engine's readout keeps test versions, planes, protocols and
+            // search providers separate. Legacy summary summed tokens while
+            // averaging time, which made the displayed throughput grow with
+            // the number of repetitions.
+            b.summary = api::arr(&v, "readout")
                 .iter()
                 .map(|r| BenchRow {
                     plane: api::s(r, "plane"),
                     llm: api::s(r, "llm"),
                     protocol: api::s(r, "protocol"),
                     runs: api::n(r, "runs").unwrap_or(0.0),
-                    ms: api::n(r, "ms"),
-                    tokens: api::n(r, "tokens"),
+                    ms: api::n(r, "latency_p50_ms"),
+                    tokens: api::n(r, "tokens_mean"),
                     accepted: api::n(r, "accepted").unwrap_or(0.0),
-                    failures: api::n(r, "failures").unwrap_or(0.0),
+                    failures: api::n(r, "failed_runs").unwrap_or(0.0),
+                    set_label: format!("{} {}", api::s(r, "set_id"), api::s(r, "set_version")),
+                    search: api::s(r, "search_provider"),
+                    p95_ms: api::n(r, "latency_p95_ms"),
+                    counted_runs: api::n(r, "counted_runs").unwrap_or(0.0),
+                    recall: api::n(r, "recall"),
+                    hallucination: api::n(r, "hallucination_rate"),
+                    spec_recall: api::n(r, "spec_recall"),
+                    abstention: api::n(r, "abstention_accuracy"),
+                    cost_per_claim: api::n(r, "usd_per_accepted_claim"),
+                    tokens_in: api::n(r, "tokens_in"), tokens_out: api::n(r, "tokens_out"),
+                    partial_runs: api::n(r, "partial_usage_runs").unwrap_or(0.0),
+                    passed: api::n(r, "passed").unwrap_or(0.0),
+                    graded: api::n(r, "graded_runs").unwrap_or(0.0),
+                    raw_produced: api::n(r, "raw_produced").unwrap_or(0.0),
+                    spec_errors: api::n(r, "spec_errors").unwrap_or(0.0),
                 })
                 .collect();
             b.scored = v
@@ -681,6 +848,16 @@ impl Kriko {
             if b.picked.is_empty() {
                 b.picked = vec!["harness".to_string()];
             }
+            if b.cases == 0 {
+                b.cases = 9;
+                b.docs = 3;
+                b.reps = 2;
+                b.budget = 0.2;
+            }
+            if b.suite.is_empty() { b.suite = "precision".into(); }
+            b.suites = api::arr(&v, "suites").iter().map(|s| BenchSuite {
+                id: api::s(s, "id"), label: api::s(s, "label"), description: api::s(s, "description"),
+            }).collect();
             let set = v.get("test_set").cloned().unwrap_or(Value::Null);
             b.set_label = format!(
                 "{} {} · {} cases",
@@ -692,20 +869,100 @@ impl Kriko {
         });
     }
 
-    /// The request a press sends, built like the web screen's default: three
-    /// cases, three documents each, twenty cents a case, one repetition.
+    /// The request a press sends: the grid the reader drew on the screen.
     fn bench_body(&self) -> Value {
-        serde_json::json!({
-            "planes": self.live.local.bench.picked.join(", "),
-            "pack_id": "",
-            "cases": 3,
-            "max_documents": 3,
-            "budget_usd": 0.2,
-            "protocols": "",
-            "reps": 1,
-            "llms": "",
-            "searches": "",
-        })
+        self.live.local.bench.body()
+    }
+
+    pub fn bench_pick_suite(&mut self, suite: String, cx: &mut Context<Self>) {
+        let b = &mut self.live.local.bench;
+        if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+        b.suite = suite;
+        if !b.controlled() { b.picked.retain(|p| p != "api"); }
+        b.drawer = None;
+        b.phase = BenchPhase::Idle;
+        cx.notify();
+    }
+
+    pub fn bench_open_run(&mut self, id: String, cx: &mut Context<Self>) {
+        let b = &mut self.live.local.bench;
+        b.open_run = if b.open_run.as_ref() == Some(&id) { None } else { Some(id) };
+        cx.notify();
+    }
+
+    /// What a run of this grid will bench, as one sentence for the screen.
+    pub fn bench_grid_word(&self) -> String {
+        self.live.local.bench.grid_word()
+    }
+
+    /// The models the sweep can be narrowed to: what the local plane holds
+    /// and what each ready harness says it serves, nothing typed by hand.
+    pub fn bench_model_choices(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        let b = &self.live.local.bench;
+        if b.picked.iter().any(|p| p == "local") {
+            if let Some(p) = &self.live.local.plane { out.extend(p.models.iter().cloned()); }
+        }
+        if b.controlled() && b.picked.iter().any(|p| p == "api") {
+            out.extend(b.api_models.iter().cloned());
+        }
+        if b.picked.iter().any(|p| p == "harness") {
+            for h in &self.live.run.harnesses {
+                if matches!(h.state, crate::live::run::RunState::Ready) {
+                    out.extend(h.llms.iter().cloned());
+                }
+            }
+        }
+        out.retain(|m| !m.is_empty());
+        out.sort();
+        out.dedup();
+        out
+    }
+
+    /// Open or close one of the grid's drawers.
+    pub fn bench_open_drawer(&mut self, name: &'static str, cx: &mut Context<Self>) {
+        if matches!(self.live.local.bench.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+        self.live.local.bench.drawer = if self.live.local.bench.drawer == Some(name) {
+            None
+        } else {
+            Some(name)
+        };
+        cx.notify();
+    }
+
+    /// Set one of the grid's numeric knobs; a different grid is a different
+    /// price.
+    pub fn bench_set_knob(&mut self, knob: &'static str, value: f64, cx: &mut Context<Self>) {
+        if matches!(self.live.local.bench.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+        {
+            let b = &mut self.live.local.bench;
+            match knob {
+                "cases" => b.cases = value as i64,
+                "docs" => b.docs = value as i64,
+                "reps" => b.reps = value as i64,
+                "budget" => b.budget = value,
+                _ => {}
+            }
+            b.drawer = None;
+            b.phase = BenchPhase::Idle;
+        }
+        cx.notify();
+    }
+
+    /// Narrow the model sweep to the picked ones; empty is whichever each
+    /// plane would pick.
+    pub fn bench_pick_model(&mut self, model: String, cx: &mut Context<Self>) {
+        if matches!(self.live.local.bench.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
+        {
+            let b = &mut self.live.local.bench;
+            if let Some(i) = b.models.iter().position(|m| m == &model) {
+                b.models.remove(i);
+            } else {
+                b.models.push(model);
+            }
+            b.phase = BenchPhase::Idle;
+        }
+        cx.notify();
     }
 
     pub fn bench_toggle_plane(&mut self, plane: &str, cx: &mut Context<Self>) {
@@ -826,7 +1083,7 @@ mod tests {
     }
 
     #[test]
-    fn batches_come_newest_first_and_skip_failures() {
+    fn batches_come_newest_first_and_include_failed_attempt_time() {
         let runs = vec![
             run("old", "2026-09-01T00:00:00+00:00", Some(100.0), ""),
             run("new", "2026-09-29T00:00:02+00:00", Some(40.0), ""),
@@ -836,9 +1093,42 @@ mod tests {
         let b = batches(&runs);
         assert_eq!(b.len(), 2);
         assert_eq!(b[0].id, "new");
-        assert_eq!(b[0].median_ms, Some(50.0));
+        assert_eq!(b[0].median_ms, Some(40.0));
         assert_eq!(b[1].median_ms, Some(100.0));
         assert_eq!(b[0].median_usd, None, "unpriced stays unmeasured, not zero");
+    }
+
+    #[test]
+    fn a_real_source_quote_can_still_fail_configuration_accuracy() {
+        let r = run_from(&serde_json::json!({
+            "bench_id": "case-1", "batch_id": "b", "llm": "small", "plane": "local",
+            "set_id": "configuration", "set_version": "v1", "protocol": "extractive",
+            "search_provider": "supplied-corpus", "accepted": 2, "refused": 0, "tokens": 100,
+            "measurement": {"tokens_in": 80, "tokens_out": 20, "usage_complete": false,
+                "stages": [{"stage": "answer", "ms": 123, "tokens_used": 100}]},
+            "gold": {"raw_produced": 2, "hallucinated": ["sibling revision"],
+                "proposed_risks": [{"title": "Sibling fault"}]}
+        }));
+        assert_eq!(r.id, "case-1");
+        assert_eq!(r.tokens_out, Some(20.0));
+        assert_eq!(r.stages.len(), 1);
+        let b = batches(&[r]);
+        assert_eq!(b[0].hallucination, Some(0.5));
+        assert_eq!(b[0].median_tokens, None, "partial counts must not appear as full usage");
+        assert!(b[0].configuration[0].contains("v1"));
+    }
+
+    #[test]
+    fn live_search_cannot_send_the_direct_completion_plane() {
+        let mut b = Bench::default();
+        b.suite = "precision".into();
+        b.picked = vec!["local".into(), "api".into()];
+        assert_eq!(b.body()["suite"], "precision");
+        assert_eq!(b.body()["planes"], "local, api");
+        b.suite = "web".into();
+        assert_eq!(b.body()["suite"], "web");
+        assert_eq!(b.body()["planes"], "local");
+        assert!(b.grid_word().contains("live web research"));
     }
 
     #[test]
@@ -871,5 +1161,25 @@ mod tests {
         let m = machine_from(&v);
         assert!(m.gpu.is_none() && m.vram_total_mb.is_none());
         assert_eq!(m.ram_mb, Some(16000.0));
+    }
+
+    #[test]
+    fn the_grid_says_what_a_run_will_bench() {
+        let mut b = Bench::default();
+        b.cases = 5;
+        b.docs = 3;
+        b.reps = 2;
+        b.budget = 0.5;
+        b.picked = vec!["local".into(), "api".into()];
+        b.models = vec!["m1".into()];
+        b.set_label = "kriko.check v3 · 40 cases".into();
+        let word = b.grid_word();
+        assert!(word.contains("5 cases"), "{word}");
+        assert!(word.contains("kriko.check"), "{word}");
+        assert!(word.contains("2 times"), "{word}");
+        assert!(word.contains("local and api"), "{word}");
+        assert!(word.contains("m1"), "{word}");
+        b.models.clear();
+        assert!(b.grid_word().contains("whichever model each plane would pick"));
     }
 }

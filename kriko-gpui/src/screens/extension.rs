@@ -4,7 +4,7 @@
 
 use gpui::{div, prelude::*, px, rgb, ClickEvent, Context, Div, Styled, Window};
 
-use crate::app::{Field, Kriko};
+use crate::app::Kriko;
 use crate::live::knowledge::{ago_seconds, ExtStatus};
 use crate::screens::{empty_note, mono, row_desc, row_title};
 use crate::theme::*;
@@ -61,7 +61,7 @@ fn seen_line(e: &ExtStatus) -> (TagState, &'static str, String) {
     }
 }
 
-pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+pub fn extension(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
     let k = &app.live.knowledge;
     let Some(e) = &k.ext else {
@@ -70,14 +70,10 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         ));
     };
 
-    let port_input = app.input_field(
-        Field::ExtensionPort, "ext-port-input", "8787", None, window, cx,
-    );
     let act = |action: &'static str| {
         cx.listener(move |this, _: &ClickEvent, _w, cx| this.extension_action(action, cx))
     };
     let check = cx.listener(|this, _: &ClickEvent, _w, cx| this.refresh_extension(cx));
-    let save_port = cx.listener(|this, _: &ClickEvent, _w, cx| this.save_extension_port(cx));
 
     // ---- steps ----
     let staged_line = if !e.available {
@@ -104,8 +100,8 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .child(step(
             2,
             "Show the folder",
-            "Opens it in the file manager, so the browser can be pointed at it.",
-            e.staged.then(|| ghost("ext-reveal", "Show folder").on_click(act("reveal")).into_any_element()),
+            "Opens ~/.kriko in the file manager with the extension folder selected, so it can be dragged straight onto the browser's extensions page.",
+            e.staged.then(|| ghost("ext-reveal", "Show Extension").on_click(act("reveal")).into_any_element()),
         ))
         .child(hairline())
         .child(step(
@@ -116,7 +112,7 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         ));
     if !e.browsers.is_empty() {
         let mut list = div().mt(px(8.0)).flex().flex_col().gap(px(4.0));
-        for b in &e.browsers {
+        for b in e.browsers.iter().filter(|b| b.name != "Firefox") {
             list = list.child(mono(&format!("{}: {}", b.name, b.url), DIM));
         }
         steps_card = steps_card.child(list);
@@ -124,6 +120,21 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     if let Some(n) = &k.ext_notice {
         steps_card = steps_card.child(div().mt(px(12.0)).child(mono(n, MUTED)));
     }
+
+    let firefox_path = e.firefox_path.clone();
+    let firefox = card().flex().flex_col().gap(px(10.0))
+        .child(eyebrow("Firefox"))
+        .child(row_desc("Firefox 140 or newer. Prepare the add-on, then open about:debugging#/runtime/this-firefox and choose Load Temporary Add-on. Select manifest.json below."))
+        .child(mono(&e.firefox_path, MUTED))
+        .child(div().flex().flex_wrap().gap(px(8.0))
+            .when(e.available, |d| d.child(key("firefox-stage", "Prepare Firefox").on_click(act("firefox/stage"))))
+            .when(e.firefox_staged, |d| d
+                .child(ghost("firefox-reveal", "Show files").on_click(act("firefox/reveal")))
+                .child(ghost("firefox-copy", "Copy path").on_click(cx.listener(move |_this, _: &ClickEvent, _w, cx| {
+                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(firefox_path.clone()));
+                })))))
+        .child(row_desc("Temporary add-ons are removed when Firefox restarts. Permanent installation needs a Mozilla-signed XPI. Preparing also creates an unsigned XPI beside the folder."))
+        .child(row_desc("The add-on sends page URLs and product details to Kriko on this computer. Research uses the provider you configure in Kriko."));
 
     // ---- what the engine has seen ----
     let (state, label, said) = seen_line(e);
@@ -152,12 +163,6 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             ),
             DIM,
         ))
-        .child(hairline())
-        .child(eyebrow("Connection port"))
-        .child(row_desc("Choose a free local port, then use the same address in the browser extension's settings."))
-        .child(port_input)
-        .child(ghost("ext-save-port", "Save port and restart engine").on_click(save_port))
-        .child(mono(&format!("Extension address: http://127.0.0.1:{}", e.port), DIM))
         .child(
             div()
                 .flex()
@@ -171,6 +176,6 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .flex()
         .gap(px(24.0))
         .items_start()
-        .child(div().flex_1().min_w(px(0.0)).child(steps_card))
+        .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(20.0)).child(steps_card).child(firefox))
         .child(div().flex_1().min_w(px(0.0)).child(status))
 }

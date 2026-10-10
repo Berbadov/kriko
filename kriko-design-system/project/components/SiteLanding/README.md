@@ -1,0 +1,1 @@
+Presentation site, one page: top bar, sky hero with the two calls to action, the five-step run on a dark stage (the lab scene goes here live), what it writes (claim, evidence, source), screenshot slots, three rules, downloads. Screenshots and file names are placeholders. Copy follows the neutrality rule.

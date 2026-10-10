@@ -72,7 +72,7 @@ test("a fresh run does not open on the last run's final stage", () => {
   assert.match(p.statusText(), /Done/);
 
   // Pressed again, which is a fresh run.
-  p.click(".lite-cta");
+  p.click(".lite-btn-density");
   assert.equal(p.statusText(), "Starting…");
 });
 

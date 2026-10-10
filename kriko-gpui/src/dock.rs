@@ -11,7 +11,7 @@ use gpui::{
 
 use crate::app::{Field, Kriko};
 use crate::live::run::mark_for;
-use crate::marks::{mark_glyph, mark_tile, phase_beat, Phase};
+use crate::marks::{mark_glyph, mark_tile, Phase};
 use crate::screens::run::option_chip;
 use crate::screens::{empty_note, mono, row_desc};
 use crate::theme::*;
@@ -112,12 +112,22 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
         requests.push(block);
     }
 
-    // ---- the lanes: who is working, on what, how far ----
+    // ---- the lanes: who is working, on what ----
     let mut lanes: Vec<Div> = Vec::new();
     for (i, job) in app.live.run.running().enumerate() {
         let phase = job.lane_phase();
         let agent = mark_for(&job.harness);
         let status = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
+        let stop: gpui::AnyElement = if job.state == "cancelling" {
+            row_desc("Stopping…").into_any_element()
+        } else {
+            let id = job.id.clone();
+            let cancel = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.stop_job(id.clone(), cx);
+                cx.notify();
+            });
+            key(("dock-lane-stop", i), "Stop").on_click(cancel).into_any_element()
+        };
         lanes.push(
             div()
                 .py(px(10.0))
@@ -147,6 +157,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                         .gap(px(8.0))
                                         .child(
                                             div()
+                                                .flex_1()
                                                 .min_w(px(0.0))
                                                 .truncate()
                                                 .font_family(SANS)
@@ -155,19 +166,65 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                                 .text_color(rgb(INK))
                                                 .child(app.live.run.task(job)),
                                         )
-                                        .child(phase_beat(
-                                            &format!("dock-lane-beat-{i}"),
-                                            phase,
-                                            motion,
-                                        )),
+                                        .child(
+                                            div()
+                                                .flex_none()
+                                                .font_family(MONO)
+                                                .text_size(px(10.0))
+                                                .text_color(rgb(if phase == Phase::Waiting { ICE } else { MUTED }))
+                                                .child(phase.label().to_uppercase()),
+                                        )
+                                        .child(stop),
                                 )
                                 .child(div().truncate().child(mono(&status, MUTED))),
                         ),
                 )
-                // The phase lights above are the lane's single activity
-                // signal. Progress stays readable without a second blink.
-                .child(meter(job.progress * 100.0, 12)),
         );
+    }
+
+    // ---- the optional full logs drawer ----
+    let toggle_logs = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.dock_logs_open = !this.dock_logs_open;
+        cx.notify();
+    });
+    let mut logs = div()
+        .id("dock-agent-logs-scroll")
+        .max_h(px(220.0))
+        .overflow_y_scroll()
+        .flex()
+        .flex_col()
+        .gap(px(10.0))
+        .p(px(10.0))
+        .rounded(px(8.0))
+        .bg(rgba(GLASS_1));
+    let mut has_logs = false;
+    for job in app.live.run.running() {
+        has_logs = true;
+        let recent: Vec<String> = job.log.lines().rev().take(60).collect::<Vec<_>>().into_iter()
+            .rev().map(str::to_string).collect();
+        logs = logs.child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(4.0))
+                .child(mono(&app.live.run.task(job), ICE))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(2.0))
+                        .children(recent.into_iter().map(|line| {
+                            div()
+                                .font_family(MONO)
+                                .text_size(px(10.0))
+                                .text_color(rgb(MUTED))
+                                .child(line)
+                        })),
+                ),
+        );
+    }
+    if !has_logs {
+        logs = logs.child(row_desc("No running agent logs."));
     }
 
     // ---- the feed: the last lines of running jobs, then finished-job notices ----
@@ -217,8 +274,24 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                 cx.notify();
             });
             Some(
-                ghost("dock-reply-open", &format!("Reply to {task}"))
+                div()
+                    .id("dock-reply-open")
                     .w_full()
+                    .min_w(px(0.0))
+                    .h(px(44.0))
+                    .px(px(12.0))
+                    .flex()
+                    .items_center()
+                    .rounded(px(12.0))
+                    .font_family(MONO)
+                    .text_color(rgb(INK_2))
+                    .text_size(px(12.0))
+                    .cursor_pointer()
+                    .bg(rgba(GLASS_1))
+                    .border_1()
+                    .border_color(rgba(BORDER_CONTROL))
+                    .hover(|s| s.bg(rgba(GLASS_2)))
+                    .child(div().flex_1().min_w(px(0.0)).truncate().child(format!("Reply to {task}")))
                     .on_click(open)
                     .into_any_element(),
             )
@@ -263,7 +336,14 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                 .on_click(collapse),
                         ),
                 )
-                .child(div().flex().gap(px(8.0)).child(reply))
+                .child(
+                    div()
+                        .flex()
+                        .w_full()
+                        .min_w(px(0.0))
+                        .gap(px(8.0))
+                        .child(reply.flex_1().min_w(px(0.0))),
+                )
                 .child(
                     div()
                         .flex()
@@ -291,11 +371,14 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
         }
     };
 
-    // The dock: a pinned head, a scrolling middle, a pinned reply drawer.
-    // The head never scrolls away and the drawer is always in reach; only
-    // the requests, lanes and feed move.
+    // The dock: a pinned head, a scrolling middle and pinned reply controls.
     let nothing_running = lanes.is_empty();
     let loaded = app.live.run.jobs_loaded;
+    let log_button = key(
+        "dock-logs-toggle",
+        if app.dock_logs_open { "Hide logs" } else { "Logs" },
+    )
+    .on_click(toggle_logs);
     div()
         .id("dock-scroll")
         .w(px(300.0))
@@ -360,7 +443,15 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .flex_col()
                         .flex_none()
                         .gap(px(0.0))
-                        .child(eyebrow("Working now"))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .mb(px(4.0))
+                                .child(eyebrow(&format!("Working now ({})", lanes.len())))
+                                .child(log_button),
+                        )
                         .when(nothing_running, |d| {
                             d.child(div().mt(px(8.0)).child(empty_note(if loaded {
                                 "No agent is working."
@@ -368,7 +459,8 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                 "Waiting for the engine."
                             })))
                         })
-                        .children(lanes),
+                        .children(lanes)
+                        .when(app.dock_logs_open, |d| d.child(logs)),
                 )
                 .child(
                     div()

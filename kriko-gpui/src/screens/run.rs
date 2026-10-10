@@ -12,7 +12,6 @@ use gpui::{
 };
 
 use crate::app::{Field, Kriko};
-use crate::api::{self, Value};
 use crate::live::run::{ago, mark_for, Job, Stage};
 use crate::marks::{mark_tile, phase_beat};
 use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
@@ -56,19 +55,20 @@ pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
     let mut page = div().flex().flex_col().gap(px(24.0));
+    page = page.child(quicklook_card(app, window, cx));
 
     let job = app.live.run.current().cloned();
     match (&job, app.live.run.jobs_loaded) {
+        (Some(job), _) if job.kind == "quick_look" => {
+            page = page.child(quicklook_result_card(job, app, window, cx));
+        }
         (Some(job), _) => {
             page = page.child(subject_card(app, job, motion, cx));
-            if let Some(evidence) = local_quick_look_card(job) {
-                page = page.child(evidence);
-            }
-            if let Some(answer) = answer_card(job) {
-                page = page.child(answer);
-            }
             if job.attention.is_some() {
                 page = page.child(questions_card(app, job, cx));
+            }
+            if job.done {
+                page = page.child(answer_card(job));
             }
         }
         (None, loaded) => {
@@ -79,7 +79,7 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
                     .gap(px(12.0))
                     .child(eyebrow("Run"))
                     .child(empty_note(if loaded {
-                        "No check has run yet. Start one below."
+                        "No recent check. Start a Quick Look above, or a catalog check below."
                     } else {
                         "Waiting for the engine to answer."
                     })),
@@ -89,99 +89,233 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
     page = page.child(start_card(app, window, cx));
     if let Some(job) = &job {
         page = page.child(lane_card(app, job, motion));
-        page = page.child(feed_card(app, job, motion, cx));
+        page = page.child(log_card(app, job, motion, cx));
     }
     page
 }
 
-/// A finished agent run must show its answer, even when the engine returned
-/// no answer text. The job feed is a record of work, not the answer itself.
-fn answer_card(job: &Job) -> Option<Div> {
-    if job.state != "succeeded"
-        || !matches!(job.kind.as_str(), "research" | "agenda_run" | "compare_ask")
-    {
-        return None;
-    }
-    let answer = job.answer.trim();
-    let reason = job.no_answer_why.trim();
-    let mut result = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Agent answer"));
-    if answer.is_empty() {
-        result = result.child(row_title("The agent returned no answer"));
-        result = result.child(row_desc(if reason.is_empty() {
-            "The run finished without answer text. Check its log and stored findings below."
-        } else {
-            reason
-        }));
+/// The desktop's primary action: a sourced product brief, always on the
+/// configured local model. The model setup remains available from this page
+/// when the local plane is not ready.
+fn quicklook_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let plane = app.live.local.plane.as_ref();
+    let ready = plane.is_some_and(|p| p.ready);
+    let busy = app.live.run.quicklook_starting;
+    let model = plane.map(|p| p.model.as_str()).filter(|m| !m.is_empty()).unwrap_or("no model selected");
+    let field = app.input_field(
+        Field::QuickLookProduct,
+        "quicklook-product",
+        "Product, model, or exact variant…",
+        Some("search"),
+        window,
+        cx,
+    );
+    let start = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.start_quick_look(cx);
+        cx.notify();
+    });
+    let local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.tab = crate::app::Tab::Local;
+        this.on_open_tab(cx);
+        cx.notify();
+    });
+    let local_description = if ready {
+        format!("{} · model inference stays on this device. Web searches use the configured search service.", model)
     } else {
-        result = result.child(row_desc(answer));
-    }
-    Some(result)
+        "Set up a local runtime and download a model to run Quick Looks with on-device inference.".to_string()
+    };
+    card()
+        .flex()
+        .flex_col()
+        .gap(px(12.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(10.0))
+                .child(eyebrow("Quick Look · local model"))
+                .child(div().flex_1())
+                .child(tag("quicklook-local", if ready { TagState::Live } else { TagState::Queue }, if ready { "On this device" } else { "Model setup needed" }, !app.reduce_motion)),
+        )
+        .child(row_desc(&local_description))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(field)
+                .when(ready, |d| d.child(key("quicklook-start", if busy { "Starting" } else { "Quick Look" }).on_click(start)))
+                .when(!ready, |d| d.child(plate_s("quicklook-setup", "Set up local model").on_click(local))),
+        )
+        .when(busy, |d| d.child(row_desc("Starting a local research job…")))
+        .when(app.live.run.quicklook_note.is_some(), |d| {
+            d.child(row_desc(app.live.run.quicklook_note.as_deref().unwrap_or_default()))
+        })
 }
 
-/// The quick look's saved result, separate from its narrated job log. The
-/// cited pages are the ones behind the returned cards; the log lists the
-/// larger set of pages that the local agent considered.
-fn local_quick_look_card(job: &Job) -> Option<Div> {
-    if job.kind != "quick_look" || (job.backend != "local" && job.harness != "local")
-        || !job.done || job.result.is_null() {
-        return None;
+fn quicklook_result_card(job: &Job, app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let state = if job.done {
+        if job.failed() { "Quick Look failed" } else { "Quick Look complete" }
+    } else if job.state == "queued" {
+        "Quick Look queued"
+    } else {
+        "Quick Look in progress"
+    };
+    let model = if job.model.is_empty() {
+        app.live.local.plane.as_ref().map(|p| p.model.as_str()).unwrap_or("local model")
+    } else {
+        job.model.as_str()
+    };
+    let plane_label = if job.backend == "local" {
+        "On this device"
+    } else if job.backend == "harness" {
+        "Coding agent"
+    } else {
+        "Configured provider"
+    };
+    let mut card = card()
+        .flex()
+        .flex_col()
+        .gap(px(10.0))
+        .child(eyebrow(state))
+        .child(row_title(&job.product))
+        .child(mono(&format!("{plane_label} · {model} · {}", job.duration_word()), DIM));
+    if !job.answer.is_empty() {
+        card = card.child(row_desc(&job.answer));
     }
-    let result = &job.result;
-    let model = api::s(result, "model");
-    let tokens = api::n(result, "tokens_used")
-        .map(|n| format!("{} tokens", n as u64))
-        .unwrap_or_else(|| "Token use not reported by this model server".into());
-    let risks = api::arr(result, "risks");
-    let dropped = api::n(result, "dropped").unwrap_or(0.0) as usize;
-    let mut urls = Vec::<String>::new();
-    for risk in risks {
-        for source in api::arr(risk, "sources") {
-            let url = api::s(source, "url");
-            if !url.is_empty() && !urls.contains(&url) {
-                urls.push(url);
+    if !job.quick_assumed.is_empty() {
+        card = card.child(row_desc(&format!("Variant assumption: {}", job.quick_assumed)));
+    }
+    if !job.done {
+        return card.child(meter_live("quicklook-progress", job.progress * 100.0, 28, true, true));
+    }
+    if !job.quick_risks.is_empty() {
+        card = card.child(eyebrow("Documented risks"));
+        for (i, risk) in job.quick_risks.iter().enumerate() {
+            let mut detail = div()
+                .flex()
+                .flex_col()
+                .gap(px(6.0))
+                .p(px(12.0))
+                .rounded(px(10.0))
+                .bg(rgba(GLASS_1))
+                .border_1()
+                .border_color(rgba(HAIRLINE))
+                .child(
+                    div()
+                        .flex()
+                        .items_start()
+                        .justify_between()
+                        .gap(px(8.0))
+                        .child(row_title(&risk.title))
+                        .child(tag(format!("quick-risk-{i}"), if risk.severity == "high" { TagState::Need } else { TagState::Queue }, &risk.severity, false)),
+                )
+                .child(row_desc(&risk.why));
+            if !risk.check.is_empty() {
+                detail = detail.child(mono(&format!("Check: {}", risk.check), MUTED));
+            }
+            if !risk.quote.is_empty() {
+                detail = detail.child(row_desc(&format!("“{}”", risk.quote)));
+            }
+            if !risk.domain.is_empty() || !risk.url.is_empty() {
+                let url = risk.url.clone();
+                let open = cx.listener(move |_, _: &gpui::ClickEvent, _w, cx| cx.open_url(&url));
+                detail = detail.child(
+                    div()
+                        .id(("quick-risk-source", i))
+                        .cursor_pointer()
+                        .hover(|s| s.opacity(0.8))
+                        .on_click(open)
+                        .child(mono(if risk.domain.is_empty() { &risk.url } else { &risk.domain }, ICE)),
+                );
+            }
+            card = card.child(detail);
+        }
+    }
+    if !job.quick_specs.is_empty() {
+        card = card.child(eyebrow("Specifications"));
+        for (i, spec) in job.quick_specs.iter().enumerate() {
+            let url = spec.url.clone();
+            let open = cx.listener(move |_, _: &gpui::ClickEvent, _w, cx| cx.open_url(&url));
+            card = card.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(12.0))
+                    .child(div().flex_1().min_w(px(0.0)).child(row_title(&spec.name)))
+                    .child(mono(&spec.value, INK_2))
+                    .child(
+                        div()
+                            .id(("quick-spec-source", i))
+                            .cursor_pointer()
+                            .hover(|s| s.opacity(0.8))
+                            .on_click(open)
+                            .child(mono(if spec.domain.is_empty() { &spec.url } else { &spec.domain }, ICE)),
+                    ),
+            );
+        }
+    }
+    if job.quick_risks.is_empty() && job.quick_specs.is_empty() {
+        card = card.child(empty_note(if job.failed() {
+            if job.no_answer_why.is_empty() { "The local model could not finish this check." } else { &job.no_answer_why }
+        } else if job.no_answer_why.is_empty() {
+            "No sourced risks or specifications were found in the pages read."
+        } else {
+            &job.no_answer_why
+        }));
+    }
+    if job.done && !job.failed() {
+        let asks = if app.live.run.quick_asks_for.as_deref() == Some(job.id.as_str()) {
+            app.live.run.quick_asks.clone()
+        } else {
+            Vec::new()
+        };
+        let mut followups = crate::theme::card().flex().flex_col().gap(px(10.0)).child(eyebrow("Ask about this Quick Look"));
+        followups = followups.child(row_desc("Answers use this check's findings and the same model plane; they do not start another web search."));
+        for (i, ask) in asks.iter().enumerate() {
+            followups = followups.child(
+                well()
+                    .p(px(12.0))
+                    .flex()
+                    .flex_col()
+                    .gap(px(6.0))
+                    .child(row_title(&ask.question))
+                    .child(if ask.done {
+                        row_desc(if ask.answer.is_empty() { "The model returned no answer." } else { &ask.answer })
+                    } else {
+                        mono(&format!("{}…", if ask.state.is_empty() { "Thinking" } else { &ask.state }), MUTED)
+                    }),
+            );
+            if i + 1 < asks.len() {
+                followups = followups.child(hairline());
             }
         }
-    }
-    for spec in api::arr(result, "specs") {
-        let url = api::s(spec, "url");
-        if !url.is_empty() && !urls.contains(&url) {
-            urls.push(url);
+        let field = app.input_field(
+            Field::QuickLookQuestion,
+            "quicklook-followup-question",
+            "Ask about a risk, source, or specification…",
+            Some("search"),
+            window,
+            cx,
+        );
+        let ask = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+            this.start_quick_ask(cx);
+            cx.notify();
+        });
+        followups = followups.child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(field)
+                .child(key("quicklook-ask", if app.live.run.quick_asking { "Asking" } else { "Ask" }).on_click(ask)),
+        );
+        if let Some(note) = &app.live.run.quick_ask_note {
+            followups = followups.child(row_desc(note));
         }
+        card = card.child(followups);
     }
-    let mut card = card().flex().flex_col().gap(px(10.0))
-        .child(eyebrow("Local quick look · evidence"))
-        .child(row_desc(&format!("{} · {tokens} · {} sourced risks kept · {dropped} unsourced dropped",
-            if model.is_empty() { "Model not reported" } else { &model }, risks.len())));
-    let verification = result.get("verification").unwrap_or(&Value::Null);
-    if verification.is_object() {
-        let error = api::s(verification, "error");
-        let unsupported = api::arr(verification, "unsupported");
-        card = if !error.is_empty() {
-            card.child(mono(&format!("Self-check unavailable: {error}"), DANGER))
-        } else if unsupported.is_empty() {
-            card.child(mono("Self-check: no unsupported risks reported", MUTED))
-        } else {
-            card.child(mono(&format!("Self-check flagged {} risk(s):", unsupported.len()), DANGER))
-        };
-        for item in unsupported {
-            card = card.child(row_desc(&format!("{} — {}", api::s(item, "title"), api::s(item, "reason"))));
-        }
-        let note = api::s(verification, "note");
-        if !note.is_empty() {
-            card = card.child(row_desc(&note));
-        }
-    } else {
-        card = card.child(mono("Self-check verdict not recorded for this run", DIM));
-    }
-    if urls.is_empty() {
-        card = card.child(mono("No cited page in the saved answer", DIM));
-    } else {
-        card = card.child(mono(&format!("CITED PAGES · {}", urls.len()), DIM));
-        for url in urls {
-            card = card.child(mono(&url, MUTED));
-        }
-    }
-    Some(card)
+    card
 }
 
 fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
@@ -266,12 +400,18 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
     if !job.harness.is_empty() {
         meta.push(format!("with {}", job.harness));
     }
+    match job.backend.as_str() {
+        "api" => meta.push("api plane".into()),
+        "local" => meta.push("local plane".into()),
+        "agent" => meta.push("agent plane".into()),
+        _ => {}
+    }
     if !job.model.is_empty() {
         meta.push(format!("model {}", job.model));
     }
-    let duration = job.duration_word();
-    if !duration.is_empty() {
-        meta.push(duration);
+    let took = job.duration_word();
+    if !took.is_empty() {
+        meta.push(took);
     }
     if !job.done {
         meta.push(format!("{}%", (job.progress * 100.0).round() as i64));
@@ -293,6 +433,38 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
         .child(mono(&meta.join(" · "), DIM))
         .when(!job.message.is_empty(), |c| c.child(row_desc(&job.message)))
         .child(div().mt(px(8.0)).child(stepper))
+}
+
+/// What the agent answered, once the run is done: its reply or outcome, or
+/// an explicit no-answer with the reason, never a bare status word.
+fn answer_card(job: &Job) -> Div {
+    let mut c = card().flex().flex_col().gap(px(8.0)).child(eyebrow("The answer"));
+    if job.answer.is_empty() {
+        let why = if job.no_answer_why.is_empty() {
+            job.message.clone()
+        } else {
+            job.no_answer_why.clone()
+        };
+        c = c.child(row_title("The agent returned no answer.")).when(
+            !why.is_empty(),
+            |c| c.child(row_desc(&why)),
+        );
+        return c;
+    }
+    let mut text = div()
+        .font_family(SANS)
+        .text_size(px(14.0))
+        .text_color(rgb(INK_2))
+        .max_w(px(720.0));
+    for para in job.answer.split("\n\n") {
+        text = text.child(
+            div()
+                .py(px(4.0))
+                .text_color(rgb(INK_2))
+                .child(para.trim().to_string()),
+        );
+    }
+    c.child(text)
 }
 
 /// The questions a run put to the reader, with their options; answering is
@@ -433,7 +605,20 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     .child(ghost("run-back", "Back").on_click(back)),
             );
     } else if start.searched && start.hits.is_empty() && start.note.is_empty() {
-        c = c.child(empty_note("Nothing in the installed catalogs matches that."));
+        let query = app.run_search.value.trim().to_string();
+        let quick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.quicklook_product.value = query.clone();
+            this.start_quick_look(cx);
+            cx.notify();
+        });
+        c = c.child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(10.0))
+                .child(empty_note("No catalog subject matches that name. A Quick Look can still research it with the local model."))
+                .child(plate_s("run-no-match-quicklook", "Quick Look this product").on_click(quick)),
+        );
     } else {
         for (i, hit) in start.hits.iter().enumerate() {
             let h = hit.clone();
@@ -522,45 +707,91 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         )
 }
 
-/// The engine's feed for the job, newest first.
-fn feed_card(app: &mut Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
-    let mut feed = card().flex().flex_col();
-    feed = feed.child(div().mb(px(12.0)).child(eyebrow(if job.done { "Log" } else { "Live feed" })));
-    let all = job.log_events();
-    if all.is_empty() {
-        return feed.child(empty_note(if job.done {
+/// The run's log: every line the engine narrated, newest first, with a level
+/// filter and a copy plate. Follows the live log while the run is going.
+fn log_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
+    let events = job.log_events();
+    let level = app.live.run.log_level;
+    let at = |k: &str| events.iter().filter(|e| e.kind == k).count();
+    let mut card = card().flex().flex_col().gap(px(12.0));
+
+    let words: [(&str, String); 5] = [
+        ("ALL", format!("ALL {}", events.len())),
+        ("SEARCH", format!("SEARCH {}", at("search"))),
+        ("SOURCE", format!("SOURCES {}", at("source"))),
+        ("FINDING", format!("FINDINGS {}", at("finding"))),
+        ("PROBLEM", format!("PROBLEMS {}", at("problem"))),
+    ];
+    let mut chips = div().flex().flex_wrap().items_center().gap(px(8.0));
+    for (li, (_, word)) in words.iter().enumerate() {
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.live.run.log_level = li;
+            cx.notify();
+        });
+        chips = chips.child(
+            option_chip(gpui::ElementId::named_usize("run-log-level", li), word, li == level)
+                .on_click(pick),
+        );
+    }
+
+    let copy_text = {
+        let kept: Vec<&crate::live::run::FeedLine> = match level {
+            1 => events.iter().filter(|e| e.kind == "search").collect(),
+            2 => events.iter().filter(|e| e.kind == "source").collect(),
+            3 => events.iter().filter(|e| e.kind == "finding").collect(),
+            4 => events.iter().filter(|e| e.kind == "problem").collect(),
+            _ => events.iter().collect(),
+        };
+        kept.iter().rev().map(|e| e.text.clone()).collect::<Vec<_>>().join("\n")
+    };
+    let copied = app
+        .live
+        .run
+        .log_copied_at
+        .map(|t| t.elapsed().as_secs() < 2)
+        .unwrap_or(false);
+    let copy = cx.listener(move |this, _: &gpui::ClickEvent, _, cx| {
+        this.live.run.log_copied_at = Some(std::time::Instant::now());
+        cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy_text.clone()));
+        cx.notify();
+    });
+
+    card = card.child(
+        div()
+            .flex()
+            .items_center()
+            .gap(px(12.0))
+            .child(eyebrow(if job.done { "Log" } else { "Live log" }))
+            .child(div().flex_1())
+            .child(plate_s("run-log-copy", if copied { "Copied" } else { "Copy" }).on_click(copy)),
+    );
+    if events.is_empty() {
+        return card.child(empty_note(if job.done {
             "This run left no log."
         } else {
             "Nothing yet. Lines land here as the agent reads and writes."
         }));
     }
-    let levels = ["ALL", "SEARCH", "SOURCE", "FINDING", "PROBLEM"];
-    let selected = app.live.run.log_level.min(levels.len() - 1);
-    let next_filter = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.live.run.log_level = (this.live.run.log_level + 1) % 5;
-        cx.notify();
-    });
-    let copied = all.iter().map(|line| line.text.as_str()).collect::<Vec<_>>().join("\n");
-    let copy_log = cx.listener(move |_this, _: &gpui::ClickEvent, _w, cx| {
-        cx.write_to_clipboard(gpui::ClipboardItem::new_string(copied.clone()));
-    });
-    feed = feed.child(
-        div()
-            .flex()
-            .items_center()
-            .gap(px(10.0))
-            .child(plate_s("run-log-level", &format!("LEVEL · {}", levels[selected])).on_click(next_filter))
-            .child(plate_s("run-log-copy", "Copy log").on_click(copy_log)),
-    );
-    let selected_kind = ["", "search", "source", "finding", "problem"][selected];
-    let lines: Vec<_> = all.iter().rev().filter(|line| {
-        selected_kind.is_empty() || line.kind == selected_kind
-    }).collect();
-    if lines.is_empty() {
-        return feed.child(empty_note("No log entries match this level."));
+    card = card.child(chips);
+
+    let kept: Vec<&crate::live::run::FeedLine> = match level {
+        1 => events.iter().filter(|e| e.kind == "search").collect(),
+        2 => events.iter().filter(|e| e.kind == "source").collect(),
+        3 => events.iter().filter(|e| e.kind == "finding").collect(),
+        4 => events.iter().filter(|e| e.kind == "problem").collect(),
+        _ => events.iter().collect(),
+    };
+    if kept.is_empty() {
+        return card.child(empty_note("Nothing at this level."));
     }
-    let count = lines.len();
-    for (i, line) in lines.into_iter().enumerate() {
+    let hidden = kept.len().saturating_sub(200);
+    let mut list = div().id("run-log-scroll").max_h(px(420.0)).overflow_y_scroll();
+    if hidden > 0 {
+        list = list.child(mono(&format!("{} earlier lines are folded", hidden), DIM));
+    }
+    let newest_first: Vec<&crate::live::run::FeedLine> = kept.iter().rev().take(200).copied().collect();
+    let count = newest_first.len();
+    for (i, line) in newest_first.iter().enumerate() {
         let state = if line.kind == "problem" {
             TagState::Block
         } else if i == 0 && !job.done {
@@ -573,21 +804,19 @@ fn feed_card(app: &mut Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) 
             .flex()
             .items_center()
             .gap(px(14.0))
-            .child(tag(format!("run-feed-{i}"), state, "", motion))
+            .child(tag(format!("run-log-{i}"), state, "", motion))
             .child(
                 div()
                     .flex_1()
                     .min_w(px(0.0))
-                    .font_family(SANS)
-                    .text_size(px(14.0))
+                    .font_family(MONO)
+                    .text_size(px(12.0))
                     .text_color(rgb(INK_2))
                     .child(line.text.clone()),
             );
-        // the newest line fades in as it lands; the count rides the id so
-        // each new line mounts its own fade
         let row: gpui::AnyElement = if motion && i == 0 && !job.done {
             row.with_animation(
-                gpui::ElementId::named_usize("run-feed-in", count),
+                gpui::ElementId::named_usize("run-log-in", count),
                 Animation::new(std::time::Duration::from_millis(450)).with_easing(|t| t * t),
                 |el, v| el.opacity(v),
             )
@@ -595,7 +824,7 @@ fn feed_card(app: &mut Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) 
         } else {
             row.into_any_element()
         };
-        feed = feed.child(row);
+        list = list.child(row);
     }
-    feed
+    card.child(list)
 }

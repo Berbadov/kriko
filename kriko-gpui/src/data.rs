@@ -20,7 +20,7 @@ pub const NAV: &[NavGroupDef] = &[
         label: "Check",
         items: &[
             NavDef { key: "home", label: "Home", icon: "home", count: None, badge: None },
-            NavDef { key: "run", label: "Run", icon: "run", count: None, badge: None },
+            NavDef { key: "run", label: "Quick Look", icon: "run", count: None, badge: None },
             NavDef { key: "history", label: "History", icon: "history", count: None, badge: None },
             NavDef { key: "compare", label: "Compare", icon: "compare", count: None, badge: None },
             NavDef { key: "extension", label: "Browser extension", icon: "extension", count: None, badge: None },
@@ -30,7 +30,7 @@ pub const NAV: &[NavGroupDef] = &[
         label: "Knowledge",
         items: &[
             NavDef { key: "overview", label: "Overview", icon: "overview", count: None, badge: None },
-            NavDef { key: "browse", label: "Browse", icon: "browse", count: Some("760"), badge: None },
+            NavDef { key: "browse", label: "Subjects", icon: "browse", count: Some("760"), badge: None },
         ],
     },
     NavGroupDef {
@@ -55,6 +55,8 @@ pub const NAV: &[NavGroupDef] = &[
 // ---- history: past checks ----
 
 pub const PAGE_SIZE: usize = 5;
+
+pub const BROWSE_PAGE_SIZE: usize = 8;
 
 // ---- compare ----
 
