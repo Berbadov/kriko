@@ -5,7 +5,8 @@
 
 use gpui::{
     AnimationExt, div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle, IntoElement,
-    KeyDownEvent, ParentElement, Render, Stateful, Styled, Window, WindowControlArea,
+    KeyDownEvent, ParentElement, Render, ScrollDelta, ScrollWheelEvent, Stateful, Styled, Window,
+    WindowControlArea,
 };
 
 use crate::data;
@@ -132,11 +133,12 @@ impl Tab {
         }
     }
 
+    /// A bar, not a banner: the sky stays, the page head sits in it, and the
+    /// content starts right under. Home and About keep a little more of it.
     fn hero_height(self) -> f32 {
         match self {
-            Tab::Home | Tab::About => 280.0,
-            Tab::Local => 220.0,
-            _ => 264.0,
+            Tab::Home | Tab::About => 132.0,
+            _ => 108.0,
         }
     }
 }
@@ -330,6 +332,14 @@ pub struct Kriko {
     pub bench_model_search: InputState,
     pub library_search: InputState,
     pub sidebar_collapsed: bool,
+    /// The page's scroll, eased. A wheel notch moves `scroll_target`; each
+    /// frame `scroll_shown` closes on it and is what the page is drawn at.
+    /// Both are offsets (zero at the top, negative further down).
+    pub main_scroll: gpui::ScrollHandle,
+    pub scroll_target: f32,
+    pub scroll_shown: f32,
+    pub scroll_moving: bool,
+    pub scroll_tick: std::time::Instant,
 }
 
 
@@ -378,6 +388,11 @@ impl Kriko {
             bench_model_search: InputState::new(cx),
             library_search: InputState::new(cx),
             sidebar_collapsed: false,
+            main_scroll: gpui::ScrollHandle::new(),
+            scroll_target: 0.0,
+            scroll_shown: 0.0,
+            scroll_moving: false,
+            scroll_tick: std::time::Instant::now(),
         };
         // A verification hook: KRIKO_VERIFY seeds one page's state so it can
         // be captured without driving the mouse on a busy desktop.
@@ -638,6 +653,52 @@ impl Kriko {
         crate::text_input::field(self, field, id, placeholder, icon_name, window, cx)
     }
 
+    // ---- smooth scroll ----
+
+    /// A mouse-wheel notch moves where the page is *going*, not where it is.
+    /// A touchpad already sends a smooth stream of pixels, so those pass
+    /// through to the page untouched.
+    fn wheel(&mut self, event: &ScrollWheelEvent, window: &mut Window, cx: &mut Context<Self>) {
+        if self.reduce_motion || !matches!(event.delta, ScrollDelta::Lines(_)) {
+            self.scroll_moving = false;
+            return;
+        }
+        let step = f32::from(event.delta.pixel_delta(window.line_height()).y);
+        let floor = -f32::from(self.main_scroll.max_offset().height);
+        if !self.scroll_moving {
+            self.scroll_target = self.scroll_shown;
+            self.scroll_tick = std::time::Instant::now();
+        }
+        self.scroll_target = (self.scroll_target + step).clamp(floor, 0.0);
+        self.scroll_moving = true;
+        cx.notify();
+    }
+
+    /// One frame of the ease: the page is drawn a fraction of the way to
+    /// where the wheel sent it (about 90 ms to settle), and asks for the next
+    /// frame until it arrives. Idle, it just follows wherever the page is.
+    fn step_scroll(&mut self, window: &mut Window) {
+        if !self.scroll_moving {
+            let at = f32::from(self.main_scroll.offset().y);
+            self.scroll_shown = at;
+            self.scroll_target = at;
+            return;
+        }
+        let now = std::time::Instant::now();
+        let dt = now.duration_since(self.scroll_tick).as_secs_f32().min(0.05);
+        self.scroll_tick = now;
+        let floor = -f32::from(self.main_scroll.max_offset().height);
+        self.scroll_target = self.scroll_target.clamp(floor, 0.0);
+        self.scroll_shown += (self.scroll_target - self.scroll_shown) * (1.0 - (-dt / 0.09).exp());
+        if (self.scroll_target - self.scroll_shown).abs() < 0.4 {
+            self.scroll_shown = self.scroll_target;
+            self.scroll_moving = false;
+        } else {
+            window.request_animation_frame();
+        }
+        self.main_scroll.set_offset(gpui::point(px(0.0), px(self.scroll_shown)));
+    }
+
     // ---- sidebar ----
 
     fn sidebar(&self, cx: &mut Context<Self>) -> Div {
@@ -684,8 +745,11 @@ impl Kriko {
             .flex()
             .flex_col()
             .when(!self.sidebar_collapsed, |d| d.child(brand_block("kriko-wordmark-white.svg", "local product knowledge")))
-            .child(div().p(px(8.0)).flex().justify_center().child(ghost("sidebar-minimise", if self.sidebar_collapsed { ">" } else { "Minimise sidebar" }).when(self.sidebar_collapsed, |d| d.w(px(52.0)).px(px(0.0)))
-                .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
+            // An icon, not a labelled key: the panel icon says "this side
+            // panel", and it sits in the same well as the window controls.
+            .child(div().px(px(12.0)).py(px(8.0)).flex().when(self.sidebar_collapsed, |d| d.justify_center())
+                .child(titlebar_button("sidebar-minimise", "sidebar", false)
+                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
             .child(nav)
     }
 }
@@ -872,6 +936,7 @@ impl Render for Kriko {
             return self.boot_screen(maximized, cx).into_any_element();
         }
         let tab = self.tab;
+        self.step_scroll(window);
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
         let sidebar = self.sidebar(cx);
@@ -936,6 +1001,8 @@ impl Render for Kriko {
                             .flex_col()
                             .overflow_y_scroll()
                             .overflow_x_hidden()
+                            .track_scroll(&self.main_scroll)
+                            .on_scroll_wheel(cx.listener(Self::wheel))
                             // flex_none keeps the hero and the content
                             // at their natural heights, so the column
                             // overflows and scrolls instead of every
