@@ -177,6 +177,14 @@ if [ "$only" = all ] || [ "$only" = gpui ]; then
         echo "no cargo on this machine — skipping. pytest's test_the_shell_is_valid_rust.py still reads the shell's sources above; a real compile needs a Rust toolchain (rustup.rs) or the Windows host that builds the installer."
     else
         export PATH="$(dirname "$CARGO"):$PATH"
+        # Reuse the shipping cache on hosts with little disk space. Both
+        # profiles still compile and run the same checks and tests.
+        cargo_profile_args=()
+        case "${KRIKO_GATE_CARGO_PROFILE:-dev}" in
+            dev) ;;
+            release) cargo_profile_args=(--release) ;;
+            *) echo "KRIKO_GATE_CARGO_PROFILE must be dev or release" >&2; exit 2 ;;
+        esac
 
         # Offline on purpose: a gate that fetches is a gate that fails for the
         # network. A cold registry cache is a skip with its remedy, never a
@@ -198,13 +206,13 @@ if [ "$only" = all ] || [ "$only" = gpui ]; then
 
         step "cargo check (kriko-gpui)"
         result=0
-        _gpui_cargo "the cargo check" check || result=$?
+        _gpui_cargo "the cargo check" check "${cargo_profile_args[@]}" || result=$?
         [ "$result" = 1 ] && exit 1
 
         if [ "$result" = 0 ]; then
             step "cargo test (kriko-gpui)"
             result=0
-            _gpui_cargo "the cargo tests" test || result=$?
+            _gpui_cargo "the cargo tests" test "${cargo_profile_args[@]}" || result=$?
             [ "$result" = 1 ] && exit 1
         fi
     fi
