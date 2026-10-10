@@ -73,6 +73,7 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
     """
     source = extension.source_dir()
     target = _target(request)
+    firefox_target = extension.target_for(request.app.state.settings.store_path, "firefox")
     staged = (target / "manifest.json").is_file()
     sightings = state.extension_sightings(conn)
     ages = [age for row in sightings if (age := _age(row["last_at"])) is not None]
@@ -92,6 +93,13 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
             for row in sightings
         ],
         "path": str(target),
+        "firefox": {
+            "path": str(firefox_target),
+            "manifest_path": str(firefox_target / "manifest.json"),
+            "package_path": str(firefox_target.with_suffix(".xpi")),
+            "staged": (firefox_target / "manifest.json").is_file(),
+            "signed": False,
+        },
         # The extension cannot be told a port, so it hardcodes this one. If
         # something else on the machine holds it the extension will install
         # perfectly and reach nothing, which looks identical to a bad install
@@ -127,7 +135,8 @@ def status(request: Request, conn=Depends(get_app_state)) -> dict:
             _running_version(sightings),
             extension.version(source) if source else "",
             loaded_digest=_loaded_digest(request, sightings),
-            carried_digest=extension.content_digest(source) if source else "",
+            carried_digest=extension.content_digest(source, "firefox" if sightings and
+                sightings[0]["origin"].startswith("moz-extension://") else "chromium") if source else "",
         ),
     }
 
@@ -520,6 +529,31 @@ def stage(request: Request) -> dict:
         "content_digest": extension.content_digest(target),
         "files": extension.content_files(target),
     }
+
+
+@router.post("/firefox/stage")
+def stage_firefox(request: Request) -> dict:
+    source = extension.source_dir()
+    if source is None:
+        raise HTTPException(status_code=501, detail="This build does not carry the extension.")
+    target = extension.target_for(request.app.state.settings.store_path, "firefox")
+    try:
+        extension.stage(source, target, "firefox")
+        output = extension.package(target, target.with_suffix(".xpi"))
+    except (OSError, ValueError) as cause:
+        raise HTTPException(status_code=500, detail=f"Could not prepare the Firefox add-on: {cause}")
+    request.app.state.firefox_staged_digest = extension.content_digest(target)
+    return {"path": str(target), "version": extension.version(target), "package_path": str(output),
+            "signed": False, "note": "Ready for Load Temporary Add-on in Firefox. A permanent install needs Mozilla signing."}
+
+
+@router.post("/firefox/reveal")
+def reveal_firefox(request: Request) -> dict:
+    target = extension.target_for(request.app.state.settings.store_path, "firefox")
+    manifest = target / "manifest.json"
+    if not manifest.is_file():
+        raise HTTPException(status_code=409, detail="Prepare the Firefox add-on first.")
+    return {"path": str(manifest), "error": extension.reveal(manifest)}
 
 
 @router.post("/reveal")

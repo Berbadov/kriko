@@ -179,3 +179,32 @@ def test_a_single_plain_word_names_nothing(client):
 def test_a_page_that_names_no_product_keeps_the_old_answer(client):
     body = _analyze(client, fields={})
     assert body["reason"] == "no_adapter"
+
+
+def test_a_filter_with_a_vehicle_in_its_title_does_not_show_vehicle_faults(client):
+    body = _analyze(client, product_name="Bosch filter set for Acme Roadster 2.0",
+                    fields={"ld:@type": "product", "ld:brand": "Bosch",
+                            "ld:manufacturer": "Bosch", "ld:pattern": "Filter set"})
+    assert body["reason"] == "unknown_product"
+    assert not body.get("claims")
+    assert body["product"]["name"] == "Bosch filter set for Acme Roadster 2.0"
+
+
+@pytest.mark.parametrize("name,fields", [
+    ("Acme Roadster replacement filter", {"ld:brand": "Bosch"}),
+    ("Makita battery for Makita DHP484Z", {"ld:brand": "Makita"}),
+    ("Battery for Makita DHP484Z", {}),
+    ("Makita DHP484Z battery", {"ld:isAccessoryOrSparePartFor": "Makita DHP484Z"}),
+    ("Acme Roadster filter", {"ld:isConsumableFor": "Acme Roadster"}),
+])
+def test_host_names_cannot_be_used_as_the_sold_product(client, name, fields):
+    body = _analyze(client, product_name=name, fields={"ld:@type": "product", **fields})
+    assert body["reason"] == "unknown_product"
+    assert not body.get("claims")
+
+
+def test_the_brand_before_a_model_code_is_still_a_product_name(client):
+    body = _analyze(client, product_name="Makita DHP484Z 18V drill",
+                    fields={"ld:@type": "product", "ld:brand": "Makita"})
+    assert body["read_by"] == "name"
+    assert body["claims"][0]["title"] == "Chuck loosens under hammer"

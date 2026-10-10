@@ -30,7 +30,8 @@ def model_name(model: str = "") -> str:
     return model or _env("LLM_MODEL", DEFAULT_MODEL)
 
 
-def completer(api_key: str = "", base_url: str = "", model: str = ""):
+def completer(api_key: str = "", base_url: str = "", model: str = "",
+              max_tokens: int | None = None):
     """`complete(prompt) -> the model's reply as a string`.
 
     An empty string on any failure, because `extract` already treats a reply it
@@ -59,6 +60,7 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
                 # a creative one: the quote must come back byte-identical or
                 # the grounding check refuses the finding.
                 "temperature": 0.0,
+                **({"max_tokens": max_tokens} if max_tokens is not None else {}),
             },
             {"authorization": f"Bearer {key}"},
         )
@@ -66,6 +68,11 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
         # cost tokens, and a total that only counts the usable answers would
         # make a run of unparseable replies look free.
         usage = body.get("usage")
+        if not isinstance(usage, dict) or not (
+                isinstance(usage.get("total_tokens"), int) and not isinstance(usage.get("total_tokens"), bool)
+                or all(isinstance(usage.get(k), int) and not isinstance(usage.get(k), bool)
+                       for k in ("prompt_tokens", "completion_tokens"))):
+            complete.usage_complete = False
         if isinstance(usage, dict):
             # Both halves, not just the total. They were there all along —
             # `prompt_tokens` and `completion_tokens` are in every
@@ -87,6 +94,7 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
         choices = body.get("choices")
         if not isinstance(choices, list) or not choices:
             return ""
+        complete.last_finish_reason = str(choices[0].get("finish_reason") or "") if isinstance(choices[0], dict) else ""
         message = choices[0].get("message") if isinstance(choices[0], dict) else None
         content = (message or {}).get("content") if isinstance(message, dict) else ""
         return _unfence(str(content or ""))
@@ -94,6 +102,8 @@ def completer(api_key: str = "", base_url: str = "", model: str = ""):
     #: None, not 0 — see the docstring. Set after the definition because the
     #: closure increments it by name.
     complete.tokens_used = None
+    complete.usage_complete = True
+    complete.last_finish_reason = ""
     #: The two halves, kept apart so a cost can be computed from them at all.
     complete.tokens_in = None
     complete.tokens_out = None

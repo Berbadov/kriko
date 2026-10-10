@@ -9,7 +9,8 @@ def test_the_set_loads_and_names_itself():
     for case in found:
         assert case["product"]
         assert case["queries"], f"{case['id']} names no queries"
-        assert case["must_find"], f"{case['id']} has no ground truth"
+        assert case["must_find"] or case.get("expect_abstention"), (
+            f"{case['id']} has no positive or abstention ground truth")
         assert case["kind"] == "fixed"
 
 

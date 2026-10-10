@@ -268,7 +268,7 @@ def test_an_effort_a_cli_cannot_take_is_refused_not_dropped():
     silently got the default has been billed for a choice they did not make,
     and the run looks identical from every screen."""
     one = _one("mistral-vibe")
-    assert harness_mod.efforts_for(one) == []
+    assert harness_mod.efforts_for(one) == ["high"]
     with pytest.raises(harness_mod.NoHarness):
         harness_mod.command_for(one, effort="low")
 
