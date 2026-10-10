@@ -454,7 +454,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                     .id("agent-check-log-scroll").overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                     .max_h(px(220.0))
                     .p(px(12.0))
-                    .font_family(MONO)
+                    .font_family(CODE)
                     .text_size(px(12.0))
                     .text_color(rgb(INK_2))
                     .child(v.log.clone()),

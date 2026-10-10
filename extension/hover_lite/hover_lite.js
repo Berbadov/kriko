@@ -890,7 +890,7 @@
   function renderResearch() {
     const slot = bodyEl?.querySelector(".lite-research-slot");
     if (!slot) return;
-    if (!state.researchOpen) { slot.innerHTML = ""; slot._researchMarkup = null; return; }
+    if (!state.researchOpen) { slot.innerHTML = ""; slot._researchMarkup = null; slot._shown = false; return; }
     const busy = Boolean(state.researching);
     const target = state.researchTarget;
     const draft = state.researchJob?.kind === "pack_author";
@@ -902,11 +902,16 @@
     const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
     const markup = `
       <section class="lite-research">
-        <strong>Research this product</strong>
-        ${target ? `<p>${escapeHtml(target.label || target.subject_id)}</p>` : `
-          <label>Product name<input class="lite-research-name" maxlength="350" ${busy ? "disabled" : ""} /></label>
-          <label>Context<textarea class="lite-research-context" maxlength="140" ${busy ? "disabled" : ""}></textarea></label>`}
-        <p class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</p>
+        <div class="lite-research-head">
+          <strong>Research this product</strong>
+          <span class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</span>
+        </div>
+        ${target ? `<p class="lite-research-target">${escapeHtml(target.label || target.subject_id)}</p>` : `
+          <input class="lite-research-name" maxlength="350" placeholder="Product name" aria-label="Product name" ${busy ? "disabled" : ""} />
+          <div class="lite-fold"><div class="lite-fold-in">
+            <textarea class="lite-research-context" maxlength="140" placeholder="Context, if it helps" aria-label="Context" ${busy ? "disabled" : ""}></textarea>
+          </div></div>
+          <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
         ${state.researchSavedAt ? `<p class="lite-saved-result">Saved result · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
@@ -935,11 +940,13 @@
             ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
           </fieldset>`).join("")}
         </div>` : ""}
-        ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
-        ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Refresh Quick Look" : "Research this product"}</button>` : ""}
-        ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
-        ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
-        ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
+        <div class="lite-research-actions">
+          ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Refresh Quick Look" : "Research this product"}</button>` : ""}
+          ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
+          ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
+          ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
+          ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
+        </div>
         <div class="lite-task-log-slot"></div>
       </section>`;
     // Progress-only polls should update the sentence, never re-create the
@@ -962,6 +969,24 @@
     }
     slot._researchMarkup = signature;
     slot.innerHTML = markup;
+    // The card drops in once, when it is opened, and not again each time a
+    // poll rebuilds it. Context stays folded until it is asked for (or has
+    // words in it already); the fold eases open rather than snapping.
+    const card = slot.querySelector(".lite-research");
+    if (!slot._shown) { slot._shown = true; card.dataset.enter = "1"; }
+    const fold = slot.querySelector(".lite-fold");
+    const foldToggle = slot.querySelector(".lite-context-toggle");
+    if (fold && foldToggle) {
+      const setFold = (open, focus) => {
+        state.researchContextOpen = open;
+        fold.dataset.open = open ? "1" : "0";
+        foldToggle.setAttribute("aria-expanded", String(open));
+        foldToggle.textContent = open ? "Hide context" : "Add context";
+        if (open && focus) setTimeout(() => fold.querySelector("textarea")?.focus({ preventScroll: true }), 120);
+      };
+      setFold(Boolean(state.researchContext) || Boolean(state.researchContextOpen), false);
+      foldToggle.addEventListener("click", () => setFold(fold.dataset.open !== "1", true));
+    }
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
@@ -1086,11 +1111,20 @@
     const view = state.taskLogs.get(job.job_id);
     if (slot.dataset.jobId !== job.job_id) {
       slot.dataset.jobId = job.job_id;
-      slot.innerHTML = `<details class="lite-task-log"><summary>Task logs</summary>
-        <p class="lite-task-log-meta"></p><div class="lite-task-log-controls">
-          <select aria-label="Log filter"><option value="">All</option><option value="search">Search</option>
-            <option value="read">Sources</option><option value="fail">Problems</option></select>
-          <button type="button">Copy log</button></div><pre class="lite-task-log-text"></pre></details>`;
+      // A bar that says how the run is (a light, a state, how long), opening
+      // onto who ran it, what it said, and the log itself.
+      slot.innerHTML = `<details class="lite-task-log">
+        <summary><span class="lite-tl-led" aria-hidden="true"></span><span class="lite-tl-title">Task log</span>
+          <span class="lite-tl-state"></span><span class="lite-tl-chev" aria-hidden="true"></span></summary>
+        <div class="lite-tl-body">
+          <p class="lite-tl-meta lite-task-log-meta"></p>
+          <p class="lite-tl-msg"></p>
+          <div class="lite-task-log-controls">
+            <select aria-label="Log filter"><option value="">All lines</option><option value="search">Search</option>
+              <option value="read">Sources</option><option value="fail">Problems</option></select>
+            <button type="button">Copy log</button></div>
+          <pre class="lite-task-log-text"></pre>
+        </div></details>`;
       const details = slot.querySelector("details");
       details.open = view.open;
       details.addEventListener("toggle", () => { view.open = details.open; });
@@ -1105,12 +1139,25 @@
     const agent = job.result?.agent;
     const started = Date.parse(job.created_at || "");
     const end = Date.parse(job.finished_at || "") || Date.now();
-    slot.querySelector(".lite-task-log-meta").textContent = [
+    const meta = slot.querySelector(".lite-task-log-meta");
+    meta.replaceChildren(...[
       agent?.label || job.result?.harness || job.params?.harness || job.params?.backend || "Agent",
       agent?.model || job.result?.model || job.params?.model || "Model not reported",
-      job.kind || "Task", job.state || "queued", job.message,
+      job.kind || "Task",
+    ].map((text) => {
+      const chip = document.createElement("span");
+      chip.className = "lite-tl-chip";
+      chip.textContent = text;
+      return chip;
+    }));
+    slot.querySelector(".lite-tl-state").textContent = [
+      job.state || "queued",
       Number.isFinite(started) ? `${Math.max(0, Math.round((end - started) / 1000))} s` : "",
     ].filter(Boolean).join(" · ");
+    const message = slot.querySelector(".lite-tl-msg");
+    message.textContent = job.message || "";
+    message.title = job.message || "";
+    slot.querySelector("details").dataset.state = job.state || "queued";
     slot.querySelector("details").dataset.active = String(!job.done && job.state === "running");
     const log = String(job.log || "").split("\n").filter(line => !view.filter || line.toLowerCase().includes(view.filter)).join("\n");
     const body = slot.querySelector("pre");
