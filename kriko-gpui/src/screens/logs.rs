@@ -64,6 +64,6 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
     let mut body = div().id(gpui::ElementId::named_usize(format!("log-scroll-{id}"), 0)).track_scroll(&scroll).overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
         .h(px(280.0)).flex_none().min_h(px(40.0)).p(px(12.0)).bg(rgb(WELL)).flex().flex_col().gap(px(5.0));
     if lines.is_empty() { body = body.child(empty_note(if job.done { "No log entries for this filter." } else { "Waiting for log entries." })); }
-    for line in lines { body = body.child(mono(&line.text, INK_2).flex_none()); }
+    for line in lines { body = body.child(mono(&line.text, INK_2).font_family(CODE).flex_none()); }
     result.child(reveal(div().flex().flex_col().gap(px(10.0)).child(controls).child(body), format!("log-disclosure-{id}"), open, 350.0, !app.reduce_motion))
 }

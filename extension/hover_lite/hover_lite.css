@@ -69,7 +69,11 @@
    * before, for the moment before a face has loaded. */
   --font-display: 'Kriko Display', 'Arial Narrow', system-ui, sans-serif;
   --font-body: 'Kriko Sans', system-ui, 'Segoe UI', sans-serif;
-  --font-mono: 'Kriko Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Labels and figures wear the body face; only text that is code (a log)
+   * keeps a fixed-width one, from the machine itself. */
+  --font-mono: 'Kriko Sans', system-ui, 'Segoe UI', sans-serif;
+  --font-code: ui-monospace, 'Cascadia Mono', Consolas, Menlo, monospace;
+  --sky-img: url("../assets/sky/sky-wide.png");
 
   /* Motion */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -142,7 +146,7 @@
 .lite-task-log summary { cursor: pointer; }
 .lite-task-log[data-active="true"] summary::before { content: "● "; color: var(--low-ink); animation: lite-asked-breathe 1.5s ease-in-out infinite; }
 .lite-task-log-controls { display: flex; flex-wrap: wrap; gap: 8px; }
-.lite-task-log-text { max-height: 240px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 var(--font-mono); }
+.lite-task-log-text { max-height: 240px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 11px/1.5 var(--font-code); }
 .lite-quick-sources a { color: var(--low-ink); }
 @media (prefers-reduced-motion: reduce) { .lite-task-log summary::before { animation: none !important; } }
 .lite-panel[data-side="left"] { transform-origin: left center; }
@@ -1699,7 +1703,7 @@
 /* actions: the brand key for analysing, bezel plates for the rest */
 .lite-cta,
 .lite-product-actions button,
-.lite-research button,
+.lite-research button:not(.lite-research-start):not(.lite-more),
 .lite-search-research,
 .lite-gap-btn,
 .lite-verdict-btn {
@@ -1720,7 +1724,7 @@
   transition: transform 90ms var(--ease-out), box-shadow 90ms var(--ease-out), color 160ms;
 }
 .lite-product-actions button:hover,
-.lite-research button:hover:not(:disabled),
+.lite-research button:hover:not(:disabled):not(.lite-research-start):not(.lite-more),
 .lite-search-research:hover,
 .lite-gap-btn:hover,
 .lite-verdict-btn:hover {
@@ -2061,3 +2065,360 @@
 .lite-question-form { flex-wrap: wrap; }
 .lite-question-form label { min-width: 0; }
 .lite-saved-result { font: 10px/1.5 var(--font-mono); color: var(--fg-muted); }
+
+/* ═════════════════════════════════════════════
+   Flat, sky-skinned, compact
+   ═════════════════════════════════════════════
+   The last word on the panel's skin. No bevels, no bezel gradients and no
+   hard drop edges: a control is a flat face with a hairline, and the one
+   that matters wears the sky, the dithered image the desktop app draws
+   behind its page heads, drifting slowly. Content gets the room: tighter
+   gaps, a smaller title, shorter keys, and the research form folds shut
+   until it is asked for. */
+
+@keyframes skyDrift {
+  from { background-position: 0 0, 0% 8%; }
+  to   { background-position: 0 0, 100% 8%; }
+}
+@keyframes skySweep {
+  from { transform: translateX(-130%); }
+  to   { transform: translateX(330%); }
+}
+@keyframes liteDrop {
+  from { opacity: 0; transform: translateY(-6px) scaleY(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes liteFade {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* the sky: header, the key, the open-app key. One drawing, one drift. */
+.lite-header,
+.lite-cta,
+.lite-research-start,
+.lite-open-app {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--on-brand);
+  background-color: #1a3fd0;
+  background-image:
+    linear-gradient(180deg, rgba(6,10,60,0) 0%, rgba(6,10,60,0.38) 100%),
+    var(--sky-img);
+  background-repeat: no-repeat;
+  background-size: auto, auto 480px;
+  background-position: 0 0, 0% 8%;
+  animation: skyDrift 70s linear infinite alternate;
+}
+/* a soft band of light that crosses the key now and then */
+.lite-cta::after,
+.lite-research-start::after,
+.lite-open-app::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 34%;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.20), transparent);
+  transform: translateX(-130%);
+  animation: skySweep 5.5s var(--ease-out) 1.2s infinite;
+  pointer-events: none;
+}
+
+/* header: one slim row, the wordmark and its line side by side */
+.lite-header {
+  gap: 8px;
+  padding: 8px 8px 8px 14px;
+  border-bottom: 0;
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.08);
+}
+.lite-titlebox { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+.lite-wordmark { height: 15px; }
+.lite-subtitle {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(240,243,255,0.78);
+}
+.lite-iconbtn,
+.lite-iconbtn.lite-btn-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition: background var(--dur-fast), transform 90ms var(--ease-out);
+}
+.lite-iconbtn:hover { background: rgba(255,255,255,0.20); border-color: transparent; }
+.lite-iconbtn:active { transform: scale(0.92); }
+.lite-iconbtn.lite-btn-close:hover { background: rgba(255,107,112,0.30); border-color: transparent; }
+
+/* content first: tighter body and gaps, a smooth scroll */
+.lite-body {
+  padding: 12px 14px 16px;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+.lite-body > * { animation: liteFade 220ms var(--ease-out) both; }
+.lite-listing { border-top: 0; padding-top: 0; }
+.lite-listing-title {
+  font-size: 17px;
+  line-height: 1.12;
+  letter-spacing: 0.012em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.lite-listing-meta { margin-top: 6px; font-size: 11px; }
+.lite-listing-engine { margin-top: 5px; font-size: 11.5px; letter-spacing: 0.01em; }
+.lite-queue-row { margin-top: 8px; gap: 6px 8px; }
+
+/* keys: flat faces. The one key wears the sky; the rest are glass. */
+.lite-cta-wrap { gap: 4px; }
+.lite-cta {
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  letter-spacing: 0.07em;
+  text-shadow: none;
+  box-shadow: none;
+  transition: transform 120ms var(--ease-out), filter 160ms;
+}
+.lite-cta,
+.lite-cta:hover,
+.lite-cta[disabled],
+.lite-cta[data-analyzing="1"] {
+  background-color: #1a3fd0;
+  background-image: linear-gradient(180deg, rgba(6,10,60,0) 0%, rgba(6,10,60,0.38) 100%), var(--sky-img);
+  background-repeat: no-repeat;
+  background-size: auto, auto 480px;
+  border: 0;
+  color: var(--on-brand);
+}
+.lite-cta:hover { filter: brightness(1.14); animation-duration: 18s; }
+.lite-cta:active { transform: scale(0.985); box-shadow: none; }
+.lite-cta[disabled],
+.lite-cta[data-analyzing="1"] { opacity: 0.72; filter: saturate(0.7); animation-duration: 8s; cursor: progress; }
+.lite-status { font-size: 10.5px; line-height: 1.35; min-height: 0; color: var(--fg-subtle); }
+
+.lite-product-actions { gap: 6px; }
+.lite-product-actions button { flex: 1 1 0; }
+.lite-product-actions button,
+.lite-search-research,
+.lite-gap-btn,
+.lite-verdict-btn,
+.lite-research button:not(.lite-research-start):not(.lite-more),
+.lite-queue,
+.lite-chip,
+.lite-rc-toggle,
+.lite-rc-factbtn,
+.lite-rc-markbtn,
+.lite-followup-send {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--glass-1);
+  box-shadow: none;
+  color: var(--fg-body);
+  text-shadow: none;
+  transition: background 160ms var(--ease-out), border-color 160ms var(--ease-out),
+              color 160ms, transform 110ms var(--ease-out);
+}
+.lite-product-actions button,
+.lite-search-research,
+.lite-research button:not(.lite-research-start):not(.lite-more),
+.lite-gap-btn,
+.lite-verdict-btn {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+.lite-queue { height: 26px; padding: 0 10px; font-size: 11px; gap: 7px; }
+.lite-product-actions button:hover,
+.lite-search-research:hover,
+.lite-research button:hover:not(:disabled):not(.lite-research-start):not(.lite-more),
+.lite-gap-btn:hover,
+.lite-verdict-btn:hover,
+.lite-queue:hover:not(:disabled),
+.lite-chip:hover,
+.lite-rc-toggle:hover,
+.lite-rc-factbtn:hover:not(:disabled),
+.lite-rc-markbtn:hover,
+.lite-followup-send:hover:not(:disabled) {
+  background: rgba(44,83,224,0.16);
+  border-color: rgba(142,163,255,0.55);
+  color: var(--fg);
+  filter: none;
+}
+.lite-product-actions button:active,
+.lite-search-research:active,
+.lite-research button:active:not(:disabled):not(.lite-research-start):not(.lite-more),
+.lite-queue:active:not(:disabled),
+.lite-chip:active,
+.lite-gap-btn:active,
+.lite-verdict-btn:active { transform: scale(0.97); box-shadow: none; }
+.lite-queue[aria-pressed="true"],
+.lite-rc-markbtn[aria-pressed="true"] { color: var(--ice); border-color: rgba(165,195,255,0.5); box-shadow: none; }
+.lite-queue-help { width: 22px; height: 22px; font-size: 11px; transition: color 160ms, border-color 160ms, transform 110ms; }
+.lite-queue-help:active { transform: scale(0.9); }
+.lite-queue-note { font-size: 10.5px; }
+.lite-queue-guide { animation: liteDrop 200ms var(--ease-out) both; border-radius: 8px; }
+
+/* the research form: one compact card, opens with a drop, context on demand */
+.lite-research {
+  padding: 10px 12px 12px;
+  margin-bottom: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--glass-1);
+  transform-origin: top center;
+}
+.lite-research[data-enter="1"] { animation: liteDrop 260ms var(--ease-out) both; }
+.lite-research-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; margin-bottom: 8px; }
+.lite-research-head strong { white-space: nowrap; font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.lite-research .lite-gap-cost { margin: 0; font-size: 10.5px; font-weight: 400; color: var(--fg-subtle); }
+.lite-research-target { margin: 0 0 6px; font-size: 12.5px; color: var(--fg-body); }
+.lite-research input,
+.lite-research textarea {
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--well);
+  font-size: 12.5px;
+  transition: border-color 160ms, box-shadow 160ms;
+}
+.lite-research input:focus,
+.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(44,83,224,0.25); }
+.lite-research textarea { resize: none; min-height: 52px; display: block; }
+/* a fold: height eases between 0 and its content */
+.lite-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 240ms var(--ease-out), opacity 200ms var(--ease-out), margin 240ms var(--ease-out); }
+.lite-fold[data-open="1"] { grid-template-rows: 1fr; opacity: 1; margin-top: 6px; }
+.lite-fold-in { overflow: hidden; min-height: 0; }
+.lite-research button.lite-more,
+.lite-more {
+  all: unset;
+  display: inline-block;
+  margin: 6px 0 0;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--ice);
+  transition: color 160ms;
+}
+.lite-more:hover { color: #fff; }
+.lite-more:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 4px; }
+.lite-research-status { margin: 6px 0 0; font-size: 11.5px; line-height: 1.4; color: var(--fg-muted); }
+.lite-research-status:empty { display: none; }
+.lite-research[data-state="failed"] .lite-research-status {
+  max-height: 4.4em;
+  overflow: auto;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--high-surface);
+  border: 1px solid var(--high-border);
+  color: var(--high-ink);
+}
+.lite-research-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.lite-research-actions button { margin: 0; flex: 0 1 auto; }
+.lite-research-actions .lite-research-start,
+.lite-research-actions .lite-research-start:hover:not(:disabled) {
+  flex: 1 1 140px;
+  border: 0;
+  color: var(--on-brand);
+  background-color: #1a3fd0;
+  background-image: linear-gradient(180deg, rgba(6,10,60,0) 0%, rgba(6,10,60,0.38) 100%), var(--sky-img);
+  background-repeat: no-repeat;
+  background-size: auto, auto 480px;
+}
+.lite-research-actions .lite-research-start:hover:not(:disabled) { filter: brightness(1.14); animation-duration: 18s; }
+.lite-research-actions .lite-research-start:disabled { opacity: 0.5; animation-duration: 90s; }
+
+/* the task log: a status bar that opens onto the run, not a wall of text */
+.lite-task-log {
+  margin-top: 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+.lite-task-log > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--fg-muted);
+  transition: background 160ms;
+}
+.lite-task-log > summary::-webkit-details-marker { display: none; }
+.lite-task-log > summary:hover { background: var(--glass-1); }
+.lite-task-log > summary::before { content: none !important; }
+.lite-tl-led { flex: none; width: 6px; height: 6px; border-radius: 2px; background: var(--led-dim); transition: background 200ms, box-shadow 200ms; }
+.lite-task-log[data-state="running"] .lite-tl-led { background: var(--low-ink); box-shadow: 0 0 6px var(--low-ink); animation: lite-asked-breathe 1.5s ease-in-out infinite; }
+.lite-task-log[data-state="failed"] .lite-tl-led { background: var(--high-ink); box-shadow: 0 0 6px var(--high-ink); }
+.lite-task-log[data-state="done"] .lite-tl-led,
+.lite-task-log[data-state="succeeded"] .lite-tl-led { background: var(--low-ink); }
+.lite-tl-title { font-weight: 600; color: var(--fg-body); letter-spacing: 0.02em; }
+.lite-tl-state { margin-left: auto; font-size: 10.5px; color: var(--fg-subtle); }
+.lite-tl-chev { flex: none; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translate(-1px, -1px); transition: transform 220ms var(--ease-out); }
+.lite-task-log[open] .lite-tl-chev { transform: rotate(-135deg) translate(-1px, -1px); }
+.lite-tl-body { padding: 0 10px 10px; display: grid; gap: 8px; animation: liteFade 220ms var(--ease-out) both; }
+.lite-tl-meta { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; }
+.lite-tl-chip { padding: 2px 7px; border-radius: 6px; background: var(--well); border: 1px solid var(--border-soft); font-size: 10px; color: var(--fg-muted); }
+.lite-tl-msg { margin: 0; max-height: 4.4em; overflow: auto; font-size: 11px; line-height: 1.4; color: var(--fg-muted); overflow-wrap: anywhere; }
+.lite-task-log[data-state="failed"] .lite-tl-msg { color: var(--high-ink); }
+.lite-tl-msg:empty { display: none; }
+.lite-task-log-controls { display: flex; align-items: center; gap: 6px; }
+.lite-task-log-controls select,
+.lite-task-log-controls button {
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--glass-1);
+  color: var(--fg-body);
+  font: 11px var(--font-body);
+  cursor: pointer;
+  transition: background 160ms, border-color 160ms, transform 110ms;
+}
+.lite-task-log-controls select:hover,
+.lite-task-log-controls button:hover { background: rgba(44,83,224,0.16); border-color: rgba(142,163,255,0.55); }
+.lite-task-log-controls button:active { transform: scale(0.96); }
+.lite-task-log-controls button { margin-left: auto; }
+.lite-task-log-text {
+  margin: 0;
+  max-height: 190px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-soft);
+  font: 10.5px/1.5 var(--font-code);
+  color: var(--fg-muted);
+  scroll-behavior: smooth;
+}
+.lite-task-log-text::-webkit-scrollbar { width: 6px; }
+.lite-task-log-text::-webkit-scrollbar-thumb { background: var(--bezel-hi); border-radius: 3px; }
+
+/* a bar, not a block: the footer asks less room */
+.lite-footer { padding: 6px 14px; }
+.lite-open-app { padding: 4px 10px; border-radius: 7px; box-shadow: none; font-size: 12px; text-decoration: none; }
+.lite-open-app:hover { color: #fff; filter: brightness(1.14); }
+
+@media (prefers-reduced-motion: reduce) {
+  .lite-header, .lite-cta, .lite-research-start, .lite-open-app { animation: none; }
+  .lite-cta::after, .lite-research-start::after, .lite-open-app::after { animation: none; display: none; }
+  .lite-body, .lite-task-log-text { scroll-behavior: auto; }
+  .lite-body > *, .lite-research[data-enter="1"], .lite-tl-body, .lite-queue-guide { animation: none; }
+  .lite-fold, .lite-tl-chev { transition: none; }
+}

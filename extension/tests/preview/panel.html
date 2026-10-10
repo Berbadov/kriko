@@ -58,6 +58,20 @@
         app_route: "result/abc123",
       },
     };
+    function previewJob() {
+      const failed = params.get("research") === "failed";
+      return {
+        job_id: "preview-research", kind: "quick_look", state: failed ? "failed" : "running", done: failed,
+        created_at: new Date(Date.now() - 15000).toISOString(),
+        finished_at: failed ? new Date().toISOString() : null,
+        message: failed ? "The local model is not ready. No local model server is running." : "Searching the web",
+        error: failed ? "The local model is not ready. No local model server is running." : "",
+        log: failed
+          ? "search: adidas grand court base 2.0 known problems\nfail: LocalInferenceError: http://127.0.0.1:11434 answered HTTP 500: error starting llama-server\nfail: giving up after 1 attempt"
+          : "search: adidas grand court base 2.0 known problems\nread: example.org/forum/thread-1\nread: example.org/review-2",
+        result: { agent: { label: "local", model: "Model not reported" } },
+      };
+    }
     window.chrome = {
       runtime: {
         onMessage: { addListener: (fn) => runtimeListeners.push(fn) },
@@ -80,6 +94,14 @@
                 : { ok: false, error: String(body.detail || res.status) });
             }).catch(error => callback({ ok: false, error: error.message }));
             return;
+          }
+          // ?research=failed | running: the research form's plane and one job,
+          // so the form and its task log can be looked at without an app.
+          const research = params.get("research");
+          if (research && message.type === "RESEARCH_PLANE") return callback({ ok: true, plane: { backend: "local" } });
+          if (research && message.type === "RESEARCH_PRODUCT") return callback({ ok: true, job: previewJob() });
+          if (research && message.type === "JOB_STATUS" && message.payload.job_id === "preview-research") {
+            return callback({ ok: true, job: previewJob() });
           }
           if (message.type === "LOOKUP_QUESTIONS") return callback({ ok: true, items: [] });
           if (message.type === "LOOKUP_ASK") return setTimeout(() => callback({ ok: true, job_id: "preview-question" }), 300);
