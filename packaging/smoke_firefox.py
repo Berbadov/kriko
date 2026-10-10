@@ -30,7 +30,7 @@ def main():
     env.pop("KRIKO_URL", None)
     engine = subprocess.Popen([str(args.engine.resolve()), "--port", "0", "--extension-port", "0",
         "--exit-with-parent"], env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        stderr=(work / "engine-stderr.txt").open("w"), text=True)
+        stderr=(work / "engine-stderr.txt").open("w", encoding="utf-8"), text=True)
     browser = None
     try:
         line = engine.stdout.readline().strip()
@@ -45,7 +45,7 @@ def main():
             encoding="utf-8")
         # Native Firefox APIs, including private session storage and the
         # extension's actual adapters/site-registration path, run in Firefox.
-        log = (work / "web-ext.log").open("w")
+        log = (work / "web-ext.log").open("w", encoding="utf-8")
         command = [str(args.web_ext.resolve()), "run", "--firefox", str(args.firefox.resolve()),
             "--source-dir", str(target), "--firefox-profile", str(work / "profile"),
             "--profile-create-if-missing", "--keep-profile-changes", "--no-reload", "--no-input",
@@ -56,14 +56,14 @@ def main():
         deadline = time.time() + 60
         while time.time() < deadline:
             if browser.poll() is not None:
-                raise RuntimeError((work / "web-ext.log").read_text())
+                raise RuntimeError((work / "web-ext.log").read_text(encoding="utf-8"))
             with urllib.request.urlopen(base + "/api/extension", timeout=5) as response:
                 status = json.load(response)
             seen = [row for row in status["sightings"] if row["origin"].startswith("moz-extension://")]
             if seen:
                 print(f"Firefox runtime check-in: {seen[0]['origin']}; version {seen[0].get('version')}")
                 print(f"Requests observed: {sum(row['hits'] for row in seen)}; isolated loopback port {port}")
-                (work / "status.json").write_text(json.dumps(status, indent=2))
+                (work / "status.json").write_text(json.dumps(status, indent=2), encoding="utf-8")
                 return 0
             time.sleep(0.5)
         raise RuntimeError("Firefox did not reach the isolated Kriko engine within 60 seconds.")

@@ -33,8 +33,12 @@ def main() -> int:
     parser.add_argument("--model", required=True)
     parser.add_argument("--base-url", default="http://127.0.0.1:11434")
     parser.add_argument("--output", required=True, type=Path)
-    parser.add_argument("--cases", type=int, choices=range(1, 10), default=9)
+    parser.add_argument("--cases", type=int, default=None)
     args = parser.parse_args()
+    from app import benchcases
+    count = args.cases if args.cases is not None else len(benchcases.load())
+    if not 1 <= count <= 50:
+        parser.error("--cases must be between 1 and 50")
     binary, output = args.binary.resolve(), args.output.resolve()
     if not binary.is_file():
         parser.error(f"missing frozen engine: {binary}")
@@ -68,7 +72,7 @@ def main() -> int:
             send(port, "/api/prefs", {"local_url": args.base_url,
                                       "local_model": args.model}, "PUT")
             body = {"suite": "precision", "planes": "local", "llms": args.model,
-                    "cases": args.cases, "reps": 1, "budget_usd": 0}
+                    "cases": count, "reps": 1, "budget_usd": 0}
             estimate = send(port, "/api/bench/estimate", body)
             started = send(port, "/api/bench", body)
             deadline = time.monotonic() + 600
@@ -85,7 +89,7 @@ def main() -> int:
                 json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             assert job.get("state") == "succeeded", f"benchmark failed: {job.get('message')}"
             rows = served["runs"]
-            assert len(rows) == args.cases, f"expected {args.cases} rows, got {len(rows)}"
+            assert len(rows) == count, f"expected {count} rows, got {len(rows)}"
             assert all(not row.get("error") for row in rows), "a measurement failed"
             assert all(row["measurement"].get("usage_complete") is True and row.get("tokens", 0) > 0
                        and row["measurement"].get("tokens_in", 0) > 0
