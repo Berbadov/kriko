@@ -17,7 +17,13 @@ use crate::theme::*;
 fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let b = &app.live.local.bench;
     let mut result = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Run setup"))
-        .child(row_desc("Each case asks for product risks, searches and reads evidence, then scores the answer against the versioned expected findings and forbidden claims. Generation controls below apply to local inference; other agents use their own supported defaults."));
+        .child(row_desc("Configuration accuracy uses the same fictional documents on each plane, with exact codes, years, revisions, markets and missing information. Live web research uses changing search results. These development cases measure behavior; they do not establish real-world coverage."));
+    let mut suites = div().flex().flex_wrap().gap(px(8.0));
+    for (id, label) in [("precision", "Configuration accuracy"), ("web", "Live web research")] {
+        let selected = b.suite == id || (b.suite.is_empty() && id == "precision");
+        suites = suites.child(pill(gpui::ElementId::Name(format!("bench-suite-{id}").into()), label, selected).on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.bench_pick_suite(id.into(), cx))));
+    }
+    result = result.child(suites);
     for (name, key, values, current) in [
         ("First cases (or choose below)", "cases", vec![1, 3, 5, 10], b.case_count),
         ("Pages per case", "documents", vec![1, 3, 5, 10, 20], b.documents),
@@ -402,6 +408,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             .gap(px(24.0))
             .child(start_panel)
             .child(setup_panel)
+            .child(accuracy(&app.live.local.bench))
             .child(progress_panel)
             .child(empty_note("Nothing has been benchmarked here yet. Run one to see how an agent does."));
     }
@@ -701,6 +708,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .gap(px(24.0))
         .child(start_panel)
         .child(setup_panel)
+        .child(accuracy(&app.live.local.bench))
         .child(progress_panel)
         .child(row_title("Results"))
         .child(latest_score(&mine))
@@ -757,6 +765,31 @@ fn latest_score(runs: &[&BenchRun]) -> Div {
         .child(row_desc(&format!("Forbidden claims in scored answers: {traps} ({scored} scored runs). {}", if attempted_scored>0 { format!("Final candidates contained {attempted} forbidden claims before filtering, across {attempted_scored} measured runs.") } else { "Attempts before filtering were not recorded in these older runs.".into() })))
         .child(row_desc(&format!("Tokens burned: {}. Counts include input and output; missing usage is not zero.", if measured>0 { format!("{tokens:.0} across {measured}/{} measured runs",runs.len()) } else { "not reported by this agent".into() })))
         .child(row_desc("Evidence kept measures quote checks. It does not mean the answer is complete or correct. Trap scoring compares wording against the versioned case list; it is not an independent accuracy audit."))
+}
+
+fn accuracy(b: &crate::live::local::Bench) -> Div {
+    let mut panel = card().flex().flex_col().gap(px(12.0))
+        .child(eyebrow("Configuration accuracy and usage"))
+        .child(row_desc("Scores inspect proposed claims before source filtering. Empty answers still lose recall. Timings include failed attempts; missing token usage and prices remain unmeasured. Results stay separate by test set, model and protocol."));
+    let rows = crate::api::arr(&b.snapshot, "readout");
+    if rows.is_empty() { return panel.child(empty_note("Run the configuration suite to measure unsupported claims, specifications, abstention, time and tokens.")); }
+    for r in rows {
+        let mut record = well().p(px(12.0)).flex().flex_col().gap(px(8.0))
+            .child(row_title(&format!("{} · {}", crate::api::s(r, "plane"), crate::api::s(r, "llm"))))
+            .child(mono(&format!("{} {} · {} · {} runs", crate::api::s(r, "set_id"), crate::api::s(r, "set_version"), crate::api::s(r, "protocol"), crate::api::n(r, "runs").unwrap_or(0.0)), DIM));
+        let mut scores = div().flex().flex_wrap().gap(px(16.0));
+        for (label, key) in [("Unsupported claims", "hallucination_rate"), ("Expected facts found", "recall"), ("Specifications found", "spec_recall"), ("Correct abstention", "abstention_accuracy")] {
+            let value = crate::api::n(r, key).map(|v| format!("{:.1}%", v * 100.0)).unwrap_or_else(|| "unmeasured".into());
+            scores = scores.child(div().flex().flex_col().gap(px(3.0)).child(row_desc(label)).child(mono(&value, INK)));
+        }
+        record = record.child(scores)
+            .child(mono(&format!("Time p50 {} · p95 {}", seconds(crate::api::n(r, "latency_p50_ms")), seconds(crate::api::n(r, "latency_p95_ms"))), MUTED));
+        let count = |key| crate::api::n(r, key).map(|v| format!("{v:.0}")).unwrap_or_else(|| "unmeasured".into());
+        record = record.child(row_desc(&format!("Tokens: {} total · {} input · {} output · {} per run · {} runs with partial usage", count("tokens_total"), count("tokens_in"), count("tokens_out"), count("tokens_mean"), count("partial_usage_runs"))))
+            .child(row_desc(&crate::api::s(r, "note")));
+        panel = panel.child(record);
+    }
+    panel
 }
 
 fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {

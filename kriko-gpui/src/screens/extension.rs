@@ -36,9 +36,9 @@ fn step(n: usize, title: &str, desc: &str, control: Option<gpui::AnyElement>) ->
                 .flex_col()
                 .gap(px(2.0))
                 .child(row_title(title))
-                .child(row_desc(desc)),
+                .child(row_desc(desc))
+                .children(control),
         )
-        .children(control)
 }
 
 fn seen_line(e: &ExtStatus) -> (TagState, &'static str, String) {
@@ -116,7 +116,7 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         ));
     if !e.browsers.is_empty() {
         let mut list = div().mt(px(8.0)).flex().flex_col().gap(px(4.0));
-        for b in &e.browsers {
+        for b in e.browsers.iter().filter(|b| b.name != "Firefox") {
             list = list.child(mono(&format!("{}: {}", b.name, b.url), DIM));
         }
         steps_card = steps_card.child(list);
@@ -124,6 +124,21 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     if let Some(n) = &k.ext_notice {
         steps_card = steps_card.child(div().mt(px(12.0)).child(mono(n, MUTED)));
     }
+
+    let firefox_path = e.firefox_path.clone();
+    let firefox = card().flex().flex_col().gap(px(10.0))
+        .child(eyebrow("Firefox"))
+        .child(row_desc("Firefox 140 or newer. Prepare the add-on, then open about:debugging#/runtime/this-firefox and choose Load Temporary Add-on. Choose manifest.json below."))
+        .child(mono(&e.firefox_path, MUTED))
+        .child(div().flex().flex_wrap().gap(px(8.0))
+            .when(e.available, |d| d.child(key("firefox-stage", "Prepare Firefox").on_click(act("firefox/stage"))))
+            .when(e.firefox_staged, |d| d
+                .child(ghost("firefox-reveal", "Show files").on_click(act("firefox/reveal")))
+                .child(ghost("firefox-copy", "Copy path").on_click(cx.listener(move |_this, _: &ClickEvent, _w, cx| {
+                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(firefox_path.clone()));
+                })))))
+        .child(row_desc("Temporary add-ons are removed when Firefox restarts. Permanent installation needs a Mozilla-signed XPI. Preparing also creates an unsigned XPI beside the folder."))
+        .child(row_desc("The add-on sends page URLs and product details to Kriko on this computer. Research uses the provider you configure in Kriko."));
 
     // ---- what the engine has seen ----
     let (state, label, said) = seen_line(e);
@@ -169,8 +184,10 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
 
     div()
         .flex()
-        .gap(px(24.0))
-        .items_start()
-        .child(div().flex_1().min_w(px(0.0)).child(steps_card))
-        .child(div().flex_1().min_w(px(0.0)).child(status))
+        .flex_col()
+        .gap(px(20.0))
+        .child(firefox)
+        .child(div().flex().flex_wrap().gap(px(24.0)).items_start()
+            .child(div().flex_1().min_w(px(320.0)).child(steps_card))
+            .child(div().flex_1().min_w(px(320.0)).child(status)))
 }

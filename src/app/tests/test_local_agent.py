@@ -62,7 +62,7 @@ def test_quick_answer_repairs_bad_json_once_and_keeps_source_and_self_checks():
         searcher([{"url": "https://a.test/1"}]), reader({"https://a.test/1": "An owner said the pump failed."}),
         model="small", search_provider="stub")
     assert asker.ask_quick("Widget MK2") == answer
-    assert asker.telemetry["queries"] == ["Widget MK2 failure reports"]
+    assert asker.telemetry["queries"] == ["Widget MK2 problems owner reports", "Widget MK2 failures review"]
     assert asker.telemetry["repairs"] == 1
     assert asker.telemetry["verification"][0]["quote_in_read_page"] is True
     assert asker.telemetry["self_verify"]["verdicts"][0]["supported"] is True
@@ -70,7 +70,7 @@ def test_quick_answer_repairs_bad_json_once_and_keeps_source_and_self_checks():
 
 
 def test_second_search_learns_from_the_first_pages():
-    plan = Sequence(['["Widget failures"]', '["Widget MK2 pump recall"]'])
+    plan = Sequence(['["Widget MK2 pump recall"]'])
     answer = json.dumps({"risks": [{"title": "Pump failure", "url": "https://a.test/2", "quote": "the pump failed"}], "specs": []})
     complete = Sequence(['{"risks":[],"specs":[]}', answer, '{"verdicts":[]}'])
     asker = local_agent.LocalAsker(plan, complete,
@@ -78,8 +78,9 @@ def test_second_search_learns_from_the_first_pages():
         reader({"https://a.test/1": "The first review names a revised pump.", "https://a.test/2": "A recall says the pump failed."}),
         model="small", search_provider="stub")
     assert asker.ask_quick("Widget MK2") == answer
-    assert "first review names a revised pump" in plan.prompts[1]
-    assert len(asker.telemetry["queries"]) == 2
+    assert "first review names a revised pump" in plan.prompts[0]
+    assert asker.telemetry["queries"][-1] == "Widget MK2 pump recall"
+    assert len(asker.telemetry["queries"]) == 3
 
 
 def test_invalid_answer_is_a_distinct_bounded_failure():

@@ -121,7 +121,7 @@ def test_quit_stops_the_engine_before_it_ends_the_app(app_rs):
     assert re.search(r"TrayAction::Quit\s*=>\s*Self::quit\(cx\)", app_rs), (
         "the tray's Quit does not reach the quit path"
     )
-    assert re.search(r"TrayAction::Open\s*=>\s*shell::show_window\(\)", app_rs)
+    assert re.search(r"TrayAction::Open\s*=>\s*shell::show_window\(cx\)", app_rs)
 
 
 def test_a_left_click_on_the_tray_brings_the_window_back(shell_rs):
@@ -156,7 +156,7 @@ def test_the_tray_exists_before_the_window_does(main_rs):
 
 def test_a_second_launch_raises_the_first_before_starting_an_engine(main_rs):
     main = main_rs[main_rs.index("fn main()") :]
-    assert main.index("raise_running_instance()") < main.index("engine::start()"), (
+    assert main.index("raise_running_instance(!background)") < main.index("engine::start()"), (
         "starting the engine first gives the second launch an engine of its "
         "own, holding the store the first one needs"
     )

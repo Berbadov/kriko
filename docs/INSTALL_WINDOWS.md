@@ -169,3 +169,35 @@ $HOME\kriko-env\Scripts\pip show -f kriko
 
 Plus **http://127.0.0.1:8787/api/health**, if the app started. On Path A, say
 whether you used the MSI or the zip.
+# Local AI setup
+
+Open **Local LLM** in the native app. A local model answers on your own
+computer; Ollama is the app that runs its downloaded model files. Research
+can still search the web.
+
+Press **Set up Ollama and a starter model** to install Ollama through Windows
+App Installer, download the small starter model, and select it in Kriko.
+The setup status shows progress and errors. Allow about 6 GB of free space
+for the app and starter; larger models need more disk space and memory.
+
+If automatic setup fails, press **Download Ollama manually**. This opens
+[Ollama's official Windows download](https://ollama.com/download/windows).
+Run its installer, return to Kriko, and press **Check again**. If Ollama is
+installed but stopped, **Start Ollama** starts it without downloading a model.
+Use **Browse downloadable models** to download another model with progress,
+then select it. Model downloads can be cancelled from their progress card.
+
+Small models can miss detailed configurations. The Benchmark screen's
+configuration suite measures missed facts, unsupported claims, wrong
+specifications, correct abstention, time and token usage on fixed development
+cases. It is not a real-world accuracy guarantee.
+
+Windows startup now offers **Off**, **Window** and **Tray** in Settings.
+Tray keeps Kriko's engine available in the background; choose Open from its
+tray menu to show the window.
+
+Firefox uses a separate package and manifest. Open **Browser Extension**,
+press **Prepare Firefox add-on**, and follow the Firefox instructions there.
+The release's unsigned XPI is a development package: regular Firefox needs
+Mozilla signing for permanent installation. Temporary installation through
+`about:debugging` lasts until Firefox restarts. See [Firefox setup](FIREFOX_ADDON.md).

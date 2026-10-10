@@ -418,6 +418,34 @@ def test_post_research_plane_cancel_after_start_keeps_gathered_work(
     assert runs[0]["outcome"] == "cancelled"
 
 
+def test_local_unknown_listing_quick_only_submits_an_answer_without_building(
+    research_client, monkeypatch,
+):
+    from app import localplane
+    from app.providers import harness
+    from app.web.deps import get_jobs
+
+    monkeypatch.setattr(harness, "available", lambda: [])
+    monkeypatch.setattr(localplane, "resolve", lambda *a, **kw: {
+        "ready": True, "model": "fixture-local", "line": "Local model ready", "reason": ""})
+    calls = []
+
+    def submit(kind, params):
+        calls.append((kind, params))
+        return "quick-only"
+
+    research_client.app.dependency_overrides[get_jobs] = lambda: SimpleNamespace(submit=submit)
+    reply = research_client.post("/api/extension/research-plane", json={
+        "q": "Unknown Widget", "allow_draft": True, "quick": True, "deepen": False,
+        "url": "https://example.org/widget", "facts": {"ld:name": "Unknown Widget"},
+    })
+    assert reply.status_code == 200, reply.text
+    assert "deepen_job_id" not in reply.json()
+    assert [kind for kind, _ in calls] == ["quick_look"]
+    assert calls[0][1]["backend"] == "local"
+    assert calls[0][1]["pack_id"] == ""
+
+
 @pytest.mark.parametrize("allow_draft,expected", [(False, 404), (True, 503)])
 def test_unknown_product_never_falls_back_to_paid_research(
     research_client, monkeypatch, allow_draft, expected,

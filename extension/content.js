@@ -476,6 +476,9 @@ const LD_PRODUCT_TYPES = new Set([
 // The more specific of the two when a page nests one in the other, as
 // AutoScout24 does (a `Product` whose offer's `itemOffered` is the `Car`).
 const LD_VEHICLE_TYPES = new Set(["vehicle", "car", "motorcycle", "busorcoach", "motorizedbicycle"]);
+// These name a different product's relationship to the offered item, never
+// another sale candidate. Keep the relationship's text as context.
+const LD_RELATED_PROPERTIES = new Set(["isaccessoryorsparepartfor", "isconsumablefor", "isrelatedto", "issimilarto"]);
 
 function _ldTypes(node) {
   const raw = node && node["@type"];
@@ -497,6 +500,25 @@ function _ldNodes() {
   };
   for (const script of document.querySelectorAll('script[type="application/ld+json"]')) {
     try { walk(JSON.parse(script.textContent || ""), 0); } catch (_) { /* a broken block is skipped */ }
+  }
+  // Microdata is the same standard in DOM form. Read only properties owned
+  // by this scope, so a recommendation's SKU cannot leak into the product.
+  const readScope = (root, depth = 0) => {
+    if (depth > 8) return {};
+    const node = { "@type": root.getAttribute("itemtype") || "" };
+    for (const field of root.querySelectorAll("[itemprop]")) {
+      if (field.parentElement?.closest("[itemscope]") !== root) continue;
+      const value = field.hasAttribute("itemscope") ? readScope(field, depth + 1)
+        : field.getAttribute("content") ?? field.getAttribute("href")
+          ?? field.getAttribute("datetime") ?? cleanText(field.textContent);
+      for (const key of (field.getAttribute("itemprop") || "").split(/\s+/)) {
+        if (key && node[key] === undefined) node[key] = value;
+      }
+    }
+    return node;
+  };
+  for (const scope of document.querySelectorAll("[itemscope][itemtype]")) {
+    if (!scope.parentElement?.closest("[itemscope]")) walk(readScope(scope), 0);
   }
   return out;
 }
@@ -521,6 +543,17 @@ const LD_SKIP = new Set(["@context", "@id", "image", "url", "offers", "review",
 function _ldFlatten(node, fields) {
   for (const [key, value] of Object.entries(node)) {
     if (LD_SKIP.has(key.toLowerCase())) continue;
+    if (key.toLowerCase() === "additionalproperty") {
+      for (const property of (Array.isArray(value) ? value : [value])) {
+        if (!property || typeof property !== "object") continue;
+        const label = _ldText(property.name || property.propertyID);
+        const figure = _ldText(property.value);
+        const unit = _ldText(property.unitText || property.unitCode);
+        if (label && figure && label.length <= 80 && figure.length <= 200) {
+          fields[`ld:additionalProperty.${label}`] = `${figure}${unit ? ` ${unit}` : ""}`;
+        }
+      }
+    }
     const text = _ldText(value);
     if (text && text.length <= 200 && !fields[`ld:${key}`]) fields[`ld:${key}`] = text;
     // One level into a nested thing (an engine, an odometer reading), so its
@@ -548,14 +581,82 @@ function _metaContent(name) {
 function readStructuredProduct() {
   const nodes = _ldNodes();
   const products = nodes.filter((n) => _ldTypes(n).some((t) => LD_PRODUCT_TYPES.has(t)));
-  const vehicle = products.find((n) => _ldTypes(n).some((t) => LD_VEHICLE_TYPES.has(t)));
-  const outer = products.find((n) => n !== vehicle) || null;
+  const heading = cleanText(document.querySelector("h1")?.textContent) || "";
+  const pageUrl = (value) => {
+    try {
+      const url = new window.URL(value, window.location.href);
+      return `${url.origin}${url.pathname.replace(/\/$/, "")}`;
+    } catch (_) { return ""; }
+  };
+  const current = pageUrl(window.location.href);
+  const canonical = pageUrl(document.querySelector('link[rel="canonical"]')?.getAttribute("href"));
+  const idKey = (value) => {
+    try { return new window.URL(value, window.location.href).href; }
+    catch (_) { return String(value || ""); }
+  };
+  const ids = new Map();
+  for (const node of nodes.filter((one) => one["@id"])) {
+    const key = idKey(node["@id"]);
+    const previous = ids.get(key);
+    // An @id-only reference must never replace the complete graph node.
+    if (!previous || Object.keys(node).length > Object.keys(previous).length) ids.set(key, node);
+  }
+  const resolve = (node) => node && (ids.get(idKey(node["@id"])) || node);
+  const mainEntities = nodes.filter((node) => _ldTypes(node).some((type) =>
+    ["webpage", "itempage"].includes(type)) &&
+    (!node.url && !node["@id"] || [node.url, node["@id"]].some((url) =>
+      url && (pageUrl(url) === current || (canonical && pageUrl(url) === canonical))))).flatMap((node) =>
+      (Array.isArray(node.mainEntity) ? node.mainEntity : [node.mainEntity]).map(resolve));
+  const offeredItems = new Set(products.flatMap((node) =>
+    (Array.isArray(node.offers) ? node.offers : [node.offers])
+      .map(resolve).map((offer) => resolve(offer?.itemOffered)).filter(Boolean)));
+  const relatedItems = new Set(products.flatMap((node) => Object.entries(node)
+    .filter(([key]) => LD_RELATED_PROPERTIES.has(key.toLowerCase()))
+    .flatMap(([, value]) => (Array.isArray(value) ? value : [value]).map(resolve))));
+  const roots = products.filter((node) => !offeredItems.has(node) && !relatedItems.has(node));
+  const tokenSet = (value) => new Set((cleanText(value) || "").toLowerCase().match(/[\p{L}\p{N}]+(?:[-./][\p{L}\p{N}]+)*/gu) || []);
+  const headingTokens = tokenSet(heading);
+  const listed = nodes.some((node) => _ldTypes(node).includes("itemlist"));
+  const nonProductPage = nodes.some((node) => _ldTypes(node).some((type) =>
+    ["collectionpage", "searchresultspage", "article", "newsarticle", "blogposting"].includes(type)));
+  const candidateScore = (node) => {
+    const urls = [node.url, node.mainEntityOfPage?.["@id"], node.mainEntityOfPage];
+    const urlMatch = urls.some((url) => typeof url === "string" &&
+      (pageUrl(url) === current || (canonical && pageUrl(url) === canonical)));
+    const main = mainEntities.includes(node);
+    const nameTokens = tokenSet(_ldText(node.name));
+    const nameMatch = nameTokens.size >= 2 && [...nameTokens].every((word) => headingTokens.has(word));
+    return { node, score: (main ? 100 : 0) + (urlMatch ? 80 : 0) + (nameMatch ? 40 : 0),
+      signals: [...(main ? ["main-entity"] : []), ...(urlMatch ? ["page-url"] : []), ...(nameMatch ? ["heading"] : [])] };
+  };
+  const ranked = roots.map(candidateScore).sort((a, b) => b.score - a.score);
+  const first = ranked[0];
+  const identityKey = (node) => [node.name, node.sku, node.mpn, node.gtin].map(_ldText).join("|");
+  const tied = first && ranked[1] && first.score === ranked[1].score &&
+    identityKey(first.node) !== identityKey(ranked[1].node);
+  const primary = first && !tied && (first.score > 0 || (roots.length === 1 && !listed && !nonProductPage))
+    && (!nonProductPage || first.signals.includes("main-entity"))
+    && (!listed || first.score >= 80) ? first.node : null;
+  // Only merge a more specific item actually offered by this primary
+  // product. Unrelated Product/Vehicle nodes never form one identity.
+  const offers = primary && (Array.isArray(primary.offers) ? primary.offers : [primary.offers]);
+  const offered = (offers || []).map(resolve).map((offer) => resolve(offer?.itemOffered));
+  const vehicle = offered.find((node) => node && _ldTypes(node).some((type) => LD_VEHICLE_TYPES.has(type)))
+    || (primary && _ldTypes(primary).some((type) => LD_VEHICLE_TYPES.has(type)) ? primary : null);
+  const outer = primary === vehicle ? null : primary;
   const chosen = [vehicle, outer].filter(Boolean);
 
   const fields = {};
-  for (const node of chosen) _ldFlatten(node, fields);
+  for (const node of chosen) {
+    _ldFlatten(node, fields);
+    for (const [key, value] of Object.entries(node)) {
+      if (!LD_RELATED_PROPERTIES.has(key.toLowerCase())) continue;
+      const names = (Array.isArray(value) ? value : [value]).map(resolve).map(_ldText).filter(Boolean);
+      if (names.length) fields[`ld:${key}`] = names.join("; ").slice(0, 200);
+    }
+  }
   if (chosen.length) {
-    fields["ld:@type"] = _ldTypes(chosen[0])[0] || "";
+    fields["ld:@type"] = _ldTypes(chosen[0]).find((type) => LD_PRODUCT_TYPES.has(type)) || "";
     const crumbs = nodes.find((n) => _ldTypes(n).includes("breadcrumblist"));
     const names = ((crumbs && crumbs.itemListElement) || [])
       .map((item) => _ldText(item && (item.name !== undefined ? item.name : item.item)))
@@ -563,7 +664,6 @@ function readStructuredProduct() {
     if (names.length) fields["ld:breadcrumb"] = names.join(" > ").slice(0, 300);
   }
 
-  const heading = cleanText(document.querySelector("h1")?.textContent) || "";
   const ogTitle = _metaContent("og:title");
   // A vehicle's own name before the listing's: AutoScout24's outer `Product`
   // is named "Mercedes-Benz for € 18,000". The heading before the share title,
@@ -576,8 +676,12 @@ function readStructuredProduct() {
     (cleanText(document.title) || "").split(" | ")[0],
   ].find((one) => one && one.length >= 3) || "";
 
-  const typed = chosen.length > 0 || /product/i.test(_metaContent("og:type"));
-  return { fields, name: name.slice(0, 200), typed };
+  const ogProduct = /^(?:og:)?product(?::item)?$/i.test(_metaContent("og:type"));
+  const typed = chosen.length > 0 || (!products.length && !nonProductPage && !listed && ogProduct);
+  return { fields, name: name.slice(0, 240), typed,
+    recognition: { status: chosen.length ? "product" : products.length && !nonProductPage ? "ambiguous" : typed ? "product" : "untyped",
+      source: chosen.length ? "structured-data" : ogProduct ? "open-graph" : "heading",
+      signals: chosen.length ? first.signals : [], candidates: products.length } };
 }
 
 // ── the scrape ──────────────────────────────────────────────────────────
@@ -618,7 +722,8 @@ function buildScrape(knownLabels, panel) {
     fields,
     // What the page says it sells, for the panel to name a product no pack
     // recognises, and `typed` for the worker to leave a non-product page alone.
-    product: { name: structured.name, typed: structured.typed },
+    product: { name: structured.name, typed: structured.typed,
+               recognition: structured.recognition },
     listing: {
       damage_info: extractDamageInfo(panel),
       equipment: extractEquipment(panel),

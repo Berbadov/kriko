@@ -12,11 +12,15 @@
 //! and exits before it starts a second engine.
 
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
+use gpui::AppContext;
 
 /// The main window's HWND, once it exists.
 static HWND: AtomicIsize = AtomicIsize::new(0);
 /// Whether the tray exists, i.e. whether hiding is safe.
 static TRAY: AtomicBool = AtomicBool::new(false);
+thread_local! {
+    static WINDOW: std::cell::Cell<Option<gpui::AnyWindowHandle>> = const { std::cell::Cell::new(None) };
+}
 
 /// Something the reader did in the tray.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -41,6 +45,10 @@ mod win {
         pub fn CloseHandle(h: isize) -> i32;
         pub fn QueryFullProcessImageNameW(h: isize, flags: u32, name: *mut u16, size: *mut u32) -> i32;
         pub fn GetCurrentProcessId() -> u32;
+        pub fn CreateEventW(security: *const std::ffi::c_void, manual_reset: i32, initial: i32, name: *const u16) -> isize;
+        pub fn OpenEventW(access: u32, inherit: i32, name: *const u16) -> isize;
+        pub fn SetEvent(event: isize) -> i32;
+        pub fn WaitForSingleObject(event: isize, milliseconds: u32) -> u32;
     }
     pub const SW_HIDE: i32 = 0;
     pub const SW_SHOW: i32 = 5;
@@ -48,8 +56,51 @@ mod win {
     pub const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
 }
 
+#[cfg(windows)]
+mod activation {
+    use super::{win, AtomicIsize, Ordering};
+    static EVENT: AtomicIsize = AtomicIsize::new(0);
+    fn name(pid: u32) -> Vec<u16> {
+        format!("Local\\Kriko.OpenWindow.{pid}").encode_utf16().chain(Some(0)).collect()
+    }
+    pub fn init() {
+        unsafe {
+            let handle = win::CreateEventW(std::ptr::null(), 0, 0, name(win::GetCurrentProcessId()).as_ptr());
+            EVENT.store(handle, Ordering::SeqCst);
+        }
+    }
+    pub fn signal(pid: u32) -> bool {
+        unsafe {
+            let handle = win::OpenEventW(2, 0, name(pid).as_ptr()); // EVENT_MODIFY_STATE
+            if handle == 0 { return false; }
+            let result = win::SetEvent(handle) != 0;
+            win::CloseHandle(handle);
+            result
+        }
+    }
+    pub fn take() -> bool {
+        let handle = EVENT.load(Ordering::SeqCst);
+        handle != 0 && unsafe { win::WaitForSingleObject(handle, 0) == 0 }
+    }
+    pub fn remove() {
+        let handle = EVENT.swap(0, Ordering::SeqCst);
+        if handle != 0 { unsafe { win::CloseHandle(handle); } }
+    }
+    #[cfg(test)]
+    #[test]
+    fn another_launch_can_request_one_window_activation() {
+        init();
+        assert!(!take());
+        assert!(signal(unsafe { win::GetCurrentProcessId() }));
+        assert!(take());
+        assert!(!take());
+        remove();
+    }
+}
+
 /// Remembers the main window, from GPUI's raw handle.
 pub fn remember_window(window: &gpui::Window) {
+    WINDOW.set(Some(window.window_handle()));
     #[cfg(windows)]
     {
         use raw_window_handle::{HasWindowHandle, RawWindowHandle};
@@ -80,7 +131,12 @@ pub fn hide_window() {
 }
 
 /// Shows, un-minimises and raises the window.
-pub fn show_window() {
+pub fn show_window(cx: &mut gpui::App) {
+    // A window created with show:false has deferred placement in GPUI.
+    // Activation applies that placement before we restore/raise its HWND.
+    if let Some(handle) = WINDOW.get() {
+        let _ = cx.update_window(handle, |_root, window, _cx| window.activate_window());
+    }
     #[cfg(windows)]
     unsafe {
         let hwnd = HWND.load(Ordering::SeqCst);
@@ -103,7 +159,7 @@ unsafe fn raise(hwnd: isize) {
 /// true: this launch should exit. The window is matched by title *and* by
 /// the owning process's exe name, so a browser tab called "Kriko" is not
 /// mistaken for the app.
-pub fn raise_running_instance() -> bool {
+pub fn raise_running_instance(show: bool) -> bool {
     #[cfg(windows)]
     unsafe {
         let title: Vec<u16> = "Kriko".encode_utf16().chain(std::iter::once(0)).collect();
@@ -132,13 +188,19 @@ pub fn raise_running_instance() -> bool {
         }
         let theirs = String::from_utf16_lossy(&buf[..len as usize]).to_lowercase();
         if ours.is_some_and(|name| theirs.ends_with(&name)) {
-            raise(hwnd);
+            // Let the owning GPUI thread apply deferred window placement.
+            // Older installed versions have no event and use the legacy raise.
+            if show && !activation::signal(pid) { raise(hwnd); }
             return true;
         }
         false
     }
     #[cfg(not(windows))]
     false
+}
+
+pub fn has_tray() -> bool {
+    TRAY.load(Ordering::SeqCst)
 }
 
 // ---- the tray ----
@@ -210,6 +272,8 @@ mod tray {
 /// Puts Kriko in the tray. On failure closing will quit, never strand.
 pub fn build_tray() {
     #[cfg(windows)]
+    activation::init();
+    #[cfg(windows)]
     match tray::build() {
         Ok(()) => TRAY.store(true, Ordering::SeqCst),
         Err(e) => log::warn!("tray: {e}; closing the window will quit Kriko"),
@@ -220,7 +284,9 @@ pub fn build_tray() {
 pub fn poll_tray() -> Vec<TrayAction> {
     #[cfg(windows)]
     {
-        tray::poll()
+        let mut actions = tray::poll();
+        if activation::take() { actions.push(TrayAction::Open); }
+        actions
     }
     #[cfg(not(windows))]
     Vec::new()
@@ -228,7 +294,10 @@ pub fn poll_tray() -> Vec<TrayAction> {
 
 pub fn remove_tray() {
     #[cfg(windows)]
-    tray::remove();
+    {
+        tray::remove();
+        activation::remove();
+    }
 }
 
 /// The tray remains visible when the window is hidden, so its label must
