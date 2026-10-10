@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.1.7-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.2.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Download for Windows](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
