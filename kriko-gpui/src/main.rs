@@ -98,6 +98,7 @@ const ASSETS: &[(&str, &[u8])] = &[
     ("icons/run.svg", include_bytes!("../assets/icons/run.svg")),
     ("icons/search.svg", include_bytes!("../assets/icons/search.svg")),
     ("icons/settings.svg", include_bytes!("../assets/icons/settings.svg")),
+    ("icons/sidebar.svg", include_bytes!("../assets/icons/sidebar.svg")),
     ("icons/restore.svg", include_bytes!("../assets/icons/restore.svg")),
     ("icons/sites.svg", include_bytes!("../assets/icons/sites.svg")),
     ("icons/x.svg", include_bytes!("../assets/icons/x.svg")),
@@ -114,8 +115,6 @@ const FONTS: &[(&str, &[u8])] = &[
     ("fonts/BarlowCondensed-700.ttf", include_bytes!("../assets/fonts/BarlowCondensed-700.ttf")),
     ("fonts/DMSans-400.ttf", include_bytes!("../assets/fonts/DMSans-400.ttf")),
     ("fonts/DMSans-600.ttf", include_bytes!("../assets/fonts/DMSans-600.ttf")),
-    ("fonts/JetBrainsMono-400.ttf", include_bytes!("../assets/fonts/JetBrainsMono-400.ttf")),
-    ("fonts/JetBrainsMono-600.ttf", include_bytes!("../assets/fonts/JetBrainsMono-600.ttf")),
 ];
 
 struct Assets;
