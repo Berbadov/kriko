@@ -445,6 +445,15 @@ pub struct Verify {
 
 /// The agent mark for a harness or target id; the engine's own mark when
 /// the id is not one the app draws.
+#[derive(Clone, Debug, Default)]
+pub struct QuickAsk {
+    pub job_id: String,
+    pub question: String,
+    pub answer: String,
+    pub state: String,
+    pub done: bool,
+}
+
 pub fn mark_for(id: &str) -> &'static Mark {
     match id {
         "claude-code" => &marks::CLAUDE,
@@ -534,6 +543,14 @@ pub struct State {
     pub verify_log_open: bool,
     /// Preference saves sent and not yet answered; see `put_prefs`.
     pub prefs_pending: usize,
+    /// #112: the follow-up exchange on the followed quick look, and whether
+    /// one is being answered right now.
+    pub quick_asks: Vec<QuickAsk>,
+    pub quick_asks_for: Option<String>,
+    pub quick_asks_loading: bool,
+    pub quick_asking: bool,
+    pub quick_ask_note: Option<String>,
+    last_quick_asks: Option<Instant>,
 }
 
 impl State {
@@ -816,6 +833,14 @@ impl Kriko {
             if self.live.run.current().is_some_and(|j| !j.done) {
                 self.refresh_current(cx);
             }
+            // #112: the follow-up exchange on a finished quick look, reread
+            // while the reader watches the run.
+            if let Some(job) = self.live.run.current() {
+                if job.kind == "quick_look" && job.done {
+                    let id = job.id.clone();
+                    self.refresh_quick_asks(id, cx);
+                }
+            }
         }
         if due(self.live.run.last_list, every) {
             self.refresh_jobs(cx);
@@ -823,6 +848,78 @@ impl Kriko {
         if self.tab == Tab::Agents && due(self.live.run.last_agents, Duration::from_secs(10)) {
             self.refresh_agents(cx);
         }
+    }
+
+    /// #112: the follow-up exchange on the followed quick look, reread every
+    /// couple of seconds while one is being answered.
+    pub fn refresh_quick_asks(&mut self, quick_job_id: String, cx: &mut Context<Self>) {
+        if self.live.run.quick_asks_loading {
+            return;
+        }
+        if self.live.run.quick_asks_for.as_deref() == Some(quick_job_id.as_str())
+            && self
+                .live
+                .run
+                .last_quick_asks
+                .is_some_and(|t| Instant::now() - t < Duration::from_secs(2))
+        {
+            return;
+        }
+        self.live.run.quick_asks_loading = true;
+        self.live.run.last_quick_asks = Some(Instant::now());
+        let path = format!("/api/extension/quick-look/{}/asks", api::seg(&quick_job_id));
+        self.fetch(cx, move || api::get(&path), move |this, reply, _| {
+            this.live.run.quick_asks_loading = false;
+            if let Ok(v) = reply {
+                this.live.run.quick_asks = api::arr(&v, "asks")
+                    .iter()
+                    .map(|a| QuickAsk {
+                        job_id: api::s(a, "job_id"),
+                        question: api::s(a, "q"),
+                        answer: api::s(a, "answer"),
+                        state: api::s(a, "state"),
+                        done: api::b(a, "done"),
+                    })
+                    .collect();
+                this.live.run.quick_asks_for = Some(quick_job_id.clone());
+            }
+        });
+    }
+
+    /// #112: a follow-up question about the followed quick look, sent as a
+    /// job; the exchange is read back once it lands.
+    pub fn start_quick_ask(&mut self, cx: &mut Context<Self>) {
+        let question = self.quick_ask_input.value.clone();
+        if question.trim().is_empty() || self.live.run.quick_asking {
+            return;
+        }
+        let Some(job) = self.live.run.detail.clone() else {
+            self.live.run.quick_ask_note = Some("Finish a Quick Look before asking a follow-up.".into());
+            cx.notify();
+            return;
+        };
+        if job.kind != "quick_look" {
+            self.live.run.quick_ask_note = Some("Follow-ups are asked of a quick look.".into());
+            cx.notify();
+            return;
+        }
+        self.live.run.quick_asking = true;
+        self.live.run.quick_ask_note = None;
+        let path = format!("/api/extension/quick-look/{}/ask", api::seg(&job.id));
+        let body = serde_json::json!({ "q": question.trim() });
+        self.fetch(cx, move || api::post(&path, body), move |this, reply, cx| {
+            this.live.run.quick_asking = false;
+            match reply {
+                Ok(v) => {
+                    let id = api::s(&v, "job_id");
+                    this.live.run.quick_asks_for = Some(job.id.clone());
+                    this.refresh_quick_asks(job.id.clone(), cx);
+                    let _ = id;
+                }
+                Err(e) => this.live.run.quick_ask_note = Some(e.message),
+            }
+            cx.notify();
+        });
     }
 
     pub fn refresh_jobs(&mut self, cx: &mut Context<Self>) {

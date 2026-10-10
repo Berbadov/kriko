@@ -120,6 +120,12 @@
     // The saved quick look the "Add to a pack" button would file, or null.
     researchQuickJob: null,
     researchSavedAt: "",
+    // #112: the follow-up exchange on that quick look, and whether one is
+    // being answered right now. Durable rows in the engine; cached here so
+    // a reload puts the conversation back.
+    researchAsks: null,
+    researchAsking: false,
+    researchFollowQ: "",
     taskLogs: new Map(),
     quickSourcesOpen: false,
     // When the followed run started, for the elapsed time beside its stage.
@@ -719,6 +725,9 @@
       state.researchQuick = null;
       state.researchQuickJob = null;
       state.researchSavedAt = "";
+      state.researchAsks = null;
+      state.researchAsking = false;
+      state.researchFollowQ = "";
     }
     state.researchName = nextName;
     state.researchContext = "";
@@ -807,6 +816,7 @@
       state.researchMessage = said;
       renderResearch();
       renderFollowups();
+      loadQuickAsks();
       return;
     }
     state.researchJob = { job_id: deepen, kind: "pack_author" };
@@ -923,6 +933,17 @@
             <summary>Sources</summary><div class="lite-quick-source-list"></div>
           </details>
         </div>` : ""}
+        ${state.researchQuick && (state.researchQuick.risks.length || state.researchQuick.specs?.length) && state.researchQuickJob ? `<div class="lite-follow">
+          <p class="lite-follow-lede">Ask a follow-up. Answers come from this quick look's findings.</p>
+          ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
+            <p class="lite-follow-q">${escapeHtml(a.q)}</p>
+            <p class="lite-follow-answer">${a.done ? escapeHtml(a.answer || "No answer.") : "Answering\u2026"}</p>
+          </div>`).join("")}
+          <div class="lite-follow-row">
+            <input class="lite-follow-input" maxlength="500" placeholder="Ask about this quick look" ${state.researchAsking ? "disabled" : ""} />
+            <button type="button" class="lite-follow-ask" ${state.researchAsking ? "disabled" : ""}>${state.researchAsking ? "Asking\u2026" : "Ask"}</button>
+          </div>
+        </div>` : ""}
         ${asked.length ? `<div class="lite-asked" aria-live="polite">
           <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
             ? "Your agent has a question. Pick an answer and it hears it now."
@@ -1003,6 +1024,15 @@
     }
     slot.querySelector(".lite-research-start")?.addEventListener("click", () => startResearch());
     slot.querySelector(".lite-research-pack")?.addEventListener("click", addQuickToPack);
+    const followInput = slot.querySelector(".lite-follow-input");
+    if (followInput) {
+      followInput.value = state.researchFollowQ;
+      followInput.addEventListener("input", () => { state.researchFollowQ = followInput.value; });
+      followInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") askQuick(followInput.value.trim());
+      });
+      slot.querySelector(".lite-follow-ask")?.addEventListener("click", () => askQuick(followInput.value.trim()));
+    }
     const quickCards = slot.querySelector(".lite-quick-cards");
     const sourceList = slot.querySelector(".lite-quick-source-list");
     const sources = new Map();
@@ -1201,6 +1231,51 @@
       renderResearch();
       pollResearchJob(response.job.job_id);
     });
+  }
+
+  /* #112: the follow-up exchange on a quick look. The asks are durable rows
+   * in the engine (one job each); the panel reads them back so a reload puts
+   * the conversation back while the engine is asked again for the truth. */
+  function loadQuickAsks() {
+    const jobId = state.researchQuickJob;
+    if (!jobId) return;
+    chrome.runtime.sendMessage({ type: "QUICK_ASKS", payload: { job_id: jobId } }, (response) => {
+      if (chrome.runtime.lastError || !response?.ok) return;
+      state.researchAsks = response.asks || [];
+      if (!state.researchAsking) renderResearch();
+    });
+  }
+
+  function askQuick(question) {
+    const jobId = state.researchQuickJob;
+    if (!question || !jobId || state.researchAsking) return;
+    state.researchAsking = true;
+    state.researchAsks = [...(state.researchAsks || []), { q: question, answer: "", done: false }];
+    renderResearch();
+    chrome.runtime.sendMessage({ type: "QUICK_ASK", payload: { job_id: jobId, q: question } }, (response) => {
+      state.researchAsking = false;
+      if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
+        state.researchMessage = response?.error || "Could not ask. Open Kriko and retry.";
+        renderResearch();
+        return;
+      }
+      state.researchFollowQ = "";
+      loadQuickAsks();
+      pollAskJob(response.job.job_id);
+    });
+  }
+
+  function pollAskJob(jobId) {
+    const timer = setInterval(() => {
+      chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
+        if (chrome.runtime.lastError || !response?.ok) { clearInterval(timer); return; }
+        const job = response.job;
+        if (!job || job.done || ["succeeded", "failed", "cancelled"].includes(job.state)) {
+          clearInterval(timer);
+          loadQuickAsks();
+        }
+      });
+    }, 1200);
   }
 
   function pollResearchJob(jobId) {
