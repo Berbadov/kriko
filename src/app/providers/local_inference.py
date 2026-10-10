@@ -45,6 +45,30 @@ CHARS_PER_TOKEN = 3.0
 #: Tokens kept free beside the reply budget, for the chat template.
 _TEMPLATE_TOKENS = 128
 
+#: What a server says when the program that runs its models is missing, as
+#: opposed to the machine lacking memory for one. Both are HTTP 500 and only the
+#: words tell them apart.
+INCOMPLETE_WORDS = ("llama-server", "binary not found")
+
+#: Servers (by address) whose last call said the install is not whole, and the
+#: sentence to show for it. Kept in memory: a restart asks the server again, and
+#: the first failing call finds it out again. See `runtime_incomplete`.
+_incomplete: dict[str, str] = {}
+
+
+def runtime_incomplete(base_url: str) -> str:
+    """Why the server at `base_url` cannot run a model, or "" when nothing says it cannot."""
+    return _incomplete.get(base_url.rstrip("/"), "")
+
+
+def forget_incomplete(base_url: str = "") -> None:
+    """The install was repaired (or the reader says so): ask the server afresh."""
+    if base_url:
+        _incomplete.pop(base_url.rstrip("/"), None)
+    else:
+        _incomplete.clear()
+
+
 #: A second try after these, because a local server's failure modes are
 #: transient in exactly this way: an idle process paged out to disk answers
 #: late and dies mid-reply, then answers fine (Ollama loading a model on its
@@ -196,6 +220,7 @@ class OpenAICompatSocket:
         except Exception as error:  # noqa: BLE001 - named for the reader below
             raise self._failed(error) from error
         self.calls += 1
+        _incomplete.pop(self.base_url.rstrip("/"), None)  # it answered: whatever was wrong is not now
         self._count(payload)
         choices = payload.get("choices") if isinstance(payload, dict) else None
         first = choices[0] if choices and isinstance(choices[0], dict) else {}
@@ -336,6 +361,15 @@ class OpenAICompatSocket:
             detail = (found.get("message") if isinstance(found, dict) else found) or ""
         except Exception:  # noqa: BLE001 - the status alone is enough
             pass
+        if error.code >= 500 and any(word in str(detail).casefold() for word in INCOMPLETE_WORDS):
+            # The server is up and lists its models, but the program that runs
+            # them is not there: an install that never finished. Saying so
+            # here, once, is what lets the screen stop calling it ready.
+            said = (f"{self.base_url} is installed but incomplete: its model runner is missing "
+                    f"({str(detail)[:120]}). In Kriko, open Local LLM and press Set up Ollama, "
+                    "which repairs it; models you downloaded are kept.")
+            _incomplete[self.base_url.rstrip("/")] = said
+            return LocalInferenceError(said, code="runtime_incomplete")
         if error.code == 404:
             return LocalInferenceError(
                 f"{self.base_url} has no model named {self.serving_name!r}"
