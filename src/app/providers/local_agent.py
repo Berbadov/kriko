@@ -30,8 +30,15 @@ from app.providers.local_inference import LocalInferenceError
 from app.providers import local_components
 from app.providers.local_components import evidence, identity
 from app.providers.local_components import plan as plan, triage as triage, verify as verify
+from app.providers.local_components import search as search_round
 
 REASONING_EFFORT = "none"
+
+#: What a quick check searches for beside the product's name. The first two
+#: are the long-standing pair; the others reach forums and repair pages, the
+#: sources a single review site cannot stand in for.
+QUICK_ANGLES = ("problems owner reports", "failures review",
+                "common issues forum discussion", "known defects repair")
 REPLY_MAX_TOKENS = 1024
 
 from kriko.research.politeness import LocalSearchError
@@ -452,7 +459,11 @@ class LocalAsker:
         if self.identity:
             # A quick check already has its exact subject. Avoid a separate
             # CPU inference just to restate that subject as search queries.
-            return [f"{self.identity} problems owner reports", f"{self.identity} failures review"]
+            # The angles are how a buyer words the question, so each one lands
+            # on a different kind of page: reports, reviews, forums, repairs.
+            # A local scraper takes one query at a time, so it gets fewer.
+            angles = QUICK_ANGLES if self.parallel_search else QUICK_ANGLES[:3]
+            return [f"{self.identity} {angle}" for angle in angles]
         task = prompt[:PLAN_CHARS]
         queries = self._usable(self._plan(_QUERY_ASK.format(n=QUERIES, task=task)))
         if not queries:
@@ -532,17 +543,13 @@ class LocalAsker:
             for query in queries:
                 self._check()
                 answered.append(_hits(query))
-        wanted: list[str] = []
-        seen: set[str] = set()
-        for hits, failure in answered:
+        for _, failure in answered:
             if failure:
                 self._say(failure)
-            for hit in hits:
-                url = str(hit.get("url", "")).strip()
-                if not url or url in seen or len(wanted) >= self.max_pages + SPARE_PAGES:
-                    continue
-                seen.add(url)
-                wanted.append(url)
+        # One query's best page after another's, and no site more than twice:
+        # the order the hits came in let a single forum fill the whole list.
+        wanted = search_round.diversify(
+            [hits for hits, _ in answered], self.max_pages + SPARE_PAGES, seen=set())
         if not wanted:
             return []
         self._check()

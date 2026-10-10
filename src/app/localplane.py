@@ -13,12 +13,18 @@ free hosted search (decision D3), so a local model alone is enough to run.
 
 from app import prefs
 from app.providers import local_discovery as discovery
-from app.providers.local_inference import DEFAULT_TIMEOUT
+from app.providers.local_inference import DEFAULT_TIMEOUT, runtime_incomplete
 
 #: A server lists every model it holds, including ones that only embed text.
 #: Such a model cannot answer a prompt, so it is never picked by default. The
 #: substring is a closed engineering convention (every such model says it).
 _NOT_A_CHAT_MODEL = "embed"
+
+#: The window asked of a runtime that takes one, in tokens. Eight thousand
+#: holds five pages beside the brief and the reply; the key-value cache it
+#: costs is small beside the weights, so it fits the machines a small model
+#: is chosen for.
+DEFAULT_CONTEXT = 8192
 
 
 def stored(app_state_path=None) -> dict:
@@ -125,13 +131,26 @@ def resolve(app_state_path=None, *, url: str = "", model: str = "",
     else:
         out["model"] = _pick(chosen["models"], want_model)
         out["ready"] = True
+    # A server that lists models and answers /api/version can still have no
+    # runner to start one with (an install that was interrupted). A call that
+    # found that out has said so; until the install is repaired the plane is
+    # not ready, and the reason says what to press instead of "Ready".
+    broken = runtime_incomplete(out["url"]) if chosen else ""
+    out["runtime_incomplete"] = bool(broken)
+    if broken:
+        out["ready"] = False
+        out["reason"] = broken
     from app.localruntime import inspect, options
     out["runtime"] = inspect(out["url"], out["name"], out["model"], mine)
     if out["runtime"]["runtime"] == "Ollama":
         out["name"] = "Ollama"
         if chosen:
             chosen["name"] = "Ollama"
-    out["runtime_options"] = options(mine) if out["runtime"]["supported"] else {}
+    # Ollama loads a model at 4096 tokens unless told otherwise, which left a
+    # quick look room for two or three pages and cut the rest from the front.
+    # The reader's own context setting still wins; this is only the default.
+    out["runtime_options"] = (
+        {"num_ctx": DEFAULT_CONTEXT, **options(mine)} if out["runtime"]["supported"] else {})
     if not with_search:
         # Not asked, so not claimed: a readiness check that skipped the
         # search probe must not say which search is in use.

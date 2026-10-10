@@ -62,7 +62,10 @@ def test_quick_answer_repairs_bad_json_once_and_keeps_source_and_self_checks():
         searcher([{"url": "https://a.test/1"}]), reader({"https://a.test/1": "An owner said the pump failed."}),
         model="small", search_provider="stub")
     assert asker.ask_quick("Widget MK2") == answer
-    assert asker.telemetry["queries"] == ["Widget MK2 problems owner reports", "Widget MK2 failures review"]
+    # A local scraper takes one query at a time, so it gets three angles.
+    assert asker.telemetry["queries"] == [
+        "Widget MK2 problems owner reports", "Widget MK2 failures review",
+        "Widget MK2 common issues forum discussion"]
     assert asker.telemetry["repairs"] == 1
     assert asker.telemetry["verification"][0]["quote_in_read_page"] is True
     assert asker.telemetry["self_verify"]["verdicts"][0]["supported"] is True
@@ -80,7 +83,7 @@ def test_second_search_learns_from_the_first_pages():
     assert asker.ask_quick("Widget MK2") == answer
     assert "first review names a revised pump" in plan.prompts[0]
     assert asker.telemetry["queries"][-1] == "Widget MK2 pump recall"
-    assert len(asker.telemetry["queries"]) == 3
+    assert len(asker.telemetry["queries"]) == 4  # three angles and the refinement
 
 
 def test_invalid_answer_is_a_distinct_bounded_failure():
@@ -430,3 +433,58 @@ def test_the_socket_asks_the_server_for_its_window(monkeypatch):
 
     silent = local_inference.OpenAICompatSocket("http://127.0.0.1:1", "other")
     assert silent.context_tokens() == local_inference.DEFAULT_CONTEXT_TOKENS
+
+
+# ---- one site is not research ----
+#
+# The reader's words: the small agent is "sticking to one resource". Two of the
+# three pages it read were the same forum, because hits were taken in the order
+# they came and one site topped every query.
+
+from app.providers.local_components import search as search_round
+
+
+def _hits(*urls):
+    return [{"url": url} for url in urls]
+
+
+def test_every_query_gets_its_best_page_before_any_gets_its_second():
+    first = _hits("https://a.test/1", "https://a.test/2", "https://a.test/3")
+    second = _hits("https://b.test/1", "https://b.test/2")
+    assert search_round.diversify([first, second], 4, seen=set(), per_host=9) == [
+        "https://a.test/1", "https://b.test/1", "https://a.test/2", "https://b.test/2"]
+
+
+def test_one_site_cannot_fill_the_list():
+    forum = _hits(*[f"https://forum.test/t/{i}" for i in range(6)])
+    other = _hits("https://review.test/x", "https://shop.test/y")
+    wanted = search_round.diversify([forum, other], 5, seen=set())
+    assert [u for u in wanted if "forum.test" in u] == ["https://forum.test/t/0", "https://forum.test/t/1"]
+    assert "https://review.test/x" in wanted and "https://shop.test/y" in wanted
+
+
+def test_www_and_the_bare_host_are_one_site():
+    assert search_round.host_of("https://www.Example.com/a") == search_round.host_of("https://example.com/b")
+
+
+def test_a_url_already_read_is_not_asked_again():
+    seen = {"https://a.test/1"}
+    wanted = search_round.diversify([_hits("https://a.test/1", "https://a.test/2")], 3, seen=seen)
+    assert wanted == ["https://a.test/2"] and "https://a.test/2" in seen
+
+
+def test_a_page_that_will_not_load_is_replaced_by_a_spare():
+    queries = ["q1", "q2"]
+    hits = {"q1": _hits("https://a.test/1", "https://a.test/2"), "q2": _hits("https://b.test/1", "https://c.test/1")}
+    refused = {"https://a.test/1"}
+
+    def fetch(url):
+        if url in refused:
+            raise OSError("403")
+        return f"readable text of {url}"
+
+    pages, tried = search_round.gather(
+        lambda query, n: hits[query], fetch, queries, seen=set(), searched=set(),
+        limit=3, hits_per_query=2)
+    assert len(pages) == 3, "three pages were asked for and three readable ones exist"
+    assert "https://a.test/1" in tried and all(url != "https://a.test/1" for url, _ in pages)
