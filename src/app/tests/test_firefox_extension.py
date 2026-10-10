@@ -41,7 +41,7 @@ def test_firefox_bundle_is_separate_and_loadable(tmp_path, monkeypatch):
         assert extension.content_digest(tmp_path / "extension") == chrome_digest
         digest = extension.content_digest(folder)
         assert digest == extension.content_digest(extension.source_dir(), "firefox")
-        stamp = re.search(r'LOADED_CONTENT_DIGEST = "([a-f0-9]+)"', (folder / "background.js").read_text()).group(1)
+        stamp = re.search(r'LOADED_CONTENT_DIGEST = "([a-f0-9]+)"', (folder / "background.js").read_text(encoding="utf-8")).group(1)
         assert stamp == digest != chrome_digest
         for origin, expected in [("moz-extension://test-addon", digest),
                 ("chrome-extension://test-addon", chrome_digest)]:
@@ -57,7 +57,7 @@ def test_firefox_update_refreshes_only_a_prepared_addon(tmp_path, monkeypatch):
     with TestClient(app(tmp_path)):
         assert not target.exists()
     extension.stage(extension.source_dir(), target, "firefox")
-    with (target / "background.js").open("a") as stream:
+    with (target / "background.js").open("a", encoding="utf-8") as stream:
         stream.write("\n// old file")
     with TestClient(app(tmp_path)) as client:
         status = client.get("/api/extension").json()
