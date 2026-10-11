@@ -697,6 +697,14 @@ class QuickLookPipeline:
                 if identifier.casefold() not in name.casefold():
                     queries = [re.sub(re.escape(identifier), "", query, flags=re.IGNORECASE).strip()
                                for query in queries]
+            if queries:
+                try:
+                    if not self._language_matches("\n".join(queries), agent.search_language):
+                        agent._say("query planner did not obey the search language; using localized issue queries")
+                        queries = []
+                except LocalInferenceError as error:
+                    self._error("query language", error)
+                    queries = []
             issue_intent = re.compile(
                 r"forum|discussion|troubleshoot|fail|problem|issue|defect|repair|broken|"
                 r"panne|problème|défaillance|défaut|répar|dépann|sorun|arıza|tamir|"
