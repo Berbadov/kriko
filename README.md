@@ -39,6 +39,13 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Each release publishes its catalogs as `.kpack` files on the same page, and you install the ones you need with `kriko install`. You don't need to install Python, Node, or Rust.
 
+### What's new in the next release
+
+- The desktop app no longer uses a CPU core while nothing is happening. With its window open behind other windows, it used about one full core (10.4 CPU-seconds every 10 seconds). It now uses about 0.1. Minimized or closed to the tray, it stays near zero. The engine keeps serving the browser extension the whole time.
+- Animations play only while the Kriko window is the one in front. Behind another window, minimized or in the tray, the window stays still; animations resume when you switch back.
+- The **? n** needs-you tag in the title bar blinks three times when it appears, then stays lit. An agent waiting for your answer breathes three times, then rests. Spinners, meters and agent marks still move while a job runs.
+- The page header's background no longer slowly pulses.
+
 ### What's new in 1.4.0
 
 - The installer no longer carries catalogs. A new install opens with none, and each catalog is installed separately.

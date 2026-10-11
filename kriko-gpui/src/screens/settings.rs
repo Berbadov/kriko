@@ -65,7 +65,7 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
 }
 
 pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let key_input = app.input_field(Field::KeyValue, "key-value", "Paste the key, then Save", None, window, cx);
     let runtime = crate::screens::local::runtime_settings(app, cx);
     let k = &app.live.knowledge;

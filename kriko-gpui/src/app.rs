@@ -295,6 +295,12 @@ pub struct Kriko {
     pub live: Live,
     // settings
     pub reduce_motion: bool,
+    /// Whether this frame may move: the reader allows motion *and* the window
+    /// is the one in front. Set once per frame in `render`. A looping GPUI
+    /// animation asks for the next frame forever and every frame redraws the
+    /// whole window, so a window behind others or minimized never loops; the
+    /// activation change itself redraws, so the loops resume on focus (#184).
+    pub motion: bool,
     /// Agent runs at once, 1..=4 (#133): the engine reads it at every start.
     pub run_concurrency: usize,
     pub run_concurrency_prev: usize,
@@ -368,6 +374,7 @@ impl Kriko {
             engine: engine::status(),
             live: Live::default(),
             reduce_motion: false,
+            motion: false,
             run_concurrency: 1,
             run_concurrency_prev: 0,
             history_search: InputState::new(cx),
@@ -789,7 +796,7 @@ impl Kriko {
     /// way out.
     fn boot_screen(&mut self, maximized: bool, cx: &mut Context<Self>) -> Div {
         let titlebar = self.titlebar(maximized, cx);
-        let motion = !self.reduce_motion;
+        let motion = self.motion;
         let body = match self.engine.clone() {
             engine::Status::Failed { title, detail } => div()
                 .flex()
@@ -934,7 +941,7 @@ impl Kriko {
                             "titlebar-needs-you",
                             TagState::Need,
                             &format!("? {needs_you}"),
-                            !self.reduce_motion,
+                            self.motion,
                         ))
                     })
                     .child(
@@ -955,6 +962,7 @@ impl Kriko {
 
 impl Render for Kriko {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.motion = !self.reduce_motion && window.is_window_active();
         if !matches!(self.engine, engine::Status::Ready { .. }) {
             let maximized = window.is_maximized();
             return self.boot_screen(maximized, cx).into_any_element();
@@ -972,7 +980,7 @@ impl Render for Kriko {
         let titlebar = self.titlebar(maximized, cx);
         let sidebar = self.sidebar(cx);
         let collapsed = self.sidebar_collapsed;
-        let sidebar = if !self.reduce_motion {
+        let sidebar = if self.motion {
             sidebar.with_animation(gpui::ElementId::named_usize("sidebar-slide", collapsed as usize),
                 gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
                     let t = t * t * (3.0 - 2.0 * t);
@@ -992,14 +1000,14 @@ impl Render for Kriko {
             .overflow_hidden()
             .w(px(if open { DOCK_W } else { 0.0 }))
             .child(dock);
-        let dock_wrap = if !self.reduce_motion {
+        let dock_wrap = if self.motion {
             dock_wrap.with_animation(gpui::ElementId::named_usize("live-slide", open as usize),
                 gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
                     let t = t * t * (3.0 - 2.0 * t); d.w(px(DOCK_W * if open { t } else { 1.0 - t }))
                 }).into_any_element()
         } else { dock_wrap.into_any_element() };
-        let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
-            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), !self.reduce_motion));
+        let hero = hero(tab.hero_sky(), tab.hero_height(), self.motion)
+            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), self.motion));
         div()
             .id("kriko-root")
             .size_full()
@@ -1057,7 +1065,7 @@ impl Render for Kriko {
                                     .px(px(40.0))
                                     .pt(px(20.0))
                                     .pb(px(48.0))
-                                    .child(arrive(content, format!("page-{}", tab.key()), !self.reduce_motion)),
+                                    .child(arrive(content, format!("page-{}", tab.key()), self.motion)),
                             ),
                     )
                     // The bar floats on the sky, after the page so it
