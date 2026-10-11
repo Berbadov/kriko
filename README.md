@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.3.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.3.2-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Download for Windows](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,10 +34,26 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.1.7-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.1.7-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep both programs together, and open `kriko.exe`. |
+| `kriko-1.3.2-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.3.2-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start, including its catalogs. You don't need to install Python, Node, or Rust.
+
+### What's new in 1.3.2
+
+- The extension's main action is now **Search this product**, with **Search again** for a refresh.
+- **Add to queue** is available even when installed catalogs do not recognize the product.
+- Agent answers render bold and inline code while escaping agent-supplied HTML.
+
+### What's new in 1.3.1
+
+- Local research prioritizes exact-model issue forums and owner reports, filters ads and repair-service offers, and replaces irrelevant pages before using the page limit.
+- Exact model codes and the selected search language are preserved. Response and search languages can be set independently.
+- Bundled OpenSERP stays usable when some search engines are unavailable, and the desktop recovers its search process after it exits.
+- Coverage and evidence rejection reasons are visible. An empty result does not establish that a product has no problems.
+- The updater recognizes this as newer than 1.3.0. Release downloads include `SHA256SUMS.txt` for verified updates.
+
+Use the app's update check or install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
 
 > The build is unsigned, so Windows may show a SmartScreen warning. See the [Windows installation guide](docs/INSTALL_WINDOWS.md) for the install steps.
 
@@ -122,6 +138,8 @@ If the panel says Kriko isn't running, open the desktop app first. After an upda
 The engine, command line, and local API can also run from source on macOS and Linux. The packaged desktop app is for Windows x64.
 
 See the [desktop build guide](kriko-gpui/README.md) for the Windows installer recipe, [contributor guide](docs/DOCTRINE.md) for setup and checks, and [architecture guide](docs/ARCHITECTURE.md) for the code. To add a new product category, start with the [catalog contract](docs/PACK_CONTRACT.md).
+
+Every change set must bump the version and update this README before it is committed. Follow the [update protocol](docs/UPDATE_PROTOCOL.md); published versions and their assets are immutable.
 
 ## License
 

@@ -435,12 +435,19 @@ class LocalAsker:
                 break
         return queries
 
-    def _read(self, queries: list[str]) -> list[tuple[str, str]]:
-        """Round-robin search results, prefer different publishers, replace misses."""
-        from app.providers.local_pipeline import canonical_url, publisher
+    def _read(self, queries: list[str], *, identity=None,
+              prefer_issues: bool = False) -> list[tuple[str, str]]:
+        """Prefer issue discussions and replace unreadable/unrelated pages."""
+        from app.providers.local_pipeline import canonical_url, publisher, repair_offer_page
+        from app.providers.local_identity import relevant_source
+        import hashlib
 
         self.search_coverage = {"queries_searched": 0, "search_errors": 0,
-                                "unique_hits": 0, "pages_unreadable": 0}
+                                "unique_hits": 0, "pages_unreadable": 0,
+                                "pages_read": 0, "pages_irrelevant": 0,
+                                "pages_duplicate": 0, "pages_selected": 0,
+                                "pages_service_offers": 0,
+                                "publishers_read": 0, "pages_timed_out": 0}
         if self.given_sources is not None:
             self.sources = dict(self.given_sources)
             return list(self.sources.items())
@@ -448,7 +455,7 @@ class LocalAsker:
         for query in queries:
             self._check()
             try:
-                hits = self._search(query, HITS_PER_QUERY) or []
+                hits = self._search(query, 10 if prefer_issues else HITS_PER_QUERY) or []
                 self.search_coverage["queries_searched"] += 1
             except LocalSearchError as error:
                 self._say(f"search failed for {query!r}: {error}")
@@ -457,7 +464,7 @@ class LocalAsker:
             hits_by_query.append(hits)
         wanted, seen = [], set()
         # A query cannot fill the entire source set before the next query runs.
-        for rank in range(HITS_PER_QUERY):
+        for rank in range(10 if prefer_issues else HITS_PER_QUERY):
             for hits in hits_by_query:
                 if rank >= len(hits) or not isinstance(hits[rank], dict):
                     continue
@@ -467,15 +474,41 @@ class LocalAsker:
                     self.page_titles[url] = str(hits[rank].get("title") or "")[:240]
                     wanted.append(url)
         self.search_coverage["unique_hits"] = len(wanted)
+        def issue_priority(url: str) -> int:
+            label = (url + " " + self.page_titles.get(url, "")).casefold()
+            if re.search(r"\b(?:forums?|threads?|communities|community|discussion|discuss|"
+                         r"boards?|subreddit)\b|/r/|/comments/|/t/", label):
+                return 3
+            if re.search(r"\b(?:problems?|issues?|failures?|broken|defects?|repair|"
+                         r"troubleshoot\w*|pannes?|problèmes?|défauts?|réparation|"
+                         r"sorun\w*|arıza\w*|tamir|fehler|defekt\w*)\b", label):
+                return 2
+            if re.search(r"\b(?:review|test|avis|long.term)\b", label):
+                return 1
+            if re.search(r"\b(?:buy|shop|price|specifications|specs|manuals|"
+                         r"acheter|prix|fiche|caractéristiques)\b|/products?/|/dp/", label):
+                return -1
+            return 0
+
+        if prefer_issues:
+            wanted.sort(key=issue_priority, reverse=True)
         domains, diverse, repeated = set(), [], []
-        for url in wanted:
-            domain = publisher(url)
-            if domain in domains:
-                repeated.append(url)
-            else:
-                domains.add(domain)
-                diverse.append(url)
-        wanted = (diverse + repeated)[:max(18, min(150, self.max_pages * 3))]
+        prioritized = []
+        # Diversity within each priority level: a low-value catalog must not
+        # jump ahead of another useful discussion merely to add a publisher.
+        for priority in (3, 2, 1, 0, -1) if prefer_issues else (0,):
+            diverse, repeated = [], []
+            for url in wanted:
+                if prefer_issues and issue_priority(url) != priority:
+                    continue
+                domain = publisher(url)
+                if domain in domains:
+                    repeated.append(url)
+                else:
+                    domains.add(domain)
+                    diverse.append(url)
+            prioritized.extend(diverse + repeated)
+        wanted = prioritized[:max(24, min(150, self.max_pages * 5))]
 
         def read_one(url: str) -> tuple[str, str]:
             try:
@@ -486,38 +519,58 @@ class LocalAsker:
             return url, text[:24000] if len(text) >= MIN_PAGE_CHARS else ""
 
         pages: list[tuple[str, str]] = []
-        start = 0
-        deadline = time.monotonic() + READ_DEADLINE
-        while start < len(wanted) and len(pages) < self.max_pages and time.monotonic() < deadline:
-            self._check()
-            batch = wanted[start:start + min(4, self.max_pages - len(pages))]
-            start += len(batch)
-            pool = ThreadPoolExecutor(max_workers=len(batch))
-            fetched_by_url = {}
-            pending = {pool.submit(read_one, url): url for url in batch}
-            try:
-                while pending and time.monotonic() < deadline:
-                    done, _ = wait(pending, timeout=min(1.0, max(0.0, deadline - time.monotonic())),
-                                   return_when=FIRST_COMPLETED)
-                    for future in done:
-                        fetched_by_url[pending.pop(future)] = future.result()
-                    self._check()
-            finally:
-                pool.shutdown(wait=False, cancel_futures=True)
-            fetched = [fetched_by_url.get(url, (url, "")) for url in batch]
-            self._check()
-            for url, text in fetched:
-                if not text:
-                    self.search_coverage["pages_unreadable"] += 1
-                    continue
-                pages.append((url, text))
-                self.sources[url] = text
-                if len(pages) >= self.max_pages:
+        fingerprints, read_domains = set(), set()
+        queue = iter(wanted)
+        deadline = time.monotonic() + (40.0 if prefer_issues else READ_DEADLINE)
+        pool = ThreadPoolExecutor(max_workers=4)
+        pending = {}
+        def fill() -> None:
+            while len(pending) < min(4, self.max_pages - len(pages)):
+                url = next(queue, None)
+                if url is None:
                     break
-            if len(pages) >= self.max_pages:
-                break
-        self._say(f"read {len(pages)} page(s) from "
-                  f"{len({publisher(url) for url, _ in pages})} publisher buckets")
+                pending[pool.submit(read_one, url)] = url
+        try:
+            fill()
+            while pending and len(pages) < self.max_pages and time.monotonic() < deadline:
+                self._check()
+                done, _ = wait(pending, timeout=min(1.0, max(0.0, deadline - time.monotonic())),
+                               return_when=FIRST_COMPLETED)
+                for future in sorted(done, key=lambda item: wanted.index(pending[item])):
+                    pending.pop(future)
+                    url, text = future.result()
+                    if not text:
+                        self.search_coverage["pages_unreadable"] += 1
+                        continue
+                    self.search_coverage["pages_read"] += 1
+                    read_domains.add(publisher(url))
+                    if identity is not None and not relevant_source(
+                            identity, self.page_titles.get(url, ""), text):
+                        self.search_coverage["pages_irrelevant"] += 1
+                        self._say(f"replacing page without an exact product match: {url}")
+                        continue
+                    fingerprint = hashlib.sha256(" ".join(text.casefold().split()).encode()).hexdigest()
+                    if prefer_issues and repair_offer_page(url, self.page_titles.get(url, ""), text):
+                        self.search_coverage["pages_service_offers"] += 1
+                        self._say(f"replacing repair-service advertisement, not an incident report: {url}")
+                        continue
+                    if fingerprint in fingerprints:
+                        self.search_coverage["pages_duplicate"] += 1
+                        self._say(f"replacing copied page: {url}")
+                        continue
+                    fingerprints.add(fingerprint)
+                    pages.append((url, text))
+                    self.sources[url] = text
+                fill()
+            if pending and time.monotonic() >= deadline:
+                self.search_coverage["pages_timed_out"] = len(pending)
+                self._say(f"page reading deadline reached; {len(pending)} page(s) still waiting")
+        finally:
+            pool.shutdown(wait=False, cancel_futures=True)
+        self.search_coverage["pages_selected"] = len(pages)
+        self.search_coverage["publishers_read"] = len(read_domains)
+        self._say(f"read {self.search_coverage['pages_read']} page(s) from "
+                  f"{len(read_domains)} publisher buckets; selected {len(pages)} usable product pages")
         return pages
 
 
