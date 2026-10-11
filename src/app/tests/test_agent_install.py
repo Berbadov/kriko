@@ -164,60 +164,24 @@ def test_spinner_frames_are_not_log_lines():
     assert progress.lines == ["real line"]
 
 
-# ---- the starter is sized to the machine, not one model for everyone ----
+# ---- the starter is the recommended model, one name everywhere ----
 #
-# The reader's words: the small agent "avoids doing hard work and gives few poor
-# results". On the same real product 0.8B kept one finding and 4B of the same
-# family kept three, in about the same time on a 6 GB GPU. Nothing here names a
-# machine; each case is a machine's own report.
+# The reader's words: "make sure that gemma4e2b is the default recommended
+# model for the app". The installer, the default pick and the screens read one
+# constant, so they cannot recommend different models.
 
 
-def _machine(gpu_mb=None, ram_mb=None):
-    return {"gpu": {"name": "x", "vram_total_mb": gpu_mb}, "ram_total_mb": ram_mb}
+def test_the_starter_is_the_recommended_model():
+    from app import localplane
+
+    assert localplane.RECOMMENDED_MODEL == "gemma4:e2b"
+    assert agentinstall.STARTER_MODEL == localplane.RECOMMENDED_MODEL
 
 
-def test_a_six_gb_gpu_gets_the_4b_not_the_0_8b():
-    assert agentinstall.starter_model(_machine(gpu_mb=6144, ram_mb=15606)) == "qwen3.5:4b"
-
-
-def test_the_model_never_outgrows_the_gpu_it_would_run_on():
-    # 9B is 6.6 GB on disk: it does not fit 8 GB beside the screen and the cache
-    assert agentinstall.starter_model(_machine(gpu_mb=8192, ram_mb=32768)) == "qwen3.5:4b"
-    assert agentinstall.starter_model(_machine(gpu_mb=12288, ram_mb=32768)) == "qwen3.5:9b"
-
-
-def test_without_a_gpu_the_share_of_ram_decides():
-    assert agentinstall.starter_model(_machine(ram_mb=16384)) == "qwen3.5:4b"
-    assert agentinstall.starter_model(_machine(ram_mb=8192)) == "qwen3.5:2b"
-    assert agentinstall.starter_model(_machine(ram_mb=4096)) == "qwen3.5:0.8b"
-
-
-def test_a_gpu_too_small_to_help_falls_back_to_ram():
-    assert agentinstall.starter_model(_machine(gpu_mb=2048, ram_mb=16384)) == "qwen3.5:4b"
-
-
-def test_nothing_reported_is_the_smallest_not_a_guess():
-    assert agentinstall.starter_model({}) == f"{agentinstall.STARTER_FAMILY}:0.8b"
-
-
-def test_no_starter_is_larger_than_the_cap_however_big_the_machine():
-    assert agentinstall.starter_model(_machine(gpu_mb=98304, ram_mb=262144),
-                                      (0.8, 4.0, 9.0, 27.0, 122.0)) == "qwen3.5:9b"
-
-
-def test_the_library_page_names_the_sizes_when_it_can(monkeypatch):
-    monkeypatch.setattr(agentinstall.modelpull, "library", lambda: [
-        {"name": "other", "sizes": ["1b"], "about": ""},
-        {"name": "qwen3.5", "sizes": ["0.8b", "2b", "e2b", "4b", "35b"], "about": ""}])
-    assert agentinstall._library_sizes() == (0.8, 2.0, 4.0, 35.0)
-
-
-def test_an_unreadable_library_falls_back_to_the_known_sizes(monkeypatch):
-    def down():
-        raise RuntimeError("offline")
-
-    monkeypatch.setattr(agentinstall.modelpull, "library", down)
-    assert agentinstall._library_sizes() == agentinstall.STARTER_SIZES
+def test_the_setup_logs_which_model_it_chose():
+    progress = _Progress()
+    assert agentinstall._starter(progress) == "gemma4:e2b"
+    assert any("gemma4:e2b" in line for line in progress.lines)
 
 
 # ---- an Ollama that answers but cannot run anything ----

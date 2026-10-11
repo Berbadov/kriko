@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.3.3-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.4.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Download for Windows](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,10 +34,31 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.3.3-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.3.3-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.4.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.4.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
-The Windows app includes everything it needs to start, including its catalogs. You don't need to install Python, Node, or Rust.
+The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Each release publishes its catalogs as `.kpack` files on the same page, and you install the ones you need with `kriko install`. You don't need to install Python, Node, or Rust.
+
+### What's new in 1.4.0
+
+- The installer no longer carries catalogs. A new install opens with none, and each catalog is installed separately.
+- Browse, Agents, Settings and Overview fit the window at its default size and at its minimum size. Nothing is cut off, and no screen scrolls sideways.
+- The Live panel starts closed on every launch. When you open it, it floats over the page on a glass panel, so the page layout does not change.
+- Local research tells a part from the product it fits. For a listing such as an air filter for a specific engine, Kriko searches for the filter by its name in your search language and skips pages that only discuss the engine.
+- A page no longer has to repeat the whole listing title. A part name matches wording variants, and the listing's trailing arrows and the dotless `ı` are handled.
+- Pages that were read but were not about the product give an empty result with counts, not a "check OpenSERP and the connection" error. That error now appears only when nothing could be read, and names the cause.
+- `gemma4:e2b` is the recommended local model: it is the default when you have not chosen one, what **Set up Ollama and the recommended model** downloads (allow about 8 GB), and it is marked *Recommended* in the model list.
+- When a research run finishes without keeping any claim, the extension's panel says that no data was found showing an issue, and that this is not proof there is no issue. Before, it only said "Open the research job for findings."
+- A run that left a brief to read keeps the previous wording, because the brief may hold the findings.
+- On **Local**, a choice of device, GPU layers, context tokens, answer language or search language shows as picked at once, with a spinner beside its row until the engine confirms it. If the engine refuses the change, the previous choice comes back.
+- **Refresh device** shows a spinner until the device information arrives.
+- Changing a Local choice or refreshing the device no longer clears a server address or search address you have typed but not saved.
+- Kriko checks for a newer version every time it starts. When one is published, the **Home** screen shows it at the top with **Install and restart**. Nothing installs until you press that button.
+- If the check cannot reach GitHub, Home stays quiet and **About** says why. A failed check does not hide a newer version that an earlier check found.
+- Follow-up questions about a saved check and about a quick look search the web for the answer. Answers are kept to a few sentences and list the pages they rely on as links.
+- Answers appear as they are written: three dots while the agent starts, then the text typed out with a caret until it is complete. A local model streams its answer word by word. A coding-agent CLI returns its answer all at once, and the panel types that out the same way.
+- Quick-look follow-ups no longer answer only from the quick look's own findings.
+- The installer build writes its Rust output to one shared folder outside the project, instead of a copy of about 2 GB inside every checkout and worktree.
 
 ### What's new in 1.3.3
 
@@ -59,7 +80,7 @@ The Windows app includes everything it needs to start, including its catalogs. Y
 - Coverage and evidence rejection reasons are visible. An empty result does not establish that a product has no problems.
 - The updater recognizes this as newer than 1.3.0. Release downloads include `SHA256SUMS.txt` for verified updates.
 
-Use the app's update check or install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
+Kriko offers a newer version on the Home screen when it starts, or you can install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
 
 > The build is unsigned, so Windows may show a SmartScreen warning. See the [Windows installation guide](docs/INSTALL_WINDOWS.md) for the install steps.
 
@@ -76,7 +97,7 @@ The extension is loaded from disk; it isn't distributed through a browser store.
 
 ### 3. Check a listing
 
-Open a supported listing and open the Kriko panel. Read the known risks, expand a finding, and follow its source. A catalog supplies the knowledge for its product category; it can only answer for products it covers.
+Open a supported listing and open the Kriko panel. Read the known risks, expand a finding, and follow its source. A catalog supplies the knowledge for its product category; it can only answer for products it covers. A new install has no catalog until you install one, so the panel has nothing to check against yet.
 
 When the product isn't covered, try **Quick look** with a configured agent. You can inspect the sources and ask another question after the result arrives. Quick look stays in your history; creating a catalog requires an explicit build action.
 

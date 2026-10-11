@@ -26,8 +26,10 @@ node_modules/
 dist/
 build/
 build.log
-# The desktop app. A Rust target directory is about 2 GB, one per worktree or
-# agent, hence the glob. Installers come from kriko-gpui/package.ps1.
+# The desktop app. package.ps1 builds its release tree outside the checkout
+# (%LOCALAPPDATA%\Kriko\cargo-target), so this glob is for a plain `cargo build`
+# run from a checkout, which still writes kriko-gpui/target (about 2 GB per
+# worktree or agent, hence the glob). Installers come from kriko-gpui/package.ps1.
 kriko-gpui/target*/
 kriko-gpui/builds/
 

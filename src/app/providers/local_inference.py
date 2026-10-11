@@ -18,6 +18,7 @@ whose text names the address and the reason in the reader's terms, and the
 plane says it in the job log.
 """
 
+from collections.abc import Callable, Iterator
 import json
 import socket
 import urllib.error
@@ -100,6 +101,25 @@ class LocalInferenceError(RuntimeError):
     def __init__(self, message: str, *, code: str = "inference_error"):
         super().__init__(message)
         self.code = code
+
+
+def _event(event: dict, native: bool) -> tuple[str, str, dict | None]:
+    """One streamed event as `(text, finish reason, usage)`, in either dialect."""
+    if native:
+        message = event.get("message")
+        text = str(message.get("content") or "") if isinstance(message, dict) else ""
+        finish = str(event.get("done_reason") or "stop") if event.get("done") else ""
+        counted = None
+        if event.get("done") and ("prompt_eval_count" in event or "eval_count" in event):
+            counted = {"prompt_tokens": event.get("prompt_eval_count"),
+                       "completion_tokens": event.get("eval_count")}
+        return text, finish, counted
+    choices = event.get("choices")
+    choice = choices[0] if isinstance(choices, list) and choices and isinstance(choices[0], dict) else {}
+    part = choice.get("delta") if isinstance(choice.get("delta"), dict) else choice.get("message")
+    text = str(part.get("content") or "") if isinstance(part, dict) else ""
+    usage = event.get("usage")
+    return text, str(choice.get("finish_reason") or ""), (usage if isinstance(usage, dict) else None)
 
 
 class OpenAICompatSocket:
@@ -244,16 +264,121 @@ class OpenAICompatSocket:
             self.truncated += 1
         text = str((message or {}).get("content") or "") if isinstance(message, dict) else ""
         if not text.strip():
-            if finish == "length":
-                raise LocalInferenceError(
-                    f"{self.base_url} cut {self.serving_name!r} off at "
-                    f"{self.max_tokens} tokens before it wrote anything. The "
-                    "page may be too long for this model's context.", code="truncated")
-            raise LocalInferenceError(
-                f"{self.base_url} answered with an empty reply from "
-                f"{self.serving_name!r}: the model produced no text. Try a "
-                "larger model, or check that it is loaded.", code="empty_reply")
+            raise self._empty(finish)
         return text
+
+    def stream(self, prompt: str, on_text: Callable[[str], None]) -> str:
+        """`complete`, with each piece of the reply handed to `on_text` as it is written.
+
+        Returns the same reply `complete` would. A reply bound to a schema is
+        whole or nothing, so that case answers through `complete` and hands the
+        whole reply over once. A server that answers without streaming hands
+        its reply over as one piece. An exception from `on_text` (a job asked to
+        stop, for one) ends the stream and is raised as it is.
+        """
+        if self._schema:
+            text = self.complete(prompt)
+            on_text(text)
+            return text
+        body: dict = {
+            "model": self.serving_name,
+            "messages": [{"role": "user", "content": self.language_instruction + prompt}],
+            "temperature": self.temperature,
+            "stream": True,
+        }
+        if not self.runtime_options:
+            # The token counts come at the end of the stream when asked for, and
+            # `_count` reads them the same way it reads a whole reply's.
+            body["stream_options"] = {"include_usage": True}
+        if isinstance(self.max_tokens, int) and self.max_tokens > 0:
+            body["max_tokens"] = self.max_tokens
+        body["reasoning_effort"] = self.reasoning_effort or "none"
+        pieces: list[str] = []
+        finish, usage = "", None
+        for piece, reason, counted in self._events(body):
+            if piece:
+                pieces.append(piece)
+                on_text(piece)
+            finish = reason or finish
+            usage = counted or usage
+        self.calls += 1
+        _incomplete.pop(self.base_url.rstrip("/"), None)
+        self._count({"usage": usage} if usage else {})
+        self.last_finish_reason = finish
+        if finish == "length":
+            self.truncated += 1
+        text = "".join(pieces)
+        if not text.strip():
+            raise self._empty(finish)
+        return text
+
+    def _events(self, body: dict) -> Iterator[tuple[str, str, dict | None]]:
+        """Each event of one streamed reply, as `(text, finish reason, usage)`.
+
+        Reads the OpenAI stream (server-sent `data:` lines), or Ollama's native
+        stream (one JSON object a line) when runtime options must reach the
+        server. An optional field the server refuses is dropped and the request
+        is sent again, as `complete` does. Nothing is retried once a piece of the
+        reply has been handed on, because a retry would repeat what was said.
+        """
+        native = bool(self.runtime_options)
+        while True:
+            sent = self._native(body, stream=True) if native else body
+            url = self.base_url + ("/api/chat" if native else "/v1/chat/completions")
+            request = urllib.request.Request(
+                url, data=json.dumps(sent).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST")
+            try:
+                response = urllib.request.urlopen(request, timeout=self.timeout)
+            except urllib.error.HTTPError as error:
+                optional = [key for key in ("stream_options", "reasoning_effort") if key in body]
+                if error.code == 400 and optional:
+                    body.pop(optional[0])
+                    continue
+                raise self._refused(error) from error
+            except Exception as error:  # noqa: BLE001 - named for the reader below
+                raise self._failed(error) from error
+            break
+        try:
+            with response:
+                for raw in response:
+                    line = raw.decode("utf-8", "replace").strip()
+                    if line.startswith("data:"):
+                        line = line[5:].strip()
+                    if not line or line.startswith(":") or line == "[DONE]":
+                        continue
+                    try:
+                        event = json.loads(line)
+                    except ValueError:
+                        continue
+                    if isinstance(event, dict):
+                        yield _event(event, native)
+        except Exception as error:  # noqa: BLE001 - named for the reader below
+            raise self._failed(error) from error
+
+    def _empty(self, finish: str) -> LocalInferenceError:
+        """Why a reply with no text is an error, said in the reader's terms."""
+        if finish == "length":
+            return LocalInferenceError(
+                f"{self.base_url} cut {self.serving_name!r} off at "
+                f"{self.max_tokens} tokens before it wrote anything. The "
+                "page may be too long for this model's context.", code="truncated")
+        return LocalInferenceError(
+            f"{self.base_url} answered with an empty reply from "
+            f"{self.serving_name!r}: the model produced no text. Try a "
+            "larger model, or check that it is loaded.", code="empty_reply")
+
+    def _native(self, body: dict, *, stream: bool) -> dict:
+        """The body Ollama's native chat endpoint takes, from an OpenAI-shaped one."""
+        native = {"model": self.serving_name, "messages": body["messages"],
+                  "stream": stream,
+                  **({"think": False} if body.get("reasoning_effort") == "none" else {}),
+                  "options": {
+                      **self.runtime_options, "temperature": body["temperature"],
+                      **({"num_predict": body["max_tokens"]} if "max_tokens" in body else {})}}
+        if "response_format" in body:
+            native["format"] = body["response_format"]["json_schema"]["schema"]
+        return native
 
     def context_tokens(self) -> int:
         """The window the server runs this model with, in tokens.
@@ -315,14 +440,7 @@ class OpenAICompatSocket:
             # Loader options are not part of the OpenAI API. Use Ollama's
             # native endpoint only for settings that resolve identified as
             # supported; never silently send ignored GPU fields to /v1.
-            native = {"model": self.serving_name, "messages": body["messages"],
-                      "stream": False,
-                      **({"think": False} if body.get("reasoning_effort") == "none" else {}),
-                      "options": {
-                          **self.runtime_options, "temperature": body["temperature"],
-                          **({"num_predict": body["max_tokens"]} if "max_tokens" in body else {})}}
-            if "response_format" in body:
-                native["format"] = body["response_format"]["json_schema"]["schema"]
+            native = self._native(body, stream=False)
             request = urllib.request.Request(
                 self.base_url + "/api/chat", data=json.dumps(native).encode("utf-8"),
                 headers={"Content-Type": "application/json"}, method="POST")

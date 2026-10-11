@@ -153,6 +153,8 @@ class LocalAsker:
         self._evidence: dict[str, tuple[str, str]] = {}
         self.on_action: Callable[[str], None] | None = None
         self.check_cancelled: Callable[[], None] | None = None
+        #: Set by a job that wants the answer as it is written (`app/followup.py`).
+        self.on_text: Callable[[str], None] | None = None
         self.replies = None
         self.note = ""
         self.max_pages = MAX_PAGES
@@ -259,7 +261,10 @@ class LocalAsker:
         self._check()
         pages = self._fit(prompt, pages, queries)
         blocks = self._blocks(pages) if self.identity else "\n\n".join(f"### URL: {url}\n{text}" for url, text in pages)
-        return self._complete(prompt + _PAGES_HEAD + blocks + self._reply_budget())
+        answer = prompt + _PAGES_HEAD + blocks + self._reply_budget()
+        if self.on_text is not None:
+            return self._complete.stream(answer, self.on_text)
+        return self._complete(answer)
 
     def ask_quick(self, product: str, *, principle: str = "", page: dict | None = None,
                   packs: str = "", attributes: str = "") -> str:
@@ -439,7 +444,7 @@ class LocalAsker:
               prefer_issues: bool = False) -> list[tuple[str, str]]:
         """Prefer issue discussions and replace unreadable/unrelated pages."""
         from app.providers.local_pipeline import canonical_url, publisher, repair_offer_page
-        from app.providers.local_identity import relevant_source
+        from app.providers.local_identity import relevant_source, source_scope
         import hashlib
 
         self.search_coverage = {"queries_searched": 0, "search_errors": 0,
@@ -547,7 +552,14 @@ class LocalAsker:
                     if identity is not None and not relevant_source(
                             identity, self.page_titles.get(url, ""), text):
                         self.search_coverage["pages_irrelevant"] += 1
-                        self._say(f"replacing page without an exact product match: {url}")
+                        scope = source_scope(identity, self.page_titles.get(url, ""), text)
+                        if scope == "host_only":
+                            self.search_coverage["pages_host_only"] = (
+                                self.search_coverage.get("pages_host_only", 0) + 1)
+                            self._say("replacing page about the product it fits, "
+                                      f"not the part itself: {url}")
+                        else:
+                            self._say(f"replacing page without an exact product match: {url}")
                         continue
                     fingerprint = hashlib.sha256(" ".join(text.casefold().split()).encode()).hexdigest()
                     if prefer_issues and repair_offer_page(url, self.page_titles.get(url, ""), text):
@@ -590,6 +602,15 @@ class _MeasuredSocket:
     def json(self, prompt, schema):
         return self.owner._measured(self.stage, self.socket,
                                    lambda: self.socket.json(prompt, schema))
+
+    def stream(self, prompt, on_text):
+        """The reply as it is written, or, from a socket that cannot stream, whole."""
+        if not callable(getattr(self.socket, "stream", None)):
+            text = self(prompt)
+            on_text(text)
+            return text
+        return self.owner._measured(self.stage, self.socket,
+                                   lambda: self.socket.stream(prompt, on_text))
 
     def __call__(self, prompt):
         stage = "verify" if prompt.startswith("Check evidence for ") else self.stage

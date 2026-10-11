@@ -179,8 +179,7 @@ powershell -ExecutionPolicy Bypass -File package.ps1
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
     A["Preflight<br/>tools, versions agree"]:::plain --> B["Python side<br/>pip install -r requirements.lock"]:::plain
-    B --> C["Build the packs"]:::plain
-    C --> D["Freeze the sidecar<br/>PyInstaller"]:::plain
+    B --> D["Freeze the sidecar<br/>PyInstaller"]:::plain
     D --> E["Sidecar answers?<br/>smoke_sidecar.py"]:::brand
     E --> F["cargo build --release"]:::plain
     F --> G["Place the sidecar<br/>beside kriko.exe"]:::plain
@@ -212,6 +211,18 @@ cargo-wix`. If WiX is not on PATH or in `WIX`, pass its folder:
 `.\package.ps1 -WixBin C:\path\to\wix314`. The exe carries the brand icon via
 `build.rs` (winresource), so the taskbar and shortcuts show the mark without
 any extra files. The installer is unsigned: SmartScreen warns on first run.
+
+Where the build writes. The release tree, about 2 GB, goes to
+`%LOCALAPPDATA%\Kriko\cargo-target`: one copy per machine, shared by every
+checkout and worktree, not `kriko-gpui\target` inside each one. `CARGO_TARGET_DIR`
+moves it. PyInstaller's scratch goes to temp and is removed after the freeze.
+`dist\` (the sidecar and the packs) and `builds\` stay in the checkout, because
+they are what the build hands over.
+
+A plain `cargo build` or `cargo run` still writes `kriko-gpui\target`. If
+`CARGO_TARGET_DIR` points elsewhere for those too, `cargo run` stops finding the
+checkout's `.venv` (`checkout_python` in `src/engine.rs` walks up from the exe)
+and falls back to `python` on PATH.
 
 The icon (`assets/kriko.ico`) is the white K mark on the flat brand blue
 `#1f4fff`, on a smooth rounded square, no sharp corners, at every size

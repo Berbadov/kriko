@@ -22,10 +22,10 @@
 # has already been wrong once — collecting all of `mcp` pulls in `mcp.cli`,
 # which raises "typer is required" and fails the freeze on every runner.
 #
-# `datas` — five things in this repo are read from disk rather than imported,
+# `datas` — four things in this repo are read from disk rather than imported,
 # and every one is invisible to PyInstaller's import graph: the store's DDL
 # (src/kriko/store/schema.sql, or every query raises FileNotFoundError), the
-# browser extension, the first-party packs, and the shipped model catalogue
+# browser extension, the shipped model catalogue
 # (src/app/models.toml, or install_default() throws FileNotFoundError on every
 # frozen startup and every screen that prices a run shows "cost unknown"), and
 # the public suffix list used to normalize local search hosts. The
@@ -69,24 +69,8 @@ ROOT = Path(SPECPATH).parent
 # mirrors by copying the directory and letting the staging step filter.
 EXTENSION = ROOT / "extension"
 
-# The first-party knowledge travels inside the sidecar too, unpacked to
-# `app/packs_bundled` where `app/bundledpacks.py` looks for it, and startup
-# installs whatever the store is missing or behind on. Until 0.7.1 the
-# installer carried none, so a fresh install opened onto an empty store — and,
-# worse, a defect whose fix lives in a pack's rows could not be delivered by
-# any release at all: B101's new alias tier shipped its engine half while the
-# reader's installed cars 0.1.1 kept producing the searches that found nothing.
-# Every file is listed rather than globbed because PyInstaller's `datas` takes
-# paths, not patterns.
-PACKS = sorted((ROOT / "dist").glob("*.kpack"))
-
-if not PACKS:
-    raise SystemExit(
-        "dist/ carries no .kpack — the app ships its first-party knowledge and "
-        "an install with none opens onto an empty store. Build them first:\n"
-        "  python -m app.cli build packs/cars  --out dist/cars.kpack\n"
-        "  python -m app.cli build packs/drill --out dist/drill.kpack"
-    )
+# No packs travel inside the sidecar (#169). A fresh install opens onto an
+# empty store, and the reader installs the packs they want.
 
 if not (EXTENSION / "manifest.json").exists():
     raise SystemExit(
@@ -125,7 +109,6 @@ a = Analysis(
         # all app JSON resources so a new suite cannot disappear when frozen.
         *((str(resource), "app") for resource in sorted((ROOT / "src" / "app").glob("*.json"))),
         (str(EXTENSION), "app/extension_src"),
-        *((str(pack), "app/packs_bundled") for pack in PACKS),
     ],
     hiddenimports=[
         "uvicorn.logging",

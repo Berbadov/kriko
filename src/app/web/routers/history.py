@@ -8,6 +8,7 @@ engine's.
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app import followup
 from app.web import state, tasks
 from app.web.deps import get_app_state, get_jobs, get_store
 
@@ -117,7 +118,8 @@ def ask_lookup(lookup_id: str, body: FollowupRequest,
         raise HTTPException(422, "Write a question first.")
     params = {"lookup_id": lookup_id, "question": question,
               "backend": tasks.default_backend(runner.settings.app_state_path),
-              "budget_usd": tasks.DEFAULT_BUDGET_USD}
+              "budget_usd": tasks.DEFAULT_BUDGET_USD,
+              "max_tokens": followup.MAX_TOKENS}
     return {"job_id": runner.submit("lookup_ask", params), "kind": "lookup_ask"}
 
 
