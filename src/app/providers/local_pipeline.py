@@ -151,6 +151,21 @@ def canonical_url(url: str) -> str:
                        urlencode(query), ""))
 
 
+def repair_offer_page(url: str, title: str, text: str) -> bool:
+    """A shop's symptom/service menu is not a documented product incident."""
+    label = (url + " " + title).casefold()
+    if re.search(r"\b(?:forums?|threads?|discussion|community)\b|/r/|/comments/", label):
+        return False
+    if not re.search(r"repair|répar|repar|tamir", label):
+        return False
+    folded = text.casefold()
+    markers = (r"\bforfait\b", r"\bdevis\b", r"\bqualirépar\b",
+               r"\b(?:tarifs?|prix)\b|€", r"rendez[- ]vous|réserv(?:ez|ation)",
+               r"contactez[- ]nous|request (?:a )?quote|book (?:a )?repair",
+               r"repair (?:services|pricing)|priced? from")
+    return sum(bool(re.search(marker, folded)) for marker in markers) >= 2
+
+
 def evidence_windows(text: str, identity, budget: int) -> dict[str, str]:
     """Exact source spans near identity mentions, numbered only after fitting."""
     spans = [part.strip() for part in re.split(r"(?<=[.!?])(?:[ \t]+\s*|\n+)|(?<=[。！？])\s*|\n+", text)

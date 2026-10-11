@@ -19,6 +19,7 @@ A preliminary corrected live run exposed an additional false claim: Qwen treated
 - Allow a literal distinctive model code plus another supplied name token to establish page relevance. Claim-level applicability checks remain required.
 - Reject extracted family names that omit the reader's explicit model code. Check planned query language and use localized issue queries when the planner disobeys it.
 - Exclude navigation boilerplate. Classify the quoted source independently of the proposed claim before checking the claim. Missing listing metadata, repair offers, service prices, and support menus are not failure evidence.
+- Replace identifiable repair-service advertisements before extraction: a generic symptom menu is not an incident report, even if a small model misclassifies its individual bullet points. A subsequent Gemma run exposed this case after the Qwen run had rejected the same type of content.
 - Log rejection reasons and show honest empty-result coverage in GPUI and the extension.
 - Supervise only the OpenSERP child the app owns; tolerate partial health and transient failures, recover after an owned child exits, and leave unrelated listeners untouched.
 - Allow an updated 1.3.0 MSI to replace the earlier 1.3.0 build.
