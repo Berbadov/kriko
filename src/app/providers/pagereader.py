@@ -1,24 +1,19 @@
-"""Reading a page through a hosted reader, the rung after the plain fetch.
+"""Reading a page through Parallel's hosted reader after the plain fetch.
 
 A site that refuses this app's own fetcher (Cloudflare's AI-bot rules answer
 `Kriko/1.0` with a 403, exactly as they answer Claude Code's `Claude-User`)
 is not unreadable, it is unreadable *from here*. A hosted reader fetches it
 from the reader service's own infrastructure instead, which those rules do
-not name. The harness plane already attaches Exa's hosted MCP as a per-run
-page reader (B155); this module is the same door opened directly, for the
-planes that read pages in this process: `fetch.py`'s ladder, with no MCP
-client, no per-run config and no session wait.
+not name. This module reads pages for the planes that run in this process:
+`fetch.py`'s ladder, with no MCP client, no per-run config and no session wait.
 
-The wire is JSON-RPC over plain HTTP, exactly as `exa_mcp.py` already speaks
-it for search: `initialize` opens a session, `tools/call` asks, and the
-reply is one JSON message, possibly dressed as a server-sent event.
+The wire is JSON-RPC over plain HTTP: `initialize` opens a session,
+`tools/call` asks, and the reply is one JSON message, possibly dressed as a
+server-sent event.
 
-Two hosted readers, tried in order: Exa's, then Parallel's
-(`https://search.parallel.ai/mcp`, tool `web_fetch`, also keyless). A
-courtesy is not a contract, and one vendor's courtesy is a single point of
-failure, so the second reader exists to make the first replaceable. Every
-failure is `""`, so the ladder can simply fall through and report the page
-unread rather than half-read.
+One hosted reader: Parallel (`https://search.parallel.ai/mcp`, tool
+`web_fetch`). Every failure is `""`, so the ladder can fall through and
+report the page unread rather than half-read.
 """
 
 import json
@@ -29,15 +24,12 @@ from urllib.parse import urlsplit
 
 from app.providers.fetch import LINK_CLOSE, LINK_OPEN, prose_lines
 
-EXA_ENDPOINT = "https://mcp.exa.ai/mcp"
-EXA_TOOL = "web_fetch_exa"
 PARALLEL_ENDPOINT = "https://search.parallel.ai/mcp"
 PARALLEL_TOOL = "web_fetch"
 PROTOCOL = "2025-06-18"
 
-#: Kept for the harness plane's per-run config, which names one door.
-ENDPOINT = EXA_ENDPOINT
-TOOL = EXA_TOOL
+ENDPOINT = PARALLEL_ENDPOINT
+TOOL = PARALLEL_TOOL
 
 #: `extract` truncates to 12 000 characters, so more than this is paying a
 #: courtesy for text the run will never read.
@@ -134,30 +126,6 @@ def plain(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
 
 
-def parse(text: str, url: str) -> str:
-    """The one page's prose out of Exa's answer, or "".
-
-    Exa answers one text per URL, each opened by a `URL:` line and preceded
-    by a heading. For a single URL the whole answer is that page, minus the
-    header lines the reader service adds and the page does not.
-    """
-    lines: list[str] = text.splitlines()
-    kept: list[str] = []
-    inside = False
-    for line in lines:
-        if line.startswith("URL:"):
-            inside = line[4:].strip() == url
-            continue
-        if line.startswith("# ") and not kept:
-            continue
-        if inside:
-            kept.append(line)
-    body = "\n".join(kept).strip()
-    if not body:
-        return text.strip() if "URL:" not in text else ""
-    return body
-
-
 def parse_parallel(text: str, url: str) -> str:
     """The one page's prose out of Parallel's answer, or "".
 
@@ -222,22 +190,18 @@ def _asked(target: str, tool: str, url: str) -> str:
 def read(url: str, endpoint: str = "") -> str:
     """The page's text through the hosted readers, "" when none read it.
 
-    Exa first, Parallel second: one initialize and one call per page per
-    reader, so a kept session would be state whose lifetime nobody owns.
+    One initialize and one call per page, so a kept session would be state
+    whose lifetime nobody owns.
     "" on every failure, so the ladder in `fetch.py` can simply fall
     through and report the page unread rather than half-read.
     """
     if not url.lower().startswith(("http://", "https://")):
         return ""
-    if urlsplit(url).netloc == urlsplit(EXA_ENDPOINT).netloc:
+    if urlsplit(url).netloc == urlsplit(PARALLEL_ENDPOINT).netloc:
         return ""
     if endpoint:
-        return plain(parse(_asked(endpoint, EXA_TOOL, url), url))[:MAX_CHARACTERS]
-    for target, tool, lift in (
-        (EXA_ENDPOINT, EXA_TOOL, parse),
-        (PARALLEL_ENDPOINT, PARALLEL_TOOL, parse_parallel),
-    ):
-        page = plain(lift(_asked(target, tool, url), url))
-        if page:
-            return page[:MAX_CHARACTERS]
-    return ""
+        target = endpoint
+    else:
+        target = PARALLEL_ENDPOINT
+    page = plain(parse_parallel(_asked(target, PARALLEL_TOOL, url), url))
+    return page[:MAX_CHARACTERS]

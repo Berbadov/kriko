@@ -58,7 +58,7 @@ STAGES = ("discovery", "extraction", "ingestion", "ledgering")
 #: How the UI labels them. Here rather than in the frontend because the stage
 #: vocabulary is the server's, and a second list in TypeScript is a second
 #: place to forget — the same reasoning that keeps identity keys out of
-#: `ui/src/`.
+#: the desktop interface.
 STAGE_LABELS = {
     "discovery": "Discovery",
     "extraction": "Extraction",

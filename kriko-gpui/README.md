@@ -179,16 +179,15 @@ powershell -ExecutionPolicy Bypass -File package.ps1
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
     A["Preflight<br/>tools, versions agree"]:::plain --> B["Python side<br/>pip install -r requirements.lock"]:::plain
-    B --> C["Build the UI<br/>(-SkipUi reuses the bundle)"]:::plain
-    C --> D["Build the packs"]:::plain
-    D --> E["Freeze the sidecar<br/>PyInstaller"]:::plain
-    E --> F["Sidecar answers?<br/>smoke_sidecar.py"]:::brand
-    F --> G["cargo build --release"]:::plain
-    G --> H["Place the sidecar<br/>beside kriko.exe"]:::plain
-    H --> I["MSI<br/>cargo wix + WiX 3"]:::plain
-    I --> J["App opens?<br/>smoke_app.py"]:::brand
-    J --> K["Portable zip"]:::plain
-    K --> L["builds/"]:::mark
+    B --> C["Build the packs"]:::plain
+    C --> D["Freeze the sidecar<br/>PyInstaller"]:::plain
+    D --> E["Sidecar answers?<br/>smoke_sidecar.py"]:::brand
+    E --> F["cargo build --release"]:::plain
+    F --> G["Place the sidecar<br/>beside kriko.exe"]:::plain
+    G --> H["MSI<br/>cargo wix + WiX 3"]:::plain
+    H --> I["App opens?<br/>smoke_app.py"]:::brand
+    I --> J["Portable zip"]:::plain
+    J --> K["builds/"]:::mark
 
     classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
     classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA

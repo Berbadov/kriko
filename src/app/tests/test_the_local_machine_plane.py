@@ -3,8 +3,8 @@
 The reader's words: "Local agent: finish the work it needs, then implement it"
 and "Add our new local machine and make it the prioritised one". Every server
 here is a loopback stub in a thread: a model server (`/v1/models`,
-`/v1/chat/completions`), a self-hosted search (`/mega/search`) and Exa's hosted
-MCP search. No model is downloaded, no real server is started and nothing
+`/v1/chat/completions`) and a self-hosted search (`/mega/search`). No model is
+downloaded, no real server is started and nothing
 leaves 127.0.0.1.
 """
 
@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 
 from app import localplane, prefs
-from app.providers import exa_mcp, local_discovery, local_inference
+from app.providers import local_discovery, local_inference
 from app.providers.local_discovery import discover as real_discover
 from app.providers.local_discovery import search_answers as real_search_answers
 from app.web import state, tasks
@@ -32,8 +32,6 @@ class Stub:
         self.chat: list = []          # (status, body-dict) popped per call
         self.chat_seen: list = []
         self.serp = {"results": []}
-        self.mcp_text = ""
-        self.mcp_agents: list = []
         self.delay = 0.0
         self.ps = None
         stub = self
@@ -71,23 +69,6 @@ class Stub:
                     status, reply = stub.chat.pop(0) if stub.chat else (
                         200, {"choices": [{"message": {"content": "[]"}}]})
                     return self._send(status, reply)
-                if self.path == "/mcp":
-                    stub.mcp_agents.append(self.headers.get("User-Agent"))
-                    method = body.get("method")
-                    if method == "initialize":
-                        payload = {"result": {"protocolVersion": "x"}}
-                    else:
-                        payload = {"result": {"content": [
-                            {"type": "text", "text": stub.mcp_text}]}}
-                    data = ("event: message\ndata: " + json.dumps(payload)
-                            + "\n\n").encode()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/event-stream")
-                    self.send_header("mcp-session-id", "s1")
-                    self.send_header("Content-Length", str(len(data)))
-                    self.end_headers()
-                    self.wfile.write(data)
-                    return
                 self._send(404, {})
 
             def log_message(self, *args):
@@ -183,8 +164,8 @@ def test_ready_with_the_servers_own_model_list(machine, stub):
     # An embedding model cannot answer a prompt, so it is not the default.
     assert plan["model"] == "qwen3-4b"
     assert plan["url"] == stub.url
-    assert plan["search_kind"] == "exa"
-    assert "Exa's free hosted search" in plan["line"]
+    assert plan["search_kind"] == ""
+    assert "no local search service" in plan["line"]
     assert plan["model"] in plan["line"]
 
 
@@ -473,38 +454,6 @@ def test_a_good_reply_resets_the_count():
         plane.extract(_task(), _document())
 
 
-# ── the hosted search fallback ─────────────────────────────────────────────
-
-EXA_TEXT = (
-    "Title: First page\nURL: https://one.test/a\nPublished: 2020\nHighlights:\n"
-    "words\n\nTitle: Second page\nURL: https://two.test/b\nAuthor: N/A\n")
-
-
-def test_exa_search_parses_entries_and_names_itself_honestly(stub, monkeypatch):
-    monkeypatch.setattr(exa_mcp, "ENDPOINT", stub.url + "/mcp")
-    stub.mcp_text = EXA_TEXT
-    search = exa_mcp.searcher()
-    assert search("widget problems", 5) == [
-        {"url": "https://one.test/a", "title": "First page", "site": "one.test"},
-        {"url": "https://two.test/b", "title": "Second page", "site": "two.test"},
-    ]
-    assert stub.mcp_agents and all(
-        agent.startswith("kriko/") for agent in stub.mcp_agents)
-
-
-def test_exa_search_honours_the_limit(stub, monkeypatch):
-    monkeypatch.setattr(exa_mcp, "ENDPOINT", stub.url + "/mcp")
-    stub.mcp_text = EXA_TEXT
-    assert len(exa_mcp.searcher()("q", 1)) == 1
-
-
-def test_exa_search_failure_is_a_named_search_error():
-    from kriko.research.politeness import LocalSearchError
-
-    with pytest.raises(LocalSearchError):
-        exa_mcp.searcher(dead_url() + "/mcp")("q", 3)
-
-
 # ── first plane (B172) ─────────────────────────────────────────────────────
 
 
@@ -637,8 +586,7 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
         ready, tmp_path, monkeypatch):
     from app.providers import fetch
 
-    monkeypatch.setattr(exa_mcp, "ENDPOINT", ready.url + "/mcp")
-    ready.mcp_text = "Title: Forum\nURL: https://forum.test/t/1\n"
+    ready.serp = {"results": [{"url": "https://forum.test/t/1", "title": "Forum"}]}
     monkeypatch.setattr(fetch, "reader", lambda *a, **k: (
         lambda url: PAGE if url == "https://forum.test/t/1" else ""))
     risks = {"assumed": "the 1.5 dCi", "category": "", "pack": "", "risks": [
@@ -652,7 +600,8 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
     ]}
     ready.chat = [completion('["renault 1.5 dci timing chain"]'),
                   completion(json.dumps(risks)), completion(json.dumps(risks))]
-    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})
+    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url,
+                              prefs.LOCAL_SEARCH_URL: ready.url})
     settings = type("S", (), {"store_path": tmp_path / "k.sqlite",
                               "app_state_path": path})()
     progress = _Progress()
@@ -683,11 +632,10 @@ def test_with_no_agent_and_a_ready_model_the_quick_look_picks_local_by_itself(
 def test_a_quick_look_with_nothing_to_search_fails_loudly(ready, tmp_path, monkeypatch):
     from app.providers import fetch
 
-    monkeypatch.setattr(exa_mcp, "ENDPOINT", ready.url + "/mcp")
-    ready.mcp_text = ""
     monkeypatch.setattr(fetch, "reader", lambda *a, **k: (lambda url: ""))
     ready.chat = [completion('["q"]')]
-    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})
+    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url,
+                              prefs.LOCAL_SEARCH_URL: ready.url})
     settings = type("S", (), {"store_path": tmp_path / "k.sqlite",
                               "app_state_path": path})()
     with pytest.raises(local_inference.LocalInferenceError) as said:
@@ -704,14 +652,14 @@ def test_naming_the_local_plane_while_it_is_not_ready_fails_with_the_reason(
 
 
 def test_a_research_run_on_the_local_plane_builds_the_plane_from_the_server(
-        ready, tmp_path, monkeypatch):
-    monkeypatch.setattr(exa_mcp, "ENDPOINT", ready.url + "/mcp")
-    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})
+        ready, tmp_path):
+    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url,
+                              prefs.LOCAL_SEARCH_URL: ready.url})
     plane = tasks._researcher({"backend": "local", "app_state_path": path,
                                "model": "gpt-4o-mini"})
     assert plane.name == "local"
     assert plane.model == "qwen3-4b"          # the server's, not the Run screen's
-    assert plane.search_provider == "exa-mcp"
+    assert plane.search_provider == "openserp:mega"
     assert plane._complete.base_url == ready.url
 
 
@@ -724,30 +672,3 @@ PARALLEL_TEXT = json.dumps({
         {"url": "https://two.test/b", "title": "Second page",
          "excerpts": ["more"]},
     ]})
-
-
-def test_parallel_search_parses_entries(stub, monkeypatch):
-    monkeypatch.setattr(exa_mcp, "PARALLEL_ENDPOINT", stub.url + "/mcp")
-    stub.mcp_text = PARALLEL_TEXT
-    assert exa_mcp.parallel_searcher()("q", 5) == [
-        {"url": "https://one.test/a", "title": "First page", "site": "one.test"},
-        {"url": "https://two.test/b", "title": "Second page", "site": "two.test"},
-    ]
-
-
-def test_the_fallback_search_rotates_to_parallel_on_a_refusal(stub, monkeypatch):
-    monkeypatch.setattr(exa_mcp, "ENDPOINT", dead_url() + "/mcp")
-    monkeypatch.setattr(exa_mcp, "PARALLEL_ENDPOINT", stub.url + "/mcp")
-    stub.mcp_text = PARALLEL_TEXT
-    assert exa_mcp.search_with_fallback()("q", 2) == [
-        {"url": "https://one.test/a", "title": "First page", "site": "one.test"},
-        {"url": "https://two.test/b", "title": "Second page", "site": "two.test"},
-    ]
-
-
-def test_the_fallback_search_stays_with_exa_while_exa_answers(stub, monkeypatch):
-    monkeypatch.setattr(exa_mcp, "ENDPOINT", stub.url + "/mcp")
-    monkeypatch.setattr(exa_mcp, "PARALLEL_ENDPOINT", dead_url() + "/mcp")
-    stub.mcp_text = EXA_TEXT
-    assert exa_mcp.search_with_fallback()("q", 1) == [
-        {"url": "https://one.test/a", "title": "First page", "site": "one.test"}]

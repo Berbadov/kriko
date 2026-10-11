@@ -3,8 +3,8 @@ is none. Used by both the operator TUI (`app/tui/app.py`) and the plain CLI's
 HTTP-backed subcommands (`app/cli.py`: prefs, costs, sites, verify, drafts,
 operations) — one client, so a fix to a call here is a fix both see.
 
-**One API, two clients.** Everything this module calls is an endpoint the web
-dashboard already calls. That is the whole reason a TUI is cheap here: the
+**One API, two clients.** Everything this module calls is an endpoint the local
+app already calls. That is the whole reason a TUI is cheap here: the
 interface layer is HTTP, so a second front end is a second *reader* of the same
 surface rather than a second implementation of the same logic. It also makes
 the TUI a standing test of whether that surface is complete — anything the TUI

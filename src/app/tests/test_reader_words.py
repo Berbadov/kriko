@@ -43,17 +43,9 @@ for a file that was renamed (its baseline line moves with it). A raise is a
 reviewable diff, never something the test does on its own. With no flag the
 script prints the same per-file report the test uses.
 
-**What is read** ("a reader sees it"):
-
-  * `ui/src/**/*.svelte`: template text (element text and attribute values),
-    the string literals of every `{...}` expression and block, and the string
-    literals of `<script>`. Not `<style>`, not `<!-- -->` comments, not JS/TS
-    comments;
-  * `ui/src/**/*.ts` except tests (`*.test.ts`, `test-setup.ts`, `tests/`):
-    string and template-literal text, not comments;
-  * `extension/**/*.js` and `extension/**/*.html` except `extension/tests/`
-    and `node_modules/`: the same, plus `extension/manifest.json` and
-    `ui/index.html` (the extension's listing text and the app's window title).
+**What is read** ("a reader sees it"): `extension/**/*.js` and
+`extension/**/*.html` except `extension/tests/` and `node_modules/`, plus
+`extension/manifest.json` (the extension's listing text and controls).
 
 **Limits of the heuristic**, so a green run is not read as more than it is:
 
@@ -307,13 +299,8 @@ def _is_test_file(path: Path) -> bool:
 
 
 def reader_visible_files() -> list[Path]:
-    ui, ext = REPO / "ui", REPO / "extension"
     found: list[Path] = []
-    for path in sorted((ui / "src").rglob("*")) if (ui / "src").is_dir() else []:
-        if path.suffix in {".svelte", ".ts"}:
-            found.append(path)
-    if (ui / "index.html").is_file():
-        found.append(ui / "index.html")
+    ext = REPO / "extension"
     if ext.is_dir():
         for path in sorted(ext.rglob("*")):
             if path.suffix in {".js", ".html"}:
@@ -471,11 +458,7 @@ def test_a_count_below_the_baseline_warns_and_does_not_fail(monkeypatch):
 def test_the_scan_reads_the_files_a_reader_sees():
     """A guard that scanned nothing would stay green forever."""
     files = [p.relative_to(REPO).as_posix() for p in reader_visible_files()]
-    svelte = [f for f in files if f.startswith("ui/src/") and f.endswith(".svelte")]
-    ts = [f for f in files if f.startswith("ui/src/") and f.endswith(".ts")]
     ext = [f for f in files if f.startswith("extension/")]
-    assert len(svelte) >= 20, f"only {len(svelte)} .svelte file(s) scanned"
-    assert len(ts) >= 5, f"only {len(ts)} .ts file(s) scanned"
     assert len(ext) >= 5, f"only {len(ext)} extension file(s) scanned"
     assert "extension/options/options.html" in files
     assert "extension/manifest.json" in files
@@ -602,13 +585,10 @@ def test_each_informal_phrase_of_the_reader_is_a_rule():
 
 def test_test_files_are_out_of_scope():
     for rel in (
-        "ui/src/App.test.ts",
-        "ui/src/test-setup.ts",
         "extension/tests/content.test.js",
         "extension/tests/pages/x.html",
     ):
         assert _is_test_file(Path(rel)), rel
-    assert not _is_test_file(Path("ui/src/routes/Bench.svelte"))
     assert not _is_test_file(Path("extension/content.js"))
 
 

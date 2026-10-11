@@ -6,7 +6,8 @@ The wire shape is deliberately thin — one GET, JSON out — and exactly
 OpenSERP's: `GET /mega/search?text=...&engines=...&limit=...` answered with
 `results: [{url, title, domain}]`. Another SERP works only if it serves that
 same path and shape; SearXNG, for one, does not (it answers `/search?q=`).
-When no OpenSERP answers, the plane searches through `exa_mcp.py` instead.
+If OpenSERP is unavailable, the local plane reports that it cannot search;
+it does not send queries to a hosted provider.
 
 What this adapter adds over pointing the paid plane's Exa socket at a
 localhost URL is the failure contract: a SERP that answers with a challenge
@@ -34,12 +35,17 @@ DEFAULT_ENGINE = "duckduckgo"
 #: the plane as a "result set" would be a block page the scheduler never
 #: hears about.
 _BLOCK_MARKERS = (
-    "captcha", "challenge", "unusual traffic", "are you a robot",
-    "access denied", "blocked", "attention required",
+    "captcha",
+    "challenge",
+    "unusual traffic",
+    "are you a robot",
+    "access denied",
+    "blocked",
+    "attention required",
 )
 
 
-def searcher(base_url: str = "", engine: str = ""):
+def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
     """`search(query, limit) -> [{"url", "title", "site"}]`.
 
     Same injected shape as the paid plane's search sockets, so the local
@@ -51,31 +57,44 @@ def searcher(base_url: str = "", engine: str = ""):
     stats = {"queries": 0, "hits": 0, "challenges": 0}
 
     def search(query: str, limit: int = 5) -> list[dict]:
-        params = urllib.parse.urlencode({
-            "text": query, "engines": chosen,
-            "limit": max(1, int(limit)), "format": "json",
-        })
+        params = urllib.parse.urlencode(
+            {
+                "text": query,
+                "engines": chosen,
+                "limit": max(1, int(limit)),
+                "format": "json",
+                "lang": language,
+            }
+        )
         request = urllib.request.Request(
             f"{endpoint}/mega/search?{params}",
             headers={"Accept": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request,
-                                        timeout=TIMEOUT) as response:
+            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
                 body = response.read().decode("utf-8", "replace")
         except Exception as error:  # noqa: BLE001 — network, rotate
             raise LocalSearchError(str(error)) from error
         stats["queries"] += 1
-        head = body[:4096].casefold()
-        if any(marker in head for marker in _BLOCK_MARKERS):
-            stats["challenges"] += 1
-            raise LocalSearchError("the SERP answered with a challenge page")
         try:
             payload = json.loads(body)
         except json.JSONDecodeError as error:
-            raise LocalSearchError("the SERP did not answer with JSON") \
-                from error
+            if any(marker in body[:4096].casefold() for marker in _BLOCK_MARKERS):
+                stats["challenges"] += 1
+                raise LocalSearchError(
+                    "the SERP answered with a challenge page"
+                ) from error
+            raise LocalSearchError("the SERP did not answer with JSON") from error
         results = payload.get("results") if isinstance(payload, dict) else []
+        if not isinstance(results, list):
+            raise LocalSearchError("the SERP returned an invalid results array")
+        if not results and isinstance(payload, dict):
+            message = str(payload.get("error") or payload.get("message") or "")
+            if any(marker in message.casefold() for marker in _BLOCK_MARKERS):
+                stats["challenges"] += 1
+                raise LocalSearchError("the SERP answered with a challenge")
+            if payload.get("error"):
+                raise LocalSearchError(message[:250])
         out = []
         for hit in results or []:
             if not isinstance(hit, dict):
@@ -87,11 +106,13 @@ def searcher(base_url: str = "", engine: str = ""):
             if not site:
                 netloc = urllib.parse.urlsplit(url).netloc
                 site = netloc.split("@")[-1].split(":")[0]
-            out.append({
-                "url": url,
-                "title": str(hit.get("title", "")).strip(),
-                "site": site,
-            })
+            out.append(
+                {
+                    "url": url,
+                    "title": str(hit.get("title", "")).strip(),
+                    "site": site,
+                }
+            )
         stats["hits"] += len(out)
         return out
 

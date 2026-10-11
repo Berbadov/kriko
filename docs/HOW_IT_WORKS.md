@@ -105,8 +105,7 @@ not a second engine.
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart TD
-    T["<b>kriko-gpui/</b> — the desktop app<br/>owns the sidecar's lifetime, draws over HTTP"] --> U
-    U["<b>ui/</b> — the frontend<br/>talks HTTP, knows no catalog's vocabulary"] --> A
+    T["<b>kriko-gpui/</b> — the native desktop app<br/>owns the sidecar's lifetime, draws over HTTP"] --> A
     A["<b>app/</b> — the interfaces<br/>web, CLI, MCP, operator console"] --> K
     P["<b>packs/</b> — one directory per category<br/>data, vocabulary, trust, its own bar"] --> K
     A --> PL["<b>app/pipeline/</b> — pipeline drivers"]

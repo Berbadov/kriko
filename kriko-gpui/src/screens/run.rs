@@ -177,6 +177,53 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
         .child(eyebrow("Local quick look · evidence"))
         .child(row_desc(&format!("{} · {tokens} · {} sourced risks kept · {dropped} unsourced dropped",
             if model.is_empty() { "Model not reported" } else { &model }, risks.len())));
+    if let Some(identity) = result.get("identity").filter(|value| value.is_object()) {
+        let name = api::s(identity, "canonical_name");
+        let variant = api::s(identity, "variant");
+        let identifiers = api::arr(identity, "identifiers").iter()
+            .filter_map(Value::as_str).collect::<Vec<_>>().join(", ");
+        let unknowns = api::arr(identity, "unknowns").iter()
+            .filter_map(Value::as_str).collect::<Vec<_>>().join(", ");
+        let resolved = identity.get("resolved").and_then(Value::as_bool).unwrap_or(false);
+        card = card.child(row_desc(&format!("Identity: {} · {} · {}",
+            if name.is_empty() { "product name not reported" } else { &name },
+            if variant.is_empty() { "exact variant unresolved" } else { &variant },
+            if resolved { "resolved" } else { "unresolved" })));
+        if !identifiers.is_empty() {
+            card = card.child(mono(&format!("Identifiers: {identifiers}"), MUTED));
+        }
+        if !unknowns.is_empty() {
+            card = card.child(mono(&format!("Still unknown: {unknowns}"), DIM));
+        }
+    }
+    let coverage = result.get("coverage")
+        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")));
+    if let Some(coverage) = coverage.filter(|value| value.is_object()) {
+        let count = |key: &str| api::n(coverage, key)
+            .map(|value| format!("{value:.0}"))
+            .unwrap_or_else(|| "not reported".into());
+        card = card.child(mono(&format!(
+            "READ {} · RELEVANT {} · PUBLISHERS {} · CITED {}",
+            count("pages_read"), count("pages_relevant"),
+            count("publishers_read"), count("sources_cited")), MUTED));
+        let status = api::s(coverage, "status");
+        if !status.is_empty() {
+            let status = match status.as_str() {
+                "supported_findings" => "Supported findings kept",
+                "partial" => "Some evidence or language stages were incomplete",
+                "no_matching_product_evidence" => "No page established a match to this product",
+                "evidence_rejected" => "Candidate findings failed the evidence checks",
+                "no_supported_findings" => "No supported findings kept",
+                _ => "Evidence processing incomplete",
+            };
+            card = card.child(row_desc(status));
+            card = card.child(mono(&format!("Evidence passes: {} · candidates rejected: {}",
+                count("pages_extracted"), count("rejected_candidates")), DIM));
+            if risks.is_empty() {
+                card = card.child(row_desc("An empty result does not establish that this product has no problems."));
+            }
+        }
+    }
     let verification = result.get("verification").unwrap_or(&Value::Null);
     if verification.is_object() {
         let error = api::s(verification, "error");

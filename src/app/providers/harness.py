@@ -82,16 +82,11 @@ from kriko.research.base import Document, Finding, ResearchTask
 #: commands is not a research plane.
 SEARCH_TOOLS = ("WebSearch", "WebFetch")
 
-#: The page reader (B155): a keyless hosted MCP server whose one tool reads a
-#: page for the agent. Exa's, because it is free, needs no key of the reader's,
-#: and read all four pages a Claude Code quick look had been refused in a probe
-#: (2026-09-29; the CLI's own fetcher got a 403 from each). Only its fetch tool
-#: is granted: search was never refused, and a second search tool is only a
-#: second place to spend the run's budget. The tool names are read off the
-#: server's own `tools/list`, not written from memory.
-READER_SERVER = "exa"
-READER_URL = "https://mcp.exa.ai/mcp"
-READER_TOOLS = ("web_fetch_exa",)
+#: The page reader (B155): Parallel's hosted MCP reader. Only its fetch tool is
+#: granted; searches go through the CLI's normal WebSearch tool.
+READER_SERVER = "parallel"
+READER_URL = "https://search.parallel.ai/mcp"
+READER_TOOLS = ("web_fetch",)
 
 #: Where the per-run config is written, inside the run's own folder.
 READER_CONFIG_FILE = "kriko-page-reader.mcp.json"
@@ -1263,6 +1258,30 @@ def with_page_reader(prompt: str, tools: list[str]) -> str:
     return f"{prompt.rstrip()}\n\n{note}\n"
 
 
+def _local_agent_for_harness(queries: list[str]):
+    """Use the configured local model and OpenSERP for tool-less harnesses.
+
+    These CLIs cannot run their own web tools in the isolated prompt mode.
+    Resolve the same local plane as the desktop card, and fail with its reason
+    when either the model or OpenSERP is unavailable; never silently switch to
+    a hosted free search service.
+    """
+    from app.localplane import resolve
+    from app.providers import local_asker
+
+    plane = resolve(with_search=True)
+    if not plane.get("ready") or plane.get("search_kind") != "openserp":
+        raise NoHarness(plane.get("reason") or
+                        "Start the local model and OpenSERP before using this harness.")
+    return local_asker(
+        base_url=plane["url"], serving_name=plane["model"],
+        search_base_url=plane["search_url"], search_kind="openserp",
+        timeout=plane["timeout"], runtime_options=plane["runtime_options"],
+        context_tokens=plane["context_tokens"],
+        output_language=plane["output_language"],
+        search_language=plane["search_language"], given_queries=queries)
+
+
 def _from_models_command(one: Harness, executable: str) -> list[str]:
     # Through `_ask` for the reason `helptext` is: this runs a binary
     # `locate` only *guessed* at, and a wrong guess must cost a dropdown
@@ -2299,20 +2318,14 @@ class HarnessResearcher(AgentResearcher):
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
         prompt = self.brief(task) + "\n" + self._contract()
         if self.harness.id in {"antigravity-cli", "mistral-vibe", "codex"}:
-            from app.providers import exa_mcp, fetch
-            from app.providers.local_agent import LocalAsker
-            def complete(brief):
-                return self._run("Answer ONLY from supplied pages. Do not call tools or run commands.\n" + brief)
-            # An explicit cap keeps the CLI prompt below Windows' argv limit.
-            setattr(complete, "prompt_chars_allowed", lambda: 22000)
-            agent = LocalAsker(lambda _: "[]", complete, exa_mcp.search_with_fallback(), fetch.reader(),
-                               model=self.requested_model or self.harness.id, search_provider="exa-mcp",
-                               given_queries=list(task.queries)[:3] or [f"{task.subject_label} failures owner reports"], parallel_search=True)
+            agent = _local_agent_for_harness(
+                list(task.queries)[:3] or
+                [f"{task.subject_label} failures owner reports"])
             agent.max_pages = max(1, task.max_documents or 3)
             agent.on_action, agent.check_cancelled = self.on_action, self.check_cancelled
             reply = agent.ask(prompt)
             self.sources, self.telemetry = agent.sources, agent.telemetry
-            self.search_provider = "exa-mcp"
+            self.search_provider = agent.search_provider
         else:
             reply = self._run(prompt)
         payload = _payload(reply)
@@ -2398,19 +2411,16 @@ class HarnessResearcher(AgentResearcher):
             from app import quicklook
             return self.ask(quicklook.brief(product, principle, page, packs, attributes)
                             + getattr(self, "source_instructions", ""))
-        from app.providers import exa_mcp, fetch
-        from app.providers.local_agent import LocalAsker
         # The host gathers evidence, then the CLI answers in a fresh, neutral
         # session. It never needs a shell command to research a product.
         calls = [0]
+        agent = _local_agent_for_harness(
+            [f"{product} problems owner reports", f"{product} failures review"])
+        original_complete = agent.complete
         def complete(prompt):
             calls[0] += 1
-            return self._run("Use ONLY the supplied evidence. Do not call tools, run commands, or search. "
-                             "Return the requested JSON object directly.\n" + prompt)
-        agent = LocalAsker(lambda _: "[]", complete, exa_mcp.search_with_fallback(), fetch.reader(),
-                           model=self.requested_model or self.harness.id, search_provider="exa-mcp",
-                           given_queries=[f"{product} problems owner reports", f"{product} failures review"],
-                           parallel_search=True)
+            return original_complete(prompt)
+        agent.complete = complete
         agent.max_pages = max(1, self.max_documents or 3)
         agent.on_action = self.on_action
         agent.check_cancelled = self.check_cancelled
@@ -2421,7 +2431,7 @@ class HarnessResearcher(AgentResearcher):
             self.sources = agent.sources
             self.telemetry = agent.telemetry
             self.telemetry["model_calls"] = calls[0]
-            self.search_provider = "exa-mcp"
+            self.search_provider = agent.search_provider
 
     def ask(self, prompt: str) -> str:
         """One prompt, one reply, for a job that is not research.
@@ -2516,21 +2526,6 @@ class HarnessResearcher(AgentResearcher):
                 # the run then read the shell's folder (its `AGENTS.md`, its
                 # `opencode.json`) and not the one it was started in (B154).
                 self._run_env = {"PWD": directory}
-                if self.harness.id == "opencode":
-                    # **Why opencode "could not open any website" (B154).**
-                    # opencode 2.x asks, once, which provider its `websearch`
-                    # tool should use, and keeps the answer in its own
-                    # database. `opencode run` has nobody to ask, so every
-                    # search came back "Web search cancelled" while the agent
-                    # file allowed it. A project `opencode.json` in the folder
-                    # the run starts in answers the question for this run
-                    # only — the reader's config and database stay as found,
-                    # and the file goes with the folder. `exa`, because it
-                    # answers without a key of the reader's; `random` can
-                    # land on one that does not (Firecrawl) and return nothing.
-                    (Path(directory) / "opencode.json").write_text(json.dumps({
-                        "websearch": {"provider": "exa"},
-                    }), encoding="utf-8")
                 self._place_reader(Path(directory))
                 try:
                     yield

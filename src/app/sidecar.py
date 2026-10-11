@@ -299,7 +299,7 @@ def main(argv=None) -> int:
     # Through the environment rather than an override, because `Settings` is
     # built from the environment a few lines down and this is the one fact
     # about the running process that no configuration file could supply.
-    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if extra is not None else "0"
+    os.environ["KRIKO_EXTENSION_BOUND"] = "1" if extra is not None or port == EXTENSION_PORT else "0"
     # Same route, same reason: a fact about this process's *supervision*, not
     # a configuration choice, so it travels the same way the port bind does.
     os.environ["KRIKO_SUPERVISED"] = "1" if args.supervised else "0"
