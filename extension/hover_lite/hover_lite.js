@@ -255,6 +255,96 @@
   // Nothing below names a car attribute. The identity keys, the context keys
   // and the units are all whatever the answering pack declared, so a pack for
   // a category nobody has written yet renders here without an edit.
+  /* ── Follow-up answers, as they are written ─────────────────────────────
+   * Both follow-ups (a saved check's question, a quick look's question) show
+   * their reply the way a chat does: three dots while nothing is written yet,
+   * then the words typed out at an even pace, with a caret while the agent is
+   * still writing. `replies` remembers how much of each reply is on screen, so
+   * a rebuilt panel resumes where it was. A plane that cannot stream (a coding
+   * agent's CLI) writes its whole reply at the end; that reply is typed out the
+   * same way, so the reader sees one behaviour on every plane. */
+  const replies = new Map();   // job_id -> { target, done, error, sources, shown }
+  let revealPending = false;
+
+  function reduceMotion() {
+    return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  /* What a job has said so far. `job` is a job row (its `result` holds the
+   * reply) or a quick-look ask (the reply is on the object itself). A reply
+   * first seen already finished is shown whole; one watched while it is being
+   * written is typed out as it grows. */
+  function observeReply(job) {
+    const id = String(job?.job_id || "");
+    if (!id) return;
+    const source = job.result ?? job;
+    const answer = String(source.answer || "");
+    const done = Boolean(job.done);
+    let reply = replies.get(id);
+    if (!reply) {
+      const whole = done || reduceMotion();
+      reply = { target: "", done, error: "", sources: [], shown: whole ? answer.length : 0 };
+      replies.set(id, reply);
+    }
+    reply.target = answer;
+    reply.done = done;
+    reply.error = done && !answer ? String(job.error || job.message || "No answer was returned.") : "";
+    if (Array.isArray(source.sources)) reply.sources = source.sources;
+    if (reduceMotion()) reply.shown = answer.length;
+  }
+
+  function loadingMarkup() {
+    return `<span class="lite-answer-loading" role="status" aria-label="Answering"><i></i><i></i><i></i></span>`;
+  }
+
+  function sourcesMarkup(sources) {
+    const links = (sources || [])
+      .filter(src => /^https?:\/\//i.test(String(src?.url || "")))
+      .slice(0, 8)
+      .map(src => `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(src.domain || src.url)}</a>`);
+    return links.length ? `<p class="lite-answer-sources">Sources: ${links.join(" · ")}</p>` : "";
+  }
+
+  /* Paints every answer slot under `root` from what is known of its reply. The
+   * text is plain while it is written and rendered (bold, code, sources) once it
+   * is whole, so the finished card reads as it always did. Then it arms the
+   * ticker while any reply is still behind what it has said. */
+  function paintReplies(root) {
+    if (!root) return;
+    for (const el of root.querySelectorAll("[data-answer]")) {
+      const reply = replies.get(el.dataset.answer)
+        || { target: "", done: false, error: "", sources: [], shown: 0 };
+      const text = reply.target.slice(0, reply.shown);
+      const whole = reply.done && reply.shown >= reply.target.length;
+      let phase;
+      let html;
+      if (whole && reply.error) { phase = "failed"; html = escapeHtml(reply.error); }
+      else if (whole) { phase = "done"; html = renderAgentText(reply.target || "No answer.") + sourcesMarkup(reply.sources); }
+      else if (!text) { phase = "waiting"; html = loadingMarkup(); }
+      else { phase = "streaming"; html = escapeHtml(text); }
+      if (el.dataset.phase === phase && el._painted === html) continue;
+      el.dataset.phase = phase;
+      el._painted = html;
+      el.innerHTML = html;
+    }
+    if (!revealPending && [...replies.values()].some(reply => reply.shown < reply.target.length)) {
+      revealPending = true;
+      requestAnimationFrame(revealTick);
+    }
+  }
+
+  /* One frame of typing: a larger share of the gap when far behind, never
+   * slower than two characters a frame, so a reply that arrives whole still
+   * reads as being written, and one that arrives in pieces keeps pace with it. */
+  function revealTick() {
+    revealPending = false;
+    for (const reply of replies.values()) {
+      const gap = reply.target.length - reply.shown;
+      if (gap > 0) reply.shown += Math.min(gap, Math.max(2, Math.min(14, Math.ceil(gap / 6))));
+    }
+    paintReplies(bodyEl);
+  }
+
   function deriveListingMeta(entry) {
     if (!entry) return null;
     const result = entry.result || {};
@@ -910,6 +1000,7 @@
     const slot = bodyEl?.querySelector(".lite-research-slot");
     if (!slot) return;
     if (!state.researchOpen) { slot.innerHTML = ""; slot._researchMarkup = null; slot._shown = false; return; }
+    for (const ask of state.researchAsks || []) observeReply(ask);
     const busy = Boolean(state.researching);
     const target = state.researchTarget;
     const draft = state.researchJob?.kind === "pack_author";
@@ -971,7 +1062,7 @@
           <p class="lite-follow-lede">Ask a follow-up. Answers come from this quick look's findings.</p>
           ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
             <p class="lite-follow-q">${escapeHtml(a.q)}</p>
-            <p class="lite-follow-answer">${a.done ? renderAgentText(a.answer || "No answer.") : "Answering\u2026"}</p>
+            <div class="lite-follow-answer lite-answer" data-answer="${escapeHtml(a.job_id || "")}"></div>
           </div>`).join("")}
           <div class="lite-follow-row">
             <input class="lite-follow-input" maxlength="500" placeholder="Ask about this quick look" ${state.researchAsking ? "disabled" : ""} />
@@ -1020,10 +1111,12 @@
         const value = state.researchDraftAnswers[input.dataset.id] || "";
         if (input.value !== value) input.value = value;
       });
+      paintReplies(slot);
       return;
     }
     slot._researchMarkup = signature;
     slot.innerHTML = markup;
+    paintReplies(slot);
     // The card drops in once, when it is opened, and not again each time a
     // poll rebuilds it. Context stays folded until it is asked for (or has
     // words in it already); the fold eases open rather than snapping.
@@ -1276,6 +1369,7 @@
     chrome.runtime.sendMessage({ type: "QUICK_ASKS", payload: { job_id: jobId } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok) return;
       state.researchAsks = response.asks || [];
+      for (const ask of state.researchAsks) observeReply(ask);
       if (!state.researchAsking) renderResearch();
     });
   }
@@ -1284,32 +1378,44 @@
     const jobId = state.researchQuickJob;
     if (!question || !jobId || state.researchAsking) return;
     state.researchAsking = true;
-    state.researchAsks = [...(state.researchAsks || []), { q: question, answer: "", done: false }];
+    // The question shows at once, with the dots, before the engine has
+    // answered; its job id arrives with the reply to the send.
+    const ask = { q: question, job_id: "", answer: "", done: false };
+    state.researchAsks = [...(state.researchAsks || []), ask];
     renderResearch();
     chrome.runtime.sendMessage({ type: "QUICK_ASK", payload: { job_id: jobId, q: question } }, (response) => {
       state.researchAsking = false;
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
+        state.researchAsks = state.researchAsks.filter((one) => one !== ask);
         state.researchMessage = response?.error || "Could not ask. Open Kriko and retry.";
         renderResearch();
         return;
       }
+      ask.job_id = response.job.job_id;
       state.researchFollowQ = "";
+      renderResearch();
       loadQuickAsks();
       pollAskJob(response.job.job_id);
     });
   }
 
+  /* The answer as the engine writes it: a partial reply is read from the job's
+   * result on every poll, and the panel types it out as it grows. Polled every
+   * 400 ms, so a reply that lands in pieces keeps pace with the reveal. */
   function pollAskJob(jobId) {
-    const timer = setInterval(() => {
-      chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
-        if (chrome.runtime.lastError || !response?.ok) { clearInterval(timer); return; }
-        const job = response.job;
-        if (!job || job.done || ["succeeded", "failed", "cancelled"].includes(job.state)) {
-          clearInterval(timer);
-          loadQuickAsks();
-        }
-      });
-    }, 1200);
+    chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
+      // A closed panel stops asking. Opening it again reads the asks back.
+      if (chrome.runtime.lastError || !response?.ok) { loadQuickAsks(); return; }
+      const job = response.job;
+      const done = !job || Boolean(job.done)
+        || ["succeeded", "failed", "cancelled", "interrupted"].includes(job.state);
+      if (job) {
+        observeReply({ ...job, job_id: jobId, done });
+        paintReplies(bodyEl);
+      }
+      if (done) { loadQuickAsks(); return; }
+      if (state.visible) setTimeout(() => pollAskJob(jobId), 400);
+    });
   }
 
   /* A finished research run that kept nothing. The panel used to say "Research
@@ -3141,7 +3247,10 @@
       status.append(" ", button);
     }
     const history = slot.querySelector(".lite-followup-history");
-    const signature = JSON.stringify(row.jobs);
+    for (const job of row.jobs) observeReply(job);
+    // The signature leaves the answer out: the text is typed out by paintReplies,
+    // so a changed answer must not rebuild the history under the reader.
+    const signature = JSON.stringify(row.jobs.map(job => ({ ...job, result: { agent: job.result?.agent } })));
     if (history._signature !== signature) {
       history._signature = signature;
       history.innerHTML = row.jobs.map(job => {
@@ -3163,12 +3272,12 @@
               <span class="lite-followup-job-status" data-active="${!job.done}">${phase}</span>
             </div>
             ${agent?.model ? `<div class="lite-followup-model">${escapeHtml(agent.model)}</div>` : ""}
-            <div class="lite-followup-answer">${renderAgentText(job.result?.answer
-              || (job.done ? job.error || "No answer was returned." : "Waiting for the answer…"))}</div>
+            <div class="lite-followup-answer lite-answer" data-answer="${escapeHtml(job.job_id)}"></div>
           </div>
         </article>`;
       }).join("");
     }
+    paintReplies(history);
     if (!row.loaded) {
       row.loaded = true;
       chrome.runtime.sendMessage({ type: "LOOKUP_QUESTIONS", payload: { lookup_id: row.id } }, response => {
@@ -3223,6 +3332,7 @@
       const job = response.job;
       const done = job.done || ["succeeded", "failed", "cancelled", "interrupted"].includes(job.state);
       row.jobs[index] = { ...row.jobs[index], ...job, done };
+      observeReply(row.jobs[index]);
       row.status = done && job.state !== "succeeded"
         ? job.error || job.message || "The question did not finish. Try asking again." : "";
       if (done) row.polling.delete(jobId);

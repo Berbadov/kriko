@@ -10,6 +10,11 @@ const answer = (claims, lookup_id = "answer-1") => ({
   ok: true, listing: {},
   result: { lookup_id, claims, identity: {}, context: {}, coverage: "RISKS_FOUND" },
 });
+// A reply is typed out a frame at a time, even when it arrives whole; run
+// frames until the slot says it is complete.
+const typeOut = (p, selector = ".lite-followup-answer") => {
+  for (let i = 0; i < 500 && p.shadow().querySelector(selector).dataset.phase !== "done"; i += 1) p.flushFrames();
+};
 
 test("live knowledge keeps existing cards, expansion, group state and focus", () => {
   const p = loadPanel();
@@ -95,6 +100,7 @@ test("a follow-up asks about the saved answer and renders the agent reply inline
   const sent = p.sent.find(m => m.type === "LOOKUP_ASK");
   assert.equal(sent.payload.lookup_id, "answer-1");
   assert.equal(sent.payload.question, "What should I check first?");
+  typeOut(p);
   assert.match(p.shadow().querySelector(".lite-followup-answer").textContent, /Ask for the service record/);
   assert.equal(p.shadow().querySelector(".lite-followup-answer script"), null);
   assert.equal(p.shadow().querySelector(".lite-followup-user-label").textContent, "You · Question");
@@ -132,6 +138,7 @@ test("a running follow-up identifies the agent and transitions to a labelled sav
   done = true;
   p.flushTimers();
   assert.equal(p.shadow().querySelector(".lite-followup-job-status").textContent, "Answered");
+  typeOut(p);
   assert.match(p.shadow().querySelector(".lite-followup-answer").textContent, /The saved answer/);
 });
 
