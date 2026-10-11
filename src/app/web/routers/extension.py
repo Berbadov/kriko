@@ -12,7 +12,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import extension, keys, sites
+from app import extension, followup, keys, sites
 from app.web import state
 from app.web.deps import get_app_state, get_jobs, get_store
 from app.web.routers.research import resolve_research_subject
@@ -530,6 +530,7 @@ def ask_quick_look(
         "harness": str(quick.get("harness") or ""),
         "model": str(quick.get("model") or ""),
         "budget_usd": 0.0,
+        "max_tokens": followup.MAX_TOKENS,
     }
     job = runner.submit("quick_ask", params)
     return {"job_id": job, "kind": "quick_ask", "quick_job_id": job_id}
@@ -552,9 +553,12 @@ def quick_look_asks(job_id: str, conn=Depends(get_app_state)) -> dict:
         asks.append({
             "job_id": row["job_id"],
             "q": str((row.get("params") or {}).get("q") or ""),
-            "answer": str(result.get("answer") or "") if row.get("done") else "",
+            # The reply so far while it is being written, the whole of it once done.
+            "answer": str(result.get("answer") or ""),
+            "sources": result.get("sources") or [],
             "state": row.get("state") or "",
             "done": bool(row.get("done")),
+            "message": str(row.get("message") or "") if row.get("done") else "",
         })
     return {"asks": asks}
 

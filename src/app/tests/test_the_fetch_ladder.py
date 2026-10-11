@@ -143,10 +143,6 @@ def test_a_non_http_url_is_never_sent_to_anyone():
 
 
 def test_the_second_reader_answers_when_the_first_is_dead(monkeypatch):
-    with socket.socket() as one:
-        one.bind(("127.0.0.1", 0))
-        dead = f"http://127.0.0.1:{one.getsockname()[1]}/mcp"
-
     class Parallel(BaseHTTPRequestHandler):
         def do_POST(self):
             size = int(self.headers.get("Content-Length") or 0)

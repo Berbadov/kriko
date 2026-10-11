@@ -174,7 +174,7 @@ def test_a_server_up_with_no_model_says_so_and_what_to_do(machine, stub):
     plan = localplane.resolve(url=stub.url)
     assert plan["ready"] is False
     assert "no model is downloaded" in plan["reason"]
-    assert "Download one" in plan["reason"]
+    assert "Download gemma4:e2b (recommended)" in plan["reason"]
     assert plan["line"] == plan["reason"]
 
 

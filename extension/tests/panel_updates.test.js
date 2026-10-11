@@ -10,6 +10,11 @@ const answer = (claims, lookup_id = "answer-1") => ({
   ok: true, listing: {},
   result: { lookup_id, claims, identity: {}, context: {}, coverage: "RISKS_FOUND" },
 });
+// A reply is typed out a frame at a time, even when it arrives whole; run
+// frames until the slot says it is complete.
+const typeOut = (p, selector = ".lite-followup-answer") => {
+  for (let i = 0; i < 500 && p.shadow().querySelector(selector).dataset.phase !== "done"; i += 1) p.flushFrames();
+};
 
 test("live knowledge keeps existing cards, expansion, group state and focus", () => {
   const p = loadPanel();
@@ -95,6 +100,7 @@ test("a follow-up asks about the saved answer and renders the agent reply inline
   const sent = p.sent.find(m => m.type === "LOOKUP_ASK");
   assert.equal(sent.payload.lookup_id, "answer-1");
   assert.equal(sent.payload.question, "What should I check first?");
+  typeOut(p);
   assert.match(p.shadow().querySelector(".lite-followup-answer").textContent, /Ask for the service record/);
   assert.equal(p.shadow().querySelector(".lite-followup-answer script"), null);
   assert.equal(p.shadow().querySelector(".lite-followup-user-label").textContent, "You · Question");
@@ -132,6 +138,7 @@ test("a running follow-up identifies the agent and transitions to a labelled sav
   done = true;
   p.flushTimers();
   assert.equal(p.shadow().querySelector(".lite-followup-job-status").textContent, "Answered");
+  typeOut(p);
   assert.match(p.shadow().querySelector(".lite-followup-answer").textContent, /The saved answer/);
 });
 
@@ -205,6 +212,51 @@ test("deeper research progress keeps quick-look cards expanded without blinking"
   assert.match(status, /1 thing to know, from a quick look/);
   assert.doesNotMatch(status, /%/);
   assert.equal(p.sent.filter(m => m.type === "JOB_STATUS" && m.payload.job_id !== "quick").length, 0);
+});
+
+test("a research run that kept nothing says no data showed an issue", () => {
+  const p = loadPanel({ workerResponse: m => {
+    if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "agent" } };
+    if (m.type === "JOB_STATUS") return { ok: true, job: { job_id: "research", kind: "research",
+      state: "succeeded", done: true,
+      result: { documents: 4, outcome: "read 4 source(s), none of them said anything keepable",
+        accepted: [], rejected: [], brief: "" } } };
+    return { ok: true, delivered: true, job: { job_id: "research", kind: "research", state: "running" } };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ...answer([]), result: { ...answer([]).result,
+    subjects: [{ subject_id: "product", label: "Product", claims: 0 }] } });
+  p.click(".lite-gap-btn");
+  p.click(".lite-research-start");
+  p.flushTimers();
+  const status = p.shadow().querySelector(".lite-research-status").textContent;
+  assert.match(status, /No data found that shows an issue/);
+  assert.match(status, /read 4 source\(s\), none of them said anything keepable/);
+  assert.match(status, /not proof that there is no issue/);
+  assert.doesNotMatch(status, /Open the research job for findings/);
+});
+
+test("a research run with a kept claim or a brief is not called empty", () => {
+  for (const result of [
+    { documents: 2, accepted: [{ title: "Kept" }], rejected: [], outcome: "1 claim(s) kept", brief: "" },
+    { documents: 3, accepted: [], rejected: [], outcome: "read 3 source(s), none of them said anything keepable", brief: "A brief to open." },
+  ]) {
+    const p = loadPanel({ workerResponse: m => {
+      if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "agent" } };
+      if (m.type === "JOB_STATUS") return { ok: true, job: { job_id: "research", kind: "research",
+        state: "succeeded", done: true, result } };
+      return { ok: true, delivered: true, job: { job_id: "research", kind: "research", state: "running" } };
+    } });
+    p.openPanel();
+    p.deliverEntry({ ...answer([]), result: { ...answer([]).result,
+      subjects: [{ subject_id: "product", label: "Product", claims: 0 }] } });
+    p.click(".lite-gap-btn");
+    p.click(".lite-research-start");
+    p.flushTimers();
+    const status = p.shadow().querySelector(".lite-research-status").textContent;
+    assert.match(status, /Open the research job for findings/);
+    assert.doesNotMatch(status, /No data found/);
+  }
 });
 
 test("a quick look is one saved job, and joins a pack only when asked", () => {

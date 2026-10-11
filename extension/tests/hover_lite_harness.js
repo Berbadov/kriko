@@ -39,6 +39,7 @@ function loadPanel({
   // the messaging contract, which Phase 6c renamed.
   const sent = [];
   const timers = [];
+  const frames = [];
   const sandbox = {
     document: dom.window.document,
     window: dom.window,
@@ -54,7 +55,10 @@ function loadPanel({
      */
     setTimeout: (fn) => { timers.push(fn); return timers.length; },
     clearTimeout: (id) => { if (id) timers[id - 1] = null; },
-    requestAnimationFrame: (fn) => { fn(); return 0; },
+    // Frames are queued like timers: the typing reveal (hover_lite.js
+    // revealTick) advances one frame per `flushFrames()`, so a test can watch a
+    // reply grow instead of seeing it finished in the same call.
+    requestAnimationFrame: (fn) => { frames.push(fn); return frames.length; },
     chrome: {
       runtime: {
         onMessage: { addListener: (fn) => runtimeListeners.push(fn) },
@@ -180,6 +184,14 @@ function loadPanel({
     }
   }
 
+  /* One animation frame: what is queued now, run once. A frame may queue the
+   * next (the reveal re-arms while it is behind), so the next one waits for the
+   * following call, exactly as a browser's frame clock does. */
+  function flushFrames() {
+    const pending = frames.splice(0);
+    for (const fn of pending) fn();
+  }
+
   /** Type into a field in the shadow tree, the way a reader does. */
   function type(selector, value) {
     const el = shadow() && shadow().querySelector(selector);
@@ -190,7 +202,7 @@ function loadPanel({
   }
 
   return { dom, openPanel, deliverEntry, deliverStage, deliverFirefoxUpdate, footer, listing, claims,
-           click, type, shadow, sent, errorText, pipeline, flushTimers,
+           click, type, shadow, sent, errorText, pipeline, flushTimers, flushFrames,
            statusText, liveRows };
 }
 

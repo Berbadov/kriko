@@ -6,9 +6,10 @@ extension door, `default_backend`, and the run itself. A screen that said
 so the run resolves its address and model through `resolve` too.
 
 Ready means a model server answers *and* serves a chat model, and the local
-search service answers. Model names come from the server; default selection
-uses the smallest known chat model of at least 4B parameters. A model explicitly
-selected by the reader remains selected when installed.
+search service answers. Model names come from the server. A model the reader
+selected stays selected when installed. With no choice, the recommended model
+is used when the server holds it; otherwise the smallest known chat model of at
+least 4B parameters.
 """
 
 import re
@@ -21,6 +22,12 @@ from app.providers.local_inference import DEFAULT_TIMEOUT, runtime_incomplete
 #: Such a model cannot answer a prompt, so it is never picked by default. The
 #: substring is a closed engineering convention (every such model says it).
 _NOT_A_CHAT_MODEL = "embed"
+
+#: The model Kriko recommends and installs. Measured on the Quick Look pipeline
+#: (docs/benchmarks): it answers on a CPU, follows the structured-output
+#: schema, and keeps an exact product identity. One constant, so the installer,
+#: the default pick and the screens cannot name different models.
+RECOMMENDED_MODEL = "gemma4:e2b"
 
 DEFAULT_CONTEXT = 4096
 MIN_CONTEXT = 2048
@@ -76,10 +83,19 @@ def _parameter_size(name: str) -> float | None:
     return max(sizes, default=None)
 
 
+def is_recommended(name: str) -> bool:
+    """The recommended model, or a quantisation of it (`gemma4:e2b-it-q4_K_M`)."""
+    folded = name.casefold()
+    return folded == RECOMMENDED_MODEL or folded.startswith(RECOMMENDED_MODEL + "-")
+
+
 def _pick(models: list[str], wanted: str) -> str:
     if wanted in models and _NOT_A_CHAT_MODEL not in wanted.casefold():
         return wanted
     chat = [one for one in models if _NOT_A_CHAT_MODEL not in one.casefold()]
+    recommended = sorted((one for one in chat if is_recommended(one)), key=len)
+    if recommended:
+        return recommended[0]
     capable = [(one, _parameter_size(one)) for one in chat]
     capable = [(one, size) for one, size in capable if size is not None and size >= 4]
     return min(capable, key=lambda item: item[1])[0] if capable else ""
@@ -146,6 +162,8 @@ def resolve(
         else [],
         "all_models": chosen["models"] if chosen else [],
         "model": "",
+        "recommended_model": RECOMMENDED_MODEL,
+        "recommended_installed": False,
         "timeout": timeout_of(mine[prefs.LOCAL_TIMEOUT]),
         "context_tokens": _context_tokens(mine[prefs.LOCAL_CONTEXT]),
         "output_language": mine[prefs.LOCAL_OUTPUT_LANGUAGE] or "auto",
@@ -169,7 +187,8 @@ def resolve(
     elif not chosen["models"]:
         out["reason"] = (
             f"{chosen['name']} is running at {chosen['url']} but no model is "
-            "downloaded. Download one in that app, then check again."
+            f"downloaded. Download {RECOMMENDED_MODEL} (recommended) in that app, "
+            "then check again."
         )
     elif want_model and want_model not in out["models"]:
         if want_model in chosen["models"]:
@@ -195,16 +214,18 @@ def resolve(
             ]
             out["reason"] = (
                 "Only local chat models smaller than 4B are available. Choose one "
-                "explicitly in Settings, Local machine, or install a model of at "
-                "least 4B parameters."
+                f"explicitly in Settings, Local machine, or download {RECOMMENDED_MODEL} "
+                "(recommended)."
                 if small
                 else "No local chat model with a known size of at least 4B is available. "
-                "Choose an installed chat model explicitly in Settings, Local machine."
+                f"Download {RECOMMENDED_MODEL} (recommended), or choose an installed "
+                "chat model explicitly in Settings, Local machine."
             )
     # A server that lists models and answers /api/version can still have no
     # runner to start one with (an install that was interrupted). A call that
     # found that out has said so; until the install is repaired the plane is
     # not ready, and the reason says what to press instead of "Ready".
+    out["recommended_installed"] = any(is_recommended(one) for one in out["models"])
     broken = runtime_incomplete(out["url"]) if chosen else ""
     out["runtime_incomplete"] = bool(broken)
     if broken:

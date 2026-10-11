@@ -89,13 +89,6 @@ jobs:
                   # rather than part of the closure, so it is not locked.
                   pip install -r requirements.lock -e "." pyinstaller
 
-            # The knowledge: the spec refuses to freeze without artifacts
-            # rather than shipping a knowledge engine with no knowledge in it.
-            # Which packs get built is discovered from packs/, so a third one
-            # ships by existing.
-            - name: Build the packs
-              run: python packaging/build_packs.py
-
             - name: Fetch the pinned OpenSERP release
               shell: pwsh
               run: |
