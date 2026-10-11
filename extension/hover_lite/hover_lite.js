@@ -1312,6 +1312,21 @@
     }, 1200);
   }
 
+  /* A finished research run that kept nothing. The panel used to say "Research
+   * completed. Open the research job for findings." and stop there, so a run
+   * that read sources and found nothing looked like one that produced cards.
+   * The app's own outcome line already says what happened ("read 4 source(s),
+   * none of them said anything keepable"); this states the one claim that
+   * evidence supports. No data showing an issue is not the same as no issue,
+   * so the sentence says that too. A brief the reader can open is never
+   * called "no data": it may hold the findings. */
+  function noKeptData(result) {
+    const plain = "Research completed. Open the research job for findings.";
+    if (!result || !Array.isArray(result.accepted) || result.accepted.length || result.brief) return plain;
+    const what = result.outcome || "nothing kept";
+    return `No data found that shows an issue (${what}). This is absence of evidence in the sources read, not proof that there is no issue.`;
+  }
+
   function pollResearchJob(jobId) {
     if (state.researchJob?.job_id !== jobId || !state.researching) return;
     chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
@@ -1348,7 +1363,7 @@
             : `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko; it could not install itself; open it there.`)
           : job.result?.brief && !job.result?.documents
             ? "Brief ready. Open the research job to continue with your agent."
-            : "Research completed. Open the research job for findings.")
+            : noKeptData(job.result))
         : job.state === "interrupted" ? "Research interrupted by an app restart."
         : `Research failed. ${job.error || job.message || "Open the job for details."}`;
       const installed = job.state === "succeeded" && Boolean(job.result?.installed);
