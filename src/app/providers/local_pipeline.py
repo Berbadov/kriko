@@ -163,7 +163,10 @@ def repair_offer_page(url: str, title: str, text: str) -> bool:
                r"\b(?:tarifs?|prix)\b|€", r"rendez[- ]vous|réserv(?:ez|ation)",
                r"contactez[- ]nous|request (?:a )?quote|book (?:a )?repair",
                r"repair (?:services|pricing)|priced? from")
-    return (any(re.search(marker, folded) for marker in markers[:3])
+    explicit_offer = re.search(
+        r"nous r[ée]parons|nous r[ée]alisons le diagnostic|atelier sp[ée]cialis[ée]|"
+        r"diagnostic.{0,40}avant travaux|we (?:offer|provide) (?:repair|diagnos)", folded)
+    return (bool(explicit_offer) or any(re.search(marker, folded) for marker in markers[:3])
             or sum(bool(re.search(marker, folded)) for marker in markers) >= 2)
 
 
