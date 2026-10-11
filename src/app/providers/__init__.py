@@ -516,6 +516,6 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
         response_json_schema=local_agent.QUERY_SCHEMA, runtime_options=runtime_options,
         context_tokens=context_tokens)
     return local_agent.LocalAsker(
-        plan, complete, search, fetch.reader(), model=serving_name,
+        plan, complete, search, fetch.reader(timeout=8.0), model=serving_name,
         search_provider=provider, url=base_url, given_queries=given_queries,
         output_language=output_language, search_language=search_language)

@@ -910,6 +910,26 @@
     const editing = slot.querySelector(".lite-question-input:focus");
     const editingId = editing?.dataset.id;
     const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
+    const quickCoverage = state.researchQuick?.coverage;
+    const quickIsEmpty = Boolean(state.researchQuick
+      && !state.researchQuick.risks?.length && !state.researchQuick.specs?.length);
+    const rejectionReasons = quickCoverage?.rejection_reasons;
+    const rejectionSummary = rejectionReasons && typeof rejectionReasons === "object"
+      ? Object.entries(rejectionReasons)
+        .filter(([, count]) => Number(count) > 0)
+        .sort((a, b) => Number(b[1]) - Number(a[1]))
+        .slice(0, 3)
+        .map(([reason, count]) => `${reason.replaceAll("_", " ")} (${count})`)
+        .join(", ")
+      : "";
+    const quickEmptyExplanation = quickIsEmpty && quickCoverage
+      ? ({
+        no_matching_product_evidence: "No pages matched this exact product.",
+        evidence_rejected: "Relevant pages were checked, but candidate findings did not pass the evidence checks.",
+        no_supported_findings: "Relevant pages were checked, but none supported a finding.",
+        partial: "Some research stages were incomplete.",
+      }[quickCoverage.status] || "No supported findings were kept.")
+      : "";
     const markup = `
       <section class="lite-research">
         <div class="lite-research-head">
@@ -924,10 +944,11 @@
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
         ${state.researchSavedAt ? `<p class="lite-saved-result">Saved result · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
-        ${state.researchQuick?.coverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
-          `${state.researchQuick.coverage.pages_read || 0} pages read · ${state.researchQuick.coverage.pages_relevant || 0} matched product · ${state.researchQuick.coverage.publishers_read || 0} publishers · ${state.researchQuick.coverage.sources_cited || 0} pages cited`
-          + (state.researchQuick.coverage.status === "partial" ? " · Some stages were incomplete." : "")
-          + (!state.researchQuick.risks?.length ? " · No supported problems kept; this does not establish that the product has no problems." : ""))}</p>` : ""}
+        ${quickCoverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
+          `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched product · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} pages cited`
+          + (quickEmptyExplanation ? ` · ${quickEmptyExplanation}` : "")
+          + (quickIsEmpty ? " This is insufficient evidence to conclude that the product has no problems." : "")
+          + (rejectionSummary ? ` Reasons: ${rejectionSummary}.` : ""))}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
         ${state.researchQuick && (state.researchQuick.risks.length || state.researchQuick.specs?.length) ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}

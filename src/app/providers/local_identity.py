@@ -158,7 +158,7 @@ def _identity_specific(value: str, product_prompt: str) -> bool:
     # do not treat one token from a longer item name as the item being sold.
     if _normalize(value) == _normalize(product_prompt) and _meaningful_tokens(value):
         return True
-    if _distinctive_identifier(value) and _distinctive_identifier(product_prompt):
+    if _distinctive_identifier(product_prompt):
         value_ids = {
             token
             for token in _TOKEN.findall(_normalize(value))
@@ -171,6 +171,9 @@ def _identity_specific(value: str, product_prompt: str) -> bool:
         }
         if value_ids & prompt_ids:
             return True
+        # A family name cannot replace the model code the reader supplied,
+        # even when the extractor puts that code in a separate variant field.
+        return False
     return len(_meaningful_tokens(value) & _meaningful_tokens(product_prompt)) >= 2
 
 
@@ -318,6 +321,15 @@ def relevant_source(
         for name in names
     )
     identifier_match = any(_literal(value, text) for value in identity.identifiers)
+    # Discussions often omit the brand or insert punctuation into the name.
+    # An exact distinctive model code plus another supplied name token is
+    # enough to read the page; each finding still needs its applicability check.
+    model_tokens = [token for token in _TOKEN.findall(identity.canonical_name)
+                    if len(token) >= 5 and _distinctive_identifier(token)]
+    other_tokens = _meaningful_tokens(identity.canonical_name) - {
+        token.casefold() for token in model_tokens}
+    code_match = any(_literal(token, text) for token in model_tokens)
+    named = named or (code_match and bool(other_tokens & _meaningful_tokens(text)))
     if not (named or identifier_match):
         return False
 
