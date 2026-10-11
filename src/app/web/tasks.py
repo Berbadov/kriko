@@ -2219,6 +2219,26 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
     from kriko.gates import load_gates
 
     quick = _await_quick_look(settings, progress, params)
+    # A listing title carries the seller's own words ("DEMİRAY OTODAN
+    # DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID"). The quick look grounded the
+    # product inside it; that, not the title, is what gets searched, named
+    # and admitted (#181).
+    grounded = str(quick.get("product") or "").strip()
+    namer = getattr(researcher, "name_product", None)
+    if not grounded and callable(namer):
+        try:
+            grounded = namer(product, params.get("page"))
+        except Cancelled:
+            raise
+        except Exception as exc:  # noqa: BLE001 - the title is still a name
+            progress.log(f"could not separate the product from the listing title ({exc})")
+    if grounded and grounded.casefold() != product.casefold():
+        progress.log(f"checking {grounded} (the listing says “{product}”)")
+        if category == product:
+            # The extension sends the title as both; a fallback name for a
+            # new catalog must not keep the words just separated from it.
+            category = grounded
+        product = grounded
     said = str(quick.get("category") or "").strip()
     target = categorypack.resolve(
         categorypack.candidates(settings.store_path),

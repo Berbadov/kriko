@@ -19,6 +19,7 @@ import urllib.error
 import urllib.request
 
 from app import prefs
+from app.localplane import too_small
 from app.providers import local_discovery as discovery
 
 #: Ollama names a model `name[:tag]`, with an optional `namespace/` and host.
@@ -184,6 +185,9 @@ def _library_rows(html: str) -> list[dict]:
         chunk = html[start:end]
         row = rows.setdefault(name, {"name": name, "sizes": [], "about": ""})
         for size in _LIBRARY_SIZE.findall(chunk):
+            # A size Kriko would refuse to run is not offered for download.
+            if too_small(f"{name}:{size}"):
+                continue
             if size not in row["sizes"] and len(row["sizes"]) < 16:
                 row["sizes"].append(size)
         if not row["about"]:
