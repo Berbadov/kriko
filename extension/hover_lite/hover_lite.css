@@ -2066,6 +2066,11 @@
 }
 .lite-follow-answer strong, .lite-followup-answer strong { color: var(--fg); font-weight: 700; }
 .lite-follow-answer code, .lite-followup-answer code { font: 0.92em var(--font-mono); padding: 0 3px; background: var(--bg-item); }
+/* Pack and agent prose (renderRichText): the same emphasis wherever it lands. */
+.lite-rc-text strong, .lite-rc-insp-body strong, .lite-quick-specs strong, .lite-quick-assumed strong,
+.lite-asked-q strong, .lite-chip strong { color: var(--fg); font-weight: 700; }
+.lite-rc-text code, .lite-rc-insp-body code, .lite-quick-specs code, .lite-quick-assumed code,
+.lite-asked-q code, .lite-chip code { font: 0.92em var(--font-mono); padding: 0 3px; background: var(--bg-item); }
 .lite-followup-form { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .lite-followup-input { box-sizing: border-box; width: 100%; resize: vertical; min-height: 58px; padding: 8px; border: 1px solid var(--border); background: var(--bg-base); color: var(--fg); font: inherit; }
 .lite-followup-send { align-self: flex-start; padding: 7px 12px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--fg); font: inherit; cursor: pointer; }
