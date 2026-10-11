@@ -67,7 +67,7 @@ def part_queries(identity: ProductIdentity, language: str, limit: int = 4) -> li
         f"{item} {host} {words[2]}",
         f"{item} {maker} {words[3]}",
     ]
-    queries = []
+    queries: list[str] = []
     for query in candidates:
         query = " ".join(query.split())
         if fold(query) not in {fold(one) for one in queries}:
