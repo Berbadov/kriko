@@ -25,3 +25,9 @@ How items are written, per `docs/DOCTRINE.md`:
 **Done when:** The old Svelte/Tauri app, static bundle, and its build/release gates are removed; the Python API remains usable by GPUI and the extension without requiring frontend files.
 **Not this:** Removing the browser extension, its resources, Python engine/API, or GPUI app.
 **Owner:** current session / main.
+
+### B203 — Local research searches issue discussions and survives partial search degradation
+**Asked:** "did a search with qwen3.5:4b no results are shown"; "lemme say that real quick: agents are going to the product pages instead of issue forums and sites" (2026-10-11)
+**Where:** Local Quick Look, research job log, and Local machine readiness.
+**Done when:** Searches prioritize exact-model owner problem discussions and repair reports rather than catalog/specification pages or advertisements; irrelevant pages are replaced within the page budget; rejection reasons remain visible; one failed OpenSERP engine does not block working engines. The corrected native installer reaches the reader.
+**Owner:** current session; root retrieval/identity/health, Luna search result filtering, native supervision, and empty output display.

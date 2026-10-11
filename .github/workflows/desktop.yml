@@ -228,10 +228,17 @@ jobs:
               run: |
                   mkdir -p release
                   find artifacts -type f \
-                      \( -name '*.msi' -o -name '*.zip' -o -name '*.kpack' -o -name 'packs.json' \) \
+                      \( -name '*.msi' -o -name '*.zip' -o -name '*.kpack' -o -name 'packs.json' -o -name 'SHA256SUMS.txt' \) \
                       -exec cp {} release/ \;
                   ls -lh release
                   test -n "$(ls -A release)"
+                  # Hash the final set, including catalogs and their index,
+                  # after both jobs' artifacts have been collected.
+                  (
+                      cd release
+                      find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -printf '%f\0' \
+                          | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+                  )
 
             - uses: softprops/action-gh-release@v2
               with:
