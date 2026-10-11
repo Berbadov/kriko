@@ -32,6 +32,8 @@ pub struct Plane {
     pub url: String,
     pub name: String,
     pub model: String,
+    /// The model the engine recommends and installs; the screens never name one.
+    pub recommended_model: String,
     pub models: Vec<String>,
     pub servers: Vec<Server>,
     pub search_label: String,
@@ -249,6 +251,7 @@ pub fn plane_from(v: &Value) -> Plane {
         url: api::s(v, "url"),
         name: api::s(v, "name"),
         model: api::s(v, "model"),
+        recommended_model: api::s(v, "recommended_model"),
         models: strings(v, "models"),
         servers: api::arr(v, "servers")
             .iter()

@@ -16,10 +16,11 @@ from typing import Any
 
 from app import pagefacts
 from app.providers.local_identity import (
-    IDENTITY_SCHEMA, identity_prompt, parse_identity,
-    relevant_source, conflicting_identity,
+    IDENTITY_SCHEMA, anchor_terms, clean_product_name, conflicting_identity,
+    fold, identity_prompt, parse_identity, relevant_source, scope_note,
 )
 from app.providers.local_inference import LocalInferenceError
+from app.providers.local_search_plan import ISSUE_WORDS, nothing_read, part_queries
 
 MAX_CANDIDATES = 18
 MAX_PER_PAGE = 3
@@ -177,9 +178,9 @@ def evidence_windows(text: str, identity, budget: int) -> dict[str, str]:
     # Chunk large unpunctuated paragraphs without changing their characters.
     spans = [part[start:start + 700] for part in spans
              for start in range(0, len(part), 700)]
-    names = [identity.canonical_name, *identity.aliases, *identity.identifiers]
+    names = [fold(name) for name in anchor_terms(identity)]
     anchors = [index for index, part in enumerate(spans)
-               if any(name.casefold() in part.casefold() for name in names if name)]
+               if any(name in fold(part) for name in names if name)]
     wanted: set[int] = set()
     for index in anchors:
         wanted.update(range(max(0, index - 2), min(len(spans), index + 5)))
@@ -458,7 +459,8 @@ class QuickLookPipeline:
             "variant/configuration; adjacent models, years or sizes are wrong. "
             "If the source omits a configuration needed for this failure, use unclear. "
             "Do not rewrite the assertion.\n"
-            + json.dumps({"product": self.identity.as_dict(), "claim": claim,
+            + (scope_note(self.identity) + "\n" if self.identity.dependent else "")
+            + json.dumps({"product": self.identity.prompt_dict(), "claim": claim,
                           "page_context": candidate["context"],
                           "evidence": [ref["quote"] for ref in candidate["sources"]]},
                          ensure_ascii=False))
@@ -489,7 +491,8 @@ class QuickLookPipeline:
             "support menus and offers to repair are not documented product failures. "
             "Service prices and subjective marketing adjectives are not product specifications.\n"
             + self._language()
-            + "\nPRODUCT IDENTITY:\n" + json.dumps(self.identity.as_dict(), ensure_ascii=False)
+            + (scope_note(self.identity) + "\n" if self.identity.dependent else "")
+            + "\nPRODUCT IDENTITY:\n" + json.dumps(self.identity.prompt_dict(), ensure_ascii=False)
             + "\nTASK:\n" + brief
             + "\nPAGE TITLE (untrusted data): " + self.agent.page_titles.get(url, "")
             + "\nSOURCE SENTENCES:\n")
@@ -642,9 +645,10 @@ class QuickLookPipeline:
     def run(self, brief: str, product: str, page: dict | None = None) -> str:
         agent = self.agent
         agent.sources = {}
+        product = clean_product_name(product) or product
         listing = pagefacts.block(pagefacts.clean(
             (page or {}).get("facts"), (page or {}).get("description", "")))
-        identity_header = identity_prompt(product, "")
+        identity_header = identity_prompt(product, "", agent.search_language)
         room = getattr(agent._complete, "prompt_chars_allowed", lambda: 12000)()
         listing = clip(listing, room - len(identity_header.encode("utf-8")) - 128)
         try:
@@ -670,18 +674,25 @@ class QuickLookPipeline:
         if source_kinds:
             source_task += "\n" + source_kinds
         try:
-            raw = self._call(identity_prompt(product, listing), IDENTITY_SCHEMA)
+            raw = self._call(
+                identity_prompt(product, listing, agent.search_language), IDENTITY_SCHEMA)
             self.identity = parse_identity(json.dumps(raw), product, listing)
         except LocalInferenceError as error:
             self._error("identity", error)
             self.identity = parse_identity("", product, listing)
         agent._say("identified: " + self.identity.canonical_name
+                   + ("; part: " + " / ".join(self.identity.item_terms)
+                      + ", fits: " + self.identity.fits if self.identity.dependent else "")
                    + ("; variant: " + self.identity.variant if self.identity.variant else "")
                    + ("; unknown: " + ", ".join(self.identity.unknowns)
                       if self.identity.unknowns else ""))
         name = self.identity.canonical_name
         if agent.given_queries:
             queries = list(agent.given_queries)[:5]
+        elif self.identity.dependent:
+            # A part is discussed by its own name and the product it fits, in
+            # the search language: never by its marketplace title as one phrase.
+            queries = part_queries(self.identity, agent.search_language)
         else:
             query_schema = {
                 "type": "object", "additionalProperties": False,
@@ -735,18 +746,7 @@ class QuickLookPipeline:
                        for query in queries]
             queries = list(dict.fromkeys(queries))[:4]
             if len(queries) < 3:
-                suffixes = {
-                    "en": ("problems owner reports forum", "failure troubleshooting discussion",
-                           "repair recurring fault", "long term issues forum"),
-                    "fr": ("problèmes utilisateurs forum", "panne discussion dépannage",
-                           "réparation défaut récurrent", "problèmes après utilisation forum"),
-                    "tr": ("sorun kullanıcı forum", "arıza çözüm tartışma",
-                           "tamir tekrarlayan arıza", "uzun kullanım sorunları forum"),
-                    "de": ("Probleme Nutzer Forum", "Defekt Diskussion Fehlerbehebung",
-                           "Reparatur wiederkehrender Fehler", "Langzeitprobleme Forum"),
-                    "es": ("problemas usuarios foro", "fallo discusión solución",
-                           "reparación defecto recurrente", "problemas uso prolongado foro"),
-                }
+                suffixes = ISSUE_WORDS
                 language = agent.search_language.split("-")[0]
                 if language not in suffixes:
                     self._error("query language", LocalInferenceError(
@@ -759,7 +759,7 @@ class QuickLookPipeline:
                        "de": "Probleme Defekt Forum", "es": "problemas fallo foro",
                        "en": "problems failure forum"}
         language = agent.search_language.split("-")[0]
-        if not agent.given_queries and language in forum_terms:
+        if not agent.given_queries and not self.identity.dependent and language in forum_terms:
             forum_query = f'"{name}" {forum_terms[language]}'
             queries = [forum_query] + [query for query in queries
                                        if query.casefold() != forum_query.casefold()]
@@ -772,8 +772,17 @@ class QuickLookPipeline:
             self.coverage["pages_read"] = len(pages)
             self.coverage["publishers_read"] = len({publisher(url) for url, _ in pages})
         if not pages:
-            raise LocalInferenceError("No usable pages could be read. Check OpenSERP and "
-                                      "the connection; no finding was inferred from search snippets.")
+            reads = agent.search_coverage
+            if not reads.get("pages_read"):
+                # Nothing came back at all: that is the search or the connection.
+                raise LocalInferenceError(
+                    nothing_read(reads, getattr(agent, "search_url", "")) +
+                    " No finding was inferred from search snippets.")
+            # Pages came back and none was about this subject. That is an
+            # empty result, not a broken connection, and it says what was read.
+            agent._say(f"{reads['pages_read']} page(s) were read but none was about this product"
+                       + (f" ({reads['pages_irrelevant']} about something else)"
+                          if reads.get("pages_irrelevant") else ""))
         candidates: list[dict] = []
         metadata: dict[str, Any] = {}
         fingerprints = set()
@@ -799,7 +808,8 @@ class QuickLookPipeline:
             metadata = metadata or data
             if len(candidates) >= MAX_CANDIDATES:
                 break
-        if not self.coverage["pages_extracted"] and self.coverage["errors"]:
+        if (self.coverage["pages_relevant"] and not self.coverage["pages_extracted"]
+                and self.coverage["errors"]):
             raise LocalInferenceError("No evidence pass completed: "
                                       + self.coverage["errors"][-1]["reason"])
         risks = self._combine([item for item in candidates if item["kind"] == "risk"])
