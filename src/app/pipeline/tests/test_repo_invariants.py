@@ -9,7 +9,6 @@ import ast
 import json
 import re
 import subprocess
-import sys
 from configparser import ConfigParser
 from pathlib import Path
 

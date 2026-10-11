@@ -32,6 +32,8 @@ pub struct Plane {
     pub url: String,
     pub name: String,
     pub model: String,
+    /// The model the engine recommends and installs; the screens never name one.
+    pub recommended_model: String,
     pub models: Vec<String>,
     pub servers: Vec<Server>,
     pub search_label: String,
@@ -197,10 +199,46 @@ pub struct LibraryModel {
     pub about: String,
 }
 
+/// A runtime or language choice the reader just made, shown at once while the
+/// engine stores it: the value picked, and how many saves of that key are
+/// still in flight. See [`local_pick_pref`](Kriko::local_pick_pref).
+#[derive(Clone, Default)]
+pub struct PendingPick {
+    pub value: String,
+    pub writes: u32,
+}
+
+/// A save starts: the pick shows from now on, and is counted as in flight.
+pub fn pick_started(pending: &mut std::collections::HashMap<String, PendingPick>, key: &str, value: &str) {
+    let pick = pending.entry(key.to_string()).or_default();
+    pick.value = value.to_string();
+    pick.writes += 1;
+}
+
+/// A save answered. A refused save with none left in flight drops the pick,
+/// so the row shows what the engine still holds.
+pub fn pick_answered(pending: &mut std::collections::HashMap<String, PendingPick>, key: &str, saved: bool) {
+    let Some(pick) = pending.get_mut(key) else { return };
+    pick.writes = pick.writes.saturating_sub(1);
+    if !saved && pick.writes == 0 {
+        pending.remove(key);
+    }
+}
+
+/// The plane was read again. A pick no save is still in flight for is now the
+/// engine's own answer, so it stops showing as pending.
+pub fn pick_confirmed(pending: &mut std::collections::HashMap<String, PendingPick>) {
+    pending.retain(|_, pick| pick.writes > 0);
+}
+
 #[derive(Default)]
 pub struct State {
     pub loaded: bool,
     pub plane: Option<Plane>,
+    /// Choices on the runtime and language rows that are being stored.
+    pub pref_pending: std::collections::HashMap<String, PendingPick>,
+    /// "Refresh device" was pressed and the plane has not answered yet.
+    pub device_reading: bool,
     pub machine: Option<Machine>,
     pub held: Option<Vec<Held>>,
     /// Downloadable names from the provider's library.
@@ -249,6 +287,7 @@ pub fn plane_from(v: &Value) -> Plane {
         url: api::s(v, "url"),
         name: api::s(v, "name"),
         model: api::s(v, "model"),
+        recommended_model: api::s(v, "recommended_model"),
         models: strings(v, "models"),
         servers: api::arr(v, "servers")
             .iter()
@@ -545,6 +584,7 @@ impl Kriko {
         self.fetch(cx, || api::get("/api/local-plane"), move |this, reply, _| {
             this.note(&reply);
             this.live.local.checking = false;
+            this.live.local.device_reading = false;
             if let Ok(v) = reply {
                 let plane = plane_from(&v);
                 if fill || !this.live.local.loaded {
@@ -560,7 +600,36 @@ impl Kriko {
                 this.live.local.loaded = true;
                 this.live.local.plane = Some(plane);
             }
+            pick_confirmed(&mut this.live.local.pref_pending);
         });
+    }
+
+    /// Stores one runtime or language choice. The pick shows at once and its
+    /// row shows a spinner until the engine's plane answers, so a click is
+    /// never silent while the engine works. Only the plane is read again: a
+    /// choice changes no machine, model or benchmark fact, and re-reading
+    /// those too would probe every model server again and refill the address
+    /// field the reader may be typing in.
+    pub fn local_pick_pref(&mut self, key: String, value: String, cx: &mut Context<Self>) {
+        pick_started(&mut self.live.local.pref_pending, &key, &value);
+        cx.notify();
+        let body = serde_json::json!({ key.clone(): value });
+        self.fetch(cx, move || api::put("/api/prefs", body), move |this, reply, cx| {
+            this.note(&reply);
+            pick_answered(&mut this.live.local.pref_pending, &key, reply.is_ok());
+            this.refresh_plane(false, cx);
+        });
+    }
+
+    /// "Refresh device": reads the plane and this machine again, with a spinner
+    /// on the button until the plane answers. It does not refill the address
+    /// and search fields, so a server address typed but not saved survives it.
+    pub fn refresh_device(&mut self, cx: &mut Context<Self>) {
+        self.live.local.device_reading = true;
+        self.refresh_plane(false, cx);
+        self.refresh_machine(false, cx);
+        self.refresh_held(cx);
+        cx.notify();
     }
 
     fn refresh_machine(&mut self, fresh: bool, cx: &mut Context<Self>) {
@@ -944,6 +1013,63 @@ mod tests {
             refused: 0.0,
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn a_pick_shows_before_the_engine_answers() {
+        let mut pending = std::collections::HashMap::new();
+        pick_started(&mut pending, "local_device", "cpu");
+        assert_eq!(pending["local_device"].value, "cpu");
+        assert_eq!(pending["local_device"].writes, 1);
+    }
+
+    #[test]
+    fn a_refused_save_drops_the_pick_so_the_row_shows_the_engine_again() {
+        let mut pending = std::collections::HashMap::new();
+        pick_started(&mut pending, "local_device", "cpu");
+        pick_answered(&mut pending, "local_device", false);
+        assert!(!pending.contains_key("local_device"));
+    }
+
+    #[test]
+    fn a_saved_pick_stays_until_the_plane_confirms_it() {
+        let mut pending = std::collections::HashMap::new();
+        pick_started(&mut pending, "local_output_language", "tr");
+        pick_answered(&mut pending, "local_output_language", true);
+        // saved, but the plane is not read yet: the row must not flicker back
+        assert_eq!(pending["local_output_language"].value, "tr");
+        pick_confirmed(&mut pending);
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn a_plane_read_during_a_save_keeps_the_pick() {
+        let mut pending = std::collections::HashMap::new();
+        pick_started(&mut pending, "local_device", "gpu");
+        pick_confirmed(&mut pending);
+        assert_eq!(pending["local_device"].value, "gpu");
+    }
+
+    #[test]
+    fn two_quick_picks_of_one_row_show_the_last_until_both_answer() {
+        let mut pending = std::collections::HashMap::new();
+        pick_started(&mut pending, "local_gpu_layers", "16");
+        pick_started(&mut pending, "local_gpu_layers", "32");
+        pick_answered(&mut pending, "local_gpu_layers", true);
+        assert_eq!(pending["local_gpu_layers"].value, "32");
+        assert_eq!(pending["local_gpu_layers"].writes, 1);
+        pick_answered(&mut pending, "local_gpu_layers", true);
+        pick_confirmed(&mut pending);
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn a_refused_save_with_a_newer_one_in_flight_keeps_the_newer_pick() {
+        let mut pending = std::collections::HashMap::new();
+        pick_started(&mut pending, "local_device", "cpu");
+        pick_started(&mut pending, "local_device", "gpu");
+        pick_answered(&mut pending, "local_device", false);
+        assert_eq!(pending["local_device"].value, "gpu");
     }
 
     #[test]

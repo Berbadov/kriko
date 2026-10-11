@@ -404,6 +404,51 @@ def test_the_script_reports_only_what_this_run_produced(script):
     )
 
 
+def test_the_release_build_stays_out_of_the_checkout(script):
+    """The release tree is about 2 GB, and it used to sit in `kriko-gpui\\target`.
+
+    Every checkout and worktree that packaged kept its own copy inside the
+    project folder. The tree now goes to one per-machine cache, and
+    `CARGO_TARGET_DIR` still wins when a reader sets it, as it does for cargo.
+    """
+    assert "CARGO_TARGET_DIR" in script
+    assert "LOCALAPPDATA" in script
+    assert 'Join-Path $crate "target' not in script, (
+        "the release tree is back inside the checkout"
+    )
+
+
+def test_pyinstaller_scratch_is_not_written_into_the_checkout(script):
+    """PyInstaller's workpath defaults to `build\\` beside the spec.
+
+    Every freeze rewrites it, and it was the second-largest folder after the
+    Rust tree. It goes to temp, unique per run, so two packagings cannot share it.
+    """
+    freeze = [line for line in script.splitlines() if "PyInstaller --noconfirm" in line]
+    assert freeze, "the script no longer freezes the sidecar"
+    assert "--workpath" in freeze[0], freeze[0]
+
+
+def test_freeze_sh_keeps_pyinstaller_scratch_out_of_the_checkout():
+    text = (ROOT / "packaging" / "freeze.sh").read_text(encoding="utf-8")
+    assert "--workpath build" not in text, "freeze.sh writes build/ into the checkout"
+    assert "mktemp" in text, "freeze.sh no longer keeps its scratch out of the tree"
+
+
+def test_the_packed_files_are_checked_before_wix_runs(script):
+    """The release folder is shared by every checkout on this machine.
+
+    Another build can replace kriko.exe while this one is still packing, and the
+    MSI would carry code nobody smoke-tested. The digests are taken once the
+    sidecar is placed and compared before WiX reads them.
+    """
+    lines = script.splitlines()
+    placed = min(i for i, line in enumerate(lines) if "Place the sidecar" in line)
+    checked = [i for i, line in enumerate(lines) if "changed while" in line]
+    wix = min(i for i, line in enumerate(lines) if '"wix"' in line)
+    assert checked and placed < checked[0] < wix, (placed, checked, wix)
+
+
 def test_the_script_checks_a_requested_version_against_the_tree(script):
     """The stamp is gone with the updater; the check stays.
 
