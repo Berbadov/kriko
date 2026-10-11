@@ -29,6 +29,16 @@
       .replace(/'/g, "&#39;");
   }
 
+  /* Prose a pack or an agent wrote carries light markdown: **bold** and
+   * `code`. Shown raw, the asterisks read as noise, so this renders just those
+   * two, on top of the escaped text: nothing the author writes can become
+   * markup of its own. Page text and the reader's own words never come here. */
+  function renderRichText(s) {
+    return escapeHtml(s)
+      .replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+  }
+
   /** Whether this claim can be re-checked: an identity the app can look up,
    * and a page to re-read. */
   function canCheck(claim) {
@@ -85,7 +95,7 @@
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M12 3 1.5 21h21z"/><line x1="12" y1="10" x2="12" y2="14"/><line x1="12" y1="17.5" x2="12" y2="17.6"/></svg>
         </div>
         <div class="lite-rc-titlebox">
-          <div class="lite-rc-title">${escapeHtml(claim.title)}</div>
+          <div class="lite-rc-title">${renderRichText(claim.title)}</div>
           <div class="lite-rc-meta">
             <span class="lite-rc-strength" data-strength="${escapeHtml(strengthAttr)}">${escapeHtml(strengthLabel)}</span>
             <span class="sep" aria-hidden="true"> · </span><span>${escapeHtml(claim.domain || "")}</span>
@@ -102,7 +112,7 @@
       <div class="lite-rc-bodywrap">
         <div class="lite-rc-bodyclip">
           <div class="lite-rc-body">
-            <p class="lite-rc-text">${escapeHtml(claim.body || "")}</p>
+            <p class="lite-rc-text">${renderRichText(claim.body || "")}</p>
             ${shownWhy.length ? `
               <div class="lite-rc-why">
                 ${shownWhy.map((w) => `<span class="lite-rc-why-chip">${escapeHtml(w)}</span>`).join("")}
@@ -112,7 +122,7 @@
                 <span class="lite-rc-insp-icon">${iconSvg("eye", { size: 13 })}</span>
                 <div class="lite-rc-insp-body">
                   <div class="lite-rc-insp-label">What to ask</div>
-                  ${escapeHtml(claim.advice)}
+                  ${renderRichText(claim.advice)}
                 </div>
               </div>` : ""}
             ${canCheck(claim) ? `
@@ -204,6 +214,7 @@
     markClaimCard,
     factClaimCard,
     canCheck,
+    renderRichText,
     FACT_WORD,
   };
 })();
