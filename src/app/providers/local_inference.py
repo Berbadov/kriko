@@ -449,6 +449,20 @@ class OpenAICompatSocket:
         tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
         return max(0, min(self.context_chars, int(tokens - 128)))
 
+    def window_chars(self) -> int:
+        """How many characters of prompt the window itself holds beside the reply.
+
+        Not `prompt_chars_allowed`: that is the research budget, one character
+        a token and capped at `context_chars`, and it bounds the evidence. The
+        whole prompt (instructions and evidence) is bounded by the window, at
+        `CHARS_PER_TOKEN`. Measuring the instructions against the evidence
+        budget left a 16k window no room after an 11.7k-character authoring
+        brief (#181).
+        """
+        reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
+        tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
+        return max(0, int(tokens * CHARS_PER_TOKEN))
+
     def _ask_context(self) -> int | None:
         def get(path: str):
             try:
