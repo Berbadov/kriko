@@ -1601,8 +1601,8 @@ async function _getApp(path) {
  *     hides a defect behind a fallback that was designed for a missing app.
  *     It is logged and rethrown instead.
  *
- * The fallback tab is therefore reserved for the two cases it was meant for:
- * no server reachable, and a server with no shell attached to it.
+ * Neither failure opens a browser tab any more: the desktop app is the only
+ * interface, so a tab would only show the reader a page that is not there.
  */
 async function openInApp(route, fallbackUrl) {
   let delivery = "no_shell";
@@ -1623,9 +1623,9 @@ async function openInApp(route, fallbackUrl) {
 
   // "unreachable" means the transport itself failed — there is no engine on
   // the other end, so a fallback tab would only open onto a dead local port
-  // (ERR_CONNECTION_REFUSED) with nothing for the reader to do about it. The
-  // fallback tab stays reserved for "no_shell": the engine answered, it just
-  // has no window to raise.
+  // (ERR_CONNECTION_REFUSED) with nothing for the reader to do about it. For
+  // "no_shell" the engine answered but no window is connected, which is said
+  // as a named error: no browser tab, since the GPUI app is the interface.
   if (delivery === "unreachable") {
     return {
       ok: false,
