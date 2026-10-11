@@ -103,8 +103,6 @@ def _wire(monkeypatch, fake):
 def test_a_refused_page_the_readers_miss_is_read_by_the_browser(page, tmp_path,
                                                                 monkeypatch):
     from app.providers import pagereader
-
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", "http://127.0.0.1:1/mcp")
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", "http://127.0.0.1:1/mcp")
     fake = FakeBrowser(tmp_path, dom="<html><body>browser words</body></html>")
     _wire(monkeypatch, fake)
@@ -118,8 +116,6 @@ def test_a_machine_with_no_browser_reads_exactly_as_before(page, monkeypatch):
 
 def test_a_browser_that_fails_leaves_the_page_unread(page, tmp_path, monkeypatch):
     from app.providers import pagereader
-
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", "http://127.0.0.1:1/mcp")
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", "http://127.0.0.1:1/mcp")
     fake = FakeBrowser(tmp_path, exit_code=1, dom="")
     _wire(monkeypatch, fake)

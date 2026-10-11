@@ -29,10 +29,9 @@ if ($AgentCaches) {
         if (-not (Test-Path -LiteralPath $parent -PathType Container)) { continue }
         foreach ($checkout in (Get-ChildItem -LiteralPath $parent -Directory -Force)) {
             if ($checkout.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
-            foreach ($relative in @('node_modules','ui/node_modules','tauri/node_modules',
+            foreach ($relative in @('node_modules',
                                     'build','kriko-gpui/builds','target',
-                                    'tauri/target','tauri/src-tauri/target','src-tauri/target',
-                                    '.pytest_cache','.mypy_cache','.ruff_cache','ui/.svelte-kit')) {
+                                    '.pytest_cache','.mypy_cache','.ruff_cache')) {
                 Add-Cache $checkout.FullName $relative
             }
             Get-ChildItem -LiteralPath $checkout.FullName -Directory -Force |

@@ -3,7 +3,7 @@
 After the knowledge-engine pivot (goal G6) Kriko is four packages, and the
 dependency arrows no longer form one column:
 
-    app/       CLI, local web dashboard, MCP server — the interfaces
+    app/       CLI, local HTTP API, MCP server — the interfaces
       |
       v
     kriko/      the engine: pack store, generic lookup, ranking.

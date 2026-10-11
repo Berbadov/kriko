@@ -17,7 +17,7 @@ def _row(row):
 
 @router.get("/status")
 def status(store=Depends(get_store)):
-    """A small, data-driven snapshot suitable for a dashboard header."""
+    """A small, data-driven snapshot suitable for an app header."""
     counts = {}
     for table in (
         "packs",

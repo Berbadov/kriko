@@ -100,9 +100,16 @@ LOCAL_SEARCH_URL = "local_search_url"
 LOCAL_TIMEOUT = "local_timeout"
 LOCAL_DEVICE = "local_device"
 LOCAL_CONTEXT = "local_context_tokens"
+LOCAL_CONTEXT_TOKENS = LOCAL_CONTEXT
 LOCAL_GPU_LAYERS = "local_gpu_layers"
+LOCAL_OUTPUT_LANGUAGE = "local_output_language"
+LOCAL_SEARCH_LANGUAGE = "local_search_language"
+# Names used by the local research provider's constructor.
+OUTPUT_LANGUAGE = LOCAL_OUTPUT_LANGUAGE
+SEARCH_LANGUAGE = LOCAL_SEARCH_LANGUAGE
 LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT,
-              LOCAL_DEVICE, LOCAL_CONTEXT, LOCAL_GPU_LAYERS)
+              LOCAL_DEVICE, LOCAL_CONTEXT, LOCAL_GPU_LAYERS,
+              LOCAL_OUTPUT_LANGUAGE, LOCAL_SEARCH_LANGUAGE)
 
 #: What every agent run reads, set once on the Agents tab: how many sources
 #: at most (empty or 0 leaves it to the run), and which kinds of source to go
@@ -203,7 +210,11 @@ def read(conn) -> dict:
     from app.web import state
 
     stored = state.all_settings(conn) if conn is not None else {}
-    return {key: str(stored.get(key) or "").strip() for key in KEYS}
+    values = {key: str(stored.get(key) or "").strip() for key in KEYS}
+    values[LOCAL_CONTEXT] = values[LOCAL_CONTEXT] or "4096"
+    values[LOCAL_OUTPUT_LANGUAGE] = values[LOCAL_OUTPUT_LANGUAGE] or "auto"
+    values[LOCAL_SEARCH_LANGUAGE] = values[LOCAL_SEARCH_LANGUAGE] or "en"
+    return values
 
 
 def write(conn, values: dict) -> dict:

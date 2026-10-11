@@ -123,15 +123,20 @@ class OpenAICompatSocket:
                  context_chars: int = 12000,
                  max_tokens: int | None = DEFAULT_MAX_TOKENS,
                  response_json_schema: dict | str = "",
-                 reasoning_effort: str = "", runtime_options: dict | None = None):
+                 reasoning_effort: str = "", runtime_options: dict | None = None,
+                 context_tokens: int | None = None, native_ollama: bool = False):
         self.base_url = base_url.rstrip("/").removesuffix("/v1")
         self.serving_name = serving_name
         self.timeout = timeout
         self.temperature = temperature
         self.context_chars = context_chars
+        self.language_instruction = ""
         self.max_tokens = max_tokens
         self.reasoning_effort = reasoning_effort.strip()
         self.runtime_options = dict(runtime_options or {})
+        self._requested_context = max(2048, min(32768, context_tokens)) if context_tokens else None
+        if native_ollama:
+            self.runtime_options["num_ctx"] = self._requested_context or DEFAULT_CONTEXT_TOKENS
         if isinstance(response_json_schema, str):
             response_json_schema = (json.loads(response_json_schema)
                                     if response_json_schema.strip() else {})
@@ -157,7 +162,18 @@ class OpenAICompatSocket:
     def set_schema(self, schema: dict) -> None:
         self._schema = schema
 
+    def json(self, prompt: str, schema: dict) -> str:
+        previous = self._schema
+        self._schema = schema
+        try:
+            if len(prompt.encode("utf-8")) > self.prompt_chars_allowed():
+                raise LocalInferenceError("Local prompt exceeds the configured context budget.")
+            return self.complete(prompt)
+        finally:
+            self._schema = previous
+
     def complete(self, prompt: str) -> str:
+        prompt = self.language_instruction + prompt
         body = {
             "model": self.serving_name,
             "messages": [{"role": "user", "content": prompt}],
@@ -183,10 +199,7 @@ class OpenAICompatSocket:
         except urllib.error.HTTPError as error:
             if error.code in _RETRY_STATUS:
                 # Transient: the model was loading, the proxy dropped an
-                # idle connection. One plain retry, schema dropped too,
-                # since a server caught mid-load can refuse it as well.
-                body.pop("response_format", None)
-                body.pop("reasoning_effort", None)
+                # idle connection. Retry with the same evidence grammar.
                 try:
                     payload = self._post(body)
                 except urllib.error.HTTPError as again:
@@ -257,17 +270,17 @@ class OpenAICompatSocket:
         if isinstance(requested, int) and requested > 0:
             return requested
         if self._context:
-            return self._context
+            return min(self._context, self._requested_context or 32768)
         found = self._ask_context()
         if found:
             self._context = found
-        return found or DEFAULT_CONTEXT_TOKENS
+        return min(found or DEFAULT_CONTEXT_TOKENS, self._requested_context or 32768)
 
     def prompt_chars_allowed(self) -> int:
         """How many characters of prompt fit beside the reply budget."""
         reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
         tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
-        return max(0, int(tokens * CHARS_PER_TOKEN))
+        return max(0, min(self.context_chars, int(tokens - 128)))
 
     def _ask_context(self) -> int | None:
         def get(path: str):

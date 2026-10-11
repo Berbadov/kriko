@@ -198,7 +198,7 @@ HTTP, because a second direct open is a second writer. Discovery order is
 (`--no-start` fails instead of starting one).
 
 **The operator console** (`src/app/tui/`) speaks the same HTTP API as the
-dashboard: `client.py` holds discovery and calls, `term.py` raw mode and the
+desktop app and browser extension: `client.py` holds discovery and calls, `term.py` raw mode and the
 frame differ, `screen.py` is a pure function of state, `app.py` is the loop.
 Its tabs are Planes, Agenda, Jobs and Ops, and `s` hands the terminal to the
 PTY until Ctrl-]. It is reachable as `kriko tui` or `kriko-sidecar --tui`, and
@@ -224,7 +224,7 @@ bound socket to uvicorn. `kriko-gpui/src/engine.rs` spawns it, polls
 `/api/health` while the window says it is starting; a failure renders stderr. `--mcp` runs
 the MCP stdio server from the same binary and `--exit-with-parent` is the crash
 belt. `packaging/kriko-sidecar.spec` freezes it,
-`packaging/smoke_sidecar.py` gates the handshake, health and frontend, and
+`packaging/smoke_sidecar.py` gates the handshake, health and extension, and
 `.github/workflows/desktop.yml` is the hand-run installer recipe. The
 supervisor rules are in `CLAUDE.md` and `kriko-gpui/README.md`.
 
