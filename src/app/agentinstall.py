@@ -30,6 +30,7 @@ import urllib.request
 from pathlib import Path
 
 from app import modelpull
+from app.localplane import RECOMMENDED_MODEL
 from app.loginpath import child_env
 from app.providers import harness
 from app.providers.local_inference import forget_incomplete
@@ -37,30 +38,10 @@ from app.winprocess import hidden_startup
 
 LOCAL = "local"
 
-#: The smallest model the one-click setup will ever choose (about 1 GB), for a
-#: machine with next to no memory to spare. It is where the choice *starts*,
-#: not what everyone gets: 0.8B read the pages and kept one finding where the
-#: same family's 4B kept three, so `starter_model` picks the largest that fits.
-STARTER_MODEL = "qwen3.5:0.8b"
-
-#: The family the starter is chosen from, and the sizes (billions of
-#: parameters) used when its library page cannot be read. The page's own badges
-#: are asked first, so a size added later is considered with no edit here.
-STARTER_FAMILY = "qwen3.5"
-STARTER_SIZES = (0.8, 2.0, 4.0, 9.0)
-
-#: Past this a "starter" is a commitment: a long download and a slow first answer.
-LARGEST_STARTER = 9.0
-
-#: Gigabytes of weights per billion parameters at 4-bit, plus a fixed part for
-#: the runtime. Measured against the library's published sizes (0.8B 1.3 GB,
-#: 2B 1.9, 4B 3.3, 9B 6.6): a little high, which is the safe side for a fit.
-_GB_PER_B, _GB_FIXED = 0.85, 0.5
-
-#: What the screen, the browser and the context cache already hold of a GPU's
-#: memory, in gigabytes, and the share of RAM a model may take without CPU
-#: inference crowding out everything else.
-_GPU_RESERVE_GB, _RAM_SHARE = 1.5, 0.4
+#: What the one-click setup downloads: the model Kriko recommends everywhere
+#: else (`localplane.RECOMMENDED_MODEL`), whatever the machine. It is chosen by
+#: how it performs on the Quick Look pipeline, not by how much memory is free.
+STARTER_MODEL = RECOMMENDED_MODEL
 
 #: Where a freshly installed Ollama listens until the reader says otherwise.
 OLLAMA_URL = "http://127.0.0.1:11434"
@@ -326,56 +307,10 @@ def _start_ollama() -> None:
             startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
 
-def _size_tag(billions: float) -> str:
-    return f"{billions:g}b"
-
-
-def _library_sizes() -> tuple[float, ...]:
-    """The family's sizes as its library page lists them, else `STARTER_SIZES`."""
-    import re
-
-    try:
-        row = next((one for one in modelpull.library() if one["name"] == STARTER_FAMILY), None)
-    except RuntimeError:
-        return STARTER_SIZES
-    found = sorted({float(m.group(1)) for badge in (row or {}).get("sizes", [])
-                    if (m := re.fullmatch(r"(\d+(?:\.\d+)?)b", badge))})
-    return tuple(found) or STARTER_SIZES
-
-
-def starter_model(machine_info: dict, sizes: tuple[float, ...] = STARTER_SIZES) -> str:
-    """The largest starter that fits this machine, from what the machine says.
-
-    A GPU's memory is the budget when it has room for the smallest size,
-    because a model that fits it answers several times faster than the same
-    model spilled onto the CPU; otherwise the share of RAM. A figure the
-    machine did not report is not guessed: with neither, the smallest size.
-    """
-    gpu = (machine_info.get("gpu") or {}).get("vram_total_mb")
-    ram = machine_info.get("ram_total_mb")
-    smallest = min(sizes)
-    budget = 0.0
-    if isinstance(gpu, (int, float)) and gpu / 1024 - _GPU_RESERVE_GB >= _GB_PER_B * smallest + _GB_FIXED:
-        budget = gpu / 1024 - _GPU_RESERVE_GB
-    elif isinstance(ram, (int, float)):
-        budget = ram / 1024 * _RAM_SHARE
-    fits = [b for b in sorted(sizes) if b <= LARGEST_STARTER and _GB_PER_B * b + _GB_FIXED <= budget]
-    return f"{STARTER_FAMILY}:{_size_tag(fits[-1] if fits else smallest)}"
-
-
 def _starter(progress) -> str:
-    """The starter for this machine, and a log line that says why."""
-    from app import machine
-
-    try:
-        info = machine.read(fresh=True)
-        model = starter_model(info, _library_sizes())
-    except Exception:  # noqa: BLE001 - not knowing the machine never blocks the install
-        return STARTER_MODEL
-    gpu = (info.get("gpu") or {}).get("vram_total_mb")
-    progress.log(f"This machine has {(info.get('ram_total_mb') or 0) / 1024:.0f} GB of memory"
-                 + (f" and {gpu / 1024:.0f} GB of GPU memory" if gpu else "") + f"; choosing {model}.")
-    return model
+    """The model to download, and a log line that says why."""
+    progress.log(f"Choosing {STARTER_MODEL}, the recommended model.")
+    return STARTER_MODEL
 
 
 class _BrokenRuntime(RuntimeError):
@@ -413,8 +348,8 @@ def _set_up_local(settings, progress) -> dict:
         if _ollama_exe():
             progress.log("Ollama is installed but not running; starting it.")
         else:
-            if shutil.disk_usage(Path.home()).free < 6 * 1024**3:
-                raise RuntimeError("Ollama and the starter model need about 6 GB of free space. Free space or use the manual installer to choose another drive, then retry.")
+            if shutil.disk_usage(Path.home()).free < 8 * 1024**3:
+                raise RuntimeError("Ollama and the starter model need about 8 GB of free space. Free space or use the manual installer to choose another drive, then retry.")
             _install_ollama(progress)
         _start_and_wait(base, progress)
     if model not in [row.get("name") for row in modelpull.installed(base)]:

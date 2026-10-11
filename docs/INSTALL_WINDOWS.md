@@ -175,15 +175,16 @@ Open **Local LLM** in the native app. A local model answers on your own
 computer; Ollama is the app that runs its downloaded model files. Research
 can still search the web.
 
-Press **Set up Ollama and a starter model** to install Ollama, download a model
-sized to this computer's memory, and select it in Kriko. Ollama comes straight
+Press **Set up Ollama and the recommended model** to install Ollama, download
+`gemma4:e2b` (the model Kriko recommends), and select it. Ollama comes straight
 from its own site (the installer's signature is checked before it runs), with
-a byte count while it downloads and no Windows App Installer involved. A
-computer with a 6 GB graphics card gets a 4-billion-parameter model; one with
-little memory gets a smaller one. If an earlier install was interrupted and
+a byte count while it downloads and no Windows App Installer involved. If you
+already run Ollama, Kriko uses `gemma4:e2b` whenever it is downloaded and you
+have not chosen another model; the **Local LLM** list marks it *Recommended*.
+If an earlier install was interrupted and
 left Ollama unable to run models, setup notices and reinstalls it over the top;
-downloaded models are kept. The setup status shows progress and errors. Allow about 6 GB of free space
-for the app and starter; larger models need more disk space and memory.
+downloaded models are kept. The setup status shows progress and errors. Allow about 8 GB of free space
+for the app and the model; larger models need more disk space and memory.
 
 If automatic setup fails, press **Download Ollama manually**. This opens
 [Ollama's official Windows download](https://ollama.com/download/windows).

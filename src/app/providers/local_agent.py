@@ -439,7 +439,7 @@ class LocalAsker:
               prefer_issues: bool = False) -> list[tuple[str, str]]:
         """Prefer issue discussions and replace unreadable/unrelated pages."""
         from app.providers.local_pipeline import canonical_url, publisher, repair_offer_page
-        from app.providers.local_identity import relevant_source
+        from app.providers.local_identity import relevant_source, source_scope
         import hashlib
 
         self.search_coverage = {"queries_searched": 0, "search_errors": 0,
@@ -547,7 +547,14 @@ class LocalAsker:
                     if identity is not None and not relevant_source(
                             identity, self.page_titles.get(url, ""), text):
                         self.search_coverage["pages_irrelevant"] += 1
-                        self._say(f"replacing page without an exact product match: {url}")
+                        scope = source_scope(identity, self.page_titles.get(url, ""), text)
+                        if scope == "host_only":
+                            self.search_coverage["pages_host_only"] = (
+                                self.search_coverage.get("pages_host_only", 0) + 1)
+                            self._say("replacing page about the product it fits, "
+                                      f"not the part itself: {url}")
+                        else:
+                            self._say(f"replacing page without an exact product match: {url}")
                         continue
                     fingerprint = hashlib.sha256(" ".join(text.casefold().split()).encode()).hexdigest()
                     if prefer_issues and repair_offer_page(url, self.page_titles.get(url, ""), text):
