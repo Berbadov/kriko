@@ -26,7 +26,7 @@ meets them.
 | Word | Definition |
 |---|---|
 | **engine** | `src/kriko/`: the store, lookup, ranking, and the research interface. It knows no category and imports nothing above it. That is the load-bearing invariant. |
-| **interface** | Anything in `src/app/` a person or an agent talks to: the CLI, the dashboard, the MCP server, the operator console. |
+| **interface** | Anything in `src/app/` a person or an agent talks to: the CLI, local HTTP API, MCP server, operator console. |
 | **plane** | Who does the reading. See the table below. |
 | **job** | Long work as a durable row (research, builds, updates): the id now, and the log, result and failure outliving the process. (`app/web/jobs.py`, `app/web/tasks.py`) |
 | **sidecar** | The engine as a child process: an OS-chosen port, `KRIKO_PORT <n>` printed first, supervised by the shell. (`app/sidecar.py`) |
@@ -77,6 +77,5 @@ Before a new word enters the code or the screen:
 2. One word, one meaning.
 3. A word the UI shows belongs in this table.
 4. A pack's vocabulary is never an engine or client identifier. No category
-   word appears in `src/kriko/` or `ui/src/`, and two tests hold that:
-   `test_core_is_domain_free.py` walks the engine's AST and
-   `test_ui_contains_no_pack_vocabulary` reads the frontend's source.
+   word appears in `src/kriko/`; `test_core_is_domain_free.py` walks the
+   engine's AST to enforce that rule.

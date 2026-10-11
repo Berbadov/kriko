@@ -87,6 +87,9 @@ struct Supervisor {
     status: Status,
     events: Vec<ShellEvent>,
     child: Option<Child>,
+    /// OpenSERP, only when this app started it. A healthy service already on
+    /// the local search port is reused and never put in this slot.
+    openserp_child: Option<Child>,
     stdin: Option<ChildStdin>,
     stderr: String,
     started: bool,
@@ -100,6 +103,7 @@ fn sup() -> &'static Mutex<Supervisor> {
             status: Status::Starting("Starting Kriko's engine…".into()),
             events: Vec::new(),
             child: None,
+            openserp_child: None,
             stdin: None,
             stderr: String::new(),
             started: false,
@@ -166,6 +170,7 @@ fn supervise(generation: u64) {
         attach(&url, generation);
         return;
     }
+    ensure_openserp(generation);
     let extension_port = configured_extension_port();
     let beside = std::env::current_exe()
         .ok()
@@ -347,11 +352,11 @@ fn spawn(mut command: Command, generation: u64) {
 /// Ends the engine this app started, the whole process tree. An attached
 /// engine is left alone: it was not ours to end.
 pub fn stop() {
-    let (child, stdin) = {
+    let (child, stdin, openserp) = {
         let mut s = sup().lock().unwrap();
         s.started = false;
         s.generation += 1;
-        (s.child.take(), s.stdin.take())
+        (s.child.take(), s.stdin.take(), s.openserp_child.take())
     };
     drop(stdin); // the polite way: the sidecar watches this pipe
     if let Some(mut child) = child {
@@ -360,6 +365,139 @@ pub fn stop() {
         kill_tree(pid);
         let _ = child.wait();
     }
+    if let Some(mut child) = openserp {
+        let pid = child.id();
+        let _ = child.kill();
+        kill_tree(pid);
+        let _ = child.wait();
+    }
+}
+
+/// Start the bundled search service only when its default loopback port is
+/// free. Existing healthy services are reused; another process is never
+/// terminated or replaced.
+fn ensure_openserp(generation: u64) {
+    const PORT: u16 = 7000;
+    const BASE: &str = "http://127.0.0.1:7000";
+    const START_TIMEOUT: Duration = Duration::from_secs(12);
+    if openserp_healthy(BASE) {
+        return;
+    }
+    if TcpStream::connect_timeout(
+        &std::net::SocketAddr::from(([127, 0, 0, 1], PORT)),
+        Duration::from_millis(250),
+    ).is_ok() {
+        log::warn!("Port {PORT} is in use, but the service did not pass OpenSERP health; leaving it untouched.");
+        return;
+    }
+    let Some(executable) = openserp_executable() else {
+        log::warn!("OpenSERP is not bundled or present in this checkout; local research needs OpenSERP on port {PORT}.");
+        return;
+    };
+    let mut command = Command::new(&executable);
+    command
+        .args(["serve", "--host", "127.0.0.1", "--port", "7000", "--quiet"])
+        .current_dir(executable.parent().unwrap_or_else(|| std::path::Path::new(".")))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let child = match command.spawn() {
+        Ok(child) => child,
+        Err(error) => {
+            log::warn!("Could not start OpenSERP at {}: {error}", executable.display());
+            return;
+        }
+    };
+    let pid = child.id();
+    {
+        let mut state = sup().lock().unwrap();
+        if !state.started || state.generation != generation {
+            drop(state);
+            let mut child = child;
+            let _ = child.kill();
+            kill_tree(pid);
+            let _ = child.wait();
+            return;
+        }
+        state.openserp_child = Some(child);
+    }
+    let deadline = Instant::now() + START_TIMEOUT;
+    while Instant::now() < deadline {
+        {
+            let mut state = sup().lock().unwrap();
+            if !state.started || state.generation != generation {
+                return;
+            }
+            if openserp_healthy(BASE) {
+                return;
+            }
+            if let Some(child) = state.openserp_child.as_mut() {
+                if child.try_wait().ok().flatten().is_some() {
+                    log::warn!("OpenSERP exited before its health check passed.");
+                    state.openserp_child = None;
+                    return;
+                }
+            }
+        }
+        std::thread::sleep(Duration::from_millis(250));
+    }
+    log::warn!("OpenSERP did not become healthy on port {PORT} in time.");
+    let owned = {
+        let mut state = sup().lock().unwrap();
+        if state.started && state.generation == generation {
+            state.openserp_child.take()
+        } else {
+            None
+        }
+    };
+    if let Some(mut child) = owned {
+        let pid = child.id();
+        let _ = child.kill();
+        kill_tree(pid);
+        let _ = child.wait();
+    }
+}
+
+fn openserp_executable() -> Option<std::path::PathBuf> {
+    let current = std::env::current_exe().ok()?;
+    let sibling = current.parent()?.join(if cfg!(windows) { "OpenSERP.exe" } else { "openserp" });
+    if sibling.is_file() {
+        return Some(sibling);
+    }
+    if let Some(path) = std::env::var_os("KRIKO_OPENSERP_EXE") {
+        let path = std::path::PathBuf::from(path);
+        if path.is_file() {
+            return Some(path);
+        }
+    }
+    current.ancestors().find_map(|dir| {
+        let candidate = dir.join(".local-evaluation/openserp")
+            .join(if cfg!(windows) { "openserp.exe" } else { "openserp" });
+        candidate.is_file().then_some(candidate)
+    })
+}
+
+fn openserp_healthy(base: &str) -> bool {
+    let Ok((host, port)) = host_port(base) else { return false };
+    let Ok(address) = format!("{host}:{port}").parse() else { return false };
+    let Ok(mut stream) = TcpStream::connect_timeout(&address, Duration::from_millis(350)) else {
+        return false;
+    };
+    stream.set_read_timeout(Some(Duration::from_millis(700))).ok();
+    if write!(stream, "GET /health HTTP/1.0\r\nHost: {host}:{port}\r\n\r\n").is_err() {
+        return false;
+    }
+    let mut response = String::new();
+    if stream.read_to_string(&mut response).is_err() { return false; }
+    let body = response.split("\r\n\r\n").nth(1).unwrap_or("");
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(body) else { return false };
+    value.get("status").and_then(|v| v.as_str()).is_some_and(|s| s == "healthy" || s == "ok")
+        || value.get("ok").and_then(|v| v.as_bool()) == Some(true)
 }
 
 #[cfg(windows)]

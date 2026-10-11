@@ -119,7 +119,7 @@ If the panel says Kriko isn't running, open the desktop app first. After an upda
 
 ## Build or contribute
 
-The engine, command line, and browser dashboard can also run from source on macOS and Linux. The packaged desktop app is for Windows x64.
+The engine, command line, and local API can also run from source on macOS and Linux. The packaged desktop app is for Windows x64.
 
 See the [desktop build guide](kriko-gpui/README.md) for the Windows installer recipe, [contributor guide](docs/DOCTRINE.md) for setup and checks, and [architecture guide](docs/ARCHITECTURE.md) for the code. To add a new product category, start with the [catalog contract](docs/PACK_CONTRACT.md).
 

@@ -7,7 +7,7 @@ python packaging/render_icon.py
 python packaging/render_lockup.py
 ```
 
-**Three sources.** The desktop app's identity in `kriko-gpui/assets/` (the white K on the blue tile) is what a reader sees first: the taskbar, the installer, the toolbar and this repository's README. The two grid marks still feed the dashboard. Everything else is output:
+**Three sources.** The desktop app's identity in `kriko-gpui/assets/` (the white K on the blue tile) is what a reader sees first: the taskbar, the installer, the toolbar and this repository's README. The two grid marks also feed the extension and installer. Everything else is output:
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -17,9 +17,7 @@ flowchart LR
     S0["kriko-gpui/assets/<br/>kriko.ico · kriko-wordmark-white.svg"]:::brand
     S0 -->|"copied, byte for byte"| O1["extension/assets/icons/<br/>icon-{16,32,48,128}.png"]:::ice
     S0 -->|"on a blue plate"| O7["docs/assets/kriko-lockup.svg<br/>(README)"]:::ice
-    S1 --> O2["ui/public/mark.svg"]:::ice
     S2 --> O3["packaging/icon-master.png<br/>(1024px)"]:::ice
-    S2 --> O4["ui/public/mark-large.svg"]:::ice
     S1 -->|"+ KRIKO"| O5["extension/assets/logo-lockup.svg"]:::ice
     S1 -->|"+ KRIKO"| O6["extension/assets/logo-lockup-mono.svg"]:::ice
 
@@ -36,8 +34,6 @@ flowchart LR
 | Toolbar icon | `extension/assets/icons/icon-*.png` (the ICO's own images) | rendered |
 | README header | `docs/assets/kriko-lockup.svg` | drawn from the app's wordmark |
 | Change the app's icon or wordmark | `kriko-gpui/assets/kriko.ico`, `kriko-wordmark-white.svg` | **source** |
-| Favicon | `ui/public/mark.svg` | rendered |
-| Rail (32px, smooth) | `ui/public/mark-large.svg` | rendered |
 | App icon master | `packaging/icon-master.png` | rendered |
 | Logo with name | `extension/assets/logo-lockup.svg` | rendered |
 | Logo on foreign ground | `extension/assets/logo-lockup-mono.svg` (`currentColor`, no ground) | rendered |
@@ -46,15 +42,15 @@ flowchart LR
 
 ## The three colours
 
-Owned by `ui/src/styles/themes/panel.css`, borrowed by the mark — so it never sits on the rail as a foreign object. A test asserts mark hex and theme tokens agree.
-
-The desktop app's own palette lives in `kriko-gpui/src/theme.rs`. Diagrams in these documents use it; see [how the docs are written](STYLE.md).
+The desktop palette lives in `kriko-gpui/src/theme.rs`; the grid marks keep their
+three source colours so the icon renderer can reproduce them exactly. Diagrams
+in these documents use the desktop palette; see [how the docs are written](STYLE.md).
 
 | Role | Token | Value |
 |---|---|---|
-| Ground | `--n-2` | `#15171C` |
-| Letter | `--n-9` | `#E7E9ED` |
-| Rising arm | `--accent` | `#E8C04B` |
+| Ground | grid mark | `#15171C` |
+| Letter | grid mark | `#E7E9ED` |
+| Rising arm | grid mark | `#E8C04B` |
 
 ## Two marks, one design
 

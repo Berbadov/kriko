@@ -39,8 +39,8 @@ REPLY_SCHEMA: dict = {
         **{key: {"type": "string"} for key in ("assumed", "category", "pack")},
         "specs": {"type": "array", "maxItems": MAX_SPECS, "items": {
             "type": "object", "properties": {
-                key: {"type": "string"} for key in ("name", "value", "url")},
-            "required": ["name", "value", "url"]}},
+                key: {"type": "string"} for key in ("name", "value", "url", "quote")},
+            "required": ["name", "value", "url", "quote"]}},
         "risks": {"type": "array", "maxItems": MAX_RISKS, "items": {
             "type": "object", "properties": {
                 **{key: {"type": "string"} for key in
@@ -129,13 +129,14 @@ friend would in a chat: fast, specific, sourced.
 
 Each risk must name a page you actually opened (`url`) and a short quote copied
 from it word for word (`quote`). A risk you cannot source that way: leave it
-out. Fewer honest lines beat more guessed ones.
+out. Fewer honest lines beat more guessed ones. Corroborating reports about the
+same fault may be included in `sources: [{{url, quote}}, ...]`; retain every quote.
 
 ## Specifications
 
 Also give up to {MAX_SPECS} specifications a buyer would compare this product
 on (for example chipset, battery or display for a phone). Each needs the page
-it was read from (`url`). Leave out any figure you cannot source.
+it was read from (`url`) and a verbatim quote (`quote`). Leave out any figure you cannot source.
 {named}
 ## Reply
 
@@ -175,12 +176,6 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
     from kriko.extract.grounding import loose_span
 
     found = _payload(reply)
-    if not isinstance(found, dict) or not {"risks", "specs"} & found.keys():
-        # A reply cut off at its token budget (a local model on a CPU, in
-        # practice) is still mostly whole items. Every item is checked by
-        # the same rules below, so a closed-off reply keeps what was
-        # finished and drops nothing it would not have dropped anyway.
-        found = closed(reply) or found
     if not isinstance(found, dict):
         return {"assumed": "", "category": "", "pack": "", "specs": [],
                 "risks": [], "dropped": 0}
@@ -192,40 +187,52 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
             dropped += 1
             continue
         title = str(raw.get("title") or "").strip()
-        url = str(raw.get("url") or "").strip()
-        quote = str(raw.get("quote") or "").strip()
-        host = urlparse(url).netloc if url.startswith(("http://", "https://")) else ""
-        if not title or not host or not quote:
+        supplied = raw.get("sources")
+        # Legacy harness replies name one URL/quote; local stages may corroborate.
+        if not isinstance(supplied, list):
+            supplied = [{"url": raw.get("url"), "quote": raw.get("quote")}]
+        refs: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+        for ref in supplied[:12]:
+            if not isinstance(ref, dict):
+                continue
+            url = str(ref.get("url") or "").strip()
+            quote = str(ref.get("quote") or "").strip()
+            host = urlparse(url).hostname if url.startswith(("http://", "https://")) else ""
+            if not host or not quote:
+                continue
+            checked = False
+            if sources is not None:
+                quote = loose_span(sources.get(url, ""), quote)
+                if not quote:
+                    continue
+                checked = True
+            key = (url, quote)
+            if key in seen:
+                continue
+            seen.add(key)
+            refs.append({"url": url, "domain": host.removeprefix("www."),
+                         "quote": quote,
+                         **({"grounded": True} if checked else {})})
+        if not title or not refs:
             dropped += 1
             continue
-        checked = False
-        if sources is not None:
-            quote = loose_span(sources.get(url, ""), quote)
-            if not quote:
-                dropped += 1
-                continue
-            checked = True
         if len(risks) == MAX_RISKS:
             break
         severity = str(raw.get("severity") or "").strip().lower()
-        host = host.removeprefix("www.")
+        # Conservative publisher count, never inflation from subdomains or URLs.
+        from app.providers.local_pipeline import publisher
+        independent = len({publisher(ref["url"]) for ref in refs})
         risks.append({
-            # The shape the panel's claim card already renders. No `claim_id`
-            # on purpose: a verdict button needs a stored claim to attach to,
-            # and this is not one yet.
             "title": title,
             "body": str(raw.get("why") or "").strip(),
             "advice": str(raw.get("check") or "").strip(),
             "severity": severity if severity in SEVERITIES else "medium",
             "strength": "reported",
-            "source_count": 1,
-            "domain": host,
+            "source_count": independent,
+            "domain": refs[0]["domain"],
             "quick": True,
-            "sources": [{"url": url, "domain": host, "quote": quote,
-                         # Only when the plane kept the text this quote was
-                         # found in. Otherwise the store reads the page again
-                         # before it keeps the quote (`categorypack.ground`).
-                         **({"grounded": True} if checked else {})}],
+            "sources": refs,
         })
 
     specs: list[dict] = []
@@ -235,9 +242,16 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         name, value = _line(raw.get("name")), _line(raw.get("value"))
         url = str(raw.get("url") or "").strip()
         host = urlparse(url).netloc if url.startswith(("http://", "https://")) else ""
-        if name and value and host and (sources is None or url in sources):
+        quote = str(raw.get("quote") or "").strip()
+        if sources is not None:
+            quote = loose_span(sources.get(url, ""), quote) if quote else ""
+            if not quote:
+                continue
+        if name and value and host:
             specs.append({"name": name, "value": value, "url": url,
-                          "domain": host.removeprefix("www.")})
+                          "domain": host.removeprefix("www."),
+                          **({"quote": quote, "grounded": True}
+                             if sources is not None else {})})
 
     return {
         "assumed": str(found.get("assumed") or "").strip(),

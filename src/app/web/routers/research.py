@@ -45,9 +45,9 @@ PLANE_WORDS = {
     ),
     "local": (
         "Kriko reads with a model running on this computer (Ollama, LM Studio "
-        "or llama-server, with a model downloaded) and searches through a "
-        "search service on this machine when one answers, otherwise through "
-        "Exa's free hosted search. Costs nothing and needs no keys."
+        "or llama-server, with a model downloaded) and searches through the "
+        "search service you configure on this machine. Costs nothing and needs "
+        "no API keys."
     ),
 }
 

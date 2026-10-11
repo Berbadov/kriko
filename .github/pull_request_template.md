@@ -13,8 +13,8 @@ Closes #<n> — "…"
 
 **Checked on:** here / Windows
 
-<!-- A screenshot of the screen named in the entry's "Where"
-     (tools/walk.sh writes them to .walk/), or the journey check's output. -->
+<!-- A screenshot of the screen named in the entry's "Where", or the
+     journey check's output. -->
 
 ## What it does not do yet
 
@@ -53,8 +53,8 @@ not; an unticked box is fine if you say why.
       surfaced, the claim is specific to the configuration, predictable from
       what the listing already says, and not something a standard check already
       finds. The bar is the pack's own, in its `research/principle.md`.
-- [ ] **No category or vendor in a document or in the UI.** Docs name no
-      product type and no model or agent product; `ui/src` names no catalog
+- [ ] **No category or vendor in a document or in the interface.** Docs name
+      no product type and no model or agent product; interfaces name no catalog
       vocabulary. Lists are read at runtime, never typed.
 
 ### Verification
@@ -62,7 +62,7 @@ not; an unticked box is fine if you say why.
 <!-- Paste real output. "Tests pass" without the numbers is not evidence. -->
 
 - [ ] `python -m pytest` — no arguments, so `pytest.ini` picks up every testpath
-- [ ] `npm test`
+- [ ] `npm test` (browser extension)
 - [ ] If this touches `packaging/`, `kriko-gpui/` or `src/app/sidecar.py`, the
       `desktop` workflow ran and all three runners are green.
 
@@ -73,9 +73,8 @@ paste test output here
 ### Before merge
 
 - [ ] One request in this PR, and the branch is less than a day old (or rebased on `main`)
-- [ ] `tools/walk.sh` shows no errors on the screens this touches
-- [ ] Its journey check passes, or (until `tools/journeys/` exists, B191) the
-      steps and the end result are walked by hand above (docs/DOCTRINE.md §4)
+- [ ] Its journey check passes, or the steps and end result are walked by hand
+      above (docs/DOCTRINE.md §4)
 
 ### Tracking
 

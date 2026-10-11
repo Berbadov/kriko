@@ -1634,14 +1634,12 @@ async function openInApp(route, fallbackUrl) {
     };
   }
 
-  if (fallbackUrl) {
-    await extensionApi.tabs.create({ url: fallbackUrl });
-    return { ok: true, raised: false, fallback: true, delivery };
-  }
-  // Nothing to raise and nowhere to fall back to. Still not an error: the
-  // route is recorded server-side for the TTL, so a window opened in the next
-  // thirty seconds picks it up.
-  return { ok: true, raised: false, delivery };
+  return {
+    ok: false,
+    code: "DESKTOP_NOT_CONNECTED",
+    error: "The Kriko engine is running, but its desktop window is not connected. Open the Kriko app, then try again.",
+    delivery,
+  };
 }
 
 // ── messages ────────────────────────────────────────────────────────────

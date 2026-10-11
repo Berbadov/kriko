@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-# A stand-in `opencode`; see `agy` beside it.
-case "${1:-}" in
-    --help) printf '%s\n' "opencode [project]" "Commands: run, models" ;;
-    models) sleep "${KRIKO_WALK_MODELS_DELAY:-2}"
-        printf 'walk/epsilon\nwalk/zeta\n' ;;
-    *) echo '{"findings": []}' ;;
-esac

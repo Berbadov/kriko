@@ -237,6 +237,9 @@ def _local_asker(settings, params: dict, progress: Progress):
         search_base_url=plan["search_url"], search_kind=plan["search_kind"],
         timeout=plan["timeout"],
         runtime_options=plan.get("runtime_options"),
+        context_tokens=plan.get("context_tokens"),
+        output_language=plan.get("output_language", "auto"),
+        search_language=plan.get("search_language", "en"),
         temperature=float(params.get("temperature") or 0),
         max_tokens=int(params.get("max_tokens") or 1024),
         given_queries=[str(one).strip() for one in (params.get("queries") or [])
@@ -311,16 +314,11 @@ def _researcher(params: dict):
         from kriko.research.politeness import PolitenessScheduler
 
         plan = _local_plan(params)
-        if plan["search_kind"] == "exa":
-            # One hosted source, and a pace kinder than the free endpoint's
-            # own limits need.
-            sources = {"exa": float(params.get("min_interval") or 1.0)}
-        else:
-            engines = str(params.get("engines") or "duckduckgo,bing,ecosia")
-            sources = {
-                engine.strip(): float(params.get("min_interval") or 3.5)
-                for engine in engines.split(",") if engine.strip()
-            }
+        engines = str(params.get("engines") or "bing,duckduckgo,ecosia")
+        sources = {
+            engine.strip(): float(params.get("min_interval") or 3.5)
+            for engine in engines.split(",") if engine.strip()
+        }
         return local_researcher(
             base_url=plan["url"],
             serving_name=plan["model"],
@@ -328,6 +326,9 @@ def _researcher(params: dict):
             search_kind=plan["search_kind"],
             timeout=plan["timeout"],
             runtime_options=plan.get("runtime_options"),
+            context_tokens=plan.get("context_tokens"),
+            output_language=plan.get("output_language", "auto"),
+            search_language=plan.get("search_language", "en"),
             engine=sources and next(iter(sources)) or "",
             scheduler=PolitenessScheduler(sources or {"duckduckgo": 3.5}),
         )
@@ -1989,6 +1990,8 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "product": product,
         **found,
         "verification": verification,
+        "identity": getattr(researcher, "identity", {}),
+        "coverage": getattr(researcher, "coverage", {}),
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
         "harness": getattr(getattr(researcher, "harness", None), "id", ""),
         "model": str(getattr(researcher, "model", "") or ""),

@@ -16,8 +16,7 @@ layering principle in `CLAUDE.md` disagree, `CLAUDE.md` wins.
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart TD
-    GPUI["kriko-gpui/<br/>desktop app, supervises the sidecar"] --> UI
-    UI["ui/<br/>frontend, HTTP only"] --> APP
+    GPUI["kriko-gpui/<br/>desktop app, supervises the sidecar"] --> APP
     APP["app/<br/>CLI, web, MCP, TUI"] --> K
     PACKS["packs/<br/>one dir per category"] --> K
     APP --> PL["app/pipeline/<br/>ledger drivers"]
@@ -29,7 +28,7 @@ flowchart TD
     classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
     classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
     class K brand
-    class GPUI,UI,APP,PACKS,PL,PP plain
+    class GPUI,APP,PACKS,PL,PP plain
     class BAD danger
 ```
 
@@ -38,23 +37,19 @@ flowchart TD
 | Package | Owns | Read first |
 |---|---|---|
 | `kriko-gpui/` | The desktop app (Rust, GPUI): supervises the sidecar, draws the interface over HTTP, no engine logic | `kriko-gpui/README.md`, then `kriko-gpui/src/engine.rs` |
-| `ui/` | Svelte source; `npm --prefix ui run build` writes `src/app/web/static/` | `ui/src/lib/shell/nav.ts`, the one route table the rail, the palette and the router all read |
-| `src/app/` | Interfaces: CLI, FastAPI dashboard, MCP server, operator TUI; the frozen sidecar entry | `src/app/cli.py`, `src/app/sidecar.py` |
+| `src/app/` | Interfaces: CLI, local FastAPI API, MCP server, operator TUI; the frozen sidecar entry | `src/app/cli.py`, `src/app/sidecar.py` |
 | `src/app/pipeline/` | Drivers that orchestrate a category's ledger and remediate its gaps | `src/app/pipeline/ledger_run.py` |
 | `src/kriko/` | Engine: pack store, generic lookup and ranking, gates, research interface | `src/kriko/store/packstore.py` |
 | `packs/` | One directory per category: data, vocabulary, trust tiers, builder | `packs/drill/README.md`, the smallest complete example |
 | `packs/<name>/pipeline/` | Evidence ledger and grounded extraction for one category | that pack's `pipeline/ledger/acquire.py` |
 | `extension/` | Reads a listing page; a background worker calls the web API and renders the risk cards | `extension/content.js` |
 
-### `ui/`, the frontend
+### `kriko-gpui/` and `src/app/web/`
 
-Svelte 5 and Vite, built into `src/app/web/static/`. A hash-routed shell over
-the route table in `lib/shell/nav.ts`, which also holds the alias words so a
-retired screen's address still opens whatever absorbed it. `styles/` holds the
-tokens and the one theme (`themes/panel.css`); `lib/` the typed API client
-plus pure derivation (`report.ts`, `verdict.ts`, `compare.ts`, `health.ts`,
-`fields.ts`, `homeSeries.ts`); `routes/` one component per destination. Only
-the report surface is editorial (68ch, a print sheet).
+The native GPUI desktop app owns the window and supervises the Python sidecar.
+The sidecar exposes the local API at `/api/*`; `/` identifies the running
+service and links to `/api/health` and `/api/docs`. There is no bundled browser
+local API: the browser extension and desktop app are the user interfaces.
 
 ## Chasing a question? Read these
 
@@ -119,7 +114,7 @@ rather than Python.
 | `python -m app.pipeline.ledger_run` | Ledger stages: acquire, extract, cluster, verdict, remediate, report |
 | `python -m app.pipeline.panel` | Ledger review and inspection panel |
 | `python -m app.pipeline.process` | End-to-end onboarding driver for one product |
-| `python -m app.web` | FastAPI dashboard on `http://127.0.0.1:8787` |
+| `python -m app.web` | Local API and interactive API docs on `http://127.0.0.1:8787` |
 | `python -m packs.<name>.build` | Builds one catalog (also `kriko build packs/<name>`) |
 | `python -m packs.<name>.coverage` | That catalog's coverage report |
 | `packs/<name>/pipeline/catalog/*.py` | Catalog discovery, health, variant and stub generation |

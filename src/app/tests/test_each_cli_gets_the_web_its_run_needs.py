@@ -5,11 +5,8 @@
     good but failed quick look … web search on cc and opencode might be an
     external block?
 
-Three different answers, reproduced on the reader's machine on 0.10.13:
+Two different answers, reproduced on the reader's machine on 0.10.13:
 
-* **opencode** was not blocked by anyone. opencode 2.x asks, once, which
-  provider its `websearch` tool should use; `opencode run` has nobody to ask,
-  so every search came back "Web search cancelled".
 * **Antigravity's quick look** died on Kriko's own arguments: the quick look
   asks for `--effort low`, the reader's model id already said `-medium`, and
   `agy` refuses the pair before it makes a single call.
@@ -43,55 +40,6 @@ AGY_MODELS = [
 def _one(ident: str):
     from app.tests.harness_fixtures import row
     return row(ident)
-
-
-# ── opencode: the question nobody was there to answer ───────────────────────
-
-
-def test_an_opencode_run_starts_with_its_search_provider_already_chosen():
-    """The answer is a file in the run's own folder, and it goes with it.
-
-    A project `opencode.json` is read from the folder `opencode run` starts
-    in, so the reader's global config and opencode's own database — where
-    the interactive answer would have been kept — are never written.
-    """
-    researcher = HarnessResearcher(_one("opencode"))
-    with researcher._workspace():
-        folder = Path(researcher._run_cwd)
-        config = json.loads((folder / "opencode.json").read_text(encoding="utf-8"))
-    # `exa` answers without a key of the reader's; `random` can land on one
-    # that needs a key and return nothing, which is the same silence again.
-    assert config == {"websearch": {"provider": "exa"}}
-    assert not folder.exists()
-    assert researcher._run_cwd is None
-
-
-def test_every_run_is_told_its_folder_by_pwd_as_well_as_by_cwd():
-    """Reproduced, not supposed: with the `opencode.json` in place, the run
-    still said "Web search cancelled" when started from a shell whose `PWD`
-    was another folder, and searched via Exa with `PWD` set to its own. A CLI
-    that believes `PWD` over the real working directory reads whichever
-    folder the reader's shell was in — so every run gets its own, for both
-    kinds of workspace, and none survives the run."""
-    for one in harness_mod.KNOWN:
-        researcher = HarnessResearcher(one)
-        with researcher._workspace():
-            assert researcher._run_env["PWD"] == researcher._run_cwd, one.id
-        assert researcher._run_env == {}, one.id
-
-
-def test_only_opencode_is_handed_an_opencode_config():
-    """A stray `opencode.json` is harmless to another CLI, and still not its
-    business: the per-run folder of every other harness holds nothing but,
-    where its row declares one and its build takes it, the page reader's
-    config (B155; `test_the_page_reader.py` covers that file)."""
-    for one in harness_mod.KNOWN:
-        if one.id == "opencode" or one.sandbox_home:
-            continue
-        researcher = HarnessResearcher(one)
-        with researcher._workspace():
-            held = {p.name for p in Path(researcher._run_cwd).iterdir()}
-        assert held <= {harness_mod.READER_CONFIG_FILE}, one.id
 
 
 # ── Antigravity: one effort, said once ──────────────────────────────────────

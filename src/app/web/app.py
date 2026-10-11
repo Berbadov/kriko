@@ -1,4 +1,4 @@
-"""The local dashboard.
+"""The local HTTP API.
 
     python -m app.web            # http://127.0.0.1:8787
 
@@ -22,8 +22,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 
 from app import agentconfig, agentskill, bundledpacks, extension as ext, logs, packautoupdate
 from app import modelcatalogue
@@ -70,9 +69,6 @@ from app.web.tasks import HANDLERS
 from kriko.store.db import SCHEMA_VERSION, connect
 
 log = logging.getLogger(__name__)
-
-STATIC = Path(__file__).parent / "static"
-
 
 def _shipped_extension_version() -> str:
     """What the app carries, or "" where it carries nothing.
@@ -407,7 +403,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             },
         )
 
-    app.mount("/static", StaticFiles(directory=STATIC), name="static")
+    @app.get("/")
+    def status():
+        """Identify the native desktop/API sidecar without a browser UI."""
+        return {
+            "app": "Kriko",
+            "desktop": "GPUI",
+            "service": "local API",
+            "health": "/api/health",
+            "docs": "/api/docs",
+        }
 
     @app.get("/api/health")
     def liveness():
@@ -459,10 +464,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "extension_version": _shipped_extension_version(),
             "port_is_ours": bool(app.state.settings.extension_port_bound),
         }
-
-    @app.get("/")
-    def index():
-        return FileResponse(STATIC / "index.html")
 
     return app
 
