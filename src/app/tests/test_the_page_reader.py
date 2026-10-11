@@ -7,7 +7,7 @@ Sites behind Cloudflare's AI-bot blocking answer Claude Code's fetcher
 (`Claude-User`) with a 403 (the reader's quick look on a laptop: "Three of my
 page fetches returned 403 errors, which used up my three page opens"). Kriko
 never changes the agent a CLI fetches with, so the answer is a second way to
-read the page: Exa's free hosted MCP server, handed to any CLI that takes a
+read the page: Parallel's hosted MCP reader, handed to any CLI that takes a
 per-run MCP config, next to the search and fetch tools it already has.
 
 None of these tests starts a real agent. A few start a Python stand-in that
@@ -148,7 +148,7 @@ def test_a_run_gets_its_own_reader_config_in_its_own_folder(monkeypatch):
         written = Path(researcher._reader_config)
         assert written.parent == folder
         config = json.loads(written.read_text(encoding="utf-8"))
-    assert config == {"mcpServers": {"exa": {"type": "http", "url": "https://mcp.exa.ai/mcp"}}}
+    assert config == {"mcpServers": {"parallel": {"type": "http", "url": "https://search.parallel.ai/mcp"}}}
     # It goes with the folder, and the reader's own config is never the target.
     assert not folder.exists()
     assert researcher._reader_config == ""
@@ -259,7 +259,7 @@ def _ask(tmp_path, monkeypatch, reader, flags, brief=None):
 def test_a_run_hands_the_child_the_config_the_grant_and_the_note(tmp_path, monkeypatch):
     got = _ask(tmp_path, monkeypatch, READER, {"--mcp-config"})
     argv = got["argv"]
-    assert json.loads(got["config"])["mcpServers"]["exa"]["type"] == "http"
+    assert json.loads(got["config"])["mcpServers"]["parallel"]["type"] == "http"
     assert argv[argv.index("--allowedTools") + 1] == f"WebSearch,WebFetch,{READER_TOOL}"
     assert "The one exception" in got["prompt"]
     assert got["prompt"].count(REFUSED_PAGE) == 1

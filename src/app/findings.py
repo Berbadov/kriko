@@ -1,6 +1,6 @@
 """Turning what a researcher read into rows — and refusing most of it.
 
-Extracted from `app/mcp_server.py` when the web dashboard grew a research job
+Extracted from `app/mcp_server.py` when the local API gained a research job
 (`app/web/tasks.py`). Both planes now share one acceptance path, which is the
 point: whether a finding arrived through MCP from a coding agent or through a
 browser-started job, it faces the same grounding check and the same pack gate.

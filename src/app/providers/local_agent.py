@@ -30,7 +30,6 @@ from app.providers.local_inference import LocalInferenceError
 from app.providers import local_components
 from app.providers.local_components import evidence, identity
 from app.providers.local_components import plan as plan, triage as triage, verify as verify
-from app.providers.local_components import search as search_round
 
 REASONING_EFFORT = "none"
 
@@ -47,8 +46,8 @@ from kriko.research.window import focus
 #: Queries proposed, hits taken per query and pages read in all. Small on
 #: purpose: each page costs a model call's worth of context on a CPU.
 QUERIES = 3
-HITS_PER_QUERY = 3
-MAX_PAGES = 5
+HITS_PER_QUERY = 5
+MAX_PAGES = 6
 #: Characters of each page shown to the model, and kept as the text its
 #: quotes are checked against. The two are the same on purpose: a quote from
 #: beyond what the model saw could only have been invented.
@@ -126,7 +125,13 @@ class LocalAsker:
                  given_queries: list[str] | None = None,
                  parallel_search: bool = False,
                  given_sources: dict[str, str] | None = None,
-                 requested_specs: list[str] | None = None):
+                 requested_specs: list[str] | None = None,
+                 output_language: str = "auto", search_language: str = "en"):
+        self.output_language = output_language
+        self.search_language = search_language
+        self.coverage: dict = {}
+        self.search_coverage: dict = {}
+        self.page_titles: dict[str, str] = {}
         self.given_sources = given_sources
         self.requested_specs = requested_specs
         self.metrics: list[dict] = []
@@ -212,7 +217,9 @@ class LocalAsker:
             self.check_cancelled()
 
     def ask(self, prompt: str) -> str:
-        if self.given_sources is not None or prompt.startswith("# Quick look:"):
+        if prompt.startswith("# Quick look:"):
+            return self.quicklook(prompt, product=identity.product_line(prompt))
+        if self.given_sources is not None:
             delegated = local_components.LocalAsker(
                 self._plan.socket, self._complete.socket, self._search, self._fetch,
                 model=self.model, search_provider=self.search_provider, url=self.url,
@@ -233,6 +240,10 @@ class LocalAsker:
         self._check()
         self._say(f"asking {self.model} at {self.url or 'this machine'}; "
                   f"searching through {self.search_provider}")
+        language = ("the language of the request" if self.output_language == "auto"
+                    else self.output_language)
+        prompt += (f"\nWrite summaries and advice in {language}; preserve exact source quotes, "
+                   "product codes, URLs and JSON keys.")
         queries = identity.anchor_queries(prompt, self._queries(prompt))
         self.telemetry["queries"] = queries
         self._say("searching: " + "; ".join(queries))
@@ -252,104 +263,22 @@ class LocalAsker:
 
     def ask_quick(self, product: str, *, principle: str = "", page: dict | None = None,
                   packs: str = "", attributes: str = "") -> str:
-        """A compact, bounded local answer with one repair and saved verification.
+        from app.quicklook import brief
+        return self.quicklook(brief(product, principle, page, packs, attributes,
+                                    max_sources=self.max_pages), product=product, page=page)
 
-        Generic pack authoring keeps its full brief. The quick door reserves
-        context for evidence instead of repeating a long chat-style brief.
-        The source gate runs after every repair; a model cannot validate itself.
-        """
-        from app import pagefacts, quicklook
-        from app.packauthor import _payload
-        set_schema = getattr(self._complete, "set_schema", lambda _schema: None)
-        set_schema(QUICK_SCHEMA)
-        self.identity = product
-        brief = (
-            f"Research this exact product: {product}\n{pagefacts.block(page)[:1000]}\n"
-            "Answer ONLY one JSON object with assumed, category, pack, specs, risks. "
-            "specs: [{name,value,url}]. risks: [{title,why,check,severity,evidence_id}]. "
-            "At most 3 risks. Cite evidence_id (such as E1) from a provided passage. "
-            "Keep titles under 8 words; why and check each one complete sentence under 20 words. "
-            "Never translate or reconstruct a quote. A passage about a different product "
-            "or a general feature cannot support a fault in this product. "
-            "Use empty arrays when evidence supports nothing. Do not invent sources.\n"
-            + identity.GUIDANCE + self.source_instructions + "\n"
-            + (f"Worth saying: {principle[:1200]}\n" if principle else "")
-            + (f"Installed packs: {packs[:500]}\n" if packs else "")
-            + (f"Specification names: {attributes[:300]}\n" if attributes else ""))
-        reply = self._resolve_evidence(self.ask(brief))
-        raw = _payload(reply)
-        parsed = quicklook.parse(reply, self.sources)
-        if (isinstance(raw, dict) and isinstance(raw.get("risks"), list)
-                and not parsed["risks"] and not parsed["specs"] and not self.given_queries):
-            self._check()
-            observations = "\n".join(f"{url}: {text[:350]}" for url, text in list(self.sources.items())[:2])
-            learned = self._usable(self._plan(
-                f"Find more specific evidence for this exact product: {product}. "
-                "Reply ONLY a JSON array of one new web query. Learn from these "
-                f"pages already read; do not repeat {self.telemetry['queries']}.\n{observations}"))
-            learned = [q for q in learned if q.casefold() not in {x.casefold() for x in self.telemetry["queries"]}][:1]
-            if learned:
-                self._say("refining search from the first pages: " + learned[0])
-                self.telemetry["queries"].extend(learned)
-                more = self._read(learned)
-                combined = list(dict([*self.sources.items(), *more]).items())[:self.max_pages]
-                fitted = self._fit(brief, combined, self.telemetry["queries"])
-                blocks = self._blocks(fitted)
-                reply = self._resolve_evidence(self._complete(brief + _PAGES_HEAD + blocks + self._reply_budget()))
-                raw = _payload(reply)
-                parsed = quicklook.parse(reply, self.sources)
-        needs_repair = not isinstance(raw, dict) or not isinstance(raw.get("risks"), list)
-        if needs_repair or parsed["dropped"]:
-            self._check()
-            self._say("repairing the answer once: valid JSON and quotes from read pages only")
-            self.telemetry["repairs"] += 1
-            repair = brief + "\nRepair the previous answer; keep supported facts only.\n"
-            # Refit with the repair instructions and the previous reply in the
-            # budget. The gate still sees exactly the pages the socket saw.
-            previous = "\nPrevious answer:\n" + reply[:1200]
-            fitted = self._fit(repair + previous, list(self.sources.items()), self.telemetry["queries"])
-            blocks = self._blocks(fitted)
-            reply = self._resolve_evidence(self._complete(repair + previous + _PAGES_HEAD + blocks + self._reply_budget()))
-            raw = _payload(reply)
-            parsed = quicklook.parse(reply, self.sources)
-        if not isinstance(raw, dict) or not isinstance(raw.get("risks"), list):
-            self.telemetry["last_reply"] = reply[-4000:]
-            raise LocalInferenceError("The local model did not produce valid answer JSON after one repair. Retry with a larger model or reply budget.", code="invalid_json")
-        self.telemetry.update(
-            model_calls=sum(getattr(part, "calls", 0) for part in (self._plan, self._complete)),
-            pages=len(self.sources), rejected=parsed["dropped"],
-            verification=[{"title": risk["title"], "url": risk["sources"][0]["url"],
-                           "quote_in_read_page": True} for risk in parsed["risks"]],
-            outcome="answer" if parsed["risks"] or parsed["specs"] else "no_supported_findings")
-        if parsed["risks"]:
-            self._say("self-verifying claim meaning against the quoted pages")
-            original_sources = self.sources.copy()
-            try:
-                self._check()
-                verify = (
-                    f"Check evidence for {product}. A translated title may be supported "
-                    "by an original-language quote. Evaluate meaning, not identical language. "
-                    "Reply ONLY {\"verdicts\":[{\"index\":0,\"supported\":true,\"reason\":\"short reason\"}]}. "
-                    "Do not add claims. These model opinions do not replace exact quote checks.\n"
-                    + json.dumps(parsed["risks"], ensure_ascii=False))
-                fitted = self._fit(verify, list(original_sources.items()), self.telemetry["queries"])
-                blocks = self._blocks(fitted)
-                set_schema(VERIFY_SCHEMA)
-                check = _payload(self._complete(verify + _PAGES_HEAD + blocks + self._reply_budget()))
-                self.telemetry["self_verify"] = check if isinstance(check, dict) and isinstance(check.get("verdicts"), list) else {"status": "invalid_output"}
-            except LocalInferenceError as error:
-                self.telemetry["self_verify"] = {"status": error.code, "message": str(error)}
-                self._say("self-verification unavailable: " + str(error))
-            finally:
-                self.sources = original_sources
-                set_schema(QUICK_SCHEMA)
-        self.telemetry["model_calls"] = sum(getattr(part, "calls", 0) for part in (self._plan, self._complete))
-        if self.runtime:
-            from app.localruntime import inspect
-            self.runtime = inspect(self.url, self.runtime.get("runtime", ""), self.model,
-                                   self.runtime.get("settings", {}))
-        self._say(f"verified {len(parsed['risks'])} risk(s); {parsed['dropped']} unsupported item(s) rejected")
-        return reply
+    def quicklook(self, prompt: str, *, product: str, page: dict | None = None) -> str:
+        from app.providers.local_pipeline import QuickLookPipeline
+        self.metrics = []
+        self._started = time.monotonic()
+        self.verification = {}
+        self.identity = ""
+        self.page_titles = {}
+        try:
+            return QuickLookPipeline(self).run(prompt, product, page)
+        finally:
+            self.telemetry.update(coverage=self.coverage, identity=self.identity,
+                                  stages=self.metrics)
 
     def _blocks(self, pages: list[tuple[str, str]]) -> str:
         # The model selects an evidence passage; the engine copies its bytes.
@@ -507,92 +436,88 @@ class LocalAsker:
         return queries
 
     def _read(self, queries: list[str]) -> list[tuple[str, str]]:
-        """Search the queries, then read the pages side by side.
+        """Round-robin search results, prefer different publishers, replace misses."""
+        from app.providers.local_pipeline import canonical_url, publisher
 
-        The reads are the slow part and they do not depend on each other, so
-        they go out together on a small pool: five pages fetched one after
-        another on a cold connection costs five round trips in sequence,
-        which on a CPU-bound run is the difference the reader feels. A few
-        spare pages go out with them, and the read stops at `READ_DEADLINE`
-        or once `MAX_PAGES` have answered, whichever is first. The order the
-        pages appear in the prompt is still the order the queries named
-        them, so the model's brief does not change with the fetching. The
-        searches go out together only on a hosted search
-        (`parallel_search`).
-
-        Each page is cut to `PAGE_CHARS` around the queries' own words
-        (`kriko.research.window.focus`), not from the top: a listing's top
-        is its menu. The cut text is what the quotes are checked against.
-        """
-        self._check()
-
-        def _hits(query: str) -> tuple[list, str]:
+        self.search_coverage = {"queries_searched": 0, "search_errors": 0,
+                                "unique_hits": 0, "pages_unreadable": 0}
+        if self.given_sources is not None:
+            self.sources = dict(self.given_sources)
+            return list(self.sources.items())
+        hits_by_query = []
+        for query in queries:
+            self._check()
             try:
-                return self._search(query, HITS_PER_QUERY) or [], ""
+                hits = self._search(query, HITS_PER_QUERY) or []
+                self.search_coverage["queries_searched"] += 1
             except LocalSearchError as error:
-                return [], f"search failed for {query!r}: {error}"
+                self._say(f"search failed for {query!r}: {error}")
+                self.search_coverage["search_errors"] += 1
+                continue
+            hits_by_query.append(hits)
+        wanted, seen = [], set()
+        # A query cannot fill the entire source set before the next query runs.
+        for rank in range(HITS_PER_QUERY):
+            for hits in hits_by_query:
+                if rank >= len(hits) or not isinstance(hits[rank], dict):
+                    continue
+                url = canonical_url(str(hits[rank].get("url", "")))
+                if url and url not in seen:
+                    seen.add(url)
+                    self.page_titles[url] = str(hits[rank].get("title") or "")[:240]
+                    wanted.append(url)
+        self.search_coverage["unique_hits"] = len(wanted)
+        domains, diverse, repeated = set(), [], []
+        for url in wanted:
+            domain = publisher(url)
+            if domain in domains:
+                repeated.append(url)
+            else:
+                domains.add(domain)
+                diverse.append(url)
+        wanted = (diverse + repeated)[:max(18, min(150, self.max_pages * 3))]
 
-        # On a hosted search the queries go out together; their hits are
-        # still taken in the queries' order, and the log is written from
-        # this thread only.
-        if self.parallel_search and len(queries) > 1:
-            with ThreadPoolExecutor(max_workers=len(queries)) as pool:
-                answered = list(pool.map(_hits, queries))
-        else:
-            answered = []
-            for query in queries:
-                self._check()
-                answered.append(_hits(query))
-        for _, failure in answered:
-            if failure:
-                self._say(failure)
-        # One query's best page after another's, and no site more than twice:
-        # the order the hits came in let a single forum fill the whole list.
-        wanted = search_round.diversify(
-            [hits for hits, _ in answered], self.max_pages + SPARE_PAGES, seen=set())
-        if not wanted:
-            return []
-        self._check()
-
-        def _one(url: str) -> str:
+        def read_one(url: str) -> tuple[str, str]:
             try:
                 got = self._fetch(url)
-            except Exception:  # noqa: BLE001 - an unreadable page is a miss
-                return ""
+            except Exception:  # noqa: BLE001 - fetch is a network boundary
+                return url, ""
             text = str(getattr(got, "text", got) or "").strip()
-            if len(text) < MIN_PAGE_CHARS:
-                return ""
-            return focus(text, PAGE_CHARS, queries)
+            return url, text[:24000] if len(text) >= MIN_PAGE_CHARS else ""
 
-        read: dict[str, str] = {}
-        pool = ThreadPoolExecutor(max_workers=min(6, len(wanted)))
-        try:
-            pending = {pool.submit(_one, url): url for url in wanted}
-            deadline = time.monotonic() + READ_DEADLINE
-            while pending:
-                left = deadline - time.monotonic()
-                if left <= 0:
-                    self._say(f"stopped waiting for {len(pending)} slow page(s)")
-                    break
-                done, _ = wait(pending, timeout=min(left, 1.0),
-                               return_when=FIRST_COMPLETED)
-                for future in done:
-                    read[pending.pop(future)] = future.result()
-                self._check()
-                # Enough are in once MAX_PAGES have text; a spare only
-                # stands in for a page that missed.
-                if sum(1 for text in read.values() if text) >= self.max_pages:
-                    break
-        finally:
-            # A page still out is abandoned, not waited for: its thread ends
-            # on its own timeout and nothing reads what it returns.
-            pool.shutdown(wait=False, cancel_futures=True)
         pages: list[tuple[str, str]] = []
-        for url in wanted:
-            text = read.get(url, "")
-            if text and len(pages) < self.max_pages:
+        start = 0
+        deadline = time.monotonic() + READ_DEADLINE
+        while start < len(wanted) and len(pages) < self.max_pages and time.monotonic() < deadline:
+            self._check()
+            batch = wanted[start:start + min(4, self.max_pages - len(pages))]
+            start += len(batch)
+            pool = ThreadPoolExecutor(max_workers=len(batch))
+            fetched_by_url = {}
+            pending = {pool.submit(read_one, url): url for url in batch}
+            try:
+                while pending and time.monotonic() < deadline:
+                    done, _ = wait(pending, timeout=min(1.0, max(0.0, deadline - time.monotonic())),
+                                   return_when=FIRST_COMPLETED)
+                    for future in done:
+                        fetched_by_url[pending.pop(future)] = future.result()
+                    self._check()
+            finally:
+                pool.shutdown(wait=False, cancel_futures=True)
+            fetched = [fetched_by_url.get(url, (url, "")) for url in batch]
+            self._check()
+            for url, text in fetched:
+                if not text:
+                    self.search_coverage["pages_unreadable"] += 1
+                    continue
                 pages.append((url, text))
                 self.sources[url] = text
+                if len(pages) >= self.max_pages:
+                    break
+            if len(pages) >= self.max_pages:
+                break
+        self._say(f"read {len(pages)} page(s) from "
+                  f"{len({publisher(url) for url, _ in pages})} publisher buckets")
         return pages
 
 
@@ -608,6 +533,10 @@ class _MeasuredSocket:
 
     def __setattr__(self, name, value):
         setattr(self.socket, name, value)
+
+    def json(self, prompt, schema):
+        return self.owner._measured(self.stage, self.socket,
+                                   lambda: self.socket.json(prompt, schema))
 
     def __call__(self, prompt):
         stage = "verify" if prompt.startswith("Check evidence for ") else self.stage

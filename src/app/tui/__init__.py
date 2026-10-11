@@ -1,8 +1,8 @@
 """`kriko tui` — the operator's console for agent operations.
 
 A fourth interface beside `cli`, `web` and `mcp`, and the only one whose
-audience is not the reader of a car listing. It drives the same HTTP API the
-dashboard drives, from a terminal, with no webview anywhere in the path — which
+audience is not the reader of a car listing. It drives the same HTTP API as the
+other interfaces, from a terminal, with no webview anywhere in the path — which
 is what makes it usable in exactly the conditions that produced B107/B109,
 where the desktop shell's window was the thing that did not work.
 

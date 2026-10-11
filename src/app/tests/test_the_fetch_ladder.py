@@ -84,14 +84,12 @@ def sites():
 
 def test_a_page_that_answers_is_read_plainly(sites, monkeypatch):
     sites.refuse_status = 200
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     assert fetch.to_text("<p>plain words</p>") == "plain words"
     assert sites.reader_calls == 0
 
 
 def test_a_refused_page_is_read_through_the_hosted_reader(sites, monkeypatch):
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     sites.reader_text = f"# A page\nURL: {sites.url}\n\nThe page's own words.\n"
     page = fetch.reader()(sites.url)
@@ -100,7 +98,6 @@ def test_a_refused_page_is_read_through_the_hosted_reader(sites, monkeypatch):
 
 
 def test_a_reader_that_fails_leaves_the_page_unread(sites, monkeypatch):
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     sites.reader_text = ""
     assert fetch.reader()(sites.url).text == ""
@@ -108,14 +105,12 @@ def test_a_reader_that_fails_leaves_the_page_unread(sites, monkeypatch):
 
 def test_a_404_is_not_a_refusal_and_never_asks_the_reader(sites, monkeypatch):
     sites.refuse_status = 404
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     assert fetch.reader()(sites.url).text == ""
     assert sites.reader_calls == 0
 
 
 def test_the_reader_names_itself_honestly(sites, monkeypatch):
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", sites.reader_url)
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     sites.reader_text = f"# A page\nURL: {sites.url}\n\nwords\n"
     pagereader.read(sites.url)
@@ -139,7 +134,6 @@ def test_a_dead_reader_is_an_unread_page(sites, monkeypatch):
     with socket.socket() as one:
         one.bind(("127.0.0.1", 0))
         dead = f"http://127.0.0.1:{one.getsockname()[1]}/mcp"
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", dead)
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", dead)
     assert pagereader.read(sites.url) == ""
 
@@ -152,7 +146,6 @@ def test_the_second_reader_answers_when_the_first_is_dead(monkeypatch):
     with socket.socket() as one:
         one.bind(("127.0.0.1", 0))
         dead = f"http://127.0.0.1:{one.getsockname()[1]}/mcp"
-    monkeypatch.setattr(pagereader, "EXA_ENDPOINT", dead)
 
     class Parallel(BaseHTTPRequestHandler):
         def do_POST(self):

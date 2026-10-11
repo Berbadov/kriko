@@ -306,19 +306,19 @@ def main(argv: list[str]) -> int:
             print("the sidecar claims a desktop shell nobody attached")
             return 1
 
-        # The frontend is loaded from the filesystem, not imported, so a
-        # missing `datas` entry only shows up as a 404 here.
+        # The root endpoint identifies the native desktop/API sidecar. It has
+        # no browser UI bundle to load.
         with urllib.request.urlopen(
             f"http://127.0.0.1:{port}/", timeout=5
         ) as response:
-            page = response.read().decode("utf-8", "replace")
-        if "<div id=\"app\"" not in page and "<script" not in page:
-            print("the sidecar served no frontend -- check the spec's datas entry")
+            root = json.loads(response.read().decode("utf-8", "replace"))
+        if root.get("desktop") != "GPUI" or root.get("health") != "/api/health":
+            print("the sidecar root does not identify the GPUI/API service")
             return 1
-        print("frontend ok")
+        print("API root ok")
 
-        # The browser extension is data too, and it fails the same way the
-        # frontend does: silently, in a shipped installer, on the one page a
+        # The browser extension is data too, and it fails silently in a
+        # shipped installer, on the one page a
         # reader opens *because* they need help. `available: false` here means
         # the spec's `datas` lost it.
         ext = fetch(port, "/api/extension")

@@ -637,7 +637,7 @@
         // a defect in *our* code and belongs where a developer will find it.
         if (chrome.runtime.lastError || (response && !response.ok)) {
           const message = chrome.runtime.lastError?.message || response?.error;
-          if (response?.code === "APP_NOT_RUNNING" || response?.code === "APP_NOT_RESPONDING") {
+          if (["APP_NOT_RUNNING", "APP_NOT_RESPONDING", "DESKTOP_NOT_CONNECTED"].includes(response?.code)) {
             showFooterStatus(message);
           } else {
             console.warn("Kriko: could not open the app on", route, message);
@@ -924,6 +924,10 @@
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
         ${state.researchSavedAt ? `<p class="lite-saved-result">Saved result · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
+        ${state.researchQuick?.coverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
+          `${state.researchQuick.coverage.pages_read || 0} pages read · ${state.researchQuick.coverage.pages_relevant || 0} matched product · ${state.researchQuick.coverage.publishers_read || 0} publishers · ${state.researchQuick.coverage.sources_cited || 0} pages cited`
+          + (state.researchQuick.coverage.status === "partial" ? " · Some stages were incomplete." : "")
+          + (!state.researchQuick.risks?.length ? " · No supported problems kept; this does not establish that the product has no problems." : ""))}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
         ${state.researchQuick && (state.researchQuick.risks.length || state.researchQuick.specs?.length) ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
@@ -1068,9 +1072,9 @@
         updateClaimCard(card, { open: card.dataset.open !== "1" }));
       // Where the line came from, in its own words: a quick look is not a
       // stored claim, so the page and its quote are the only warrant it has.
-      const src = (risk.sources || [])[0];
       const body = card.querySelector(".lite-rc-body");
-      if (src?.url && body) {
+      for (const src of risk.sources || []) {
+        if (!src?.url || !body) continue;
         const cite = document.createElement("blockquote");
         cite.className = "lite-quick-src";
         cite.textContent = `\u201c${src.quote}\u201d `;

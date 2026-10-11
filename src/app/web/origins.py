@@ -46,7 +46,7 @@ EXTENSION_SCHEMES = ("chrome-extension", "moz-extension", "safari-web-extension"
 
 #: Hosts this server answers to. The desktop app (kriko-gpui) is a native
 #: client and sends no `Origin` at all; the retired webview shell's own
-#: `tauri://` scheme and `tauri.localhost` host are no longer trusted.
+#: legacy desktop webview origins are no longer trusted.
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1", "[::1]", "0.0.0.0"})
 
 

@@ -8,7 +8,9 @@ preference a reader sets without being shown the bill is how a surprise
 happens.
 """
 
-from fastapi import APIRouter, Depends
+import re
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from app import costs, prefs, scale
@@ -64,9 +66,39 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
     this installation does not define. The length bound moves here with it,
     since there is no per-field `max_length` left to carry it.
     """
-    written = {key: str(value)[:VALUE_MAX]
-               for key, value in body.model_dump().items()
-               if value is not None and key in prefs.KEYS}
+    written = {
+        key: str(value)[:VALUE_MAX]
+        for key, value in body.model_dump().items()
+        if value is not None and key in prefs.KEYS
+    }
+    for key in (prefs.LOCAL_OUTPUT_LANGUAGE, prefs.LOCAL_SEARCH_LANGUAGE):
+        if key not in written:
+            continue
+        value = written[key]
+        valid = value == "auto" if key == prefs.LOCAL_OUTPUT_LANGUAGE else False
+        valid = valid or bool(re.fullmatch(r"[a-z]{2,3}(?:-[A-Z]{2})?", value))
+        if not valid:
+            raise HTTPException(
+                422,
+                detail=(
+                    f"{key} must be 'auto' (output only) or a language tag "
+                    "such as en or tr-TR"
+                ),
+            )
+    if prefs.LOCAL_CONTEXT in written and written[prefs.LOCAL_CONTEXT].strip():
+        try:
+            context_tokens = int(written[prefs.LOCAL_CONTEXT])
+        except ValueError as error:
+            raise HTTPException(
+                422,
+                detail="local_context_tokens must be an integer from 2048 to 32768",
+            ) from error
+        if not 2048 <= context_tokens <= 32768:
+            raise HTTPException(
+                422,
+                detail="local_context_tokens must be an integer from 2048 to 32768",
+            )
+        written[prefs.LOCAL_CONTEXT] = str(context_tokens)
     prefs.write(conn, written)
     return prefs.choices(conn)
 

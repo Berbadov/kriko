@@ -7,7 +7,7 @@ One step in two build paths — `.github/workflows/desktop.yml` and
 them, because a step written twice in two languages is a step that will
 eventually differ in one of them. `packaging/kriko-sidecar.spec` refuses to
 freeze without the artifacts this writes, the same way it already refuses
-without a built frontend.
+without a graphical interface.
 
 **Which packs get built is discovered, never listed.** Anything under `packs/`
 with a `pack.toml` is a pack, so a third first-party pack ships by existing and

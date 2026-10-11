@@ -27,6 +27,38 @@ pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         result = result.child(mono(&format!("Runtime VRAM {:.2} GB · context {}",
             bytes / 1e9, crate::api::n(&runtime, "context_tokens").map(|n| format!("{n:.0} tokens")).unwrap_or_else(|| "not reported".into())), MUTED));
     }
+    let (output_language, search_language) = app.live.local.plane.as_ref()
+        .map(|plane| (plane.stored_output_language.clone(), plane.stored_search_language.clone()))
+        .unwrap_or_default();
+    for (group, key, current, choices) in [
+        ("Answer language", "local_output_language", output_language,
+            vec![("Automatic", "auto"), ("English", "en"), ("Turkish", "tr"),
+                 ("German", "de"), ("French", "fr"), ("Spanish", "es"),
+                 ("Japanese", "ja"), ("Chinese", "zh")]),
+        ("Search language", "local_search_language", search_language,
+            vec![("English", "en"), ("Turkish", "tr"), ("German", "de"),
+                 ("French", "fr"), ("Spanish", "es"), ("Japanese", "ja"),
+                 ("Chinese", "zh")]),
+    ] {
+        let mut controls = div().flex().flex_wrap().gap(px(8.0)).child(row_desc(group));
+        for (i, (label, value)) in choices.into_iter().enumerate() {
+            let key = key.to_string();
+            let value = value.to_string();
+            let selected = if current.is_empty() {
+                if key == "local_output_language" { value == "auto" } else { value == "en" }
+            } else { current == value };
+            let element_id = gpui::ElementId::named_usize(format!("local-language-{key}"), i);
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                let body = serde_json::json!({key.clone(): value.clone()});
+                this.fetch(cx, move || crate::api::put("/api/prefs", body), |this, reply, cx| {
+                    this.note(&reply);
+                    if reply.is_ok() { this.refresh_local(cx); }
+                });
+            });
+            controls = controls.child(pill(element_id, label, selected).on_click(pick));
+        }
+        result = result.child(controls);
+    }
     if !supported { return result; }
     for (group, key, choices) in [
         ("Device", "local_device", vec![("Auto", ""), ("CPU", "cpu"), ("GPU", "gpu")]),

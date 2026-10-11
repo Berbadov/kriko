@@ -10,8 +10,8 @@
         builds\kriko-<version>-x86_64.msi         per-user installer
         builds\kriko-<version>-win64-portable.zip  both exes, no install
 
-    In order: preflight (versions agree), the Python side, the UI, the packs,
-    the frozen sidecar and its handshake, the app, the MSI, and the app's own
+    In order: preflight (versions agree), the Python side, the packs,
+    OpenSERP, the frozen sidecar and its handshake, the app, the MSI, and the app's own
     start-up check. `.github/workflows/desktop.yml` runs the same steps in the
     same order; there is one recipe, and this is it. PyInstaller cannot
     cross-compile, so a Windows sidecar has to be frozen on Windows.
@@ -20,10 +20,6 @@
     %LOCALAPPDATA%\Programs\Kriko, needs no administrator prompt, creates the
     Start-menu shortcuts "Kriko" and "Kriko Console" and a desktop shortcut,
     and stops a running Kriko before it replaces files.
-
-.PARAMETER SkipUi
-    Reuse the committed bundle in src/app/web/static instead of rebuilding it.
-    Only safe when ui/ has not changed since that bundle was committed.
 
 .PARAMETER Python
     Interpreter to build with. Defaults to .venv\Scripts\python.exe in the
@@ -42,7 +38,7 @@
     powershell -ExecutionPolicy Bypass -File kriko-gpui\package.ps1 -WixBin C:\path\to\wix314
 
 .NOTES
-    Needs on PATH: node 20+, a Rust toolchain, and `cargo install cargo-wix`.
+    Needs on PATH: a Rust toolchain and `cargo install cargo-wix`.
 
     ASCII only, on purpose: Windows PowerShell 5.1 decodes a BOM-less script
     with the system codepage, so one em-dash in a comment is a parse error on
@@ -54,7 +50,6 @@
 #>
 [CmdletBinding()]
 param(
-    [switch]$SkipUi,
     [string]$Python = "",
     [string]$Version = "",
     [string]$WixBin = ""
@@ -133,7 +128,7 @@ try {
         throw "$Python is not on PATH. See the .NOTES block in this script."
     }
 
-    foreach ($tool in @("node", "npm", "rustc", "cargo")) {
+    foreach ($tool in @("rustc", "cargo")) {
         if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
             throw "$tool is not on PATH. See the .NOTES block in this script."
         }
@@ -157,7 +152,6 @@ try {
 
     & $Python --version
     Assert-LastExitCode "python --version"
-    node --version
     rustc --version
 
     # The three committed version strings, before anything is compiled. Plain
@@ -226,23 +220,18 @@ try {
                " $Python's environment has no other checkout installed, then re-run.")
     }
 
-    # The UI before the freeze: the spec refuses to freeze without a built
-    # bundle rather than shipping an engine that 404s on its own frontend.
-    if ($SkipUi) {
-        Step "UI (skipped, using the committed bundle)"
-    } else {
-        Step "Build the UI"
-        npm --prefix ui ci --no-audit --no-fund
-        Assert-LastExitCode "npm ci (ui)"
-        npm --prefix ui run build
-        Assert-LastExitCode "npm run build (ui)"
-    }
-
     # The knowledge before the freeze, for the same reason. Which packs get
     # built is discovered from packs/, so a third one ships by existing.
     Step "Build the packs"
     & $Python packaging/build_packs.py
     Assert-LastExitCode "build_packs.py"
+
+    Step "Fetch the pinned OpenSERP release"
+    $bin = Join-Path $crate "target\release"
+    & (Join-Path $repo "packaging\fetch_openserp.ps1") -Destination (Join-Path $bin "OpenSERP.exe")
+    if (-not (Test-Path -LiteralPath (Join-Path $bin "OpenSERP.exe"))) { throw "OpenSERP executable was not produced." }
+    if ((Get-FileHash -LiteralPath (Join-Path $bin "OpenSERP.exe") -Algorithm SHA256).Hash -ne "336CD54C25F35BF76827E1D88C97E20FD085F219BFDCC7F96ACF541208FC651B") { throw "OpenSERP executable digest did not match the pinned release." }
+    Copy-Item (Join-Path $crate "third-party\OpenSERP-LICENSE.txt") (Join-Path $bin "OpenSERP-LICENSE.txt") -Force
 
     Step "Freeze the sidecar"
     & $Python -m PyInstaller --noconfirm packaging/kriko-sidecar.spec
@@ -266,7 +255,6 @@ try {
     # Beside kriko.exe, which is where the app looks for its engine and where
     # main.wxs picks both programs up.
     Step "Place the sidecar"
-    $bin = Join-Path $crate "target\release"
     Copy-Item (Join-Path $repo "dist\kriko-sidecar.exe") (Join-Path $bin "kriko-sidecar.exe") -Force
     Write-Host (Join-Path $bin "kriko-sidecar.exe")
 
@@ -296,11 +284,19 @@ try {
     Step "The portable zip"
     $zip = Join-Path $builds "kriko-$ver-win64-portable.zip"
     if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
-    Compress-Archive -Path (Join-Path $bin "kriko.exe"), (Join-Path $bin "kriko-sidecar.exe") `
+    Compress-Archive -Path (Join-Path $bin "kriko.exe"), (Join-Path $bin "kriko-sidecar.exe"), `
+        (Join-Path $bin "OpenSERP.exe"), (Join-Path $bin "OpenSERP-LICENSE.txt") `
         -DestinationPath $zip -Force
 
+    $checksums = Join-Path $builds "SHA256SUMS.txt"
+    @($msi, $zip) | ForEach-Object {
+        $file = Get-Item -LiteralPath $_
+        $digest = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()
+        "$digest  $($file.Name)"
+    } | Set-Content -LiteralPath $checksums -Encoding Ascii
+
     Step "Done"
-    foreach ($item in @($msi, $zip)) {
+    foreach ($item in @($msi, $zip, $checksums)) {
         $f = Get-Item -LiteralPath $item
         Write-Host ("{0}  {1:N1} MB" -f $f.FullName, ($f.Length / 1MB)) -ForegroundColor Green
     }
