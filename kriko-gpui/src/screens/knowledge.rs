@@ -116,22 +116,33 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         ));
     }
 
-    // ---- pack updates: only when a newer version is on offer ----
-    let mut banner: Option<Div> = None;
-    if !k.offers.is_empty() {
+    // ---- what the index offers: packs to install, then newer versions ----
+    // One card per kind, because "Install" and "Update" are different
+    // promises: the first adds knowledge the store never had.
+    let working = k.update_job.as_ref().map(|j| !j.done).unwrap_or(false);
+    let (installable, newer): (Vec<_>, Vec<_>) = k.offers.iter().enumerate().partition(|(_, o)| o.installed.is_empty());
+    let mut offer_cards: Vec<Div> = Vec::new();
+    for (title, group, verb) in [("Packs you can install", installable, "Install"), ("Pack updates", newer, "Update")] {
+        if group.is_empty() {
+            continue;
+        }
         let mut b = card()
             .flex()
             .flex_col()
-            .child(div().mb(px(4.0)).child(eyebrow("Pack updates")))
+            .child(div().mb(px(4.0)).child(eyebrow(title)))
             .child(hairline());
-        let working = k.update_job.as_ref().map(|j| !j.done).unwrap_or(false);
-        for (i, o) in k.offers.iter().enumerate() {
+        for (i, o) in group {
             let id = o.pack_id.clone();
             let go = cx.listener(move |this, _: &ClickEvent, _w, cx| {
                 this.update_pack(id.clone(), cx);
             });
-            let button = key(("pack-update", i), "Update");
+            let button = key(("pack-offer", i), verb);
             let button = if working { button.opacity(0.5) } else { button.on_click(go) };
+            let version = if o.installed.is_empty() {
+                format!("version {}", o.offered)
+            } else {
+                format!("{} to {}", o.installed, o.offered)
+            };
             b = b.child(
                 div()
                     .py(px(12.0))
@@ -147,16 +158,16 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                             .flex_col()
                             .gap(px(2.0))
                             .child(row_title(&o.name))
-                            .child(mono(&format!("{} to {}", o.installed, o.offered), MUTED)),
+                            .child(mono(&version, MUTED)),
                     )
                     .child(button),
             );
         }
-        if let Some(job) = &k.update_job {
-            let line = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
-            b = b.child(mono(&line, if job.state == "failed" { DANGER } else { MUTED }));
-        }
-        banner = Some(b);
+        offer_cards.push(b);
+    }
+    if let (Some(job), Some(last)) = (&k.update_job, offer_cards.pop()) {
+        let line = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
+        offer_cards.push(last.child(mono(&line, if job.state == "failed" { DANGER } else { MUTED })));
     }
 
     // ---- packs with switches; the meter is each pack's share of subjects ----
@@ -166,7 +177,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     packs = packs.child(hairline());
     if k.packs.is_empty() {
         packs = packs.child(div().pt(px(12.0)).child(empty_note(
-            "No packs are installed yet, so there is no knowledge to check listings against.",
+            if k.offers.iter().any(|o| o.installed.is_empty()) {
+                "No packs are installed yet. Install one above to start checking listings."
+            } else {
+                "No packs are installed yet, and none could be fetched. Check the connection, then reopen this screen."
+            },
         )));
     }
     for (i, pack) in pack_rows.iter().enumerate() {
@@ -384,7 +399,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let claims_note = format!("{} packs installed", t.packs);
 
     let mut left = div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(24.0));
-    if let Some(b) = banner {
+    for b in offer_cards {
         left = left.child(b);
     }
     left = left.child(packs);
