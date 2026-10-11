@@ -232,6 +232,13 @@ class Harness:
     #: a tool it does not own. Per-harness prose, never per-category: nothing
     #: here may name a product, a make or a subject.
     contract_note: str = ""
+    #: Appended to a prompt for a job that is *not* research (`ask`: reading a
+    #: site, drafting a pack), where `CONTRACT` does not apply. It exists for
+    #: a CLI whose headless mode auto-denies the shell: left to itself the
+    #: agent reaches for `curl` or `dir` to fetch a page, is refused, and the
+    #: run ends at that first denial having read nothing. Prose about tools,
+    #: never about a product.
+    ask_note: str = ""
     #: What to run instead of `args` when this machine's CLI does not list
     #: `needs_in_help` among the things it can do. The streaming vector is the
     #: one this plane wants (see `_claude_args`); this is the one that still
@@ -563,6 +570,12 @@ KNOWN: tuple[Harness, ...] = (
         # survives, because `agy` keeps its token in the OS keyring rather
         # than under `HOME`.
         sandbox_home=True,
+        ask_note=(
+            "\n\nTools: use only your web tools (`search_web` to find a page, "
+            "`read_url_content` to read one). This run has no shell: `curl`, "
+            "`dir`, `wget` or any other command is auto-denied, and the first "
+            "denial ends the run with nothing read."
+        ),
         turns_flag="",
         budget_flag="",
     ),
@@ -2443,7 +2456,7 @@ class HarnessResearcher(AgentResearcher):
         one MCP server that only reads a page — and that is worth reusing rather than
         reimplementing next to it.
         """
-        return self._run(prompt)
+        return self._run(prompt + self.harness.ask_note)
 
     # ── the subprocess ───────────────────────────────────────────────────────
 
