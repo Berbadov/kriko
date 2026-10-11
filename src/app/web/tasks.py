@@ -1981,6 +1981,20 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             for one in verification["unsupported"] if isinstance(one, dict)))
     spent = getattr(researcher, "spent", None)
     billed = getattr(researcher, "cost_basis", "") == "per_token"
+    coverage = getattr(researcher, "coverage", {}) or {}
+    empty_messages = {
+        "no_matching_product_evidence": "No pages matched this exact product. This is insufficient evidence to conclude that the product has no problems.",
+        "evidence_rejected": "Relevant pages were checked, but candidate findings did not pass the evidence checks. This is insufficient evidence to conclude that the product has no problems.",
+        "no_supported_findings": "Relevant pages were checked, but none supported a finding. This is insufficient evidence to conclude that the product has no problems.",
+        "partial": "Some research stages were incomplete. This is insufficient evidence to conclude that the product has no problems.",
+    }
+    empty_message = (
+        empty_messages.get(
+            coverage.get("status"),
+            "Pages were read, but no supported findings were kept. This is insufficient evidence to conclude that the product has no problems.",
+        )
+        if not kept and not found["specs"] else ""
+    )
     result_message = quicklook.outcome(
         reply, found, finish_reason=str(getattr(researcher, "last_finish_reason", "")))
     progress.set(1.0, result_message
@@ -1991,7 +2005,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         **found,
         "verification": verification,
         "identity": getattr(researcher, "identity", {}),
-        "coverage": getattr(researcher, "coverage", {}),
+        "coverage": coverage,
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
         "harness": getattr(getattr(researcher, "harness", None), "id", ""),
         "model": str(getattr(researcher, "model", "") or ""),
@@ -2001,7 +2015,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "telemetry": getattr(researcher, "telemetry", {}),
         "runtime": getattr(researcher, "runtime", {}),
         "diagnostic": {"code": "answer" if kept or found["specs"] else "no_supported_findings",
-                       "message": "" if kept or found["specs"] else "Pages were read, but no supported findings were kept."},
+                       "message": empty_message},
         "measurement": {
             "tokens_in": getattr(researcher, "tokens_in", None),
             "tokens_out": getattr(researcher, "tokens_out", None),

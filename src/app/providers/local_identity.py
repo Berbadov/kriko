@@ -318,6 +318,15 @@ def relevant_source(
         for name in names
     )
     identifier_match = any(_literal(value, text) for value in identity.identifiers)
+    # Discussions often omit the brand or insert punctuation into the name.
+    # An exact distinctive model code plus another supplied name token is
+    # enough to read the page; each finding still needs its applicability check.
+    model_tokens = [token for token in _TOKEN.findall(identity.canonical_name)
+                    if len(token) >= 5 and _distinctive_identifier(token)]
+    other_tokens = _meaningful_tokens(identity.canonical_name) - {
+        token.casefold() for token in model_tokens}
+    code_match = any(_literal(token, text) for token in model_tokens)
+    named = named or (code_match and bool(other_tokens & _meaningful_tokens(text)))
     if not (named or identifier_match):
         return False
 
