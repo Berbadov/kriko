@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.3.3-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.4.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Download for Windows](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,10 +34,15 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.3.3-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.3.3-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.4.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.4.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start, including its catalogs. You don't need to install Python, Node, or Rust.
+
+### What's new in 1.4.0
+
+- Kriko checks for a newer version every time it starts. When one is published, the **Home** screen shows it at the top with **Install and restart**. Nothing installs until you press that button.
+- If the check cannot reach GitHub, Home stays quiet and **About** says why. A failed check does not hide a newer version that an earlier check found.
 
 ### What's new in 1.3.3
 
@@ -59,7 +64,7 @@ The Windows app includes everything it needs to start, including its catalogs. Y
 - Coverage and evidence rejection reasons are visible. An empty result does not establish that a product has no problems.
 - The updater recognizes this as newer than 1.3.0. Release downloads include `SHA256SUMS.txt` for verified updates.
 
-Use the app's update check or install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
+Kriko offers a newer version on the Home screen when it starts, or you can install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
 
 > The build is unsigned, so Windows may show a SmartScreen warning. See the [Windows installation guide](docs/INSTALL_WINDOWS.md) for the install steps.
 
