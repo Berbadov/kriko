@@ -163,7 +163,8 @@ def repair_offer_page(url: str, title: str, text: str) -> bool:
                r"\b(?:tarifs?|prix)\b|€", r"rendez[- ]vous|réserv(?:ez|ation)",
                r"contactez[- ]nous|request (?:a )?quote|book (?:a )?repair",
                r"repair (?:services|pricing)|priced? from")
-    return sum(bool(re.search(marker, folded)) for marker in markers) >= 2
+    return (any(re.search(marker, folded) for marker in markers[:3])
+            or sum(bool(re.search(marker, folded)) for marker in markers) >= 2)
 
 
 def evidence_windows(text: str, identity, budget: int) -> dict[str, str]:
