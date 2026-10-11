@@ -393,14 +393,21 @@ impl Kriko {
         );
     }
 
-    /// Which installed packs have a newer version offered. An index that
-    /// cannot be reached offers nothing, and that is not an error here.
+    /// What the index offers: newer versions of installed packs, and packs
+    /// not installed yet (an empty `installed`). A fresh install has no
+    /// packs, so the second kind is how a reader gets any knowledge at all
+    /// without a terminal. An index that cannot be reached offers nothing,
+    /// and that is not an error here.
     pub fn refresh_updates(&mut self, cx: &mut Context<Self>) {
         self.fetch(cx, || api::get("/api/packs/updates"), |this, reply, _| {
             if let Ok(v) = reply {
                 this.live.knowledge.offers = api::arr(&v, "packs")
                     .iter()
-                    .filter(|p| api::s(p, "state") == "available" && !api::s(p, "installed_version").is_empty())
+                    .filter(|p| match api::s(p, "state").as_str() {
+                        "available" => !api::s(p, "installed_version").is_empty(),
+                        "not_installed" => true,
+                        _ => false,
+                    })
                     .map(|p| Offer {
                         pack_id: api::s(p, "pack_id"),
                         name: api::s(p, "name"),
@@ -412,7 +419,8 @@ impl Kriko {
         });
     }
 
-    /// `POST /api/packs/update` is a job: follow it, then refresh.
+    /// `POST /api/packs/update` is a job: follow it, then refresh. The same
+    /// job installs a pack the store does not have yet.
     pub fn update_pack(&mut self, pack_id: String, cx: &mut Context<Self>) {
         self.live.knowledge.update_job = Some(JobView {
             state: "queued".into(),
