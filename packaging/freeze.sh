@@ -12,7 +12,12 @@ cd "$(dirname "$0")/.."
 
 PYTHON=${PYTHON:-.venv/bin/python}
 
-"$PYTHON" -m PyInstaller --noconfirm --distpath dist --workpath build \
+# PyInstaller's scratch is rebuilt on every freeze, so it stays out of the
+# checkout. A build/ beside the spec was a second copy of everything.
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
+
+"$PYTHON" -m PyInstaller --noconfirm --distpath dist --workpath "$WORK" \
     packaging/kriko-sidecar.spec
 
 "$PYTHON" packaging/smoke_sidecar.py dist/kriko-sidecar
