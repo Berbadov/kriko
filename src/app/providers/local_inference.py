@@ -21,6 +21,7 @@ plane says it in the job log.
 from collections.abc import Callable, Iterator
 import json
 import socket
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -68,6 +69,45 @@ def forget_incomplete(base_url: str = "") -> None:
         _incomplete.pop(base_url.rstrip("/"), None)
     else:
         _incomplete.clear()
+
+
+#: Every `(server, model)` this process has asked for a completion since the
+#: last `release`. A server keeps a model in memory after its last request
+#: (Ollama for five minutes by default), so a finished run went on holding
+#: gigabytes of video memory while Kriko sat in the background.
+_held: set[tuple[str, str]] = set()
+_held_lock = threading.Lock()
+
+
+def _hold(base_url: str, serving_name: str) -> None:
+    with _held_lock:
+        _held.add((base_url.rstrip("/"), serving_name))
+
+
+def release(timeout: float = 10.0) -> list[str]:
+    """Ask each server to unload every model this process ran; the names let go.
+
+    Called when no work is left, so the memory is the host's again the moment
+    a run ends rather than whenever the server's own timer runs out. Ollama
+    unloads on a request with `keep_alive` 0. A server without that endpoint
+    answers 404 and keeps its own policy; nothing here can fail a run.
+    """
+    with _held_lock:
+        held = sorted(_held)
+        _held.clear()
+    released = []
+    for base_url, name in held:
+        request = urllib.request.Request(
+            base_url + "/api/generate",
+            data=json.dumps({"model": name, "keep_alive": 0}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                response.read()
+            released.append(name)
+        except Exception:  # noqa: BLE001 - a server that cannot unload keeps its own timer
+            pass
+    return released
 
 
 #: A second try after these, because a local server's failure modes are
@@ -193,6 +233,7 @@ class OpenAICompatSocket:
             self._schema = previous
 
     def complete(self, prompt: str) -> str:
+        _hold(self.base_url, self.serving_name)
         prompt = self.language_instruction + prompt
         body = {
             "model": self.serving_name,
@@ -280,6 +321,7 @@ class OpenAICompatSocket:
             text = self.complete(prompt)
             on_text(text)
             return text
+        _hold(self.base_url, self.serving_name)
         body: dict = {
             "model": self.serving_name,
             "messages": [{"role": "user", "content": self.language_instruction + prompt}],
