@@ -179,8 +179,7 @@ powershell -ExecutionPolicy Bypass -File package.ps1
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
     A["Preflight<br/>tools, versions agree"]:::plain --> B["Python side<br/>pip install -r requirements.lock"]:::plain
-    B --> C["Build the packs"]:::plain
-    C --> D["Freeze the sidecar<br/>PyInstaller"]:::plain
+    B --> D["Freeze the sidecar<br/>PyInstaller"]:::plain
     D --> E["Sidecar answers?<br/>smoke_sidecar.py"]:::brand
     E --> F["cargo build --release"]:::plain
     F --> G["Place the sidecar<br/>beside kriko.exe"]:::plain

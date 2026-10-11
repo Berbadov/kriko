@@ -342,20 +342,18 @@ def main(argv: list[str]) -> int:
                 return 1
         print("Firefox ok: separate event-page manifest and unsigned XPI")
 
-        # The knowledge, on a store this run created two seconds ago. Empty
-        # here means one of three things went wrong and every one of them
-        # ships as a knowledge engine with no knowledge: the spec's datas lost
-        # the artifacts, the build never made them, or the seeder in
-        # `app/bundledpacks.py` did not run at startup. A reader cannot tell
-        # those apart from an app that opens onto nothing, so the build does.
+        # The installer carries no packs (#169), so a store this run created
+        # two seconds ago starts empty. A pack here means something was frozen
+        # into the sidecar or seeded at startup after all, and the reader would
+        # open onto a catalog they never chose. The build refuses it.
         packs = fetch(port, "/api/packs")
         carried = packs.get("items") if isinstance(packs, dict) else packs
-        if not carried:
-            print("the sidecar installed no bundled packs into a fresh store "
-                  "-- check the spec's datas entry and build_packs.py")
+        if carried:
+            print("the sidecar put packs into a fresh store -- the installer "
+                  "must carry none: " + ", ".join(
+                      f"{row.get('pack_id')} {row.get('version')}" for row in carried))
             return 1
-        print("packs ok: " + ", ".join(
-            f"{row.get('pack_id')} {row.get('version')}" for row in carried))
+        print("packs ok: a fresh store starts with no packs")
 
         if not benchmark_ok(port):
             return 1

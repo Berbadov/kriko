@@ -660,10 +660,13 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             total
         )
     };
+    // Wraps under the count when the card is narrow, so Next is never cut off.
     let pagination = div()
         .mt(px(16.0))
         .pt(px(16.0))
         .flex()
+        .flex_wrap()
+        .gap(px(12.0))
         .items_center()
         .justify_between()
         .child(
