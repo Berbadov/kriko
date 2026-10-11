@@ -405,7 +405,7 @@ class OpenAICompatSocket:
         """How many characters of prompt fit beside the reply budget."""
         reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
         tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
-        return max(0, min(self.context_chars, int(tokens - 128)))
+        return max(0, min(self.context_chars, int(tokens * CHARS_PER_TOKEN)))
 
     def _ask_context(self) -> int | None:
         def get(path: str):
