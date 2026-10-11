@@ -107,5 +107,10 @@ def discover(configured: str = "", timeout: float = PROBE_TIMEOUT) -> list[dict]
 
 
 def search_answers(url: str = "", timeout: float = PROBE_TIMEOUT) -> bool:
-    """Whether the self-hosted search service is up at its address."""
-    return _get(base_of(url) or SEARCH_DEFAULT_URL, timeout)[0]
+    """Whether OpenSERP's health endpoint says the local service is ready."""
+    reached, payload = _get((base_of(url) or SEARCH_DEFAULT_URL) + "/health", timeout)
+    return bool(
+        reached
+        and isinstance(payload, dict)
+        and (payload.get("status") in ("healthy", "ok") or payload.get("ok") is True)
+    )

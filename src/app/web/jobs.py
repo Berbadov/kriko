@@ -3,7 +3,7 @@
 Two operations actually grow the knowledge base — researching a subject and
 building a pack — and before this module both were terminal-only. That
 contradicted G6's delivery constraint directly: *every operation must be
-operable and inspectable from the dashboard with a visible result, error, and
+operable and inspectable from the desktop and extension with a visible result, error, and
 durable status*. A `POST` that blocks for four minutes is not that, and neither
 is a spinner with nothing behind it.
 
@@ -405,7 +405,7 @@ class JobRunner:
             )
         except Exception as exc:  # noqa: BLE001 — a failed job is data, not a crash
             # The traceback goes in the log rather than to stderr: an operator
-            # reading the dashboard should not have to find the terminal that
+            # reading the job in the app should not have to find the terminal that
             # started the server.
             state.update_job(conn, job_id, line=traceback.format_exc())
             state.finish_job(

@@ -1,5 +1,4 @@
-"""Render the brand mark to the 1024px master PNG, the frontend copies and the
-extension icons.
+"""Render the brand mark to the 1024px master PNG and extension icons.
 
 There are two marks and one design, and the split is the point.
 
@@ -28,8 +27,7 @@ carry the risk.
     python packaging/render_icon.py
 
 Writes `packaging/icon-master.png`, the 1024px master, and the two copies the
-frontend serves; and copies the extension's toolbar icons out of the desktop
-icon. The desktop app's own
+    extension toolbar icons out of the desktop icon. The desktop app's own
 `kriko-gpui/assets/kriko.ico` is a separate, hand-drawn tile (the white K on
 the brand blue, rounded) that the exe and the installer both read; it is not
 derived here, and `test_the_desktop_icon_is_a_whole_ico` holds its shape.
@@ -48,24 +46,9 @@ SOURCE = REPO / "extension" / "assets" / "logo-mark.svg"
 #: this location was chosen). `test_the_committed_icon_is_what_the_mark_
 #: renders_to` fails if it ever stops being what the mark renders to.
 TARGET = REPO / "packaging" / "icon-master.png"
-#: The same mark, served to the frontend as the rail brand and the favicon.
-#: A copy rather than an import because `ui/` may not reach outside itself —
-#: Vite only bundles what lives under `ui/` — and a copy that is produced by
-#: the same script that produces the icon cannot drift from it. `test_brand_
-#: icon.py` fails if it ever does.
-WEB_TARGET = REPO / "ui" / "public" / "mark.svg"
-
 #: The mark drawn for the sizes the grid cannot serve. See that file's own
 #: comment for why there are two of them.
 LARGE_SOURCE = REPO / "extension" / "assets" / "logo-mark-large.svg"
-#: The large mark, served to the frontend for the rail's brand tile (B161). The
-#: rail drew the 16x16 grid at 28px, a 1.75 scale, which no integer factor
-#: makes crisp and which `image-rendering: pixelated` turned into uneven blocks
-#: ("Fix the pixelated Kriko logo in the top left"). The drawing has real
-#: diagonals and scales smoothly to any size, so the rail uses this. The grid
-#: copy above stays for the favicon, where 16px is exactly one cell per pixel.
-WEB_LARGE_TARGET = REPO / "ui" / "public" / "mark-large.svg"
-
 #: 16 * 64. Kept because the extension icons and the role checks still scale
 #: the grid, and because `test_the_scale_keeps_the_grid_whole` is about the
 #: grid staying whole rather than about which file the master comes from.
@@ -389,23 +372,6 @@ def main() -> None:
     TARGET.parent.mkdir(parents=True, exist_ok=True)
     TARGET.write_bytes(smooth_png(shapes, units, MASTER))
     print(f"{LARGE_SOURCE.name} ({units}x{units}) -> {TARGET} ({MASTER}px)")
-    WEB_TARGET.parent.mkdir(parents=True, exist_ok=True)
-    # newline="": `write_text` translates "\n" to "\r\n" on Windows, so
-    # rendering on this host rewrote all 37 lines of a file whose content had
-    # not changed at all — `aa795e6` and `bea9e88` are the same defect in
-    # a config file and in the bump tool. A generated file that reports
-    # itself as modified on one platform is a diff nobody can read, and the
-    # frontend copy has to stay byte for byte the source anyway: a test
-    # compares the two as text.
-    WEB_TARGET.write_text(svg, encoding="utf-8", newline="")
-    print(f"{SOURCE.name} -> {WEB_TARGET}")
-    # Same newline rule as the copy above, and for the same reason: a test
-    # compares this file with its source as text.
-    WEB_LARGE_TARGET.write_text(
-        LARGE_SOURCE.read_text(encoding="utf-8"), encoding="utf-8", newline=""
-    )
-    print(f"{LARGE_SOURCE.name} -> {WEB_LARGE_TARGET}")
-
     EXTENSION_DIR.mkdir(parents=True, exist_ok=True)
     images = ico_images(DESKTOP_ICO.read_bytes())
     disconnected = offline_grid(pixels)

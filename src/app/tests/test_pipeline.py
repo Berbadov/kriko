@@ -360,9 +360,8 @@ def test_the_pipeline_tables_are_interface_state_not_engine_schema(app_state, co
 
 
 def test_the_runs_endpoint_names_the_stages_so_the_ui_need_not(client):
-    """The stage vocabulary is the server's. A second list in TypeScript is a
-    second place to forget — the same reasoning that keeps identity keys out
-    of `ui/src/`."""
+    """The stage vocabulary is the server's, which keeps a second list from
+    drifting away from the API."""
     body = client.get("/api/pipeline/runs").json()
     assert [row["stage"] for row in body["stages"]] == list(pipeline.STAGES)
     assert body["runs"] == []

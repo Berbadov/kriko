@@ -140,9 +140,8 @@ pipeline step a person walks.
 a fan, not a column. Import down only:
 
 ```
-kriko-gpui/  desktop app (Rust, GPUI) — supervises the sidecar, draws the interface over HTTP; no engine logic ever
-ui/     Svelte+Vite source -> src/app/web/static/; HTTP to app/; no Python, no catalog vocabulary
-app/    interfaces — cli, web dashboard, mcp server, operator TUI (same HTTP API, no webview)
+kriko-gpui/  desktop app (Rust, GPUI) — supervises the sidecar and draws the interface; no engine logic ever
+app/    interfaces — cli, local HTTP API, mcp server, operator TUI
 kriko/  engine — pack store, lookup, ranking, research interface; imports NONE of the others; no category
 packs/  per-category data, vocabulary, trust tiers, builder, coverage report (third-party-authored)
 packs/<name>/pipeline/  evidence ledger + grounded extraction, per category
@@ -167,11 +166,7 @@ grep -rnE "^[[:space:]]*(from|import) (app|app.pipeline)"                       
 grep -rnE "^[[:space:]]*(from|import) backend"                    --include='*.py' src/app/   | grep -v /pipeline/ | grep -v /tests/
 ```
 
-Enforced in `src/app/pipeline/tests/test_repo_invariants.py`. `ui/` rebuild:
-`npm --prefix ui run build`, commit both; the gate fails on a stale bundle.
-Forms come from `/api/identity-keys/{pack_id}` and
-`/api/packs/{pack_id}/vocabulary` at runtime
-(`test_ui_contains_no_pack_vocabulary`, in that same invariants file).
+Enforced in `src/app/pipeline/tests/test_repo_invariants.py`.
 
 **Long work is a row, not a request** (`app/web/jobs.py`: as many at once
 as Settings says, never two on one pack, cooperative cancel; state in `app.sqlite` `jobs`; handlers in

@@ -10,7 +10,7 @@ that will not open cannot be instrumented at all, and through most of B107/B109
 the reader had no working surface of any kind.
 
 So this is a second client on the same HTTP API — not a second implementation.
-Every key below is an endpoint the dashboard already calls. It needs no
+Every key below is an endpoint the local app already calls. It needs no
 webview, no WebView2, no Rust shell and no bundled JavaScript, which means it
 keeps working in exactly the conditions that produced those three reports.
 

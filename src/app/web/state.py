@@ -1238,7 +1238,7 @@ def marks(
 def mark_counts(conn: sqlite3.Connection) -> dict[str, int]:
     """How many of each verdict, with the zeroes present.
 
-    Every verdict is a key even at zero: a dashboard that renders only the
+    Every verdict is a key even at zero: an interface that renders only the
     non-empty ones changes shape as data arrives, and "no claims marked wrong"
     is a thing worth stating rather than omitting.
     """
@@ -2882,7 +2882,7 @@ def _research_run(row: sqlite3.Row) -> dict:
         "plane": row["plane"],
         # `llm` on the wire, `model` in the column. Not a whim: `model` is a
         # car identity key, and `test_ui_contains_no_pack_vocabulary` bans
-        # every pack identity word from `ui/src` — correctly, because a
+        # every pack identity word from the desktop interface — correctly, because a
         # literal key name in the frontend is the scalability bug in a
         # language the AST test cannot read. The collision is real rather
         # than incidental (a car has a model; so does a completion API), so

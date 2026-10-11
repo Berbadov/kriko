@@ -54,10 +54,6 @@ jobs:
                   # the one the suite actually ran on.
                   python-version: "3.13"
 
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: "24"
-
             - uses: dtolnay/rust-toolchain@stable
 
             # The lock is the pin, and this is what makes it one. Cargo already
@@ -93,19 +89,18 @@ jobs:
                   # rather than part of the closure, so it is not locked.
                   pip install -r requirements.lock -e "." pyinstaller
 
-            # The UI first: the spec refuses to freeze without it rather than
-            # shipping an engine that 404s on its own frontend.
-            - name: Build the UI
-              run: |
-                  npm --prefix ui ci --no-audit --no-fund
-                  npm --prefix ui run build
-
-            # And the knowledge, for the same reason: the spec refuses to
-            # freeze without artifacts rather than shipping a knowledge engine
-            # with no knowledge in it. Which packs get built is discovered
-            # from packs/, so a third one ships by existing.
+            # The knowledge: the spec refuses to freeze without artifacts
+            # rather than shipping a knowledge engine with no knowledge in it.
+            # Which packs get built is discovered from packs/, so a third one
+            # ships by existing.
             - name: Build the packs
               run: python packaging/build_packs.py
+
+            - name: Fetch the pinned OpenSERP release
+              shell: pwsh
+              run: |
+                  ./packaging/fetch_openserp.ps1 -Destination kriko-gpui/target/release/OpenSERP.exe
+                  Copy-Item kriko-gpui/third-party/OpenSERP-LICENSE.txt kriko-gpui/target/release/OpenSERP-LICENSE.txt -Force
 
             - name: Freeze the sidecar
               run: pyinstaller --noconfirm packaging/kriko-sidecar.spec
@@ -146,8 +141,16 @@ jobs:
               shell: pwsh
               run: |
                   $bin = "kriko-gpui/target/release"
-                  Compress-Archive -Path "$bin/kriko.exe", "$bin/kriko-sidecar.exe" `
+                  Compress-Archive -Path "$bin/kriko.exe", "$bin/kriko-sidecar.exe", `
+                      "$bin/OpenSERP.exe", "$bin/OpenSERP-LICENSE.txt" `
                       -DestinationPath "kriko-gpui/builds/kriko-$env:VERSION-win64-portable.zip" -Force
+                  $files = @("kriko-gpui/builds/kriko-$env:VERSION-x86_64.msi", "kriko-gpui/builds/kriko-$env:VERSION-win64-portable.zip")
+                  $lines = foreach ($file in $files) {
+                      $item = Get-Item -LiteralPath $file
+                      $digest = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
+                      "$digest  $($item.Name)"
+                  }
+                  $lines | Set-Content -LiteralPath "kriko-gpui/builds/SHA256SUMS.txt" -Encoding Ascii
 
             - uses: actions/upload-artifact@v4
               with:
@@ -155,6 +158,7 @@ jobs:
                   path: |
                       kriko-gpui/builds/*.msi
                       kriko-gpui/builds/*.zip
+                      kriko-gpui/builds/SHA256SUMS.txt
                   if-no-files-found: error
 
     # The knowledge, built once and published beside the installers. Packs are

@@ -15,7 +15,7 @@ flowchart LR
     Q --> A
     B -->|yes| C["3. Reproduce<br/>a check that fails first"]:::plain
     C --> D["Fix"]:::plain
-    D --> E["tools/gate.sh<br/>+ tools/walk.sh"]:::plain
+    D --> E["tools/gate.sh<br/>+ reader journey"]:::plain
     E --> F["5. PR with proof<br/>quote, observation, screenshot"]:::ice
     F --> G["Second agent reviews<br/>does it do what was asked,<br/>where it was asked?"]:::plain
     G --> H["Reader merges to main"]:::plain
@@ -75,7 +75,7 @@ runner exists, the reader or a hand build does, and the PR says plainly
 
 ## 3. Reproduce first, then fix
 
-A bug fails on purpose first (a test, `tools/walk.sh`, a symptom script). No
+A bug fails on purpose first (a test, a symptom script, or a reproduced screen). No
 prior failure is a guess. Three failed fixes in one place means the model of
 the problem is wrong. A fact about an outside tool is read from that tool, with
 a test that fails when the tool drifts.
@@ -84,9 +84,8 @@ a test that fails when the tool drifts.
 
 | Kind | Proves | Does **not** prove |
 |---|---|---|
-| Unit / component (pytest, vitest) | logic, world stubbed | world matches stub |
+| Unit / component (pytest, Node test runner) | logic, world stubbed | world matches stub |
 | Source-reading guard (`test_repo_invariants.py` et al.) | code rule holds | anything *works* |
-| `tools/walk.sh` | screens load, buttons respond, no errors/hangs | the button's purpose |
 | **Journey check** (below) | reader's end result happened | (the one that counts) |
 | Reader's Windows install | works where used | |
 
@@ -96,8 +95,7 @@ middle (collaborators).
 
 ### Journey checks
 
-One reader task start to finish in `tools/journeys/`, run by `tools/walk.sh`,
-stated the way a "Done when" is:
+One reader task from start to finish, stated the way a "Done when" is:
 
 - load the extension and check in;
 - check a listing and read the risks;
@@ -106,9 +104,8 @@ stated the way a "Done when" is:
 - install, disable and update a catalog and see checks follow;
 - register a site and see the extension read it.
 
-No journey pass, checked on Windows as in §2, means not done. Until those
-scripts exist, the PR hand-walks the journey and shows the steps, the
-observed result and a screenshot.
+The PR records the journey steps, observed result, and a screenshot, checked
+on Windows as in §2.
 
 ## 5. Every PR carries its own proof
 
@@ -144,8 +141,8 @@ alternative next to it.
   failing check pre-existed (for a bug); the "Done when" is seen on the
   **Where** screen; it is checked on Windows or the PR says it is not; the
   journey passes, or is hand-walked until the journey scripts exist.
-- [ ] `tools/gate.sh` is green and `tools/walk.sh` is clean on the screens this
-  touches; the PR carries the quote, the observation and the screenshot; a
+- [ ] `tools/gate.sh` is green and the reader journey is observed; the PR carries
+  the quote, the observation and the screenshot; a
   second agent has reviewed it; it is on `main`; the PR closes the issue (`Closes #n`) and its Linear twin
   is done; and the commit says what was observed.
 
@@ -159,7 +156,7 @@ tools/gate.sh                  # everything the branch used to be checked for
 python tools/bump.py X.Y.Z     # version, in all four places it lives
 ```
 
-`setup.sh` pins what six failed discoveries taught: the interpreter floor from `pyproject.toml`, `requirements.lock` as the frozen closure, `-e .` so `app.version` reports the tree, the `pipeline` extra required for the *suite* (six modules will not import without it), separate `node_modules` for `ui/` and the root, and wiping stale `src/*.egg-info`. It never touches `~/.kriko`: the store, history and keys are not a dev environment.
+`setup.sh` pins the interpreter floor from `pyproject.toml`, `requirements.lock` as the frozen closure, `-e .` so `app.version` reports the tree, the `pipeline` extra required for the suite, and wiping stale `src/*.egg-info`. It installs the root Node dependencies for the browser extension checks. It never touches `~/.kriko`: the store, history and keys are not a dev environment.
 
 `python tools/bump.py --show` checks three committed files (`pyproject.toml` and the app's `Cargo.toml` and `Cargo.lock`) plus installed-distribution metadata (what `/api/health` reports; a tree at 0.8.1 with a 0.8.0 editable install serves 0.8.0). It never commits or tags.
 
@@ -187,7 +184,6 @@ The body is for `git log` in six months: the cause, not the symptom (*"the picke
 ```bash
 python -m pytest        # all tests, no arguments
 npm test                # extension scraper + panel
-npm --prefix ui test    # dashboard Svelte components
 ```
 
 Run `pytest` bare: `pytest.ini` pins `testpaths`, and naming directories skips `app/pipeline/tests` silently (576 of 761 tests once). The suite must pass with **no API keys and no `.env`**; a keyed test reaches the network and belongs behind a marker.
@@ -201,29 +197,13 @@ python -m pytest src/app/pipeline/tests/test_repo_invariants.py
 
 Serving is the local FastAPI app on the SQLite pack store; the pipeline stays separate, so importing `app.web.app` must not load `app.pipeline` or the LLM stack.
 
-## The frontend
+## User interfaces
 
-`ui/` is Svelte + Vite source; `src/app/web/static/` is committed build output (the wheel serves the UI with no Node toolchain, which is only true while the output matches the source). After touching `ui/src/`:
-
-```bash
-npm --prefix ui test
-npm --prefix ui run build      # rewrites src/app/web/static/
-git add ui src/app/web/static
-```
-
-`tools/gate.sh ui` rebuilds and fails on a dirty diff. `ui/package-lock.json` is committed (overriding the repo ignore) for reproducible asset hashes. `ui/src/` holds **no vocabulary from any catalog**: forms come from `/api/identity-keys/{pack_id}` and `/api/packs/{pack_id}/vocabulary` at runtime, checked by `test_ui_contains_no_pack_vocabulary` in `test_repo_invariants.py`.
-
-### Pressing every button: `tools/walk.sh`
-
-Component tests stub fetch, so they miss slow screens and dead buttons. `walk.sh` starts the app on a throwaway home (never `~/.kriko`) with the first-party catalogs freshly installed, opens every rail screen in headless Chromium, presses every button from a fresh load, and writes `.walk/walk.md`. The report lists load time, console errors and requests over 400; per button: errored, never settled, slow, or changed nothing.
-
-```bash
-tools/walk.sh             # all screens, ~15 min
-tools/walk.sh agents      # addresses containing "agents"
-KRIKO_WALK_REAL_CLIS=1 tools/walk.sh agents   # the real agent CLIs on this machine
-```
-
-The default run puts instant stand-in CLIs on `PATH`. Buttons named quit, uninstall, delete, remove, forget, reset, revoke or undo are listed, never pressed. It needs Playwright (`npm i -g playwright && npx playwright install chromium`), which is not a repo dependency and not in the gate.
+The GPUI desktop app is the native interface. The browser extension reads a
+listing and calls the local FastAPI API. `python -m app.web` starts the API;
+`/` reports the service identity, `/api/health` reports liveness, and
+`/api/docs` exposes its interactive API documentation. There is no Svelte
+dashboard or committed static bundle.
 
 ## Dead code
 
@@ -237,9 +217,8 @@ Dependencies flow one way; import down, never up.
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart TD
     gpui["kriko-gpui/<br/>desktop app, over HTTP"]:::plain --> app
-    ui["ui/<br/>Svelte source, over HTTP"]:::plain --> app
     ext["extension/<br/>thin browser client"]:::plain --> app
-    app["src/app/<br/>CLI, dashboard, MCP server, operator TUI"]:::plain --> eng
+    app["src/app/<br/>CLI, local HTTP API, MCP server, operator TUI"]:::plain --> eng
     pipe["src/app/pipeline/<br/>ledger and remediation orchestration"]:::plain --> eng
     pipe --> packs
     eng["src/kriko/<br/>store, ledger/extract, lookup, ranking, research"]:::brand
@@ -257,7 +236,6 @@ Needing something from above means **the module is in the wrong layer, so move i
 tools/gate.sh            # everything
 tools/gate.sh py         # version strings, ruff, mypy, pytest
 tools/gate.sh node       # scraper and extension panel
-tools/gate.sh ui         # vitest + types + palette + stale-bundle check
 tools/gate.sh wheel      # the shipped wheel imports and runs
 tools/gate.sh gpui       # cargo check and cargo test, offline
 ```
@@ -269,10 +247,6 @@ tools/gate.sh gpui       # cargo check and cargo test, offline
 | `pytest` | full suite + the layering and testpaths invariants |
 | `tools/smoke_wheel.sh` | a wheel that no longer imports what the checkout does |
 | `npm test` | scraper and extension-panel tests (jsdom); a run of zero tests fails |
-| `npm --prefix ui test` | Svelte component tests |
-| `svelte-check` | type errors at `--threshold error` |
-| `python tools/tokens.py --check` | the extension's palette stale against the app's theme |
-| rebuild + `git diff` | a committed bundle that no longer matches `ui/src/` |
 | `cargo check`, `cargo test` | the desktop app; skipped, with the remedy, when there is no `cargo` or the registry cache is cold |
 
 **It runs on your machine, as a deliberate retreat.** These were `ci.yml`'s
