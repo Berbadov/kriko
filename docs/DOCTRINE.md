@@ -166,6 +166,8 @@ The MCP server (`.mcp.json`) runs `.venv/bin/python -m app.sidecar --mcp` relati
 
 Branch off `main`. Nothing reaches `main` without the author asking.
 
+Every change set must bump the app version and update `README.md` before it is committed, including fixes, features, documentation, configuration, and packaging changes. Use `python tools/bump.py X.Y.Z`; it also updates the README badge and download filenames. Add a description of the change to the README. Published tags and assets are immutable: a correction ships as a newer version. Follow [the update protocol](UPDATE_PROTOCOL.md) for building and publishing.
+
 Conventional commits with scope, as history uses:
 
 | Prefix | For |
