@@ -213,13 +213,13 @@ weekly pass is `app/packautoupdate.py`, which at startup submits an
 `pack_update` job for already-installed packs only when a week has passed since
 the last success. There is no updates block in the UI.
 
-**The installer carries first-party catalogs** (until 0.7.1 it carried none,
-so a fresh install opened empty and row-level fixes could not ship by
-release). `app/bundledpacks.py` seeds at startup: missing means install, newer
-means install, never older, and a failure never blocks start. Identity comes
-from the bundle's own `packs` row, and the set is discovered from
-`packs/*/pack.toml` by `packaging/build_packs.py`, so a third catalog ships by
-existing.
+**The installer carries no packs** (#169). A fresh install opens onto an empty
+store: the sidecar freezes no `.kpack`, no build step makes one for the
+installer, and startup seeds nothing. The reader installs the packs they want,
+and a pack already installed is kept current by the weekly update above. The
+release job still builds each `packs/<name>` into a `.kpack` and publishes
+`packs.json`; that is the update channel, not what the installer contains.
+`test_the_installer_carries_no_packs.py` pins it.
 
 A need from the wrong layer means moving the module (drivers to
 `app/pipeline/`, interfaces to `app/`, category-specific to
