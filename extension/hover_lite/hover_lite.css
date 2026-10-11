@@ -2041,6 +2041,9 @@
 .lite-followup-job-status[data-active="true"] { color: var(--ice); }
 .lite-followup-model { font: 10px/1.5 var(--font-mono); color: var(--fg-muted); overflow-wrap: anywhere; }
 .lite-followup-question, .lite-followup-answer { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 6px; }
+.lite-follow-answer { overflow-wrap: anywhere; }
+.lite-follow-answer strong, .lite-followup-answer strong { color: var(--fg); font-weight: 700; }
+.lite-follow-answer code, .lite-followup-answer code { font: 0.92em var(--font-mono); padding: 0 3px; background: var(--bg-item); }
 .lite-followup-form { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
 .lite-followup-input { box-sizing: border-box; width: 100%; resize: vertical; min-height: 58px; padding: 8px; border: 1px solid var(--border); background: var(--bg-base); color: var(--fg); font: inherit; }
 .lite-followup-send { align-self: flex-start; padding: 7px 12px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--fg); font: inherit; cursor: pointer; }
