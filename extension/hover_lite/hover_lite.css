@@ -2041,7 +2041,29 @@
 .lite-followup-job-status[data-active="true"] { color: var(--ice); }
 .lite-followup-model { font: 10px/1.5 var(--font-mono); color: var(--fg-muted); overflow-wrap: anywhere; }
 .lite-followup-question, .lite-followup-answer { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 6px; }
-.lite-follow-answer { overflow-wrap: anywhere; }
+.lite-follow-answer { overflow-wrap: anywhere; margin: 4px 0 0; }
+/* A reply as it is written (paintReplies): three dots until the first words,
+ * a caret while the agent is still writing, and the sources under the finished
+ * words. The dots and caret are the only motion; reduced motion keeps them still. */
+.lite-answer-loading { display: inline-flex; align-items: center; gap: 4px; height: 1.4em; }
+.lite-answer-loading i { width: 5px; height: 5px; border-radius: 50%; background: var(--fg-muted); animation: lite-dot 1.2s ease-in-out infinite; }
+.lite-answer-loading i:nth-child(2) { animation-delay: 0.15s; }
+.lite-answer-loading i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes lite-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
+.lite-answer[data-phase="streaming"]::after {
+  content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -0.15em;
+  background: var(--fg-muted); animation: lite-caret 1s steps(1) infinite;
+}
+@keyframes lite-caret { 50% { opacity: 0; } }
+.lite-answer-sources { margin: 8px 0 0; font-size: 11px; color: var(--fg-muted); overflow-wrap: anywhere; white-space: normal; }
+.lite-answer-sources a { color: var(--ice); }
+@media (prefers-reduced-motion: reduce) {
+  .lite-answer-loading i { animation: none; opacity: 0.6; }
+  .lite-answer[data-phase="streaming"]::after { animation: none; }
+}
 .lite-follow-answer strong, .lite-followup-answer strong { color: var(--fg); font-weight: 700; }
 .lite-follow-answer code, .lite-followup-answer code { font: 0.92em var(--font-mono); padding: 0 3px; background: var(--bg-item); }
 /* Pack and agent prose (renderRichText): the same emphasis wherever it lands. */

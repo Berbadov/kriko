@@ -17,10 +17,14 @@ pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let runtime = app.live.local.plane.as_ref().map(|p| p.runtime.clone()).unwrap_or(crate::api::Value::Null);
     let supported = crate::api::b(&runtime, "supported");
     let stored = runtime.get("settings").cloned().unwrap_or(crate::api::Value::Null);
-    let refresh = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_local(cx));
+    let motion = !app.reduce_motion;
+    let reading = app.live.local.device_reading;
+    let refresh = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_device(cx));
     let mut result = card().flex().flex_col().gap(px(12.0))
         .child(div().flex().items_center().justify_between().child(eyebrow("Local inference device"))
-            .child(ghost("runtime-refresh", "Refresh device").on_click(refresh)))
+            .child(div().flex().items_center().gap(px(10.0))
+                .children(reading.then(|| spinner("runtime-refresh-spinner", 14.0, motion)))
+                .child(ghost("runtime-refresh", "Refresh device").on_click(refresh))))
         .child(row_desc(&format!("Active: {} · {}", crate::api::s(&runtime, "device"), crate::api::s(&runtime, "reason"))))
         .child(row_desc(&crate::api::s(&runtime, "settings_help")));
     if let Some(bytes) = crate::api::n(&runtime, "vram_bytes") {
@@ -30,7 +34,10 @@ pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let (output_language, search_language) = app.live.local.plane.as_ref()
         .map(|plane| (plane.stored_output_language.clone(), plane.stored_search_language.clone()))
         .unwrap_or_default();
-    for (group, key, current, choices) in [
+    // what a row shows: the reader's pick while it is being stored, else what the engine holds
+    let pending = app.live.local.pref_pending.clone();
+    let shown = |key: &str, stored: String| pending.get(key).map(|p| p.value.clone()).unwrap_or(stored);
+    for (group, key, stored, choices) in [
         ("Answer language", "local_output_language", output_language,
             vec![("Automatic", "auto"), ("English", "en"), ("Turkish", "tr"),
                  ("German", "de"), ("French", "fr"), ("Spanish", "es"),
@@ -40,7 +47,9 @@ pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                  ("French", "fr"), ("Spanish", "es"), ("Japanese", "ja"),
                  ("Chinese", "zh")]),
     ] {
-        let mut controls = div().flex().flex_wrap().gap(px(8.0)).child(row_desc(group));
+        let current = shown(key, stored);
+        let saving = pending.contains_key(key);
+        let mut controls = div().flex().flex_wrap().gap(px(8.0)).child(choice_label(group, key, saving, motion));
         for (i, (label, value)) in choices.into_iter().enumerate() {
             let key = key.to_string();
             let value = value.to_string();
@@ -49,11 +58,7 @@ pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             } else { current == value };
             let element_id = gpui::ElementId::named_usize(format!("local-language-{key}"), i);
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                let body = serde_json::json!({key.clone(): value.clone()});
-                this.fetch(cx, move || crate::api::put("/api/prefs", body), |this, reply, cx| {
-                    this.note(&reply);
-                    if reply.is_ok() { this.refresh_local(cx); }
-                });
+                this.local_pick_pref(key.clone(), value.clone(), cx);
             });
             controls = controls.child(pill(element_id, label, selected).on_click(pick));
         }
@@ -65,22 +70,31 @@ pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         ("GPU layers", "local_gpu_layers", vec![("Runtime default", ""), ("All", "-1"), ("16", "16"), ("32", "32")]),
         ("Context tokens", "local_context_tokens", vec![("Runtime default", ""), ("2048", "2048"), ("4096", "4096"), ("8192", "8192"), ("16384", "16384")]),
     ] {
-        let mut controls = div().flex().flex_wrap().gap(px(8.0)).child(row_desc(group));
+        let saving = pending.contains_key(key);
+        let mut controls = div().flex().flex_wrap().gap(px(8.0)).child(choice_label(group, key, saving, motion));
         for (i, (label, value)) in choices.into_iter().enumerate() {
             let key = key.to_string(); let value = value.to_string();
-            let selected = crate::api::s(&stored, &key) == value;
+            let selected = shown(key.as_str(), crate::api::s(&stored, &key)) == value;
             let button_id = gpui::ElementId::named_usize(format!("runtime-{key}"), i);
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                let body = serde_json::json!({key.clone(): value.clone()});
-                this.fetch(cx, move || crate::api::put("/api/prefs", body), |this, reply, cx| {
-                    this.note(&reply); if reply.is_ok() { this.refresh_local(cx); }
-                });
+                this.local_pick_pref(key.clone(), value.clone(), cx);
             });
             controls = controls.child(pill(button_id, label, selected).on_click(pick));
         }
         result = result.child(controls);
     }
     result
+}
+
+/// A row's label, with a turning mark beside it while the engine stores a
+/// choice on that row, so a click is answered even before the engine is.
+fn choice_label(label: &str, key: &str, saving: bool, motion: bool) -> Div {
+    div()
+        .flex()
+        .items_center()
+        .gap(px(8.0))
+        .child(row_desc(label))
+        .when(saving, |d| d.child(spinner(format!("choice-saving-{key}"), 14.0, motion)))
 }
 
 // ---- the guided setup: a runtime, then a model ----
@@ -251,9 +265,9 @@ fn setup(
         .when(!model_ready, |d| {
             let job = app.live.knowledge.agent_install.as_ref().filter(|(id, _)| id == "local");
             let busy = job.map(|(_, job)| !job.done).unwrap_or(false);
-            d.child(row_desc("Start here: Kriko can install Ollama, download a model sized to this computer, and choose it for you. Allow about 6 GB of free space and keep an internet connection during setup. Larger models need more space and memory."))
+            d.child(row_desc("Start here: Kriko can install Ollama, download the recommended model and choose it for you. Allow about 8 GB of free space and keep an internet connection during setup. Larger models need more space and memory."))
                 .child(div().flex().flex_wrap().gap(px(8.0))
-                    .child(key("local-guided-setup", if busy { "Setting up Ollama…" } else { "Set up Ollama and a starter model" }).opacity(if busy { 0.5 } else { 1.0 }).on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                    .child(key("local-guided-setup", if busy { "Setting up Ollama…" } else { "Set up Ollama and the recommended model" }).opacity(if busy { 0.5 } else { 1.0 }).on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
                         if this.live.knowledge.agent_install.as_ref().map(|(_, j)| !j.done).unwrap_or(false) { return; }
                         this.install_agent("local".into(), cx);
                     })))
@@ -714,6 +728,9 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
       for (i, name) in members {
         let info = held.iter().find(|h| &h.name == name);
         let in_use = *name == plane.model;
+        let recommended = !plane.recommended_model.is_empty()
+            && (name.eq_ignore_ascii_case(&plane.recommended_model)
+                || name.to_ascii_lowercase().starts_with(&format!("{}-", plane.recommended_model.to_ascii_lowercase())));
         let fit: Option<bool> = match (info.and_then(|h| h.size_bytes), vram_bytes) {
             (Some(size), Some(vram)) => Some(size <= vram),
             _ => None,
@@ -756,6 +773,7 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                                 .gap(px(10.0))
                                 .flex_wrap()
                                 .child(row_title(name))
+                                .children(recommended.then(|| mono("RECOMMENDED", ICE)))
                                 .children(fit.map(|f| {
                                     div()
                                         .flex()
