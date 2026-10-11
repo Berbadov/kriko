@@ -189,6 +189,30 @@ test("a full queue says so instead of pretending the product was queued", () => 
   assert.equal(p.shadow().querySelector(".lite-queue").disabled, false, "it can be tried again");
 });
 
+test("Add to queue is offered on a product nothing installed knows", () => {
+  // The button used to live in the listing header, which only a read page
+  // gets, so the unknown product a reader most wants to line up had none.
+  const p = loadPanel({ analyzeResponse: { ok: false, code: "UNKNOWN_PRODUCT", productName: "Acme Phone 5" },
+    workerResponse: (m) => m.type === "QUEUE_ADD"
+      ? { ok: true, added: true, count: 1, max: 8 } : undefined });
+  p.openPanel();
+  p.click(".lite-cta");
+  assert.ok(p.shadow().querySelector(".lite-queue"), "the queue key is on the panel");
+  p.click(".lite-queue");
+  const ask = p.sent.find((m) => m.type === "QUEUE_ADD");
+  assert.equal(ask.payload.name, "Acme Phone 5");
+});
+
+test("an agent's **bold** is rendered, and its markup is not", () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, "..", "hover_lite", "hover_lite.js"), "utf8");
+  const fn = source.match(/function renderAgentText[\s\S]*?\r?\n  }\r?\n/)[0];
+  const esc = source.match(/function escapeHtml[\s\S]*?\r?\n  }\r?\n/)[0];
+  const render = new Function(`${esc}${fn}return renderAgentText;`)();
+  assert.equal(render("For the **Lenovo 3**: <b>x</b>"),
+    "For the <strong>Lenovo 3</strong>: &lt;b&gt;x&lt;/b&gt;");
+});
+
 // ── the way back to the app ─────────────────────────────────────────────
 
 test("the footer raises the desktop app rather than opening a browser tab", () => {
@@ -903,7 +927,7 @@ test("the empty state doesn't promise a run time it doesn't always keep", () => 
   const source = fs.readFileSync(
     path.join(__dirname, "..", "hover_lite", "hover_lite.js"), "utf8");
   assert.doesNotMatch(source, /under 2/);
-  assert.match(source, /No analysis yet/);
+  assert.match(source, /No search yet/);
 });
 
 test("pressing Refresh asks background.js to bypass its own cache", () => {
