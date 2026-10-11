@@ -167,7 +167,8 @@
         </Feature>
 
         <!--
-          Stop a running Kriko: the app first, then the engine. Immediate
+          Stop a running Kriko: the app first, then the engine, then OpenSERP
+          (a shipped .exe that an orphan would hold against the next install). Immediate
           actions are enough because nothing here needs elevation, and they
           sit right after InstallInitialize, before the old version is removed
           and before any file is touched. WixQuietExec reads
@@ -180,11 +181,15 @@
         <CustomAction Id='StopKriko' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
         <CustomAction Id='SetStopEngine' Property='WixQuietExecCmdLine' Value='&quot;[SystemFolder]taskkill.exe&quot; /F /T /IM kriko-sidecar.exe'/>
         <CustomAction Id='StopEngine' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
+        <CustomAction Id='SetStopOpenSERP' Property='WixQuietExecCmdLine' Value='&quot;[SystemFolder]taskkill.exe&quot; /F /T /IM OpenSERP.exe'/>
+        <CustomAction Id='StopOpenSERP' BinaryKey='WixCA' DllEntry='WixQuietExec' Execute='immediate' Return='ignore'/>
         <InstallExecuteSequence>
             <Custom Action='SetStopKriko' Before='RemoveExistingProducts'/>
             <Custom Action='StopKriko' After='SetStopKriko'/>
             <Custom Action='SetStopEngine' After='StopKriko'/>
             <Custom Action='StopEngine' After='SetStopEngine'/>
+            <Custom Action='SetStopOpenSERP' After='StopEngine'/>
+            <Custom Action='StopOpenSERP' After='SetStopOpenSERP'/>
         </InstallExecuteSequence>
 
         <SetProperty Id='ARPINSTALLLOCATION' Value='[APPLICATIONFOLDER]' After='CostFinalize'/>

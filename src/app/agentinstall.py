@@ -22,6 +22,7 @@ import os
 import queue
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -271,7 +272,9 @@ def _ollama_exe() -> str:
 
 def _registered_ollama_exe() -> str:
     """Prefer the vendor's current installation over an obsolete PATH entry."""
-    if os.name != "nt":
+    # `sys.platform`, not `os.name`: mypy understands only the former, and it
+    # is what keeps the winreg attributes out of a Linux type check.
+    if sys.platform != "win32":
         return ""
     import winreg
 

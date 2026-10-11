@@ -1981,7 +1981,8 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             for one in verification["unsupported"] if isinstance(one, dict)))
     spent = getattr(researcher, "spent", None)
     billed = getattr(researcher, "cost_basis", "") == "per_token"
-    coverage = getattr(researcher, "coverage", {}) or {}
+    coverage = getattr(researcher, "coverage", None)
+    coverage = coverage if isinstance(coverage, dict) else {}
     empty_messages = {
         "no_matching_product_evidence": "No pages matched this exact product. This is insufficient evidence to conclude that the product has no problems.",
         "evidence_rejected": "Relevant pages were checked, but candidate findings did not pass the evidence checks. This is insufficient evidence to conclude that the product has no problems.",
@@ -1990,7 +1991,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     }
     empty_message = (
         empty_messages.get(
-            coverage.get("status"),
+            str(coverage.get("status") or ""),
             "Pages were read, but no supported findings were kept. This is insufficient evidence to conclude that the product has no problems.",
         )
         if not kept and not found["specs"] else ""
