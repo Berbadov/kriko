@@ -111,11 +111,13 @@ All 12 replies completed. These are startup checks, not research scores: the rep
 ### 1.5.0
 
 - **Knowledge** lists the catalogs you can install, each with an **Install** button. A new install no longer needs a terminal to get its first catalog. Newer versions of installed catalogs stay in their own **Pack updates** card.
+- Saved quick looks build your catalogs. **File quick looks** on **Knowledge** adds every saved quick look to the catalog that already has its product. No agent runs again and it costs nothing. Each quote is re-checked against its page before it is kept, and each catalog that changed is installed at a new version, as a `.kpack` file you can share. Products no catalog has yet are listed so you can choose to research them.
+- **Add to a pack** on a quick look is instant and free when the catalog already has that product. Before, it ran the whole research again.
 - When no catalog is installed and none can be fetched, Knowledge says to check the connection instead of leaving you at an empty screen.
 - Answers from the engine arrive about 40 ms sooner each. The extension and the app ask often, so lists and checks feel quicker: a status check went from 48 ms to 3 ms, and a catalog lookup from 60 ms to 15 ms.
 - Updating with the installer also stops a running search helper (`OpenSERP.exe`), so it can no longer lock files and fail the upgrade.
 - In a research log, the page reader is named only when it was actually used. Before, an ordinary page fetch could be reported as a page-reader read.
-- The precision benchmark counts a correct finding as supported when it cites its sources in the current format. Before, it scored those findings as unsupported.
+- The precision benchmark counts a correct finding as supported when it cites its sources in the current format. Before, it scored those findings as unsupported. Its score is what reaches you, and a separate column counts the candidates the local pipeline turned down.
 - For contributors: the check script `tools/gate.sh` passes again (it had 43 failing tests and 15 type errors), a new test checks that every engine address the extension, the app and the terminal console call actually exists, and `docs/PROTOCOL.md` describes how they talk to the engine.
 
 <details>

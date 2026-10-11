@@ -1753,6 +1753,20 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
             "name the category in a few words — 'cordless drills', 'espresso "
             "machines'. It is the only thing an agent cannot infer")
 
+    # A saved quick look whose product a catalog already holds needs no agent:
+    # its risks are sourced and quoted already, so they are re-read against
+    # their pages and filed. The agent is for what only it can do, writing a
+    # subject the catalog does not have yet.
+    if params.get("quick_job_id") and params.get("product"):
+        filed = _file_quick_look(settings, _await_quick_look(settings, progress, params),
+                                 str(params["product"]).strip(), progress)
+        if filed is not None:
+            if params.get("install"):
+                _install_draft(settings, filed, progress)
+            progress.set(1.0, f"{filed['product']} is in {filed['name']}: "
+                              f"{filed['claims_added']} sourced claim(s) added, no agent run")
+            return filed
+
     if _use_local_ask(settings, params):
         # No coding agent, or the door chose the local model (B171): the same
         # job on a model served from this machine.
@@ -2198,6 +2212,114 @@ def _sourced_items(quick: dict, proposed) -> tuple[list[dict], int]:
             "domain": claim.get("domain"), "evidence": evidence,
         })
     return items, bare
+
+
+def _file_quick_look(settings, quick: dict, product: str, progress: Progress) -> dict | None:
+    """File a finished quick look into a catalog that already holds its product.
+
+    No agent and no cost: the target is the catalog the quick look named, the
+    subject is the one the draft already declares, and every risk is re-read
+    against its own page before it is attached (`categorypack.ground`, the same
+    gate an agent's claims pass). None when there is no such catalog or the
+    product is not in it, which is the agent's job.
+    """
+    from app import categorypack
+    from kriko.gates import load_gates
+
+    if not quick:
+        return None
+    target = categorypack.resolve(
+        categorypack.candidates(settings.store_path),
+        pack=str(quick.get("pack") or ""), category=str(quick.get("category") or "").strip())
+    if target is None:
+        return None
+    held = categorypack.holds(settings.store_path, target["slug"], product)
+    if held is None:
+        return None
+    progress.log(f"{product} is already in {held['name']}; filing the quick look without an agent")
+    items, _ = _sourced_items(quick, None)
+    kept, dropped = categorypack.ground(items, _page_reader())
+    for one in dropped:
+        progress.log(f"left out {one['title']!r}: {one['reason']}")
+    store = connect(settings.store_path)
+    try:
+        vocab = load_gates(store, held["pack_id"])
+    finally:
+        store.close()
+    attached = categorypack.attach(settings.store_path, held["slug"], product, kept,
+                                   subject_rows=held["subject_rows"], vocab=vocab)
+    for one in attached["refused"]:
+        progress.log(f"left out {one['title']!r}: {one['reason']}")
+    held.update({
+        "category": target["name"], "product": product, "joined": True, "agent": False,
+        "subject": attached["subject"], "claims_added": attached["claims_added"],
+        "evidence_added": attached["evidence_added"], "left_out": dropped,
+    })
+    held["claims"] = int(held.get("claims") or 0) + attached["claims_added"]
+    return held
+
+
+#: How far back a harvest reads the job history for quick looks.
+HARVEST_WINDOW = 2000
+
+
+def pack_harvest(settings, params: dict, progress: Progress) -> dict:
+    """File every finished quick look into the catalog that holds its product.
+
+    Quick looks accumulate; this turns them into knowledge without a second
+    research run. Each one already filed (a finished `pack_author` or an
+    earlier harvest names it) is skipped, so pressing it twice files nothing
+    twice. A quick look whose product no catalog holds yet is listed, not sent
+    to an agent: spending an agent is the reader's press, per look. Every
+    catalog that gained claims is installed once, at a raised version, and its
+    `.kpack` is what the reader shares (`GET /api/packs/drafts/{slug}/artifact`).
+    """
+    conn = state.connect(settings.app_state_path)
+    try:
+        jobs = state.list_jobs(conn, HARVEST_WINDOW)
+    finally:
+        conn.close()
+    filed: set[str] = set()
+    for one in jobs:
+        if one["kind"] == "pack_author" and one["state"] == state.SUCCEEDED:
+            filed.add(str((one["params"] or {}).get("quick_job_id") or ""))
+        elif one["kind"] == "pack_harvest" and one["state"] == state.SUCCEEDED:
+            filed.update((one["result"] or {}).get("filed_quick_looks") or [])
+    looks = [one for one in reversed(jobs)
+             if one["kind"] == "quick_look" and one["state"] == state.SUCCEEDED
+             and one["job_id"] not in filed]
+    progress.log(f"{len(looks)} quick look(s) not yet in a catalog")
+    done: list[str] = []
+    needs_agent: list[dict] = []
+    touched: dict[str, dict] = {}
+    claims = 0
+    for position, look in enumerate(looks, start=1):
+        progress.check()
+        product = str((look["params"] or {}).get("product") or "").strip()
+        progress.set(0.05 + 0.75 * position / max(1, len(looks)), f"filing {product}")
+        quick = look["result"] or {}
+        if not product or not quick.get("risks"):
+            done.append(look["job_id"])  # nothing to file is filed
+            continue
+        written = _file_quick_look(settings, quick, product, progress)
+        if written is None:
+            needs_agent.append({"quick_job_id": look["job_id"], "product": product})
+            continue
+        done.append(look["job_id"])
+        claims += written["claims_added"]
+        if written["claims_added"]:
+            touched[written["slug"]] = written
+    shared = []
+    for slug, written in touched.items():
+        if params.get("install", True):
+            _install_draft(settings, written, progress)
+        shared.append({"slug": slug, "pack_id": written["pack_id"], "name": written["name"],
+                       "artifact": f"/api/packs/drafts/{slug}/artifact"})
+    progress.set(1.0, f"{len(done)} quick look(s) filed, {claims} claim(s) added"
+                      + (f"; {len(needs_agent)} need an agent to add their product"
+                         if needs_agent else ""))
+    return {"filed_quick_looks": done, "claims_added": claims,
+            "needs_agent": needs_agent, "packs": shared}
 
 
 def _product_check(settings, researcher, params: dict, progress: Progress,
@@ -3401,6 +3523,7 @@ HANDLERS = {
     "verify": verify,
     "site_register": site_register,
     "pack_update": pack_update,
+    "pack_harvest": pack_harvest,
     "compare_ask": compare_ask,
     "model_pull": model_pull,
     "lookup_ask": lookup_ask,

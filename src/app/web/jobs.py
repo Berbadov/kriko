@@ -84,7 +84,7 @@ def claims(kind: str, params: dict) -> frozenset[str]:
     if kind == "pack_build":
         root = str(params.get("root") or "").replace("\\", "/").rstrip("/")
         return _named("pack", root.rsplit("/", 1)[-1])
-    if kind in ("pack_author", "pack_amend"):
+    if kind in ("pack_author", "pack_amend", "pack_harvest"):
         return frozenset({"drafts"})
     if kind == "compare_ask":
         return _named("compare", params.get("draft_id"))
