@@ -80,7 +80,12 @@ def reserve(host: str, port: int) -> tuple[socket.socket, int]:
     to the wrong process. `SO_EXCLUSIVEADDRUSE` is the Windows spelling of what
     this function has always claimed to do, and it fails the bind loudly.
     """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # `proto=IPPROTO_TCP` is not decoration. asyncio turns on TCP_NODELAY for an
+    # accepted socket only when the listener's `proto` is IPPROTO_TCP; with the
+    # default 0 every response's headers and body go out as two writes, and
+    # Nagle holds the second until the client's delayed ACK (~40 ms) fires. Measured
+    # on keep-alive requests: 48 ms per /api/health, 3-5 ms once this is set.
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
     if sys.platform == "win32":
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
     else:
