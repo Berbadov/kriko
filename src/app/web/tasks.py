@@ -2068,16 +2068,16 @@ QUICK_POLL_SECONDS = 0.2
 
 
 def quick_ask(settings, params: dict, progress: Progress) -> dict:
-    """A follow-up question about a finished quick look, answered from it.
+    """A follow-up question about a finished quick look, answered from the web (#112).
 
-    The panel's question box (#112). No search, no new pages: the reply is
-    the quick look's own findings or an explicit "these do not answer that",
-    on the same plane the quick look ran on. A job rather than a reply because
-    a local model on a CPU takes minutes, and the exchange is what the reader
-    comes back for — the rows survive the panel closing.
+    The panel's question box. The agent searches the web for the answer, the
+    way a quick look does, on the same plane the quick look ran on, and keeps
+    it short (`app/followup.py`). The quick look's own findings go beside the
+    question as a starting point. A job rather than a reply, because a local
+    model on a CPU takes minutes; the reply is written as it goes, so the panel
+    can show it arriving, and the rows survive the panel closing.
     """
     from app import quicklook as quicklook_mod
-    from app.providers import harness_researcher
 
     quick_id = str(params.get("quick_job_id") or "").strip()
     question = str(params.get("q") or "").strip()
@@ -2093,36 +2093,22 @@ def quick_ask(settings, params: dict, progress: Progress) -> dict:
 
     quick_params = row.get("params") or {}
     product = str(quick_params.get("product") or "").strip()
-    progress.set(0.2, f"answering from the quick look at {product}")
-    if _use_local_ask(settings, params):
-        researcher = _local_asker(settings, params, progress)
-    else:
-        researcher = harness_researcher(
-            preferred=str(params.get("harness") or ""),
-            app_state_path=settings.app_state_path,
-            timeout=QUICK_LOOK_TIMEOUT_SECONDS,
-            effort="low",
-        )
-    _cap_agent(researcher, params)
-    researcher.on_action = progress.log
-    researcher.check_cancelled = progress.check
-
     found = row.get("result") or {}
-    reply = researcher.ask(quicklook_mod.follow_up(
-        question,
-        str(found.get("assumed") or ""),
-        found.get("risks") or [],
-        found.get("specs") or [],
-    ))
-    progress.check()
+    brief = quicklook_mod.follow_up(question, product, str(found.get("assumed") or ""),
+                                    found.get("risks") or [], found.get("specs") or [])
+    answer, sources = _ask_about_checks(
+        settings, params, progress, brief,
+        timeout=QUICK_LOOK_TIMEOUT_SECONDS, effort="low", follow_up=True)
+    if not answer:
+        raise ValueError("The agent returned no answer. Try asking again.")
     progress.set(1.0, "answered")
     return {
         "product": product,
         "q": question,
-        "answer": str(reply or "").strip(),
+        "answer": answer,
+        "sources": sources,
         "quick_job_id": quick_id,
     }
-
 
 
 def _await_quick_look(settings, progress: Progress, params: dict | None = None) -> dict:
@@ -3075,8 +3061,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
         def report_agent(identity: dict) -> None:
             agent.update(identity)
 
-        reply = _ask_about_checks(settings, params, progress, brief,
-                                  on_agent=report_agent)
+        reply, _ = _ask_about_checks(settings, params, progress, brief,
+                                     on_agent=report_agent)
     progress.log(reply[:4000] or "(the agent printed nothing)")
     progress.set(0.9, "writing the answer down")
     app_state = state.connect(settings.app_state_path)
@@ -3105,10 +3091,15 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
 
 
 def lookup_ask(settings, params: dict, progress: Progress) -> dict:
-    """Answer inside the listing panel, using its saved evidence, as a job.
+    """Answer inside the listing panel: a web search about the saved check, as a job.
 
-    The reply stays on the job in app.sqlite; it is never new knowledge.
+    The reply stays on the job in app.sqlite; it is never new knowledge. The
+    agent searches the web for the answer, in a few sentences, and names the
+    pages it rests on (`app/followup.py`). The saved check's recorded claims go
+    beside the question as a starting point, not as the limit.
     """
+    from app import followup
+
     lookup_id = str(params.get("lookup_id") or "")
     question = str(params.get("question") or "").strip()
     conn = state.connect(settings.app_state_path)
@@ -3121,16 +3112,10 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
         raise ValueError(f"no such lookup: {lookup_id}")
     if not question:
         raise ValueError("Write a question first.")
-    brief = _compare_brief(question, [stored]).replace(
-        "The reader has these products side by side and asks:",
-        "The reader is viewing this listing and asks a follow-up question:", 1)
-    # Sources remain attached to their claims, so the agent can distinguish
-    # the recorded evidence from a new inference and cite the original page.
-    lines = [brief, "Cite the recorded sources when they support your answer."]
-    for claim in stored["response"].get("claims") or []:
-        for source in claim.get("sources") or []:
-            lines.append(f"{claim.get('title', '')}: {source.get('url', '')} "
-                         f"{source.get('quote', '')}")
+    lines = [
+        "What the saved check recorded about this product (a starting point, not the limit):",
+        *_recorded_lines(stored),
+    ]
     replies = [job for job in previous if job["state"] == state.SUCCEEDED
                and (job.get("result") or {}).get("answer")][-6:]
     if replies:
@@ -3144,16 +3129,28 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
         agent.update(identity)
         progress.partial({"agent": identity})
 
-    reply = _ask_about_checks(settings, params, progress, "\n".join(lines),
-                              on_agent=report_agent)
+    brief = followup.web_brief(question, product=str(stored.get("label") or ""),
+                               context="\n".join(lines))
+    reply, sources = _ask_about_checks(settings, params, progress, brief,
+                                       on_agent=report_agent, follow_up=True)
     if not reply:
         raise ValueError("The agent returned no answer. Try asking again.")
     progress.set(1.0, "answered")
-    return {"lookup_id": lookup_id, "question": question, "answer": reply, "agent": agent}
+    return {"lookup_id": lookup_id, "question": question, "answer": reply,
+            "agent": agent, "sources": sources}
 
 
 def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
-                      on_agent: Callable[[dict], None] | None = None) -> str:
+                      on_agent: Callable[[dict], None] | None = None,
+                      timeout: float = 0.0, effort: str = "",
+                      follow_up: bool = False) -> tuple[str, list[dict]]:
+    """The reader's plane answers one brief. Returns the reply and the pages behind it.
+
+    A `follow_up` answer is written into the job as the agent writes it
+    (`app/followup.py`), and its `Sources:` line comes off the text and back as
+    pages. Any other answer comes back exactly as the agent wrote it.
+    """
+    from app import followup
     from app.providers import agent_ready, harness_researcher
 
     local = _use_local_ask(settings, params)
@@ -3169,27 +3166,34 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
         researcher = harness_researcher(
             preferred=str(params.get("harness") or ""),
             app_state_path=settings.app_state_path,
-            timeout=float(
-                params.get("timeout_seconds") or COMPARE_ASK_TIMEOUT_SECONDS),
+            timeout=float(params.get("timeout_seconds") or timeout or COMPARE_ASK_TIMEOUT_SECONDS),
+            effort=effort,
         )
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
         researcher.check_cancelled = progress.check
+    # Read the resolved researcher: a requested CLI can fall back to a
+    # different one. CLI `model` is its id, whereas API/local `model`
+    # names the model; only show the CLI's explicitly selected model.
+    provider = getattr(researcher, "agent", None) or getattr(researcher, "harness", None)
+    api = getattr(researcher, "agent", None) is not None
+    identity = {
+        "id": "local" if local else str(getattr(provider, "id", "")),
+        "label": "Local model" if local else str(getattr(provider, "label", "Agent")),
+        "model": str(getattr(researcher, "model" if local or api else "requested_model", "")),
+    }
     if on_agent is not None:
-        # Read the resolved researcher: a requested CLI can fall back to a
-        # different one. CLI `model` is its id, whereas API/local `model`
-        # names the model; only show the CLI's explicitly selected model.
-        provider = getattr(researcher, "agent", None) or getattr(researcher, "harness", None)
-        api = getattr(researcher, "agent", None) is not None
-        on_agent({
-            "id": "local" if local else str(getattr(provider, "id", "")),
-            "label": "Local model" if local else str(getattr(provider, "label", "Agent")),
-            "model": str(getattr(researcher, "model" if local or api else "requested_model", "")),
-        })
-    progress.set(0.2, f"asking: {str(params.get('question') or '')[:120]}")
+        on_agent(identity)
+    if follow_up:
+        writer = followup.Reply(progress.partial, base={"agent": identity})
+        researcher.on_text = writer.add
+    progress.set(0.2, f"asking: {str(params.get('question') or params.get('q') or '')[:120]}")
     reply = researcher.ask(brief).strip()
     progress.check()
-    return reply
+    if not follow_up:
+        return reply, []
+    answer, cited = followup.split(reply)
+    return answer, followup.sources_of(researcher, cited)
 
 
 def _compare_brief(question: str, answers: list[dict], *,
@@ -3217,29 +3221,39 @@ def _compare_brief(question: str, answers: list[dict], *,
     if max_chars is not None:
         return _compact_compare_brief(lines, question, answers, max_chars)
     for stored in answers:
-        response = stored["response"]
-        lines.append(f"## {stored['label']}")
-        claims = response.get("claims") or []
-        if claims:
-            lines.append("Known risks:")
-            for claim in claims:
-                severity = str(claim.get("severity") or "")
-                line = f"- [{severity}] {claim.get('title') or ''}"
-                if claim.get("body"):
-                    line += f": {claim['body']}"
-                if claim.get("advice"):
-                    line += f" (advice: {claim['advice']})"
-                lines.append(line)
-                lines.extend(_source_lines(claim))
-        else:
-            lines.append("Known risks: none recorded.")
-        if response.get("context"):
-            units = _context_units_of(response)
-            for key, value in sorted(response["context"].items()):
-                unit = units.get(key, "")
-                lines.append(f"- {key}: {value}{(' ' + unit) if unit else ''}")
-        lines.append("")
+        lines.extend(_recorded_lines(stored))
     return "\n".join(lines)
+
+
+def _recorded_lines(stored: dict) -> list[str]:
+    """One saved check, as the agent reads it: its claims, their sources and its context.
+
+    Every word comes from the stored answer, as the packs wrote it. A product
+    with no recorded claim says so.
+    """
+    response = stored["response"]
+    lines = [f"## {stored['label']}"]
+    claims = response.get("claims") or []
+    if claims:
+        lines.append("Known risks:")
+        for claim in claims:
+            severity = str(claim.get("severity") or "")
+            line = f"- [{severity}] {claim.get('title') or ''}"
+            if claim.get("body"):
+                line += f": {claim['body']}"
+            if claim.get("advice"):
+                line += f" (advice: {claim['advice']})"
+            lines.append(line)
+            lines.extend(_source_lines(claim))
+    else:
+        lines.append("Known risks: none recorded.")
+    if response.get("context"):
+        units = _context_units_of(response)
+        for key, value in sorted(response["context"].items()):
+            unit = units.get(key, "")
+            lines.append(f"- {key}: {value}{(' ' + unit) if unit else ''}")
+    lines.append("")
+    return lines
 
 
 def _compact_compare_brief(lines: list[str], question: str,
