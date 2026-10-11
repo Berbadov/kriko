@@ -90,6 +90,8 @@ struct Supervisor {
     /// OpenSERP, only when this app started it. A healthy service already on
     /// the local search port is reused and never put in this slot.
     openserp_child: Option<Child>,
+    openserp_health_failures: u8,
+    openserp_unhealthy_since: Option<Instant>,
     stdin: Option<ChildStdin>,
     stderr: String,
     started: bool,
@@ -104,6 +106,8 @@ fn sup() -> &'static Mutex<Supervisor> {
             events: Vec::new(),
             child: None,
             openserp_child: None,
+            openserp_health_failures: 0,
+            openserp_unhealthy_since: None,
             stdin: None,
             stderr: String::new(),
             started: false,
@@ -171,6 +175,13 @@ fn supervise(generation: u64) {
         return;
     }
     ensure_openserp(generation);
+    // Search is an optional sidecar from the engine's point of view, but it
+    // must recover if our owned process exits after the initial health check.
+    // The generation guard makes this watcher end with stop/restart.
+    std::thread::Builder::new()
+        .name("openserp-supervisor".into())
+        .spawn(move || supervise_openserp(generation))
+        .ok();
     let extension_port = configured_extension_port();
     let beside = std::env::current_exe()
         .ok()
@@ -380,8 +391,67 @@ fn ensure_openserp(generation: u64) {
     const PORT: u16 = 7000;
     const BASE: &str = "http://127.0.0.1:7000";
     const START_TIMEOUT: Duration = Duration::from_secs(12);
+    // Reap our child before deciding whether to attach or start. A healthy
+    // listener with no owned child is external and must be left alone.
+    let mut owned = {
+        let mut state = sup().lock().unwrap();
+        if !state.started || state.generation != generation {
+            return;
+        }
+        match state.openserp_child.as_mut().map(Child::try_wait) {
+            Some(Ok(Some(_))) => state.openserp_child.take(),
+            Some(Ok(None)) | Some(Err(_)) => None,
+            None => None,
+        }
+    };
+    if let Some(mut child) = owned.take() {
+        log::warn!("The supervised OpenSERP process exited; checking whether its port is available.");
+        let _ = child.wait();
+        let mut state = sup().lock().unwrap();
+        if state.generation == generation {
+            state.openserp_health_failures = 0;
+            state.openserp_unhealthy_since = None;
+        }
+    }
     if openserp_healthy(BASE) {
+        let mut state = sup().lock().unwrap();
+        if state.generation == generation {
+            state.openserp_health_failures = 0;
+            state.openserp_unhealthy_since = None;
+        }
         return;
+    }
+
+    // One slow health response can overlap an in-flight search. Require
+    // repeated failures before replacing a live process we own. A process
+    // that has exited is still recovered immediately above.
+    let mut owned_unhealthy = {
+        let mut state = sup().lock().unwrap();
+        if !state.started || state.generation != generation {
+            return;
+        }
+        let running = matches!(state.openserp_child.as_mut().map(Child::try_wait), Some(Ok(None)));
+        if !running {
+            state.openserp_health_failures = 0;
+            state.openserp_unhealthy_since = None;
+            None
+        } else {
+            state.openserp_health_failures = state.openserp_health_failures.saturating_add(1);
+            let since = *state.openserp_unhealthy_since.get_or_insert_with(Instant::now);
+            if state.openserp_health_failures >= 3 || since.elapsed() >= Duration::from_secs(10) {
+                state.openserp_health_failures = 0;
+                state.openserp_unhealthy_since = None;
+                state.openserp_child.take()
+            } else {
+                None
+            }
+        }
+    };
+    if let Some(mut child) = owned_unhealthy.take() {
+        let pid = child.id();
+        let _ = child.kill();
+        kill_tree(pid);
+        let _ = child.wait();
     }
     if TcpStream::connect_timeout(
         &std::net::SocketAddr::from(([127, 0, 0, 1], PORT)),
@@ -428,12 +498,12 @@ fn ensure_openserp(generation: u64) {
     }
     let deadline = Instant::now() + START_TIMEOUT;
     while Instant::now() < deadline {
+        if openserp_healthy(BASE) {
+            return;
+        }
         {
             let mut state = sup().lock().unwrap();
             if !state.started || state.generation != generation {
-                return;
-            }
-            if openserp_healthy(BASE) {
                 return;
             }
             if let Some(child) = state.openserp_child.as_mut() {
@@ -460,6 +530,19 @@ fn ensure_openserp(generation: u64) {
         let _ = child.kill();
         kill_tree(pid);
         let _ = child.wait();
+    }
+}
+
+fn supervise_openserp(generation: u64) {
+    loop {
+        {
+            let state = sup().lock().unwrap();
+            if !state.started || state.generation != generation {
+                return;
+            }
+        }
+        ensure_openserp(generation);
+        std::thread::sleep(Duration::from_secs(3));
     }
 }
 
@@ -496,8 +579,19 @@ fn openserp_healthy(base: &str) -> bool {
     if stream.read_to_string(&mut response).is_err() { return false; }
     let body = response.split("\r\n\r\n").nth(1).unwrap_or("");
     let Ok(value) = serde_json::from_str::<serde_json::Value>(body) else { return false };
-    value.get("status").and_then(|v| v.as_str()).is_some_and(|s| s == "healthy" || s == "ok")
-        || value.get("ok").and_then(|v| v.as_bool()) == Some(true)
+    let status = value.get("status").and_then(|v| v.as_str()).unwrap_or("");
+    if status == "healthy" || status == "ok" || value.get("ok").and_then(|v| v.as_bool()) == Some(true) {
+        return true;
+    }
+    // OpenSERP reports `degraded` when one upstream engine has opened its
+    // circuit breaker. It remains useful when at least one engine is ready;
+    // treating that partial failure as service death causes needless restarts.
+    status == "degraded"
+        && value.get("engines").and_then(|engines| engines.as_array()).is_some_and(|engines| {
+            engines.iter().any(|engine| {
+                engine.get("status").and_then(|v| v.as_str()) == Some("ready")
+            })
+        })
 }
 
 #[cfg(windows)]
