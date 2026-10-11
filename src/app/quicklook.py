@@ -176,6 +176,10 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
     from kriko.extract.grounding import loose_span
 
     found = _payload(reply)
+    if isinstance(found, dict) and "risks" not in found and "specs" not in found:
+        # A reply cut off mid-item: the reader found one finished risk inside
+        # it, which is not the answer. The object closed at what it finished is.
+        found = closed(reply) or found
     if not isinstance(found, dict):
         return {"assumed": "", "category": "", "pack": "", "specs": [],
                 "risks": [], "dropped": 0}

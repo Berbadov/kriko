@@ -19,6 +19,14 @@ from app.web.app import create_app
 from app.web.settings import Settings
 from kriko.store.db import connect
 
+#: Nothing chosen: every key empty, except the local settings that read as
+#: their shipped defaults (context window, output and search language).
+UNCHOSEN = dict.fromkeys(prefs.KEYS, "") | {
+    prefs.LOCAL_CONTEXT: "4096",
+    prefs.LOCAL_OUTPUT_LANGUAGE: "auto",
+    prefs.LOCAL_SEARCH_LANGUAGE: "en",
+}
+
 
 @pytest.fixture
 def settings(tmp_path) -> Settings:
@@ -303,7 +311,8 @@ def test_nothing_chosen_behaves_exactly_as_before(client):
     # that had gone stale and silently dropped Mistral Vibe's model on write —
     # so a literal copy in this file would be the same bug one layer out, and
     # would fail the day a harness is added rather than the day one breaks.
-    assert body["chosen"] == dict.fromkeys(prefs.KEYS, "")
+    # The three local settings read as their shipped defaults, not as empty.
+    assert body["chosen"] == UNCHOSEN
 
 
 def test_a_choice_survives_being_made(client):
@@ -312,7 +321,7 @@ def test_a_choice_survives_being_made(client):
     # Merged, never replaced: setting one must not clear the others.
     client.put("/api/prefs", json={"search_provider": "tavily"})
     chosen = client.get("/api/prefs").json()["chosen"]
-    assert chosen == dict.fromkeys(prefs.KEYS, "") | {
+    assert chosen == UNCHOSEN | {
         "llm_model": "qwen3.5-27b", "search_provider": "tavily",
     }
 
