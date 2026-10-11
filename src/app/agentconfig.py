@@ -319,6 +319,22 @@ def skill_status(target: Target, name: str, body: str) -> dict:
     }
 
 
+def skill_needs_refresh(name: str, body: str) -> bool:
+    """Would `refresh_skills(name, body)` write anything? Reads, never writes.
+
+    The same three conditions `refresh_skills` acts on, asked without rendering
+    the body twice. Lets startup decide whether the agenda snapshot needs
+    computing at all: most starts find nothing stale and nothing wired.
+    """
+    if not body:
+        return False
+    for target in targets():
+        status = skill_status(target, name, body)
+        if status["supported"] and status["present"] and status["stale"]:
+            return True
+    return False
+
+
 def refresh_skills(name: str, body: str) -> list[dict]:
     """Rewrite the skill wherever a stale or missing copy is already wired.
 
