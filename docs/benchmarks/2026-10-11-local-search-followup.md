@@ -17,6 +17,7 @@ A preliminary corrected live run exposed an additional false claim: Qwen treated
 - Plan issue discussions, owner reports, and repair experiences. Pin a quoted exact-model forum search, remove extra regional SKU terms, and avoid bare model/specification searches in normal planning.
 - Prefer discussion URLs and issue titles. Replace unreadable, irrelevant, and copied pages continuously rather than waiting for an entire batch. Bound extraction to the selected page ceiling and expose actual read/selected/rejected/timed-out counts.
 - Allow a literal distinctive model code plus another supplied name token to establish page relevance. Claim-level applicability checks remain required.
+- Reject extracted family names that omit the reader's explicit model code. Check planned query language and use localized issue queries when the planner disobeys it.
 - Exclude navigation boilerplate. Classify the quoted source independently of the proposed claim before checking the claim. Missing listing metadata, repair offers, service prices, and support menus are not failure evidence.
 - Log rejection reasons and show honest empty-result coverage in GPUI and the extension.
 - Supervise only the OpenSERP child the app owns; tolerate partial health and transient failures, recover after an owned child exits, and leave unrelated listeners untouched.
@@ -36,6 +37,6 @@ Static Python checks, JavaScript syntax, Rust compilation, and source review wer
 
 The complete packaging recipe completed, followed by an isolated-source freeze and MSI relink to exclude unrelated concurrent workspace edits. Frozen-engine startup checks passed. The MSI installed successfully (exit 0), and the installed GPUI and sidecar digests matched the reviewed build. The installed local-plane API reported the reader's selected `gemma4:e2b`, French response/search, context 4096, and `ready=true`.
 
-MSI SHA256: `e3ee6992b503684be83e39bcb69512070e4f1ec89fd840686498df6ed5f3f321`.
+The final artifact checksum is published in `SHA256SUMS.txt` alongside the release MSI.
 
 WiX reported ICE61 for the intentional same-version upgrade, plus existing ICE63/ICE91 warnings. The existing release tag remains unchanged; the installer source is recorded by the linked follow-up PR.

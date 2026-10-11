@@ -158,7 +158,7 @@ def _identity_specific(value: str, product_prompt: str) -> bool:
     # do not treat one token from a longer item name as the item being sold.
     if _normalize(value) == _normalize(product_prompt) and _meaningful_tokens(value):
         return True
-    if _distinctive_identifier(value) and _distinctive_identifier(product_prompt):
+    if _distinctive_identifier(product_prompt):
         value_ids = {
             token
             for token in _TOKEN.findall(_normalize(value))
@@ -171,6 +171,9 @@ def _identity_specific(value: str, product_prompt: str) -> bool:
         }
         if value_ids & prompt_ids:
             return True
+        # A family name cannot replace the model code the reader supplied,
+        # even when the extractor puts that code in a separate variant field.
+        return False
     return len(_meaningful_tokens(value) & _meaningful_tokens(product_prompt)) >= 2
 
 
