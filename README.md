@@ -37,52 +37,7 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 | `kriko-1.4.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
 | `kriko-1.4.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
-The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Each release publishes its catalogs as `.kpack` files on the same page, and you install the ones you need with `kriko install`. You don't need to install Python, Node, or Rust.
-
-### What's new in 1.4.0
-
-- The installer no longer carries catalogs. A new install opens with none, and each catalog is installed separately.
-- Browse, Agents, Settings and Overview fit the window at its default size and at its minimum size. Nothing is cut off, and no screen scrolls sideways.
-- The Live panel starts closed on every launch. When you open it, it floats over the page on a glass panel, so the page layout does not change.
-- Local research tells a part from the product it fits. For a listing such as an air filter for a specific engine, Kriko searches for the filter by its name in your search language and skips pages that only discuss the engine.
-- A page no longer has to repeat the whole listing title. A part name matches wording variants, and the listing's trailing arrows and the dotless `ı` are handled.
-- Pages that were read but were not about the product give an empty result with counts, not a "check OpenSERP and the connection" error. That error now appears only when nothing could be read, and names the cause.
-- `gemma4:e2b` is the recommended local model: it is the default when you have not chosen one, what **Set up Ollama and the recommended model** downloads (allow about 8 GB), and it is marked *Recommended* in the model list.
-- When a research run finishes without keeping any claim, the extension's panel says that no data was found showing an issue, and that this is not proof there is no issue. Before, it only said "Open the research job for findings."
-- A run that left a brief to read keeps the previous wording, because the brief may hold the findings.
-- On **Local**, a choice of device, GPU layers, context tokens, answer language or search language shows as picked at once, with a spinner beside its row until the engine confirms it. If the engine refuses the change, the previous choice comes back.
-- **Refresh device** shows a spinner until the device information arrives.
-- Changing a Local choice or refreshing the device no longer clears a server address or search address you have typed but not saved.
-- Kriko checks for a newer version every time it starts. When one is published, the **Home** screen shows it at the top with **Install and restart**. Nothing installs until you press that button.
-- If the check cannot reach GitHub, Home stays quiet and **About** says why. A failed check does not hide a newer version that an earlier check found.
-- Follow-up questions about a saved check and about a quick look search the web for the answer. Answers are kept to a few sentences and list the pages they rely on as links.
-- Answers appear as they are written: three dots while the agent starts, then the text typed out with a caret until it is complete. A local model streams its answer word by word. A coding-agent CLI returns its answer all at once, and the panel types that out the same way.
-- Quick-look follow-ups no longer answer only from the quick look's own findings.
-- The installer build writes its Rust output to one shared folder outside the project, instead of a copy of about 2 GB inside every checkout and worktree.
-
-### What's new in 1.3.3
-
-- Includes the extension's **Search this product** action, queue button for unrecognized products, and escaped bold/inline-code answer formatting from 1.3.2.
-- **Add site** checks for usable catalog identity information before starting an agent, with distinct messages for missing, disabled, or incomplete catalogs.
-- Antigravity site and catalog authoring prompts direct the agent to its permitted web tools instead of shell commands that headless mode denies.
-
-### What's new in 1.3.2
-
-- The extension's main action is now **Search this product**, with **Search again** for a refresh.
-- **Add to queue** is available even when installed catalogs do not recognize the product.
-- Agent answers render bold and inline code while escaping agent-supplied HTML.
-
-### What's new in 1.3.1
-
-- Local research prioritizes exact-model issue forums and owner reports, filters ads and repair-service offers, and replaces irrelevant pages before using the page limit.
-- Exact model codes and the selected search language are preserved. Response and search languages can be set independently.
-- Bundled OpenSERP stays usable when some search engines are unavailable, and the desktop recovers its search process after it exits.
-- Coverage and evidence rejection reasons are visible. An empty result does not establish that a product has no problems.
-- The updater recognizes this as newer than 1.3.0. Release downloads include `SHA256SUMS.txt` for verified updates.
-
-Kriko offers a newer version on the Home screen when it starts, or you can install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
-
-> The build is unsigned, so Windows may show a SmartScreen warning. See the [Windows installation guide](docs/INSTALL_WINDOWS.md) for the install steps.
+The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Knowledge** in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
 ### 2. Add the browser extension
 
@@ -150,6 +105,58 @@ Measured on 9 October 2026, three separate processes and three fresh chats per C
 <sub>Medians of three runs. "First reply" is a fresh one-word answer in a new chat.</sub>
 
 All 12 replies completed. These are startup checks, not research scores: the reply times also include authentication, agent setup, network latency, and model generation. Keeping a terminal open cannot remove most of that wait. GLM varied from 12.55 to 35.23 seconds. Every reply used a new chat. [Raw measurements](docs/benchmarks/cli-startup-1.1.2.json) include the CLI-reported token totals; even a short answer includes the agent's initial instructions.
+
+## What's new
+
+### 1.4.0
+
+- The installer no longer carries catalogs. A new install opens with none, and each catalog is installed separately.
+- Browse, Agents, Settings and Overview fit the window at its default size and at its minimum size. Nothing is cut off, and no screen scrolls sideways.
+- The Live panel starts closed on every launch. When you open it, it floats over the page on a glass panel, so the page layout does not change.
+- Local research tells a part from the product it fits. For a listing such as an air filter for a specific engine, Kriko searches for the filter by its name in your search language and skips pages that only discuss the engine.
+- A page no longer has to repeat the whole listing title. A part name matches wording variants, and the listing's trailing arrows and the dotless `ı` are handled.
+- Pages that were read but were not about the product give an empty result with counts, not a "check OpenSERP and the connection" error. That error now appears only when nothing could be read, and names the cause.
+- `gemma4:e2b` is the recommended local model: it is the default when you have not chosen one, what **Set up Ollama and the recommended model** downloads (allow about 8 GB), and it is marked *Recommended* in the model list.
+- When a research run finishes without keeping any claim, the extension's panel says that no data was found showing an issue, and that this is not proof there is no issue. Before, it only said "Open the research job for findings."
+- A run that left a brief to read keeps the previous wording, because the brief may hold the findings.
+- On **Local**, a choice of device, GPU layers, context tokens, answer language or search language shows as picked at once, with a spinner beside its row until the engine confirms it. If the engine refuses the change, the previous choice comes back.
+- **Refresh device** shows a spinner until the device information arrives.
+- Changing a Local choice or refreshing the device no longer clears a server address or search address you have typed but not saved.
+- Kriko checks for a newer version every time it starts. When one is published, the **Home** screen shows it at the top with **Install and restart**. Nothing installs until you press that button.
+- If the check cannot reach GitHub, Home stays quiet and **About** says why. A failed check does not hide a newer version that an earlier check found.
+- Follow-up questions about a saved check and about a quick look search the web for the answer. Answers are kept to a few sentences and list the pages they rely on as links.
+- Answers appear as they are written: three dots while the agent starts, then the text typed out with a caret until it is complete. A local model streams its answer word by word. A coding-agent CLI returns its answer all at once, and the panel types that out the same way.
+- Quick-look follow-ups no longer answer only from the quick look's own findings.
+- The installer build writes its Rust output to one shared folder outside the project, instead of a copy of about 2 GB inside every checkout and worktree.
+
+<details>
+<summary>Earlier releases</summary>
+
+#### 1.3.3
+
+- Includes the extension's **Search this product** action, queue button for unrecognized products, and escaped bold/inline-code answer formatting from 1.3.2.
+- **Add site** checks for usable catalog identity information before starting an agent, with distinct messages for missing, disabled, or incomplete catalogs.
+- Antigravity site and catalog authoring prompts direct the agent to its permitted web tools instead of shell commands that headless mode denies.
+
+#### 1.3.2
+
+- The extension's main action is now **Search this product**, with **Search again** for a refresh.
+- **Add to queue** is available even when installed catalogs do not recognize the product.
+- Agent answers render bold and inline code while escaping agent-supplied HTML.
+
+#### 1.3.1
+
+- Local research prioritizes exact-model issue forums and owner reports, filters ads and repair-service offers, and replaces irrelevant pages before using the page limit.
+- Exact model codes and the selected search language are preserved. Response and search languages can be set independently.
+- Bundled OpenSERP stays usable when some search engines are unavailable, and the desktop recovers its search process after it exits.
+- Coverage and evidence rejection reasons are visible. An empty result does not establish that a product has no problems.
+- The updater recognizes this as newer than 1.3.0. Release downloads include `SHA256SUMS.txt` for verified updates.
+
+Kriko offers a newer version on the Home screen when it starts, or you can install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
+
+> The build is unsigned, so Windows may show a SmartScreen warning. See the [Windows installation guide](docs/INSTALL_WINDOWS.md) for the install steps.
+
+</details>
 
 ## Get help
 
