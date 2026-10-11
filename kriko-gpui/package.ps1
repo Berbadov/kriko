@@ -21,6 +21,11 @@
     Start-menu shortcuts "Kriko" and "Kriko Console" and a desktop shortcut,
     and stops a running Kriko before it replaces files.
 
+    Output: the Rust release tree goes to %LOCALAPPDATA%\Kriko\cargo-target, one
+    per machine, rather than into the checkout (CARGO_TARGET_DIR moves it).
+    PyInstaller's scratch is deleted after the freeze. dist\ and builds\ stay in
+    the checkout, because they are what the build hands over.
+
 .PARAMETER Python
     Interpreter to build with. Defaults to .venv\Scripts\python.exe in the
     repository, which is created when it is missing.
@@ -63,6 +68,14 @@ $crate = $PSScriptRoot
 $repo = Split-Path -Parent $crate
 Push-Location $repo
 
+# The Rust release tree is about 2 GB. It used to sit in kriko-gpui\target, so
+# every checkout and worktree that packaged kept a copy inside the project
+# folder. It lives in one cache per machine instead, shared by every checkout.
+# CARGO_TARGET_DIR overrides it, as it does for cargo itself.
+$cargoTarget = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $env:LOCALAPPDATA "Kriko\cargo-target" }
+$cargoTarget = [IO.Path]::GetFullPath($cargoTarget)
+$env:CARGO_TARGET_DIR = $cargoTarget
+
 function Step {
     param([string]$Name)
     Write-Host ""
@@ -83,16 +96,21 @@ function Read-Setting {
     return $hit.Matches[0].Groups[1].Value
 }
 
-# Anything this script started that is still alive and lives inside this tree.
-# A frozen engine holds its own image mapped, so a leftover one fails the next
-# build's copy. By path and not by name: a Kriko the reader has open from
-# somewhere else is not ours to end.
+# Anything this script started that is still alive and lives inside this tree
+# or in the release cache it builds into. A frozen engine holds its own image
+# mapped, so a leftover one fails the next build's copy. By path and not by
+# name: a Kriko the reader has open from somewhere else is not ours to end. A
+# copy running out of the cache is this machine's build output, so it is ended.
 function Stop-OurProcesses {
+    $cache = $cargoTarget.TrimEnd('\') + '\'
     foreach ($name in @("kriko", "kriko-sidecar")) {
         foreach ($p in @(Get-Process -Name $name -ErrorAction SilentlyContinue)) {
             $where = ""
             try { $where = [string]$p.Path } catch { $where = "" }
-            if ($where -and $where.StartsWith($repo, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $ours = $where -and (
+                $where.StartsWith($repo, [System.StringComparison]::OrdinalIgnoreCase) -or
+                $where.StartsWith($cache, [System.StringComparison]::OrdinalIgnoreCase))
+            if ($ours) {
                 & taskkill /F /T /PID $p.Id 2>&1 | Out-Null
             }
         }
@@ -227,15 +245,21 @@ try {
     Assert-LastExitCode "build_packs.py"
 
     Step "Fetch the pinned OpenSERP release"
-    $bin = Join-Path $crate "target\release"
+    $bin = Join-Path $cargoTarget "release"
     & (Join-Path $repo "packaging\fetch_openserp.ps1") -Destination (Join-Path $bin "OpenSERP.exe")
     if (-not (Test-Path -LiteralPath (Join-Path $bin "OpenSERP.exe"))) { throw "OpenSERP executable was not produced." }
     if ((Get-FileHash -LiteralPath (Join-Path $bin "OpenSERP.exe") -Algorithm SHA256).Hash -ne "336CD54C25F35BF76827E1D88C97E20FD085F219BFDCC7F96ACF541208FC651B") { throw "OpenSERP executable digest did not match the pinned release." }
     Copy-Item (Join-Path $crate "third-party\OpenSERP-LICENSE.txt") (Join-Path $bin "OpenSERP-LICENSE.txt") -Force
 
+    # PyInstaller's scratch is rebuilt on every freeze, so it gets a folder of
+    # its own in temp and is removed here. Its default, build\ beside the spec,
+    # was a second copy inside the checkout. The sidecar and the packs stay in
+    # dist\, which the placement step and the spec read.
     Step "Freeze the sidecar"
-    & $Python -m PyInstaller --noconfirm packaging/kriko-sidecar.spec
+    $work = Join-Path ([IO.Path]::GetTempPath()) "kriko-pyinstaller-$PID"
+    & $Python -m PyInstaller --noconfirm --workpath $work packaging/kriko-sidecar.spec
     Assert-LastExitCode "pyinstaller"
+    Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 
     # A frozen binary that cannot print its port is a blank window, so the
     # handshake is checked before it is bundled into anything.
@@ -258,11 +282,26 @@ try {
     Copy-Item (Join-Path $repo "dist\kriko-sidecar.exe") (Join-Path $bin "kriko-sidecar.exe") -Force
     Write-Host (Join-Path $bin "kriko-sidecar.exe")
 
+    # The release folder is shared by every checkout on this machine, so another
+    # build can replace these two files while this one is still packing. The
+    # digests are taken here and checked before WiX reads the folder: a mismatch
+    # stops the run, rather than an MSI that carries code nobody smoke-tested.
+    $packed = @{}
+    foreach ($name in @("kriko.exe", "kriko-sidecar.exe")) {
+        $packed[$name] = (Get-FileHash -LiteralPath (Join-Path $bin $name) -Algorithm SHA256).Hash
+    }
+
     $builds = Join-Path $crate "builds"
     New-Item -ItemType Directory -Force -Path $builds | Out-Null
     $msi = Join-Path $builds "kriko-$ver-x86_64.msi"
 
     Step "The MSI"
+    foreach ($name in $packed.Keys) {
+        $now = (Get-FileHash -LiteralPath (Join-Path $bin $name) -Algorithm SHA256).Hash
+        if ($now -ne $packed[$name]) {
+            throw "$name in $bin changed while this build was packing: another build shares that folder. Run the script again."
+        }
+    }
     if (Test-Path -LiteralPath $msi) { Remove-Item -LiteralPath $msi -Force }
     Push-Location $crate
     try {
