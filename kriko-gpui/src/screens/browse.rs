@@ -486,6 +486,27 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 
     let drawer = drawer(app, motion);
 
+    // Side by side when the page has room for the table (at least 520 px)
+    // beside the drawer (320 px, 24 px apart). Narrower, the drawer stacks
+    // under the table at the page's full width: it is never cut off at the
+    // edge, and nothing needs a sideways scroll to be reached.
+    let side_by_side = app.content_w >= 864.0;
+    let picked = if side_by_side {
+        div()
+            .flex()
+            .gap(px(24.0))
+            .items_start()
+            .child(div().flex_1().min_w(px(0.0)).child(body))
+            .child(div().w(px(320.0)).flex_none().child(drawer))
+    } else {
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(24.0))
+            .child(div().w_full().min_w(px(0.0)).child(body))
+            .child(div().w_full().child(drawer))
+    };
+
     div()
         .flex()
         .flex_col()
@@ -500,19 +521,6 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             900.0,
             motion,
         )))
-        .child(
-            div()
-                .id("browse-row-scroll")
-                .overflow_x_scroll().map(horizontal_wheel)
-                .child(
-                    div()
-                        .flex()
-                        .gap(px(24.0))
-                        .items_start()
-                        .min_w(px(904.0))
-                        .child(div().flex_1().min_w(px(0.0)).child(body))
-                        .child(div().w(px(320.0)).flex_none().child(drawer)),
-                ),
-        )
+        .child(picked)
         .child(pagination)
 }

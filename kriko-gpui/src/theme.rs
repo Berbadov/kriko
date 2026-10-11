@@ -33,6 +33,9 @@ pub const BEZEL_EDGE: u32 = 0x06080f;
 // translucent: 0xRRGGBBAA
 pub const GLASS_1: u32 = 0xffffff0d;
 pub const GLASS_2: u32 = 0xffffff14;
+/// The live dock's panel: the ground colour at 94% so the page behind it
+/// reads as a faint shape, never as text competing with the dock's own.
+pub const DOCK_GLASS: u32 = 0x090e1bf0;
 pub const HAIRLINE: u32 = 0xffffff1a;
 pub const BORDER_CONTROL: u32 = 0xffffff59;
 pub const BRAND_WASH: u32 = 0x1f4fff29;

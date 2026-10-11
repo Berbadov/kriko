@@ -291,36 +291,44 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         ))
         .when_some(k.settings_notice.clone(), |c, n| c.child(div().pt(px(8.0)).child(mono(&n, MUTED))));
 
-    div()
-        .id("settings-scroll")
-        .overflow_x_scroll().map(horizontal_wheel)
-        .child(
-            div()
-                .flex()
-                .gap(px(24.0))
-                .items_start()
-                .min_w(px(920.0))
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(0.0))
-                        .flex()
-                        .flex_col()
-                        .gap(px(24.0))
-                        .child(general)
-                        .child(runs)
-                        .child(runtime)
-                        .child(shortcuts),
-                )
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(0.0))
-                        .flex()
-                        .flex_col()
-                        .gap(px(24.0))
-                        .child(keys)
-                        .child(danger_zone),
-                ),
-        )
+    // Two columns when the page has the room for both (920 px); narrower, the
+    // cards stack in one column at the page's full width, so none of them is
+    // cut off at the edge.
+    let two_columns = app.content_w >= 920.0;
+    let left = div()
+        .flex_1()
+        .min_w(px(0.0))
+        .flex()
+        .flex_col()
+        .gap(px(24.0))
+        .child(general)
+        .child(runs)
+        .child(runtime)
+        .child(shortcuts);
+    let right = div()
+        .flex_1()
+        .min_w(px(0.0))
+        .flex()
+        .flex_col()
+        .gap(px(24.0))
+        .child(keys)
+        .child(danger_zone);
+    if two_columns {
+        div()
+            .id("settings-screen")
+            .flex()
+            .gap(px(24.0))
+            .items_start()
+            .child(left)
+            .child(right)
+    } else {
+        div()
+            .id("settings-screen")
+            .flex()
+            .flex_col()
+            .gap(px(24.0))
+            .w_full()
+            .child(left)
+            .child(right)
+    }
 }
