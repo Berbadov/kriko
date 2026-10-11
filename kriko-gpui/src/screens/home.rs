@@ -207,6 +207,37 @@ fn bar_rows(rows: &[(String, f32, String)]) -> Div {
     graph
 }
 
+/// The launch notice: a newer Kriko is published. The app opens on Home, so
+/// this is where the reader sees it without going to About. Installing stays a
+/// button the reader presses; nothing downloads on its own.
+fn update_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<Div> {
+    let k = &app.live.knowledge;
+    let offer = k.app_update.as_ref().filter(|u| u.newer)?;
+    let busy = k.app_update_busy;
+    let line = if busy {
+        "Installing the update. Kriko will close and reopen.".to_string()
+    } else {
+        format!("Version {} is available. Installing keeps your catalogs and history.", offer.version)
+    };
+    let mut row = div()
+        .flex()
+        .items_center()
+        .justify_between()
+        .gap(px(24.0))
+        .child(mono(&line, INK_2).min_w(px(0.0)));
+    if !busy {
+        row = row.child(
+            key("home-app-update-install", "Install and restart")
+                .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| this.install_app_update(cx))),
+        );
+    }
+    let mut notice = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Updates")).child(row);
+    if let Some(note) = &k.app_update_note {
+        notice = notice.child(mono(note, DIM));
+    }
+    Some(notice)
+}
+
 pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let open_history = cx.listener(|this, _: &ClickEvent, _w, cx| {
         this.tab = Tab::History;
@@ -330,10 +361,11 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
         .child(eyebrow("Claims per catalog"))
         .child(packs_body);
 
-    div()
-        .flex()
-        .flex_col()
-        .gap(px(24.0))
+    let mut column = div().flex().flex_col().gap(px(24.0));
+    if let Some(notice) = update_card(app, cx) {
+        column = column.child(notice);
+    }
+    column
         .child(
             div()
                 .flex()

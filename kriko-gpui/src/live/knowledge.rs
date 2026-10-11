@@ -185,6 +185,23 @@ pub struct AppUpdate {
     pub error: String,
 }
 
+/// What an answer to `GET /api/app-update` leaves on the state. A call that
+/// did not come back, or an answer that says it could not check, keeps the
+/// offer already known and carries its error: a failed re-check never hides a
+/// newer release that the launch check found.
+pub fn app_update_from(reply: api::Reply, prior: AppUpdate) -> AppUpdate {
+    match reply {
+        Ok(v) if api::s(&v, "error").is_empty() => AppUpdate {
+            newer: api::b(&v, "newer"),
+            version: api::s(&v, "version"),
+            notes: api::s(&v, "notes"),
+            error: String::new(),
+        },
+        Ok(v) => AppUpdate { error: api::s(&v, "error"), ..prior },
+        Err(e) => AppUpdate { error: e.message, ..prior },
+    }
+}
+
 /// The engine's own ceiling (`prefs.MAX_RUN_CONCURRENCY`); it clamps too.
 pub const RUNS_MAX: usize = 4;
 
@@ -195,7 +212,6 @@ impl Kriko {
         self.refresh_packs(cx);
         self.refresh_thin(cx);
         self.refresh_updates(cx);
-        self.check_app_update(cx);
         self.refresh_sites(cx);
         self.refresh_extension(cx);
         self.refresh_settings(cx);
@@ -678,19 +694,15 @@ impl Kriko {
         );
     }
 
-    /// Ask whether a newer app exists. Quiet on failure: the About screen says why.
+    /// Ask whether a newer app exists. Runs on every launch (`refresh_all`) and
+    /// from the About screen's button. Quiet on failure: Home shows nothing,
+    /// and About says why.
     pub fn check_app_update(&mut self, cx: &mut Context<Self>) {
         self.live.knowledge.app_update_note = Some("Checking for updates.".into());
         self.fetch(cx, || api::get("/api/app-update"), |this, reply, _| {
             this.live.knowledge.app_update_note = None;
-            if let Ok(v) = reply {
-                this.live.knowledge.app_update = Some(AppUpdate {
-                    newer: api::b(&v, "newer"),
-                    version: api::s(&v, "version"),
-                    notes: api::s(&v, "notes"),
-                    error: api::s(&v, "error"),
-                });
-            }
+            let prior = this.live.knowledge.app_update.take().unwrap_or_default();
+            this.live.knowledge.app_update = Some(app_update_from(reply, prior));
         });
     }
 
@@ -1033,5 +1045,29 @@ mod tests {
         assert_eq!(ago_seconds(3.0 * 86_400.0), "3 d ago");
     }
 
+    #[test]
+    fn a_failed_update_check_keeps_the_offer_it_had() {
+        let offer = AppUpdate { newer: true, version: "1.4.0".into(), ..Default::default() };
+        let failed = app_update_from(
+            Err(api::ApiError { status: 502, message: "timed out".into() }),
+            offer.clone(),
+        );
+        assert!(failed.newer);
+        assert_eq!(failed.version, "1.4.0");
+        assert_eq!(failed.error, "timed out");
 
+        let said_no = app_update_from(
+            Ok(serde_json::json!({ "newer": false, "error": "no published release found" })),
+            offer,
+        );
+        assert!(said_no.newer);
+        assert_eq!(said_no.error, "no published release found");
+
+        let answered = app_update_from(
+            Ok(serde_json::json!({ "newer": true, "version": "1.4.0", "error": "" })),
+            AppUpdate::default(),
+        );
+        assert!(answered.newer);
+        assert!(answered.error.is_empty());
+    }
 }

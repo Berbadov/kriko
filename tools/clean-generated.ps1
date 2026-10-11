@@ -15,7 +15,8 @@ function Add-Cache([string]$checkout, [string]$relative) {
     }
 }
 
-foreach ($relative in @('build','.build-review','kriko-gpui/target','kriko-gpui/target-check','kriko-gpui/review-target','kriko-gpui/builds',
+foreach ($relative in @('build','dist','.build-review','kriko-gpui/target','kriko-gpui/target-check','kriko-gpui/review-target','kriko-gpui/builds',
+                        'kriko-gpui/build','kriko-gpui/dist',
                         '.pytest_cache','.mypy_cache','.check-mypy','.ruff_cache','.npm-cache')) {
     Add-Cache $cleanupRoot $relative
 }
@@ -30,7 +31,7 @@ if ($AgentCaches) {
         foreach ($checkout in (Get-ChildItem -LiteralPath $parent -Directory -Force)) {
             if ($checkout.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
             foreach ($relative in @('node_modules',
-                                    'build','kriko-gpui/builds','target',
+                                    'build','dist','kriko-gpui/build','kriko-gpui/dist','kriko-gpui/builds','target',
                                     '.pytest_cache','.mypy_cache','.ruff_cache')) {
                 Add-Cache $checkout.FullName $relative
             }

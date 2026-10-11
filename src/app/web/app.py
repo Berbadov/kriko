@@ -24,7 +24,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app import agentconfig, agentskill, bundledpacks, extension as ext, logs, packautoupdate
+from app import agentconfig, agentskill, extension as ext, logs, packautoupdate
 from app import modelcatalogue
 from app.web.settings import KRIKO_HOME
 from app.web import origins, pipeline
@@ -83,24 +83,6 @@ def _shipped_extension_version() -> str:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # The knowledge the installer carries, first: a fresh install used to open
-    # onto an empty store, and anything the schedule might tick has to have
-    # something to tick against. Guarded like every other startup step —
-    # bundled knowledge is a convenience over a working store, never a
-    # precondition for one, and a store the reader already filled themselves
-    # is a store where this does nothing at all.
-    try:
-        app.state.seeded = bundledpacks.seed(
-            app.state.settings.store_path,
-            app_state_path=app.state.settings.app_state_path)
-        for row in app.state.seeded:
-            if row["action"] in ("installed", "upgraded"):
-                log.info("%s bundled pack %s %s",
-                         row["action"], row["pack_id"], row["version"])
-    except Exception:
-        app.state.seeded = []
-        log.warning("could not install the bundled packs", exc_info=True)
-
     # The extension the browser loads, brought up to the one this app carries
     # (B151). The extension reloads itself when the digest below is not its
     # own, so an app update reaches the browser without the reader's hands.

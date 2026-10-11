@@ -346,40 +346,39 @@ def outcome(reply: str, found: dict, *, finish_reason: str = "") -> str:
     return "the pages read did not yield any sourced findings"
 
 
-def follow_up(question: str, assumed: str, risks: list[dict],
+def follow_up(question: str, product: str, assumed: str, risks: list[dict],
               specs: list[dict]) -> str:
-    """A reader's follow-up, answered from the quick look's own findings.
+    """A reader's follow-up on a quick look: the question, searched on the web.
 
-    The panel's question box (#112). No search, no new pages: the answer is
-    what this quick look found, and if the findings do not answer it the reply
-    says exactly that — the Sources drawer is where going further belongs.
+    The panel's question box (#112). The quick look's own findings go beside
+    the question as a starting point, not as the limit: a finding that answers
+    it is cited, and one that does not is no reason to stop searching. The
+    brief is the shared follow-up brief (`app/followup.py`), so the listing's
+    question and this one are answered the same way.
     """
-    lines = [
-        "A quick look at a product found the findings below. The reader asks a",
-        "follow-up question. Answer it using only these findings; quote nothing",
-        "you do not see here. If they do not answer the question, say exactly",
-        "that in one sentence and stop. Plain text, no markdown, under 120 words.",
-        "",
-        f"The reader asks: {question.strip()}",
-    ]
+    from app import followup
+
+    lines = []
     if assumed.strip():
-        lines.append(f"The product was taken as: {assumed.strip()}")
-    lines.append("")
-    lines.append("## The findings")
+        lines.append(f"The quick look took the product as: {assumed.strip()}")
+    findings = []
     for one in risks:
         if not isinstance(one, dict):
             continue
         title = str(one.get("title") or "").strip()
         if not title:
             continue
-        lines.append(f"- {title} ({one.get('severity') or 'unknown'}): "
-                     f"{str(one.get('body') or '').strip()}")
+        findings.append(f"- {title} ({one.get('severity') or 'unknown'}): "
+                        f"{str(one.get('body') or '').strip()}")
         if str(one.get("advice") or "").strip():
-            lines.append(f"  Worth checking: {str(one['advice']).strip()}")
+            findings.append(f"  Worth checking: {str(one['advice']).strip()}")
         for src in one.get("sources") or []:
-            lines.append(f"  Source: {src.get('domain', '')} {src.get('url', '')} — "
-                         f"\u201c{str(src.get('quote') or '').strip()}\u201d")
+            findings.append(f"  Source: {src.get('domain', '')} {src.get('url', '')} \u2014 "
+                            f"\u201c{str(src.get('quote') or '').strip()}\u201d")
     for one in specs:
         if isinstance(one, dict) and one.get("name") and one.get("value"):
-            lines.append(f"- {one['name']}: {one['value']} ({one.get('domain', '')})")
-    return "\n".join(lines)
+            findings.append(f"- {one['name']}: {one['value']} ({one.get('domain', '')})")
+    if findings:
+        lines += ["What the quick look found so far (a starting point, not the limit):",
+                  *findings]
+    return followup.web_brief(question, product=product, context="\n".join(lines))
