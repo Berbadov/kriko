@@ -45,6 +45,36 @@ _BLOCK_MARKERS = (
 )
 
 
+def _is_ad_or_search_redirect(url: str, result_type: object = "") -> bool:
+    """Reject sponsored entries and search-engine click-through URLs.
+
+    OpenSERP's mega response includes richer fields such as ``type`` even
+    though this adapter only exposes the compact result shape to the reader.
+    Keep the URL checks too: some engine/version combinations omit that
+    metadata while still returning their own ad redirect URL.
+    """
+    kind = str(result_type or "").strip().casefold().replace("_", "-")
+    if kind in {"ad", "ads", "advertisement", "sponsored", "paid"}:
+        return True
+
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        host = (parsed.hostname or "").casefold().rstrip(".")
+    except ValueError:
+        return False
+
+    path = parsed.path.casefold().rstrip("/")
+    # These endpoints are click trackers, not destination pages. Match the
+    # host and path together so ordinary pages with the same path stay valid.
+    if host == "duckduckgo.com" and path == "/y.js":
+        return True
+    if host == "bing.com" and path == "/aclick":
+        return True
+    if host in {"google.com", "www.google.com", "google.fr"} and path == "/aclk":
+        return True
+    return False
+
+
 def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
     """`search(query, limit) -> [{"url", "title", "site"}]`.
 
@@ -100,7 +130,7 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
             if not isinstance(hit, dict):
                 continue
             url = str(hit.get("url", "")).strip()
-            if not url:
+            if not url or _is_ad_or_search_redirect(url, hit.get("type")):
                 continue
             site = str(hit.get("domain", "")).strip()
             if not site:
