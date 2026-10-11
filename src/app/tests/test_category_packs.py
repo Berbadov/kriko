@@ -598,3 +598,25 @@ def test_a_claim_the_packs_own_gate_refuses_is_left_out(world, tmp_path):
     assert yaml.safe_load(
         (packdraft.open_draft(world.settings.store_path, "gaming-mice").root
          / "data" / "claims.yaml").read_text(encoding="utf-8")) in (None, [])
+
+
+# ── #181: the seller's words are not the product ──────────────────────────
+
+
+def test_the_product_the_quick_look_grounded_is_what_the_pack_is_written_for(world):
+    """A listing title carries the seller's own words ("DEMİRAY OTODAN
+    DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID"); the quick look separated the
+    product from them, and that is what the author is told about."""
+    title = "TUL-CAR SIFIR Scyrox V8 Gaming Mouse"
+    world.script.quick[title] = {
+        "assumed": "the wireless V8", "product": "Scyrox V8 Gaming Mouse",
+        "category": "gaming mouse", "pack": "",
+        "risks": [_risk("Scroll wheel wears", V8_PAGE, V8_QUOTE)]}
+    world.script.author["Scyrox V8 Gaming Mouse"] = MICE
+    quick, deepen = _check(world, title)
+
+    assert quick["result"]["product"] == "Scyrox V8 Gaming Mouse"
+    assert deepen["state"] == "succeeded", deepen["message"]
+    [brief] = world.script.asked("# Author a Kriko knowledge pack")
+    assert "TUL-CAR" not in brief
+    assert deepen["result"]["product"] == "Scyrox V8 Gaming Mouse"
