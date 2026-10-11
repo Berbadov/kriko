@@ -26,6 +26,7 @@ from fastapi.responses import JSONResponse
 
 from app import agentconfig, agentskill, extension as ext, logs, packautoupdate
 from app import modelcatalogue
+from app.providers import local_inference
 from app.web.settings import KRIKO_HOME
 from app.web import origins, pipeline
 from app.web.jobs import JobRunner
@@ -255,7 +256,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     # One runner per app, built here so a test app gets its own pool pointed at
     # its own temporary app.sqlite.
-    app.state.jobs = JobRunner(app.state.settings, HANDLERS)
+    # Idle, it hands the local model's memory back to the host: a finished run
+    # must not hold video memory while Kriko sits in the background.
+    app.state.jobs = JobRunner(app.state.settings, HANDLERS,
+                               on_idle=local_inference.release)
     # What the open answers watch to know the knowledge moved (B152.4).
     app.state.knowledge_clock = KnowledgeClock(app.state.settings.store_path)
 
