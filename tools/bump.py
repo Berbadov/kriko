@@ -3,10 +3,11 @@
     python tools/bump.py 0.8.1
     python tools/bump.py --show
 
-**Why a script for a `sed`.** The version is in three committed files:
+**Why a script for a `sed`.** The app version is in three build files:
 `pyproject.toml`, `kriko-gpui/Cargo.toml` and the `kriko-gpui` entry of
 `kriko-gpui/Cargo.lock`. `test_the_version_strings_agree` fails if they
-disagree. That test is the reason bumping by hand mostly works and is exactly
+disagree. README's badge and download filenames are updated alongside them.
+That test is the reason bumping by hand mostly works and is exactly
 the wrong shape: it tells you afterwards, once, that you missed one.
 
 The fourth place is not a file in the tree at all. `app.version.app_version()`
@@ -50,6 +51,8 @@ PLACES = (
 )
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
+README_VERSION = re.compile(r"(badge/version-)(\d+\.\d+\.\d+)(-)")
+README_DOWNLOAD = re.compile(r"(kriko-)(\d+\.\d+\.\d+)(-(?:x86_64\.msi|win64-portable\.zip))")
 
 
 def current() -> dict[Path, str]:
@@ -81,6 +84,15 @@ def installed() -> str:
 
 def show(strict: bool = False) -> int:
     found = current()
+    readme = README_VERSION.search((ROOT / "README.md").read_text(encoding="utf-8"))
+    if readme is None:
+        print("README.md has no version badge")
+        return 1
+    found[Path("README.md")] = readme.group(2)
+    downloads = README_DOWNLOAD.findall((ROOT / "README.md").read_text(encoding="utf-8"))
+    if not downloads or any(version != readme.group(2) for _, version, _ in downloads):
+        print("README.md download filenames disagree with its version badge")
+        return 1
     width = max(len(str(p)) for p in found)
     for path, version in found.items():
         print(f"{str(path):<{width}}  {version}")
@@ -116,6 +128,18 @@ def show(strict: bool = False) -> int:
 def bump(version: str) -> int:
     if not SEMVER.match(version):
         raise SystemExit(f"{version!r} is not X.Y.Z")
+    previous = set(current().values())
+    if len(previous) != 1:
+        raise SystemExit("version files disagree; reconcile them before bumping")
+    old = previous.pop()
+    if tuple(map(int, version.split("."))) <= tuple(map(int, old.split("."))):
+        raise SystemExit(f"{version} must be newer than {old}; published versions are immutable")
+    readme_path = ROOT / "README.md"
+    readme = readme_path.read_text(encoding="utf-8")
+    readme, count = README_VERSION.subn(rf"\g<1>{version}\g<3>", readme)
+    if count != 1:
+        raise SystemExit("README.md must have exactly one version badge")
+    readme = README_DOWNLOAD.sub(rf"\g<1>{version}\g<3>", readme)
     for path, pattern in PLACES:
         full = ROOT / path
         text = full.read_text(encoding="utf-8")
@@ -134,6 +158,8 @@ def bump(version: str) -> int:
         # converting it.
         full.write_bytes(new.encode("utf-8"))
         print(f"{path} -> {version}")
+    readme_path.write_bytes(readme.encode("utf-8"))
+    print(f"README.md -> {version} (add the reader-visible release notes too)")
 
     if installed() != version:
         print(
