@@ -33,6 +33,9 @@ Short form, not a substitute:
    agent reviews it against the request.
 5. **One area per agent, a PR the same day, merged daily** (by the reader;
    nothing reaches `main` without the author asking).
+6. **Every change set bumps the version and updates `README.md` before commit**,
+   including documentation and packaging changes. Published versions are
+   immutable; corrections get a newer version. Read `docs/UPDATE_PROTOCOL.md`.
 
 ## TEMPORARY — app-first phase *(2026-09-01, delete when it ends)*
 
