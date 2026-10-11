@@ -61,6 +61,12 @@ The Windows app includes everything it needs to start. It does not include catal
 - When a research run finishes without keeping any claim, the extension's panel says that no data was found showing an issue, and that this is not proof there is no issue. Before, it only said "Open the research job for findings."
 - A run that left a brief to read keeps the previous wording, because the brief may hold the findings.
 
+### What's new in 1.3.4
+
+- On **Local**, a choice of device, GPU layers, context tokens, answer language or search language shows as picked at once, with a spinner beside its row until the engine confirms it. If the engine refuses the change, the previous choice comes back.
+- **Refresh device** shows a spinner until the device information arrives.
+- Changing a Local choice or refreshing the device no longer clears a server address or search address you have typed but not saved.
+
 ### What's new in 1.3.3
 
 - Includes the extension's **Search this product** action, queue button for unrecognized products, and escaped bold/inline-code answer formatting from 1.3.2.
