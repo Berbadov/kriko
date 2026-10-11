@@ -32,6 +32,8 @@ The corrected run searched four issue queries, read seven pages from five publis
 
 The inspected Darty forum page was a product-group hub with a buyer question about the numeric keypad, product details, and generic service promotions. No failure thread or owner malfunction report appeared in the fetched text. Its evidence window retained the available discussion text. These observations establish retrieval and rejection behavior; they do not establish that the laptop is problem-free.
 
+The final Gemma 4 E2B live run kept the exact `15AMN8` name and used French issue queries after rejecting English planner output. It read 16 pages from eight publisher buckets, replaced two repair-service advertisements, and selected six pages, including the Darty discussion hubs. Six extraction passes completed in 73.26 seconds, with seven rejection events, no pipeline errors, and zero retained findings. The result was `evidence_rejected`; this is not evidence that the product has no faults. This is one live retrieval observation, not a model reliability benchmark.
+
 Static Python checks, JavaScript syntax, Rust compilation, and source review were completed. No test suites were added or run by this task. Model-based classification remains fallible. The earlier controlled model comparison describes the first MSI's pipeline snapshot, not a complete evaluation of these subsequent gates. Visual screen confirmation remains pending.
 
 ## Updated installer
