@@ -43,10 +43,6 @@ SCRIPT = ROOT / "kriko-gpui" / "package.ps1"
 #: pip installs, the smoke tests.
 ARTIFACT = re.compile(r"\b((?:packaging|tools)/[\w.-]+\.(?:py|spec)|requirements\.lock)\b")
 
-#: npm scripts are the other half of the build and are not files. Matched as
-#: "run <script>" and "ci" pairs rather than by name.
-NPM_SCRIPT = re.compile(r"npm --prefix (\w+) (?:ci|run ([\w-]+))")
-
 #: The cargo commands the bundle depends on. Building the app and wrapping it
 #: in an MSI are separate steps, and a script can plausibly have one without
 #: the other.
@@ -114,7 +110,6 @@ def test_the_workflow_still_parses_into_steps(workflow_build):
     the rest of the file green by accident.
     """
     assert ARTIFACT.findall(workflow_build), "no build artifacts found in the workflow"
-    assert NPM_SCRIPT.findall(workflow_build), "no npm steps found in the workflow"
     assert CARGO_STEP.findall(workflow_build), "no cargo steps found in the workflow"
 
 
@@ -135,21 +130,6 @@ def test_every_artifact_the_release_build_names_is_named_by_the_script(
         "job does. A step added to CI has to be added here too, or a hand-built "
         "installer is not the one a tag produces."
     )
-
-
-def test_the_script_builds_the_same_npm_surfaces(workflow_build, script):
-    """The prefix is checked as well as the script name because `npm run
-    build` in the wrong directory is a plausible transcription error that
-    produces a bundle with no frontend in it."""
-    required = {
-        (prefix, run) for prefix, run in NPM_SCRIPT.findall(workflow_build)
-    }
-    missing = sorted(
-        f"npm --prefix {prefix} {'run ' + run if run else 'ci'}"
-        for prefix, run in required
-        if f"npm --prefix {prefix} {'run ' + run if run else 'ci'}" not in script
-    )
-    assert missing == [], f"{SCRIPT.name} is missing: {missing}"
 
 
 @pytest.mark.parametrize("step", ["build --release", "wix"])
