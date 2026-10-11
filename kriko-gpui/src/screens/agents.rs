@@ -54,6 +54,11 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let motion = !app.reduce_motion;
     let entries = app.live.run.agent_entries();
     let loaded = app.live.run.prefs_loaded || app.live.run.targets_loaded;
+    // The table's columns want 840 px of their own. Narrower than that, each
+    // agent becomes a two-line row, so every control stays on the page.
+    let compact = app.content_w < 840.0;
+    // The detail card sits beside the table only when both fit (840 + 24 + 320).
+    let beside = app.content_w >= 1184.0;
 
     let body: Div = if entries.is_empty() {
         div().child(empty_note(if loaded {
@@ -66,22 +71,25 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         let picked = entries.iter().find(|e| e.id == selected).cloned();
 
         let mut table = card().flex().flex_col();
-        table = table
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .pb(px(10.0))
-                    .child(div().flex_1().min_w(px(180.0)).child(th("Agent")))
-                    .child(div().w(px(200.0)).flex_none().child(th("Runs checks")))
-                    .child(div().w(px(140.0)).flex_none().child(th("MCP")))
-                    .child(div().w(px(100.0)).flex_none().child(th("Recent runs")))
-                    .child(div().w(px(168.0)).flex_none().child(th("Order"))),
-            )
-            .child(hairline());
+        if !compact {
+            table = table
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .pb(px(10.0))
+                        .child(div().flex_1().min_w(px(180.0)).child(th("Agent")))
+                        .child(div().w(px(200.0)).flex_none().child(th("Runs checks")))
+                        .child(div().w(px(140.0)).flex_none().child(th("MCP")))
+                        .child(div().w(px(100.0)).flex_none().child(th("Recent runs")))
+                        .child(div().w(px(168.0)).flex_none().child(th("Order"))),
+                )
+                .child(hairline());
+        }
 
         for (i, e) in entries.iter().enumerate() {
-            let up_id = e.id.clone(); let down_id = e.id.clone();
+            let up_id = e.id.clone();
+            let down_id = e.id.clone();
             let up = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.order_agent(up_id.clone(), -1, cx));
             let down = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.order_agent(down_id.clone(), 1, cx));
             let is_selected = e.id == selected;
@@ -110,54 +118,63 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 }
                 None => div().child(mono("-", DIM)),
             };
+            let runs_n = mono(&app.live.run.runs_of(&e.id).to_string(), INK_2);
+            let mark = mark_tile(
+                &format!("agents-row-tile-{i}"),
+                mark_for(&e.id),
+                entry_phase(app, e),
+                40.0,
+                motion,
+            );
+            let name = div()
+                .flex_1()
+                .min_w(px(0.0))
+                .pr(px(10.0))
+                .truncate()
+                .font_family(SANS)
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_size(px(15.0))
+                .text_color(rgb(if is_selected { ICE } else { INK }))
+                .child(e.label.clone());
+            let order = div()
+                .w(px(168.0))
+                .flex_none()
+                .flex()
+                .justify_end()
+                .gap(px(4.0))
+                .when(i > 0, |d| d.child(ghost(("agent-up", i), "Up").on_click(move |ev, w, cx| { cx.stop_propagation(); up(ev, w, cx); })))
+                .when(i + 1 < entries.len(), |d| d.child(ghost(("agent-down", i), "Down").on_click(move |ev, w, cx| { cx.stop_propagation(); down(ev, w, cx); })));
             let row = div()
                 .id(("agent-row", i))
                 .flex()
-                .items_center()
                 .py(px(12.0))
                 .cursor_pointer()
                 .hover(|s| s.bg(rgba(GLASS_1)))
-                .when(is_selected, |s| {
-                    s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE))
-                })
-                .on_click(click)
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(180.0))
-                        .flex()
-                        .items_center()
-                        .gap(px(12.0))
-                        .child(mark_tile(
-                            &format!("agents-row-tile-{i}"),
-                            mark_for(&e.id),
-                            entry_phase(app, e),
-                            40.0,
-                            motion,
-                        ))
-                        .child(
-                            div()
-                                .flex_1()
-                                .min_w(px(0.0))
-                                .pr(px(10.0))
-                                .truncate()
-                                .font_family(SANS)
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .text_size(px(15.0))
-                                .text_color(rgb(if is_selected { ICE } else { INK }))
-                                .child(e.label.clone()),
-                        ),
-                )
-                .child(div().w(px(200.0)).flex_none().child(runs_cell))
-                .child(div().w(px(140.0)).flex_none().child(mcp_cell))
-                .child(
-                    div()
-                        .w(px(100.0)).flex_none()
-                        .child(mono(&app.live.run.runs_of(&e.id).to_string(), INK_2)),
-                )
-                .child(div().w(px(168.0)).flex_none().flex().justify_end().gap(px(4.0))
-                    .when(i > 0, |d| d.child(ghost(("agent-up", i), "Up").on_click(move |ev,w,cx| { cx.stop_propagation(); up(ev,w,cx); })))
-                    .when(i + 1 < entries.len(), |d| d.child(ghost(("agent-down", i), "Down").on_click(move |ev,w,cx| { cx.stop_propagation(); down(ev,w,cx); }))));
+                .when(is_selected, |s| s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE)))
+                .on_click(click);
+            let row = if compact {
+                row.flex_col()
+                    .gap(px(10.0))
+                    .child(div().flex().items_center().gap(px(12.0)).child(mark).child(name).child(order))
+                    .child(
+                        div()
+                            .pl(px(52.0))
+                            .flex()
+                            .flex_wrap()
+                            .items_center()
+                            .gap(px(10.0))
+                            .child(runs_cell)
+                            .child(mcp_cell)
+                            .child(runs_n),
+                    )
+            } else {
+                row.items_center()
+                    .child(div().flex_1().min_w(px(180.0)).flex().items_center().gap(px(12.0)).child(mark).child(name))
+                    .child(div().w(px(200.0)).flex_none().child(runs_cell))
+                    .child(div().w(px(140.0)).flex_none().child(mcp_cell))
+                    .child(div().w(px(100.0)).flex_none().child(runs_n))
+                    .child(order)
+            };
             table = table.child(row);
             if i + 1 < entries.len() {
                 table = table.child(hairline());
@@ -168,26 +185,34 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             Some(e) => detail_card(app, &e, motion, window, cx),
             None => card(),
         };
-        // The detail card drops below the table when the window is too narrow
-        // for both (a 2K display at 125% scaling is about 1260 px of content),
-        // instead of running off the right edge.
-        div()
-            .flex()
-            .flex_wrap()
-            .gap(px(24.0))
-            .items_start()
-            .w_full()
-            .child(div().flex_1().min_w(px(840.0)).child(table))
-            .child(div().w(px(320.0)).flex_none().child(detail))
+        if beside {
+            div()
+                .flex()
+                .gap(px(24.0))
+                .items_start()
+                .w_full()
+                .child(div().flex_1().min_w(px(840.0)).child(table))
+                .child(div().w(px(320.0)).flex_none().child(detail))
+        } else {
+            // Not room for both beside each other: the detail card takes the
+            // page's width under the table, rather than a 320 px column that
+            // floats at the left edge.
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(24.0))
+                .w_full()
+                .child(table.w_full())
+                .child(div().w_full().child(detail))
+        }
     };
 
-    // only the table scrolls sideways, and only in a very narrow window; the options card below stays put
     div()
         .id("agents-screen")
         .flex()
         .flex_col()
         .gap(px(24.0))
-        .child(div().id("agents-row-scroll").flex_none().overflow_x_scroll().map(horizontal_wheel).child(body))
+        .child(body)
         .when(app.live.run.prefs_loaded, |d| d.child(research_card(app, cx)))
 }
 
