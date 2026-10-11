@@ -6,9 +6,9 @@
 //! plus a hairline ring, and "frost" is a translucent fill over the hero.
 
 use gpui::{
-    div, img, linear_color_stop, linear_gradient, point, px, rgb, rgba, relative, svg, prelude::*,
-    Animation, AnimationExt, BoxShadow, Div, FontWeight, Hsla, ObjectFit, SharedString, Stateful,
-    Styled, Svg, TextAlign,
+    div, img, linear_color_stop, linear_gradient, percentage, point, px, rgb, rgba, relative, svg,
+    prelude::*, Animation, AnimationExt, BoxShadow, Div, FontWeight, Hsla, ObjectFit, SharedString,
+    Stateful, Styled, Svg, TextAlign, Transformation,
 };
 
 // ---- colour tokens (match tokens.json / the screenshots) ----
@@ -1112,6 +1112,22 @@ pub fn icon(name: &str, size: f32) -> Svg {
         .path(SharedString::from(format!("icons/{name}.svg")))
         .size(px(size))
         .flex_none()
+}
+
+/// A loading mark: the loader arc turning while the engine answers. It stays
+/// still under reduced motion, so the wait is still shown without movement.
+pub fn spinner(id: impl Into<SharedString>, size: f32, motion: bool) -> gpui::AnyElement {
+    let base = icon("loader", size).text_color(rgb(ICE));
+    if motion {
+        base.with_animation(
+            gpui::ElementId::Name(id.into()),
+            Animation::new(std::time::Duration::from_millis(900)).repeat(),
+            |mark, t| mark.with_transformation(Transformation::rotate(percentage(t))),
+        )
+        .into_any_element()
+    } else {
+        base.into_any_element()
+    }
 }
 
 /// Sidebar item. `current` draws the recessed well with ice text.
