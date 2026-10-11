@@ -263,7 +263,7 @@ def _facets(data: dict, corpus: str) -> dict[str, Any]:
     """
     def grounded(key: str) -> str:
         value = data.get(key)
-        return " ".join(value.split()) if _grounded(value, corpus) else ""
+        return " ".join(value.split()) if isinstance(value, str) and _grounded(value, corpus) else ""
 
     item = grounded("item")
     listed = data.get("item_terms")
