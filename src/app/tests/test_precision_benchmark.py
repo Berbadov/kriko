@@ -206,6 +206,7 @@ def test_fixed_case_records_the_refusal_the_pipeline_makes(tmp_path, monkeypatch
     row = bench.run_case(SimpleNamespace(app_state_path=tmp_path / "app.sqlite"), c, plane="local")
     assert row["tokens"] == model.tokens_used == 25 * len(model.calls)
     assert asker.coverage["rejected_candidates"] == 1
+    assert row["gold"]["pipeline_rejected"] == 1
     assert all("Memory shortfall" != risk["title"] for risk in row["detail"]["answer"]["risks"])
     conn = state.connect(tmp_path / "app.sqlite")
     try:

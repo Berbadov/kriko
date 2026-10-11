@@ -447,6 +447,34 @@ impl Kriko {
         );
     }
 
+    /// `POST /api/packs/harvest`: file every saved quick look into the
+    /// catalog that holds its product, with no agent. Followed like an update,
+    /// because it ends the same way: a catalog installed at a new version.
+    pub fn harvest_quick_looks(&mut self, cx: &mut Context<Self>) {
+        self.live.knowledge.update_job = Some(JobView {
+            state: "queued".into(),
+            message: "Filing saved quick looks.".into(),
+            ..Default::default()
+        });
+        self.fetch(
+            cx,
+            || api::post("/api/packs/harvest", serde_json::json!({})),
+            |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => this.follow_job(api::s(&v, "job_id"), Followed::PackUpdate, cx),
+                    Err(e) => {
+                        this.live.knowledge.update_job = Some(JobView {
+                            state: "failed".into(),
+                            message: e.message,
+                            done: true,
+                        })
+                    }
+                }
+            },
+        );
+    }
+
     /// Install an agent for the reader (for `local`: Ollama and a small model).
     pub fn install_agent(&mut self, agent_id: String, cx: &mut Context<Self>) {
         let pending = |message: &str, state: &str, done: bool| JobView {

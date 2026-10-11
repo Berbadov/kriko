@@ -165,16 +165,31 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         }
         offer_cards.push(b);
     }
-    if let (Some(job), Some(last)) = (&k.update_job, offer_cards.pop()) {
+    let job_line = k.update_job.as_ref().map(|job| {
         let line = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
-        offer_cards.push(last.child(mono(&line, if job.state == "failed" { DANGER } else { MUTED })));
-    }
+        mono(&line, if job.state == "failed" { DANGER } else { MUTED })
+    });
+    let job_line = match (job_line, offer_cards.pop()) {
+        (Some(line), Some(last)) => { offer_cards.push(last.child(line)); None }
+        (line, last) => { if let Some(last) = last { offer_cards.push(last); } line }
+    };
 
     // ---- packs with switches; the meter is each pack's share of subjects ----
     let max_subjects = k.packs.iter().map(|p| p.subjects).max().unwrap_or(1).max(1) as f32;
     let mut packs = card().flex().flex_col();
-    packs = packs.child(div().mb(px(4.0)).child(eyebrow("Packs")));
+    let harvesting = k.update_job.as_ref().map(|j| !j.done).unwrap_or(false);
+    let harvest = cx.listener(|this, _: &ClickEvent, _w, cx| this.harvest_quick_looks(cx));
+    let harvest_btn = ghost("pack-harvest", "File quick looks").h(px(32.0)).px(px(14.0)).text_size(px(12.0));
+    let harvest_btn = if harvesting { harvest_btn.opacity(0.5) } else { harvest_btn.on_click(harvest) };
+    packs = packs.child(
+        div().mb(px(4.0)).flex().items_center().justify_between()
+            .child(eyebrow("Packs"))
+            .child(harvest_btn),
+    );
     packs = packs.child(hairline());
+    if let Some(line) = job_line {
+        packs = packs.child(div().py(px(8.0)).child(line));
+    }
     if k.packs.is_empty() {
         packs = packs.child(div().pt(px(12.0)).child(empty_note(
             if k.offers.iter().any(|o| o.installed.is_empty()) {

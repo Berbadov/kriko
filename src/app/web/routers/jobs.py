@@ -161,6 +161,12 @@ def check_pack_updates(
     return tasks.check_updates(runner.settings, index_url or "", fresh=fresh)
 
 
+@router.post("/packs/harvest")
+def start_harvest(runner=Depends(get_jobs)):
+    """File every finished quick look into the catalog that holds its product. No agent."""
+    return _submit(runner, "pack_harvest", {"install": True})
+
+
 @router.post("/packs/update")
 def start_update(body: UpdateRequest, runner=Depends(get_jobs)):
     return _submit(runner, "pack_update", body.model_dump())
