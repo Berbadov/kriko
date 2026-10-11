@@ -67,6 +67,11 @@ The Windows app includes everything it needs to start. It does not include catal
 - **Refresh device** shows a spinner until the device information arrives.
 - Changing a Local choice or refreshing the device no longer clears a server address or search address you have typed but not saved.
 
+### What's new in 1.4.0
+
+- Kriko checks for a newer version every time it starts. When one is published, the **Home** screen shows it at the top with **Install and restart**. Nothing installs until you press that button.
+- If the check cannot reach GitHub, Home stays quiet and **About** says why. A failed check does not hide a newer version that an earlier check found.
+
 ### What's new in 1.3.3
 
 - Includes the extension's **Search this product** action, queue button for unrecognized products, and escaped bold/inline-code answer formatting from 1.3.2.
@@ -87,7 +92,7 @@ The Windows app includes everything it needs to start. It does not include catal
 - Coverage and evidence rejection reasons are visible. An empty result does not establish that a product has no problems.
 - The updater recognizes this as newer than 1.3.0. Release downloads include `SHA256SUMS.txt` for verified updates.
 
-Use the app's update check or install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
+Kriko offers a newer version on the Home screen when it starts, or you can install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
 
 > The build is unsigned, so Windows may show a SmartScreen warning. See the [Windows installation guide](docs/INSTALL_WINDOWS.md) for the install steps.
 
