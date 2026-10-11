@@ -51,7 +51,7 @@ fn entry_phase(app: &Kriko, e: &AgentEntry) -> Phase {
 }
 
 pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let entries = app.live.run.agent_entries();
     let loaded = app.live.run.prefs_loaded || app.live.run.targets_loaded;
     // The table's columns want 840 px of their own. Narrower than that, each
@@ -277,7 +277,7 @@ fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kr
         } else {
             (TagState::Block, "Install failed")
         };
-        block = block.child(div().flex().child(tag("agent-install-state", state, word, !app.reduce_motion)));
+        block = block.child(div().flex().child(tag("agent-install-state", state, word, app.motion)));
         if !v.message.is_empty() {
             block = block.child(row_desc(&v.message));
         }
@@ -527,7 +527,7 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
                 cx.notify();
             });
             row = row.child(option_chip(("agent-model", i), name, *name == h.llm)
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), *name == h.llm, 6.0, !app.reduce_motion)).on_click(pick));
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), *name == h.llm, 6.0, app.motion)).on_click(pick));
         }
         out = out.child(hairline()).child(eyebrow("Model")).child(row);
         if !h.llms_note.is_empty() {
@@ -549,7 +549,7 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
                 cx.notify();
             });
             row = row.child(option_chip(("agent-effort", i), level, *level == h.effort)
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, !app.reduce_motion)).on_click(pick));
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, app.motion)).on_click(pick));
         }
         out = out.child(hairline()).child(eyebrow("Effort")).child(row);
         if !h.effort_hint.is_empty() {

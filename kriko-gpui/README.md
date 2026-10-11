@@ -155,8 +155,8 @@ The design system's four animations all run, and Reduce motion (Settings)
 freezes every one of them:
 
 - **Boot** — live tags' LED dots wake with the staggered k-boot flicker.
-- **Blink** — needs-you tags pulse; a live meter's leading segment pulses
-  while a run is in flight.
+- **Blink** — needs-you tags blink three rounds when they appear, then rest
+  lit; a live meter's leading segment pulses while a run is in flight.
 - **The switch knob** slides through the --ease-mech overshoot; flipping it
   remounts the knob and the slide replays from the other side.
 - **The segmented thumb** slides the same way when a view is picked.
@@ -166,6 +166,19 @@ whose id carries the state it depends on — change the state, the element
 remounts, the animation replays. The overshoot is applied inside the
 animator (an easing function must stay within 0.0..=1.0 or the dev build's
 assert fires).
+
+**Only the window in front moves, and only work loops** (#184). A `.repeat()`
+animation is never done, so GPUI asks for the next frame forever and redraws
+the whole window each time: one loop on screen costs a CPU core. `render`
+decides `motion` once per frame as *Reduce motion is off and
+`window.is_window_active()`*, and every screen reads `app.motion`, so a
+window behind others, minimized or in the tray is still; GPUI redraws on
+every activation change, so the loops resume on focus. Loops are kept for
+work in flight (spinner, ripple, live meter, progress sheen, a working
+agent's mark). Waiting is not work: a waiting mark breathes three times and
+rests, the closed Live dock does not move, and the page head no longer
+breathes. `src/app/tests/test_the_idle_window_does_not_draw.py` holds the
+list of functions allowed to loop.
 
 ## Build the installer
 

@@ -157,7 +157,7 @@ fn claim_block(claim: &ClaimView) -> Div {
 }
 
 pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     if !app.live.history.loaded {
         return div().child(empty_note("Reading your history from the engine."));
     }
