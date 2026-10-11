@@ -87,6 +87,9 @@ impl Kriko {
         self.refresh_run(cx);
         self.refresh_knowledge(cx);
         self.refresh_local(cx);
+        // Every launch, once the engine answers: is a newer Kriko published?
+        // Home offers it and About shows it, so it is asked here, not on a screen.
+        self.check_app_update(cx);
     }
 
     pub fn refresh_health(&mut self, cx: &mut Context<Self>) {
