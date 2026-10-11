@@ -37,34 +37,27 @@ Short form, not a substitute:
    including documentation and packaging changes. Published versions are
    immutable; corrections get a newer version. Read `docs/UPDATE_PROTOCOL.md`.
 
-## TEMPORARY — app-first phase *(2026-09-01, delete when it ends)*
+## The gate — green on every push *(2026-10-11)*
 
-Until a Windows install opens, runs a check, and the reader says so, the loop is
-the *app*, not the suite. `ci.yml` was un-paused 2026-09-08 (audit: four
-defects passed every gate, which is why it was un-paused), then deleted
-2026-09-13: with no Actions minutes every run failed in under 15 seconds
-unallocated, so there were no logs and red ticks on untested commits, `main`
-included. A gate that is always red teaches scrolling past it. Its three jobs
-live verbatim in `tools/gate.sh`. Restore is `git revert` then the billing
-change, in that order. `desktop.yml` kept its recipe (the only installer
-record; its smoke steps would have caught v0.2.4) but lost its triggers the
-same day for the same reason: hand-run until minutes return.
+There are no Actions minutes, so `ci.yml` is gone and `tools/gate.sh` is the
+only gate: version agreement, ruff, mypy, pytest, both JS suites, the wheel,
+and `cargo check` + `cargo test` for `kriko-gpui/`. It was left red for weeks
+(43 failures, 15 type errors) because merges skipped it; 1.5.0 brought it back
+to green. So:
 
-The gate moved, it did not disappear:
-
-1. **Run `tools/gate.sh` before every push** (pytest, both JS suites, types,
-   stale-bundle check). A workflow that cannot run is why the gate is yours,
-   not permission to push broken work.
-2. **Do not block on CI.** Push, tag, keep working.
-3. **`desktop.yml` untrimmed, hand-run only.** Do not trim it for speed; put
-   `push`/`pull_request` back when minutes return. Every installer so far was
-   built by hand on a Windows host, which is a billing problem and not a reason
-   to cut the recipe.
+1. **Run `tools/gate.sh` before every push and every merge.** A red gate on
+   your branch is yours to fix before pushing. A red gate on `main` is the
+   first work of the day, before any feature.
+2. **A behaviour change updates its tests in the same commit.** A test that
+   asserts retired behaviour is rewritten to assert the new intent, or deleted
+   with the code it guarded. It is never left failing for someone else.
+3. **`desktop.yml` is the installer recipe, hand-run.** Do not trim it; put
+   `push`/`pull_request` back when minutes return.
 4. **Ship to the reader, not the branch.** A fix not in a double-clickable
    installer is not a fix yet.
 
-Ends when the reader confirms a double-clicked install opens and runs a check;
-then delete this section.
+On Linux, `cargo test` needs `libxkbcommon-dev` and `libxkbcommon-x11-dev`;
+without them it fails at link time, not in a test.
 
 ## Task tracking
 
@@ -214,7 +207,8 @@ weekly pass is `app/packautoupdate.py`, which at startup submits an
 the last success. There is no updates block in the UI.
 
 **The installer carries no packs** (#169). A fresh install opens onto an empty
-store: the sidecar freezes no `.kpack`, no build step makes one for the
+store, and the Knowledge screen offers the published index's packs with an
+Install button (same `pack_update` job as an update). The sidecar freezes no `.kpack`, no build step makes one for the
 installer, and startup seeds nothing. The reader installs the packs they want,
 and a pack already installed is kept current by the weekly update above. The
 release job still builds each `packs/<name>` into a `.kpack` and publishes
@@ -240,6 +234,7 @@ A need from the wrong layer means moving the module (drivers to
 | `docs/BRAND.md` | mark sources against rendered output, and why | current |
 | `docs/INSTALL_WINDOWS.md` | Windows install including the extension permission | current |
 | `docs/INTERNALS.md` | mechanism-level architecture, every endpoint and table | current |
+| `docs/PROTOCOL.md` | the wire: three clients, ports, health handshake, jobs, errors; `test_the_clients_call_routes_that_exist.py` enforces it | current |
 | `docs/PACK_CONTRACT.md` | what a catalog contains, must and may | current |
 | `docs/GLOSSARY.md` | one line per word, and the words with two meanings | current |
 | `docs/AGENT_OPERATIONS.md` | operation vocabulary, the harness protocol, open questions | a note, dated 2026-09-14 |
