@@ -155,13 +155,22 @@ async def lifespan(app: FastAPI):
             raise FileNotFoundError(app.state.settings.store_path)
         store = connect(app.state.settings.store_path)
         try:
-            # Rendered as the status check and the Update button render it, so
-            # what startup writes is what they compare against (B157: it once
-            # left out the agenda snapshot the other two put in).
-            body = agent.skill_body(app.state.settings, store)
+            # The digest leaves the agenda snapshot out (`agentskill.digest`), so
+            # whether a wired copy is stale can be answered from the protocol
+            # alone, at ~0.2 ms against ~70 ms for the full render with the agenda
+            # (the lookup tree over every claim). Startup pays for the agenda only
+            # when something is going to be written.
+            probe = agentskill.render(store) or ""
+            if agentconfig.skill_needs_refresh(agentskill.SKILL_NAME, probe):
+                # Rendered as the status check and the Update button render it, so
+                # what startup writes is what they compare against (B157: it once
+                # left out the agenda snapshot the other two put in).
+                body = agent.skill_body(app.state.settings, store)
+                refreshed = agentconfig.refresh_skills(agentskill.SKILL_NAME, body)
+            else:
+                refreshed = []
         finally:
             store.close()
-        refreshed = agentconfig.refresh_skills(agentskill.SKILL_NAME, body)
         if refreshed:
             log.info("refreshed %d stale agent skill(s)", len(refreshed))
     except FileNotFoundError:
