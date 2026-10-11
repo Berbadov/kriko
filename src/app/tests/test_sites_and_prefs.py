@@ -151,6 +151,8 @@ def test_a_refused_adapter_is_recorded_rather_than_stored(settings, monkeypatch)
     installation exactly as it was, and the reason has to be readable."""
     from app.providers import harness as harness_mod
     from app.web import tasks
+    monkeypatch.setattr(tasks, "identity_keys_text",
+                        lambda conn: "* `cars` / `car`: `make`")
 
     class _Plane:
         on_action = None
@@ -177,6 +179,8 @@ def test_a_refused_adapter_is_recorded_rather_than_stored(settings, monkeypatch)
 def test_a_good_adapter_is_stored_and_the_ask_is_closed(settings, monkeypatch):
     from app.providers import harness as harness_mod
     from app.web import tasks
+    monkeypatch.setattr(tasks, "identity_keys_text",
+                        lambda conn: "* `cars` / `car`: `make`")
 
     class _Plane:
         on_action = None

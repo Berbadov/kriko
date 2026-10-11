@@ -130,6 +130,8 @@ def test_site_register_saves_no_adapter_once_cancelled_after_the_ask(
 
     from app.providers import harness as harness_mod
     from app.web import jobs, state, tasks
+    monkeypatch.setattr(tasks, "identity_keys_text",
+                        lambda conn: "* `cars` / `car`: `make`")
     from kriko.store.db import connect
 
     spec = {
