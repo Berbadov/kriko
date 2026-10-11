@@ -39,14 +39,18 @@ def base_of(url: str) -> str:
     return (url or "").strip().rstrip("/").removesuffix("/v1").rstrip("/")
 
 
-def _get(url: str, timeout: float):
+def _get(url: str, timeout: float, *, health: bool = False):
     """`(reached, payload)`. Reached means *something* answered over HTTP,
     including a 404, because a server that refuses one path is still up."""
     try:
         with urllib.request.urlopen(url, timeout=timeout) as response:
             raw = response.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError:
-        return True, None
+    except urllib.error.HTTPError as error:
+        # OpenSERP may return 503 for partial engine degradation. Preserve its
+        # health document, without accepting error documents as model lists.
+        if not health or error.code != 503:
+            return True, None
+        raw = error.read(65536).decode("utf-8", "replace")
     except Exception:  # noqa: BLE001 - a down server is an answer, not an error
         return False, None
     try:
@@ -108,9 +112,19 @@ def discover(configured: str = "", timeout: float = PROBE_TIMEOUT) -> list[dict]
 
 def search_answers(url: str = "", timeout: float = PROBE_TIMEOUT) -> bool:
     """Whether OpenSERP's health endpoint says the local service is ready."""
-    reached, payload = _get((base_of(url) or SEARCH_DEFAULT_URL) + "/health", timeout)
+    reached, payload = _get((base_of(url) or SEARCH_DEFAULT_URL) + "/health", timeout,
+                            health=True)
+    engines = payload.get("engines") if isinstance(payload, dict) else []
+    if not isinstance(engines, list):
+        engines = []
     return bool(
         reached
         and isinstance(payload, dict)
-        and (payload.get("status") in ("healthy", "ok") or payload.get("ok") is True)
+        and (payload.get("status") in ("healthy", "ok") or payload.get("ok") is True
+             or (payload.get("status") == "degraded"
+                 and any(isinstance(engine, dict)
+                         and engine.get("name") in ("bing", "duckduckgo", "ecosia")
+                         and engine.get("initialized") is True
+                         and engine.get("status") == "ready"
+                         for engine in engines)))
     )

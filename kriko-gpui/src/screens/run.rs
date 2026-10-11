@@ -157,6 +157,7 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
         .map(|n| format!("{} tokens", n as u64))
         .unwrap_or_else(|| "Token use not reported by this model server".into());
     let risks = api::arr(result, "risks");
+    let specs = api::arr(result, "specs");
     let dropped = api::n(result, "dropped").unwrap_or(0.0) as usize;
     let mut urls = Vec::<String>::new();
     for risk in risks {
@@ -203,9 +204,9 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
             .map(|value| format!("{value:.0}"))
             .unwrap_or_else(|| "not reported".into());
         card = card.child(mono(&format!(
-            "READ {} · RELEVANT {} · PUBLISHERS {} · CITED {}",
+            "READ {} · PRODUCT MATCHES {} · CHECKED {} · PUBLISHERS {} · CITED {}",
             count("pages_read"), count("pages_relevant"),
-            count("publishers_read"), count("sources_cited")), MUTED));
+            count("pages_extracted"), count("publishers_read"), count("sources_cited")), MUTED));
         let status = api::s(coverage, "status");
         if !status.is_empty() {
             let status = match status.as_str() {
@@ -219,8 +220,21 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
             card = card.child(row_desc(status));
             card = card.child(mono(&format!("Evidence passes: {} · candidates rejected: {}",
                 count("pages_extracted"), count("rejected_candidates")), DIM));
-            if risks.is_empty() {
-                card = card.child(row_desc("An empty result does not establish that this product has no problems."));
+            if risks.is_empty() && specs.is_empty() {
+                card = card.child(row_desc("This is insufficient evidence to conclude that the product has no problems."));
+                if let Some(reasons) = coverage.get("rejection_reasons").and_then(Value::as_object) {
+                    let mut summary = reasons.iter()
+                        .filter_map(|(reason, count)| {
+                            let count = count.as_u64().or_else(|| count.as_i64().map(|n| n.max(0) as u64))?;
+                            (count > 0).then(|| (count, format!("{} ({count})", reason.replace('_', " "))))
+                        })
+                        .collect::<Vec<_>>();
+                    summary.sort_by(|a, b| b.0.cmp(&a.0));
+                    let summary = summary.into_iter().take(3).map(|(_, label)| label).collect::<Vec<_>>();
+                    if !summary.is_empty() {
+                        card = card.child(row_desc(&format!("Candidate rejection reasons: {}", summary.join(" · "))));
+                    }
+                }
             }
         }
     }

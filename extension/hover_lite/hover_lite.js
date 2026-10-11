@@ -2,7 +2,7 @@
    installed adapter matches, via Shadow DOM. The toolbar action toggles visibility.
 
    State machine:
-     idle      → no analysis run yet (button: "Analyze current page")
+     idle      → no analysis run yet (button: "Search this product")
      analyzing → request in flight (skeleton + spinner)
      result    → AnalyzeResponse rendered
      error     → backend error message
@@ -30,7 +30,7 @@
    * ever mounts on a page an adapter matched, so naming *which* site was never
    * information the reader needed; it was only a sentence that would be wrong
    * on the second site and unnoticed on the third. */
-  const IDLE_HINT = "Analyze this page to see what is known about it.";
+  const IDLE_HINT = "Quick search: see what is known about this product.";
 
   /* The engine's verdict, as a word the panel shows. Three of the four are
    * worth a banner; `recognised` is the ordinary case and gets none. */
@@ -221,6 +221,15 @@
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────
+  /* An agent answers in light markdown (**bold**, `code`). Shown raw, the
+   * asterisks read as noise, so this renders just those two, on top of the
+   * escaped text: nothing the agent writes can become markup of its own. */
+  function renderAgentText(s) {
+    return escapeHtml(s)
+      .replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/`([^`\n]+?)`/g, "<code>$1</code>");
+  }
+
   function escapeHtml(s) {
     if (s == null) return "";
     return String(s)
@@ -910,6 +919,26 @@
     const editing = slot.querySelector(".lite-question-input:focus");
     const editingId = editing?.dataset.id;
     const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
+    const quickCoverage = state.researchQuick?.coverage;
+    const quickIsEmpty = Boolean(state.researchQuick
+      && !state.researchQuick.risks?.length && !state.researchQuick.specs?.length);
+    const rejectionReasons = quickCoverage?.rejection_reasons;
+    const rejectionSummary = rejectionReasons && typeof rejectionReasons === "object"
+      ? Object.entries(rejectionReasons)
+        .filter(([, count]) => Number(count) > 0)
+        .sort((a, b) => Number(b[1]) - Number(a[1]))
+        .slice(0, 3)
+        .map(([reason, count]) => `${reason.replaceAll("_", " ")} (${count})`)
+        .join(", ")
+      : "";
+    const quickEmptyExplanation = quickIsEmpty && quickCoverage
+      ? ({
+        no_matching_product_evidence: "No pages matched this exact product.",
+        evidence_rejected: "Relevant pages were checked, but candidate findings did not pass the evidence checks.",
+        no_supported_findings: "Relevant pages were checked, but none supported a finding.",
+        partial: "Some research stages were incomplete.",
+      }[quickCoverage.status] || "No supported findings were kept.")
+      : "";
     const markup = `
       <section class="lite-research">
         <div class="lite-research-head">
@@ -924,10 +953,11 @@
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
         ${state.researchSavedAt ? `<p class="lite-saved-result">Saved result · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
-        ${state.researchQuick?.coverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
-          `${state.researchQuick.coverage.pages_read || 0} pages read · ${state.researchQuick.coverage.pages_relevant || 0} matched product · ${state.researchQuick.coverage.publishers_read || 0} publishers · ${state.researchQuick.coverage.sources_cited || 0} pages cited`
-          + (state.researchQuick.coverage.status === "partial" ? " · Some stages were incomplete." : "")
-          + (!state.researchQuick.risks?.length ? " · No supported problems kept; this does not establish that the product has no problems." : ""))}</p>` : ""}
+        ${quickCoverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
+          `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched product · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} pages cited`
+          + (quickEmptyExplanation ? ` · ${quickEmptyExplanation}` : "")
+          + (quickIsEmpty ? " This is insufficient evidence to conclude that the product has no problems." : "")
+          + (rejectionSummary ? ` Reasons: ${rejectionSummary}.` : ""))}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
         ${state.researchQuick && (state.researchQuick.risks.length || state.researchQuick.specs?.length) ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
@@ -941,7 +971,7 @@
           <p class="lite-follow-lede">Ask a follow-up. Answers come from this quick look's findings.</p>
           ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
             <p class="lite-follow-q">${escapeHtml(a.q)}</p>
-            <p class="lite-follow-answer">${a.done ? escapeHtml(a.answer || "No answer.") : "Answering\u2026"}</p>
+            <p class="lite-follow-answer">${a.done ? renderAgentText(a.answer || "No answer.") : "Answering\u2026"}</p>
           </div>`).join("")}
           <div class="lite-follow-row">
             <input class="lite-follow-input" maxlength="500" placeholder="Ask about this quick look" ${state.researchAsking ? "disabled" : ""} />
@@ -1706,7 +1736,7 @@
           <div class="lite-subtitle">local product knowledge</div>
         </div>
         <button type="button" class="lite-iconbtn lite-btn-density"
-                title="Refresh analysis" aria-label="Refresh analysis">
+                title="Search again" aria-label="Search again">
           ${iconSvg("refresh", { size: 16, strokeWidth: 2 })}
         </button>
         <!-- Search sits in the header rather than behind a verdict, because
@@ -1730,10 +1760,11 @@
         <div class="lite-cta-wrap">
           <button type="button" class="lite-cta">
             <span class="lite-cta-icon">${iconSvg("scan", { size: 15 })}</span>
-            <span class="lite-cta-label">Analyze current page</span>
+            <span class="lite-cta-label">Search this product</span>
           </button>
           <p class="lite-status">${escapeHtml(IDLE_HINT)}</p>
         </div>
+        <div class="lite-queue-slot"></div>
         <div class="lite-product-actions">
           <button type="button" class="lite-find-product">Find in installed packs</button>
           <button type="button" class="lite-research-product">Research this product</button>
@@ -1815,11 +1846,19 @@
             // the page reads; a second line repeating it is noise (B152.5).
             ? (sameWords(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
             : `<div class="lite-listing-engine" data-unresolved="1">Not recognised; no pack matched this page</div>`}
-        ${renderQueueRow()}
       </div>
     `;
-    const queueButton = slot.querySelector(".lite-queue");
-    if (queueButton) queueButton.addEventListener("click", addToQueue);
+  }
+
+  /* The queue row has a slot of its own. It used to sit inside the listing
+   * header, which exists only once a pack has read the page, so on a product
+   * nothing installed knew (the very one a reader wants to line up and
+   * research) the button was simply gone. */
+  function renderQueue() {
+    const slot = bodyEl?.querySelector(".lite-queue-slot");
+    if (!slot) return;
+    slot.innerHTML = renderQueueRow();
+    slot.querySelector(".lite-queue")?.addEventListener("click", addToQueue);
     slot.querySelector(".lite-queue-help")?.addEventListener("click", (event) => {
       state.queueHelpOpen = !state.queueHelpOpen;
       event.currentTarget.setAttribute("aria-expanded", String(state.queueHelpOpen));
@@ -1865,12 +1904,12 @@
     const lm = state.listingMeta || {};
     const url = window.location.href;
     state.queue = { url, phase: "busy", text: "" };
-    renderListingHeader();
+    renderQueue();
     chrome.runtime.sendMessage({ type: "QUEUE_ADD", payload: {
       url,
       // the engine's reading of the product first: it is the name the
       // agent researches under, where the page title is the seller's
-      name: lm.identity_line || lm.title || document.title,
+      name: lm.identity_line || lm.title || state.unknownProduct || document.title,
       lookup_id: (state.result && state.result.lookup_id) || "",
     } }, (response) => {
       if (state.queue.url !== url) return;
@@ -1883,7 +1922,7 @@
         state.queue = { url, phase: response.added ? "queued" : "already",
           text: `${response.added ? "Queued" : "Already queued"} · ${response.count} of ${response.max} in Compare` };
       }
-      renderListingHeader();
+      renderQueue();
     });
   }
 
@@ -2044,8 +2083,8 @@
     ctaBtn.disabled = isAnalyzing;
     const iconName = isAnalyzing || hasResult ? "refresh" : "scan";
     const label = isAnalyzing
-      ? "Analyzing…"
-      : (hasResult ? "Refresh analysis" : "Analyze current page");
+      ? "Searching…"
+      : (hasResult ? "Search again" : "Search this product");
     const iconWrap = ctaBtn.querySelector(".lite-cta-icon");
     iconWrap.innerHTML = iconSvg(iconName, { size: 15 });
     iconWrap.classList.toggle("spin", isAnalyzing);
@@ -2727,7 +2766,7 @@
       empty.className = "lite-empty";
       empty.innerHTML = `
         <span class="lite-empty-icon">${iconSvg("search", { size: 18 })}</span>
-        <div>No analysis yet. Press <b>Analyze current page</b>.</div>
+        <div>No search yet. Press <b>Search this product</b>.</div>
       `;
       claimsListEl.appendChild(empty);
       return;
@@ -3109,7 +3148,7 @@
               <span class="lite-followup-job-status" data-active="${!job.done}">${phase}</span>
             </div>
             ${agent?.model ? `<div class="lite-followup-model">${escapeHtml(agent.model)}</div>` : ""}
-            <div class="lite-followup-answer">${escapeHtml(job.result?.answer
+            <div class="lite-followup-answer">${renderAgentText(job.result?.answer
               || (job.done ? job.error || "No answer was returned." : "Waiting for the answer…"))}</div>
           </div>
         </article>`;
@@ -3194,6 +3233,7 @@
     const anchorTop = anchor?.getBoundingClientRect().top;
     const focused = shadow.activeElement;
     renderListingHeader();
+    renderQueue();
     renderCriticalAlerts();
     renderCta();
     renderStatus();
