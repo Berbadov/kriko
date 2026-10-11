@@ -96,8 +96,11 @@ def _pick(models: list[str], wanted: str) -> str:
     recommended = sorted((one for one in chat if is_recommended(one)), key=len)
     if recommended:
         return recommended[0]
-    capable = [(one, _parameter_size(one)) for one in chat]
-    capable = [(one, size) for one, size in capable if size is not None and size >= 4]
+    capable: list[tuple[str, float]] = []
+    for one in chat:
+        size = _parameter_size(one)
+        if size is not None and size >= 4:
+            capable.append((one, size))
     return min(capable, key=lambda item: item[1])[0] if capable else ""
 
 
@@ -210,7 +213,7 @@ def resolve(
             small = [
                 one
                 for one in out["models"]
-                if _parameter_size(one) is not None and _parameter_size(one) < 4
+                if (size := _parameter_size(one)) is not None and size < 4
             ]
             out["reason"] = (
                 "Only local chat models smaller than 4B are available. Choose one "

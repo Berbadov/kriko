@@ -2,12 +2,20 @@
 from types import SimpleNamespace
 from io import BytesIO
 import json
+import os
 import urllib.error
 
 import pytest
 
 from app import agentinstall, prefs
 from app.web import state
+
+
+def _as_windows(monkeypatch):
+    """The one-click install is Windows-only. Only the install module's view of
+    `os` says so: patching `os.name` itself would make pathlib build Windows
+    paths on this machine."""
+    monkeypatch.setattr(agentinstall, "os", SimpleNamespace(name="nt", environ=os.environ))
 
 
 class Progress:
@@ -23,7 +31,7 @@ class Progress:
 
 def test_setup_selects_the_downloaded_starter_in_the_readers_settings(tmp_path, monkeypatch):
     settings = SimpleNamespace(app_state_path=tmp_path / "app.sqlite")
-    monkeypatch.setattr(agentinstall.os, "name", "nt")
+    _as_windows(monkeypatch)
     monkeypatch.setattr(agentinstall, "_set_up_local", lambda *args: {
         "id": "local", "installed": True, "model": agentinstall.STARTER_MODEL})
     monkeypatch.setattr(agentinstall.modelpull, "ollama_base", lambda path: agentinstall.OLLAMA_URL)
@@ -57,6 +65,7 @@ def test_a_missing_app_has_an_actionable_setup_message(monkeypatch):
 
 
 def test_setup_refuses_ready_when_the_installed_model_cannot_run(monkeypatch, tmp_path):
+    _as_windows(monkeypatch)
     monkeypatch.setattr(agentinstall, "_answers", lambda base: True)
     monkeypatch.setattr(agentinstall.modelpull, "ollama_base", lambda *a: agentinstall.OLLAMA_URL)
     monkeypatch.setattr(agentinstall.modelpull, "installed", lambda *a: [{"name": agentinstall.STARTER_MODEL}])
