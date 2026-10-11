@@ -598,3 +598,61 @@ def test_a_claim_the_packs_own_gate_refuses_is_left_out(world, tmp_path):
     assert yaml.safe_load(
         (packdraft.open_draft(world.settings.store_path, "gaming-mice").root
          / "data" / "claims.yaml").read_text(encoding="utf-8")) in (None, [])
+
+
+# ── quick looks accumulate into a pack, without a second research run ─────
+
+
+def _look(client, title):
+    """One press of "Research this product": a saved quick look, not filed."""
+    response = client.post("/api/extension/research-plane", json={
+        "q": title, "allow_draft": True})
+    assert response.status_code == 200, response.text
+    quick = _wait(client, response.json()["job_id"])
+    assert quick["state"] == "succeeded", quick["message"]
+    return quick
+
+
+def test_a_product_the_catalog_holds_is_filed_without_asking_an_agent(world):
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    world.script.quick["Scyrox V8 Gaming Mouse"]["pack"] = "gaming.mice"
+    world.script.quick["Scyrox V8 Gaming Mouse"]["risks"] = [
+        _risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]
+    authored = len(world.script.asked("# Author")) + len(world.script.asked("# Extend"))
+
+    _, deepen = _check(world, "Scyrox V8 Gaming Mouse")
+
+    assert deepen["state"] == "succeeded", deepen["message"]
+    assert deepen["result"]["agent"] is False
+    assert deepen["result"]["claims_added"] == 1
+    assert len(world.script.asked("# Author")) + len(world.script.asked("# Extend")) == authored
+    assert ("Cable fraying", CABLE_PAGE, CABLE_QUOTE) in _claims_of(world, "Scyrox V8")
+
+
+def test_a_harvest_files_every_saved_quick_look_once_and_names_what_needs_an_agent(world):
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")            # the catalog, authored once
+    world.script.quick["Scyrox V8 Gaming Mouse"]["pack"] = "gaming.mice"
+    world.script.quick["Scyrox V8 Gaming Mouse"]["risks"] = [
+        _risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]
+    _look(world, "Scyrox V8 Gaming Mouse")             # saved, not filed
+    _script_v6(world.script)
+    _look(world, "Scyrox V6 Gaming Mouse")             # a product the catalog lacks
+    version = _packs(world)["gaming.mice"]["version"]
+    prompts = len(world.script.prompts)
+
+    first = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+
+    assert first["state"] == "succeeded", first["message"]
+    assert first["result"]["claims_added"] == 1
+    assert [one["product"] for one in first["result"]["needs_agent"]] == ["Scyrox V6 Gaming Mouse"]
+    assert len(world.script.prompts) == prompts         # no agent was asked anything
+    assert _packs(world)["gaming.mice"]["version"] != version
+    [shared] = first["result"]["packs"]
+    artifact = world.get(shared["artifact"])
+    assert artifact.status_code == 200 and artifact.content
+
+    again = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert again["result"]["claims_added"] == 0
+    assert [one["product"] for one in again["result"]["needs_agent"]] == ["Scyrox V6 Gaming Mouse"]

@@ -84,6 +84,24 @@ whose risks are cheap to check by other means has a different bar, and says so.
 
 Honour whatever bar the pack declares in any claim-selection change.
 
+## Catalogs grow from quick looks *(2026-10-11)*
+
+A quick look is already sourced and quote-checked, so it is the raw material
+of a catalog, not a preview of a research run. Two rules follow:
+
+1. **No second research run for what is already known.** A quick look whose
+   product a catalog already holds is filed by re-reading each quote against
+   its page and attaching it (`tasks._file_quick_look`). An agent is spent
+   only to write a subject the catalog does not have.
+2. **Accumulation is a harvest, not a chore.** `POST /api/packs/harvest`
+   files every saved quick look not yet filed, installs each catalog that
+   gained claims once, and returns its `.kpack` link to share. A look whose
+   product no catalog holds is listed as needing an agent, never sent to one
+   unasked, because spending an agent is the reader's press.
+
+So a catalog shared between readers is the sum of their grounded quick
+looks, and every claim in it still carries the page and the quote it came from.
+
 ## Scalability — no hardcoded category data
 
 **READ BEFORE ADDING A LIST OF PRODUCT NAMES.** Hardcoding makes, models or
