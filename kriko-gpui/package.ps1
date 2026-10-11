@@ -220,12 +220,6 @@ try {
                " $Python's environment has no other checkout installed, then re-run.")
     }
 
-    # The knowledge before the freeze, for the same reason. Which packs get
-    # built is discovered from packs/, so a third one ships by existing.
-    Step "Build the packs"
-    & $Python packaging/build_packs.py
-    Assert-LastExitCode "build_packs.py"
-
     Step "Fetch the pinned OpenSERP release"
     $bin = Join-Path $crate "target\release"
     & (Join-Path $repo "packaging\fetch_openserp.ps1") -Destination (Join-Path $bin "OpenSERP.exe")

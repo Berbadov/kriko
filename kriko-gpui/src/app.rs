@@ -20,6 +20,16 @@ use crate::theme::*;
 // ---- keyboard actions (bound in main.rs) ----
 gpui::actions!(kriko, [NewCheck, SearchKnowledge, JumpBrowse]);
 
+// ---- the window's room ----
+
+/// The page column's side padding (`px(40.0)` on the page, below the hero).
+const PAGE_PAD: f32 = 40.0;
+/// The live dock's width when it sits beside the page.
+const DOCK_W: f32 = 300.0;
+/// The titlebar's height; the floating dock starts under it so the window
+/// controls on the titlebar stay under the reader's pointer.
+const TITLEBAR_H: f32 = 40.0;
+
 // ---- tabs ----
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -334,6 +344,10 @@ pub struct Kriko {
     pub library_search: InputState,
     pub quick_ask_input: InputState,
     pub sidebar_collapsed: bool,
+    /// The width the page column has this frame, measured in `render` before
+    /// any screen lays out, so a screen can choose side-by-side panels or a
+    /// stacked column for the room it really has.
+    pub content_w: f32,
     /// The page's scroll, eased. A wheel notch moves `scroll_target`; each
     /// frame `scroll_shown` closes on it and is what the page is drawn at.
     /// Both are offsets (zero at the top, negative further down).
@@ -379,7 +393,8 @@ impl Kriko {
             dock_reply_open: false,
             dock_logs_open: false,
             dock_feed: Vec::new(),
-            dock_open: true,
+            // Every launch starts with the live dock closed.
+            dock_open: false,
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
             local_url: InputState::new(cx),
@@ -391,6 +406,7 @@ impl Kriko {
             library_search: InputState::new(cx),
             quick_ask_input: InputState::new(cx),
             sidebar_collapsed: false,
+            content_w: 0.0,
             main_scroll: gpui::ScrollHandle::new(),
             scroll_target: 0.0,
             scroll_shown: 0.0,
@@ -945,6 +961,13 @@ impl Render for Kriko {
         }
         let tab = self.tab;
         self.step_scroll(window);
+        // The page's room is the window less the sidebar and the page's own
+        // padding. The live dock floats over the page and takes none of it,
+        // so opening the dock never changes how a screen lays out.
+        let viewport_w = f32::from(window.viewport_size().width);
+        let open = self.dock_open;
+        let sidebar_w = if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W };
+        self.content_w = (viewport_w - sidebar_w - 2.0 * PAGE_PAD).max(0.0);
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
         let sidebar = self.sidebar(cx);
@@ -958,12 +981,21 @@ impl Render for Kriko {
         } else { sidebar.into_any_element() };
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
-        let open = self.dock_open;
-        let dock_wrap = div().flex_none().h_full().overflow_hidden().w(px(if open { 300.0 } else { 0.0 })).child(dock);
+        // A glass panel floating over the page's right edge, under the
+        // titlebar and inset from the window's edges. It sits above the page
+        // and takes no width from it; closed, it has no width and no reach.
+        let dock_wrap = div()
+            .absolute()
+            .top(px(TITLEBAR_H + 8.0))
+            .bottom(px(12.0))
+            .right(px(12.0))
+            .overflow_hidden()
+            .w(px(if open { DOCK_W } else { 0.0 }))
+            .child(dock);
         let dock_wrap = if !self.reduce_motion {
             dock_wrap.with_animation(gpui::ElementId::named_usize("live-slide", open as usize),
                 gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
-                    let t = t * t * (3.0 - 2.0 * t); d.w(px(300.0 * if open { t } else { 1.0 - t }))
+                    let t = t * t * (3.0 - 2.0 * t); d.w(px(DOCK_W * if open { t } else { 1.0 - t }))
                 }).into_any_element()
         } else { dock_wrap.into_any_element() };
         let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
@@ -971,6 +1003,7 @@ impl Render for Kriko {
         div()
             .id("kriko-root")
             .size_full()
+            .relative()
             .flex()
             .bg(rgb(GROUND))
             .text_color(rgb(INK))

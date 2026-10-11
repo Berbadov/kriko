@@ -69,31 +69,12 @@ def test_reset_removes_every_pack_and_keeps_history(client, settings):
         conn.close()
 
 
-def test_seeding_is_refused_after_a_reset(settings):
-    from app import bundledpacks
-
-    _install_pack(settings, "probe")
-    cleaninstall.reset(settings.store_path, settings.app_state_path)
-    bundledpacks.seed(
-        settings.store_path, source=None,
-        app_state_path=settings.app_state_path)
-    # No bundled packs on this machine either way; the marker is the point.
-    assert cleaninstall.was_reset(settings.app_state_path) is True
-
-
-def test_the_marker_can_be_cleared_to_reseed(settings):
-    cleaninstall.reset(settings.store_path, settings.app_state_path)
-    assert cleaninstall.was_reset(settings.app_state_path) is True
-    cleaninstall.clear_reset(settings.app_state_path)
-    assert cleaninstall.was_reset(settings.app_state_path) is False
-
-
 def test_reset_discards_drafts(settings, tmp_path):
     _install_pack(settings, "probe")
     from app import packdraft
     root = packdraft.drafts_root(settings.store_path)
     (root / "my-draft").mkdir(parents=True)
     (root / "my-draft" / "pack.toml").write_text("name = 'x'", encoding="utf-8")
-    result = cleaninstall.reset(settings.store_path, settings.app_state_path)
+    result = cleaninstall.reset(settings.store_path)
     assert "my-draft" in result["drafts"]
     assert not (root / "my-draft").exists()
