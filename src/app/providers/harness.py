@@ -1897,8 +1897,9 @@ def _tool_line(name: str, args: dict | None) -> str:
     # The page reader (B155) takes a list, under whichever server name the
     # CLI's allowlist spells in front of the tool. The log names it as what it
     # is, because "read through the page reader" is the line that shows a
-    # refused page was not fetched a second time.
-    if any(name.endswith(tool) for tool in READER_TOOLS):
+    # refused page was not fetched a second time. Only the MCP-qualified
+    # spelling counts: a CLI's own `web_fetch` is an ordinary fetch.
+    if any(name.startswith("mcp__") and name.endswith("__" + tool) for tool in READER_TOOLS):
         urls = args.get("urls")
         urls = [str(one) for one in urls] if isinstance(urls, list) else [str(url or "")]
         return f"read through the page reader {_short(', '.join(u for u in urls if u), 120)}".strip()

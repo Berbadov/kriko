@@ -602,10 +602,11 @@ test("a raised window means no browser tab", async () => {
   assert.deepEqual(h.state.tabsCreated, []);
 });
 
-test("no shell attached opens the tab the reader asked for", async () => {
-  // The case that produced the report. The route posts fine, nothing is
-  // listening for the line, and a tab is the correct answer rather than a
-  // fallback the reader has to interpret.
+test("no shell attached says the window is not connected and opens no tab", async () => {
+  // The engine answers, but nothing is reading its stdout to raise a window.
+  // The fallback tab used to open here; it pointed at the retired Svelte
+  // hash routes, so the reader got a page that no longer exists. The answer
+  // is now a named error the panel can say, and no tab.
   const h = loadBackground({
     routes: { "/api/focus": { accepted: true, route: "check", delivery: "no_shell" } },
   });
@@ -613,9 +614,10 @@ test("no shell attached opens the tab the reader asked for", async () => {
     type: "OPEN_IN_APP",
     payload: { route: "check", fallbackUrl: "http://127.0.0.1:8787/#/check" },
   });
-  assert.equal(got.raised, false);
+  assert.equal(got.ok, false);
+  assert.equal(got.code, "DESKTOP_NOT_CONNECTED");
   assert.equal(got.delivery, "no_shell");
-  assert.deepEqual(h.state.tabsCreated, ["http://127.0.0.1:8787/#/check"]);
+  assert.deepEqual(h.state.tabsCreated, []);
 });
 
 test("nothing running is reported, not opened in a dead tab", async () => {
