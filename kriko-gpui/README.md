@@ -212,6 +212,18 @@ cargo-wix`. If WiX is not on PATH or in `WIX`, pass its folder:
 `build.rs` (winresource), so the taskbar and shortcuts show the mark without
 any extra files. The installer is unsigned: SmartScreen warns on first run.
 
+Where the build writes. The release tree, about 2 GB, goes to
+`%LOCALAPPDATA%\Kriko\cargo-target`: one copy per machine, shared by every
+checkout and worktree, not `kriko-gpui\target` inside each one. `CARGO_TARGET_DIR`
+moves it. PyInstaller's scratch goes to temp and is removed after the freeze.
+`dist\` (the sidecar and the packs) and `builds\` stay in the checkout, because
+they are what the build hands over.
+
+A plain `cargo build` or `cargo run` still writes `kriko-gpui\target`. If
+`CARGO_TARGET_DIR` points elsewhere for those too, `cargo run` stops finding the
+checkout's `.venv` (`checkout_python` in `src/engine.rs` walks up from the exe)
+and falls back to `python` on PATH.
+
 The icon (`assets/kriko.ico`) is the white K mark on the flat brand blue
 `#1f4fff`, on a smooth rounded square, no sharp corners, at every size
 from 16 to 256 px. It is the one file the exe and the installer both read,

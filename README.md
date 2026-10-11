@@ -52,6 +52,10 @@ The Windows app includes everything it needs to start. It does not include catal
 - Pages that were read but were not about the product give an empty result with counts, not a "check OpenSERP and the connection" error. That error now appears only when nothing could be read, and names the cause.
 - `gemma4:e2b` is the recommended local model: it is the default when you have not chosen one, what **Set up Ollama and the recommended model** downloads (allow about 8 GB), and it is marked *Recommended* in the model list.
 
+### What's new in 1.3.4
+
+- Build maintenance only: the app is unchanged from 1.3.3. The installer build now writes its Rust output to one shared folder outside the project, instead of a copy of about 2 GB inside every checkout and worktree.
+
 ### What's new in 1.3.3
 
 - Includes the extension's **Search this product** action, queue button for unrecognized products, and escaped bold/inline-code answer formatting from 1.3.2.
