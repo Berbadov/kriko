@@ -2582,8 +2582,30 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
     conn = connect(settings.store_path)
     try:
         keys = identity_keys_text(conn)
+        installed, enabled = conn.execute(
+            "SELECT COUNT(*), COALESCE(SUM(CASE WHEN enabled = 1 THEN 1 ELSE 0 END), 0)"
+            " FROM packs"
+        ).fetchone()
     finally:
         conn.close()
+
+    # Before the agent, not after it: with no identity key to map into, every
+    # adapter it could write is refused ("no `identity` rules"), and that
+    # verdict used to arrive only once a run had spent the reader's quota.
+    if keys == NO_IDENTITY_KEYS:
+        raise ValueError(
+            (f"all {installed} installed pack(s) are disabled, so there is no "
+             "identity key an adapter could map this site into. Enable a pack "
+             "on the Packs screen, then add the site again."
+             if installed and not enabled else
+             "enabled catalogs provide no product identity information for "
+             "an adapter. Install or enable a catalog that identifies products, "
+             "then add the site again."
+             if installed else
+             "no pack is installed, so there is no identity key an adapter "
+             "could map this site into. Install a pack, then add the site "
+             "again.")
+        )
 
     if not harness.available():
         raise ValueError(
@@ -2651,6 +2673,10 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
     return {"host": host, "adapter": checked, "url": url}
 
 
+#: What `identity_keys_text` says when no enabled pack declares an identity key.
+NO_IDENTITY_KEYS = "(no packs are installed, so there are no keys to map into yet)"
+
+
 def identity_keys_text(conn) -> str:
     """The identity keys the installed packs declare, for a brief.
 
@@ -2667,7 +2693,7 @@ def identity_keys_text(conn) -> str:
         " ORDER BY s.pack_id, s.kind, a.key"
     ).fetchall()
     if not rows:
-        return "(no packs are installed, so there are no keys to map into yet)"
+        return NO_IDENTITY_KEYS
     by_pack: dict[tuple, list[str]] = {}
     for row in rows:
         by_pack.setdefault((row["pack_id"], row["kind"]), []).append(row["key"])
