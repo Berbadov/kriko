@@ -19,7 +19,7 @@ Pages read, pages relevant, completed evidence passes, cited pages, and publishe
 
 Identical fictional evidence, native Ollama, temperature 0, thinking disabled, 4096-token context. Output limits vary by stage. One case contains two documented problems and matching battery reports; another contains positive evidence and a neighbouring model's failure. This is a small controlled comparison, not a general benchmark or proof of reliability.
 
-Final shipping pipeline digest: `67fd77e059831464fdfb061380b76ddfa774c9e13a71a9d9383d808313140ed6`.
+First MSI pipeline snapshot digest: `67fd77e059831464fdfb061380b76ddfa774c9e13a71a9d9383d808313140ed6`. Subsequent search and source-classification fixes are recorded in [the follow-up observation](2026-10-11-local-search-followup.md); the controlled comparison below was run before those changes.
 
 | Installed model | Expected problems recovered | Battery publishers | Abstention case | Evidence-case time |
 |---|---:|---:|---|---:|
