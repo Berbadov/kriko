@@ -35,6 +35,9 @@ fn settle(
 
 pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
+    // The packs card and the gaps card side by side only when each has its
+    // 360 px; narrower, they stack at the page's width.
+    let beside = app.content_w >= 760.0;
     let search = app.input_field(Field::OverviewSearch, "overview-search", "Search packs or products", Some("search"), window, cx);
     let query = app.overview_search.value.to_lowercase();
     let pack_pick = app.overview_pack.clone();
@@ -163,7 +166,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     packs = packs.child(hairline());
     if k.packs.is_empty() {
         packs = packs.child(div().pt(px(12.0)).child(empty_note(
-            "No packs are installed. Install one from Browse and its knowledge lands here.",
+            "No packs are installed yet, so there is no knowledge to check listings against.",
         )));
     }
     for (i, pack) in pack_rows.iter().enumerate() {
@@ -195,11 +198,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                         .child(
                             div()
                                 .flex()
-                                .items_center()
-                                .justify_between()
-                                .gap(px(16.0))
-                                .child(div().flex_1().min_w(px(0.0)).truncate().child(row_title(&pack.name)))
-                                .child(div().flex_none().child(mono(&note, MUTED))),
+                                .flex_col()
+                                .gap(px(4.0))
+                                .min_w(px(0.0))
+                                .child(div().min_w(px(0.0)).truncate().child(row_title(&pack.name)))
+                                .child(mono(&note, MUTED)),
                         )
                         .child(meter_slim(pack.subjects as f32 / max_subjects * 100.0, 10))
                         .child(mono(&format!("{} · {}", pack.id, pack.version), DIM)),
@@ -406,16 +409,27 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     total_card("Evidence", &t.evidence.to_string(), "quotes with their sources").flex_1(),
                 )),
         )
-        .child(
+        .child(if beside {
             div()
                 .flex()
-                .flex_wrap()
                 .gap(px(24.0))
                 .items_start()
                 .child(settle(gpui::ElementId::named_usize("ov-card", 0), 260.0, motion)(left))
                 .child(settle(gpui::ElementId::named_usize("ov-card", 1), 340.0, motion)(
                     div().flex_1().min_w(px(0.0)).child(gaps_card),
-                )),
-        )
+                ))
+                .into_any_element()
+        } else {
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(24.0))
+                .w_full()
+                .child(settle(gpui::ElementId::named_usize("ov-card", 0), 260.0, motion)(left.w_full()))
+                .child(settle(gpui::ElementId::named_usize("ov-card", 1), 340.0, motion)(
+                    div().w_full().child(gaps_card),
+                ))
+                .into_any_element()
+        })
         .child(settle(gpui::ElementId::named_usize("ov-card", 2), 420.0, motion)(thin_card))
 }
