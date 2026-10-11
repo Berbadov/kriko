@@ -96,11 +96,6 @@ class TestLocalResearcherWiring:
         with pytest.raises(ValueError):
             local_researcher(serving_name="m")
 
-    def test_factory_searches_through_exa_when_told_no_serp_answers(self):
-        plane = local_researcher(base_url="http://127.0.0.1:1",
-                                 serving_name="m", search_kind="exa")
-        assert plane.search_provider == "exa-mcp"
-
     def test_factory_accepts_a_scheduler_and_names(self):
         scheduler = PolitenessScheduler({"duckduckgo": 3.5})
         plane = local_researcher(scheduler=scheduler,

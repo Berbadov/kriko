@@ -40,6 +40,8 @@ pub struct Plane {
     pub stored_model: String,
     pub stored_search: String,
     pub stored_timeout: String,
+    pub stored_output_language: String,
+    pub stored_search_language: String,
     pub runtime: Value,
 }
 
@@ -263,6 +265,20 @@ pub fn plane_from(v: &Value) -> Plane {
         stored_model: api::s(&stored, "local_model"),
         stored_search: api::s(&stored, "local_search_url"),
         stored_timeout: api::s(&stored, "local_timeout"),
+        stored_output_language: {
+            let selected = api::s(v, "output_language");
+            if !selected.is_empty() { selected } else {
+                let selected = api::s(&stored, "local_output_language");
+                if selected.is_empty() { api::s(&stored, "output_language") } else { selected }
+            }
+        },
+        stored_search_language: {
+            let selected = api::s(v, "search_language");
+            if !selected.is_empty() { selected } else {
+                let selected = api::s(&stored, "local_search_language");
+                if selected.is_empty() { api::s(&stored, "search_language") } else { selected }
+            }
+        },
         runtime: v.get("runtime").cloned().unwrap_or(Value::Null),
     }
 }

@@ -252,18 +252,6 @@ def test_a_local_scraper_is_searched_one_query_at_a_time():
     assert most[0] == 1
 
 
-def test_only_the_hosted_search_is_asked_in_parallel(monkeypatch):
-    from app import providers
-    from app.providers import exa_mcp, openserp
-
-    monkeypatch.setattr(exa_mcp, "search_with_fallback", lambda: (lambda q, n: []))
-    monkeypatch.setattr(openserp, "searcher", lambda base: (lambda q, n: []))
-    hosted = providers.local_asker(base_url="http://127.0.0.1:1", serving_name="m",
-                                   search_kind="exa")
-    scraped = providers.local_asker(base_url="http://127.0.0.1:1", serving_name="m")
-    assert hosted.parallel_search and not scraped.parallel_search
-
-
 def test_a_page_that_never_answers_does_not_hold_the_run(monkeypatch):
     """The slow page is abandoned at the deadline; the others are read."""
     monkeypatch.setattr(local_agent, "READ_DEADLINE", 0.5)

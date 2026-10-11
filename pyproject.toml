@@ -16,8 +16,8 @@ license-files = ["LICENSE"]
 # clean `tools/setup.sh` could succeed, and the workaround for that is always a
 # hand-built environment nobody else can reproduce.
 #
-# Nothing was relaxed on a hunch: the whole of `tools/gate.sh` — pytest, both JS
-# suites, svelte-check and the stale-bundle check — passes on 3.13. The floor
+# Nothing was relaxed on a hunch: the whole of `tools/gate.sh` — pytest and
+# Python static checks — passes on 3.13. The floor
 # was not load-bearing for anything the tests cover. Raise it again when there
 # is a reason a test can state, not because a newer version exists.
 requires-python = ">=3.13"
@@ -59,10 +59,7 @@ pipeline = [
 ]
 dev = ["pytest>=8.0.0", "ruff>=0.16", "mypy>=2.3"]
 
-# The built frontend. ui/ is the source and is not packaged; this bundle is,
-# so `pip install kriko` serves a working UI with no Node toolchain.
 [tool.setuptools.package-data]
-"app.web" = ["static/**/*"]
 # The store's DDL is read from disk at every `connect()`, not imported. Without
 # this line an editable install works and a real wheel raises FileNotFoundError
 # on the first query — which is how it went unnoticed until a PyInstaller build
@@ -72,7 +69,7 @@ dev = ["pytest>=8.0.0", "ruff>=0.16", "mypy>=2.3"]
 # The default model catalogue, copied to ~/.kriko on first run. Read from disk
 # like the DDL above, so it fails the same way if it is not declared: an
 # editable install finds it in the checkout and a real wheel does not.
-"app" = ["*.toml", "*.json"]
+"app" = ["*.toml", "*.json", "*.dat"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -140,10 +137,9 @@ select = [
 # `check_untyped_defs` — still real type checking, just not reaching into
 # unannotated function bodies — with a short, named list of per-module
 # overrides for the specific patterns that are false positives here, each
-# with its reason below. `ui/`, `kriko-gpui/` and every `tests/` package are out of
-# scope: `ui/` is Svelte/TypeScript (checked by `svelte-check`, not mypy),
-# `kriko-gpui/` is Rust, and a test suite proving a false-positive-shaped pattern
-# on purpose (mocks, duck-typed doubles) is not the code this gate is for.
+# with its reason below. `kriko-gpui/` is Rust, and every `tests/` package is
+# out of scope: a test suite proving a false-positive-shaped pattern on purpose
+# (mocks, duck-typed doubles) is not the code this gate is for.
 [tool.mypy]
 python_version = "3.13"
 ignore_missing_imports = true

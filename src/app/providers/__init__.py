@@ -423,9 +423,11 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
 
 def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
                  search_kind: str, timeout: float, schema, runtime_options=None,
-                 temperature: float = 0.0, max_tokens: int = 1024):
+                 temperature: float = 0.0, max_tokens: int = 1024,
+                 context_tokens: int | None = None, search_language: str = "en",
+                 engine: str = ""):
     """The sockets both local doors share: a completion and a search."""
-    from app.providers import exa_mcp, local_inference, openserp
+    from app.providers import local_inference, openserp
 
     if not serving_name.strip():
         raise ValueError(
@@ -436,21 +438,20 @@ def _local_parts(*, base_url: str, serving_name: str, search_base_url: str,
     complete = local_inference.OpenAICompatSocket(
         base_url, serving_name, timeout=timeout or local_inference.DEFAULT_TIMEOUT,
         response_json_schema=schema, runtime_options=runtime_options,
-        temperature=temperature, max_tokens=max_tokens)
-    if search_kind == "exa":
-        return complete, exa_mcp.search_with_fallback(), "exa-mcp"
-    return complete, openserp.searcher(search_base_url), "openserp"
+        temperature=temperature, max_tokens=max_tokens, context_tokens=context_tokens)
+    return complete, openserp.searcher(search_base_url, engine=engine,
+                                     language=search_language), "openserp"
 
 
 def local_researcher(*, base_url: str = "", serving_name: str = "",
                      search_base_url: str = "", engine: str = "",
                      scheduler=None, spend=None, model: str = "",
                      search_kind: str = "openserp", timeout: float = 0.0,
-                     runtime_options=None):
+                     runtime_options=None, context_tokens: int | None = None,
+                     output_language: str = "auto", search_language: str = "en"):
     """The free plane that gathers: this machine's own sockets do the work.
 
-    A local inference server completes, a search service searches (OpenSERP
-    when it answers, else Exa's free hosted search, decision D3), the stock
+    A local inference server completes, OpenSERP searches on this machine, the stock
     reader reads. Nothing here costs a key or a subscription, so unlike
     `api_researcher` there is no `MissingKey` to raise and no budget to
     enforce — but there *is* politeness, and the scheduler is passed in by the
@@ -472,10 +473,16 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
     complete, search, provider = _local_parts(
         base_url=base_url, serving_name=name, search_base_url=search_base_url,
         search_kind=search_kind, timeout=timeout,
-        schema=local_inference.FINDINGS_SCHEMA, runtime_options=runtime_options)
+        schema=local_inference.FINDINGS_SCHEMA, runtime_options=runtime_options,
+        context_tokens=context_tokens, search_language=search_language, engine=engine)
     researcher = LocalPlane(
         search, fetch.reader(), complete, scheduler=scheduler, spend=spend,
     )
+    complete.language_instruction = (
+        f"Write summaries and advice in {output_language}; preserve exact source quotes, "
+        "product codes, URLs and JSON keys.\n" if output_language != "auto" else
+        "Write summaries and advice in the language of the request. Preserve exact source quotes, "
+        "product codes, URLs and JSON keys.\n")
     researcher.model = name
     researcher.search_provider = (
         f"openserp:{engine or openserp.DEFAULT_ENGINE}" if provider == "openserp"
@@ -486,7 +493,9 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
 def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
                 search_kind: str = "openserp", timeout: float = 0.0,
                 given_queries: list[str] | None = None, runtime_options=None,
-                temperature: float = 0.0, max_tokens: int = 1024):
+                temperature: float = 0.0, max_tokens: int = 1024,
+                context_tokens: int | None = None, output_language: str = "auto",
+                search_language: str = "en"):
     """The local model as something that can `ask` (B171): the quick look, the
     pack author and the pack amend take it when no coding agent is there.
 
@@ -499,12 +508,14 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
         base_url=base_url, serving_name=serving_name,
         search_base_url=search_base_url, search_kind=search_kind,
         timeout=timeout, schema="", runtime_options=runtime_options,
-        temperature=temperature, max_tokens=max_tokens)
+        temperature=temperature, max_tokens=max_tokens, context_tokens=context_tokens,
+        search_language=search_language, engine="bing,duckduckgo,ecosia")
     plan = local_inference.OpenAICompatSocket(
         base_url, serving_name,
         timeout=timeout or local_inference.DEFAULT_TIMEOUT,
-        response_json_schema=local_agent.QUERY_SCHEMA, runtime_options=runtime_options)
+        response_json_schema=local_agent.QUERY_SCHEMA, runtime_options=runtime_options,
+        context_tokens=context_tokens)
     return local_agent.LocalAsker(
         plan, complete, search, fetch.reader(), model=serving_name,
         search_provider=provider, url=base_url, given_queries=given_queries,
-        parallel_search=provider == "exa-mcp")
+        output_language=output_language, search_language=search_language)
