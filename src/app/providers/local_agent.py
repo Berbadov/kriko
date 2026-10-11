@@ -438,7 +438,7 @@ class LocalAsker:
     def _read(self, queries: list[str], *, identity=None,
               prefer_issues: bool = False) -> list[tuple[str, str]]:
         """Prefer issue discussions and replace unreadable/unrelated pages."""
-        from app.providers.local_pipeline import canonical_url, publisher
+        from app.providers.local_pipeline import canonical_url, publisher, repair_offer_page
         from app.providers.local_identity import relevant_source
         import hashlib
 
@@ -446,6 +446,7 @@ class LocalAsker:
                                 "unique_hits": 0, "pages_unreadable": 0,
                                 "pages_read": 0, "pages_irrelevant": 0,
                                 "pages_duplicate": 0, "pages_selected": 0,
+                                "pages_service_offers": 0,
                                 "publishers_read": 0, "pages_timed_out": 0}
         if self.given_sources is not None:
             self.sources = dict(self.given_sources)
@@ -549,6 +550,10 @@ class LocalAsker:
                         self._say(f"replacing page without an exact product match: {url}")
                         continue
                     fingerprint = hashlib.sha256(" ".join(text.casefold().split()).encode()).hexdigest()
+                    if prefer_issues and repair_offer_page(url, self.page_titles.get(url, ""), text):
+                        self.search_coverage["pages_service_offers"] += 1
+                        self._say(f"replacing repair-service advertisement, not an incident report: {url}")
+                        continue
                     if fingerprint in fingerprints:
                         self.search_coverage["pages_duplicate"] += 1
                         self._say(f"replacing copied page: {url}")
