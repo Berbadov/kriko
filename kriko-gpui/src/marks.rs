@@ -313,6 +313,9 @@ fn level(phase: Phase, t: f32, x: f32, y: f32, order: f32) -> f32 {
     }
 }
 
+/// How many breaths a waiting mark takes before it rests lit.
+const WAIT_BREATHS: u32 = 3;
+
 fn cycle_ms(phase: Phase) -> u64 {
     match phase {
         Phase::Thinking => 1800,
@@ -371,7 +374,29 @@ fn mark_dots(
                     let y = ry as f32 / (h.max(2) - 1) as f32;
                     let order = rank as f32 / lit_total as f32;
                     rank += 1;
-                    if animated {
+                    if animated && phase == Phase::Waiting {
+                        // A question can wait for days, and a loop redraws the
+                        // whole window every frame (#184): waiting breathes
+                        // WAIT_BREATHS times when it starts, then rests lit.
+                        lit.with_animation(
+                            gpui::ElementId::Name(SharedString::from(format!(
+                                "{id}-{}-{rx}-{ry}",
+                                phase.label()
+                            ))),
+                            Animation::new(std::time::Duration::from_millis(
+                                cycle_ms(phase) * WAIT_BREATHS as u64,
+                            ))
+                            .with_easing(|t| t),
+                            move |el, t| {
+                                el.opacity(if t >= 1.0 {
+                                    1.0
+                                } else {
+                                    level(phase, (t * WAIT_BREATHS as f32).fract(), x, y, order)
+                                })
+                            },
+                        )
+                        .into_any_element()
+                    } else if animated {
                         lit.with_animation(
                             gpui::ElementId::Name(SharedString::from(format!(
                                 "{id}-{}-{rx}-{ry}",
