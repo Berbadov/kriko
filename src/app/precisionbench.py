@@ -24,6 +24,18 @@ def _flat(value) -> str:
     return " ".join(str(value or "").casefold().split())
 
 
+def _cited(risk: dict) -> dict:
+    """A risk with its citation at the top, whichever shape the reply used.
+
+    A single-shot reply names one `url` and `quote`; the Quick Look pipeline
+    cites each passage under `sources`. The first passage is the citation,
+    as it is for the row's own proposals."""
+    cited = risk.get("sources")
+    if risk.get("url") or not isinstance(cited, list) or not cited or not isinstance(cited[0], dict):
+        return risk
+    return {**risk, "url": cited[0].get("url", ""), "quote": cited[0].get("quote", "")}
+
+
 def _terms(entry: dict, risk: dict) -> bool:
     text = _flat(str(risk.get("title") or "") + " " + str(risk.get("why") or ""))
     return all(any(_flat(term) in text for term in group)
@@ -45,6 +57,8 @@ def judge(case: dict, reply: str, sources: dict[str, str]) -> dict:
     errors = []
     quote_errors = 0
     for index, risk in enumerate(proposals):
+        if isinstance(risk, dict):
+            risk = _cited(risk)
         if not isinstance(risk, dict):
             errors.append({"index": index, "reason": "invalid-risk"})
             continue
