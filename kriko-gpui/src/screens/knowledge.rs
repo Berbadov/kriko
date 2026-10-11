@@ -34,7 +34,7 @@ fn settle(
 }
 
 pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     // The packs card and the gaps card side by side only when each has its
     // 360 px; narrower, they stack at the page's width.
     let beside = app.content_w >= 760.0;
@@ -107,7 +107,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         drawer = drawer.child(eyebrow("Status")).child(choices);
         panel = panel.child(drawer);
     }
-    controls = controls.child(div().mt(px(-12.0)).child(reveal(panel, "overview-filters-reveal", app.overview_filters_open, 1000.0, !app.reduce_motion)));
+    controls = controls.child(div().mt(px(-12.0)).child(reveal(panel, "overview-filters-reveal", app.overview_filters_open, 1000.0, app.motion)));
     if matches == 0 && k.packs_loaded { controls = controls.child(empty_note("No record matches. Reset the filters or change the search.")); }
 
     if !k.packs_loaded {

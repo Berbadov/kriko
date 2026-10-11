@@ -39,7 +39,7 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
         .child(div().flex().flex_wrap().items_center().gap(px(10.0))
             .child(tag(format!("task-state-{id}"), if !job.done && job.state == "running" { TagState::Live }
                 else if matches!(job.state.as_str(), "failed" | "interrupted") { TagState::Block }
-                else if job.done { TagState::Done } else { TagState::Queue }, &job.state, !app.reduce_motion))
+                else if job.done { TagState::Done } else { TagState::Queue }, &job.state, app.motion))
             .child(plate_s(gpui::ElementId::named_usize(format!("task-logs-{id}"), 0), if open { "Hide logs" } else { "Show logs" }).on_click(toggle)))
         .child(row_desc(&format!("{} · {} · {} · {} · {}",
             kind_word(&job.kind), if job.harness.is_empty() { job.backend.as_str() } else { job.harness.as_str() },
@@ -65,5 +65,5 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
         .h(px(280.0)).flex_none().min_h(px(40.0)).p(px(12.0)).bg(rgb(WELL)).flex().flex_col().gap(px(5.0));
     if lines.is_empty() { body = body.child(empty_note(if job.done { "No log entries for this filter." } else { "Waiting for log entries." })); }
     for line in lines { body = body.child(mono(&line.text, INK_2).font_family(CODE).flex_none()); }
-    result.child(reveal(div().flex().flex_col().gap(px(10.0)).child(controls).child(body), format!("log-disclosure-{id}"), open, 350.0, !app.reduce_motion))
+    result.child(reveal(div().flex().flex_col().gap(px(10.0)).child(controls).child(body), format!("log-disclosure-{id}"), open, 350.0, app.motion))
 }
