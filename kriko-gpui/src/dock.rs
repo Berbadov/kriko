@@ -17,7 +17,9 @@ use crate::screens::{empty_note, mono, row_desc};
 use crate::theme::*;
 
 pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
-    let motion = !app.reduce_motion;
+    // Closed, the dock is still laid out at zero width for its slide, and its
+    // waiting marks would loop unseen at full frame rate (#184).
+    let motion = app.motion && app.dock_open;
 
     let send = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         this.send_reply(cx);
