@@ -44,6 +44,10 @@ The Windows app includes everything it needs to start. It does not include catal
 - **Search this product** works on a product no installed catalog knows yet. It now starts the same research as **Research this product** in the panel, and the panel says so beneath the button, instead of asking the catalogs again and showing the same answer.
 - Bold and inline code in catalog and agent text (claim titles, bodies and "What to ask" lines, quick look specs and assumptions, and an agent's questions) render as formatting instead of showing the asterisks and backticks.
 - When the last running job ends, Kriko asks Ollama to unload the local model straight away. Before, the model stayed in video memory for five more minutes after a run (Ollama's default) and slowed the computer while Kriko sat in the background. Quitting Kriko unloads it too. Other model servers keep their own unload timer.
+- A product check on a local model no longer stops with "The task leaves no room for evidence" when no installed catalog fits. The instructions are measured against the model's whole context window, and only the page text is held to the research budget. A 16k window now has room for three pages beside the catalog instructions.
+- When the instructions really are too long for the window, the error gives both numbers: how long the instructions are and how much the window holds.
+- A listing title's seller words are no longer the product. In "DEMİRAY OTODAN DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID", the check searches for, names and files the product "COROLLA 1.8 HYBRID". The name is kept only when every word of it is in the title or the listing.
+- Local models under 2B parameters are never run, whether picked or not. A 0.8B model wrote findings its pages did not say. Choosing one leaves the local plane not ready and says why. The model library no longer offers those sizes for download.
 
 ### What's new in 1.4.0
 
