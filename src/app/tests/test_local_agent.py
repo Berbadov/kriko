@@ -13,6 +13,8 @@ import pytest
 
 from app.providers import local_agent
 from app.providers.local_inference import LocalInferenceError
+from app.providers.local_pipeline import EXTRACT_SCHEMA
+from app.tests.test_local_quicklook_output import PipelineModel
 
 
 @pytest.fixture(autouse=True)
@@ -55,46 +57,59 @@ class Sequence(Complete):
         return next(self.replies)
 
 
-def test_quick_answer_repairs_bad_json_once_and_keeps_source_and_self_checks():
-    answer = json.dumps({"risks": [{"title": "Pump failure", "url": "https://a.test/1", "quote": "the pump failed"}], "specs": []})
-    complete = Sequence(["not JSON", answer, '{"verdicts":[{"index":0,"supported":true,"reason":"the page reports it"}]}'])
-    asker = local_agent.LocalAsker(Plan('["failure reports"]'), complete,
-        searcher([{"url": "https://a.test/1"}]), reader({"https://a.test/1": "An owner said the pump failed."}),
+class FirstPageBroken(PipelineModel):
+    """The first evidence pass answers with no JSON; every later one is sound."""
+
+    def json(self, prompt, schema):
+        if schema == EXTRACT_SCHEMA and "extract" not in self.stages():
+            self.calls.append(("extract", prompt, self.max_tokens))
+            return "I found a pump failure but did not write JSON."
+        return super().json(prompt, schema)
+
+
+def test_a_malformed_page_is_said_and_the_other_page_still_grounds_its_card():
+    good = "https://a.test/2"
+    model = FirstPageBroken(findings=[{"title": "Pump failure", "why": "An owner reported it.",
+                                       "needle": "the pump failed"}])
+    asker = local_agent.LocalAsker(model, model,
+        searcher([{"url": "https://a.test/1"}, {"url": good}]),
+        reader({"https://a.test/1": "Widget MK2 forum: the first thread is about tyres.",
+                good: "Widget MK2 owners report that the pump failed after a month."}),
         model="small", search_provider="stub")
-    assert asker.ask_quick("Widget MK2") == answer
-    # A local scraper takes one query at a time, so it gets three angles.
-    assert asker.telemetry["queries"] == [
-        "Widget MK2 problems owner reports", "Widget MK2 failures review",
-        "Widget MK2 common issues forum discussion"]
-    assert asker.telemetry["repairs"] == 1
-    assert asker.telemetry["verification"][0]["quote_in_read_page"] is True
-    assert asker.telemetry["self_verify"]["verdicts"][0]["supported"] is True
-    assert len(complete.prompts) == 3
+    answer = json.loads(asker.ask_quick("Widget MK2"))
+    assert [one["title"] for one in answer["risks"]] == ["Pump failure"]
+    assert answer["risks"][0]["sources"][0]["url"] == good
+    assert "the pump failed" in answer["risks"][0]["sources"][0]["quote"]
+    # The malformed page is named as the error, and the check ran on the card.
+    assert [row["stage"] for row in asker.coverage["errors"]] == ["https://a.test/1"]
+    assert "verify" in model.stages()
 
 
-def test_second_search_learns_from_the_first_pages():
-    plan = Sequence(['["Widget MK2 pump recall"]'])
-    answer = json.dumps({"risks": [{"title": "Pump failure", "url": "https://a.test/2", "quote": "the pump failed"}], "specs": []})
-    complete = Sequence(['{"risks":[],"specs":[]}', answer, '{"verdicts":[]}'])
-    asker = local_agent.LocalAsker(plan, complete,
-        lambda query, limit: [{"url": "https://a.test/2" if "recall" in query else "https://a.test/1"}],
-        reader({"https://a.test/1": "The first review names a revised pump.", "https://a.test/2": "A recall says the pump failed."}),
+def test_a_page_returned_by_two_queries_is_read_once():
+    searched: list[str] = []
+    model = PipelineModel(findings=[{"title": "Pump failure", "why": "An owner reported it.",
+                                     "needle": "the pump failed"}],
+                          queries=["Widget MK2 pump recall", "Widget MK2 pump failure"])
+    asker = local_agent.LocalAsker(model, model,
+        lambda query, limit: searched.append(query) or [{"url": "https://a.test/2"}],
+        reader({"https://a.test/2": "Widget MK2 owners report that the pump failed."}),
         model="small", search_provider="stub")
-    assert asker.ask_quick("Widget MK2") == answer
-    assert "first review names a revised pump" in plan.prompts[0]
-    assert asker.telemetry["queries"][-1] == "Widget MK2 pump recall"
-    assert len(asker.telemetry["queries"]) == 4  # three angles and the refinement
+    asker.ask_quick("Widget MK2")
+    assert len(searched) >= 2
+    assert model.stages().count("extract") == 1
+    assert list(asker.sources) == ["https://a.test/2"]
 
 
-def test_invalid_answer_is_a_distinct_bounded_failure():
-    complete = Sequence(["not JSON", "still not JSON"])
-    asker = local_agent.LocalAsker(Plan('["query"]'), complete,
-        searcher([{"url": "https://a.test/1"}]), reader({"https://a.test/1": "readable page"}),
+def test_an_unreadable_evidence_reply_is_a_bounded_failure():
+    model = PipelineModel(broken=("extract",))
+    asker = local_agent.LocalAsker(model, model,
+        searcher([{"url": "https://a.test/1"}]),
+        reader({"https://a.test/1": "Widget MK2 owners report that the pump failed."}),
         model="small", search_provider="stub")
-    with pytest.raises(LocalInferenceError) as error:
-        asker.ask_quick("Widget")
-    assert error.value.code == "invalid_json"
-    assert complete.calls == 2
+    with pytest.raises(LocalInferenceError, match="No evidence pass completed"):
+        asker.ask_quick("Widget MK2")
+    # One attempt for the one page, and no repair round after it.
+    assert model.stages().count("extract") == 1
 
 
 def searcher(hits, started=None, gate=None):
@@ -276,7 +291,7 @@ def test_a_page_that_never_answers_does_not_hold_the_run(monkeypatch):
     stuck.set()
     assert time.monotonic() - started < 5.0
     assert list(asker.sources) == ["https://a.test/fast"]
-    assert any("slow page" in line for line in said)
+    assert any("still waiting" in line for line in said)
 
 
 def test_a_long_page_is_cut_around_the_queries_not_from_the_top():
@@ -417,7 +432,8 @@ def test_the_socket_asks_the_server_for_its_window(monkeypatch):
     monkeypatch.setattr(local_inference.urllib.request, "urlopen", urlopen)
     assert socket.context_tokens() == 8192
     allowed = socket.prompt_chars_allowed()
-    assert allowed == int((8192 - socket.max_tokens - 128) * local_inference.CHARS_PER_TOKEN)
+    assert allowed == min(socket.context_chars,
+                          int((8192 - socket.max_tokens - 128) * local_inference.CHARS_PER_TOKEN))
 
     silent = local_inference.OpenAICompatSocket("http://127.0.0.1:1", "other")
     assert silent.context_tokens() == local_inference.DEFAULT_CONTEXT_TOKENS

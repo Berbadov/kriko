@@ -24,7 +24,7 @@ import json
 import re
 from collections.abc import Callable
 import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 
 from app.providers.local_inference import LocalInferenceError
 from app.providers import local_components
@@ -368,7 +368,11 @@ class LocalAsker:
         """
         allowed = getattr(self._complete, "prompt_chars_allowed", None)
         if not callable(allowed):
-            return pages
+            # No window to fit: each page is still cut to `PAGE_CHARS` around
+            # the queries, and the cut text is what the quotes are checked on.
+            fitted = [(url, focus(text, PAGE_CHARS, queries)) for url, text in pages]
+            self.sources = dict(fitted)
+            return fitted
         room = allowed() - len(prompt) - len(_PAGES_HEAD) - len(self._reply_budget()) - 500
         count = len(pages)
         while count > 1 and room // count < MIN_SHARE:
@@ -456,16 +460,32 @@ class LocalAsker:
         if self.given_sources is not None:
             self.sources = dict(self.given_sources)
             return list(self.sources.items())
-        hits_by_query = []
-        for query in queries:
-            self._check()
+        limit = 10 if prefer_issues else HITS_PER_QUERY
+
+        def answer(query: str) -> tuple[list, str]:
             try:
-                hits = self._search(query, 10 if prefer_issues else HITS_PER_QUERY) or []
-                self.search_coverage["queries_searched"] += 1
+                return self._search(query, limit) or [], ""
             except LocalSearchError as error:
-                self._say(f"search failed for {query!r}: {error}")
+                return [], str(error)
+
+        # On a hosted search the queries go out together; their hits are
+        # still taken in the queries' order, and the log is written from
+        # this thread only.
+        if self.parallel_search and len(queries) > 1:
+            with ThreadPoolExecutor(max_workers=len(queries)) as pool:
+                answered = list(pool.map(answer, queries))
+        else:
+            answered = []
+            for query in queries:
+                self._check()
+                answered.append(answer(query))
+        hits_by_query = []
+        for query, (hits, failure) in zip(queries, answered):
+            if failure:
+                self._say(f"search failed for {query!r}: {failure}")
                 self.search_coverage["search_errors"] += 1
                 continue
+            self.search_coverage["queries_searched"] += 1
             hits_by_query.append(hits)
         wanted, seen = [], set()
         # A query cannot fill the entire source set before the next query runs.
@@ -497,8 +517,10 @@ class LocalAsker:
 
         if prefer_issues:
             wanted.sort(key=issue_priority, reverse=True)
-        domains, diverse, repeated = set(), [], []
-        prioritized = []
+        domains: set[str] = set()
+        diverse: list[str] = []
+        repeated: list[str] = []
+        prioritized: list[str] = []
         # Diversity within each priority level: a low-value catalog must not
         # jump ahead of another useful discussion merely to add a publisher.
         for priority in (3, 2, 1, 0, -1) if prefer_issues else (0,):
@@ -528,7 +550,7 @@ class LocalAsker:
         queue = iter(wanted)
         deadline = time.monotonic() + (40.0 if prefer_issues else READ_DEADLINE)
         pool = ThreadPoolExecutor(max_workers=4)
-        pending = {}
+        pending: dict[Future, str] = {}
         def fill() -> None:
             while len(pending) < min(4, self.max_pages - len(pages)):
                 url = next(queue, None)
@@ -600,6 +622,9 @@ class _MeasuredSocket:
         setattr(self.socket, name, value)
 
     def json(self, prompt, schema):
+        """The structured reply, or, from a plain socket that has no schema, the text."""
+        if not callable(getattr(self.socket, "json", None)):
+            return self(prompt)
         return self.owner._measured(self.stage, self.socket,
                                    lambda: self.socket.json(prompt, schema))
 
