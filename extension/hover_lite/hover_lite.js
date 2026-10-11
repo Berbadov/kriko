@@ -17,7 +17,7 @@
   window.__krikoPanelInstalled = true;
 
   const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
-  const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard } =
+  const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard, renderRichText } =
     window.__KrikoPanelClaimCard;
 
   const HOST_TAG = "kriko-panel-host";
@@ -31,6 +31,9 @@
    * information the reader needed; it was only a sentence that would be wrong
    * on the second site and unnoticed on the third. */
   const IDLE_HINT = "Quick search: see what is known about this product.";
+  // A product nothing installed knows: the button researches it, so the hint
+  // says what it will do rather than promising a search that cannot find it.
+  const UNKNOWN_HINT = "Nothing installed knows this product yet. Research it to find out what is known.";
 
   /* The engine's verdict, as a word the panel shows. Three of the four are
    * worth a banner; `recognised` is the ordinary case and gets none. */
@@ -221,14 +224,8 @@
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────
-  /* An agent answers in light markdown (**bold**, `code`). Shown raw, the
-   * asterisks read as noise, so this renders just those two, on top of the
-   * escaped text: nothing the agent writes can become markup of its own. */
-  function renderAgentText(s) {
-    return escapeHtml(s)
-      .replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/`([^`\n]+?)`/g, "<code>$1</code>");
-  }
+  // renderRichText (claim_card.js) renders the light markdown agents and packs
+  // write; the panel uses it wherever that prose lands.
 
   function escapeHtml(s) {
     if (s == null) return "";
@@ -960,7 +957,7 @@
           + (rejectionSummary ? ` Reasons: ${rejectionSummary}.` : ""))}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
         ${state.researchQuick && (state.researchQuick.risks.length || state.researchQuick.specs?.length) ? `<div class="lite-quick">
-          ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${escapeHtml(state.researchQuick.assumed)}</p>` : ""}
+          ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
           <div class="lite-quick-specs"></div>
           <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
@@ -971,7 +968,7 @@
           <p class="lite-follow-lede">Ask a follow-up. Answers come from this quick look's findings.</p>
           ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
             <p class="lite-follow-q">${escapeHtml(a.q)}</p>
-            <p class="lite-follow-answer">${a.done ? renderAgentText(a.answer || "No answer.") : "Answering\u2026"}</p>
+            <p class="lite-follow-answer">${a.done ? renderRichText(a.answer || "No answer.") : "Answering\u2026"}</p>
           </div>`).join("")}
           <div class="lite-follow-row">
             <input class="lite-follow-input" maxlength="500" placeholder="Ask about this quick look" ${state.researchAsking ? "disabled" : ""} />
@@ -982,10 +979,10 @@
           <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
             ? "Your agent has a question. Pick an answer and it hears it now."
             : "Your agent had a question and went with its guess. Pick an answer to run it again."}</p>
-          ${asked.map((q, qi) => `<fieldset class="lite-asked-q"><legend>${escapeHtml(q.ask)}</legend>
+          ${asked.map((q, qi) => `<fieldset class="lite-asked-q"><legend>${renderRichText(q.ask)}</legend>
             ${(q.options || []).length ? `<div class="lite-chips">${q.options.map((o, oi) => `
               <button type="button" class="lite-chip" data-q="${qi}" data-o="${oi}"
-                aria-pressed="${state.researchAnswers[q.id] === o}">${escapeHtml(o)}${
+                aria-pressed="${state.researchAnswers[q.id] === o}">${renderRichText(o)}${
                 o === q.default && !state.researchAnswers[q.id] ? ` <span class="lite-chip-note">its guess</span>` : ""}</button>`).join("")}</div>`
               : ""}
             <form class="lite-question-form" data-q="${qi}">
@@ -1073,7 +1070,7 @@
     const specsSlot = slot.querySelector(".lite-quick-specs");
     for (const spec of state.researchQuick?.specs || []) {
       const item = document.createElement("p");
-      item.textContent = `${spec.name}: ${spec.value}`;
+      item.innerHTML = `${renderRichText(spec.name)}: ${renderRichText(spec.value)}`;
       specsSlot?.appendChild(item);
     }
     for (const risk of state.researchQuick?.risks || []) {
@@ -1533,8 +1530,12 @@
 
     // A press of either control is the reader asking again on purpose, so
     // both bypass the cache; the automatic run at page load calls
-    // triggerAnalyze() directly with no argument and gets the cache.
-    ctaBtn.addEventListener("click", () => triggerAnalyze(true));
+    // triggerAnalyze() directly with no argument and gets the cache. The
+    // exception is the primary button on a product nothing installed knows:
+    // asking again cannot answer differently, so it researches instead.
+    ctaBtn.addEventListener("click", () => (ctaIsResearch()
+      ? researchSubject({ label: state.unknownProduct })
+      : triggerAnalyze(true)));
     densityBtn.addEventListener("click", () => triggerAnalyze(true));
     searchBtn.addEventListener("click", () =>
       (state.searchOpen ? closeSearch() : openSearch()));
@@ -2075,6 +2076,14 @@
     }
   }
 
+  // The one idle state where the primary button's lookup is a dead end: a
+  // product nothing installed knows is answered "unknown" every time. The card
+  // under the button already offers the research; this makes the button offer
+  // it too, so a press does something the reader can see.
+  function ctaIsResearch() {
+    return Boolean(state.unknownProduct) && state.pipeline === "idle";
+  }
+
   function renderCta() {
     if (!ctaBtn) return;
     const isAnalyzing = state.pipeline === "analyzing";
@@ -2084,7 +2093,8 @@
     const iconName = isAnalyzing || hasResult ? "refresh" : "scan";
     const label = isAnalyzing
       ? "Searching…"
-      : (hasResult ? "Search again" : "Search this product");
+      : (hasResult ? "Search again"
+        : (ctaIsResearch() ? "Research this product" : "Search this product"));
     const iconWrap = ctaBtn.querySelector(".lite-cta-icon");
     iconWrap.innerHTML = iconSvg(iconName, { size: 15 });
     iconWrap.classList.toggle("spin", isAnalyzing);
@@ -2258,7 +2268,7 @@
   function renderStatus() {
     if (!statusEl) return;
     if (state.pipeline === "idle") {
-      statusEl.textContent = IDLE_HINT;
+      statusEl.textContent = ctaIsResearch() ? UNKNOWN_HINT : IDLE_HINT;
       statusEl.style.display = "";
     } else if (state.pipeline === "analyzing") {
       statusEl.textContent = stageSentence(state.stage);
@@ -3148,7 +3158,7 @@
               <span class="lite-followup-job-status" data-active="${!job.done}">${phase}</span>
             </div>
             ${agent?.model ? `<div class="lite-followup-model">${escapeHtml(agent.model)}</div>` : ""}
-            <div class="lite-followup-answer">${renderAgentText(job.result?.answer
+            <div class="lite-followup-answer">${renderRichText(job.result?.answer
               || (job.done ? job.error || "No answer was returned." : "Waiting for the answer…"))}</div>
           </div>
         </article>`;
