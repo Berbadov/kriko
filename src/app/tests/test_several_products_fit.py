@@ -47,3 +47,18 @@ def test_two_products_labelled_alike_are_one_choice():
              {"subject_id": "c", "label": "Other"}]
     step = matching.next_step(_several(3), "MATCHED_NO_DATA", "", twins)
     assert [one["label"] for one in step["choices"]] == ["Same", "Other"]
+
+
+def test_a_check_that_fits_several_is_named_by_the_listing_not_the_bare_identity():
+    from types import SimpleNamespace
+
+    from app.web.routers.analyze import _analyze_label
+
+    mapped = SimpleNamespace(identity={"make": "volkswagen", "model": "golf"})
+    result = SimpleNamespace(resolution=_several(3))
+    body = SimpleNamespace(title="Volkswagen Golf 7 GTI 2.0 TSI DSG 2018", url="https://cars.example/x")
+    assert _analyze_label(None, body, mapped, result) == "Volkswagen Golf 7 GTI 2.0 TSI DSG 2018"
+    # A title that does not carry the identity is a site's boilerplate.
+    boiler = SimpleNamespace(title="Best deals on cars.example", url="https://cars.example/x")
+    assert "volkswagen" in _analyze_label(None, boiler, mapped, result).casefold()
+    assert _analyze_label(None, boiler, mapped, result) != boiler.title
