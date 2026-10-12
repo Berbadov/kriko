@@ -441,7 +441,11 @@ impl Kriko {
             Ok("dock") => {
                 app.dock_reply_open = true;
             }
-            _ => {}
+            // Any other screen by the name the extension uses for it.
+            Ok(other) => {
+                app.tab = Tab::from_route(other);
+            }
+            Err(_) => {}
         }
         shell::set_tray_status(
             matches!(app.engine, engine::Status::Ready { .. }),

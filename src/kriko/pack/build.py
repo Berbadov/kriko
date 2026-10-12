@@ -517,8 +517,21 @@ def build(root, out_path) -> Path:
         _emit_trust_and_gates(conn, pack_id, root, row_ids)
         _write_manifest_row(conn, pack_id, man, row_ids)
 
-    conn.close()
+    seal(conn)
     return out_path
+
+
+def seal(conn) -> None:
+    """Close a finished pack as one self-contained file.
+
+    The store's connector opens every database in WAL mode, which leaves a
+    `-wal` and a `-shm` beside the file and keeps it WAL on the next open, so
+    a `.kpack` someone shares or publishes would carry side files and need a
+    writable directory to be read. A pack is written once and then only read:
+    it leaves the builder in rollback-journal mode, as one file.
+    """
+    conn.execute("PRAGMA journal_mode = DELETE")
+    conn.close()
 
 
 def digest_of(pack_path) -> str:
