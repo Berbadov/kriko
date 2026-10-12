@@ -489,6 +489,31 @@ pub fn feed_kind(op: &Op) -> &'static str {
     }
 }
 
+/// What a lookup was about and what it found, read off the operation's own
+/// request and response ("renault megane · 8 claims"), so the feed names the
+/// listing instead of a row of identical "analyze ok" lines.
+fn lookup_note(v: &Value) -> String {
+    if api::s(v, "kind") != "lookup" {
+        return String::new();
+    }
+    let parse = |key: &str| serde_json::from_str::<Value>(&api::s(v, key)).unwrap_or(Value::Null);
+    let request = parse("request_json");
+    let response = parse("response_json");
+    let named: Vec<String> = request
+        .get("identity")
+        .and_then(|i| i.as_object())
+        .map(|i| i.values().filter_map(|x| x.as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
+    let mut parts = Vec::new();
+    if !named.is_empty() {
+        parts.push(named.join(" "));
+    }
+    if let Some(n) = response.get("claims").and_then(|c| c.as_u64()) {
+        parts.push(format!("{n} claim{}", if n == 1 { "" } else { "s" }));
+    }
+    parts.join(" · ")
+}
+
 fn op_from(v: &Value) -> Op {
     Op {
         ts: parse_utc(&api::s(v, "started_at")),
@@ -499,7 +524,14 @@ fn op_from(v: &Value) -> Op {
         ms: api::n(v, "ms"),
         note: {
             let note = api::s(v, "note");
-            if note.is_empty() { api::s(v, "error") } else { note }
+            let error = api::s(v, "error");
+            if !note.is_empty() {
+                note
+            } else if !error.is_empty() {
+                error
+            } else {
+                lookup_note(v)
+            }
         },
     }
 }
@@ -824,6 +856,22 @@ impl Kriko {
                 self.refresh_activity(cx);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod lookup_note_tests {
+    use super::lookup_note;
+
+    #[test]
+    fn a_lookup_names_what_it_read_and_how_much_it_found() {
+        let v = serde_json::json!({
+            "kind": "lookup",
+            "request_json": "{\"identity\": {\"make\": \"renault\", \"model\": \"megane\"}}",
+            "response_json": "{\"claims\": 8}",
+        });
+        assert_eq!(lookup_note(&v), "renault megane · 8 claims");
+        assert_eq!(lookup_note(&serde_json::json!({"kind": "pack_update"})), "");
     }
 }
 
