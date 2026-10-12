@@ -116,10 +116,12 @@ All 12 replies completed. These are startup checks, not research scores: the rep
 - **Open in Kriko** and the other buttons in the extension's panel now open the screen they name: a saved check opens in **History**, already unfolded; a product opens in **Browse**; installing a catalog opens **Overview**. Before, they only brought the window to the front, on whatever screen was last open.
 - **Home** says whether no catalog is installed or every catalog is switched off, and takes you to **Overview** to fix either.
 - When no catalog is installed and none can be fetched, Overview says to check the connection instead of leaving you at an empty screen.
+- A finding is shown only with the page and quote it came from. A few findings in the built-in catalogs had none and were shown anyway; they are now left out.
 - Answers from the engine arrive about 40 ms sooner each. The extension and the app ask often, so lists and checks feel quicker: a status check went from 48 ms to 3 ms, and a catalog lookup from 60 ms to 15 ms.
 - Updating with the installer also stops a running search helper (`OpenSERP.exe`), so it can no longer lock files and fail the upgrade.
 - In a research log, the page reader is named only when it was actually used. Before, an ordinary page fetch could be reported as a page-reader read.
 - The precision benchmark counts a correct finding as supported when it cites its sources in the current format. Before, it scored those findings as unsupported. Its score is what reaches you, and a separate column counts the candidates the local pipeline turned down.
+- For contributors: `kriko build packs/<name>` works from a plain checkout for catalogs that ship their own builder (it needed `PYTHONPATH` before), and the car catalog's research pipeline no longer ranks every high-severity finding as unverified, which put the most expensive faults below cheap ones with the same evidence.
 - For contributors: the check script `tools/gate.sh` passes again (it had 43 failing tests and 15 type errors), a new test checks that every engine address the extension, the app and the terminal console call actually exists, and `docs/PROTOCOL.md` describes how they talk to the engine.
 
 <details>

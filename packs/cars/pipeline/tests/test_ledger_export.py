@@ -19,7 +19,9 @@ def test_disposition_rules():
     assert export.disposition(_verdict(), 2, False) == "verified"
     assert export.disposition(_verdict(), 1, False) == "review"
     assert export.disposition(_verdict(), 1, True) == "verified"   # structured corroboration
-    assert export.disposition(_verdict(severity="high"), 3, False) == "review"  # human gate
+    # Severity does not change the evidence rule: no human gate exists.
+    assert export.disposition(_verdict(severity="high"), 3, False) == "verified"
+    assert export.disposition(_verdict(severity="high"), 1, False) == "review"
     assert export.disposition(_verdict(supported=False), 3, False) is None
     assert export.disposition(_verdict(product_value="generic"), 3, False) is None
     assert export.disposition(
