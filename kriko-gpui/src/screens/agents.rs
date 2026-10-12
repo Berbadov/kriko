@@ -130,12 +130,13 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .flex_1()
                 .min_w(px(0.0))
                 .pr(px(10.0))
-                .truncate()
                 .font_family(SANS)
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(15.0))
                 .text_color(rgb(if is_selected { ICE } else { INK }))
-                .child(e.label.clone());
+                // clipped by characters: GPUI's ellipsis shrank the whole
+                // table card to its content at narrow widths
+                .child(crate::screens::history::clip(&e.label, 40));
             let order = div()
                 .w(px(168.0))
                 .flex_none()
@@ -163,9 +164,15 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                             .flex_wrap()
                             .items_center()
                             .gap(px(10.0))
+                            // No column headers in this layout, so each value
+                            // carries its own word; a bare "-" or "0" said nothing.
                             .child(runs_cell)
-                            .child(mcp_cell)
-                            .child(runs_n),
+                            .when(e.target.is_some(), |d| d.child(mcp_cell))
+                            .child(mono(&match app.live.run.runs_of(&e.id) {
+                                0 => "no runs yet".to_string(),
+                                1 => "1 run".to_string(),
+                                n => format!("{n} runs"),
+                            }, DIM)),
                     )
             } else {
                 row.items_center()
@@ -201,9 +208,10 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .flex()
                 .flex_col()
                 .gap(px(24.0))
-                .w_full()
-                .child(table.w_full())
-                .child(div().w_full().child(detail))
+                // no w_full: a percentage resolved against the page's
+                // indefinite width and left this column at its content's size
+                .child(table)
+                .child(detail)
         }
     };
 

@@ -492,7 +492,11 @@ fn questions_card(app: &Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
 
 /// Start a check: look a subject up, pick it, pick the agent, go.
 fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let open = app.live.run.start.open;
+    // With nothing run yet, starting one is the only thing this screen is
+    // for: the form is simply there, with no "New" to find first.
+    // The same test the Run card uses for "No check has run yet".
+    let first = app.live.run.current().is_none();
+    let open = app.live.run.start.open || first;
     let toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         let s = &mut this.live.run.start;
         s.open = !s.open;
@@ -504,7 +508,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .items_center()
             .child(eyebrow("Start a check"))
             .child(div().flex_1())
-            .child(plate_s("run-start-toggle", if open { "Close" } else { "New" }).on_click(toggle)),
+            .when(!first, |d| d.child(plate_s("run-start-toggle", if open { "Close" } else { "New" }).on_click(toggle))),
     );
     if !open {
         return c;

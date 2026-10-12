@@ -30,6 +30,10 @@ const DOCK_W: f32 = 300.0;
 /// controls on the titlebar stay under the reader's pointer.
 const TITLEBAR_H: f32 = 40.0;
 
+/// Below this window width the sidebar shows icons only, unless the reader
+/// chose otherwise with its toggle.
+const SIDEBAR_FOLD_BELOW: f32 = 1100.0;
+
 // ---- tabs ----
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -358,6 +362,8 @@ pub struct Kriko {
     pub library_search: InputState,
     pub quick_ask_input: InputState,
     pub sidebar_collapsed: bool,
+    /// The reader's own open or closed; None follows the window's width.
+    pub sidebar_choice: Option<bool>,
     /// The width the page column has this frame, measured in `render` before
     /// any screen lays out, so a screen can choose side-by-side panels or a
     /// stacked column for the room it really has.
@@ -422,6 +428,7 @@ impl Kriko {
             library_search: InputState::new(cx),
             quick_ask_input: InputState::new(cx),
             sidebar_collapsed: false,
+            sidebar_choice: None,
             content_w: 0.0,
             main_scroll: gpui::ScrollHandle::new(),
             scroll_target: 0.0,
@@ -841,7 +848,7 @@ impl Kriko {
             // panel", and it sits in the same well as the window controls.
             .child(div().px(px(12.0)).py(px(8.0)).flex().when(self.sidebar_collapsed, |d| d.justify_center())
                 .child(titlebar_button("sidebar-minimise", "sidebar", false)
-                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
+                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_choice = Some(!this.sidebar_collapsed); this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
             .child(nav)
     }
 }
@@ -1033,6 +1040,9 @@ impl Render for Kriko {
         // padding. The live dock floats over the page and takes none of it,
         // so opening the dock never changes how a screen lays out.
         let viewport_w = f32::from(window.viewport_size().width);
+        // Narrow windows give the page the room: the sidebar folds to its
+        // icons below this width unless the reader opened it themselves.
+        self.sidebar_collapsed = self.sidebar_choice.unwrap_or(viewport_w < SIDEBAR_FOLD_BELOW);
         let open = self.dock_open;
         let sidebar_w = if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W };
         self.content_w = (viewport_w - sidebar_w - 2.0 * PAGE_PAD).max(0.0);
