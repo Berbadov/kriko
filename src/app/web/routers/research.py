@@ -85,8 +85,8 @@ def list_planes(
     """The planes knowledge gets built on, and whether each one can run now.
 
     Read off the researcher classes rather than restated in the frontend, for
-    the same reason `/api/pipeline/runs` hands over its stage labels: a second
-    copy of a vocabulary is a second place to forget when it changes. What the
+    the same reason a vocabulary is never restated in the frontend: a second
+    copy is a second place to forget when it changes. What the
     interface adds is the sentence and the readiness — `cost_basis` is the
     engine's word and the reader's question is "can I press this".
 
