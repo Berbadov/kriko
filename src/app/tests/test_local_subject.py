@@ -248,3 +248,37 @@ def test_the_plane_reports_the_recommendation(monkeypatch):
     plane = localplane.resolve()
     assert plane["model"] == plane["recommended_model"] == "gemma4:e2b"
     assert plane["recommended_installed"] is True
+
+
+# ---- the size floor ---------------------------------------------------------
+#
+# The reader, on a 0.8B model: "guy is literally making shit up". A model under
+# the floor is refused by its size tag, picked or not, offered or not.
+
+
+def test_a_model_under_the_floor_is_never_run_even_when_picked():
+    assert localplane.too_small("qwen3.5:0.8b")
+    assert localplane.too_small("gemma3:270m")
+    assert not localplane.too_small("gemma4:e2b")
+    assert not localplane.too_small("llama3:latest")  # unknown is not small
+    assert localplane._pick(["qwen3.5:0.8b", "qwen3.5:4b"], "qwen3.5:0.8b") == "qwen3.5:4b"
+
+
+def test_a_picked_tiny_model_leaves_the_plane_not_ready_and_says_why(monkeypatch):
+    from app.providers import local_discovery
+
+    server = {"url": "http://127.0.0.1:11434", "name": "Ollama", "up": True,
+              "models": ["qwen3.5:0.8b"]}
+    monkeypatch.setattr(local_discovery, "discover", lambda url="": [server])
+    monkeypatch.setattr(local_discovery, "search_answers", lambda url="": True)
+    plane = localplane.resolve(model="qwen3.5:0.8b")
+    assert plane["ready"] is False and plane["model"] == ""
+    assert "0.8B" in plane["reason"] and "gemma4:e2b" in plane["reason"]
+
+
+def test_a_tiny_size_is_not_offered_for_download():
+    from app import modelpull
+
+    html = ('<a href="/library/qwen3.5"><span>0.8b</span><span>4b</span></a>'
+            '<a href="/library/gemma3"><span>270m</span><span>4b</span></a>')
+    assert [row["sizes"] for row in modelpull._library_rows(html)] == [["4b"], ["4b"]]

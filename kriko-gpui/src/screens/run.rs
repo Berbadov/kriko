@@ -76,7 +76,7 @@ fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
 }
 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let mut page = div().flex().flex_col().gap(px(24.0));
 
     let job = app.live.run.current().cloned();

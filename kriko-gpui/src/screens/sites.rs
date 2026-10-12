@@ -29,7 +29,7 @@ fn request_tag(state: &str) -> (TagState, &'static str) {
 }
 
 pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let add_field = app.input_field(
         Field::SitesAdd,
         "sites-add",

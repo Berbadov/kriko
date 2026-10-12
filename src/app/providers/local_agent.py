@@ -272,6 +272,29 @@ class LocalAsker:
         return self.quicklook(brief(product, principle, page, packs, attributes,
                                     max_sources=self.max_pages), product=product, page=page)
 
+    def name_product(self, product: str, page: dict | None = None) -> str:
+        """The product a listing title names, without the seller's words, or "".
+
+        The quick look's identity step, alone: one structured call, and the
+        name is kept only when every word of it is in the title or the
+        listing (`parse_identity`). "" when it is the title itself (#181).
+        """
+        from app import pagefacts
+        from app.providers.local_identity import (
+            IDENTITY_SCHEMA, clean_product_name, fold, identity_prompt, parse_identity)
+        from app.providers.local_pipeline import QuickLookPipeline
+
+        page = page or {}
+        listing = pagefacts.block(pagefacts.clean(page.get("facts"), page.get("description", "")))
+        coverage = self.coverage
+        try:
+            raw = QuickLookPipeline(self)._call(
+                identity_prompt(product, listing, self.search_language), IDENTITY_SCHEMA)
+        finally:
+            self.coverage = coverage
+        name = parse_identity(json.dumps(raw), product, listing).canonical_name
+        return name if fold(name) != fold(clean_product_name(product)) else ""
+
     def quicklook(self, prompt: str, *, product: str, page: dict | None = None) -> str:
         from app.providers.local_pipeline import QuickLookPipeline
         self.metrics = []
@@ -373,12 +396,25 @@ class LocalAsker:
             fitted = [(url, focus(text, PAGE_CHARS, queries)) for url, text in pages]
             self.sources = dict(fitted)
             return fitted
-        room = allowed() - len(prompt) - len(_PAGES_HEAD) - len(self._reply_budget()) - 500
+        task = len(prompt) + len(_PAGES_HEAD) + len(self._reply_budget()) + 500
+        whole = getattr(self._complete, "window_chars", None)
+        # The window bounds instructions plus evidence; the research budget
+        # bounds the evidence alone. Charging the instructions to the research
+        # budget left an authoring brief no room on any window (#181).
+        room = (min(allowed(), whole() - task) if callable(whole)
+                else allowed() - task)
         count = len(pages)
         while count > 1 and room // count < MIN_SHARE:
             count -= 1
         if room < 200:
-            raise LocalInferenceError("The task leaves no room for evidence in this model's context. Increase the context window or shorten the task.", code="context_limit")
+            window = getattr(self._complete, "context_tokens", lambda: 0)()
+            holds = whole() if callable(whole) else allowed()
+            raise LocalInferenceError(
+                f"The instructions for this task take {task} characters and "
+                f"this model's {window}-token window holds about {holds} beside "
+                "its reply, which leaves no room for evidence. Serve the model "
+                "with a larger context window (Settings, Local machine).",
+                code="context_limit")
         share = max(1, room // max(1, count) - max(len(url) + 20 for url, _ in pages[:count]))
         fitted = [(url, focus(text, share, queries)) for url, text in pages[:count]]
         if count < len(pages) or any(len(a) < len(b) for (_, a), (_, b) in zip(fitted, pages)):

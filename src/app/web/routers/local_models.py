@@ -60,6 +60,13 @@ def pull_model(body: PullRequest, runner=Depends(get_jobs)) -> dict:
             400, f"Kriko downloads models through Ollama only. Get the model in {name}.")
     if not modelpull.valid_name(model):
         raise HTTPException(422, "That is not a model name Ollama would accept.")
+    from app import localplane
+
+    if localplane.too_small(model):
+        raise HTTPException(
+            422, f"{model} is under {localplane.MIN_PARAMETERS_B:g}B parameters. Models "
+            "that small write findings their sources do not say, so Kriko does not "
+            "run them.")
     job_id = runner.submit("model_pull", {"runtime": "ollama", "model": model})
     return {"job_id": job_id, "kind": "model_pull"}
 

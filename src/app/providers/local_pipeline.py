@@ -969,6 +969,11 @@ class QuickLookPipeline:
             "assumed": self.identity.canonical_name
                        + ("; variant unknown" if not self.identity.resolved else ""),
             "output_language": target_language,
+            # The product as grounded in the title or listing, without the
+            # seller's own words around it (#181); "" when that is the title.
+            "product": (self.identity.canonical_name
+                        if fold(self.identity.canonical_name) != fold(clean_product_name(product))
+                        else ""),
             "category": category,
             "pack": str(metadata.get("pack") or "") if listed else "",
             "pack_identity": (metadata.get("pack_identity") or {}) if listed else {},

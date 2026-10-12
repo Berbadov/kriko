@@ -381,6 +381,49 @@ def test_too_small_a_window_shows_fewer_pages_whole_enough_to_quote():
     assert all(len(text) >= local_agent.MIN_SHARE // 2 for text in asker.sources.values())
 
 
+class Windowed(Fitted):
+    """The real socket's two numbers: research budget and whole window."""
+
+    def __init__(self, allowed: int, window: int):
+        super().__init__(allowed)
+        self.window = window
+
+    def window_chars(self) -> int:
+        return self.window
+
+
+def test_a_long_brief_is_charged_to_the_window_not_to_the_evidence_budget():
+    """#181: an 11.7k-character authoring brief against a 12k research budget
+    left no room on a 16k window, which holds about 45k characters. The brief
+    is measured against the window; the evidence against the budget."""
+    page = "\n\n".join(f"Paragraph {i} about the widget gearbox." for i in range(400))
+    pages = {f"https://site{n}.test/r": f"Site {n}. " + page for n in range(3)}
+    complete = Windowed(allowed=12000, window=45000)
+    asker = local_agent.LocalAsker(
+        Plan('["widget gearbox"]'), complete,
+        searcher([{"url": f"https://site{i}.test/r", "title": str(i)} for i in range(3)]),
+        reader(pages),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    brief = "widget\n" + "Write the catalog this way. " * 420  # ~11.8k characters
+    asker.ask(brief)
+    assert len(asker.sources) == 3
+    shown = sum(len(text) for text in asker.sources.values())
+    assert 3 * local_agent.MIN_SHARE <= shown <= 12000
+    assert len(complete.prompts[0]) <= 45000
+
+
+def test_a_brief_the_window_cannot_hold_says_its_numbers():
+    complete = Windowed(allowed=12000, window=9000)
+    asker = local_agent.LocalAsker(
+        Plan('["q"]'), complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "text " * 400}), model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    with pytest.raises(local_agent.LocalInferenceError) as raised:
+        asker.ask("widget\n" + "x" * 11000)
+    assert "4096-token window holds about 9000" in str(raised.value)
+
+
 def test_the_reply_budget_is_said_to_the_model():
     complete = Fitted(allowed=100_000)
     asker = local_agent.LocalAsker(
@@ -431,9 +474,11 @@ def test_the_socket_asks_the_server_for_its_window(monkeypatch):
 
     monkeypatch.setattr(local_inference.urllib.request, "urlopen", urlopen)
     assert socket.context_tokens() == 8192
-    allowed = socket.prompt_chars_allowed()
-    assert allowed == min(socket.context_chars,
-                          int((8192 - socket.max_tokens - 128) * local_inference.CHARS_PER_TOKEN))
+    # The window holds the whole prompt at CHARS_PER_TOKEN; the research
+    # budget (`context_chars`) bounds only the evidence (#181).
+    assert socket.window_chars() == int((8192 - socket.max_tokens - 128) * local_inference.CHARS_PER_TOKEN)
+    assert socket.prompt_chars_allowed() == min(socket.context_chars,
+                                                8192 - socket.max_tokens - 128 - 128)
 
     silent = local_inference.OpenAICompatSocket("http://127.0.0.1:1", "other")
     assert silent.context_tokens() == local_inference.DEFAULT_CONTEXT_TOKENS
@@ -492,3 +537,37 @@ def test_a_page_that_will_not_load_is_replaced_by_a_spare():
         limit=3, hits_per_query=2)
     assert len(pages) == 3, "three pages were asked for and three readable ones exist"
     assert "https://a.test/1" in tried and all(url != "https://a.test/1" for url, _ in pages)
+
+
+def _identity_reply(name: str) -> str:
+    return json.dumps({"canonical_name": name, "aliases": [], "variant": "",
+                       "identifiers": [], "unknowns": [], "evidence": []})
+
+
+class Structured(Complete):
+    """The real socket's structured door, which the identity step uses."""
+
+    def json(self, prompt: str, schema: dict) -> str:
+        return self(prompt)
+
+
+def _namer(reply: str):
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Structured(reply), searcher([]), reader({}),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    return asker
+
+
+def test_the_seller_words_are_taken_off_a_listing_title():
+    """#181: "DEMİRAY OTODAN DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID" was
+    authored, searched and named as a whole. The product inside it is."""
+    title = "DEMİRAY OTODAN DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID"
+    assert _namer(_identity_reply("COROLLA 1.8 HYBRID")).name_product(title) == "COROLLA 1.8 HYBRID"
+
+
+def test_a_name_not_in_the_title_is_not_taken_and_the_title_is_no_news():
+    title = "DEMİRAY OTODAN DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID"
+    # Invented words are refused by grounding; the title itself is "".
+    assert _namer(_identity_reply("Toyota Prius 2.0")).name_product(title) == ""
+    assert _namer(_identity_reply(title)).name_product(title) == ""
