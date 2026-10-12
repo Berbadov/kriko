@@ -383,3 +383,25 @@ def test_uninstalling_one_pack_leaves_the_other_answering(two_packs):
                                      context={"usage_km": 200_000}))
     assert {c.pack_id for c in result.claims} == {"alpha"}
     assert "Chain tensioner fails" in _titles(result)
+
+
+def test_a_claim_with_no_evidence_is_not_served(tmp_path):
+    """Whatever builder made the pack, a claim reaches the reader with its
+    page and quote or not at all."""
+    claims = ALPHA_CLAIMS + """
+- subject: {kind: product, identity: {brand: acme, model: w100}}
+  kind: known_issue
+  domain: mech
+  severity: high
+  text: {en: {title: Unsourced hunch, body: b, advice: a}}
+"""
+    conn = connect(tmp_path / "bare.sqlite")
+    try:
+        packstore.install(conn, _pack(tmp_path, "bare", toml=ALPHA_TOML,
+                                      subjects=ALPHA_SUBJECTS, claims=claims))
+        result = lookup(conn, Query(kind="product",
+                                    identity={"brand": "acme", "model": "w100"}))
+        assert "Trim rattle" in _titles(result)
+        assert "Unsourced hunch" not in _titles(result)
+    finally:
+        conn.close()

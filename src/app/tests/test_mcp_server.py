@@ -46,6 +46,8 @@ PACK = {
           domain: mech
           severity: high
           text: {en: {title: Chuck slips under torque, body: b, advice: a}}
+          evidence:
+            - {url: "https://example.org/report", quote: An owner reported it.}
     """,
     "principle": "Keep only what handling the tool would not reveal.",
     "templates": '- "{alias} common faults"\n',

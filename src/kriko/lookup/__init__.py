@@ -171,6 +171,11 @@ def lookup(conn, query: Query) -> LookupResult:
             " FROM evidence e JOIN sources s USING (source_id, pack_id)"
             " WHERE e.claim_id = ? AND e.pack_id = ?",
             (row["claim_id"], row["pack_id"])).fetchall()
+        # A claim is served with the page and the quote it came from, or not
+        # at all. Enforced here, whatever builder made the pack: a claim with
+        # nothing behind it is a gap, not an answer.
+        if not evidence:
+            continue
         sources, trust, disputed = score_sources(evidence, tiers, trusts)
 
         via = reached.get(row["subject_id"], "direct")

@@ -97,6 +97,12 @@ def cmd_build(args, store) -> int:
     own_builder = (root / "build.py").exists()
     stats = None
     if own_builder:
+        # The builder is `packs.<name>.build`, imported from the directory
+        # that holds `packs/`, so `kriko build packs/<name>` works from the
+        # checkout without PYTHONPATH.
+        holder = str(root.resolve().parent.parent)
+        if holder not in sys.path:
+            sys.path.insert(0, holder)
         module = importlib.import_module(f"packs.{root.name}.build")
         result = module.build(out)
         if isinstance(result, tuple):
