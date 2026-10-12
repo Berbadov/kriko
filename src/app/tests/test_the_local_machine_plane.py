@@ -246,14 +246,29 @@ def test_the_socket_posts_to_v1_with_the_real_model_name_and_a_schema(stub):
     assert (socket_.tokens_in, socket_.tokens_out, socket_.tokens_used) == (3, 4, 7)
 
 
-def test_a_server_that_refuses_the_schema_is_asked_again_plainly(stub):
-    stub.chat = [(400, {"error": {"message": "no response_format"}}),
+def test_a_server_that_refuses_the_schema_is_asked_in_its_other_spelling(stub):
+    """llama-cpp-python's server refuses `json_schema` by name (as a 500) and
+    takes the same schema under `json_object`; the constraint is kept."""
+    stub.chat = [(500, {"error": {"message": "response_format.type: Input should be "
+                                             "'text' or 'json_object', got json_schema"}}),
                  completion("[]")]
     socket_ = local_inference.OpenAICompatSocket(
         stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA)
     assert socket_("p") == "[]"
-    assert "response_format" in stub.chat_seen[0]
-    assert "response_format" not in stub.chat_seen[1]
+    assert stub.chat_seen[0]["response_format"]["type"] == "json_schema"
+    assert stub.chat_seen[1]["response_format"] == {
+        "type": "json_object", "schema": local_inference.FINDINGS_SCHEMA}
+
+
+def test_a_server_that_refuses_both_spellings_is_asked_again_plainly(stub):
+    stub.chat = [(400, {"error": {"message": "no response_format"}}),
+                 (400, {"error": {"message": "no response_format"}}),
+                 completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA)
+    assert socket_("p") == "[]"
+    assert stub.chat_seen[1]["response_format"]["type"] == "json_object"
+    assert "response_format" not in stub.chat_seen[2]
 
 
 def test_runtime_settings_survive_restart_and_reach_the_native_ollama_socket(machine, stub, tmp_path):
@@ -304,18 +319,21 @@ def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):
     assert "reasoning_effort" in stub.chat_seen[1]
     assert "reasoning_effort" not in stub.chat_seen[2]
 
-    # Both optional fields refused: the schema goes first, then the effort.
+    # Both optional fields refused: the schema goes first (after its other
+    # spelling is refused too), then the effort.
     stub.chat = [(400, {"error": {"message": "no response_format"}}),
+                 (400, {"error": {"message": "no response_format"}}),
                  (400, {"error": {"message": "no reasoning_effort"}}),
                  completion("[]")]
     socket_ = local_inference.OpenAICompatSocket(
         stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA,
         reasoning_effort="low")
     assert socket_("p") == "[]"
-    assert "response_format" in stub.chat_seen[3]
-    assert "response_format" not in stub.chat_seen[4]
-    assert "reasoning_effort" in stub.chat_seen[4]
-    assert "reasoning_effort" not in stub.chat_seen[5]
+    assert stub.chat_seen[3]["response_format"]["type"] == "json_schema"
+    assert stub.chat_seen[4]["response_format"]["type"] == "json_object"
+    assert "response_format" not in stub.chat_seen[5]
+    assert "reasoning_effort" in stub.chat_seen[5]
+    assert "reasoning_effort" not in stub.chat_seen[6]
 
 
 def test_a_missing_model_names_the_address_and_the_model(stub):
