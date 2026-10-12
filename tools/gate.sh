@@ -192,6 +192,22 @@ if [ "$only" = all ] || [ "$only" = gpui ]; then
             _gpui_cargo "the cargo tests" test "${cargo_profile_args[@]}" || result=$?
             [ "$result" = 1 ] && exit 1
         fi
+
+        # The Windows-only code (tray, single instance, window sizing, the
+        # failure box) compiles only for Windows, and the reader is on
+        # Windows. Off a Windows host it is checked by cross-compiling when
+        # the target is installed; otherwise the gate says it was not.
+        case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) win_host=1 ;; *) win_host=0 ;; esac
+        if [ "$result" = 0 ] && [ "$win_host" = 0 ]; then
+            step "cargo check --target x86_64-pc-windows-gnu (kriko-gpui)"
+            if command -v rustup >/dev/null 2>&1 && rustup target list --installed 2>/dev/null | grep -qx x86_64-pc-windows-gnu; then
+                result=0
+                _gpui_cargo "the Windows cargo check" check --target x86_64-pc-windows-gnu "${cargo_profile_args[@]}" || result=$?
+                [ "$result" = 1 ] && exit 1
+            else
+                echo "not checked for Windows: the x86_64-pc-windows-gnu target is not installed (\`rustup target add x86_64-pc-windows-gnu\` adds it)"
+            fi
+        fi
     fi
 fi
 

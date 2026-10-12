@@ -39,6 +39,7 @@ mod win {
         pub fn IsIconic(hwnd: isize) -> i32;
         pub fn FindWindowW(class: *const u16, title: *const u16) -> isize;
         pub fn GetWindowThreadProcessId(hwnd: isize, pid: *mut u32) -> u32;
+        pub fn MessageBoxW(hwnd: isize, text: *const u16, caption: *const u16, kind: u32) -> i32;
     }
     #[link(name = "kernel32")]
     extern "system" {
@@ -55,6 +56,43 @@ mod win {
     pub const SW_SHOW: i32 = 5;
     pub const SW_RESTORE: i32 = 9;
     pub const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
+    pub const MB_ICONERROR: u32 = 0x10;
+}
+
+/// What the reader is told when the window cannot be made at all.
+pub fn window_failure_text(error: &str) -> String {
+    format!(
+        "Kriko could not open its window.\n\n{error}\n\n\
+         Kriko draws with DirectX 11. Updating the graphics driver usually \
+         fixes this. Over Remote Desktop or in a virtual machine it may not \
+         be available."
+    )
+}
+
+/// Say a failure that happened before there is a window to say it in. A
+/// release build on Windows has no console, so without this a failed
+/// window was a program that vanished without a word.
+pub fn tell_fatal(text: &str) {
+    eprintln!("{text}");
+    #[cfg(windows)]
+    {
+        let wide = |s: &str| s.encode_utf16().chain(std::iter::once(0)).collect::<Vec<u16>>();
+        let (body, title) = (wide(text), wide("Kriko"));
+        unsafe {
+            win::MessageBoxW(0, body.as_ptr(), title.as_ptr(), win::MB_ICONERROR);
+        }
+    }
+}
+
+#[cfg(test)]
+mod fatal_tests {
+    #[test]
+    fn a_failed_window_says_why_and_what_to_try() {
+        let t = super::window_failure_text("Creating DirectX renderer: Not implemented. (0x80004001)");
+        assert!(t.starts_with("Kriko could not open its window."));
+        assert!(t.contains("0x80004001"), "the cause is kept, so it can be reported");
+        assert!(t.contains("graphics driver"));
+    }
 }
 
 #[cfg(windows)]
