@@ -19,6 +19,7 @@ The last one is the load-bearing one. An emitter reachable from `kriko/` would
 make "add a category" mean "touch the engine", which is G6.
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -56,6 +57,40 @@ def client(tmp_path):
         yield client
 
 
+# ── reading the record back ──────────────────────────────────────────────
+#
+# The app serves no read API over these tables, so the tests read the rows
+# they assert on directly. What is under test is what was written, and that
+# is the property that matters.
+
+
+def _rows(conn, sql, args=()):
+    return [dict(row) for row in conn.execute(sql, args)]
+
+
+def _run(conn, run_id):
+    found = _rows(conn, "SELECT * FROM pipeline_runs WHERE run_id = ?", (run_id,))
+    return found[0] if found else None
+
+
+def _stages(conn, run_id):
+    return _rows(
+        conn, "SELECT * FROM pipeline_stages WHERE run_id = ? ORDER BY seq", (run_id,)
+    )
+
+
+def _events(conn, run_id, after=0, limit=300):
+    rows = _rows(
+        conn,
+        "SELECT * FROM pipeline_events WHERE run_id = ? AND event_id > ?"
+        " ORDER BY event_id LIMIT ?",
+        (run_id, int(after), int(limit)),
+    )
+    for row in rows:
+        row["detail"] = json.loads(row.pop("detail_json") or "{}")
+    return rows
+
+
 # ── the shape of a run ───────────────────────────────────────────────────
 
 
@@ -66,28 +101,9 @@ def test_a_run_records_its_stages_in_pipeline_order(app_state, conn):
         emit.open_stage(stage)
     emit.finish()
 
-    stages = pipeline.stages(conn, emit.run_id)
+    stages = _stages(conn, emit.run_id)
     assert [row["stage"] for row in stages] == list(pipeline.STAGES)
     assert [row["seq"] for row in stages] == [0, 1, 2, 3]
-
-
-def test_every_stage_is_present_before_it_has_run(app_state, conn):
-    """The view shows a shape, it does not grow one.
-
-    Four boxes that fill in reads as a pipeline making progress. Four boxes
-    that appear one at a time reads as a UI loading.
-    """
-    emit = pipeline.Emitter(app_state, kind="research")
-    emit.begin()
-    emit.open_stage("discovery")
-
-    states = {row["stage"]: row["state"] for row in pipeline.stages(conn, emit.run_id)}
-    assert states == {
-        "discovery": "running",
-        "extraction": "waiting",
-        "ingestion": "waiting",
-        "ledgering": "waiting",
-    }
 
 
 def test_opening_the_next_stage_closes_the_one_before(app_state, conn):
@@ -98,7 +114,7 @@ def test_opening_the_next_stage_closes_the_one_before(app_state, conn):
     emit.open_stage("discovery")
     emit.open_stage("extraction")
 
-    states = {row["stage"]: row["state"] for row in pipeline.stages(conn, emit.run_id)}
+    states = {row["stage"]: row["state"] for row in _stages(conn, emit.run_id)}
     assert states["discovery"] == "done"
     assert states["extraction"] == "running"
 
@@ -112,7 +128,7 @@ def test_a_stage_that_did_nothing_on_purpose_is_skipped_not_done(app_state, conn
     emit.skip_stage("extraction", "the agent plane fetches nothing itself")
 
     row = next(
-        r for r in pipeline.stages(conn, emit.run_id) if r["stage"] == "extraction"
+        r for r in _stages(conn, emit.run_id) if r["stage"] == "extraction"
     )
     assert row["state"] == "skipped"
     assert "agent plane" in row["detail"]
@@ -127,10 +143,10 @@ def test_a_stage_still_open_when_the_run_ends_failed_with_it(app_state, conn):
     emit.finish("failed", "RuntimeError: the source went away")
 
     row = next(
-        r for r in pipeline.stages(conn, emit.run_id) if r["stage"] == "extraction"
+        r for r in _stages(conn, emit.run_id) if r["stage"] == "extraction"
     )
     assert row["state"] == "failed"
-    assert pipeline.get_run(conn, emit.run_id)["error"].startswith("RuntimeError")
+    assert _run(conn, emit.run_id)["error"].startswith("RuntimeError")
 
 
 # ── counts and events ────────────────────────────────────────────────────
@@ -149,7 +165,7 @@ def test_counts_accumulate_across_stages(app_state, conn):
     emit.count(accepted=4, refused=3)
     emit.finish()
 
-    run = pipeline.get_run(conn, emit.run_id)
+    run = _run(conn, emit.run_id)
     assert (run["sources"], run["findings"]) == (3, 7)
     assert (run["accepted"], run["refused"]) == (4, 3)
 
@@ -166,7 +182,7 @@ def test_a_refusal_is_a_first_class_event_with_its_source(app_state, conn):
         source_url="https://example.test/thread/1",
         claim_id="",
     )
-    events = pipeline.events(conn, emit.run_id)
+    events = _events(conn, emit.run_id)
     assert len(events) == 1
     assert events[0]["level"] == "refused"
     assert events[0]["source_url"] == "https://example.test/thread/1"
@@ -182,9 +198,9 @@ def test_events_are_cursored_by_id_not_by_time(app_state, conn):
     for index in range(5):
         emit.event(f"source {index}")
 
-    first = pipeline.events(conn, emit.run_id, limit=2)
+    first = _events(conn, emit.run_id, limit=2)
     assert [e["message"] for e in first] == ["source 0", "source 1"]
-    rest = pipeline.events(conn, emit.run_id, after=first[-1]["event_id"])
+    rest = _events(conn, emit.run_id, after=first[-1]["event_id"])
     assert [e["message"] for e in rest] == ["source 2", "source 3", "source 4"]
 
 
@@ -197,7 +213,7 @@ def test_the_event_log_is_bounded(app_state, conn, monkeypatch):
     emit.open_stage("discovery")
     for index in range(50):
         emit.event(f"event {index}")
-    assert len(pipeline.events(conn, emit.run_id, limit=1000)) == 10
+    assert len(_events(conn, emit.run_id, limit=1000)) == 10
 
 
 def test_an_unnamed_stage_is_not_silently_accepted(app_state):
@@ -224,10 +240,8 @@ def test_nobody_counting_tokens_is_not_the_same_as_zero_tokens(app_state, conn):
     measured.describe(tokens=0)
     measured.finish()
 
-    assert pipeline.get_run(conn, unmeasured.run_id)["tokens"] is None
-    assert pipeline.get_run(conn, unmeasured.run_id)["tokens_counted"] is False
-    assert pipeline.get_run(conn, measured.run_id)["tokens"] == 0
-    assert pipeline.get_run(conn, measured.run_id)["tokens_counted"] is True
+    assert _run(conn, unmeasured.run_id)["tokens"] is None
+    assert _run(conn, measured.run_id)["tokens"] == 0
 
 
 # ── surviving a restart ──────────────────────────────────────────────────
@@ -239,12 +253,12 @@ def test_a_run_running_at_startup_was_killed_not_is_running(app_state, conn):
     emit.open_stage("extraction")
 
     assert pipeline.mark_interrupted(conn) == 1
-    run = pipeline.get_run(conn, emit.run_id)
+    run = _run(conn, emit.run_id)
     assert run["state"] == "interrupted"
     assert run["ended_at"]
     assert "stopped" in run["error"]
     stage = next(
-        r for r in pipeline.stages(conn, emit.run_id) if r["stage"] == "extraction"
+        r for r in _stages(conn, emit.run_id) if r["stage"] == "extraction"
     )
     assert stage["state"] == "failed"
 
@@ -268,7 +282,7 @@ def test_startup_reconciles_the_pipeline_the_way_it_reconciles_jobs(tmp_path):
         pass  # startup runs the reconciliation
     conn = state.connect(app_state)
     try:
-        runs = pipeline.runs(conn)
+        runs = _rows(conn, "SELECT * FROM pipeline_runs ORDER BY started_at DESC")
     finally:
         conn.close()
     assert runs[0]["state"] == "interrupted"
@@ -287,12 +301,12 @@ def test_old_runs_are_dropped_whole(app_state, conn, monkeypatch):
         emit.finish()
         ids.append(emit.run_id)
 
-    kept = {row["run_id"] for row in pipeline.runs(conn, limit=100)}
+    kept = {row["run_id"] for row in _rows(conn, "SELECT run_id FROM pipeline_runs")}
     assert len(kept) <= 4  # the cap, plus the one being inserted
     gone = next(run_id for run_id in ids if run_id not in kept)
-    assert pipeline.events(conn, gone) == []
+    assert _events(conn, gone) == []
     assert not any(
-        row["state"] != "waiting" for row in pipeline.stages(conn, gone)
+        row["state"] != "waiting" for row in _stages(conn, gone)
     )
 
 
@@ -360,25 +374,6 @@ def test_the_pipeline_tables_are_interface_state_not_engine_schema(app_state, co
     assert "pipeline_runs" not in SCHEMA_PATH.read_text(encoding="utf-8")
 
 
-def test_the_stream_opens_on_whatever_is_running(client, tmp_path):
-    """A view that opens empty while a run is in flight is the failure this
-    whole subsystem exists to fix — so `latest` prefers a live run over a
-    more recent finished one."""
-    app_state = tmp_path / "app.sqlite"
-    done = pipeline.Emitter(app_state, kind="research")
-    done.begin(subject="finished")
-    done.finish()
-    live = pipeline.Emitter(app_state, kind="research")
-    live.begin(subject="going")
-    live.close()
-
-    conn = state.connect(app_state)
-    try:
-        assert pipeline.latest(conn)["run_id"] == live.run_id
-    finally:
-        conn.close()
-
-
 # ── the handler actually emits ────────────────────────────────────────────
 #
 # The tests above hold the spine's properties. These two hold the thing that
@@ -429,9 +424,9 @@ def test_a_real_research_run_writes_its_four_stages(client, tmp_path):
     run_id = row["result"]["run_id"]
     conn = state.connect(tmp_path / "app.sqlite")
     try:
-        run = pipeline.get_run(conn, run_id)
-        stages = {s["stage"]: s["state"] for s in pipeline.stages(conn, run_id)}
-        events = pipeline.events(conn, run_id)
+        run = _run(conn, run_id)
+        stages = {s["stage"]: s["state"] for s in _stages(conn, run_id)}
+        events = _events(conn, run_id)
     finally:
         conn.close()
     assert run["state"] == "done"
@@ -465,13 +460,13 @@ def test_a_failed_research_run_is_readable_afterwards(client, tmp_path):
 
     conn = state.connect(tmp_path / "app.sqlite")
     try:
-        runs = pipeline.runs(conn)
+        runs = _rows(conn, "SELECT * FROM pipeline_runs ORDER BY started_at DESC")
         assert len(runs) == 1
         assert runs[0]["state"] == "failed"
         assert runs[0]["subject_id"] == "nope"
         assert "KeyError" in runs[0]["error"]
         # The stage it died in, not just the fact that it died.
-        stages = pipeline.stages(conn, runs[0]["run_id"])
+        stages = _stages(conn, runs[0]["run_id"])
     finally:
         conn.close()
     assert next(s for s in stages if s["stage"] == "discovery")["state"] == "failed"

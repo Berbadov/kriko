@@ -108,7 +108,7 @@ in a document, because a surface nobody knows exists cannot be reasoned about.
 | query | `POST /api/lookup`, `GET /api/identity-keys/{pack_id}` | A lookup, and the keys a pack declares. |
 | history | `GET /api/history`, `GET /api/history/records`, `GET /api/lookup/{lookup_id}`, `GET\|POST /api/lookup/{lookup_id}/questions`, `DELETE /api/history/{lookup_id}`, `GET\|POST /api/settings` | Backed by `app.sqlite`. |
 | live | `POST /api/lookup/{lookup_id}/refresh` | Re-read one past check. The knowledge clock it answers with rides on `GET /api/operations`. |
-| marks | `GET\|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}` | Author verdicts, pack-keyed. The research queue they feed is `state.mark_signals`, read by no route. |
+| marks | `GET\|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}` | Author verdicts, pack-keyed. Counted by `GET /api/marks`; no route reads the verdicts back as a queue. |
 | compare | `GET\|POST /api/compare-drafts`, `PUT\|DELETE /api/compare-drafts/{draft_id}`, `GET\|POST /api/compare-drafts/{draft_id}/questions`, `GET\|PUT /api/compare-drafts/{draft_id}/board` | Named comparisons of saved checks. App state, never knowledge. |
 | queue | `GET\|POST /api/queue`, `PATCH\|DELETE /api/queue/{queue_id}` | The research queue: products queued from the extension's panel (Add to queue), researched in turn, then compared. One row per listing address; a second press answers `added: false`; PATCH sets `state` (waiting, researching, done) and the fresh `lookup_id` as the window researches them. App state, never knowledge. |
 | jobs | `POST /api/research`, `POST /api/packs/update`, `POST /api/packs/harvest`, `GET /api/packs/updates`, `GET /api/jobs`, `GET /api/jobs/{job_id}`, `POST /api/jobs/{job_id}/cancel`, `POST /api/jobs/{job_id}/retry`, `POST /api/jobs/{job_id}/say` | A client follows a job by polling `GET /api/jobs/{job_id}`; there is no push stream. |
@@ -159,7 +159,7 @@ flowchart LR
 | `claim_marks` | Author verdicts; they outlive the check that prompted them. |
 | `jobs` | Job rows that outlive the request and the process. |
 | `job_messages` | Reader-to-run messages. `taken_at` is set inside the read transaction, so a message is never delivered twice. |
-| `pipeline_runs`, `pipeline_stages`, `pipeline_events` | What a run did, stage by stage, and what it printed. |
+| `pipeline_runs`, `pipeline_stages`, `pipeline_events` | What a run did, stage by stage, and what it printed. Written by the handlers; no route reads them back. |
 | `submissions` | Agent-door input and the verdicts it drew. |
 | `fact_checks` | The last "the page still says this" per (pack, claim). A dead link is a signal, not a retraction. |
 | `extension_seen` | Extension origins, hit counts and versions. |
@@ -167,7 +167,7 @@ flowchart LR
 | `bench_runs` | Every benchmark row: plane, model, protocol, context size, cost, and the per-reason refusals. `rep` marks a repeat of the same case. `detail_json` keeps the versioned case, run settings, answer, evidence, runtime and diagnostics. |
 | `operations` | The any-door work feed, bounded to 2000 rows. |
 | `documents` | Quote-proving page text, one row per `source_id`, bounded. |
-| `unmapped_labels` | Labels seen on pages that no adapter reads. |
+| `unmapped_labels` | Labels seen on pages that no adapter reads, written on each analysis. The analyze response carries the same list; nothing else reads the table back. |
 | `local_adapters` | Site readers this installation taught itself. They never travel and never enter a digest. |
 | `site_requests` | Unreadable sites the reader stood on, so "which site next" is answerable. |
 | `site_activation` | The browser's per-site permission verdict. |
