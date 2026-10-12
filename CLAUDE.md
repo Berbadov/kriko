@@ -17,25 +17,20 @@ document has to name one, that is a defect in the document: a decision that
 belongs to the reader's own machine must not be frozen into prose that every
 other machine reads.
 
-## Doctrine — read `docs/DOCTRINE.md` before any work *(2026-09-24)*
+## Doctrine — `docs/DOCTRINE.md` *(lean since 2026-10-12)*
 
-Short form, not a substitute:
+About a fifth of the effort goes on process; the rest is the product.
 
-1. **Write the request down first** as a GitHub issue (mirrored to Linear),
-   quoting the reader, with
-   **Where** (exact screen) and **Done when** (what they can see). Read it
-   back before any code. No "Done when", no start.
-2. **Done means observed**: end result on the named screen, on `main`, on
-   Windows where it differs.
-3. **Reproduce first, then fix.** Ask the tool for its facts; never type a list
-   from memory.
-4. **Every PR carries its proof** (quote, observation, screenshot); a second
-   agent reviews it against the request.
-5. **One area per agent, a PR the same day, merged daily** (by the reader;
-   nothing reaches `main` without the author asking).
-6. **Every change set bumps the version and updates `README.md` before commit**,
-   including documentation and packaging changes. Published versions are
-   immutable; corrections get a newer version. Read `docs/UPDATE_PROTOCOL.md`.
+1. **Know what was asked:** quote the reader and write **Done when** before
+   code. In the PR for up to a day of work; a GitHub issue for more.
+2. **Done means observed**: on the screen the reader uses, on Windows where it
+   differs; a changed screen gets a screenshot in the PR.
+3. **Reproduce first, then fix.**
+4. **Test behaviour, not prose**: no tests that only keep documents in step.
+5. **Proof sized to the change**; a second-agent review only for big or
+   lookup-touching PRs. The reader merges.
+6. **Versions and README notes move at release**, not per change
+   (`docs/UPDATE_PROTOCOL.md`).
 
 ## The gate — green on every push *(2026-10-11)*
 
@@ -63,8 +58,8 @@ without them it fails at link time, not in a test.
 
 ## Task tracking
 
-Open work is GitHub issues, each mirrored to the Linear team with a link each
-way; nothing in the repo is a status file. A PR closes its issue
+Open work bigger than a day is a GitHub issue (Linear mirroring optional);
+nothing in the repo is a status file. A PR closes its issue
 (`Closes #n`), and its commit message carries the reasoning. `git log` is the
 record of what was done. Check the issues before starting and keep them
 current.
@@ -248,7 +243,7 @@ A need from the wrong layer means moving the module (drivers to
 | `README.md` | overview, quickstart, what a catalog is | current |
 | `packs/<name>/README.md` | one catalog's coverage and its own bar | current |
 | `CLAUDE.md` | agent principles and working rules | current |
-| `docs/DOCTRINE.md` | request to done: the issue, done-ness, tests, PR proof, parallel agents; then setup, branches, commits, the gate | current, read first |
+| `docs/DOCTRINE.md` | request to done, kept lean: what was asked, done-ness, tests, PR proof; then setup, branches, commits, the gate | current, read first |
 | `docs/ARCHITECTURE.md` | reading map, package ownership | current |
 | `docs/USAGE.md` | operating the stack and growing knowledge | current |
 | `docs/HOW_IT_WORKS.md` | matching, catalog lifecycle, a run, layering | current |

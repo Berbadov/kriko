@@ -1,150 +1,72 @@
 # From request to done
 
-How work gets from "the reader asked for it" to "the reader has it", every
-session, human or agent. Until 2026-09-24 the norm was tests-green yet
-ask-missed. Cause: no fixed **what was asked, what counts as done, who
-checks.** Short rules; each enforceable one has a test. The mechanics (setup,
-the gate, branches, commits) follow the rules, from
-[the working tree](#set-up-the-working-tree) on.
-
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart LR
-    A["1. Open an issue<br/>Asked, Where, Done when"]:::brand --> B{"Done when<br/>written?"}
-    B -->|no| Q["Ask. Never guess."]:::danger
-    Q --> A
-    B -->|yes| C["3. Reproduce<br/>a check that fails first"]:::plain
-    C --> D["Fix"]:::plain
-    D --> E["tools/gate.sh<br/>+ reader journey"]:::plain
-    E --> F["5. PR with proof<br/>quote, observation, screenshot"]:::ice
-    F --> G["Second agent reviews<br/>does it do what was asked,<br/>where it was asked?"]:::plain
-    G --> H["Reader merges to main"]:::plain
-    H --> I["2. Observed on the Where screen,<br/>on Windows where it differs"]:::ice
-    I --> J["Shipped: a double-clicked installer"]:::mark
-
-    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
-    classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
-    classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
-```
+How work gets from "the reader asked for it" to "the reader has it". The aim
+since 2026-10-12: about **a fifth** of the effort on process (tests, version
+control, proof), the rest on the product. A rule stays only if it has caught
+a real defect; ceremony that only checked other ceremony was cut.
 
 | # | Rule | One line |
 |---|---|---|
-| 1 | Request first | An issue (GitHub, mirrored to Linear) before any code |
-| 2 | Done is observed | On the **Where** screen, on `main`, on Windows where it differs |
+| 1 | Know what was asked | Quote the reader; write **Done when** before code |
+| 2 | Done is observed | Seen where the reader sees it, on Windows where it differs |
 | 3 | Reproduce first | A bug fails on purpose before it is fixed |
-| 4 | Know what a test proves | Green is necessary, not sufficient |
-| 5 | Proof in the PR | Quote, observation, screenshot, second reviewer |
-| 6 | One area per agent | Claimed, merged the same day |
-| 7 | Say when it fails | Partial is partial |
+| 4 | Test behaviour, not prose | One test per behaviour change; none for documents |
+| 5 | Proof in the PR, sized to the change | What changed, what was seen, what is not done |
+| 6 | Say when it fails | Partial is partial |
 
-## 1. A request is written down before any code
+## 1. Know what was asked
 
-First act: an issue on GitHub, from the **Request** template
-(`.github/ISSUE_TEMPLATE/request.md`), mirrored to the Linear team with a link
-each way. Open work lives there and nowhere in the repo.
+Quote the reader, never paraphrase ("sliders" becomes "chips"), and write
+**Done when**: a reader-visible outcome. No "Done when" means not understood:
+ask, never guess.
 
-```
-Title:      <a short title, ideally the reader's own phrase>
-Asked:      "<the reader's words, verbatim, never a paraphrase>" (date)
-Where:      <exact screen(s), e.g. "every research button: Browse, subject, Research">
-Done when:  <a reader-visible outcome, check-decidable>
-Not this:   <the likeliest misreading>
-```
+Where it lives depends on size:
 
-Quote, don't paraphrase ("Sliders" becomes "chips"). Read it back before
-starting. No "Done when" means not understood: ask, never guess. The template
-asks for every field, enforced by
-`test_the_request_template_asks_where_and_done_when`.
+- **Up to a day of work:** the PR description holds the quote and the Done
+  when. No issue.
+- **Bigger, or more than one PR:** a GitHub issue from the **Request** template
+  (`.github/ISSUE_TEMPLATE/request.md`), closed by the PR (`Closes #n`).
+  Mirroring to Linear is optional.
 
-## 2. "Done" is observable, and it is observed where the reader is
+## 2. Done is observed
 
-All four required.
+Done means the end result happened, seen as is where the reader sees it. A
+screen that changed is looked at (a screenshot in the PR); a change with no
+screen is shown by its output. Where Windows can differ (the shell, the
+installer, the tray), the PR says whether it was checked there. Shipped is a
+double-clicked installer.
 
-| # | Done means | Example |
-|---|---|---|
-| 1 | **The end result happened** | the extension checks in; the claims are in the pack |
-| 2 | **It is seen, as is, on the "Where" screen** | not on a neighbouring screen |
-| 3 | **It is on `main`** | branch work does not exist for the reader or the next session, which is why an item written on a branch is still open |
-| 4 | **It was checked in the reader's environment** | Windows, their browser, their own CLIs, wherever that can differ |
+## 3. Reproduce first
 
-A stub is a rehearsal and a cloud session cannot do (4). Until a Windows
-runner exists, the reader or a hand build does, and the PR says plainly
-"not yet checked on Windows". "Shipped" is fifth: a double-clicked installer.
+A bug fails on purpose first: a test, a symptom script, or a reproduced
+screen. No prior failure is a guess. Three failed fixes in one place mean the
+model of the problem is wrong.
 
-## 3. Reproduce first, then fix
+## 4. Test behaviour, not prose
 
-A bug fails on purpose first (a test, a symptom script, or a reproduced screen). No
-prior failure is a guess. Three failed fixes in one place means the model of
-the problem is wrong. A fact about an outside tool is read from that tool, with
-a test that fails when the tool drifts.
+- A behaviour change brings its test in the same commit; a retired behaviour
+  takes its test with it.
+- Break a new guard once to see it fail. A test that never failed tests nothing.
+- Stub the edge (network, CLIs), not the middle.
+- **No tests whose only job is to keep a document in step with the code**
+  (tables of endpoints, lists of tables). A document that misleads is fixed
+  when someone is misled. What agents *execute* from text is different and
+  stays tested: the generated skill, the tools a brief names.
+- `tools/gate.sh` before every push. It is the one check that has repeatedly
+  caught real defects.
 
-## 4. Tests: which kind proves what
+## 5. Proof in the PR, sized to the change
 
-| Kind | Proves | Does **not** prove |
-|---|---|---|
-| Unit / component (pytest, Node test runner) | logic, world stubbed | world matches stub |
-| Source-reading guard (`test_repo_invariants.py` et al.) | code rule holds | anything *works* |
-| **Journey check** (below) | reader's end result happened | (the one that counts) |
-| Reader's Windows install | works where used | |
+Every PR says what changed, what was observed (real output or a screenshot),
+and what it does not do yet. A second, uninvolved agent reviews only PRs over
+about 500 changed lines or touching lookup and claim selection. The reader
+merges; nothing reaches `main` without that.
 
-Green suite is necessary, not sufficient. A never-failed test tests nothing:
-break the code once per guard (#48). Stub the edge (network, CLI), not the
-middle (collaborators).
-
-### Journey checks
-
-One reader task from start to finish, stated the way a "Done when" is:
-
-- load the extension and check in;
-- check a listing and read the risks;
-- research one subject and see the catalog gain claims;
-- change a model or an effort and read the next command line;
-- install, disable and update a catalog and see checks follow;
-- register a site and see the extension read it.
-
-The PR records the journey steps, observed result, and a screenshot, checked
-on Windows as in §2.
-
-## 5. Every PR carries its own proof
-
-Merge requires:
-
-- the quoted request and its id;
-- the "Done when" and what was observed;
-- a screenshot of the "Where" screen (`.walk/`) or the journey's output;
-- where it was checked;
-- what it still does not do, stated rather than left for the reader to find.
-
-Then **an uninvolved second agent reviews** the entry, the proof and the diff,
-and answers one question: *does this do what was asked, where it was asked?*
-
-## 6. Several agents at once, without colliding
-
-One area, one agent: the Agents screen, the research harness, the extension,
-knowledge and catalogs, packaging and the shell. Claim it (assign
-the issue to yourself) first. Mergeable within a day, one request per PR. The PR goes to `main` the
-same day and is merged daily; the reader merges. A day-old branch merges,
-rebases, or closes, and nobody builds on unmerged work. LF endings
-(`.gitattributes`).
-
-## 7. When it does not work, say so
+## 6. Say when it fails
 
 Partial is partial: what is missing and why. "It should work" is not a status.
-A button that cannot work on this reader's machine says so on screen, with the
+A button that cannot work on this machine says so on screen, with the
 alternative next to it.
-
-## Checklist, before saying "done"
-
-- [ ] The entry quotes the reader, has a **Done when**, and was read first; a
-  failing check pre-existed (for a bug); the "Done when" is seen on the
-  **Where** screen; it is checked on Windows or the PR says it is not; the
-  journey passes, or is hand-walked until the journey scripts exist.
-- [ ] `tools/gate.sh` is green and the reader journey is observed; the PR carries
-  the quote, the observation and the screenshot; a
-  second agent has reviewed it; it is on `main`; the PR closes the issue (`Closes #n`) and its Linear twin
-  is done; and the commit says what was observed.
 
 ## Set up the working tree
 
