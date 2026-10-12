@@ -37,7 +37,7 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 | `kriko-1.5.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
 | `kriko-1.5.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
-The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Knowledge** in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
+The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
 ### 2. Add the browser extension
 
@@ -54,7 +54,7 @@ The extension is loaded from disk; it isn't distributed through a browser store.
 
 Open a supported listing and open the Kriko panel. Read the known risks, expand a finding, and follow its source. A catalog supplies the knowledge for its product category; it can only answer for products it covers. A new install has no catalog until you install one, so the panel has nothing to check against yet.
 
-When the product isn't covered, try **Quick look** with a configured agent. You can inspect the sources and ask another question after the result arrives. Quick look stays in your history; creating a catalog requires an explicit build action.
+When the product isn't covered, try **Quick look** with a configured agent. You can inspect the sources and ask another question after the result arrives. Quick look stays in your history. A catalog grows when you press **File quick looks** on **Overview**, or when you build one yourself.
 
 ### 4. Choose an agent when you want to research
 
