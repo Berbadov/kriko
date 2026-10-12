@@ -14,6 +14,7 @@ earning its place. Everything lives in ~/.kriko unless --store says otherwise.
 
 import argparse
 import json
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -83,7 +84,6 @@ def cmd_build(args, store) -> int:
     import importlib
 
     from kriko.pack.build import build as generic_build, digest_of
-    from kriko.store.db import connect as connect_store
 
     root = Path(args.root)
     out = Path(args.out) if args.out else Path("dist") / f"{root.name}.kpack"
@@ -114,7 +114,9 @@ def cmd_build(args, store) -> int:
     else:
         generic_build(root, out)
 
-    conn = connect_store(out)
+    # Read-only and plain: the store's connector would switch the finished
+    # file to WAL and leave -wal/-shm beside the .kpack that gets shared.
+    conn = sqlite3.connect(f"file:{Path(out).resolve().as_posix()}?mode=ro", uri=True)
     try:
         counts = {
             table: conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
