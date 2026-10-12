@@ -415,7 +415,11 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     LedAnim::Boot,
                     motion,
                 ))
-                .child(row_desc("No check matches. Clear the search or the filters.")),
+                .child(row_desc(if app.live.history.history_rows().is_empty() {
+                    "No checks yet. A listing you check from the browser extension shows up here."
+                } else {
+                    "No check matches. Clear the search or the filters."
+                })),
         );
     }
 
