@@ -89,6 +89,24 @@ impl Tab {
         }
     }
 
+    /// The screen an extension route names. A route is `<screen>[/<id>]` in
+    /// the extension's words (`packs`, `sites`, `check`, `jobs/<id>`,
+    /// `subject/<id>`, `result/<id>`, `questions/<id>`, `compare/<id>`), so
+    /// its first segment decides; a word it does not know
+    /// opens Home, never whatever happened to be on screen.
+    pub fn from_route(route: &str) -> Tab {
+        let head = route.trim_start_matches(['#', '/']).split('/').next().unwrap_or("");
+        match head {
+            "packs" | "knowledge" => Tab::Overview,
+            "subject" => Tab::Browse,
+            "result" => Tab::History,
+            "questions" => Tab::Compare,
+            "jobs" => Tab::Activity,
+            "check" => Tab::Home,
+            other => Tab::from_key(other),
+        }
+    }
+
     fn crumb(self) -> &'static str {
         match self {
             Tab::Home => "check / home",
@@ -468,7 +486,24 @@ impl Kriko {
         }
         for event in engine::take_events() {
             match event {
-                engine::ShellEvent::Focus(_route) => shell::show_window(cx),
+                engine::ShellEvent::Focus(route) => {
+                    // The extension asked for a screen, not just the window.
+                    if !route.trim().is_empty() {
+                        self.tab = Tab::from_route(&route);
+                        if let Some(id) = route.strip_prefix("subject/").filter(|id| !id.is_empty()) {
+                            self.select_subject(id.to_string(), cx);
+                        }
+                        // A saved check opens in History, already unfolded.
+                        if let Some(id) = route.strip_prefix("result/").filter(|id| !id.is_empty()) {
+                            if self.live.history.open.as_deref() != Some(id) {
+                                self.toggle_history_open(id.to_string(), cx);
+                            }
+                        }
+                        self.on_open_tab(cx);
+                        cx.notify();
+                    }
+                    shell::show_window(cx);
+                }
                 engine::ShellEvent::Hide => shell::hide_window(),
                 engine::ShellEvent::Quit => Self::quit(cx),
             }
@@ -1079,6 +1114,25 @@ fn text_selection(value: &str, cursor: usize, anchor: Option<usize>) -> std::ops
     let at = text_boundary(value, cursor);
     let anchor = text_boundary(value, anchor.unwrap_or(at));
     at.min(anchor)..at.max(anchor)
+}
+
+#[cfg(test)]
+mod route_tests {
+    use super::Tab;
+
+    #[test]
+    fn an_extension_route_opens_the_screen_it_names() {
+        assert!(Tab::from_route("packs") == Tab::Overview);
+        assert!(Tab::from_route("sites") == Tab::Sites);
+        assert!(Tab::from_route("subject/abc123") == Tab::Browse);
+        assert!(Tab::from_route("jobs/j-1") == Tab::Activity);
+        assert!(Tab::from_route("check") == Tab::Home);
+        assert!(Tab::from_route("result/abc123") == Tab::History);
+        assert!(Tab::from_route("questions/abc123") == Tab::Compare);
+        assert!(Tab::from_route("compare/abc123") == Tab::Compare);
+        assert!(Tab::from_route("#/history") == Tab::History);
+        assert!(Tab::from_route("no-such-screen") == Tab::Home);
+    }
 }
 
 #[cfg(test)]
