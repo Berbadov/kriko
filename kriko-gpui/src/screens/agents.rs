@@ -360,7 +360,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                     c = c.child(install_block(app, e, true, cx));
                 }
                 if !url.is_empty() {
-                    c = c.child(div().min_w(px(0.0)).truncate().child(mono(url, DIM)));
+                    c = c.child(mono(&crate::screens::history::clip(url, 72), DIM));
                 }
             }
         }

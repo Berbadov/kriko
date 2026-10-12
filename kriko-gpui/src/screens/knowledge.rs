@@ -108,7 +108,10 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         panel = panel.child(drawer);
     }
     controls = controls.child(div().mt(px(-12.0)).child(reveal(panel, "overview-filters-reveal", app.overview_filters_open, 1000.0, !app.reduce_motion)));
-    if matches == 0 && k.packs_loaded { controls = controls.child(empty_note("No record matches. Reset the filters or change the search.")); }
+    // Only a search or a filter can "not match"; an empty store is said by
+    // the packs card below, once.
+    let narrowed = active > 0 || !query.is_empty();
+    if matches == 0 && k.packs_loaded && narrowed { controls = controls.child(empty_note("No record matches. Reset the filters or change the search.")); }
 
     if !k.packs_loaded {
         return div().child(empty_note(
@@ -256,7 +259,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                                 .flex_col()
                                 .gap(px(4.0))
                                 .min_w(px(0.0))
-                                .child(div().min_w(px(0.0)).truncate().child(row_title(&pack.name)))
+                                .child(row_title(&crate::screens::history::clip(&pack.name, 48)))
                                 .child(mono(&note, MUTED)),
                         )
                         .child(meter_slim(pack.subjects as f32 / max_subjects * 100.0, 10))
@@ -275,7 +278,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     gaps_card = gaps_card.child(hairline());
     if gaps.is_empty() {
         gaps_card = gaps_card.child(div().pt(px(12.0)).child(empty_note(
-            "Every subject in the enabled packs has at least one claim.",
+            if k.packs.iter().any(|p| p.enabled) {
+                "Every subject in the enabled packs has at least one claim."
+            } else {
+                "Gaps show here once a pack is installed and switched on."
+            },
         )));
     }
     let shown = 8usize;

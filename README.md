@@ -115,6 +115,7 @@ All 12 replies completed. These are startup checks, not research scores: the rep
 - **Install from a file** on **Overview** installs a catalog someone shared with you, from its `.kpack` file. After a harvest, **Share as a file** saves the catalogs that changed, so you can send them.
 - **Add to a pack** on a quick look is instant and free when the catalog already has that product. Before, it ran the whole research again.
 - **Open in Kriko** and the other buttons in the extension's panel now open the screen they name: a saved check opens in **History**, already unfolded; a product opens in **Browse**; installing a catalog opens **Overview**. Before, they only brought the window to the front, on whatever screen was last open.
+- Catalog names on **Overview** and links on **Agents** showed as "…" instead of their text; they now show in full. The sidebar's **Browse** count and **Activity** badge come from your install; before, they were fixed placeholder numbers. Empty screens say what is missing instead of "no match" when nothing was searched.
 - **Home** says whether no catalog is installed or every catalog is switched off, and takes you to **Overview** to fix either.
 - When no catalog is installed and none can be fetched, Overview says to check the connection instead of leaving you at an empty screen.
 - A finding is shown only with the page and quote it came from. A few findings in the built-in catalogs had none and were shown anyway; they are now left out.
