@@ -976,7 +976,7 @@ fn agent_key(
 /// researching them in turn, and the researched ones handed to the slots
 /// below as a new draft.
 fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let c = &app.live.compare;
     let running = c.queue_running;
     let n = c.queue.len();
@@ -1300,7 +1300,7 @@ fn question_run_detail(run: &QuestionRun) -> Div {
 }
 
 pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
 
     // ---- drafts + the board toggle ----
     let board_toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {

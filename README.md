@@ -110,6 +110,9 @@ All 12 replies completed. These are startup checks, not research scores: the rep
 
 ### 1.5.0
 
+- The recommended local model, running on a CPU with no graphics card, now finds both documented problems in Kriko's test evidence instead of one, still reports nothing where nothing is documented, and ignores instructions planted in a page. It no longer throws away a correct finding that names the product word for word because it was unsure of its own answer.
+- English answers from a local model skip a translation step that changed nothing: about a third fewer model calls per check.
+- A local model server that asks for structured answers in a different format (such as llama-cpp-python's) still gets them, instead of the model being left to answer in free text.
 - **Overview** (under **Knowledge**) lists the catalogs you can install, each with an **Install** button. A new install no longer needs a terminal to get its first catalog. Newer versions of installed catalogs stay in their own **Pack updates** card.
 - Saved quick looks build your catalogs. **File quick looks** on **Overview** adds every saved quick look to its catalog: to the product already there, or as a new product when the quick look read enough to name it in the catalog's own terms (for example, make and model). No agent runs again and it costs nothing. Each quote is re-checked against its page before it is kept, and each catalog that changed is installed at a new version, as a `.kpack` file you can share. Quick looks that couldn't name their product that precisely are listed, so you can choose to research them.
 - A catalog that a harvest or an update replaced can go back: **Back to <version>** on its row on **Overview** restores the version installed before.
@@ -136,6 +139,20 @@ All 12 replies completed. These are startup checks, not research scores: the rep
 
 <details>
 <summary>Earlier releases</summary>
+
+#### 1.4.1
+
+- **Search this product** works on a product no installed catalog knows yet. It now starts the same research as **Research this product** in the panel, and the panel says so beneath the button, instead of asking the catalogs again and showing the same answer.
+- Bold and inline code in catalog and agent text (claim titles, bodies and "What to ask" lines, quick look specs and assumptions, and an agent's questions) render as formatting instead of showing the asterisks and backticks.
+- When the last running job ends, Kriko asks Ollama to unload the local model straight away. Before, the model stayed in video memory for five more minutes after a run (Ollama's default) and slowed the computer while Kriko sat in the background. Quitting Kriko unloads it too. Other model servers keep their own unload timer.
+- A product check on a local model no longer stops with "The task leaves no room for evidence" when no installed catalog fits. The instructions are measured against the model's whole context window, and only the page text is held to the research budget. A 16k window now has room for three pages beside the catalog instructions.
+- When the instructions really are too long for the window, the error gives both numbers: how long the instructions are and how much the window holds.
+- A listing title's seller words are no longer the product. In "DEMİRAY OTODAN DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID", the check searches for, names and files the product "COROLLA 1.8 HYBRID". The name is kept only when every word of it is in the title or the listing.
+- Local models under 2B parameters are never run, whether picked or not. A 0.8B model wrote findings its pages did not say. Choosing one leaves the local plane not ready and says why. The model library no longer offers those sizes for download.
+- The desktop app no longer uses a CPU core while nothing is happening. With its window open behind other windows, it used about one full core (10.4 CPU-seconds every 10 seconds). It now uses about 0.1. Minimized or closed to the tray, it stays near zero. The engine keeps serving the browser extension the whole time.
+- Animations play only while the Kriko window is the one in front. Behind another window, minimized or in the tray, the window stays still; animations resume when you switch back.
+- The **? n** needs-you tag in the title bar blinks three times when it appears, then stays lit. An agent waiting for your answer breathes three times, then rests. Spinners, meters and agent marks still move while a job runs.
+- The page header's background no longer slowly pulses.
 
 #### 1.4.0
 

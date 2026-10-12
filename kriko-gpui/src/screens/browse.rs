@@ -166,7 +166,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
 }
 
 pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let search = app.input_field(
         Field::BrowseSearch,
         "browse-search",

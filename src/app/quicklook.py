@@ -186,7 +186,8 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
         # it, which is not the answer. The object closed at what it finished is.
         found = closed(reply) or found
     if not isinstance(found, dict):
-        return {"assumed": "", "category": "", "pack": "", "pack_identity": {}, "specs": [],
+        return {"assumed": "", "product": "", "category": "", "pack": "", "pack_identity": {},
+                "specs": [],
                 "risks": [], "dropped": 0}
 
     risks: list[dict] = []
@@ -264,6 +265,7 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
 
     return {
         "assumed": str(found.get("assumed") or "").strip(),
+        "product": _line(found.get("product")),
         "category": _line(found.get("category")),
         "pack": _line(found.get("pack")).lower(),
         "pack_identity": _identity(found.get("pack_identity")),
