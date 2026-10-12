@@ -123,6 +123,14 @@ if [ "$only" = all ] || [ "$only" = node ]; then
     # that covers the extension reading a page. The quoting is fixed in
     # package.json; this is the part that makes the *next* such mistake loud.
     # An empty suite and a passing suite must not produce the same tick.
+    # And never `--test-force-exit`: it ends the run as soon as the tests
+    # registered so far have finished, so a file that registers its tests a
+    # moment later is skipped, silently. It cut 31 panel tests from about one
+    # run in six, each such run still printing "fail 0".
+    if grep -q -- "--test-force-exit" package.json; then
+        echo "package.json runs node with --test-force-exit, which drops tests silently." >&2
+        exit 1
+    fi
     node_out=$(npm test 2>&1)
     printf '%s\n' "$node_out"
     node_count=$(printf '%s' "$node_out" | sed -n 's/.*[^a-z]tests \([0-9][0-9]*\).*/\1/p' | tail -1)
