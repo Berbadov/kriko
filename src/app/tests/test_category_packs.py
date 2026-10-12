@@ -656,3 +656,33 @@ def test_a_harvest_files_every_saved_quick_look_once_and_names_what_needs_an_age
     again = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
     assert again["result"]["claims_added"] == 0
     assert [one["product"] for one in again["result"]["needs_agent"]] == ["Scyrox V6 Gaming Mouse"]
+
+
+def test_a_quick_look_that_read_the_identity_adds_a_new_product_without_an_agent(world):
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    _script_v6(world.script)
+    world.script.quick["Scyrox V6 Gaming Mouse"]["pack_identity"] = {"brand": "Scyrox", "model": "V6"}
+    _look(world, "Scyrox V6 Gaming Mouse")
+    world.script.quick["Logitech Mouse"] = {
+        "assumed": "", "category": "gaming mouse", "pack": "gaming.mice",
+        "pack_identity": {"brand": "Logitech"},              # no model: not enough to name it
+        "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]}
+    _look(world, "Logitech Mouse")
+    prompts = len(world.script.prompts)
+
+    done = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+
+    assert done["state"] == "succeeded", done["message"]
+    assert len(world.script.prompts) == prompts
+    assert [one["product"] for one in done["result"]["needs_agent"]] == ["Logitech Mouse"]
+    listed = world.get("/api/subjects", params={"pack_id": "gaming.mice"}).json()
+    assert sorted(one["label"] for one in listed) == ["Scyrox V6 Gaming Mouse", "Scyrox V8"]
+    assert _claims_of(world, "Scyrox V6 Gaming Mouse") == [("Side buttons rattle", V6_PAGE, V6_QUOTE)]
+
+
+def test_the_catalog_choice_shows_each_packs_identity_keys():
+    block = categorypack.choice_block([{
+        "pack_id": "gaming.mice", "name": "Gaming mice", "subjects": [], "blurb": "",
+        "identity": {"product": ["brand", "model"]}}])
+    assert "[identity product: brand, model]" in block
