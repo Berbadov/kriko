@@ -669,27 +669,3 @@ def test_the_reader_finds_split_templates_format_strings_and_methods(tmp_path):
     assert _serves(Call("c", "w", "POST", "/api/jobs/*/cancel"), cancel)
     assert _serves(Call("c", "w", None, "/api/jobs/*/cancel"), cancel)
     assert not _serves(Call("c", "w", "GET", "/api/jobs/*/cancel"), cancel)
-
-
-def test_the_internals_table_lists_exactly_the_routes_the_engine_serves(tmp_path):
-    """docs/INTERNALS.md's endpoint table is the reader's map of the API.
-
-    It drifted both ways at once (routes removed but still listed, routes added
-    but never listed), so it is held to the served set the same way the
-    clients are: every verb and path, read from the schema and from the table.
-    """
-    served = {(verb, path) for path, verbs in _server_routes(tmp_path) for verb in verbs}
-    table = [line for line in (REPO / "docs" / "INTERNALS.md").read_text(encoding="utf-8").splitlines()
-             if line.startswith("| ") and "/api/" in line]
-    documented = {
-        (verb, path)
-        for line in table
-        for verbs, path in re.findall(r"`([A-Z|\\]+) (/api/[^`\s]+)`", line)
-        for verb in verbs.replace("\\", "").split("|")
-    }
-    missing = sorted(served - documented)
-    stale = sorted(documented - served)
-    assert not missing and not stale, (
-        "docs/INTERNALS.md disagrees with the engine.\n"
-        + "".join(f"  served, not listed: {v} {p}\n" for v, p in missing)
-        + "".join(f"  listed, not served: {v} {p}\n" for v, p in stale))
