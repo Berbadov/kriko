@@ -220,6 +220,12 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     } else {
         (total + data::PAGE_SIZE - 1) / data::PAGE_SIZE
     };
+    if let Some(id) = app.history_focus.clone() {
+        if let Some(at) = filtered.iter().position(|&i| app.live.history.history_rows()[i].id == id) {
+            app.page = at / data::PAGE_SIZE;
+            app.history_focus = None;
+        }
+    }
     let page = app.page.min(pages - 1);
     let rows: Vec<usize> = filtered
         .iter()

@@ -489,6 +489,10 @@ def _read_any_site(store, body: ScrapeRequest, vocabulary):
     return None, None, ""
 
 
+#: The longest page title a saved check is named by.
+TITLE_LABEL_MAX = 90
+
+
 def _analyze_label(store, body: ScrapeRequest, mapped, result) -> str:
     """A short title, not the raw 150-character URL (check-15).
 
@@ -512,6 +516,14 @@ def _analyze_label(store, body: ScrapeRequest, mapped, result) -> str:
         if row and row["label"]:
             return row["label"]
     if mapped.identity:
+        # Not one subject (several fit, or a near miss): the page's own title
+        # names this listing better than the bare identity values, which are
+        # stored folded to lower case ("volkswagen golf"), but only when it
+        # carries every one of them, so a site's boilerplate never wins.
+        title = " ".join(str(body.title or "").split())
+        folded = title.casefold()
+        if title and all(str(v).casefold() in folded for v in mapped.identity.values()):
+            return title if len(title) <= TITLE_LABEL_MAX else title[:TITLE_LABEL_MAX - 1] + "…"
         return label_for(mapped.identity)
     host = urlparse(body.url).netloc.removeprefix("www.") or body.url
     return f"Listing on {host}"
