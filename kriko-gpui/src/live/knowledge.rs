@@ -138,6 +138,39 @@ pub struct KeyRow {
     pub hint: String,
 }
 
+/// One press of Test on a key: the engine sends the provider one tiny
+/// request with it (`POST /api/keys/test`) and says whether it worked.
+#[derive(Clone, Default)]
+pub struct KeyTest {
+    pub busy: bool,
+    pub ok: bool,
+    pub said: String,
+}
+
+/// The test's answer in words: what worked and how fast, or why not.
+pub fn key_test_words(v: &Value) -> KeyTest {
+    let ok = api::b(v, "ok");
+    let ms = v.get("latency_ms").and_then(Value::as_i64).unwrap_or(0);
+    let said = if ok {
+        let mut parts = vec![format!("works, answered in {ms} ms")];
+        if let Some(n) = v.get("results").and_then(Value::as_i64) {
+            parts.push(format!("{n} result{}", if n == 1 { "" } else { "s" }));
+        }
+        if let Some(n) = v.get("tokens").and_then(Value::as_i64) {
+            parts.push(format!("{n} tokens"));
+        }
+        let llm = api::s(v, "llm");
+        if !llm.is_empty() {
+            parts.push(llm);
+        }
+        parts.join(" · ")
+    } else {
+        let detail = api::s(v, "detail");
+        if detail.is_empty() { api::s(v, "error") } else { detail }
+    };
+    KeyTest { busy: false, ok, said }
+}
+
 #[derive(Default)]
 pub struct State {
     pub loaded: bool,
@@ -177,6 +210,8 @@ pub struct State {
     pub settings_notice: Option<String>,
     /// The provider the key field is being typed for.
     pub key_provider: Option<String>,
+    /// Each provider's last key test: still asking, or what it answered.
+    pub key_tests: std::collections::HashMap<String, KeyTest>,
     pub erase_confirm: bool,
     pub erase_busy: bool,
     // App updates (`/api/app-update`)
@@ -1001,6 +1036,25 @@ impl Kriko {
         );
     }
 
+    pub fn test_key(&mut self, provider: String, cx: &mut Context<Self>) {
+        self.live.knowledge.key_tests.insert(
+            provider.clone(),
+            KeyTest { busy: true, ok: false, said: "asking the provider".to_string() },
+        );
+        let id = provider.clone();
+        self.fetch(
+            cx,
+            move || api::post("/api/keys/test", serde_json::json!({ "provider": provider })),
+            move |this, reply, _| {
+                let result = match reply {
+                    Ok(v) => key_test_words(&v),
+                    Err(e) => KeyTest { busy: false, ok: false, said: e.message },
+                };
+                this.live.knowledge.key_tests.insert(id.clone(), result);
+            },
+        );
+    }
+
     pub fn remove_key(&mut self, provider: String, cx: &mut Context<Self>) {
         self.fetch(
             cx,
@@ -1195,5 +1249,28 @@ mod tests {
         );
         assert!(answered.newer);
         assert!(answered.error.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod key_test_tests {
+    use super::key_test_words;
+    use serde_json::json;
+
+    #[test]
+    fn a_working_key_says_what_it_got_back() {
+        let t = key_test_words(&json!({"ok": true, "latency_ms": 412, "results": 1, "tokens": null, "llm": ""}));
+        assert!(t.ok && !t.busy);
+        assert_eq!(t.said, "works, answered in 412 ms · 1 result");
+        let t = key_test_words(&json!({"ok": true, "latency_ms": 90, "results": null, "tokens": 21, "llm": "m-small"}));
+        assert_eq!(t.said, "works, answered in 90 ms · 21 tokens · m-small");
+    }
+
+    #[test]
+    fn a_refused_key_says_why() {
+        let t = key_test_words(&json!({"ok": false, "error": "unauthorized", "detail": "provider refused the key (HTTP 401)"}));
+        assert!(!t.ok);
+        assert_eq!(t.said, "provider refused the key (HTTP 401)");
+        assert_eq!(key_test_words(&json!({"ok": false, "error": "timeout", "detail": ""})).said, "timeout");
     }
 }
