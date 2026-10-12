@@ -1719,7 +1719,10 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
         )
         progress.log(f"{pack_id} is now {candidate.version}")
 
-    progress.set(1.0, f"updated {len(updated)} pack(s)")
+    fresh = sum(1 for one in updated if not one["from"])
+    said = [f"installed {fresh} pack(s)" if fresh else "",
+            f"updated {len(updated) - fresh} pack(s)" if len(updated) - fresh else ""]
+    progress.set(1.0, ", ".join(one for one in said if one))
     _note_automatic_pass(settings, params)
     return {"index_url": index_url, "updated": updated, "skipped": len(rows) - len(updated)}
 

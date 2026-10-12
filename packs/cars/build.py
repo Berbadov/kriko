@@ -40,7 +40,7 @@ from pathlib import Path
 import tomllib
 import yaml
 
-from kriko.pack.build import _GATE_KINDS
+from kriko.pack.build import _GATE_KINDS, seal
 from kriko.store import ids
 from kriko.store.db import SCHEMA_VERSION, connect
 
@@ -987,7 +987,7 @@ def build(out_path: Path) -> tuple[Path, dict]:
 
         _write_manifest(conn, pack_id, manifest, row_ids)
 
-    conn.close()
+    seal(conn)
     return out_path, {"stats": dict(stats), "id_map": id_map}
 
 
