@@ -393,17 +393,18 @@ def _owned_elsewhere(claims: list, own: int | None, ev: dict) -> bool:
         for old in claim.get("evidence") or [] if isinstance(old, dict))
 
 
-def add_subject(store_path, slug: str, product: str, identity: dict) -> dict | None:
+def add_subject(store_path, slug: str, identity: dict) -> dict | None:
     """Write a product into a draft from the identity a quick look read.
 
     The identity must give every key one of the draft's kinds declares, with
-    values the quick look took from the listing or its pages; anything short
+    values found on the listing or its pages (the caller checks); anything short
     of that is None, and the product waits for an agent rather than joining
     under a guessed key. A product the draft already holds is not written
     twice. Returns the subject row, as `attach` takes it.
     """
-    values = {str(k).strip().lower(): " ".join(str(v).split()).lower()
-              for k, v in (identity or {}).items() if str(v or "").strip()}
+    shown = {str(k).strip().lower(): " ".join(str(v).split())
+             for k, v in (identity or {}).items() if str(v or "").strip()}
+    values = {k: v.lower() for k, v in shown.items()}
     with LOCK:
         root = packdraft.open_draft(store_path, slug).root
         keys = _declared_keys(root)
@@ -412,7 +413,9 @@ def add_subject(store_path, slug: str, product: str, identity: dict) -> dict | N
         if kind is None:
             return None
         ident = {n: values[n] for n in keys[kind]}
-        row = {"kind": kind, "label": " ".join(product.split()), "identity": ident}
+        # Named by its identity, in the order the pack declares it, not by
+        # the listing title: a marketplace title is not a product's name.
+        row = {"kind": kind, "label": " ".join(shown[n] for n in keys[kind]), "identity": ident}
         subjects = _yaml_rows(root, "data/subjects.yaml")
         wanted = _subject_id(kind, ident, keys)
         for one in subjects:

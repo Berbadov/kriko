@@ -481,8 +481,9 @@ impl Kriko {
             match event {
                 engine::ShellEvent::Focus(route) => {
                     // The extension asked for a screen, not just the window.
-                    if !route.trim().is_empty() {
-                        self.tab = Tab::from_route(&route);
+                    let route = route.trim().trim_start_matches(['#', '/']);
+                    if !route.is_empty() {
+                        self.tab = Tab::from_route(route);
                         if let Some(id) = route.strip_prefix("subject/").filter(|id| !id.is_empty()) {
                             self.select_subject(id.to_string(), cx);
                         }

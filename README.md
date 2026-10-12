@@ -110,12 +110,12 @@ All 12 replies completed. These are startup checks, not research scores: the rep
 
 ### 1.5.0
 
-- **Knowledge** lists the catalogs you can install, each with an **Install** button. A new install no longer needs a terminal to get its first catalog. Newer versions of installed catalogs stay in their own **Pack updates** card.
-- Saved quick looks build your catalogs. **File quick looks** on **Knowledge** adds every saved quick look to its catalog: to the product already there, or as a new product when the quick look read enough to name it in the catalog's own terms (for example, make and model). No agent runs again and it costs nothing. Each quote is re-checked against its page before it is kept, and each catalog that changed is installed at a new version, as a `.kpack` file you can share. Quick looks that couldn't name their product that precisely are listed, so you can choose to research them.
+- **Overview** (under **Knowledge**) lists the catalogs you can install, each with an **Install** button. A new install no longer needs a terminal to get its first catalog. Newer versions of installed catalogs stay in their own **Pack updates** card.
+- Saved quick looks build your catalogs. **File quick looks** on **Overview** adds every saved quick look to its catalog: to the product already there, or as a new product when the quick look read enough to name it in the catalog's own terms (for example, make and model). No agent runs again and it costs nothing. Each quote is re-checked against its page before it is kept, and each catalog that changed is installed at a new version, as a `.kpack` file you can share. Quick looks that couldn't name their product that precisely are listed, so you can choose to research them.
 - **Add to a pack** on a quick look is instant and free when the catalog already has that product. Before, it ran the whole research again.
-- **Open in Kriko** and the other buttons in the extension's panel now open the screen they name: a saved check opens in **History**, already unfolded; a product opens in **Browse**; installing a catalog opens **Knowledge**. Before, they only brought the window to the front, on whatever screen was last open.
-- **Home** says whether no catalog is installed or every catalog is switched off, and takes you to **Knowledge** to fix either.
-- When no catalog is installed and none can be fetched, Knowledge says to check the connection instead of leaving you at an empty screen.
+- **Open in Kriko** and the other buttons in the extension's panel now open the screen they name: a saved check opens in **History**, already unfolded; a product opens in **Browse**; installing a catalog opens **Overview**. Before, they only brought the window to the front, on whatever screen was last open.
+- **Home** says whether no catalog is installed or every catalog is switched off, and takes you to **Overview** to fix either.
+- When no catalog is installed and none can be fetched, Overview says to check the connection instead of leaving you at an empty screen.
 - Answers from the engine arrive about 40 ms sooner each. The extension and the app ask often, so lists and checks feel quicker: a status check went from 48 ms to 3 ms, and a catalog lookup from 60 ms to 15 ms.
 - Updating with the installer also stops a running search helper (`OpenSERP.exe`), so it can no longer lock files and fail the upgrade.
 - In a research log, the page reader is named only when it was actually used. Before, an ordinary page fetch could be reported as a page-reader read.
