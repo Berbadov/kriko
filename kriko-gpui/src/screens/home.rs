@@ -345,9 +345,9 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
                     cx.notify();
                 });
                 let say = if packs.is_empty() {
-                    "No catalog installed yet. Open Knowledge to install one."
+                    "No catalog installed yet. Open Overview to install one."
                 } else {
-                    "Every catalog is switched off. Open Knowledge to switch one on."
+                    "Every catalog is switched off. Open Overview to switch one on."
                 };
                 div().id("home-no-catalog").cursor_pointer().on_click(go)
                     .child(empty_note(say)).into_any_element()

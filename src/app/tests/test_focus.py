@@ -119,9 +119,13 @@ def test_the_shell_and_the_engine_agree_on_the_stdout_line():
     # an event, and the window raises on it.
     assert "line.contains(FOCUS_LINE)" in engine and "ShellEvent::Focus" in engine
     app = (REPO / "kriko-gpui" / "src" / "app.rs").read_text(encoding="utf-8")
-    assert re.search(r"ShellEvent::Focus\(\w+\)\s*=>\s*shell::show_window\(cx\)", app), (
-        "the app receives the focus event and does not raise the window"
-    )
+    handler = re.search(r"ShellEvent::Focus\((\w+)\)\s*=>(.*?)ShellEvent::Hide", app, re.S)
+    assert handler, "the app does not handle the focus event"
+    route, body = handler.groups()
+    assert "shell::show_window(cx)" in body, (
+        "the app receives the focus event and does not raise the window")
+    # And the route picks the screen, rather than raising whatever was open.
+    assert route != "_" and "Tab::from_route" in body
 
 
 def test_the_focus_line_cannot_be_mistaken_for_the_port_handshake():

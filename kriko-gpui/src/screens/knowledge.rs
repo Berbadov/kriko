@@ -169,18 +169,25 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         let line = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
         mono(&line, if job.state == "failed" { DANGER } else { MUTED })
     });
+    // The job's line sits under the last offer card, or under the packs
+    // card when there is no offer to sit under.
     let job_line = match (job_line, offer_cards.pop()) {
-        (Some(line), Some(last)) => { offer_cards.push(last.child(line)); None }
-        (line, last) => { if let Some(last) = last { offer_cards.push(last); } line }
+        (Some(line), Some(last)) => {
+            offer_cards.push(last.child(line));
+            None
+        }
+        (line, last) => {
+            offer_cards.extend(last);
+            line
+        }
     };
 
     // ---- packs with switches; the meter is each pack's share of subjects ----
     let max_subjects = k.packs.iter().map(|p| p.subjects).max().unwrap_or(1).max(1) as f32;
     let mut packs = card().flex().flex_col();
-    let harvesting = k.update_job.as_ref().map(|j| !j.done).unwrap_or(false);
     let harvest = cx.listener(|this, _: &ClickEvent, _w, cx| this.harvest_quick_looks(cx));
     let harvest_btn = ghost("pack-harvest", "File quick looks").h(px(32.0)).px(px(14.0)).text_size(px(12.0));
-    let harvest_btn = if harvesting { harvest_btn.opacity(0.5) } else { harvest_btn.on_click(harvest) };
+    let harvest_btn = if working { harvest_btn.opacity(0.5) } else { harvest_btn.on_click(harvest) };
     packs = packs.child(
         div().mb(px(4.0)).flex().items_center().justify_between()
             .child(eyebrow("Packs"))
@@ -189,6 +196,21 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     packs = packs.child(hairline());
     if let Some(line) = job_line {
         packs = packs.child(div().py(px(8.0)).child(line));
+    }
+    for (i, one) in k.shared.iter().enumerate() {
+        // The engine builds the file on request; the browser saves it.
+        let url = crate::engine::base()
+            .map(|base| format!("{base}/api/packs/drafts/{}/artifact", crate::api::seg(&one.slug)));
+        let share = ghost(("pack-share", i), "Share as a file").h(px(32.0)).px(px(14.0)).text_size(px(12.0));
+        let share = match url {
+            Some(url) => share.on_click(move |_, _, cx| cx.open_url(&url)),
+            None => share.opacity(0.5),
+        };
+        packs = packs.child(
+            div().py(px(8.0)).flex().items_center().justify_between().gap(px(16.0))
+                .child(mono(&format!("{} changed", one.name), MUTED))
+                .child(share),
+        );
     }
     if k.packs.is_empty() {
         packs = packs.child(div().pt(px(12.0)).child(empty_note(
