@@ -1,4 +1,4 @@
-Keep a claim when it tells a second-hand buyer something they could not learn by picking the tool up in a shop:
+Keep a claim when it tells a buyer something they could not learn by picking the tool up in a shop:
 
 | Keep | Drop (visible in 30s of handling) |
 |---|---|
