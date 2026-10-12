@@ -108,36 +108,6 @@ def list_adapters(store=Depends(get_store), app_state=Depends(get_app_state)):
     ]
 
 
-@router.get("/adapters/unmapped")
-def unmapped(
-    limit: int = 100, adapter_id: str = "", app_state=Depends(get_app_state)
-):
-    """Labels the pages carried that no installed adapter reads.
-
-    The whole point of persisting them: this list is where "the site renamed a
-    field last Tuesday" is legible. A label with a high `seen` and a recent
-    `last_at` on a site that used to work is a markup change; one seen twice in
-    June is noise an author can dismiss.
-
-    Deliberately not derived from `declared_labels` — a label absent from the
-    adapter is not interesting, a label *present on the page* and absent from
-    the adapter is. Only the reader's actual browsing can tell the difference.
-    """
-    return {"labels": state.unmapped_labels(app_state, limit, adapter_id=adapter_id)}
-
-
-@router.delete("/adapters/unmapped/{adapter_id}/{label:path}")
-def forget_unmapped(adapter_id: str, label: str, app_state=Depends(get_app_state)):
-    """Dismiss one label.
-
-    A list that cannot be pruned stops being read, and some labels are never
-    going to be mapped. Not permanent: the next listing carrying the label puts
-    it back, which is the honest answer to "I dismissed this and it is still
-    happening".
-    """
-    return {"forgotten": state.forget_unmapped(app_state, adapter_id, label)}
-
-
 def _context_units(store, context) -> dict:
     """The unit each context key is measured in, as the packs declared it.
 

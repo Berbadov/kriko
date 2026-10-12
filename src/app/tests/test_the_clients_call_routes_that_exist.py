@@ -536,6 +536,26 @@ def _client_calls() -> dict[str, list[Call]]:
     return clients
 
 
+def _http_python_calls() -> list[Call]:
+    """Calls made by Python that speak HTTP: the tools and packaging smoke tests.
+
+    The reverse check counts them, so a route only they use is not "dead". The
+    modules are found by what they import, not listed here. The MCP server and
+    the command line call the engine's functions directly and never open a
+    socket, so they are not among them; a future HTTP caller in either is found
+    the same way.
+    """
+    markers = ("urllib.request", "http.client", "import httpx", "import requests")
+    files = [p for root in (REPO / "src" / "app", REPO / "tools", REPO / "packaging")
+             for p in root.rglob("*.py")
+             if not {"tests", "__pycache__"} & set(p.parts)]
+    found: list[Call] = []
+    for path in sorted(files):
+        if any(marker in path.read_text(encoding="utf-8") for marker in markers):
+            found.extend(_python_calls("python HTTP caller", path))
+    return found
+
+
 def _server_routes(tmp_path: Path) -> list[tuple[str, frozenset[str]]]:
     """Every `/api` path template with its verbs, as the engine serves them.
 
@@ -588,14 +608,18 @@ def test_every_client_call_names_a_route_the_engine_serves(tmp_path):
             lines.extend(rows)
         raise AssertionError("\n".join(lines))
 
-    used = [route for route in routes
-            if any(_serves(call, route) for calls in clients.values() for call in calls)]
-    unused = [route for route in routes if route not in used]
+    # The reverse direction is per verb: a route that only its GET is called
+    # through is still a dead POST. Callers are the windows, the extension and
+    # the terminal interface, plus any Python tool or smoke test that speaks HTTP.
+    callers = [c for calls in clients.values() for c in calls] + _http_python_calls()
+    unused = [(path, method) for path, methods in routes for method in sorted(methods)
+              if not any(_serves(call, (path, frozenset({method}))) for call in callers)]
     if unused:
         warnings.warn(
-            f"{len(unused)} of {len(routes)} engine routes are called by no window, "
-            "extension or terminal interface (fine for MCP and the command line): "
-            + ", ".join(f"{'/'.join(sorted(m))} {p}" for p, m in unused),
+            f"{len(unused)} of {sum(len(m) for _, m in routes)} engine verbs are called by "
+            "no window, extension, terminal interface, tool or smoke test (MCP and the "
+            "command line call the functions, not HTTP): "
+            + ", ".join(f"{method} {path}" for path, method in unused),
             stacklevel=1,
         )
 
@@ -645,3 +669,27 @@ def test_the_reader_finds_split_templates_format_strings_and_methods(tmp_path):
     assert _serves(Call("c", "w", "POST", "/api/jobs/*/cancel"), cancel)
     assert _serves(Call("c", "w", None, "/api/jobs/*/cancel"), cancel)
     assert not _serves(Call("c", "w", "GET", "/api/jobs/*/cancel"), cancel)
+
+
+def test_the_internals_table_lists_exactly_the_routes_the_engine_serves(tmp_path):
+    """docs/INTERNALS.md's endpoint table is the reader's map of the API.
+
+    It drifted both ways at once (routes removed but still listed, routes added
+    but never listed), so it is held to the served set the same way the
+    clients are: every verb and path, read from the schema and from the table.
+    """
+    served = {(verb, path) for path, verbs in _server_routes(tmp_path) for verb in verbs}
+    table = [line for line in (REPO / "docs" / "INTERNALS.md").read_text(encoding="utf-8").splitlines()
+             if line.startswith("| ") and "/api/" in line]
+    documented = {
+        (verb, path)
+        for line in table
+        for verbs, path in re.findall(r"`([A-Z|\\]+) (/api/[^`\s]+)`", line)
+        for verb in verbs.replace("\\", "").split("|")
+    }
+    missing = sorted(served - documented)
+    stale = sorted(documented - served)
+    assert not missing and not stale, (
+        "docs/INTERNALS.md disagrees with the engine.\n"
+        + "".join(f"  served, not listed: {v} {p}\n" for v, p in missing)
+        + "".join(f"  listed, not served: {v} {p}\n" for v, p in stale))

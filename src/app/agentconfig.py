@@ -1,6 +1,6 @@
 """Writing this installation's address into a harness's config, safely.
 
-`/api/agent-config` answers *which command*; this answers *where it goes*. The
+The command is `agent._server_block`'s answer; this answers *where it goes*. The
 gap between those two was a paragraph of documentation and a copy-paste, which
 is the step that goes wrong silently: a reader who pastes into the wrong file,
 or into a file whose JSON they then break, gets an agent that appears to be

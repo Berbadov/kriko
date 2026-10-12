@@ -10,7 +10,7 @@ Two of these tests are the ones that matter, because they are the two things
 `Origin` and `Host` catch that the other cannot:
 
 * a cross-site GET, which executes even though the page cannot read the
-  reply — and `GET /api/focus` is consume-once, so it does damage unread;
+  reply, so a state-changing route must refuse the foreign origin itself;
 * DNS rebinding, where the attacker's own domain resolves to 127.0.0.1 and is
   therefore *same-origin* with this server. No `Origin` check can see it.
 
@@ -52,14 +52,15 @@ def test_a_page_on_the_open_web_is_refused(client):
     assert "evil.example" in got.json()["detail"]
 
 
-def test_the_consume_once_nudge_cannot_be_burned_from_a_page(client):
-    """Concretely: a page cannot spend a focus the reader was about to act
-    on. This is the endpoint that made the check worth writing."""
-    client.post("/api/focus", json={"route": "knowledge"})
-    refused = client.get("/api/focus", headers={"Origin": "https://evil.example"})
+def test_a_page_cannot_raise_the_window(client):
+    """Concretely: a page cannot make the shell raise the window. The POST that
+    prints the focus line is the one state-changing door the extension uses."""
+    refused = client.post(
+        "/api/focus",
+        json={"route": "knowledge"},
+        headers={"Origin": "https://evil.example"},
+    )
     assert refused.status_code == 403
-    # And the nudge is still there for the window that was meant to have it.
-    assert client.get("/api/focus").json()["route"] == "knowledge"
 
 
 def test_a_rebound_dns_name_is_refused_even_though_it_is_same_origin(client):

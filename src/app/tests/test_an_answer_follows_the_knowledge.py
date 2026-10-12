@@ -96,7 +96,8 @@ def client(tmp_path):
 
 
 def _clock(client):
-    return client.get("/api/knowledge/clock").json()["clock"]
+    """The clock as the live feed reports it: the poll the extension makes."""
+    return client.get("/api/operations?limit=6").json()["knowledge"]
 
 
 def test_the_clock_stands_still_while_nothing_is_written(client):
