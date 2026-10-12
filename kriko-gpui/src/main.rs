@@ -164,9 +164,28 @@ fn main() {
             KeyBinding::new("ctrl-b", JumpBrowse, None),
         ]);
 
-        let (screen_w, screen_h) = screen_size();
-        let width = 1280.0f32.min(screen_w - 80.0).max(940.0);
-        let height = 906.0f32.min(screen_h - 80.0).max(640.0);
+        // The display the window opens on, where the platform reports it; the
+        // fixed guess only when it does not (it was the only answer off
+        // Windows, so a small screen got a window larger than itself).
+        let (screen_w, screen_h) = cx
+            .primary_display()
+            .map(|d| {
+                let b = d.bounds();
+                (b.size.width / px(1.0), b.size.height / px(1.0))
+            })
+            .filter(|(w, h)| *w >= 640.0 && *h >= 480.0)
+            .unwrap_or_else(screen_size);
+        let mut width = 1280.0f32.min(screen_w - 80.0).max(940.0);
+        let mut height = 906.0f32.min(screen_h - 80.0).max(640.0);
+        // KRIKO_WINDOW_SIZE=WxH opens the window at that size, for capturing
+        // a screen at, say, the 940x640 minimum.
+        if let Some((w, h)) = std::env::var("KRIKO_WINDOW_SIZE").ok().and_then(|v| {
+            let (w, h) = v.split_once('x')?;
+            Some((w.trim().parse::<f32>().ok()?, h.trim().parse::<f32>().ok()?))
+        }) {
+            width = w.max(940.0);
+            height = h.max(640.0);
+        }
         let bounds = Bounds {
             origin: point(
                 px(((screen_w - width) / 2.0).max(20.0)),

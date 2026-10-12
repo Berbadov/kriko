@@ -77,6 +77,10 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     }
 
     // ---- the adapters ----
+    // Fixed columns sized to the room there is: at the window's minimum the
+    // wide set left the site column nothing, and its header ran into "Pack".
+    let narrow = app.content_w < 900.0;
+    let (pack_w, source_w, ext_w, act_w) = if narrow { (130.0, 90.0, 120.0, 80.0) } else { (220.0, 100.0, 150.0, 90.0) };
     let mut table = card().flex().flex_col();
     table = table
         .child(
@@ -84,11 +88,11 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .flex()
                 .items_center()
                 .pb(px(10.0))
-                .child(div().flex_1().child(th("Site")))
-                .child(div().w(px(220.0)).child(th("Pack")))
-                .child(div().w(px(100.0)).child(th("Source")))
-                .child(div().w(px(150.0)).child(th("Extension")))
-                .child(div().w(px(90.0))),
+                .child(div().flex_1().min_w(px(120.0)).child(th("Site")))
+                .child(div().w(px(pack_w)).child(th("Pack")))
+                .child(div().w(px(source_w)).child(th("Source")))
+                .child(div().w(px(ext_w)).child(th("Extension")))
+                .child(div().w(px(act_w))),
         )
         .child(hairline());
     if k.registered.is_empty() {
@@ -111,7 +115,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             .child(
                 div()
                     .flex_1()
-                    .min_w(px(0.0))
+                    .min_w(px(120.0))
                     .flex()
                     .items_center()
                     .gap(px(12.0))
@@ -124,10 +128,10 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                             .child(r.host.clone()),
                     ),
             )
-            .child(div().w(px(220.0)).child(mono(&r.pack_id, INK_2)))
-            .child(div().w(px(100.0)).child(mono(source, INK_2)))
-            .child(div().w(px(150.0)).child(tag(format!("sites-reg-{i}"), state, label, motion)))
-            .child(div().w(px(90.0)).flex().justify_end().when(r.local, |d| {
+            .child(div().w(px(pack_w)).child(mono(&crate::screens::history::clip(&r.pack_id, if narrow { 16 } else { 28 }), INK_2)))
+            .child(div().w(px(source_w)).child(mono(source, INK_2)))
+            .child(div().w(px(ext_w)).child(tag(format!("sites-reg-{i}"), state, label, motion)))
+            .child(div().w(px(act_w)).flex().justify_end().when(r.local, |d| {
                 d.child(ghost(("site-forget", i), "Forget").on_click(forget))
             }));
         table = table.child(row);
@@ -147,7 +151,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .flex()
                 .items_center()
                 .pb(px(10.0))
-                .child(div().flex_1().child(th("Asked for")))
+                .child(div().flex_1().min_w(px(120.0)).child(th("Asked for")))
                 .child(div().w(px(80.0)).child(th("Asks")))
                 .child(div().w(px(130.0)).child(th("Last")))
                 .child(div().w(px(150.0)).child(th("State")))

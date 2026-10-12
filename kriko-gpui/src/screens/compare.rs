@@ -1820,7 +1820,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     // ---- assemble ----
     // The board sits directly under the toggle that opens it, so it is on
     // screen the moment it appears, with the slots above the table below.
-    let mut page = div().flex().flex_col().gap(px(20.0)).child(drafts_row);
+    let mut page = div().flex().flex_col().min_w(px(0.0)).gap(px(20.0)).child(drafts_row);
     if let Some(say) = app.live.compare.say.clone() {
         page = page.child(
             div()
@@ -1845,8 +1845,13 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .child(
             div()
                 .id("compare-table-scroll")
+                // min_w(0): without it the table's 860 px became the page's
+                // minimum, and every card ran past the right edge at 940
+                .min_w(px(0.0))
                 .overflow_x_scroll().map(horizontal_wheel)
-                .child(table(app, window, cx).min_w(px(860.0))),
+                // the columns' minimum only once there are columns: empty, the
+                // card fits the page instead of scrolling its own corner away
+                .child(table(app, window, cx).when(filled_n > 0, |t| t.min_w(px(860.0)))),
         )
         .child(questions_card);
     page
