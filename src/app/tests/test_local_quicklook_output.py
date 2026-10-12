@@ -42,8 +42,10 @@ class PipelineModel:
     last_finish_reason = "stop"
 
     def __init__(self, findings=(), queries=("widget drive failures",), *,
-                 broken=(), wrong_shape=(), window=12000):
+                 broken=(), wrong_shape=(), window=12000, pack="", pack_identity=None):
         self.findings = list(findings)
+        self.pack = pack
+        self.pack_identity = dict(pack_identity or {})
         self.queries = list(queries)
         self.broken = set(broken)
         self.wrong_shape = set(wrong_shape)
@@ -91,7 +93,8 @@ class PipelineModel:
                 if ids:
                     risks.append({"title": finding["title"], "why": finding["why"],
                                   "check": "", "severity": "high", "evidence": ids[:1]})
-            return {"category": "", "pack": "", "risks": risks, "specs": []}
+            return {"category": "", "pack": self.pack, "pack_identity": self.pack_identity,
+                    "risks": risks, "specs": []}
         if stage == "verify":
             return {"evidence_kind": "problem", "support": "supported", "identity": "match"}
         if stage == "source":
@@ -132,6 +135,23 @@ def test_small_runtime_receives_a_bounded_prompt_and_grounded_answer():
     # budgeted: a small model is not handed the 8k default.
     assert model.calls and all(len(prompt) <= model.window for _, prompt, _ in model.calls)
     assert all(budget <= local_agent.REPLY_MAX_TOKENS for _, _, budget in model.calls)
+
+
+def test_the_local_answer_carries_the_packs_identity_only_for_a_listed_pack():
+    url = "https://example.org/report"
+    finding = [{"title": "Drive failure", "why": "An owner reported a failed drive.",
+                "needle": "drive failed after one month"}]
+    page = lambda _: "Widget owners report that the drive failed after one month, across many forum threads."  # noqa: E731
+    packs = "* `widgets`, Widgets [identity product: brand, model]"
+    for named, expected in (("widgets", {"brand": "Acme", "model": "W1"}), ("invented", {})):
+        model = PipelineModel(findings=finding, pack=named,
+                              pack_identity={"brand": "Acme", "model": "W1"})
+        asker = local_agent.LocalAsker(lambda _: '["Widget drive failures"]', model,
+                                       lambda *_: [{"url": url}], page,
+                                       model="test", search_provider="stub")
+        result = quicklook.parse(asker.ask(quicklook.brief("Widget", packs=packs, compact=True)),
+                                 asker.sources)
+        assert result["pack_identity"] == expected
 
 
 def test_wrong_json_shape_is_not_a_card_and_is_not_repaired():

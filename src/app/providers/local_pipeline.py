@@ -40,6 +40,9 @@ EXTRACT_SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {
         "category": _STRING, "pack": _STRING,
+        # The chosen pack's identity keys, as the task's "Where it belongs"
+        # asks; optional, so a page that names no key still extracts.
+        "pack_identity": {"type": "object", "additionalProperties": _STRING},
         "risks": {"type": "array", "items": RISK_SCHEMA, "maxItems": MAX_PER_PAGE},
         "specs": {"type": "array", "maxItems": 4, "items": {
             "type": "object", "additionalProperties": False,
@@ -876,6 +879,9 @@ class QuickLookPipeline:
             "pack": (str(metadata.get("pack") or "")
                      if str(metadata.get("pack") or "") in re.findall(r"\* `([^`]+)`", brief)
                      else ""),
+            "pack_identity": (metadata.get("pack_identity") or {}
+                              if str(metadata.get("pack") or "") in re.findall(r"\* `([^`]+)`", brief)
+                              else {}),
             "risks": output,
             "specs": rendered_specs,
         }, ensure_ascii=False)
