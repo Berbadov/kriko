@@ -1,4 +1,4 @@
-Kriko surfaces the risks a used-car buyer **cannot cheaply get
+This catalog surfaces the risks a car buyer **cannot cheaply get
 from a standard pre-purchase inspection** (ekspertiz) — what to worry
 about for *this* car, before booking the expert.
 

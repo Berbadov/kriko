@@ -24,7 +24,7 @@ that select what goes wrong *before* searching.
    `unknown_subject` row is left unresearched, not aimed at
    a guessed neighbour. A confident wrong answer is worse than none.
 5. **The bar is `principle.md`, in full — read it before filing.**
-   Summary: keep what a second-hand buyer could not learn by handling
+   Summary: keep what a buyer could not learn by handling
    the tool — model/platform-specific, predictable from age/use,
    expensive relative to the tool, consumable-and-due.
    Drop anything visible in 30 seconds (chuck play, cracked housing,

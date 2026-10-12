@@ -2898,7 +2898,7 @@ dependencies = [
 
 [[package]]
 name = "kriko-gpui"
-version = "1.5.0"
+version = "1.5.1"
 dependencies = [
  "gpui",
  "log",

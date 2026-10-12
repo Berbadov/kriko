@@ -265,7 +265,7 @@ def _when(packs: list[dict]) -> str:
     """The description's trigger, in the reader's own installed terms.
 
     Named packs rather than "products" because a harness matches a skill by
-    reading this line: "used cars" is a trigger, "domain entities" is not. The
+    reading this line: "cars" is a trigger, "domain entities" is not. The
     list stops at five so the line stays one line.
     """
     names = [p["name"][:_MAX_LABEL] for p in packs]
