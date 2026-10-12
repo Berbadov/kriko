@@ -98,7 +98,10 @@ def test_the_shell_and_the_engine_agree_on_the_stdout_line():
     assert "shell::show_window(cx)" in body, (
         "the app receives the focus event and does not raise the window")
     # And the route picks the screen, rather than raising whatever was open.
-    assert route != "_" and "Tab::from_route" in body
+    assert route != "_" and ("Tab::from_route" in body or "open_route" in body)
+    if "open_route" in body:
+        opener = re.search(r"pub fn open_route\(.*?\n    }\n", app, re.S)
+        assert opener and "Tab::from_route" in opener.group(0)
 
 
 def test_the_focus_line_cannot_be_mistaken_for_the_port_handshake():

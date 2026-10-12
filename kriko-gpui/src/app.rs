@@ -336,6 +336,8 @@ pub struct Kriko {
     pub dock_reply: InputState,
     /// The reply drawer: closed unless you are answering an agent.
     pub dock_reply_open: bool,
+    /// A route KRIKO_VERIFY asked for, opened once the engine answers.
+    pub pending_route: Option<String>,
     /// The full live agent logs drawer in the dock.
     pub dock_logs_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
@@ -401,6 +403,7 @@ impl Kriko {
             run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
+            pending_route: None,
             dock_logs_open: false,
             dock_feed: Vec::new(),
             // Every launch starts with the live dock closed.
@@ -441,9 +444,11 @@ impl Kriko {
             Ok("dock") => {
                 app.dock_reply_open = true;
             }
-            // Any other screen by the name the extension uses for it.
+            // Any other screen by the name the extension uses for it; a route
+            // with an id is opened once the engine answers.
             Ok(other) => {
                 app.tab = Tab::from_route(other);
+                app.pending_route = Some(other.to_string());
             }
             Err(_) => {}
         }
@@ -473,6 +478,28 @@ impl Kriko {
         app
     }
 
+    /// Show what a route names: the screen (`Tab::from_route`), and the
+    /// product or saved check when the route carries its id. One place for
+    /// the extension's "open in Kriko" and for KRIKO_VERIFY.
+    pub fn open_route(&mut self, route: &str, cx: &mut Context<Self>) {
+        let route = route.trim().trim_start_matches(['#', '/']);
+        if route.is_empty() {
+            return;
+        }
+        self.tab = Tab::from_route(route);
+        if let Some(id) = route.strip_prefix("subject/").filter(|id| !id.is_empty()) {
+            self.select_subject(id.to_string(), cx);
+        }
+        // A saved check opens in History, already unfolded.
+        if let Some(id) = route.strip_prefix("result/").filter(|id| !id.is_empty()) {
+            if self.live.history.open.as_deref() != Some(id) {
+                self.toggle_history_open(id.to_string(), cx);
+            }
+        }
+        self.on_open_tab(cx);
+        cx.notify();
+    }
+
     fn pulse(&mut self, cx: &mut Context<Self>) {
         #[cfg(windows)]
         for action in shell::poll_tray() {
@@ -485,26 +512,17 @@ impl Kriko {
             match event {
                 engine::ShellEvent::Focus(route) => {
                     // The extension asked for a screen, not just the window.
-                    let route = route.trim().trim_start_matches(['#', '/']);
-                    if !route.is_empty() {
-                        self.tab = Tab::from_route(route);
-                        if let Some(id) = route.strip_prefix("subject/").filter(|id| !id.is_empty()) {
-                            self.select_subject(id.to_string(), cx);
-                        }
-                        // A saved check opens in History, already unfolded.
-                        if let Some(id) = route.strip_prefix("result/").filter(|id| !id.is_empty()) {
-                            if self.live.history.open.as_deref() != Some(id) {
-                                self.toggle_history_open(id.to_string(), cx);
-                            }
-                        }
-                        self.on_open_tab(cx);
-                        cx.notify();
-                    }
+                    self.open_route(&route, cx);
                     shell::show_window(cx);
                 }
             }
         }
         let now = engine::status();
+        if matches!(now, engine::Status::Ready { .. }) {
+            if let Some(route) = self.pending_route.take() {
+                self.open_route(&route, cx);
+            }
+        }
         if now != self.engine {
             shell::set_tray_status(
                 matches!(now, engine::Status::Ready { .. }),
