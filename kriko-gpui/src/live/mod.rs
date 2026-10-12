@@ -31,8 +31,6 @@ pub struct Health {
     pub app_state: String,
     pub log_file: String,
     pub releases_url: String,
-    pub extension_port: i64,
-    pub port_is_ours: bool,
     pub packs: Vec<(String, String)>,
 }
 
@@ -111,8 +109,6 @@ fn health_from(v: &Value) -> Health {
         app_state: api::s(v, "app_state"),
         log_file: api::s(v, "log_file"),
         releases_url: api::s(v, "releases_url"),
-        extension_port: api::n(v, "extension_port").unwrap_or(0.0) as i64,
-        port_is_ours: api::b(v, "port_is_ours"),
         packs: api::arr(v, "packs")
             .iter()
             .map(|p| (api::s(p, "pack_id"), api::s(p, "version")))

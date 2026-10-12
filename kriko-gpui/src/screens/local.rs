@@ -17,7 +17,7 @@ pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let runtime = app.live.local.plane.as_ref().map(|p| p.runtime.clone()).unwrap_or(crate::api::Value::Null);
     let supported = crate::api::b(&runtime, "supported");
     let stored = runtime.get("settings").cloned().unwrap_or(crate::api::Value::Null);
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let reading = app.live.local.device_reading;
     let refresh = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_device(cx));
     let mut result = card().flex().flex_col().gap(px(12.0))
@@ -178,16 +178,6 @@ fn runtime_id(name: &str) -> &'static str {
     }
 }
 
-fn machine_line(m: Option<&Machine>) -> String {
-    let Some(m) = m else { return "reading this machine".to_string() };
-    format!(
-        "{} · {} VRAM · {} RAM",
-        m.gpu.clone().unwrap_or_else(|| "no GPU reported".to_string()),
-        m.vram_total_mb.map(gb_mb).unwrap_or_else(|| "n/a".to_string()),
-        m.ram_mb.map(gb_mb).unwrap_or_else(|| "n/a".to_string()),
-    )
-}
-
 fn setup(
     app: &mut Kriko,
     plane: &Plane,
@@ -195,7 +185,7 @@ fn setup(
     window: &mut Window,
     cx: &mut Context<Kriko>,
 ) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let runtime_ready = plane.servers.iter().any(|s| s.up);
     let model_ready = plane.ready;
     let current = if !runtime_ready {
@@ -564,7 +554,7 @@ fn setup(
 // ---- the server card, the models, the memory ----
 
 fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let url_field = app.input_field(Field::LocalUrl, "local-url", "Found automatically", Some("local"), window, cx);
     let search_field = app.input_field(Field::LocalSearch, "local-search", "http://127.0.0.1:7000", Some("search"), window, cx);
     let cycle_model = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| { this.live.local.models_open = true; cx.notify(); });
@@ -687,7 +677,7 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
 }
 
 fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Machine>, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let vram_bytes = machine.and_then(|m| m.vram_total_mb).map(|mb| mb * 1024.0 * 1024.0);
     let drawer = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| { this.live.local.models_open = !this.live.local.models_open; cx.notify(); });
     let mut models = card().flex().flex_col();
@@ -834,7 +824,7 @@ mod model_group_tests {
 }
 
 pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let Some(plane) = app.live.local.plane.clone() else {
         return div().child(empty_note(
             "Asking Kriko's engine what runs on this machine. A local model needs the engine answering first.",

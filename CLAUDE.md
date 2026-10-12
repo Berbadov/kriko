@@ -17,59 +17,49 @@ document has to name one, that is a defect in the document: a decision that
 belongs to the reader's own machine must not be frozen into prose that every
 other machine reads.
 
-## Doctrine — read `docs/DOCTRINE.md` before any work *(2026-09-24)*
+## Doctrine — `docs/DOCTRINE.md` *(lean since 2026-10-12)*
 
-Short form, not a substitute:
+About a fifth of the effort goes on process; the rest is the product.
 
-1. **Write the request down first** as a GitHub issue (mirrored to Linear),
-   quoting the reader, with
-   **Where** (exact screen) and **Done when** (what they can see). Read it
-   back before any code. No "Done when", no start.
-2. **Done means observed**: end result on the named screen, on `main`, on
-   Windows where it differs.
-3. **Reproduce first, then fix.** Ask the tool for its facts; never type a list
-   from memory.
-4. **Every PR carries its proof** (quote, observation, screenshot); a second
-   agent reviews it against the request.
-5. **One area per agent, a PR the same day, merged daily** (by the reader;
-   nothing reaches `main` without the author asking).
-6. **Every change set bumps the version and updates `README.md` before commit**,
-   including documentation and packaging changes. Published versions are
-   immutable; corrections get a newer version. Read `docs/UPDATE_PROTOCOL.md`.
+1. **Know what was asked:** quote the reader and write **Done when** before
+   code. In the PR for up to a day of work; a GitHub issue for more.
+2. **Done means observed**: on the screen the reader uses, on Windows where it
+   differs; a changed screen gets a screenshot in the PR.
+3. **Reproduce first, then fix.**
+4. **Test behaviour, not prose**: no tests that only keep documents in step.
+5. **Proof sized to the change**; a second-agent review only for big or
+   lookup-touching PRs. The reader merges.
+6. **Versions and README notes move at release**, not per change
+   (`docs/UPDATE_PROTOCOL.md`).
 
-## TEMPORARY — app-first phase *(2026-09-01, delete when it ends)*
+## The gate — green on every push *(2026-10-11)*
 
-Until a Windows install opens, runs a check, and the reader says so, the loop is
-the *app*, not the suite. `ci.yml` was un-paused 2026-09-08 (audit: four
-defects passed every gate, which is why it was un-paused), then deleted
-2026-09-13: with no Actions minutes every run failed in under 15 seconds
-unallocated, so there were no logs and red ticks on untested commits, `main`
-included. A gate that is always red teaches scrolling past it. Its three jobs
-live verbatim in `tools/gate.sh`. Restore is `git revert` then the billing
-change, in that order. `desktop.yml` kept its recipe (the only installer
-record; its smoke steps would have caught v0.2.4) but lost its triggers the
-same day for the same reason: hand-run until minutes return.
+There are no Actions minutes, so `ci.yml` is gone and `tools/gate.sh` is the
+only gate: version agreement, ruff, mypy, pytest, both JS suites, the wheel,
+and `cargo check` + `cargo test` for `kriko-gpui/`, plus a
+`cargo check` for Windows (the `x86_64-pc-windows-gnu` target) off a Windows host,
+so the Windows-only code is compiled on every push. It was left red for weeks
+(43 failures, 15 type errors) because merges skipped it; 1.5.0 brought it back
+to green. So:
 
-The gate moved, it did not disappear:
-
-1. **Run `tools/gate.sh` before every push** (pytest, both JS suites, types,
-   stale-bundle check). A workflow that cannot run is why the gate is yours,
-   not permission to push broken work.
-2. **Do not block on CI.** Push, tag, keep working.
-3. **`desktop.yml` untrimmed, hand-run only.** Do not trim it for speed; put
-   `push`/`pull_request` back when minutes return. Every installer so far was
-   built by hand on a Windows host, which is a billing problem and not a reason
-   to cut the recipe.
+1. **Run `tools/gate.sh` before every push and every merge.** A red gate on
+   your branch is yours to fix before pushing. A red gate on `main` is the
+   first work of the day, before any feature.
+2. **A behaviour change updates its tests in the same commit.** A test that
+   asserts retired behaviour is rewritten to assert the new intent, or deleted
+   with the code it guarded. It is never left failing for someone else.
+3. **`desktop.yml` is the installer recipe, hand-run.** Do not trim it; put
+   `push`/`pull_request` back when minutes return.
 4. **Ship to the reader, not the branch.** A fix not in a double-clickable
    installer is not a fix yet.
 
-Ends when the reader confirms a double-clicked install opens and runs a check;
-then delete this section.
+On Linux, `cargo test` needs `libxkbcommon-dev` and `libxkbcommon-x11-dev`;
+without them it fails at link time, not in a test.
 
 ## Task tracking
 
-Open work is GitHub issues, each mirrored to the Linear team with a link each
-way; nothing in the repo is a status file. A PR closes its issue
+Open work bigger than a day is a GitHub issue (Linear mirroring optional);
+nothing in the repo is a status file. A PR closes its issue
 (`Closes #n`), and its commit message carries the reasoning. `git log` is the
 record of what was done. Check the issues before starting and keep them
 current.
@@ -90,6 +80,26 @@ proves otherwise; high-consequence where being wrong is expensive. A category
 whose risks are cheap to check by other means has a different bar, and says so.
 
 Honour whatever bar the pack declares in any claim-selection change.
+
+## Catalogs grow from quick looks *(2026-10-11)*
+
+A quick look is already sourced and quote-checked, so it is the raw material
+of a catalog, not a preview of a research run. Two rules follow:
+
+1. **No second research run for what is already known.** A quick look whose
+   product a catalog already holds is filed by re-reading each quote against
+   its page and attaching it (`tasks._file_quick_look`). A product the
+   catalog lacks joins it too when the quick look read every identity key of
+   one of the catalog's kinds (`pack_identity`, written by
+   `categorypack.add_subject`); an agent is spent only when it could not.
+2. **Accumulation is a harvest, not a chore.** `POST /api/packs/harvest`
+   files every saved quick look not yet filed, installs each catalog that
+   gained claims once, and returns its `.kpack` link to share. A look that
+   names no catalog, or lacks an identity key, is listed as needing an agent, never sent to one
+   unasked, because spending an agent is the reader's press.
+
+So a catalog shared between readers is the sum of their grounded quick
+looks, and every claim in it still carries the page and the quote it came from.
 
 ## Scalability — no hardcoded category data
 
@@ -214,7 +224,8 @@ weekly pass is `app/packautoupdate.py`, which at startup submits an
 the last success. There is no updates block in the UI.
 
 **The installer carries no packs** (#169). A fresh install opens onto an empty
-store: the sidecar freezes no `.kpack`, no build step makes one for the
+store, and Overview (the Knowledge group) offers the published index's packs with an
+Install button (same `pack_update` job as an update). The sidecar freezes no `.kpack`, no build step makes one for the
 installer, and startup seeds nothing. The reader installs the packs they want,
 and a pack already installed is kept current by the weekly update above. The
 release job still builds each `packs/<name>` into a `.kpack` and publishes
@@ -232,7 +243,7 @@ A need from the wrong layer means moving the module (drivers to
 | `README.md` | overview, quickstart, what a catalog is | current |
 | `packs/<name>/README.md` | one catalog's coverage and its own bar | current |
 | `CLAUDE.md` | agent principles and working rules | current |
-| `docs/DOCTRINE.md` | request to done: the issue, done-ness, tests, PR proof, parallel agents; then setup, branches, commits, the gate | current, read first |
+| `docs/DOCTRINE.md` | request to done, kept lean: what was asked, done-ness, tests, PR proof; then setup, branches, commits, the gate | current, read first |
 | `docs/ARCHITECTURE.md` | reading map, package ownership | current |
 | `docs/USAGE.md` | operating the stack and growing knowledge | current |
 | `docs/HOW_IT_WORKS.md` | matching, catalog lifecycle, a run, layering | current |
@@ -240,6 +251,7 @@ A need from the wrong layer means moving the module (drivers to
 | `docs/BRAND.md` | mark sources against rendered output, and why | current |
 | `docs/INSTALL_WINDOWS.md` | Windows install including the extension permission | current |
 | `docs/INTERNALS.md` | mechanism-level architecture, every endpoint and table | current |
+| `docs/PROTOCOL.md` | the wire: three clients, ports, health handshake, jobs, errors; `test_the_clients_call_routes_that_exist.py` enforces it | current |
 | `docs/PACK_CONTRACT.md` | what a catalog contains, must and may | current |
 | `docs/GLOSSARY.md` | one line per word, and the words with two meanings | current |
 | `docs/AGENT_OPERATIONS.md` | operation vocabulary, the harness protocol, open questions | a note, dated 2026-09-14 |

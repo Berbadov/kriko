@@ -439,3 +439,18 @@ def test_a_trust_file_the_builder_cannot_read_fails_the_build(tmp_path):
     root = _pack_with_tiers(tmp_path, "- {domain: a.example, tier: specialist}\n")
     with pytest.raises(ValueError, match="source_tiers.yaml"):
         build.build(root, tmp_path / "p.kpack")
+
+
+def test_a_built_pack_is_one_self_contained_file(tmp_path):
+    """A .kpack is shared and published as one file: no -wal or -shm beside
+    it, and not left in WAL mode for the next reader to need a writable
+    directory."""
+    import sqlite3
+
+    out = build.build(_write(tmp_path), tmp_path / "drill.kpack")
+    assert sorted(p.name for p in tmp_path.glob("drill.kpack*")) == ["drill.kpack"]
+    plain = sqlite3.connect(f"file:{out.as_posix()}?mode=ro", uri=True)
+    try:
+        assert plain.execute("PRAGMA journal_mode").fetchone()[0].lower() == "delete"
+    finally:
+        plain.close()

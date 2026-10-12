@@ -13,6 +13,8 @@ import pytest
 
 from app.providers import local_agent
 from app.providers.local_inference import LocalInferenceError
+from app.providers.local_pipeline import EXTRACT_SCHEMA
+from app.tests.test_local_quicklook_output import PipelineModel
 
 
 @pytest.fixture(autouse=True)
@@ -55,46 +57,59 @@ class Sequence(Complete):
         return next(self.replies)
 
 
-def test_quick_answer_repairs_bad_json_once_and_keeps_source_and_self_checks():
-    answer = json.dumps({"risks": [{"title": "Pump failure", "url": "https://a.test/1", "quote": "the pump failed"}], "specs": []})
-    complete = Sequence(["not JSON", answer, '{"verdicts":[{"index":0,"supported":true,"reason":"the page reports it"}]}'])
-    asker = local_agent.LocalAsker(Plan('["failure reports"]'), complete,
-        searcher([{"url": "https://a.test/1"}]), reader({"https://a.test/1": "An owner said the pump failed."}),
+class FirstPageBroken(PipelineModel):
+    """The first evidence pass answers with no JSON; every later one is sound."""
+
+    def json(self, prompt, schema):
+        if schema == EXTRACT_SCHEMA and "extract" not in self.stages():
+            self.calls.append(("extract", prompt, self.max_tokens))
+            return "I found a pump failure but did not write JSON."
+        return super().json(prompt, schema)
+
+
+def test_a_malformed_page_is_said_and_the_other_page_still_grounds_its_card():
+    good = "https://a.test/2"
+    model = FirstPageBroken(findings=[{"title": "Pump failure", "why": "An owner reported it.",
+                                       "needle": "the pump failed"}])
+    asker = local_agent.LocalAsker(model, model,
+        searcher([{"url": "https://a.test/1"}, {"url": good}]),
+        reader({"https://a.test/1": "Widget MK2 forum: the first thread is about tyres.",
+                good: "Widget MK2 owners report that the pump failed after a month."}),
         model="small", search_provider="stub")
-    assert asker.ask_quick("Widget MK2") == answer
-    # A local scraper takes one query at a time, so it gets three angles.
-    assert asker.telemetry["queries"] == [
-        "Widget MK2 problems owner reports", "Widget MK2 failures review",
-        "Widget MK2 common issues forum discussion"]
-    assert asker.telemetry["repairs"] == 1
-    assert asker.telemetry["verification"][0]["quote_in_read_page"] is True
-    assert asker.telemetry["self_verify"]["verdicts"][0]["supported"] is True
-    assert len(complete.prompts) == 3
+    answer = json.loads(asker.ask_quick("Widget MK2"))
+    assert [one["title"] for one in answer["risks"]] == ["Pump failure"]
+    assert answer["risks"][0]["sources"][0]["url"] == good
+    assert "the pump failed" in answer["risks"][0]["sources"][0]["quote"]
+    # The malformed page is named as the error, and the check ran on the card.
+    assert [row["stage"] for row in asker.coverage["errors"]] == ["https://a.test/1"]
+    assert "verify" in model.stages()
 
 
-def test_second_search_learns_from_the_first_pages():
-    plan = Sequence(['["Widget MK2 pump recall"]'])
-    answer = json.dumps({"risks": [{"title": "Pump failure", "url": "https://a.test/2", "quote": "the pump failed"}], "specs": []})
-    complete = Sequence(['{"risks":[],"specs":[]}', answer, '{"verdicts":[]}'])
-    asker = local_agent.LocalAsker(plan, complete,
-        lambda query, limit: [{"url": "https://a.test/2" if "recall" in query else "https://a.test/1"}],
-        reader({"https://a.test/1": "The first review names a revised pump.", "https://a.test/2": "A recall says the pump failed."}),
+def test_a_page_returned_by_two_queries_is_read_once():
+    searched: list[str] = []
+    model = PipelineModel(findings=[{"title": "Pump failure", "why": "An owner reported it.",
+                                     "needle": "the pump failed"}],
+                          queries=["Widget MK2 pump recall", "Widget MK2 pump failure"])
+    asker = local_agent.LocalAsker(model, model,
+        lambda query, limit: searched.append(query) or [{"url": "https://a.test/2"}],
+        reader({"https://a.test/2": "Widget MK2 owners report that the pump failed."}),
         model="small", search_provider="stub")
-    assert asker.ask_quick("Widget MK2") == answer
-    assert "first review names a revised pump" in plan.prompts[0]
-    assert asker.telemetry["queries"][-1] == "Widget MK2 pump recall"
-    assert len(asker.telemetry["queries"]) == 4  # three angles and the refinement
+    asker.ask_quick("Widget MK2")
+    assert len(searched) >= 2
+    assert model.stages().count("extract") == 1
+    assert list(asker.sources) == ["https://a.test/2"]
 
 
-def test_invalid_answer_is_a_distinct_bounded_failure():
-    complete = Sequence(["not JSON", "still not JSON"])
-    asker = local_agent.LocalAsker(Plan('["query"]'), complete,
-        searcher([{"url": "https://a.test/1"}]), reader({"https://a.test/1": "readable page"}),
+def test_an_unreadable_evidence_reply_is_a_bounded_failure():
+    model = PipelineModel(broken=("extract",))
+    asker = local_agent.LocalAsker(model, model,
+        searcher([{"url": "https://a.test/1"}]),
+        reader({"https://a.test/1": "Widget MK2 owners report that the pump failed."}),
         model="small", search_provider="stub")
-    with pytest.raises(LocalInferenceError) as error:
-        asker.ask_quick("Widget")
-    assert error.value.code == "invalid_json"
-    assert complete.calls == 2
+    with pytest.raises(LocalInferenceError, match="No evidence pass completed"):
+        asker.ask_quick("Widget MK2")
+    # One attempt for the one page, and no repair round after it.
+    assert model.stages().count("extract") == 1
 
 
 def searcher(hits, started=None, gate=None):
@@ -276,7 +291,7 @@ def test_a_page_that_never_answers_does_not_hold_the_run(monkeypatch):
     stuck.set()
     assert time.monotonic() - started < 5.0
     assert list(asker.sources) == ["https://a.test/fast"]
-    assert any("slow page" in line for line in said)
+    assert any("still waiting" in line for line in said)
 
 
 def test_a_long_page_is_cut_around_the_queries_not_from_the_top():
@@ -366,6 +381,49 @@ def test_too_small_a_window_shows_fewer_pages_whole_enough_to_quote():
     assert all(len(text) >= local_agent.MIN_SHARE // 2 for text in asker.sources.values())
 
 
+class Windowed(Fitted):
+    """The real socket's two numbers: research budget and whole window."""
+
+    def __init__(self, allowed: int, window: int):
+        super().__init__(allowed)
+        self.window = window
+
+    def window_chars(self) -> int:
+        return self.window
+
+
+def test_a_long_brief_is_charged_to_the_window_not_to_the_evidence_budget():
+    """#181: an 11.7k-character authoring brief against a 12k research budget
+    left no room on a 16k window, which holds about 45k characters. The brief
+    is measured against the window; the evidence against the budget."""
+    page = "\n\n".join(f"Paragraph {i} about the widget gearbox." for i in range(400))
+    pages = {f"https://site{n}.test/r": f"Site {n}. " + page for n in range(3)}
+    complete = Windowed(allowed=12000, window=45000)
+    asker = local_agent.LocalAsker(
+        Plan('["widget gearbox"]'), complete,
+        searcher([{"url": f"https://site{i}.test/r", "title": str(i)} for i in range(3)]),
+        reader(pages),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    brief = "widget\n" + "Write the catalog this way. " * 420  # ~11.8k characters
+    asker.ask(brief)
+    assert len(asker.sources) == 3
+    shown = sum(len(text) for text in asker.sources.values())
+    assert 3 * local_agent.MIN_SHARE <= shown <= 12000
+    assert len(complete.prompts[0]) <= 45000
+
+
+def test_a_brief_the_window_cannot_hold_says_its_numbers():
+    complete = Windowed(allowed=12000, window=9000)
+    asker = local_agent.LocalAsker(
+        Plan('["q"]'), complete, searcher([{"url": "https://a.test/1", "title": "A"}]),
+        reader({"https://a.test/1": "text " * 400}), model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    with pytest.raises(local_agent.LocalInferenceError) as raised:
+        asker.ask("widget\n" + "x" * 11000)
+    assert "4096-token window holds about 9000" in str(raised.value)
+
+
 def test_the_reply_budget_is_said_to_the_model():
     complete = Fitted(allowed=100_000)
     asker = local_agent.LocalAsker(
@@ -416,8 +474,11 @@ def test_the_socket_asks_the_server_for_its_window(monkeypatch):
 
     monkeypatch.setattr(local_inference.urllib.request, "urlopen", urlopen)
     assert socket.context_tokens() == 8192
-    allowed = socket.prompt_chars_allowed()
-    assert allowed == int((8192 - socket.max_tokens - 128) * local_inference.CHARS_PER_TOKEN)
+    # The window holds the whole prompt at CHARS_PER_TOKEN; the research
+    # budget (`context_chars`) bounds only the evidence (#181).
+    assert socket.window_chars() == int((8192 - socket.max_tokens - 128) * local_inference.CHARS_PER_TOKEN)
+    assert socket.prompt_chars_allowed() == min(socket.context_chars,
+                                                8192 - socket.max_tokens - 128 - 128)
 
     silent = local_inference.OpenAICompatSocket("http://127.0.0.1:1", "other")
     assert silent.context_tokens() == local_inference.DEFAULT_CONTEXT_TOKENS
@@ -476,3 +537,37 @@ def test_a_page_that_will_not_load_is_replaced_by_a_spare():
         limit=3, hits_per_query=2)
     assert len(pages) == 3, "three pages were asked for and three readable ones exist"
     assert "https://a.test/1" in tried and all(url != "https://a.test/1" for url, _ in pages)
+
+
+def _identity_reply(name: str) -> str:
+    return json.dumps({"canonical_name": name, "aliases": [], "variant": "",
+                       "identifiers": [], "unknowns": [], "evidence": []})
+
+
+class Structured(Complete):
+    """The real socket's structured door, which the identity step uses."""
+
+    def json(self, prompt: str, schema: dict) -> str:
+        return self(prompt)
+
+
+def _namer(reply: str):
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Structured(reply), searcher([]), reader({}),
+        model="m", search_provider="stub")
+    asker.on_action = lambda line: None
+    return asker
+
+
+def test_the_seller_words_are_taken_off_a_listing_title():
+    """#181: "DEMİRAY OTODAN DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID" was
+    authored, searched and named as a whole. The product inside it is."""
+    title = "DEMİRAY OTODAN DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID"
+    assert _namer(_identity_reply("COROLLA 1.8 HYBRID")).name_product(title) == "COROLLA 1.8 HYBRID"
+
+
+def test_a_name_not_in_the_title_is_not_taken_and_the_title_is_no_news():
+    title = "DEMİRAY OTODAN DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID"
+    # Invented words are refused by grounding; the title itself is "".
+    assert _namer(_identity_reply("Toyota Prius 2.0")).name_product(title) == ""
+    assert _namer(_identity_reply(title)).name_product(title) == ""

@@ -30,14 +30,14 @@ pub const NAV: &[NavGroupDef] = &[
         label: "Knowledge",
         items: &[
             NavDef { key: "overview", label: "Overview", icon: "overview", count: None, badge: None },
-            NavDef { key: "browse", label: "Browse", icon: "browse", count: Some("760"), badge: None },
+            NavDef { key: "browse", label: "Browse", icon: "browse", count: None, badge: None },
         ],
     },
     NavGroupDef {
         label: "System",
         items: &[
             NavDef { key: "sites", label: "Sites", icon: "sites", count: None, badge: None },
-            NavDef { key: "activity", label: "Activity", icon: "activity", count: None, badge: Some("1") },
+            NavDef { key: "activity", label: "Activity", icon: "activity", count: None, badge: None },
             NavDef { key: "agents", label: "Agents", icon: "agents", count: None, badge: None },
             NavDef { key: "benchmark", label: "Benchmark", icon: "benchmark", count: None, badge: None },
         ],

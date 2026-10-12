@@ -20,6 +20,8 @@ pub struct PackRow {
     pub id: String,
     pub name: String,
     pub version: String,
+    /// The version a rollback returns to; empty when none is kept.
+    pub previous: String,
     pub enabled: bool,
     pub subjects: i64,
     pub claims: i64,
@@ -66,6 +68,13 @@ pub struct Offer {
     pub name: String,
     pub installed: String,
     pub offered: String,
+}
+
+/// A catalog a harvest changed, shareable as a file.
+#[derive(Clone)]
+pub struct Shared {
+    pub name: String,
+    pub slug: String,
 }
 
 /// A job as the polling loop last saw it.
@@ -129,6 +138,39 @@ pub struct KeyRow {
     pub hint: String,
 }
 
+/// One press of Test on a key: the engine sends the provider one tiny
+/// request with it (`POST /api/keys/test`) and says whether it worked.
+#[derive(Clone, Default)]
+pub struct KeyTest {
+    pub busy: bool,
+    pub ok: bool,
+    pub said: String,
+}
+
+/// The test's answer in words: what worked and how fast, or why not.
+pub fn key_test_words(v: &Value) -> KeyTest {
+    let ok = api::b(v, "ok");
+    let ms = v.get("latency_ms").and_then(Value::as_i64).unwrap_or(0);
+    let said = if ok {
+        let mut parts = vec![format!("works, answered in {ms} ms")];
+        if let Some(n) = v.get("results").and_then(Value::as_i64) {
+            parts.push(format!("{n} result{}", if n == 1 { "" } else { "s" }));
+        }
+        if let Some(n) = v.get("tokens").and_then(Value::as_i64) {
+            parts.push(format!("{n} tokens"));
+        }
+        let llm = api::s(v, "llm");
+        if !llm.is_empty() {
+            parts.push(llm);
+        }
+        parts.join(" · ")
+    } else {
+        let detail = api::s(v, "detail");
+        if detail.is_empty() { api::s(v, "error") } else { detail }
+    };
+    KeyTest { busy: false, ok, said }
+}
+
 #[derive(Default)]
 pub struct State {
     pub loaded: bool,
@@ -144,6 +186,8 @@ pub struct State {
     pub thin_quotes_loaded: bool,
     pub offers: Vec<Offer>,
     pub update_job: Option<JobView>,
+    /// Catalogs the last harvest changed, each downloadable as a `.kpack`.
+    pub shared: Vec<Shared>,
     /// A pack the reader just switched, until the engine confirms.
     pub switching: Option<String>,
     // Sites
@@ -166,6 +210,8 @@ pub struct State {
     pub settings_notice: Option<String>,
     /// The provider the key field is being typed for.
     pub key_provider: Option<String>,
+    /// Each provider's last key test: still asking, or what it answered.
+    pub key_tests: std::collections::HashMap<String, KeyTest>,
     pub erase_confirm: bool,
     pub erase_busy: bool,
     // App updates (`/api/app-update`)
@@ -181,7 +227,6 @@ pub struct State {
 pub struct AppUpdate {
     pub newer: bool,
     pub version: String,
-    pub notes: String,
     pub error: String,
 }
 
@@ -194,7 +239,6 @@ pub fn app_update_from(reply: api::Reply, prior: AppUpdate) -> AppUpdate {
         Ok(v) if api::s(&v, "error").is_empty() => AppUpdate {
             newer: api::b(&v, "newer"),
             version: api::s(&v, "version"),
-            notes: api::s(&v, "notes"),
             error: String::new(),
         },
         Ok(v) => AppUpdate { error: api::s(&v, "error"), ..prior },
@@ -288,6 +332,7 @@ impl Kriko {
                             id: api::s(p, "pack_id"),
                             name: api::s(p, "name"),
                             version: api::s(p, "version"),
+                            previous: api::s(p, "previous_version"),
                             enabled: api::b(p, "enabled"),
                             subjects: int(p, "subjects"),
                             claims: int(p, "claims"),
@@ -328,6 +373,22 @@ impl Kriko {
                 this.live.knowledge.switching = None;
                 this.refresh_packs(cx);
                 this.refresh_thin(cx);
+            },
+        );
+    }
+
+    /// Back to the revision installed before this one, after an update or a
+    /// harvest the reader did not want.
+    pub fn rollback_pack(&mut self, pack_id: String, cx: &mut Context<Self>) {
+        self.live.knowledge.switching = Some(pack_id.clone());
+        self.fetch(
+            cx,
+            move || api::post(&format!("/api/packs/{}/rollback", api::seg(&pack_id)), serde_json::json!({})),
+            |this, reply, cx| {
+                this.note(&reply);
+                this.live.knowledge.switching = None;
+                this.refresh_packs(cx);
+                this.refresh_updates(cx);
             },
         );
     }
@@ -393,14 +454,21 @@ impl Kriko {
         );
     }
 
-    /// Which installed packs have a newer version offered. An index that
-    /// cannot be reached offers nothing, and that is not an error here.
+    /// What the index offers: newer versions of installed packs, and packs
+    /// not installed yet (an empty `installed`). A fresh install has no
+    /// packs, so the second kind is how a reader gets any knowledge at all
+    /// without a terminal. An index that cannot be reached offers nothing,
+    /// and that is not an error here.
     pub fn refresh_updates(&mut self, cx: &mut Context<Self>) {
         self.fetch(cx, || api::get("/api/packs/updates"), |this, reply, _| {
             if let Ok(v) = reply {
                 this.live.knowledge.offers = api::arr(&v, "packs")
                     .iter()
-                    .filter(|p| api::s(p, "state") == "available" && !api::s(p, "installed_version").is_empty())
+                    .filter(|p| match api::s(p, "state").as_str() {
+                        "available" => !api::s(p, "installed_version").is_empty(),
+                        "not_installed" => true,
+                        _ => false,
+                    })
                     .map(|p| Offer {
                         pack_id: api::s(p, "pack_id"),
                         name: api::s(p, "name"),
@@ -412,7 +480,8 @@ impl Kriko {
         });
     }
 
-    /// `POST /api/packs/update` is a job: follow it, then refresh.
+    /// `POST /api/packs/update` is a job: follow it, then refresh. The same
+    /// job installs a pack the store does not have yet.
     pub fn update_pack(&mut self, pack_id: String, cx: &mut Context<Self>) {
         self.live.knowledge.update_job = Some(JobView {
             state: "queued".into(),
@@ -432,6 +501,82 @@ impl Kriko {
                             message: e.message,
                             done: true,
                             ..Default::default()
+                        })
+                    }
+                }
+            },
+        );
+    }
+
+    /// Install a catalog someone shared: the reader picks a `.kpack`, its
+    /// bytes go to `POST /api/packs/install` (the engine never takes a path),
+    /// and the packs list is read again.
+    pub fn install_pack_file(&mut self, cx: &mut Context<Self>) {
+        let picked = cx.prompt_for_paths(gpui::PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: false,
+            prompt: Some("Install".into()),
+        });
+        cx.spawn(async move |this, cx| {
+            let Ok(Ok(Some(paths))) = picked.await else { return };
+            let Some(path) = paths.into_iter().next() else { return };
+            this.update(cx, |this, cx| {
+                this.live.knowledge.update_job = Some(JobView {
+                    state: "running".into(),
+                    message: format!("Installing {}.", path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()),
+                    done: false,
+                });
+                this.fetch(
+                    cx,
+                    move || {
+                        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                        std::fs::read(&path)
+                            .map_err(|e| api::ApiError { status: 0, message: format!("Could not read {name}: {e}") })
+                            .and_then(|bytes| api::post_bytes("/api/packs/install", &bytes, &name))
+                    },
+                    |this, reply, cx| {
+                        this.note(&reply);
+                        let (state, message) = match &reply {
+                            Ok(v) => {
+                                let pack = v.get("pack").cloned().unwrap_or_default();
+                                ("succeeded", format!("Installed {} {}.", api::s(&pack, "name"), api::s(&pack, "version")))
+                            }
+                            Err(e) => ("failed", e.message.clone()),
+                        };
+                        this.live.knowledge.update_job = Some(JobView { state: state.into(), message, done: true });
+                        this.refresh_packs(cx);
+                        this.refresh_updates(cx);
+                    },
+                );
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
+    /// `POST /api/packs/harvest`: file every saved quick look into the
+    /// catalog that holds its product, with no agent. Followed like an update,
+    /// because it ends the same way: a catalog installed at a new version.
+    pub fn harvest_quick_looks(&mut self, cx: &mut Context<Self>) {
+        self.live.knowledge.update_job = Some(JobView {
+            state: "queued".into(),
+            message: "Filing saved quick looks.".into(),
+            ..Default::default()
+        });
+        self.fetch(
+            cx,
+            || api::post("/api/packs/harvest", serde_json::json!({})),
+            |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => this.follow_job(api::s(&v, "job_id"), Followed::PackUpdate, cx),
+                    Err(e) => {
+                        this.live.knowledge.update_job = Some(JobView {
+                            state: "failed".into(),
+                            message: e.message,
+                            done: true,
                         })
                     }
                 }
@@ -492,7 +637,23 @@ impl Kriko {
                     };
                     let done = view.done;
                     match &which {
-                        Followed::PackUpdate => this.live.knowledge.update_job = Some(view),
+                        Followed::PackUpdate => {
+                            // A harvest names the catalogs it changed; those
+                            // are what the reader can now share as files.
+                            if done {
+                                if let Ok(v) = &reply {
+                                    let shared: Vec<Shared> = v.get("result").map(|r| api::arr(r, "packs"))
+                                        .unwrap_or(&[]).iter()
+                                        .map(|p| Shared { name: api::s(p, "name"), slug: api::s(p, "slug") })
+                                        .filter(|p| !p.slug.is_empty())
+                                        .collect();
+                                    if !shared.is_empty() {
+                                        this.live.knowledge.shared = shared;
+                                    }
+                                }
+                            }
+                            this.live.knowledge.update_job = Some(view)
+                        }
                         Followed::SiteRegister(host) => {
                             this.live.knowledge.site_job = Some((host.clone(), view))
                         }
@@ -875,6 +1036,25 @@ impl Kriko {
         );
     }
 
+    pub fn test_key(&mut self, provider: String, cx: &mut Context<Self>) {
+        self.live.knowledge.key_tests.insert(
+            provider.clone(),
+            KeyTest { busy: true, ok: false, said: "asking the provider".to_string() },
+        );
+        let id = provider.clone();
+        self.fetch(
+            cx,
+            move || api::post("/api/keys/test", serde_json::json!({ "provider": provider })),
+            move |this, reply, _| {
+                let result = match reply {
+                    Ok(v) => key_test_words(&v),
+                    Err(e) => KeyTest { busy: false, ok: false, said: e.message },
+                };
+                this.live.knowledge.key_tests.insert(id.clone(), result);
+            },
+        );
+    }
+
     pub fn remove_key(&mut self, provider: String, cx: &mut Context<Self>) {
         self.fetch(
             cx,
@@ -1069,5 +1249,28 @@ mod tests {
         );
         assert!(answered.newer);
         assert!(answered.error.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod key_test_tests {
+    use super::key_test_words;
+    use serde_json::json;
+
+    #[test]
+    fn a_working_key_says_what_it_got_back() {
+        let t = key_test_words(&json!({"ok": true, "latency_ms": 412, "results": 1, "tokens": null, "llm": ""}));
+        assert!(t.ok && !t.busy);
+        assert_eq!(t.said, "works, answered in 412 ms · 1 result");
+        let t = key_test_words(&json!({"ok": true, "latency_ms": 90, "results": null, "tokens": 21, "llm": "m-small"}));
+        assert_eq!(t.said, "works, answered in 90 ms · 21 tokens · m-small");
+    }
+
+    #[test]
+    fn a_refused_key_says_why() {
+        let t = key_test_words(&json!({"ok": false, "error": "unauthorized", "detail": "provider refused the key (HTTP 401)"}));
+        assert!(!t.ok);
+        assert_eq!(t.said, "provider refused the key (HTTP 401)");
+        assert_eq!(key_test_words(&json!({"ok": false, "error": "timeout", "detail": ""})).said, "timeout");
     }
 }

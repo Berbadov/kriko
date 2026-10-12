@@ -19,13 +19,6 @@ How items are written, per `docs/DOCTRINE.md`:
 **Not this:** A changed source counter or a promise that a tiny model always tells the truth.
 **Owner:** current session / main; root pipeline, Luna language settings and identification.
 
-### B202 — Retire the obsolete Svelte/Tauri desktop app
-**Asked:** "WAIT we are stoppped using the svelte one bro. we use gpui with web extension remove that old app" (2026-10-11)
-**Where:** Desktop packaging and the Python HTTP service that the GPUI app and browser extension use.
-**Done when:** The old Svelte/Tauri app, static bundle, and its build/release gates are removed; the Python API remains usable by GPUI and the extension without requiring frontend files.
-**Not this:** Removing the browser extension, its resources, Python engine/API, or GPUI app.
-**Owner:** current session / main.
-
 ### B203 — Local research searches issue discussions and survives partial search degradation
 **Asked:** "did a search with qwen3.5:4b no results are shown"; "lemme say that real quick: agents are going to the product pages instead of issue forums and sites" (2026-10-11)
 **Where:** Local Quick Look, research job log, and Local machine readiness.

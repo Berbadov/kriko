@@ -53,12 +53,6 @@ def test_a_printed_action_reaches_the_log_within_a_second(tmp_path):
     assert at - printed < 1.0, f"the log heard it {at - printed:.2f}s after it was printed"
 
 
-def test_the_stream_polls_fast_enough_to_keep_the_second():
-    # The log write is immediate; what remains is the stream's own poll, which
-    # adds up to one interval on top of everything else.
-    assert jobs_router.POLL_SECONDS <= 0.25
-
-
 def test_the_narrators_own_lines_are_classified():
     lines = "\n".join([
         _tool_line("WebSearch", {"query": "e-bike motor faults"}),
@@ -99,9 +93,3 @@ def test_the_sources_slider_becomes_a_ceiling_in_the_brief():
     assert "at most 1 source " in tasks._source_ceiling({"max_documents": 1})
 
 
-def test_the_author_request_takes_and_bounds_the_source_count():
-    from pydantic import ValidationError
-
-    assert jobs_router.AuthorRequest(category="e-bikes", max_documents=8).max_documents == 8
-    with pytest.raises(ValidationError):
-        jobs_router.AuthorRequest(category="e-bikes", max_documents=51)

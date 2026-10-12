@@ -74,6 +74,21 @@ def _agreed_attributes(conn, subject_ids, pack_ids) -> dict:
     return {k: next(iter(v)) for k, v in seen.items() if len(v) == 1}
 
 
+def _candidate_attributes(conn, subject_ids, pack_ids) -> list[dict]:
+    """Each candidate subject's own attributes, one dict per subject."""
+    if not subject_ids or not pack_ids:
+        return []
+    smarks = ",".join("?" * len(subject_ids))
+    pmarks = ",".join("?" * len(pack_ids))
+    found: dict[str, dict] = {sid: {} for sid in subject_ids}
+    for row in conn.execute(
+            f"SELECT subject_id, key, value_text FROM attributes"
+            f" WHERE subject_id IN ({smarks}) AND pack_id IN ({pmarks})",
+            (*subject_ids, *pack_ids)):
+        found[row["subject_id"]][row["key"]] = row["value_text"]
+    return list(found.values())
+
+
 def _merge_cluster(group: list) -> "Claim":
     """Keep the best-ranked claim, absorbing the others' sources as corroboration.
 
@@ -140,6 +155,10 @@ def lookup(conn, query: Query) -> LookupResult:
     # assumed for the general case.
     context = {**_agreed_attributes(conn, resolution.subject_ids, pack_ids),
                **query.context}
+    # Each candidate's own reading, for the one case agreement cannot settle.
+    candidates = ([{**attrs, **query.context}
+                   for attrs in _candidate_attributes(conn, resolution.subject_ids, pack_ids)]
+                  if len(resolution.subject_ids) > 1 else [])
 
     tiers = tier_lookup(conn, pack_ids)
     trusts = trust_lookup(conn, pack_ids)
@@ -165,12 +184,25 @@ def lookup(conn, query: Query) -> LookupResult:
         served, condition_weight, outcomes = evaluate_all(conditions, context)
         if not served:
             continue
+        # Fail open stays the rule while any candidate could be the one: a
+        # condition the candidates disagree on is unknown, and served. But a
+        # claim no candidate satisfies cannot apply whichever one this is (a
+        # fault gated to a configuration none of the fitting subjects has),
+        # and serving it would be noise with a source attached.
+        if conditions and candidates and not any(
+                evaluate_all(conditions, one)[0] for one in candidates):
+            continue
 
         evidence = conn.execute(
             "SELECT e.quote, e.stance, e.independent, e.source_id, s.url, s.domain"
             " FROM evidence e JOIN sources s USING (source_id, pack_id)"
             " WHERE e.claim_id = ? AND e.pack_id = ?",
             (row["claim_id"], row["pack_id"])).fetchall()
+        # A claim is served with the page and the quote it came from, or not
+        # at all. Enforced here, whatever builder made the pack: a claim with
+        # nothing behind it is a gap, not an answer.
+        if not evidence:
+            continue
         sources, trust, disputed = score_sources(evidence, tiers, trusts)
 
         via = reached.get(row["subject_id"], "direct")

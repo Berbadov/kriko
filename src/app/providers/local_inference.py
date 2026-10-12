@@ -21,6 +21,7 @@ plane says it in the job log.
 from collections.abc import Callable, Iterator
 import json
 import socket
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -70,12 +71,67 @@ def forget_incomplete(base_url: str = "") -> None:
         _incomplete.clear()
 
 
+#: Every `(server, model)` this process has asked for a completion since the
+#: last `release`. A server keeps a model in memory after its last request
+#: (Ollama for five minutes by default), so a finished run went on holding
+#: gigabytes of video memory while Kriko sat in the background.
+_held: set[tuple[str, str]] = set()
+_held_lock = threading.Lock()
+
+
+def _hold(base_url: str, serving_name: str) -> None:
+    with _held_lock:
+        _held.add((base_url.rstrip("/"), serving_name))
+
+
+def release(timeout: float = 10.0) -> list[str]:
+    """Ask each server to unload every model this process ran; the names let go.
+
+    Called when no work is left, so the memory is the host's again the moment
+    a run ends rather than whenever the server's own timer runs out. Ollama
+    unloads on a request with `keep_alive` 0. A server without that endpoint
+    answers 404 and keeps its own policy; nothing here can fail a run.
+    """
+    with _held_lock:
+        held = sorted(_held)
+        _held.clear()
+    released = []
+    for base_url, name in held:
+        request = urllib.request.Request(
+            base_url + "/api/generate",
+            data=json.dumps({"model": name, "keep_alive": 0}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                response.read()
+            released.append(name)
+        except Exception:  # noqa: BLE001 - a server that cannot unload keeps its own timer
+            pass
+    return released
+
+
 #: A second try after these, because a local server's failure modes are
 #: transient in exactly this way: an idle process paged out to disk answers
 #: late and dies mid-reply, then answers fine (Ollama loading a model on its
 #: first call; a proxy closing an idle keep-alive). Only these retry, once;
 #: a 400 or 404 is an answer, not a hiccup.
 _RETRY_STATUS = frozenset((408, 429, 500, 502, 503, 504))
+
+
+def _read_body(error: urllib.error.HTTPError) -> str:
+    """An error's body as text, left readable for whoever reads it next."""
+    import io
+
+    try:
+        raw = error.read() or b""
+    except Exception:  # noqa: BLE001 - an unreadable body is an empty one
+        raw = b""
+    error.fp = io.BytesIO(raw)
+    try:
+        error.read = error.fp.read  # type: ignore[method-assign,assignment]
+    except Exception:  # noqa: BLE001
+        pass
+    return raw.decode("utf-8", "replace")
 
 #: The reply a findings extraction must produce, as a JSON schema. Sent as the
 #: `json_schema` response format so a server that supports grammar constraint
@@ -193,6 +249,7 @@ class OpenAICompatSocket:
             self._schema = previous
 
     def complete(self, prompt: str) -> str:
+        _hold(self.base_url, self.serving_name)
         prompt = self.language_instruction + prompt
         body = {
             "model": self.serving_name,
@@ -217,7 +274,11 @@ class OpenAICompatSocket:
         try:
             payload = self._post(body)
         except urllib.error.HTTPError as error:
-            if error.code in _RETRY_STATUS:
+            said = _read_body(error)
+            spelled = self._other_schema_spelling(body, error.code, said)
+            if spelled is not None:
+                payload = spelled
+            elif error.code in _RETRY_STATUS:
                 # Transient: the model was loading, the proxy dropped an
                 # idle connection. Retry with the same evidence grammar.
                 try:
@@ -280,6 +341,7 @@ class OpenAICompatSocket:
             text = self.complete(prompt)
             on_text(text)
             return text
+        _hold(self.base_url, self.serving_name)
         body: dict = {
             "model": self.serving_name,
             "messages": [{"role": "user", "content": self.language_instruction + prompt}],
@@ -407,6 +469,20 @@ class OpenAICompatSocket:
         tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
         return max(0, min(self.context_chars, int(tokens - 128)))
 
+    def window_chars(self) -> int:
+        """How many characters of prompt the window itself holds beside the reply.
+
+        Not `prompt_chars_allowed`: that is the research budget, one character
+        a token and capped at `context_chars`, and it bounds the evidence. The
+        whole prompt (instructions and evidence) is bounded by the window, at
+        `CHARS_PER_TOKEN`. Measuring the instructions against the evidence
+        budget left a 16k window no room after an 11.7k-character authoring
+        brief (#181).
+        """
+        reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
+        tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
+        return max(0, int(tokens * CHARS_PER_TOKEN))
+
     def _ask_context(self) -> int | None:
         def get(path: str):
             try:
@@ -483,6 +559,29 @@ class OpenAICompatSocket:
             self.tokens_used = (self.tokens_used or 0) + usage["prompt_tokens"] + usage["completion_tokens"]
         else:
             self.usage_complete = False
+
+    def _other_schema_spelling(self, body: dict, status: int, said: str) -> dict | None:
+        """The same constraint in the spelling a server that refused ours takes.
+
+        Ollama and llama.cpp's own server take `json_schema`; llama-cpp-python's
+        server (and some others) refuse it, by name, and take the schema under
+        `json_object` instead. Dropping the constraint there let a small model
+        answer in prose, so the other spelling is tried first. None when the
+        refusal is not about the response format, or that spelling fails too.
+        """
+        fmt = body.get("response_format")
+        if not isinstance(fmt, dict) or fmt.get("type") != "json_schema" or status not in (400, 422, 500):
+            return None
+        if "response_format" not in said and "json_schema" not in said:
+            return None
+        body["response_format"] = {"type": "json_object", "schema": fmt["json_schema"]["schema"]}
+        try:
+            return self._post(body)
+        except urllib.error.HTTPError as again:
+            # Neither spelling: the original refusal path drops the field.
+            body["response_format"] = fmt
+            _read_body(again)
+            return None
 
     def _refused(self, error: urllib.error.HTTPError) -> LocalInferenceError:
         detail = ""

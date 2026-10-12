@@ -30,6 +30,10 @@ const DOCK_W: f32 = 300.0;
 /// controls on the titlebar stay under the reader's pointer.
 const TITLEBAR_H: f32 = 40.0;
 
+/// Below this window width the sidebar shows icons only, unless the reader
+/// chose otherwise with its toggle.
+const SIDEBAR_FOLD_BELOW: f32 = 1100.0;
+
 // ---- tabs ----
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -86,6 +90,24 @@ impl Tab {
             "settings" => Tab::Settings,
             "about" => Tab::About,
             _ => Tab::Home,
+        }
+    }
+
+    /// The screen an extension route names. A route is `<screen>[/<id>]` in
+    /// the extension's words (`packs`, `sites`, `check`, `jobs/<id>`,
+    /// `subject/<id>`, `result/<id>`, `questions/<id>`, `compare/<id>`), so
+    /// its first segment decides; a word it does not know
+    /// opens Home, never whatever happened to be on screen.
+    pub fn from_route(route: &str) -> Tab {
+        let head = route.trim_start_matches(['#', '/']).split('/').next().unwrap_or("");
+        match head {
+            "packs" | "knowledge" => Tab::Overview,
+            "subject" => Tab::Browse,
+            "result" => Tab::History,
+            "questions" => Tab::Compare,
+            "jobs" => Tab::Activity,
+            "check" => Tab::Home,
+            other => Tab::from_key(other),
         }
     }
 
@@ -263,14 +285,6 @@ impl SpanFilter {
         }
     }
 
-    pub fn next(self) -> Self {
-        match self {
-            SpanFilter::All => SpanFilter::Month,
-            SpanFilter::Month => SpanFilter::Quarter,
-            SpanFilter::Quarter => SpanFilter::Half,
-            SpanFilter::Half => SpanFilter::All,
-        }
-    }
 }
 
 /// One line in the dock's own feed.
@@ -295,6 +309,12 @@ pub struct Kriko {
     pub live: Live,
     // settings
     pub reduce_motion: bool,
+    /// Whether this frame may move: the reader allows motion *and* the window
+    /// is the one in front. Set once per frame in `render`. A looping GPUI
+    /// animation asks for the next frame forever and every frame redraws the
+    /// whole window, so a window behind others or minimized never loops; the
+    /// activation change itself redraws, so the loops resume on focus (#184).
+    pub motion: bool,
     /// Agent runs at once, 1..=4 (#133): the engine reads it at every start.
     pub run_concurrency: usize,
     pub run_concurrency_prev: usize,
@@ -326,6 +346,10 @@ pub struct Kriko {
     pub dock_reply: InputState,
     /// The reply drawer: closed unless you are answering an agent.
     pub dock_reply_open: bool,
+    /// A route KRIKO_VERIFY asked for, opened once the engine answers.
+    pub pending_route: Option<String>,
+    /// A saved check a route asked for: History turns to its page.
+    pub history_focus: Option<String>,
     /// The full live agent logs drawer in the dock.
     pub dock_logs_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
@@ -344,6 +368,8 @@ pub struct Kriko {
     pub library_search: InputState,
     pub quick_ask_input: InputState,
     pub sidebar_collapsed: bool,
+    /// The reader's own open or closed; None follows the window's width.
+    pub sidebar_choice: Option<bool>,
     /// The width the page column has this frame, measured in `render` before
     /// any screen lays out, so a screen can choose side-by-side panels or a
     /// stacked column for the room it really has.
@@ -368,6 +394,7 @@ impl Kriko {
             engine: engine::status(),
             live: Live::default(),
             reduce_motion: false,
+            motion: false,
             run_concurrency: 1,
             run_concurrency_prev: 0,
             history_search: InputState::new(cx),
@@ -391,6 +418,8 @@ impl Kriko {
             run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
+            pending_route: None,
+            history_focus: None,
             dock_logs_open: false,
             dock_feed: Vec::new(),
             // Every launch starts with the live dock closed.
@@ -406,6 +435,7 @@ impl Kriko {
             library_search: InputState::new(cx),
             quick_ask_input: InputState::new(cx),
             sidebar_collapsed: false,
+            sidebar_choice: None,
             content_w: 0.0,
             main_scroll: gpui::ScrollHandle::new(),
             scroll_target: 0.0,
@@ -431,7 +461,13 @@ impl Kriko {
             Ok("dock") => {
                 app.dock_reply_open = true;
             }
-            _ => {}
+            // Any other screen by the name the extension uses for it; a route
+            // with an id is opened once the engine answers.
+            Ok(other) => {
+                app.tab = Tab::from_route(other);
+                app.pending_route = Some(other.to_string());
+            }
+            Err(_) => {}
         }
         shell::set_tray_status(
             matches!(app.engine, engine::Status::Ready { .. }),
@@ -459,7 +495,35 @@ impl Kriko {
         app
     }
 
+    /// Show what a route names: the screen (`Tab::from_route`), and the
+    /// product or saved check when the route carries its id. One place for
+    /// the extension's "open in Kriko" and for KRIKO_VERIFY.
+    pub fn open_route(&mut self, route: &str, cx: &mut Context<Self>) {
+        let route = route.trim().trim_start_matches(['#', '/']);
+        if route.is_empty() {
+            return;
+        }
+        self.tab = Tab::from_route(route);
+        if let Some(id) = route.strip_prefix("subject/").filter(|id| !id.is_empty()) {
+            self.select_subject(id.to_string(), cx);
+        }
+        // A saved check opens in History, already unfolded.
+        if let Some(id) = route.strip_prefix("result/").filter(|id| !id.is_empty()) {
+            if self.live.history.open.as_deref() != Some(id) {
+                self.toggle_history_open(id.to_string(), cx);
+            }
+            // Wherever it sits: no search or span hides it, and History
+            // turns to its page once the list is there.
+            self.history_search.set_value(String::new());
+            self.history_span = SpanFilter::All;
+            self.history_focus = Some(id.to_string());
+        }
+        self.on_open_tab(cx);
+        cx.notify();
+    }
+
     fn pulse(&mut self, cx: &mut Context<Self>) {
+        #[cfg(windows)]
         for action in shell::poll_tray() {
             match action {
                 shell::TrayAction::Open => shell::show_window(cx),
@@ -468,12 +532,19 @@ impl Kriko {
         }
         for event in engine::take_events() {
             match event {
-                engine::ShellEvent::Focus(_route) => shell::show_window(cx),
-                engine::ShellEvent::Hide => shell::hide_window(),
-                engine::ShellEvent::Quit => Self::quit(cx),
+                engine::ShellEvent::Focus(route) => {
+                    // The extension asked for a screen, not just the window.
+                    self.open_route(&route, cx);
+                    shell::show_window(cx);
+                }
             }
         }
         let now = engine::status();
+        if matches!(now, engine::Status::Ready { .. }) {
+            if let Some(route) = self.pending_route.take() {
+                self.open_route(&route, cx);
+            }
+        }
         if now != self.engine {
             shell::set_tray_status(
                 matches!(now, engine::Status::Ready { .. }),
@@ -737,6 +808,12 @@ impl Kriko {
             .flex_1()
             .min_h(px(0.0))
             .overflow_y_scroll().occlude();
+        // Counts from the engine, not from the mock-up: products in the
+        // store beside Browse, jobs still running beside Activity.
+        let subjects = self.live.knowledge.totals.subjects;
+        let browse_count = (subjects > 0).then(|| subjects.to_string());
+        let running = self.live.run.jobs.iter().filter(|j| !j.done).count();
+        let activity_badge = (running > 0).then(|| running.to_string());
         for (gi, group) in data::NAV.iter().enumerate() {
             nav = nav.child(
                 div()
@@ -749,7 +826,12 @@ impl Kriko {
             for item in group.items {
                 let key = item.key;
                 let current = self.tab.key() == key;
-                let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { item.count }, if self.sidebar_collapsed { None } else { item.badge })
+                let (count, badge) = match key {
+                    "browse" => (browse_count.as_deref(), None),
+                    "activity" => (None, activity_badge.as_deref()),
+                    _ => (item.count, item.badge),
+                };
+                let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { count }, if self.sidebar_collapsed { None } else { badge })
                     .flex_none()
                     .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
                         this.tab = Tab::from_key(key);
@@ -773,7 +855,7 @@ impl Kriko {
             // panel", and it sits in the same well as the window controls.
             .child(div().px(px(12.0)).py(px(8.0)).flex().when(self.sidebar_collapsed, |d| d.justify_center())
                 .child(titlebar_button("sidebar-minimise", "sidebar", false)
-                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
+                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_choice = Some(!this.sidebar_collapsed); this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
             .child(nav)
     }
 }
@@ -789,7 +871,7 @@ impl Kriko {
     /// way out.
     fn boot_screen(&mut self, maximized: bool, cx: &mut Context<Self>) -> Div {
         let titlebar = self.titlebar(maximized, cx);
-        let motion = !self.reduce_motion;
+        let motion = self.motion;
         let body = match self.engine.clone() {
             engine::Status::Failed { title, detail } => div()
                 .flex()
@@ -934,7 +1016,7 @@ impl Kriko {
                             "titlebar-needs-you",
                             TagState::Need,
                             &format!("? {needs_you}"),
-                            !self.reduce_motion,
+                            self.motion,
                         ))
                     })
                     .child(
@@ -955,6 +1037,7 @@ impl Kriko {
 
 impl Render for Kriko {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.motion = !self.reduce_motion && window.is_window_active();
         if !matches!(self.engine, engine::Status::Ready { .. }) {
             let maximized = window.is_maximized();
             return self.boot_screen(maximized, cx).into_any_element();
@@ -965,6 +1048,9 @@ impl Render for Kriko {
         // padding. The live dock floats over the page and takes none of it,
         // so opening the dock never changes how a screen lays out.
         let viewport_w = f32::from(window.viewport_size().width);
+        // Narrow windows give the page the room: the sidebar folds to its
+        // icons below this width unless the reader opened it themselves.
+        self.sidebar_collapsed = self.sidebar_choice.unwrap_or(viewport_w < SIDEBAR_FOLD_BELOW);
         let open = self.dock_open;
         let sidebar_w = if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W };
         self.content_w = (viewport_w - sidebar_w - 2.0 * PAGE_PAD).max(0.0);
@@ -972,7 +1058,7 @@ impl Render for Kriko {
         let titlebar = self.titlebar(maximized, cx);
         let sidebar = self.sidebar(cx);
         let collapsed = self.sidebar_collapsed;
-        let sidebar = if !self.reduce_motion {
+        let sidebar = if self.motion {
             sidebar.with_animation(gpui::ElementId::named_usize("sidebar-slide", collapsed as usize),
                 gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
                     let t = t * t * (3.0 - 2.0 * t);
@@ -992,14 +1078,14 @@ impl Render for Kriko {
             .overflow_hidden()
             .w(px(if open { DOCK_W } else { 0.0 }))
             .child(dock);
-        let dock_wrap = if !self.reduce_motion {
+        let dock_wrap = if self.motion {
             dock_wrap.with_animation(gpui::ElementId::named_usize("live-slide", open as usize),
                 gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
                     let t = t * t * (3.0 - 2.0 * t); d.w(px(DOCK_W * if open { t } else { 1.0 - t }))
                 }).into_any_element()
         } else { dock_wrap.into_any_element() };
-        let hero = hero(tab.hero_sky(), tab.hero_height(), !self.reduce_motion)
-            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), !self.reduce_motion));
+        let hero = hero(tab.hero_sky(), tab.hero_height(), self.motion)
+            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), self.motion));
         div()
             .id("kriko-root")
             .size_full()
@@ -1057,7 +1143,7 @@ impl Render for Kriko {
                                     .px(px(40.0))
                                     .pt(px(20.0))
                                     .pb(px(48.0))
-                                    .child(arrive(content, format!("page-{}", tab.key()), !self.reduce_motion)),
+                                    .child(arrive(content, format!("page-{}", tab.key()), self.motion)),
                             ),
                     )
                     // The bar floats on the sky, after the page so it
@@ -1079,6 +1165,25 @@ fn text_selection(value: &str, cursor: usize, anchor: Option<usize>) -> std::ops
     let at = text_boundary(value, cursor);
     let anchor = text_boundary(value, anchor.unwrap_or(at));
     at.min(anchor)..at.max(anchor)
+}
+
+#[cfg(test)]
+mod route_tests {
+    use super::Tab;
+
+    #[test]
+    fn an_extension_route_opens_the_screen_it_names() {
+        assert!(Tab::from_route("packs") == Tab::Overview);
+        assert!(Tab::from_route("sites") == Tab::Sites);
+        assert!(Tab::from_route("subject/abc123") == Tab::Browse);
+        assert!(Tab::from_route("jobs/j-1") == Tab::Activity);
+        assert!(Tab::from_route("check") == Tab::Home);
+        assert!(Tab::from_route("result/abc123") == Tab::History);
+        assert!(Tab::from_route("questions/abc123") == Tab::Compare);
+        assert!(Tab::from_route("compare/abc123") == Tab::Compare);
+        assert!(Tab::from_route("#/history") == Tab::History);
+        assert!(Tab::from_route("no-such-screen") == Tab::Home);
+    }
 }
 
 #[cfg(test)]

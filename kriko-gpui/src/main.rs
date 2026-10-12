@@ -142,8 +142,9 @@ fn main() {
     let background = std::env::args_os().skip(1).any(|arg| arg == "--background");
     // Verification uses an isolated engine/store and must not be redirected
     // to the reader's installed app. Normal launches remain single-instance.
-    let review = std::env::var("KRIKO_VERIFY").map(|page| matches!(page.as_str(),
-        "compare" | "risks" | "local" | "agents" | "dock" | "benchmark")).unwrap_or(false);
+    // Any page: KRIKO_VERIFY opens every route, and a fixed list here let
+    // `KRIKO_VERIFY=settings` raise the reader's own app instead.
+    let review = std::env::var("KRIKO_VERIFY").is_ok_and(|page| !page.trim().is_empty());
     // a second launch raises the first and leaves: one engine per machine
     if !review && shell::raise_running_instance(!background) {
         return;
@@ -164,9 +165,28 @@ fn main() {
             KeyBinding::new("ctrl-b", JumpBrowse, None),
         ]);
 
-        let (screen_w, screen_h) = screen_size();
-        let width = 1280.0f32.min(screen_w - 80.0).max(940.0);
-        let height = 906.0f32.min(screen_h - 80.0).max(640.0);
+        // The display the window opens on, where the platform reports it; the
+        // fixed guess only when it does not (it was the only answer off
+        // Windows, so a small screen got a window larger than itself).
+        let (screen_w, screen_h) = cx
+            .primary_display()
+            .map(|d| {
+                let b = d.bounds();
+                (b.size.width / px(1.0), b.size.height / px(1.0))
+            })
+            .filter(|(w, h)| *w >= 640.0 && *h >= 480.0)
+            .unwrap_or_else(screen_size);
+        let mut width = 1280.0f32.min(screen_w - 80.0).max(940.0);
+        let mut height = 906.0f32.min(screen_h - 80.0).max(640.0);
+        // KRIKO_WINDOW_SIZE=WxH opens the window at that size, for capturing
+        // a screen at, say, the 940x640 minimum.
+        if let Some((w, h)) = std::env::var("KRIKO_WINDOW_SIZE").ok().and_then(|v| {
+            let (w, h) = v.split_once('x')?;
+            Some((w.trim().parse::<f32>().ok()?, h.trim().parse::<f32>().ok()?))
+        }) {
+            width = w.max(940.0);
+            height = h.max(640.0);
+        }
         let bounds = Bounds {
             origin: point(
                 px(((screen_w - width) / 2.0).max(20.0)),
@@ -200,7 +220,7 @@ fn main() {
             async {}
         })
         .detach();
-        cx.open_window(opts, |window, cx| {
+        let opened = cx.open_window(opts, |window, cx| {
             shell::remember_window(window);
             // Window is not Quit: closing hides, the engine keeps serving
             // the extension, and the tray brings it back or ends it
@@ -215,7 +235,14 @@ fn main() {
                 }
             });
             cx.new(|cx| Kriko::new(cx))
-        })
-        .expect("kriko window");
+        });
+        // No window (no usable DirectX 11, say): tell the reader in a system
+        // box, and take the engine down rather than leave it serving alone.
+        if let Err(e) = opened {
+            shell::tell_fatal(&shell::window_failure_text(&format!("{e:#}")));
+            engine::stop();
+            shell::remove_tray();
+            cx.quit();
+        }
     });
 }
