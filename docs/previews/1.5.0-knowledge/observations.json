@@ -7,7 +7,9 @@
     "overview-installed.png": "Pack names render ('Used cars', 'Cordless drills (example)'); they rendered as an ellipsis before. Install from a file and File quick looks sit on the packs card.",
     "home-installed.png": "Claims per catalog shows both catalogs; with none installed it says so and links to Overview.",
     "agents.png": "The install link under a missing agent renders; it rendered as an ellipsis before.",
-    "sidebar": "Browse shows the live product count (53) and Activity a badge only while jobs run; both were hardcoded mock values ('760', '1')."
+    "sidebar": "Browse shows the live product count (53) and Activity a badge only while jobs run; both were hardcoded mock values ('760', '1').",
+    "browse-variant.png": "A car variant opened by route (the panel's choose buttons): 104 claims apply, each naming the part it reaches through (engine, gearbox, electrics, body). Before, the drawer said no claim was stored.",
+    "several": "'Volkswagen Golf 7 GTI 2.0 TSI DSG 2018' against the installed catalogs answers verdict 'several' with a choose step listing the variants; before it was 'recognised' and called a gap."
   },
   "windows": "Native Windows installation remains unverified.",
   "validation": {
