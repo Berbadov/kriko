@@ -97,9 +97,8 @@ once, at a raised version, and its `.kpack` is shared through
 
 ## API surfaces
 
-Each `app/web/routers/*.py` module is one surface.
-`test_docs_match_the_code.py` fails until every surface has an endpoint named
-in a document, because a surface nobody knows exists cannot be reasoned about.
+Each `app/web/routers/*.py` module is one surface. The engine's OpenAPI
+schema (`/openapi.json`) is the authoritative list; this table is a map.
 
 | Surface | Endpoints | Notes |
 |---|---|---|
