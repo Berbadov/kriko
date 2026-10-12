@@ -1,6 +1,6 @@
 [package]
 name = "kriko-gpui"
-version = "1.5.1"
+version = "1.5.0"
 edition = "2021"
 description = "Kriko — local product knowledge, on the Kriko design system"
 license = "MIT"
