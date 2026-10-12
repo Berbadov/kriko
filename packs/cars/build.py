@@ -216,6 +216,38 @@ _MANUAL_ONLY_RE = re.compile(
 )
 
 
+#: Generation numerals as cars name them: "Megane 3" and "Megane III" alike.
+_ROMAN = {"1": "I", "2": "II", "3": "III", "4": "IV", "5": "V", "6": "VI",
+          "7": "VII", "8": "VIII", "9": "IX"}
+
+
+def _names_another_generation(claim: dict, span: dict) -> bool:
+    """A claim filed on a one-model part that is about another generation of it.
+
+    A body or electrics part belongs to one model and generation; research
+    has filed a Mégane 3 parking-sensor fault on the Mégane 4 body part, and
+    it was served on every Mégane 4. Derived from the fitment data, not a
+    list: the part's models and generations are those of the cars fitted with
+    it. Parts fitted to more than one model (an engine, a gearbox) are left
+    alone, because a fault in a shared engine carries across generations.
+    Dropped at build and counted, never guessed at by the engine.
+    """
+    models = span.get("model") or set()
+    generations = {str(g).upper() for g in span.get("generation") or set()}
+    if len(models) != 1 or not generations:
+        return False
+    model = next(iter(models))
+    text = f"{claim.get('title', '')} {claim.get('rationale', '')}"
+    folded = text.replace("é", "e").replace("É", "E")
+    named = set()
+    for found in re.finditer(rf"\b{re.escape(model)}\s*((?:\d|[IVX]+)(?:\s*/\s*(?:\d|[IVX]+))*)\b",
+                             folded, re.I):
+        for one in re.split(r"\s*/\s*", found.group(1).upper()):
+            named.add(_ROMAN.get(one, one))
+    # "Mégane III/IV" names the part's own generation too, and stays.
+    return bool(named) and not (named & generations)
+
+
 def _compat_conditions(
     claim: dict, part_codes: set[str], spanned: dict[str, set] | None = None
 ) -> list[dict]:
@@ -413,6 +445,8 @@ def _part_spans() -> dict[str, dict[str, set]]:
                     "aftertreatment",
                     "transmission",
                     "transmission_code",
+                    "model",
+                    "generation",
                 ):
                     if variant.get(attribute):
                         bucket.setdefault(attribute, set()).add(variant[attribute])
@@ -734,6 +768,9 @@ def _emit_claim(
     confidence = status_confidence.get(claim.get("status", "review"), 0.6)
     if confidence <= 0:
         stats["claims_skipped_by_status"] += 1
+        return
+    if _names_another_generation(claim, part_spans.get(part_code) or {}):
+        stats["claims_dropped_other_generation"] += 1
         return
 
     claim_id = _emit_claim_row(
