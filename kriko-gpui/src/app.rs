@@ -263,14 +263,6 @@ impl SpanFilter {
         }
     }
 
-    pub fn next(self) -> Self {
-        match self {
-            SpanFilter::All => SpanFilter::Month,
-            SpanFilter::Month => SpanFilter::Quarter,
-            SpanFilter::Quarter => SpanFilter::Half,
-            SpanFilter::Half => SpanFilter::All,
-        }
-    }
 }
 
 /// One line in the dock's own feed.
@@ -460,6 +452,7 @@ impl Kriko {
     }
 
     fn pulse(&mut self, cx: &mut Context<Self>) {
+        #[cfg(windows)]
         for action in shell::poll_tray() {
             match action {
                 shell::TrayAction::Open => shell::show_window(cx),
