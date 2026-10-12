@@ -19,7 +19,7 @@ sequenceDiagram
     A->>M: adapt the scrape to a Query, resolve subjects
     M->>L: lookup(query, conn)
     L-->>A: claims, verified and current only
-    A-->>B: risks + areas, always HTTP 200
+    A-->>B: claims, packs and coverage, HTTP 200
     B-->>C: render cards
 ```
 
@@ -30,10 +30,10 @@ Serving never calls a model: `/api/analyze` reads the store.
 | Scrape | `extension/content.js` | Raw `label -> value`, uninterpreted. `knownLabels` (from `GET /api/adapters`) only says which labels are worth digging for; the adapter decides what a label means (`kriko/adapters.py`). |
 | Panel rules | the adapter's `local_panel` block | Selectors, the site's own words and thresholds ride in the adapter, opaque to the engine, and are never compiled from pack patterns into a `RegExp`. `test_the_extension_speaks_no_sites_own_language` fails on a non-ASCII word in `extension/`. |
 | Request | `extension/background.js` | Labels and panel travel per request, never cached. |
-| Endpoint | `src/app/web/app.py` | Always 200; an exception becomes `coverage_state: unavailable`. |
+| Endpoint | `src/app/web/routers/analyze.py` | Answers 200 with `readable: true`, the matched `identity`, `claims`, `packs` and `coverage`. A page it cannot answer for is also 200, with `readable: false` and a `reason` (`no_adapter`, `unknown_product`, `page_not_read`). An unexpected error is a 500 from the handler in `src/app/web/app.py`. |
 | Identity | `src/kriko/lookup/match.py` | Matches on attribute overlap, never on `subject_id` equality. Narrowing is soft: an unmatched hint flags a contradiction, it never produces `no_match`. The result is a `Resolution` (`lookup/query.py`): `subject_ids`, `method` (`exact`/`ambiguous`/`no_match`), `notes`, `flags`. |
-| Claims | `src/kriko/lookup/__init__.py` | Reads `claim_variants`, `verified` and `is_current` only. |
-| Ranking | `src/app/web/routers/analyze.py` | Severity, times the pack's own gate, times detection (lower for a component that has to be seen rather than measured), times source trust (a null tier is neutral). Sorted by `relevance_score` and capped at `MAX_RISKS_PER_LISTING`. Every risk carries `why_shown`; the response adds `subsystems` beside the flat `risks`. |
+| Claims | `src/kriko/lookup/__init__.py` | Reads the claims of the matched subjects, with their text in the reader's language, their conditions and their evidence. An unmet condition withdraws a claim; an unknown one lowers its weight. The store keeps no claim status, so none is a filter. |
+| Ranking | `src/kriko/lookup/rank.py` (`relevance()`, `explain()`) | Severity, detection (lower for a component that has to be seen rather than measured), source trust, the pack's weight, the author's confidence and the conditions. Claims sort by that relevance, then severity and title. Near-duplicate titles in one domain merge into the best of them, keeping their sources, and the list stops at the query's `limit`. Each claim carries `why`, the reasons for its rank. |
 | Render | `extension/hover_lite/hover_lite.js` | Risk cards plus local blocks. Alerts walk `listing.panel.alerts` in order, and `unless: [rule-id]` is an else-branch written as data. |
 
 **Claim health** (`kriko/lookup/tree.py`) keeps four signals per claim, and
@@ -47,7 +47,7 @@ written at acceptance (`app/findings.py`).
 
 Long work is a row, not a request. How many run at once is the reader's
 Settings choice (`run_concurrency`, 1 to 4, one by default); each job claims
-the pack it writes (`jobs.claims`), two overlapping claims never run
+the pack it writes (`claims()` in `src/app/web/jobs.py`), two overlapping claims never run
 together, and a kind whose target cannot be named runs alone. Quick looks
 keep their own lane.
 
@@ -86,6 +86,15 @@ handler reads it between steps, so a run can be answered while it runs.
 `research` feeds `app/findings.py`, the same grounding path as the MCP
 `submit_findings`; `pack_build` mirrors `kriko build`.
 
+**Filing quick looks needs no agent.** `pack_harvest` (`src/app/web/tasks.py`,
+started by `POST /api/packs/harvest` and by **File quick looks** on Overview)
+files every saved quick look not yet filed. `_file_quick_look` re-checks each
+risk against its own page and attaches it to the catalog that already holds the
+product, at no cost. A product no catalog holds is listed as `needs_agent`, and
+nothing is sent to an agent for it. A catalog that gained claims is installed
+once, at a raised version, and its `.kpack` is shared through
+`GET /api/packs/drafts/{slug}/artifact`. A look filed once is never filed again.
+
 ## API surfaces
 
 Each `app/web/routers/*.py` module is one surface.
@@ -94,35 +103,35 @@ in a document, because a surface nobody knows exists cannot be reasoned about.
 
 | Surface | Endpoints | Notes |
 |---|---|---|
-| analyze | `POST /api/analyze`, `GET /api/adapters`, `GET /api/adapters/unmapped`, `POST /api/diagnose/identity` | The check itself, the adapters a page may use, the labels no adapter reads, and the full identity weighing behind a "not recognised". |
+| analyze | `POST /api/analyze`, `GET /api/adapters`, `GET /api/adapters/unmapped`, `POST /api/diagnose/identity`, `DELETE /api/adapters/unmapped/{adapter_id}/{label}` | The check itself, the adapters a page may use, the labels no adapter reads, and the full identity weighing behind a "not recognised". |
 | subjects | `GET /api/subjects`, `GET /api/subjects/{subject_id}`, `GET /api/subjects/{subject_id}/brief`, `GET /api/subjects/filters`, `GET /api/search` | Pack knowledge, the $0 brief, the filter vocabulary and the catalogue-wide search. |
 | query | `POST /api/lookup`, `GET /api/identity-keys/{pack_id}`, `GET /api/kinds` | A lookup, the keys a pack declares, the subject kinds it has. |
-| history | `GET /api/history`, `GET /api/history/{lookup_id}`, `GET /api/lookup/{lookup_id}`, `POST /api/lookups/{lookup_id}/notes`, `GET\|POST /api/lookups/{lookup_id}/checked`, `GET /api/lookups/{lookup_id}/triage`, `GET\|POST /api/settings` | Backed by `app.sqlite`. |
-| live | `GET /api/knowledge/clock`, `GET /api/lookup/{lookup_id}/refresh` | What changed in the store, and re-read one past check. |
+| history | `GET /api/history`, `GET /api/history/records`, `GET /api/lookup/{lookup_id}`, `GET\|POST /api/lookup/{lookup_id}/questions`, `DELETE /api/history/{lookup_id}`, `POST /api/lookups/{lookup_id}/notes`, `GET\|POST /api/lookups/{lookup_id}/checked`, `GET /api/lookups/{lookup_id}/triage`, `GET\|POST /api/settings` | Backed by `app.sqlite`. |
+| live | `GET /api/knowledge/clock`, `POST /api/lookup/{lookup_id}/refresh` | What changed in the store, and re-read one past check. |
 | marks | `GET\|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}`, `GET /api/marks/signals` | Author verdicts, pack-keyed, and the research signals they feed. |
-| compare | `GET\|POST /api/compare-drafts`, `PUT\|DELETE /api/compare-drafts/{draft_id}` | Named comparisons of saved checks. App state, never knowledge. |
+| compare | `GET\|POST /api/compare-drafts`, `PUT\|DELETE /api/compare-drafts/{draft_id}`, `GET\|POST /api/compare-drafts/{draft_id}/questions`, `GET\|PUT /api/compare-drafts/{draft_id}/board` | Named comparisons of saved checks. App state, never knowledge. |
 | queue | `GET\|POST /api/queue`, `PATCH\|DELETE /api/queue/{queue_id}` | The research queue: products queued from the extension's panel (Add to queue), researched in turn, then compared. One row per listing address; a second press answers `added: false`; PATCH sets `state` (waiting, researching, done) and the fresh `lookup_id` as the window researches them. App state, never knowledge. |
-| jobs | `POST /api/research`, `POST /api/packs/build`, `POST /api/packs/author`, `POST /api/packs/update`, `GET /api/packs/updates`, `GET /api/jobs`, `GET /api/jobs/{job_id}`, `POST /api/jobs/{job_id}/cancel`, `POST /api/jobs/{job_id}/retry`, `POST /api/jobs/{job_id}/say`, `GET /api/jobs/{job_id}/stream` | SSE polls the row, so a reconnect is safe. |
+| jobs | `POST /api/research`, `POST /api/packs/build`, `POST /api/packs/author`, `POST /api/packs/update`, `POST /api/packs/harvest`, `GET /api/packs/updates`, `GET /api/jobs`, `GET /api/jobs/{job_id}`, `POST /api/jobs/{job_id}/cancel`, `POST /api/jobs/{job_id}/retry`, `POST /api/jobs/{job_id}/say`, `GET /api/jobs/{job_id}/stream` | SSE polls the row, so a reconnect is safe. |
 | pipeline | `GET /api/pipeline/runs`, `GET /api/pipeline/runs/{run_id}`, `GET /api/pipeline/stream` | What came of a run: sources, kept findings, refusals with their reason. |
-| agenda | `GET /api/agenda`, `GET\|DELETE /api/research-runs`, `GET /api/research-runs/{run_id}` | Computed on read from demand, gaps and thinness. `DELETE` is undo, through `retract_claim`. |
+| agenda | `GET /api/agenda`, `GET /api/research-runs`, `GET\|DELETE /api/research-runs/{run_id}` | Computed on read from demand, gaps and thinness. `DELETE` is undo, through `retract_claim`. |
 | research | `GET /api/research-planes`, `GET /api/local-plane`, `GET /api/usage` | The planes read off the researcher classes, with a cost sentence and `ready` each; the local plane's own state; measured spend. |
 | prefs | `GET\|PUT /api/prefs`, `GET /api/costs`, `GET /api/scales` | Chosen providers, measured spend and next estimate, the scale presets. No credit balance, because no vendor exposes one. |
 | factcheck | `GET\|POST /api/factcheck`, `GET /api/factcheck/grounding`, `GET /api/factcheck/document`, `POST /api/verify` | The quote comes from the store, never from the caller. Verdicts are `quoted`/`missing`/`unreadable`/`unreachable`, and `missing` means the page changed, not that the claim is false. |
-| sites | `GET /api/sites`, `GET /api/sites/activation`, `GET\|POST /api/sites/seen`, `GET\|DELETE /api/sites/{host}`, `GET\|POST /api/sites/{host}/activation`, `POST /api/sites/{host}/register` | A pack's adapter always beats a learned one (`app/sites.py`). |
-| control | `GET /api/status`, `GET /api/activity`, `GET /api/packs/{pack_id}/revisions`, `POST /api/packs/{pack_id}/activate`, `POST /api/packs/{pack_id}/rollback`, `GET /api/packs/{pack_id}/events` | Pack revisions and rollbacks, the activity lens, the install's own status. |
-| packs | `GET /api/packs`, `GET /api/packs/{pack_id}`, `POST /api/packs/install`, `GET\|PUT /api/packs/{pack_id}/enabled`, `GET /api/packs/{pack_id}/gaps`, `GET /api/packs/{pack_id}/vocabulary`, `POST /api/packs/scaffold`, `GET /api/packs/drafts`, `GET /api/packs/drafts/{slug}`, `POST /api/packs/drafts/{slug}/build`, `POST /api/packs/drafts/{slug}/amend`, `POST /api/packs/drafts/{slug}/install`, `GET /api/packs/drafts/{slug}/artifact`, `DELETE /api/packs/drafts/{slug}` | Drafts live in `~/.kriko/drafts/<slug>/`. An adapter is `adapters/*.json`, not `.yaml`. A draft with no `principle` or no `lineup` is refused, and a subject named by neither the line-up nor `coverage.out_of_scope` is quarantined in `research/coverage.yaml`. |
+| sites | `GET /api/sites`, `POST /api/sites/activation`, `POST /api/sites/seen`, `GET /api/sites/{host}/detail`, `PUT\|DELETE /api/sites/{host}`, `GET /api/sites/{host}/activation`, `POST /api/sites/{host}/register` | A pack's adapter always beats a learned one (`app/sites.py`). |
+| control | `GET /api/status`, `GET /api/activity`, `GET /api/packs/{pack_id}/revisions`, `POST /api/packs/{pack_id}/activate`, `POST /api/packs/{pack_id}/rollback`, `POST /api/packs/{pack_id}/revisions/{revision_id}/activate`, `POST /api/packs/{pack_id}/revisions/{revision_id}/rollback`, `GET /api/packs/{pack_id}/events` | Pack revisions and rollbacks, the activity lens, the install's own status. |
+| packs | `GET /api/packs`, `POST /api/packs/install`, `DELETE /api/packs/{pack_id}`, `POST /api/packs/reset`, `POST /api/packs/{pack_id}/enabled`, `GET /api/packs/{pack_id}/gaps`, `GET /api/packs/{pack_id}/vocabulary`, `POST /api/packs/scaffold`, `GET /api/packs/drafts`, `GET /api/packs/drafts/{slug}`, `POST /api/packs/drafts/{slug}/build`, `POST /api/packs/drafts/{slug}/amend`, `POST /api/packs/drafts/{slug}/install`, `GET /api/packs/drafts/{slug}/artifact`, `DELETE /api/packs/drafts/{slug}` | Drafts live in `~/.kriko/drafts/<slug>/`. An adapter is `adapters/*.json`, not `.yaml`. A draft with no `principle` or no `lineup` is refused, and a subject named by neither the line-up nor `coverage.out_of_scope` is quarantined in `research/coverage.yaml`. |
 | submissions | `GET /api/submissions` | Legible refusals only (`app/findings.py`). |
 | keys | `GET\|PUT /api/keys`, `POST /api/keys/test`, `DELETE /api/keys/{provider_id}` | Stored in `~/.kriko/env`. No response ever carries a key: presence, source and the last four only. `test` makes one cheap live call server-side, so a key never leaves the machine. |
 | agent | `GET /api/agent-config`, `GET /api/agent-targets`, `POST /api/agent-targets/{target_id}/connect`, `POST /api/agent-targets/{target_id}/skill`, `GET /api/agent-skill`, `POST /api/agent-verify` | `agent-verify` runs a real MCP `initialize` and `tools/list`. |
 | operations | `GET /api/operations`, `GET /api/operations/stream` | The any-door live feed of agent work (`docs/AGENT_OPERATIONS.md`). |
-| bench | `GET\|POST /api/bench`, `GET /api/bench/configs`, `GET /api/bench/configs/{name}`, `POST /api/bench/estimate` | The sweep runs on a throwaway copy of the store. `estimate` is a separate endpoint so that asking what a grid would cost can never start it. |
+| bench | `GET\|POST /api/bench`, `GET\|PUT /api/bench/configs`, `DELETE /api/bench/configs/{name}`, `POST /api/bench/estimate` | The sweep runs on a throwaway copy of the store. `estimate` is a separate endpoint so that asking what a grid would cost can never start it. |
 | machine | `GET /api/machine` | The GPU (name, VRAM total and used from `nvidia-smi`), system memory, the processor, and which local runtimes are installed with their path. A figure the machine does not report is `null`, never a guess. Cached for 60 seconds; `?fresh=true` skips the cache (`app/machine.py`). |
 | app-update | `GET /api/app-update`, `POST /api/app-update/download` | The app's own clock, apart from the catalogs'. `GET` asks the releases API (`Settings.app_release_api_url`) for the latest release and compares versions as numbers; it fails quiet ("no published release found" on a private repository). `POST` downloads that release's MSI and keeps it only if it matches the release's `SHA256SUMS.txt`; the desktop shell runs it and reopens the app (`app/appupdate.py`). |
-| agent install | `POST /api/agents/{agent_id}/install` | Starts an `agent_install` job: the agent's `install_command` (the vendor's own Windows instructions, run in PowerShell with the log streamed), then a look for the CLI on the login `PATH`. For `local` it downloads Ollama's own installer (signature checked, run silently), starts Ollama if stopped, reinstalls it if it answers but cannot run a model, and downloads the recommended model, `localplane.RECOMMENDED_MODEL` (`gemma4:e2b`), whatever the machine (`app/agentinstall.py`); the same constant is the default pick when the reader chose no model, and `/api/local` reports it as `recommended_model` for the screens to mark. Rows in `/api/prefs` carry `can_install`. |
-| local-models | `GET /api/local-models`, `POST /api/local-models/pull` | `GET` is what Ollama holds, with the bytes, parameter count and quantisation it reports. `POST` starts a `model_pull` job: Ollama's own streamed `/api/pull`, progress as the share of bytes, cancel stops the stream, a failure carries Ollama's words. Ollama only; any other runtime is refused with where to get the model (`app/modelpull.py`). |
-| extension | `GET /api/extension`, `POST /api/extension/stage`, `POST /api/extension/reveal`, `POST /api/extension/launch`, `POST /api/extension/research-plane` | The staged directory, the version verdict, opening a browser with it, and the door a check starts from. |
+| agent install | `POST /api/agents/{agent_id}/install` | Starts an `agent_install` job: the agent's `install_command` (the vendor's own Windows instructions, run in PowerShell with the log streamed), then a look for the CLI on the login `PATH`. For `local` it downloads Ollama's own installer (signature checked, run silently), starts Ollama if stopped, reinstalls it if it answers but cannot run a model, and downloads the recommended model, `localplane.RECOMMENDED_MODEL` (`gemma4:e2b`), whatever the machine (`app/agentinstall.py`); the same constant is the default pick when the reader chose no model, and `/api/local-plane` reports it as `recommended_model` for the screens to mark. Rows in `/api/prefs` carry `can_install`. |
+| local-models | `GET /api/local-models`, `POST /api/local-models/pull`, `POST /api/local-models/start` | `GET` is what Ollama holds, with the bytes, parameter count and quantisation it reports. `POST` starts a `model_pull` job: Ollama's own streamed `/api/pull`, progress as the share of bytes, cancel stops the stream, a failure carries Ollama's words. Ollama only; any other runtime is refused with where to get the model (`app/modelpull.py`). |
+| extension | `GET /api/extension`, `POST /api/extension/stage`, `POST /api/extension/reveal`, `POST /api/extension/launch`, `GET\|POST /api/extension/research-plane`, `GET /api/extension/quick-looks`, `POST /api/extension/quick-looks/{job_id}/pack`, `GET /api/extension/quick-look/{job_id}/asks`, `POST /api/extension/quick-look/{job_id}/ask`, `POST /api/extension/firefox/stage`, `POST /api/extension/firefox/reveal` | The staged directory, the version verdict, opening a browser with it, and the door a check starts from. |
 | terminal | `GET /api/terminal/state`, `GET /api/terminal/stream`, `POST /api/terminal/input`, `POST /api/terminal/resize`, `POST /api/terminal/restart`, `POST /api/terminal/close` | One PTY per session (`app/providers/termpty.py`), for a one-time sign-in. The client is `kriko tui`; scrollback is bounded and resumable with `?offset=`. The origin check excludes extension origins. |
-| focus | `POST /api/focus`, `GET /api/focus`, `GET /api/window`, `POST /api/window/close-notice` | "Open in Kriko": the extension posts a route, the shell raises the window, and the window consumes the route once. |
+| focus | `POST /api/focus`, `GET /api/focus`, `GET /api/window`, `PUT /api/window/close-notice` | "Open in Kriko": the extension posts a route, the shell raises the window, and the window consumes the route once. |
 
 ## Interface state, `app.sqlite`
 
@@ -253,7 +262,7 @@ flowchart LR
 | chunk, extract | `src/kriko/ledger/chunking.py` and `extraction.py`; the noise gates run `kriko.gates` over the pack's own vocabulary file |
 | resolve | the pack's `pipeline/ledger/resolve.py`, from the evidence text against the catalog's own codes, never from the query |
 | verdict | the pack's `pipeline/ledger/verdict.py`, with `eval_verdict.py` checking it against that pack's gold set |
-| export, parity | `ledger/export.py` writes the pack's own data files; `ledger/parity.py` diffs those files against the export by a stable identity |
+| export, parity | `packs/<name>/pipeline/ledger/export.py` writes the pack's own data files; `packs/<name>/pipeline/ledger/parity.py` diffs those files against the export by a stable identity |
 | build | `src/kriko/pack/build.py` (`kriko build packs/<name>`). The ledger's database is never on the request path |
 
 ## Data formats
@@ -262,29 +271,33 @@ A **subject** is whatever the pack declares it to be. A mature pack's shape
 happens to carry a variant record and a claim record; neither name is required
 and neither is understood by the engine.
 
-A claim, as one pack writes it (`packs/<name>/data/parts/**/*.yaml`):
+A claim, as a pack writes it in `packs/<name>/data/claims.yaml` (the `drill`
+pack is the minimum, and `packs/drill/data/claims.yaml` is the full example):
 
 ```yaml
-- id: <claim_key>_v<version>     # {claim_key}_v{version}
-  claim_key: <claim_key>         # stable across versions
-  version: 1
-  is_current: true
-  title: "<the claim, in the pack's own words>"
-  domain: <the pack's own area vocabulary>
+- subject: {kind: battery_platform, identity: {brand: makita, platform: LXT}}
+  kind: known_issue              # the pack's own kinds
+  domain: battery                # the pack's own area vocabulary
   severity: high                 # the pack's own scale
-  confidence: 0.72
-  status: verified               # verified | draft | held | review | rejected
-  variants:
-    - variant_id: <the subject this claim is about>
-  sources:
-    - source_url: "https://..."
+  detection: diagnostic          # visual | test_drive | diagnostic | history_check
+  confidence: 0.7
+  text:
+    en:
+      title: "<the claim, in the pack's own words>"
+      body: "<what goes wrong, and when>"
+      advice: "<what to check>"
+  evidence:
+    - url: "https://..."
       quote: "verbatim quote..."
-      independent: true
+      stance: supports           # supports | refutes | qualifies
 ```
 
-What the engine guarantees about a claim is what is in that record: a stable
-key, a current flag, a status, and at least one source whose quote is present
-in a document that was actually read.
+`src/kriko/pack/build.py` stores that record as written: the subject, the
+claim's kind, domain, severity and detection, its text per language, its
+conditions and its evidence rows. It does not refuse a claim without evidence,
+and it does not check a quote against its page. Quotes are checked where they
+are kept: agent findings in `src/app/findings.py`, ledger output in the pack's
+own `pipeline/`.
 
 ## Invariants
 

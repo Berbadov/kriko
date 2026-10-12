@@ -109,7 +109,11 @@ and the reply field at the bottom posts straight into the feed.
 
 ## The screens
 
-Three screens, in the order the rail opens them:
+The rail has four groups, in this order: **Check** (Home, Run, History,
+Compare, Browser extension), **Knowledge** (Overview, Browse), **System** (Sites,
+Activity, Agents, Benchmark) and **This install** (Local LLM, Settings, About).
+Overview, under Knowledge, lists the installable catalogs and holds the **File
+quick looks** button. The screens below are described in detail:
 
 | Screen | What is on it |
 | --- | --- |
@@ -145,7 +149,7 @@ Compare and Local LLM are the workbenches, and carry the most:
   permissions (read pages, take part in Run, answer questions) and a
   reconnect key.
 
-Setting `KRIKO_VERIFY=compare|risks|local|agents|dock` seeds one page's state at
+Setting `KRIKO_VERIFY=compare|risks|local|agents|dock|benchmark` seeds one page's state at
 startup (tab, board with strokes and a note, open sections, finished test)
 so it can be captured without driving the mouse on a busy desktop.
 

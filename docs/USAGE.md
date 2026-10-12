@@ -64,7 +64,7 @@ Click the icon to open the panel on the page.
 > browser's Reload (the circular arrow on the extension's card at
 > `chrome://extensions`).
 
-> The panel is missing on a page it used to read? App, then System, then Sites
+> The panel is missing on a page it used to read? System, then Sites
 > says which of the two it is: the site needs a permission the browser has not
 > granted, or no adapter reads it yet.
 
@@ -111,11 +111,39 @@ The tool list lives in `src/app/mcp_server.py`. Findings enter as drafts
 through `app/findings.py`, which refuses a quote that is not in the document
 the agent says it read.
 
-**A local model instead.** System, then Settings, sets the address of a model
-server running on this machine and which model to use. The plane reports
+**A local model instead.** This install, then Local LLM, sets the address of a
+model server running on this machine and which model to use. [Setting one up](#local-models)
+is below. The plane reports
 whether it is ready, and a run started without naming a plane uses it first.
 The one thing it cannot do alone is search: it uses a hosted keyless search
 until a local search service is available.
+
+### Local models
+
+A local model answers on your own computer. Ollama is the app that runs its
+downloaded model files. Research can still search the web. Open **Local LLM**
+in the app.
+
+Press **Set up Ollama and the recommended model** to install Ollama, download
+`gemma4:e2b` (the model Kriko recommends) and select it. Ollama comes from its
+own site, the installer's signature is checked before it runs, and the download
+shows its byte count. If you already run Ollama, Kriko uses `gemma4:e2b`
+whenever it is downloaded and you have not chosen another model; the **Local
+LLM** list marks it *Recommended*. If an earlier install was interrupted and
+left Ollama unable to run models, setup notices and reinstalls it, and
+downloaded models are kept. Allow about 8 GB of free space for the app and the
+model. Larger models need more disk space and memory.
+
+If automatic setup fails, press **Download Ollama manually**, run its installer,
+return to Kriko and press **Check again**. If Ollama is installed but stopped,
+**Start Ollama** starts it without downloading a model. **Browse downloadable
+models** downloads another model with progress, then select it. A model
+download can be cancelled from its progress card.
+
+Small models can miss detailed configurations. The Benchmark screen's
+configuration suite measures missed facts, unsupported claims, wrong
+specifications, correct abstention, time and token usage on fixed development
+cases. It is not a real-world accuracy guarantee.
 
 ## 4. Terminal
 
@@ -142,7 +170,7 @@ The default path costs nothing extra: hand the agent the product and let it
 work.
 
 ```
-use the kriko_research agent to research <product>
+use the kriko-research skill to research <product>
 ```
 
 ```mermaid
@@ -198,28 +226,27 @@ installed. Statuses are pipeline-owned, so never hand-edit `status`.
 
 ## What a reader sees
 
-| Status | Shown as | Meaning |
-|---|---|---|
-| `verified` | Confirmed | Two or more independent sources |
-| `review`, `held` | Reported, with its source count | Thin, or high severity |
-| `rejected`, `draft` | not served | Refused, or not pipeline output |
+| Shown as | When |
+|---|---|
+| Confirmed | At least one source is from a confirming trust tier, `authoritative` or `manufacturer`. The card shows a relevance number. |
+| Reported | Every other claim. The card shows its sources and no number. |
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart LR
-    C["A claim"]:::plain --> G{"Grounded source?"}
-    G -->|none| N["Not served"]:::danger
-    G -->|"rejected, draft"| N
-    G -->|"two or more independent"| V["Confirmed"]:::mark
-    G -->|"one, or high severity"| R["Reported,<br/>with its source count"]:::ice
+    C["A claim the pack holds"]:::plain --> S{"A source from a<br/>confirming tier?"}
+    S -- yes --> V["Confirmed"]:::mark
+    S -- no --> R["Reported,<br/>with its sources"]:::ice
     classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
     classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
     classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
     classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
 ```
 
-Only claims with at least one grounded source are served, and a single-source
-report is always labelled as a report.
+The pipeline keeps a claim only with quotes it has grounded in the document it
+read. The engine serves the claims a pack holds for the product and does not
+check their quotes again. The strength shown on a card comes from the trust tier
+of its sources (`extension/background.js`, `_strengthOf`).
 
 ## Check the store
 
