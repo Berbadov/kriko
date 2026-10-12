@@ -1,9 +1,10 @@
 """What is installed, and what it covers."""
 
 import sqlite3
+import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app import categorypack, packdraft
@@ -11,6 +12,91 @@ from app.web.deps import get_store
 from kriko.store import packstore
 
 router = APIRouter(prefix="/api", tags=["packs"])
+
+
+@router.post("/packs/install")
+def install_pack(
+    body: bytes = Body(default=b""),
+    filename: str | None = Query(default=None),
+    filename_header: str | None = Header(default=None, alias="X-Filename"),
+    allow_downgrade: bool = Query(default=False),
+    store=Depends(get_store),
+):
+    """Install one uploaded artifact without accepting a filesystem path.
+
+    The browser sends the artifact as the request body. The optional filename is
+    metadata only; the store always receives a generated temporary path.
+    """
+    if not body:
+        raise HTTPException(400, "pack artifact is empty")
+
+    supplied_name = filename or filename_header or "upload.kpack"
+    if (
+        Path(supplied_name).name != supplied_name
+        or "\\" in supplied_name
+        or supplied_name in {".", ".."}
+    ):
+        raise HTTPException(400, "filename must be a plain file name")
+
+    temporary_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".kpack", delete=False) as staged:
+            staged.write(body)
+            temporary_path = Path(staged.name)
+        try:
+            pack_id = packstore.install(
+                store, temporary_path, allow_downgrade=allow_downgrade
+            )
+        except packstore.DowngradeRefused as exc:
+            # Structured, not just a sentence: the client offers "install
+            # anyway" from these three fields rather than parsing them back
+            # out of prose (knowledge-13).
+            raise HTTPException(
+                409,
+                {
+                    "kind": "downgrade_refused",
+                    "message": (
+                        f"{exc.installed} is installed; {exc.offered} is older."
+                    ),
+                    "installed": exc.installed,
+                    "offered": exc.offered,
+                },
+            ) from exc
+        except ValueError as exc:
+            raise HTTPException(400, f"invalid pack artifact: {exc}") from exc
+        except sqlite3.Error as exc:
+            raise HTTPException(400, "invalid pack artifact") from exc
+
+        pack = store.execute(
+            "SELECT * FROM packs WHERE pack_id = ?", (pack_id,)
+        ).fetchone()
+        revision = packstore.revisions(store, pack_id)[0]
+        counts = {
+            table: store.execute(
+                f"SELECT COUNT(*) FROM {table} WHERE pack_id = ?", (pack_id,)
+            ).fetchone()[0]
+            for table in ("subjects", "claims", "evidence")
+        }
+        return {
+            "pack": {
+                "pack_id": pack["pack_id"],
+                "name": pack["name"],
+                "version": pack["version"],
+                "enabled": bool(pack["enabled"]),
+            },
+            "revision": dict(revision),
+            "counts": counts,
+        }
+    except HTTPException:
+        raise
+    except OSError as exc:
+        raise HTTPException(500, "could not stage pack artifact") from exc
+    finally:
+        if temporary_path is not None:
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                pass
 
 
 @router.get("/packs")

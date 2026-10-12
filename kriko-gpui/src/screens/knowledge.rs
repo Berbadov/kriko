@@ -188,10 +188,13 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let harvest = cx.listener(|this, _: &ClickEvent, _w, cx| this.harvest_quick_looks(cx));
     let harvest_btn = ghost("pack-harvest", "File quick looks").h(px(32.0)).px(px(14.0)).text_size(px(12.0));
     let harvest_btn = if working { harvest_btn.opacity(0.5) } else { harvest_btn.on_click(harvest) };
+    let from_file = cx.listener(|this, _: &ClickEvent, _w, cx| this.install_pack_file(cx));
+    let file_btn = ghost("pack-from-file", "Install from a file").h(px(32.0)).px(px(14.0)).text_size(px(12.0));
+    let file_btn = if working { file_btn.opacity(0.5) } else { file_btn.on_click(from_file) };
     packs = packs.child(
         div().mb(px(4.0)).flex().items_center().justify_between()
             .child(eyebrow("Packs"))
-            .child(harvest_btn),
+            .child(div().flex().gap(px(8.0)).child(file_btn).child(harvest_btn)),
     );
     packs = packs.child(hairline());
     if let Some(line) = job_line {
