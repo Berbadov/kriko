@@ -122,10 +122,29 @@ def list_packs(store=Depends(get_store)):
                 "installed_at": row["installed_at"],
                 "trust_weight": row["trust_weight"],
                 "digest": row["content_digest"][:12],
+                # The version a rollback returns to; '' when none is kept.
+                "previous_version": (before["version"] if (before := packstore.previous(
+                    store, row["pack_id"])) else ""),
                 **counts,
             }
         )
     return out
+
+
+@router.post("/packs/{pack_id}/rollback")
+def rollback_pack(pack_id: str, store=Depends(get_store)):
+    """Go back to the revision installed before the active one.
+
+    A harvest or an update installs a catalog without asking; this is the
+    reader's way back from one they did not want, kept in the store as an
+    immutable revision (`kriko.store.packstore`).
+    """
+    try:
+        packstore.rollback(store, pack_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    row = store.execute("SELECT version FROM packs WHERE pack_id = ?", (pack_id,)).fetchone()
+    return {"pack_id": pack_id, "version": row["version"] if row else ""}
 
 
 @router.post("/packs/{pack_id}/enabled")

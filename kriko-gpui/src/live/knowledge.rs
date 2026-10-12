@@ -20,6 +20,8 @@ pub struct PackRow {
     pub id: String,
     pub name: String,
     pub version: String,
+    /// The version a rollback returns to; empty when none is kept.
+    pub previous: String,
     pub enabled: bool,
     pub subjects: i64,
     pub claims: i64,
@@ -295,6 +297,7 @@ impl Kriko {
                             id: api::s(p, "pack_id"),
                             name: api::s(p, "name"),
                             version: api::s(p, "version"),
+                            previous: api::s(p, "previous_version"),
                             enabled: api::b(p, "enabled"),
                             subjects: int(p, "subjects"),
                             claims: int(p, "claims"),
@@ -335,6 +338,22 @@ impl Kriko {
                 this.live.knowledge.switching = None;
                 this.refresh_packs(cx);
                 this.refresh_thin(cx);
+            },
+        );
+    }
+
+    /// Back to the revision installed before this one, after an update or a
+    /// harvest the reader did not want.
+    pub fn rollback_pack(&mut self, pack_id: String, cx: &mut Context<Self>) {
+        self.live.knowledge.switching = Some(pack_id.clone());
+        self.fetch(
+            cx,
+            move || api::post(&format!("/api/packs/{}/rollback", api::seg(&pack_id)), serde_json::json!({})),
+            |this, reply, cx| {
+                this.note(&reply);
+                this.live.knowledge.switching = None;
+                this.refresh_packs(cx);
+                this.refresh_updates(cx);
             },
         );
     }

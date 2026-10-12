@@ -263,7 +263,17 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                                 .child(mono(&note, MUTED)),
                         )
                         .child(meter_slim(pack.subjects as f32 / max_subjects * 100.0, 10))
-                        .child(mono(&format!("{} · {}", pack.id, pack.version), DIM)),
+                        .child(mono(&format!("{} · {}", pack.id, pack.version), DIM))
+                        .when(!pack.previous.is_empty(), |d| {
+                            let id = pack.id.clone();
+                            let back = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                                this.rollback_pack(id.clone(), cx);
+                            });
+                            d.child(div().pt(px(4.0)).child(
+                                ghost(("pack-back", i), &format!("Back to {}", pack.previous))
+                                    .h(px(28.0)).px(px(12.0)).text_size(px(12.0)).on_click(back),
+                            ))
+                        }),
                 )
                 .child(switch_anim(("pack-sw", i), pack.enabled, motion).on_click(toggle)),
         );
