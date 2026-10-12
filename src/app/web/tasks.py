@@ -13,6 +13,7 @@ the whole point of the jobs layer.
 """
 
 import importlib
+import json
 import secrets
 import time
 from collections.abc import Callable
@@ -1759,8 +1760,10 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     # subject the catalog does not have yet.
     if params.get("quick_job_id") and params.get("product"):
         filed = _file_quick_look(settings, _await_quick_look(settings, progress, params),
-                                 str(params["product"]).strip(), progress)
-        if filed is not None:
+                                 str(params["product"]).strip(), progress, params.get("page"))
+        # Nothing new from the look is not an answer to "research this": the
+        # agent runs as before.
+        if filed is not None and _changed(filed):
             if params.get("install"):
                 _install_draft(settings, filed, progress)
             progress.set(1.0, f"{filed['product']} is in {filed['name']}: "
@@ -2214,16 +2217,39 @@ def _sourced_items(quick: dict, proposed) -> tuple[list[dict], int]:
     return items, bare
 
 
-def _file_quick_look(settings, quick: dict, product: str, progress: Progress) -> dict | None:
+def _folded(text: str) -> str:
+    """Letters and digits only, lower case: how an identity value is found in text."""
+    return "".join(ch for ch in str(text).casefold() if ch.isalnum())
+
+
+def _grounded_identity(identity: dict, product: str, page, quick: dict) -> dict:
+    """The identity values the listing or a quoted page actually contains.
+
+    A model may fill `pack_identity` with a plausible value that nothing on
+    the page says; written into a shared catalog, that would put real claims
+    on the wrong product. So a value is kept only when it appears, ignoring
+    case, spaces and punctuation, in the listing title, the listing's own
+    facts or one of the quick look's quotes. A dropped value is a missing key,
+    and a product with a missing key waits for an agent.
+    """
+    quotes = [one.get("quote", "") for risk in quick.get("risks") or [] if isinstance(risk, dict)
+              for one in (risk.get("sources") or [risk]) if isinstance(one, dict)]
+    haystack = _folded(" ".join([product, json.dumps(page or {}, ensure_ascii=False), *quotes]))
+    return {key: value for key, value in (identity or {}).items()
+            if _folded(value) and _folded(value) in haystack}
+
+
+def _file_quick_look(settings, quick: dict, product: str, progress: Progress,
+                     page=None) -> dict | None:
     """File a finished quick look into the catalog it named.
 
     No agent and no cost: the target is the catalog the quick look named, the
     subject is the one the draft declares or, when the quick look read every
-    identity key of one of its kinds, a new one written from those values
-    (`categorypack.add_subject`); every risk is re-read
-    against its own page before it is attached (`categorypack.ground`, the same
-    gate an agent's claims pass). None when there is no such catalog or the
-    product is not in it, which is the agent's job.
+    identity key of one of its kinds from the listing or its pages, a new one
+    written from those values (`categorypack.add_subject`). Every risk is
+    re-read against its own page before it is attached (`categorypack.ground`,
+    the same gate an agent's claims pass). None when there is no such catalog
+    or the product cannot be named in it, which is the agent's job.
     """
     from app import categorypack
     from kriko.gates import load_gates
@@ -2236,10 +2262,19 @@ def _file_quick_look(settings, quick: dict, product: str, progress: Progress) ->
     if target is None:
         return None
     held = categorypack.holds(settings.store_path, target["slug"], product)
-    if held is None and categorypack.add_subject(
-            settings.store_path, target["slug"], product, quick.get("pack_identity") or {}):
-        progress.log(f"added {product} to {target['name']} from the identity the quick look read")
-        held = categorypack.holds(settings.store_path, target["slug"], product)
+    added = False
+    if held is None:
+        identity = _grounded_identity(quick.get("pack_identity") or {}, product, page, quick)
+        row = categorypack.add_subject(settings.store_path, target["slug"], identity)
+        if row is not None:
+            # The row itself, not a second lookup by title: the title of a
+            # listing need not read like the subject's label.
+            held = categorypack.holds(settings.store_path, target["slug"], str(row.get("label") or ""))
+            if held is not None:
+                held["subject_rows"] = [row]
+                added = True
+                progress.log(f"added {row.get('label')} to {target['name']} "
+                             "from the identity on the listing")
     if held is None:
         return None
     progress.log(f"{product} is in {held['name']}; filing the quick look without an agent")
@@ -2256,13 +2291,23 @@ def _file_quick_look(settings, quick: dict, product: str, progress: Progress) ->
                                    subject_rows=held["subject_rows"], vocab=vocab)
     for one in attached["refused"]:
         progress.log(f"left out {one['title']!r}: {one['reason']}")
+    unread = bool(items) and not kept and all(
+        one.get("reason") == "the page could not be read" for one in dropped)
     held.update({
         "category": target["name"], "product": product, "joined": True, "agent": False,
         "subject": attached["subject"], "claims_added": attached["claims_added"],
         "evidence_added": attached["evidence_added"], "left_out": dropped,
+        "subject_added": added,
+        # Every page refused this time: nothing was judged, so try again later.
+        "unread": unread,
     })
     held["claims"] = int(held.get("claims") or 0) + attached["claims_added"]
     return held
+
+
+def _changed(written: dict) -> bool:
+    return bool(written.get("claims_added") or written.get("evidence_added")
+                or written.get("subject_added"))
 
 
 #: How far back a harvest reads the job history for quick looks.
@@ -2286,17 +2331,23 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
     finally:
         conn.close()
     filed: set[str] = set()
+    authored: set[str] = set()
     for one in jobs:
         if one["kind"] == "pack_author" and one["state"] == state.SUCCEEDED:
+            # Linked both ways: "Add to a pack" names the look it files, and
+            # "Research this product" is named by the look beside it.
             filed.add(str((one["params"] or {}).get("quick_job_id") or ""))
+            authored.add(one["job_id"])
         elif one["kind"] == "pack_harvest" and one["state"] == state.SUCCEEDED:
             filed.update((one["result"] or {}).get("filed_quick_looks") or [])
     looks = [one for one in reversed(jobs)
              if one["kind"] == "quick_look" and one["state"] == state.SUCCEEDED
-             and one["job_id"] not in filed]
+             and one["job_id"] not in filed
+             and str((one["params"] or {}).get("deepen_job_id") or "") not in authored]
     progress.log(f"{len(looks)} quick look(s) not yet in a catalog")
     done: list[str] = []
     needs_agent: list[dict] = []
+    unread: list[str] = []
     touched: dict[str, dict] = {}
     claims = 0
     for position, look in enumerate(looks, start=1):
@@ -2307,13 +2358,17 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
         if not product or not quick.get("risks"):
             done.append(look["job_id"])  # nothing to file is filed
             continue
-        written = _file_quick_look(settings, quick, product, progress)
+        written = _file_quick_look(settings, quick, product, progress,
+                                   (look["params"] or {}).get("page"))
         if written is None:
             needs_agent.append({"quick_job_id": look["job_id"], "product": product})
             continue
+        if written["unread"]:
+            unread.append(product)
+            continue
         done.append(look["job_id"])
         claims += written["claims_added"]
-        if written["claims_added"]:
+        if _changed(written):
             touched[written["slug"]] = written
     shared = []
     for slug, written in touched.items():
@@ -2321,11 +2376,15 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
             _install_draft(settings, written, progress)
         shared.append({"slug": slug, "pack_id": written["pack_id"], "name": written["name"],
                        "artifact": f"/api/packs/drafts/{slug}/artifact"})
+    waiting = [one["product"] for one in needs_agent]
     progress.set(1.0, f"{len(done)} quick look(s) filed, {claims} claim(s) added"
-                      + (f"; {len(needs_agent)} need an agent to add their product"
-                         if needs_agent else ""))
+                      + (f"; needs an agent: {', '.join(waiting[:3])}"
+                         + (f" and {len(waiting) - 3} more" if len(waiting) > 3 else "")
+                         if waiting else "")
+                      + (f"; pages unreadable, try again later: {', '.join(unread[:3])}"
+                         if unread else ""))
     return {"filed_quick_looks": done, "claims_added": claims,
-            "needs_agent": needs_agent, "packs": shared}
+            "needs_agent": needs_agent, "unread": unread, "packs": shared}
 
 
 def _product_check(settings, researcher, params: dict, progress: Progress,

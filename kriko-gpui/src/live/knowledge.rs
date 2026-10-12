@@ -68,6 +68,13 @@ pub struct Offer {
     pub offered: String,
 }
 
+/// A catalog a harvest changed, shareable as a file.
+#[derive(Clone)]
+pub struct Shared {
+    pub name: String,
+    pub slug: String,
+}
+
 /// A job as the polling loop last saw it.
 #[derive(Clone, Default)]
 pub struct JobView {
@@ -144,6 +151,8 @@ pub struct State {
     pub thin_quotes_loaded: bool,
     pub offers: Vec<Offer>,
     pub update_job: Option<JobView>,
+    /// Catalogs the last harvest changed, each downloadable as a `.kpack`.
+    pub shared: Vec<Shared>,
     /// A pack the reader just switched, until the engine confirms.
     pub switching: Option<String>,
     // Sites
@@ -526,7 +535,23 @@ impl Kriko {
                     };
                     let done = view.done;
                     match &which {
-                        Followed::PackUpdate => this.live.knowledge.update_job = Some(view),
+                        Followed::PackUpdate => {
+                            // A harvest names the catalogs it changed; those
+                            // are what the reader can now share as files.
+                            if done {
+                                if let Ok(v) = &reply {
+                                    let shared: Vec<Shared> = v.get("result").map(|r| api::arr(r, "packs"))
+                                        .unwrap_or(&[]).iter()
+                                        .map(|p| Shared { name: api::s(p, "name"), slug: api::s(p, "slug") })
+                                        .filter(|p| !p.slug.is_empty())
+                                        .collect();
+                                    if !shared.is_empty() {
+                                        this.live.knowledge.shared = shared;
+                                    }
+                                }
+                            }
+                            this.live.knowledge.update_job = Some(view)
+                        }
                         Followed::SiteRegister(host) => {
                             this.live.knowledge.site_job = Some((host.clone(), view))
                         }

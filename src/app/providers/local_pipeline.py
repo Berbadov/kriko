@@ -871,17 +871,15 @@ class QuickLookPipeline:
         if self.coverage["status"] != "supported_findings":
             agent._say("result status: " + self.coverage["status"]
                        + "; this is not proof that the product has no problems")
+        # A pack the task did not list is one the model invented.
+        listed = str(metadata.get("pack") or "") in re.findall(r"\* `([^`]+)`", brief)
         return json.dumps({
             "assumed": self.identity.canonical_name
                        + ("; variant unknown" if not self.identity.resolved else ""),
             "output_language": target_language,
             "category": category,
-            "pack": (str(metadata.get("pack") or "")
-                     if str(metadata.get("pack") or "") in re.findall(r"\* `([^`]+)`", brief)
-                     else ""),
-            "pack_identity": (metadata.get("pack_identity") or {}
-                              if str(metadata.get("pack") or "") in re.findall(r"\* `([^`]+)`", brief)
-                              else {}),
+            "pack": str(metadata.get("pack") or "") if listed else "",
+            "pack_identity": (metadata.get("pack_identity") or {}) if listed else {},
             "risks": output,
             "specs": rendered_specs,
         }, ensure_ascii=False)

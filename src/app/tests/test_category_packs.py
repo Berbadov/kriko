@@ -677,8 +677,9 @@ def test_a_quick_look_that_read_the_identity_adds_a_new_product_without_an_agent
     assert len(world.script.prompts) == prompts
     assert [one["product"] for one in done["result"]["needs_agent"]] == ["Logitech Mouse"]
     listed = world.get("/api/subjects", params={"pack_id": "gaming.mice"}).json()
-    assert sorted(one["label"] for one in listed) == ["Scyrox V6 Gaming Mouse", "Scyrox V8"]
-    assert _claims_of(world, "Scyrox V6 Gaming Mouse") == [("Side buttons rattle", V6_PAGE, V6_QUOTE)]
+    # Named by its identity, not by the listing's title.
+    assert sorted(one["label"] for one in listed) == ["Scyrox V6", "Scyrox V8"]
+    assert _claims_of(world, "Scyrox V6") == [("Side buttons rattle", V6_PAGE, V6_QUOTE)]
 
 
 def test_the_catalog_choice_shows_each_packs_identity_keys():
@@ -686,3 +687,60 @@ def test_the_catalog_choice_shows_each_packs_identity_keys():
         "pack_id": "gaming.mice", "name": "Gaming mice", "subjects": [], "blurb": "",
         "identity": {"product": ["brand", "model"]}}])
     assert "[identity product: brand, model]" in block
+
+
+def test_an_identity_value_the_listing_never_says_is_not_trusted(world):
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    _script_v6(world.script)
+    # The model "read" a model code that neither the title nor a quote contains.
+    world.script.quick["Scyrox V6 Gaming Mouse"]["pack_identity"] = {"brand": "Scyrox", "model": "V7"}
+    _look(world, "Scyrox V6 Gaming Mouse")
+
+    done = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+
+    assert [one["product"] for one in done["result"]["needs_agent"]] == ["Scyrox V6 Gaming Mouse"]
+    labels = [one["label"] for one in world.get(
+        "/api/subjects", params={"pack_id": "gaming.mice"}).json()]
+    assert labels == ["Scyrox V8"]
+
+
+def test_a_look_already_filed_by_its_research_run_is_not_harvested_again(world):
+    """Older rows link the other way: the look names the research run beside it."""
+    from app.web import state
+
+    conn = state.connect(world.settings.app_state_path)
+    try:
+        run = state.create_job(conn, "pack_author", {"product": "Scyrox V8 Gaming Mouse"})
+        state.finish_job(conn, run, state.SUCCEEDED, result={})
+        look = state.create_job(conn, "quick_look", {
+            "product": "Scyrox V8 Gaming Mouse", "deepen_job_id": run})
+        state.finish_job(conn, look, state.SUCCEEDED, result={
+            "pack": "gaming.mice", "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]})
+    finally:
+        conn.close()
+
+    done = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert done["state"] == "succeeded", done["message"]
+    assert done["result"]["filed_quick_looks"] == []
+    assert done["result"]["needs_agent"] == []
+
+
+def test_pages_that_cannot_be_read_leave_the_look_for_the_next_harvest(world, monkeypatch):
+    from app.web import tasks
+
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    world.script.quick["Scyrox V8 Gaming Mouse"]["pack"] = "gaming.mice"
+    world.script.quick["Scyrox V8 Gaming Mouse"]["risks"] = [
+        _risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]
+    _look(world, "Scyrox V8 Gaming Mouse")
+
+    monkeypatch.setattr(tasks, "_page_reader", lambda: (lambda url: Fetched("")))
+    offline = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert offline["result"]["filed_quick_looks"] == []
+    assert offline["result"]["unread"] == ["Scyrox V8 Gaming Mouse"]
+
+    monkeypatch.setattr(tasks, "_page_reader", lambda: (lambda url: Fetched(PAGES.get(url, ""))))
+    online = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert online["result"]["claims_added"] == 1

@@ -227,7 +227,7 @@ weekly pass is `app/packautoupdate.py`, which at startup submits an
 the last success. There is no updates block in the UI.
 
 **The installer carries no packs** (#169). A fresh install opens onto an empty
-store, and the Knowledge screen offers the published index's packs with an
+store, and Overview (the Knowledge group) offers the published index's packs with an
 Install button (same `pack_update` job as an update). The sidecar freezes no `.kpack`, no build step makes one for the
 installer, and startup seeds nothing. The reader installs the packs they want,
 and a pack already installed is kept current by the weekly update above. The
