@@ -454,6 +454,54 @@ impl Kriko {
         );
     }
 
+    /// Install a catalog someone shared: the reader picks a `.kpack`, its
+    /// bytes go to `POST /api/packs/install` (the engine never takes a path),
+    /// and the packs list is read again.
+    pub fn install_pack_file(&mut self, cx: &mut Context<Self>) {
+        let picked = cx.prompt_for_paths(gpui::PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: false,
+            prompt: Some("Install".into()),
+        });
+        cx.spawn(async move |this, cx| {
+            let Ok(Ok(Some(paths))) = picked.await else { return };
+            let Some(path) = paths.into_iter().next() else { return };
+            this.update(cx, |this, cx| {
+                this.live.knowledge.update_job = Some(JobView {
+                    state: "running".into(),
+                    message: format!("Installing {}.", path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default()),
+                    done: false,
+                });
+                this.fetch(
+                    cx,
+                    move || {
+                        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                        std::fs::read(&path)
+                            .map_err(|e| api::ApiError { status: 0, message: format!("Could not read {name}: {e}") })
+                            .and_then(|bytes| api::post_bytes("/api/packs/install", &bytes, &name))
+                    },
+                    |this, reply, cx| {
+                        this.note(&reply);
+                        let (state, message) = match &reply {
+                            Ok(v) => {
+                                let pack = v.get("pack").cloned().unwrap_or_default();
+                                ("succeeded", format!("Installed {} {}.", api::s(&pack, "name"), api::s(&pack, "version")))
+                            }
+                            Err(e) => ("failed", e.message.clone()),
+                        };
+                        this.live.knowledge.update_job = Some(JobView { state: state.into(), message, done: true });
+                        this.refresh_packs(cx);
+                        this.refresh_updates(cx);
+                    },
+                );
+                cx.notify();
+            })
+            .ok();
+        })
+        .detach();
+    }
+
     /// `POST /api/packs/harvest`: file every saved quick look into the
     /// catalog that holds its product, with no agent. Followed like an update,
     /// because it ends the same way: a catalog installed at a new version.
