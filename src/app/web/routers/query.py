@@ -145,19 +145,6 @@ def _history_label(store, body: LookupRequest, result, payload: dict) -> str:
     return label
 
 
-@router.get("/kinds")
-def subject_kinds(store=Depends(get_store)):
-    """Which kinds of thing the installed packs can answer about."""
-    return [
-        dict(r)
-        for r in store.execute(
-            "SELECT s.kind, s.pack_id, COUNT(*) AS n FROM subjects s"
-            " JOIN packs p USING (pack_id) WHERE p.enabled = 1"
-            " GROUP BY s.kind, s.pack_id ORDER BY n DESC"
-        )
-    ]
-
-
 def _is_required(match_json: str | None) -> bool:
     """`match_json` is YAML, written by the builder — the same shape
     `kriko.lookup.match._match_rules` parses for the engine's own use. The

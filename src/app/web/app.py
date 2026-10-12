@@ -52,14 +52,12 @@ from app.web.routers import (
     marks,
     operations,
     packs,
-    pipeline as pipeline_router,
     queue,
     prefs as prefs_router,
     query,
     research,
     sites,
     subjects,
-    submissions,
     terminal,
 )
 from app.web import state
@@ -232,7 +230,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         agent.router,
         packs.router,
         prefs_router.router,
-        pipeline_router.router,
         query.router,
         research.router,
         subjects.router,
@@ -257,7 +254,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         marks.router,
         operations.router,
         sites.router,
-        submissions.router,
         terminal.router,
     ):
         app.include_router(router)

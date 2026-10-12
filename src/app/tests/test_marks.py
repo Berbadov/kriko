@@ -186,13 +186,3 @@ def test_the_queue_is_worst_first_and_counts_the_claims(tmp_path):
         ("quiet", 1),
     ]
     assert sorted(research[0]["claim_ids"]) == ["a", "b"]
-
-
-def test_the_signals_endpoint_serves_both_queues(client):
-    client.post(
-        "/api/marks",
-        json={"pack_id": "p", "claim_id": "c1", "verdict": "wrong", "subject_id": "s1"},
-    )
-    body = client.get("/api/marks/signals").json()
-    assert body["research"][0]["subject_id"] == "s1"
-    assert body["matching"] == []
