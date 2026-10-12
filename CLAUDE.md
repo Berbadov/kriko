@@ -41,7 +41,9 @@ Short form, not a substitute:
 
 There are no Actions minutes, so `ci.yml` is gone and `tools/gate.sh` is the
 only gate: version agreement, ruff, mypy, pytest, both JS suites, the wheel,
-and `cargo check` + `cargo test` for `kriko-gpui/`. It was left red for weeks
+and `cargo check` + `cargo test` for `kriko-gpui/`, plus a
+`cargo check` for Windows (the `x86_64-pc-windows-gnu` target) off a Windows host,
+so the Windows-only code is compiled on every push. It was left red for weeks
 (43 failures, 15 type errors) because merges skipped it; 1.5.0 brought it back
 to green. So:
 

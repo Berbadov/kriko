@@ -220,7 +220,7 @@ fn main() {
             async {}
         })
         .detach();
-        cx.open_window(opts, |window, cx| {
+        let opened = cx.open_window(opts, |window, cx| {
             shell::remember_window(window);
             // Window is not Quit: closing hides, the engine keeps serving
             // the extension, and the tray brings it back or ends it
@@ -235,7 +235,14 @@ fn main() {
                 }
             });
             cx.new(|cx| Kriko::new(cx))
-        })
-        .expect("kriko window");
+        });
+        // No window (no usable DirectX 11, say): tell the reader in a system
+        // box, and take the engine down rather than leave it serving alone.
+        if let Err(e) = opened {
+            shell::tell_fatal(&shell::window_failure_text(&format!("{e:#}")));
+            engine::stop();
+            shell::remove_tray();
+            cx.quit();
+        }
     });
 }
