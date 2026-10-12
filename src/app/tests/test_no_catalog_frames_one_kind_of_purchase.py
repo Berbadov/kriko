@@ -12,9 +12,11 @@ Two rules, read from the files rather than typed as a list of catalogs:
   judgement, so it never says what *Kriko* surfaces.
 * What a shipped catalog shows a reader or an agent (its name, every text
   asset a `.kpack` carries, the strings its pipeline sends a model) does not
-  narrow a purchase to used or second-hand, whatever the category. Claim
-  texts are left out on purpose: a rationale that a car at this mileage is
-  due a belt describes that one product, not what the catalog is for.
+  narrow a purchase to used or second-hand, whatever the category.
+
+Claim texts are not read here. The framing in them was written by models that
+had been handed the old bar and prompts; those claims were reworded once, and
+this guards the bar and the prompts, which are what wrote it.
 """
 
 import ast
