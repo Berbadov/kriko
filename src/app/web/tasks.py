@@ -2215,10 +2215,12 @@ def _sourced_items(quick: dict, proposed) -> tuple[list[dict], int]:
 
 
 def _file_quick_look(settings, quick: dict, product: str, progress: Progress) -> dict | None:
-    """File a finished quick look into a catalog that already holds its product.
+    """File a finished quick look into the catalog it named.
 
     No agent and no cost: the target is the catalog the quick look named, the
-    subject is the one the draft already declares, and every risk is re-read
+    subject is the one the draft declares or, when the quick look read every
+    identity key of one of its kinds, a new one written from those values
+    (`categorypack.add_subject`); every risk is re-read
     against its own page before it is attached (`categorypack.ground`, the same
     gate an agent's claims pass). None when there is no such catalog or the
     product is not in it, which is the agent's job.
@@ -2234,9 +2236,13 @@ def _file_quick_look(settings, quick: dict, product: str, progress: Progress) ->
     if target is None:
         return None
     held = categorypack.holds(settings.store_path, target["slug"], product)
+    if held is None and categorypack.add_subject(
+            settings.store_path, target["slug"], product, quick.get("pack_identity") or {}):
+        progress.log(f"added {product} to {target['name']} from the identity the quick look read")
+        held = categorypack.holds(settings.store_path, target["slug"], product)
     if held is None:
         return None
-    progress.log(f"{product} is already in {held['name']}; filing the quick look without an agent")
+    progress.log(f"{product} is in {held['name']}; filing the quick look without an agent")
     items, _ = _sourced_items(quick, None)
     kept, dropped = categorypack.ground(items, _page_reader())
     for one in dropped:
