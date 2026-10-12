@@ -1,52 +1,33 @@
 """Bringing the window to the front, from outside the window.
 
 The browser extension's "Open in Kriko" was a plain `<a href>` at the app's
-own HTTP port. That works — the SPA is served over HTTP and the route resolves
-— but it opens the report *in the browser*, in a second tab, beside the desktop
-app the reader already has running. The reader asked for the app and got a
-web page that looks like it.
+own HTTP port. That opened the report *in the browser*, in a second tab, beside
+the desktop app the reader already has running. The reader asked for the app and
+got a web page that looks like it.
 
 The fix cannot be a link, because a page has no way to raise a native window.
-So the handoff goes the other way: the extension **posts a route**, and the
-two processes that can act on it each pick up their half.
+So the extension **posts a route**, and the shell does the raising:
 
 * The **shell** (`kriko-gpui/src/engine.rs`) is already reading the
   sidecar's stdout for the port handshake, so it costs nothing to have the
   sidecar print one more line. `KRIKO_FOCUS` on stdout makes the shell call
   `show_window` — raise and focus. That is the only thing Rust does here, and
   it stays a supervisor rather than becoming a second engine.
-* The **window** polls `GET /api/focus` and navigates. It has to be a poll from
-  the page rather than a push into it: the shell can raise a window but has no
-  business knowing the SPA's route table, and the SPA cannot be reached from
-  another process except through this server.
 
-**A pending focus is deliberately in memory, and deliberately expires.** It is
-not history — it is a nudge between two live processes, and `app.sqlite` is for
-things that must outlive the process. A route persisted across a restart would
-surface as the window jumping to a stale report days later, which is worse than
-losing the nudge. One server process serves both sockets, so in-memory is also
-simply *correct* here: the extension's POST and the window's GET are handled by
-the same object.
+The route is only printed, not kept: the window that used to poll it for the
+navigation was the retired page, and nothing else reads it back.
 
 **The route is validated, not trusted.** It arrives from a browser extension —
-the one client that cannot be authenticated — and it ends up in the SPA's
-`location.hash`. A closed shape (a name, optionally one `/`-separated id) is
-enough to make it unusable as an injection vector while staying agnostic about
-which routes exist: this module must not hold the app's route table any more
-than Rust holds the engine's.
-
-Consume-once on read: a nudge acted on is spent. Two windows would otherwise
-both navigate, and a window reopened later would replay an old jump.
+the one client that cannot be authenticated. A closed shape (a name, optionally
+one `/`-separated id) keeps it unusable as an injection vector while staying
+agnostic about which routes exist: this module must not hold the app's route
+table any more than Rust holds the engine's.
 """
 
 import re
-import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
-
-from app.web import state
-from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["focus"])
 
@@ -59,14 +40,9 @@ router = APIRouter(prefix="/api", tags=["focus"])
 #: the first stdout line that does as the port handshake.
 FOCUS_LINE = "KRIKO_FOCUS"
 
-#: How long a nudge is worth acting on. Long enough for a cold window to
-#: finish booting and poll once; short enough that a window opened by hand
-#: minutes later does not jump somewhere the reader has forgotten asking for.
-TTL_SECONDS = 30.0
-
 #: A route name, optionally followed by one id segment: `knowledge`,
 #: `result/9f2c...`. Anchored, bounded, and with no `#`, `?`, `:` or `//`, so
-#: what the SPA puts in its hash cannot become a different URL.
+#: nothing a browser sends can become a different URL.
 ROUTE = re.compile(r"^[a-z][a-z0-9-]{0,31}(/[A-Za-z0-9_-]{1,80})?$")
 
 
@@ -74,13 +50,9 @@ class FocusRequest(BaseModel):
     route: str = Field(min_length=1, max_length=128)
 
 
-def _pending(request: Request) -> dict | None:
-    return getattr(request.app.state, "focus", None)
-
-
 @router.post("/focus")
 def ask_for_focus(body: FocusRequest, request: Request) -> dict:
-    """Record a route and tell the shell to raise the window.
+    """Tell the shell to raise the window, and say whether anybody heard.
 
     `delivery` is the honest answer, and it replaced a `raised: true` that
     was structurally a lie. Whether a window was raised is not knowable from
@@ -91,10 +63,8 @@ def ask_for_focus(body: FocusRequest, request: Request) -> dict:
       * `raised`   — a shell is attached; it read the line and called
                      `show_window`. The extension must not open a tab.
       * `no_shell` — nobody is reading stdout, because nobody is supervising
-                     this process. The nudge is still recorded (a window
-                     opened later within the TTL will take it), and a browser
-                     tab is the *correct* answer rather than a silent
-                     fallback the reader has to interpret.
+                     this process, so a browser tab is the *correct* answer
+                     rather than a silent fallback the reader has to interpret.
 
     `raised` is kept as an alias because the extension ships on its own clock
     and an older one reads that key. It now says `delivery == "raised"`, which
@@ -104,7 +74,6 @@ def ask_for_focus(body: FocusRequest, request: Request) -> dict:
     if not ROUTE.match(route):
         raise HTTPException(422, f"not a route this app could navigate to: {body.route!r}")
 
-    request.app.state.focus = {"route": route, "at": time.monotonic()}
     # Unbuffered, like the port handshake: a frozen binary's buffered stdout
     # would hold this line until the process exited, i.e. forever.
     #
@@ -121,74 +90,3 @@ def ask_for_focus(body: FocusRequest, request: Request) -> dict:
         "delivery": delivery,
         "raised": delivery == "raised",
     }
-
-
-@router.get("/focus")
-def take_focus(request: Request) -> dict:
-    """The route the window should jump to, once.
-
-    Cleared on read even when it has expired, so a stale entry cannot sit in
-    memory being re-checked for the life of the process.
-    """
-    pending = _pending(request)
-    request.app.state.focus = None
-    if pending is None:
-        return {"route": None}
-    if time.monotonic() - pending["at"] > TTL_SECONDS:
-        return {"route": None, "expired": True}
-    return {"route": pending["route"]}
-
-
-
-# ── closing the window, asked in the window (B152) ──────────────────────────
-#
-# The shell used to answer the close button with a native message box: the
-# OS's own chrome, the OS's warning sound, every time, with no way to stop it.
-# The reader asked for a "don't show me again", a box that looks like Kriko,
-# and no sound — all three of which are the page's to draw, not Rust's. So the
-# shell now only *asks* the page (one `eval`), and the page answers here; this
-# prints one more stdout line for the shell to act on, exactly as `FOCUS_LINE`
-# does. The choice lives in `app.sqlite`: the window's origin carries a port
-# picked fresh each launch, so its localStorage would forget by morning.
-
-#: Must match `WINDOW_LINE` in `kriko-gpui/src/engine.rs`.
-WINDOW_LINE = "KRIKO_WINDOW"
-#: The `settings` row that says the reader has seen the close notice enough.
-CLOSE_NOTICE_OFF = "close_notice_off"
-#: `ack` means "the page is showing its own notice" — the shell stops waiting
-#: to hide the window itself. `hide` and `quit` are the two answers.
-WINDOW_ACTIONS = ("ack", "hide", "quit")
-
-
-class WindowAction(BaseModel):
-    action: str = Field(pattern="^(" + "|".join(WINDOW_ACTIONS) + ")$")
-    #: Set with `hide`: stop asking on close from now on.
-    remember: bool = False
-
-
-@router.get("/window")
-def read_window(request: Request, conn=Depends(get_app_state)) -> dict:
-    return {
-        "shell": bool(request.app.state.settings.shell_attached),
-        "close_notice": not state.all_settings(conn).get(CLOSE_NOTICE_OFF, False),
-    }
-
-
-@router.post("/window")
-def window_action(body: WindowAction, request: Request, conn=Depends(get_app_state)) -> dict:
-    if body.remember:
-        state.put_settings(conn, {CLOSE_NOTICE_OFF: True})
-    print(f"{WINDOW_LINE} {body.action}", flush=True)
-    return {"action": body.action, "shell": bool(request.app.state.settings.shell_attached)}
-
-
-class CloseNotice(BaseModel):
-    on: bool
-
-
-@router.put("/window/close-notice")
-def set_close_notice(body: CloseNotice, conn=Depends(get_app_state)) -> dict:
-    """Settings' switch for it — and the way back from "don't show again".
-    Changes the setting only; nothing reaches the shell."""
-    state.put_settings(conn, {CLOSE_NOTICE_OFF: not body.on})
-    return {"close_notice": body.on}

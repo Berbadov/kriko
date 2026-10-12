@@ -25,6 +25,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
+from app.web import state
 from app.web.app import create_app
 from app.web.settings import Settings
 
@@ -370,7 +371,7 @@ def test_post_research_plane_cap_reaches_the_paid_pipeline(research_client, monk
     assert budgets == [0.20]
     assert calls == ["first", "second"]
     assert "BudgetExceeded" in row["message"]
-    runs = research_client.get("/api/research-runs").json()["runs"]
+    runs = state.research_runs(state.connect(research_client.app.state.settings.app_state_path))
     assert runs[0]["outcome"] == "budget"
 
 
@@ -414,7 +415,7 @@ def test_post_research_plane_cancel_after_start_keeps_gathered_work(
     assert row["result"]["partial"] is True
     assert row["result"]["retained_documents"][0]["text"] == "Retained evidence from the first source."
     assert extracted == []
-    runs = research_client.get("/api/research-runs").json()["runs"]
+    runs = state.research_runs(state.connect(research_client.app.state.settings.app_state_path))
     assert runs[0]["outcome"] == "cancelled"
 
 

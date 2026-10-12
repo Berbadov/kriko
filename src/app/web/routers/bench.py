@@ -190,63 +190,6 @@ def estimate_bench(
     return bench.estimate(conn, params, len(found))
 
 
-#: Where saved grids live. One settings key holding a JSON object rather than a
-#: table: these are a handful of named requests, they are interface state like
-#: every other preference, and a table would be a migration for something a
-#: reader will have three of.
-SAVED_KEY = "bench_configs"
-MAX_SAVED = 20
-
-
-@router.get("/bench/configs")
-def read_configs(conn=Depends(get_app_state)) -> dict:
-    """Grids the reader named, so a comparison can be repeated.
-
-    Results are only comparable across runs if the *config* was the same, and
-    a config reconstructed from memory next month is a different experiment
-    wearing the same name.
-    """
-    import json
-
-    raw = state.all_settings(conn).get(SAVED_KEY) or "{}"
-    try:
-        saved = json.loads(raw)
-    except ValueError:
-        saved = {}
-    return {"configs": {
-        name: {("llms" if key == "models" else key): value for key, value in config.items()}
-        for name, config in saved.items() if isinstance(config, dict)
-    } if isinstance(saved, dict) else {}}
-
-
-class SaveConfig(BaseModel):
-    name: str = Field(min_length=1, max_length=60)
-    config: BenchRequest
-
-
-@router.put("/bench/configs")
-def save_config(body: SaveConfig, conn=Depends(get_app_state)) -> dict:
-    import json
-
-    saved = read_configs(conn)["configs"]
-    if body.name not in saved and len(saved) >= MAX_SAVED:
-        raise HTTPException(
-            400, f"{MAX_SAVED} saved grids is the limit — delete one first")
-    saved[body.name] = body.config.model_dump()
-    state.put_settings(conn, {SAVED_KEY: json.dumps(saved)})
-    return read_configs(conn)
-
-
-@router.delete("/bench/configs/{name}")
-def forget_config(name: str, conn=Depends(get_app_state)) -> dict:
-    import json
-
-    saved = read_configs(conn)["configs"]
-    saved.pop(name, None)
-    state.put_settings(conn, {SAVED_KEY: json.dumps(saved)})
-    return read_configs(conn)
-
-
 @router.post("/bench")
 def start_bench(body: BenchRequest, runner=Depends(get_jobs)) -> dict:
     from app import bench

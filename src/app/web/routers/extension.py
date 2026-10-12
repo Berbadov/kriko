@@ -608,15 +608,6 @@ def stage_firefox(request: Request) -> dict:
             "signed": False, "note": "Ready for Load Temporary Add-on in Firefox. A permanent install needs Mozilla signing."}
 
 
-@router.post("/firefox/reveal")
-def reveal_firefox(request: Request) -> dict:
-    target = extension.target_for(request.app.state.settings.store_path, "firefox")
-    manifest = target / "manifest.json"
-    if not manifest.is_file():
-        raise HTTPException(status_code=409, detail="Prepare the Firefox add-on first.")
-    return {"path": str(manifest), "error": extension.reveal(manifest)}
-
-
 @router.post("/reveal")
 def reveal(request: Request, spawn: bool = True) -> dict:
     """Open the staged folder in the file manager.

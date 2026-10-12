@@ -1,16 +1,12 @@
 """Answers that follow the knowledge (B152.4).
 
-"A card added by the agent, we instantly see the new card." Two pieces:
+"A card added by the agent, we instantly see the new card."
 
-- `GET /api/knowledge/clock` — one value that moves whenever anything writes
-  to the knowledge store, from any process (`app/web/knowledge_clock.py`).
-  Cheap enough to ask every second or two.
-- `POST /api/lookup/{id}/refresh` — the saved question asked again of the
-  knowledge as it is now, written over the saved answer. Same id, same place
-  in history: a re-answer is not a new lookup, so it records no operation, no
-  analysis-log line and no history row.
-
-A client holding an answer watches the clock and, when it moves, refreshes.
+`POST /api/lookup/{id}/refresh` is the saved question asked again of the
+knowledge as it is now, written over the saved answer. Same id, same place in
+history: a re-answer is not a new lookup, so it records no operation, no
+analysis-log line and no history row. Its answer carries the knowledge clock
+(`app/web/knowledge_clock.py`) that was current when it was given.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -25,11 +21,6 @@ router = APIRouter(prefix="/api", tags=["live"])
 
 def clock_of(request: Request) -> str:
     return request.app.state.knowledge_clock.now()
-
-
-@router.get("/knowledge/clock")
-def knowledge_clock(request: Request) -> dict:
-    return {"clock": clock_of(request)}
 
 
 @router.post("/lookup/{lookup_id}/refresh")
