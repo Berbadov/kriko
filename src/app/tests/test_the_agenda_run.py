@@ -356,43 +356,6 @@ def test_undoing_a_run_twice_is_a_no_op_that_says_so(tmp_path):
     assert "already been taken out" in again["note"]
 
 
-def test_a_run_with_nothing_left_is_not_offered_an_undo(tmp_path):
-    """A button that would do nothing is worse than no button."""
-    _run_with_claims(tmp_path, [("c1", "One")])
-    settings = _settings(tmp_path)
-    with TestClient(create_app(settings)) as client:
-        assert client.get("/api/research-runs/run-1").json()["undoable"] is True
-        tasks.research_undo(settings, {"run_id": "run-1"}, _Recorder())
-        body = client.get("/api/research-runs/run-1").json()
-        assert body["undoable"] is False
-        assert body["claims"] == 0
-        assert body["removed"] == 1
-
-
-def test_the_provenance_row_names_the_llm_and_what_it_spent(tmp_path):
-    """"Researched by an LLM" is not a provenance record; a name is one.
-
-    `llm` on the wire where the column is `model` — see the comment in
-    `state._research_run`: `model` is a car identity key and the frontend gate
-    bans it, so the interface uses the word no pack can claim.
-    """
-    _run_with_claims(tmp_path, [("c1", "One")])
-    with TestClient(create_app(_settings(tmp_path))) as client:
-        run = client.get("/api/research-runs").json()["runs"][0]
-    assert run["plane"] == "api"
-    assert run["llm"] == "a-model"
-    assert "model" not in run, "the column name reached the wire"
-    assert run["search_provider"] == "exa"
-    assert run["spent_usd"] == 0.11
-    assert run["budget_usd"] == 0.2
-
-
-def test_undoing_a_run_that_does_not_exist_is_a_bad_request_not_a_failed_job(tmp_path):
-    """Queuing a job that will immediately fail reports a mistake as a crash."""
-    with TestClient(create_app(_settings(tmp_path))) as client:
-        assert client.delete("/api/research-runs/nope").status_code == 404
-
-
 def test_a_real_agenda_run_ends_up_in_the_run_list(tmp_path):
     """End to end on the $0 plane, through the job runner, with no key set.
 
@@ -415,7 +378,7 @@ def test_a_real_agenda_run_ends_up_in_the_run_list(tmp_path):
             time.sleep(0.02)
         assert row["state"] == "succeeded", row
         assert row["result"]["subjects"] == 2
-        runs = client.get("/api/research-runs").json()["runs"]
+        runs = state.research_runs(state.connect(client.app.state.settings.app_state_path), 50)
     assert len(runs) == 2
     assert all(run["plane"] == "agent" for run in runs)
     # Nobody counted on this plane, so the column stays NULL rather than

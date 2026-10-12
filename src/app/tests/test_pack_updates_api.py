@@ -294,7 +294,10 @@ def test_the_automatic_pass_does_not_reinstall_an_uninstalled_pack(client, serve
     published, base = serve
     newer = build.build(write_pack(tmp_path / "v2", "0.3.0", extra=True), tmp_path / "v2.kpack")
     settings, runner = _pointed_at(client, publish(published, base, newer, "0.3.0"))
-    assert client.delete("/api/packs/tools").status_code == 200
+    conn = connect(client.store_path)
+    packstore.uninstall(conn, "tools")
+    conn.commit()
+    conn.close()
 
     assert _wait(client, packautoupdate.submit_if_due(settings, runner))["state"] == "succeeded"
     conn = connect(client.store_path)

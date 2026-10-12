@@ -23,7 +23,7 @@ Every answer also carries two headers the extension reads. `X-Kriko-Minimum-Exte
 
 ## Jobs
 
-Long work is a row, not a request. A `POST` that starts work returns at once with `{"job_id": ..., "kind": ...}`. Examples are `/api/research`, `/api/packs/build`, `/api/packs/update`, `/api/packs/harvest` and `/api/agents/{agent_id}/install`. The client then polls `GET /api/jobs/{job_id}`.
+Long work is a row, not a request. A `POST` that starts work returns at once with `{"job_id": ..., "kind": ...}`. Examples are `/api/research`, `/api/packs/update`, `/api/packs/harvest` and `/api/agents/{agent_id}/install`. The client then polls `GET /api/jobs/{job_id}`.
 
 A job is in one of six states: `queued`, `running`, `succeeded`, `failed`, `cancelled` or `interrupted`. The last four are terminal. A job waits while a running job claims the same pack, and the reader's setting decides how many run at once (`src/app/web/jobs.py`). Rows live in `app.sqlite` (`src/app/web/state.py`), so a result outlives the request and the process. A job that was running when the process died is marked `interrupted` at the next startup (`JobRunner.recover`).
 

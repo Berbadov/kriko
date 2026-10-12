@@ -2,10 +2,10 @@
 
 The extension's "Open in Kriko" used to be a link, which opened the report in
 a *browser tab* next to the app the reader already had running. The handoff is
-now a posted route: the engine records it and prints a line the shell is
-already listening for. These tests hold the three joints of that — the
-validation, the consume-once, and the two constants on either side of a pipe
-with no compiler to check them against each other.
+now a posted route: the engine prints a line the shell is already listening
+for. These tests hold the joints of that — the validation, the honest delivery
+answer, and the two constants on either side of a pipe with no compiler to
+check them against each other.
 """
 
 import re
@@ -34,29 +34,16 @@ def client(tmp_path):
         yield client
 
 
-def test_nothing_pending_is_not_an_error(client):
-    """The window polls this forever. A 404 every two seconds is not a design."""
-    assert client.get("/api/focus").json() == {"route": None}
-
-
-def test_a_posted_route_is_handed_to_the_window_exactly_once(client):
-    """A nudge acted on is spent.
-
-    Two windows would otherwise both jump, and a window opened by hand later
-    would replay a navigation nobody asked for a second time.
-    """
+def test_a_posted_route_is_echoed_normalised(client):
     posted = client.post("/api/focus", json={"route": "#/result/abc123"})
     assert posted.json()["route"] == "result/abc123"
-    assert client.get("/api/focus").json() == {"route": "result/abc123"}
-    assert client.get("/api/focus").json() == {"route": None}
 
 
 def test_the_leading_hash_is_the_extension_speaking_the_ui_dialect(client):
     """`#/result/x` is what the SPA's own links look like, so it is accepted
     and normalised rather than refused on a technicality."""
     for given in ("#/result/x", "/result/x", "result/x"):
-        client.post("/api/focus", json={"route": given})
-        assert client.get("/api/focus").json()["route"] == "result/x"
+        assert client.post("/api/focus", json={"route": given}).json()["route"] == "result/x"
 
 
 @pytest.mark.parametrize(
@@ -90,20 +77,6 @@ def test_every_route_the_panel_can_hand_over_fits_the_shape(client, route):
     buttons would silently stop working; failing here instead is the point.
     """
     assert client.post("/api/focus", json={"route": route}).status_code == 200
-    assert client.get("/api/focus").json()["route"] == route
-
-
-def test_a_stale_nudge_is_dropped_rather_than_replayed(client, monkeypatch):
-    """A window opened minutes later must not jump to a forgotten report."""
-    client.post("/api/focus", json={"route": "result/abc"})
-    # Relative to the clock the POST actually read, not to zero: `monotonic`
-    # counts from an arbitrary origin, so an absolute value here would happen
-    # to be in the *past* on a machine that has been up for a while.
-    stamped = client.app.state.focus["at"]
-    monkeypatch.setattr(
-        focus.time, "monotonic", lambda: stamped + focus.TTL_SECONDS + 1
-    )
-    assert client.get("/api/focus").json()["route"] is None
 
 
 def test_the_shell_and_the_engine_agree_on_the_stdout_line():
@@ -156,8 +129,6 @@ def test_unsupervised_says_so_rather_than_claiming_a_window(client):
     body = client.post("/api/focus", json={"route": "knowledge"}).json()
     assert body["delivery"] == "no_shell"
     assert body["raised"] is False
-    # Still recorded: a window opened within the TTL should take the nudge.
-    assert client.get("/api/focus").json()["route"] == "knowledge"
 
 
 def test_supervised_claims_the_raise(tmp_path):

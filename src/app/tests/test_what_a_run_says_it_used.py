@@ -23,11 +23,9 @@ pretend to".
 """
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.providers import llm
 from app.web import state, tasks
-from app.web.app import create_app
 from app.web.settings import Settings
 from kriko.research.api import ApiResearcher
 
@@ -274,49 +272,3 @@ def test_a_log_that_does_not_exist_summarises_to_zero_rather_than_raising(tmp_pa
 
     assert observability.summarise(tmp_path / "nope.jsonl")["analyses"] == 0
 
-
-# ── the route the screen reads ───────────────────────────────────────────
-
-
-def test_the_usage_endpoint_reports_both_halves(tmp_path):
-    """What was spent writing claims in, and what was asked reading them out.
-    Neither half answers "what has this cost me" alone."""
-    conn = state.connect(tmp_path / "app.sqlite")
-    _metered(conn, "a", "api", 0.04, 400, claims=1)
-    conn.close()
-    (tmp_path / "a.jsonl").write_text(
-        '{"subjects": ["s1"], "claim_titles": ["one"]}\n', encoding="utf-8"
-    )
-    with TestClient(create_app(_settings(tmp_path))) as client:
-        body = client.get("/api/usage").json()
-    assert body["research"]["tokens_used"] == 400
-    assert body["research"]["cost_per_claim"] == pytest.approx(0.04)
-    assert body["analyses"]["analyses"] == 1
-
-
-def test_usage_on_a_fresh_installation_is_zeroes_and_nulls_not_an_error(tmp_path):
-    """The first screen a new reader sees. It must render, and it must not
-    invent a spend of $0.00 out of an installation that has never run."""
-    with TestClient(create_app(_settings(tmp_path))) as client:
-        body = client.get("/api/usage").json()
-    assert body["research"]["runs"] == 0
-    assert body["research"]["spent_usd"] is None
-    assert body["analyses"]["analyses"] == 0
-
-
-def test_every_metered_column_reaches_the_wire(tmp_path):
-    """The parity that keeps this honest as planes learn to count.
-
-    `state.METERED` is the schema's own list. A third currency added to the
-    column set but not to the run payload would be a measurement taken and
-    never shown, which is the state B97 exists to end.
-    """
-    conn = state.connect(tmp_path / "app.sqlite")
-    _metered(conn, "a", "api", 0.04, 400)
-    conn.close()
-    with TestClient(create_app(_settings(tmp_path))) as client:
-        run = client.get("/api/research-runs").json()["runs"][0]
-        totals = client.get("/api/usage").json()["research"]
-    for column in state.METERED:
-        assert column in run, f"{column} is recorded and never reported"
-        assert column in totals, f"{column} is reported per run and never summed"

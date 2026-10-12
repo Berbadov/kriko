@@ -171,11 +171,10 @@ def test_health_reports_which_store_it_is_looking_at(client):
     assert body["store"].endswith("store.sqlite")
 
 
-def test_status_and_activity_are_control_plane_snapshots(client):
+def test_status_is_the_control_plane_snapshot(client):
     status = client.get("/api/status").json()
     assert status["ok"] is True
     assert status["counts"]["packs"] == 1
-    assert client.get("/api/activity").json() == {"items": [], "malformed": 0}
 
 
 def test_status_counts_enabled_drop_a_disabled_packs_rows(client):
@@ -220,10 +219,6 @@ def test_disabling_a_pack_hides_it_from_reads_without_deleting_it(client):
     assert client.get("/api/subjects").json()
 
 
-def test_uninstalling_an_absent_pack_is_a_404(client):
-    assert client.delete("/api/packs/nope").status_code == 404
-
-
 def test_the_vocabulary_endpoint_reports_the_packs_own_words(client):
     vocab = client.get("/api/packs/tools/vocabulary").json()
     assert {t["term_id"] for t in vocab["context_key"]} == {"usage_hours"}
@@ -242,11 +237,6 @@ def test_identity_keys_come_from_the_pack_not_from_the_page(client):
     """
     keys = {k["key"] for k in client.get("/api/identity-keys/tools").json()}
     assert keys == {"brand", "model", "platform"}
-
-
-def test_kinds_are_reported_per_pack(client):
-    kinds = client.get("/api/kinds").json()
-    assert {k["kind"] for k in kinds} == {"product", "platform"}
 
 
 # ── asking ───────────────────────────────────────────────────────────────
@@ -314,13 +304,6 @@ def test_a_percent_in_the_search_box_matches_literally_not_every_subject(client)
     assert client.get("/api/subjects?q=_").json() == []
     # The escape must not break matching what is actually there.
     assert client.get("/api/subjects?q=DHP484").json()
-
-
-def test_the_brief_endpoint_carries_the_packs_principle(client):
-    subjects = client.get("/api/subjects?q=DHP484").json()
-    brief = client.get(f"/api/subjects/{subjects[0]['subject_id']}/brief").json()
-    assert "Only the expensive." in brief["brief"]
-    assert brief["queries"] == ["Makita DHP484 faults"]
 
 
 # ── coverage ─────────────────────────────────────────────────────────────
@@ -405,27 +388,6 @@ def test_a_bare_url_with_no_scraped_fields_says_the_page_was_not_read(client):
     assert body["reason"] == "page_not_read"
 
 
-def test_analysis_is_visible_in_recent_activity(client):
-    client.post(
-        "/api/analyze",
-        json={
-            "url": "https://toolshop.invalid/item/dhp484",
-            "fields": {"Model No": "DHP484"},
-        },
-    )
-    activity = client.get("/api/activity").json()
-    assert len(activity["items"]) == 1
-    assert activity["items"][0]["url"].endswith("dhp484")
-
-
-def test_revision_history_and_lifecycle_events_are_visible(client):
-    revisions = client.get("/api/packs/tools/revisions")
-    assert revisions.status_code == 200
-    assert revisions.json()[0]["active"] is True
-    events = client.get("/api/packs/tools/events").json()
-    assert events[0]["action"] == "install"
-
-
 def test_the_adapters_endpoint_tells_the_client_where_it_is_worth_scraping(client):
     rows = client.get("/api/adapters").json()
     assert [a["id"] for a in rows] == ["toolshop"]
@@ -481,45 +443,6 @@ def test_a_label_no_rule_covers_is_reported_rather_than_silently_dropped(client)
         },
     )
     assert r.json()["unmapped_labels"] == ["Torque"]
-
-
-def test_an_unmapped_label_outlives_the_lookup_that_found_it(client):
-    """Reported *and* kept.
-
-    The response has carried `unmapped_labels` since the beginning and every
-    caller dropped it, which made a site renaming a field invisible: the
-    lookup still succeeds, resolves less precisely and returns fewer claims,
-    so it reads as a thin pack rather than a broken adapter. B70 is the row
-    that survives the request.
-    """
-    for _ in range(3):
-        client.post(
-            "/api/analyze",
-            json={
-                "url": "https://toolshop.invalid/item/dhp484",
-                "fields": {"Model No": "DHP484", "Torque": "54 Nm"},
-            },
-        )
-    rows = client.get("/api/adapters/unmapped").json()["labels"]
-    assert [r["label"] for r in rows] == ["Torque"]
-    # Three lookups, one row, a count of three — the signal, not a log.
-    assert rows[0]["seen"] == 3
-    assert rows[0]["sample_url"] == "https://toolshop.invalid/item/dhp484"
-    assert rows[0]["adapter_id"]
-
-
-def test_a_label_can_be_dismissed_and_returns_if_it_recurs(client):
-    client.post(
-        "/api/analyze",
-        json={
-            "url": "https://toolshop.invalid/item/dhp484",
-            "fields": {"Model No": "DHP484", "Torque": "54 Nm"},
-        },
-    )
-    adapter_id = client.get("/api/adapters/unmapped").json()["labels"][0]["adapter_id"]
-    gone = client.delete(f"/api/adapters/unmapped/{adapter_id}/Torque")
-    assert gone.json() == {"forgotten": True}
-    assert client.get("/api/adapters/unmapped").json()["labels"] == []
 
 
 def test_a_failure_to_record_a_label_never_costs_the_reader_the_answer(client, monkeypatch):

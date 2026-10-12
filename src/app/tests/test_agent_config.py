@@ -42,15 +42,22 @@ def _redirect_roots(monkeypatch, home: Path) -> None:
 
 
 def _client(tmp_path):
-    return TestClient(
-        create_app(
-            Settings(
-                store_path=tmp_path / "knowledge.sqlite",
-                app_state_path=tmp_path / "app.sqlite",
-                analysis_log_path=tmp_path / "analyses.jsonl",
-            )
-        )
+    return TestClient(create_app(_settings(tmp_path)))
+
+
+def _settings(tmp_path) -> Settings:
+    return Settings(
+        store_path=tmp_path / "knowledge.sqlite",
+        app_state_path=tmp_path / "app.sqlite",
+        analysis_log_path=tmp_path / "analyses.jsonl",
     )
+
+
+def _server(tmp_path) -> dict:
+    """The `kriko` entry the connect step writes, from the helper the app uses."""
+    from app.web.routers.agent import _server_block
+
+    return _server_block(_settings(tmp_path))
 
 
 def test_the_block_names_the_store_this_window_reads(tmp_path):
@@ -60,18 +67,14 @@ def test_the_block_names_the_store_this_window_reads(tmp_path):
     between. The store path is therefore explicit in the command rather than
     left to whichever `~/.kriko` the harness happens to resolve.
     """
-    body = _client(tmp_path).get("/api/agent-config").json()
-    server = body["mcp_json"]["mcpServers"]["kriko"]
+    server = _server(tmp_path)
     assert str(tmp_path / "knowledge.sqlite") in server["args"]
-    assert body["store"] == str(tmp_path / "knowledge.sqlite")
     assert server["type"] == "stdio"
 
 
 def test_the_advertised_command_actually_speaks_mcp(tmp_path):
     """Run what we tell the reader to run, and complete a handshake with it."""
-    server = _client(tmp_path).get("/api/agent-config").json()["mcp_json"][
-        "mcpServers"
-    ]["kriko"]
+    server = _server(tmp_path)
     process = subprocess.Popen(
         [server["command"], *server["args"]],
         stdin=subprocess.PIPE,
@@ -109,7 +112,7 @@ def test_the_advertised_command_actually_speaks_mcp(tmp_path):
                 continue
             break
         assert answer is not None, (
-            "the command in /api/agent-config answered nothing:\n"
+            "the command the app advertises answered nothing:\n"
             + (process.stderr.read() or "(no stderr)")
         )
         assert answer["result"]["serverInfo"]["name"] == "kriko"
@@ -222,7 +225,7 @@ def test_connecting_writes_a_config_the_harness_can_read(tmp_path, monkeypatch):
     assert client.post("/api/agent-targets/claude-code/connect").json()["state"] == "connected"
 
     written = json.loads((home / ".claude.json").read_text(encoding="utf-8"))["mcpServers"]["kriko"]
-    assert written == client.get("/api/agent-config").json()["mcp_json"]["mcpServers"]["kriko"]
+    assert written == _server(tmp_path)
 
 
 def test_the_listing_reflects_a_connection_that_was_just_made(tmp_path, monkeypatch):
