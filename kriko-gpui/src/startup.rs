@@ -1,4 +1,5 @@
 //! Windows login mode. The Run entry is the source of truth.
+#[cfg(any(windows, test))]
 use std::path::Path;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -9,10 +10,12 @@ pub enum Mode {
     Tray,
 }
 
+#[cfg(any(windows, test))]
 pub fn command(exe: &Path, mode: Mode) -> String {
     format!("\"{}\"{}", exe.display(), if mode == Mode::Tray { " --background" } else { "" })
 }
 
+#[cfg(any(windows, test))]
 pub fn command_mode(value: &str) -> Mode {
     // Ignore the executable itself, including spaces and flag-like filenames.
     let value = value.trim();
