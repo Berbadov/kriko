@@ -38,14 +38,11 @@ READS = [
     "/api/health",
     "/api/status",
     "/api/packs",
-    "/api/kinds",
     "/api/subjects",
     "/api/history",
     "/api/jobs",
-    "/api/activity",
     "/api/adapters",
     "/api/settings",
-    "/api/agent-config",
     "/api/agent-targets",
     "/api/agent-skill",
     "/api/extension",
@@ -125,7 +122,7 @@ def test_a_single_view_s_opening_burst_is_enough(running_app):
         "/api/packs/updates",
         "/api/jobs",
         "/api/health/weakest",
-        "/api/activity",
+        "/api/operations",
     ]
     with ThreadPoolExecutor(max_workers=len(paths)) as pool:
         results = list(pool.map(_get, [f"{running_app}{p}" for p in paths]))
@@ -141,7 +138,7 @@ def test_an_unhandled_error_says_what_it_was(running_app):
     diagnosis available to them. So a 500 must carry the exception's type and
     message, and this asserts the handler is wired rather than trusting it.
     """
-    status, body = _get(f"{running_app}/api/subjects/no-such-subject/brief")
+    status, body = _get(f"{running_app}/api/subjects/no-such-subject")
     # Either a clean 404 for a subject that does not exist, or — if it raises —
     # a 500 that names the exception. What is not allowed is a bare 500.
     assert status in (200, 404) or ("detail" in body and status == 500), body
