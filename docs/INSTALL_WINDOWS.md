@@ -87,15 +87,22 @@ Not on a web store: load it from disk.
 > digest, so an extension older than this build is caught even when the version
 > numbers agree.
 
-### Then grant it the sites
+### Then allow it the sites
 
 Registering a site in the app is never enough: the browser grants a site
 permission only from inside the extension.
 
-1. Right-click the extension's toolbar button, then **Options**, then **Grant**
-   each waiting site and confirm. It works from the next page load.
+1. Open the extension's **Options** (right-click its toolbar button), press
+   **Allow the pending sites**, and confirm. It works from the next page load.
 2. The panel is still missing? **System**, then **Sites** says which of the two
    it is: the site needs a permission, or no adapter reads it yet.
+
+For Firefox, see [the Firefox add-on](FIREFOX_ADDON.md).
+
+## Local models
+
+A local model is optional. To set one up, see [Local models](USAGE.md#local-models)
+in the usage guide.
 
 ## Path B: from Python, without the app
 
@@ -148,8 +155,10 @@ install.
 $HOME\kriko-env\Scripts\python -m app.web
 ```
 
-Keep that window open and open **http://127.0.0.1:8787**. For a terminal
-interface instead, `$HOME\kriko-env\Scripts\kriko tui`. Then load the
+Keep that window open. The interactive API is at **http://127.0.0.1:8787/api/docs**,
+and the status at **http://127.0.0.1:8787/api/health**. The address
+`http://127.0.0.1:8787/` returns the service's JSON description, not a page. For
+a terminal interface instead, `$HOME\kriko-env\Scripts\kriko tui`. Then load the
 extension as above.
 
 Uninstall:
@@ -169,41 +178,3 @@ $HOME\kriko-env\Scripts\pip show -f kriko
 
 Plus **http://127.0.0.1:8787/api/health**, if the app started. On Path A, say
 whether you used the MSI or the zip.
-# Local AI setup
-
-Open **Local LLM** in the native app. A local model answers on your own
-computer; Ollama is the app that runs its downloaded model files. Research
-can still search the web.
-
-Press **Set up Ollama and the recommended model** to install Ollama, download
-`gemma4:e2b` (the model Kriko recommends), and select it. Ollama comes straight
-from its own site (the installer's signature is checked before it runs), with
-a byte count while it downloads and no Windows App Installer involved. If you
-already run Ollama, Kriko uses `gemma4:e2b` whenever it is downloaded and you
-have not chosen another model; the **Local LLM** list marks it *Recommended*.
-If an earlier install was interrupted and
-left Ollama unable to run models, setup notices and reinstalls it over the top;
-downloaded models are kept. The setup status shows progress and errors. Allow about 8 GB of free space
-for the app and the model; larger models need more disk space and memory.
-
-If automatic setup fails, press **Download Ollama manually**. This opens
-[Ollama's official Windows download](https://ollama.com/download/windows).
-Run its installer, return to Kriko, and press **Check again**. If Ollama is
-installed but stopped, **Start Ollama** starts it without downloading a model.
-Use **Browse downloadable models** to download another model with progress,
-then select it. Model downloads can be cancelled from their progress card.
-
-Small models can miss detailed configurations. The Benchmark screen's
-configuration suite measures missed facts, unsupported claims, wrong
-specifications, correct abstention, time and token usage on fixed development
-cases. It is not a real-world accuracy guarantee.
-
-Windows startup now offers **Off**, **Window** and **Tray** in Settings.
-Tray keeps Kriko's engine available in the background; choose Open from its
-tray menu to show the window.
-
-Firefox uses a separate package and manifest. Open **Browser Extension**,
-press **Prepare Firefox add-on**, and follow the Firefox instructions there.
-The release's unsigned XPI is a development package: regular Firefox needs
-Mozilla signing for permanent installation. Temporary installation through
-`about:debugging` lasts until Firefox restarts. See [Firefox setup](FIREFOX_ADDON.md).

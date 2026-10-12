@@ -62,7 +62,7 @@ fn seen_line(e: &ExtStatus) -> (TagState, &'static str, String) {
 }
 
 pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let k = &app.live.knowledge;
     let Some(e) = &k.ext else {
         return div().child(empty_note(
@@ -178,16 +178,21 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex()
                 .items_center()
                 .gap(px(12.0))
-                .child(ghost("ext-check", "Check again").on_click(check))
-                .child(row_desc("The extension is trusted by its own origin; there is nothing to pair.")),
+                .child(ghost("ext-check", "Check again").flex_none().on_click(check))
+                // flex_1 and min_w(0) so the sentence wraps inside the card.
+                .child(div().flex_1().min_w(px(0.0)).child(row_desc(
+                    "The extension is trusted by its own origin; there is nothing to pair.",
+                ))),
         );
 
     div()
         .flex()
         .flex_col()
         .gap(px(20.0))
-        .child(firefox)
+        // The steps most browsers take come first; Firefox's own path, which
+        // is a temporary add-on, follows them.
         .child(div().flex().flex_wrap().gap(px(24.0)).items_start()
             .child(div().flex_1().min_w(px(320.0)).child(steps_card))
             .child(div().flex_1().min_w(px(320.0)).child(status)))
+        .child(firefox)
 }

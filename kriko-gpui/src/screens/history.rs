@@ -7,7 +7,7 @@
 //! (`/api/history`, `/api/lookup/{id}`).
 
 use gpui::{
-    div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba, Animation, AnimationExt,
+    div, prelude::*, px, rgb, rgba, Animation, AnimationExt,
     ClickEvent, Context, Div, FontWeight, Styled, Window,
 };
 
@@ -57,40 +57,6 @@ pub(crate) fn severity_word_chip(word: &str) -> Div {
         } else {
             word.to_uppercase()
         })
-}
-
-/// A cycling mono control: one click advances to the next value.
-pub(crate) fn cycle_ctrl(
-    id: impl Into<gpui::ElementId>,
-    label: &str,
-    value: &str,
-) -> gpui::Stateful<Div> {
-    div()
-        .id(id)
-        .h(px(44.0))
-        .px(px(16.0))
-        .flex()
-        .items_center()
-        .justify_center()
-        .gap(px(10.0))
-        .rounded(px(12.0))
-        .font_family(MONO)
-        .text_size(px(12.0))
-        .text_color(rgb(INK_2))
-        .cursor_pointer()
-        .border_1()
-        .border_color(rgb(BEZEL_EDGE))
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(hsla(BEZEL_HI), 0.0),
-            linear_color_stop(hsla(BEZEL_LO), 1.0),
-        ))
-        .shadow(vec![shadow(0x00000099, 0.0, 6.0, 16.0, 0.0)])
-        .hover(|s| s.text_color(rgb(INK)))
-        .child(led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0))
-        .child(format!("{label}: "))
-        .child(div().text_color(rgb(INK)).child(value.to_string()))
-        .child(icon("chevron-down", 14.0).text_color(rgb(MUTED)))
 }
 
 /// One claim of an opened check: its severity and title, then the sources
@@ -157,7 +123,7 @@ fn claim_block(claim: &ClaimView) -> Div {
 }
 
 pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     if !app.live.history.loaded {
         return div().child(empty_note("Reading your history from the engine."));
     }
@@ -218,7 +184,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         }
         let title = match field.as_str() { "pack" => "pack", "time" => "date", "kind" => "kind", _ => "status" };
         let close = cx.listener(|this, _: &ClickEvent, _w, cx| { this.live.history.filter_open = None; cx.notify(); });
-        let mut drawer = card().flex().flex_col().gap(px(14.0)).child(
+        let drawer = card().flex().flex_col().gap(px(14.0)).child(
             div().flex().items_center().justify_between()
                 .child(eyebrow(&format!("Filter by {title}")))
                 .child(filter_btn("history-filter-close", "Close", false, false).on_click(close)),
@@ -254,6 +220,12 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     } else {
         (total + data::PAGE_SIZE - 1) / data::PAGE_SIZE
     };
+    if let Some(id) = app.history_focus.clone() {
+        if let Some(at) = filtered.iter().position(|&i| app.live.history.history_rows()[i].id == id) {
+            app.page = at / data::PAGE_SIZE;
+            app.history_focus = None;
+        }
+    }
     let page = app.page.min(pages - 1);
     let rows: Vec<usize> = filtered
         .iter()
@@ -449,7 +421,11 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     LedAnim::Boot,
                     motion,
                 ))
-                .child(row_desc("No check matches. Clear the search or the filters.")),
+                .child(row_desc(if app.live.history.history_rows().is_empty() {
+                    "No checks yet. A listing you check from the browser extension shows up here."
+                } else {
+                    "No check matches. Clear the search or the filters."
+                })),
         );
     }
 

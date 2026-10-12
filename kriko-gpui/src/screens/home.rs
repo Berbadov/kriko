@@ -336,7 +336,21 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
             let mut live: Vec<_> = packs.iter().filter(|p| p.enabled).collect();
             live.sort_by(|a, b| b.claims.cmp(&a.claims));
             if live.is_empty() {
-                empty_note("No catalog is switched on.").into_any_element()
+                // Either nothing is installed (every fresh install) or it is
+                // all switched off; both are fixed on the Knowledge screen,
+                // so the note is the way there.
+                let go = cx.listener(|this, _: &ClickEvent, _w, cx| {
+                    this.tab = Tab::Overview;
+                    this.on_open_tab(cx);
+                    cx.notify();
+                });
+                let say = if packs.is_empty() {
+                    "No catalog installed yet. Open Overview to install one."
+                } else {
+                    "Every catalog is switched off. Open Overview to switch one on."
+                };
+                div().id("home-no-catalog").cursor_pointer().on_click(go)
+                    .child(empty_note(say)).into_any_element()
             } else {
                 let rows: Vec<(String, f32, String)> = live
                     .iter()

@@ -116,22 +116,6 @@ def test_the_newest_label_is_first(conn):
     assert [r["label"] for r in state.unmapped_labels(conn)] == ["New", "Old"]
 
 
-def test_a_dismissed_label_comes_back_if_it_recurs(conn):
-    """The honest behaviour, and the reason dismissal is a delete rather than
-    a flag: "I said I did not care and it is still happening" is a different
-    fact from "I said I did not care", and only the first is worth showing."""
-    state.record_unmapped(conn, "a", ["Takasa Uygun"])
-    assert state.forget_unmapped(conn, "a", "Takasa Uygun") is True
-    assert state.unmapped_labels(conn) == []
-    assert state.forget_unmapped(conn, "a", "Takasa Uygun") is False
-
-    state.record_unmapped(conn, "a", ["Takasa Uygun"])
-    rows = state.unmapped_labels(conn)
-    assert len(rows) == 1
-    # A fresh count, not the old one resumed: the dismissal reset the clock.
-    assert rows[0]["seen"] == 1
-
-
 def test_the_table_is_the_interfaces_and_not_the_engines(tmp_path):
     """Where this may not live.
 

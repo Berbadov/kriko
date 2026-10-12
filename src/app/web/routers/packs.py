@@ -4,13 +4,11 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
-from fastapi import Header
+from fastapi import APIRouter, Body, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app import categorypack, packdraft
 from app.web.deps import get_store
-from kriko.pack.scaffold import scaffold
 from kriko.store import packstore
 
 router = APIRouter(prefix="/api", tags=["packs"])
@@ -124,10 +122,29 @@ def list_packs(store=Depends(get_store)):
                 "installed_at": row["installed_at"],
                 "trust_weight": row["trust_weight"],
                 "digest": row["content_digest"][:12],
+                # The version a rollback returns to; '' when none is kept.
+                "previous_version": (before["version"] if (before := packstore.previous(
+                    store, row["pack_id"])) else ""),
                 **counts,
             }
         )
     return out
+
+
+@router.post("/packs/{pack_id}/rollback")
+def rollback_pack(pack_id: str, store=Depends(get_store)):
+    """Go back to the revision installed before the active one.
+
+    A harvest or an update installs a catalog without asking; this is the
+    reader's way back from one they did not want, kept in the store as an
+    immutable revision (`kriko.store.packstore`).
+    """
+    try:
+        packstore.rollback(store, pack_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    row = store.execute("SELECT version FROM packs WHERE pack_id = ?", (pack_id,)).fetchone()
+    return {"pack_id": pack_id, "version": row["version"] if row else ""}
 
 
 @router.post("/packs/{pack_id}/enabled")
@@ -137,17 +154,6 @@ def set_enabled(pack_id: str, enabled: bool = True, store=Depends(get_store)):
     except KeyError as exc:
         raise HTTPException(404, str(exc)) from exc
     return {"pack_id": pack_id, "enabled": enabled}
-
-
-@router.delete("/packs/{pack_id}")
-def uninstall(pack_id: str, store=Depends(get_store)):
-    """Remove a pack. Every other pack is untouched — that is the whole point
-    of `pack_id` living in every primary key."""
-    try:
-        packstore.uninstall(store, pack_id)
-    except KeyError as exc:
-        raise HTTPException(404, str(exc)) from exc
-    return {"pack_id": pack_id, "uninstalled": True}
 
 
 @router.get("/packs/{pack_id}/gaps")
@@ -196,65 +202,6 @@ def vocabulary(pack_id: str, store=Depends(get_store)):
     for term in terms:
         by_role.setdefault(term["role"], []).append(term)
     return by_role
-
-
-class NewPack(BaseModel):
-    """A pack about to exist, in the four fields the contract actually needs.
-
-    `identity` is free-form on purpose — kind to attribute keys, whatever the
-    author's category is shaped like. A typed field per kind would be this
-    server having an opinion about what products are, which is the one thing
-    G6 forbids.
-    """
-
-    root: str
-    pack_id: str = Field(min_length=1, max_length=200)
-    name: str = Field(min_length=1, max_length=200)
-    identity: dict[str, list[str]] = Field(default_factory=dict)
-    version: str = Field(default="0.1.0", max_length=40)
-
-
-@router.post("/packs/scaffold")
-def scaffold_pack(body: NewPack):
-    """Write a new pack's skeleton to disk, ready to fill in and build.
-
-    Authoring a pack was the one thing this app could not start: it could build
-    a directory and install the artifact, but the directory itself had to be
-    created by hand from a document. This closes that — the reader gets a
-    contract-passing pack in one press and edits rows from there.
-
-    Writes files and installs nothing. Building is a job, and the artifact only
-    reaches the store when that job runs, so a mistake here costs a directory
-    and never a store row.
-    """
-    root = Path(body.root).expanduser()
-    if not str(root):
-        raise HTTPException(400, "a directory is required")
-    try:
-        written = scaffold(
-            root,
-            pack_id=body.pack_id,
-            name=body.name,
-            identity=body.identity,
-            version=body.version,
-        )
-    except FileExistsError as exc:
-        # 409, not 400: the request was well formed and the conflict is with
-        # the filesystem's current state — and the answer is a different
-        # directory, not a corrected field. But Windows raises the same
-        # exception when a *parent* of the root is a plain file, which is a
-        # bad path rather than a conflict — so the conflict is named by
-        # checking the one file the scaffold refuses to overwrite.
-        if (root / "pack.toml").exists():
-            raise HTTPException(409, str(exc)) from exc
-        raise HTTPException(400, f"could not write to {root}: {exc}") from exc
-    except NotADirectoryError as exc:
-        raise HTTPException(400, f"could not write to {root}: {exc}") from exc
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    except OSError as exc:
-        raise HTTPException(400, f"could not write to {root}: {exc}") from exc
-    return {"root": str(root), "files": [str(path) for path in written]}
 
 
 # ── drafts an agent wrote ────────────────────────────────────────────────

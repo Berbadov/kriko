@@ -39,9 +39,7 @@ pub struct Plane {
     pub search_label: String,
     pub timeout: f64,
     pub stored_url: String,
-    pub stored_model: String,
     pub stored_search: String,
-    pub stored_timeout: String,
     pub stored_output_language: String,
     pub stored_search_language: String,
     pub runtime: Value,
@@ -50,10 +48,8 @@ pub struct Plane {
 #[derive(Default, Clone)]
 pub struct RuntimeFound {
     pub id: String,
-    pub name: String,
     pub installed: bool,
     pub path: Option<String>,
-    pub can_pull: bool,
 }
 
 /// This computer, as `/api/machine` reports it. `None` is "not reported",
@@ -67,12 +63,6 @@ pub struct Machine {
     pub cpu: Option<String>,
     pub cores: Option<f64>,
     pub runtimes: Vec<RuntimeFound>,
-}
-
-impl Machine {
-    pub fn vram_gb(&self) -> Option<f64> {
-        self.vram_total_mb.map(|m| m / 1024.0)
-    }
 }
 
 /// A model Ollama holds, with the sizes it reports.
@@ -135,7 +125,6 @@ pub struct BenchRow {
 pub struct Scored {
     pub plane: String,
     pub llm: String,
-    pub recall: Option<f64>,
     pub hallucination: Option<f64>,
 }
 
@@ -143,7 +132,6 @@ pub struct Scored {
 pub struct Estimate {
     pub runs: i64,
     pub usd: Option<f64>,
-    pub note: String,
 }
 
 #[derive(Clone)]
@@ -301,9 +289,7 @@ pub fn plane_from(v: &Value) -> Plane {
         search_label: api::s(v, "search_label"),
         timeout: api::n(v, "timeout").unwrap_or(0.0),
         stored_url: api::s(&stored, "local_url"),
-        stored_model: api::s(&stored, "local_model"),
         stored_search: api::s(&stored, "local_search_url"),
-        stored_timeout: api::s(&stored, "local_timeout"),
         stored_output_language: {
             let selected = api::s(v, "output_language");
             if !selected.is_empty() { selected } else {
@@ -336,10 +322,8 @@ pub fn machine_from(v: &Value) -> Machine {
             .iter()
             .map(|r| RuntimeFound {
                 id: api::s(r, "id"),
-                name: api::s(r, "name"),
                 installed: api::b(r, "installed"),
                 path: opt_s(r, "path"),
-                can_pull: api::b(r, "can_pull"),
             })
             .collect(),
     }
@@ -445,7 +429,6 @@ pub struct JobView {
     pub progress: f32,
     pub message: String,
     pub done: bool,
-    pub result: Value,
 }
 
 impl JobView {
@@ -460,7 +443,6 @@ fn job_view(v: &Value) -> JobView {
         progress: api::n(v, "progress").unwrap_or(0.0) as f32,
         message: api::s(v, "message"),
         done: api::b(v, "done"),
-        result: v.get("result").cloned().unwrap_or(Value::Null),
     }
 }
 
@@ -500,7 +482,6 @@ impl Kriko {
                                     progress: 0.0,
                                     message: e.message.clone(),
                                     done: true,
-                                    result: Value::Null,
                                 }
                             }
                         };
@@ -712,24 +693,6 @@ impl Kriko {
         self.local_save(cx);
     }
 
-    /// The next model the server lists, for the picker.
-    pub fn local_cycle_model(&mut self, cx: &mut Context<Self>) {
-        let Some(plane) = self.live.local.plane.as_ref() else { return };
-        if plane.models.is_empty() {
-            return;
-        }
-        let at = self
-            .live
-            .local
-            .model_pick
-            .as_ref()
-            .and_then(|m| plane.models.iter().position(|x| x == m))
-            .map(|i| (i + 1) % plane.models.len())
-            .unwrap_or(0);
-        self.live.local.model_pick = Some(plane.models[at].clone());
-        cx.notify();
-    }
-
     pub fn local_timeout_step(&mut self, up: bool, cx: &mut Context<Self>) {
         let t = self.live.local.timeout;
         self.live.local.timeout = if up { (t + 30).min(900) } else { t.saturating_sub(30).max(30) };
@@ -846,7 +809,6 @@ impl Kriko {
                 .map(|g| Scored {
                     plane: api::s(g, "plane"),
                     llm: api::s(g, "llm"),
-                    recall: api::n(g, "recall"),
                     hallucination: api::n(g, "hallucination_rate"),
                 })
                 .collect();
@@ -943,7 +905,6 @@ impl Kriko {
                         Ok(v) => BenchPhase::Confirm(Estimate {
                             runs: api::n(&v, "runs").unwrap_or(0.0) as i64,
                             usd: api::n(&v, "usd"),
-                            note: api::s(&v, "note"),
                         }),
                         Err(e) => BenchPhase::Failed(e.message),
                     };
@@ -1113,7 +1074,7 @@ mod tests {
         });
         let p = plane_from(&v);
         assert!(p.ready && p.models.len() == 2 && p.servers[0].up);
-        assert_eq!(p.stored_timeout, "120");
+        assert_eq!(p.timeout, 300.0);
     }
 
     #[test]

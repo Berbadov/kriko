@@ -7,6 +7,7 @@ import pytest
 
 from app import bench, benchcases, precisionbench, precisioncases, protocols
 from app.providers.local_agent import LocalAsker, evidence, identity, plan, triage
+from app.tests.test_local_quicklook_output import PipelineModel
 from app.web import state
 
 
@@ -23,6 +24,28 @@ def correct(c):
         {"title": " ".join(group[0] for group in entry["terms"]),
          "why": entry["quote"], "url": entry["url"], "quote": entry["quote"]}
         for entry in c["supported"]]}
+
+
+def findings_of(c):
+    """What a model that reads the case correctly finds: each supported claim,
+    cited to the sentence that states it."""
+    return [{"title": entry["id"], "why": entry["quote"], "needle": entry["quote"]}
+            for entry in c["supported"]]
+
+
+class Metered(PipelineModel):
+    """The pipeline's stand-in model, each call charged 20 in and 5 out."""
+
+    def __init__(self, findings=()):
+        super().__init__(findings=findings)
+        self.tokens_in = self.tokens_out = self.tokens_used = 0
+
+    def json(self, prompt, schema):
+        reply = super().json(prompt, schema)
+        self.tokens_in += 20
+        self.tokens_out += 5
+        self.tokens_used += 25
+        return reply
 
 
 def test_generated_suite_matches_the_shipped_snapshot():
@@ -135,43 +158,64 @@ class Counted:
         return self.reply if len(self.prompts) % 2 else '{"unsupported": [], "note": "checked"}'
 
 
-def test_local_supplied_evidence_skips_search_and_counts_answer_and_check():
-    c = case()
-    complete = Counted(json.dumps(correct(c)))
-    asker = LocalAsker(complete, complete, None, None, model="small",
+def test_local_supplied_evidence_skips_search_and_counts_every_model_call():
+    # The page names the model code, so the product is named as the page does.
+    c = dict(case(), product="AX-1040R2")
+    model = Metered(findings_of(c))
+
+    def no_search(query, limit):
+        raise AssertionError("supplied evidence is not searched")
+
+    asker = LocalAsker(model, model, no_search, None, model="small",
                        search_provider="supplied-corpus", given_sources=sources(c))
     asker.ask(precisionbench.brief(c))
-    assert asker.tokens_used == 50, "shared sockets must not be counted twice"
-    assert [row["stage"] for row in asker.metrics] == ["triage", "answer", "verify"]
-    assert sum(row["tokens_used"] or 0 for row in asker.metrics) == 50
+    assert model.calls, "the pipeline asked the model"
+    # Shared sockets are counted once per call, not once per socket object:
+    # one measured row and 25 tokens for each call the model answered.
+    assert asker.tokens_used == model.tokens_used == 25 * len(model.calls)
+    assert len(asker.metrics) == len(model.calls)
     assert asker.sources == sources(c)
-    assert "AX-1040R2" in complete.prompts[0]
+    assert any("AX-1040R2" in prompt for _, prompt, _ in model.calls)
 
 
-def test_fixed_case_records_raw_errors_even_if_the_parser_drops_them(tmp_path, monkeypatch):
+def test_fixed_case_records_the_refusal_the_pipeline_makes(tmp_path, monkeypatch):
+    """The model proposes an invented second fault; the pipeline refuses it.
+
+    The answer keeps only the supported claim, the refusal is counted by the
+    pipeline, and the measurement is stored and read back with its usage.
+    """
     c = case()
-    answer = correct(c)
-    answer["risks"].append({"title": "Fire", "url": c["documents"][0]["url"],
-                            "quote": "Invented quote from nowhere."})
-    complete = Counted(json.dumps(answer))
-    asker = LocalAsker(complete, complete, None, None, model="small",
+
+    class Refusing(Metered):
+        """The check of the invented claim comes back unsupported."""
+
+        def _answer(self, stage, prompt):
+            if stage == "verify" and '"title": "Memory shortfall"' in prompt:
+                return {"evidence_kind": "problem", "support": "unsupported", "identity": "match"}
+            return super()._answer(stage, prompt)
+
+    # The model's extra claim cites a real sentence and states a shortfall the
+    # sentence does not support; the pipeline's check refuses it.
+    model = Refusing(findings_of(c) + [{"title": "Memory shortfall",
+                                        "why": "Memory is too small for the task.",
+                                        "needle": "memory capacity is 16 GB"}])
+    c = dict(c, product="AX-1040R2")
+    asker = LocalAsker(model, model, None, None, model="small",
                        search_provider="supplied-corpus", given_sources=sources(c))
     monkeypatch.setattr(bench, "_asker", lambda *a: asker)
     row = bench.run_case(SimpleNamespace(app_state_path=tmp_path / "app.sqlite"), c, plane="local")
-    assert row["accepted"] == 1
-    assert row["refused"] == 1
-    assert row["gold"]["raw_produced"] == 2
-    assert row["gold"]["hallucination_rate"] == .5
-    assert row["tokens"] == 50
+    assert row["tokens"] == model.tokens_used == 25 * len(model.calls)
+    assert asker.coverage["rejected_candidates"] == 1
+    assert row["gold"]["pipeline_rejected"] == 1
+    assert all("Memory shortfall" != risk["title"] for risk in row["detail"]["answer"]["risks"])
     conn = state.connect(tmp_path / "app.sqlite")
     try:
         state.record_bench(conn, row)
         restored = state.bench_runs(conn)[0]
-        assert restored["measurement"]["tokens_in"] == 40
+        assert restored["measurement"]["tokens_in"] == model.tokens_in
         assert restored["measurement"]["stages"]
         readout = protocols.readout([restored], [])[0]
-        assert readout["hallucination_rate"] == .5
-        assert readout["tokens_mean"] == 50
+        assert readout["tokens_mean"] == model.tokens_used
         assert readout["recall"] == 1
     finally:
         conn.close()
@@ -246,20 +290,23 @@ def test_capacity_and_compatibility_do_not_become_faults():
 
 
 def test_no_fault_corpus_cannot_bypass_sentence_choices_with_a_paragraph():
-    c = case("consumable-host")
-    class Socket(Counted):
-        _schema = {}
-
-        def __call__(self, prompt):
-            if "risks" in self._schema.get("properties", {}):
-                assert self._schema["properties"]["risks"]["maxItems"] == 0
-                assert "FK-40 is a filter kit compatible" in prompt
-            return super().__call__(prompt)
-
-    socket = Socket('{"risks": [], "specs": []}')
-    asker = LocalAsker(socket, socket, None, None, model="small",
+    # The page is about the car the kit fits, so the product is the car: a part
+    # is judged by its own page, and this one is the host's.
+    c = dict(case("consumable-host"), product="Meridian car")
+    model = PipelineModel()  # a corpus with no documented fault: nothing to find
+    asker = LocalAsker(model, model, None, None, model="small",
                        search_provider="supplied-corpus", given_sources=sources(c))
-    asker.ask(precisionbench.brief(c))
+    reply = json.loads(asker.ask(precisionbench.brief(c)))
+    assert reply["risks"] == []
+    # The model is shown sentences it may cite, never the paragraph whole: the
+    # fault sentence about the host is not joined to the gearbox sentence.
+    extract = [prompt for stage, prompt, _ in model.calls if stage == "extract"]
+    assert extract, "the page was read for evidence"
+    shown = json.loads(extract[0].split("SOURCE SENTENCES:\n", 1)[1])
+    assert any("FK-40 is a filter kit compatible" in text for text in shown.values())
+    # The host's leakage sentence is never joined to the compatibility sentence.
+    assert not any("filter kit compatible" in text and "cooler seal leakage" in text
+                   for text in shown.values())
 
 
 def test_hosted_completion_enforces_a_budget_before_the_request(monkeypatch):

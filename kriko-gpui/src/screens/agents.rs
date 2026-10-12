@@ -51,7 +51,7 @@ fn entry_phase(app: &Kriko, e: &AgentEntry) -> Phase {
 }
 
 pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let entries = app.live.run.agent_entries();
     let loaded = app.live.run.prefs_loaded || app.live.run.targets_loaded;
     // The table's columns want 840 px of their own. Narrower than that, each
@@ -130,12 +130,13 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .flex_1()
                 .min_w(px(0.0))
                 .pr(px(10.0))
-                .truncate()
                 .font_family(SANS)
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(15.0))
                 .text_color(rgb(if is_selected { ICE } else { INK }))
-                .child(e.label.clone());
+                // clipped by characters: GPUI's ellipsis shrank the whole
+                // table card to its content at narrow widths
+                .child(crate::screens::history::clip(&e.label, 40));
             let order = div()
                 .w(px(168.0))
                 .flex_none()
@@ -163,9 +164,15 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                             .flex_wrap()
                             .items_center()
                             .gap(px(10.0))
+                            // No column headers in this layout, so each value
+                            // carries its own word; a bare "-" or "0" said nothing.
                             .child(runs_cell)
-                            .child(mcp_cell)
-                            .child(runs_n),
+                            .when(e.target.is_some(), |d| d.child(mcp_cell))
+                            .child(mono(&match app.live.run.runs_of(&e.id) {
+                                0 => "no runs yet".to_string(),
+                                1 => "1 run".to_string(),
+                                n => format!("{n} runs"),
+                            }, DIM)),
                     )
             } else {
                 row.items_center()
@@ -201,9 +208,10 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .flex()
                 .flex_col()
                 .gap(px(24.0))
-                .w_full()
-                .child(table.w_full())
-                .child(div().w_full().child(detail))
+                // no w_full: a percentage resolved against the page's
+                // indefinite width and left this column at its content's size
+                .child(table)
+                .child(detail)
         }
     };
 
@@ -277,7 +285,7 @@ fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kr
         } else {
             (TagState::Block, "Install failed")
         };
-        block = block.child(div().flex().child(tag("agent-install-state", state, word, !app.reduce_motion)));
+        block = block.child(div().flex().child(tag("agent-install-state", state, word, app.motion)));
         if !v.message.is_empty() {
             block = block.child(row_desc(&v.message));
         }
@@ -360,7 +368,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                     c = c.child(install_block(app, e, true, cx));
                 }
                 if !url.is_empty() {
-                    c = c.child(div().min_w(px(0.0)).truncate().child(mono(url, DIM)));
+                    c = c.child(mono(&crate::screens::history::clip(url, 72), DIM));
                 }
             }
         }
@@ -527,7 +535,7 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
                 cx.notify();
             });
             row = row.child(option_chip(("agent-model", i), name, *name == h.llm)
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), *name == h.llm, 6.0, !app.reduce_motion)).on_click(pick));
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), *name == h.llm, 6.0, app.motion)).on_click(pick));
         }
         out = out.child(hairline()).child(eyebrow("Model")).child(row);
         if !h.llms_note.is_empty() {
@@ -549,7 +557,7 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
                 cx.notify();
             });
             row = row.child(option_chip(("agent-effort", i), level, *level == h.effort)
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, !app.reduce_motion)).on_click(pick));
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, app.motion)).on_click(pick));
         }
         out = out.child(hairline()).child(eyebrow("Effort")).child(row);
         if !h.effort_hint.is_empty() {

@@ -130,6 +130,20 @@ jobs:
             - name: The app opens
               run: python packaging/smoke_app.py kriko-gpui/target/release/kriko.exe
 
+            # What a reader on Windows gets: the MSI installed without a
+            # prompt, every screen of the installed app drawn by real DirectX
+            # and photographed at the default size and at the 940x640
+            # minimum, then the MSI removed again.
+            - name: The installed app, looked at
+              run: python packaging/windows_look.py "kriko-gpui/builds/kriko-$VERSION-x86_64.msi" windows-look
+
+            - uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: kriko-windows-look
+                  path: windows-look/
+                  if-no-files-found: warn
+
             - name: The portable zip
               shell: pwsh
               run: |

@@ -24,7 +24,7 @@ import json
 import re
 from collections.abc import Callable
 import time
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 
 from app.providers.local_inference import LocalInferenceError
 from app.providers import local_components
@@ -272,6 +272,29 @@ class LocalAsker:
         return self.quicklook(brief(product, principle, page, packs, attributes,
                                     max_sources=self.max_pages), product=product, page=page)
 
+    def name_product(self, product: str, page: dict | None = None) -> str:
+        """The product a listing title names, without the seller's words, or "".
+
+        The quick look's identity step, alone: one structured call, and the
+        name is kept only when every word of it is in the title or the
+        listing (`parse_identity`). "" when it is the title itself (#181).
+        """
+        from app import pagefacts
+        from app.providers.local_identity import (
+            IDENTITY_SCHEMA, clean_product_name, fold, identity_prompt, parse_identity)
+        from app.providers.local_pipeline import QuickLookPipeline
+
+        page = page or {}
+        listing = pagefacts.block(pagefacts.clean(page.get("facts"), page.get("description", "")))
+        coverage = self.coverage
+        try:
+            raw = QuickLookPipeline(self)._call(
+                identity_prompt(product, listing, self.search_language), IDENTITY_SCHEMA)
+        finally:
+            self.coverage = coverage
+        name = parse_identity(json.dumps(raw), product, listing).canonical_name
+        return name if fold(name) != fold(clean_product_name(product)) else ""
+
     def quicklook(self, prompt: str, *, product: str, page: dict | None = None) -> str:
         from app.providers.local_pipeline import QuickLookPipeline
         self.metrics = []
@@ -368,13 +391,30 @@ class LocalAsker:
         """
         allowed = getattr(self._complete, "prompt_chars_allowed", None)
         if not callable(allowed):
-            return pages
-        room = allowed() - len(prompt) - len(_PAGES_HEAD) - len(self._reply_budget()) - 500
+            # No window to fit: each page is still cut to `PAGE_CHARS` around
+            # the queries, and the cut text is what the quotes are checked on.
+            fitted = [(url, focus(text, PAGE_CHARS, queries)) for url, text in pages]
+            self.sources = dict(fitted)
+            return fitted
+        task = len(prompt) + len(_PAGES_HEAD) + len(self._reply_budget()) + 500
+        whole = getattr(self._complete, "window_chars", None)
+        # The window bounds instructions plus evidence; the research budget
+        # bounds the evidence alone. Charging the instructions to the research
+        # budget left an authoring brief no room on any window (#181).
+        room = (min(allowed(), whole() - task) if callable(whole)
+                else allowed() - task)
         count = len(pages)
         while count > 1 and room // count < MIN_SHARE:
             count -= 1
         if room < 200:
-            raise LocalInferenceError("The task leaves no room for evidence in this model's context. Increase the context window or shorten the task.", code="context_limit")
+            window = getattr(self._complete, "context_tokens", lambda: 0)()
+            holds = whole() if callable(whole) else allowed()
+            raise LocalInferenceError(
+                f"The instructions for this task take {task} characters and "
+                f"this model's {window}-token window holds about {holds} beside "
+                "its reply, which leaves no room for evidence. Serve the model "
+                "with a larger context window (Settings, Local machine).",
+                code="context_limit")
         share = max(1, room // max(1, count) - max(len(url) + 20 for url, _ in pages[:count]))
         fitted = [(url, focus(text, share, queries)) for url, text in pages[:count]]
         if count < len(pages) or any(len(a) < len(b) for (_, a), (_, b) in zip(fitted, pages)):
@@ -456,16 +496,32 @@ class LocalAsker:
         if self.given_sources is not None:
             self.sources = dict(self.given_sources)
             return list(self.sources.items())
-        hits_by_query = []
-        for query in queries:
-            self._check()
+        limit = 10 if prefer_issues else HITS_PER_QUERY
+
+        def answer(query: str) -> tuple[list, str]:
             try:
-                hits = self._search(query, 10 if prefer_issues else HITS_PER_QUERY) or []
-                self.search_coverage["queries_searched"] += 1
+                return self._search(query, limit) or [], ""
             except LocalSearchError as error:
-                self._say(f"search failed for {query!r}: {error}")
+                return [], str(error)
+
+        # On a hosted search the queries go out together; their hits are
+        # still taken in the queries' order, and the log is written from
+        # this thread only.
+        if self.parallel_search and len(queries) > 1:
+            with ThreadPoolExecutor(max_workers=len(queries)) as pool:
+                answered = list(pool.map(answer, queries))
+        else:
+            answered = []
+            for query in queries:
+                self._check()
+                answered.append(answer(query))
+        hits_by_query = []
+        for query, (hits, failure) in zip(queries, answered):
+            if failure:
+                self._say(f"search failed for {query!r}: {failure}")
                 self.search_coverage["search_errors"] += 1
                 continue
+            self.search_coverage["queries_searched"] += 1
             hits_by_query.append(hits)
         wanted, seen = [], set()
         # A query cannot fill the entire source set before the next query runs.
@@ -497,8 +553,10 @@ class LocalAsker:
 
         if prefer_issues:
             wanted.sort(key=issue_priority, reverse=True)
-        domains, diverse, repeated = set(), [], []
-        prioritized = []
+        domains: set[str] = set()
+        diverse: list[str] = []
+        repeated: list[str] = []
+        prioritized: list[str] = []
         # Diversity within each priority level: a low-value catalog must not
         # jump ahead of another useful discussion merely to add a publisher.
         for priority in (3, 2, 1, 0, -1) if prefer_issues else (0,):
@@ -528,7 +586,7 @@ class LocalAsker:
         queue = iter(wanted)
         deadline = time.monotonic() + (40.0 if prefer_issues else READ_DEADLINE)
         pool = ThreadPoolExecutor(max_workers=4)
-        pending = {}
+        pending: dict[Future, str] = {}
         def fill() -> None:
             while len(pending) < min(4, self.max_pages - len(pages)):
                 url = next(queue, None)
@@ -600,6 +658,9 @@ class _MeasuredSocket:
         setattr(self.socket, name, value)
 
     def json(self, prompt, schema):
+        """The structured reply, or, from a plain socket that has no schema, the text."""
+        if not callable(getattr(self.socket, "json", None)):
+            return self(prompt)
         return self.owner._measured(self.stage, self.socket,
                                    lambda: self.socket.json(prompt, schema))
 

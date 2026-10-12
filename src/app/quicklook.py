@@ -37,6 +37,7 @@ REPLY_SCHEMA: dict = {
     "type": "object",
     "properties": {
         **{key: {"type": "string"} for key in ("assumed", "category", "pack")},
+        "pack_identity": {"type": "object", "additionalProperties": {"type": "string"}},
         "specs": {"type": "array", "maxItems": MAX_SPECS, "items": {
             "type": "object", "properties": {
                 key: {"type": "string"} for key in ("name", "value", "url", "quote")},
@@ -80,7 +81,10 @@ def brief(product: str, principle: str = "", page: dict | None = None,
     belongs = (
         "\n## Where it belongs\n\nThese installed packs each hold one kind of "
         f"product:\n\n{packs.strip()}\n\nIf this product is that kind, give the "
-        "pack's id in `pack`. If none of them fits, leave `pack` empty.\n"
+        "pack's id in `pack`, and in `pack_identity` the value of each of that pack's "
+        "identity keys for this product, copied from the listing or a page you "
+        "read. Leave a key out rather than guess it. If none of them fits, "
+        "leave `pack` empty and `pack_identity` empty.\n"
         if packs.strip() else ""
     )
     named = (
@@ -101,7 +105,7 @@ def brief(product: str, principle: str = "", page: dict | None = None,
             "hypothetical failures alone are not documented product faults. "
             "Name a specific failing component or mechanism and the source's "
             "applicability to this variant. Shape:\n"
-            '{"assumed":"", "category":"", "pack":"", '
+            '{"assumed":"", "category":"", "pack":"", "pack_identity":{}, '
             '"specs":[{"name":"", "value":"", "url":""}], '
             '"risks":[{"title":"", "why":"", "check":"", '
             '"severity":"medium", "url":"", "quote":""}]}\n')
@@ -148,6 +152,7 @@ words, with no brand or model in it (for example "wireless earbuds").
 {{"assumed": "one sentence on which variant you took this to be",
   "category": "what kind of product this is",
   "pack": "the id of a listed pack this belongs in, or an empty string",
+  "pack_identity": {{"each identity key of that pack": "its value for this product"}},
   "specs": [
     {{"name": "what the figure is", "value": "the figure with its unit",
       "url": "https://the page you read"}}
@@ -176,8 +181,13 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
     from kriko.extract.grounding import loose_span
 
     found = _payload(reply)
+    if isinstance(found, dict) and "risks" not in found and "specs" not in found:
+        # A reply cut off mid-item: the reader found one finished risk inside
+        # it, which is not the answer. The object closed at what it finished is.
+        found = closed(reply) or found
     if not isinstance(found, dict):
-        return {"assumed": "", "category": "", "pack": "", "specs": [],
+        return {"assumed": "", "product": "", "category": "", "pack": "", "pack_identity": {},
+                "specs": [],
                 "risks": [], "dropped": 0}
 
     risks: list[dict] = []
@@ -255,12 +265,22 @@ def parse(reply: str, sources: dict[str, str] | None = None) -> dict:
 
     return {
         "assumed": str(found.get("assumed") or "").strip(),
+        "product": _line(found.get("product")),
         "category": _line(found.get("category")),
         "pack": _line(found.get("pack")).lower(),
+        "pack_identity": _identity(found.get("pack_identity")),
         "specs": specs,
         "risks": risks,
         "dropped": dropped,
     }
+
+
+def _identity(raw) -> dict[str, str]:
+    """The identity a reply gave for its pack: short strings only, nothing nested."""
+    if not isinstance(raw, dict):
+        return {}
+    return {_line(k)[:40]: _line(v)[:80] for k, v in raw.items()
+            if isinstance(v, (str, int, float)) and _line(k) and _line(v)}
 
 
 def apply_verification(found: dict, verdict: dict) -> dict:

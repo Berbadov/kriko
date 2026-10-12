@@ -215,6 +215,8 @@ pub struct SubjectClaim {
     pub title: String,
     pub severity: String,
     pub domain: String,
+    /// The part a claim reaches this subject through; empty when it is its own.
+    pub via: String,
 }
 
 #[derive(Clone)]
@@ -315,18 +317,6 @@ impl State {
         }
         out.sort_by(|a, b| a.1.to_lowercase().cmp(&b.1.to_lowercase()));
         out
-    }
-
-    /// The next catalog in the cycle: all, then each present one, then all.
-    pub fn next_pack(&self) -> Option<String> {
-        let options = self.pack_options();
-        match &self.pack {
-            None => options.first().map(|p| p.0.clone()),
-            Some(cur) => {
-                let at = options.iter().position(|p| &p.0 == cur)?;
-                options.get(at + 1).map(|p| p.0.clone())
-            }
-        }
     }
 
     /// The word the pack plate shows.
@@ -460,6 +450,7 @@ fn subject_detail_from(v: &Value) -> SubjectDetail {
                 title: api::s(c, "title"),
                 severity: api::s(c, "severity"),
                 domain: api::s(c, "domain"),
+                via: api::s(c, "via"),
             })
             .collect(),
     }
@@ -498,6 +489,31 @@ pub fn feed_kind(op: &Op) -> &'static str {
     }
 }
 
+/// What a lookup was about and what it found, read off the operation's own
+/// request and response ("renault megane · 8 claims"), so the feed names the
+/// listing instead of a row of identical "analyze ok" lines.
+fn lookup_note(v: &Value) -> String {
+    if api::s(v, "kind") != "lookup" {
+        return String::new();
+    }
+    let parse = |key: &str| serde_json::from_str::<Value>(&api::s(v, key)).unwrap_or(Value::Null);
+    let request = parse("request_json");
+    let response = parse("response_json");
+    let named: Vec<String> = request
+        .get("identity")
+        .and_then(|i| i.as_object())
+        .map(|i| i.values().filter_map(|x| x.as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
+    let mut parts = Vec::new();
+    if !named.is_empty() {
+        parts.push(named.join(" "));
+    }
+    if let Some(n) = response.get("claims").and_then(|c| c.as_u64()) {
+        parts.push(format!("{n} claim{}", if n == 1 { "" } else { "s" }));
+    }
+    parts.join(" · ")
+}
+
 fn op_from(v: &Value) -> Op {
     Op {
         ts: parse_utc(&api::s(v, "started_at")),
@@ -508,7 +524,14 @@ fn op_from(v: &Value) -> Op {
         ms: api::n(v, "ms"),
         note: {
             let note = api::s(v, "note");
-            if note.is_empty() { api::s(v, "error") } else { note }
+            let error = api::s(v, "error");
+            if !note.is_empty() {
+                note
+            } else if !error.is_empty() {
+                error
+            } else {
+                lookup_note(v)
+            }
         },
     }
 }
@@ -837,6 +860,22 @@ impl Kriko {
 }
 
 #[cfg(test)]
+mod lookup_note_tests {
+    use super::lookup_note;
+
+    #[test]
+    fn a_lookup_names_what_it_read_and_how_much_it_found() {
+        let v = serde_json::json!({
+            "kind": "lookup",
+            "request_json": "{\"identity\": {\"make\": \"renault\", \"model\": \"megane\"}}",
+            "response_json": "{\"claims\": 8}",
+        });
+        assert_eq!(lookup_note(&v), "renault megane · 8 claims");
+        assert_eq!(lookup_note(&serde_json::json!({"kind": "pack_update"})), "");
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -875,7 +914,7 @@ mod tests {
     }
 
     #[test]
-    fn the_pack_plate_cycles_through_what_is_present() {
+    fn the_pack_filter_admits_only_its_pack() {
         let item = |id: &str, pack: &str| Item {
             id: id.into(),
             ts: None,
@@ -888,13 +927,8 @@ mod tests {
         };
         let mut s = State { items: vec![item("a", "x.b"), item("b", "x.a")], ..Default::default() };
         assert_eq!(s.pack_word(), "ALL");
-        s.pack = s.next_pack();
-        assert_eq!(s.pack.as_deref(), Some("x.a"));
+        s.pack = Some("x.a".into());
         assert_eq!(s.filtered("", u32::MAX, 0), vec![1]);
-        s.pack = s.next_pack();
-        assert_eq!(s.pack.as_deref(), Some("x.b"));
-        s.pack = s.next_pack();
-        assert_eq!(s.pack, None);
     }
 
     #[test]

@@ -18,6 +18,7 @@ it — dropping it entirely would tell the reader nothing, while keeping it
 surfaces a coverage gap.
 """
 
+import functools
 import json
 from dataclasses import dataclass
 
@@ -44,9 +45,21 @@ class Term:
 
 
 def _match_rules(raw: str) -> dict:
-    """`match_json` is written by the builder as YAML; tolerate JSON too."""
+    """`match_json` is written by the builder as YAML; tolerate JSON too.
+
+    Parsed once per distinct text, not once per lookup. Every term row of every
+    enabled pack is read on every request, and YAML parsing was a third of a
+    lookup's cost (measured: 64 `safe_load` calls per request). The cache is keyed
+    by the text itself, so a reinstalled pack with different rules is a new key
+    and can never be answered from an old parse; callers only read the result.
+    """
     if not raw:
         return {}
+    return _parse_match_json(raw)
+
+
+@functools.lru_cache(maxsize=4096)
+def _parse_match_json(raw: str) -> dict:
     try:
         parsed = yaml.safe_load(raw)
     except yaml.YAMLError:

@@ -13,6 +13,7 @@ the whole point of the jobs layer.
 """
 
 import importlib
+import json
 import secrets
 import time
 from collections.abc import Callable
@@ -1718,7 +1719,10 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
         )
         progress.log(f"{pack_id} is now {candidate.version}")
 
-    progress.set(1.0, f"updated {len(updated)} pack(s)")
+    fresh = sum(1 for one in updated if not one["from"])
+    said = [f"installed {fresh} pack(s)" if fresh else "",
+            f"updated {len(updated) - fresh} pack(s)" if len(updated) - fresh else ""]
+    progress.set(1.0, ", ".join(one for one in said if one))
     _note_automatic_pass(settings, params)
     return {"index_url": index_url, "updated": updated, "skipped": len(rows) - len(updated)}
 
@@ -1752,6 +1756,22 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         raise ValueError(
             "name the category in a few words — 'cordless drills', 'espresso "
             "machines'. It is the only thing an agent cannot infer")
+
+    # A saved quick look whose product a catalog already holds needs no agent:
+    # its risks are sourced and quoted already, so they are re-read against
+    # their pages and filed. The agent is for what only it can do, writing a
+    # subject the catalog does not have yet.
+    if params.get("quick_job_id") and params.get("product"):
+        filed = _file_quick_look(settings, _await_quick_look(settings, progress, params),
+                                 str(params["product"]).strip(), progress, params.get("page"))
+        # Nothing new from the look is not an answer to "research this": the
+        # agent runs as before.
+        if filed is not None and _changed(filed):
+            if params.get("install"):
+                _install_draft(settings, filed, progress)
+            progress.set(1.0, f"{filed['product']} is in {filed['name']}: "
+                              f"{filed['claims_added']} sourced claim(s) added, no agent run")
+            return filed
 
     if _use_local_ask(settings, params):
         # No coding agent, or the door chose the local model (B171): the same
@@ -1981,7 +2001,8 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             for one in verification["unsupported"] if isinstance(one, dict)))
     spent = getattr(researcher, "spent", None)
     billed = getattr(researcher, "cost_basis", "") == "per_token"
-    coverage = getattr(researcher, "coverage", {}) or {}
+    coverage = getattr(researcher, "coverage", None)
+    coverage = coverage if isinstance(coverage, dict) else {}
     empty_messages = {
         "no_matching_product_evidence": "No pages matched this exact product. This is insufficient evidence to conclude that the product has no problems.",
         "evidence_rejected": "Relevant pages were checked, but candidate findings did not pass the evidence checks. This is insufficient evidence to conclude that the product has no problems.",
@@ -1990,7 +2011,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     }
     empty_message = (
         empty_messages.get(
-            coverage.get("status"),
+            str(coverage.get("status") or ""),
             "Pages were read, but no supported findings were kept. This is insufficient evidence to conclude that the product has no problems.",
         )
         if not kept and not found["specs"] else ""
@@ -2199,6 +2220,176 @@ def _sourced_items(quick: dict, proposed) -> tuple[list[dict], int]:
     return items, bare
 
 
+def _folded(text: str) -> str:
+    """Letters and digits only, lower case: how an identity value is found in text."""
+    return "".join(ch for ch in str(text).casefold() if ch.isalnum())
+
+
+def _grounded_identity(identity: dict, product: str, page, quick: dict) -> dict:
+    """The identity values the listing or a quoted page actually contains.
+
+    A model may fill `pack_identity` with a plausible value that nothing on
+    the page says; written into a shared catalog, that would put real claims
+    on the wrong product. So a value is kept only when it appears, ignoring
+    case, spaces and punctuation, in the listing title, the listing's own
+    facts or one of the quick look's quotes. A dropped value is a missing key,
+    and a product with a missing key waits for an agent.
+    """
+    quotes = [one.get("quote", "") for risk in quick.get("risks") or [] if isinstance(risk, dict)
+              for one in (risk.get("sources") or [risk]) if isinstance(one, dict)]
+    haystack = _folded(" ".join([product, json.dumps(page or {}, ensure_ascii=False), *quotes]))
+    return {key: value for key, value in (identity or {}).items()
+            if _folded(value) and _folded(value) in haystack}
+
+
+def _file_quick_look(settings, quick: dict, product: str, progress: Progress,
+                     page=None) -> dict | None:
+    """File a finished quick look into the catalog it named.
+
+    No agent and no cost: the target is the catalog the quick look named, the
+    subject is the one the draft declares or, when the quick look read every
+    identity key of one of its kinds from the listing or its pages, a new one
+    written from those values (`categorypack.add_subject`). Every risk is
+    re-read against its own page before it is attached (`categorypack.ground`,
+    the same gate an agent's claims pass). None when there is no such catalog
+    or the product cannot be named in it, which is the agent's job.
+    """
+    from app import categorypack
+    from kriko.gates import load_gates
+
+    if not quick:
+        return None
+    target = categorypack.resolve(
+        categorypack.candidates(settings.store_path),
+        pack=str(quick.get("pack") or ""), category=str(quick.get("category") or "").strip())
+    if target is None:
+        return None
+    held = categorypack.holds(settings.store_path, target["slug"], product)
+    added = False
+    if held is None:
+        identity = _grounded_identity(quick.get("pack_identity") or {}, product, page, quick)
+        row = categorypack.add_subject(settings.store_path, target["slug"], identity)
+        if row is not None:
+            # The row itself, not a second lookup by title: the title of a
+            # listing need not read like the subject's label.
+            held = categorypack.holds(settings.store_path, target["slug"], str(row.get("label") or ""))
+            if held is not None:
+                held["subject_rows"] = [row]
+                added = True
+                progress.log(f"added {row.get('label')} to {target['name']} "
+                             "from the identity on the listing")
+    if held is None:
+        return None
+    progress.log(f"{product} is in {held['name']}; filing the quick look without an agent")
+    items, _ = _sourced_items(quick, None)
+    kept, dropped = categorypack.ground(items, _page_reader())
+    for one in dropped:
+        progress.log(f"left out {one['title']!r}: {one['reason']}")
+    store = connect(settings.store_path)
+    try:
+        vocab = load_gates(store, held["pack_id"])
+    finally:
+        store.close()
+    attached = categorypack.attach(settings.store_path, held["slug"], product, kept,
+                                   subject_rows=held["subject_rows"], vocab=vocab)
+    for one in attached["refused"]:
+        progress.log(f"left out {one['title']!r}: {one['reason']}")
+    unread = bool(items) and not kept and all(
+        one.get("reason") == "the page could not be read" for one in dropped)
+    held.update({
+        "category": target["name"], "product": product, "joined": True, "agent": False,
+        "subject": attached["subject"], "claims_added": attached["claims_added"],
+        "evidence_added": attached["evidence_added"], "left_out": dropped,
+        "subject_added": added,
+        # Every page refused this time: nothing was judged, so try again later.
+        "unread": unread,
+    })
+    held["claims"] = int(held.get("claims") or 0) + attached["claims_added"]
+    return held
+
+
+def _changed(written: dict) -> bool:
+    return bool(written.get("claims_added") or written.get("evidence_added")
+                or written.get("subject_added"))
+
+
+#: How far back a harvest reads the job history for quick looks.
+HARVEST_WINDOW = 2000
+
+
+def pack_harvest(settings, params: dict, progress: Progress) -> dict:
+    """File every finished quick look into the catalog that holds its product.
+
+    Quick looks accumulate; this turns them into knowledge without a second
+    research run. Each one already filed (a finished `pack_author` or an
+    earlier harvest names it) is skipped, so pressing it twice files nothing
+    twice. A quick look whose product no catalog holds yet is listed, not sent
+    to an agent: spending an agent is the reader's press, per look. Every
+    catalog that gained claims is installed once, at a raised version, and its
+    `.kpack` is what the reader shares (`GET /api/packs/drafts/{slug}/artifact`).
+    """
+    conn = state.connect(settings.app_state_path)
+    try:
+        jobs = state.list_jobs(conn, HARVEST_WINDOW)
+    finally:
+        conn.close()
+    filed: set[str] = set()
+    authored: set[str] = set()
+    for one in jobs:
+        if one["kind"] == "pack_author" and one["state"] == state.SUCCEEDED:
+            # Linked both ways: "Add to a pack" names the look it files, and
+            # "Research this product" is named by the look beside it.
+            filed.add(str((one["params"] or {}).get("quick_job_id") or ""))
+            authored.add(one["job_id"])
+        elif one["kind"] == "pack_harvest" and one["state"] == state.SUCCEEDED:
+            filed.update((one["result"] or {}).get("filed_quick_looks") or [])
+    looks = [one for one in reversed(jobs)
+             if one["kind"] == "quick_look" and one["state"] == state.SUCCEEDED
+             and one["job_id"] not in filed
+             and str((one["params"] or {}).get("deepen_job_id") or "") not in authored]
+    progress.log(f"{len(looks)} quick look(s) not yet in a catalog")
+    done: list[str] = []
+    needs_agent: list[dict] = []
+    unread: list[str] = []
+    touched: dict[str, dict] = {}
+    claims = 0
+    for position, look in enumerate(looks, start=1):
+        progress.check()
+        product = str((look["params"] or {}).get("product") or "").strip()
+        progress.set(0.05 + 0.75 * position / max(1, len(looks)), f"filing {product}")
+        quick = look["result"] or {}
+        if not product or not quick.get("risks"):
+            done.append(look["job_id"])  # nothing to file is filed
+            continue
+        written = _file_quick_look(settings, quick, product, progress,
+                                   (look["params"] or {}).get("page"))
+        if written is None:
+            needs_agent.append({"quick_job_id": look["job_id"], "product": product})
+            continue
+        if written["unread"]:
+            unread.append(product)
+            continue
+        done.append(look["job_id"])
+        claims += written["claims_added"]
+        if _changed(written):
+            touched[written["slug"]] = written
+    shared = []
+    for slug, written in touched.items():
+        if params.get("install", True):
+            _install_draft(settings, written, progress)
+        shared.append({"slug": slug, "pack_id": written["pack_id"], "name": written["name"],
+                       "artifact": f"/api/packs/drafts/{slug}/artifact"})
+    waiting = [one["product"] for one in needs_agent]
+    progress.set(1.0, f"{len(done)} quick look(s) filed, {claims} claim(s) added"
+                      + (f"; needs an agent: {', '.join(waiting[:3])}"
+                         + (f" and {len(waiting) - 3} more" if len(waiting) > 3 else "")
+                         if waiting else "")
+                      + (f"; pages unreadable, try again later: {', '.join(unread[:3])}"
+                         if unread else ""))
+    return {"filed_quick_looks": done, "claims_added": claims,
+            "needs_agent": needs_agent, "unread": unread, "packs": shared}
+
+
 def _product_check(settings, researcher, params: dict, progress: Progress,
                    product: str, category: str) -> dict:
     """One product, into a pack for its category (B168, B169, B170).
@@ -2219,6 +2410,26 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
     from kriko.gates import load_gates
 
     quick = _await_quick_look(settings, progress, params)
+    # A listing title carries the seller's own words ("DEMİRAY OTODAN
+    # DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID"). The quick look grounded the
+    # product inside it; that, not the title, is what gets searched, named
+    # and admitted (#181).
+    grounded = str(quick.get("product") or "").strip()
+    namer = getattr(researcher, "name_product", None)
+    if not grounded and callable(namer):
+        try:
+            grounded = namer(product, params.get("page"))
+        except Cancelled:
+            raise
+        except Exception as exc:  # noqa: BLE001 - the title is still a name
+            progress.log(f"could not separate the product from the listing title ({exc})")
+    if grounded and grounded.casefold() != product.casefold():
+        progress.log(f"checking {grounded} (the listing says “{product}”)")
+        if category == product:
+            # The extension sends the title as both; a fallback name for a
+            # new catalog must not keep the words just separated from it.
+            category = grounded
+        product = grounded
     said = str(quick.get("category") or "").strip()
     target = categorypack.resolve(
         categorypack.candidates(settings.store_path),
@@ -3400,6 +3611,7 @@ HANDLERS = {
     "verify": verify,
     "site_register": site_register,
     "pack_update": pack_update,
+    "pack_harvest": pack_harvest,
     "compare_ask": compare_ask,
     "model_pull": model_pull,
     "lookup_ask": lookup_ask,

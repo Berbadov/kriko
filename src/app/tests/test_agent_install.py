@@ -296,7 +296,7 @@ class _BrokenOllama(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path.startswith("/v1/models"):
-            self._send(200, {"data": [{"id": "m"}]})
+            self._send(200, {"data": [{"id": "gemma4:e2b"}]})
         elif self.path.startswith("/api/version"):
             self._send(200, {"version": "0.40.2"})
         else:
@@ -320,7 +320,7 @@ def test_the_plane_stops_saying_ready_once_a_call_finds_the_runner_missing(monke
     local_inference.forget_incomplete()
     try:
         assert localplane.resolve(url=base, with_search=False)["ready"] is True
-        socket = local_inference.OpenAICompatSocket(base, "m", max_tokens=8)
+        socket = local_inference.OpenAICompatSocket(base, "gemma4:e2b", max_tokens=8)
         with pytest.raises(local_inference.LocalInferenceError) as error:
             socket.complete("hi")
         assert error.value.code == "runtime_incomplete"

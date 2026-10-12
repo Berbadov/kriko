@@ -42,6 +42,8 @@ DRILLISH = {
           domain: mech
           severity: high
           text: {en: {title: Chuck slips under torque, body: b, advice: a}}
+          evidence:
+            - {url: "https://example.org/report", quote: An owner reported it.}
           conditions:
             - {key: usage_hours, op: gte, value: 400, on_missing: open, weight: 0.7}
     """,
@@ -77,6 +79,8 @@ CARISH = {
           domain: engine
           severity: high
           text: {en: {title: Injector fouling at high mileage, body: b, advice: a}}
+          evidence:
+            - {url: "https://example.org/report", quote: An owner reported it.}
           conditions:
             - {key: usage_km, op: gte, value: 120000, on_missing: open, weight: 0.7}
     """,

@@ -25,7 +25,9 @@ names the closest thing it found and why it was not close enough.
 #: not know what car this is" became one message.
 VERDICTS = {
     "exact": "recognised",
-    "ambiguous": "recognised",
+    # Several products in one pack fit what the page says. Not "recognised":
+    # that word promised the reader we knew which one this is, and we do not.
+    "ambiguous": "several",
     "probable": "probably",
     "no_match": "unrecognised",
 }
@@ -72,7 +74,11 @@ def scoring(resolution) -> dict:
     }
 
 
-def next_step(resolution, coverage: str, url: str = "") -> dict:
+#: How many of the fitting products the panel offers to pick from.
+MAX_CHOICES = 6
+
+
+def next_step(resolution, coverage: str, url: str = "", subjects=None) -> dict:
     """What the reader can do about this answer. Never an empty hand.
 
     The `action` words are a closed vocabulary the client renders as buttons;
@@ -81,7 +87,31 @@ def next_step(resolution, coverage: str, url: str = "") -> dict:
     writes its own copy from a status code writes copy that stops agreeing the
     first time the engine gains a method.
     """
-    if resolution.method in {"exact", "ambiguous"}:
+    if resolution.method == "ambiguous":
+        # Only what every candidate shares is served (kriko.lookup), so a
+        # page that names the model but not the variant can come back empty
+        # while the pack knows a great deal about each variant. That is a
+        # question for the reader, never "a gap".
+        # One button per name: two subjects a pack labels alike would be two
+        # identical buttons, and the reader could not tell them apart either.
+        fitting, named = [], set()
+        for one in subjects or []:
+            if one["label"] in named:
+                continue
+            named.add(one["label"])
+            fitting.append({"subject_id": one["subject_id"], "label": one["label"]})
+        fitting = fitting[:MAX_CHOICES]
+        count = len(resolution.subject_ids)
+        if coverage == "MATCHED_NO_DATA":
+            say = (f"{count} products in the installed packs fit this page, and "
+                   "they share no known problem. Pick the one on the listing to "
+                   "see what is known about it.")
+        else:
+            say = (f"{count} products fit this page, so only what all of them "
+                   "share is shown. Pick the one on the listing to see the rest.")
+        return {"action": "choose", "say": say, "choices": fitting}
+
+    if resolution.method == "exact":
         if coverage == "MATCHED_NO_DATA":
             return {
                 "action": "research",

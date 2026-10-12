@@ -6,17 +6,11 @@ constraint makes: a durable id comes back immediately, the status is readable
 afterwards even across a restart, and a failure arrives as a message rather
 than as silence.
 
-`/stream` is Server-Sent Events over a poll of the row, not a push from the
-worker. A queue would have to be wired through the thread pool and would still
-lose everything on reconnect; polling the row means a browser that reconnects
-mid-job sees the truth, and that the row stays the single source of it.
+A client that wants to follow a job polls `GET /api/jobs/{job_id}`. The row is
+the single source of the truth, so a client that reconnects mid-job sees it.
 """
 
-import asyncio
-import json
-
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
 from pydantic import AliasChoices, BaseModel, Field
 
 from app import prefs
@@ -24,10 +18,6 @@ from app.web import livefeed, state, tasks
 from app.web.deps import get_app_state, get_jobs
 
 router = APIRouter(prefix="/api", tags=["jobs"])
-
-#: How often `/stream` re-reads the row. Fast enough to feel live, slow enough
-#: that a job logging in a tight loop is not also a busy loop here.
-POLL_SECONDS = 0.25
 
 
 class ResearchRequest(BaseModel):
@@ -74,43 +64,6 @@ class UpdateRequest(BaseModel):
     index_url: str | None = None
 
 
-class AuthorRequest(BaseModel):
-    """One field, on purpose. (D4)
-
-    The screen this replaces asked for a directory, a pack id, a name and an
-    identity table. Three of those four are things an agent that has read the
-    category can decide better than a reader who has not, and the fourth — the
-    directory — is derived from the pack id rather than accepted, because an
-    agent that could name a directory would eventually name one `../../`.
-    """
-    category: str = Field(min_length=2, max_length=200)
-    #: Which installed CLI, when there is more than one. Empty means the first
-    #: one Kriko can both start and sandbox.
-    harness: str = ""
-    timeout_seconds: float = 0.0
-    #: How many sources the agent may read (B175's slider). `0` leaves the
-    #: brief as it was. Carried into the prompt as a ceiling, since a CLI has
-    #: no per-run source flag of its own to set.
-    max_documents: int = Field(0, ge=0, le=50)
-    source_kinds: list[str] = Field(default_factory=list, max_length=12)
-    #: Answers to the questions a previous run asked, keyed by their id.
-    #:
-    #: Supplied at the *start* of a run rather than during one, and that is the
-    #: whole design rather than a shortcut. The identification pass is
-    #: non-blocking — it states its assumptions and carries on — so an answer
-    #: arriving mid-run would have nothing left to change. What it does instead
-    #: is make the next run exact, which is why the questions are written to
-    #: the job row where a client can offer them back alongside "run it again".
-    #: A run nobody answers is still a run; see `app/disambiguate.py`.
-    answers: dict[str, str] = Field(default_factory=dict)
-
-
-class BuildRequest(BaseModel):
-    root: str
-    out: str | None = None
-    install: bool = True
-
-
 def _submit(runner, kind: str, params: dict) -> dict:
     try:
         job_id = runner.submit(kind, params)
@@ -129,22 +82,6 @@ def start_research(body: ResearchRequest, runner=Depends(get_jobs)):
     return _submit(runner, "research", params)
 
 
-@router.post("/packs/author")
-def start_author(body: AuthorRequest, runner=Depends(get_jobs)):
-    """Have the reader's own coding agent write a whole pack. Installs nothing.
-
-    A job rather than a request because it spawns an agent that will search the
-    web for a few minutes, and because the reply is worth outliving the page:
-    the log holds what the agent said even when what it said was not a pack.
-    """
-    return _submit(runner, "pack_author", body.model_dump())
-
-
-@router.post("/packs/build")
-def start_build(body: BuildRequest, runner=Depends(get_jobs)):
-    return _submit(runner, "pack_build", body.model_dump())
-
-
 @router.get("/packs/updates")
 def check_pack_updates(
     index_url: str | None = Query(default=None),
@@ -159,6 +96,12 @@ def check_pack_updates(
     every navigation — see `tasks.check_updates`.
     """
     return tasks.check_updates(runner.settings, index_url or "", fresh=fresh)
+
+
+@router.post("/packs/harvest")
+def start_harvest(runner=Depends(get_jobs)):
+    """File every finished quick look into the catalog that holds its product. No agent."""
+    return _submit(runner, "pack_harvest", {"install": True})
 
 
 @router.post("/packs/update")
@@ -316,65 +259,3 @@ def retry_job(job_id: str, body: RetryRequest | None = None,
     return {"job_id": child, "kind": row["kind"]}
 
 
-@router.get("/jobs/{job_id}/stream")
-async def stream_job(job_id: str, request_jobs=Depends(get_jobs)):
-    """Follow one job to its end.
-
-    Opens its own connection rather than taking the request-scoped one: the
-    generator outlives the dependency's scope, and a dependency-managed
-    connection would be closed under it on the first yield.
-    """
-    settings = request_jobs.settings
-
-    async def events():
-        conn = state.connect(settings.app_state_path)
-        try:
-            row = state.get_job(conn, job_id)
-            if row is None:
-                yield f"event: error\ndata: {json.dumps({'error': 'no such job'})}\n\n"
-                return
-            last = None
-            # ops-20: a long harness run's log grows to tens of kilobytes, and
-            # this loop used to put the whole thing on the wire every tick —
-            # the reader's own progress made their connection slower. The
-            # first event still carries the full row (a client that only just
-            # opened the stream has nothing to append to); every one after it
-            # carries only the log bytes this connection has not sent yet, and
-            # `follow()` reassembles the full string client-side. An old,
-            # not-yet-rebuilt bundle reads `job.log` on every event same as
-            # before — it just sees the tail rather than the whole log after
-            # the first tick, which is a shorter log, not a broken one.
-            sent_log = 0
-            while True:
-                row = state.get_job(conn, job_id)
-                if row is None:  # forgotten mid-stream
-                    return
-                # Only send on change, so an idle job costs one comparison per
-                # tick instead of a message the browser has to re-render.
-                # The result is in the fingerprint because the questions ride
-                # in it: a `progress.partial` that changes nothing else is
-                # exactly the tick worth pushing, and without this the live
-                # watcher — the reader actually waiting on the run — is the
-                # one client that never learns it was asked anything.
-                fingerprint = (row["state"], row["progress"], row["message"],
-                               len(row["log"]), len(str(row["result"])))
-                if fingerprint != last:
-                    last = fingerprint
-                    payload = _with_attention(row)
-                    if sent_log:
-                        payload = dict(payload)
-                        payload["log"] = row["log"][sent_log:]
-                        payload["log_append"] = True
-                    sent_log = len(row["log"])
-                    yield f"data: {json.dumps(payload)}\n\n"
-                if row["done"]:
-                    return
-                await asyncio.sleep(POLL_SECONDS)
-        finally:
-            conn.close()
-
-    return StreamingResponse(
-        events(),
-        media_type="text/event-stream",
-        headers={"cache-control": "no-cache", "x-accel-buffering": "no"},
-    )

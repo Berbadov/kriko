@@ -14,11 +14,10 @@ landed before the loop that needs it, and both live here rather than in
 `routers/jobs.py` because they are one story.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app import prefs
-from app.web import observability, state
-from app.web.deps import get_app_state, get_jobs
+from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["research"])
 
@@ -86,8 +85,8 @@ def list_planes(
     """The planes knowledge gets built on, and whether each one can run now.
 
     Read off the researcher classes rather than restated in the frontend, for
-    the same reason `/api/pipeline/runs` hands over its stage labels: a second
-    copy of a vocabulary is a second place to forget when it changes. What the
+    the same reason a vocabulary is never restated in the frontend: a second
+    copy is a second place to forget when it changes. What the
     interface adds is the sentence and the readiness — `cost_basis` is the
     engine's word and the reader's question is "can I press this".
 
@@ -246,69 +245,3 @@ def resolve_research_subject(store, *, q: str = "", subject_id: str = "") -> dic
     return {key: matches[0][key] for key in ("subject_id", "pack_id")}
 
 
-@router.get("/research-runs")
-def list_runs(
-    limit: int = Query(50, ge=1, le=200), app_state=Depends(get_app_state)
-) -> dict:
-    """Provenance, newest first: plane, model, provider, spend, claims still in.
-
-    `claims` is counted rather than stored, so a run that has been undone reads
-    as zero here instead of still advertising what it once added.
-    """
-    return {"runs": state.research_runs(app_state, limit)}
-
-
-@router.get("/usage")
-def read_usage(request: Request, app_state=Depends(get_app_state)) -> dict:
-    """Everything this installation has spent, and everything it was asked.
-
-    Two halves, because a reader asking "what has this cost me" is asking
-    about both and neither half can answer alone. `research` sums the runs
-    that wrote claims *in*; `analyses` counts the lookups that read them back
-    *out*, off the JSONL log whose contents nothing reachable has ever read.
-    Together they are the only place the ratio is visible: a hundred analyses
-    served by four runs is a very different installation from four analyses
-    served by a hundred.
-
-    Nothing here is computed from a guess. A plane that cannot count leaves
-    its column null all the way to the wire, and `metered_runs` says how many
-    of the runs behind a total were counted at all — see
-    `state.usage_totals`.
-    """
-    return {
-        "research": state.usage_totals(app_state),
-        "analyses": observability.summarise(
-            request.app.state.settings.analysis_log_path
-        ),
-    }
-
-
-@router.get("/research-runs/{run_id}")
-def read_run(run_id: str, app_state=Depends(get_app_state)) -> dict:
-    run = state.get_research_run(app_state, run_id)
-    if run is None:
-        raise HTTPException(404, f"no research run {run_id}")
-    claims = state.run_claims(app_state, run_id)
-    return {
-        **run,
-        "claims_detail": claims,
-        # The one thing a screen must not do is offer an undo that would do
-        # nothing. A run whose claims are all gone says so instead.
-        "undoable": any(not item["removed_at"] for item in claims),
-    }
-
-
-@router.delete("/research-runs/{run_id}")
-def undo_run(run_id: str, app_state=Depends(get_app_state), runner=Depends(get_jobs)):
-    """Start the undo. A job, because it writes once per claim.
-
-    Refused up front for a run that does not exist — a 404 is the honest
-    answer, and queuing a job that will immediately fail would report the
-    mistake as a failed run instead of as a bad request.
-    """
-    if state.get_research_run(app_state, run_id) is None:
-        raise HTTPException(404, f"no research run {run_id}")
-    return {
-        "job_id": runner.submit("research_undo", {"run_id": run_id}),
-        "kind": "research_undo",
-    }
