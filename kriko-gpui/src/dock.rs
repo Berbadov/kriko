@@ -17,7 +17,9 @@ use crate::screens::{empty_note, mono, row_desc};
 use crate::theme::*;
 
 pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
-    let motion = !app.reduce_motion;
+    // Closed, the dock is still laid out at zero width for its slide, and its
+    // waiting marks would loop unseen at full frame rate (#184).
+    let motion = app.motion && app.dock_open;
 
     let send = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         this.send_reply(cx);
@@ -173,16 +175,17 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                         .child(
                                             div()
                                                 .min_w(px(0.0))
-                                                .truncate()
                                                 .font_family(SANS)
                                                 .font_weight(FontWeight::SEMIBOLD)
                                                 .text_size(px(13.0))
                                                 .text_color(rgb(INK))
-                                                .child(app.live.run.task(job)),
+                                                .child(crate::screens::history::clip(&app.live.run.task(job), 44)),
                                         )
                                         .child(stop),
                                 )
-                                .child(div().truncate().child(mono(&status, MUTED)))
+                                // Clipped by characters: GPUI's ellipsis collapses
+                                // a column child with no definite width to "…".
+                                .child(mono(&crate::screens::history::clip(&status, 80), MUTED))
                                 .child(
                                     div().pt(px(4.0)).child(progress_bar(
                                         &format!("dock-lane-bar-{i}"),

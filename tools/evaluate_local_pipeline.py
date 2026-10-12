@@ -53,10 +53,11 @@ ABSTENTION = {
         "We have no evidence of that problem on the Aster One."),
 }
 
-def run(model, context, case, language, search_language="en", plan_queries=False):
+def run(model, context, case, language, search_language="en", plan_queries=False,
+        url="http://127.0.0.1:11434", native=True):
     pages = EVIDENCE if case == "evidence" else ABSTENTION
     socket = OpenAICompatSocket(
-        "http://127.0.0.1:11434", model, native_ollama=True,
+        url, model, native_ollama=native,
         context_tokens=context, timeout=180, max_tokens=1024)
     search = lambda query, limit: [
         {"url": url, "title": text.split(".")[0]} for url, text in pages.items()
@@ -113,13 +114,18 @@ def main():
     parser.add_argument("--search-language", default="en")
     parser.add_argument("--plan-queries", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
+    # Any OpenAI-compatible server (llama.cpp's, LM Studio) as well as Ollama.
+    parser.add_argument("--url", default="http://127.0.0.1:11434")
+    parser.add_argument("--openai", action="store_true",
+                        help="the server speaks the OpenAI surface, not Ollama's native one")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("a", encoding="utf-8") as output:
         for model in args.models:
             for context in args.contexts:
                 for case in args.cases:
-                    row = run(model, context, case, args.language, args.search_language, args.plan_queries)
+                    row = run(model, context, case, args.language, args.search_language,
+                              args.plan_queries, url=args.url, native=not args.openai)
                     output.write(json.dumps(row, ensure_ascii=False) + "\n")
                     output.flush()
                     print(json.dumps({key: value for key, value in row.items()

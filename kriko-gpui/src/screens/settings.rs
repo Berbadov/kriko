@@ -65,7 +65,7 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
 }
 
 pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let key_input = app.input_field(Field::KeyValue, "key-value", "Paste the key, then Save", None, window, cx);
     let runtime = crate::screens::local::runtime_settings(app, cx);
     let k = &app.live.knowledge;
@@ -163,7 +163,12 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     }
     for (i, p) in k.keys.iter().enumerate() {
         let picked = k.key_provider.as_deref() == Some(p.id.as_str());
-        let (pid, rid) = (p.id.clone(), p.id.clone());
+        let (pid, rid, tid) = (p.id.clone(), p.id.clone(), p.id.clone());
+        let test = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.test_key(tid.clone(), cx);
+            cx.notify();
+        });
+        let tested = k.key_tests.get(&p.id).cloned();
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.live.knowledge.key_provider = Some(pid.clone());
             cx.notify();
@@ -186,9 +191,14 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     .items_center()
                     .gap(px(8.0))
                     .child(ghost(("key-pick", i), if picked { "Typing" } else { "Set" }).on_click(pick))
+                    .when(p.present, |d| d.child(ghost(("key-test", i), "Test").on_click(test)))
                     .when(p.present, |d| d.child(ghost(("key-remove", i), "Remove").on_click(remove)))
                     .into_any_element(),
             ))
+            .when_some(tested.filter(|_| p.present), |d, t| {
+                let ink = if t.busy { MUTED } else if t.ok { ICE } else { DANGER };
+                d.child(div().pb(px(10.0)).child(mono(&t.said, ink)))
+            })
             .child(hairline());
     }
     if let Some(target) = k.key_provider.as_ref().and_then(|id| k.keys.iter().find(|p| &p.id == id)) {

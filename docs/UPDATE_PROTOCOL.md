@@ -1,8 +1,11 @@
 # Update protocol
 
-## Every change gets a new version
+## Versions move at release, not per change
 
-Every change set must increase the app version and update `README.md` before it is committed. This includes features, fixes, documentation, configuration, dependencies, and packaging. Bump once for the complete change set; another change after publishing requires another bump.
+Change sets land without touching the version or the README. Whoever cuts a
+release bumps the version once, with `tools/bump.py`, and writes the
+reader-visible notes in the README for everything since the last one. The gate
+checks only that the version strings agree.
 
 Use `MAJOR.MINOR.PATCH`: increase PATCH for compatible corrections, MINOR for new compatible features, and MAJOR for incompatible changes. The next version must be greater than the current tree and every published app release.
 
@@ -22,7 +25,7 @@ The release tag, source manifests, installed app metadata, MSI ProductVersion, i
 
 ## Build and publish
 
-1. Record the request and its acceptance criteria. Prepare the complete change set, version bump, and README update in a review branch. Preserve unrelated workspace changes.
+1. Bump the version and write the README notes for everything since the last release, in a review branch. Preserve unrelated workspace changes.
 2. Refresh the build environment's package metadata after bumping: `.venv/Scripts/python.exe -m pip install --no-deps --no-build-isolation -e .`. Run `.venv/Scripts/python.exe tools/bump.py --show --strict`; the tree, README, and installed metadata must agree before freezing.
 3. Build from the exact reviewed source using `kriko-gpui/package.ps1`. Follow the project's review and verification rules and record the observed result. Never rename an older installer to simulate a version bump.
 4. Generate SHA256 digests from the final downloadable files. `SHA256SUMS.txt` must name each file exactly. Include the MSI, any portable ZIP, catalogs, and their index as applicable. Update `packs.json` URLs to the new release tag when publishing catalogs.

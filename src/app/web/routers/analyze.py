@@ -108,36 +108,6 @@ def list_adapters(store=Depends(get_store), app_state=Depends(get_app_state)):
     ]
 
 
-@router.get("/adapters/unmapped")
-def unmapped(
-    limit: int = 100, adapter_id: str = "", app_state=Depends(get_app_state)
-):
-    """Labels the pages carried that no installed adapter reads.
-
-    The whole point of persisting them: this list is where "the site renamed a
-    field last Tuesday" is legible. A label with a high `seen` and a recent
-    `last_at` on a site that used to work is a markup change; one seen twice in
-    June is noise an author can dismiss.
-
-    Deliberately not derived from `declared_labels` — a label absent from the
-    adapter is not interesting, a label *present on the page* and absent from
-    the adapter is. Only the reader's actual browsing can tell the difference.
-    """
-    return {"labels": state.unmapped_labels(app_state, limit, adapter_id=adapter_id)}
-
-
-@router.delete("/adapters/unmapped/{adapter_id}/{label:path}")
-def forget_unmapped(adapter_id: str, label: str, app_state=Depends(get_app_state)):
-    """Dismiss one label.
-
-    A list that cannot be pruned stops being read, and some labels are never
-    going to be mapped. Not permanent: the next listing carrying the label puts
-    it back, which is the honest answer to "I dismissed this and it is still
-    happening".
-    """
-    return {"forgotten": state.forget_unmapped(app_state, adapter_id, label)}
-
-
 def _context_units(store, context) -> dict:
     """The unit each context key is measured in, as the packs declared it.
 
@@ -344,7 +314,7 @@ def answer(store, app_state, body: ScrapeRequest):
         # answer rather than being inferred from it.
         **matching.scoring(result.resolution),
         "next_step": matching.next_step(result.resolution, result.coverage,
-                                        body.url),
+                                        body.url, _resolved(store, result.resolution.subject_ids)),
         # Which subjects the listing actually resolved to, claims or not.
         # `claims` cannot answer this: the interesting case is a subject that
         # resolved and has nothing known about it, which is exactly the row
@@ -519,6 +489,10 @@ def _read_any_site(store, body: ScrapeRequest, vocabulary):
     return None, None, ""
 
 
+#: The longest page title a saved check is named by.
+TITLE_LABEL_MAX = 90
+
+
 def _analyze_label(store, body: ScrapeRequest, mapped, result) -> str:
     """A short title, not the raw 150-character URL (check-15).
 
@@ -542,6 +516,14 @@ def _analyze_label(store, body: ScrapeRequest, mapped, result) -> str:
         if row and row["label"]:
             return row["label"]
     if mapped.identity:
+        # Not one subject (several fit, or a near miss): the page's own title
+        # names this listing better than the bare identity values, which are
+        # stored folded to lower case ("volkswagen golf"), but only when it
+        # carries every one of them, so a site's boilerplate never wins.
+        title = " ".join(str(body.title or "").split())
+        folded = title.casefold()
+        if title and all(str(v).casefold() in folded for v in mapped.identity.values()):
+            return title if len(title) <= TITLE_LABEL_MAX else title[:TITLE_LABEL_MAX - 1] + "…"
         return label_for(mapped.identity)
     host = urlparse(body.url).netloc.removeprefix("www.") or body.url
     return f"Listing on {host}"
@@ -604,7 +586,7 @@ def diagnose_identity(
     )
     out = matching.diagnosis(mapped, result, spec)
     out["next_step"] = matching.next_step(result.resolution, result.coverage,
-                                          body.url)
+                                          body.url, _resolved(store, result.resolution.subject_ids))
     # Not the claims themselves — how many there would be. Someone debugging a
     # match wants to know the answer was non-empty, not to read it here.
     out["outcome"]["claims"] = len(result.claims)

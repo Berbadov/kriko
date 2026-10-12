@@ -14,13 +14,22 @@ sidecar the metadata may be absent, which is a packaging gap, not a crash — so
 the fallback is `"unknown"` and the endpoint still answers.
 """
 
+import functools
 import sqlite3
 from pathlib import Path
 
 UNKNOWN = "unknown"
 
 
+@functools.cache
 def app_version() -> str:
+    """The installed distribution's version, read once per process.
+
+    Cached because `/api/health` is polled (at startup, and by the extension) and
+    `importlib.metadata.version` scans every distribution on `sys.path` each time:
+    about 1.8 ms per call measured, most of a health answer. The version a process
+    reports is the one it was started with, which is the claim the endpoint makes.
+    """
     from importlib.metadata import PackageNotFoundError, version
 
     try:

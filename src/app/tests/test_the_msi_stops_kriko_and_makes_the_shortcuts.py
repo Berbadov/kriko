@@ -96,9 +96,13 @@ def test_the_names_it_stops_are_the_names_it_ships(wix):
     spec = (ROOT / "packaging" / "kriko-sidecar.spec").read_text(encoding="utf-8")
     assert 'name="kriko-sidecar"' in spec
     files = {f.get("Name") for f in wix.iter("{%s}File" % NS["w"])}
-    assert files == {app, "kriko-sidecar.exe"}
+    # OpenSERP is a shipped process the app starts, so an orphan of it would
+    # hold its .exe against the next install like the other two.
+    executables = {name for name in files if name.endswith(".exe")}
+    assert executables == {app, "kriko-sidecar.exe", "OpenSERP.exe"}
     text = "".join(a.get("Value") or "" for a in _actions(wix).values())
     assert f"/IM {app}" in text and "/IM kriko-sidecar.exe" in text
+    assert "/IM OpenSERP.exe" in text
 
 
 def test_the_installer_makes_the_console_a_thing_you_double_click(wix):

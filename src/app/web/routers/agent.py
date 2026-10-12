@@ -69,29 +69,6 @@ def command_for(store_path: Path) -> dict:
     }
 
 
-@router.get("/agent-config")
-def agent_config(request: Request):
-    """A block that can be pasted into a harness without editing.
-
-    Returned as data *and* as `mcp_json`, already shaped for `.mcp.json`, for
-    the same reason the boot screen is plain HTML: the reader is one copy away
-    from a working setup, and any transcription step is a step that goes wrong
-    silently.
-    """
-    settings = request.app.state.settings
-    entry = command_for(Path(settings.store_path))
-    server = _server_block(settings)
-    return {
-        "server_name": SERVER_NAME,
-        "frozen": entry["frozen"],
-        "store": str(settings.store_path),
-        "mcp_json": {"mcpServers": {SERVER_NAME: server}},
-        # Named so the UI does not have to know the tool list to explain the
-        # protocol: these are the two an agent cannot work without.
-        "tools": ["research_brief", "coverage_gaps", "submit_findings"],
-    }
-
-
 def _server_block(settings) -> dict:
     entry = command_for(Path(settings.store_path))
     server = {"type": "stdio", "command": entry["command"], "args": entry["args"]}
