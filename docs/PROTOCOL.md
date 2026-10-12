@@ -11,7 +11,11 @@ Kriko's engine is one local HTTP server (FastAPI, `src/app/web/app.py`). Every r
 ## Ports
 
 - **8787 is fixed.** `EXTENSION_PORT` in `src/app/web/settings.py` is the one port that anything outside the process may assume. The extension's default base is `http://127.0.0.1:8787`, and a reader can change it in the extension's storage (`krikoApiBaseUrl`). `python -m app.web` also listens there.
-- **The sidecar's port is announced.** `src/app/sidecar.py` binds port 0, so the operating system picks a free port, and its first stdout line is `KRIKO_PORT <n>`. If 8787 is also free, it binds that too and prints `KRIKO_EXTENSION_PORT <n>`. A second Kriko on the same machine simply leaves 8787 to the first.
+- **The sidecar's port is announced.** `src/app/sidecar.py` binds port 0, so the operating system picks a free port, and its first stdout line is `KRIKO_PORT <n>`. If 8787 is also free, it binds that too and prints `KRIKO_EXTENSION_PORT <n>`. A second Kriko on the same machine simply leaves 8787 to the first. Both
+sockets are created with `IPPROTO_TCP`, so a response's headers and body are
+sent without waiting on Nagle's algorithm. That option is what keeps each
+keep-alive request in the low milliseconds; `reserve()` in `src/app/sidecar.py`
+holds the reason.
 - **The desktop app finds an engine in this order** (`kriko-gpui/src/engine.rs`): `KRIKO_URL` if set; the sidecar beside the app; an engine already answering on 8787, which it attaches to; a source checkout's `python -m app.sidecar`.
 - **The terminal interface** tries `--url`, then `KRIKO_URL`, then 8787 (`src/app/tui/client.py`).
 
