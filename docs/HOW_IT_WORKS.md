@@ -6,6 +6,10 @@ Four pictures, one per question people actually ask.
 
 A page is matched on its identity keys, never on its title. Exact on every key
 is *recognised*; a near miss is *probably*; anything else says why it failed.
+When every key the page gives fits several products in one catalog (a model
+named without its variant), the answer is *one of several*: only what all of
+them share is served, and the panel lists them so the reader can open the one
+on the listing. That is a question, never reported as a gap.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -15,7 +19,8 @@ flowchart TD
     B -- yes --> C["The adapter reads the page<br/>into key = value pairs"]
     C --> D["Normalise onto the catalog's<br/>own vocabulary"]
     D --> E{"Exact match on<br/>every identity key?"}
-    E -- yes --> F["<b>recognised</b><br/>score 1.0"]
+    E -- "yes, one subject" --> F["<b>recognised</b><br/>score 1.0"]
+    E -- "yes, several" --> K["<b>one of several</b><br/>what all share, and a choice"]
     E -- no --> G["Score every subject:<br/>exact 1.0, close 0 to 1, absent 0<br/>a contradiction counts double against"]
     G --> H{"Best score"}
     H -- "at or above the pack's floor" --> F
@@ -29,7 +34,7 @@ flowchart TD
     classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
     class A,B,C,D,E,G,H plain
     class F mark
-    class I ice
+    class I,K ice
     class B1,J danger
 ```
 

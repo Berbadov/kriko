@@ -314,7 +314,7 @@ def answer(store, app_state, body: ScrapeRequest):
         # answer rather than being inferred from it.
         **matching.scoring(result.resolution),
         "next_step": matching.next_step(result.resolution, result.coverage,
-                                        body.url),
+                                        body.url, _resolved(store, result.resolution.subject_ids)),
         # Which subjects the listing actually resolved to, claims or not.
         # `claims` cannot answer this: the interesting case is a subject that
         # resolved and has nothing known about it, which is exactly the row
@@ -574,7 +574,7 @@ def diagnose_identity(
     )
     out = matching.diagnosis(mapped, result, spec)
     out["next_step"] = matching.next_step(result.resolution, result.coverage,
-                                          body.url)
+                                          body.url, _resolved(store, result.resolution.subject_ids))
     # Not the claims themselves — how many there would be. Someone debugging a
     # match wants to know the answer was non-empty, not to read it here.
     out["outcome"]["claims"] = len(result.claims)

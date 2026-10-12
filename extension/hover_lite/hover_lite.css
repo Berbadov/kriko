@@ -1326,6 +1326,8 @@
   font-size: 12px;
 }
 .lite-verdict-btn:hover { border-color: var(--accent); color: var(--accent); }
+.lite-verdict-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.lite-verdict-choices .lite-verdict-btn { margin-top: 0; }
 .lite-verdict-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

@@ -37,6 +37,7 @@
   const VERDICT_WORD = {
     recognised: "Recognised",
     probably: "Probably this one",
+    several: "One of several",
     unrecognised: "Not recognised",
   };
 
@@ -2708,7 +2709,7 @@
     head.className = "lite-verdict-head";
     head.innerHTML = `
       <span class="lite-verdict-word">${escapeHtml(VERDICT_WORD[verdict] || verdict)}</span>
-      ${typeof state.result.score === "number" && verdict !== "recognised"
+      ${typeof state.result.score === "number" && verdict !== "recognised" && verdict !== "several"
         ? `<span class="lite-verdict-score">${(state.result.score * 100).toFixed(0)}%</span>`
         : ""}
     `;
@@ -2725,6 +2726,22 @@
     if (weighed) card.appendChild(weighed);
 
     const action = step && step.action && step.action !== "none" ? step.action : "";
+    // `choose`: the page fits several products, and the reader can say which.
+    // Each opens that product in the app, where all of what is known shows.
+    if (action === "choose" && Array.isArray(step.choices) && step.choices.length) {
+      const list = document.createElement("div");
+      list.className = "lite-verdict-choices";
+      for (const one of step.choices) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "lite-verdict-btn";
+        button.textContent = one.label || one.subject_id;
+        const route = `subject/${encodeURIComponent(one.subject_id)}`;
+        button.addEventListener("click", () => openInApp(route, appUrlFor(route)));
+        list.appendChild(button);
+      }
+      card.appendChild(list);
+    }
     const label = actionLabel(action, step);
     if (label) {
       const button = document.createElement("button");

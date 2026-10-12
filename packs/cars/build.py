@@ -143,13 +143,28 @@ def _search_names(variant: dict) -> list[str]:
 
 
 def _label(variant: dict) -> str:
+    """What a reader is shown for a variant: enough to tell it from its siblings.
+
+    Displacement and a power range are part of it because two variants of one
+    engine family can share everything else (a 1.0 and a 1.2 both sold at
+    105 hp); without them the reader is offered two identical names. Engine
+    codes are display text here, so an underscore reads as a space.
+    """
     bits = [str(variant.get("make", "")).title(), str(variant.get("model", "")).title()]
     if variant.get("generation"):
         bits.append(str(variant["generation"]))
-    if variant.get("engine_code"):
-        bits.append(str(variant["engine_code"]))
-    if variant.get("power_min_hp"):
-        bits.append(f"{variant['power_min_hp']} hp")
+    code = str(variant.get("engine_code") or "").replace("_", " ")
+    if variant.get("displacement_cc"):
+        litres = f"{int(variant['displacement_cc']) / 1000:.1f}"
+        if not code.startswith(litres):  # "1.5 TSI" already says it
+            bits.append(litres)
+    if code:
+        bits.append(code)
+    low, high = variant.get("power_min_hp"), variant.get("power_max_hp")
+    if low and high and high != low:
+        bits.append(f"{low}-{high} hp")
+    elif low:
+        bits.append(f"{low} hp")
     if variant.get("transmission_code") not in (None, "", "manual"):
         bits.append(str(variant["transmission_code"]).upper())
     return " ".join(b for b in bits if b)

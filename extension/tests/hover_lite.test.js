@@ -685,6 +685,29 @@ test("what was weighed is shown per key, with each key's own reading", () => {
   assert.match(verdict(p).textContent, /Golf VII EA211 105 hp/);
 });
 
+test("a page that fits several products asks which one, and each opens in the app", () => {
+  // The engine serves only what every fitting product shares; with nothing
+  // shared, the old answer called it a gap. It is a question for the reader.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: {
+    ...ENTRY.result, verdict: "several", score: 1, considered: [], claims: [],
+    next_step: { action: "choose",
+      say: "12 products in the installed packs fit this page, and they share no known problem.",
+      choices: [{ subject_id: "a", label: "Golf VII EA888 230 hp" },
+                { subject_id: "b", label: "Golf VII EA211 105 hp" }] } } });
+
+  const box = verdict(p);
+  assert.match(box.textContent, /One of several/);
+  assert.equal(box.querySelector(".lite-verdict-score"), null);
+  const choices = [...box.querySelectorAll(".lite-verdict-choices .lite-verdict-btn")];
+  assert.deepEqual(choices.map((b) => b.textContent),
+                   ["Golf VII EA888 230 hp", "Golf VII EA211 105 hp"]);
+  choices[0].click();
+  const opened = p.sent.filter((m) => m.type === "OPEN_IN_APP").pop();
+  assert.equal(opened.payload.route, "subject/a");
+});
+
 test("a page nothing covers offers the app rather than a search", () => {
   const p = loadPanel();
   p.openPanel();

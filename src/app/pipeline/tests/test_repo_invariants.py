@@ -229,7 +229,12 @@ def test_every_pack_in_the_repo_builds_and_is_not_empty(tmp_path):
         conn = connect(out)
         subjects = conn.execute("SELECT COUNT(*) AS n FROM subjects").fetchone()["n"]
         claims = conn.execute("SELECT COUNT(*) AS n FROM claims").fetchone()["n"]
+        # A label is what a reader picks from when a page fits several
+        # subjects; two alike are two buttons nobody can tell apart.
+        twins = [tuple(row) for row in conn.execute(
+            "SELECT kind, label, COUNT(*) FROM subjects GROUP BY kind, label HAVING COUNT(*) > 1")]
         conn.close()
+        assert not twins, f"{root} gives several subjects the same label: {twins}"
         assert subjects and claims, (
             f"{root} built empty ({subjects} subjects, {claims} claims)"
             + (
