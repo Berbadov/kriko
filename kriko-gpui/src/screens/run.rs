@@ -7,7 +7,7 @@
 //! the engine has no job, a quiet note stands in.
 
 use gpui::{
-    div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba, Animation, AnimationExt,
+    div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba,
     Context, Div, FontWeight, Stateful, Styled, Window,
 };
 
@@ -660,82 +660,4 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
                     led_ripple("run-lane", motion)
                 }),
         )
-}
-
-/// The engine's feed for the job, newest first.
-fn feed_card(app: &mut Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
-    let mut feed = card().flex().flex_col();
-    feed = feed.child(div().mb(px(12.0)).child(eyebrow(if job.done { "Log" } else { "Live feed" })));
-    let all = job.log_events();
-    if all.is_empty() {
-        return feed.child(empty_note(if job.done {
-            "This run left no log."
-        } else {
-            "Nothing yet. Lines land here as the agent reads and writes."
-        }));
-    }
-    let levels = ["ALL", "SEARCH", "SOURCE", "FINDING", "PROBLEM"];
-    let selected = app.live.run.log_level.min(levels.len() - 1);
-    let next_filter = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.live.run.log_level = (this.live.run.log_level + 1) % 5;
-        cx.notify();
-    });
-    let copied = all.iter().map(|line| line.text.as_str()).collect::<Vec<_>>().join("\n");
-    let copy_log = cx.listener(move |_this, _: &gpui::ClickEvent, _w, cx| {
-        cx.write_to_clipboard(gpui::ClipboardItem::new_string(copied.clone()));
-    });
-    feed = feed.child(
-        div()
-            .flex()
-            .items_center()
-            .gap(px(10.0))
-            .child(plate_s("run-log-level", &format!("LEVEL · {}", levels[selected])).on_click(next_filter))
-            .child(plate_s("run-log-copy", "Copy log").on_click(copy_log)),
-    );
-    let selected_kind = ["", "search", "source", "finding", "problem"][selected];
-    let lines: Vec<_> = all.iter().rev().filter(|line| {
-        selected_kind.is_empty() || line.kind == selected_kind
-    }).collect();
-    if lines.is_empty() {
-        return feed.child(empty_note("No log entries match this level."));
-    }
-    let count = lines.len();
-    for (i, line) in lines.into_iter().enumerate() {
-        let state = if line.kind == "problem" {
-            TagState::Block
-        } else if i == 0 && !job.done {
-            TagState::Live
-        } else {
-            TagState::Done
-        };
-        let row = div()
-            .py(px(10.0))
-            .flex()
-            .items_center()
-            .gap(px(14.0))
-            .child(tag(format!("run-feed-{i}"), state, "", motion))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(0.0))
-                    .font_family(SANS)
-                    .text_size(px(14.0))
-                    .text_color(rgb(INK_2))
-                    .child(line.text.clone()),
-            );
-        // the newest line fades in as it lands; the count rides the id so
-        // each new line mounts its own fade
-        let row: gpui::AnyElement = if motion && i == 0 && !job.done {
-            row.with_animation(
-                gpui::ElementId::named_usize("run-feed-in", count),
-                Animation::new(std::time::Duration::from_millis(450)).with_easing(|t| t * t),
-                |el, v| el.opacity(v),
-            )
-            .into_any_element()
-        } else {
-            row.into_any_element()
-        };
-        feed = feed.child(row);
-    }
-    feed
 }
