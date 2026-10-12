@@ -171,11 +171,10 @@ claims:
   confidence: 0.6
   rationale: The EA288 diesel engine's diesel particulate filter (DPF) is highly sensitive
     to fuel quality, which can lead to frequent clogging. This is a chronic issue
-    that requires expensive replacement. Buyers should be aware of this risk when
-    considering a used car with this engine.
+    that requires expensive replacement. Buyers should be aware of this risk when considering a car with this engine.
   rationale_tr: EA288 dizel motorunun dizel partikül filtresi (DPF) yakıt kalitesine
     oldukça hassastır ve sık sık tıkanabilir. Bu kronik sorun pahalı değişim gerektirir.
-    Alıcılar bu motorlu ikinci el bir araç alırken bu riski bilmelidir.
+    Alıcılar bu motorlu bir araç alırken bu riski bilmelidir.
   inspection_advice: Check for DPF fault codes (e.g., P2002, P242F) with OBD scanner.
     Look for excessive soot in tailpipe, ask about fuel quality history and DPF maintenance/replacement.
   inspection_advice_tr: OBD tarayıcı ile DPF arıza kodlarını kontrol edin (örn. P2002,
@@ -465,13 +464,11 @@ claims:
   rationale: 'The EA288 diesel engine can develop unstable idle speed due to two common
     causes: a failing fuel rail pressure sensor or a worn dual-mass flywheel. A worn
     flywheel is expensive to replace and can cause shuddering or rattling. This issue
-    is specific to EA288 and predictable with age/mileage, making it a useful used-car
-    risk.'
+    is specific to EA288 and predictable with age/mileage, making it a useful risk to know before buying.'
   rationale_tr: EA288 dizel motor, yakıt rayı basınç sensörü arızası veya aşınmış
     çift kütleli volan nedeniyle düzensiz rölanti devri geliştirebilir. Aşınmış volanın
     değişimi pahalıdır ve titreme veya takırtıya neden olabilir. Bu sorun EA288'e
-    özgüdür ve yaş/km ile tahmin edilebilir, bu da onu ikinci el araç riski olarak
-    değerli kılar.
+    özgüdür ve yaş/km ile tahmin edilebilir, bu da onu satın almadan önce bilinmesi gereken bir risk yapar.
   inspection_advice: At viewing, let the engine idle warm and watch the tachometer
     for fluctuations. Listen for rattling or knocking from the gearbox area (flywheel
     side). A diagnostic scan may show fuel rail pressure sensor fault codes (e.g.,
@@ -1011,12 +1008,11 @@ claims:
   rationale: The 2.0 TDI diesel engine family, which includes the EA288, has a known
     chronic issue where fuel injectors clog or leak due to gasket failure. This can
     cause misfires, rough idling, loss of power, and poor fuel economy. Replacing
-    injectors is costly, so these symptoms matter for a used-car buyer.
+    injectors is costly, so these symptoms matter to a buyer.
   rationale_tr: EA288 dahil 2.0 TDI dizel motor ailesinde, yakıt enjektörlerinin tıkanması
     veya conta arızası nedeniyle sızıntı yapması bilinen kronik bir sorundur. Bu durum
     tekleme, rölantide düzensizlik, güç kaybı ve yakıt ekonomisinin bozulmasına neden
-    olabilir. Enjektör değişimi pahalıdır, bu nedenle bu belirtiler ikinci el alıcı
-    için önemlidir.
+    olabilir. Enjektör değişimi pahalıdır, bu nedenle bu belirtiler alıcı için önemlidir.
   inspection_advice: Ask if injectors have been replaced and check service records.
     During a test drive, feel for rough idle or hesitation. If possible, run an OBD
     scan for misfire codes (e.g., P0200–P0299 range) and look at injector correction

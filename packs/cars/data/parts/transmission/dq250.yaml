@@ -339,12 +339,10 @@ claims:
   confidence: 0.6
   rationale: The DQ250 is a wet-clutch dual-clutch transmission. Aggressive acceleration
     and shifting put extra stress on the wet clutches, causing them to wear out prematurely.
-    This can lead to shuddering, slipping, and expensive repairs, making it a critical
-    point for used-car buyers to check.
+    This can lead to shuddering, slipping, and expensive repairs, making it a critical point for buyers to check.
   rationale_tr: DQ250, ıslak debriyajlı çift kavramalı bir şanzımandır. Agresif hızlanma
     ve vites değişimleri ıslak debriyajlara ekstra stres bindirerek erken aşınmaya
-    neden olur. Bu durum titreme, kayma ve pahalı onarımlara yol açabilir; bu da ikinci
-    el araç alıcıları için kritik bir kontrol noktasıdır.
+    neden olur. Bu durum titreme, kayma ve pahalı onarımlara yol açabilir; bu da alıcılar için kritik bir kontrol noktasıdır.
   inspection_advice: During test drive, feel for clutch judder or slipping, especially
     in low gears. Check the DSG service history for fluid and filter changes. Use
     a diagnostic tool to read clutch wear adaptations and pending gearbox fault codes.
