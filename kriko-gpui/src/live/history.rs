@@ -317,18 +317,6 @@ impl State {
         out
     }
 
-    /// The next catalog in the cycle: all, then each present one, then all.
-    pub fn next_pack(&self) -> Option<String> {
-        let options = self.pack_options();
-        match &self.pack {
-            None => options.first().map(|p| p.0.clone()),
-            Some(cur) => {
-                let at = options.iter().position(|p| &p.0 == cur)?;
-                options.get(at + 1).map(|p| p.0.clone())
-            }
-        }
-    }
-
     /// The word the pack plate shows.
     pub fn pack_word(&self) -> String {
         match &self.pack {
@@ -875,7 +863,7 @@ mod tests {
     }
 
     #[test]
-    fn the_pack_plate_cycles_through_what_is_present() {
+    fn the_pack_filter_admits_only_its_pack() {
         let item = |id: &str, pack: &str| Item {
             id: id.into(),
             ts: None,
@@ -888,13 +876,8 @@ mod tests {
         };
         let mut s = State { items: vec![item("a", "x.b"), item("b", "x.a")], ..Default::default() };
         assert_eq!(s.pack_word(), "ALL");
-        s.pack = s.next_pack();
-        assert_eq!(s.pack.as_deref(), Some("x.a"));
+        s.pack = Some("x.a".into());
         assert_eq!(s.filtered("", u32::MAX, 0), vec![1]);
-        s.pack = s.next_pack();
-        assert_eq!(s.pack.as_deref(), Some("x.b"));
-        s.pack = s.next_pack();
-        assert_eq!(s.pack, None);
     }
 
     #[test]

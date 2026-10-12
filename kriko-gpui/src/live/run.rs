@@ -141,10 +141,6 @@ impl Job {
         )
     }
 
-    pub fn failed(&self) -> bool {
-        matches!(self.state.as_str(), "failed" | "interrupted")
-    }
-
     /// The whole log as events, newest line last, the same shapes the engine
     /// reads (`livefeed`): the server's feed carries only the live tail, so
     /// the full story is classified here.
@@ -447,10 +443,8 @@ pub struct Verify {
 /// the id is not one the app draws.
 #[derive(Clone, Debug, Default)]
 pub struct QuickAsk {
-    pub job_id: String,
     pub question: String,
     pub answer: String,
-    pub state: String,
     pub done: bool,
 }
 
@@ -513,11 +507,6 @@ pub struct State {
     label_asked: HashSet<String>,
     /// The option picked for each question, by question id.
     pub answers: HashMap<String, String>,
-    /// The Run screen's log level filter: 0 is all, then search, source,
-    /// finding, problem.
-    pub log_level: usize,
-    /// When the log's Copy plate was pressed, for its "Copied" flash.
-    pub log_copied_at: Option<Instant>,
     pub start: Start,
     // agents
     pub harnesses: Vec<Harness>,
@@ -874,10 +863,8 @@ impl Kriko {
                 this.live.run.quick_asks = api::arr(&v, "asks")
                     .iter()
                     .map(|a| QuickAsk {
-                        job_id: api::s(a, "job_id"),
                         question: api::s(a, "q"),
                         answer: api::s(a, "answer"),
-                        state: api::s(a, "state"),
                         done: api::b(a, "done"),
                     })
                     .collect();
