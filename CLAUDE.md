@@ -91,12 +91,14 @@ of a catalog, not a preview of a research run. Two rules follow:
 
 1. **No second research run for what is already known.** A quick look whose
    product a catalog already holds is filed by re-reading each quote against
-   its page and attaching it (`tasks._file_quick_look`). An agent is spent
-   only to write a subject the catalog does not have.
+   its page and attaching it (`tasks._file_quick_look`). A product the
+   catalog lacks joins it too when the quick look read every identity key of
+   one of the catalog's kinds (`pack_identity`, written by
+   `categorypack.add_subject`); an agent is spent only when it could not.
 2. **Accumulation is a harvest, not a chore.** `POST /api/packs/harvest`
    files every saved quick look not yet filed, installs each catalog that
-   gained claims once, and returns its `.kpack` link to share. A look whose
-   product no catalog holds is listed as needing an agent, never sent to one
+   gained claims once, and returns its `.kpack` link to share. A look that
+   names no catalog, or lacks an identity key, is listed as needing an agent, never sent to one
    unasked, because spending an agent is the reader's press.
 
 So a catalog shared between readers is the sum of their grounded quick
