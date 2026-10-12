@@ -2922,8 +2922,11 @@
         if (!state.result.next_step && !state.result.verdict) {
           const empty = document.createElement("div");
           empty.className = "lite-empty";
-          empty.textContent =
-            "Nothing matched this listing. No installed pack recognises it.";
+          // Recognised with nothing known is a gap, not "not recognised":
+          // the header above already names the product.
+          empty.textContent = state.result.coverage === "MATCHED_NO_DATA"
+            ? "Recognised, but the installed packs hold nothing about it yet."
+            : "Nothing matched this listing. No installed pack recognises it.";
           claimsListEl.appendChild(empty);
         }
       }
