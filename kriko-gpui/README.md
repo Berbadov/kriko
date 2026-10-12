@@ -149,9 +149,12 @@ Compare and Local LLM are the workbenches, and carry the most:
   permissions (read pages, take part in Run, answer questions) and a
   reconnect key.
 
-Setting `KRIKO_VERIFY=compare|risks|local|agents|dock|benchmark` seeds one page's state at
-startup (tab, board with strokes and a note, open sections, finished test)
-so it can be captured without driving the mouse on a busy desktop.
+Setting `KRIKO_VERIFY` starts a separate review window that never hands off to a
+running Kriko. Any route opens its screen (`settings`, `sites`, `subject/<id>`,
+…); `compare`, `risks`, `local`, `agents`, `dock` and `benchmark` also seed that
+page's state (board with strokes and a note, open sections, finished test), so
+it can be captured without driving the mouse. `KRIKO_WINDOW_SIZE=WxH` opens the
+window at that size, for example the 940x640 minimum.
 
 ## Motion
 

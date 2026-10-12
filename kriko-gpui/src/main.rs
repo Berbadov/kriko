@@ -142,8 +142,9 @@ fn main() {
     let background = std::env::args_os().skip(1).any(|arg| arg == "--background");
     // Verification uses an isolated engine/store and must not be redirected
     // to the reader's installed app. Normal launches remain single-instance.
-    let review = std::env::var("KRIKO_VERIFY").map(|page| matches!(page.as_str(),
-        "compare" | "risks" | "local" | "agents" | "dock" | "benchmark")).unwrap_or(false);
+    // Any page: KRIKO_VERIFY opens every route, and a fixed list here let
+    // `KRIKO_VERIFY=settings` raise the reader's own app instead.
+    let review = std::env::var("KRIKO_VERIFY").is_ok_and(|page| !page.trim().is_empty());
     // a second launch raises the first and leaves: one engine per machine
     if !review && shell::raise_running_instance(!background) {
         return;
