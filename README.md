@@ -120,6 +120,7 @@ All 12 replies completed. These are startup checks, not research scores: the rep
 - **Home** says whether no catalog is installed or every catalog is switched off, and takes you to **Overview** to fix either.
 - When no catalog is installed and none can be fetched, Overview says to check the connection instead of leaving you at an empty screen.
 - When several products fit a listing, a finding that fits none of them is no longer shown. For example, a hybrid-only fault no longer appears on a listing whose fitting variants are all petrol or diesel. A saved check of such a listing is named by the listing's own title. Opening one from the panel takes **History** to its page, already unfolded.
+- The car catalog no longer puts findings about another generation on a model's body and electrics. Mégane 3 faults were showing on every Mégane 4, and Golf 8 faults on Golf 7 engines.
 - A finding is shown only with the page and quote it came from. A few findings in the built-in catalogs had none and were shown anyway; they are now left out.
 - Answers from the engine arrive about 40 ms sooner each. The extension and the app ask often, so lists and checks feel quicker: a status check went from 48 ms to 3 ms, and a catalog lookup from 60 ms to 15 ms.
 - Updating with the installer also stops a running search helper (`OpenSERP.exe`), so it can no longer lock files and fail the upgrade.
