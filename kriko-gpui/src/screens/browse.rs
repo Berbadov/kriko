@@ -144,7 +144,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
                                 .text_color(rgb(INK_2))
                                 .child(clip(&c.title, 110)),
                         )
-                        .child(mono(&c.domain, DIM)),
+                        .child(mono(&if c.via.is_empty() { c.domain.clone() } else { format!("{} · through {}", c.domain, clip(&c.via, 48)) }, DIM)),
                 )
                 .child(severity_word_chip(&c.severity)),
         );

@@ -215,6 +215,8 @@ pub struct SubjectClaim {
     pub title: String,
     pub severity: String,
     pub domain: String,
+    /// The part a claim reaches this subject through; empty when it is its own.
+    pub via: String,
 }
 
 #[derive(Clone)]
@@ -448,6 +450,7 @@ fn subject_detail_from(v: &Value) -> SubjectDetail {
                 title: api::s(c, "title"),
                 severity: api::s(c, "severity"),
                 domain: api::s(c, "domain"),
+                via: api::s(c, "via"),
             })
             .collect(),
     }
