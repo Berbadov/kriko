@@ -7,7 +7,7 @@
     python -m http.server 8790 --directory extension
     open http://127.0.0.1:8790/tests/preview/panel.html
 
-  ?state=error | idle | empty picks another state of the panel.
+  ?state=error | idle | empty | several picks another state of the panel.
 -->
 <html lang="en">
 <head>
@@ -50,7 +50,7 @@
       result: {
         lookup_id: lookupId || "preview-check",
         claims: state === "empty" ? [] : CLAIMS,
-        coverage: state === "empty" ? "NO_RISKS_KNOWN" : "RISKS_FOUND",
+        coverage: state === "empty" ? "MATCHED_NO_DATA" : "RISKS_FOUND",
         identity: { make: "volkswagen", model: "golf", fuel: "Dizel" },
         context: { build_year: 2014, usage_km: 190000 },
         context_units: { usage_km: "km" },
@@ -58,6 +58,29 @@
         app_route: "result/abc123",
       },
     };
+    // ?state=empty: what the engine sends for a recognised product with
+    // nothing known (app/matching.py), verdict and next step included.
+    if (state === "empty") {
+      ENTRY.result.verdict = "recognised";
+      ENTRY.result.next_step = {
+        action: "research",
+        say: "This one is recognised, but the installed packs hold nothing about it yet. That is a gap, not a clean bill of health.",
+      };
+    }
+    // ?state=several: the page fits three products, and only what they share shows.
+    if (state === "several") {
+      ENTRY.result.claims = CLAIMS.slice(3);
+      ENTRY.result.verdict = "several";
+      ENTRY.result.next_step = {
+        action: "choose",
+        say: "3 products fit this page, so only what all of them share is shown. Pick the one on the listing to see the rest.",
+        choices: [
+          { subject_id: "s1", label: "Golf 1.6 TDI 90 hp" },
+          { subject_id: "s2", label: "Golf 1.6 TDI 105 hp" },
+          { subject_id: "s3", label: "Golf 1.6 TDI 110 hp" },
+        ],
+      };
+    }
     function previewJob() {
       const failed = params.get("research") === "failed";
       return {
@@ -135,7 +158,7 @@
   <script src="../../hover_lite/hover_lite.js"></script>
   <script>
     for (const fn of runtimeListeners) fn({ type: "TOGGLE_HOVER_LITE" });
-    if (state === "risks" || state === "empty") {
+    if (state === "risks" || state === "empty" || state === "several") {
       setTimeout(() => deliver("stage", { name: "reading", detail: "", at: Date.now() }), 300);
       setTimeout(() => deliver("result", ENTRY), 1200);
     }

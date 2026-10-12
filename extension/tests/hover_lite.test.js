@@ -430,6 +430,23 @@ const GAP_ENTRY = {
   },
 };
 
+test("a recognised product with nothing known is not called unrecognised", () => {
+  // The fallback line under an answer with no verdict: a product the header
+  // names must not be told, one line below, that no pack recognises it.
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [], coverage: "MATCHED_NO_DATA" } });
+  const empty = p.shadow().querySelector(".lite-empty");
+  assert.ok(empty, "the empty line was rendered");
+  assert.match(empty.textContent, /Recognised, but the installed packs hold nothing/);
+  assert.doesNotMatch(empty.textContent, /recognises it/);
+
+  const q = loadPanel();
+  q.openPanel();
+  q.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [], coverage: "NOT_MATCHED" } });
+  assert.match(q.shadow().querySelector(".lite-empty").textContent, /Nothing matched/);
+});
+
 test("a subject the packs know but hold nothing on opens a consent form, not a run", () => {
   // The difference that matters: "nothing matched" is a pack adapter problem
   // the reader cannot act on, while a subject that resolved with zero claims
