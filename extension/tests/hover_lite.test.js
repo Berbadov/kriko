@@ -203,14 +203,26 @@ test("Add to queue is offered on a product nothing installed knows", () => {
   assert.equal(ask.payload.name, "Acme Phone 5");
 });
 
-test("an agent's **bold** is rendered, and its markup is not", () => {
-  const source = fs.readFileSync(
-    path.join(__dirname, "..", "hover_lite", "hover_lite.js"), "utf8");
-  const fn = source.match(/function renderAgentText[\s\S]*?\r?\n  }\r?\n/)[0];
-  const esc = source.match(/function escapeHtml[\s\S]*?\r?\n  }\r?\n/)[0];
-  const render = new Function(`${esc}${fn}return renderAgentText;`)();
-  assert.equal(render("For the **Lenovo 3**: <b>x</b>"),
-    "For the <strong>Lenovo 3</strong>: &lt;b&gt;x&lt;/b&gt;");
+test("a pack's or an agent's **bold** and `code` render, and their markup does not", () => {
+  // The cars pack writes **emphasis** into its claims, and the card showed the
+  // asterisks. One renderer serves every prose field a pack or agent writes;
+  // escaping stays on, so an angle bracket in a claim is still just text.
+  const CLAIM = { claim_id: "c9", pack_id: "org.kriko.cars", severity: "high", strength: "reported",
+    domain: "engine", title: "Timing **chain**",
+    body: "For the **Lenovo 3**: <b>x</b> and `code`.",
+    advice: "Ask for the **service** records." };
+  const p = loadPanel();
+  p.openPanel();
+  p.deliverEntry({ ...ENTRY, result: { ...ENTRY.result, claims: [CLAIM] } });
+  const card = p.shadow().querySelector(".lite-rc");
+  assert.equal(card.querySelector(".lite-rc-title strong").textContent, "chain");
+  const body = card.querySelector(".lite-rc-text");
+  assert.equal(body.querySelector("strong").textContent, "Lenovo 3");
+  assert.equal(body.querySelector("code").textContent, "code");
+  assert.equal(body.querySelector("b"), null, "a claim's markup is shown as text");
+  assert.match(body.textContent, /<b>x<\/b>/);
+  assert.equal(card.querySelector(".lite-rc-insp-body strong").textContent, "service");
+  assert.doesNotMatch(card.textContent, /\*\*|`/);
 });
 
 // ── the way back to the app ─────────────────────────────────────────────
@@ -483,11 +495,11 @@ test("a subject the packs know but hold nothing on opens a consent form, not a r
 const ASKED = { questions: [{ id: "engine_code", ask: "Which engine code is it?",
   options: ["BUG", "CASA"], default: "BUG", because: "BUG was common." }] };
 
-function askingPanel(state) {
+function askingPanel(state, asked = ASKED) {
   const p = loadPanel({ workerResponse: {
     ok: true, plane: { backend: "agent", budget_usd: 0 },
     job: { job_id: "j1", kind: "pack_author", state, done: state !== "running",
-           attention: ASKED },
+           attention: asked },
     delivered: true, job_id: "j2", kind: "pack_author",
   } });
   p.openPanel();
@@ -511,6 +523,16 @@ test("a live run's question is a row of answers, and a press reaches the run (B1
   assert.equal(said.payload.job_id, "j1");
   assert.match(said.payload.text, /CASA/);
   assert.match(p.shadow().querySelector(".lite-asked").textContent, /It heard you\./);
+});
+
+test("an agent's question keeps its **emphasis** as emphasis, not as asterisks", () => {
+  const p = askingPanel("running", { questions: [{ id: "engine_code", ask: "Which **engine code** is it?",
+    options: ["**BUG**", "CASA"], default: "BUG", because: "BUG was common." }] });
+  const asked = p.shadow().querySelector(".lite-asked");
+  assert.equal(asked.querySelector(".lite-asked-q legend strong").textContent, "engine code");
+  const bug = [...asked.querySelectorAll(".lite-chip")].find((b) => b.querySelector("strong"));
+  assert.equal(bug.querySelector("strong").textContent, "BUG");
+  assert.doesNotMatch(asked.textContent, /\*\*/);
 });
 
 test("a finished run's question runs it again with the answer applied (B147)", () => {
@@ -928,6 +950,28 @@ test("a product nothing installed knows gets its name and one research button (B
   assert.ok(p.shadow().querySelector(".lite-research-start"));
 });
 
+test("the primary button researches a product nothing installed knows; it does not ask again", () => {
+  // It said "Search this product", and for a product no pack holds a second
+  // lookup answers exactly what the first did: the screen did not change. The
+  // card under it already offered the research, so the button offers it too.
+  const p = loadPanel({
+    analyzeResponse: { ok: false, code: "UNKNOWN_PRODUCT", productName: "Bosch HSG 7584 B 1" },
+    workerResponse: (message) => message.type === "RESEARCH_PLANE"
+      ? { ok: true, plane: { backend: "local", budget_usd: 0 } }
+      : { ok: true },
+  });
+  p.openPanel();
+  assert.equal(p.shadow().querySelector(".lite-cta-label").textContent, "Research this product");
+  assert.match(p.statusText(), /Research it to find out/);
+
+  const asks = p.sent.filter((m) => m.type === "ANALYZE").length;
+  p.click(".lite-cta");
+  assert.equal(p.sent.filter((m) => m.type === "ANALYZE").length, asks, "no second lookup");
+  assert.ok(p.sent.some((m) => m.type === "RESEARCH_PLANE"), "the research form opened");
+  assert.equal(p.shadow().querySelector(".lite-research-name").value, "Bosch HSG 7584 B 1");
+  assert.ok(p.shadow().querySelector(".lite-research-start"));
+});
+
 test("a stored unknown-product answer reopens on the same card (B149)", () => {
   const p = loadPanel({ analyzeResponse: { ok: false, code: "UNKNOWN_PRODUCT", productName: "Acme Phone 5" } });
   p.openPanel();
@@ -1011,7 +1055,8 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
     }
     if (message.type === "JOB_STATUS" && message.payload.job_id === "q1") {
       return { ok: true, job: { state: "succeeded", done: true, result: {
-        assumed: "the 1.6 diesel", risks: [RISK], dropped: 1, deepen_job_id: "d1" } } };
+        assumed: "the **1.6** diesel", specs: [{ name: "Torque", value: "**250 Nm**" }],
+        risks: [RISK], dropped: 1, deepen_job_id: "d1" } } };
     }
     if (message.type === "JOB_STATUS") {
       return { ok: true, job: { state: "running", done: false, progress: 0.2, message: "reading" } };
@@ -1033,6 +1078,9 @@ test("an unknown product gets one button: quick cards now, then the deeper run (
   const slot = p.shadow().querySelector(".lite-research");
   assert.match(slot.textContent, /Gearbox judder/);
   assert.match(slot.textContent, /Taken as: the 1\.6 diesel/);
+  assert.equal(slot.querySelector(".lite-quick-assumed strong").textContent, "1.6");
+  assert.equal(slot.querySelector(".lite-quick-specs strong").textContent, "250 Nm");
+  assert.doesNotMatch(slot.textContent, /\*\*/);
   assert.match(slot.querySelector(".lite-quick-src").textContent, /it judders/);
   assert.equal(slot.querySelector(".lite-quick-src a").getAttribute("href"), "https://example.org/a");
   // The panel moved on to the deep run rather than stopping at "done".

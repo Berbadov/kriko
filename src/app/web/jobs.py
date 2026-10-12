@@ -200,9 +200,15 @@ class _Waiting:
 
 
 class JobRunner:
-    def __init__(self, settings, handlers: Mapping[str, Handler]):
+    def __init__(self, settings, handlers: Mapping[str, Handler],
+                 on_idle: Callable[[], object] | None = None):
         self.settings = settings
         self.handlers = handlers
+        #: Called each time the last running job ends, both lanes counted:
+        #: what a job held for its run (a loaded model) goes back to the host
+        #: then, and never while another job may still be using it.
+        self._on_idle = on_idle
+        self._active = 0
         # Sized to the ceiling, not to the choice: the choice is read at every
         # start, so raising it in Settings needs no restart, and an idle
         # executor thread costs nothing.
@@ -351,6 +357,8 @@ class JobRunner:
 
     def _run(self, job_id: str, kind: str, params: dict, lane: bool = True,
              waited: bool = False) -> None:
+        with self._lock:
+            self._active += 1
         conn = self._connect()
         progress = Progress(job_id, conn)
         try:
@@ -413,8 +421,19 @@ class JobRunner:
             )
         finally:
             conn.close()
+            self._idle_check()
             if lane:
                 self._done(job_id)
+
+    def _idle_check(self) -> None:
+        with self._lock:
+            self._active -= 1
+            idle = self._active == 0 and not self._waiting
+        if idle and self._on_idle is not None:
+            try:
+                self._on_idle()
+            except Exception:  # noqa: BLE001 - letting go is a courtesy, never a failure
+                traceback.print_exc()
 
     def cancel(self, job_id: str) -> str | None:
         conn = self._connect()
@@ -432,3 +451,8 @@ class JobRunner:
             self._waiting.clear()
         self._pool.shutdown(wait=wait, cancel_futures=True)
         self._quick.shutdown(wait=wait, cancel_futures=True)
+        if self._on_idle is not None:
+            try:
+                self._on_idle()
+            except Exception:  # noqa: BLE001 - quitting goes on regardless
+                pass

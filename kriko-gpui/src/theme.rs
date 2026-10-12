@@ -342,10 +342,11 @@ pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
         )
 }
 
-/// A translucent brand wash over the sky that slowly breathes, so the hero
-/// feels alive without anything moving in it. Still (dimmed) without motion.
-fn sky_veil(motion: bool) -> gpui::AnyElement {
-    let veil = div().absolute().top_0().left_0().size_full().bg(linear_gradient(
+/// A translucent brand wash over the sky. It used to breathe on a 14 s loop,
+/// which redrew the whole window every frame on every screen for a movement
+/// nobody could see (#184); the wash now holds the breath's middle.
+fn sky_veil(_motion: bool) -> gpui::AnyElement {
+    div().absolute().top_0().left_0().size_full().bg(linear_gradient(
         90.0,
         linear_color_stop(
             Hsla {
@@ -361,17 +362,9 @@ fn sky_veil(motion: bool) -> gpui::AnyElement {
             },
             1.0,
         ),
-    ));
-    if motion {
-        veil.with_animation(
-            "sky-breath",
-            Animation::new(std::time::Duration::from_secs(14)).repeat(),
-            |el, t| el.opacity(0.55 + 0.45 * (std::f32::consts::PI * t).sin()),
-        )
-        .into_any_element()
-    } else {
-        veil.opacity(0.6).into_any_element()
-    }
+    ))
+    .opacity(0.6)
+    .into_any_element()
 }
 
 /// The img source that reads from the embedded AssetSource. A bare string
@@ -737,16 +730,18 @@ pub fn led_matrix_anim(
                     .into_any_element()
                 } else if motion && anim == LedAnim::Blink {
                     // the marquee: bulb `index` dims out of turn, one after
-                    // another, so the sign never goes dark all at once
+                    // another, so the sign never goes dark all at once. It
+                    // runs BLINKS rounds when the tag appears, then rests lit:
+                    // a question can wait for days, and a loop would redraw
+                    // the whole window every frame for all of them (#184).
                     let phase = index as f32 / lit_dots as f32;
                     base.with_animation(
                         gpui::ElementId::named_usize(format!("{id}-blink"), index),
-                        Animation::new(std::time::Duration::from_millis(1200))
-                            .repeat()
+                        Animation::new(std::time::Duration::from_millis(1200 * BLINKS as u64))
                             .with_easing(|t| t),
                         move |el, t| {
-                            let k = (t + phase).fract();
-                            el.opacity(if k < 0.6 { 1.0 } else { 0.25 })
+                            let k = (t * BLINKS as f32 + phase).fract();
+                            el.opacity(if t >= 1.0 || k < 0.6 { 1.0 } else { 0.25 })
                         },
                     )
                     .into_any_element()
@@ -774,8 +769,11 @@ pub enum TagState {
     Block,
 }
 
+/// How many marquee rounds a needs-you tag runs before it rests lit.
+const BLINKS: u32 = 3;
+
 /// State tag: LED glyph plus a word, always both. The LED animates the way
-/// the CSS does: NEEDS YOU blinks, LIVE boots once on mount. `motion ==
+/// the CSS does: NEEDS YOU blinks a few rounds, LIVE boots once on mount. `motion ==
 /// false` (Reduce motion) keeps it static. `id` names the tag's animation:
 /// unique per tag on the screen, or two tags half-light each other.
 pub fn tag(id: impl Into<SharedString>, state: TagState, label: &str, motion: bool) -> Div {

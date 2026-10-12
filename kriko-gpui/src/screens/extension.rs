@@ -62,7 +62,7 @@ fn seen_line(e: &ExtStatus) -> (TagState, &'static str, String) {
 }
 
 pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let k = &app.live.knowledge;
     let Some(e) = &k.ext else {
         return div().child(empty_note(

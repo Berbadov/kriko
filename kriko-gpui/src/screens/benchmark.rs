@@ -272,7 +272,7 @@ fn machine_cells(m: Option<&Machine>) -> Vec<(&'static str, String)> {
 }
 
 pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let bench = app.live.local.bench.clone();
     let b = &bench;
     if !b.loaded {
