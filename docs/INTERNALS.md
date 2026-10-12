@@ -86,16 +86,6 @@ handler reads it between steps, so a run can be answered while it runs.
 `research` feeds `app/findings.py`, the same grounding path as the MCP
 `submit_findings`; `pack_build` mirrors `kriko build`.
 
-**A quick look needs no agent either.** With no coding agent, key or local
-model, the extension's research door runs the quick look on the reader's own
-chat (`app/providers/chat_bridge.py`, plane `chat`, cost basis `own_chat`).
-The job puts its question in its partial result (`chat_prompt`); the panel
-shows it with a Copy button and posts the pasted answer to
-`POST /api/jobs/{id}/say`. Every page the answer cites is then fetched on this
-machine and `quicklook.parse` keeps a risk only when its quote is in its page,
-so an invented or misquoted line, or an unreadable source, is dropped. The
-result is an ordinary quick look, filed into catalogs like any other.
-
 **Filing quick looks needs no agent.** `pack_harvest` (`src/app/web/tasks.py`,
 started by `POST /api/packs/harvest` and by **File quick looks** on Overview)
 files every saved quick look not yet filed. `_file_quick_look` re-checks each

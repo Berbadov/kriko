@@ -807,9 +807,6 @@
     if (plane.backend === "local") {
       return "Costs nothing. Runs on the model on this computer.";
     }
-    if (plane.backend === "chat") {
-      return "Costs nothing. Uses your own chat: copy a question into it, paste its answer back.";
-    }
     return "Costs nothing; runs through your coding agent.";
   }
 
@@ -863,9 +860,6 @@
     state.researchAnswers = {};
     state.researchTold = {};
     state.researchDraftAnswers = {};
-    state.chatPaste = "";
-    state.chatSent = false;
-    state.chatCopied = false;
     // Retain the last successful cards while refreshing, including failure.
     state.researchStartedAt = Date.now();
     state.researchProgress = 0;
@@ -1003,42 +997,6 @@
     });
   }
 
-  /* The two halves of "use your own chat": the question out, the answer in.
-   * The answer is kept in state as it is typed, so a poll that rebuilds the
-   * card never loses a paste. */
-  function bindChat(slot) {
-    const question = slot.querySelector(".lite-chat-question");
-    const answer = slot.querySelector(".lite-chat-answer");
-    if (!question || !answer) return;
-    answer.value = state.chatPaste || "";
-    answer.addEventListener("input", () => { state.chatPaste = answer.value; });
-    slot.querySelector(".lite-chat-copy")?.addEventListener("click", () => {
-      const done = () => { state.chatCopied = true; renderResearch(); };
-      const fallback = () => {
-        question.focus();
-        question.select();
-        try { document.execCommand("copy"); } catch (_) { /* the text stays selected */ }
-        done();
-      };
-      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(question.value).then(done, fallback);
-      else fallback();
-    });
-    slot.querySelector(".lite-chat-send")?.addEventListener("click", () => {
-      const text = (state.chatPaste || "").trim();
-      const jobId = state.researchJob?.job_id;
-      if (!text || !jobId || state.chatSent) return;
-      state.chatSent = true;
-      renderResearch();
-      chrome.runtime.sendMessage({ type: "JOB_SAY", payload: { job_id: jobId, text } }, (response) => {
-        if (chrome.runtime.lastError || !response?.ok || !response.delivered) {
-          state.chatSent = false;
-          state.researchMessage = "The answer did not reach Kriko. Is the app still open?";
-        }
-        renderResearch();
-      });
-    });
-  }
-
   function renderResearch() {
     const slot = bodyEl?.querySelector(".lite-research-slot");
     if (!slot) return;
@@ -1053,9 +1011,6 @@
     const editing = slot.querySelector(".lite-question-input:focus");
     const editingId = editing?.dataset.id;
     const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
-    // The reader's own chat is the researcher: the run hands its question
-    // over and waits for the answer to be pasted back (app/providers/chat_bridge.py).
-    const chatPrompt = busy ? String(state.researchJob?.result?.chat_prompt || "") : "";
     const quickCoverage = state.researchQuick?.coverage;
     const quickIsEmpty = Boolean(state.researchQuick
       && !state.researchQuick.risks?.length && !state.researchQuick.specs?.length);
@@ -1089,15 +1044,6 @@
           </div></div>
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
-        ${chatPrompt ? `<div class="lite-chat">
-          <p class="lite-chat-step"><b>1</b> Copy this question into any chat that can search the web.</p>
-          <textarea class="lite-chat-question" readonly rows="3" aria-label="The question for your chat">${escapeHtml(chatPrompt)}</textarea>
-          <button type="button" class="lite-chip lite-chat-copy">${state.chatCopied ? "Copied" : "Copy question"}</button>
-          <p class="lite-chat-step"><b>2</b> Paste its whole answer here.</p>
-          <textarea class="lite-chat-answer" rows="4" maxlength="60000" placeholder="Paste your chat's answer" aria-label="Your chat's answer" ${state.chatSent ? "disabled" : ""}></textarea>
-          <button type="button" class="lite-research-start lite-chat-send" ${state.chatSent ? "disabled" : ""}>${state.chatSent ? "Checking its sources\u2026" : "Check the answer"}</button>
-          <p class="lite-chat-note">Each risk is kept only if its quote is on the page it cites, read on this computer.</p>
-        </div>` : ""}
         ${state.researchSavedAt ? `<p class="lite-saved-result">Saved result · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
         ${quickCoverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
           `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched product · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} pages cited`
@@ -1172,7 +1118,6 @@
     slot._researchMarkup = signature;
     slot.innerHTML = markup;
     paintReplies(slot);
-    bindChat(slot);
     // The card drops in once, when it is opened, and not again each time a
     // poll rebuilds it. Context stays folded until it is asked for (or has
     // words in it already); the fold eases open rather than snapping.
