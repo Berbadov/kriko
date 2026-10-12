@@ -122,8 +122,9 @@ def test_the_research_plane_endpoint_reports_free_by_default(tmp_path, monkeypat
     monkeypatch.setattr(harness_mod, "available", lambda: [])
     client = _client(tmp_path)
     body = client.get("/api/extension/research-plane").json()
-    assert body["backend"] == "agent"
-    assert body["cost_basis"] == "subscription"
+    # Nothing on this machine can research: the reader's own chat, free.
+    assert body["backend"] == "chat"
+    assert body["cost_basis"] == "own_chat"
     assert body["budget_usd"] == 0.0
 
 
@@ -292,7 +293,7 @@ def test_post_research_plane_does_not_guess_between_variants(research_client, al
     assert research_client.get("/api/jobs").json()["items"] == []
 
 
-@pytest.mark.parametrize("available,backend", [(False, "agent"), (True, "harness")])
+@pytest.mark.parametrize("available,backend", [(False, "chat"), (True, "harness")])
 def test_post_research_plane_uses_the_advertised_free_plane(
     research_client, monkeypatch, available, backend,
 ):
@@ -447,22 +448,46 @@ def test_local_unknown_listing_quick_only_submits_an_answer_without_building(
     assert calls[0][1]["pack_id"] == ""
 
 
-@pytest.mark.parametrize("allow_draft,expected", [(False, 404), (True, 503)])
-def test_unknown_product_never_falls_back_to_paid_research(
-    research_client, monkeypatch, allow_draft, expected,
-):
+def test_unknown_product_never_falls_back_to_paid_research(research_client, monkeypatch):
     from app.providers import harness
 
     monkeypatch.setattr(harness, "available", lambda: [])
     response = research_client.post("/api/extension/research-plane", json={
-        "q": "Unknown Widget", "allow_draft": allow_draft,
+        "q": "Unknown Widget", "allow_draft": False,
         "model": "paid-model", "search": "paid-search", "cap": 100,
     })
-    assert response.status_code == expected
-    if allow_draft:
-        assert "Install" in response.json()["detail"]
-        assert "No API research was started" in response.json()["detail"]
+    assert response.status_code == 404
     assert research_client.get("/api/jobs").json()["items"] == []
+
+
+def test_with_nothing_to_research_on_the_readers_own_chat_answers(research_client, monkeypatch):
+    """The reader with no agent, key or local model used to get a 503 here.
+    Their own chat answers instead: a free quick look that waits for a pasted
+    reply, and never a paid plane."""
+    from app.providers import harness
+    from app.web.deps import get_jobs
+
+    calls = []
+
+    class Runner:
+        def submit(self, kind, params):
+            calls.append((kind, params))
+            return f"job-{len(calls)}"
+
+    monkeypatch.setattr(harness, "available", lambda: [])
+    research_client.app.dependency_overrides[get_jobs] = lambda: Runner()
+    response = research_client.post("/api/extension/research-plane", json={
+        "q": "Unknown Widget", "allow_draft": True,
+        "model": "paid-model", "search": "paid-search", "cap": 100,
+    })
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["backend"] == "chat" and body["cost_basis"] == "own_chat"
+    assert body["budget_usd"] == 0.0
+    assert "paste its answer" in body["note"]
+    assert [kind for kind, _ in calls] == ["quick_look"]
+    assert calls[0][1]["backend"] == "chat"
+    assert calls[0][1]["budget_usd"] == 0.0
 
 
 def test_unknown_subject_id_does_not_author_a_draft(research_client):
