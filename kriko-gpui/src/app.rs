@@ -768,6 +768,12 @@ impl Kriko {
             .flex_1()
             .min_h(px(0.0))
             .overflow_y_scroll().occlude();
+        // Counts from the engine, not from the mock-up: products in the
+        // store beside Browse, jobs still running beside Activity.
+        let subjects = self.live.knowledge.totals.subjects;
+        let browse_count = (subjects > 0).then(|| subjects.to_string());
+        let running = self.live.run.jobs.iter().filter(|j| !j.done).count();
+        let activity_badge = (running > 0).then(|| running.to_string());
         for (gi, group) in data::NAV.iter().enumerate() {
             nav = nav.child(
                 div()
@@ -780,7 +786,12 @@ impl Kriko {
             for item in group.items {
                 let key = item.key;
                 let current = self.tab.key() == key;
-                let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { item.count }, if self.sidebar_collapsed { None } else { item.badge })
+                let (count, badge) = match key {
+                    "browse" => (browse_count.as_deref(), None),
+                    "activity" => (None, activity_badge.as_deref()),
+                    _ => (item.count, item.badge),
+                };
+                let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { count }, if self.sidebar_collapsed { None } else { badge })
                     .flex_none()
                     .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
                         this.tab = Tab::from_key(key);
