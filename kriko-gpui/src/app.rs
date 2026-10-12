@@ -498,8 +498,6 @@ impl Kriko {
                     }
                     shell::show_window(cx);
                 }
-                engine::ShellEvent::Hide => shell::hide_window(),
-                engine::ShellEvent::Quit => Self::quit(cx),
             }
         }
         let now = engine::status();

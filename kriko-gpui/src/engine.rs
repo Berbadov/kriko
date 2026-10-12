@@ -27,8 +27,6 @@ use std::time::{Duration, Instant};
 pub const PORT_LINE: &str = "KRIKO_PORT";
 /// The sidecar prints this with a route when something asks to raise Kriko.
 pub const FOCUS_LINE: &str = "KRIKO_FOCUS";
-/// The sidecar prints this with `ack|hide|quit` when the window is answered.
-pub const WINDOW_LINE: &str = "KRIKO_WINDOW";
 /// Default second socket for the browser extension. Must equal
 /// `app.web.settings.EXTENSION_PORT`.
 pub const EXTENSION_PORT: u16 = 8787;
@@ -77,10 +75,6 @@ pub enum Status {
 pub enum ShellEvent {
     /// Raise the window (and open this route, when there is one).
     Focus(String),
-    /// Hide the window: the reader chose "keep running".
-    Hide,
-    /// End the app and the engine.
-    Quit,
 }
 
 struct Supervisor {
@@ -310,16 +304,6 @@ fn spawn(mut command: Command, generation: u64) {
         } else if line.contains(FOCUS_LINE) {
             let route = line.split(FOCUS_LINE).nth(1).unwrap_or("").trim().to_string();
             sup().lock().unwrap().events.push(ShellEvent::Focus(route));
-        } else if line.contains(WINDOW_LINE) {
-            let answer = line.split(WINDOW_LINE).nth(1).unwrap_or("").trim().to_string();
-            let event = match answer.as_str() {
-                "hide" => Some(ShellEvent::Hide),
-                "quit" => Some(ShellEvent::Quit),
-                _ => None,
-            };
-            if let Some(event) = event {
-                sup().lock().unwrap().events.push(event);
-            }
         }
     }
     // stdout closed: the engine has ended, or is about to
