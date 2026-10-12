@@ -1942,7 +1942,12 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         finally:
             store.close()
 
-    if _use_local_ask(settings, params):
+    if str(params.get("backend") or "").lower() == "chat":
+        # The reader's own chat, relayed by hand: no agent, key or local model.
+        from app.providers.chat_bridge import ChatBridge
+
+        researcher = ChatBridge(progress)
+    elif _use_local_ask(settings, params):
         researcher = _local_asker(settings, params, progress)
     else:
         researcher = harness_researcher(

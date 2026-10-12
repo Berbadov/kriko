@@ -16,7 +16,6 @@ from app import extension, followup, keys, sites
 from app.web import state
 from app.web.deps import get_app_state, get_jobs, get_store
 from app.web.routers.research import resolve_research_subject
-from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher
 
 router = APIRouter(prefix="/api/extension", tags=["extension"])
@@ -194,11 +193,33 @@ def research_plane(request: Request) -> dict:
             "cost_basis": "subscription",
             "budget_usd": 0.0,
         }
-    return {
-        "backend": AgentResearcher.name,
-        "cost_basis": AgentResearcher.cost_basis,
-        "budget_usd": 0.0,
-    }
+    # No agent, no key, no local model: the reader's own chat, relayed by
+    # hand (`app.providers.chat_bridge`). Free, and every quote it brings back
+    # is checked against its page on this machine.
+    return CHAT_PLANE
+
+
+#: The plane for a reader with nothing but a chat in a browser tab.
+CHAT_PLANE = {"backend": "chat", "cost_basis": "own_chat", "budget_usd": 0.0}
+
+#: What the panel says when it hands the question over.
+CHAT_NOTE = ("Copy the question into any chat that can search the web, then "
+             "paste its answer here. Free. Every quote is checked against its "
+             "page on this computer, and lines that do not hold are dropped.")
+
+
+def _chat_quick_look(runner, store, conn, body, product: str, pack_id: str = "") -> dict:
+    """A quick look answered by the reader's own chat."""
+    from app import pagefacts
+
+    page = pagefacts.clean(body.facts, body.description)
+    pack = pack_id or _listing_pack(store, conn, body.url, body.facts, product)
+    job = runner.submit("quick_look", {
+        "product": product, "page_url": body.url, "harness": "", "backend": "chat",
+        "pack_id": pack, "page": page, "budget_usd": 0.0,
+    })
+    return {"job_id": job, "kind": "quick_look", **CHAT_PLANE, "harness": "",
+            "note": CHAT_NOTE}
 
 
 class ExtensionResearchRequest(BaseModel):
@@ -271,6 +292,8 @@ def start_research_plane(
         installed = harness.available()
         stored = (prefs.read(conn).get(prefs.HARNESS) or "") if conn is not None else ""
         requested = body.harness.strip()
+        if requested == CHAT_PLANE["backend"]:
+            return _chat_quick_look(runner, store, conn, body, body.q.strip())
         api_ids = {one.id for one in apiagent.available()}
         installed_ids = {one.id for one in installed}
         if requested and requested != prefs.LOCAL_PICK and requested not in api_ids | installed_ids:
@@ -324,12 +347,9 @@ def start_research_plane(
                         "is saved; add it to a pack when you want it kept as knowledge.",
             }
         if not installed_ids and not picked_api:
-            raise HTTPException(503, (
-                "Product drafts need an agent. Install a coding-agent CLI, pick "
-                "the Mistral API agent in Settings → Agents (it needs a Mistral "
-                "key), or run a local model server with a model downloaded. "
-                + local["reason"] + " No API research was started."
-            )) from exc
+            # Nothing on this machine can research. That used to be a 503 and
+            # the end of it for most readers; their own chat can do it.
+            return _chat_quick_look(runner, store, conn, body, body.q.strip())
         # Decided once, here, and then both reported and obeyed.
         #
         # Passing `available[0].id` was passing it *explicitly*, and an
@@ -417,6 +437,13 @@ def start_research_plane(
                     "add it to a pack when you want it kept as knowledge.",
         }
     plane = research_plane(request)
+    if plane["backend"] == CHAT_PLANE["backend"] or body.harness.strip() == CHAT_PLANE["backend"]:
+        # A pack's own subject with nothing known: the chat's sourced answer
+        # is a quick look, which a harvest then files into that pack.
+        row = store.execute("SELECT label FROM subjects WHERE subject_id = ? AND pack_id = ?",
+                            (subject["subject_id"], subject["pack_id"])).fetchone()
+        label = (row[0] if row else "") or body.q.strip()
+        return _chat_quick_look(runner, store, conn, body, label, subject["pack_id"])
     budget = min(body.cap or EXTENSION_RESEARCH_BUDGET_USD,
                  EXTENSION_RESEARCH_BUDGET_USD)
     params = {

@@ -2449,3 +2449,16 @@
   .lite-body > *, .lite-research[data-enter="1"], .lite-tl-body, .lite-queue-guide { animation: none; }
   .lite-fold, .lite-tl-chev { transition: none; }
 }
+
+/* Use your own chat: the question to copy, the answer to paste. */
+.lite-chat { display: grid; gap: 8px; margin: 10px 0; padding: 12px; border-radius: 10px;
+  background: var(--bg-item); border: 1px solid var(--border-soft); }
+.lite-chat-step { margin: 0; font-size: 12px; color: var(--fg-body); }
+.lite-chat-step b { display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px;
+  border-radius: 50%; background: var(--accent); color: var(--on-brand); font-size: 11px; }
+.lite-chat textarea { width: 100%; box-sizing: border-box; resize: vertical; font: 12px/1.4 var(--font-mono);
+  color: var(--fg); background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px; }
+.lite-chat-question { max-height: 90px; color: var(--fg-muted); }
+.lite-chat-copy, .lite-chat-send { justify-self: start; }
+.lite-chat-note { margin: 0; font-size: 11px; color: var(--fg-subtle); }
