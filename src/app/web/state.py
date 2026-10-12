@@ -1094,76 +1094,6 @@ def extension_sightings(conn: sqlite3.Connection) -> list[dict]:
     ]
 
 
-# ── triage ───────────────────────────────────────────────────────────────
-
-
-def checked_keys(conn: sqlite3.Connection, lookup_id: str) -> list[str]:
-    return [
-        row["claim_key"]
-        for row in conn.execute(
-            "SELECT claim_key FROM claim_checks WHERE lookup_id = ?"
-            " ORDER BY claim_key",
-            (lookup_id,),
-        )
-    ]
-
-
-def set_checked(
-    conn: sqlite3.Connection, lookup_id: str, claim_key: str, checked: bool
-) -> list[str]:
-    if checked:
-        conn.execute(
-            "INSERT OR IGNORE INTO claim_checks (lookup_id, claim_key, created_at)"
-            " VALUES (?, ?, ?)",
-            (lookup_id, claim_key, datetime.now(UTC).isoformat(timespec="seconds")),
-        )
-    else:
-        conn.execute(
-            "DELETE FROM claim_checks WHERE lookup_id = ? AND claim_key = ?",
-            (lookup_id, claim_key),
-        )
-    conn.commit()
-    return checked_keys(conn, lookup_id)
-
-
-def notes(conn: sqlite3.Connection, lookup_id: str) -> dict[str, str]:
-    """Every note on one answer, keyed the way the UI keys a claim."""
-    return {
-        row["claim_key"]: row["note"]
-        for row in conn.execute(
-            "SELECT claim_key, note FROM claim_notes WHERE lookup_id = ?",
-            (lookup_id,),
-        )
-    }
-
-
-def set_note(
-    conn: sqlite3.Connection, lookup_id: str, claim_key: str, note: str
-) -> dict[str, str]:
-    """Write one note, or clear it.
-
-    An empty note deletes the row rather than storing `''`. A reader who
-    selects their own text and deletes it has said "there is no note here",
-    and an empty string would keep the claim in every "what did the seller
-    say" list forever.
-    """
-    if note.strip():
-        conn.execute(
-            "INSERT INTO claim_notes (lookup_id, claim_key, note, updated_at)"
-            " VALUES (?, ?, ?, ?)"
-            " ON CONFLICT (lookup_id, claim_key) DO UPDATE SET"
-            "   note = excluded.note, updated_at = excluded.updated_at",
-            (lookup_id, claim_key, note.strip(), _now()),
-        )
-    else:
-        conn.execute(
-            "DELETE FROM claim_notes WHERE lookup_id = ? AND claim_key = ?",
-            (lookup_id, claim_key),
-        )
-    conn.commit()
-    return notes(conn, lookup_id)
-
-
 # ── marks — what the reader thought of a claim ────────────────────────────
 
 
@@ -2692,23 +2622,6 @@ def unmapped_labels(
         (*args, limit),
     ).fetchall()
     return [dict(row) for row in rows]
-
-
-def forget_unmapped(conn: sqlite3.Connection, adapter_id: str, label: str) -> bool:
-    """Drop one label.
-
-    The dismissal an author needs: "Takasa Uygun" is never going to be mapped
-    and a list that cannot be pruned stops being read. Deleting a row that
-    recurs is not permanent — the next listing carrying it puts it back with a
-    fresh `first_at`, which is the correct answer to "I said I did not care
-    and it is still happening".
-    """
-    cur = conn.execute(
-        "DELETE FROM unmapped_labels WHERE adapter_id = ? AND label = ?",
-        (adapter_id, label),
-    )
-    conn.commit()
-    return cur.rowcount > 0
 
 
 # ── fact checks — what the cited page says now ────────────────────────────

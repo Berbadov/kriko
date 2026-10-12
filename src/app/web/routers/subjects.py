@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.termlabel import term_label
 from app.web.deps import get_store
-from kriko.research import get_researcher, plan_task
 
 router = APIRouter(prefix="/api", tags=["subjects"])
 
@@ -293,22 +292,3 @@ def get_subject(subject_id: str, store=Depends(get_store)):
     }
 
 
-@router.get("/subjects/{subject_id}/brief")
-def research_brief(subject_id: str, store=Depends(get_store)):
-    """The research brief, in the pack's own terms.
-
-    This is the whole $0 plane from the browser: copy it into a coding-agent
-    session, let the subscription do the searching, and the findings come back
-    through MCP.
-    """
-    row = store.execute(
-        "SELECT pack_id FROM subjects WHERE subject_id = ?", (subject_id,)
-    ).fetchone()
-    if row is None:
-        raise HTTPException(404, f"no subject {subject_id}")
-    task = plan_task(store, subject_id, row["pack_id"])
-    return {
-        "subject": task.subject_label,
-        "queries": list(task.rendered_queries()),
-        "brief": get_researcher().brief(task),
-    }
