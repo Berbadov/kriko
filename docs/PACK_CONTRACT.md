@@ -25,9 +25,9 @@ flowchart LR
         README["README.md"]
         OPT["optional: vocabulary/, research/,<br/>trust/, adapters/, build.py,<br/>pipeline/, coverage.py"]
     end
-    DIR --> BUILD["kriko build"]
+    DIR --> BUILD["kriko build<br/>refuses no subjects and no claims"]
     BUILD --> KPACK[".kpack"]
-    KPACK --> INSTALL["kriko install<br/>refused with no subjects and claims"]
+    KPACK --> INSTALL["kriko install"]
     INSTALL --> STORE["the SQLite store"]
     STORE --> LOOKUP["resolve, then query claims"]
 
@@ -89,7 +89,8 @@ is still a valid pack.
   language as seeds, not by script; effectively required, because without it
   the brief never says what to look for), and `skill.md` (an optional
   identity-resolution method, which becomes a section of the skill).
-  `kriko pack scaffold` derives starters from the identity keys.
+  `POST /api/packs/scaffold` (`src/kriko/pack/scaffold.py`) derives starters
+  from the identity keys.
 - **`trust/`** — source trust tiers, for ingestion whose sources vary in
   reliability. A pack of synthetic data has none and needs none.
 - **`adapters/`** — per-site rules (`identity`, `context`, `derive`,
