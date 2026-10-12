@@ -22,7 +22,8 @@ thread_local! {
     static WINDOW: std::cell::Cell<Option<gpui::AnyWindowHandle>> = const { std::cell::Cell::new(None) };
 }
 
-/// Something the reader did in the tray.
+/// Something the reader did in the tray. The tray exists only on Windows.
+#[cfg(windows)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TrayAction {
     Open,
@@ -196,7 +197,10 @@ pub fn raise_running_instance(show: bool) -> bool {
         false
     }
     #[cfg(not(windows))]
-    false
+    {
+        let _ = show;
+        false
+    }
 }
 
 pub fn has_tray() -> bool {
@@ -281,15 +285,11 @@ pub fn build_tray() {
 }
 
 /// What was clicked in the tray since the last call.
+#[cfg(windows)]
 pub fn poll_tray() -> Vec<TrayAction> {
-    #[cfg(windows)]
-    {
-        let mut actions = tray::poll();
-        if activation::take() { actions.push(TrayAction::Open); }
-        actions
-    }
-    #[cfg(not(windows))]
-    Vec::new()
+    let mut actions = tray::poll();
+    if activation::take() { actions.push(TrayAction::Open); }
+    actions
 }
 
 pub fn remove_tray() {

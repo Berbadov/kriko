@@ -178,16 +178,6 @@ fn runtime_id(name: &str) -> &'static str {
     }
 }
 
-fn machine_line(m: Option<&Machine>) -> String {
-    let Some(m) = m else { return "reading this machine".to_string() };
-    format!(
-        "{} · {} VRAM · {} RAM",
-        m.gpu.clone().unwrap_or_else(|| "no GPU reported".to_string()),
-        m.vram_total_mb.map(gb_mb).unwrap_or_else(|| "n/a".to_string()),
-        m.ram_mb.map(gb_mb).unwrap_or_else(|| "n/a".to_string()),
-    )
-}
-
 fn setup(
     app: &mut Kriko,
     plane: &Plane,

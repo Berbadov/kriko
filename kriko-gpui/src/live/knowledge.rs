@@ -181,7 +181,6 @@ pub struct State {
 pub struct AppUpdate {
     pub newer: bool,
     pub version: String,
-    pub notes: String,
     pub error: String,
 }
 
@@ -194,7 +193,6 @@ pub fn app_update_from(reply: api::Reply, prior: AppUpdate) -> AppUpdate {
         Ok(v) if api::s(&v, "error").is_empty() => AppUpdate {
             newer: api::b(&v, "newer"),
             version: api::s(&v, "version"),
-            notes: api::s(&v, "notes"),
             error: String::new(),
         },
         Ok(v) => AppUpdate { error: api::s(&v, "error"), ..prior },
