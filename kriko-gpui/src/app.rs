@@ -338,6 +338,8 @@ pub struct Kriko {
     pub dock_reply_open: bool,
     /// A route KRIKO_VERIFY asked for, opened once the engine answers.
     pub pending_route: Option<String>,
+    /// A saved check a route asked for: History turns to its page.
+    pub history_focus: Option<String>,
     /// The full live agent logs drawer in the dock.
     pub dock_logs_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
@@ -404,6 +406,7 @@ impl Kriko {
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
             pending_route: None,
+            history_focus: None,
             dock_logs_open: false,
             dock_feed: Vec::new(),
             // Every launch starts with the live dock closed.
@@ -495,6 +498,11 @@ impl Kriko {
             if self.live.history.open.as_deref() != Some(id) {
                 self.toggle_history_open(id.to_string(), cx);
             }
+            // Wherever it sits: no search or span hides it, and History
+            // turns to its page once the list is there.
+            self.history_search.set_value(String::new());
+            self.history_span = SpanFilter::All;
+            self.history_focus = Some(id.to_string());
         }
         self.on_open_tab(cx);
         cx.notify();
