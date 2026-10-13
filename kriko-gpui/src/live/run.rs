@@ -394,6 +394,8 @@ pub struct Harness {
     pub llm: String,
     /// The models this provider says it serves, asked for at refresh.
     pub llms: Vec<String>,
+    /// Moving aliases whose current canonical pin is among `llms`.
+    pub llm_aliases: HashMap<String, String>,
     pub llms_note: String,
     pub llms_pending: bool,
     pub llm_selectable: bool,
@@ -450,6 +452,8 @@ pub struct QuickAsk {
     pub question: String,
     pub answer: String,
     pub done: bool,
+    pub sources: Vec<(String, String)>,
+    pub message: String,
 }
 
 pub fn mark_for(id: &str) -> &'static Mark {
@@ -746,6 +750,12 @@ fn harnesses_from(v: &Value) -> Vec<Harness> {
             .iter()
             .filter_map(|m| m.as_str().map(str::to_string))
             .collect(),
+        llm_aliases: h.get("llm_aliases")
+            .and_then(Value::as_object)
+            .map(|aliases| aliases.iter().filter_map(|(alias, pin)| {
+                pin.as_str().map(|pin| (alias.clone(), pin.to_string()))
+            }).collect())
+            .unwrap_or_default(),
         llms_note: api::s(h, "llms_note"),
         llms_pending: api::b(h, "llms_pending"),
         llm_selectable: api::b(h, "llm_selectable"),
@@ -912,6 +922,12 @@ impl Kriko {
                         question: api::s(a, "q"),
                         answer: api::s(a, "answer"),
                         done: api::b(a, "done"),
+                        sources: api::arr(a, "sources")
+                            .iter()
+                            .map(|source| (api::s(source, "domain"), api::s(source, "url")))
+                            .filter(|(_, url)| !url.is_empty())
+                            .collect(),
+                        message: api::s(a, "message"),
                     })
                     .collect();
                 this.live.run.quick_asks_for = Some(quick_job_id.clone());

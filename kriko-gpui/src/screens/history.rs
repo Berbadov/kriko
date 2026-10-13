@@ -14,7 +14,7 @@ use gpui::{
 use crate::app::{Field, Kriko, SpanFilter};
 use crate::data;
 use crate::live::history::{ago, month_buckets, now_secs, ClaimView};
-use crate::screens::run::option_chip;
+use crate::screens::run::{option_chip, quick_look_result_card};
 use crate::screens::{empty_note, filter_btn, mono, plate_s, row_desc, th};
 use crate::theme::*;
 
@@ -399,7 +399,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .pb(px(10.0))
                 .child(div().w(px(28.0)))
                 .child(div().flex_1().child(th("Record")))
-                .child(div().w(px(120.0)).child(th("Claims")))
+                .child(div().w(px(120.0)).child(th("Findings")))
                 .child(div().w(px(110.0)).child(th("When"))),
         )
         .child(hairline());
@@ -441,6 +441,12 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         let open_id = check.id.clone();
         let kind = check.kind.clone();
         let source = check.source.clone();
+        let kind_label: &str = if source == "quick_look" { "Quick Look" } else { check.kind.as_str() };
+        let count_label = if source == "quick_look" {
+            format!("{} sourced risks", check.claims)
+        } else {
+            format!("{} claims", check.claims)
+        };
         let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
             if source == "quick_look" {
                 this.toggle_history_open(open_id.clone(), cx);
@@ -477,9 +483,9 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             .text_color(rgb(INK))
                             .child(check.label.clone()),
                     )
-                    .child(mono(&format!("{} · {} · {} {}", check.kind, check.status, clip(&check.pack_line(), 60), check.agent), MUTED)),
+                    .child(mono(&format!("{} · {} · {} {}", kind_label, check.status, clip(&check.pack_line(), 60), check.agent), MUTED)),
             )
-            .child(div().w(px(120.0)).child(mono(&format!("{} claims", check.claims), INK_2)))
+            .child(div().w(px(120.0)).child(mono(&count_label, INK_2)))
             .child(div().w(px(110.0)).child(mono(&ago(check.ts, now), MUTED)));
 
         let mut row = div().flex().flex_col().child(columns);
@@ -493,6 +499,24 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .flex_col()
                 .gap(px(10.0));
             if check.source == "quick_look" {
+                match &app.live.history.quick_look_detail {
+                    Some(detail) if detail.id == check.id => {
+                        if let Some(result) = quick_look_result_card(
+                            &detail.result, &detail.product, &detail.state,
+                        ) {
+                            panel = panel.child(result);
+                        } else {
+                            panel = panel.child(mono("No saved result was returned for this Quick Look.", MUTED));
+                        }
+                    }
+                    _ if app.live.history.quick_look_loading => {
+                        panel = panel.child(mono("Reading the saved Quick Look result.", MUTED));
+                    }
+                    _ if app.live.history.quick_look_error.is_some() => {
+                        panel = panel.child(row_desc(app.live.history.quick_look_error.as_deref().unwrap_or("Could not read the saved Quick Look.")));
+                    }
+                    _ => panel = panel.child(mono("Reading the saved Quick Look result.", MUTED)),
+                }
                 panel = panel.child(eyebrow("Catalog assignment"));
                 let assignment = check.categorization.as_ref();
                 let assigned = assignment.is_some_and(|one| one.status == "assigned");
