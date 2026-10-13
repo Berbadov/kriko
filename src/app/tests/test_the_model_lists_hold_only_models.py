@@ -17,6 +17,8 @@ The two captures below are the CLIs' own output, taken on 2026-09-29.
 """
 
 import sys
+import threading
+import time
 from dataclasses import replace
 
 import pytest
@@ -159,11 +161,26 @@ def _settings(tmp_path) -> Settings:
 def two_clis(monkeypatch):
     """Antigravity (lists) and Vibe (lists nothing), the rest of the world stubbed."""
     agy, vibe = _row("antigravity-cli"), replace(_row("mistral-vibe"), model_source="")
+    release = threading.Event()
+    started = threading.Event()
+
+    def listing(_one, _executable):
+        started.set()
+        if not release.wait(2):
+            return []
+        return AGY_IDS
+
     monkeypatch.setattr(harness_mod, "available", lambda: [agy, vibe])
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
-    monkeypatch.setattr(harness_mod, "efforts_for", lambda one: [])
+    monkeypatch.setattr(harness_mod, "_from_models_command", listing)
     monkeypatch.setattr(harness_mod, "_MODELS", {})
+    monkeypatch.setattr(harness_mod, "_MODELS_PENDING", set())
+    monkeypatch.setattr(harness_mod, "_ASKING", {})
+    monkeypatch.setattr(harness_mod, "_EFFORTS", {})
+    monkeypatch.setattr(harness_mod, "_EFFORT_PENDING", set())
+    monkeypatch.setattr("app.prefs.local_agent_rows", lambda _conn: ([], [], []))
     _answering(monkeypatch, AGY_MODELS)
+    return release, started
 
 
 def _by_id(rows):
@@ -173,8 +190,20 @@ def _by_id(rows):
 def test_the_agents_screen_row_carries_the_note(tmp_path, two_clis):
     connect(tmp_path / "k.sqlite").close()
     client = TestClient(create_app(_settings(tmp_path)))
-    rows = _by_id(client.get("/api/prefs").json()["harnesses"])
+    cold = _by_id(client.get("/api/prefs").json()["harnesses"])
+    release, started = two_clis
+    assert started.wait(1)
+    assert cold["antigravity-cli"]["llms"] == []
+    assert cold["antigravity-cli"]["llms_pending"] is True
+    release.set()
+    deadline = time.monotonic() + 1
+    while time.monotonic() < deadline:
+        rows = _by_id(client.get("/api/prefs").json()["harnesses"])
+        if rows["antigravity-cli"]["llms"]:
+            break
+        time.sleep(0.01)
     assert rows["antigravity-cli"]["llms"] == AGY_IDS
+    assert rows["antigravity-cli"]["llms_pending"] is False
     assert rows["antigravity-cli"]["llms_note"] == ""
     assert rows["mistral-vibe"]["llms"] == []
     assert rows["mistral-vibe"]["llms_note"] == "This CLI does not list its models"
@@ -183,8 +212,21 @@ def test_the_agents_screen_row_carries_the_note(tmp_path, two_clis):
 def test_the_run_screen_row_carries_the_same_note(tmp_path, two_clis):
     connect(tmp_path / "k.sqlite").close()
     client = TestClient(create_app(_settings(tmp_path)))
+    release, started = two_clis
     planes = client.get("/api/research-planes").json()["planes"]
-    rows = _by_id(next(p for p in planes if p["id"] == "harness")["harnesses"])
+    cold = _by_id(next(p for p in planes if p["id"] == "harness")["harnesses"])
+    assert started.wait(1)
+    assert cold["antigravity-cli"]["llms"] == []
+    assert cold["antigravity-cli"]["llms_pending"] is True
+    release.set()
+    deadline = time.monotonic() + 1
+    while time.monotonic() < deadline:
+        planes = client.get("/api/research-planes").json()["planes"]
+        rows = _by_id(next(p for p in planes if p["id"] == "harness")["harnesses"])
+        if rows["antigravity-cli"]["llms"]:
+            break
+        time.sleep(0.01)
     assert rows["antigravity-cli"]["llms"] == AGY_IDS
+    assert rows["antigravity-cli"]["llms_pending"] is False
     assert rows["antigravity-cli"]["llms_note"] == ""
     assert rows["mistral-vibe"]["llms_note"] == "This CLI does not list its models"

@@ -135,6 +135,7 @@ def list_planes(
             # a text field — the reader asked for Sonnet vs Haiku vs Opus
             # *by name*, and the names live with the CLI, not in Kriko.
             lists = harness_mod.models_for_each(installed)
+            efforts = harness_mod.efforts_for_each(installed)
             # The API agents (B153) in the same two lists, so the run screen
             # offers the one the reader keyed in the same picker as a CLI.
             api_rows, api_missing = prefs.api_agent_rows(conn)
@@ -150,6 +151,7 @@ def list_planes(
                     # is "model" (see SERVED_AS in routers/bench.py).
                     "llm": prefs.for_harness(conn, h.id),
                     "llms": lists.get(h.id, []),
+                    "llms_pending": harness_mod.models_pending(h),
                     "llms_note": harness_mod.models_note(h, lists.get(h.id, [])),
                     "llm_hint": h.model_hint,
                     # `model_env` counts, for the reason `app/prefs.py` gives
@@ -166,7 +168,9 @@ def list_planes(
                     # effort and neither run screen could, which made it a
                     # preference the reader had to leave the run to change.
                     "effort": prefs.effort_for_harness(conn, h.id),
-                    "efforts": harness_mod.efforts_for(h),
+                    "efforts": efforts.get(h.id, []),
+                    "efforts_pending": harness_mod.efforts_pending(h),
+                    "efforts_note": harness_mod.efforts_note(h, efforts.get(h.id, [])),
                     "effort_hint": h.effort_hint,
                 }
                 for h in installed

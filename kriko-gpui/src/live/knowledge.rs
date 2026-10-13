@@ -199,6 +199,10 @@ pub struct State {
     // Extension
     pub ext: Option<ExtStatus>,
     pub ext_notice: Option<String>,
+    /// Last extension status read failure. Existing status remains available
+    /// as a last-known snapshot, but the screen labels it stale until retry.
+    pub ext_error: Option<String>,
+    pub ext_checking: bool,
     // Settings
     pub settings_loaded: bool,
     pub keys_loaded: bool,
@@ -778,33 +782,43 @@ impl Kriko {
     // ---- Browser extension ----
 
     pub fn refresh_extension(&mut self, cx: &mut Context<Self>) {
+        if self.live.knowledge.ext_checking {
+            return;
+        }
+        self.live.knowledge.ext_checking = true;
+        self.live.knowledge.ext_error = None;
         self.fetch(cx, || api::get("/api/extension"), |this, reply, _| {
             this.note(&reply);
-            if let Ok(v) = reply {
-                let compat = v.get("compatibility").cloned().unwrap_or(Value::Null);
-                let firefox = v.get("firefox").cloned().unwrap_or(Value::Null);
-                let hits = api::arr(&v, "sightings").iter().map(|s| int(s, "hits")).sum();
-                this.live.knowledge.ext = Some(ExtStatus {
-                    available: api::b(&v, "available"),
-                    version: api::s(&v, "version"),
-                    staged: api::b(&v, "staged"),
-                    staged_version: api::s(&v, "staged_version"),
-                    path: api::s(&v, "path"),
-                    firefox_path: api::s(&firefox, "manifest_path"),
-                    firefox_staged: api::b(&firefox, "staged"),
-                    port: int(&v, "port"),
-                    port_is_ours: api::b(&v, "port_is_ours"),
-                    browsers: api::arr(&v, "browsers")
-                        .iter()
-                        .map(|b| Browser { name: api::s(b, "name"), url: api::s(b, "url") })
-                        .collect(),
-                    hits,
-                    connected: api::b(&v, "connected"),
-                    ever_connected: api::b(&v, "ever_connected"),
-                    seconds_since_seen: api::n(&v, "seconds_since_seen"),
-                    compat_state: api::s(&compat, "state"),
-                    compat_detail: api::s(&compat, "detail"),
-                });
+            this.live.knowledge.ext_checking = false;
+            match reply {
+                Ok(v) => {
+                    let compat = v.get("compatibility").cloned().unwrap_or(Value::Null);
+                    let firefox = v.get("firefox").cloned().unwrap_or(Value::Null);
+                    let hits = api::arr(&v, "sightings").iter().map(|s| int(s, "hits")).sum();
+                    this.live.knowledge.ext = Some(ExtStatus {
+                        available: api::b(&v, "available"),
+                        version: api::s(&v, "version"),
+                        staged: api::b(&v, "staged"),
+                        staged_version: api::s(&v, "staged_version"),
+                        path: api::s(&v, "path"),
+                        firefox_path: api::s(&firefox, "manifest_path"),
+                        firefox_staged: api::b(&firefox, "staged"),
+                        port: int(&v, "port"),
+                        port_is_ours: api::b(&v, "port_is_ours"),
+                        browsers: api::arr(&v, "browsers")
+                            .iter()
+                            .map(|b| Browser { name: api::s(b, "name"), url: api::s(b, "url") })
+                            .collect(),
+                        hits,
+                        connected: api::b(&v, "connected"),
+                        ever_connected: api::b(&v, "ever_connected"),
+                        seconds_since_seen: api::n(&v, "seconds_since_seen"),
+                        compat_state: api::s(&compat, "state"),
+                        compat_detail: api::s(&compat, "detail"),
+                    });
+                    this.live.knowledge.ext_error = None;
+                }
+                Err(error) => this.live.knowledge.ext_error = Some(error.message),
             }
         });
     }
@@ -869,6 +883,7 @@ impl Kriko {
 
     /// Download the verified installer, run it and step aside: the installer
     /// stops this app and the engine, replaces them, and the Start menu opens the new one.
+    #[cfg(windows)]
     pub fn install_app_update(&mut self, cx: &mut Context<Self>) {
         if self.live.knowledge.app_update_busy {
             return;
@@ -1169,11 +1184,6 @@ fn run_installer_then_reopen(msi: &str) -> std::io::Result<()> {
         .creation_flags(CREATE_NO_WINDOW)
         .spawn()
         .map(|_| ())
-}
-
-#[cfg(not(windows))]
-fn run_installer_then_reopen(_msi: &str) -> std::io::Result<()> {
-    Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "the installer is for Windows"))
 }
 
 pub fn ago_seconds(s: f64) -> String {

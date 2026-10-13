@@ -10,7 +10,7 @@ use crate::live::local::{Held, LibraryModel, Machine, Plane, PullPhase};
 use crate::live::run;
 use crate::marks::{self, mark_tile, Mark, Phase};
 use crate::screens::run::option_chip;
-use crate::screens::{empty_note, mono, row_desc, row_title, stepper, trust_icon};
+use crate::screens::{empty_note, guidance, mono, row_desc, row_title, stepper, trust_icon};
 use crate::theme::*;
 
 pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
@@ -186,20 +186,12 @@ fn setup(
     cx: &mut Context<Kriko>,
 ) -> Div {
     let motion = app.motion;
-    let runtime_ready = plane.servers.iter().any(|s| s.up);
+    let selected_server = plane.servers.iter().find(|s| !plane.url.is_empty() && s.url == plane.url);
+    let runtime_ready = selected_server.is_some_and(|s| s.up);
     let model_ready = plane.ready;
-    let current = if !runtime_ready {
-        0
-    } else if !model_ready {
-        1
-    } else {
-        2
-    };
-    let up_name = plane
-        .servers
-        .iter()
-        .find(|s| s.up && s.url == plane.url)
-        .or_else(|| plane.servers.iter().find(|s| s.up))
+    let current = if model_ready { 2 } else if runtime_ready { 1 } else { 0 };
+    let up_name = selected_server
+        .filter(|s| s.up)
         .map(|s| s.name.clone())
         .unwrap_or_default();
     let steps = div()
@@ -210,9 +202,9 @@ fn setup(
             1,
             "Model app",
             if runtime_ready {
-                format!("{up_name}, running")
+                format!("{up_name} is running")
             } else {
-                "Install or start Ollama".to_string()
+                "Start the selected model app".to_string()
             },
             runtime_ready,
             current == 0,
@@ -221,9 +213,9 @@ fn setup(
             2,
             "Model",
             if model_ready {
-                format!("{}, ready", plane.model)
+                format!("{} selected", plane.model)
             } else {
-                "Get one sized to this machine".to_string()
+                "Choose or download a model".to_string()
             },
             model_ready,
             current == 1,
@@ -253,17 +245,49 @@ fn setup(
         .child(row_desc("A local model is an AI that answers on your computer. Ollama is the app that runs it; a model is the downloaded file it needs. Research can still search the web."))
         .child(row_desc(if plane.ready { &plane.line } else { &plane.reason }))
         .when(!model_ready, |d| {
-            let job = app.live.knowledge.agent_install.as_ref().filter(|(id, _)| id == "local");
-            let busy = job.map(|(_, job)| !job.done).unwrap_or(false);
-            d.child(row_desc("Start here: Kriko can install Ollama, download the recommended model and choose it for you. Allow about 8 GB of free space and keep an internet connection during setup. Larger models need more space and memory."))
-                .child(div().flex().flex_wrap().gap(px(8.0))
-                    .child(key("local-guided-setup", if busy { "Setting up Ollama…" } else { "Set up Ollama and the recommended model" }).opacity(if busy { 0.5 } else { 1.0 }).on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-                        if this.live.knowledge.agent_install.as_ref().map(|(_, j)| !j.done).unwrap_or(false) { return; }
-                        this.install_agent("local".into(), cx);
-                    })))
-                    .child(ghost("local-ollama-download", "Download Ollama manually").on_click(|_, _, cx| cx.open_url("https://ollama.com/download/windows"))))
-                .children(job.map(|(_, j)| row_desc(&format!("{}: {}", j.state, j.message))))
-                .child(row_desc("Manual setup: download Ollama from its official site, run the installer, then return here and press Check again. Next, choose a model below. A small model can miss details; try a larger one when your computer has room."))
+            if runtime_ready {
+                let open_models = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                    this.live.local.catalogue_open = true;
+                    if this.live.local.offered.is_empty() { this.refresh_local_catalogue(cx); }
+                    cx.notify();
+                });
+                d
+                    .child(row_desc("The selected model app is running. Choose a model it already holds, or download one for this server."))
+                    .child(key("local-guided-models", "Browse downloadable models").on_click(open_models))
+            } else {
+                let job = app.live.knowledge.agent_install.as_ref().filter(|(id, _)| id == "local");
+                let busy = job.map(|(_, job)| !job.done).unwrap_or(false);
+                let failed = job.map(|(_, job)| job.done && matches!(job.state.as_str(), "failed" | "interrupted")).unwrap_or(false);
+                let running_other = plane.servers.iter().find(|s| s.up);
+                let ollama_installed = machine.map(|m| m.runtimes.iter().any(|r| r.id == "ollama" && r.installed)).unwrap_or(false);
+                let detail = if failed {
+                    "Setup stopped before Kriko confirmed a local model. Retry setup, or use the manual steps if it stops again."
+                } else {
+                    "Kriko can install Ollama, download the recommended model and choose it. Allow about 8 GB of free space and keep an internet connection during setup. Larger models need more space and memory."
+                };
+                let setup_button = if let Some(server) = running_other {
+                    let url = server.url.clone();
+                    ghost("local-guided-use-running", &format!("Use {}", server.name)).on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                        this.local_use_server(url.clone(), cx);
+                    }))
+                } else if ollama_installed {
+                    ghost("local-guided-start-ollama", if app.live.local.runtime_starting { "Starting Ollama…" } else { "Start Ollama" })
+                        .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_start_ollama(cx)))
+                } else {
+                    key("local-guided-setup", if busy { "Setting up Ollama…" } else if failed { "Try setup again" } else { "Set up Ollama and the recommended model" })
+                        .opacity(if busy { 0.5 } else { 1.0 })
+                        .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                            if this.live.knowledge.agent_install.as_ref().map(|(_, j)| !j.done).unwrap_or(false) { return; }
+                            this.install_agent("local".into(), cx);
+                        }))
+                };
+                d.child(row_desc(detail))
+                    .child(div().flex().flex_wrap().gap(px(8.0))
+                        .child(setup_button)
+                        .when(!ollama_installed && running_other.is_none(), |d| d.child(ghost("local-ollama-download", "Download Ollama manually").on_click(|_, _, cx| cx.open_url("https://ollama.com/download/windows")))))
+                    .children(job.map(|(_, j)| row_desc(&format!("Setup {}: {}", j.state, j.message))))
+                    .child(row_desc("Manual setup: download Ollama from its official site, run the installer, then return here and press Check again. Next, choose a model below. A small model can miss details; try a larger one when your computer has room."))
+            }
         })
         .child(steps);
 
@@ -527,18 +551,27 @@ fn setup(
                 .gap(px(12.0))
                 .child(tag("local-get-done", TagState::Done, "Downloaded", motion))
                 .child(row_desc(&format!("{} is on this machine.", p.model))),
-            PullPhase::Failed(why) => div()
-                .flex()
-                .flex_col()
-                .gap(px(4.0))
-                .child(tag("local-get-failed", TagState::Block, "Not downloaded", motion))
-                .child(
-                    div()
-                        .font_family(SANS)
-                        .text_size(px(13.0))
-                        .text_color(rgb(DANGER))
-                        .child(why),
-                ),
+            PullPhase::Failed(why) => {
+                let target = p.model.clone();
+                let retry = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                    if matches!(&this.live.local.pull, Some(p) if p.phase == PullPhase::Running) { return; }
+                    this.local_get.set_value(target.clone());
+                    this.local_pull(cx);
+                });
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(6.0))
+                    .child(tag("local-get-failed", TagState::Block, "Not downloaded", motion))
+                    .child(
+                        div()
+                            .font_family(SANS)
+                            .text_size(px(13.0))
+                            .text_color(rgb(DANGER))
+                            .child(why),
+                    )
+                    .child(ghost("local-get-retry", "Try download again").on_click(retry))
+            }
         });
     }
 
@@ -825,10 +858,41 @@ mod model_group_tests {
 
 pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
+    let plane_status = plane_read_state(
+        app.live.local.plane.is_some(),
+        app.live.local.checking,
+        app.live.local.plane_error.is_some(),
+    );
     let Some(plane) = app.live.local.plane.clone() else {
-        return div().child(empty_note(
-            "Asking Kriko's engine what runs on this machine. A local model needs the engine answering first.",
-        ));
+        let status = match plane_status {
+            PlaneReadState::Checking => empty_note(
+                "Asking Kriko's engine what runs on this machine. Keep this screen open while it checks.",
+            )
+            .into_any_element(),
+            PlaneReadState::Failed => {
+                let error = app.live.local.plane_error.as_deref().unwrap_or("The local setup request failed.");
+                let retry = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_check_again(cx));
+                guidance::next_step(
+                    "local-plane-error",
+                    "Local setup could not be read",
+                    &format!("{error} Your server address and model selection are still here. Check again to retry."),
+                    ghost("local-plane-retry", "Check again").on_click(retry).into_any_element(),
+                    motion,
+                )
+            }
+            PlaneReadState::Waiting => {
+                let retry = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_check_again(cx));
+                guidance::next_step(
+                    "local-plane-waiting",
+                    "Local setup has not loaded yet",
+                    "Kriko has not returned the local model server details. Check again to retry the request.",
+                    ghost("local-plane-retry", "Check again").on_click(retry).into_any_element(),
+                    motion,
+                )
+            }
+            PlaneReadState::Stale | PlaneReadState::Ready => unreachable!("no plane has no ready or stale state"),
+        };
+        return div().flex().flex_col().gap(px(12.0)).child(status);
     };
     let machine = app.live.local.machine.clone();
     let held = app.live.local.held.clone().unwrap_or_default();
@@ -911,6 +975,17 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         );
 
     let guide = setup(app, &plane, machine.as_ref(), window, cx);
+    let plane_notice = if plane_status == PlaneReadState::Stale {
+        let error = app.live.local.plane_error.as_deref().unwrap_or("The last local setup refresh failed.");
+        let retry = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_check_again(cx));
+        Some(guidance::next_step(
+            "local-plane-stale",
+            "Could not refresh local setup",
+            &format!("{error} The last known server and model details remain on screen. Check again to retry."),
+            ghost("local-plane-retry", "Check again").on_click(retry).into_any_element(),
+            motion,
+        ))
+    } else { None };
     let runtime = runtime_settings(app, cx);
     let server = server_card(app, &plane, window, cx);
     let models = model_card(app, &plane, &held, machine.as_ref(), cx);
@@ -989,6 +1064,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         .flex()
         .flex_col()
         .gap(px(24.0))
+        .children(plane_notice)
         .child(guide)
         .child(use_card)
         .child(work)
@@ -1004,6 +1080,47 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .child(div().flex_1().min_w(px(320.0)).child(memory))
                 .child(div().flex_1().min_w(px(320.0)).child(where_card)),
         )
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PlaneReadState {
+    Checking,
+    Waiting,
+    Failed,
+    Stale,
+    Ready,
+}
+
+/// A failed refresh keeps the previous plane visible, while a first read
+/// failure gets its own retry surface instead of leaving a loading note up.
+fn plane_read_state(has_plane: bool, checking: bool, failed: bool) -> PlaneReadState {
+    if checking {
+        return if has_plane { PlaneReadState::Ready } else { PlaneReadState::Checking };
+    }
+    match (has_plane, failed) {
+        (true, true) => PlaneReadState::Stale,
+        (true, false) => PlaneReadState::Ready,
+        (false, true) => PlaneReadState::Failed,
+        (false, false) => PlaneReadState::Waiting,
+    }
+}
+
+#[cfg(test)]
+mod plane_guidance_tests {
+    use super::{plane_read_state, PlaneReadState};
+
+    #[test]
+    fn first_read_wait_failure_and_retry_have_distinct_surfaces() {
+        assert_eq!(plane_read_state(false, true, false), PlaneReadState::Checking);
+        assert_eq!(plane_read_state(false, false, false), PlaneReadState::Waiting);
+        assert_eq!(plane_read_state(false, false, true), PlaneReadState::Failed);
+    }
+
+    #[test]
+    fn refresh_failure_keeps_last_known_setup_visible() {
+        assert_eq!(plane_read_state(true, true, false), PlaneReadState::Ready);
+        assert_eq!(plane_read_state(true, false, true), PlaneReadState::Stale);
+    }
 }
 
 /// A small picked/unpicked pill, for choices of one among a few.
