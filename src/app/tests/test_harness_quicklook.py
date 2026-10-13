@@ -168,3 +168,26 @@ def test_claude_quicklook_keeps_its_native_web_tool_path(monkeypatch):
     assert len(prompts) == 1
     assert "# Quick look:" in prompts[0]
     assert "Host-read pages" not in prompts[0]
+
+
+def test_oil_compatibility_followup_can_read_the_vehicle_manual(monkeypatch):
+    manual_url = "https://vehicle.example/owners-manual"
+    manual = ("The 2018 Honda Civic owner's manual specifies SAE 0W-20 engine oil. "
+              "Use the viscosity and approval required for the vehicle's engine.")
+    monkeypatch.setattr("app.providers.openserp.searcher", lambda *args, **kwargs:
+                        lambda query, limit: [{"url": manual_url, "title": "Honda Civic owner's manual"}])
+    monkeypatch.setattr("app.providers.fetch.reader", lambda **kwargs: lambda url: manual)
+    researcher = harness.HarnessResearcher(row("codex"))
+
+    def answer(prompt):
+        assert f"SOURCE URL: {manual_url}" in prompt
+        assert manual in prompt
+        return "Check the manual's engine-specific requirements.\nSources: " + manual_url
+
+    monkeypatch.setattr(researcher, "_run", answer)
+    researcher.ask_followup(
+        "Product: Castrol Magnatec 5W-30\nSaved viscosity: SAE 5W-30",
+        product="Castrol Magnatec 5W-30",
+        question="Is this oil right for my 2018 Honda Civic?",
+    )
+    assert researcher.sources == {manual_url: manual}
