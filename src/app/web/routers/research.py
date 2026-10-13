@@ -151,6 +151,7 @@ def list_planes(
                     # is "model" (see SERVED_AS in routers/bench.py).
                     "llm": prefs.for_harness(conn, h.id),
                     "llms": lists.get(h.id, []),
+                    "llm_aliases": harness_mod.model_aliases_for(h, lists.get(h.id, [])),
                     "llms_pending": harness_mod.models_pending(h),
                     "llms_note": harness_mod.models_note(h, lists.get(h.id, [])),
                     "llm_hint": h.model_hint,

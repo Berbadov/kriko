@@ -9,8 +9,10 @@ from app.providers import local_agent, local_asker
 from app.providers.local_inference import LocalInferenceError
 from app.providers.local_pipeline import (
     EXTRACT_SCHEMA, GROUP_SCHEMA, IDENTITY_SCHEMA, LANGUAGE_CHECK_SCHEMA,
-    LANGUAGE_SCHEMA, PAIR_SCHEMA, RENDER_SCHEMA, SOURCE_KIND_SCHEMA, VERIFY_SCHEMA,
+    LANGUAGE_SCHEMA, PAIR_SCHEMA, QuickLookPipeline, RENDER_SCHEMA, SOURCE_KIND_SCHEMA,
+    VERIFY_SCHEMA,
 )
+from app.providers.local_identity import ProductIdentity
 
 
 _STAGES = ((EXTRACT_SCHEMA, "extract"), (VERIFY_SCHEMA, "verify"),
@@ -109,6 +111,29 @@ class PipelineModel:
         return {}
 
 
+class FourKPipelineModel(PipelineModel):
+    def prompt_bytes_allowed(self, *, reply_tokens=None):
+        reserved = reply_tokens if reply_tokens is not None else self.max_tokens
+        return max(0, (4096 - reserved - 256) * 2)
+
+
+class SpecificationPipelineModel(PipelineModel):
+    def _answer(self, stage: str, prompt: str):
+        if stage == "extract":
+            sentences = json.loads(prompt.split("SOURCE SENTENCES:\n", 1)[1])
+            evidence_id = next(key for key, text in sentences.items()
+                               if "5W-30" in text)
+            return {"category": "Motor oil", "pack": "", "pack_identity": {},
+                    "risks": [], "specs": [{"name": "Viscosity grade", "value": "5W-30",
+                                               "evidence": [evidence_id]}]}
+        if stage == "source":
+            return {"kind": "specification"}
+        if stage == "verify":
+            return {"evidence_kind": "specification", "support": "supported",
+                    "identity": "match"}
+        return super()._answer(stage, prompt)
+
+
 def test_the_local_plane_searches_on_this_machine_whatever_the_setting_says():
     """Exa left the local plane: its search is OpenSERP on this machine, and a
     local scraper is asked one query at a time, never in a burst."""
@@ -118,7 +143,56 @@ def test_the_local_plane_searches_on_this_machine_whatever_the_setting_says():
     assert asker.parallel_search is False
 
 
-def test_small_runtime_receives_a_bounded_prompt_and_grounded_answer():
+def test_a_4k_context_keeps_identity_unknowns_and_a_source_sentence():
+    url = "https://example.org/manual"
+    model = FourKPipelineModel()
+    asker = local_agent.LocalAsker(
+        model, model, lambda *_: [], lambda _: "", model="test", search_provider="stub")
+    pipeline = QuickLookPipeline(asker)
+    pipeline.identity = ProductIdentity(
+        canonical_name="Widget MK2", identifiers=("MK2",),
+        unknowns=tuple(f"configuration unknown {index}" for index in range(40)))
+    asker.page_titles[url] = "Widget MK2 service record"
+    task = "## What is worth saying\n" + "Keep every claim tied to the product-specific bar. " * 35
+    pipeline._extract(url, "Widget MK2 owner report: the pump failed after one month.", task, 1)
+
+    prompt = next(text for stage, text, _ in model.calls if stage == "extract")
+    context = json.loads(prompt.split("PRODUCT IDENTITY:\n", 1)[1].split("\nTASK:", 1)[0])
+    assert len(prompt.encode("utf-8")) <= model.prompt_bytes_allowed(reply_tokens=768)
+    assert context["unknowns"][0] == "configuration unknown 0"
+    assert len(context["unknowns"]) == 8
+    assert "configuration unknown 8" not in prompt
+    assert "the pump failed after one month" in prompt
+
+
+def test_a_checked_specification_without_risks_is_complete_negative_coverage():
+    from app.quicklook import has_complete_negative_coverage
+    from app.web.tasks import _quicklook_has_coverage_for_no_issues
+
+    url = "https://example.org/oil"
+    page = "Acme Motor Oil 5W-30 has an SAE viscosity grade of 5W-30."
+    model = SpecificationPipelineModel()
+    asker = local_agent.LocalAsker(model, model, lambda *_: [], lambda _: "",
+                                   model="test", search_provider="stub",
+                                   given_sources={url: page})
+
+    reply = asker.ask(quicklook.brief("Acme Motor Oil 5W-30", compact=True))
+    result = quicklook.parse(reply, asker.sources)
+
+    assert result["risks"] == []
+    assert result["specs"][0]["value"] == "5W-30"
+    assert result["specs"][0]["grounded"] is True
+    assert asker.coverage["candidates"] == 1
+    assert asker.coverage["accepted_candidates"] == 1
+    assert asker.coverage["risk_candidates"] == 0
+    assert asker.coverage["status"] == "no_supported_findings"
+    assert has_complete_negative_coverage(asker.coverage)
+    assert _quicklook_has_coverage_for_no_issues(asker.coverage)
+
+
+def test_small_runtime_receives_a_bounded_prompt_and_grounded_answer(monkeypatch):
+    from app import localruntime
+
     url = "https://example.org/report"
     quote = "The Widget drive failed after one month."
     model = PipelineModel(findings=[{"title": "Drive failure",
@@ -128,6 +202,10 @@ def test_small_runtime_receives_a_bounded_prompt_and_grounded_answer():
         lambda *_: [{"url": url}],
         lambda _: "Widget forum thread\n\n" + "Navigation\n\n" * 1500 + quote,
         model="test", search_provider="stub")
+    runtime_reads = []
+    monkeypatch.setattr(localruntime, "inspect", lambda *args: runtime_reads.append(args) or {
+        "loaded": True, "device": "gpu", "device_source": "Ollama /api/ps"})
+    asker.runtime = {"runtime": "Ollama", "settings": {}}
     reply = asker.ask(quicklook.brief("Widget", compact=True))
     result = quicklook.parse(reply, asker.sources)
     assert result["risks"][0]["sources"][0]["grounded"]
@@ -135,6 +213,12 @@ def test_small_runtime_receives_a_bounded_prompt_and_grounded_answer():
     # budgeted: a small model is not handed the 8k default.
     assert model.calls and all(len(prompt) <= model.window for _, prompt, _ in model.calls)
     assert all(budget <= local_agent.REPLY_MAX_TOKENS for _, _, budget in model.calls)
+    assert any("forum" in query.casefold() for query in asker.telemetry["queries"])
+    assert any("manual" in query.casefold() or "technical data" in query.casefold()
+               for query in asker.telemetry["queries"])
+    assert runtime_reads and runtime_reads[0][:3] == ("", "Ollama", "test")
+    assert asker.runtime["device"] == asker.telemetry["runtime"]["device"] == "gpu"
+    assert asker.relevant_sources == asker.sources
 
 
 def test_local_coverage_reports_when_structured_output_was_downgraded():
