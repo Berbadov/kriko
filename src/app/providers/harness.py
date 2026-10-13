@@ -2849,7 +2849,6 @@ class HarnessResearcher(AgentResearcher):
             question = match.group(1).strip() if match else prompt[:240].strip()
         subjects = [part.strip() for part in re.split(r"\s*[,;]\s*", product) if part.strip()]
         multi_product = len(subjects) > 1
-        search_product = "" if multi_product else product
         if multi_product:
             queries = [f'"{subject}" {question}' for subject in subjects]
         else:
@@ -2859,8 +2858,13 @@ class HarnessResearcher(AgentResearcher):
                 queries.append(f"{product} {question} discussion")
         queries = list(dict.fromkeys(query[:240] for query in queries if query.strip()))[:6]
         prompt += getattr(self, "source_instructions", "")
+        # Follow-ups can need evidence about a related item: an oil's car
+        # compatibility depends on the vehicle manual, which need not name
+        # that oil brand. Keep the product in the queries and answer context,
+        # but let the answer use related pages instead of exact-product-only
+        # filtering used for Quick Look risk claims.
         return self._ask_with_pages(
-            queries, prompt, product=search_product, prefer_issues=False,
+            queries, prompt, prefer_issues=False,
             max_pages=min(8, max(3, len(queries) * 2)),
             quicklook_answer=False, source_line=True,
         )
