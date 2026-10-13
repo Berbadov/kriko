@@ -140,7 +140,10 @@ def test_configured_first_ask_pays_only_one_verified_help_probe(tmp_path, monkey
     researcher = providers.harness_researcher(
         preferred=one.id, model="sonnet", effort="low",
     )
-    researcher.on_text = lambda text: (heard.append((time.monotonic(), text)), sentinel.write_text("seen"))
+    researcher.on_text = lambda text: (
+        heard.append((time.monotonic(), text)),
+        sentinel.write_text("seen", encoding="utf-8"),
+    )
 
     began = time.monotonic()
     assert researcher.ask("brief") == "done"
