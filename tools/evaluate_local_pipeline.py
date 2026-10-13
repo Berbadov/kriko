@@ -8,6 +8,8 @@ from __future__ import annotations
 import hashlib
 import argparse
 import json
+import os
+import platform
 import time
 from pathlib import Path
 import sys
@@ -15,6 +17,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from app.providers.local_agent import LocalAsker
 from app.providers.local_inference import OpenAICompatSocket
+from app.localruntime import inspect as inspect_runtime
 from app.quicklook import brief, parse
 
 PIPELINE_DIGEST = hashlib.sha256(b"".join(
@@ -98,6 +101,13 @@ def run(model, context, case, language, search_language="en", plan_queries=False
         outcome.update({"error": f"{type(error).__name__}: {error}",
                         "coverage": asker.coverage, "identity": asker.identity})
     outcome["seconds"] = round(time.monotonic() - started, 3)
+    outcome["host"] = {
+        "platform": platform.platform(), "machine": platform.machine(),
+        "processor": platform.processor() or "unknown", "logical_cpus": os.cpu_count(),
+    }
+    runtime = inspect_runtime(url, "Ollama" if native else "OpenAI-compatible", model, {})
+    outcome["runtime"] = {key: runtime[key] for key in (
+        "runtime", "device", "memory_bytes", "vram_bytes", "context_tokens", "reason")}
     # plan and complete share this socket here; avoid double-counting its usage.
     outcome["tokens_used"] = socket.tokens_used
     outcome["calls"] = socket.calls

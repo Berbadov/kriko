@@ -687,7 +687,8 @@ CREATE TABLE IF NOT EXISTS compare_questions (
   job_id      TEXT NOT NULL DEFAULT '',
   asked_at    TEXT NOT NULL DEFAULT '',
   answered_at TEXT NOT NULL DEFAULT '',
-  PRIMARY KEY (draft_id, question_id));
+  PRIMARY KEY (draft_id, question_id)
+);
 
 -- One comparison's board: the reader's free marks over the table (B194),
 -- pen strokes and typed notes, saved as one JSON document per draft. A
@@ -701,7 +702,8 @@ CREATE TABLE IF NOT EXISTS compare_questions (
 CREATE TABLE IF NOT EXISTS compare_boards (
   draft_id  TEXT PRIMARY KEY,
   board     TEXT NOT NULL DEFAULT '{}',
-  updated_at TEXT NOT NULL DEFAULT '');
+  updated_at TEXT NOT NULL DEFAULT ''
+);
 
 -- The research queue: products the reader lined up from the browser
 -- extension's panel for an agent to research one after another, then compare.
@@ -715,14 +717,32 @@ CREATE TABLE IF NOT EXISTS research_queue (
   lookup_id TEXT NOT NULL DEFAULT '',   -- the stored answer, when there is one
   origin    TEXT NOT NULL DEFAULT '',   -- the host it was queued from
   state     TEXT NOT NULL DEFAULT 'waiting',  -- waiting | researching | done
-  added_at  TEXT NOT NULL DEFAULT '');
+  added_at  TEXT NOT NULL DEFAULT ''
+);
 -- the one-row-per-listing rule, as an index: a column constraint could never
 -- be added to a table that already exists
 CREATE UNIQUE INDEX IF NOT EXISTS research_queue_url ON research_queue (url);
 CREATE TABLE IF NOT EXISTS queue_history (
   queue_id TEXT PRIMARY KEY, url TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '',
   lookup_id TEXT NOT NULL DEFAULT '', origin TEXT NOT NULL DEFAULT '',
-  state TEXT NOT NULL DEFAULT 'waiting', added_at TEXT NOT NULL DEFAULT '');
+  state TEXT NOT NULL DEFAULT 'waiting', added_at TEXT NOT NULL DEFAULT ''
+);
+
+-- Where a saved Quick Look belongs. This is app state, not pack content: a
+-- reader or the configured agent can organise a look without changing its
+-- claims, evidence, or any catalog digest. A blank pack id with `uncertain`
+-- is a durable answer too, so the next screen can say what needs a decision.
+CREATE TABLE IF NOT EXISTS quicklook_categories (
+  quick_job_id TEXT PRIMARY KEY,
+  pack_id      TEXT NOT NULL DEFAULT '',
+  pack_name    TEXT NOT NULL DEFAULT '',
+  status       TEXT NOT NULL DEFAULT 'uncertain', -- assigned | uncertain
+  method       TEXT NOT NULL DEFAULT 'deterministic', -- deterministic | agent | reader
+  confidence   TEXT NOT NULL DEFAULT 'none',
+  basis_json   TEXT NOT NULL DEFAULT '[]',
+  message      TEXT NOT NULL DEFAULT '',
+  updated_at   TEXT NOT NULL DEFAULT ''
+);
 """
 
 #: The most operations one installation keeps. A feed, not an archive: the
@@ -2140,6 +2160,52 @@ def create_job(conn: sqlite3.Connection, kind: str, params: dict) -> str:
     )
     conn.commit()
     return job_id
+
+
+def save_quicklook_category(conn: sqlite3.Connection, quick_job_id: str,
+                            assignment: dict) -> dict:
+    """Keep a validated category decision beside the saved look."""
+    status = str(assignment.get("status") or "uncertain")
+    if status not in {"assigned", "uncertain"}:
+        status = "uncertain"
+    pack_id = str(assignment.get("pack_id") or "") if status == "assigned" else ""
+    basis = assignment.get("basis") if isinstance(assignment.get("basis"), list) else []
+    record = {
+        "quick_job_id": str(quick_job_id),
+        "pack_id": pack_id,
+        "pack_name": str(assignment.get("pack_name") or "") if pack_id else "",
+        "status": status,
+        "method": str(assignment.get("method") or "deterministic"),
+        "confidence": str(assignment.get("confidence") or "none"),
+        "basis": basis,
+        "message": str(assignment.get("message") or ""),
+        "updated_at": _now(),
+    }
+    conn.execute(
+        "INSERT INTO quicklook_categories"
+        " (quick_job_id, pack_id, pack_name, status, method, confidence,"
+        "  basis_json, message, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT(quick_job_id) DO UPDATE SET"
+        " pack_id=excluded.pack_id, pack_name=excluded.pack_name,"
+        " status=excluded.status, method=excluded.method, confidence=excluded.confidence,"
+        " basis_json=excluded.basis_json, message=excluded.message, updated_at=excluded.updated_at",
+        (record["quick_job_id"], record["pack_id"], record["pack_name"], record["status"],
+         record["method"], record["confidence"], json.dumps(basis, ensure_ascii=False),
+         record["message"], record["updated_at"]),
+    )
+    conn.commit()
+    return record
+
+
+def quicklook_category(conn: sqlite3.Connection, quick_job_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT * FROM quicklook_categories WHERE quick_job_id = ?", (quick_job_id,)
+    ).fetchone()
+    if row is None:
+        return None
+    out = dict(row)
+    out["basis"] = json.loads(out.pop("basis_json") or "[]")
+    return out
 
 
 def start_job(conn: sqlite3.Connection, job_id: str) -> bool:

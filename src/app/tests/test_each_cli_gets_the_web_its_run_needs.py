@@ -46,8 +46,11 @@ def _one(ident: str):
 
 
 def _agy(monkeypatch, models=AGY_MODELS):
-    monkeypatch.setattr(harness_mod, "efforts_for", lambda one: ["low", "medium", "high"])
-    monkeypatch.setattr(harness_mod, "models_for", lambda one, **_: list(models))
+    # These tests exercise settlement with completed discovery results. A
+    # cold selected-provider start is covered separately and stays nonblocking.
+    monkeypatch.setattr(harness_mod, "cached_efforts_for",
+                        lambda one: ["low", "medium", "high"])
+    monkeypatch.setattr(harness_mod, "cached_models_for", lambda one: list(models))
     return _one("antigravity-cli")
 
 
@@ -91,7 +94,8 @@ def test_a_tail_that_only_looks_like_a_level_keeps_its_flag(monkeypatch):
     `…-codex-max` with no `-low`/`-high` sibling. The name is a coincidence,
     so the effort stays a flag instead of being silently dropped."""
     agy = _agy(monkeypatch, models=["gpt-5.1-codex-max", "gpt-5.1-codex"])
-    monkeypatch.setattr(harness_mod, "efforts_for", lambda one: ["low", "high", "max"])
+    monkeypatch.setattr(harness_mod, "cached_efforts_for",
+                        lambda one: ["low", "high", "max"])
     assert harness_mod.settle_effort(agy, "gpt-5.1-codex-max", "low") == (
         "gpt-5.1-codex-max", "low")
 

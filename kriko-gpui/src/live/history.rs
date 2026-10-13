@@ -133,8 +133,30 @@ pub struct Item {
     pub agent: String,
     pub claims: usize,
     pub category: String,
+    pub categorization: Option<Categorization>,
     /// (pack_id, name)
     pub packs: Vec<(String, String)>,
+}
+
+/// The engine's validated category assignment for a saved Quick Look.
+#[derive(Clone, Default)]
+pub struct Categorization {
+    pub status: String,
+    pub method: String,
+    pub pack_id: String,
+    pub pack_name: String,
+    pub confidence: String,
+    pub basis: Vec<(String, String)>,
+    pub message: String,
+}
+
+/// An installed catalog that can be selected after an uncertain match.
+#[derive(Clone)]
+pub struct CategoryCatalog {
+    pub pack_id: String,
+    pub name: String,
+    pub enabled: bool,
+    pub editable: bool,
 }
 
 impl Item {
@@ -263,6 +285,10 @@ pub struct State {
     pub items: Vec<Item>,
     pub records: Vec<Item>,
     pub records_loaded: bool,
+    pub categorization_catalogs: Vec<CategoryCatalog>,
+    pub categorizing: Option<String>,
+    pub categorization_message: Option<String>,
+    pub category_picker: Option<String>,
     pub filter_open: Option<String>,
     pub record_kind: String,
     pub record_status: String,
@@ -386,6 +412,21 @@ impl State {
 }
 
 fn item_from(v: &Value) -> Item {
+    let categorization = v.get("categorization").filter(|v| !v.is_null()).map(|v| {
+        Categorization {
+            status: api::s(v, "status"),
+            method: api::s(v, "method"),
+            pack_id: api::s(v, "pack_id"),
+            pack_name: api::s(v, "pack_name"),
+            confidence: api::s(v, "confidence"),
+            basis: api::arr(v, "basis").iter().filter_map(|one| {
+                let saved = api::s(one, "saved_text");
+                let catalog = api::s(one, "catalog_text");
+                (!saved.is_empty() && !catalog.is_empty()).then_some((saved, catalog))
+            }).collect(),
+            message: api::s(v, "message"),
+        }
+    });
     Item {
         id: api::s(v, "lookup_id"),
         ts: parse_utc(&api::s(v, "created_at")),
@@ -396,6 +437,7 @@ fn item_from(v: &Value) -> Item {
         agent: api::s(v, "agent"),
         claims: api::n(v, "claim_count").unwrap_or(0.0) as usize,
         category: api::s(v, "category"),
+        categorization,
         packs: api::arr(v, "packs")
             .iter()
             .map(|p| (api::s(p, "pack_id"), api::s(p, "name")))
@@ -544,6 +586,16 @@ impl Kriko {
             this.note(&reply);
             if let Ok(v) = reply {
                 this.live.history.records = api::arr(&v, "items").iter().map(item_from).collect();
+                this.live.history.categorization_catalogs = api::arr(&v, "categorization_catalogs")
+                    .iter()
+                    .map(|one| CategoryCatalog {
+                        pack_id: api::s(one, "pack_id"),
+                        name: api::s(one, "name"),
+                        enabled: api::b(one, "enabled"),
+                        editable: api::b(one, "editable"),
+                    })
+                    .filter(|one| !one.pack_id.is_empty())
+                    .collect();
                 this.live.history.records_loaded = true;
             }
         });
@@ -614,6 +666,14 @@ impl Kriko {
         }
         h.open = Some(id.clone());
         h.detail = None;
+        h.category_picker = None;
+        let quick_look = h.history_rows().iter().any(|item| {
+            item.id == id && item.source == "quick_look"
+        });
+        if quick_look {
+            cx.notify();
+            return;
+        }
         let path = format!("/api/lookup/{}", api::seg(&id));
         self.fetch(cx, move || api::get(&path), move |this, reply, _| {
             this.note(&reply);
@@ -623,6 +683,97 @@ impl Kriko {
                 }
             }
         });
+    }
+
+    /// Explicitly ask the configured agent to categorize one saved look.
+    /// The task receives only the stored Quick Look and installed definitions.
+    pub fn categorize_saved_look(&mut self, lookup_id: String, cx: &mut Context<Self>) {
+        let Some(job_id) = lookup_id.strip_prefix("job:").map(str::to_string) else {
+            return;
+        };
+        self.live.history.categorizing = Some(lookup_id.clone());
+        self.live.history.categorization_message = Some("Starting the catalog match…".into());
+        self.fetch(
+            cx,
+            move || api::post(
+                &format!("/api/quick-looks/{}/categorize", api::seg(&job_id)),
+                serde_json::json!({}),
+            ),
+            move |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => {
+                        let categorization_job = api::s(&v, "job_id");
+                        if categorization_job.is_empty() {
+                            this.live.history.categorizing = None;
+                            this.live.history.categorization_message = Some(
+                                "The engine did not return a categorization task.".into(),
+                            );
+                            return;
+                        }
+                        this.live.history.categorization_message = Some(
+                            "Matching the saved product to installed catalogs…".into(),
+                        );
+                        this.follow_local_job(cx, categorization_job, move |this, view, cx| {
+                            if this.live.history.categorizing.as_deref() != Some(lookup_id.as_str()) {
+                                return;
+                            }
+                            this.live.history.categorization_message = Some(view.message.clone());
+                            if view.done {
+                                this.live.history.categorizing = None;
+                                if view.succeeded() {
+                                    this.live.history.categorization_message = Some(
+                                        "Categorization finished. Refreshing the saved assignment…".into(),
+                                    );
+                                    this.refresh_history(cx);
+                                }
+                            }
+                        });
+                    }
+                    Err(error) => {
+                        this.live.history.categorizing = None;
+                        this.live.history.categorization_message = Some(error.message);
+                    }
+                }
+            },
+        );
+    }
+
+    /// Save the reader's explicit choice from the installed-catalog list.
+    pub fn choose_saved_look_category(
+        &mut self,
+        lookup_id: String,
+        pack_id: String,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(job_id) = lookup_id.strip_prefix("job:").map(str::to_string) else {
+            return;
+        };
+        self.live.history.categorizing = Some(lookup_id.clone());
+        self.live.history.categorization_message = Some("Saving your catalog choice…".into());
+        self.fetch(
+            cx,
+            move || api::post(
+                &format!("/api/quick-looks/{}/category", api::seg(&job_id)),
+                serde_json::json!({"pack_id": pack_id}),
+            ),
+            move |this, reply, cx| {
+                this.note(&reply);
+                this.live.history.categorizing = None;
+                match reply {
+                    Ok(_) => {
+                        this.live.history.categorization_message = Some(
+                            "Catalog choice saved.".into(),
+                        );
+                        this.live.history.category_picker = None;
+                        this.refresh_history(cx);
+                    }
+                    Err(error) => {
+                        this.live.history.categorization_message = Some(error.message);
+                    }
+                }
+            },
+        );
     }
 
     /// Forget a check: the first press arms the key, the second deletes.
@@ -923,6 +1074,7 @@ mod tests {
             kind: "check".into(), status: "succeeded".into(), agent: String::new(),
             claims: 0,
             category: String::new(),
+            categorization: None,
             packs: vec![(pack.into(), pack.to_uppercase())],
         };
         let mut s = State { items: vec![item("a", "x.b"), item("b", "x.a")], ..Default::default() };

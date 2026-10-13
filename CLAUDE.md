@@ -48,10 +48,17 @@ to green. So:
 2. **A behaviour change updates its tests in the same commit.** A test that
    asserts retired behaviour is rewritten to assert the new intent, or deleted
    with the code it guarded. It is never left failing for someone else.
-3. **`desktop.yml` is the installer recipe, hand-run.** Do not trim it; put
-   `push`/`pull_request` back when minutes return.
-4. **Ship to the reader, not the branch.** A fix not in a double-clickable
-   installer is not a fix yet.
+3. **`desktop.yml` is the desktop release recipe, hand-dispatched.** It builds
+   Windows x64 and native macOS packages for Apple Silicon (`arm64`) and Intel
+   (`x86_64`); the macOS jobs must run on matching hosts. Dispatch it on the
+   reviewed source branch first, verify and download the artifacts, then tag
+   that exact source SHA and upload those artifacts to a new draft release.
+   Dispatching on a tag runs the native builds again and creates a draft; use
+   that path only when a second build is intended. See
+   `docs/UPDATE_PROTOCOL.md`. Do not trim the workflow.
+4. **Ship to the reader, not the branch.** A fix is not done until its package
+   has been built and observed on the target platform. Windows and each native
+   Mac architecture need their own packaging and smoke evidence.
 
 On Linux, `cargo test` needs `libxkbcommon-dev` and `libxkbcommon-x11-dev`;
 without them it fails at link time, not in a test.
@@ -216,12 +223,13 @@ must not drop history, and history must not move a `content_digest`.
 
 **Two update clocks, neither waiting:** knowledge updates weekly through the
 engine (`kriko/pack/updates.py` decides, `app/packsource.py` fetches, so the
-engine owns no socket) and the app updates through the shell's minisign
-updater, configured at build time (`packaging/configure_updater.py`, so a
-keyless tree still builds). Checking is a request; installing is a job. The
-weekly pass is `app/packautoupdate.py`, which at startup submits an
-`pack_update` job for already-installed packs only when a week has passed since
-the last success. There is no updates block in the UI.
+engine owns no socket). The app checks the latest release through
+`app/appupdate.py`; its verified download is the Windows x86_64 MSI, which the
+Windows shell runs after closing Kriko. It does not update portable archives
+or Mac app bundles; Mac updates replace `Kriko.app` manually. Checking is a
+request; the weekly pass is `app/packautoupdate.py`, which at startup submits
+a `pack_update` job for already-installed packs only when a week has passed
+since the last success. There is no pack-updates block in the UI.
 
 **The installer carries no packs** (#169). A fresh install opens onto an empty
 store, and Overview (the Knowledge group) offers the published index's packs with an

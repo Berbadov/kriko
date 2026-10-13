@@ -7,10 +7,10 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.5.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
-[![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.6.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
-[Download for Windows](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
+[Downloads](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
 
 </div>
 
@@ -34,10 +34,23 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.5.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.5.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.6.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.6.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
+
+#### macOS downloads
+
+The packaging script names Apple Silicon and Intel builds separately. These are the exact filenames it produces; a file is downloadable only when that architecture's native build has been attached to the [release](https://github.com/Berbadov/kriko/releases/latest):
+
+| Mac | Disk image | Portable app bundle |
+|---|---|---|
+| Apple Silicon | `kriko-1.6.0-macos-arm64.dmg` | `kriko-1.6.0-macos-arm64-portable.zip` |
+| Intel | `kriko-1.6.0-macos-x86_64.dmg` | `kriko-1.6.0-macos-x86_64-portable.zip` |
+
+Open the `.dmg` and drag **Kriko.app** to **Applications**. For the portable ZIP, extract it and move **Kriko.app** where you want it. Each archive contains a complete app for its named Mac architecture. The release packaging recipe builds each artifact on a matching Mac; this Linux checkout has not run or visually verified either native build.
+
+These macOS builds are unsigned unless the release explicitly says otherwise. On first launch, macOS may warn that it cannot verify the developer. In Finder, Control-click **Kriko.app**, choose **Open**, then confirm. If macOS still blocks it, use **System Settings → Privacy & Security → Open Anyway** for Kriko.
 
 ### 2. Add the browser extension
 
@@ -66,7 +79,9 @@ Your model choices come from the provider or runtime. You can adjust a research 
 
 ## Your data stays with you
 
-Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.kriko`. Updating or uninstalling the app preserves that folder.
+Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.kriko` on Windows and `~/.kriko` on macOS. Updating or uninstalling the app preserves that folder.
+
+The in-app updater currently downloads and runs only the Windows x86_64 MSI. It does not update the Windows portable ZIP or macOS app bundles. To update a Mac or portable install, download the newer archive from Releases and replace the old app or extracted files; your `~/.kriko` data stays in place.
 
 Closing the window keeps Kriko running so the browser extension can answer. To stop it completely, choose **Quit** from its tray icon.
 
@@ -107,6 +122,25 @@ Measured on 9 October 2026, three separate processes and three fresh chats per C
 All 12 replies completed. These are startup checks, not research scores: the reply times also include authentication, agent setup, network latency, and model generation. Keeping a terminal open cannot remove most of that wait. GLM varied from 12.55 to 35.23 seconds. Every reply used a new chat. [Raw measurements](docs/benchmarks/cli-startup-1.1.2.json) include the CLI-reported token totals; even a short answer includes the agent's initial instructions.
 
 ## What's new
+
+### 1.6.0
+
+- The desktop has a new glass-inspired layout, clearer navigation and live job panel, with animations that pause when the window is inactive and obey **Reduce motion**.
+- Home, Run, Local, and Browser extension now explain what to do while data loads and after success or failure. Retry actions report their state, and failed refreshes identify stale information instead of presenting it as current.
+- Saved Quick Looks can be filed into installed catalogs using exact matching or a grounded assignment from a local model or Mistral, with web tools disabled. CLI-only agents currently abstain and leave the catalog choice to the reader because a verified tool-less mode is unavailable; this does not affect ordinary CLI research. Filing does not rewrite the saved research evidence.
+- Local model requests negotiate supported structured-output formats while keeping Kriko's evidence checks in place. No Gemma 4 E2B quality evaluation was run on the 1.6.0 pipeline, whose evaluator digest is
+  `e647d1c957e01a8972ddef64ed0834a17ceb622613e0e1d998c8aa2affec6055`.
+  An older two-case Gemma 4 E2B fixture run at digest
+  `e686996dd0dadaa54e653ae0065e089521c9c4425284f3394d265f08c9e57e98`
+  recorded the expected findings and abstention, but its rows lack
+  host/runtime metadata and it is not a 1.6.0 benchmark. A separate [live
+  search observation](docs/benchmarks/2026-10-11-local-search-followup.md)
+  used an earlier pipeline and retained no findings for one product; this is
+  not evidence that the product has no faults. Neither result is a general
+  model-quality claim. No fine-tuning was performed; details are in the
+  [local-agent research note](docs/benchmarks/2026-10-12-local-agent-research.md).
+- Agent and model discovery shows when provider choices are still loading, and research screens give clearer feedback as runs start and finish. Hosted response time still depends on the selected provider, model, account, and network; this release makes no latency guarantee.
+- A native macOS packaging recipe now targets Apple Silicon (`arm64`) and Intel (`x86_64`) Macs and emits the filenames listed above. The screenshots in this checkout were captured on Linux; each release still needs a successful build and launch check on matching native hardware.
 
 ### 1.5.0
 
@@ -212,11 +246,11 @@ If the panel says Kriko isn't running, open the desktop app first. After an upda
 
 ## Build or contribute
 
-The engine, command line, and local API can also run from source on macOS and Linux. The packaged desktop app is for Windows x64.
+The engine, command line, and local API can also run from source on macOS and Linux. The desktop packaging scripts target Windows x64 and native macOS builds for Apple Silicon and Intel.
 
 See the [desktop build guide](kriko-gpui/README.md) for the Windows installer recipe, [contributor guide](docs/DOCTRINE.md) for setup and checks, and [architecture guide](docs/ARCHITECTURE.md) for the code. To add a new product category, start with the [catalog contract](docs/PACK_CONTRACT.md).
 
-Every change set must bump the version and update this README before it is committed. Follow the [update protocol](docs/UPDATE_PROTOCOL.md); published versions and their assets are immutable.
+Versions and reader-visible release notes move at release, not with every change set. Follow the [update protocol](docs/UPDATE_PROTOCOL.md); published versions and their assets are immutable.
 
 ## License
 

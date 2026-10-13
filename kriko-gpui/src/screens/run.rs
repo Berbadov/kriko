@@ -11,11 +11,11 @@ use gpui::{
     Context, Div, FontWeight, Stateful, Styled, Window,
 };
 
-use crate::app::{Field, Kriko};
+use crate::app::{Field, Kriko, Tab};
 use crate::api::{self, Value};
 use crate::live::run::{ago, mark_for, Job, Stage};
 use crate::marks::{mark_tile, phase_beat};
-use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
+use crate::screens::{empty_note, guidance, mono, plate_s, row_desc, row_title};
 use crate::theme::*;
 
 /// The run's phases, in order, as the LEDs name them.
@@ -83,6 +83,9 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
     match (&job, app.live.run.jobs_loaded) {
         (Some(job), _) => {
             page = page.child(subject_card(app, job, motion, cx));
+            if let Some(next) = terminal_next_step(app, job, motion, cx) {
+                page = page.child(next);
+            }
             if let Some(evidence) = local_quick_look_card(job) {
                 page = page.child(evidence);
             }
@@ -93,21 +96,33 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
                 page = page.child(follow_up_card(app, job.id.clone(), window, cx));
             }
             if job.attention.is_some() {
-                page = page.child(questions_card(app, job, cx));
+                page = page.child(questions_card(app, job, motion, cx));
             }
         }
         (None, loaded) => {
+            let empty = if loaded {
+                empty_note("No check has run yet. Start one below.").into_any_element()
+            } else {
+                let retry = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                    this.refresh_jobs(cx);
+                    this.refresh_agents(cx);
+                    cx.notify();
+                });
+                guidance::next_step(
+                    "run-job-list-waiting",
+                    "Waiting for the engine",
+                    "The job list has not arrived yet. Check again to retry while the product search stays below.",
+                    ghost("run-jobs-retry", "Check again").on_click(retry).into_any_element(),
+                    motion,
+                )
+            };
             page = page.child(
                 card()
                     .flex()
                     .flex_col()
                     .gap(px(12.0))
                     .child(eyebrow("Run"))
-                    .child(empty_note(if loaded {
-                        "No check has run yet. Start one below."
-                    } else {
-                        "Waiting for the engine to answer."
-                    })),
+                    .child(empty),
             );
         }
     }
@@ -117,6 +132,99 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
         page = page.child(card().child(crate::screens::logs::job_logs(app, job, cx)));
     }
     page
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RunNext {
+    Retry,
+    Activity,
+}
+
+fn next_for_job(done: bool, stage: Stage, needs_answers: bool) -> Option<RunNext> {
+    if !done || needs_answers {
+        return None;
+    }
+    match stage {
+        Stage::Failed | Stage::Cancelled => Some(RunNext::Retry),
+        Stage::Stored => Some(RunNext::Activity),
+        Stage::Queued | Stage::Reading | Stage::Grounding => None,
+    }
+}
+
+fn terminal_next_step(
+    app: &Kriko,
+    job: &Job,
+    motion: bool,
+    cx: &mut Context<Kriko>,
+) -> Option<gpui::AnyElement> {
+    let next = next_for_job(job.done, job.stage(), job.attention.is_some())?;
+    let id = format!("run-next-{}-{}", job.id, match next { RunNext::Retry => "retry", RunNext::Activity => "activity" });
+    let job_id = job.id.clone();
+    let retrying = next == RunNext::Retry
+        && (crate::live::run::retry_pending(&app.live.run.retry_pending, &job.id, std::time::Instant::now())
+            || app.live.run.jobs.iter().any(|j| j.retry_of == job.id && !j.done));
+    let (title, detail, label) = match next {
+        RunNext::Retry => (
+            "Run this request again",
+            "This attempt remains below with its message and log. Retrying creates a new run with the same request.",
+            "Retry run",
+        ),
+        RunNext::Activity => (
+            "Review the finished work",
+            "The run has ended. Activity keeps its job updates, and the run details remain below.",
+            "Open Activity",
+        ),
+    };
+    let action = match next {
+        RunNext::Retry => key("run-retry", if retrying { "Retry submitted…" } else { label })
+            .opacity(if retrying { 0.55 } else { 1.0 })
+            .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                let now = std::time::Instant::now();
+                if crate::live::run::retry_pending(&this.live.run.retry_pending, &job_id, now) {
+                    return;
+                }
+                if this.live.run.jobs.iter().any(|j| j.retry_of == job_id && !j.done) {
+                    return;
+                }
+                this.live.run.retry_pending.insert(job_id.clone(), now);
+                cx.notify();
+                let path = format!("/api/jobs/{}/retry", api::seg(&job_id));
+                let retry_parent = job_id.clone();
+                this.fetch(cx, move || api::post(&path, serde_json::json!({})), move |this, reply, cx| {
+                    this.note(&reply);
+                    let mut submitted = false;
+                    if let Ok(v) = reply {
+                        let id = api::s(&v, "job_id");
+                        if !id.is_empty() {
+                            this.live.run.pinned = Some(id);
+                            this.live.run.detail = None;
+                            submitted = true;
+                        }
+                    }
+                    if !submitted {
+                        this.live.run.retry_pending.remove(&retry_parent);
+                    }
+                    this.refresh_jobs(cx);
+                })
+            }))
+            .into_any_element(),
+        RunNext::Activity => ghost("run-open-activity", label)
+            .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                this.tab = Tab::Activity;
+                this.on_open_tab(cx);
+                cx.notify();
+            }))
+            .into_any_element(),
+    };
+    Some(guidance::next_step(&id, title, detail, action, motion))
+}
+
+fn attention_detail(done: bool) -> &'static str {
+    if done {
+        "This run has finished with its own answers. Choose yours, then run it again to carry them into a new attempt."
+    } else {
+        "This run keeps going with its own answers. Choose yours now; when it finishes, run it again to carry them into a new attempt."
+    }
 }
 
 /// A finished agent run must show its answer, even when the engine returned
@@ -437,10 +545,17 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
 
 /// The questions a run put to the reader, with their options; answering is
 /// a new run that carries them.
-fn questions_card(app: &Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
-    let Some(att) = &job.attention else { return div() };
+fn questions_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> gpui::AnyElement {
+    let Some(att) = &job.attention else { return div().into_any_element() };
     let mut c = card().flex().flex_col().gap(px(12.0));
-    c = c.child(eyebrow("Needs you")).child(row_desc(&att.say));
+    c = c
+        .child(
+            div().flex().items_center().justify_between().gap(px(12.0))
+                .child(eyebrow("Needs you"))
+                .child(tag(format!("run-needs-user-{}", job.id), TagState::Need, "Choose answers", motion)),
+        )
+        .child(row_desc(&att.say))
+        .child(row_desc(attention_detail(job.done)));
     for (qi, q) in att.questions.iter().enumerate() {
         let chosen = app
             .live
@@ -485,9 +600,47 @@ fn questions_card(app: &Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
                 .child(row_desc("A new run that carries these answers.")),
         );
     } else {
-        c = c.child(row_desc("Your answers go into the next run; this one carries on with its own."));
     }
-    c
+    arrive(c, format!("run-questions-{}", job.id), motion)
+}
+
+fn route_button(
+    cx: &mut Context<Kriko>,
+    id: &'static str,
+    label: &str,
+    destination: Tab,
+) -> gpui::AnyElement {
+    key(id, label)
+        .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.tab = destination;
+            this.on_open_tab(cx);
+            match destination {
+                Tab::Run => {
+                    this.refresh_jobs(cx);
+                    this.refresh_agents(cx);
+                }
+                Tab::Agents => this.refresh_agents(cx),
+                Tab::Browse => this.refresh_subjects(cx),
+                _ => {}
+            }
+            cx.notify();
+        }))
+        .into_any_element()
+}
+
+fn quick_look_available(agents_ready: bool, extension_available: bool) -> bool {
+    agents_ready && extension_available
+}
+
+fn pending_agent_choice_labels(llms_pending: bool, efforts_pending: bool) -> Vec<&'static str> {
+    let mut labels = Vec::new();
+    if llms_pending {
+        labels.push("Checking available models…");
+    }
+    if efforts_pending {
+        labels.push("Checking effort choices…");
+    }
+    labels
 }
 
 /// Start a check: look a subject up, pick it, pick the agent, go.
@@ -514,6 +667,66 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         return c;
     }
 
+    if app.live.history.packs.is_none() {
+        let check = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+            this.refresh_history(cx);
+            this.refresh_agents(cx);
+            this.refresh_extension(cx);
+            cx.notify();
+        });
+        let primary = ghost("run-catalog-check", "Check again")
+            .on_click(check)
+            .into_any_element();
+        let can_quick_look = quick_look_available(
+            app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
+            app.live.knowledge.ext.as_ref().is_some_and(|e| e.available),
+        );
+        let actions = if can_quick_look {
+            div().flex().items_center().gap(px(8.0))
+                .child(primary)
+                .child(route_button(cx, "run-quick-look-pending-catalog", "Quick Look a product", Tab::Extension))
+                .into_any_element()
+        } else {
+            primary
+        };
+        return c.child(guidance::next_step(
+            "run-catalogs-waiting",
+            "Catalog details have not loaded",
+            "Kriko has not confirmed which catalogs are available. Check again to retry; if an agent and extension are ready, Quick Look can start from a product listing meanwhile.",
+            actions,
+            app.motion,
+        ));
+    }
+    if let Some(packs) = app.live.history.packs.as_ref() {
+        if !packs.iter().any(|pack| pack.enabled) {
+            let (title, detail) = if packs.is_empty() {
+                ("Install a catalog", "Install a catalog in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing without a catalog.")
+            } else {
+                ("Switch on a catalog", "Every installed catalog is off. Switch one on in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing.")
+            };
+            let primary = route_button(cx, "run-open-overview", "Open Overview", Tab::Overview);
+            let can_quick_look = quick_look_available(
+                app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
+                app.live.knowledge.ext.as_ref().is_some_and(|e| e.available),
+            );
+            let actions = if can_quick_look {
+                div().flex().items_center().gap(px(8.0))
+                    .child(primary)
+                    .child(route_button(cx, "run-quick-look-listing", "Quick Look a product", Tab::Extension))
+                    .into_any_element()
+            } else {
+                primary
+            };
+            return c.child(guidance::next_step(
+                if packs.is_empty() { "run-no-catalog" } else { "run-catalogs-off" },
+                title,
+                detail,
+                actions,
+                app.motion,
+            ));
+        }
+    }
+
     let search = app.input_field(Field::RunSearch, "run-search", "Find a product...", Some("search"), window, cx);
     let go = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         this.search_subjects(cx);
@@ -525,7 +738,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .items_center()
             .gap(px(8.0))
             .child(search)
-            .child(key("run-search-go", if app.live.run.start.searching { "Looking" } else { "Search" }).on_click(go)),
+            .child(key("run-search-go", if app.live.run.start.searching { "Looking" } else if app.live.run.start.note.is_empty() { "Search" } else { "Try again" }).on_click(go)),
     );
 
     let start = &app.live.run.start;
@@ -561,23 +774,40 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             this.live.run.start.picked = None;
             cx.notify();
         });
-        c = c
-            .child(mono("RUN WITH", DIM))
-            .child(if app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)) {
-                agents
-            } else {
-                div().child(empty_note("No agent is ready to run a check. See the Agents tab."))
-            })
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(8.0))
-                    .child(key("run-begin", "Start").on_click(begin))
-                    .child(ghost("run-back", "Back").on_click(back)),
-            );
+        let ready = app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready));
+        c = c.child(mono("RUN WITH", DIM));
+        if ready {
+            c = c.child(agents);
+            if let Some(agent) = app.live.run.harnesses.iter().find(|h| h.id == chosen) {
+                for label in pending_agent_choice_labels(agent.llms_pending, agent.efforts_pending) {
+                    c = c.child(row_desc(label));
+                }
+            }
+        } else if app.live.run.prefs_loaded {
+            c = c.child(guidance::next_step(
+                "run-no-ready-agent",
+                "Set up an agent",
+                "No agent is ready to run this check. Connect or install one in Agents, then come back.",
+                route_button(cx, "run-open-agents", "Open Agents", Tab::Agents),
+                app.motion,
+            ));
+        } else {
+            c = c.child(empty_note("Checking which agents can run a check."));
+        }
+        c = c.child(
+            div().flex().items_center().gap(px(8.0))
+                .when(ready, |d| d.child(key("run-begin", "Start").on_click(begin)))
+                .child(ghost("run-back", "Back").on_click(back)),
+        );
     } else if start.searched && start.hits.is_empty() && start.note.is_empty() {
-        c = c.child(empty_note("Nothing in the installed catalogs matches that."));
+        c = c.child(empty_note("Nothing in the installed catalogs matches that."))
+            .child(guidance::next_step(
+                "run-search-no-match",
+                "Browse catalog products",
+                "See which products are available in the catalogs installed here.",
+                route_button(cx, "run-browse-products", "Open Browse", Tab::Browse),
+                app.motion,
+            ));
     } else {
         for (i, hit) in start.hits.iter().enumerate() {
             let h = hit.clone();
@@ -621,7 +851,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         .map(|h| h.label.clone())
         .unwrap_or_else(|| if job.harness.is_empty() { "Agent".to_string() } else { job.harness.clone() });
     let phase = job.lane_phase();
-    let progress = if job.done { 100.0 } else { job.progress * 100.0 };
+    let progress = if job.stage() == Stage::Stored { 100.0 } else { job.progress * 100.0 };
     card()
         .flex()
         .flex_col()
@@ -664,4 +894,42 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
                     led_ripple("run-lane", motion)
                 }),
         )
+}
+
+#[cfg(test)]
+mod guidance_tests {
+    use super::{attention_detail, next_for_job, pending_agent_choice_labels, quick_look_available, RunNext};
+    use crate::live::run::Stage;
+
+    #[test]
+    fn active_jobs_and_question_runs_keep_their_own_next_action() {
+        assert_eq!(next_for_job(false, Stage::Reading, false), None);
+        assert_eq!(next_for_job(true, Stage::Stored, true), None);
+        assert!(attention_detail(false).contains("when it finishes"));
+        assert!(attention_detail(true).contains("run it again"));
+    }
+
+    #[test]
+    fn failed_or_stopped_runs_can_be_retried_and_completed_runs_lead_to_activity() {
+        assert_eq!(next_for_job(true, Stage::Failed, false), Some(RunNext::Retry));
+        assert_eq!(next_for_job(true, Stage::Cancelled, false), Some(RunNext::Retry));
+        assert_eq!(next_for_job(true, Stage::Stored, false), Some(RunNext::Activity));
+    }
+
+    #[test]
+    fn quick_look_is_offered_only_when_an_agent_and_extension_are_available() {
+        assert!(quick_look_available(true, true));
+        assert!(!quick_look_available(false, true));
+        assert!(!quick_look_available(true, false));
+    }
+
+    #[test]
+    fn run_picker_only_shows_model_and_effort_messages_while_they_are_pending() {
+        assert_eq!(pending_agent_choice_labels(false, false), Vec::<&str>::new());
+        assert_eq!(pending_agent_choice_labels(true, false), vec!["Checking available models…"]);
+        assert_eq!(pending_agent_choice_labels(false, true), vec!["Checking effort choices…"]);
+        assert_eq!(pending_agent_choice_labels(true, true), vec![
+            "Checking available models…", "Checking effort choices…"
+        ]);
+    }
 }

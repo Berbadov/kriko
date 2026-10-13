@@ -52,6 +52,7 @@
 # `winpty\\conpty.dll` but not `winpty\\winpty-agent.exe`; not caught by any
 # test, because none of them run the frozen binary's PTY on Windows.
 
+import os
 import sys
 from pathlib import Path
 
@@ -59,6 +60,14 @@ sys.path.insert(0, SPECPATH)
 from freeze_imports import CONSOLE_MODULES, FROZEN_EXCLUDES, kriko_submodules, mcp_submodules
 
 ROOT = Path(SPECPATH).parent
+
+# PyInstaller's onefile executable embeds Python and extension binaries. When
+# macOS signing is configured, they must carry the same Apple-issued identity
+# as the outer executable so hardened runtime library validation accepts them.
+# Keep the ordinary local and CI build ad-hoc-signed by default.
+CODESIGN_IDENTITY = None
+if sys.platform == "darwin":
+    CODESIGN_IDENTITY = os.environ.get("KRIKO_MACOS_SIGN_IDENTITY") or None
 
 # The browser extension travels *inside* the sidecar, unpacked to
 # `app/extension_src` where `app/extension.py` looks for it. It is data, not
@@ -153,4 +162,5 @@ exe = EXE(
     # starts --mcp. The runtime hook restores inherited pipes for both the
     # engine's port handshake and MCP's bidirectional stdio protocol.
     console=sys.platform != "win32",
+    codesign_identity=CODESIGN_IDENTITY,
 )

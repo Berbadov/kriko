@@ -22,8 +22,8 @@ thread_local! {
     static WINDOW: std::cell::Cell<Option<gpui::AnyWindowHandle>> = const { std::cell::Cell::new(None) };
 }
 
-/// Something the reader did in the tray. The tray exists only on Windows.
-#[cfg(windows)]
+/// Something the reader did in the tray.
+#[cfg(any(windows, target_os = "macos"))]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TrayAction {
     Open,
@@ -156,21 +156,43 @@ pub fn remember_window(window: &gpui::Window) {
 /// Whether closing the window should hide it (there is a tray to come back
 /// through) rather than quit.
 pub fn can_hide() -> bool {
-    TRAY.load(Ordering::SeqCst) && HWND.load(Ordering::SeqCst) != 0
+    #[cfg(windows)]
+    {
+        TRAY.load(Ordering::SeqCst) && HWND.load(Ordering::SeqCst) != 0
+    }
+    #[cfg(target_os = "macos")]
+    {
+        TRAY.load(Ordering::SeqCst)
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        false
+    }
 }
 
-pub fn hide_window() {
+pub fn hide_window(cx: &mut gpui::App) {
     #[cfg(windows)]
     unsafe {
+        let _ = cx;
         let hwnd = HWND.load(Ordering::SeqCst);
         if hwnd != 0 {
             win::ShowWindow(hwnd, win::SW_HIDE);
         }
     }
+    // The status item remains in the menu bar while NSApp hides its windows.
+    // Opening Kriko from that menu re-activates the app and its saved window.
+    #[cfg(target_os = "macos")]
+    cx.hide();
+    #[cfg(not(any(windows, target_os = "macos")))]
+    let _ = cx;
 }
 
 /// Shows, un-minimises and raises the window.
 pub fn show_window(cx: &mut gpui::App) {
+    // NSWindow activation alone does not unhide an application that was
+    // hidden when its close button was used.
+    #[cfg(target_os = "macos")]
+    cx.activate(true);
     // A window created with show:false has deferred placement in GPUI.
     // Activation applies that placement before we restore/raise its HWND.
     if let Some(handle) = WINDOW.get() {
@@ -247,12 +269,14 @@ pub fn has_tray() -> bool {
 
 // ---- the tray ----
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 mod tray {
     use super::TrayAction;
     use std::cell::RefCell;
     use tray_icon::menu::{Menu, MenuEvent, MenuItem};
-    use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
+    use tray_icon::{MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent};
+    #[cfg(windows)]
+    use tray_icon::Icon;
 
     thread_local! {
         // the icon lives as long as the UI thread; dropping it removes it
@@ -263,13 +287,24 @@ mod tray {
         let open = MenuItem::with_id("open", "Open Kriko", true, None);
         let quit = MenuItem::with_id("quit", "Quit Kriko", true, None);
         let menu = Menu::with_items(&[&open, &quit]).map_err(|e| e.to_string())?;
-        // the exe's own icon resource (build.rs embeds assets/kriko.ico as 1)
+        // The exe's own icon resource (build.rs embeds assets/kriko.ico as 1).
+        // macOS uses a text status item; its app icon is supplied by the bundle.
+        #[cfg(windows)]
         let icon = Icon::from_resource(1, None).map_err(|e| e.to_string())?;
+        #[cfg(windows)]
         let tray = TrayIconBuilder::new()
             .with_tooltip("Kriko — connecting to engine")
             .with_menu(Box::new(menu))
             .with_menu_on_left_click(false)
             .with_icon(icon)
+            .build()
+            .map_err(|e| e.to_string())?;
+        #[cfg(target_os = "macos")]
+        let tray = TrayIconBuilder::new()
+            .with_title("Kriko")
+            .with_tooltip("Kriko — connecting to engine")
+            .with_menu(Box::new(menu))
+            .with_menu_on_left_click(false)
             .build()
             .map_err(|e| e.to_string())?;
         ICON.with(|slot| *slot.borrow_mut() = Some(tray));
@@ -315,7 +350,7 @@ mod tray {
 pub fn build_tray() {
     #[cfg(windows)]
     activation::init();
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "macos"))]
     match tray::build() {
         Ok(()) => TRAY.store(true, Ordering::SeqCst),
         Err(e) => log::warn!("tray: {e}; closing the window will quit Kriko"),
@@ -323,17 +358,19 @@ pub fn build_tray() {
 }
 
 /// What was clicked in the tray since the last call.
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 pub fn poll_tray() -> Vec<TrayAction> {
     let mut actions = tray::poll();
+    #[cfg(windows)]
     if activation::take() { actions.push(TrayAction::Open); }
     actions
 }
 
 pub fn remove_tray() {
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "macos"))]
     {
         tray::remove();
+        #[cfg(windows)]
         activation::remove();
     }
 }
@@ -341,7 +378,7 @@ pub fn remove_tray() {
 /// The tray remains visible when the window is hidden, so its label must
 /// describe the engine's actual state rather than merely the app process.
 pub fn set_tray_status(ready: bool, failed: bool) {
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "macos"))]
     tray::set_tooltip(if ready {
         "Kriko — engine ready for browser extension"
     } else if failed {
