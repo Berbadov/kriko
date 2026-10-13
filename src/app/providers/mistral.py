@@ -35,7 +35,7 @@ import re
 from dataclasses import dataclass, field
 
 from app.keys import require
-from app.providers._http import post_json_or_why
+from app.providers._http import post_json_or_why, post_sse_or_why
 
 DEFAULT_BASE_URL = "https://api.mistral.ai/v1"
 #: Fastest of the two measured on the quick-look brief (8.8 s against 46 s
@@ -214,6 +214,154 @@ def converse(prompt: str, *, model: str = "", api_key: str = "",
     if why:
         return Reply(error=why)
     reply = parse(body)
+    if not reply.text:
+        reply.error = "Mistral answered with no text"
+    return reply
+
+
+def converse_stream(prompt: str, *, model: str = "", api_key: str = "",
+                    timeout: float = TIMEOUT_SECONDS, search: bool = True,
+                    max_tokens: int = 0, on_text=None,
+                    cancel_event=None) -> Reply:
+    """Stream assistant text from the Conversations API and retain its evidence.
+
+    The SSE stream exposes answer deltas before the completed conversation,
+    while web-search results arrive on `tool.execution.done`. Text is only a
+    live preview; the final reply is still assembled from the same text and
+    tool result events and passed through `parse` for source grounding and
+    token/tool accounting.
+    """
+    completion_args: dict = {"temperature": 0.0}
+    if max_tokens:
+        completion_args["max_tokens"] = int(max_tokens)
+    payload: dict = {
+        "model": model or DEFAULT_MODEL,
+        "inputs": prompt,
+        "store": False,
+        "stream": True,
+        "completion_args": completion_args,
+    }
+    if search:
+        payload["tools"] = [{"type": "web_search"}]
+
+    messages: dict[int, dict] = {}
+    tool_arguments: dict[str, str] = {}
+    tool_info: dict[str, dict] = {}
+    tool_rows: dict[str, dict] = {}
+    usage: dict = {}
+    stream_error = ""
+    next_index = 0
+    completed = False
+    final_outputs: list[dict] | None = None
+
+    def append_argument(previous: str, piece) -> str:
+        if isinstance(piece, dict):
+            piece = json.dumps(piece, ensure_ascii=False)
+        current = str(piece or "")
+        if current.startswith(previous):
+            return current
+        return previous + current
+
+    def text_chunks(content):
+        """Yield text from the string and typed-chunk delta shapes."""
+        if isinstance(content, str):
+            if content:
+                yield content
+        elif isinstance(content, dict):
+            if content.get("type") == "text" and isinstance(content.get("text"), str):
+                yield content["text"]
+        elif isinstance(content, list):
+            for chunk in content:
+                yield from text_chunks(chunk)
+
+    def event(outer: dict) -> None:
+        nonlocal usage, stream_error, next_index, completed, final_outputs
+        nested: object = outer.get("data")
+        data: dict = nested if isinstance(nested, dict) else outer
+        kind = data.get("type") or outer.get("event")
+        if kind == "message.output.delta":
+            index = data.get("output_index")
+            try:
+                if index is None:
+                    raise TypeError
+                output_index = int(index)
+            except (TypeError, ValueError):
+                output_index = next_index
+                next_index += 1
+            content = data.get("content")
+            pieces = list(text_chunks(content))
+            if isinstance(content, (str, dict, list)):
+                row = messages.setdefault(output_index, {
+                    "type": "message.output", "content": [],
+                })
+                row_content = row["content"]
+                if isinstance(content, str):
+                    row_content.append({"type": "text", "text": content})
+                elif isinstance(content, dict):
+                    row_content.append(content)
+                elif isinstance(content, list):
+                    row_content.extend(content)
+            if on_text is not None:
+                for piece in pieces:
+                    on_text(piece)
+        elif kind in {"tool.execution.started", "tool.execution.delta",
+                      "tool.execution.done", "tool.execution"}:
+            ident = str(data.get("id") or f"anonymous-{len(tool_arguments)}")
+            tool_arguments[ident] = append_argument(
+                tool_arguments.get(ident, ""), data.get("arguments"),
+            )
+            if isinstance(data.get("info"), dict):
+                tool_info[ident] = data["info"]
+            if kind in {"tool.execution.done", "tool.execution"}:
+                tool_row = {
+                    "type": "tool.execution",
+                    "arguments": tool_arguments.get(ident, ""),
+                    "info": tool_info.get(ident, {}),
+                }
+                tool_rows[ident] = tool_row
+                parsed = parse({"outputs": [tool_row]})
+                for query in parsed.queries:
+                    if query not in source_reply.queries:
+                        source_reply.queries.append(query)
+                for url, source in parsed.sources.items():
+                    _add_source(source_reply.sources, url, source["title"], source["text"])
+        elif kind == "conversation.response.done":
+            completed = True
+            value = data.get("usage")
+            if isinstance(value, dict):
+                usage = value
+            outputs = data.get("outputs")
+            if isinstance(outputs, list):
+                final_outputs = [row for row in outputs if isinstance(row, dict)]
+        elif kind == "conversation.response.error":
+            # Vendor error payloads can echo request material, so keep it out
+            # of transcript and logs just as the non-streaming helper does.
+            stream_error = "Mistral conversation failed"
+
+    source_reply = Reply()
+    _, why = post_sse_or_why(
+        f"{base_url()}/conversations",
+        payload,
+        {"authorization": f"Bearer {api_key or require('mistral')}"},
+        timeout,
+        event,
+        cancel_event=cancel_event,
+    )
+    if why:
+        return Reply(error=why)
+    if stream_error:
+        return Reply(error=stream_error)
+    if not completed:
+        return Reply(error="Mistral conversation ended before its completion event")
+    outputs = final_outputs if final_outputs is not None else [
+        *[messages[index] for index in sorted(messages)], *tool_rows.values(),
+    ]
+    reply = parse({
+        "outputs": outputs,
+        "usage": usage,
+    })
+    reply.queries = source_reply.queries
+    reply.sources = source_reply.sources
     if not reply.text:
         reply.error = "Mistral answered with no text"
     return reply

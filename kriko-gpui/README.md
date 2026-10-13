@@ -47,8 +47,8 @@ engine, waits until it answers, and ends it with the app.
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 sequenceDiagram
-    participant App as kriko.exe
-    participant Side as kriko-sidecar.exe
+    participant App as kriko or kriko.exe
+    participant Side as kriko-sidecar or kriko-sidecar.exe
     participant Win as Window
     App->>Side: spawn with --exit-with-parent --supervised, stdin kept open
     Side-->>App: KRIKO_PORT n (first stdout line)
@@ -66,7 +66,7 @@ Where the engine comes from, first match wins:
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 flowchart TD
     A{"KRIKO_URL set?"}:::plain -->|yes| B["Attach to it, start nothing"]:::ice
-    A -->|no| C{"kriko-sidecar.exe<br/>beside kriko.exe?"}:::plain
+    A -->|no| C{"kriko-sidecar[.exe]<br/>beside kriko[.exe]?"}:::plain
     C -->|yes| D["Start it (installed layout)"]:::brand
     C -->|no| E{"Engine already answering<br/>on the selected extension port?"}:::plain
     E -->|yes| F["Attach to it"]:::ice
@@ -93,7 +93,7 @@ flowchart TD
 | Close the window | Hides it. The engine keeps serving, because the extension needs it. Without a tray, closing quits instead. |
 | Quit (tray: Open, Quit) | Ends the engine, then the app. On Windows the kill is a tree kill (`taskkill /F /T`), because a one-file bundle re-executes: the pid spawned is the bootloader. |
 | Attached engine | Left alone on exit. It was not ours to end. |
-| Second launch | Raises the first window and exits before starting a second engine. |
+| Second launch | Windows raises the first window and exits before starting a second engine; app-bundle launches on macOS go through Launch Services. |
 
 ## The window and the dock
 
@@ -189,11 +189,47 @@ list of functions allowed to loop.
 
 ## Build the installer
 
-One command builds everything a reader can install, on Windows:
+The Windows installer and portable zip are built on Windows:
 
 ```
 powershell -ExecutionPolicy Bypass -File package.ps1
 ```
+
+The macOS app is built on the machine it targets, because GPUI, PyInstaller,
+and OpenSERP must all have the same architecture. On Apple Silicon:
+
+```sh
+kriko-gpui/package-macos.sh arm64
+```
+
+On an Intel Mac, use `kriko-gpui/package-macos.sh x86_64`. The script checks
+the host and each bundled executable's architecture, verifies the pinned
+OpenSERP release archive, then builds and smoke-checks the `.app` before
+creating these files in `kriko-gpui/builds/`:
+
+| File | What it is |
+|---|---|
+| `kriko-<version>-macos-<arch>.dmg` | Drag-and-drop disk image containing `Kriko.app` and an Applications link. |
+| `kriko-<version>-macos-<arch>-portable.zip` | The complete app bundle, including the GPUI app, frozen engine sidecar, OpenSERP, and its license. |
+| `SHA256SUMS-<arch>.txt` | SHA-256 hashes of the disk image and portable archive. |
+
+Without signing configuration these packages are unsigned. To sign, set
+`KRIKO_MACOS_SIGN_IDENTITY` to an installed Apple-issued Developer ID
+Application identity. PyInstaller uses it while freezing the sidecar, so the
+embedded Python runtime and extensions share the identity required by hardened
+runtime library validation; the package script then signs the app bundle and
+disk image with that identity.
+To notarize as well, first configure an `xcrun notarytool` keychain profile and
+set `KRIKO_MACOS_NOTARY_PROFILE` to its name. The script signs the app, submits
+and staples the app and disk image, then hashes the final artifacts. The
+hand-run desktop workflow builds unsigned artifacts for both native
+architectures; this Linux checkout cannot execute or visually verify a macOS
+app.
+
+On macOS, Settings → General → Launch at login writes a per-user LaunchAgent
+under `~/Library/LaunchAgents`. **Window** opens the app at the next login;
+**Tray** starts it hidden with the menu-bar item available. The change is for
+the next login and does not start another copy in the current session.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%

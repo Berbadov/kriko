@@ -308,6 +308,11 @@ class QuickLookPipeline:
         try:
             raw = socket.json(prompt, schema) if hasattr(socket, "json") else socket(prompt)
         finally:
+            negotiated = getattr(socket, "structured_output", None)
+            if isinstance(negotiated, dict):
+                # Keep protocol degradation visible in the run's coverage, but
+                # omit server error bodies which can contain arbitrary text.
+                self.coverage["structured_output"] = dict(negotiated)
             if hasattr(socket, "max_tokens"):
                 socket.max_tokens = previous
         self.agent._check()

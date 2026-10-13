@@ -219,10 +219,20 @@ pub fn pick_confirmed(pending: &mut std::collections::HashMap<String, PendingPic
     pending.retain(|_, pick| pick.writes > 0);
 }
 
+/// Whether a plane answer should replace the reader's server/model form.
+/// Retry refreshes pass `fill = false`, so the address and model survive a
+/// failed request and the subsequent retry.
+fn should_fill_plane_form(fill: bool, loaded: bool) -> bool {
+    fill || !loaded
+}
+
 #[derive(Default)]
 pub struct State {
     pub loaded: bool,
     pub plane: Option<Plane>,
+    /// The last `/api/local-plane` failure, kept with this slice so the Local
+    /// screen can offer a real retry without showing an unrelated global error.
+    pub plane_error: Option<String>,
     /// Choices on the runtime and language rows that are being stored.
     pub pref_pending: std::collections::HashMap<String, PendingPick>,
     /// "Refresh device" was pressed and the plane has not answered yet.
@@ -562,24 +572,30 @@ impl Kriko {
     /// Reads the plane; `fill` also puts the stored choices into the form,
     /// which only the first read and a Save do, so typing is never undone.
     fn refresh_plane(&mut self, fill: bool, cx: &mut Context<Self>) {
+        self.live.local.checking = true;
+        self.live.local.plane_error = None;
         self.fetch(cx, || api::get("/api/local-plane"), move |this, reply, _| {
             this.note(&reply);
             this.live.local.checking = false;
             this.live.local.device_reading = false;
-            if let Ok(v) = reply {
-                let plane = plane_from(&v);
-                if fill || !this.live.local.loaded {
-                    this.local_url.set_value(plane.stored_url.clone());
-                    this.local_search.set_value(plane.stored_search.clone());
-                    this.live.local.timeout = plane.timeout.round().max(1.0) as u32;
-                    this.live.local.model_pick = if plane.model.is_empty() {
-                        None
-                    } else {
-                        Some(plane.model.clone())
-                    };
+            match reply {
+                Ok(v) => {
+                    this.live.local.plane_error = None;
+                    let plane = plane_from(&v);
+                    if should_fill_plane_form(fill, this.live.local.loaded) {
+                        this.local_url.set_value(plane.stored_url.clone());
+                        this.local_search.set_value(plane.stored_search.clone());
+                        this.live.local.timeout = plane.timeout.round().max(1.0) as u32;
+                        this.live.local.model_pick = if plane.model.is_empty() {
+                            None
+                        } else {
+                            Some(plane.model.clone())
+                        };
+                    }
+                    this.live.local.loaded = true;
+                    this.live.local.plane = Some(plane);
                 }
-                this.live.local.loaded = true;
-                this.live.local.plane = Some(plane);
+                Err(error) => this.live.local.plane_error = Some(error.message),
             }
             pick_confirmed(&mut this.live.local.pref_pending);
         });
@@ -606,6 +622,9 @@ impl Kriko {
     /// on the button until the plane answers. It does not refill the address
     /// and search fields, so a server address typed but not saved survives it.
     pub fn refresh_device(&mut self, cx: &mut Context<Self>) {
+        if self.live.local.checking {
+            return;
+        }
         self.live.local.device_reading = true;
         self.refresh_plane(false, cx);
         self.refresh_machine(false, cx);
@@ -634,6 +653,9 @@ impl Kriko {
 
     /// "Check again": ask the machine and the servers afresh.
     pub fn local_check_again(&mut self, cx: &mut Context<Self>) {
+        if self.live.local.checking {
+            return;
+        }
         self.live.local.checking = true;
         self.refresh_machine(true, cx);
         self.refresh_held(cx);
@@ -1031,6 +1053,13 @@ mod tests {
         pick_started(&mut pending, "local_device", "gpu");
         pick_answered(&mut pending, "local_device", false);
         assert_eq!(pending["local_device"].value, "gpu");
+    }
+
+    #[test]
+    fn retry_refresh_preserves_the_reader_server_and_model_form() {
+        assert!(!should_fill_plane_form(false, true));
+        assert!(should_fill_plane_form(false, false));
+        assert!(should_fill_plane_form(true, true));
     }
 
     #[test]

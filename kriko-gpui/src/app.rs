@@ -4,7 +4,8 @@
 //! method over one state struct.
 
 use gpui::{
-    AnimationExt, div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle, IntoElement,
+    AnimationExt, div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba, App, ClickEvent,
+    Context, Div, FocusHandle, IntoElement,
     KeyDownEvent, ParentElement, Render, ScrollDelta, ScrollWheelEvent, Stateful, Styled, Window,
     WindowControlArea,
 };
@@ -22,10 +23,10 @@ gpui::actions!(kriko, [NewCheck, SearchKnowledge, JumpBrowse]);
 
 // ---- the window's room ----
 
-/// The page column's side padding (`px(40.0)` on the page, below the hero).
+/// The page column's side padding below the hero when the window has room.
 const PAGE_PAD: f32 = 40.0;
-/// The live dock's width when it sits beside the page.
-const DOCK_W: f32 = 300.0;
+/// The live dock's width. Its open width is reserved from page content.
+const DOCK_W: f32 = DOCK_WIDTH;
 /// The titlebar's height; the floating dock starts under it so the window
 /// controls on the titlebar stay under the reader's pointer.
 const TITLEBAR_H: f32 = 40.0;
@@ -33,6 +34,9 @@ const TITLEBAR_H: f32 = 40.0;
 /// Below this window width the sidebar shows icons only, unless the reader
 /// chose otherwise with its toggle.
 const SIDEBAR_FOLD_BELOW: f32 = 1100.0;
+/// At narrower widths, the Live panel and expanded sidebar cannot leave a
+/// useful page column. Fold the sidebar temporarily so the page can wrap.
+const MIN_COMFORTABLE_CONTENT_W: f32 = 380.0;
 
 // ---- tabs ----
 
@@ -370,6 +374,9 @@ pub struct Kriko {
     pub sidebar_collapsed: bool,
     /// The reader's own open or closed; None follows the window's width.
     pub sidebar_choice: Option<bool>,
+    /// True while the Live panel temporarily folds an otherwise expanded
+    /// sidebar to preserve a useful page width.
+    sidebar_folded_for_live: bool,
     /// The width the page column has this frame, measured in `render` before
     /// any screen lays out, so a screen can choose side-by-side panels or a
     /// stacked column for the room it really has.
@@ -436,6 +443,7 @@ impl Kriko {
             quick_ask_input: InputState::new(cx),
             sidebar_collapsed: false,
             sidebar_choice: None,
+            sidebar_folded_for_live: false,
             content_w: 0.0,
             main_scroll: gpui::ScrollHandle::new(),
             scroll_target: 0.0,
@@ -523,7 +531,7 @@ impl Kriko {
     }
 
     fn pulse(&mut self, cx: &mut Context<Self>) {
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "macos"))]
         for action in shell::poll_tray() {
             match action {
                 shell::TrayAction::Open => shell::show_window(cx),
@@ -567,6 +575,55 @@ impl Kriko {
         engine::stop();
         shell::remove_tray();
         cx.quit();
+    }
+
+    /// Retry the data shown by the screen under the persistent shell error.
+    /// Clear first so an error from this retry can replace it, while ordinary
+    /// background successes remain unable to hide a still-relevant failure.
+    fn retry_current_screen(&mut self, cx: &mut Context<Self>) {
+        self.live.problem = None;
+        match self.tab {
+            Tab::Home => {
+                self.refresh_history(cx);
+                self.refresh_jobs(cx);
+                self.refresh_agents(cx);
+                self.refresh_updates(cx);
+                self.check_app_update(cx);
+            }
+            Tab::Run => {
+                self.refresh_jobs(cx);
+                self.refresh_agents(cx);
+            }
+            Tab::History => self.refresh_history(cx),
+            Tab::Compare => self.refresh_compare(cx),
+            Tab::Extension => self.refresh_extension(cx),
+            Tab::Overview => {
+                self.refresh_packs(cx);
+                self.refresh_thin(cx);
+                self.refresh_updates(cx);
+            }
+            Tab::Browse => self.refresh_subjects(cx),
+            Tab::Sites => self.refresh_sites(cx),
+            Tab::Activity => self.refresh_activity(cx),
+            Tab::Agents => self.refresh_agents(cx),
+            Tab::Benchmark => {
+                self.refresh_bench(cx);
+                self.refresh_jobs(cx);
+            }
+            Tab::Local => {
+                self.refresh_local(cx);
+                self.refresh_jobs(cx);
+            }
+            Tab::Settings => {
+                self.refresh_local(cx);
+                self.refresh_settings(cx);
+                self.refresh_keys(cx);
+                self.refresh_health(cx);
+                self.refresh_startup(cx);
+            }
+            Tab::About => self.refresh_health(cx),
+        }
+        cx.notify();
     }
 
     pub(crate) fn input(&self, field: Field) -> &InputState {
@@ -855,7 +912,21 @@ impl Kriko {
             // panel", and it sits in the same well as the window controls.
             .child(div().px(px(12.0)).py(px(8.0)).flex().when(self.sidebar_collapsed, |d| d.justify_center())
                 .child(titlebar_button("sidebar-minimise", "sidebar", false)
-                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| { this.sidebar_choice = Some(!this.sidebar_collapsed); this.sidebar_collapsed = !this.sidebar_collapsed; cx.notify(); }))))
+                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
+                        if this.sidebar_folded_for_live {
+                            // The user asked to expand the rail while it was
+                            // temporarily folded. Close Live to honor that
+                            // action, then retain the expanded preference.
+                            this.dock_open = false;
+                            this.sidebar_choice = Some(false);
+                            this.sidebar_collapsed = false;
+                            this.sidebar_folded_for_live = false;
+                        } else {
+                            this.sidebar_choice = Some(!this.sidebar_collapsed);
+                            this.sidebar_collapsed = !this.sidebar_collapsed;
+                        }
+                        cx.notify();
+                    }))))
             .child(nav)
     }
 }
@@ -985,14 +1056,17 @@ impl Kriko {
                     .child(
                         div()
                             .id("titlebar-dock-toggle")
-                            .h(px(28.0))
+                            .h(px(32.0))
                             .px(px(12.0))
                             .flex()
                             .items_center()
                             .gap(px(8.0))
                             .rounded(px(8.0))
                             .cursor_pointer()
-                            .when(self.dock_open, |d| d.bg(rgba(GLASS_1)))
+                            .bg(rgba(GLASS_1))
+                            .border_1()
+                            .border_color(rgba(HAIRLINE))
+                            .when(self.dock_open, |d| d.bg(rgba(GLASS_2)).border_color(rgba(BRAND_BRIGHT)))
                             .on_click(toggle_dock)
                             .child(icon("agents", 14.0).text_color(rgb(if self.dock_open {
                                 ICE
@@ -1008,7 +1082,7 @@ impl Kriko {
                                     } else {
                                         MUTED
                                     }))
-                                    .child(if self.dock_open { "LIVE ON" } else { "LIVE OFF" }),
+                                    .child("Live"),
                             ),
                     )
                     .when(needs_you > 0, |d| {
@@ -1044,16 +1118,23 @@ impl Render for Kriko {
         }
         let tab = self.tab;
         self.step_scroll(window);
-        // The page's room is the window less the sidebar and the page's own
-        // padding. The live dock floats over the page and takes none of it,
-        // so opening the dock never changes how a screen lays out.
+        // The page uses compact side padding in a narrow window. While Live
+        // is open, reserve its width plus a gutter from the content column so
+        // buttons and text stay clear of the floating panel.
         let viewport_w = f32::from(window.viewport_size().width);
         // Narrow windows give the page the room: the sidebar folds to its
         // icons below this width unless the reader opened it themselves.
-        self.sidebar_collapsed = self.sidebar_choice.unwrap_or(viewport_w < SIDEBAR_FOLD_BELOW);
         let open = self.dock_open;
+        let preferred_sidebar_collapsed = self.sidebar_choice.unwrap_or(viewport_w < SIDEBAR_FOLD_BELOW);
+        let page_pad = if viewport_w < SIDEBAR_FOLD_BELOW { 28.0 } else { PAGE_PAD };
+        let dock_inset = if open { DOCK_W + 24.0 } else { 0.0 };
+        let expanded_content_w = viewport_w - SIDEBAR_W - 2.0 * page_pad - dock_inset;
+        self.sidebar_folded_for_live = open
+            && !preferred_sidebar_collapsed
+            && expanded_content_w < MIN_COMFORTABLE_CONTENT_W;
+        self.sidebar_collapsed = preferred_sidebar_collapsed || self.sidebar_folded_for_live;
         let sidebar_w = if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W };
-        self.content_w = (viewport_w - sidebar_w - 2.0 * PAGE_PAD).max(0.0);
+        self.content_w = (viewport_w - sidebar_w - 2.0 * page_pad - dock_inset).max(0.0);
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
         let sidebar = self.sidebar(cx);
@@ -1067,9 +1148,58 @@ impl Render for Kriko {
         } else { sidebar.into_any_element() };
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
-        // A glass panel floating over the page's right edge, under the
-        // titlebar and inset from the window's edges. It sits above the page
-        // and takes no width from it; closed, it has no width and no reach.
+        let mut page_content = div()
+            .flex()
+            .flex_col()
+            .flex_none()
+            .gap(px(16.0));
+        if let Some(problem) = self.live.problem.clone() {
+            let retry = cx.listener(|this, _: &ClickEvent, _w, cx| {
+                this.retry_current_screen(cx);
+            });
+            let dismiss = cx.listener(|this, _: &ClickEvent, _w, cx| {
+                this.live.problem = None;
+                cx.notify();
+            });
+            page_content = page_content.child(
+                card()
+                    .bg(linear_gradient(
+                        180.0,
+                        linear_color_stop(rgba(0xff6b5e29), 0.0),
+                        linear_color_stop(rgba(DANGER_WASH), 1.0),
+                    ))
+                    .border_color(rgba(DANGER_EDGE))
+                    .flex()
+                    .flex_col()
+                    .gap(px(10.0))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_wrap()
+                            .items_center()
+                            .justify_between()
+                            .gap(px(12.0))
+                            .child(tag(
+                                "engine-request-failed",
+                                TagState::Block,
+                                "Engine request failed",
+                                self.motion,
+                            ))
+                            .child(ghost("engine-error-dismiss", "Dismiss").on_click(dismiss)),
+                    )
+                    .child(screens::row_desc(&problem))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_wrap()
+                            .gap(px(8.0))
+                            .child(key("engine-error-retry", "Refresh this screen").on_click(retry)),
+                    ),
+            );
+        }
+        page_content = page_content.child(arrive(content, format!("page-{}", tab.key()), self.motion));
+        // A glass panel floating under the titlebar, inset from the window's
+        // edges. The page reserves its width only while it is open.
         let dock_wrap = div()
             .absolute()
             .top(px(TITLEBAR_H + 8.0))
@@ -1135,16 +1265,13 @@ impl Render for Kriko {
                             // overflows and scrolls instead of every
                             // child being squeezed to fit.
                             .child(hero.flex_none())
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .flex_none()
-                                    .px(px(40.0))
-                                    .pt(px(20.0))
-                                    .pb(px(48.0))
-                                    .child(arrive(content, format!("page-{}", tab.key()), self.motion)),
-                            ),
+                                    .child(
+                                        page_content
+                                            .pl(px(page_pad))
+                                            .pr(px(page_pad + dock_inset))
+                                            .pt(px(20.0))
+                                            .pb(px(48.0)),
+                                    ),
                     )
                     // The bar floats on the sky, after the page so it
                     // paints on top of the hero it blends into.
