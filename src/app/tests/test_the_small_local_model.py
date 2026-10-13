@@ -5,6 +5,10 @@ reply budget on its reasoning, `content` came back empty, and the run failed.
 Asked not to think it answers the same prompt in under a second.
 """
 
+import io
+import json
+import urllib.error
+
 from app.providers import pagereader
 from app.providers.local_inference import OpenAICompatSocket
 
@@ -31,6 +35,103 @@ def test_a_chosen_effort_wins():
     one, sent = _socket(reasoning_effort="high")
     one.complete("hi")
     assert sent[0]["reasoning_effort"] == "high"
+
+
+def test_a_reasoning_effort_refusal_keeps_the_evidence_schema():
+    one, sent = _socket(reasoning_effort="low", response_json_schema={"type": "array"})
+
+    def post(body):
+        sent.append(dict(body))
+        if "reasoning_effort" in body:
+            refusal = json.dumps({"error": {"message": "reasoning_effort is not supported"}})
+            raise urllib.error.HTTPError(
+                one.base_url + "/v1/chat/completions", 400, "Bad Request", {},
+                io.BytesIO(refusal.encode()))
+        return {"choices": [{"message": {"content": "[]"}, "finish_reason": "stop"}],
+                "usage": {}}
+
+    one._post = post
+    assert one("hi") == "[]"
+    assert "reasoning_effort" in sent[0]
+    assert sent[1]["response_format"] == {
+        "type": "json_schema", "json_schema": {"name": "findings", "schema": {"type": "array"}}}
+    assert "reasoning_effort" not in sent[1]
+    assert one.structured_output == {"mode": "json_schema", "reason": ""}
+    assert one("again") == "[]"
+    assert "reasoning_effort" not in sent[2]
+
+
+def test_json_object_fallback_is_reported_and_reused():
+    one, sent = _socket(response_json_schema={"type": "array"})
+
+    def post(body):
+        sent.append(dict(body))
+        if body.get("response_format", {}).get("type") == "json_schema":
+            refusal = json.dumps({"error": {"message": "response_format.type only accepts json_object"}})
+            raise urllib.error.HTTPError(
+                one.base_url + "/v1/chat/completions", 500, "Internal Server Error", {},
+                io.BytesIO(refusal.encode()))
+        return {"choices": [{"message": {"content": "[]"}, "finish_reason": "stop"}],
+                "usage": {}}
+
+    one._post = post
+    assert one.json("first", {"type": "array"}) == "[]"
+    assert one.structured_output == {"mode": "json_object", "reason": "json_schema_refused"}
+    assert one.json("second", {"type": "object"}) == "[]"
+    assert len(sent) == 3
+    assert sent[1]["response_format"] == {"type": "json_object", "schema": {"type": "array"}}
+    assert sent[2]["response_format"] == {"type": "json_object", "schema": {"type": "object"}}
+
+
+def test_ambiguous_bad_request_keeps_reasoning_effort_when_schema_was_the_problem():
+    one, sent = _socket(response_json_schema={"type": "array"})
+
+    def post(body):
+        sent.append(dict(body))
+        if body.get("response_format", {}).get("type") == "json_schema":
+            refusal = json.dumps({"error": {"message": "unknown field"}})
+            raise urllib.error.HTTPError(
+                one.base_url + "/v1/chat/completions", 400, "Bad Request", {},
+                io.BytesIO(refusal.encode()))
+        return {"choices": [{"message": {"content": "[]"}, "finish_reason": "stop"}],
+                "usage": {}}
+
+    one._post = post
+    assert one.json("first", {"type": "array"}) == "[]"
+    assert one.structured_output == {"mode": "json_object", "reason": "json_schema_refused"}
+    assert one.json("second", {"type": "object"}) == "[]"
+    assert "reasoning_effort" in sent[-1]
+
+
+def test_when_neither_schema_spelling_works_the_socket_reports_degradation():
+    one, sent = _socket(response_json_schema={"type": "array"})
+
+    def post(body):
+        sent.append(dict(body))
+        if "response_format" in body:
+            refusal = json.dumps({"error": {"message": "response_format is not supported"}})
+            raise urllib.error.HTTPError(
+                one.base_url + "/v1/chat/completions", 400, "Bad Request", {},
+                io.BytesIO(refusal.encode()))
+        return {"choices": [{"message": {"content": "[]"}, "finish_reason": "stop"}],
+                "usage": {}}
+
+    one._post = post
+    assert one.json("first", {"type": "array"}) == "[]"
+    assert one.structured_output == {
+        "mode": "unconstrained", "reason": "response_format_refused"}
+    assert one.json("second", {"type": "object"}) == "[]"
+    assert "response_format" not in sent[-1]
+
+
+def test_native_ollama_maps_the_json_object_compatibility_spelling():
+    one = OpenAICompatSocket("http://127.0.0.1:11434", "gemma4:e2b",
+                             runtime_options={"num_ctx": 4096})
+    body = {"messages": [{"role": "user", "content": "prompt"}],
+            "temperature": 0, "response_format": {
+                "type": "json_object", "schema": {"type": "array"}}}
+
+    assert one._native(body, stream=False)["format"] == {"type": "array"}
 
 
 def test_utf8_decoded_as_windows_1252_is_repaired_line_by_line():

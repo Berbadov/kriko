@@ -3,7 +3,7 @@
 //!
 //! One shared poll serves all three. The jobs list is read every few seconds
 //! (the dock and Run both draw from it), the job being followed is read every
-//! 700 ms until it ends, and the agent lists are read when the Agents tab is
+//! 250 ms while its live view is open, then every 700 ms until it ends, and the agent lists are read when the Agents tab is
 //! open. Nothing here starts work on its own: a job starts only from the
 //! reader's own press on Start, and every long operation is a job row the
 //! engine owns (`POST /api/research` answers with its id).
@@ -395,12 +395,16 @@ pub struct Harness {
     /// The models this provider says it serves, asked for at refresh.
     pub llms: Vec<String>,
     pub llms_note: String,
+    pub llms_pending: bool,
     pub llm_selectable: bool,
     /// The effort chosen for this harness; empty means its own default.
     pub effort: String,
     /// The effort levels this CLI's `--help` declares; empty means no dial.
     pub efforts: Vec<String>,
     pub effort_hint: String,
+    pub efforts_pending: bool,
+    /// Explanation from CLI effort discovery when no choices were returned.
+    pub efforts_note: String,
 }
 
 #[derive(Clone, Debug)]
@@ -495,6 +499,8 @@ pub struct State {
     pub activity_log_open: Option<String>,
     list_inflight: bool,
     detail_inflight: bool,
+    prefs_inflight: bool,
+    targets_inflight: bool,
     last_list: Option<Instant>,
     last_agents: Option<Instant>,
     /// The job the reader started or retried: followed until they say
@@ -502,6 +508,9 @@ pub struct State {
     pub pinned: Option<String>,
     /// The followed job as `GET /api/jobs/{id}` last said it.
     pub detail: Option<Job>,
+    /// Original job ids whose retry POST has been sent; cleared when the
+    /// resulting child appears, a request fails, or the bounded wait expires.
+    pub retry_pending: HashMap<String, Instant>,
     /// Subject labels, by subject id, for naming a job.
     pub labels: HashMap<String, String>,
     label_asked: HashSet<String>,
@@ -540,6 +549,16 @@ pub struct State {
     pub quick_asking: bool,
     pub quick_ask_note: Option<String>,
     last_quick_asks: Option<Instant>,
+}
+
+const RETRY_PENDING_WINDOW: Duration = Duration::from_secs(20);
+
+fn retry_is_active(started: Instant, now: Instant) -> bool {
+    now.saturating_duration_since(started) < RETRY_PENDING_WINDOW
+}
+
+pub fn retry_pending(pending: &HashMap<String, Instant>, id: &str, now: Instant) -> bool {
+    pending.get(id).is_some_and(|started| retry_is_active(*started, now))
 }
 
 impl State {
@@ -707,6 +726,12 @@ impl State {
             })
             .collect()
     }
+
+    fn agent_choices_pending(&self) -> bool {
+        self.harnesses
+            .iter()
+            .any(|h| h.llms_pending || h.efforts_pending)
+    }
 }
 
 // ---- reading the engine ----
@@ -722,6 +747,7 @@ fn harnesses_from(v: &Value) -> Vec<Harness> {
             .filter_map(|m| m.as_str().map(str::to_string))
             .collect(),
         llms_note: api::s(h, "llms_note"),
+        llms_pending: api::b(h, "llms_pending"),
         llm_selectable: api::b(h, "llm_selectable"),
         effort: api::s(h, "effort"),
         efforts: api::arr(h, "efforts")
@@ -729,6 +755,8 @@ fn harnesses_from(v: &Value) -> Vec<Harness> {
             .filter_map(|m| m.as_str().map(str::to_string))
             .collect(),
         effort_hint: api::s(h, "effort_hint"),
+        efforts_pending: api::b(h, "efforts_pending"),
+        efforts_note: api::s(h, "efforts_note"),
     };
     let mut out: Vec<Harness> = api::arr(v, "harnesses")
         .iter()
@@ -801,18 +829,31 @@ impl Kriko {
         self.live.run.loaded = true;
         self.refresh_jobs(cx);
         self.refresh_agents(cx);
-        cx.spawn(async move |this, cx| loop {
-            cx.background_executor().timer(Duration::from_millis(700)).await;
-            if this.update(cx, |this, cx| this.run_tick(cx)).is_err() {
-                break;
+        cx.spawn(async move |this, cx| {
+            let mut delay = Duration::from_millis(700);
+            loop {
+                cx.background_executor().timer(delay).await;
+                let next = this.update(cx, |this, cx| {
+                    this.run_tick(cx);
+                    let watching = this.dock_open || this.tab == Tab::Run;
+                    let active = watching && this.live.run.current().is_some_and(|job| !job.done);
+                    let choices_pending = matches!(this.tab, Tab::Run | Tab::Agents)
+                        && this.live.run.agent_choices_pending();
+                    Duration::from_millis(if active { 250 } else if choices_pending { 500 } else { 700 })
+                });
+                match next {
+                    Ok(next) => delay = next,
+                    Err(_) => break,
+                }
             }
         })
         .detach();
     }
 
-    /// 700 ms: follow the current job while it runs; every 3 s (15 s when
-    /// nothing is on screen that shows it) the jobs list; every 10 s the
-    /// agent lists while Agents is open.
+    /// Follow a visible running job at 250 ms, with one detail request in
+    /// flight at a time; the scheduler rests at 700 ms otherwise. Read the
+    /// jobs list every 3 s (15 s when it is not visible), and agent lists
+    /// every 10 s while Agents is open.
     fn run_tick(&mut self, cx: &mut Context<Self>) {
         let now = Instant::now();
         let watching = self.dock_open || self.tab == Tab::Run;
@@ -834,7 +875,12 @@ impl Kriko {
         if due(self.live.run.last_list, every) {
             self.refresh_jobs(cx);
         }
-        if self.tab == Tab::Agents && due(self.live.run.last_agents, Duration::from_secs(10)) {
+        let choices_visible = matches!(self.tab, Tab::Run | Tab::Agents);
+        if choices_visible && self.live.run.agent_choices_pending()
+            && due(self.live.run.last_agents, Duration::from_millis(500)) {
+            self.refresh_agent_choices(cx);
+        } else if self.tab == Tab::Agents
+            && due(self.live.run.last_agents, Duration::from_secs(10)) {
             self.refresh_agents(cx);
         }
     }
@@ -919,7 +965,13 @@ impl Kriko {
             this.live.run.list_inflight = false;
             this.note(&reply);
             if let Ok(v) = reply {
-                this.live.run.jobs = api::arr(&v, "items").iter().map(job_from).collect();
+                let jobs: Vec<Job> = api::arr(&v, "items").iter().map(job_from).collect();
+                let now = Instant::now();
+                this.live.run.retry_pending.retain(|id, started| {
+                    retry_is_active(*started, now)
+                        && !jobs.iter().any(|job| job.retry_of == *id)
+                });
+                this.live.run.jobs = jobs;
                 this.live.run.jobs_loaded = true;
                 this.name_subjects(cx);
             }
@@ -977,17 +1029,40 @@ impl Kriko {
 
     pub fn refresh_agents(&mut self, cx: &mut Context<Self>) {
         self.live.run.last_agents = Some(Instant::now());
+        if !self.live.run.prefs_inflight {
+            self.live.run.prefs_inflight = true;
+            self.fetch(cx, || api::get("/api/prefs"), |this, reply, _| {
+                this.live.run.prefs_inflight = false;
+                this.note(&reply);
+                if let Ok(v) = reply {
+                    this.apply_prefs(&v);
+                }
+            });
+        }
+        if !self.live.run.targets_inflight {
+            self.live.run.targets_inflight = true;
+            self.fetch(cx, || api::get("/api/agent-targets"), |this, reply, _| {
+                this.live.run.targets_inflight = false;
+                this.note(&reply);
+                if let Ok(v) = reply {
+                    this.live.run.targets = targets_from(&v);
+                    this.live.run.targets_loaded = true;
+                }
+            });
+        }
+    }
+
+    fn refresh_agent_choices(&mut self, cx: &mut Context<Self>) {
+        if self.live.run.prefs_inflight {
+            return;
+        }
+        self.live.run.last_agents = Some(Instant::now());
+        self.live.run.prefs_inflight = true;
         self.fetch(cx, || api::get("/api/prefs"), |this, reply, _| {
+            this.live.run.prefs_inflight = false;
             this.note(&reply);
             if let Ok(v) = reply {
                 this.apply_prefs(&v);
-            }
-        });
-        self.fetch(cx, || api::get("/api/agent-targets"), |this, reply, _| {
-            this.note(&reply);
-            if let Ok(v) = reply {
-                this.live.run.targets = targets_from(&v);
-                this.live.run.targets_loaded = true;
             }
         });
     }
@@ -1477,6 +1552,15 @@ mod tests {
         assert_eq!(s.current_id().as_deref(), Some("b"));
         s.jobs = vec![mk("a", "failed", true)];
         assert_eq!(s.current_id().as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn retry_post_is_guarded_until_child_arrival_or_timeout() {
+        let started = Instant::now();
+        let pending = HashMap::from([("parent".to_string(), started)]);
+        assert!(retry_pending(&pending, "parent", started + Duration::from_secs(1)));
+        assert!(!retry_pending(&pending, "parent", started + Duration::from_secs(21)));
+        assert!(!retry_pending(&pending, "other", started + Duration::from_secs(1)));
     }
 
     #[test]

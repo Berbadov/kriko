@@ -440,8 +440,11 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         let open = app.live.history.open.as_deref() == Some(check.id.as_str());
         let open_id = check.id.clone();
         let kind = check.kind.clone();
+        let source = check.source.clone();
         let toggle = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-            if let Some(job_id) = open_id.strip_prefix("job:") {
+            if source == "quick_look" {
+                this.toggle_history_open(open_id.clone(), cx);
+            } else if let Some(job_id) = open_id.strip_prefix("job:") {
                 this.live.run.pinned = Some(job_id.to_string()); this.tab = crate::app::Tab::Run; this.refresh_jobs(cx);
             } else if kind == "check" { this.toggle_history_open(open_id.clone(), cx); }
             cx.notify();
@@ -481,96 +484,213 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
 
         let mut row = div().flex().flex_col().child(columns);
         if open {
-            // the drawer: the claims with their sources, then the page read.
+            // A Quick Look has a separate, explicit catalog-assignment flow.
             let mut panel = well()
                 .mt(px(2.0))
                 .mb(px(6.0))
                 .p(px(16.0))
                 .flex()
                 .flex_col()
-                .gap(px(10.0))
-                .child(eyebrow("Evidence"));
-            match &app.live.history.detail {
-                Some(detail) if detail.id == check.id => {
-                    if detail.claims.is_empty() {
-                        panel = panel.child(mono("This check grounded no claim.", MUTED));
-                    }
-                    for (item, claim) in detail.claims.iter().enumerate() {
-                        let line = claim_block(claim);
-                        let line: gpui::AnyElement = if motion {
-                            let delay = 120.0 + item.min(8) as f32 * 90.0;
-                            line.with_animation(
-                                gpui::ElementId::named_usize(format!("hist-claim-{}", check.id), item),
-                                Animation::new(std::time::Duration::from_millis(800)).with_easing(
-                                    move |t| {
-                                        let local = ((t * 800.0 - delay) / 450.0).clamp(0.0, 1.0);
-                                        1.0 - (1.0 - local).powi(3)
-                                    },
-                                ),
-                                |el, v| el.opacity(v),
-                            )
-                            .into_any_element()
+                .gap(px(10.0));
+            if check.source == "quick_look" {
+                panel = panel.child(eyebrow("Catalog assignment"));
+                let assignment = check.categorization.as_ref();
+                let assigned = assignment.is_some_and(|one| one.status == "assigned");
+                let busy = app.live.history.categorizing.as_deref() == Some(check.id.as_str());
+                let message = assignment
+                    .map(|one| one.message.as_str())
+                    .filter(|text| !text.is_empty())
+                    .or_else(|| {
+                        app.live.history.categorization_message.as_deref()
+                            .filter(|_| busy)
+                    });
+                let catalog_name = assignment
+                    .map(|one| one.pack_name.as_str())
+                    .filter(|name| !name.is_empty())
+                    .unwrap_or_else(|| check.category.as_str());
+                let mut status = callout()
+                    .child(div().flex().flex_col().gap(px(5.0))
+                        .child(eyebrow(if assigned { "Assigned" } else { "Needs a catalog" }))
+                        .child(div().font_family(SANS).font_weight(FontWeight::SEMIBOLD)
+                            .text_size(px(14.0)).text_color(rgb(INK))
+                            .child(if assigned && !catalog_name.is_empty() {
+                                catalog_name.to_string()
+                            } else if !assigned {
+                                "No catalog was selected automatically".to_string()
+                            } else {
+                                "Catalog assignment saved".to_string()
+                            }))
+                        .child(mono(message.unwrap_or(if assigned {
+                            "The assignment is grounded in the saved product details and installed catalog definitions."
                         } else {
-                            line.into_any_element()
+                            "This look remains saved. Choose an installed catalog or ask the configured agent to match it."
+                        }), MUTED)));
+                if assigned {
+                    if let Some(one) = assignment {
+                        let route = match one.method.as_str() {
+                            "reader" => "Chosen by you".to_string(),
+                            "agent" => "Matched by configured agent".to_string(),
+                            _ => "Matched from saved category".to_string(),
                         };
-                        panel = panel.child(line);
-                    }
-                    if !detail.url.is_empty() {
-                        panel = panel
-                            .child(hairline())
-                            .child(eyebrow("Read from"))
-                            .child(
-                                div()
-                                    .flex()
-                                    .items_center()
-                                    .gap(px(10.0))
-                                    .child(icon("arrow-right", 12.0).text_color(rgb(MUTED)))
-                                    .child(
-                                        div()
-                                            .min_w(px(0.0))
-                                            .font_family(MONO)
-                                            .text_size(px(12.0))
-                                            .text_color(rgb(ICE))
-                                            .child(clip(&detail.url, 90)),
-                                    ),
-                            );
+                        status = status.child(mono(&route, INK_2));
                     }
                 }
-                _ => {
-                    panel = panel.child(mono("Reading this check from the store.", MUTED));
-                }
-            }
-            let armed = app.live.history.forget_armed.as_deref() == Some(check.id.as_str());
-            let forget_id = check.id.clone();
-            let forget = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                this.forget_check(forget_id.clone(), cx);
-            });
-            panel = panel.child(hairline()).child(
-                div()
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .gap(px(12.0))
-                    .child(
-                        div()
-                            .font_family(MONO)
-                            .text_size(px(11.0))
-                            .text_color(rgb(MUTED))
-                            .child(format!(
-                                "{} claims · from {} · stored to {}",
-                                check.claims,
-                                if check.source.is_empty() { "the app" } else { &check.source },
-                                clip(&check.pack_line(), 50),
+                panel = panel.child(status);
+
+                if !assigned {
+                    let quick_id = check.id.clone();
+                    let run_agent = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                        this.categorize_saved_look(quick_id.clone(), cx);
+                    });
+                    panel = panel.child(
+                        div().flex().flex_wrap().items_center().gap(px(10.0))
+                            .child(key(
+                                gpui::ElementId::named_usize("hist-categorize", gi),
+                                if busy { "Categorising…" } else { "Categorise with agent" },
+                            ).when(!busy, |button| button.on_click(run_agent)))
+                            .child(mono(
+                                "Uses this saved look and installed definitions; it does not research the product again.",
+                                MUTED,
                             )),
-                    )
-                    .child(
-                        danger(
-                            gpui::ElementId::named_usize("hist-forget", gi),
-                            if armed { "Press again to forget" } else { "Forget" },
+                    );
+                }
+
+                let picker_open = app.live.history.category_picker.as_deref() == Some(check.id.as_str());
+                let pick_id = check.id.clone();
+                let toggle_picker = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                    let history = &mut this.live.history;
+                    history.category_picker = if history.category_picker.as_deref() == Some(pick_id.as_str()) {
+                        None
+                    } else {
+                        Some(pick_id.clone())
+                    };
+                    cx.notify();
+                });
+                panel = panel.child(
+                    ghost(
+                        gpui::ElementId::named_usize("hist-pick-category", gi),
+                        if picker_open { "Close catalog choices" } else { "Choose a catalog" },
+                    ).on_click(toggle_picker),
+                );
+                if picker_open {
+                    if app.live.history.categorization_catalogs.is_empty() {
+                        panel = panel.child(mono("No installed catalogs are available yet.", MUTED));
+                    } else {
+                        panel = panel.child(eyebrow("Installed catalogs"));
+                        for (ci, catalog) in app.live.history.categorization_catalogs.iter().enumerate() {
+                            let id = catalog.pack_id.clone();
+                            let label = catalog.name.clone();
+                            let current = assignment.is_some_and(|one| one.status == "assigned" && one.pack_id == id);
+                            let enabled = catalog.enabled;
+                            let editable = catalog.editable;
+                            let lookup_id = check.id.clone();
+                            let choose = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                                this.choose_saved_look_category(lookup_id.clone(), id.clone(), cx);
+                            });
+                            panel = panel.child(
+                                div().flex().flex_wrap().items_center().justify_between().gap(px(8.0))
+                                    .py(px(6.0))
+                                    .child(div().flex().flex_col().gap(px(2.0))
+                                        .child(div().font_family(SANS).text_size(px(13.0))
+                                            .text_color(rgb(INK_2)).child(label.clone()))
+                                        .child(mono(&format!("{} · {}", if enabled { "enabled" } else { "disabled" },
+                                            if editable { "harvest target" } else { "read-only catalog" }), MUTED)))
+                                    .child(ghost(
+                                        gpui::ElementId::named_usize(format!("hist-catalog-{gi}"), ci),
+                                        if current { "Current catalog" } else { "Assign" },
+                                    ).when(!busy && !current, |button| button.on_click(choose))),
+                            );
+                        }
+                    }
+                }
+                if !check.packs.is_empty() {
+                    panel = panel.child(hairline()).child(mono(&format!("Saved catalog · {}", clip(&check.pack_line(), 72)), INK_2));
+                }
+            } else {
+                // the drawer: the claims with their sources, then the page read.
+                panel = panel.child(eyebrow("Evidence"));
+                match &app.live.history.detail {
+                    Some(detail) if detail.id == check.id => {
+                        if detail.claims.is_empty() {
+                            panel = panel.child(mono("This check grounded no claim.", MUTED));
+                        }
+                        for (item, claim) in detail.claims.iter().enumerate() {
+                            let line = claim_block(claim);
+                            let line: gpui::AnyElement = if motion {
+                                let delay = 120.0 + item.min(8) as f32 * 90.0;
+                                line.with_animation(
+                                    gpui::ElementId::named_usize(format!("hist-claim-{}", check.id), item),
+                                    Animation::new(std::time::Duration::from_millis(800)).with_easing(
+                                        move |t| {
+                                            let local = ((t * 800.0 - delay) / 450.0).clamp(0.0, 1.0);
+                                            1.0 - (1.0 - local).powi(3)
+                                        },
+                                    ),
+                                    |el, v| el.opacity(v),
+                                )
+                                .into_any_element()
+                            } else {
+                                line.into_any_element()
+                            };
+                            panel = panel.child(line);
+                        }
+                        if !detail.url.is_empty() {
+                            panel = panel
+                                .child(hairline())
+                                .child(eyebrow("Read from"))
+                                .child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .gap(px(10.0))
+                                        .child(icon("arrow-right", 12.0).text_color(rgb(MUTED)))
+                                        .child(
+                                            div()
+                                                .min_w(px(0.0))
+                                                .font_family(MONO)
+                                                .text_size(px(12.0))
+                                                .text_color(rgb(ICE))
+                                                .child(clip(&detail.url, 90)),
+                                        ),
+                                );
+                        }
+                    }
+                    _ => {
+                        panel = panel.child(mono("Reading this check from the store.", MUTED));
+                    }
+                }
+                let armed = app.live.history.forget_armed.as_deref() == Some(check.id.as_str());
+                let forget_id = check.id.clone();
+                let forget = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                    this.forget_check(forget_id.clone(), cx);
+                });
+                panel = panel.child(hairline()).child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .gap(px(12.0))
+                        .child(
+                            div()
+                                .font_family(MONO)
+                                .text_size(px(11.0))
+                                .text_color(rgb(MUTED))
+                                .child(format!(
+                                    "{} claims · from {} · stored to {}",
+                                    check.claims,
+                                    if check.source.is_empty() { "the app" } else { &check.source },
+                                    clip(&check.pack_line(), 50),
+                                )),
                         )
-                        .on_click(forget),
-                    ),
-            );
+                        .child(
+                            danger(
+                                gpui::ElementId::named_usize("hist-forget", gi),
+                                if armed { "Press again to forget" } else { "Forget" },
+                            )
+                            .on_click(forget),
+                        ),
+                );
+            }
             row = row.child(panel);
         }
 

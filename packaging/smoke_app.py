@@ -23,6 +23,7 @@ already installed Kriko cannot accidentally be the executable being tested.
 """
 
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -80,7 +81,18 @@ def end_tree(process: subprocess.Popen) -> None:
             ["taskkill", "/F", "/T", "/PID", str(process.pid)], capture_output=True
         )
     else:
-        process.kill()
+        # Keep the app and anything it spawns (the sidecar and OpenSERP) in an
+        # isolated session so a Mac/Linux package smoke never leaves children
+        # behind or signals an unrelated installed Kriko.
+        signal_group(process, signal.SIGTERM)
+
+
+def signal_group(process: subprocess.Popen, sig: signal.Signals) -> None:
+    """Signal only the isolated Unix process group created for this smoke."""
+    try:
+        os.killpg(process.pid, sig)
+    except ProcessLookupError:
+        pass
 
 
 def main(argv: list[str]) -> int:
@@ -115,6 +127,7 @@ def main(argv: list[str]) -> int:
         stderr=subprocess.STDOUT,
         text=True,
         env=environment,
+        start_new_session=(sys.platform != "win32"),
     )
     try:
         deadline = time.time() + HOLD
@@ -131,7 +144,10 @@ def main(argv: list[str]) -> int:
         try:
             output = process.communicate(timeout=20)[0] or ""
         except subprocess.TimeoutExpired:
-            process.kill()
+            if sys.platform == "win32":
+                process.kill()
+            else:
+                signal_group(process, signal.SIGKILL)
             output = process.communicate()[0] or ""
 
         if PANIC in output:

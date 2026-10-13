@@ -20,6 +20,7 @@ from collections.abc import Callable
 from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from app import packautoupdate, packsource
 
@@ -247,6 +248,7 @@ def _local_asker(settings, params: dict, progress: Progress):
                        if str(one).strip()])
     progress.log(f"local plane: {plan['line']}")
     researcher.on_action = progress.log
+    _wire_researcher_text(researcher, progress)
     researcher.check_cancelled = progress.check
     researcher.replies = progress.replies
     researcher.runtime = plan.get("runtime", {})
@@ -258,6 +260,13 @@ def _local_asker(settings, params: dict, progress: Progress):
     researcher.max_pages = max(1, min(int(source_options["sources"] or local_agent.MAX_PAGES), 40))
     researcher.source_instructions = _source_kinds_line(source_options["kinds"])
     return researcher
+
+
+def _wire_researcher_text(researcher, progress: Progress) -> None:
+    """Connect streamed prose when both sides support the optional callback."""
+    draft = getattr(progress, "draft", None)
+    if hasattr(researcher, "on_text") and callable(draft):
+        researcher.on_text = draft
 
 
 def _local_compare_completer(settings, params: dict, progress: Progress):
@@ -815,6 +824,7 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
         # the actions needed a sender, not a second transport.
         if hasattr(researcher, "on_action"):
             researcher.on_action = progress.log
+        _wire_researcher_text(researcher, progress)
         if hasattr(researcher, "check_cancelled"):
             researcher.check_cancelled = progress.check
         # The return path — see the same pair in the handlers below. Guarded
@@ -1762,8 +1772,35 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
     # their pages and filed. The agent is for what only it can do, writing a
     # subject the catalog does not have yet.
     if params.get("quick_job_id") and params.get("product"):
-        filed = _file_quick_look(settings, _await_quick_look(settings, progress, params),
-                                 str(params["product"]).strip(), progress, params.get("page"))
+        quick = _await_quick_look(settings, progress, params)
+        quick_job_id = str(params.get("quick_job_id") or "")
+        product = str(params["product"]).strip()
+        assignment_conn = state.connect(settings.app_state_path)
+        try:
+            assignment = state.quicklook_category(assignment_conn, quick_job_id)
+            if assignment is None or assignment.get("status") != "assigned":
+                from app import categorizer
+
+                profiles = categorizer.installed_catalogs(settings.store_path)
+                fresh = categorizer.deterministic(product, quick, profiles)
+                if fresh["status"] == "assigned":
+                    assignment = state.save_quicklook_category(
+                        assignment_conn, quick_job_id, fresh,
+                    )
+                elif assignment is None:
+                    assignment = state.save_quicklook_category(
+                        assignment_conn, quick_job_id, fresh,
+                    )
+        finally:
+            assignment_conn.close()
+        assigned_pack_id = (
+            str(assignment.get("pack_id") or "")
+            if assignment and assignment.get("status") == "assigned" else ""
+        )
+        filed = _file_quick_look(
+            settings, quick, product, progress, params.get("page"),
+            assigned_pack_id=assigned_pack_id,
+        )
         # Nothing new from the look is not an answer to "research this": the
         # agent runs as before.
         if filed is not None and _changed(filed):
@@ -1807,6 +1844,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
         # the longest-running thing in the app and the one whose log most needed
         # to say something before it finished.
         researcher.on_action = progress.log
+        _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
         # The return path. Same wiring, opposite direction: `check` asks whether
         # the reader wants this stopped, `replies` asks whether they have said
@@ -1894,6 +1932,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
 #: few searches and three pages on a slow connection; short enough that the
 #: reader is still on the listing when it answers. (B148)
 QUICK_LOOK_TIMEOUT_SECONDS = 240
+CATEGORIZATION_BUDGET_USD = 0.05
 
 
 def quick_look(settings, params: dict, progress: Progress) -> dict:
@@ -1912,7 +1951,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     category pack (B168): this handler only says which pack it thinks the
     product belongs in, from the installed ones it is shown.
     """
-    from app import categorypack, quicklook
+    from app import categorizer, quicklook
     from app.providers import harness_researcher
     from kriko.research import pack_asset
 
@@ -1956,11 +1995,21 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         )
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
+        _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
 
+    catalog_context_error = ""
     try:
-        packs = categorypack.choice_block(categorypack.candidates(settings.store_path))
+        profiles = categorizer.installed_catalogs(settings.store_path)
+        packs = categorizer.choice_block(profiles)
+    except categorizer.CatalogSetTooLarge as error:
+        # Keep every profile for the deterministic pass, and state plainly
+        # why full catalog context was not sent to this first Quick Look.
+        profiles = categorizer.installed_catalogs(settings.store_path)
+        catalog_context_error = str(error)
+        packs = f"[Installed catalog context not shortened: {error}]"
     except Exception:  # noqa: BLE001 - a list of packs is never why a look fails
+        profiles = []
         packs = ""
     progress.set(0.1, f"a quick look at {product}")
     try:
@@ -1999,6 +2048,21 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         progress.log("self-check: " + "; ".join(
             f"{one.get('title') or 'a risk'} ({one.get('reason') or 'not carried'})"
             for one in verification["unsupported"] if isinstance(one, dict)))
+
+    # A saved category that names one installed definition clearly can be
+    # filed without another model call. A vague or conflicting answer stays
+    # visible as uncertain and can be sent to the categorizer explicitly.
+    assignment = categorizer.deterministic(product, found, profiles)
+    if catalog_context_error and assignment["status"] != "assigned":
+        assignment["message"] = (
+            f"The saved category is uncertain. {catalog_context_error}"
+        )
+    if getattr(settings, "app_state_path", None):
+        app_state = state.connect(settings.app_state_path)
+        try:
+            state.save_quicklook_category(app_state, progress.job_id, assignment)
+        finally:
+            app_state.close()
     spent = getattr(researcher, "spent", None)
     billed = getattr(researcher, "cost_basis", "") == "per_token"
     coverage = getattr(researcher, "coverage", None)
@@ -2009,6 +2073,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "no_supported_findings": "Relevant pages were checked, but none supported a finding. This is insufficient evidence to conclude that the product has no problems.",
         "partial": "Some research stages were incomplete. This is insufficient evidence to conclude that the product has no problems.",
     }
+
     empty_message = (
         empty_messages.get(
             str(coverage.get("status") or ""),
@@ -2028,6 +2093,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "identity": getattr(researcher, "identity", {}),
         "coverage": coverage,
         "deepen_job_id": str(params.get("deepen_job_id") or ""),
+        "categorization": assignment,
         "harness": getattr(getattr(researcher, "harness", None), "id", ""),
         "model": str(getattr(researcher, "model", "") or ""),
         "cost_basis": getattr(researcher, "cost_basis", "subscription"),
@@ -2044,6 +2110,115 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             "stages": stages,
         },
     }
+
+
+def categorize_quick_look(settings, params: dict, progress: Progress) -> dict:
+    """Assign one saved Quick Look using its configured agent, on request.
+
+    This is a classification call only: the prompt contains the saved result
+    and installed catalog definitions, and explicitly forbids web research.
+    The parser accepts only a catalog id that is installed and exact phrases
+    from both sides. It never changes a quick look's risks, quotes, or specs.
+    """
+    from app import categorizer
+
+    quick_job_id = str(params.get("quick_job_id") or "").strip()
+    if not quick_job_id:
+        raise ValueError("name the saved quick look to categorize")
+    app_state = state.connect(settings.app_state_path)
+    try:
+        look_job = state.get_job(app_state, quick_job_id)
+    finally:
+        app_state.close()
+    if not look_job or look_job["kind"] != "quick_look":
+        raise ValueError(f"no saved quick look {quick_job_id}")
+    if look_job["state"] != state.SUCCEEDED:
+        raise ValueError("the quick look must finish before it can be categorized")
+    result = look_job.get("result") or {}
+    product = str(look_job["params"].get("product") or result.get("product") or "").strip()
+    profiles = categorizer.installed_catalogs(settings.store_path)
+    assignment: dict[str, Any]
+    if not profiles:
+        assignment = {
+            "status": "uncertain", "method": "agent", "pack_id": "",
+            "confidence": "none", "basis": [],
+            "message": "No installed catalogs are available.",
+        }
+        progress.log(assignment["message"])
+    else:
+        try:
+            prompt = categorizer.brief(product, result, profiles)
+        except categorizer.CatalogSetTooLarge as error:
+            assignment = {
+                "status": "uncertain", "method": "agent", "pack_id": "",
+                "confidence": "none", "basis": [], "message": str(error),
+            }
+            progress.log(assignment["message"])
+        else:
+            local = _use_local_ask(settings, params)
+            if local:
+                completer = _local_compare_completer(settings, params, progress)
+                allowed = completer.prompt_chars_allowed()
+                reply: str | None
+                if len(prompt.encode("utf-8")) > allowed:
+                    assignment = {
+                        "status": "uncertain", "method": "agent", "pack_id": "",
+                        "confidence": "none", "basis": [],
+                        "message": (
+                            "The complete installed-catalog prompt exceeds this local model's "
+                            f"current context budget ({allowed} characters); no catalogs were omitted. "
+                            "Choose from the installed-catalog list instead."
+                        ),
+                    }
+                    progress.log(assignment["message"])
+                    reply = None
+                else:
+                    progress.set(0.2, "matching the saved look to installed catalog definitions")
+                    reply = completer.json(prompt, categorizer.OUTPUT_SCHEMA).strip()
+            else:
+                from app.providers import harness_researcher
+
+                researcher = harness_researcher(
+                    preferred=str(params.get("harness") or ""),
+                    app_state_path=settings.app_state_path,
+                    timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
+                    model=str(params.get("model") or ""),
+                    effort="low",
+                )
+                _cap_agent(researcher, {**params, "budget_usd": CATEGORIZATION_BUDGET_USD})
+                researcher.on_action = progress.log
+                _wire_researcher_text(researcher, progress)
+                researcher.check_cancelled = progress.check
+                progress.set(0.2, "matching the saved look to installed catalog definitions")
+                from app.providers.harness import NoHarness
+
+                try:
+                    # Classification must not turn saved listing text into a
+                    # web query or grant the selected agent ambient tools.
+                    # Providers without a verified tool-less mode refuse this
+                    # call; the reader can still choose a catalog manually.
+                    reply = researcher.ask(prompt, allow_tools=False).strip()
+                except NoHarness as error:
+                    assignment = {
+                        "status": "uncertain", "method": "agent", "pack_id": "",
+                        "confidence": "none", "basis": [], "message": str(error),
+                    }
+                    progress.log(assignment["message"])
+                    reply = None
+            if reply is not None:
+                progress.check()
+                progress.log(reply[:2000] or "(the agent returned no category)")
+                assignment = categorizer.parse(reply, product, result, profiles)
+    app_state = state.connect(settings.app_state_path)
+    try:
+        state.save_quicklook_category(app_state, quick_job_id, assignment)
+    finally:
+        app_state.close()
+    if assignment["status"] == "assigned":
+        progress.set(1.0, f"categorized as {assignment['pack_name']}")
+    else:
+        progress.set(1.0, assignment["message"])
+    return {"quick_job_id": quick_job_id, "categorization": assignment}
 
 
 def _install_draft(settings, written: dict, progress: Progress) -> str:
@@ -2243,7 +2418,7 @@ def _grounded_identity(identity: dict, product: str, page, quick: dict) -> dict:
 
 
 def _file_quick_look(settings, quick: dict, product: str, progress: Progress,
-                     page=None) -> dict | None:
+                     page=None, assigned_pack_id: str = "") -> dict | None:
     """File a finished quick look into the catalog it named.
 
     No agent and no cost: the target is the catalog the quick look named, the
@@ -2259,9 +2434,8 @@ def _file_quick_look(settings, quick: dict, product: str, progress: Progress,
 
     if not quick:
         return None
-    target = categorypack.resolve(
-        categorypack.candidates(settings.store_path),
-        pack=str(quick.get("pack") or ""), category=str(quick.get("category") or "").strip())
+    target = next((one for one in categorypack.candidates(settings.store_path)
+                   if one["pack_id"] == assigned_pack_id), None)
     if target is None:
         return None
     held = categorypack.holds(settings.store_path, target["slug"], product)
@@ -2328,66 +2502,109 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
     catalog that gained claims is installed once, at a raised version, and its
     `.kpack` is what the reader shares (`GET /api/packs/drafts/{slug}/artifact`).
     """
+    from app import categorizer
+
     conn = state.connect(settings.app_state_path)
     try:
         jobs = state.list_jobs(conn, HARVEST_WINDOW)
+        profiles = categorizer.installed_catalogs(settings.store_path)
+        profile_by_id = {one["pack_id"]: one for one in profiles}
+        filed: set[str] = set()
+        authored: set[str] = set()
+        for one in jobs:
+            if one["kind"] == "pack_author" and one["state"] == state.SUCCEEDED:
+                # Linked both ways: "Add to a pack" names the look it files, and
+                # "Research this product" is named by the look beside it.
+                filed.add(str((one["params"] or {}).get("quick_job_id") or ""))
+                authored.add(one["job_id"])
+            elif one["kind"] == "pack_harvest" and one["state"] == state.SUCCEEDED:
+                filed.update((one["result"] or {}).get("filed_quick_looks") or [])
+        looks = [one for one in reversed(jobs)
+                 if one["kind"] == "quick_look" and one["state"] == state.SUCCEEDED
+                 and one["job_id"] not in filed
+                 and str((one["params"] or {}).get("deepen_job_id") or "") not in authored]
+        progress.log(f"{len(looks)} quick look(s) not yet in a catalog")
+        done: list[str] = []
+        needs_agent: list[dict] = []
+        needs_categorization: list[dict] = []
+        unread: list[str] = []
+        touched: dict[str, dict] = {}
+        claims = 0
+        for position, look in enumerate(looks, start=1):
+            progress.check()
+            product = str((look["params"] or {}).get("product") or "").strip()
+            progress.set(0.05 + 0.75 * position / max(1, len(looks)), f"filing {product}")
+            quick = look["result"] or {}
+            if not product or not quick.get("risks"):
+                done.append(look["job_id"])  # nothing to file is filed
+                continue
+            assignment = state.quicklook_category(conn, look["job_id"])
+            fresh = categorizer.deterministic(product, quick, profiles)
+            assignment_missing_target = bool(
+                assignment and assignment.get("status") == "assigned"
+                and assignment.get("pack_id") not in profile_by_id
+            )
+            if (assignment is None or assignment_missing_target
+                    or (assignment.get("status") != "assigned"
+                        and fresh["status"] == "assigned")):
+                assignment = state.save_quicklook_category(conn, look["job_id"], fresh)
+            if assignment["status"] != "assigned":
+                needs_categorization.append({
+                    "quick_job_id": look["job_id"], "product": product,
+                    "reason": assignment["message"],
+                })
+                continue
+            target = profile_by_id.get(assignment["pack_id"])
+            if target is None:
+                needs_categorization.append({
+                    "quick_job_id": look["job_id"], "product": product,
+                    "reason": "The assigned catalog is no longer installed.",
+                })
+                continue
+            if not target["editable"]:
+                needs_agent.append({
+                    "quick_job_id": look["job_id"], "product": product,
+                    "pack_id": assignment["pack_id"], "category": target["name"],
+                    "reason": "This catalog has no editable draft for harvesting; use Add to a pack to research it.",
+                })
+                continue
+            written = _file_quick_look(settings, quick, product, progress,
+                                       (look["params"] or {}).get("page"),
+                                       assigned_pack_id=assignment["pack_id"])
+            if written is None:
+                needs_agent.append({
+                    "quick_job_id": look["job_id"], "product": product,
+                    "pack_id": assignment["pack_id"], "category": target["name"],
+                    "reason": "This catalog does not yet have enough grounded identity to name the product; use Add to a pack to research it.",
+                })
+                continue
+            if written["unread"]:
+                unread.append(product)
+                continue
+            done.append(look["job_id"])
+            claims += written["claims_added"]
+            if _changed(written):
+                touched[written["slug"]] = written
+        shared = []
+        for slug, written in touched.items():
+            if params.get("install", True):
+                _install_draft(settings, written, progress)
+            shared.append({"slug": slug, "pack_id": written["pack_id"], "name": written["name"],
+                           "artifact": f"/api/packs/drafts/{slug}/artifact"})
+        waiting = [one["product"] for one in needs_agent]
+        progress.set(1.0, f"{len(done)} quick look(s) filed, {claims} claim(s) added"
+                          + (f"; needs categorization: {len(needs_categorization)}"
+                             if needs_categorization else "")
+                          + (f"; needs an agent: {', '.join(waiting[:3])}"
+                             + (f" and {len(waiting) - 3} more" if len(waiting) > 3 else "")
+                             if waiting else "")
+                          + (f"; pages unreadable, try again later: {', '.join(unread[:3])}"
+                             if unread else ""))
+        return {"filed_quick_looks": done, "claims_added": claims,
+                "needs_agent": needs_agent, "needs_categorization": needs_categorization,
+                "unread": unread, "packs": shared}
     finally:
         conn.close()
-    filed: set[str] = set()
-    authored: set[str] = set()
-    for one in jobs:
-        if one["kind"] == "pack_author" and one["state"] == state.SUCCEEDED:
-            # Linked both ways: "Add to a pack" names the look it files, and
-            # "Research this product" is named by the look beside it.
-            filed.add(str((one["params"] or {}).get("quick_job_id") or ""))
-            authored.add(one["job_id"])
-        elif one["kind"] == "pack_harvest" and one["state"] == state.SUCCEEDED:
-            filed.update((one["result"] or {}).get("filed_quick_looks") or [])
-    looks = [one for one in reversed(jobs)
-             if one["kind"] == "quick_look" and one["state"] == state.SUCCEEDED
-             and one["job_id"] not in filed
-             and str((one["params"] or {}).get("deepen_job_id") or "") not in authored]
-    progress.log(f"{len(looks)} quick look(s) not yet in a catalog")
-    done: list[str] = []
-    needs_agent: list[dict] = []
-    unread: list[str] = []
-    touched: dict[str, dict] = {}
-    claims = 0
-    for position, look in enumerate(looks, start=1):
-        progress.check()
-        product = str((look["params"] or {}).get("product") or "").strip()
-        progress.set(0.05 + 0.75 * position / max(1, len(looks)), f"filing {product}")
-        quick = look["result"] or {}
-        if not product or not quick.get("risks"):
-            done.append(look["job_id"])  # nothing to file is filed
-            continue
-        written = _file_quick_look(settings, quick, product, progress,
-                                   (look["params"] or {}).get("page"))
-        if written is None:
-            needs_agent.append({"quick_job_id": look["job_id"], "product": product})
-            continue
-        if written["unread"]:
-            unread.append(product)
-            continue
-        done.append(look["job_id"])
-        claims += written["claims_added"]
-        if _changed(written):
-            touched[written["slug"]] = written
-    shared = []
-    for slug, written in touched.items():
-        if params.get("install", True):
-            _install_draft(settings, written, progress)
-        shared.append({"slug": slug, "pack_id": written["pack_id"], "name": written["name"],
-                       "artifact": f"/api/packs/drafts/{slug}/artifact"})
-    waiting = [one["product"] for one in needs_agent]
-    progress.set(1.0, f"{len(done)} quick look(s) filed, {claims} claim(s) added"
-                      + (f"; needs an agent: {', '.join(waiting[:3])}"
-                         + (f" and {len(waiting) - 3} more" if len(waiting) > 3 else "")
-                         if waiting else "")
-                      + (f"; pages unreadable, try again later: {', '.join(unread[:3])}"
-                         if unread else ""))
-    return {"filed_quick_looks": done, "claims_added": claims,
-            "needs_agent": needs_agent, "unread": unread, "packs": shared}
 
 
 def _product_check(settings, researcher, params: dict, progress: Progress,
@@ -2581,6 +2798,7 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
         )
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
+        _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
         # The return path. Same wiring, opposite direction: `check` asks whether
         # the reader wants this stopped, `replies` asks whether they have said
@@ -2820,6 +3038,7 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
         api=False,
     )
     researcher.on_action = progress.log
+    _wire_researcher_text(researcher, progress)
     researcher.check_cancelled = progress.check
     # The return path. Same wiring, opposite direction: `check` asks whether
     # the reader wants this stopped, `replies` asks whether they have said
@@ -3382,6 +3601,7 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
         )
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
+        _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
     # Read the resolved researcher: a requested CLI can fall back to a
     # different one. CLI `model` is its id, whereas API/local `model`
@@ -3395,9 +3615,17 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     }
     if on_agent is not None:
         on_agent(identity)
+    _wire_researcher_text(researcher, progress)
     if follow_up:
         writer = followup.Reply(progress.partial, base={"agent": identity})
-        researcher.on_text = writer.add
+        prior_text = getattr(researcher, "on_text", None)
+
+        def stream(text: str) -> None:
+            if callable(prior_text):
+                prior_text(text)
+            writer.add(text)
+
+        researcher.on_text = stream
     progress.set(0.2, f"asking: {str(params.get('question') or params.get('q') or '')[:120]}")
     reply = researcher.ask(brief).strip()
     progress.check()
@@ -3606,6 +3834,7 @@ HANDLERS = {
     "pack_build": pack_build,
     "pack_author": pack_author,
     "quick_look": quick_look,
+    "categorize_quick_look": categorize_quick_look,
     "quick_ask": quick_ask,
     "pack_amend": pack_amend,
     "verify": verify,
