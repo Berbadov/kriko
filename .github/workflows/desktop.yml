@@ -21,6 +21,14 @@ name: desktop
 # caught v0.2.4: CLAUDE.md's app-first rule 3.
 on:
     workflow_dispatch:
+        inputs:
+            source_run:
+                description: >-
+                    Existing verified desktop run to upload into the empty
+                    v1.6.0 draft. Leave blank to run the normal build flow.
+                required: false
+                type: string
+                default: ""
 
 concurrency:
     group: desktop-${{ github.ref }}
@@ -36,6 +44,7 @@ jobs:
     # PyInstaller cannot cross-compile the sidecar anyway.
     bundle:
         name: windows
+        if: ${{ inputs.source_run == '' }}
         runs-on: windows-latest
         defaults:
             run:
@@ -175,6 +184,7 @@ jobs:
     # reinstalling.
     packs:
         name: packs
+        if: ${{ inputs.source_run == '' }}
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -217,6 +227,7 @@ jobs:
     # The package script is also the documented hand-build recipe.
     macos:
         name: macos-${{ matrix.arch }}
+        if: ${{ inputs.source_run == '' }}
         strategy:
             fail-fast: false
             matrix:
@@ -254,7 +265,7 @@ jobs:
     release:
         name: release
         needs: [bundle, packs, macos]
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: ${{ inputs.source_run == '' && startsWith(github.ref, 'refs/tags/v') }}
         runs-on: ubuntu-latest
         permissions:
             contents: write
@@ -383,3 +394,201 @@ jobs:
 
                       Kriko keeps everything in `~/.kriko`: `knowledge.sqlite`
                       for installed packs, `app.sqlite` for your own history.
+
+    # A one-time transport fallback for the first v1.6.0 upload. It reuses the
+    # native artifacts from the already successful branch run; it never builds,
+    # creates a release, replaces assets, or publishes the draft.
+    upload-verified-v160:
+        name: upload verified v1.6.0 artifacts
+        if: ${{ inputs.source_run != '' }}
+        runs-on: ubuntu-latest
+        permissions:
+            actions: read
+            contents: write
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: 499cc937043fa50c89f9f99e227b40d4f76168e9
+                  persist-credentials: false
+
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.13"
+
+            - name: Verify the source run, immutable tag, and empty draft
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const expectedRun = 38363842313;
+                      const expectedSha = "499cc937043fa50c89f9f99e227b40d4f76168e9";
+                      const expectedTag = "v1.6.0";
+                      const expectedRelease = 411430940;
+                      const suppliedRun = String(context.payload.inputs?.source_run || "");
+                      if (suppliedRun !== String(expectedRun)) {
+                        throw new Error(`source_run must be ${expectedRun}; refusing another build`);
+                      }
+
+                      const { data: run } = await github.rest.actions.getWorkflowRun({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        run_id: expectedRun,
+                      });
+                      if (run.status !== "completed" || run.conclusion !== "success" ||
+                          run.head_sha !== expectedSha ||
+                          run.head_branch !== "release/1.6.0-desktop-agents" ||
+                          run.event !== "workflow_dispatch" ||
+                          !run.path.endsWith(".github/workflows/desktop.yml")) {
+                        throw new Error("the source workflow run is not the approved successful run at the exact source SHA");
+                      }
+
+                      let object = (await github.rest.git.getRef({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        ref: `tags/${expectedTag}`,
+                      })).data.object;
+                      for (let depth = 0; object.type === "tag" && depth < 8; depth++) {
+                        object = (await github.rest.git.getTag({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          tag_sha: object.sha,
+                        })).data.object;
+                      }
+                      if (object.type !== "commit" || object.sha !== expectedSha) {
+                        throw new Error(`${expectedTag} does not resolve to ${expectedSha}`);
+                      }
+
+                      const { data: release } = await github.rest.repos.getRelease({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        release_id: expectedRelease,
+                      });
+                      if (release.tag_name !== expectedTag || !release.draft ||
+                          (release.assets || []).length !== 0 ||
+                          !String(release.body || "").includes(expectedSha)) {
+                        throw new Error("the existing draft is not empty, not a draft for v1.6.0, or lacks the exact source SHA");
+                      }
+                      core.info(`Verified run ${expectedRun}, ${expectedTag} at ${expectedSha}, and empty draft ${expectedRelease}.`);
+
+            - name: Download only the approved run's release artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  name: kriko-windows
+                  repository: ${{ github.repository }}
+                  run-id: ${{ inputs.source_run }}
+                  github-token: ${{ github.token }}
+                  path: artifacts/kriko-windows
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: kriko-packs
+                  repository: ${{ github.repository }}
+                  run-id: ${{ inputs.source_run }}
+                  github-token: ${{ github.token }}
+                  path: artifacts/kriko-packs
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: kriko-macos-arm64
+                  repository: ${{ github.repository }}
+                  run-id: ${{ inputs.source_run }}
+                  github-token: ${{ github.token }}
+                  path: artifacts/kriko-macos-arm64
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: kriko-macos-x86_64
+                  repository: ${{ github.repository }}
+                  run-id: ${{ inputs.source_run }}
+                  github-token: ${{ github.token }}
+                  path: artifacts/kriko-macos-x86_64
+
+            - name: Collect, reindex, and verify release assets
+              id: collect
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  python tools/bump.py --show --strict
+                  VERSION=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+                  test "$VERSION" = "1.6.0"
+
+                  mkdir -p release
+                  cp "artifacts/kriko-windows/kriko-$VERSION-x86_64.msi" release/
+                  cp "artifacts/kriko-windows/kriko-$VERSION-win64-portable.zip" release/
+                  cp artifacts/kriko-windows/SHA256SUMS.txt release/
+                  for arch in arm64 x86_64; do
+                      cp "artifacts/kriko-macos-$arch/kriko-$VERSION-macos-$arch.dmg" release/
+                      cp "artifacts/kriko-macos-$arch/kriko-$VERSION-macos-$arch-portable.zip" release/
+                      cp "artifacts/kriko-macos-$arch/SHA256SUMS-$arch.txt" release/
+                  done
+                  find artifacts/kriko-packs -maxdepth 1 -type f -name '*.kpack' -exec cp {} release/ \;
+                  test -n "$(find release -maxdepth 1 -type f -name '*.kpack' -print -quit)"
+
+                  # The branch artifact's pack URLs name the branch. Regenerate
+                  # just this derived JSON against the already pushed v1.6.0 tag.
+                  python packaging/publish_index.py \
+                      --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/v1.6.0" \
+                      --out release/packs.json release/*.kpack
+
+                  (
+                      cd release
+                      sha256sum --check SHA256SUMS.txt
+                      for arch in arm64 x86_64; do
+                          shasum --check "SHA256SUMS-$arch.txt"
+                      done
+                  )
+                  python - <<'PY'
+                  import hashlib
+                  import json
+                  import pathlib
+
+                  release = pathlib.Path("release")
+                  pack_names = sorted(path.name for path in release.glob("*.kpack"))
+                  index = json.loads((release / "packs.json").read_text(encoding="utf-8"))
+                  rows = index.get("packs", [])
+                  indexed = sorted(row.get("url", "").rsplit("/", 1)[-1] for row in rows)
+                  base = "https://github.com/Berbadov/kriko/releases/download/v1.6.0/"
+                  if not rows or indexed != pack_names:
+                      raise SystemExit("packs.json does not name exactly the collected .kpack files")
+                  for row in rows:
+                      path = release / row["url"].rsplit("/", 1)[-1]
+                      digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                      if not row.get("url", "").startswith(base):
+                          raise SystemExit(f"pack URL is not pinned to v1.6.0: {row.get('url')}")
+                      if row.get("sha256") != digest or row.get("size") != path.stat().st_size:
+                          raise SystemExit(f"packs.json checksum or size does not match {path.name}")
+                  print(f"Verified {len(pack_names)} packs for v1.6.0")
+                  PY
+
+                  (
+                      cd release
+                      find . -maxdepth 1 -type f ! -name 'SHA256SUMS-ALL.txt' -printf '%f\0' \
+                          | sort -z | xargs -0 sha256sum > SHA256SUMS-ALL.txt
+                      sha256sum --check SHA256SUMS-ALL.txt
+                  )
+                  EXPECTED_ASSETS=$(find release -maxdepth 1 -type f -printf '%f\n' | sort | paste -sd ',' -)
+                  echo "assets=$EXPECTED_ASSETS" >> "$GITHUB_OUTPUT"
+                  ls -lh release
+
+            - name: Upload assets to the existing draft without replacing files
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: gh release upload v1.6.0 release/* --repo "$GITHUB_REPOSITORY"
+
+            - name: Verify the draft still contains exactly these assets
+              uses: actions/github-script@v7
+              env:
+                  EXPECTED_ASSETS: ${{ steps.collect.outputs.assets }}
+              with:
+                  script: |
+                      const { data: release } = await github.rest.repos.getRelease({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        release_id: 411430940,
+                      });
+                      const expected = process.env.EXPECTED_ASSETS.split(",").filter(Boolean).sort();
+                      const actual = (release.assets || []).map(asset => asset.name).sort();
+                      if (release.tag_name !== "v1.6.0" || !release.draft ||
+                          JSON.stringify(actual) !== JSON.stringify(expected)) {
+                        throw new Error("the draft is no longer unchanged or does not contain exactly the verified assets");
+                      }
+                      core.info(`Verified ${actual.length} assets on the unpublished v1.6.0 draft.`);
