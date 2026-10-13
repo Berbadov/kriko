@@ -46,6 +46,10 @@ DEFAULT_CONTEXT_TOKENS = 4096
 CHARS_PER_TOKEN = 3.0
 #: Tokens kept free beside the reply budget, for the chat template.
 _TEMPLATE_TOKENS = 128
+#: A deliberately low UTF-8 byte estimate for a prompt token. Counting bytes
+#: instead of Python characters keeps accents and non-Latin text from getting
+#: a larger budget just because one character occupies several bytes.
+PROMPT_BYTES_PER_TOKEN = 2
 
 #: What a server says when the program that runs its models is missing, as
 #: opposed to the machine lacking memory for one. Both are HTTP 500 and only the
@@ -254,7 +258,7 @@ class OpenAICompatSocket:
         if schema and self._response_format_mode == "not_requested":
             self._response_format_mode = "json_schema"
         try:
-            if len(prompt.encode("utf-8")) > self.prompt_chars_allowed():
+            if len(prompt.encode("utf-8")) > self.prompt_bytes_allowed():
                 raise LocalInferenceError("Local prompt exceeds the configured context budget.")
             return self.complete(prompt)
         finally:
@@ -522,6 +526,20 @@ class OpenAICompatSocket:
         reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
         tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
         return max(0, min(self.context_chars, int(tokens - 128)))
+
+    def prompt_bytes_allowed(self, *, reply_tokens: int | None = None) -> int:
+        """A conservative UTF-8 byte budget for one prompt.
+
+        The extraction pipeline needs both its policy and source evidence in
+        one request. Treating every byte as one token made ordinary 4k
+        contexts reject those requests before showing any evidence. Two bytes
+        per token remains conservative for multilingual text while using the
+        model's actual context and the stage's own reply reservation.
+        """
+        reply = (reply_tokens if isinstance(reply_tokens, int) and reply_tokens > 0
+                 else self.max_tokens if isinstance(self.max_tokens, int) else 1024)
+        tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS - 128
+        return max(0, int(tokens * PROMPT_BYTES_PER_TOKEN))
 
     def window_chars(self) -> int:
         """How many characters of prompt the window itself holds beside the reply.
