@@ -71,16 +71,26 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let k = &app.live.knowledge;
 
     // ---- general ----
-    let mut login = div().flex().gap(px(6.0)).opacity(if k.startup_busy { 0.5 } else { 1.0 });
+    let mut login = div().flex().flex_wrap().items_center().gap(px(6.0));
     for (id, label, mode) in [
         ("startup-off", "Off", StartupMode::Off),
         ("startup-window", "Window", StartupMode::Window),
         ("startup-tray", "Tray", StartupMode::Tray),
     ] {
         let button = if k.startup_mode == mode { key(id, label) } else { ghost(id, label) };
-        login = login.child(button.px(px(10.0)).h(px(34.0)).on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+        let set_mode = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.set_startup_mode(mode, cx);
-        })));
+        });
+        login = login.child(
+            button
+                .px(px(12.0))
+                .h(px(40.0))
+                .opacity(if k.startup_busy { 0.55 } else { 1.0 })
+                .when(!k.startup_busy, |b| b.on_click(set_mode)),
+        );
+    }
+    if k.startup_busy {
+        login = login.child(tag("startup-saving", TagState::Live, "Saving", motion).flex_none());
     }
     let reduce = switch_anim("sw-motion", app.reduce_motion, motion).on_click(cx.listener(
         |this, _: &gpui::ClickEvent, _w, cx| {
@@ -100,7 +110,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .child(hairline())
         .child(row(
             "Launch at login",
-            "Open the window or keep Kriko in the tray when Windows starts",
+            "Open the window or keep Kriko in the tray when your computer starts",
             login.into_any_element(),
         ))
         .child(hairline())

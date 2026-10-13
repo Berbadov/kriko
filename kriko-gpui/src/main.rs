@@ -226,7 +226,7 @@ fn main() {
             // the extension, and the tray brings it back or ends it
             window.on_window_should_close(cx, |_window, cx| {
                 if shell::can_hide() {
-                    shell::hide_window();
+                    shell::hide_window(cx);
                     false
                 } else {
                     engine::stop();

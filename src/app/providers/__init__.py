@@ -253,12 +253,18 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
                 effort = prefs.effort_for_harness(conn, found.id)
             finally:
                 conn.close()
-    # A level this machine's CLI will not take is dropped, not raised. The
-    # reader chose it for a harness that is no longer the one running, or on a
-    # build whose `--help` has since changed, and losing the run over a dial
-    # would be worse than losing the dial.
-    if effort.strip() and effort.strip() not in harness.efforts_for(found):
-        effort = ""
+    # Validate against a completed discovery when one is already available.
+    # Starting a job must not run `--help` synchronously here; the choice was
+    # made in a picker whose own cold discovery is asynchronous. A stale or
+    # cross-harness value is still dropped against the cached list, or the
+    # roster's known choices while discovery is in flight. `command_for`
+    # performs the final declared-flag check before launching the CLI.
+    if effort.strip():
+        known_efforts = harness.cached_efforts_for(found)
+        allowed_efforts = (known_efforts if known_efforts is not None
+                           else list(getattr(found, "effort_choices", ())))
+        if effort.strip() not in allowed_efforts:
+            effort = ""
     picked = (model.strip(), effort.strip())
     model, effort = harness.settle_effort(found, *picked)
     researcher = harness.HarnessResearcher(
@@ -269,13 +275,21 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
         # `found.label` spells the effort in its model ids, and a flag beside
         # one is refused. Said in the run's log, since the run is now on a
         # model or a level the reader did not literally pick.
-        researcher.effort_settled = (
+        listed = harness.cached_models_for(found) if getattr(found, "model_source", "") else []
+        if (model == picked[0] and not effort and not listed):
+            researcher.effort_settled = (
+                f"Running {model} without a separate effort flag: {found.label} has not "
+                f"returned its model list, so {picked[1]} could conflict with the "
+                "selected model id."
+            )
+        else:
+            researcher.effort_settled = (
             f"Running {model}: {found.label} names the effort in the model id, "
             f"so the {picked[1]} this run asked for is that id, not a second flag."
             if model != picked[0] else
             f"Running {model} at its own level: {found.label} lists no "
             f"{picked[1]} variant of it, and a second effort flag would be refused."
-        )
+            )
     if note:
         # Duck-typed, read by `app/web/tasks.py` when the run gathers nothing
         # to say *why* — the same slot `_empty_run_note` already reads. Not
