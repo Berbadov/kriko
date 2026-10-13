@@ -87,12 +87,18 @@ class Script:
         self.quick = {}      # product title -> the quick look's JSON
         self.author = {}     # product title -> the authoring JSON
         self.amend = {}      # product title -> the amend JSON
+        self.categorize = {}  # product title -> the validated category reply
         self.prompts = []
+        self.ask_options = []
 
     def reply(self, prompt: str) -> str:
         self.prompts.append(prompt)
         if prompt.startswith("# Is this product identity unambiguous?"):
             return _fenced({"ambiguous": False})
+        if prompt.startswith("# Categorise this saved product check"):
+            for title, payload in self.categorize.items():
+                if f"Product: {title}\n" in prompt:
+                    return json.dumps(payload, ensure_ascii=False)
         for title, payload in self.quick.items():
             if prompt.startswith("# Quick look") and f"    {title}\n" in prompt:
                 return _fenced(payload)
@@ -119,7 +125,8 @@ def world(tmp_path, monkeypatch):
     class Agent:
         search_provider = "fixture-harness"
 
-        def ask(self, prompt):
+        def ask(self, prompt, **options):
+            script.ask_options.append(options)
             return script.reply(prompt)
 
     monkeypatch.setattr(keys, "ready", lambda *_, **__: True)
@@ -675,7 +682,8 @@ def test_a_quick_look_that_read_the_identity_adds_a_new_product_without_an_agent
 
     assert done["state"] == "succeeded", done["message"]
     assert len(world.script.prompts) == prompts
-    assert [one["product"] for one in done["result"]["needs_agent"]] == ["Logitech Mouse"]
+    assert done["result"]["needs_agent"] == []
+    assert [one["product"] for one in done["result"]["needs_categorization"]] == ["Logitech Mouse"]
     listed = world.get("/api/subjects", params={"pack_id": "gaming.mice"}).json()
     # Named by its identity, not by the listing's title.
     assert sorted(one["label"] for one in listed) == ["Scyrox V6", "Scyrox V8"]
@@ -744,6 +752,125 @@ def test_pages_that_cannot_be_read_leave_the_look_for_the_next_harvest(world, mo
     monkeypatch.setattr(tasks, "_page_reader", lambda: (lambda url: Fetched(PAGES.get(url, ""))))
     online = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
     assert online["result"]["claims_added"] == 1
+
+
+def test_saved_quick_look_categorization_is_explicit_persistent_and_stale_targets_clear(world):
+    from app.web import state
+
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    title = "Scyrox V7 Gaming Mouse"
+    world.script.quick[title] = {
+        "assumed": "the V7", "category": "wireless pointer", "pack": "",
+        "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)],
+    }
+    quick = _look(world, title)
+    quick_id = quick["job_id"]
+    original_risks = quick["result"]["risks"]
+    assert quick["result"]["categorization"]["status"] == "uncertain"
+
+    world.script.categorize[title] = {
+        "decision": "assigned", "pack_id": "gaming.mice", "confidence": "high",
+        "basis": [{"saved_text": title, "catalog_text": "Gaming mice"}],
+    }
+    started = world.post(f"/api/quick-looks/{quick_id}/categorize")
+    assert started.status_code == 200, started.text
+    categorized = _wait(world, started.json()["job_id"])
+    assert categorized["state"] == "succeeded", categorized["message"]
+    assert categorized["result"]["categorization"]["pack_id"] == "gaming.mice"
+    assert categorized["result"]["categorization"]["method"] == "agent"
+    assert world.script.asked("# Categorise this saved product check")
+    assert world.script.ask_options[-1] == {"allow_tools": False}
+
+    conn = state.connect(world.settings.app_state_path)
+    try:
+        saved = state.get_job(conn, quick_id)
+        assignment = state.quicklook_category(conn, quick_id)
+    finally:
+        conn.close()
+    assert assignment["pack_id"] == "gaming.mice"
+    assert saved["result"]["risks"] == original_risks
+
+    # Reader choices are validated against the installed set. `probe` is an
+    # installed catalog without an editable draft, so harvest reports the
+    # limitation rather than attempting a store write.
+    invalid = world.post(f"/api/quick-looks/{quick_id}/category", json={"pack_id": "made.up"})
+    assert invalid.status_code == 422
+    manual = world.post(f"/api/quick-looks/{quick_id}/category", json={"pack_id": "probe"})
+    assert manual.status_code == 200, manual.text
+    assert manual.json()["method"] == "reader"
+    record = next(one for one in world.get("/api/history/records").json()["items"]
+                  if one["lookup_id"] == f"job:{quick_id}")
+    assert record["categorization"]["pack_id"] == "probe"
+
+    harvested = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert harvested["state"] == "succeeded", harvested["message"]
+    assert any(one["quick_job_id"] == quick_id and one["pack_id"] == "probe"
+               for one in harvested["result"]["needs_agent"])
+    assert harvested["result"]["needs_categorization"] == []
+
+    store = _store(world)
+    try:
+        store.execute("DELETE FROM packs WHERE pack_id = 'probe'")
+        store.commit()
+    finally:
+        store.close()
+    refreshed = next(one for one in world.get("/api/history/records").json()["items"]
+                     if one["lookup_id"] == f"job:{quick_id}")
+    assert refreshed["categorization"]["status"] == "uncertain"
+    assert refreshed["categorization"]["pack_id"] == ""
+    assert refreshed["packs"] == []
+    assert world.get(f"/api/jobs/{quick_id}").json()["result"]["risks"] == original_risks
+
+
+def test_local_categorization_uses_the_bounded_json_completion_path(world, monkeypatch):
+    from app import categorizer
+    from app.web import state, tasks
+
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    title = "Scyrox V7 Gaming Mouse"
+    world.script.quick[title] = {
+        "assumed": "the V7", "category": "wireless pointer", "pack": "",
+        "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)],
+    }
+    quick = _look(world, title)
+    conn = state.connect(world.settings.app_state_path)
+    try:
+        job = state.get_job(conn, quick["job_id"])
+        params = job["params"]
+        params["backend"] = "local"
+        conn.execute("UPDATE jobs SET params_json = ? WHERE job_id = ?",
+                     (json.dumps(params), quick["job_id"]))
+        conn.commit()
+    finally:
+        conn.close()
+
+    calls = []
+
+    class Completer:
+        def prompt_chars_allowed(self):
+            return 20_000
+
+        def json(self, prompt, schema):
+            calls.append((prompt, schema))
+            return json.dumps({
+                "decision": "assigned", "pack_id": "gaming.mice", "confidence": "high",
+                "basis": [{"saved_text": title, "catalog_text": "Gaming mice"}],
+            })
+
+    monkeypatch.setattr(tasks, "_use_local_ask", lambda settings, params: True)
+    monkeypatch.setattr(tasks, "_local_compare_completer", lambda *args: Completer())
+    started = world.post(f"/api/quick-looks/{quick['job_id']}/categorize")
+    assert started.status_code == 200, started.text
+    categorized = _wait(world, started.json()["job_id"])
+
+    assert categorized["state"] == "succeeded", categorized["message"]
+    assert categorized["result"]["categorization"]["pack_id"] == "gaming.mice"
+    assert len(calls) == 1
+    assert calls[0][1] == categorizer.OUTPUT_SCHEMA
+    assert title in calls[0][0]
+    assert "Installed catalog definitions:" in calls[0][0]
 
 
 # ── #181: the seller's words are not the product ──────────────────────────

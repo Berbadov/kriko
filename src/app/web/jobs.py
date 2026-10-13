@@ -43,6 +43,7 @@ job is asked to stop, never made to.
 
 import sqlite3
 import threading
+import time
 import traceback
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
@@ -55,7 +56,12 @@ from app.web import state
 
 #: Kinds that never write the store or a pack directory, and are short enough
 #: that queueing them behind long work would defeat them.
-QUICK_KINDS = frozenset({"quick_look", "quick_ask", "lookup_ask"})
+QUICK_KINDS = frozenset({
+    "quick_look", "quick_ask", "lookup_ask", "categorize_quick_look",
+})
+
+LIVE_DRAFT_CHARS = 8_192
+LIVE_DRAFT_INTERVAL = 0.1
 
 #: The claim that overlaps every other: a job holding it runs alone.
 EVERYTHING = "*"
@@ -78,6 +84,10 @@ def claims(kind: str, params: dict) -> frozenset[str]:
     by the agent mid-run, so two authors cannot be told apart up front, and an
     amend may be extending the very draft an author is writing.
     """
+    if kind == "categorize_quick_look":
+        # This writes a validated assignment to app state, not a pack or the
+        # knowledge store. It is safe alongside every other job.
+        return frozenset()
     if kind in ("research", "verify", "site_register", "agenda_run", "bench",
                 "pack_update"):
         return _named("pack", params.get("pack_id"))
@@ -115,16 +125,47 @@ class Progress:
 
     job_id: str
     _conn: sqlite3.Connection
+    _base_message: str = ""
+    _draft_message: str = ""
+    _draft_last_write: float = 0.0
 
     def log(self, line: str) -> None:
         state.update_job(self._conn, self.job_id, line=line)
 
     def set(self, progress: float, message: str = "") -> None:
+        if message:
+            self._base_message = message
+        shown = self._draft_message or message or self._base_message
         state.update_job(
             self._conn,
             self.job_id,
             progress=progress,
-            message=message or None,
+            message=shown or None,
+        )
+
+    def draft(self, text: str, *, force: bool = False) -> None:
+        """Show bounded live prose in the job's existing status field.
+
+        The first fragment is durable immediately. Later updates are
+        coalesced to at most ten snapshots per second, so a token stream does
+        not rewrite the SQLite row on every delta. Clearing the draft restores
+        the phase message; the action log remains a separate, append-only
+        record of completed events.
+        """
+        now = time.monotonic()
+        clean = str(text or "")[-(LIVE_DRAFT_CHARS - len("Writing: ")):]
+        visible = f"Writing: {clean}" if clean else ""
+        if visible == self._draft_message and not force:
+            return
+        if visible and self._draft_message and not force:
+            if now - self._draft_last_write < LIVE_DRAFT_INTERVAL:
+                self._draft_message = visible
+                return
+        self._draft_message = visible
+        self._draft_last_write = now
+        state.update_job(
+            self._conn, self.job_id,
+            message=visible or self._base_message or None,
         )
 
     @property

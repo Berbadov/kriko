@@ -28,11 +28,13 @@ the instance and read duck-typed, as everywhere else: `cost_basis`, `spent`,
 """
 
 import threading
+from collections import deque
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
 
 from app.providers import harness, mistral
+from app.providers._http import StreamCancelled
 from kriko.extract.grounding import loose_span
 from kriko.research import BudgetExceeded
 from kriko.research.base import Document, ResearchTask
@@ -152,6 +154,9 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         self.model = model.strip() or agent.default_model
         self.search_provider = agent.label
         self._converse = converse or mistral.converse
+        # Injected test/tool adapters keep their established complete-reply
+        # shape. The built-in Mistral adapter has a verified SSE endpoint.
+        self._stream_converse = mistral.converse_stream if converse is None else None
         self._home = home
         #: What the provider billed, in dollars. `None` once any call could
         #: not be priced: an under-count reported as a total is the invented
@@ -203,31 +208,84 @@ class ApiAgentResearcher(harness.HarnessResearcher):
     def _contract(self) -> str:
         return super()._contract() + self._ceiling()
 
-    def ask(self, prompt: str) -> str:
-        """`HarnessResearcher.ask`, told what its tool is and what it may spend.
+    def ask(self, prompt: str, *, allow_tools: bool = True) -> str:
+        """One completion with an explicit web-tool grant.
 
-        A CLI's `ask` carries neither: its own tools are its business, and its
-        subscription is not metered. Here both are the run's.
+        Research keeps the existing search-enabled contract by default. A
+        classification call can request a tool-less completion; that path
+        omits the web instructions and spending-on-search clause and sends no
+        `web_search` tool to Mistral. Prompt wording alone is not a permission
+        boundary.
         """
-        return self._run(prompt + "\n" + TOOLS + self._ceiling())
+        if allow_tools:
+            return self._run(
+                prompt + "\n" + TOOLS + self._ceiling(), search=True)
+        return self._run(prompt, search=False)
 
     # ── one request ─────────────────────────────────────────────────────────
 
-    def _run(self, prompt: str, on_line=None) -> str:
+    def _run(self, prompt: str, on_line=None, *, search: bool = True) -> str:
         if self._at_least >= self._budget():
             raise BudgetExceeded(
                 f"{self.agent.label} has spent ${self._at_least:.2f} of this "
                 f"run's ${self._budget():.2f}; no further request was sent")
         if self.check_cancelled is not None:
             self.check_cancelled()
-        self._echo(f"asking {self.agent.label} ({self.model}); it searches "
-                   "the web itself")
+        self._echo(
+            f"asking {self.agent.label} ({self.model}); "
+            + ("it searches the web itself" if search else "web tools are disabled")
+        )
         box: dict = {}
+        pending: deque[str] = deque()
+        pending_chars = 0
+        pending_lock = threading.Lock()
+        stop_deltas = threading.Event()
+
+        def queue_delta(text: str) -> None:
+            nonlocal pending_chars
+            if stop_deltas.is_set():
+                raise StreamCancelled("provider stream canceled")
+            if not text:
+                return
+            with pending_lock:
+                pending.append(text)
+                pending_chars += len(text)
+                while pending_chars > harness.LIVE_DRAFT_CHARS and pending:
+                    excess = pending_chars - harness.LIVE_DRAFT_CHARS
+                    old = pending.popleft()
+                    pending_chars -= len(old)
+                    if len(old) > excess:
+                        pending.insert(0, old[excess:])
+                        pending_chars += len(old) - excess
+
+        def publish_deltas() -> None:
+            nonlocal pending_chars
+            with pending_lock:
+                text = "".join(pending)
+                pending.clear()
+                pending_chars = 0
+            if text:
+                # Reuse the same prose/JSON/fence filter and bounded draft
+                # buffer as the CLI path. Run this on the job thread so the
+                # Progress callback uses its SQLite connection on its owner.
+                self._append_live_text(text)
 
         def call():
             try:
-                box["reply"] = self._converse(prompt, model=self.model,
-                                              timeout=self.timeout)
+                if self._stream_converse is not None:
+                    box["reply"] = self._stream_converse(
+                        prompt, model=self.model, timeout=self.timeout,
+                        on_text=queue_delta, cancel_event=stop_deltas,
+                        search=search,
+                    )
+                else:
+                    if search:
+                        box["reply"] = self._converse(
+                            prompt, model=self.model, timeout=self.timeout)
+                    else:
+                        box["reply"] = self._converse(
+                            prompt, model=self.model, timeout=self.timeout,
+                            search=False)
             except Exception as error:  # noqa: BLE001 — re-raised below
                 box["error"] = error
 
@@ -238,10 +296,30 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         # between output lines. A request already sent cannot be recalled:
         # the provider bills it whether or not anyone reads the answer, and
         # the meter cannot count what never came back.
-        while worker.is_alive():
-            worker.join(self._cancel_tick)
-            if worker.is_alive() and self.check_cancelled is not None:
-                self.check_cancelled()
+        last_cancel_check = started
+        try:
+            while worker.is_alive():
+                worker.join(0.05)
+                publish_deltas()
+                now = time.monotonic()
+                if (worker.is_alive() and self.check_cancelled is not None
+                        and now - last_cancel_check >= self._cancel_tick):
+                    self.check_cancelled()
+                    last_cancel_check = now
+            publish_deltas()
+        finally:
+            stop_deltas.set()
+            publish_deltas()
+            if self.on_text is not None and self._live_published:
+                try:
+                    self.on_text("")
+                except Exception:  # noqa: BLE001 — a live status cannot lose a run
+                    pass
+            self._live_parts.clear()
+            self._live_chars = 0
+            self._live_detector_tail = ""
+            self._live_suppressed = False
+            self._live_published = ""
         if "error" in box:
             raise box["error"]
         reply = box["reply"]

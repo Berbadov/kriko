@@ -61,11 +61,26 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let beside = app.content_w >= 1184.0;
 
     let body: Div = if entries.is_empty() {
-        div().child(empty_note(if loaded {
-            "No agent was found on this machine."
-        } else {
-            "Waiting for the engine to list the agents."
-        }))
+        let mut empty = div()
+            .flex()
+            .flex_col()
+            .gap(px(10.0))
+            .child(empty_note(if loaded {
+                "No agent was found on this machine."
+            } else {
+                "Waiting for the engine to list the agents."
+            }));
+        if loaded {
+            let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                this.tab = crate::app::Tab::Local;
+                this.refresh_local(cx);
+                cx.notify();
+            });
+            empty = empty
+                .child(row_desc("Set up a local model, or connect an agent from Settings."))
+                .child(ghost("agents-open-local", "Open Local LLM").on_click(open_local));
+        }
+        empty
     } else {
         let selected = app.live.run.selected_agent().map(|e| e.id).unwrap_or_default();
         let picked = entries.iter().find(|e| e.id == selected).cloned();
@@ -268,10 +283,11 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
 fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kriko>) -> Div {
     let job = app.live.knowledge.agent_install.as_ref().filter(|(id, _)| *id == e.id).map(|(_, v)| v.clone());
     let busy = job.as_ref().is_some_and(|v| !v.done);
+    let succeeded = job.as_ref().is_some_and(|v| v.done && v.state == "succeeded");
     let id = e.id.clone();
     let label = if e.id == "local" { "Set up the small local model" } else { "Install" };
     let mut block = div().flex().flex_col().gap(px(8.0));
-    if offered && !busy {
+    if offered && !busy && !succeeded {
         block = block.child(div().child(
             key(("agent-install", 0usize), label)
                 .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.install_agent(id.clone(), cx))),
@@ -279,13 +295,20 @@ fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kr
     }
     if let Some(v) = job {
         let (state, word) = if !v.done {
-            (TagState::Need, "Installing")
+            (TagState::Live, "Installing")
         } else if v.state == "succeeded" {
-            (TagState::Live, "Installed")
+            (TagState::Done, "Installed")
         } else {
             (TagState::Block, "Install failed")
         };
-        block = block.child(div().flex().child(tag("agent-install-state", state, word, app.motion)));
+        block = block.child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(tag("agent-install-state", state, word, app.motion))
+                .when(busy, |d| d.child(spinner("agent-install-spinner", 14.0, app.motion))),
+        );
         if !v.message.is_empty() {
             block = block.child(row_desc(&v.message));
         }
@@ -537,19 +560,28 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
             row = row.child(option_chip(("agent-model", i), name, *name == h.llm)
                 .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), *name == h.llm, 6.0, app.motion)).on_click(pick));
         }
-        out = out.child(hairline()).child(eyebrow("Model")).child(row);
+        if names.is_empty() && !query.is_empty() {
+            row = row.child(empty_note("No listed model matches. Use the typed model action above."));
+        }
+        out = out.child(hairline()).child(eyebrow("Model"));
+        if h.llms_pending {
+            out = out.child(row_desc("Checking available models…"));
+        }
+        out = out.child(row);
         if !h.llms_note.is_empty() {
             out = out.child(row_desc(&h.llms_note));
         }
     }
-    if !h.efforts.is_empty() {
+    if !h.efforts.is_empty() || h.efforts_pending || !h.efforts_note.is_empty() {
         let mut row = div().flex().flex_wrap().gap(px(6.0));
-        let id = h.id.clone();
-        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.pick_agent_effort(id.clone(), String::new(), cx);
-            cx.notify();
-        });
-        row = row.child(option_chip("agent-effort-default", "Default", h.effort.is_empty()).on_click(pick));
+        if !h.efforts.is_empty() {
+            let id = h.id.clone();
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.pick_agent_effort(id.clone(), String::new(), cx);
+                cx.notify();
+            });
+            row = row.child(option_chip("agent-effort-default", "Default", h.effort.is_empty()).on_click(pick));
+        }
         for (i, level) in h.efforts.iter().enumerate() {
             let (id, effort) = (h.id.clone(), level.clone());
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -559,7 +591,15 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
             row = row.child(option_chip(("agent-effort", i), level, *level == h.effort)
                 .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, app.motion)).on_click(pick));
         }
-        out = out.child(hairline()).child(eyebrow("Effort")).child(row);
+        out = out.child(hairline()).child(eyebrow("Effort"));
+        if h.efforts_pending {
+            out = out.child(row_desc("Checking effort choices…"));
+        }
+        if !h.efforts.is_empty() {
+            out = out.child(row);
+        } else if !h.efforts_note.is_empty() {
+            out = out.child(row_desc(&h.efforts_note));
+        }
         if !h.effort_hint.is_empty() {
             out = out.child(row_desc(&h.effort_hint));
         }

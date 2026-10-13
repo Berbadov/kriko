@@ -48,7 +48,6 @@ __all__ = [
     "candidates", "choice_block", "resolve", "taken_ids", "ground", "attach",
     "admit", "holds",
     "absorb", "install_draft", "DraftBuildFailed", "next_version", "pick_subject",
-    "MAX_CANDIDATES",
 ]
 
 #: One writer at a time per process. The job runner already serialises the
@@ -56,10 +55,6 @@ __all__ = [
 #: thread, and two builds of one draft directory are how a half-written pack
 #: happens.
 LOCK = threading.RLock()
-
-#: How many category packs the quick look is shown. Past this the list is a
-#: catalogue, and a model choosing from a catalogue picks badly.
-MAX_CANDIDATES = 12
 
 #: Subject labels shown per pack in that list. Enough to tell two packs apart.
 _SAMPLE_LABELS = 5
@@ -146,8 +141,6 @@ def candidates(store_path) -> list[dict]:
             "subjects": list(state.get("subjects") or []),
             "blurb": _blurb(state.get("principle") or ""),
         })
-        if len(found) == MAX_CANDIDATES:
-            break
     return found
 
 

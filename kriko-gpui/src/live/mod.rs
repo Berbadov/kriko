@@ -42,8 +42,9 @@ pub struct Live {
     pub run: run::State,
     pub knowledge: knowledge::State,
     pub local: local::State,
-    /// The last thing that went wrong talking to the engine, for the status
-    /// line; cleared by the next success.
+    /// The last thing that went wrong talking to the engine, for the shell's
+    /// retry notice. It stays until the reader dismisses it or retries this
+    /// screen, so an unrelated successful poll cannot hide a failure.
     pub problem: Option<String>,
 }
 
@@ -68,11 +69,10 @@ impl Kriko {
         .detach();
     }
 
-    /// Notes a failed call for the status line, or clears the last one.
+    /// Notes failed calls for the persistent shell notice.
     pub fn note<T>(&mut self, reply: &Result<T, api::ApiError>) {
-        match reply {
-            Ok(_) => self.live.problem = None,
-            Err(e) => self.live.problem = Some(e.message.clone()),
+        if let Err(e) = reply {
+            self.live.problem = Some(e.message.clone());
         }
     }
 

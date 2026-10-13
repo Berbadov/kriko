@@ -5,7 +5,7 @@
 //! Where the engine comes from, first match wins:
 //!
 //! 1. `KRIKO_URL` set: attach to that address, start nothing.
-//! 2. `kriko-sidecar.exe` beside this exe (the installed layout): start it.
+//! 2. `kriko-sidecar[.exe]` beside this app executable (the installed layout): start it.
 //! 3. An engine already answering on the extension port: attach to it.
 //! 4. A source checkout: `python -m app.sidecar` (`KRIKO_PYTHON` picks the
 //!    interpreter).
@@ -205,7 +205,7 @@ fn supervise(generation: u64) {
 }
 
 /// The source checkout's own virtualenv, found by walking up from this exe
-/// (`kriko-gpui/target/<profile>/kriko.exe` sits three levels below it).
+/// (`kriko-gpui/target/<profile>/kriko[.exe]` sits three levels below it).
 fn checkout_python() -> Option<std::path::PathBuf> {
     let exe = std::env::current_exe().ok()?;
     let venv = if cfg!(windows) { ".venv/Scripts/python.exe" } else { ".venv/bin/python" };
