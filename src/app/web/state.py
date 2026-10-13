@@ -684,6 +684,7 @@ CREATE TABLE IF NOT EXISTS compare_questions (
   question_id TEXT NOT NULL,
   question    TEXT NOT NULL,
   answer      TEXT NOT NULL DEFAULT '',
+  sources_json TEXT NOT NULL DEFAULT '[]',
   job_id      TEXT NOT NULL DEFAULT '',
   asked_at    TEXT NOT NULL DEFAULT '',
   answered_at TEXT NOT NULL DEFAULT '',
@@ -1534,6 +1535,7 @@ def _question(row: sqlite3.Row) -> dict:
         "question_id": row["question_id"],
         "question": row["question"],
         "answer": row["answer"],
+        "sources": json.loads(row["sources_json"] or "[]"),
         "job_id": row["job_id"],
         "asked_at": row["asked_at"],
         "answered_at": row["answered_at"],
@@ -1585,7 +1587,7 @@ def record_compare_question(
 
 def answer_compare_question(
     conn: sqlite3.Connection, draft_id: str, question_id: str,
-    answer: str, job_id: str = "",
+    answer: str, job_id: str = "", sources: list[dict] | None = None,
 ) -> dict | None:
     """The job's return path: what the agent said, onto the row it was asked on.
 
@@ -1597,9 +1599,10 @@ def answer_compare_question(
     looks like it was never asked.
     """
     cur = conn.execute(
-        "UPDATE compare_questions SET answer = ?, job_id = ?, answered_at = ?"
+        "UPDATE compare_questions SET answer = ?, sources_json = ?, job_id = ?, answered_at = ?"
         " WHERE draft_id = ? AND question_id = ?",
-        (answer.strip()[:ANSWER_MAX_CHARS], job_id, _now(), draft_id, question_id))
+        (answer.strip()[:ANSWER_MAX_CHARS], json.dumps(sources or [], default=str),
+         job_id, _now(), draft_id, question_id))
     conn.commit()
     if cur.rowcount != 1:
         return None
@@ -2476,6 +2479,11 @@ def saved_answer(conn: sqlite3.Connection, answer_id: str) -> dict | None:
     return {"lookup_id": answer_id, "label": job["params"].get("product", ""),
             "response": {"claims": result.get("risks") or [],
                          "specs": result.get("specs") or [],
+                         "listing": result.get("listing") or {},
+                         "evidence_pages": result.get("evidence_pages") or [],
+                         "coverage": result.get("coverage") or {},
+                         "diagnostic": result.get("diagnostic") or {},
+                         "identity": result.get("identity") or {},
                          "category": result.get("category", ""),
                          "assumed": result.get("assumed", "")}}
 

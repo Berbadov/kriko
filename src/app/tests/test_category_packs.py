@@ -860,7 +860,7 @@ def test_local_categorization_uses_the_bounded_json_completion_path(world, monke
             })
 
     monkeypatch.setattr(tasks, "_use_local_ask", lambda settings, params: True)
-    monkeypatch.setattr(tasks, "_local_compare_completer", lambda *args: Completer())
+    monkeypatch.setattr(tasks, "_local_structured_completer", lambda *args: Completer())
     started = world.post(f"/api/quick-looks/{quick['job_id']}/categorize")
     assert started.status_code == 200, started.text
     categorized = _wait(world, started.json()["job_id"])

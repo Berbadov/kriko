@@ -117,61 +117,92 @@ def _one_lookup(settings, label, response) -> str:
         conn.close()
 
 
-def test_the_job_handler_answers_a_question_and_writes_it_on_the_row(
+def test_the_job_handler_searches_with_quicklook_product_context_and_persists_sources(
         client, monkeypatch):
     http, settings = client
     from app.web import tasks
-    a1 = _one_lookup(settings, "One", {
+    app_state = state.connect(settings.app_state_path)
+    quick_id = state.create_job(app_state, "quick_look", {"product": "Acme 5W-30 oil"})
+    state.finish_job(app_state, quick_id, state.SUCCEEDED, result={
+        "assumed": "the 5W-30 full synthetic",
+        "category": "engine oil",
+        "risks": [],
+        "specs": [{"name": "Viscosity", "value": "SAE 5W-30",
+                   "url": "https://oil.example/spec", "domain": "oil.example",
+                   "quote": "SAE 5W-30 full synthetic engine oil."}],
+        "listing": {"url": "https://shop.example/listing", "facts": {
+            "vehicle": "2018 Honda Civic", "engine": "1.5L turbo"},
+            "description": "Meets API SP; synthetic oil."},
+        "coverage": {"status": "no_supported_findings", "pages_read": 2,
+                     "pages_relevant": 2, "pages_extracted": 2},
+        "diagnostic": {"code": "no_issues_found", "message": "No supported issues found in 2 pages."},
+        "evidence_pages": [{"url": "https://oil.example/spec", "domain": "oil.example",
+                            "excerpt": "SAE 5W-30 full synthetic engine oil."}],
+    })
+    b2 = _one_lookup(settings, "Acme 0W-20 oil", {
         "claims": [{"claim_id": "c", "pack_id": "p", "title": "Timing chain",
                     "body": "Stretches early.", "severity": "high"}],
-        "context": {"mileage": "120000"},
-        "context_units": {"mileage": "km"}})
-    b2 = _one_lookup(settings, "Two", {"claims": [], "context": {}})
+        "context": {"engine": "2.0L"},
+    })
+    app_state.close()
     made = http.post("/api/compare-drafts",
-                     json={"name": "Two cars", "lookup_ids": [a1, b2]}).json()
+                     json={"name": "Two oils", "lookup_ids": [quick_id, b2]}).json()
     monkeypatch.setattr(http.app.state.jobs, "submit", lambda *_: "queued-test-job")
     asked = http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
-                      json={"question": "which has the cheaper known fix?"}).json()
+                      json={"question": "Is the first oil right for my car?"}).json()
 
-    class _Completer:
-        context_chars = 12000
-        model = "small:4b"
-        tokens_used = 141
-        tokens_in = 100
-        tokens_out = 41
+    class Researcher:
+        requested_model = "codex"
+        harness = type("Harness", (), {"id": "codex", "label": "Codex"})()
+        sources = {"https://owner.example/manual": "Honda specifies 0W-20 for this engine."}
+        on_text = None
 
-        def __call__(self, prompt):
+        def ask_followup(self, prompt, *, product, question):
             self.prompt = prompt
-            return " The first one: the chain is a known, cheap fix. "
+            self.product = product
+            self.question = question
+            self.on_text("The listing shows 5W-30, but the manual says ")
+            return ("The listing shows 5W-30, but the manual says to use 0W-20. "
+                    "Sources: https://owner.example/manual")
 
-    researcher = _Completer()
-    monkeypatch.setattr(tasks, "_use_local_ask", lambda *a, **k: True)
-    monkeypatch.setattr(tasks, "_local_compare_completer", lambda *a, **k: researcher)
-    monkeypatch.setattr(tasks, "_local_asker", lambda *a, **k: (_ for _ in ()).throw(
-        AssertionError("comparison must not search or crawl")))
+        def ask(self, _prompt):
+            raise AssertionError("the harness follow-up should use host-read pages")
+
+    researcher = Researcher()
+    from app import providers
+    monkeypatch.setattr(tasks, "_use_local_ask", lambda *a, **k: False)
+    monkeypatch.setattr(providers, "agent_ready", lambda *a, **k: True)
+    monkeypatch.setattr(providers, "harness_researcher", lambda **_kwargs: researcher)
 
     class _Progress:
         job_id = "job-1"
         def log(self, line): pass
         def set(self, *a, **k): pass
         def check(self): pass
+        def partial(self, result): pass
 
     result = tasks.compare_ask(settings, {
         "draft_id": made["draft_id"], "question_id": asked["question_id"],
         "question": asked["question"]}, _Progress())
-    assert result["answer"].startswith("The first one")
+    assert result["answer"].startswith("The listing shows 5W-30")
     assert result["saved_checks"] == [
-        {"name": "One", "risks": 1}, {"name": "Two", "risks": 0}]
+        {"name": "Acme 5W-30 oil", "risks": 0}, {"name": "Acme 0W-20 oil", "risks": 1}]
     assert result["brief_chars"] == len(researcher.prompt)
-    assert result["web_searches"] == 0
-    assert (result["model"], result["tokens_used"], result["tokens_in"], result["tokens_out"]) == (
-        "small:4b", 141, 100, 41)
-    assert "QUESTION: which has the cheaper known fix?" in researcher.prompt
-    assert "## One" in researcher.prompt and "## Two" in researcher.prompt
+    assert result["sources"] == [{"url": "https://owner.example/manual",
+                                   "domain": "owner.example"}]
+    assert result["model"] == "codex"
+    assert researcher.product == "Acme 5W-30 oil, Acme 0W-20 oil"
+    assert researcher.question == "Is the first oil right for my car?"
+    assert "QUESTION: Is the first oil right for my car?" in researcher.prompt
+    assert "## Acme 5W-30 oil" in researcher.prompt and "## Acme 0W-20 oil" in researcher.prompt
+    assert "2018 Honda Civic" in researcher.prompt and "1.5L turbo" in researcher.prompt
+    assert "SAE 5W-30 full synthetic engine oil." in researcher.prompt
+    assert "Search the web" in researcher.prompt
     conn = state.connect(settings.app_state_path)
     stored = state.compare_questions(conn, made["draft_id"])
     conn.close()
-    assert stored[0]["answer"].startswith("The first one")
+    assert stored[0]["answer"].startswith("The listing shows 5W-30")
+    assert stored[0]["sources"] == result["sources"]
     assert stored[0]["job_id"] == "job-1"
 
 
@@ -199,9 +230,9 @@ def test_small_compare_brief_keeps_each_product_and_names_omissions():
     assert all(f"## Product {i}" in bounded for i in range(4))
 
 
-def test_local_comparison_probes_only_the_model(monkeypatch, tmp_path):
+def test_structured_local_completion_probes_only_the_model(monkeypatch, tmp_path):
     from app import localplane
-    from app.web.tasks import _local_compare_completer
+    from app.web.tasks import _local_structured_completer
 
     probed = []
 
@@ -215,11 +246,11 @@ def test_local_comparison_probes_only_the_model(monkeypatch, tmp_path):
     settings = type("Settings", (), {"app_state_path": tmp_path / "app.sqlite"})()
     logged = []
     progress = type("Progress", (), {"log": lambda self, line: logged.append(line)})()
-    socket = _local_compare_completer(settings, {}, progress)
+    socket = _local_structured_completer(settings, {}, progress)
     assert probed == [False]
     assert socket.serving_name == "a-larger-model:27b"
     assert socket.reasoning_effort == "none"
-    assert "saved checks only" in logged[0]
+    assert "local structured completion" in logged[0]
 
 
 def test_a_question_about_a_shortlist_of_one_is_refused(client, monkeypatch):

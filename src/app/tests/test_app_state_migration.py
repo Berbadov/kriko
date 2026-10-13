@@ -82,6 +82,36 @@ def test_a_column_added_to_the_schema_reaches_an_existing_file(tmp_path):
     conn.close()
 
 
+def test_old_compare_questions_gain_empty_sources_without_losing_answers(tmp_path):
+    path = tmp_path / "app.sqlite"
+    old = sqlite3.connect(path)
+    old.executescript("""
+        CREATE TABLE compare_questions (
+          draft_id TEXT NOT NULL,
+          question_id TEXT NOT NULL,
+          question TEXT NOT NULL,
+          answer TEXT NOT NULL DEFAULT '',
+          job_id TEXT NOT NULL DEFAULT '',
+          asked_at TEXT NOT NULL DEFAULT '',
+          answered_at TEXT NOT NULL DEFAULT '',
+          PRIMARY KEY (draft_id, question_id)
+        );
+    """)
+    old.execute(
+        "INSERT INTO compare_questions (draft_id, question_id, question, answer)"
+        " VALUES ('draft', 'question', 'which is better?', 'The first one.')")
+    old.commit()
+    old.close()
+
+    conn = state.connect(path)
+    row = state.compare_questions(conn, "draft")[0]
+    columns = {one[1] for one in conn.execute("PRAGMA table_info(compare_questions)")}
+    conn.close()
+    assert "sources_json" in columns
+    assert row["answer"] == "The first one."
+    assert row["sources"] == []
+
+
 def test_the_reconciler_reports_exactly_what_it_added(tmp_path):
     path = tmp_path / "app.sqlite"
     conn = sqlite3.connect(path)

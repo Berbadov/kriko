@@ -299,6 +299,27 @@ def test_unreported_runtime_device_stays_unknown_and_controls_stay_external(stub
     assert not runtime["supported"]
 
 
+def test_ollama_runtime_matches_implicit_latest_and_reports_actual_device(monkeypatch):
+    import io
+
+    from app.localruntime import inspect, options
+
+    monkeypatch.setattr(local_inference.urllib.request, "urlopen", lambda *_args, **_kwargs:
+                        io.BytesIO(json.dumps({"models": [{
+                            "name": "gemma4:latest", "size": 2000,
+                            "size_vram": 0, "context_length": 4096,
+                        }]}).encode()))
+    runtime = inspect("http://ollama.test", "Ollama", "gemma4",
+                      {prefs.LOCAL_DEVICE: "gpu", prefs.LOCAL_GPU_LAYERS: ""})
+
+    assert runtime["loaded"] is True
+    assert runtime["requested_device"] == "gpu"
+    assert runtime["device"] == "cpu"
+    assert runtime["device_source"] == "Ollama /api/ps"
+    assert "despite the GPU request" in runtime["reason"]
+    assert options({prefs.LOCAL_DEVICE: "gpu"})["num_gpu"] == -1
+
+
 def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):
     """A reasoning model left at full effort spends the reply's whole budget
     on thinking and writes nothing; the socket asks for low effort on the

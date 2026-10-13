@@ -8,8 +8,10 @@ Asked not to think it answers the same prompt in under a second.
 import io
 import json
 import urllib.error
+import pytest
 
 from app.providers import pagereader
+from app.providers import local_inference
 from app.providers.local_inference import OpenAICompatSocket
 
 
@@ -132,6 +134,15 @@ def test_native_ollama_maps_the_json_object_compatibility_spelling():
                 "type": "json_object", "schema": {"type": "array"}}}
 
     assert one._native(body, stream=False)["format"] == {"type": "array"}
+
+
+def test_structured_prompt_budget_uses_runtime_context_and_utf8_bytes():
+    one, sent = _socket(runtime_options={"num_ctx": 4096})
+    one.max_tokens = 768
+    one.json("é" * 2000, {"type": "array"})
+    assert sent and one.prompt_bytes_allowed() == (4096 - 768 - 128 - 128) * 2
+    with pytest.raises(local_inference.LocalInferenceError, match="context budget"):
+        one.json("界" * 3000, {"type": "array"})
 
 
 def test_utf8_decoded_as_windows_1252_is_repaired_line_by_line():

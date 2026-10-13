@@ -132,6 +132,7 @@ class LocalAsker:
         self.coverage: dict = {}
         self.search_coverage: dict = {}
         self.page_titles: dict[str, str] = {}
+        self.relevant_sources: dict[str, str] = {}
         self.given_sources = given_sources
         self.requested_specs = requested_specs
         self.metrics: list[dict] = []
@@ -219,6 +220,10 @@ class LocalAsker:
             self.check_cancelled()
 
     def ask(self, prompt: str) -> str:
+        self.sources = {}
+        self.relevant_sources = {}
+        self.page_titles = {}
+        self.search_coverage = {}
         if prompt.startswith("# Quick look:"):
             return self.quicklook(prompt, product=identity.product_line(prompt))
         if self.given_sources is not None:
@@ -305,8 +310,20 @@ class LocalAsker:
         try:
             return QuickLookPipeline(self).run(prompt, product, page)
         finally:
+            self.relevant_sources = dict(self.sources)
+            self._refresh_runtime()
             self.telemetry.update(coverage=self.coverage, identity=self.identity,
-                                  stages=self.metrics)
+                                  stages=self.metrics, runtime=self.runtime)
+
+    def _refresh_runtime(self) -> None:
+        """Read Ollama's actual device allocation while the model is still loaded."""
+        if not self.runtime or self.runtime.get("runtime") != "Ollama":
+            return
+        from app.localruntime import inspect
+
+        current = inspect(self.url, "Ollama", self.model,
+                          self.runtime.get("settings", {}))
+        self.runtime.update(current)
 
     def _blocks(self, pages: list[tuple[str, str]]) -> str:
         # The model selects an evidence passage; the engine copies its bytes.
@@ -493,8 +510,10 @@ class LocalAsker:
                                 "pages_duplicate": 0, "pages_selected": 0,
                                 "pages_service_offers": 0,
                                 "publishers_read": 0, "pages_timed_out": 0}
+        self.relevant_sources = {}
         if self.given_sources is not None:
             self.sources = dict(self.given_sources)
+            self.relevant_sources = dict(self.sources)
             return list(self.sources.items())
         limit = 10 if prefer_issues else HITS_PER_QUERY
 
@@ -540,6 +559,12 @@ class LocalAsker:
             if re.search(r"\b(?:forums?|threads?|communities|community|discussion|discuss|"
                          r"boards?|subreddit)\b|/r/|/comments/|/t/", label):
                 return 3
+            if re.search(r"\b(?:manuals?|technical data|technical document(?:ation)?|"
+                         r"specifications?|datasheets?|product support|service bulletins?|"
+                         r"recalls?|fiche technique|manuel|données techniques|"
+                         r"technische daten|handbuch|ficha técnica|manual de usuario|"
+                         r"teknik özellikler|kullanım kılavuzu)\b|/manual|/support|/datasheet", label):
+                return 3
             if re.search(r"\b(?:problems?|issues?|failures?|broken|defects?|repair|"
                          r"troubleshoot\w*|pannes?|problèmes?|défauts?|réparation|"
                          r"sorun\w*|arıza\w*|tamir|fehler|defekt\w*)\b", label):
@@ -551,8 +576,23 @@ class LocalAsker:
                 return -1
             return 0
 
+        def title_relevance(url: str) -> tuple[int, int]:
+            """Rank result titles by the supplied identity, without guessing a category."""
+            if identity is None:
+                return (0, 0)
+            from app.providers.local_identity import anchor_terms, fold
+
+            title = self.page_titles.get(url, "") + " " + url
+            folded = fold(title)
+            terms = anchor_terms(identity)
+            exact = sum(bool(term and fold(term) in folded) for term in terms)
+            tokens = {token for term in terms for token in re.findall(r"[^\W_]+", fold(term))
+                      if len(token) >= 4}
+            overlap = len(tokens & set(re.findall(r"[^\W_]+", folded)))
+            return exact, overlap
+
         if prefer_issues:
-            wanted.sort(key=issue_priority, reverse=True)
+            wanted.sort(key=lambda url: (title_relevance(url), issue_priority(url)), reverse=True)
         domains: set[str] = set()
         diverse: list[str] = []
         repeated: list[str] = []
@@ -571,7 +611,10 @@ class LocalAsker:
                     domains.add(domain)
                     diverse.append(url)
             prioritized.extend(diverse + repeated)
-        wanted = prioritized[:max(24, min(150, self.max_pages * 5))]
+        # Only a few replacement candidates are useful: a long tail of weak
+        # search hits made unrelated video/shop pages spend the whole fetch
+        # deadline before a usable report or product document was reached.
+        wanted = prioritized[:self.max_pages + SPARE_PAGES]
 
         def read_one(url: str) -> tuple[str, str]:
             try:
@@ -584,7 +627,7 @@ class LocalAsker:
         pages: list[tuple[str, str]] = []
         fingerprints, read_domains = set(), set()
         queue = iter(wanted)
-        deadline = time.monotonic() + (40.0 if prefer_issues else READ_DEADLINE)
+        deadline = time.monotonic() + READ_DEADLINE
         pool = ThreadPoolExecutor(max_workers=4)
         pending: dict[Future, str] = {}
         def fill() -> None:
@@ -639,6 +682,7 @@ class LocalAsker:
             pool.shutdown(wait=False, cancel_futures=True)
         self.search_coverage["pages_selected"] = len(pages)
         self.search_coverage["publishers_read"] = len(read_domains)
+        self.relevant_sources = dict(self.sources)
         self._say(f"read {self.search_coverage['pages_read']} page(s) from "
                   f"{len(read_domains)} publisher buckets; selected {len(pages)} usable product pages")
         return pages

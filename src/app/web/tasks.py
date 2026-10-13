@@ -269,18 +269,13 @@ def _wire_researcher_text(researcher, progress: Progress) -> None:
         researcher.on_text = draft
 
 
-def _local_compare_completer(settings, params: dict, progress: Progress):
-    """A saved comparison needs the local model, not a search service.
-
-    The checks have already been read and grounded. Asking the web again
-    spends a planning call, search calls and page context on unrelated pages.
-    This socket sees only the stored table and cannot quietly replace it.
-    """
+def _local_structured_completer(settings, params: dict, progress: Progress):
+    """A bounded local completion for structured tasks without web research."""
     from app.providers.local_inference import OpenAICompatSocket
 
     plan = _local_plan({**params, "app_state_path": settings.app_state_path},
                        with_search=False)
-    progress.log(f"local comparison: {plan['line']}; using saved checks only")
+    progress.log(f"local structured completion: {plan['line']}")
     return OpenAICompatSocket(
         plan["url"], plan["model"], timeout=plan["timeout"],
         max_tokens=2048, reasoning_effort="none", runtime_options=plan.get("runtime_options"),
@@ -2067,28 +2062,75 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     billed = getattr(researcher, "cost_basis", "") == "per_token"
     coverage = getattr(researcher, "coverage", None)
     coverage = coverage if isinstance(coverage, dict) else {}
-    empty_messages = {
-        "no_matching_product_evidence": "No pages matched this exact product. This is insufficient evidence to conclude that the product has no problems.",
-        "evidence_rejected": "Relevant pages were checked, but candidate findings did not pass the evidence checks. This is insufficient evidence to conclude that the product has no problems.",
-        "no_supported_findings": "Relevant pages were checked, but none supported a finding. This is insufficient evidence to conclude that the product has no problems.",
-        "partial": "Some research stages were incomplete. This is insufficient evidence to conclude that the product has no problems.",
+    if coverage.get("status") == "answer_completed":
+        from app.packauthor import _payload
+        parsed = _payload(reply) or quicklook.closed(reply)
+        if (isinstance(parsed, dict) and isinstance(parsed.get("risks"), list)
+                and isinstance(parsed.get("specs"), list)
+                and not parsed["risks"] and not found.get("dropped")):
+            coverage["status"] = "no_supported_findings"
+    no_issues_found = _quicklook_has_coverage_for_no_issues(coverage)
+    coverage_message = _quicklook_coverage_message(coverage)
+    if kept:
+        diagnostic = {"code": "issues_found", "message": ""}
+    elif no_issues_found:
+        relevant = int(coverage.get("pages_relevant") or 0)
+        passes = int(coverage.get("answer_passes") or coverage.get("pages_extracted") or 0)
+        diagnostic = {
+            "code": "no_issues_found",
+            "message": (f"No supported issues were found in {relevant} relevant "
+                        f"page(s) checked ({passes} completed check(s)). "
+                        + coverage_message),
+        }
+    else:
+        status = str(coverage.get("status") or "")
+        incomplete = status == "partial" or any(
+            coverage.get(key) for key in
+            ("pages_timed_out", "pages_unreadable", "search_errors", "errors"))
+        messages = {
+            "no_matching_product_evidence": "No pages matched this exact product. "
+                "This is insufficient evidence to conclude that the product has no problems.",
+            "evidence_rejected": "Relevant pages were checked, but candidate findings "
+                "did not pass the evidence checks. This is insufficient evidence to "
+                "conclude that the product has no problems.",
+            "no_supported_findings": "Relevant pages were checked, but the evidence "
+                "pass did not complete with enough coverage to report a negative result.",
+            "partial": "Some research stages were incomplete. This is insufficient "
+                "evidence to conclude that the product has no problems.",
+        }
+        default = ("No supported issues were kept. This is insufficient evidence to "
+                   "conclude that the product has no problems.")
+        diagnostic = {"code": "partial" if incomplete else "insufficient_evidence",
+                      "message": messages.get(status, default)}
+        if coverage_message:
+            diagnostic["message"] += " " + coverage_message
+        if found["specs"]:
+            diagnostic["message"] += (f" {len(found['specs'])} sourced product "
+                                       "specification(s) were retained.")
+    page_value = params.get("page")
+    page: dict = page_value if isinstance(page_value, dict) else {}
+    facts_value = page.get("facts")
+    listing: dict[str, Any] = {
+        "url": str(params.get("page_url") or "").strip(),
+        "facts": facts_value if isinstance(facts_value, dict) else {},
+        "description": str(page.get("description") or "").strip(),
     }
-
-    empty_message = (
-        empty_messages.get(
-            str(coverage.get("status") or ""),
-            "Pages were read, but no supported findings were kept. This is insufficient evidence to conclude that the product has no problems.",
-        )
-        if not kept and not found["specs"] else ""
-    )
+    relevant_sources = getattr(researcher, "relevant_sources", None)
+    evidence_pages = _quicklook_evidence_pages(
+        relevant_sources if isinstance(relevant_sources, dict)
+        else getattr(researcher, "sources", None), found,
+        selected=isinstance(relevant_sources, dict))
     result_message = quicklook.outcome(
-        reply, found, finish_reason=str(getattr(researcher, "last_finish_reason", "")))
+        reply, found, finish_reason=str(getattr(researcher, "last_finish_reason", "")),
+        coverage=coverage)
     progress.set(1.0, result_message
         + (f", {found['dropped']} unsourced dropped" if found["dropped"] else "")
         + ((f", ${spent:.2f}" if spent is not None else ", cost unknown") if billed else ""))
     return {
-        "product": product,
         **found,
+        "product": str(found.get("product") or product),
+        "listing": listing,
+        "evidence_pages": evidence_pages,
         "verification": verification,
         "identity": getattr(researcher, "identity", {}),
         "coverage": coverage,
@@ -2101,8 +2143,7 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         "tokens_used": getattr(researcher, "tokens_used", None),
         "telemetry": getattr(researcher, "telemetry", {}),
         "runtime": getattr(researcher, "runtime", {}),
-        "diagnostic": {"code": "answer" if kept or found["specs"] else "no_supported_findings",
-                       "message": empty_message},
+        "diagnostic": diagnostic,
         "measurement": {
             "tokens_in": getattr(researcher, "tokens_in", None),
             "tokens_out": getattr(researcher, "tokens_out", None),
@@ -2110,6 +2151,67 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             "stages": stages,
         },
     }
+
+
+def _quicklook_has_coverage_for_no_issues(coverage: dict) -> bool:
+    """A negative result needs relevant pages and completed evidence passes."""
+    from app import quicklook as quicklook_mod
+    return quicklook_mod.has_complete_negative_coverage(coverage)
+
+
+def _quicklook_coverage_message(coverage: dict) -> str:
+    """A compact account of the evidence pass to carry with its result."""
+    labels = []
+    for key, label in (("pages_read", "pages opened"),
+                       ("pages_relevant", "relevant pages checked"),
+                       ("publishers_read", "publisher buckets"),
+                       ("pages_extracted", "evidence passes"),
+                       ("answer_passes", "completed answer passes"),
+                       ("sources_cited", "cited pages"),
+                       ("pages_unreadable", "unreadable pages"),
+                       ("pages_timed_out", "timed out pages")):
+        value = coverage.get(key)
+        if value is not None:
+            try:
+                labels.append(f"{int(value)} {label}")
+            except (TypeError, ValueError):
+                continue
+    return "Coverage: " + ", ".join(labels) + "." if labels else ""
+
+
+def _quicklook_evidence_pages(sources, found: dict | None = None, *,
+                              selected: bool = False) -> list[dict]:
+    """Persist bounded excerpts from selected pages or pages with kept evidence.
+
+    A raw search results map can include unrelated results. Without the local
+    pipeline's selected `relevant_sources`, retain only pages explicitly cited
+    by a risk or specification.
+    """
+    from urllib.parse import urlparse
+
+    if not isinstance(sources, dict):
+        return []
+    found = found or {}
+    allowed = set()
+    for risk in found.get("risks") or []:
+        for reference in risk.get("sources") or []:
+            if isinstance(reference, dict) and reference.get("url"):
+                allowed.add(str(reference["url"]))
+    for spec in found.get("specs") or []:
+        if isinstance(spec, dict) and spec.get("url"):
+            allowed.add(str(spec["url"]))
+    pages = []
+    for url, text in sources.items():
+        address = str(url or "").strip()
+        host = urlparse(address).hostname if address.startswith(("http://", "https://")) else ""
+        if not host or (not selected and address not in allowed):
+            continue
+        excerpt = " ".join(str(text or "").split())[:1200]
+        pages.append({"url": address, "domain": host.removeprefix("www."),
+                      "excerpt": excerpt})
+        if len(pages) >= 5:
+            break
+    return pages
 
 
 def categorize_quick_look(settings, params: dict, progress: Progress) -> dict:
@@ -2157,7 +2259,7 @@ def categorize_quick_look(settings, params: dict, progress: Progress) -> dict:
         else:
             local = _use_local_ask(settings, params)
             if local:
-                completer = _local_compare_completer(settings, params, progress)
+                completer = _local_structured_completer(settings, params, progress)
                 allowed = completer.prompt_chars_allowed()
                 reply: str | None
                 if len(prompt.encode("utf-8")) > allowed:
@@ -2284,17 +2386,26 @@ def quick_ask(settings, params: dict, progress: Progress) -> dict:
         row = state.get_job(conn, quick_id)
     finally:
         conn.close()
-    if row is None or row.get("kind") != "quick_look" or not row.get("done"):
-        raise ValueError(f"no finished quick look {quick_id} to ask about")
+    if (row is None or row.get("kind") != "quick_look"
+            or row.get("state") != state.SUCCEEDED):
+        raise ValueError(f"no successful quick look {quick_id} to ask about")
 
     quick_params = row.get("params") or {}
     product = str(quick_params.get("product") or "").strip()
     found = row.get("result") or {}
     brief = quicklook_mod.follow_up(question, product, str(found.get("assumed") or ""),
-                                    found.get("risks") or [], found.get("specs") or [])
+                                    found.get("risks") or [], found.get("specs") or [],
+                                    page=quick_params.get("page")
+                                    if isinstance(quick_params.get("page"), dict) else {},
+                                    page_url=str(quick_params.get("page_url") or ""),
+                                    category=str(found.get("category") or ""),
+                                    evidence_pages=found.get("evidence_pages") or [],
+                                    coverage=found.get("coverage")
+                                    if isinstance(found.get("coverage"), dict) else {})
     answer, sources = _ask_about_checks(
         settings, params, progress, brief,
-        timeout=QUICK_LOOK_TIMEOUT_SECONDS, effort="low", follow_up=True)
+        timeout=QUICK_LOOK_TIMEOUT_SECONDS, effort="low", follow_up=True,
+        product=product, question=question)
     if not answer:
         raise ValueError("The agent returned no answer. Try asking again.")
     progress.set(1.0, "answered")
@@ -3451,6 +3562,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     decision support, stored on the question row in `app.sqlite` by
     `answer_compare_question` — never a submission, never a claim.
     """
+    from app import followup
+
     draft_id = str(params.get("draft_id") or "").strip()
     question_id = str(params.get("question_id") or "").strip()
     question = str(params.get("question") or "").strip()
@@ -3463,7 +3576,7 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
             raise ValueError(f"no draft {draft_id}")
         answers = []
         for lookup_id in draft["lookup_ids"]:
-            stored = state.get_lookup(app_state, lookup_id)
+            stored = state.saved_answer(app_state, lookup_id)
             if stored:
                 answers.append(stored)
     finally:
@@ -3473,50 +3586,43 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     progress.set(0.05, "lining up the shortlist")
     for stored in answers:
         progress.log(f"{stored['label']}: {len(stored['response'].get('claims') or [])} known risk(s)")
-    local = _use_local_ask(settings, params)
     agent: dict = {}
-    if local:
-        completer = _local_compare_completer(settings, params, progress)
-        brief = _compare_brief(
-            question, answers,
-            max_chars=max(3000, completer.context_chars - 2500),
-        )
-        progress.log(f"comparison brief: {len(brief)} characters from saved checks; no web search")
-        progress.set(0.2, f"asking: {question[:120]}")
-        reply = completer(brief).strip()
-        progress.check()
-    else:
-        brief = _compare_brief(question, answers)
+    products = ", ".join(str(stored.get("label") or "").strip()[:120]
+                          for stored in answers if stored.get("label"))[:1000]
+    context = _compare_brief(question, answers, max_chars=10000)
+    brief = followup.web_brief(question, product=products, context=context)
+    progress.log(f"comparison brief: {len(brief)} characters from {len(answers)} saved checks")
 
-        def report_agent(identity: dict) -> None:
-            agent.update(identity)
+    def report_agent(identity: dict) -> None:
+        agent.update(identity)
 
-        reply, _ = _ask_about_checks(settings, params, progress, brief,
-                                     on_agent=report_agent)
-    progress.log(reply[:4000] or "(the agent printed nothing)")
+    answer, sources = _ask_about_checks(
+        settings, {**params, "max_tokens": followup.MAX_TOKENS}, progress, brief,
+        on_agent=report_agent, timeout=COMPARE_ASK_TIMEOUT_SECONDS,
+        effort="low", follow_up=True, product=products, question=question)
+    if not answer:
+        raise ValueError("The agent returned no answer. Try asking again.")
+    progress.log(answer[:4000])
     progress.set(0.9, "writing the answer down")
     app_state = state.connect(settings.app_state_path)
     try:
         row = state.answer_compare_question(
-            app_state, draft_id, question_id, reply, progress.job_id)
+            app_state, draft_id, question_id, answer, progress.job_id, sources)
     finally:
         app_state.close()
     if not row:
         raise ValueError("the question is gone — the draft was deleted while it ran")
-    progress.set(1.0, "answered" if reply else "the agent printed nothing")
+    progress.set(1.0, "answered")
     source_summary = [
         {"name": str(stored["label"]),
          "risks": len(stored["response"].get("claims") or [])}
         for stored in answers
     ]
     return {
-        "draft_id": draft_id, "question_id": question_id, "answer": reply,
-        "source": "saved checks", "saved_checks": source_summary,
-        "brief_chars": len(brief), "web_searches": 0 if local else None,
-        "model": str(getattr(completer, "model", "") if local else agent.get("model", "")),
-        "tokens_used": getattr(completer, "tokens_used", None) if local else None,
-        "tokens_in": getattr(completer, "tokens_in", None) if local else None,
-        "tokens_out": getattr(completer, "tokens_out", None) if local else None,
+        "draft_id": draft_id, "question_id": question_id, "answer": answer,
+        "sources": sources, "agent": agent,
+        "source": "saved checks and web research", "saved_checks": source_summary,
+        "brief_chars": len(brief), "model": str(agent.get("model", "")),
     }
 
 
@@ -3562,7 +3668,9 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
     brief = followup.web_brief(question, product=str(stored.get("label") or ""),
                                context="\n".join(lines))
     reply, sources = _ask_about_checks(settings, params, progress, brief,
-                                       on_agent=report_agent, follow_up=True)
+                                       on_agent=report_agent, follow_up=True,
+                                       product=str(stored.get("label") or ""),
+                                       question=question)
     if not reply:
         raise ValueError("The agent returned no answer. Try asking again.")
     progress.set(1.0, "answered")
@@ -3573,7 +3681,8 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
 def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       on_agent: Callable[[dict], None] | None = None,
                       timeout: float = 0.0, effort: str = "",
-                      follow_up: bool = False) -> tuple[str, list[dict]]:
+                      follow_up: bool = False, product: str = "",
+                      question: str = "") -> tuple[str, list[dict]]:
     """The reader's plane answers one brief. Returns the reply and the pages behind it.
 
     A `follow_up` answer is written into the job as the agent writes it
@@ -3627,7 +3736,11 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
 
         researcher.on_text = stream
     progress.set(0.2, f"asking: {str(params.get('question') or params.get('q') or '')[:120]}")
-    reply = researcher.ask(brief).strip()
+    host_followup = getattr(researcher, "ask_followup", None)
+    if follow_up and not local and callable(host_followup):
+        reply = host_followup(brief, product=product, question=question).strip()
+    else:
+        reply = researcher.ask(brief).strip()
     progress.check()
     if not follow_up:
         return reply, []
@@ -3672,6 +3785,41 @@ def _recorded_lines(stored: dict) -> list[str]:
     """
     response = stored["response"]
     lines = [f"## {stored['label']}"]
+    category = str(response.get("category") or "").strip()
+    assumed = str(response.get("assumed") or "").strip()
+    if category:
+        lines.append(f"Product category: {category}")
+    if assumed:
+        lines.append(f"Variant assumption: {assumed}")
+    diagnostic = response.get("diagnostic")
+    if isinstance(diagnostic, dict) and diagnostic.get("message"):
+        lines.append(f"Research outcome: {diagnostic['message']}")
+    coverage = response.get("coverage")
+    if isinstance(coverage, dict) and coverage:
+        counts = [f"{coverage[key]} {label}" for key, label in (
+            ("pages_read", "pages opened"),
+            ("pages_relevant", "relevant pages checked"),
+            ("pages_extracted", "evidence passes"),
+            ("publishers_read", "publisher buckets"),
+        ) if coverage.get(key) is not None]
+        status = str(coverage.get("status") or "")
+        lines.append("Research coverage: " + ", ".join(
+            ([f"status {status}"] if status else []) + counts))
+    identity = response.get("identity")
+    if isinstance(identity, dict) and identity:
+        lines.append("Product identity recorded:")
+        lines.extend(f"- {key}: {value}" for key, value in identity.items())
+    listing = response.get("listing")
+    if isinstance(listing, dict):
+        url = str(listing.get("url") or "").strip()
+        if url:
+            lines.append(f"Listing page: {url}")
+        facts = listing.get("facts") if isinstance(listing.get("facts"), dict) else {}
+        if facts:
+            lines.append("Product facts copied from its listing:")
+            lines.extend(f"- {key}: {value}" for key, value in facts.items())
+        if listing.get("description"):
+            lines.append(f"Seller description: {listing['description']}")
     claims = response.get("claims") or []
     if claims:
         lines.append("Known risks:")
@@ -3686,11 +3834,29 @@ def _recorded_lines(stored: dict) -> list[str]:
             lines.extend(_source_lines(claim))
     else:
         lines.append("Known risks: none recorded.")
+    specs = response.get("specs") or []
+    if specs:
+        lines.append("Recorded product specifications:")
+        for spec in specs:
+            if not isinstance(spec, dict):
+                continue
+            name, value = str(spec.get("name") or ""), str(spec.get("value") or "")
+            if not (name and value):
+                continue
+            lines.append(f"- {name}: {value}")
+            url = str(spec.get("url") or "").strip()
+            quote = " ".join(str(spec.get("quote") or "").split())
+            if url:
+                lines.append(f"  Source: {url}" + (f' — “{quote}”' if quote else ""))
     if response.get("context"):
         units = _context_units_of(response)
         for key, value in sorted(response["context"].items()):
             unit = units.get(key, "")
             lines.append(f"- {key}: {value}{(' ' + unit) if unit else ''}")
+    for page in (response.get("evidence_pages") or [])[:5]:
+        if isinstance(page, dict) and page.get("url"):
+            excerpt = " ".join(str(page.get("excerpt") or "").split())[:700]
+            lines.append(f"Page read: {page['url']}" + (f" — {excerpt}" if excerpt else ""))
     lines.append("")
     return lines
 
@@ -3729,6 +3895,48 @@ def _compact_compare_brief(lines: list[str], question: str,
         units = _context_units_of(response)
         for key, value in sorted((response.get("context") or {}).items()):
             item = f"- {str(key)[:80]}: {str(value)[:120]} {str(units.get(key, ''))[:30]}".rstrip()
+            if len(item) + 1 > room:
+                break
+            section.append(item)
+            room -= len(item) + 1
+        identity = response.get("identity")
+        if isinstance(identity, dict):
+            for key, value in list(identity.items())[:8]:
+                item = f"- product identity: {str(key)[:80]} = {str(value)[:120]}"
+                if len(item) + 1 > room:
+                    break
+                section.append(item)
+                room -= len(item) + 1
+        listing = response.get("listing")
+        if isinstance(listing, dict):
+            facts = listing.get("facts")
+            facts = facts if isinstance(facts, dict) else {}
+            for key, value in list(facts.items())[:8]:
+                item = f"- listing fact: {str(key)[:80]} = {str(value)[:140]}"
+                if len(item) + 1 > room:
+                    break
+                section.append(item)
+                room -= len(item) + 1
+        specs = [spec for spec in (response.get("specs") or [])
+                 if isinstance(spec, dict) and spec.get("name") and spec.get("value")]
+        for spec in specs:
+            item = (f"- specification: {str(spec['name'])[:100]} = "
+                    f"{str(spec['value'])[:180]}")
+            url = str(spec.get("url") or "").strip()
+            quote = " ".join(str(spec.get("quote") or "").split())[:140]
+            if url:
+                item += f'\n    source: {url}' + (f' “{quote}”' if quote else "")
+            if len(item) + 1 > room:
+                continue
+            section.append(item)
+            room -= len(item) + 1
+        for page in (response.get("evidence_pages") or [])[:2]:
+            if not isinstance(page, dict) or not page.get("url"):
+                continue
+            item = f"- relevant page read: {str(page['url'])[:250]}"
+            excerpt = " ".join(str(page.get("excerpt") or "").split())[:120]
+            if excerpt:
+                item += f' "{excerpt}"'
             if len(item) + 1 > room:
                 break
             section.append(item)

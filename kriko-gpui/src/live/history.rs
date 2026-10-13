@@ -197,6 +197,15 @@ pub struct Detail {
     pub claims: Vec<ClaimView>,
 }
 
+/// A saved Quick Look's complete job result, reopened from history.
+#[derive(Clone)]
+pub struct QuickLookDetail {
+    pub id: String,
+    pub product: String,
+    pub state: String,
+    pub result: Value,
+}
+
 #[derive(Clone)]
 pub struct Draft {
     pub name: String,
@@ -297,6 +306,9 @@ pub struct State {
     pub pack: Option<String>,
     pub open: Option<String>,
     pub detail: Option<Detail>,
+    pub quick_look_detail: Option<QuickLookDetail>,
+    pub quick_look_loading: bool,
+    pub quick_look_error: Option<String>,
     /// The check whose Forget key was pressed once.
     pub forget_armed: Option<String>,
     // Home
@@ -467,6 +479,25 @@ fn detail_from(id: &str, v: &Value) -> Detail {
                     .collect(),
             })
             .collect(),
+    }
+}
+
+fn quick_look_detail_from(id: &str, v: &Value) -> QuickLookDetail {
+    let params = v.get("params").cloned().unwrap_or(Value::Null);
+    let result = v.get("result").cloned().unwrap_or(Value::Null);
+    let product = api::s(&params, "product");
+    let category = api::s(&params, "category");
+    QuickLookDetail {
+        id: id.to_string(),
+        product: if !product.is_empty() {
+            product
+        } else if !category.is_empty() {
+            category
+        } else {
+            api::s(&result, "product")
+        },
+        state: api::s(v, "state"),
+        result,
     }
 }
 
@@ -662,15 +693,37 @@ impl Kriko {
         if h.open.as_deref() == Some(id.as_str()) {
             h.open = None;
             h.detail = None;
+            h.quick_look_detail = None;
+            h.quick_look_loading = false;
+            h.quick_look_error = None;
             return;
         }
         h.open = Some(id.clone());
         h.detail = None;
+        h.quick_look_detail = None;
+        h.quick_look_loading = false;
+        h.quick_look_error = None;
         h.category_picker = None;
         let quick_look = h.history_rows().iter().any(|item| {
             item.id == id && item.source == "quick_look"
         });
         if quick_look {
+            let job_id = id.strip_prefix("job:").unwrap_or(&id).to_string();
+            self.live.history.quick_look_loading = true;
+            let path = format!("/api/jobs/{}", api::seg(&job_id));
+            self.fetch(cx, move || api::get(&path), move |this, reply, _| {
+                let history = &mut this.live.history;
+                if history.open.as_deref() != Some(id.as_str()) {
+                    return;
+                }
+                history.quick_look_loading = false;
+                match reply {
+                    Ok(value) => {
+                        history.quick_look_detail = Some(quick_look_detail_from(&id, &value));
+                    }
+                    Err(error) => history.quick_look_error = Some(error.message),
+                }
+            });
             cx.notify();
             return;
         }
@@ -1029,6 +1082,23 @@ mod lookup_note_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_saved_quick_look_keeps_its_product_facts_when_reopened() {
+        let job = serde_json::json!({
+            "state": "succeeded",
+            "params": {"product": "Example product"},
+            "result": {
+                "listing": {"facts": [{"name": "Rated output", "value": "18 W"}]},
+                "specs": [{"name": "Capacity", "value": "2 L", "quote": "Capacity: 2 L", "url": "https://example.test/specs"}]
+            }
+        });
+        let detail = quick_look_detail_from("job:look-1", &job);
+        assert_eq!(detail.product, "Example product");
+        assert_eq!(detail.state, "succeeded");
+        assert_eq!(detail.result["listing"]["facts"][0]["value"], "18 W");
+        assert_eq!(detail.result["specs"][0]["quote"], "Capacity: 2 L");
+    }
 
     #[test]
     fn the_engines_stamps_parse_to_utc_seconds() {

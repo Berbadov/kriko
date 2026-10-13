@@ -86,8 +86,10 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
             if let Some(next) = terminal_next_step(app, job, motion, cx) {
                 page = page.child(next);
             }
-            if let Some(evidence) = local_quick_look_card(job) {
-                page = page.child(evidence);
+            if job.kind == "quick_look" && job.done {
+                if let Some(evidence) = quick_look_result_card(&job.result, &job.product, &job.state) {
+                    page = page.child(evidence);
+                }
             }
             if let Some(answer) = answer_card(job) {
                 page = page.child(answer);
@@ -251,41 +253,127 @@ fn answer_card(job: &Job) -> Option<Div> {
     Some(result)
 }
 
-/// The quick look's saved result, separate from its narrated job log. The
-/// cited pages are the ones behind the returned cards; the log lists the
-/// larger set of pages that the local agent considered.
-fn local_quick_look_card(job: &Job) -> Option<Div> {
-    if job.kind != "quick_look" || (job.backend != "local" && job.harness != "local")
-        || !job.done || job.result.is_null() {
+/// Render the saved result separately from the narrated job log. This accepts
+/// every quick-look backend so a persisted result is still readable in
+/// history after the active run has gone away.
+pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str) -> Option<Div> {
+    if result.is_null() {
         return None;
     }
-    let result = &job.result;
     let model = api::s(result, "model");
-    let tokens = api::n(result, "tokens_used")
-        .map(|n| format!("{} tokens", n as u64))
-        .unwrap_or_else(|| "Token use not reported by this model server".into());
     let risks = api::arr(result, "risks");
     let specs = api::arr(result, "specs");
     let dropped = api::n(result, "dropped").unwrap_or(0.0) as usize;
-    let mut urls = Vec::<String>::new();
-    for risk in risks {
-        for source in api::arr(risk, "sources") {
-            let url = api::s(source, "url");
-            if !url.is_empty() && !urls.contains(&url) {
-                urls.push(url);
+    let coverage = result.get("coverage")
+        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")))
+        .filter(|value| value.is_object());
+    let listing = result.get("listing").filter(|value| value.is_object());
+    let mut card = card().flex().flex_col().gap(px(10.0))
+        .child(eyebrow("Quick Look · saved evidence"));
+    let saved_product = api::s(result, "product");
+    let label = if !saved_product.is_empty() { saved_product }
+        else if !product.is_empty() { product.to_string() }
+        else { String::new() };
+    if !label.is_empty() {
+        card = card.child(row_title(&label));
+    }
+    let tokens = api::n(result, "tokens_used")
+        .map(|n| format!("{} tokens", n as u64))
+        .unwrap_or_else(|| "token use not reported".into());
+    card = card.child(row_desc(&format!("{} · {tokens} · {} sourced risk(s) · {} sourced product fact(s) · {} unsupported item(s) omitted",
+        if model.is_empty() { "Model not reported" } else { &model }, risks.len(), specs.len(), dropped)));
+    let diagnostic = result.get("diagnostic").unwrap_or(&Value::Null);
+    let diagnostic_message = api::s(diagnostic, "message");
+    if risks.is_empty() {
+        let message = quick_look_empty_message(result, state);
+        if !message.is_empty() {
+            card = card.child(row_desc(&message));
+        }
+    } else if !diagnostic_message.is_empty() {
+        card = card.child(row_desc(&diagnostic_message));
+    }
+    if let Some(coverage) = coverage {
+        let count = |key: &str| api::n(coverage, key)
+            .map(|value| format!("{value:.0}"))
+            .unwrap_or_else(|| "not reported".into());
+        card = card.child(mono(&format!(
+            "READ {} · PRODUCT MATCHES {} · CHECKED {} · PUBLISHERS {} · CITED {}",
+            count("pages_read"), count("pages_relevant"),
+            count("pages_extracted"), count("publishers_read"), count("sources_cited")), MUTED));
+        let coverage_status = api::s(coverage, "status");
+        let status = match coverage_status.as_str() {
+            "supported_findings" => "Evidence checks kept one or more findings",
+            "partial" => "Some research or evidence stages were incomplete",
+            "no_matching_product_evidence" => "No read page established a match to this exact product",
+            "evidence_rejected" => "Candidate findings did not pass the evidence checks",
+            "no_supported_findings" => "No sourced risks were kept from the pages read",
+            _ if risks.is_empty() => "No sourced risks were kept in the saved result",
+            _ => "Evidence coverage recorded",
+        };
+        if !risks.is_empty() {
+            card = card.child(row_desc(status));
+        }
+        card = card.child(mono(&format!("Pages checked: {} · candidates rejected: {}",
+            count("pages_extracted"), count("rejected_candidates")), DIM));
+    } else if risks.is_empty() && diagnostic_message.is_empty() {
+        card = card.child(row_desc("No sourced risks were kept in the saved result. Coverage details were not reported."));
+    }
+
+    let evidence_pages = api::arr(result, "evidence_pages");
+    if !evidence_pages.is_empty() {
+        card = card.child(hairline()).child(eyebrow("Pages checked"));
+        for (page_index, page) in evidence_pages.iter().enumerate() {
+            let url = api::s(page, "url");
+            let domain = api::s(page, "domain");
+            let excerpt = ["excerpt", "quote", "text", "content"]
+                .iter()
+                .map(|key| api::s(page, key))
+                .find(|text| !text.trim().is_empty())
+                .unwrap_or_default();
+            if !excerpt.is_empty() {
+                card = card.child(row_desc(&short_text(&excerpt, 320)));
+            }
+            if !url.is_empty() {
+                card = card.child(source_link(
+                    gpui::ElementId::named_usize("quicklook-page-source", page_index),
+                    if domain.is_empty() { "Page" } else { &domain },
+                    &url,
+                ));
             }
         }
     }
-    for spec in api::arr(result, "specs") {
-        let url = api::s(spec, "url");
-        if !url.is_empty() && !urls.contains(&url) {
-            urls.push(url);
+
+    if let Some(listing) = listing {
+        let description = api::s(listing, "description");
+        let listing_url = api::s(listing, "url");
+        let facts = listing.get("facts").unwrap_or(&Value::Null);
+        if !description.is_empty() || !listing_url.is_empty() || !facts.is_null() {
+            card = card.child(hairline()).child(eyebrow("Product listing"));
+            if !description.is_empty() {
+                card = card.child(row_desc(&description));
+            }
+            if !listing_url.is_empty() {
+                card = card.child(source_link("quicklook-listing-source", "Listing", &listing_url));
+            }
+            for (fact_index, (name, value, quote, url)) in quick_look_listing_facts(facts).into_iter().enumerate() {
+                card = card.child(row_title(&format!("{name} · {value}")));
+                if !quote.is_empty() {
+                    card = card.child(row_desc(&format!("“{quote}”")));
+                }
+                if !url.is_empty() {
+                    card = card.child(source_link(
+                        gpui::ElementId::named_usize("quicklook-listing-fact-source", fact_index),
+                        "Listing fact",
+                        &url,
+                    ));
+                }
+            }
         }
     }
-    let mut card = card().flex().flex_col().gap(px(10.0))
-        .child(eyebrow("Local quick look · evidence"))
-        .child(row_desc(&format!("{} · {tokens} · {} sourced risks kept · {dropped} unsourced dropped",
-            if model.is_empty() { "Model not reported" } else { &model }, risks.len())));
+    let assumed = api::s(result, "assumed");
+    if !assumed.is_empty() {
+        card = card.child(mono(&format!("Variant assumption · {assumed}"), MUTED));
+    }
     if let Some(identity) = result.get("identity").filter(|value| value.is_object()) {
         let name = api::s(identity, "canonical_name");
         let variant = api::s(identity, "variant");
@@ -294,58 +382,45 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
         let unknowns = api::arr(identity, "unknowns").iter()
             .filter_map(Value::as_str).collect::<Vec<_>>().join(", ");
         let resolved = identity.get("resolved").and_then(Value::as_bool).unwrap_or(false);
-        card = card.child(row_desc(&format!("Identity: {} · {} · {}",
+        let identity_line = format!("Identity · {} · {} · {}",
             if name.is_empty() { "product name not reported" } else { &name },
             if variant.is_empty() { "exact variant unresolved" } else { &variant },
-            if resolved { "resolved" } else { "unresolved" })));
+            if resolved { "resolved" } else { "unresolved" });
+        card = card.child(mono(&identity_line, INK_2));
         if !identifiers.is_empty() {
-            card = card.child(mono(&format!("Identifiers: {identifiers}"), MUTED));
+            card = card.child(mono(&format!("Identifiers · {identifiers}"), MUTED));
         }
         if !unknowns.is_empty() {
-            card = card.child(mono(&format!("Still unknown: {unknowns}"), DIM));
+            card = card.child(mono(&format!("Still unknown · {unknowns}"), DIM));
         }
     }
-    let coverage = result.get("coverage")
-        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")));
-    if let Some(coverage) = coverage.filter(|value| value.is_object()) {
-        let count = |key: &str| api::n(coverage, key)
-            .map(|value| format!("{value:.0}"))
-            .unwrap_or_else(|| "not reported".into());
-        card = card.child(mono(&format!(
-            "READ {} · PRODUCT MATCHES {} · CHECKED {} · PUBLISHERS {} · CITED {}",
-            count("pages_read"), count("pages_relevant"),
-            count("pages_extracted"), count("publishers_read"), count("sources_cited")), MUTED));
-        let status = api::s(coverage, "status");
-        if !status.is_empty() {
-            let status = match status.as_str() {
-                "supported_findings" => "Supported findings kept",
-                "partial" => "Some evidence or language stages were incomplete",
-                "no_matching_product_evidence" => "No page established a match to this product",
-                "evidence_rejected" => "Candidate findings failed the evidence checks",
-                "no_supported_findings" => "No supported findings kept",
-                _ => "Evidence processing incomplete",
-            };
-            card = card.child(row_desc(status));
-            card = card.child(mono(&format!("Evidence passes: {} · candidates rejected: {}",
-                count("pages_extracted"), count("rejected_candidates")), DIM));
-            if risks.is_empty() && specs.is_empty() {
-                card = card.child(row_desc("This is insufficient evidence to conclude that the product has no problems."));
-                if let Some(reasons) = coverage.get("rejection_reasons").and_then(Value::as_object) {
-                    let mut summary = reasons.iter()
-                        .filter_map(|(reason, count)| {
-                            let count = count.as_u64().or_else(|| count.as_i64().map(|n| n.max(0) as u64))?;
-                            (count > 0).then(|| (count, format!("{} ({count})", reason.replace('_', " "))))
-                        })
-                        .collect::<Vec<_>>();
-                    summary.sort_by(|a, b| b.0.cmp(&a.0));
-                    let summary = summary.into_iter().take(3).map(|(_, label)| label).collect::<Vec<_>>();
-                    if !summary.is_empty() {
-                        card = card.child(row_desc(&format!("Candidate rejection reasons: {}", summary.join(" · "))));
-                    }
-                }
-            }
+    if let Some(pack_identity) = result.get("pack_identity") {
+        for fact in quick_look_facts(pack_identity) {
+            card = card.child(mono(&format!("Catalog identity · {fact}"), MUTED));
         }
     }
+    let runtime = result.get("runtime")
+        .filter(|runtime| {
+            !api::s(runtime, "requested_device").is_empty()
+                || !matches!(api::s(runtime, "device").as_str(), "" | "unknown")
+        })
+        .or_else(|| result.get("telemetry").and_then(|telemetry| telemetry.get("runtime")))
+        .filter(|runtime| runtime.is_object());
+    if let Some(runtime) = runtime {
+        let requested = api::s(runtime, "requested_device");
+        let actual = api::s(runtime, "device");
+        let actual = if actual.is_empty() || actual == "unknown" { String::new() } else { actual };
+        let device = match (requested.is_empty(), actual.is_empty()) {
+            (false, false) => format!("Device · requested {requested}, runtime reported {actual}"),
+            (false, true) => format!("Device · requested {requested}, actual use not reported"),
+            (true, false) => format!("Device reported · {actual}"),
+            (true, true) => String::new(),
+        };
+        if !device.is_empty() {
+            card = card.child(mono(&device, MUTED));
+        }
+    }
+
     let verification = result.get("verification").unwrap_or(&Value::Null);
     if verification.is_object() {
         let error = api::s(verification, "error");
@@ -364,13 +439,13 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
         if !note.is_empty() {
             card = card.child(row_desc(&note));
         }
-    } else if let Some(check) = result.get("telemetry").and_then(|t| t.get("self_verify")) {
-        card = card.child(row_desc("Model self-check opinions; exact source quotes remain the evidence gate."));
-        if let Some(verdicts) = check.get("verdicts").and_then(|v| v.as_array()) {
+    } else if let Some(check) = result.get("telemetry").and_then(|telemetry| telemetry.get("self_verify")) {
+        card = card.child(row_desc("Model self-check opinions; source quotes remain the evidence gate."));
+        if let Some(verdicts) = check.get("verdicts").and_then(Value::as_array) {
             for verdict in verdicts {
                 let index = api::n(verdict, "index").unwrap_or(0.0) as usize;
                 let title = risks.get(index).map(|risk| api::s(risk, "title")).unwrap_or_default();
-                let supported = verdict.get("supported").and_then(|v| v.as_bool()).unwrap_or(false);
+                let supported = verdict.get("supported").and_then(Value::as_bool).unwrap_or(false);
                 card = card.child(row_desc(&format!("{} · {} · {}", title,
                     if supported { "supported" } else { "flagged" }, api::s(verdict, "reason"))));
             }
@@ -380,19 +455,184 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
     } else {
         card = card.child(mono("Self-check verdict not recorded for this run", DIM));
     }
-    if urls.is_empty() {
-        card = card.child(mono("No cited page in the saved answer", DIM));
-    } else {
-        card = card.child(mono(&format!("CITED PAGES · {}", urls.len()), DIM));
-        for url in urls {
-            card = card.child(mono(&url, MUTED));
+
+    if !risks.is_empty() {
+        card = card.child(hairline()).child(eyebrow("Sourced risks"));
+        for (risk_index, risk) in risks.iter().enumerate() {
+            let title = api::s(risk, "title");
+            let severity = api::s(risk, "severity");
+            card = card.child(row_title(&if severity.is_empty() { title.clone() }
+                else { format!("{title} · {severity}") }));
+            let body = api::s(risk, "body");
+            if !body.is_empty() {
+                card = card.child(row_desc(&body));
+            }
+            let advice = api::s(risk, "advice");
+            if !advice.is_empty() {
+                card = card.child(mono(&format!("Worth checking · {advice}"), MUTED));
+            }
+            for (source_index, source) in api::arr(risk, "sources").iter().enumerate() {
+                let domain = api::s(source, "domain");
+                let url = api::s(source, "url");
+                let quote = api::s(source, "quote");
+                if !quote.is_empty() {
+                    card = card.child(row_desc(&format!("“{quote}”")));
+                }
+                if !url.is_empty() {
+                    card = card.child(source_link(
+                        gpui::ElementId::named_usize(format!("quicklook-risk-source-{risk_index}"), source_index),
+                        if domain.is_empty() { "Source" } else { &domain },
+                        &url,
+                    ));
+                }
+            }
+        }
+    }
+    if !specs.is_empty() {
+        card = card.child(hairline()).child(eyebrow("Sourced product facts"));
+        for (spec_index, spec) in specs.iter().enumerate() {
+            let name = api::s(spec, "name");
+            let value = api::s(spec, "value");
+            card = card.child(row_title(&format!("{name} · {value}")));
+            let quote = api::s(spec, "quote");
+            if !quote.is_empty() {
+                card = card.child(row_desc(&format!("“{quote}”")));
+            }
+            let url = api::s(spec, "url");
+            if !url.is_empty() {
+                let domain = {
+                    let domain = api::s(spec, "domain");
+                    if domain.is_empty() { "Source".to_string() } else { domain }
+                };
+                card = card.child(source_link(
+                    gpui::ElementId::named_usize("quicklook-spec-source", spec_index),
+                    &domain,
+                    &url,
+                ));
+            }
         }
     }
     Some(card)
 }
 
-/// #112: the follow-up exchange on a finished quick look, answered from its
-/// own findings on the same plane the look ran on.
+/// Normalize both the result's list of `{name,value}` rows and the older
+/// pack-identity map into short, visible product facts.
+fn quick_look_facts(value: &Value) -> Vec<String> {
+    match value {
+        Value::Array(items) => items.iter().filter_map(|item| {
+            let name = api::s(item, "name");
+            let value = api::s(item, "value");
+            if name.is_empty() || value.is_empty() { None } else { Some(format!("{name} · {value}")) }
+        }).collect(),
+        Value::Object(items) => items.iter().map(|(name, value)| {
+            let value = value.as_str().map(str::to_string).unwrap_or_else(|| value.to_string());
+            format!("{name} · {value}")
+        }).collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn quick_look_listing_facts(value: &Value) -> Vec<(String, String, String, String)> {
+    match value {
+        Value::Array(items) => items.iter().filter_map(|item| {
+            let name = api::s(item, "name");
+            let value = api::s(item, "value");
+            if name.is_empty() || value.is_empty() {
+                None
+            } else {
+                Some((name, value, api::s(item, "quote"), api::s(item, "url")))
+            }
+        }).collect(),
+        Value::Object(items) => items.iter().map(|(name, value)| {
+            let value = value.as_str().map(str::to_string).unwrap_or_else(|| value.to_string());
+            (name.clone(), value, String::new(), String::new())
+        }).collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn source_link(id: impl Into<gpui::ElementId>, label: &str, url: &str) -> Stateful<Div> {
+    let full_label = format!("{label} · {url}");
+    let label = if full_label.chars().count() > 92 {
+        format!("{}…", full_label.chars().take(91).collect::<String>())
+    } else {
+        full_label
+    };
+    let link = url.to_string();
+    div()
+        .id(id)
+        .cursor_pointer()
+        .child(mono(&label, ICE))
+        .on_click(move |_, _, cx| cx.open_url(&link))
+}
+
+fn short_text(text: &str, limit: usize) -> String {
+    let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if flat.chars().count() <= limit {
+        return flat;
+    }
+    format!("{}…", flat.chars().take(limit.saturating_sub(1)).collect::<String>())
+}
+
+fn quick_look_empty_message(result: &Value, state: &str) -> String {
+    if !api::arr(result, "risks").is_empty() {
+        return String::new();
+    }
+    let diagnostic = result.get("diagnostic").unwrap_or(&Value::Null);
+    let message = api::s(diagnostic, "message");
+    let coverage = result.get("coverage")
+        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")))
+        .unwrap_or(&Value::Null);
+    let summary = if !message.is_empty() {
+        message
+    } else {
+        match api::s(coverage, "status").as_str() {
+            "no_matching_product_evidence" => "No read page established a match to this exact product.".into(),
+            "evidence_rejected" => "Candidate risks did not pass the evidence checks on the pages read.".into(),
+            "no_supported_findings" => "No sourced risks were kept from the pages read.".into(),
+            "partial" => "Some research stages were incomplete, and no sourced risks were kept.".into(),
+            _ => "No sourced risks were kept in the saved result.".into(),
+        }
+    };
+    let caveat = if state == "succeeded" {
+        "This describes the saved coverage result; it does not prove the product has no problems."
+    } else {
+        "This result is incomplete and does not establish whether the product has problems."
+    };
+    format!("{summary} {caveat}")
+}
+
+#[cfg(test)]
+mod quick_look_result_tests {
+    use super::quick_look_empty_message;
+    use crate::api::Value;
+
+    #[test]
+    fn an_empty_success_describes_coverage_without_claiming_the_product_is_clear() {
+        let result: Value = serde_json::json!({
+            "risks": [],
+            "diagnostic": {"code": "no_issues_found", "message": "No known issues were found in the pages read."},
+            "coverage": {"status": "no_supported_findings", "pages_read": 4}
+        });
+        let message = quick_look_empty_message(&result, "succeeded");
+        assert!(message.contains("No known issues were found in the pages read."));
+        assert!(message.contains("does not prove the product has no problems."));
+    }
+
+    #[test]
+    fn an_unmatched_product_is_reported_as_a_coverage_gap() {
+        let result: Value = serde_json::json!({
+            "risks": [],
+            "coverage": {"status": "no_matching_product_evidence"}
+        });
+        let message = quick_look_empty_message(&result, "succeeded");
+        assert!(message.contains("No read page established a match to this exact product."));
+        assert!(message.contains("does not prove the product has no problems."));
+    }
+}
+
+/// #112: a web-searched follow-up, with the product context and source pages
+/// kept beside the answer.
 fn follow_up_card(
     app: &mut Kriko,
     job_id: String,
@@ -413,14 +653,36 @@ fn follow_up_card(
         }
     });
     let mut c = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Ask a follow-up"))
-        .child(row_desc("Answered from this quick look's findings; no new pages are read."));
-    for a in app.live.run.quick_asks.iter() {
+        .child(row_desc("Follow-ups search the web using this product's saved listing details and Quick Look evidence."));
+    for (ask_index, a) in app.live.run.quick_asks.iter().enumerate() {
         c = c.child(row_title(&a.question));
         if a.done {
             c = c.child(row_desc(if a.answer.is_empty() { "No answer." } else { &a.answer }));
+            if !a.sources.is_empty() {
+                c = c.child(mono("Sources read", DIM));
+                for (source_index, (domain, url)) in a.sources.iter().enumerate() {
+                    c = c.child(source_link(
+                        gpui::ElementId::named_usize(
+                            format!("quick-followup-source-{ask_index}"),
+                            source_index,
+                        ),
+                        if domain.is_empty() { "Source" } else { domain },
+                        url,
+                    ));
+                }
+            } else {
+                c = c.child(row_desc(if a.message.is_empty() {
+                    "No source pages were reported for this answer."
+                } else {
+                    &a.message
+                }));
+            }
         } else {
-            c = c.child(row_desc("Answering\u{2026}"));
+            c = c.child(row_desc("Searching and answering…"));
         }
+    }
+    if app.live.run.quick_asks_loading && app.live.run.quick_asks.is_empty() {
+        c = c.child(row_desc("Loading saved follow-ups…"));
     }
     if let Some(note) = app.live.run.quick_ask_note.clone() {
         c = c.child(row_desc(&note));
