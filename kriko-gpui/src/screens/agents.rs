@@ -32,6 +32,32 @@ fn mcp_word(t: &Target) -> (TagState, &'static str) {
     }
 }
 
+/// The provider's list can contain the same id more than once, and Claude's
+/// moving alias can repeat a numbered model. The engine supplies the current
+/// alias mapping; older versions and named variants remain separate.
+fn model_choices(h: &Harness) -> Vec<String> {
+    let mut names = Vec::with_capacity(h.llms.len() + 1);
+    for name in &h.llms {
+        if h.llm_aliases.get(name).is_some_and(|pin| h.llms.contains(pin)) {
+            continue;
+        }
+        if !names.contains(name) {
+            names.push(name.clone());
+        }
+    }
+    let selected_pin = h.llm_aliases.get(&h.llm);
+    let represented = names.contains(&h.llm)
+        || selected_pin.is_some_and(|pin| names.contains(pin));
+    if !h.llm.is_empty() && !represented {
+        names.insert(0, h.llm.clone());
+    }
+    names
+}
+
+fn model_is_selected(h: &Harness, name: &str) -> bool {
+    name == h.llm || h.llm_aliases.get(&h.llm).is_some_and(|pin| name == pin)
+}
+
 /// The tile's motion: what a running job of this agent is doing; otherwise
 /// still when usable or connected, dark when it is not there, a held breath
 /// when it needs you.
@@ -530,10 +556,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
 fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let mut out = div().flex().flex_col().gap(px(10.0));
     if h.llm_selectable {
-        let mut names: Vec<String> = h.llms.clone();
-        if !h.llm.is_empty() && !names.contains(&h.llm) {
-            names.insert(0, h.llm.clone());
-        }
+        let mut names = model_choices(h);
         out = out.child(app.input_field(Field::ModelSearch, "agent-model-search", "Search models or type an ID", Some("search"), window, cx));
         if !app.model_search.value.trim().is_empty() {
             let id = h.id.clone(); let typed = app.model_search.value.trim().to_string();
@@ -541,6 +564,7 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
         }
         let query = app.model_search.value.trim().to_lowercase();
         names.retain(|name| query.is_empty() || name.to_lowercase().contains(&query));
+        let selected_model = |name: &String| model_is_selected(h, name);
         let mut row = div().id("agent-model-list").h(px(220.0)).min_h(px(0.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation()).flex().flex_col().gap(px(6.0));
         // The local model has no "default" of its own: the server runs one.
         if h.id != "local" {
@@ -557,8 +581,8 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
                 this.pick_agent_model(id.clone(), model.clone(), cx);
                 cx.notify();
             });
-            row = row.child(option_chip(("agent-model", i), name, *name == h.llm)
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), *name == h.llm, 6.0, app.motion)).on_click(pick));
+            row = row.child(option_chip(("agent-model", i), name, selected_model(name))
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), selected_model(name), 6.0, app.motion)).on_click(pick));
         }
         if names.is_empty() && !query.is_empty() {
             row = row.child(empty_note("No listed model matches. Use the typed model action above."));
@@ -605,4 +629,66 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn model_picker_folds_the_current_alias_and_keeps_distinct_versions() {
+        let h = Harness {
+            id: "claude-code".into(),
+            label: "Claude Code".into(),
+            state: RunState::Ready,
+            llm: "sonnet".into(),
+            llms: vec![
+                "claude-sonnet-5-5".into(),
+                "claude-sonnet-5-5".into(),
+                "claude-sonnet-4-5".into(),
+                "claude-sonnet-5-5[1m]".into(),
+            ],
+            llm_aliases: std::collections::HashMap::from([(
+                "sonnet".into(), "claude-sonnet-5-5".into(),
+            )]),
+            llms_note: String::new(),
+            llms_pending: false,
+            llm_selectable: true,
+            effort: String::new(),
+            efforts: Vec::new(),
+            effort_hint: String::new(),
+            efforts_pending: false,
+            efforts_note: String::new(),
+        };
+
+        let choices = model_choices(&h);
+        assert_eq!(choices, [
+            "claude-sonnet-5-5", "claude-sonnet-4-5", "claude-sonnet-5-5[1m]",
+        ]);
+        assert!(model_is_selected(&h, "claude-sonnet-5-5"));
+        assert!(!model_is_selected(&h, "claude-sonnet-4-5"));
+    }
+
+    #[test]
+    fn model_picker_keeps_a_moving_alias_beside_an_old_pin_without_current_metadata() {
+        let h = Harness {
+            id: "claude-code".into(),
+            label: "Claude Code".into(),
+            state: RunState::Ready,
+            llm: "sonnet".into(),
+            llms: vec!["claude-sonnet-4-5".into(), "claude-sonnet-4-5".into()],
+            llm_aliases: std::collections::HashMap::new(),
+            llms_note: String::new(),
+            llms_pending: false,
+            llm_selectable: true,
+            effort: String::new(),
+            efforts: Vec::new(),
+            effort_hint: String::new(),
+            efforts_pending: false,
+            efforts_note: String::new(),
+        };
+
+        assert_eq!(model_choices(&h), ["sonnet", "claude-sonnet-4-5"]);
+        assert!(model_is_selected(&h, "sonnet"));
+    }
 }

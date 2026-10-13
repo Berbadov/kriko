@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.6.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.6.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Downloads](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,8 +34,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.6.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.6.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.6.1-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.6.1-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
@@ -45,8 +45,8 @@ The packaging script names Apple Silicon and Intel builds separately. These are 
 
 | Mac | Disk image | Portable app bundle |
 |---|---|---|
-| Apple Silicon | `kriko-1.6.0-macos-arm64.dmg` | `kriko-1.6.0-macos-arm64-portable.zip` |
-| Intel | `kriko-1.6.0-macos-x86_64.dmg` | `kriko-1.6.0-macos-x86_64-portable.zip` |
+| Apple Silicon | `kriko-1.6.1-macos-arm64.dmg` | `kriko-1.6.1-macos-arm64-portable.zip` |
+| Intel | `kriko-1.6.1-macos-x86_64.dmg` | `kriko-1.6.1-macos-x86_64-portable.zip` |
 
 Open the `.dmg` and drag **Kriko.app** to **Applications**. For the portable ZIP, extract it and move **Kriko.app** where you want it. Each archive contains a complete app for its named Mac architecture. The release packaging recipe builds each artifact on a matching Mac; this Linux checkout has not run or visually verified either native build.
 
@@ -122,6 +122,13 @@ Measured on 9 October 2026, three separate processes and three fresh chats per C
 All 12 replies completed. These are startup checks, not research scores: the reply times also include authentication, agent setup, network latency, and model generation. Keeping a terminal open cannot remove most of that wait. GLM varied from 12.55 to 35.23 seconds. Every reply used a new chat. [Raw measurements](docs/benchmarks/cli-startup-1.1.2.json) include the CLI-reported token totals; even a short answer includes the agent's initial instructions.
 
 ## What's new
+
+### 1.6.1
+
+- Codex, Antigravity and Mistral Vibe Quick Looks no longer fail while counting model calls. Agent model choices omit duplicate entries.
+- Local research reserves context for source evidence, keeps product metadata compact, and searches product documentation alongside issue discussions. Ollama execution reports the model's observed GPU or CPU use.
+- A completed Quick Look with no supported issues remains a saved research result, with product facts, sources and coverage. It does not establish that the product is issue-free.
+- Product and comparison follow-ups carry the saved product context and can search and read fresh web evidence. Saved results show their evidence in Run and History.
 
 ### 1.6.0
 
