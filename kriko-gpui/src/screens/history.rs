@@ -441,7 +441,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         let open_id = check.id.clone();
         let kind = check.kind.clone();
         let source = check.source.clone();
-        let kind_label: &str = if source == "quick_look" { "Quick Look" } else { kind.as_str() };
+        let kind_label: &str = if source == "quick_look" { "Quick Look" } else { check.kind.as_str() };
         let count_label = if source == "quick_look" {
             format!("{} sourced risks", check.claims)
         } else {
