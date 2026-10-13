@@ -34,6 +34,16 @@ def options(mine: dict) -> dict:
     return out
 
 
+def _model_key(value: object) -> str:
+    """Ollama may report a default tag that the selected name leaves implicit."""
+    name = str(value or "").strip().casefold()
+    for prefix in ("registry.ollama.ai/library/", "registry.ollama.ai/"):
+        if name.startswith(prefix):
+            name = name[len(prefix):]
+            break
+    return name.removesuffix(":latest")
+
+
 def inspect(url: str, runtime: str, model: str, mine: dict) -> dict:
     if runtime == "configured" and url:
         try:
@@ -43,7 +53,11 @@ def inspect(url: str, runtime: str, model: str, mine: dict) -> dict:
                 runtime = "Ollama"
         except (OSError, ValueError, TypeError):
             pass
+    requested_device = mine.get(prefs.LOCAL_DEVICE, "") or "auto"
     out = {"device": "unknown", "model": model, "runtime": runtime,
+           "loaded": False, "requested_device": requested_device,
+           "requested_gpu_layers": mine.get(prefs.LOCAL_GPU_LAYERS, "") or "runtime default",
+           "device_source": "",
            "supported": runtime == "Ollama", "requested": options(mine), "settings": mine,
            "memory_bytes": None, "vram_bytes": None, "context_tokens": None,
            "reason": "The runtime has not reported device use.",
@@ -60,14 +74,38 @@ def inspect(url: str, runtime: str, model: str, mine: dict) -> dict:
         with urllib.request.urlopen(url.rstrip("/") + "/api/ps", timeout=2) as response:
             payload = json.load(response)
         for row in payload.get("models", []):
-            if model not in (row.get("name"), row.get("model")):
+            if not isinstance(row, dict) or _model_key(model) not in {
+                    _model_key(row.get("name")), _model_key(row.get("model"))}:
                 continue
+            out["loaded"] = True
             size, vram = row.get("size"), row.get("size_vram")
             if isinstance(size, int) and size > 0 and isinstance(vram, int) and vram >= 0:
+                actual = "cpu" if vram == 0 else "gpu" if vram >= size else "mixed"
                 out.update(memory_bytes=size, vram_bytes=vram,
-                           device="cpu" if vram == 0 else "gpu" if vram >= size else "mixed",
-                           reason="Reported by Ollama for this loaded model.")
-            out["context_tokens"] = row.get("context_length")
+                           device=actual, device_source="Ollama /api/ps",
+                           gpu_offload_percent=min(100, round(vram * 100 / size)))
+                if actual == "cpu" and requested_device == "gpu":
+                    out["reason"] = (
+                        "Ollama reports CPU use for this loaded model despite the GPU request. "
+                        "Check Ollama's GPU backend, driver and available memory, then refresh."
+                    )
+                elif actual == "mixed":
+                    out["reason"] = (
+                        f"Ollama reports mixed CPU/GPU use ({out['gpu_offload_percent']}% of "
+                        "the model allocation is in VRAM). Check available VRAM if you expected "
+                        "full GPU offload."
+                    )
+                elif actual == "cpu":
+                    out["reason"] = "Ollama reports CPU use for this loaded model."
+                else:
+                    out["reason"] = "Ollama reports GPU allocation for this loaded model."
+            else:
+                out["reason"] = (
+                    "Ollama reports the model loaded but did not report its VRAM allocation."
+                )
+            context = row.get("context_length")
+            if isinstance(context, int) and not isinstance(context, bool) and context > 0:
+                out["context_tokens"] = context
             break
         else:
             out["reason"] = "The model is not loaded. Run it, then refresh to see its device."

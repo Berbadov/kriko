@@ -286,3 +286,30 @@ test("a quick look is one saved job, and joins a pack only when asked", () => {
   assert.equal(asked.payload.job_id, "quick");
   assert.match(p.shadow().querySelector(".lite-research-status").textContent, /Filing it/);
 });
+
+test("a zero-issue quick look retains listing facts, evidence and a web follow-up", () => {
+  const p = loadPanel({ workerResponse: m => {
+    if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local" } };
+    if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "oil-look", kind: "quick_look" } };
+    if (m.type === "JOB_STATUS") return { ok: true, job: {
+      job_id: "oil-look", kind: "quick_look", state: "succeeded", done: true,
+      result: { risks: [], specs: [],
+        diagnostic: { code: "no_issues_found", message: "No supported issues found in the pages checked." },
+        coverage: { pages_read: 2, pages_relevant: 2, pages_extracted: 2, status: "no_supported_findings" },
+        listing: { url: "https://example.test/oil", facts: { Volume: "4 L", Grade: "5W-30" } },
+        evidence_pages: [{ url: "https://example.test/datasheet", domain: "example.test", excerpt: "Oil product data" }],
+      },
+    } };
+    return { ok: true, items: [] };
+  } });
+  p.openPanel();
+  p.deliverEntry({ ok: false, code: "UNKNOWN_PRODUCT", productName: "Example oil" });
+  p.click(".lite-research-product");
+  p.type(".lite-research-name", "Example oil");
+  p.click(".lite-research-start");
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /No supported issues found/);
+  assert.match(p.shadow().querySelector(".lite-quick-specs").textContent, /Volume: 4 L/);
+  assert.equal(p.shadow().querySelector(".lite-quick-source-list a").href, "https://example.test/datasheet");
+  assert.ok(p.shadow().querySelector(".lite-follow-input"));
+  assert.match(p.shadow().querySelector(".lite-follow-lede").textContent, /web/);
+});

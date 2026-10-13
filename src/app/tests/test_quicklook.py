@@ -132,3 +132,31 @@ def test_a_trailing_comma_does_not_cost_the_reply():
     reply = ('{"specs": [{"name": "a", "value": "1", "url": "https://a.test/1"},],'
              ' "risks": [')
     assert quicklook.closed(reply)["specs"][0]["name"] == "a"
+
+
+def test_no_supported_issues_is_bounded_by_completed_coverage():
+    coverage = {
+        "status": "no_supported_findings", "pages_read": 2,
+        "pages_relevant": 1, "pages_extracted": 1,
+    }
+    message = quicklook.outcome(
+        '{"risks": [], "specs": []}', {"risks": [], "specs": []},
+        coverage=coverage)
+    assert "no known issues found in 1 relevant page(s) checked" in message
+    assert "1 completed check(s)" in message
+
+    for gap in ("pages_timed_out", "pages_unreadable", "errors", "search_errors"):
+        incomplete = {**coverage, gap: 1 if gap.startswith("pages_") else ["failed"]}
+        assert not quicklook.has_complete_negative_coverage(incomplete)
+        assert "incomplete" in quicklook.outcome(
+            '{"risks": [], "specs": []}', {"risks": [], "specs": []},
+            coverage=incomplete)
+
+
+def test_a_harness_answer_pass_can_support_a_bounded_negative_result():
+    coverage = {"status": "no_supported_findings", "pages_read": 3,
+                "pages_relevant": 2, "pages_extracted": 0, "answer_passes": 1}
+    assert quicklook.has_complete_negative_coverage(coverage)
+    assert "2 relevant page(s) checked" in quicklook.outcome(
+        '{"risks": [], "specs": []}', {"risks": [], "specs": []},
+        coverage=coverage)

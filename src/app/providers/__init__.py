@@ -269,7 +269,7 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     model, effort = harness.settle_effort(found, *picked)
     researcher = harness.HarnessResearcher(
         found, timeout=timeout or harness.TIMEOUT_SECONDS, model=model.strip(),
-        effort=effort.strip(),
+        effort=effort.strip(), app_state_path=app_state_path,
     )
     if (model, effort) != picked:
         # `found.label` spells the effort in its model ids, and a flag beside

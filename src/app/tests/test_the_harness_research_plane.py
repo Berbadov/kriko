@@ -1738,8 +1738,45 @@ def test_claude_help_examples_include_the_documented_fast_models(monkeypatch):
     monkeypatch.setattr(harness_mod, "helptext", lambda _: _CLAUDE_HELP)
     monkeypatch.setattr(harness_mod, "_MODELS", {})
     assert harness_mod.models_for(claude) == [
-        *harness_mod.CLAUDE_FAST_MODELS, "fable", "opus", "sonnet", "claude-fable-5",
+        "claude-haiku-5-5", "fable", "opus", "sonnet", "claude-fable-5",
     ]
+
+
+def test_claude_aliases_collapse_only_when_the_current_pin_is_offered(monkeypatch):
+    from app import modelcatalogue
+
+    monkeypatch.setattr(modelcatalogue, "load", lambda: {
+        "claude-sonnet-5": {}, "claude-opus-5": {}, "claude-fable-5-1": {},
+    })
+
+    names = harness_mod._dedupe_claude_aliases([
+        "sonnet", "sonnet-latest", "claude-sonnet-latest",
+        "claude-sonnet-4-6", "claude-sonnet-5", "claude-sonnet-5[1m]",
+        "fable", "claude-fable-5", "opus", "claude-opus-5",
+    ])
+
+    assert names == [
+        "claude-sonnet-4-6", "claude-sonnet-5", "claude-sonnet-5[1m]",
+        "fable", "claude-fable-5", "claude-opus-5",
+    ]
+
+
+def test_claude_picker_alias_metadata_names_only_the_catalogue_current_pin(monkeypatch):
+    from app import modelcatalogue
+
+    monkeypatch.setattr(modelcatalogue, "load", lambda: {
+        "claude-sonnet-5": {}, "claude-opus-5": {},
+    })
+    claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+
+    assert harness_mod.model_aliases_for(claude, ["claude-sonnet-4-6"]) == {}
+    assert harness_mod.model_aliases_for(claude, [
+        "claude-sonnet-4-6", "claude-sonnet-5", "claude-sonnet-5[1m]",
+    ]) == {
+        "sonnet": "claude-sonnet-5",
+        "sonnet-latest": "claude-sonnet-5",
+        "claude-sonnet-latest": "claude-sonnet-5",
+    }
 
 
 def test_an_updated_or_reasked_claude_has_its_help_read_again(monkeypatch):

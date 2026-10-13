@@ -12,6 +12,7 @@ import json
 import pytest
 
 from app.providers import local_agent
+from app.providers.local_identity import ProductIdentity
 from app.providers.local_inference import LocalInferenceError
 from app.providers.local_pipeline import EXTRACT_SCHEMA
 from app.tests.test_local_quicklook_output import PipelineModel
@@ -330,6 +331,51 @@ def test_a_stub_page_is_a_miss_and_a_spare_takes_its_place(monkeypatch):
     asker.on_action = lambda line: None
     asker.ask("widget")
     assert list(asker.sources) == ["https://a.test/real"]
+
+
+def test_product_document_hits_are_kept_ahead_of_unrelated_video_results(monkeypatch):
+    monkeypatch.setattr(local_agent, "MAX_PAGES", 1)
+    identity = ProductIdentity(
+        canonical_name="Acme Motor Oil XW-40", variant="XW-40",
+        identifiers=("XW-40",), unknowns=("approval specification",))
+    hits = ([{"url": f"https://video{i}.test/watch", "title": "Electric brush review"}
+             for i in range(8)]
+            + [{"url": "https://acme.test/xw40", "title": "Acme Motor Oil XW-40 technical data sheet"}])
+    fetched = []
+
+    def fetch(url):
+        fetched.append(url)
+        return "Acme Motor Oil XW-40 technical data: product specifications and approvals."
+
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), searcher(hits), fetch,
+        model="m", search_provider="stub")
+    pages = asker._read(['"Acme Motor Oil XW-40" manufacturer technical data'],
+                        identity=identity, prefer_issues=True)
+
+    assert [url for url, _ in pages] == ["https://acme.test/xw40"]
+    assert "https://acme.test/xw40" in fetched
+    assert len(fetched) <= 1 + local_agent.SPARE_PAGES
+    assert asker.relevant_sources == dict(pages)
+
+
+def test_unrelated_hits_use_only_the_small_spare_fetch_budget(monkeypatch):
+    monkeypatch.setattr(local_agent, "MAX_PAGES", 1)
+    identity = ProductIdentity(canonical_name="Acme Motor Oil XW-40",
+                               identifiers=("XW-40",))
+    hits = [{"url": f"https://video{i}.test/watch", "title": "Electric brush review"}
+            for i in range(20)]
+    fetched = []
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), searcher(hits),
+        lambda url: fetched.append(url) or "Electric brush review and cleaning advice.",
+        model="m", search_provider="stub")
+
+    pages = asker._read(["Acme Motor Oil XW-40 failure"], identity=identity,
+                        prefer_issues=True)
+
+    assert pages == []
+    assert len(fetched) <= 1 + local_agent.SPARE_PAGES
 
 
 class Fitted(Complete):

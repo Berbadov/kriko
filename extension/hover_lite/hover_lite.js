@@ -898,12 +898,16 @@
       specs: Array.isArray(result.specs) ? result.specs : [],
       risks: Array.isArray(result.risks) ? result.risks : [],
       dropped: Number(result.dropped) || 0,
+      coverage: result.coverage || result.telemetry?.coverage || null,
+      diagnostic: result.diagnostic || {},
+      listing: result.listing || {},
+      evidence_pages: Array.isArray(result.evidence_pages) ? result.evidence_pages : [],
     };
     const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
     const found = state.researchQuick.risks.length;
     const said = job.state === "succeeded"
       ? (found ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look. Saved in Kriko.`
-        : "The quick look found nothing it could source.")
+        : (result.diagnostic?.message || "No sourced issues were found in this quick look.") + " Saved in Kriko.")
       : "The quick look did not finish.";
     if (!deepen) {
       // A quick look is not a pack: it is saved as it is, and joins a pack
@@ -1045,10 +1049,10 @@
         ${quickCoverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
           `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched product · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} pages cited`
           + (quickEmptyExplanation ? ` · ${quickEmptyExplanation}` : "")
-          + (quickIsEmpty ? " This is insufficient evidence to conclude that the product has no problems." : "")
+          + (quickIsEmpty ? " This describes the pages checked; it does not prove the product has no problems." : "")
           + (rejectionSummary ? ` Reasons: ${rejectionSummary}.` : ""))}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
-        ${state.researchQuick && (state.researchQuick.risks.length || state.researchQuick.specs?.length) ? `<div class="lite-quick">
+        ${state.researchQuick ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
           <div class="lite-quick-specs"></div>
@@ -1056,8 +1060,8 @@
             <summary>Sources</summary><div class="lite-quick-source-list"></div>
           </details>
         </div>` : ""}
-        ${state.researchQuick && (state.researchQuick.risks.length || state.researchQuick.specs?.length) && state.researchQuickJob ? `<div class="lite-follow">
-          <p class="lite-follow-lede">Ask a follow-up. Answers come from this quick look's findings.</p>
+        ${state.researchQuick && state.researchQuickJob ? `<div class="lite-follow">
+          <p class="lite-follow-lede">Ask a follow-up. Your agent can use the saved product facts and search the web.</p>
           ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
             <p class="lite-follow-q">${escapeHtml(a.q)}</p>
             <div class="lite-follow-answer lite-answer" data-answer="${escapeHtml(a.job_id || "")}"></div>
@@ -1167,6 +1171,23 @@
       item.innerHTML = `${renderRichText(spec.name)}: ${renderRichText(spec.value)}`;
       specsSlot?.appendChild(item);
     }
+    const listing = state.researchQuick?.listing || {};
+    for (const [name, value] of Object.entries(listing.facts || {}).slice(0, 20)) {
+      const item = document.createElement("p");
+      item.textContent = `${name}: ${typeof value === "object" ? JSON.stringify(value) : value}`;
+      specsSlot?.appendChild(item);
+    }
+    if (listing.description) {
+      const item = document.createElement("p");
+      item.textContent = String(listing.description).slice(0, 1200);
+      specsSlot?.appendChild(item);
+    }
+    for (const page of state.researchQuick?.evidence_pages || []) {
+      if (/^https?:\/\//i.test(page.url || "")) sources.set(page.url, page);
+    }
+    if (/^https?:\/\//i.test(listing.url || "") && !sources.has(listing.url)) {
+      sources.set(listing.url, { url: listing.url, domain: "Product listing" });
+    }
     for (const risk of state.researchQuick?.risks || []) {
       for (const src of risk.sources || []) if (/^https?:\/\//i.test(src.url || "")) sources.set(src.url, src);
     }
@@ -1178,7 +1199,8 @@
       const link = document.createElement("a");
       link.href = src.url; link.target = "_blank"; link.rel = "noopener noreferrer";
       link.textContent = src.domain || src.url;
-      item.append(link, document.createTextNode(src.quote ? ` · ${src.quote}` : ""));
+      const passage = src.quote || src.excerpt || "";
+      item.append(link, document.createTextNode(passage ? ` · ${passage}` : ""));
       sourceList?.appendChild(item);
     }
     slot.querySelector(".lite-quick-sources")?.addEventListener("toggle", event => {
