@@ -50,7 +50,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     let add_row = div()
         .flex()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(div().flex_1().min_w(px(0.0)).child(add_field))
         .child(plate_s("sites-add-btn", "Add site").on_click(add_click));
 
@@ -85,7 +85,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         return div()
             .flex()
             .flex_col()
-            .gap(px(16.0))
+            .gap(px(12.0))
             .child(add_row)
             .child(status)
             .child(empty_note("Waiting for Kriko's engine. The sites it can read appear here."));
@@ -166,7 +166,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             div()
             .flex()
             .items_center()
-            .py(px(10.0))
+            .py(px(6.0))
             .hover(|s| s.bg(rgba(GLASS_1)))
             .child(
                 div()
@@ -260,7 +260,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             div()
                 .flex()
                 .items_center()
-                .py(px(10.0))
+                .py(px(6.0))
                 .hover(|s| s.bg(rgba(GLASS_1)))
                 .child(
                     div()
@@ -294,7 +294,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     div()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(add_row)
         .child(status)
         .child(table)

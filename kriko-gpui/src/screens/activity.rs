@@ -131,8 +131,8 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         let row = div()
             .flex()
             .items_center()
-            .gap(px(16.0))
-            .py(px(10.0))
+            .gap(px(12.0))
+            .py(px(6.0))
             .hover(|s| s.bg(rgba(GLASS_1)))
             .child(
                 div()
