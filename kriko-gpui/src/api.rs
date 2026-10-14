@@ -64,6 +64,18 @@ pub fn seg(s: &str) -> String {
 }
 
 pub fn request(method: &str, path: &str, body: Option<Value>) -> Reply {
+    let payload = body.map(|b| b.to_string()).unwrap_or_default();
+    let typed = !payload.is_empty() || method == "POST" || method == "PUT";
+    send(method, path, payload.as_bytes(), typed.then_some("application/json"), None)
+}
+
+/// A file's bytes as the body, for the one door that takes a file
+/// (`POST /api/packs/install`). The name travels as metadata only.
+pub fn post_bytes(path: &str, bytes: &[u8], filename: &str) -> Reply {
+    send("POST", path, bytes, Some("application/octet-stream"), Some(filename))
+}
+
+fn send(method: &str, path: &str, payload: &[u8], content_type: Option<&str>, filename: Option<&str>) -> Reply {
     let base = engine::base().ok_or_else(|| err(0, "Kriko's engine is not running yet."))?;
     let (host, port) = engine::host_port(&base).map_err(|e| err(0, e))?;
     let addr = format!("{host}:{port}")
@@ -74,19 +86,20 @@ pub fn request(method: &str, path: &str, body: Option<Value>) -> Reply {
     // long enough for a slow lookup, short enough that a hung engine shows
     stream.set_read_timeout(Some(Duration::from_secs(60))).ok();
     stream.set_write_timeout(Some(Duration::from_secs(10))).ok();
-    let payload = body.map(|b| b.to_string()).unwrap_or_default();
     let mut head =
         format!("{method} {path} HTTP/1.0\r\nHost: {host}:{port}\r\nAccept: application/json\r\n");
-    if !payload.is_empty() || method == "POST" || method == "PUT" {
-        head.push_str(&format!(
-            "Content-Type: application/json\r\nContent-Length: {}\r\n",
-            payload.len()
-        ));
+    if let Some(kind) = content_type {
+        head.push_str(&format!("Content-Type: {kind}\r\nContent-Length: {}\r\n", payload.len()));
+    }
+    if let Some(name) = filename {
+        // A header value carries no line break; the engine checks the rest.
+        let name: String = name.chars().filter(|c| !c.is_control()).collect();
+        head.push_str(&format!("X-Filename: {name}\r\n"));
     }
     head.push_str("\r\n");
     stream
         .write_all(head.as_bytes())
-        .and_then(|_| stream.write_all(payload.as_bytes()))
+        .and_then(|_| stream.write_all(payload))
         .map_err(|e| err(0, format!("Could not reach Kriko's engine: {e}")))?;
     let mut raw = Vec::new();
     stream

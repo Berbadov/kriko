@@ -202,7 +202,7 @@ class TestThePlanesEndpoint:
                    if p["id"] == "local")
         assert row["cost_basis"] == "self_hosted"
         assert row["needs_keys"] is False
-        assert "Ollama" in row["what"] and "Exa" in row["what"]
+        assert "Ollama" in row["what"] and "search service" in row["what"]
 
     def test_readiness_says_what_is_missing_and_what_to_do(self, tmp_path):
         # Nothing answers under test (conftest), which is the state of a
@@ -214,4 +214,5 @@ class TestThePlanesEndpoint:
         assert "No local model server is running" in row["reason"]
         assert "Ollama" in row["reason"]
         assert row["serp_url"] == "http://127.0.0.1:7000"
-        assert row["search_kind"] == "exa"
+        # Nothing answers at the search address either, so no search is claimed.
+        assert row["search_kind"] == ""

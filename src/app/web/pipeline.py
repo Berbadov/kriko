@@ -27,8 +27,8 @@ interface would make "add a category" mean "touch the engine", and the
 transitions worth watching all happen in the driver anyway, because the driver
 is what sequences them.
 
-**Rows before stream.** The SSE endpoint reads these tables; it is not the
-source of truth for them. A run interrupted by a restart is *readable*
+**Rows are the record.** These tables are what a run leaves behind; nothing in
+the app reads them back yet, and the rows are written so that they could be. A run interrupted by a restart is *readable*
 afterwards — the same lesson the jobs table already learned, and the reason
 `mark_interrupted` exists here too. A live view that is the only record is a
 live view that lies the moment anybody closes the window.
@@ -54,17 +54,6 @@ from app.web import state
 #: grow with pack coverage. A fifth stage would be an architecture change, not
 #: a new car.
 STAGES = ("discovery", "extraction", "ingestion", "ledgering")
-
-#: How the UI labels them. Here rather than in the frontend because the stage
-#: vocabulary is the server's, and a second list in TypeScript is a second
-#: place to forget — the same reasoning that keeps identity keys out of
-#: the desktop interface.
-STAGE_LABELS = {
-    "discovery": "Discovery",
-    "extraction": "Extraction",
-    "ingestion": "Ingestion",
-    "ledgering": "Ledgering",
-}
 
 #: Events kept per run. Generous — a run reading fifty documents produces a
 #: few hundred — and bounded, because this table is the only one here whose
@@ -331,149 +320,3 @@ def mark_interrupted(conn: sqlite3.Connection) -> int:
     )
     conn.commit()
     return cursor.rowcount
-
-
-def _run(row: sqlite3.Row) -> dict:
-    run = dict(row)
-    # `tokens` stays None when nobody counted, and the UI must be able to tell
-    # that from a genuine zero — the agent plane's marginal cost really is
-    # zero, and an estimate rendered as a measurement is the same class of
-    # mistake as claiming a window was raised.
-    run["tokens_counted"] = run.get("tokens") is not None
-    run["outcome"] = outcome(run)
-    return run
-
-
-#: What a finished run is, in the reader's terms, and what they do next.
-#:
-#: The states were already recorded; what was missing is that a state is not an
-#: instruction. "failed" tells somebody watching a four-minute run that it is
-#: over and nothing else — not whether to press it again, fix a key, or accept
-#: that this subject has no sources. A terminal screen with no next move is the
-#: same dead end `app/matching.py` was written to end, one surface along.
-OUTCOMES = {
-    "done": ("finished", ""),
-    "partial": (
-        "stopped early",
-        "What it had gathered was kept. Run it again to carry on, or read what "
-        "it found first.",
-    ),
-    "cancelled": (
-        "stopped by you",
-        "Everything finished before you stopped it was kept.",
-    ),
-    "failed": (
-        "failed",
-        "The log says why. A failure on the first source is usually a key or a "
-        "network problem; one partway through is usually the source.",
-    ),
-    "interrupted": (
-        "interrupted by a restart",
-        "The app stopped while this was running. Nothing was lost that had "
-        "already been written; run it again to finish.",
-    ),
-}
-
-
-def outcome(run: dict) -> dict:
-    """The terminal state as a sentence, plus whether anything is owed.
-
-    An unknown state reads as *not* finished, which is the safe way round: a
-    view that calls a running thing done stops watching it.
-
-    The other half of §2.5 — "if the agent is waiting on my answer, that must
-    be unmissable" — is deliberately not here. Those questions are written to
-    the *job* row (`app/disambiguate.py` through `Progress.partial`), and the
-    author run that asks them has no emitter at all, so an `attention` flag on
-    this object would be a field that is always false: a hook that looks
-    implemented and never fires. It lives in `app/web/routers/jobs.py`, where
-    the data is.
-    """
-    state_name = str(run.get("state") or "")
-    said, next_step = OUTCOMES.get(state_name, (state_name or "running", ""))
-    return {
-        "state": state_name,
-        "done": state_name in OUTCOMES,
-        "said": said,
-        "next_step": next_step,
-    }
-
-
-def runs(conn: sqlite3.Connection, limit: int = 30) -> list[dict]:
-    return [
-        _run(row)
-        for row in conn.execute(
-            "SELECT * FROM pipeline_runs ORDER BY started_at DESC LIMIT ?",
-            (int(limit),),
-        )
-    ]
-
-
-def stages(conn: sqlite3.Connection, run_id: str) -> list[dict]:
-    """Every stage of a run, in pipeline order — including the ones that have
-    not started, so the view can show a shape rather than growing one."""
-    seen = {
-        row["stage"]: dict(row)
-        for row in conn.execute(
-            "SELECT * FROM pipeline_stages WHERE run_id = ? ORDER BY seq",
-            (run_id,),
-        )
-    }
-    out = []
-    for index, stage in enumerate(STAGES):
-        row = seen.get(stage) or {
-            "run_id": run_id,
-            "stage": stage,
-            "seq": index,
-            "state": "waiting",
-            "detail": "",
-            "items": 0,
-            "started_at": None,
-            "ended_at": None,
-        }
-        row["label"] = STAGE_LABELS[stage]
-        out.append(row)
-    return out
-
-
-def events(
-    conn: sqlite3.Connection, run_id: str, after: int = 0, limit: int = 300
-) -> list[dict]:
-    """Events since `after`, oldest first.
-
-    Cursored on `event_id` rather than on a timestamp: two events in the same
-    second are ordinary, and a time cursor would either repeat them or skip
-    them depending on which side of the comparison it fell.
-    """
-    out = []
-    for row in conn.execute(
-        "SELECT * FROM pipeline_events WHERE run_id = ? AND event_id > ? "
-        "ORDER BY event_id LIMIT ?",
-        (run_id, int(after), int(limit)),
-    ):
-        event = dict(row)
-        raw = event.pop("detail_json", None)
-        try:
-            event["detail"] = json.loads(raw) if raw else {}
-        except (TypeError, ValueError):
-            event["detail"] = {}
-        out.append(event)
-    return out
-
-
-def get_run(conn: sqlite3.Connection, run_id: str) -> dict | None:
-    row = conn.execute(
-        "SELECT * FROM pipeline_runs WHERE run_id = ?", (run_id,)
-    ).fetchone()
-    return _run(row) if row else None
-
-
-def latest(conn: sqlite3.Connection) -> dict | None:
-    """The run the pipeline view should open on: whatever is going, else the
-    most recent one. A view that opens empty while a run is in flight is the
-    failure this whole subsystem exists to fix."""
-    row = conn.execute(
-        "SELECT * FROM pipeline_runs ORDER BY "
-        "CASE state WHEN 'running' THEN 0 ELSE 1 END, started_at DESC LIMIT 1"
-    ).fetchone()
-    return _run(row) if row else None

@@ -118,9 +118,23 @@ def test_the_gearbox_failures_are_still_covered_from_the_right_part(new_engine):
 
 def test_review_status_lowers_rank_instead_of_hiding_the_claim(new_engine):
     """B26, asserted. 696 of 699 claims are unreviewed; none may be hidden."""
+    import yaml
+
+    from packs.cars import build as cars_build
+
     store, _ = new_engine
     total = store.execute("SELECT COUNT(*) FROM claims").fetchone()[0]
-    assert total == 699, "every claim in the catalog must be exported"
+    # Every claim in the part files, less the ones filed on a one-model part
+    # about another generation of it (dropped at build and counted). Status
+    # alone never removes one.
+    spans = cars_build._part_spans()
+    expected = 0
+    for path in sorted((cars_build.DATA / "parts").glob("**/*.yaml")):
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        span = spans.get(data.get("part_id")) or {}
+        expected += sum(1 for claim in data.get("claims") or []
+                        if not cars_build._names_another_generation(claim, span))
+    assert total == expected, "every claim in the catalog must be exported"
 
     confidences = [r[0] for r in store.execute(
         "SELECT DISTINCT author_confidence FROM claims WHERE author_confidence IS NOT NULL")]

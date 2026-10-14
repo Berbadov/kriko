@@ -25,7 +25,7 @@ from app.providers import harness as harness_mod
 from app.providers.harness import Harness, HarnessResearcher, PageReader
 from kriko.research.agent import REFUSED_PAGE
 
-READER_TOOL = "mcp__exa__web_fetch_exa"
+READER_TOOL = "mcp__parallel__web_fetch"
 
 #: What `claude --help` declares on this build, trimmed to what the vector reads.
 DECLARED = frozenset({
@@ -160,7 +160,7 @@ def test_the_config_holds_the_page_reader_and_nothing_of_krikos(monkeypatch):
     config = harness_mod.reader_config()
     assert list(config["mcpServers"]) == [harness_mod.READER_SERVER]
     assert "kriko" not in json.dumps(config).lower()
-    assert harness_mod.READER_TOOLS == ("web_fetch_exa",)
+    assert harness_mod.READER_TOOLS == ("web_fetch",)
 
 
 def test_no_folder_gets_a_reader_config_where_the_flag_is_not_declared(monkeypatch):
@@ -191,7 +191,7 @@ def test_only_a_row_with_a_reader_gets_a_reader_config(monkeypatch):
 
 def test_the_note_names_the_tool_and_says_what_a_refusal_costs():
     note = harness_mod.page_reader_note([READER_TOOL])
-    assert "web_fetch_exa" in note and READER_TOOL in note
+    assert "web_fetch" in note and READER_TOOL in note
     assert "once" in note
     assert "does not count" in note
     assert "another source" in note  # the way out if the reader is refused too

@@ -76,13 +76,17 @@ def test_the_quick_look_asks_for_specifications_and_names_the_packs_own(tmp_path
 
 def test_a_quick_look_keeps_only_specifications_that_name_a_page():
     found = quicklook.parse(_reply({"specs": [
-        {"name": "Chipset", "value": "A16", "url": PAGE},
+        {"name": "Chipset", "value": "A16", "url": PAGE,
+         "quote": "The chipset is A16."},
         {"name": "Battery", "value": "3349 mAh"},
-        {"name": "", "value": "x", "url": PAGE},
-        {"name": "Display", "value": "6.1 in", "url": "file:///etc/passwd"},
+        {"name": "Unquoted", "value": "x", "url": PAGE},
+        {"name": "", "value": "x", "url": PAGE, "quote": "x"},
+        {"name": "Display", "value": "6.1 in", "url": "file:///etc/passwd",
+         "quote": "6.1 inches"},
     ]}))
     assert found["specs"] == [
-        {"name": "Chipset", "value": "A16", "url": PAGE, "domain": "example.org"}]
+        {"name": "Chipset", "value": "A16", "url": PAGE,
+         "domain": "example.org", "quote": "The chipset is A16."}]
 
 
 # ── the record ───────────────────────────────────────────────────────────

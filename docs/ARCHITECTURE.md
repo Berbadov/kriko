@@ -114,7 +114,7 @@ rather than Python.
 | `python -m app.pipeline.ledger_run` | Ledger stages: acquire, extract, cluster, verdict, remediate, report |
 | `python -m app.pipeline.panel` | Ledger review and inspection panel |
 | `python -m app.pipeline.process` | End-to-end onboarding driver for one product |
-| `python -m app.web` | Local API and interactive API docs on `http://127.0.0.1:8787` |
+| `python -m app.web` | Local API on `http://127.0.0.1:8787`; interactive API docs at `/api/docs` (no browser UI) |
 | `python -m packs.<name>.build` | Builds one catalog (also `kriko build packs/<name>`) |
 | `python -m packs.<name>.coverage` | That catalog's coverage report |
 | `packs/<name>/pipeline/catalog/*.py` | Catalog discovery, health, variant and stub generation |

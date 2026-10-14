@@ -43,7 +43,7 @@ fn took(ms: Option<f64>) -> String {
 }
 
 pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     // ---- the needs-you callout: only while a job has put a question ----
     let callout = app.live.history.attention.clone().map(|say| {
         let open_run = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {

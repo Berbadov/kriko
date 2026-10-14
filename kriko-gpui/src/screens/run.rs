@@ -7,15 +7,15 @@
 //! the engine has no job, a quiet note stands in.
 
 use gpui::{
-    div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba, Animation, AnimationExt,
+    div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba,
     Context, Div, FontWeight, Stateful, Styled, Window,
 };
 
-use crate::app::{Field, Kriko};
+use crate::app::{Field, Kriko, Tab};
 use crate::api::{self, Value};
 use crate::live::run::{ago, mark_for, Job, Stage};
 use crate::marks::{mark_tile, phase_beat};
-use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
+use crate::screens::{empty_note, guidance, mono, plate_s, row_desc, row_title};
 use crate::theme::*;
 
 /// The run's phases, in order, as the LEDs name them.
@@ -76,18 +76,20 @@ fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
 }
 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let mut page = div().flex().flex_col().gap(px(SPACE_CARD));
 
     let job = app.live.run.current().cloned();
-    // With no check on screen, the idle note sits inside the start card
-    // instead of in a card of its own: one card, not two stacked bands.
-    let mut idle_note: Option<&str> = None;
     match (&job, app.live.run.jobs_loaded) {
         (Some(job), _) => {
             page = page.child(subject_card(app, job, motion, cx));
-            if let Some(evidence) = local_quick_look_card(job) {
-                page = page.child(evidence);
+            if let Some(next) = terminal_next_step(app, job, motion, cx) {
+                page = page.child(next);
+            }
+            if job.kind == "quick_look" && job.done {
+                if let Some(evidence) = quick_look_result_card(&job.result, &job.product, &job.state) {
+                    page = page.child(evidence);
+                }
             }
             if let Some(answer) = answer_card(job) {
                 page = page.child(answer);
@@ -96,23 +98,135 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
                 page = page.child(follow_up_card(app, job.id.clone(), window, cx));
             }
             if job.attention.is_some() {
-                page = page.child(questions_card(app, job, cx));
+                page = page.child(questions_card(app, job, motion, cx));
             }
         }
         (None, loaded) => {
-            idle_note = Some(if loaded {
-                "No check has run yet. Start one below."
+            let empty = if loaded {
+                empty_note("No check has run yet. Start one below.").into_any_element()
             } else {
-                "Waiting for the engine to answer."
-            });
+                let retry = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                    this.refresh_jobs(cx);
+                    this.refresh_agents(cx);
+                    cx.notify();
+                });
+                guidance::next_step(
+                    "run-job-list-waiting",
+                    "Waiting for the engine",
+                    "The job list has not arrived yet. Check again to retry while the product search stays below.",
+                    ghost("run-jobs-retry", "Check again").on_click(retry).into_any_element(),
+                    motion,
+                )
+            };
+            page = page.child(
+                card()
+                    .flex()
+                    .flex_col()
+                    .gap(px(12.0))
+                    .child(eyebrow("Run"))
+                    .child(empty),
+            );
         }
     }
-    page = page.child(start_card(app, window, cx, idle_note));
+    page = page.child(start_card(app, window, cx));
     if let Some(job) = &job {
         page = page.child(lane_card(app, job, motion));
         page = page.child(card().child(crate::screens::logs::job_logs(app, job, cx)));
     }
     page
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum RunNext {
+    Retry,
+    Activity,
+}
+
+fn next_for_job(done: bool, stage: Stage, needs_answers: bool) -> Option<RunNext> {
+    if !done || needs_answers {
+        return None;
+    }
+    match stage {
+        Stage::Failed | Stage::Cancelled => Some(RunNext::Retry),
+        Stage::Stored => Some(RunNext::Activity),
+        Stage::Queued | Stage::Reading | Stage::Grounding => None,
+    }
+}
+
+fn terminal_next_step(
+    app: &Kriko,
+    job: &Job,
+    motion: bool,
+    cx: &mut Context<Kriko>,
+) -> Option<gpui::AnyElement> {
+    let next = next_for_job(job.done, job.stage(), job.attention.is_some())?;
+    let id = format!("run-next-{}-{}", job.id, match next { RunNext::Retry => "retry", RunNext::Activity => "activity" });
+    let job_id = job.id.clone();
+    let retrying = next == RunNext::Retry
+        && (crate::live::run::retry_pending(&app.live.run.retry_pending, &job.id, std::time::Instant::now())
+            || app.live.run.jobs.iter().any(|j| j.retry_of == job.id && !j.done));
+    let (title, detail, label) = match next {
+        RunNext::Retry => (
+            "Run this request again",
+            "This attempt remains below with its message and log. Retrying creates a new run with the same request.",
+            "Retry run",
+        ),
+        RunNext::Activity => (
+            "Review the finished work",
+            "The run has ended. Activity keeps its job updates, and the run details remain below.",
+            "Open Activity",
+        ),
+    };
+    let action = match next {
+        RunNext::Retry => key("run-retry", if retrying { "Retry submitted…" } else { label })
+            .opacity(if retrying { 0.55 } else { 1.0 })
+            .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                let now = std::time::Instant::now();
+                if crate::live::run::retry_pending(&this.live.run.retry_pending, &job_id, now) {
+                    return;
+                }
+                if this.live.run.jobs.iter().any(|j| j.retry_of == job_id && !j.done) {
+                    return;
+                }
+                this.live.run.retry_pending.insert(job_id.clone(), now);
+                cx.notify();
+                let path = format!("/api/jobs/{}/retry", api::seg(&job_id));
+                let retry_parent = job_id.clone();
+                this.fetch(cx, move || api::post(&path, serde_json::json!({})), move |this, reply, cx| {
+                    this.note(&reply);
+                    let mut submitted = false;
+                    if let Ok(v) = reply {
+                        let id = api::s(&v, "job_id");
+                        if !id.is_empty() {
+                            this.live.run.pinned = Some(id);
+                            this.live.run.detail = None;
+                            submitted = true;
+                        }
+                    }
+                    if !submitted {
+                        this.live.run.retry_pending.remove(&retry_parent);
+                    }
+                    this.refresh_jobs(cx);
+                })
+            }))
+            .into_any_element(),
+        RunNext::Activity => ghost("run-open-activity", label)
+            .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                this.tab = Tab::Activity;
+                this.on_open_tab(cx);
+                cx.notify();
+            }))
+            .into_any_element(),
+    };
+    Some(guidance::next_step(&id, title, detail, action, motion))
+}
+
+fn attention_detail(done: bool) -> &'static str {
+    if done {
+        "This run has finished with its own answers. Choose yours, then run it again to carry them into a new attempt."
+    } else {
+        "This run keeps going with its own answers. Choose yours now; when it finishes, run it again to carry them into a new attempt."
+    }
 }
 
 /// A finished agent run must show its answer, even when the engine returned
@@ -139,41 +253,127 @@ fn answer_card(job: &Job) -> Option<Div> {
     Some(result)
 }
 
-/// The quick look's saved result, separate from its narrated job log. The
-/// cited pages are the ones behind the returned cards; the log lists the
-/// larger set of pages that the local agent considered.
-fn local_quick_look_card(job: &Job) -> Option<Div> {
-    if job.kind != "quick_look" || (job.backend != "local" && job.harness != "local")
-        || !job.done || job.result.is_null() {
+/// Render the saved result separately from the narrated job log. This accepts
+/// every quick-look backend so a persisted result is still readable in
+/// history after the active run has gone away.
+pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str) -> Option<Div> {
+    if result.is_null() {
         return None;
     }
-    let result = &job.result;
     let model = api::s(result, "model");
-    let tokens = api::n(result, "tokens_used")
-        .map(|n| format!("{} tokens", n as u64))
-        .unwrap_or_else(|| "Token use not reported by this model server".into());
     let risks = api::arr(result, "risks");
     let specs = api::arr(result, "specs");
     let dropped = api::n(result, "dropped").unwrap_or(0.0) as usize;
-    let mut urls = Vec::<String>::new();
-    for risk in risks {
-        for source in api::arr(risk, "sources") {
-            let url = api::s(source, "url");
-            if !url.is_empty() && !urls.contains(&url) {
-                urls.push(url);
+    let coverage = result.get("coverage")
+        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")))
+        .filter(|value| value.is_object());
+    let listing = result.get("listing").filter(|value| value.is_object());
+    let mut card = card().flex().flex_col().gap(px(10.0))
+        .child(eyebrow("Quick Look · saved evidence"));
+    let saved_product = api::s(result, "product");
+    let label = if !saved_product.is_empty() { saved_product }
+        else if !product.is_empty() { product.to_string() }
+        else { String::new() };
+    if !label.is_empty() {
+        card = card.child(row_title(&label));
+    }
+    let tokens = api::n(result, "tokens_used")
+        .map(|n| format!("{} tokens", n as u64))
+        .unwrap_or_else(|| "token use not reported".into());
+    card = card.child(row_desc(&format!("{} · {tokens} · {} sourced risk(s) · {} sourced product fact(s) · {} unsupported item(s) omitted",
+        if model.is_empty() { "Model not reported" } else { &model }, risks.len(), specs.len(), dropped)));
+    let diagnostic = result.get("diagnostic").unwrap_or(&Value::Null);
+    let diagnostic_message = api::s(diagnostic, "message");
+    if risks.is_empty() {
+        let message = quick_look_empty_message(result, state);
+        if !message.is_empty() {
+            card = card.child(row_desc(&message));
+        }
+    } else if !diagnostic_message.is_empty() {
+        card = card.child(row_desc(&diagnostic_message));
+    }
+    if let Some(coverage) = coverage {
+        let count = |key: &str| api::n(coverage, key)
+            .map(|value| format!("{value:.0}"))
+            .unwrap_or_else(|| "not reported".into());
+        card = card.child(mono(&format!(
+            "READ {} · PRODUCT MATCHES {} · CHECKED {} · PUBLISHERS {} · CITED {}",
+            count("pages_read"), count("pages_relevant"),
+            count("pages_extracted"), count("publishers_read"), count("sources_cited")), MUTED));
+        let coverage_status = api::s(coverage, "status");
+        let status = match coverage_status.as_str() {
+            "supported_findings" => "Evidence checks kept one or more findings",
+            "partial" => "Some research or evidence stages were incomplete",
+            "no_matching_product_evidence" => "No read page established a match to this exact product",
+            "evidence_rejected" => "Candidate findings did not pass the evidence checks",
+            "no_supported_findings" => "No sourced risks were kept from the pages read",
+            _ if risks.is_empty() => "No sourced risks were kept in the saved result",
+            _ => "Evidence coverage recorded",
+        };
+        if !risks.is_empty() {
+            card = card.child(row_desc(status));
+        }
+        card = card.child(mono(&format!("Pages checked: {} · candidates rejected: {}",
+            count("pages_extracted"), count("rejected_candidates")), DIM));
+    } else if risks.is_empty() && diagnostic_message.is_empty() {
+        card = card.child(row_desc("No sourced risks were kept in the saved result. Coverage details were not reported."));
+    }
+
+    let evidence_pages = api::arr(result, "evidence_pages");
+    if !evidence_pages.is_empty() {
+        card = card.child(hairline()).child(eyebrow("Pages checked"));
+        for (page_index, page) in evidence_pages.iter().enumerate() {
+            let url = api::s(page, "url");
+            let domain = api::s(page, "domain");
+            let excerpt = ["excerpt", "quote", "text", "content"]
+                .iter()
+                .map(|key| api::s(page, key))
+                .find(|text| !text.trim().is_empty())
+                .unwrap_or_default();
+            if !excerpt.is_empty() {
+                card = card.child(row_desc(&short_text(&excerpt, 320)));
+            }
+            if !url.is_empty() {
+                card = card.child(source_link(
+                    gpui::ElementId::named_usize("quicklook-page-source", page_index),
+                    if domain.is_empty() { "Page" } else { &domain },
+                    &url,
+                ));
             }
         }
     }
-    for spec in api::arr(result, "specs") {
-        let url = api::s(spec, "url");
-        if !url.is_empty() && !urls.contains(&url) {
-            urls.push(url);
+
+    if let Some(listing) = listing {
+        let description = api::s(listing, "description");
+        let listing_url = api::s(listing, "url");
+        let facts = listing.get("facts").unwrap_or(&Value::Null);
+        if !description.is_empty() || !listing_url.is_empty() || !facts.is_null() {
+            card = card.child(hairline()).child(eyebrow("Product listing"));
+            if !description.is_empty() {
+                card = card.child(row_desc(&description));
+            }
+            if !listing_url.is_empty() {
+                card = card.child(source_link("quicklook-listing-source", "Listing", &listing_url));
+            }
+            for (fact_index, (name, value, quote, url)) in quick_look_listing_facts(facts).into_iter().enumerate() {
+                card = card.child(row_title(&format!("{name} · {value}")));
+                if !quote.is_empty() {
+                    card = card.child(row_desc(&format!("“{quote}”")));
+                }
+                if !url.is_empty() {
+                    card = card.child(source_link(
+                        gpui::ElementId::named_usize("quicklook-listing-fact-source", fact_index),
+                        "Listing fact",
+                        &url,
+                    ));
+                }
+            }
         }
     }
-    let mut card = card().flex().flex_col().gap(px(10.0))
-        .child(eyebrow("Local quick look · evidence"))
-        .child(row_desc(&format!("{} · {tokens} · {} sourced risks kept · {dropped} unsourced dropped",
-            if model.is_empty() { "Model not reported" } else { &model }, risks.len())));
+    let assumed = api::s(result, "assumed");
+    if !assumed.is_empty() {
+        card = card.child(mono(&format!("Variant assumption · {assumed}"), MUTED));
+    }
     if let Some(identity) = result.get("identity").filter(|value| value.is_object()) {
         let name = api::s(identity, "canonical_name");
         let variant = api::s(identity, "variant");
@@ -182,58 +382,45 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
         let unknowns = api::arr(identity, "unknowns").iter()
             .filter_map(Value::as_str).collect::<Vec<_>>().join(", ");
         let resolved = identity.get("resolved").and_then(Value::as_bool).unwrap_or(false);
-        card = card.child(row_desc(&format!("Identity: {} · {} · {}",
+        let identity_line = format!("Identity · {} · {} · {}",
             if name.is_empty() { "product name not reported" } else { &name },
             if variant.is_empty() { "exact variant unresolved" } else { &variant },
-            if resolved { "resolved" } else { "unresolved" })));
+            if resolved { "resolved" } else { "unresolved" });
+        card = card.child(mono(&identity_line, INK_2));
         if !identifiers.is_empty() {
-            card = card.child(mono(&format!("Identifiers: {identifiers}"), MUTED));
+            card = card.child(mono(&format!("Identifiers · {identifiers}"), MUTED));
         }
         if !unknowns.is_empty() {
-            card = card.child(mono(&format!("Still unknown: {unknowns}"), DIM));
+            card = card.child(mono(&format!("Still unknown · {unknowns}"), DIM));
         }
     }
-    let coverage = result.get("coverage")
-        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")));
-    if let Some(coverage) = coverage.filter(|value| value.is_object()) {
-        let count = |key: &str| api::n(coverage, key)
-            .map(|value| format!("{value:.0}"))
-            .unwrap_or_else(|| "not reported".into());
-        card = card.child(mono(&format!(
-            "READ {} · PRODUCT MATCHES {} · CHECKED {} · PUBLISHERS {} · CITED {}",
-            count("pages_read"), count("pages_relevant"),
-            count("pages_extracted"), count("publishers_read"), count("sources_cited")), MUTED));
-        let status = api::s(coverage, "status");
-        if !status.is_empty() {
-            let status = match status.as_str() {
-                "supported_findings" => "Supported findings kept",
-                "partial" => "Some evidence or language stages were incomplete",
-                "no_matching_product_evidence" => "No page established a match to this product",
-                "evidence_rejected" => "Candidate findings failed the evidence checks",
-                "no_supported_findings" => "No supported findings kept",
-                _ => "Evidence processing incomplete",
-            };
-            card = card.child(row_desc(status));
-            card = card.child(mono(&format!("Evidence passes: {} · candidates rejected: {}",
-                count("pages_extracted"), count("rejected_candidates")), DIM));
-            if risks.is_empty() && specs.is_empty() {
-                card = card.child(row_desc("This is insufficient evidence to conclude that the product has no problems."));
-                if let Some(reasons) = coverage.get("rejection_reasons").and_then(Value::as_object) {
-                    let mut summary = reasons.iter()
-                        .filter_map(|(reason, count)| {
-                            let count = count.as_u64().or_else(|| count.as_i64().map(|n| n.max(0) as u64))?;
-                            (count > 0).then(|| (count, format!("{} ({count})", reason.replace('_', " "))))
-                        })
-                        .collect::<Vec<_>>();
-                    summary.sort_by(|a, b| b.0.cmp(&a.0));
-                    let summary = summary.into_iter().take(3).map(|(_, label)| label).collect::<Vec<_>>();
-                    if !summary.is_empty() {
-                        card = card.child(row_desc(&format!("Candidate rejection reasons: {}", summary.join(" · "))));
-                    }
-                }
-            }
+    if let Some(pack_identity) = result.get("pack_identity") {
+        for fact in quick_look_facts(pack_identity) {
+            card = card.child(mono(&format!("Catalog identity · {fact}"), MUTED));
         }
     }
+    let runtime = result.get("runtime")
+        .filter(|runtime| {
+            !api::s(runtime, "requested_device").is_empty()
+                || !matches!(api::s(runtime, "device").as_str(), "" | "unknown")
+        })
+        .or_else(|| result.get("telemetry").and_then(|telemetry| telemetry.get("runtime")))
+        .filter(|runtime| runtime.is_object());
+    if let Some(runtime) = runtime {
+        let requested = api::s(runtime, "requested_device");
+        let actual = api::s(runtime, "device");
+        let actual = if actual.is_empty() || actual == "unknown" { String::new() } else { actual };
+        let device = match (requested.is_empty(), actual.is_empty()) {
+            (false, false) => format!("Device · requested {requested}, runtime reported {actual}"),
+            (false, true) => format!("Device · requested {requested}, actual use not reported"),
+            (true, false) => format!("Device reported · {actual}"),
+            (true, true) => String::new(),
+        };
+        if !device.is_empty() {
+            card = card.child(mono(&device, MUTED));
+        }
+    }
+
     let verification = result.get("verification").unwrap_or(&Value::Null);
     if verification.is_object() {
         let error = api::s(verification, "error");
@@ -252,13 +439,13 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
         if !note.is_empty() {
             card = card.child(row_desc(&note));
         }
-    } else if let Some(check) = result.get("telemetry").and_then(|t| t.get("self_verify")) {
-        card = card.child(row_desc("Model self-check opinions; exact source quotes remain the evidence gate."));
-        if let Some(verdicts) = check.get("verdicts").and_then(|v| v.as_array()) {
+    } else if let Some(check) = result.get("telemetry").and_then(|telemetry| telemetry.get("self_verify")) {
+        card = card.child(row_desc("Model self-check opinions; source quotes remain the evidence gate."));
+        if let Some(verdicts) = check.get("verdicts").and_then(Value::as_array) {
             for verdict in verdicts {
                 let index = api::n(verdict, "index").unwrap_or(0.0) as usize;
                 let title = risks.get(index).map(|risk| api::s(risk, "title")).unwrap_or_default();
-                let supported = verdict.get("supported").and_then(|v| v.as_bool()).unwrap_or(false);
+                let supported = verdict.get("supported").and_then(Value::as_bool).unwrap_or(false);
                 card = card.child(row_desc(&format!("{} · {} · {}", title,
                     if supported { "supported" } else { "flagged" }, api::s(verdict, "reason"))));
             }
@@ -268,19 +455,184 @@ fn local_quick_look_card(job: &Job) -> Option<Div> {
     } else {
         card = card.child(mono("Self-check verdict not recorded for this run", DIM));
     }
-    if urls.is_empty() {
-        card = card.child(mono("No cited page in the saved answer", DIM));
-    } else {
-        card = card.child(mono(&format!("CITED PAGES · {}", urls.len()), DIM));
-        for url in urls {
-            card = card.child(mono(&url, MUTED));
+
+    if !risks.is_empty() {
+        card = card.child(hairline()).child(eyebrow("Sourced risks"));
+        for (risk_index, risk) in risks.iter().enumerate() {
+            let title = api::s(risk, "title");
+            let severity = api::s(risk, "severity");
+            card = card.child(row_title(&if severity.is_empty() { title.clone() }
+                else { format!("{title} · {severity}") }));
+            let body = api::s(risk, "body");
+            if !body.is_empty() {
+                card = card.child(row_desc(&body));
+            }
+            let advice = api::s(risk, "advice");
+            if !advice.is_empty() {
+                card = card.child(mono(&format!("Worth checking · {advice}"), MUTED));
+            }
+            for (source_index, source) in api::arr(risk, "sources").iter().enumerate() {
+                let domain = api::s(source, "domain");
+                let url = api::s(source, "url");
+                let quote = api::s(source, "quote");
+                if !quote.is_empty() {
+                    card = card.child(row_desc(&format!("“{quote}”")));
+                }
+                if !url.is_empty() {
+                    card = card.child(source_link(
+                        gpui::ElementId::named_usize(format!("quicklook-risk-source-{risk_index}"), source_index),
+                        if domain.is_empty() { "Source" } else { &domain },
+                        &url,
+                    ));
+                }
+            }
+        }
+    }
+    if !specs.is_empty() {
+        card = card.child(hairline()).child(eyebrow("Sourced product facts"));
+        for (spec_index, spec) in specs.iter().enumerate() {
+            let name = api::s(spec, "name");
+            let value = api::s(spec, "value");
+            card = card.child(row_title(&format!("{name} · {value}")));
+            let quote = api::s(spec, "quote");
+            if !quote.is_empty() {
+                card = card.child(row_desc(&format!("“{quote}”")));
+            }
+            let url = api::s(spec, "url");
+            if !url.is_empty() {
+                let domain = {
+                    let domain = api::s(spec, "domain");
+                    if domain.is_empty() { "Source".to_string() } else { domain }
+                };
+                card = card.child(source_link(
+                    gpui::ElementId::named_usize("quicklook-spec-source", spec_index),
+                    &domain,
+                    &url,
+                ));
+            }
         }
     }
     Some(card)
 }
 
-/// #112: the follow-up exchange on a finished quick look, answered from its
-/// own findings on the same plane the look ran on.
+/// Normalize both the result's list of `{name,value}` rows and the older
+/// pack-identity map into short, visible product facts.
+fn quick_look_facts(value: &Value) -> Vec<String> {
+    match value {
+        Value::Array(items) => items.iter().filter_map(|item| {
+            let name = api::s(item, "name");
+            let value = api::s(item, "value");
+            if name.is_empty() || value.is_empty() { None } else { Some(format!("{name} · {value}")) }
+        }).collect(),
+        Value::Object(items) => items.iter().map(|(name, value)| {
+            let value = value.as_str().map(str::to_string).unwrap_or_else(|| value.to_string());
+            format!("{name} · {value}")
+        }).collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn quick_look_listing_facts(value: &Value) -> Vec<(String, String, String, String)> {
+    match value {
+        Value::Array(items) => items.iter().filter_map(|item| {
+            let name = api::s(item, "name");
+            let value = api::s(item, "value");
+            if name.is_empty() || value.is_empty() {
+                None
+            } else {
+                Some((name, value, api::s(item, "quote"), api::s(item, "url")))
+            }
+        }).collect(),
+        Value::Object(items) => items.iter().map(|(name, value)| {
+            let value = value.as_str().map(str::to_string).unwrap_or_else(|| value.to_string());
+            (name.clone(), value, String::new(), String::new())
+        }).collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn source_link(id: impl Into<gpui::ElementId>, label: &str, url: &str) -> Stateful<Div> {
+    let full_label = format!("{label} · {url}");
+    let label = if full_label.chars().count() > 92 {
+        format!("{}…", full_label.chars().take(91).collect::<String>())
+    } else {
+        full_label
+    };
+    let link = url.to_string();
+    div()
+        .id(id)
+        .cursor_pointer()
+        .child(mono(&label, ICE))
+        .on_click(move |_, _, cx| cx.open_url(&link))
+}
+
+fn short_text(text: &str, limit: usize) -> String {
+    let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if flat.chars().count() <= limit {
+        return flat;
+    }
+    format!("{}…", flat.chars().take(limit.saturating_sub(1)).collect::<String>())
+}
+
+fn quick_look_empty_message(result: &Value, state: &str) -> String {
+    if !api::arr(result, "risks").is_empty() {
+        return String::new();
+    }
+    let diagnostic = result.get("diagnostic").unwrap_or(&Value::Null);
+    let message = api::s(diagnostic, "message");
+    let coverage = result.get("coverage")
+        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")))
+        .unwrap_or(&Value::Null);
+    let summary = if !message.is_empty() {
+        message
+    } else {
+        match api::s(coverage, "status").as_str() {
+            "no_matching_product_evidence" => "No read page established a match to this exact product.".into(),
+            "evidence_rejected" => "Candidate risks did not pass the evidence checks on the pages read.".into(),
+            "no_supported_findings" => "No sourced risks were kept from the pages read.".into(),
+            "partial" => "Some research stages were incomplete, and no sourced risks were kept.".into(),
+            _ => "No sourced risks were kept in the saved result.".into(),
+        }
+    };
+    let caveat = if state == "succeeded" {
+        "This describes the saved coverage result; it does not prove the product has no problems."
+    } else {
+        "This result is incomplete and does not establish whether the product has problems."
+    };
+    format!("{summary} {caveat}")
+}
+
+#[cfg(test)]
+mod quick_look_result_tests {
+    use super::quick_look_empty_message;
+    use crate::api::Value;
+
+    #[test]
+    fn an_empty_success_describes_coverage_without_claiming_the_product_is_clear() {
+        let result: Value = serde_json::json!({
+            "risks": [],
+            "diagnostic": {"code": "no_issues_found", "message": "No known issues were found in the pages read."},
+            "coverage": {"status": "no_supported_findings", "pages_read": 4}
+        });
+        let message = quick_look_empty_message(&result, "succeeded");
+        assert!(message.contains("No known issues were found in the pages read."));
+        assert!(message.contains("does not prove the product has no problems."));
+    }
+
+    #[test]
+    fn an_unmatched_product_is_reported_as_a_coverage_gap() {
+        let result: Value = serde_json::json!({
+            "risks": [],
+            "coverage": {"status": "no_matching_product_evidence"}
+        });
+        let message = quick_look_empty_message(&result, "succeeded");
+        assert!(message.contains("No read page established a match to this exact product."));
+        assert!(message.contains("does not prove the product has no problems."));
+    }
+}
+
+/// #112: a web-searched follow-up, with the product context and source pages
+/// kept beside the answer.
 fn follow_up_card(
     app: &mut Kriko,
     job_id: String,
@@ -301,14 +653,36 @@ fn follow_up_card(
         }
     });
     let mut c = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Ask a follow-up"))
-        .child(row_desc("Answered from this quick look's findings; no new pages are read."));
-    for a in app.live.run.quick_asks.iter() {
+        .child(row_desc("Follow-ups search the web using this product's saved listing details and Quick Look evidence."));
+    for (ask_index, a) in app.live.run.quick_asks.iter().enumerate() {
         c = c.child(row_title(&a.question));
         if a.done {
             c = c.child(row_desc(if a.answer.is_empty() { "No answer." } else { &a.answer }));
+            if !a.sources.is_empty() {
+                c = c.child(mono("Sources read", DIM));
+                for (source_index, (domain, url)) in a.sources.iter().enumerate() {
+                    c = c.child(source_link(
+                        gpui::ElementId::named_usize(
+                            format!("quick-followup-source-{ask_index}"),
+                            source_index,
+                        ),
+                        if domain.is_empty() { "Source" } else { domain },
+                        url,
+                    ));
+                }
+            } else {
+                c = c.child(row_desc(if a.message.is_empty() {
+                    "No source pages were reported for this answer."
+                } else {
+                    &a.message
+                }));
+            }
         } else {
-            c = c.child(row_desc("Answering\u{2026}"));
+            c = c.child(row_desc("Searching and answering…"));
         }
+    }
+    if app.live.run.quick_asks_loading && app.live.run.quick_asks.is_empty() {
+        c = c.child(row_desc("Loading saved follow-ups…"));
     }
     if let Some(note) = app.live.run.quick_ask_note.clone() {
         c = c.child(row_desc(&note));
@@ -433,10 +807,17 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
 
 /// The questions a run put to the reader, with their options; answering is
 /// a new run that carries them.
-fn questions_card(app: &Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
-    let Some(att) = &job.attention else { return div() };
+fn questions_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> gpui::AnyElement {
+    let Some(att) = &job.attention else { return div().into_any_element() };
     let mut c = card().flex().flex_col().gap(px(12.0));
-    c = c.child(eyebrow("Needs you")).child(row_desc(&att.say));
+    c = c
+        .child(
+            div().flex().items_center().justify_between().gap(px(12.0))
+                .child(eyebrow("Needs you"))
+                .child(tag(format!("run-needs-user-{}", job.id), TagState::Need, "Choose answers", motion)),
+        )
+        .child(row_desc(&att.say))
+        .child(row_desc(attention_detail(job.done)));
     for (qi, q) in att.questions.iter().enumerate() {
         let chosen = app
             .live
@@ -481,14 +862,56 @@ fn questions_card(app: &Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
                 .child(row_desc("A new run that carries these answers.")),
         );
     } else {
-        c = c.child(row_desc("Your answers go into the next run; this one carries on with its own."));
     }
-    c
+    arrive(c, format!("run-questions-{}", job.id), motion)
+}
+
+fn route_button(
+    cx: &mut Context<Kriko>,
+    id: &'static str,
+    label: &str,
+    destination: Tab,
+) -> gpui::AnyElement {
+    key(id, label)
+        .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.tab = destination;
+            this.on_open_tab(cx);
+            match destination {
+                Tab::Run => {
+                    this.refresh_jobs(cx);
+                    this.refresh_agents(cx);
+                }
+                Tab::Agents => this.refresh_agents(cx),
+                Tab::Browse => this.refresh_subjects(cx),
+                _ => {}
+            }
+            cx.notify();
+        }))
+        .into_any_element()
+}
+
+fn quick_look_available(agents_ready: bool, extension_available: bool) -> bool {
+    agents_ready && extension_available
+}
+
+fn pending_agent_choice_labels(llms_pending: bool, efforts_pending: bool) -> Vec<&'static str> {
+    let mut labels = Vec::new();
+    if llms_pending {
+        labels.push("Checking available models…");
+    }
+    if efforts_pending {
+        labels.push("Checking effort choices…");
+    }
+    labels
 }
 
 /// Start a check: look a subject up, pick it, pick the agent, go.
-fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>, idle_note: Option<&str>) -> Div {
-    let open = app.live.run.start.open;
+fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    // With nothing run yet, starting one is the only thing this screen is
+    // for: the form is simply there, with no "New" to find first.
+    // The same test the Run card uses for "No check has run yet".
+    let first = app.live.run.current().is_none();
+    let open = app.live.run.start.open || first;
     let toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         let s = &mut this.live.run.start;
         s.open = !s.open;
@@ -500,13 +923,70 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>, idl
             .items_center()
             .child(eyebrow("Start a check"))
             .child(div().flex_1())
-            .child(plate_s("run-start-toggle", if open { "Close" } else { "New" }).on_click(toggle)),
+            .when(!first, |d| d.child(plate_s("run-start-toggle", if open { "Close" } else { "New" }).on_click(toggle))),
     );
-    if let Some(note) = idle_note {
-        c = c.child(row_desc(note));
-    }
     if !open {
         return c;
+    }
+
+    if app.live.history.packs.is_none() {
+        let check = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+            this.refresh_history(cx);
+            this.refresh_agents(cx);
+            this.refresh_extension(cx);
+            cx.notify();
+        });
+        let primary = ghost("run-catalog-check", "Check again")
+            .on_click(check)
+            .into_any_element();
+        let can_quick_look = quick_look_available(
+            app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
+            app.live.knowledge.ext.as_ref().is_some_and(|e| e.available),
+        );
+        let actions = if can_quick_look {
+            div().flex().items_center().gap(px(8.0))
+                .child(primary)
+                .child(route_button(cx, "run-quick-look-pending-catalog", "Quick Look a product", Tab::Extension))
+                .into_any_element()
+        } else {
+            primary
+        };
+        return c.child(guidance::next_step(
+            "run-catalogs-waiting",
+            "Catalog details have not loaded",
+            "Kriko has not confirmed which catalogs are available. Check again to retry; if an agent and extension are ready, Quick Look can start from a product listing meanwhile.",
+            actions,
+            app.motion,
+        ));
+    }
+    if let Some(packs) = app.live.history.packs.as_ref() {
+        if !packs.iter().any(|pack| pack.enabled) {
+            let (title, detail) = if packs.is_empty() {
+                ("Install a catalog", "Install a catalog in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing without a catalog.")
+            } else {
+                ("Switch on a catalog", "Every installed catalog is off. Switch one on in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing.")
+            };
+            let primary = route_button(cx, "run-open-overview", "Open Overview", Tab::Overview);
+            let can_quick_look = quick_look_available(
+                app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
+                app.live.knowledge.ext.as_ref().is_some_and(|e| e.available),
+            );
+            let actions = if can_quick_look {
+                div().flex().items_center().gap(px(8.0))
+                    .child(primary)
+                    .child(route_button(cx, "run-quick-look-listing", "Quick Look a product", Tab::Extension))
+                    .into_any_element()
+            } else {
+                primary
+            };
+            return c.child(guidance::next_step(
+                if packs.is_empty() { "run-no-catalog" } else { "run-catalogs-off" },
+                title,
+                detail,
+                actions,
+                app.motion,
+            ));
+        }
     }
 
     let search = app.input_field(Field::RunSearch, "run-search", "Find a product...", Some("search"), window, cx);
@@ -520,7 +1000,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>, idl
             .items_center()
             .gap(px(8.0))
             .child(search)
-            .child(key("run-search-go", if app.live.run.start.searching { "Looking" } else { "Search" }).on_click(go)),
+            .child(key("run-search-go", if app.live.run.start.searching { "Looking" } else if app.live.run.start.note.is_empty() { "Search" } else { "Try again" }).on_click(go)),
     );
 
     let start = &app.live.run.start;
@@ -556,23 +1036,40 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>, idl
             this.live.run.start.picked = None;
             cx.notify();
         });
-        c = c
-            .child(mono("RUN WITH", DIM))
-            .child(if app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)) {
-                agents
-            } else {
-                div().child(empty_note("No agent is ready to run a check. See the Agents tab."))
-            })
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(8.0))
-                    .child(key("run-begin", "Start").on_click(begin))
-                    .child(ghost("run-back", "Back").on_click(back)),
-            );
+        let ready = app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready));
+        c = c.child(mono("RUN WITH", DIM));
+        if ready {
+            c = c.child(agents);
+            if let Some(agent) = app.live.run.harnesses.iter().find(|h| h.id == chosen) {
+                for label in pending_agent_choice_labels(agent.llms_pending, agent.efforts_pending) {
+                    c = c.child(row_desc(label));
+                }
+            }
+        } else if app.live.run.prefs_loaded {
+            c = c.child(guidance::next_step(
+                "run-no-ready-agent",
+                "Set up an agent",
+                "No agent is ready to run this check. Connect or install one in Agents, then come back.",
+                route_button(cx, "run-open-agents", "Open Agents", Tab::Agents),
+                app.motion,
+            ));
+        } else {
+            c = c.child(empty_note("Checking which agents can run a check."));
+        }
+        c = c.child(
+            div().flex().items_center().gap(px(8.0))
+                .when(ready, |d| d.child(key("run-begin", "Start").on_click(begin)))
+                .child(ghost("run-back", "Back").on_click(back)),
+        );
     } else if start.searched && start.hits.is_empty() && start.note.is_empty() {
-        c = c.child(empty_note("Nothing in the installed catalogs matches that."));
+        c = c.child(empty_note("Nothing in the installed catalogs matches that."))
+            .child(guidance::next_step(
+                "run-search-no-match",
+                "Browse catalog products",
+                "See which products are available in the catalogs installed here.",
+                route_button(cx, "run-browse-products", "Open Browse", Tab::Browse),
+                app.motion,
+            ));
     } else {
         for (i, hit) in start.hits.iter().enumerate() {
             let h = hit.clone();
@@ -616,7 +1113,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         .map(|h| h.label.clone())
         .unwrap_or_else(|| if job.harness.is_empty() { "Agent".to_string() } else { job.harness.clone() });
     let phase = job.lane_phase();
-    let progress = if job.done { 100.0 } else { job.progress * 100.0 };
+    let progress = if job.stage() == Stage::Stored { 100.0 } else { job.progress * 100.0 };
     card()
         .flex()
         .flex_col()
@@ -661,80 +1158,40 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         )
 }
 
-/// The engine's feed for the job, newest first.
-fn feed_card(app: &mut Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
-    let mut feed = card().flex().flex_col();
-    feed = feed.child(div().mb(px(12.0)).child(eyebrow(if job.done { "Log" } else { "Live feed" })));
-    let all = job.log_events();
-    if all.is_empty() {
-        return feed.child(empty_note(if job.done {
-            "This run left no log."
-        } else {
-            "Nothing yet. Lines land here as the agent reads and writes."
-        }));
+#[cfg(test)]
+mod guidance_tests {
+    use super::{attention_detail, next_for_job, pending_agent_choice_labels, quick_look_available, RunNext};
+    use crate::live::run::Stage;
+
+    #[test]
+    fn active_jobs_and_question_runs_keep_their_own_next_action() {
+        assert_eq!(next_for_job(false, Stage::Reading, false), None);
+        assert_eq!(next_for_job(true, Stage::Stored, true), None);
+        assert!(attention_detail(false).contains("when it finishes"));
+        assert!(attention_detail(true).contains("run it again"));
     }
-    let levels = ["ALL", "SEARCH", "SOURCE", "FINDING", "PROBLEM"];
-    let selected = app.live.run.log_level.min(levels.len() - 1);
-    let next_filter = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.live.run.log_level = (this.live.run.log_level + 1) % 5;
-        cx.notify();
-    });
-    let copied = all.iter().map(|line| line.text.as_str()).collect::<Vec<_>>().join("\n");
-    let copy_log = cx.listener(move |_this, _: &gpui::ClickEvent, _w, cx| {
-        cx.write_to_clipboard(gpui::ClipboardItem::new_string(copied.clone()));
-    });
-    feed = feed.child(
-        div()
-            .flex()
-            .items_center()
-            .gap(px(10.0))
-            .child(plate_s("run-log-level", &format!("LEVEL · {}", levels[selected])).on_click(next_filter))
-            .child(plate_s("run-log-copy", "Copy log").on_click(copy_log)),
-    );
-    let selected_kind = ["", "search", "source", "finding", "problem"][selected];
-    let lines: Vec<_> = all.iter().rev().filter(|line| {
-        selected_kind.is_empty() || line.kind == selected_kind
-    }).collect();
-    if lines.is_empty() {
-        return feed.child(empty_note("No log entries match this level."));
+
+    #[test]
+    fn failed_or_stopped_runs_can_be_retried_and_completed_runs_lead_to_activity() {
+        assert_eq!(next_for_job(true, Stage::Failed, false), Some(RunNext::Retry));
+        assert_eq!(next_for_job(true, Stage::Cancelled, false), Some(RunNext::Retry));
+        assert_eq!(next_for_job(true, Stage::Stored, false), Some(RunNext::Activity));
     }
-    let count = lines.len();
-    for (i, line) in lines.into_iter().enumerate() {
-        let state = if line.kind == "problem" {
-            TagState::Block
-        } else if i == 0 && !job.done {
-            TagState::Live
-        } else {
-            TagState::Done
-        };
-        let row = div()
-            .py(px(10.0))
-            .flex()
-            .items_center()
-            .gap(px(SPACE_CARD))
-            .child(tag(format!("run-feed-{i}"), state, "", motion))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w(px(0.0))
-                    .font_family(SANS)
-                    .text_size(px(14.0))
-                    .text_color(rgb(INK_2))
-                    .child(line.text.clone()),
-            );
-        // the newest line fades in as it lands; the count rides the id so
-        // each new line mounts its own fade
-        let row: gpui::AnyElement = if motion && i == 0 && !job.done {
-            row.with_animation(
-                gpui::ElementId::named_usize("run-feed-in", count),
-                Animation::new(std::time::Duration::from_millis(450)).with_easing(|t| t * t),
-                |el, v| el.opacity(v),
-            )
-            .into_any_element()
-        } else {
-            row.into_any_element()
-        };
-        feed = feed.child(row);
+
+    #[test]
+    fn quick_look_is_offered_only_when_an_agent_and_extension_are_available() {
+        assert!(quick_look_available(true, true));
+        assert!(!quick_look_available(false, true));
+        assert!(!quick_look_available(true, false));
     }
-    feed
+
+    #[test]
+    fn run_picker_only_shows_model_and_effort_messages_while_they_are_pending() {
+        assert_eq!(pending_agent_choice_labels(false, false), Vec::<&str>::new());
+        assert_eq!(pending_agent_choice_labels(true, false), vec!["Checking available models…"]);
+        assert_eq!(pending_agent_choice_labels(false, true), vec!["Checking effort choices…"]);
+        assert_eq!(pending_agent_choice_labels(true, true), vec![
+            "Checking available models…", "Checking effort choices…"
+        ]);
+    }
 }

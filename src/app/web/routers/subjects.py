@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.termlabel import term_label
 from app.web.deps import get_store
-from kriko.research import get_researcher, plan_task
 
 router = APIRouter(prefix="/api", tags=["subjects"])
 
@@ -238,6 +237,55 @@ def search_subjects(
     return {"query": q, "items": items, "count": len(items)}
 
 
+#: How many applying claims a subject's page lists.
+SUBJECT_CLAIMS = 200
+
+
+def _claims_for(store, row) -> list[dict]:
+    """What applies to this subject, as a check on it would say.
+
+    The engine's own lookup on the subject's identity: it follows the parts
+    the subject is built from and applies each claim's conditions, so a car
+    variant shows its engine's and gearbox's claims and not those gated to
+    another gearbox. Empty when the lookup does not land on exactly this
+    subject; the caller then lists the subject's own rows.
+    """
+    from kriko.lookup import lookup
+    from kriko.lookup.query import Query
+
+    identity = {r["key"]: r["value_text"] for r in store.execute(
+        "SELECT key, value_text FROM attributes WHERE subject_id = ? AND is_identity = 1",
+        (row["subject_id"],))}
+    if not identity:
+        return []
+    result = lookup(store, Query(kind=row["kind"], identity=identity,
+                                 packs=(row["pack_id"],), limit=SUBJECT_CLAIMS))
+    if result.resolution.subject_ids != (row["subject_id"],):
+        return []
+    return [
+        {"claim_id": c.claim_id, "kind": c.kind, "domain": c.domain,
+         "severity": c.severity, "detection": c.detection, "title": c.title,
+         # Reached through a part: name the part, so the reader sees why.
+         "via": c.subject_label if c.subject_id != row["subject_id"] else ""}
+        for c in result.claims
+    ]
+
+
+def _direct_claims(store, subject_id: str) -> list[dict]:
+    return [
+        dict(r)
+        for r in store.execute(
+            "SELECT c.claim_id, c.kind, c.domain, c.severity, c.detection,"
+            "       c.author_confidence, t.title"
+            " FROM claims c LEFT JOIN claim_text t"
+            "   ON t.claim_id = c.claim_id AND t.pack_id = c.pack_id"
+            "  AND t.lang = 'en'"
+            " WHERE c.subject_id = ? ORDER BY c.severity, t.title",
+            (subject_id,),
+        )
+    ]
+
+
 @router.get("/subjects/{subject_id}")
 def get_subject(subject_id: str, store=Depends(get_store)):
     row = store.execute(
@@ -250,6 +298,7 @@ def get_subject(subject_id: str, store=Depends(get_store)):
         "pack_id": row["pack_id"],
         "kind": row["kind"],
         "label": row["label"],
+        "claims": _claims_for(store, row) or _direct_claims(store, subject_id),
         "attributes": [
             {**{k: v for k, v in dict(r).items() if k != "label_json"},
              "label": term_label(r["label_json"], r["key"])}
@@ -278,37 +327,6 @@ def get_subject(subject_id: str, store=Depends(get_store)):
                 (subject_id,),
             )
         ],
-        "claims": [
-            dict(r)
-            for r in store.execute(
-                "SELECT c.claim_id, c.kind, c.domain, c.severity, c.detection,"
-                "       c.author_confidence, t.title"
-                " FROM claims c LEFT JOIN claim_text t"
-                "   ON t.claim_id = c.claim_id AND t.pack_id = c.pack_id"
-                "  AND t.lang = 'en'"
-                " WHERE c.subject_id = ? ORDER BY c.severity, t.title",
-                (subject_id,),
-            )
-        ],
     }
 
 
-@router.get("/subjects/{subject_id}/brief")
-def research_brief(subject_id: str, store=Depends(get_store)):
-    """The research brief, in the pack's own terms.
-
-    This is the whole $0 plane from the browser: copy it into a coding-agent
-    session, let the subscription do the searching, and the findings come back
-    through MCP.
-    """
-    row = store.execute(
-        "SELECT pack_id FROM subjects WHERE subject_id = ?", (subject_id,)
-    ).fetchone()
-    if row is None:
-        raise HTTPException(404, f"no subject {subject_id}")
-    task = plan_task(store, subject_id, row["pack_id"])
-    return {
-        "subject": task.subject_label,
-        "queries": list(task.rendered_queries()),
-        "brief": get_researcher().brief(task),
-    }
