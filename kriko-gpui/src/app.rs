@@ -22,8 +22,6 @@ gpui::actions!(kriko, [NewCheck, SearchKnowledge, JumpBrowse]);
 
 // ---- the window's room ----
 
-/// The page column's side padding (`px(40.0)` on the page, below the hero).
-const PAGE_PAD: f32 = 40.0;
 /// The live dock's width when it sits beside the page.
 const DOCK_W: f32 = 300.0;
 /// The titlebar's height; the floating dock starts under it so the window
@@ -147,8 +145,8 @@ impl Tab {
     /// content starts right under. Home and About keep a little more of it.
     fn hero_height(self) -> f32 {
         match self {
-            Tab::Home | Tab::About => 132.0,
-            _ => 108.0,
+            Tab::Home | Tab::About => 116.0,
+            _ => 100.0,
         }
     }
 }
@@ -1036,6 +1034,7 @@ impl Render for Kriko {
                     .child(
                         div()
                             .id("main-scroll")
+                            .w_full()
                             .flex()
                             .flex_1()
                             .min_h(px(0.0))
@@ -1054,9 +1053,10 @@ impl Render for Kriko {
                                     .flex()
                                     .flex_col()
                                     .flex_none()
-                                    .px(px(40.0))
-                                    .pt(px(20.0))
-                                    .pb(px(48.0))
+                                    .w_full()
+                                    .px(px(PAGE_PAD))
+                                    .pt(px(SPACE_SECTION))
+                                    .pb(px(32.0))
                                     .child(arrive(content, format!("page-{}", tab.key()), !self.reduce_motion)),
                             ),
                     )

@@ -77,9 +77,12 @@ fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = !app.reduce_motion;
-    let mut page = div().flex().flex_col().gap(px(24.0));
+    let mut page = div().flex().flex_col().gap(px(SPACE_CARD));
 
     let job = app.live.run.current().cloned();
+    // With no check on screen, the idle note sits inside the start card
+    // instead of in a card of its own: one card, not two stacked bands.
+    let mut idle_note: Option<&str> = None;
     match (&job, app.live.run.jobs_loaded) {
         (Some(job), _) => {
             page = page.child(subject_card(app, job, motion, cx));
@@ -97,21 +100,14 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
             }
         }
         (None, loaded) => {
-            page = page.child(
-                card()
-                    .flex()
-                    .flex_col()
-                    .gap(px(12.0))
-                    .child(eyebrow("Run"))
-                    .child(empty_note(if loaded {
-                        "No check has run yet. Start one below."
-                    } else {
-                        "Waiting for the engine to answer."
-                    })),
-            );
+            idle_note = Some(if loaded {
+                "No check has run yet. Start one below."
+            } else {
+                "Waiting for the engine to answer."
+            });
         }
     }
-    page = page.child(start_card(app, window, cx));
+    page = page.child(start_card(app, window, cx, idle_note));
     if let Some(job) = &job {
         page = page.child(lane_card(app, job, motion));
         page = page.child(card().child(crate::screens::logs::job_logs(app, job, cx)));
@@ -491,14 +487,14 @@ fn questions_card(app: &Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
 }
 
 /// Start a check: look a subject up, pick it, pick the agent, go.
-fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>, idle_note: Option<&str>) -> Div {
     let open = app.live.run.start.open;
     let toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         let s = &mut this.live.run.start;
         s.open = !s.open;
         cx.notify();
     });
-    let mut c = card().flex().flex_col().gap(px(12.0)).child(
+    let mut c = card().flex().flex_col().gap(px(SPACE_CARD)).child(
         div()
             .flex()
             .items_center()
@@ -506,6 +502,9 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .child(div().flex_1())
             .child(plate_s("run-start-toggle", if open { "Close" } else { "New" }).on_click(toggle)),
     );
+    if let Some(note) = idle_note {
+        c = c.child(row_desc(note));
+    }
     if !open {
         return c;
     }
@@ -627,7 +626,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
             div()
                 .flex()
                 .items_center()
-                .gap(px(14.0))
+                .gap(px(SPACE_CARD))
                 .child(mark_tile("run-lane-tile", mark_for(agent), phase, 48.0, motion))
                 .child(
                     div()
@@ -712,7 +711,7 @@ fn feed_card(app: &mut Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) 
             .py(px(10.0))
             .flex()
             .items_center()
-            .gap(px(14.0))
+            .gap(px(SPACE_CARD))
             .child(tag(format!("run-feed-{i}"), state, "", motion))
             .child(
                 div()

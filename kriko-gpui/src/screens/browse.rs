@@ -269,7 +269,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         return div()
             .flex()
             .flex_col()
-            .gap(px(24.0))
+            .gap(px(SPACE_SECTION))
             .child(head)
             .child(empty_note("Reading the subjects from the store."));
     }
@@ -362,7 +362,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                         .id(("browse-list-row", ri))
                         .flex()
                         .items_center()
-                        .gap(px(14.0))
+                        .gap(px(SPACE_CARD))
                         .py(px(10.0))
                         .px(px(16.0))
                         .mx(px(-16.0))
@@ -494,7 +494,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let picked = if side_by_side {
         div()
             .flex()
-            .gap(px(24.0))
+            .gap(px(SPACE_SECTION))
             .items_start()
             .child(div().flex_1().min_w(px(0.0)).child(body))
             .child(div().w(px(320.0)).flex_none().child(drawer))
@@ -502,7 +502,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         div()
             .flex()
             .flex_col()
-            .gap(px(24.0))
+            .gap(px(SPACE_SECTION))
             .child(div().w_full().min_w(px(0.0)).child(body))
             .child(div().w_full().child(drawer))
     };
@@ -510,7 +510,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(head)
         // always mounted so it can slide; the negative margin takes back the
         // page gap a closed, zero-height panel would otherwise leave

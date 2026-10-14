@@ -13,7 +13,7 @@ fn kv(k: &str, v: &str) -> Div {
         .flex()
         .items_center()
         .justify_between()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(mono(k, DIM).flex_none())
         .child(mono(v, INK_2).min_w(px(0.0)))
 }
@@ -39,7 +39,7 @@ fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         (Some(_), _) => ("This is the newest version.".to_string(), Some(check("Check again", cx))),
         (None, _) => ("Not checked yet.".to_string(), Some(check("Check for updates", cx))),
     };
-    let mut row = div().flex().items_center().justify_between().gap(px(24.0)).child(mono(&line, INK_2).min_w(px(0.0)));
+    let mut row = div().flex().items_center().justify_between().gap(px(SPACE_SECTION)).child(mono(&line, INK_2).min_w(px(0.0)));
     if let Some(button) = action {
         row = row.child(button);
     }
@@ -84,7 +84,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
     let brand = card()
         .flex()
         .items_center()
-        .gap(px(20.0))
+        .gap(px(SPACE_SECTION))
         .child(
             svg()
                 .path(SharedString::from("kriko-mark-white.svg"))
@@ -135,7 +135,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(brand)
         .child(updates)
         .child(blurb)
