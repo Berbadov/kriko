@@ -294,7 +294,9 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let running = matches!(b.phase, BenchPhase::Running { .. });
     let estimating = matches!(b.phase, BenchPhase::Estimating);
     let progress = match &b.phase {
-        BenchPhase::Running { progress, .. } => Some((progress / 100.0).clamp(0.0, 1.0)),
+        BenchPhase::Running { job_id, progress, .. } => Some(
+            app.live.run.bar_value(job_id, (progress / 100.0).clamp(0.0, 1.0), motion).clamp(0.0, 1.0),
+        ),
         _ => None,
     };
     let setup_panel = setup(app, window, cx);

@@ -106,7 +106,7 @@ pub const FOUR5: [&str; 5] = ["#..#.", "#..#.", "#####", "...#.", "...#."];
 // in Settings) skips the wrapper entirely.
 
 /// cubic-bezier(.3, 1.25, .5, 1): the --ease-mech overshoot of the hardware.
-fn ease_mech(t: f32) -> f32 {
+pub(crate) fn ease_mech(t: f32) -> f32 {
     let c1 = 1.70158;
     let c3 = c1 + 1.0;
     let x = t - 1.0;

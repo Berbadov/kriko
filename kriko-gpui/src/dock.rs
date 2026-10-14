@@ -16,22 +16,6 @@ use crate::screens::run::option_chip;
 use crate::screens::{empty_note, mono, row_desc};
 use crate::theme::*;
 
-/// Keep the newest part of a long live narration in view. The job log keeps
-/// the complete thought; the dock shows a few readable lines beside its bar.
-fn status_tail(text: &str) -> String {
-    const MAX_CHARS: usize = 170;
-    let total = text.chars().count();
-    if total <= MAX_CHARS {
-        return text.to_string();
-    }
-    let start = text
-        .char_indices()
-        .nth(total - MAX_CHARS)
-        .map(|(index, _)| index)
-        .unwrap_or(0);
-    format!("…{}", &text[start..])
-}
-
 pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
     // Closed, the dock is still laid out at zero width for its slide, and its
     // waiting marks would loop unseen at full frame rate (#184).
@@ -143,7 +127,6 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
     for (i, job) in app.live.run.running().enumerate() {
         let phase = job.lane_phase();
         let agent = mark_for(&job.harness);
-        let status = status_tail(if job.message.is_empty() { &job.state } else { &job.message });
         let stop: gpui::AnyElement = if job.state == "cancelling" {
             row_desc("Stopping…").into_any_element()
         } else {
@@ -187,9 +170,11 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                         .items_center()
                                         .justify_between()
                                         .gap(px(8.0))
+                                        .w_full()
                                         .min_w(px(0.0))
                                         .child(
                                             div()
+                                                .flex_1()
                                                 .min_w(px(0.0))
                                                 .font_family(SANS)
                                                 .font_weight(FontWeight::SEMIBOLD)
@@ -199,20 +184,11 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                         )
                                         .child(stop),
                                 )
-                                .child(
-                                    div()
-                                        .min_w(px(0.0))
-                                        .max_h(px(72.0))
-                                        .font_family(SANS)
-                                        .text_size(px(12.0))
-                                        .line_height(px(17.0))
-                                        .text_color(rgb(ICE))
-                                        .child(status),
-                                )
+                                .child(crate::screens::action_trail::compact_line(job, motion))
                                 .child(
                                     div().pt(px(4.0)).child(progress_bar(
                                         &format!("dock-lane-bar-{i}"),
-                                        job.progress,
+                                        app.live.run.bar_value(&job.id, job.progress, motion),
                                         motion,
                                     )),
                                 ),
