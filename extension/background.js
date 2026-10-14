@@ -1560,6 +1560,153 @@ async function _postApp(path, body) {
   return response.json();
 }
 
+// A service worker can be stopped between the app accepting a write and the
+// extension receiving its response. Keep a small durable record of each
+// research intent until a job receipt arrives; another click/retry then sends
+// the exact same request ID and body, letting the app return the original job.
+const RESEARCH_INTENTS_KEY = "krikoResearchIntentsV1";
+const RESEARCH_INTENT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const RESEARCH_INTENTS_LIMIT = 32;
+const RESEARCH_INTENT_BODY_LIMIT = 64 * 1024;
+const _intentInFlight = new Map();
+let _researchIntentLock = Promise.resolve();
+let _researchIdCounter = 0;
+
+async function _intentKey(path, body) {
+  // Persist a digest rather than the user's query a second time as an index.
+  const value = `${path}\n${JSON.stringify(body)}`;
+  try {
+    if (typeof crypto !== "undefined" && crypto.subtle && typeof TextEncoder !== "undefined") {
+      const bytes = new TextEncoder().encode(value);
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+    }
+  } catch (_) { /* an older runtime can still use the deterministic fallback */ }
+  let a = 2166136261;
+  let b = 2246822519;
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i);
+    a = Math.imul(a ^ code, 16777619) >>> 0;
+    b = Math.imul(b ^ code, 3266489917) >>> 0;
+  }
+  return `${a.toString(16)}${b.toString(16)}-${value.length.toString(16)}`;
+}
+
+function _newClientRequestId() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch (_) { /* older extension runtimes */ }
+  _researchIdCounter += 1;
+  return `kriko-${Date.now().toString(36)}-${_researchIdCounter.toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
+
+async function _withResearchIntentLock(fn) {
+  const previous = _researchIntentLock;
+  let release;
+  _researchIntentLock = new Promise((resolve) => { release = resolve; });
+  await previous;
+  try { return await fn(); }
+  finally { release(); }
+}
+
+async function _readResearchIntents() {
+  const stored = await extensionApi.storage.local.get(RESEARCH_INTENTS_KEY);
+  const now = Date.now();
+  const rows = stored[RESEARCH_INTENTS_KEY];
+  return Array.isArray(rows) ? rows.filter((row) => row && typeof row.key === "string" &&
+    typeof row.client_request_id === "string" && row.body &&
+    Number.isFinite(row.created_at) && now - row.created_at < RESEARCH_INTENT_TTL_MS)
+    .slice(-RESEARCH_INTENTS_LIMIT) : [];
+}
+
+async function _writeResearchIntents(rows) {
+  const bounded = rows.slice(-RESEARCH_INTENTS_LIMIT);
+  if (bounded.some((row) => JSON.stringify(row.body).length > RESEARCH_INTENT_BODY_LIMIT)) {
+    throw new Error("The research request is too large to save safely for retry.");
+  }
+  await extensionApi.storage.local.set({
+    [RESEARCH_INTENTS_KEY]: bounded,
+  });
+}
+
+async function _postIdempotentIntent(path, baseBody, prepareBody = null) {
+  const key = await _intentKey(path, baseBody);
+  let record = await _withResearchIntentLock(async () => {
+    const rows = await _readResearchIntents();
+    const existing = rows.find((row) => row.key === key);
+    if (existing) {
+      await _writeResearchIntents(rows);
+      return existing;
+    }
+    const clientRequestId = _newClientRequestId();
+    const created = {
+      key,
+      path,
+      client_request_id: clientRequestId,
+      body: { ...baseBody, client_request_id: clientRequestId },
+      prepared: !prepareBody,
+      created_at: Date.now(),
+    };
+    await _writeResearchIntents([...rows, created]);
+    return created;
+  });
+
+  // The first request captures page facts in the durable body too. On a later
+  // invocation after a lost response, do not refetch changing page content.
+  if (!record.prepared && prepareBody) {
+    const body = { ...record.body };
+    await prepareBody(body);
+    body.client_request_id = record.client_request_id;
+    record = await _withResearchIntentLock(async () => {
+      const rows = await _readResearchIntents();
+      const index = rows.findIndex((row) => row.key === key);
+      if (index < 0) return record;
+      const prepared = { ...rows[index], body, prepared: true };
+      rows[index] = prepared;
+      await _writeResearchIntents(rows);
+      return prepared;
+    });
+  }
+
+  let job;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      job = await _postApp(path, record.body);
+      break;
+    } catch (error) {
+      const transient = error.status === undefined || error.status >= 500;
+      if (!transient || attempt === 2) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 100 * (2 ** attempt)));
+    }
+  }
+  // The receipt is the only evidence that the server response made it back.
+  // If storage cleanup itself fails, replaying the same ID remains safe.
+  try {
+    await _withResearchIntentLock(async () => {
+      const rows = await _readResearchIntents();
+      await _writeResearchIntents(rows.filter((row) => row.key !== key ||
+        row.client_request_id !== record.client_request_id));
+    });
+  } catch (_) {
+    // A receipt still means success. Retaining the ID after a storage failure
+    // is safe: another click asks the server for the same accepted job.
+  }
+  return job;
+}
+
+async function _postIdempotent(path, baseBody, prepareBody = null) {
+  const key = await _intentKey(path, baseBody);
+  const existing = _intentInFlight.get(key);
+  if (existing) return existing;
+  const operation = _postIdempotentIntent(path, baseBody, prepareBody).finally(() => {
+    if (_intentInFlight.get(key) === operation) _intentInFlight.delete(key);
+  });
+  _intentInFlight.set(key, operation);
+  return operation;
+}
+
 /** Read something from the app. No body, and never used to change anything —
  * `_postApp` is the write door, this is the read one, and keeping them
  * separate means a caller cannot accidentally fire a mutation while asking a
@@ -1780,13 +1927,13 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // of the pack whose site this is.
     if (!subject_id && typeof input.url === "string" && input.url) body.url = input.url.slice(0, 2000);
     if (Number.isFinite(input.cap) && input.cap > 0) body.cap = input.cap;
-    (body.url ? _pageFacts(body.url) : Promise.resolve(null))
-      .then((page) => {
-        // B150: what the listing says travels with its name.
-        if (page && page.facts && Object.keys(page.facts).length) body.facts = page.facts;
-        if (page && page.description) body.description = page.description;
-        return _postApp("/api/extension/research-plane", body);
-      })
+    _postIdempotent("/api/extension/research-plane", body, async (prepared) => {
+      if (!prepared.url) return;
+      const page = await _pageFacts(prepared.url);
+      // B150: what the listing says travels with its name.
+      if (page && page.facts && Object.keys(page.facts).length) prepared.facts = page.facts;
+      if (page && page.description) prepared.description = page.description;
+    })
       .then((job) => sendResponse({ ok: true, job }))
       .catch((error) => sendResponse({
         ok: false, status: error.status, code: error.code, error: error.message }));
@@ -1802,7 +1949,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: false, error: "Missing job_id" });
       return false;
     }
-    _postApp(`/api/extension/quick-looks/${encodeURIComponent(jobId)}/pack`, {})
+    _postIdempotent(`/api/extension/quick-looks/${encodeURIComponent(jobId)}/pack`, {})
       .then((job) => sendResponse({ ok: true, job }))
       .catch((error) => sendResponse({
         ok: false, status: error.status, code: error.code, error: error.message }));
@@ -1818,7 +1965,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: false, error: "Missing job_id or question" });
       return false;
     }
-    _postApp(`/api/extension/quick-look/${encodeURIComponent(jobId)}/ask`, { q })
+    _postIdempotent(`/api/extension/quick-look/${encodeURIComponent(jobId)}/ask`, { q })
       .then((job) => sendResponse({ ok: true, job }))
       .catch((error) => sendResponse({
         ok: false, status: error.status, code: error.code, error: error.message }));

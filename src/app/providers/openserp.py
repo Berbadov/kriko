@@ -25,6 +25,7 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+from app.providers import network
 
 from app.providers._http import TIMEOUT
 from kriko.research.politeness import LocalSearchError
@@ -142,7 +143,10 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
             headers={"Accept": "application/json"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+            check_cancelled = getattr(search, "check_cancelled", None)
+            with network.urlopen(request, timeout=TIMEOUT,
+                                 pace_interval=0.25,
+                                 check=check_cancelled) as response:
                 body = response.read().decode("utf-8", "replace")
         except Exception as error:  # noqa: BLE001 — network, rotate
             raise LocalSearchError(str(error)) from error
@@ -189,4 +193,5 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
         return out
 
     search.stats = stats  # type: ignore[attr-defined]
+    search.check_cancelled = None  # type: ignore[attr-defined]
     return search

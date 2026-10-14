@@ -30,13 +30,17 @@ test("RESEARCH_PRODUCT posts only the explicit product choice through the extens
   assert.equal(request.method, "POST");
   assert.equal(request.headers["content-type"], "application/json");
   assert.equal(request.headers["X-Kriko-Extension"], MANIFEST.version);
-  assert.deepEqual(request.body, { q: "Example device", allow_draft: true, cap: 0.2 });
+  assert.deepEqual({ ...request.body, client_request_id: undefined },
+    { q: "Example device", allow_draft: true, cap: 0.2, client_request_id: undefined });
+  assert.equal(typeof request.body.client_request_id, "string");
+  assert.ok(request.body.client_request_id.length <= 200);
 });
 
 test("selected subject research does not permit a draft by accident", async () => {
   const h = loadBackground({ routes: { "/api/extension/research-plane": { job_id: "j" } } });
   await send(h, { type: "RESEARCH_PRODUCT", payload: { subject_id: "s1", q: "ignored", cap: 0.2 } });
-  assert.deepEqual(h.state.requests[0].body, { subject_id: "s1", cap: 0.2 });
+  assert.deepEqual({ ...h.state.requests[0].body, client_request_id: undefined },
+    { subject_id: "s1", cap: 0.2, client_request_id: undefined });
 });
 
 test("cancellation posts to the existing job endpoint", async () => {
@@ -801,8 +805,73 @@ test("research on a page never read sends its name alone (B150)", async () => {
   await send(h, { type: "RESEARCH_PRODUCT", payload: {
     q: "Example device", allow_draft: true, url: "https://shop.example/p/1",
   } });
-  assert.deepEqual(h.state.requests[0].body,
-    { q: "Example device", allow_draft: true, url: "https://shop.example/p/1" });
+  assert.deepEqual({ ...h.state.requests[0].body, client_request_id: undefined },
+    { q: "Example device", allow_draft: true, url: "https://shop.example/p/1",
+      client_request_id: undefined });
+});
+
+test("uncertain research retries retain one durable id and confirmed receipt clears it", async () => {
+  let acceptedJob = null;
+  let loseResponses = 3;
+  const h = loadBackground({ routes: {
+    "/api/extension/research-plane": (body) => {
+      if (!acceptedJob) acceptedJob = { job_id: "accepted-once", request_id: body.client_request_id };
+      assert.equal(body.client_request_id, acceptedJob.request_id);
+      if (loseResponses > 0) {
+        loseResponses -= 1;
+        throw new TypeError("connection reset after server accepted request");
+      }
+      return acceptedJob;
+    },
+  } });
+  const payload = { q: "Example device", allow_draft: true };
+  const first = await send(h, { type: "RESEARCH_PRODUCT", payload });
+  assert.equal(first.ok, false);
+  assert.equal(h.state.requests.length, 3);
+  const firstId = h.state.requests[0].body.client_request_id;
+  assert.ok(firstId);
+  assert.ok(h.state.requests.every((row) => row.body.client_request_id === firstId));
+  const pending = h.state.local.krikoResearchIntentsV1;
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].body.client_request_id, firstId);
+
+  // Restart the worker while preserving Chrome's durable local storage.
+  const restarted = loadBackground({ localState: h.state.local, routes: {
+    "/api/extension/research-plane": (body) => {
+      assert.equal(body.client_request_id, acceptedJob.request_id);
+      return acceptedJob;
+    },
+  } });
+  const recovered = await send(restarted, { type: "RESEARCH_PRODUCT", payload });
+  assert.equal(recovered.job.job_id, "accepted-once");
+  assert.equal(restarted.state.requests[0].body.client_request_id, firstId);
+  assert.deepEqual(restarted.state.local.krikoResearchIntentsV1, []);
+
+  await send(restarted, { type: "RESEARCH_PRODUCT", payload });
+  assert.notEqual(restarted.state.requests[1].body.client_request_id, firstId,
+    "a deliberate new click after a receipt starts a fresh intent");
+});
+
+test("changed research input gets a different client request id", async () => {
+  const h = loadBackground({ routes: {
+    "/api/extension/research-plane": (body) => ({ job_id: body.client_request_id }),
+  } });
+  await send(h, { type: "RESEARCH_PRODUCT", payload: { q: "First product" } });
+  await send(h, { type: "RESEARCH_PRODUCT", payload: { q: "Second product" } });
+  assert.notEqual(h.state.requests[0].body.client_request_id,
+    h.state.requests[1].body.client_request_id);
+});
+
+test("quick follow-up writes carry stable request ids", async () => {
+  const h = loadBackground({ routes: {
+    "/api/extension/quick-look/j1/ask": (body) => ({ job_id: body.client_request_id }),
+    "/api/extension/quick-looks/j1/pack": (body) => ({ job_id: body.client_request_id }),
+  } });
+  await send(h, { type: "QUICK_ASK", payload: { job_id: "j1", q: "Why?" } });
+  await send(h, { type: "QUICK_TO_PACK", payload: { job_id: "j1" } });
+  assert.equal(typeof h.state.requests[0].body.client_request_id, "string");
+  assert.equal(h.state.requests[0].body.q, "Why?");
+  assert.equal(typeof h.state.requests[1].body.client_request_id, "string");
 });
 
 // ── B152.4: an answer that follows the knowledge ─────────────────────────
