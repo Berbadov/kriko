@@ -288,6 +288,13 @@ def cmd_tui(args, store) -> int:
     return run_tui(url=args.url, allow_start=not args.no_start)
 
 
+def cmd_agent_bench(args, store) -> int:
+    """Grade agents on the fixed task suite (`app/agentbench`)."""
+    from app.agentbench.cli import run
+
+    return run(args)
+
+
 def cmd_bench(args, store) -> int:
     """Measure the planes against the same cases (B111).
 
@@ -736,6 +743,15 @@ def build_parser() -> argparse.ArgumentParser:
                    help="narrow | standard | wide (repeatable; default: whatever "
                         "the plane would choose from past measurements)")
     p.set_defaults(fn=cmd_bench)
+
+    p = sub.add_parser(
+        "agent-bench",
+        help="grade agents on fixed tasks, like Terminal-Bench but for this: "
+             "resolve rate, consistency, settings obeyed")
+    from app.agentbench.cli import add_arguments as add_agent_bench_arguments
+
+    add_agent_bench_arguments(p)
+    p.set_defaults(fn=cmd_agent_bench, needs_store=False)
 
     # ── the research door for agents: JSON in, JSON out, same acceptance
     # path as the MCP tools of the same names (`app/agentops.py`).

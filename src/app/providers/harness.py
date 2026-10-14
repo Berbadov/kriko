@@ -84,6 +84,13 @@ from kriko.research.base import Document, Finding, ResearchTask
 #: commands is not a research plane.
 SEARCH_TOOLS = ("WebSearch", "WebFetch")
 
+#: The CLIs for which Kriko searches and reads the pages itself, then hands
+#: them the text, instead of letting the CLI browse. What such a CLI was shown
+#: is therefore known (`HarnessResearcher.sources`), a quote is checked against
+#: it, and a benchmark can serve it a fixed web. The others search with their
+#: own tools, which Kriko can neither see into nor replace.
+HOST_READ_HARNESSES = frozenset({"codex", "antigravity-cli", "mistral-vibe"})
+
 #: The page reader (B155): Parallel's hosted MCP reader. Only its fetch tool is
 #: granted; searches go through the CLI's normal WebSearch tool.
 READER_SERVER = "parallel"
@@ -2647,7 +2654,7 @@ class HarnessResearcher(AgentResearcher):
         # drops it.
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
         prompt = self.brief(task) + "\n" + self._contract()
-        if self.harness.id in {"antigravity-cli", "mistral-vibe", "codex"}:
+        if self.harness.id in HOST_READ_HARNESSES:
             queries = list(task.queries)[:3] or [
                 f"{task.subject_label} failures owner reports"]
             reply = self._ask_with_pages(
@@ -2678,7 +2685,7 @@ class HarnessResearcher(AgentResearcher):
             quote = str(item.get("quote") or "").strip()
             if not url or not quote:
                 continue
-            if self.harness.id in {"codex", "antigravity-cli", "mistral-vibe"}:
+            if self.harness.id in HOST_READ_HARNESSES:
                 from kriko.extract.grounding import loose_span
 
                 page_text = (self.sources or {}).get(url, "")
@@ -2843,7 +2850,7 @@ class HarnessResearcher(AgentResearcher):
 
         source_note = getattr(self, "source_instructions", "")
         language = str(getattr(self, "output_language", "") or "auto")
-        if self.harness.id not in {"codex", "antigravity-cli", "mistral-vibe"}:
+        if self.harness.id not in HOST_READ_HARNESSES:
             return self.ask(quicklook.brief(
                 product, principle, page, packs, attributes,
                 max_sources=max(1, self.max_documents or 5), language=language,
@@ -2865,7 +2872,7 @@ class HarnessResearcher(AgentResearcher):
 
     def ask_followup(self, prompt: str, *, product: str = "", question: str = "") -> str:
         """Answer a web follow-up from host-read pages in one CLI session."""
-        if self.harness.id not in {"codex", "antigravity-cli", "mistral-vibe"}:
+        if self.harness.id not in HOST_READ_HARNESSES:
             return self.ask(prompt)
         product = product.strip()
         question = question.strip()

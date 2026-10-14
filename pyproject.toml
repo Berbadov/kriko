@@ -70,6 +70,9 @@ dev = ["pytest>=8.0.0", "ruff>=0.16", "mypy>=2.3"]
 # like the DDL above, so it fails the same way if it is not declared: an
 # editable install finds it in the checkout and a real wheel does not.
 "app" = ["*.toml", "*.json", "*.dat"]
+# The agent benchmark's tasks (`kriko agent-bench`), read from disk like the
+# files above. A terminal command, so the frozen sidecar does not carry them.
+"app.agentbench" = ["*.json"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
