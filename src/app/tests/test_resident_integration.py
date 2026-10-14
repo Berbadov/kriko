@@ -10,10 +10,9 @@ from types import SimpleNamespace
 import pytest
 
 from app.agentledger import Ledger
-from app.providers import codex_profile, harness, resident
+from app.providers import harness, resident
 from app.providers.codex_transport import TransportUnavailable
 from app.providers.resident import ResidentResult
-from app.tests.harness_fixtures import row
 
 
 def _researcher(monkeypatch, tmp_path, agent: str, **kwargs):
