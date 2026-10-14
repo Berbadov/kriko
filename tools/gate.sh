@@ -12,14 +12,25 @@
 # Run it before every push; `CLAUDE.md`'s app-first rule 1 already asked for
 # pytest, and this is the rest of what the branch used to be checked for.
 #
-#     tools/gate.sh          # everything
+#     tools/gate.sh          # everything; the four stages run at once (below)
 #     tools/gate.sh py       # just the Python suite
 #     tools/gate.sh wheel    # just: does the artifact we ship actually import
+#     tools/gate.sh node     # just the JavaScript suites
 #     tools/gate.sh gpui     # just the desktop app: cargo check and cargo test, offline
 #
-# Exits non-zero on the first failure, and says which gate failed. Nothing here
-# needs secrets: the suite must pass without an API key, which is the same rule
-# the workflow had.
+# With no argument the stages are independent — python, wheel, node and gpui —
+# so they run concurrently. Each writes to its own log, and a log is printed as
+# one block when its stage finishes, so output never interleaves. A failed stage
+# does not stop the others: the gate then exits non-zero and names every stage
+# that failed. Inside the python stage the order is still cheap-first: version,
+# ruff, the three mypy runs, then pytest.
+#
+# pytest runs with `-n auto` (pytest-xdist, in the `dev` extra) when xdist is
+# importable. `GATE_JOBS=1` turns that off and runs the whole gate serially, in
+# the order it always had, for debugging; `GATE_JOBS=<n>` sets the worker count.
+#
+# Nothing here needs secrets: the suite must pass without an API key, which is
+# the same rule the workflow had.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -60,13 +71,66 @@ fi
 # was left to repeat the probe above — which it did not, so it asserted
 # `.venv/bin/python` and could not start on Windows. One probe, one answer.
 export PYTHON
+
 only="${1:-all}"
-ran=0
+case "$only" in
+    all|py|wheel|node|gpui) ;;
+    *) echo "unknown gate: $only (expected: all, py, node, gpui, wheel)" >&2; exit 2 ;;
+esac
+
+# pytest workers: `auto` is every core. GATE_JOBS=1 makes the whole gate serial.
+jobs="${GATE_JOBS:-auto}"
+case "$jobs" in
+    auto) ;;
+    *[!0-9]*|0) echo "GATE_JOBS must be a worker count of 1 or more, or unset; got '$jobs'" >&2; exit 2 ;;
+esac
+
+# `wait -n -p` (which names the job that finished) needs bash 5.1. Without it the
+# stages still run, one after another.
+concurrent_ok=1
+if [ "${BASH_VERSINFO[0]}" -lt 5 ] || { [ "${BASH_VERSINFO[0]}" -eq 5 ] && [ "${BASH_VERSINFO[1]}" -lt 1 ]; }; then
+    concurrent_ok=0
+fi
+
+declare -A took_ms=() verdict_of=() exit_of=()
+current_stage=""
+tmp_dir=""
+
+# Runs on every exit. A failing single stage, or a failing serial `all`, stops
+# the script where it fails; this is where that stage is named.
+cleanup() {
+    local rc=$?
+    if [ -n "$tmp_dir" ]; then rm -rf "$tmp_dir"; fi
+    if [ "$rc" != 0 ] && [ -n "$current_stage" ]; then
+        echo "gate FAILED in stage: $current_stage" >&2
+    fi
+}
+trap cleanup EXIT
 
 step() { printf '\n\033[1m── %s\033[0m\n' "$1"; }
+now_ms() { echo $(( $(date +%s%N) / 1000000 )); }
+fmt_ms() {
+    local s=$(( $1 / 1000 ))
+    if [ "$s" -ge 60 ]; then printf '%dm%02ds' $((s / 60)) $((s % 60)); else printf '%ds' "$s"; fi
+}
 
-if [ "$only" = all ] || [ "$only" = py ]; then
-    ran=1
+gate_pytest() {
+    # `-n auto` is pytest-xdist. Each test runs in one of N worker processes, so
+    # the suite must not share state across processes. Each test's state lives
+    # under tmp_path or is monkeypatched, and src/app/tests/conftest.py fences the
+    # reader's ~/.kriko, the fixed extension port and the real agent CLIs.
+    # `--durations=5` comes from pytest.ini's addopts and reports the same way.
+    if [ "$jobs" = 1 ]; then
+        "$PYTHON" -m pytest
+    elif "$PYTHON" -c "import xdist" 2>/dev/null; then
+        "$PYTHON" -m pytest -n "$jobs"
+    else
+        echo "pytest-xdist is not installed in $PYTHON, so pytest runs serially (pip install -e '.[dev]' adds it)."
+        "$PYTHON" -m pytest
+    fi
+}
+
+gate_py() {
     # Three files carry this project's version (pyproject, the app's Cargo.toml
     # and its lock) and the app's is the one that names the installer. Two releases have now shipped under a number the tree did not
     # contain, each caught at build time on the Windows host -- hours after the
@@ -96,25 +160,24 @@ if [ "$only" = all ] || [ "$only" = py ]; then
     # test_repo_invariants.py enforces the layering rules and the testpaths
     # coverage, so the architecture is checked here too.
     step "pytest (engine + catalog + pipeline)"
-    "$PYTHON" -m pytest
-fi
+    gate_pytest
+}
 
-# Not in `py`: it builds an artifact and makes a virtualenv, which is a
-# different order of cost from a test run, and `py` is the one people run in a
-# loop. Its own word, in `all`.
-if [ "$only" = all ] || [ "$only" = wheel ]; then
-    ran=1
-    # Everything above this line runs against the *checkout*, where `src/` is
+gate_wheel() {
+    # Not in `py`: it builds an artifact and makes a virtualenv, which is a
+    # different order of cost from a test run, and `py` is the one people run in
+    # a loop. Its own word, in `all`.
+    #
+    # Everything in the python stage runs against the *checkout*, where `src/` is
     # on the path and `kriko` imports whether or not the wheel would contain
     # it. A reader's install failed on exactly that gap — the console script
     # was there and the package it imports was not — and nothing in the tree
     # could have seen it.
     step "the shipped wheel imports and runs"
     tools/smoke_wheel.sh
-fi
+}
 
-if [ "$only" = all ] || [ "$only" = node ]; then
-    ran=1
+gate_node() {
     step "node (scraper + extension panel)"
     # Not just `npm test`. `node --test` exits 0 when its pattern matches no
     # files, and the pattern was single-quoted — which cmd.exe does not strip,
@@ -131,17 +194,25 @@ if [ "$only" = all ] || [ "$only" = node ]; then
         echo "package.json runs node with --test-force-exit, which drops tests silently." >&2
         exit 1
     fi
-    node_out=$(npm test 2>&1)
+    # The status is taken with `||`, not left to `set -e`: an assignment that
+    # fails exits the script before its output is printed, so a red run used to
+    # stop silently. Printing first and then exiting with the same status keeps
+    # the verdict and shows the failure.
+    local node_out node_status=0 node_count
+    node_out=$(npm test 2>&1) || node_status=$?
     printf '%s\n' "$node_out"
+    if [ "$node_status" != 0 ]; then
+        echo "the node suite failed (npm test exited $node_status)." >&2
+        exit "$node_status"
+    fi
     node_count=$(printf '%s' "$node_out" | sed -n 's/.*[^a-z]tests \([0-9][0-9]*\).*/\1/p' | tail -1)
     if [ "${node_count:-0}" -lt 1 ]; then
         echo "the node suite ran ${node_count:-no} tests — a glob that matches nothing is not a pass." >&2
         exit 1
     fi
-fi
+}
 
-if [ "$only" = all ] || [ "$only" = gpui ]; then
-    ran=1
+gate_gpui() {
     CRATE="kriko-gpui"
     CARGO="$(command -v cargo || true)"
     if [ -z "$CARGO" ]; then
@@ -171,8 +242,7 @@ if [ "$only" = all ] || [ "$only" = gpui ]; then
             local out status
             out=$(cd "$CRATE" && cargo "$@" --locked --offline 2>&1)
             status=$?
-            printf '%s
-' "$out"
+            printf '%s\n' "$out"
             [ "$status" = 0 ] && return 0
             if printf '%s' "$out" | grep -qiE "failed to get |spurious network error|unable to get packages from source|offline mode|no matching package named|attempting to make an HTTP request"; then
                 echo "skipping $desc — the cargo registry cache is not warm and this gate runs --offline; run \`cargo fetch --locked\` once in $CRATE (needs network), then re-run"
@@ -209,11 +279,88 @@ if [ "$only" = all ] || [ "$only" = gpui ]; then
             fi
         fi
     fi
-fi
+}
 
-if [ "$ran" = 0 ]; then
-    echo "unknown gate: $only (expected: all, py, node, gpui, wheel)" >&2
-    exit 2
-fi
+summary() {
+    local wall="$1" n
+    local -a failed=()
+    printf '\n\033[1m── gate summary\033[0m\n'
+    for n in py wheel node gpui; do
+        [ -n "${verdict_of[$n]:-}" ] || continue
+        printf '  %-7s %-16s %s\n' "$n" "${verdict_of[$n]}" "$(fmt_ms "${took_ms[$n]}")"
+        if [ "${exit_of[$n]}" != 0 ]; then failed+=("$n"); fi
+    done
+    printf '  %-7s %-16s %s\n' "wall" "" "$(fmt_ms "$wall")"
+    if [ "${#failed[@]}" -gt 0 ]; then
+        printf '\n\033[31mgate FAILED in: %s\033[0m\n' "${failed[*]}" >&2
+        exit 1
+    fi
+    printf '\n\033[32mall gates passed\033[0m\n'
+}
 
-printf '\n\033[32mall gates passed\033[0m\n'
+# All four stages at once. Each runs in a background subshell with its own log;
+# whichever finishes first is printed first, as one block.
+run_all_concurrently() {
+    local -a stages=(py wheel node gpui)
+    local -A name_of=() started=()
+    local n rc done_pid remaining t0 verdict
+    t0=$(now_ms)
+    tmp_dir=$(mktemp -d)
+    for n in "${stages[@]}"; do
+        started[$n]=$(now_ms)
+        ( trap - EXIT; "gate_$n" ) >"$tmp_dir/$n.log" 2>&1 &
+        name_of[$!]=$n
+    done
+    echo "running ${stages[*]} at once; each stage prints as one block when it finishes"
+    remaining=${#stages[@]}
+    while [ "$remaining" -gt 0 ]; do
+        rc=0
+        wait -n -p done_pid || rc=$?
+        n=${name_of[$done_pid]}
+        unset "name_of[$done_pid]"
+        remaining=$((remaining - 1))
+        took_ms[$n]=$(( $(now_ms) - ${started[$n]} ))
+        exit_of[$n]=$rc
+        if [ "$rc" = 0 ]; then verdict=passed; else verdict="FAILED (exit $rc)"; fi
+        verdict_of[$n]=$verdict
+        printf '\n\033[1m════ %s: %s after %s\033[0m\n' "$n" "$verdict" "$(fmt_ms "${took_ms[$n]}")"
+        cat "$tmp_dir/$n.log"
+    done
+    summary $(( $(now_ms) - t0 ))
+}
+
+# The stages one after another, output streamed as it is produced. This is the
+# order the gate always ran in, and it stops at the first failing stage.
+run_all_in_order() {
+    local n t0 s
+    t0=$(now_ms)
+    for n in py wheel node gpui; do
+        current_stage=$n
+        s=$(now_ms)
+        "gate_$n"
+        took_ms[$n]=$(( $(now_ms) - s ))
+        verdict_of[$n]=passed
+        exit_of[$n]=0
+    done
+    current_stage=""
+    summary $(( $(now_ms) - t0 ))
+}
+
+case "$only" in
+    all)
+        if [ "$jobs" = 1 ]; then
+            run_all_in_order
+        elif [ "$concurrent_ok" = 1 ]; then
+            run_all_concurrently
+        else
+            echo "bash is older than 5.1, so the stages run one after another"
+            run_all_in_order
+        fi
+        ;;
+    *)
+        current_stage=$only
+        "gate_$only"
+        current_stage=""
+        printf '\n\033[32mall gates passed\033[0m\n'
+        ;;
+esac
