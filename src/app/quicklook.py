@@ -31,6 +31,17 @@ MAX_SPECS = 10
 #: What the panel's card knows how to colour. Anything else reads as `medium`.
 SEVERITIES = ("high", "medium", "low")
 
+#: The reader's language, said to every plane that has no language step of its
+#: own. Five runs of one listing came back in two languages, because the
+#: sources' language and not the reader's decided it. Neither the listing's
+#: language nor any word of it is named here: the agent reads it from the
+#: product and listing it was given.
+LANGUAGE_RULE = (
+    "Write title, why, check and assumed in the language of the product name "
+    "and listing above, even when a page is in another language. Copy every "
+    "quote exactly as its page words it, and never translate a quote."
+)
+
 # The local runtime can enforce this shape while it generates the answer.
 # Empty lists remain valid: a schema must never force an unsupported claim.
 REPLY_SCHEMA: dict = {
@@ -97,6 +108,7 @@ def brief(product: str, principle: str = "", page: dict | None = None,
             f"# Quick look: what is known to go wrong with this one?\n\n{product}\n"
             f"{listing}{bar}{belongs}{named}\n"
             "Use only the fetched pages below. Be specific to this variant. "
+            f"{LANGUAGE_RULE} "
             f"Return one JSON object, with short fields and at most {MAX_RISKS} risks "
             f"and {MAX_SPECS} specifications. Every risk needs an exact URL and a "
             "verbatim quote from that page. Leave unsupported items out. "
@@ -128,6 +140,7 @@ friend would in a chat: fast, specific, sourced.
 * If the name leaves the variant open, state what is missing in `assumed`.
   Omit claims that depend on an unproven configuration. Do not guess a part
   code or assume that a nearby revision, year or market has the same fault.
+* {LANGUAGE_RULE}
 {bar}{belongs}
 ## Every risk needs its page
 
