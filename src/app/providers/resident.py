@@ -62,6 +62,15 @@ _MAX_RETAINED_EVENTS = 4096
 _STOP_GRACE = 2.0
 
 
+class ProtocolAbsent(TransportUnavailable):
+    """This agent, or this installed copy of it, has no persistent protocol.
+
+    A fact about the install and not a failure: `auto` uses a process without
+    remark, and `persistent` reports it. A worker that *should* have started and
+    did not is a plain `TransportUnavailable`, which `auto` mentions.
+    """
+
+
 class ResidentError(CodexTransportError):
     """The agent ended the request in a way it reported (refusal, limit)."""
 
