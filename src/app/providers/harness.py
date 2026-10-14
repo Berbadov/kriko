@@ -92,6 +92,25 @@ SEARCH_TOOLS = ("WebSearch", "WebFetch")
 #: own tools, which Kriko can neither see into nor replace.
 HOST_READ_HARNESSES = frozenset({"codex", "antigravity-cli", "mistral-vibe"})
 
+#: The agents that have a persistent protocol Kriko can drive, by the `protocol`
+#: of their row. Codex keeps one app-server (`codex_transport`); the rest share
+#: `resident`: Claude Code over `stream-json` stdin, Mistral Vibe over ACP.
+#: Antigravity's `agy` has only a print mode and so appears in neither.
+RESIDENT_PROTOCOLS = frozenset({"claude", "vibe"})
+
+
+def transport_env() -> str:
+    """`KRIKO_AGENT_TRANSPORT`, or its earlier name `KRIKO_CODEX_TRANSPORT`."""
+    for name in ("KRIKO_AGENT_TRANSPORT", "KRIKO_CODEX_TRANSPORT"):
+        value = os.environ.get(name, "").strip().lower()
+        if value:
+            return value
+    return ""
+
+#: The persistent protocols that hand the model no tools. Those agents are fed
+#: pages Kriko read itself; asking one to search natively needs a process.
+TOOLLESS_PROTOCOLS = frozenset({"codex", "vibe"})
+
 _CODEX_SUPPORT: dict[tuple[str, float], bool] = {}
 _CODEX_SUPPORT_LOCK = threading.Lock()
 
@@ -1787,6 +1806,57 @@ def scale_args(one: Harness, *, max_documents: int = 0, budget_usd: float = 0.0,
     return out
 
 
+def _sibling_executable(executable: str, name: str) -> str:
+    """`name` installed beside `executable`, or on the machine's own PATH."""
+    folder = Path(executable).parent
+    for suffix in _SUFFIXES:
+        candidate = folder / f"{name}{suffix}"
+        try:
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return str(candidate)
+        except OSError:
+            continue
+    return shutil.which(name, path=child_env().get("PATH")) or ""
+
+
+def _vibe_config(model: str, effort: str, sessions: Path, *, log_sessions: bool = True) -> tuple[str, str]:
+    """The per-run `config.toml` for Mistral Vibe, and the model it names.
+
+    Only the things that are nobody's business on a research run: update
+    checks, telemetry, the reader's MCP servers and skills. The reader's own
+    model rows are carried across so an alias they defined keeps working, and
+    the requested effort is written onto the chosen row. A resident worker
+    passes `log_sessions=False`: it serves many requests, and a session log per
+    request would grow without bound in a folder nobody reads.
+    """
+    try:
+        own = tomllib.loads((Path.home() / ".vibe" / "config.toml").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        own = {}
+    chosen = model or str(own.get("active_model") or "")
+    rows = own.get("models") or []
+    text = 'enable_update_checks = false\nenable_telemetry = false\nmcp_servers = []\ndisabled_skills = ["*"]\n'
+    if chosen:
+        text += "active_model = " + json.dumps(chosen) + "\n"
+    if effort and not any(isinstance(r, dict) and r.get("alias") == chosen for r in rows) and chosen:
+        rows = [*rows, {"alias": chosen}]
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        text += "\n[[models]]\n"
+        for key in ("name", "provider", "alias", "thinking"):
+            value = row.get(key)
+            if key == "thinking" and (row.get("alias") == chosen or row.get("name") == chosen) and effort:
+                value = effort
+            if isinstance(value, str):
+                text += key + " = " + json.dumps(value) + "\n"
+        if "thinking" not in row and effort and row.get("alias") == chosen:
+            text += "thinking = " + json.dumps(effort) + "\n"
+    text += "\n[session_logging]\ngenerate_titles = false\n"
+    text += ("save_dir = " + json.dumps(str(sessions)) + "\n") if log_sessions else "enabled = false\n"
+    return text, chosen
+
+
 def command_for(one: Harness, *, model: str = "", effort: str = "",
                 max_documents: int = 0, budget_usd: float = 0.0,
                 reader_config: str = "") -> list[str]:
@@ -2503,6 +2573,31 @@ def _hint(reason: str, harness: "Harness | None" = None) -> str:
     return ""
 
 
+class _Attempt:
+    """Ledger bookkeeping for one persistent request."""
+
+    def __init__(self, ledger, run_id: str, attempt: str, owned_run: bool) -> None:
+        self.ledger, self.run_id, self.attempt, self.owned_run = ledger, run_id, attempt, owned_run
+
+    def delivery(self, status, context_id="", turn_id="", detail=None) -> None:
+        if self.ledger is not None and self.attempt:
+            self.ledger.update_delivery(self.attempt, status, context_id, turn_id, detail)
+
+    def fail(self, error: BaseException) -> None:
+        outcome = "cancelled" if getattr(error, "cancelled", False) else "failed"
+        if self.ledger is not None and self.attempt:
+            self.ledger.finish_attempt(self.attempt, outcome, error=type(error).__name__)
+        if self.ledger is not None and self.owned_run:
+            self.ledger.finish(self.run_id, outcome)
+
+    def succeed(self, text: str, usage: dict) -> None:
+        if self.ledger is not None and self.attempt:
+            self.ledger.finish_attempt(self.attempt, "succeeded", result=text, usage=usage)
+            if self.owned_run:
+                self.ledger.finish(self.run_id, "succeeded", result={
+                    "reply_sha256": hashlib.sha256(text.encode()).hexdigest()}, usage=usage)
+
+
 class HarnessResearcher(AgentResearcher):
     """Research by *running* the harness, rather than by writing to it.
 
@@ -2536,7 +2631,7 @@ class HarnessResearcher(AgentResearcher):
         self.app_state_path = app_state_path
         self.agent_ledger = None
         self.agent_run_id = ""
-        self.transport_mode = os.environ.get("KRIKO_CODEX_TRANSPORT", "auto").strip().lower()
+        self.transport_mode = transport_env() or "auto"
         self._host_search_url = ""
         self.runtime: dict = {}
         self.timeout = timeout
@@ -2992,10 +3087,11 @@ class HarnessResearcher(AgentResearcher):
                 # quote, and an unsourced claim is dropped.
                 own_search = True
                 self.sources = None
-                if self.harness.protocol == "codex" and self.transport_mode == "persistent":
+                if self.harness.protocol in TOOLLESS_PROTOCOLS and self.transport_mode == "persistent":
                     raise NoHarness(
-                        "Host web search failed. Persistent Codex transport has web tools disabled "
-                        "and requires host-read pages; restore host search or use auto/exec mode."
+                        f"Host web search failed. Persistent {self.harness.label} transport "
+                        "has web tools disabled and requires host-read pages; restore host "
+                        "search or use auto/exec mode."
                     )
                 self._echo(f"The search service did not answer; {self.harness.label} "
                            "will search the web itself")
@@ -3015,11 +3111,12 @@ class HarnessResearcher(AgentResearcher):
             before_tokens = self.tokens_used
             answer_started = time.perf_counter()
             try:
-                if own_search and self.harness.protocol == "codex":
+                if own_search and self.harness.protocol in TOOLLESS_PROTOCOLS:
                     if self.transport_mode == "auto":
                         # This one request explicitly asks the CLI to search.
                         # The persistent protocol has no web grant, so choose
-                        # the legacy web-capable CLI path before prompt delivery.
+                        # the process path, which has web tools, before the
+                        # prompt is delivered.
                         previous_mode = self.transport_mode
                         self.transport_mode = "exec"
                         try:
@@ -3157,11 +3254,29 @@ class HarnessResearcher(AgentResearcher):
         receives one line per action the agent takes, while it takes it.
         """
         prompt = with_refused_page(prompt)
-        if self.harness.protocol == "codex" and self.transport_mode != "exec":
+        if self.transport_mode not in {"auto", "persistent", "exec"}:
+            raise ValueError("the agent transport must be auto, persistent, or exec")
+        if self.transport_mode != "exec":
             from app.providers.codex_transport import TransportUnavailable
 
             try:
-                return self._run_codex(prompt, on_line)
+                if self.harness.protocol == "codex":
+                    return self._run_codex(prompt, on_line)
+                if self.harness.protocol in RESIDENT_PROTOCOLS:
+                    if self._can_converse():
+                        # A run the reader can answer talks to its own process
+                        # mid-run; a shared worker cannot be handed one reader's
+                        # replies. This is a capability, not a failure, so it
+                        # does not depend on the mode.
+                        say = on_line if on_line is not None else self.on_action
+                        if say is not None:
+                            say("this run can be answered, so it uses its own process")
+                    else:
+                        return self._run_resident(prompt, on_line)
+                else:
+                    raise TransportUnavailable(
+                        f"{self.harness.label} has no persistent protocol; its print mode "
+                        "starts one process per request")
             except TransportUnavailable as error:
                 if self.transport_mode == "persistent":
                     raise
@@ -3172,7 +3287,7 @@ class HarnessResearcher(AgentResearcher):
             return self._invoke(prompt, on_line)
 
     def _run_codex(self, prompt: str, on_line=None) -> str:
-        from app.providers import codex_profile
+        from app.providers import codex_profile, resident
         from app.providers.codex_transport import CodexRequest, TransportUnavailable
 
         if self.check_cancelled is not None:
@@ -3197,30 +3312,8 @@ class HarnessResearcher(AgentResearcher):
             executable, model=self.requested_model, effort=self.requested_effort,
             namespace=str(self.app_state_path or ""),
         )
-        ledger = self.agent_ledger
-        run_id = self.agent_run_id
-        owned_run = False
-        if ledger is None and self.app_state_path is not None:
-            from app.agentledger import Ledger
-
-            ledger = Ledger(self.app_state_path)
-            saved = ledger.reserve(None, "harness", {
-                "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
-                "provider": self.harness.id, "model": self.requested_model,
-                "effort": self.requested_effort,
-            })
-            run_id = saved["run_id"]
-            owned_run = True
-        attempt = ledger.start_attempt(run_id, self.harness.id, self.requested_model, {
-            "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
-            "prompt_bytes": len(prompt.encode()), "effort": self.requested_effort,
-            "transport": "app-server", "tools": [],
-        }) if ledger is not None and run_id else ""
-
-        def delivery(status, context_id="", turn_id="", detail=None):
-            if ledger is not None and attempt:
-                ledger.update_delivery(attempt, status, context_id, turn_id, detail)
-
+        attempt = self._open_attempt(prompt, "app-server")
+        delivery = attempt.delivery
         say = on_line if on_line is not None else self.on_action
         if say is not None:
             if self.effort_settled:
@@ -3233,6 +3326,7 @@ class HarnessResearcher(AgentResearcher):
         self._live_suppressed = False
         self._live_published = ""
         self._live_last_emit = 0.0
+        resident.release_idle()
         try:
             result = codex_profile.transport().run(
                 chosen, CodexRequest(prompt, {}, timeout=self.timeout),
@@ -3240,11 +3334,7 @@ class HarnessResearcher(AgentResearcher):
                 on_delivery=delivery,
             )
         except BaseException as error:
-            outcome = "cancelled" if getattr(error, "cancelled", False) else "failed"
-            if ledger is not None and attempt:
-                ledger.finish_attempt(attempt, outcome, error=type(error).__name__)
-            if ledger is not None and owned_run:
-                ledger.finish(run_id, outcome)
+            attempt.fail(error)
             raise
         finally:
             if self.on_text is not None and self._live_published:
@@ -3269,13 +3359,210 @@ class HarnessResearcher(AgentResearcher):
         self.telemetry["transport"] = self.runtime.copy()
         self.telemetry["transport_metrics"] = dict(result.metrics)
         self.telemetry["prompt_bytes"] = len(prompt.encode())
-        if ledger is not None and attempt:
-            ledger.finish_attempt(attempt, "succeeded", result=result.text, usage=usage)
-            if owned_run:
-                ledger.finish(run_id, "succeeded", result={"reply_sha256": hashlib.sha256(
-                    result.text.encode()).hexdigest()}, usage=usage)
+        attempt.succeed(result.text, usage)
         self.telemetry["transport_ms"] = round((time.monotonic() - started) * 1000, 3)
         return result.text
+
+    def _open_attempt(self, prompt: str, transport: str) -> "_Attempt":
+        """The durable record of one persistent request, shared by every agent.
+
+        Reserved here and not in each adapter so that provenance does not
+        depend on which agent answered: the prompt digest, model, effort and
+        transport are recorded before anything is sent, and the delivery state
+        follows the protocol's own acknowledgements.
+        """
+        ledger = self.agent_ledger
+        run_id = self.agent_run_id
+        owned_run = False
+        digest = hashlib.sha256(prompt.encode()).hexdigest()
+        if ledger is None and self.app_state_path is not None:
+            from app.agentledger import Ledger
+
+            ledger = Ledger(self.app_state_path)
+            saved = ledger.reserve(None, "harness", {
+                "prompt_sha256": digest, "provider": self.harness.id,
+                "model": self.requested_model, "effort": self.requested_effort,
+            })
+            run_id = saved["run_id"]
+            owned_run = True
+        attempt = ledger.start_attempt(run_id, self.harness.id, self.requested_model, {
+            "prompt_sha256": digest, "prompt_bytes": len(prompt.encode()),
+            "effort": self.requested_effort, "transport": transport, "tools": [],
+        }) if ledger is not None and run_id else ""
+        return _Attempt(ledger, run_id, attempt, owned_run)
+
+    def _run_resident(self, prompt: str, on_line=None) -> str:
+        """One request on a resident worker: Claude Code or Mistral Vibe.
+
+        The worker is the process adapter's child kept alive, so the launch
+        vector and the child environment come from the same rules; what is new
+        is only that it is reused, and that a request never sees another's
+        conversation (`resident` says how, per agent). Everything that goes
+        wrong before the prompt is written is `TransportUnavailable`, which
+        `auto` answers with a fresh process.
+        """
+        from app.providers import codex_profile, resident
+
+        if self.check_cancelled is not None:
+            self.check_cancelled()
+        try:
+            profile = self._resident_profile()
+            if (self._reader_config and self.harness.reader is not None
+                    and self.harness.reader.config_flag in profile.argv):
+                prompt = with_page_reader(prompt, reader_tools(self.harness))
+        finally:
+            self._reader_config = ""
+        attempt = self._open_attempt(prompt, profile.wire)
+        say = on_line if on_line is not None else self.on_action
+        if say is not None:
+            if self.effort_settled:
+                say(self.effort_settled)
+            say("answering with the selected agent over a persistent protocol")
+        self.transcript = ""
+        self._spoke = False
+        self._live_parts.clear()
+        self._live_chars = 0
+        self._live_detector_tail = ""
+        self._live_suppressed = False
+        self._live_published = ""
+        self._live_last_emit = 0.0
+        self._streamed_blocks = {}
+        self.actions = []
+        narrated = 0
+
+        def line(raw: str) -> None:
+            nonlocal narrated, say
+            self._spoke = True
+            self._keep(raw)
+            try:
+                event = json.loads(raw)
+            except (TypeError, ValueError):
+                return
+            if not isinstance(event, dict):
+                return
+            self._draft_from_event(event)
+            if say is None or narrated > MAX_NARRATED:
+                return
+            if narrated == MAX_NARRATED:
+                narrated += 1
+                say(f"(still running; the next actions are not shown — {MAX_NARRATED}-line cap)")
+                return
+            spoken = self._narrate(raw)
+            if spoken:
+                narrated += 1
+                self.actions.append(spoken)
+                try:
+                    say(spoken)
+                except Exception:  # noqa: BLE001 - a worse log, not a lost run
+                    say = None
+
+        def action(sentence: str) -> None:
+            if say is not None:
+                self.actions.append(sentence)
+                try:
+                    say(sentence)
+                except Exception:  # noqa: BLE001
+                    pass
+
+        started = time.monotonic()
+        codex_profile.release_idle()
+        try:
+            result = resident.transport().run(profile, resident.ResidentRequest(
+                prompt, timeout=self.timeout,
+                on_line=line if profile.wire == "claude" else None,
+                on_action=action if profile.wire == "acp" else None,
+                on_text=self._append_live_text if profile.wire == "acp" else None,
+                on_delivery=attempt.delivery, check_cancelled=self.check_cancelled,
+            ))
+        except BaseException as error:
+            attempt.fail(error)
+            raise
+        finally:
+            if self.on_text is not None and self._live_published:
+                self.on_text("")
+        usage = dict(result.usage)
+        self.runtime.update(transport=profile.wire, context_id=result.context_id,
+                            turn_id=result.turn_id)
+        self.telemetry["transport"] = self.runtime.copy()
+        self.telemetry["transport_metrics"] = dict(result.metrics)
+        self.telemetry["prompt_bytes"] = len(prompt.encode())
+        self.telemetry["transport_ms"] = round((time.monotonic() - started) * 1000, 3)
+        try:
+            if profile.wire == "claude":
+                # The agent's own `result` object goes through the code that
+                # reads the process adapter's output, so cost, usage and an
+                # error it reported are read one way, whichever door it used.
+                text = self._finish(0, json.dumps(result.envelope, ensure_ascii=False), "")
+            else:
+                text = result.text
+                count = usage.get("totalTokens", usage.get("total_tokens"))
+                if count is None and ("inputTokens" in usage or "outputTokens" in usage):
+                    count = _int(usage.get("inputTokens")) + _int(usage.get("outputTokens"))
+                if count is not None:
+                    self.tokens_used = (self.tokens_used or 0) + _int(count)
+        except BaseException as error:
+            attempt.fail(error)
+            raise
+        attempt.succeed(text, usage)
+        return text
+
+    def _resident_profile(self):
+        """The launch vector, environment and folders of this agent's worker."""
+        from app.providers import resident
+        from app.providers.codex_transport import TransportUnavailable
+
+        executable = locate(self.harness)
+        if not executable:
+            raise NoHarness(f"{self.harness.label} is not installed")
+        if self.harness.protocol == "claude":
+            if "--input-format" not in declared(executable):
+                raise TransportUnavailable("the installed CLI has no stream-json input mode")
+            folder = resident.owned_folder("claude-work")
+            self._place_reader(folder)
+            command = command_for(
+                self.harness, model=self.requested_model, effort=self.requested_effort,
+                max_documents=self.max_documents, budget_usd=self.budget_usd,
+                reader_config=self._reader_config,
+            )
+            if "stream-json" not in command or "--verbose" not in command:
+                raise TransportUnavailable("this vector does not stream JSON")
+            command += ["--input-format", "stream-json"]
+            if "--no-session-persistence" in declared(executable):
+                command.append("--no-session-persistence")
+            env = {**child_env(extra_dirs=(str(Path(command[0]).parent),) if os.path.isabs(command[0]) else ()),
+                   **CHILD_ENCODING_ENV, **self.harness.env, "PWD": str(folder)}
+            work = folder
+            wire = "claude"
+        else:
+            acp = _sibling_executable(executable, "vibe-acp")
+            if not acp:
+                raise TransportUnavailable("vibe-acp is not installed; update Mistral Vibe")
+            root = resident.owned_folder(f"vibe:{self.requested_model}:{self.requested_effort}")
+            home, work = root / "home", root / "work"
+            config = home / ".vibe"
+            config.mkdir(parents=True, exist_ok=True)
+            work.mkdir(exist_ok=True)
+            text, chosen = _vibe_config(self.requested_model, self.requested_effort,
+                                        config / "sessions", log_sessions=False)
+            if chosen:
+                self.model = chosen
+            (config / "config.toml").write_text(text, encoding="utf-8")
+            command = [acp]
+            env = {**child_env(extra_dirs=(str(Path(acp).parent),)), **CHILD_ENCODING_ENV,
+                   **self.harness.env, "HOME": str(home), "USERPROFILE": str(home),
+                   "PWD": str(work), "VIBE_HOME": str(config)}
+            if self.requested_model and self.harness.model_env:
+                env[self.harness.model_env] = self.requested_model
+            for name in ("MISTRAL_API_KEY", "VIBE_API_KEY"):
+                if os.environ.get(name):
+                    env[name] = os.environ[name]
+            wire = "acp"
+        if self._needs_shell(command):
+            raise TransportUnavailable("a .cmd launcher needs a shell, which a resident worker does not use")
+        return resident.ResidentProfile(
+            wire, tuple(unshim(command)), str(work), env,
+            model=self.requested_model, effort=self.requested_effort,
+        )
 
     def _place_reader(self, folder: Path) -> None:
         """Write this run's page-reader config into its own folder (B155).
@@ -3370,32 +3657,10 @@ class HarnessResearcher(AgentResearcher):
                 # and no schema of Mistral's for Kriko to keep in step with.
                 config = home / ".vibe"
                 config.mkdir(parents=True)
-                try:
-                    own = tomllib.loads((Path.home() / ".vibe" / "config.toml").read_text(encoding="utf-8"))
-                except (OSError, ValueError):
-                    own = {}
-                chosen = self.requested_model or str(own.get("active_model") or "")
+                text, chosen = _vibe_config(
+                    self.requested_model, self.requested_effort, config / "sessions")
                 if chosen:
                     self.model = chosen
-                rows = own.get("models") or []
-                text = 'enable_update_checks = false\nenable_telemetry = false\nmcp_servers = []\ndisabled_skills = ["*"]\n'
-                if chosen:
-                    text += "active_model = " + json.dumps(chosen) + "\n"
-                if self.requested_effort and not any(isinstance(r, dict) and r.get("alias") == chosen for r in rows) and chosen:
-                    rows = [*rows, {"alias": chosen}]
-                for row in rows:
-                    if not isinstance(row, dict):
-                        continue
-                    text += "\n[[models]]\n"
-                    for key in ("name", "provider", "alias", "thinking"):
-                        value = row.get(key)
-                        if key == "thinking" and (row.get("alias") == chosen or row.get("name") == chosen) and self.requested_effort:
-                            value = self.requested_effort
-                        if isinstance(value, str):
-                            text += key + " = " + json.dumps(value) + "\n"
-                    if "thinking" not in row and self.requested_effort and row.get("alias") == chosen:
-                        text += "thinking = " + json.dumps(self.requested_effort) + "\n"
-                text += "\n[session_logging]\ngenerate_titles = false\nsave_dir = " + json.dumps(str(config / "sessions")) + "\n"
                 (config / "config.toml").write_text(text, encoding="utf-8")
                 self._run_env["VIBE_HOME"] = str(config)
                 # The CLI reads its key from the environment, and the
@@ -3687,9 +3952,10 @@ class HarnessResearcher(AgentResearcher):
                 pass
 
     def _stream(self, command, stdin_read, say, opening: str = "") -> tuple[int, str, str]:
-        from app.providers import codex_profile
+        from app.providers import codex_profile, resident
 
         codex_profile.release_idle()
+        resident.release_idle()
         return self._stream_owned(command, stdin_read, say, opening)
 
     def _stream_owned(self, command, stdin_read, say, opening: str = "") -> tuple[int, str, str]:

@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.6.2-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.7.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Downloads](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [What's new](#whats-new) · [Benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,8 +34,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.6.2-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.6.2-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.7.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.7.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
@@ -45,8 +45,8 @@ Apple Silicon and Intel Macs have separate builds. A file is downloadable only w
 
 | Mac | Disk image | Portable app bundle |
 |---|---|---|
-| Apple Silicon | `kriko-1.6.2-macos-arm64.dmg` | `kriko-1.6.2-macos-arm64-portable.zip` |
-| Intel | `kriko-1.6.2-macos-x86_64.dmg` | `kriko-1.6.2-macos-x86_64-portable.zip` |
+| Apple Silicon | `kriko-1.7.0-macos-arm64.dmg` | `kriko-1.7.0-macos-arm64-portable.zip` |
+| Intel | `kriko-1.7.0-macos-x86_64.dmg` | `kriko-1.7.0-macos-x86_64-portable.zip` |
 
 Open the `.dmg` and drag **Kriko.app** to **Applications**. For the portable ZIP, extract it and move **Kriko.app** where you want it. Each archive is a complete app for its named architecture, built on a matching Mac.
 
@@ -90,6 +90,19 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 **What leaves your computer.** Installed lookups run on your computer. Online research sends its questions and reading context to the providers you select; a local model runs inference on your computer and still needs web search to gather new sources.
 
 ## What's new
+
+### 1.7.0
+
+- **Chat** (Check group): pick an agent and hold a threaded conversation. The agent is told only the names and one-line descriptions of what the app has gathered, and reads a source only when it asks; each ask shows as a step, then the answer with its sources. "I need X, with constraints a, b, c" becomes a ranked shortlist that says, per candidate, what is met, unknown or contradicted. Keys and settings cannot be reached from chat. Numeric limits are word-matched, so "under 2 kg" is met by "2 kg" whatever the direction.
+- Agent progress moves steadily: bars ease and creep instead of freezing and leaping, and every running agent shows what it is doing in words, its stage, a ticking clock and a short trail of recent actions. Reduce motion keeps them still.
+- Screens are more compact and consistent: shared spacing, a responsive grid, smaller cards and totals.
+- **Compare → Start queue** researches several products at once, as many as Settings → Runs allows (default 1). Runs on the same catalog still take turns.
+- **Persistent agents.** Claude Code and Mistral Vibe now keep one worker alive across requests, as Codex already did, so a request skips process start-up. Every request still gets a fresh conversation: Claude Code is reset with `/clear` and Vibe opens a new ACP session. Workers get no tools beyond what the process path granted, are released when idle or when another agent needs the slot, and a request that may have been delivered is never sent twice. Antigravity has no persistent mode, so it keeps starting a process. `Settings → agent_transport` (or `KRIKO_AGENT_TRANSPORT`) accepts `auto` (default), `persistent` or `exec`; the older `codex_transport` and `KRIKO_CODEX_TRANSPORT` names still work. A run the reader can answer mid-run keeps its own process. Details: [docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md).
+- Research requests are recorded durably (inputs, attempts, delivery state, results and usage), a lost response no longer submits the same research twice, and a run's manifest, log tail and event stream can be inspected through the API.
+- Quick Looks obey the settings in the app (effort per agent, number and kinds of sources, search and output language) and answer in the listing's language. `kriko agent-bench` runs the real Quick Look path against a fixed fake web and reports how often each agent is right and how consistent it is; it spends your subscription only with `--yes`.
+- Codex, Antigravity and Mistral Vibe search for the product itself, not for the catalog's `{make} {model}` templates.
+- `tools/gate.sh` runs the Python tests in parallel and its stages concurrently: about 3 minutes instead of 13.
+- Known limits: the Chat screen and the parallel queue were compiled and unit-tested but not driven in a real window; nothing here was checked on macOS. Resident Claude Code workers pick up a new login only after they idle out or Kriko restarts. Vibe's persistent worker was checked up to a prompt against the real `vibe-acp` (no Mistral key here); Claude Code was checked end to end.
 
 ### 1.6.2
 
