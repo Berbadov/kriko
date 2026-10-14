@@ -188,7 +188,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         if beside {
             div()
                 .flex()
-                .gap(px(24.0))
+                .gap(px(SPACE_SECTION))
                 .items_start()
                 .w_full()
                 .child(div().flex_1().min_w(px(840.0)).child(table))
@@ -200,7 +200,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             div()
                 .flex()
                 .flex_col()
-                .gap(px(24.0))
+                .gap(px(SPACE_SECTION))
                 .w_full()
                 .child(table.w_full())
                 .child(div().w_full().child(detail))
@@ -211,7 +211,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .id("agents-screen")
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(body)
         .when(app.live.run.prefs_loaded, |d| d.child(research_card(app, cx)))
 }

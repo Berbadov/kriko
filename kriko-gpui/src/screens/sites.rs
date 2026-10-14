@@ -106,7 +106,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         let row = div()
             .flex()
             .items_center()
-            .py(px(14.0))
+            .py(px(10.0))
             .hover(|s| s.bg(rgba(GLASS_1)))
             .child(
                 div()
@@ -170,7 +170,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             div()
                 .flex()
                 .items_center()
-                .py(px(14.0))
+                .py(px(10.0))
                 .hover(|s| s.bg(rgba(GLASS_1)))
                 .child(
                     div()
