@@ -21,10 +21,19 @@ name: desktop
 # caught v0.2.4: CLAUDE.md's app-first rule 3.
 on:
     workflow_dispatch:
+        inputs:
+            verified_run:
+                description: "Optional successful desktop run to publish without rebuilding"
+                type: string
+                default: ""
+            release_tag:
+                description: "Existing draft tag for verified-run publication"
+                type: string
+                default: ""
 
 concurrency:
-    group: desktop-${{ github.ref }}
-    cancel-in-progress: true
+    group: desktop-${{ inputs.verified_run != '' && 'publish-verified' || github.ref }}
+    cancel-in-progress: ${{ inputs.verified_run == '' }}
 
 # Read-only by default; the release job asks for `contents: write` itself, so a
 # bundle job that is compromised by a dependency cannot publish anything.
@@ -32,10 +41,169 @@ permissions:
     contents: read
 
 jobs:
+    # Complete a verified branch build's existing draft when local release
+    # upload credentials are unavailable. Native recipes below remain intact.
+    publish-verified:
+        if: inputs.verified_run != ''
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            actions: read
+        env:
+            GH_TOKEN: ${{ github.token }}
+            BUILD_RUN: ${{ inputs.verified_run }}
+            RELEASE_TAG: ${{ inputs.release_tag }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  ref: ${{ inputs.release_tag }}
+
+            - name: Verify source, successful build and draft
+              run: |
+                  set -euo pipefail
+                  [[ "$BUILD_RUN" =~ ^[0-9]+$ ]]
+                  [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+                  gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN" > build.json
+                  gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > draft.json
+                  python - <<'PY'
+                  import json, os, subprocess, tomllib
+                  source = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+                  build = json.load(open("build.json"))
+                  draft = json.load(open("draft.json"))
+                  version = tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]
+                  assert os.environ["RELEASE_TAG"] == f"v{version}", "Tag/version mismatch"
+                  assert build["head_sha"] == source, "Build/source mismatch"
+                  assert build["status"] == "completed" and build["conclusion"] == "success", "Build did not pass"
+                  assert build["path"] == ".github/workflows/desktop.yml", "Wrong build workflow"
+                  assert build["repository"]["full_name"] == os.environ["GITHUB_REPOSITORY"], "Wrong repository"
+                  assert draft["draft"] and not draft["prerelease"], "Expected stable draft"
+                  assert draft["tag_name"] == os.environ["RELEASE_TAG"] and source in draft["body"], "Draft source not recorded"
+                  print(f"Verified source {source}, build {build['id']} and draft {draft['id']}")
+                  PY
+
+            - uses: actions/download-artifact@v4
+              with:
+                  name: kriko-windows
+                  path: release
+                  run-id: ${{ inputs.verified_run }}
+                  github-token: ${{ github.token }}
+            - uses: actions/download-artifact@v4
+              with:
+                  name: kriko-macos-arm64
+                  path: release
+                  run-id: ${{ inputs.verified_run }}
+                  github-token: ${{ github.token }}
+            - uses: actions/download-artifact@v4
+              with:
+                  name: kriko-macos-x86_64
+                  path: release
+                  run-id: ${{ inputs.verified_run }}
+                  github-token: ${{ github.token }}
+            - uses: actions/download-artifact@v4
+              with:
+                  name: kriko-packs
+                  path: release
+                  run-id: ${{ inputs.verified_run }}
+                  github-token: ${{ github.token }}
+
+            - name: Pin pack URLs and verify the complete asset set
+              run: |
+                  set -euo pipefail
+                  cp release/packs.json built-packs.json
+                  python packaging/publish_index.py \
+                      --base-url "https://github.com/$GITHUB_REPOSITORY/releases/download/$RELEASE_TAG" \
+                      --out release/packs.json release/*.kpack
+                  python - <<'PY'
+                  import hashlib, json, os
+                  from pathlib import Path
+                  root = Path("release")
+                  # Preserve the build's publication times so retries produce
+                  # identical index bytes as well as identical native binaries.
+                  times = {r["pack_id"]: r["published_at"] for r in json.loads(Path("built-packs.json").read_text())["packs"]}
+                  index = json.loads((root / "packs.json").read_text())
+                  for row in index["packs"]:
+                      row["published_at"] = times[row["pack_id"]]
+                  (root / "packs.json").write_text(json.dumps(index, indent=2) + "\n")
+                  version = os.environ["RELEASE_TAG"][1:]
+                  expected = {f"kriko-{version}-x86_64.msi", f"kriko-{version}-win64-portable.zip", "SHA256SUMS.txt", "packs.json"}
+                  for arch in ("arm64", "x86_64"):
+                      expected.update({f"kriko-{version}-macos-{arch}.dmg", f"kriko-{version}-macos-{arch}-portable.zip", f"SHA256SUMS-{arch}.txt"})
+                  packs = {f"{p.parent.name}.kpack" for p in Path("packs").glob("*/pack.toml")}
+                  expected.update(packs)
+                  assert {p.name for p in root.iterdir()} == expected, "Unexpected/missing artifacts"
+                  checked = set()
+                  for name in ("SHA256SUMS.txt", "SHA256SUMS-arm64.txt", "SHA256SUMS-x86_64.txt"):
+                      for line in (root / name).read_text().splitlines():
+                          digest, filename = line.split(maxsplit=1)
+                          filename = filename.lstrip("*")
+                          assert filename in expected and filename not in checked, "Unexpected manifest entry"
+                          assert hashlib.sha256((root / filename).read_bytes()).hexdigest() == digest, filename
+                          checked.add(filename)
+                  assert checked == {n for n in expected if n.endswith((".msi", ".zip", ".dmg"))}, "Incomplete native manifests"
+                  rows = json.loads((root / "packs.json").read_text())["packs"]
+                  base = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{os.environ['RELEASE_TAG']}/"
+                  assert {r["url"] for r in rows} == {base + n for n in packs}, "Wrong pack URLs"
+                  for row in rows:
+                      path = root / row["url"].rsplit("/", 1)[-1]
+                      assert row["sha256"] == hashlib.sha256(path.read_bytes()).hexdigest(), path.name
+                      assert row["size"] == path.stat().st_size, path.name
+                  aggregate = "".join(f"{hashlib.sha256((root / n).read_bytes()).hexdigest()}  {n}\n" for n in sorted(expected))
+                  (root / "SHA256SUMS-ALL.txt").write_text(aggregate)
+                  print(f"Verified {len(expected) + 1} release assets")
+                  PY
+                  (cd release && sha256sum --check SHA256SUMS-ALL.txt)
+
+            - name: Validate existing assets and upload only missing assets
+              run: |
+                  set -euo pipefail
+                  gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > current.json
+                  python - <<'PY'
+                  import hashlib, json, os, subprocess
+                  from pathlib import Path
+                  before, current = [json.load(open(p)) for p in ("draft.json", "current.json")]
+                  assert before["id"] == current["id"] and current["draft"] and not current["prerelease"], "Draft changed during verification"
+                  assert before["body"] == current["body"], "Release notes changed"
+                  files = {p.name: p for p in Path("release").iterdir()}
+                  assets = current["assets"]
+                  assert len({a["name"] for a in assets}) == len(assets), "Duplicate existing assets"
+                  for asset in assets:
+                      assert asset["name"] in files, "Unexpected existing asset"
+                      path = files[asset["name"]]
+                      assert asset["state"] == "uploaded" and asset["size"] == path.stat().st_size, path.name
+                      assert asset["digest"] == "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(), path.name
+                  missing = sorted(set(files) - {a["name"] for a in assets})
+                  if missing:
+                      subprocess.run(["gh", "release", "upload", os.environ["RELEASE_TAG"], "--repo", os.environ["GITHUB_REPOSITORY"], *(str(files[n]) for n in missing)], check=True)
+                  print(f"Retained {len(assets)} matching assets; uploaded {len(missing)} missing assets")
+                  PY
+
+            - name: Verify remote asset digests and publish latest stable
+              run: |
+                  set -euo pipefail
+                  gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > uploaded.json
+                  python - <<'PY'
+                  import hashlib, json
+                  from pathlib import Path
+                  before = json.load(open("draft.json"))
+                  uploaded = json.load(open("uploaded.json"))
+                  assert uploaded["id"] == before["id"] and uploaded["draft"] and not uploaded["prerelease"], "Draft identity changed"
+                  assert uploaded["body"] == before["body"], "Release notes changed"
+                  files = {p.name: p for p in Path("release").iterdir()}
+                  assert len(uploaded["assets"]) == len(files), "Asset count mismatch"
+                  assert {a["name"] for a in uploaded["assets"]} == set(files), "Asset name mismatch"
+                  for asset in uploaded["assets"]:
+                      path = files[asset["name"]]
+                      assert asset["state"] == "uploaded" and asset["size"] == path.stat().st_size, path.name
+                      assert asset["digest"] == "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest(), path.name
+                  print(f"Verified {len(files)} remote digests before publication")
+                  PY
+                  gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+
     # Windows only: the desktop app and its installer are Windows, and
     # PyInstaller cannot cross-compile the sidecar anyway.
     bundle:
         name: windows
+        if: inputs.verified_run == ''
         runs-on: windows-latest
         defaults:
             run:
@@ -175,6 +343,7 @@ jobs:
     # reinstalling.
     packs:
         name: packs
+        if: inputs.verified_run == ''
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
@@ -217,6 +386,7 @@ jobs:
     # The package script is also the documented hand-build recipe.
     macos:
         name: macos-${{ matrix.arch }}
+        if: inputs.verified_run == ''
         strategy:
             fail-fast: false
             matrix:
@@ -254,7 +424,7 @@ jobs:
     release:
         name: release
         needs: [bundle, packs, macos]
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: inputs.verified_run == '' && startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
         permissions:
             contents: write
