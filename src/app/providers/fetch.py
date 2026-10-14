@@ -23,6 +23,7 @@ import logging
 import re
 import urllib.error
 import urllib.request
+from app.providers import network
 from datetime import date, datetime, timezone
 
 from kriko.research import Fetched
@@ -138,7 +139,7 @@ def _download(url: str, timeout: float) -> str:
         return ""
     request = urllib.request.Request(url, headers={"user-agent": USER_AGENT})
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with network.urlopen(request, timeout=timeout) as response:
             kind = (response.headers.get_content_type() or "").lower()
             if kind and not (
                 kind.startswith("text/") or "html" in kind or "xml" in kind

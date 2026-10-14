@@ -20,6 +20,7 @@ import json
 import re
 import urllib.error
 import urllib.request
+from app.providers import network
 from urllib.parse import urlsplit
 
 from app.providers.fetch import LINK_CLOSE, LINK_OPEN, prose_lines
@@ -55,7 +56,7 @@ def _rpc(endpoint: str, body: dict, session: str = "") -> tuple[dict, str]:
         endpoint, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST"
     )
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as response:
+        with network.urlopen(request, timeout=TIMEOUT) as response:
             session = response.headers.get("mcp-session-id") or session
             raw = response.read().decode("utf-8", "replace")
     except (urllib.error.URLError, urllib.error.HTTPError, OSError):
