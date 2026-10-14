@@ -193,7 +193,13 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             div().flex().items_center().gap(px(12.0))
                 .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(3.0))
                     .child(row_title(&app.live.run.task(job)))
-                    .child(row_desc(&line)))
+                    .child(row_desc(&line))
+                    .when(!job.done, |d| d.child(crate::screens::action_trail::compact_line(job, motion)))
+                    .when(!job.done, |d| d.child(progress_bar(
+                        &format!("activity-run-bar-{i}"),
+                        app.live.run.bar_value(&job.id, job.progress, motion),
+                        motion,
+                    ))))
                 .child(ghost(("activity-run", i), if open { "Hide details" } else { "View details" }).on_click(toggle)),
         );
         runs = runs.child(crate::screens::logs::job_logs(app, job, cx));

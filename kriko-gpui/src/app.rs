@@ -1112,6 +1112,12 @@ impl Kriko {
 impl Render for Kriko {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.motion = !self.reduce_motion && window.is_window_active();
+        // A job's bar eases a frame at a time. Ask for the next frame while
+        // one still moves (a job is running, in front, motion on), and nowhere
+        // else: the idle guard in test_the_idle_window_does_not_draw.py.
+        if self.live.run.advance_bars(self.motion) {
+            window.request_animation_frame();
+        }
         if !matches!(self.engine, engine::Status::Ready { .. }) {
             let maximized = window.is_maximized();
             return self.boot_screen(maximized, cx).into_any_element();

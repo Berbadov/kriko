@@ -11,6 +11,7 @@ use crate::app::Kriko;
 use crate::theme::*;
 
 pub(crate) mod about;
+pub(crate) mod action_trail;
 pub(crate) mod activity;
 pub(crate) mod agents;
 pub(crate) mod benchmark;

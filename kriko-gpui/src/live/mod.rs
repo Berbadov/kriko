@@ -10,6 +10,7 @@
 //! dock, Agents), `knowledge` (Overview, Sites, Extension, Settings, About)
 //! and `local` (Local LLM, Benchmark).
 
+pub mod action;
 pub mod compare;
 pub mod history;
 pub mod knowledge;

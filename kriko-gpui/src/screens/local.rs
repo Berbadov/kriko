@@ -543,7 +543,13 @@ fn setup(
                         .child(row_title(&p.model))
                         .child(ghost("local-get-cancel", "Stop").on_click(cancel)),
                 )
-                .child(meter_live("pull-meter", p.progress, 20, true, motion).max_w(px(420.0)))
+                .child(meter_live(
+                    "pull-meter",
+                    app.live.run.bar_value(&p.job_id, p.progress / 100.0, motion) * 100.0,
+                    20,
+                    true,
+                    motion,
+                ).max_w(px(420.0)))
                 .child(mono(&format!("{:.0}% · {}", p.progress.min(100.0), p.message), INK_2)),
             PullPhase::Done => div()
                 .flex()

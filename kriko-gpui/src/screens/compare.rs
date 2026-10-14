@@ -1065,7 +1065,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         };
         let progress = match item.state {
             QState::Done => 100.0,
-            QState::Researching => run.progress,
+            QState::Researching => app.live.run.bar_value(&run.job, run.progress / 100.0, motion) * 100.0,
             QState::Waiting => 0.0,
         };
         rows = rows.child(
@@ -1149,7 +1149,11 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             .iter()
             .map(|q| match q.state {
                 QState::Done => 100.0,
-                QState::Researching => c.queue_run.get(&q.queue_id).map(|r| r.progress).unwrap_or(0.0),
+                QState::Researching => c
+                    .queue_run
+                    .get(&q.queue_id)
+                    .map(|r| app.live.run.bar_value(&r.job, r.progress / 100.0, motion) * 100.0)
+                    .unwrap_or(0.0),
                 QState::Waiting => 0.0,
             })
             .sum::<f32>()
@@ -1809,7 +1813,19 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             motion,
                         ))),
                 })
-                .children(run.map(|run| question_run_detail(run, &q.sources, qi))
+                .children(run.map(|run| {
+                    let mut detail = question_run_detail(run, &q.sources, qi);
+                    let live = !run.state.is_empty()
+                        && !matches!(run.state.as_str(), "succeeded" | "failed" | "cancelled" | "interrupted");
+                    if live {
+                        detail = detail.child(progress_bar(
+                            &format!("compare-question-bar-{qi}"),
+                            app.live.run.bar_value(&q.job_id, run.progress, motion),
+                            motion,
+                        ));
+                    }
+                    detail
+                })
                     .or_else(|| question_sources(&q.sources, qi)
                         .map(|sources| div().pl(px(24.0)).child(sources))))
                 .child(mono(
