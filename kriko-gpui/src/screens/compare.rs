@@ -1065,7 +1065,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         };
         let progress = match item.state {
             QState::Done => 100.0,
-            QState::Researching => run.progress,
+            QState::Researching => app.live.run.bar_value(&run.job, run.progress / 100.0, motion) * 100.0,
             QState::Waiting => 0.0,
         };
         rows = rows.child(
@@ -1073,7 +1073,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                 .py(px(10.0))
                 .flex()
                 .items_center()
-                .gap(px(14.0))
+                .gap(px(SPACE_CARD))
                 .child(mono(&format!("{:02}", qi + 1), DIM))
                 .child(mark_tile(
                     &format!("queue-row-tile-{qi}"),
@@ -1113,7 +1113,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         }
     }
     if n == 0 {
-        rows = rows.child(div().py(px(14.0)).child(row_desc(if c.queue_loaded {
+        rows = rows.child(div().py(px(10.0)).child(row_desc(if c.queue_loaded {
             "The queue is empty. Queue the products you are weighing up from their listings."
         } else {
             "Reading the queue..."
@@ -1149,7 +1149,11 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             .iter()
             .map(|q| match q.state {
                 QState::Done => 100.0,
-                QState::Researching => c.queue_run.get(&q.queue_id).map(|r| r.progress).unwrap_or(0.0),
+                QState::Researching => c
+                    .queue_run
+                    .get(&q.queue_id)
+                    .map(|r| app.live.run.bar_value(&r.job, r.progress / 100.0, motion) * 100.0)
+                    .unwrap_or(0.0),
                 QState::Waiting => 0.0,
             })
             .sum::<f32>()
@@ -1214,7 +1218,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     card()
         .flex()
         .flex_col()
-        .gap(px(14.0))
+        .gap(px(SPACE_CARD))
         .child(
             div()
                 .flex()
@@ -1747,7 +1751,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         let run = app.live.compare.question_runs.get(&q.job_id);
         questions = questions.child(
             well()
-                .p(px(14.0))
+                .p(px(PAD_CARD_TIGHT))
                 .flex()
                 .flex_col()
                 .gap(px(8.0))
@@ -1815,7 +1819,19 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             motion,
                         ))),
                 })
-                .children(run.map(|run| question_run_detail(run, &q.sources, qi))
+                .children(run.map(|run| {
+                    let mut detail = question_run_detail(run, &q.sources, qi);
+                    let live = !run.state.is_empty()
+                        && !matches!(run.state.as_str(), "succeeded" | "failed" | "cancelled" | "interrupted");
+                    if live {
+                        detail = detail.child(progress_bar(
+                            &format!("compare-question-bar-{qi}"),
+                            app.live.run.bar_value(&q.job_id, run.progress, motion),
+                            motion,
+                        ));
+                    }
+                    detail
+                })
                     .or_else(|| question_sources(&q.sources, qi)
                         .map(|sources| div().pl(px(24.0)).child(sources))))
                 .child(mono(
@@ -1870,7 +1886,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     // ---- assemble ----
     // The board sits directly under the toggle that opens it, so it is on
     // screen the moment it appears, with the slots above the table below.
-    let mut page = div().flex().flex_col().min_w(px(0.0)).gap(px(20.0)).child(drafts_row);
+    let mut page = div().flex().flex_col().min_w(px(0.0)).gap(px(SPACE_SECTION)).child(drafts_row);
     if let Some(say) = app.live.compare.say.clone() {
         page = page.child(
             div()

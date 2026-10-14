@@ -543,7 +543,13 @@ fn setup(
                         .child(row_title(&p.model))
                         .child(ghost("local-get-cancel", "Stop").on_click(cancel)),
                 )
-                .child(meter_live("pull-meter", p.progress, 20, true, motion).max_w(px(420.0)))
+                .child(meter_live(
+                    "pull-meter",
+                    app.live.run.bar_value(&p.job_id, p.progress / 100.0, motion) * 100.0,
+                    20,
+                    true,
+                    motion,
+                ).max_w(px(420.0)))
                 .child(mono(&format!("{:.0}% · {}", p.progress.min(100.0), p.message), INK_2)),
             PullPhase::Done => div()
                 .flex()
@@ -578,7 +584,7 @@ fn setup(
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(guide)
         .child(runtimes)
         .child(catalogue)
@@ -777,11 +783,11 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
         };
         models = models.child(
             div()
-                .py(px(14.0))
+                .py(px(10.0))
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(20.0))
+                .gap(px(SPACE_SECTION))
                 .child(
                     div()
                         .flex_1()
@@ -932,14 +938,14 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     let where_card = card()
         .flex()
         .flex_col()
-        .gap(px(14.0))
+        .gap(px(SPACE_CARD))
         .child(eyebrow("Where things run"))
         .child(
             div()
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(24.0))
+                .gap(px(SPACE_SECTION))
                 .child(
                     div()
                         .flex()
@@ -1063,7 +1069,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .children(plane_notice)
         .child(guide)
         .child(use_card)
@@ -1074,7 +1080,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         .child(
             div()
                 .flex()
-                .gap(px(24.0))
+                .gap(px(SPACE_SECTION))
                 .items_start()
                 .flex_wrap()
                 .child(div().flex_1().min_w(px(320.0)).child(memory))

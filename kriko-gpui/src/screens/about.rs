@@ -13,7 +13,7 @@ fn kv(k: &str, v: &str) -> Div {
         .flex()
         .items_center()
         .justify_between()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(mono(k, DIM).flex_none())
         .child(mono(v, INK_2).min_w(px(0.0)))
 }
@@ -125,7 +125,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
     let brand = card()
         .flex()
         .items_center()
-        .gap(px(20.0))
+        .gap(px(SPACE_SECTION))
         .child(
             svg()
                 .path(SharedString::from("kriko-mark-white.svg"))
@@ -176,7 +176,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(brand)
         .child(updates)
         .child(blurb)

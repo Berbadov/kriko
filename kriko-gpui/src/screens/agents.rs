@@ -178,6 +178,20 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 // clipped by characters: GPUI's ellipsis shrank the whole
                 // table card to its content at narrow widths
                 .child(crate::screens::history::clip(&e.label, 40));
+            // while this agent runs a job, its tile says what it is doing
+            let doing = app.live.run.running().find(|j| j.harness == e.id);
+            let name = match doing {
+                Some(job) => div()
+                    .flex_1()
+                    .min_w(px(0.0))
+                    .pr(px(10.0))
+                    .flex()
+                    .flex_col()
+                    .gap(px(3.0))
+                    .child(name)
+                    .child(crate::screens::action_trail::compact_line(job, motion)),
+                None => name,
+            };
             let order = div()
                 .w(px(168.0))
                 .flex_none()
@@ -236,7 +250,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         if beside {
             div()
                 .flex()
-                .gap(px(24.0))
+                .gap(px(SPACE_SECTION))
                 .items_start()
                 .w_full()
                 .child(div().flex_1().min_w(px(840.0)).child(table))
@@ -260,7 +274,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .id("agents-screen")
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(body)
         .when(app.live.run.prefs_loaded, |d| d.child(research_card(app, cx)))
 }
