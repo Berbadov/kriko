@@ -21,6 +21,8 @@ scheduler's to enforce, in one place.
 """
 
 import json
+import threading
+import time
 import urllib.parse
 import urllib.request
 
@@ -29,6 +31,40 @@ from kriko.research.politeness import LocalSearchError
 
 DEFAULT_BASE_URL = "http://127.0.0.1:7000"
 DEFAULT_ENGINE = "duckduckgo"
+
+#: `/mega/search` waits for its slowest engine, so one blocked engine costs
+#: every query the time it takes to fail (measured: Ecosia blocked, Baidu 36 s
+#: to a 502, Yandex a captcha, against 2-6 s for the engines that answered).
+#: The service names the engines that failed (`meta.engines_failed`); those
+#: are left out of the next queries for this long and then tried again, so a
+#: block that lifts is noticed. Taken from what the service reports, never a
+#: list of bad engines typed here.
+ENGINE_COOLDOWN_SECONDS = 600.0
+_failed_at: dict[str, float] = {}
+_failed_lock = threading.Lock()
+
+
+def _engines_to_ask(requested: str) -> str:
+    """`requested` without the engines that failed recently, never empty."""
+    names = [name.strip() for name in requested.split(",") if name.strip()]
+    now = time.monotonic()
+    with _failed_lock:
+        live = [name for name in names
+                if name not in _failed_at
+                or now - _failed_at[name] >= ENGINE_COOLDOWN_SECONDS]
+    return ",".join(live or names)
+
+
+def _note_failed_engines(payload: object) -> None:
+    meta = payload.get("meta") if isinstance(payload, dict) else None
+    failed = meta.get("engines_failed") if isinstance(meta, dict) else None
+    if not isinstance(failed, list):
+        return
+    now = time.monotonic()
+    with _failed_lock:
+        for name in failed:
+            if isinstance(name, str) and name:
+                _failed_at[name] = now
 
 #: Same markers the politeness module reads, checked here because the SERP
 #: itself is the first thing a challenge hits — a block page that reaches
@@ -72,6 +108,11 @@ def _is_ad_or_search_redirect(url: str, result_type: object = "") -> bool:
         return True
     if host in {"google.com", "www.google.com", "google.fr"} and path == "/aclk":
         return True
+    # Google's own click-through with an opaque token (no destination in it),
+    # so it can neither be read nor unwrapped; the same result usually
+    # arrives from another engine under its real address.
+    if host in {"google.com", "www.google.com"} and path == "/goto":
+        return True
     return False
 
 
@@ -90,7 +131,7 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
         params = urllib.parse.urlencode(
             {
                 "text": query,
-                "engines": chosen,
+                "engines": _engines_to_ask(chosen),
                 "limit": max(1, int(limit)),
                 "format": "json",
                 "lang": language,
@@ -115,6 +156,7 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
                     "the SERP answered with a challenge page"
                 ) from error
             raise LocalSearchError("the SERP did not answer with JSON") from error
+        _note_failed_engines(payload)
         results = payload.get("results") if isinstance(payload, dict) else []
         if not isinstance(results, list):
             raise LocalSearchError("the SERP returned an invalid results array")

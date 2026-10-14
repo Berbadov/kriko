@@ -302,7 +302,10 @@ def test_unreported_runtime_device_stays_unknown_and_controls_stay_external(stub
 def test_ollama_runtime_matches_implicit_latest_and_reports_actual_device(monkeypatch):
     import io
 
+    from app import localruntime
     from app.localruntime import inspect, options
+
+    monkeypatch.setattr(localruntime, "_machine_has_gpu", lambda: False)
 
     monkeypatch.setattr(local_inference.urllib.request, "urlopen", lambda *_args, **_kwargs:
                         io.BytesIO(json.dumps({"models": [{
@@ -318,6 +321,25 @@ def test_ollama_runtime_matches_implicit_latest_and_reports_actual_device(monkey
     assert runtime["device_source"] == "Ollama /api/ps"
     assert "despite the GPU request" in runtime["reason"]
     assert options({prefs.LOCAL_DEVICE: "gpu"})["num_gpu"] == -1
+
+
+def test_a_model_on_the_cpu_of_a_machine_with_a_gpu_says_to_restart_ollama(monkeypatch):
+    import io
+
+    from app import localruntime
+
+    monkeypatch.setattr(localruntime, "_machine_has_gpu", lambda: True)
+    monkeypatch.setattr(local_inference.urllib.request, "urlopen", lambda *_args, **_kwargs:
+                        io.BytesIO(json.dumps({"models": [{
+                            "name": "gemma4:latest", "size": 2000,
+                            "size_vram": 0, "context_length": 4096,
+                        }]}).encode()))
+    # Whatever the device setting says: the GPU being unused is the finding.
+    for device in ("", "gpu"):
+        runtime = localruntime.inspect("http://ollama.test", "Ollama", "gemma4",
+                                       {prefs.LOCAL_DEVICE: device})
+        assert runtime["device"] == "cpu"
+        assert "Quit Ollama from the tray" in runtime["reason"]
 
 
 def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):

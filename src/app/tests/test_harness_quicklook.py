@@ -27,7 +27,7 @@ def test_harness_quicklook_searches_host_pages_then_calls_selected_cli_once(monk
     cli_calls = []
 
     def searcher(_url, *, engine, language):
-        assert engine == "bing,duckduckgo,ecosia"
+        assert engine == "google,duckduckgo,bing"
         assert language == "en"
 
         def search(query, limit):
@@ -191,3 +191,46 @@ def test_oil_compatibility_followup_can_read_the_vehicle_manual(monkeypatch):
         question="Is this oil right for my 2018 Honda Civic?",
     )
     assert researcher.sources == {manual_url: manual}
+
+
+def _dead_search(monkeypatch, calls):
+    from kriko.research.politeness import LocalSearchError
+
+    def searcher(_url, *, engine, language):
+        def search(query, limit):
+            calls.append(query)
+            raise LocalSearchError("HTTP Error 502: Bad Gateway")
+
+        return search
+
+    monkeypatch.setattr("app.providers.openserp.searcher", searcher)
+    monkeypatch.setattr("app.providers.fetch.reader", lambda *, timeout: lambda url: PAGE)
+
+
+def test_a_dead_search_service_hands_the_search_to_the_cli_and_says_so(monkeypatch):
+    calls, said, cli_calls = [], [], []
+    _dead_search(monkeypatch, calls)
+    researcher = harness.HarnessResearcher(row("codex"))
+    researcher.on_action = said.append
+    monkeypatch.setattr(researcher, "_echo", said.append)
+    monkeypatch.setattr(researcher, "_run", lambda prompt: cli_calls.append(prompt) or
+                        '{"risks":[],"specs":[]}')
+
+    researcher.ask_quick("Widget", principle="pack bar")
+
+    assert len(cli_calls) == 1
+    assert "search the web with your own tools" in cli_calls[0].lower()
+    assert "Host-read pages" not in cli_calls[0]
+    assert any("will search the web itself" in line for line in said)
+    assert any(line.startswith("searching: ") for line in said)
+
+
+def test_two_failed_searches_in_a_row_skip_the_third(monkeypatch):
+    calls = []
+    _dead_search(monkeypatch, calls)
+    researcher = harness.HarnessResearcher(row("codex"))
+    monkeypatch.setattr(researcher, "_run", lambda prompt: '{"risks":[],"specs":[]}')
+
+    researcher.ask_quick("Widget", principle="pack bar")
+
+    assert len(calls) == 2
