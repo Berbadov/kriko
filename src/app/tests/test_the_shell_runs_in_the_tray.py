@@ -79,7 +79,7 @@ def app_rs() -> str:
 def test_closing_the_window_hides_it_rather_than_ending_the_process(main_rs):
     close = _block(main_rs, "on_window_should_close")
     hiding = close.split("else")[0]
-    assert "shell::can_hide()" in hiding and "shell::hide_window()" in hiding
+    assert "shell::can_hide()" in hiding and "shell::hide_window(cx)" in hiding
     assert "false" in hiding, "returning true would let the window close"
     assert "engine::stop" not in hiding, (
         "the whole point of the tray is that the engine survives the window; "

@@ -52,13 +52,11 @@ claims:
   confidence: 0.6
   rationale: A recall has been issued for defective crash sensors in the front doors
     that can affect airbag and restraint systems. If not repaired, these sensors could
-    prevent airbags from deploying in a crash, creating a serious safety risk. Buyers
-    should ensure the recall work has been completed on any used Golf 7.
+    prevent airbags from deploying in a crash, creating a serious safety risk. Buyers should make sure the recall work has been done on the Golf 7 they are considering.
   rationale_tr: Ön kapılardaki hatalı çarpışma sensörleri için geri çağırma yayınlanmıştır;
     bu sensörler hava yastığı ve emniyet kemeri sistemlerini etkileyebilir. Onarılmazsa,
     bu sensörler bir kazada hava yastıklarının açılmasını engelleyebilir ve ciddi
-    güvenlik riski oluşturabilir. Alıcılar, kullanılmış Golf 7'de bu geri çağırmanın
-    yapıldığından emin olmalıdır.
+    güvenlik riski oluşturabilir. Alıcılar, inceledikleri Golf 7'de bu geri çağırmanın yapıldığından emin olmalıdır.
   inspection_advice: Check the vehicle's VIN against Volkswagen's recall database
     to confirm the crash sensor recall has been performed. Ask service records for
     proof of recall completion.

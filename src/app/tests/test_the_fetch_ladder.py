@@ -18,6 +18,11 @@ import pytest
 from app.providers import fetch, pagereader
 
 
+def _parallel_answer(url: str, excerpts: list[str]) -> str:
+    """The reader's text answer: JSON with one `results` entry per page."""
+    return json.dumps({"results": [{"url": url, "excerpts": excerpts}]})
+
+
 class Sites:
     """One loopback server playing two doors: the site and the reader."""
 
@@ -91,7 +96,7 @@ def test_a_page_that_answers_is_read_plainly(sites, monkeypatch):
 
 def test_a_refused_page_is_read_through_the_hosted_reader(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
-    sites.reader_text = f"# A page\nURL: {sites.url}\n\nThe page's own words.\n"
+    sites.reader_text = _parallel_answer(sites.url, ["The page's own words."])
     page = fetch.reader()(sites.url)
     assert "The page's own words." in page.text
     assert sites.reader_calls == 2
@@ -112,22 +117,22 @@ def test_a_404_is_not_a_refusal_and_never_asks_the_reader(sites, monkeypatch):
 
 def test_the_reader_names_itself_honestly(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
-    sites.reader_text = f"# A page\nURL: {sites.url}\n\nwords\n"
+    sites.reader_text = _parallel_answer(sites.url, ["words"])
     pagereader.read(sites.url)
     assert sites.site_agents or True
 
 
 def test_parse_takes_the_asked_page_out_of_a_batch():
-    text = (
-        "# Other page\nURL: https://other.test/x\n\nother words\n\n"
-        "# Asked page\nURL: https://asked.test/y\n\nasked words\n"
-    )
-    assert pagereader.parse(text, "https://asked.test/y") == "asked words"
+    text = json.dumps({"results": [
+        {"url": "https://other.test/x", "excerpts": ["other words"]},
+        {"url": "https://asked.test/y", "excerpts": ["asked words"]},
+    ]})
+    assert pagereader.parse_parallel(text, "https://asked.test/y") == "asked words"
 
 
-def test_parse_of_a_single_page_answer_drops_the_heading():
-    text = "# Asked page\nURL: https://asked.test/y\n\nasked words\n"
-    assert pagereader.parse(text, "https://asked.test/y") == "asked words"
+def test_parse_of_a_single_page_answer_keeps_only_its_prose():
+    text = _parallel_answer("https://asked.test/y", ["asked words"])
+    assert pagereader.parse_parallel(text, "https://asked.test/y") == "asked words"
 
 
 def test_a_dead_reader_is_an_unread_page(sites, monkeypatch):

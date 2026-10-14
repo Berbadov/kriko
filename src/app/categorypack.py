@@ -48,7 +48,6 @@ __all__ = [
     "candidates", "choice_block", "resolve", "taken_ids", "ground", "attach",
     "admit", "holds",
     "absorb", "install_draft", "DraftBuildFailed", "next_version", "pick_subject",
-    "MAX_CANDIDATES",
 ]
 
 #: One writer at a time per process. The job runner already serialises the
@@ -56,10 +55,6 @@ __all__ = [
 #: thread, and two builds of one draft directory are how a half-written pack
 #: happens.
 LOCK = threading.RLock()
-
-#: How many category packs the quick look is shown. Past this the list is a
-#: catalogue, and a model choosing from a catalogue picks badly.
-MAX_CANDIDATES = 12
 
 #: Subject labels shown per pack in that list. Enough to tell two packs apart.
 _SAMPLE_LABELS = 5
@@ -146,8 +141,6 @@ def candidates(store_path) -> list[dict]:
             "subjects": list(state.get("subjects") or []),
             "blurb": _blurb(state.get("principle") or ""),
         })
-        if len(found) == MAX_CANDIDATES:
-            break
     return found
 
 
@@ -168,7 +161,10 @@ def choice_block(cands: list[dict]) -> str:
         sample = ", ".join(one["subjects"][:_SAMPLE_LABELS])
         held = f" (holds {sample})" if sample else ""
         said = f": {one['blurb']}" if one["blurb"] else ""
-        lines.append(f"* `{one['pack_id']}`, {one['name']}{held}{said}")
+        keys = "; ".join(f"{kind}: {', '.join(names)}"
+                         for kind, names in (one.get("identity") or {}).items() if names)
+        named = f" [identity {keys}]" if keys else ""
+        lines.append(f"* `{one['pack_id']}`, {one['name']}{held}{named}{said}")
     return "\n".join(lines)
 
 
@@ -388,6 +384,43 @@ def _owned_elsewhere(claims: list, own: int | None, ev: dict) -> bool:
         for at, claim in enumerate(claims)
         if at != own and isinstance(claim, dict)
         for old in claim.get("evidence") or [] if isinstance(old, dict))
+
+
+def add_subject(store_path, slug: str, identity: dict) -> dict | None:
+    """Write a product into a draft from the identity a quick look read.
+
+    The identity must give every key one of the draft's kinds declares, with
+    values found on the listing or its pages (the caller checks); anything short
+    of that is None, and the product waits for an agent rather than joining
+    under a guessed key. A product the draft already holds is not written
+    twice. Returns the subject row, as `attach` takes it.
+    """
+    shown = {str(k).strip().lower(): " ".join(str(v).split())
+             for k, v in (identity or {}).items() if str(v or "").strip()}
+    values = {k: v.lower() for k, v in shown.items()}
+    with LOCK:
+        root = packdraft.open_draft(store_path, slug).root
+        keys = _declared_keys(root)
+        kind = next((k for k, names in keys.items()
+                     if names and all(n in values for n in names)), None)
+        if kind is None:
+            return None
+        ident = {n: values[n] for n in keys[kind]}
+        # Named by its identity, in the order the pack declares it, not by
+        # the listing title: a marketplace title is not a product's name.
+        row = {"kind": kind, "label": " ".join(shown[n] for n in keys[kind]), "identity": ident}
+        subjects = _yaml_rows(root, "data/subjects.yaml")
+        wanted = _subject_id(kind, ident, keys)
+        for one in subjects:
+            if isinstance(one, dict) and _subject_id(
+                    str(one.get("kind") or ""), dict(one.get("identity") or {}), keys) == wanted:
+                return one
+        subjects.append(row)
+        packdraft.write(
+            store_path, slug=slug, path="data/subjects.yaml",
+            text=_preamble(root / "data" / "subjects.yaml")
+            + yaml.safe_dump(subjects, allow_unicode=True, sort_keys=False))
+        return row
 
 
 def attach(store_path, slug: str, product: str, sourced: list[dict], *,

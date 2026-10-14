@@ -133,8 +133,30 @@ pub struct Item {
     pub agent: String,
     pub claims: usize,
     pub category: String,
+    pub categorization: Option<Categorization>,
     /// (pack_id, name)
     pub packs: Vec<(String, String)>,
+}
+
+/// The engine's validated category assignment for a saved Quick Look.
+#[derive(Clone, Default)]
+pub struct Categorization {
+    pub status: String,
+    pub method: String,
+    pub pack_id: String,
+    pub pack_name: String,
+    pub confidence: String,
+    pub basis: Vec<(String, String)>,
+    pub message: String,
+}
+
+/// An installed catalog that can be selected after an uncertain match.
+#[derive(Clone)]
+pub struct CategoryCatalog {
+    pub pack_id: String,
+    pub name: String,
+    pub enabled: bool,
+    pub editable: bool,
 }
 
 impl Item {
@@ -173,6 +195,15 @@ pub struct Detail {
     pub id: String,
     pub url: String,
     pub claims: Vec<ClaimView>,
+}
+
+/// A saved Quick Look's complete job result, reopened from history.
+#[derive(Clone)]
+pub struct QuickLookDetail {
+    pub id: String,
+    pub product: String,
+    pub state: String,
+    pub result: Value,
 }
 
 #[derive(Clone)]
@@ -215,6 +246,8 @@ pub struct SubjectClaim {
     pub title: String,
     pub severity: String,
     pub domain: String,
+    /// The part a claim reaches this subject through; empty when it is its own.
+    pub via: String,
 }
 
 #[derive(Clone)]
@@ -261,6 +294,10 @@ pub struct State {
     pub items: Vec<Item>,
     pub records: Vec<Item>,
     pub records_loaded: bool,
+    pub categorization_catalogs: Vec<CategoryCatalog>,
+    pub categorizing: Option<String>,
+    pub categorization_message: Option<String>,
+    pub category_picker: Option<String>,
     pub filter_open: Option<String>,
     pub record_kind: String,
     pub record_status: String,
@@ -269,6 +306,9 @@ pub struct State {
     pub pack: Option<String>,
     pub open: Option<String>,
     pub detail: Option<Detail>,
+    pub quick_look_detail: Option<QuickLookDetail>,
+    pub quick_look_loading: bool,
+    pub quick_look_error: Option<String>,
     /// The check whose Forget key was pressed once.
     pub forget_armed: Option<String>,
     // Home
@@ -315,18 +355,6 @@ impl State {
         }
         out.sort_by(|a, b| a.1.to_lowercase().cmp(&b.1.to_lowercase()));
         out
-    }
-
-    /// The next catalog in the cycle: all, then each present one, then all.
-    pub fn next_pack(&self) -> Option<String> {
-        let options = self.pack_options();
-        match &self.pack {
-            None => options.first().map(|p| p.0.clone()),
-            Some(cur) => {
-                let at = options.iter().position(|p| &p.0 == cur)?;
-                options.get(at + 1).map(|p| p.0.clone())
-            }
-        }
     }
 
     /// The word the pack plate shows.
@@ -396,6 +424,21 @@ impl State {
 }
 
 fn item_from(v: &Value) -> Item {
+    let categorization = v.get("categorization").filter(|v| !v.is_null()).map(|v| {
+        Categorization {
+            status: api::s(v, "status"),
+            method: api::s(v, "method"),
+            pack_id: api::s(v, "pack_id"),
+            pack_name: api::s(v, "pack_name"),
+            confidence: api::s(v, "confidence"),
+            basis: api::arr(v, "basis").iter().filter_map(|one| {
+                let saved = api::s(one, "saved_text");
+                let catalog = api::s(one, "catalog_text");
+                (!saved.is_empty() && !catalog.is_empty()).then_some((saved, catalog))
+            }).collect(),
+            message: api::s(v, "message"),
+        }
+    });
     Item {
         id: api::s(v, "lookup_id"),
         ts: parse_utc(&api::s(v, "created_at")),
@@ -406,6 +449,7 @@ fn item_from(v: &Value) -> Item {
         agent: api::s(v, "agent"),
         claims: api::n(v, "claim_count").unwrap_or(0.0) as usize,
         category: api::s(v, "category"),
+        categorization,
         packs: api::arr(v, "packs")
             .iter()
             .map(|p| (api::s(p, "pack_id"), api::s(p, "name")))
@@ -438,6 +482,25 @@ fn detail_from(id: &str, v: &Value) -> Detail {
     }
 }
 
+fn quick_look_detail_from(id: &str, v: &Value) -> QuickLookDetail {
+    let params = v.get("params").cloned().unwrap_or(Value::Null);
+    let result = v.get("result").cloned().unwrap_or(Value::Null);
+    let product = api::s(&params, "product");
+    let category = api::s(&params, "category");
+    QuickLookDetail {
+        id: id.to_string(),
+        product: if !product.is_empty() {
+            product
+        } else if !category.is_empty() {
+            category
+        } else {
+            api::s(&result, "product")
+        },
+        state: api::s(v, "state"),
+        result,
+    }
+}
+
 fn subject_detail_from(v: &Value) -> SubjectDetail {
     SubjectDetail {
         id: api::s(v, "subject_id"),
@@ -460,6 +523,7 @@ fn subject_detail_from(v: &Value) -> SubjectDetail {
                 title: api::s(c, "title"),
                 severity: api::s(c, "severity"),
                 domain: api::s(c, "domain"),
+                via: api::s(c, "via"),
             })
             .collect(),
     }
@@ -498,6 +562,31 @@ pub fn feed_kind(op: &Op) -> &'static str {
     }
 }
 
+/// What a lookup was about and what it found, read off the operation's own
+/// request and response ("renault megane · 8 claims"), so the feed names the
+/// listing instead of a row of identical "analyze ok" lines.
+fn lookup_note(v: &Value) -> String {
+    if api::s(v, "kind") != "lookup" {
+        return String::new();
+    }
+    let parse = |key: &str| serde_json::from_str::<Value>(&api::s(v, key)).unwrap_or(Value::Null);
+    let request = parse("request_json");
+    let response = parse("response_json");
+    let named: Vec<String> = request
+        .get("identity")
+        .and_then(|i| i.as_object())
+        .map(|i| i.values().filter_map(|x| x.as_str().map(str::to_string)).collect())
+        .unwrap_or_default();
+    let mut parts = Vec::new();
+    if !named.is_empty() {
+        parts.push(named.join(" "));
+    }
+    if let Some(n) = response.get("claims").and_then(|c| c.as_u64()) {
+        parts.push(format!("{n} claim{}", if n == 1 { "" } else { "s" }));
+    }
+    parts.join(" · ")
+}
+
 fn op_from(v: &Value) -> Op {
     Op {
         ts: parse_utc(&api::s(v, "started_at")),
@@ -508,7 +597,14 @@ fn op_from(v: &Value) -> Op {
         ms: api::n(v, "ms"),
         note: {
             let note = api::s(v, "note");
-            if note.is_empty() { api::s(v, "error") } else { note }
+            let error = api::s(v, "error");
+            if !note.is_empty() {
+                note
+            } else if !error.is_empty() {
+                error
+            } else {
+                lookup_note(v)
+            }
         },
     }
 }
@@ -521,6 +617,16 @@ impl Kriko {
             this.note(&reply);
             if let Ok(v) = reply {
                 this.live.history.records = api::arr(&v, "items").iter().map(item_from).collect();
+                this.live.history.categorization_catalogs = api::arr(&v, "categorization_catalogs")
+                    .iter()
+                    .map(|one| CategoryCatalog {
+                        pack_id: api::s(one, "pack_id"),
+                        name: api::s(one, "name"),
+                        enabled: api::b(one, "enabled"),
+                        editable: api::b(one, "editable"),
+                    })
+                    .filter(|one| !one.pack_id.is_empty())
+                    .collect();
                 this.live.history.records_loaded = true;
             }
         });
@@ -587,10 +693,40 @@ impl Kriko {
         if h.open.as_deref() == Some(id.as_str()) {
             h.open = None;
             h.detail = None;
+            h.quick_look_detail = None;
+            h.quick_look_loading = false;
+            h.quick_look_error = None;
             return;
         }
         h.open = Some(id.clone());
         h.detail = None;
+        h.quick_look_detail = None;
+        h.quick_look_loading = false;
+        h.quick_look_error = None;
+        h.category_picker = None;
+        let quick_look = h.history_rows().iter().any(|item| {
+            item.id == id && item.source == "quick_look"
+        });
+        if quick_look {
+            let job_id = id.strip_prefix("job:").unwrap_or(&id).to_string();
+            self.live.history.quick_look_loading = true;
+            let path = format!("/api/jobs/{}", api::seg(&job_id));
+            self.fetch(cx, move || api::get(&path), move |this, reply, _| {
+                let history = &mut this.live.history;
+                if history.open.as_deref() != Some(id.as_str()) {
+                    return;
+                }
+                history.quick_look_loading = false;
+                match reply {
+                    Ok(value) => {
+                        history.quick_look_detail = Some(quick_look_detail_from(&id, &value));
+                    }
+                    Err(error) => history.quick_look_error = Some(error.message),
+                }
+            });
+            cx.notify();
+            return;
+        }
         let path = format!("/api/lookup/{}", api::seg(&id));
         self.fetch(cx, move || api::get(&path), move |this, reply, _| {
             this.note(&reply);
@@ -600,6 +736,97 @@ impl Kriko {
                 }
             }
         });
+    }
+
+    /// Explicitly ask the configured agent to categorize one saved look.
+    /// The task receives only the stored Quick Look and installed definitions.
+    pub fn categorize_saved_look(&mut self, lookup_id: String, cx: &mut Context<Self>) {
+        let Some(job_id) = lookup_id.strip_prefix("job:").map(str::to_string) else {
+            return;
+        };
+        self.live.history.categorizing = Some(lookup_id.clone());
+        self.live.history.categorization_message = Some("Starting the catalog match…".into());
+        self.fetch(
+            cx,
+            move || api::post(
+                &format!("/api/quick-looks/{}/categorize", api::seg(&job_id)),
+                serde_json::json!({}),
+            ),
+            move |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => {
+                        let categorization_job = api::s(&v, "job_id");
+                        if categorization_job.is_empty() {
+                            this.live.history.categorizing = None;
+                            this.live.history.categorization_message = Some(
+                                "The engine did not return a categorization task.".into(),
+                            );
+                            return;
+                        }
+                        this.live.history.categorization_message = Some(
+                            "Matching the saved product to installed catalogs…".into(),
+                        );
+                        this.follow_local_job(cx, categorization_job, move |this, view, cx| {
+                            if this.live.history.categorizing.as_deref() != Some(lookup_id.as_str()) {
+                                return;
+                            }
+                            this.live.history.categorization_message = Some(view.message.clone());
+                            if view.done {
+                                this.live.history.categorizing = None;
+                                if view.succeeded() {
+                                    this.live.history.categorization_message = Some(
+                                        "Categorization finished. Refreshing the saved assignment…".into(),
+                                    );
+                                    this.refresh_history(cx);
+                                }
+                            }
+                        });
+                    }
+                    Err(error) => {
+                        this.live.history.categorizing = None;
+                        this.live.history.categorization_message = Some(error.message);
+                    }
+                }
+            },
+        );
+    }
+
+    /// Save the reader's explicit choice from the installed-catalog list.
+    pub fn choose_saved_look_category(
+        &mut self,
+        lookup_id: String,
+        pack_id: String,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(job_id) = lookup_id.strip_prefix("job:").map(str::to_string) else {
+            return;
+        };
+        self.live.history.categorizing = Some(lookup_id.clone());
+        self.live.history.categorization_message = Some("Saving your catalog choice…".into());
+        self.fetch(
+            cx,
+            move || api::post(
+                &format!("/api/quick-looks/{}/category", api::seg(&job_id)),
+                serde_json::json!({"pack_id": pack_id}),
+            ),
+            move |this, reply, cx| {
+                this.note(&reply);
+                this.live.history.categorizing = None;
+                match reply {
+                    Ok(_) => {
+                        this.live.history.categorization_message = Some(
+                            "Catalog choice saved.".into(),
+                        );
+                        this.live.history.category_picker = None;
+                        this.refresh_history(cx);
+                    }
+                    Err(error) => {
+                        this.live.history.categorization_message = Some(error.message);
+                    }
+                }
+            },
+        );
     }
 
     /// Forget a check: the first press arms the key, the second deletes.
@@ -837,8 +1064,41 @@ impl Kriko {
 }
 
 #[cfg(test)]
+mod lookup_note_tests {
+    use super::lookup_note;
+
+    #[test]
+    fn a_lookup_names_what_it_read_and_how_much_it_found() {
+        let v = serde_json::json!({
+            "kind": "lookup",
+            "request_json": "{\"identity\": {\"make\": \"renault\", \"model\": \"megane\"}}",
+            "response_json": "{\"claims\": 8}",
+        });
+        assert_eq!(lookup_note(&v), "renault megane · 8 claims");
+        assert_eq!(lookup_note(&serde_json::json!({"kind": "pack_update"})), "");
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_saved_quick_look_keeps_its_product_facts_when_reopened() {
+        let job = serde_json::json!({
+            "state": "succeeded",
+            "params": {"product": "Example product"},
+            "result": {
+                "listing": {"facts": [{"name": "Rated output", "value": "18 W"}]},
+                "specs": [{"name": "Capacity", "value": "2 L", "quote": "Capacity: 2 L", "url": "https://example.test/specs"}]
+            }
+        });
+        let detail = quick_look_detail_from("job:look-1", &job);
+        assert_eq!(detail.product, "Example product");
+        assert_eq!(detail.state, "succeeded");
+        assert_eq!(detail.result["listing"]["facts"][0]["value"], "18 W");
+        assert_eq!(detail.result["specs"][0]["quote"], "Capacity: 2 L");
+    }
 
     #[test]
     fn the_engines_stamps_parse_to_utc_seconds() {
@@ -875,7 +1135,7 @@ mod tests {
     }
 
     #[test]
-    fn the_pack_plate_cycles_through_what_is_present() {
+    fn the_pack_filter_admits_only_its_pack() {
         let item = |id: &str, pack: &str| Item {
             id: id.into(),
             ts: None,
@@ -884,17 +1144,13 @@ mod tests {
             kind: "check".into(), status: "succeeded".into(), agent: String::new(),
             claims: 0,
             category: String::new(),
+            categorization: None,
             packs: vec![(pack.into(), pack.to_uppercase())],
         };
         let mut s = State { items: vec![item("a", "x.b"), item("b", "x.a")], ..Default::default() };
         assert_eq!(s.pack_word(), "ALL");
-        s.pack = s.next_pack();
-        assert_eq!(s.pack.as_deref(), Some("x.a"));
+        s.pack = Some("x.a".into());
         assert_eq!(s.filtered("", u32::MAX, 0), vec![1]);
-        s.pack = s.next_pack();
-        assert_eq!(s.pack.as_deref(), Some("x.b"));
-        s.pack = s.next_pack();
-        assert_eq!(s.pack, None);
     }
 
     #[test]

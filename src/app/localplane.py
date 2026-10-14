@@ -29,6 +29,13 @@ _NOT_A_CHAT_MODEL = "embed"
 #: the default pick and the screens cannot name different models.
 RECOMMENDED_MODEL = "gemma4:e2b"
 
+#: Below this many parameters a model is never run, chosen or not. Measured
+#: (docs/benchmarks/2026-10-11-*): a 0.8B model writes findings its pages do
+#: not say, and a fabricated risk is worse than none. The recommended model
+#: reads as 2B (`e2b`) and sits on the floor. A threshold, not a model list:
+#: a new tiny model is refused by its size tag with nothing to register.
+MIN_PARAMETERS_B = 2.0
+
 DEFAULT_CONTEXT = 4096
 MIN_CONTEXT = 2048
 MAX_CONTEXT = 32768
@@ -80,7 +87,17 @@ def _parameter_size(name: str) -> float | None:
     sizes.extend(
         float(size) for size in re.findall(r"(?:^|[-_:])e([24])b(?:$|[-_:])", folded)
     )
+    sizes.extend(
+        float(size) / 1000
+        for size in re.findall(r"(?:^|[-_:])(\d+(?:\.\d+)?)m(?:$|[-_:])", folded)
+    )
     return max(sizes, default=None)
+
+
+def too_small(name: str) -> bool:
+    """A model whose size tag is under `MIN_PARAMETERS_B`. Unknown is not small."""
+    size = _parameter_size(name)
+    return size is not None and size < MIN_PARAMETERS_B
 
 
 def is_recommended(name: str) -> bool:
@@ -90,14 +107,18 @@ def is_recommended(name: str) -> bool:
 
 
 def _pick(models: list[str], wanted: str) -> str:
-    if wanted in models and _NOT_A_CHAT_MODEL not in wanted.casefold():
+    if wanted in models and _NOT_A_CHAT_MODEL not in wanted.casefold() and not too_small(wanted):
         return wanted
-    chat = [one for one in models if _NOT_A_CHAT_MODEL not in one.casefold()]
+    chat = [one for one in models
+            if _NOT_A_CHAT_MODEL not in one.casefold() and not too_small(one)]
     recommended = sorted((one for one in chat if is_recommended(one)), key=len)
     if recommended:
         return recommended[0]
-    capable = [(one, _parameter_size(one)) for one in chat]
-    capable = [(one, size) for one, size in capable if size is not None and size >= 4]
+    capable: list[tuple[str, float]] = []
+    for one in chat:
+        size = _parameter_size(one)
+        if size is not None and size >= 4:
+            capable.append((one, size))
     return min(capable, key=lambda item: item[1])[0] if capable else ""
 
 
@@ -202,6 +223,13 @@ def resolve(
                 f"{want_model!r}. It has: {', '.join(out['models'])}. Pick one "
                 "in Settings, Local machine."
             )
+    elif want_model and too_small(want_model):
+        out["reason"] = (
+            f"{want_model!r} is a {_parameter_size(want_model):g}B model. Models under "
+            f"{MIN_PARAMETERS_B:g}B write findings their sources do not say, so Kriko "
+            f"does not run them. Download {RECOMMENDED_MODEL} (recommended) or pick a "
+            "larger model in Settings, Local machine."
+        )
     else:
         out["model"] = _pick(out["models"], want_model)
         if out["model"]:
@@ -210,7 +238,7 @@ def resolve(
             small = [
                 one
                 for one in out["models"]
-                if _parameter_size(one) is not None and _parameter_size(one) < 4
+                if (size := _parameter_size(one)) is not None and size < 4
             ]
             out["reason"] = (
                 "Only local chat models smaller than 4B are available. Choose one "

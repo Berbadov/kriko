@@ -117,11 +117,16 @@ def test_health_names_the_log_file(tmp_path):
     assert body["analysis_log_problem"] is None
 
 
-def test_health_reports_an_unwritable_analysis_log(tmp_path):
+def test_health_reports_an_unwritable_analysis_log(tmp_path, monkeypatch):
     """The regression under test: a swallowed write and a green suite."""
     blocked = tmp_path / "blocked"
     blocked.mkdir()
     blocked.chmod(stat.S_IRUSR | stat.S_IXUSR)
+    # The production fallback is under KRIKO_HOME. Keep that path in this
+    # test's sandbox too, so a denied preferred path exercises the writable
+    # fallback without touching the developer or CI user's real home.
+    fallback_home = tmp_path / "fallback-home"
+    monkeypatch.setattr(logs, "KRIKO_HOME", fallback_home)
     try:
         _skip_unless_write_can_be_denied(blocked)
         client = TestClient(create_app(Settings(
@@ -135,7 +140,8 @@ def test_health_reports_an_unwritable_analysis_log(tmp_path):
     assert body["analysis_log_problem"] is not None
     # And it moved somewhere it can actually write, rather than failing every
     # append for the life of the install.
-    assert body["analysis_log"] != str(blocked / "analyses.jsonl")
+    assert body["analysis_log"] == str(fallback_home / "logs" / "analyses.jsonl")
+    assert Path(body["analysis_log"]).is_file()
 
 
 def test_an_unhandled_error_reaches_the_log_file(tmp_path):

@@ -32,6 +32,32 @@ fn mcp_word(t: &Target) -> (TagState, &'static str) {
     }
 }
 
+/// The provider's list can contain the same id more than once, and Claude's
+/// moving alias can repeat a numbered model. The engine supplies the current
+/// alias mapping; older versions and named variants remain separate.
+fn model_choices(h: &Harness) -> Vec<String> {
+    let mut names = Vec::with_capacity(h.llms.len() + 1);
+    for name in &h.llms {
+        if h.llm_aliases.get(name).is_some_and(|pin| h.llms.contains(pin)) {
+            continue;
+        }
+        if !names.contains(name) {
+            names.push(name.clone());
+        }
+    }
+    let selected_pin = h.llm_aliases.get(&h.llm);
+    let represented = names.contains(&h.llm)
+        || selected_pin.is_some_and(|pin| names.contains(pin));
+    if !h.llm.is_empty() && !represented {
+        names.insert(0, h.llm.clone());
+    }
+    names
+}
+
+fn model_is_selected(h: &Harness, name: &str) -> bool {
+    name == h.llm || h.llm_aliases.get(&h.llm).is_some_and(|pin| name == pin)
+}
+
 /// The tile's motion: what a running job of this agent is doing; otherwise
 /// still when usable or connected, dark when it is not there, a held breath
 /// when it needs you.
@@ -51,7 +77,7 @@ fn entry_phase(app: &Kriko, e: &AgentEntry) -> Phase {
 }
 
 pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let entries = app.live.run.agent_entries();
     let loaded = app.live.run.prefs_loaded || app.live.run.targets_loaded;
     // The table's columns want 840 px of their own. Narrower than that, each
@@ -61,11 +87,26 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let beside = app.content_w >= 1184.0;
 
     let body: Div = if entries.is_empty() {
-        div().child(empty_note(if loaded {
-            "No agent was found on this machine."
-        } else {
-            "Waiting for the engine to list the agents."
-        }))
+        let mut empty = div()
+            .flex()
+            .flex_col()
+            .gap(px(10.0))
+            .child(empty_note(if loaded {
+                "No agent was found on this machine."
+            } else {
+                "Waiting for the engine to list the agents."
+            }));
+        if loaded {
+            let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                this.tab = crate::app::Tab::Local;
+                this.refresh_local(cx);
+                cx.notify();
+            });
+            empty = empty
+                .child(row_desc("Set up a local model, or connect an agent from Settings."))
+                .child(ghost("agents-open-local", "Open Local LLM").on_click(open_local));
+        }
+        empty
     } else {
         let selected = app.live.run.selected_agent().map(|e| e.id).unwrap_or_default();
         let picked = entries.iter().find(|e| e.id == selected).cloned();
@@ -130,12 +171,13 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .flex_1()
                 .min_w(px(0.0))
                 .pr(px(10.0))
-                .truncate()
                 .font_family(SANS)
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(15.0))
                 .text_color(rgb(if is_selected { ICE } else { INK }))
-                .child(e.label.clone());
+                // clipped by characters: GPUI's ellipsis shrank the whole
+                // table card to its content at narrow widths
+                .child(crate::screens::history::clip(&e.label, 40));
             let order = div()
                 .w(px(168.0))
                 .flex_none()
@@ -163,9 +205,15 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                             .flex_wrap()
                             .items_center()
                             .gap(px(10.0))
+                            // No column headers in this layout, so each value
+                            // carries its own word; a bare "-" or "0" said nothing.
                             .child(runs_cell)
-                            .child(mcp_cell)
-                            .child(runs_n),
+                            .when(e.target.is_some(), |d| d.child(mcp_cell))
+                            .child(mono(&match app.live.run.runs_of(&e.id) {
+                                0 => "no runs yet".to_string(),
+                                1 => "1 run".to_string(),
+                                n => format!("{n} runs"),
+                            }, DIM)),
                     )
             } else {
                 row.items_center()
@@ -201,9 +249,10 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .flex()
                 .flex_col()
                 .gap(px(24.0))
-                .w_full()
-                .child(table.w_full())
-                .child(div().w_full().child(detail))
+                // no w_full: a percentage resolved against the page's
+                // indefinite width and left this column at its content's size
+                .child(table)
+                .child(detail)
         }
     };
 
@@ -260,10 +309,11 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
 fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kriko>) -> Div {
     let job = app.live.knowledge.agent_install.as_ref().filter(|(id, _)| *id == e.id).map(|(_, v)| v.clone());
     let busy = job.as_ref().is_some_and(|v| !v.done);
+    let succeeded = job.as_ref().is_some_and(|v| v.done && v.state == "succeeded");
     let id = e.id.clone();
     let label = if e.id == "local" { "Set up the small local model" } else { "Install" };
     let mut block = div().flex().flex_col().gap(px(8.0));
-    if offered && !busy {
+    if offered && !busy && !succeeded {
         block = block.child(div().child(
             key(("agent-install", 0usize), label)
                 .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.install_agent(id.clone(), cx))),
@@ -271,13 +321,20 @@ fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kr
     }
     if let Some(v) = job {
         let (state, word) = if !v.done {
-            (TagState::Need, "Installing")
+            (TagState::Live, "Installing")
         } else if v.state == "succeeded" {
-            (TagState::Live, "Installed")
+            (TagState::Done, "Installed")
         } else {
             (TagState::Block, "Install failed")
         };
-        block = block.child(div().flex().child(tag("agent-install-state", state, word, !app.reduce_motion)));
+        block = block.child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(tag("agent-install-state", state, word, app.motion))
+                .when(busy, |d| d.child(spinner("agent-install-spinner", 14.0, app.motion))),
+        );
         if !v.message.is_empty() {
             block = block.child(row_desc(&v.message));
         }
@@ -360,7 +417,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                     c = c.child(install_block(app, e, true, cx));
                 }
                 if !url.is_empty() {
-                    c = c.child(div().min_w(px(0.0)).truncate().child(mono(url, DIM)));
+                    c = c.child(mono(&crate::screens::history::clip(url, 72), DIM));
                 }
             }
         }
@@ -499,10 +556,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
 fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let mut out = div().flex().flex_col().gap(px(10.0));
     if h.llm_selectable {
-        let mut names: Vec<String> = h.llms.clone();
-        if !h.llm.is_empty() && !names.contains(&h.llm) {
-            names.insert(0, h.llm.clone());
-        }
+        let mut names = model_choices(h);
         out = out.child(app.input_field(Field::ModelSearch, "agent-model-search", "Search models or type an ID", Some("search"), window, cx));
         if !app.model_search.value.trim().is_empty() {
             let id = h.id.clone(); let typed = app.model_search.value.trim().to_string();
@@ -510,6 +564,7 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
         }
         let query = app.model_search.value.trim().to_lowercase();
         names.retain(|name| query.is_empty() || name.to_lowercase().contains(&query));
+        let selected_model = |name: &String| model_is_selected(h, name);
         let mut row = div().id("agent-model-list").h(px(220.0)).min_h(px(0.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation()).flex().flex_col().gap(px(6.0));
         // The local model has no "default" of its own: the server runs one.
         if h.id != "local" {
@@ -526,22 +581,31 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
                 this.pick_agent_model(id.clone(), model.clone(), cx);
                 cx.notify();
             });
-            row = row.child(option_chip(("agent-model", i), name, *name == h.llm)
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), *name == h.llm, 6.0, !app.reduce_motion)).on_click(pick));
+            row = row.child(option_chip(("agent-model", i), name, selected_model(name))
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), selected_model(name), 6.0, app.motion)).on_click(pick));
         }
-        out = out.child(hairline()).child(eyebrow("Model")).child(row);
+        if names.is_empty() && !query.is_empty() {
+            row = row.child(empty_note("No listed model matches. Use the typed model action above."));
+        }
+        out = out.child(hairline()).child(eyebrow("Model"));
+        if h.llms_pending {
+            out = out.child(row_desc("Checking available models…"));
+        }
+        out = out.child(row);
         if !h.llms_note.is_empty() {
             out = out.child(row_desc(&h.llms_note));
         }
     }
-    if !h.efforts.is_empty() {
+    if !h.efforts.is_empty() || h.efforts_pending || !h.efforts_note.is_empty() {
         let mut row = div().flex().flex_wrap().gap(px(6.0));
-        let id = h.id.clone();
-        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.pick_agent_effort(id.clone(), String::new(), cx);
-            cx.notify();
-        });
-        row = row.child(option_chip("agent-effort-default", "Default", h.effort.is_empty()).on_click(pick));
+        if !h.efforts.is_empty() {
+            let id = h.id.clone();
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.pick_agent_effort(id.clone(), String::new(), cx);
+                cx.notify();
+            });
+            row = row.child(option_chip("agent-effort-default", "Default", h.effort.is_empty()).on_click(pick));
+        }
         for (i, level) in h.efforts.iter().enumerate() {
             let (id, effort) = (h.id.clone(), level.clone());
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -549,12 +613,82 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
                 cx.notify();
             });
             row = row.child(option_chip(("agent-effort", i), level, *level == h.effort)
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, !app.reduce_motion)).on_click(pick));
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, app.motion)).on_click(pick));
         }
-        out = out.child(hairline()).child(eyebrow("Effort")).child(row);
+        out = out.child(hairline()).child(eyebrow("Effort"));
+        if h.efforts_pending {
+            out = out.child(row_desc("Checking effort choices…"));
+        }
+        if !h.efforts.is_empty() {
+            out = out.child(row);
+        } else if !h.efforts_note.is_empty() {
+            out = out.child(row_desc(&h.efforts_note));
+        }
         if !h.effort_hint.is_empty() {
             out = out.child(row_desc(&h.effort_hint));
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn model_picker_folds_the_current_alias_and_keeps_distinct_versions() {
+        let h = Harness {
+            id: "claude-code".into(),
+            label: "Claude Code".into(),
+            state: RunState::Ready,
+            llm: "sonnet".into(),
+            llms: vec![
+                "claude-sonnet-5-5".into(),
+                "claude-sonnet-5-5".into(),
+                "claude-sonnet-4-5".into(),
+                "claude-sonnet-5-5[1m]".into(),
+            ],
+            llm_aliases: std::collections::HashMap::from([(
+                "sonnet".into(), "claude-sonnet-5-5".into(),
+            )]),
+            llms_note: String::new(),
+            llms_pending: false,
+            llm_selectable: true,
+            effort: String::new(),
+            efforts: Vec::new(),
+            effort_hint: String::new(),
+            efforts_pending: false,
+            efforts_note: String::new(),
+        };
+
+        let choices = model_choices(&h);
+        assert_eq!(choices, [
+            "claude-sonnet-5-5", "claude-sonnet-4-5", "claude-sonnet-5-5[1m]",
+        ]);
+        assert!(model_is_selected(&h, "claude-sonnet-5-5"));
+        assert!(!model_is_selected(&h, "claude-sonnet-4-5"));
+    }
+
+    #[test]
+    fn model_picker_keeps_a_moving_alias_beside_an_old_pin_without_current_metadata() {
+        let h = Harness {
+            id: "claude-code".into(),
+            label: "Claude Code".into(),
+            state: RunState::Ready,
+            llm: "sonnet".into(),
+            llms: vec!["claude-sonnet-4-5".into(), "claude-sonnet-4-5".into()],
+            llm_aliases: std::collections::HashMap::new(),
+            llms_note: String::new(),
+            llms_pending: false,
+            llm_selectable: true,
+            effort: String::new(),
+            efforts: Vec::new(),
+            effort_hint: String::new(),
+            efforts_pending: false,
+            efforts_note: String::new(),
+        };
+
+        assert_eq!(model_choices(&h), ["sonnet", "claude-sonnet-4-5"]);
+        assert!(model_is_selected(&h, "sonnet"));
+    }
 }

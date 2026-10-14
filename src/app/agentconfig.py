@@ -1,6 +1,6 @@
 """Writing this installation's address into a harness's config, safely.
 
-`/api/agent-config` answers *which command*; this answers *where it goes*. The
+The command is `agent._server_block`'s answer; this answers *where it goes*. The
 gap between those two was a paragraph of documentation and a copy-paste, which
 is the step that goes wrong silently: a reader who pastes into the wrong file,
 or into a file whose JSON they then break, gets an agent that appears to be
@@ -317,6 +317,22 @@ def skill_status(target: Target, name: str, body: str) -> dict:
         "present": present,
         "stale": present and agentskill.digest_of_file(text) != agentskill.digest(body),
     }
+
+
+def skill_needs_refresh(name: str, body: str) -> bool:
+    """Would `refresh_skills(name, body)` write anything? Reads, never writes.
+
+    The same three conditions `refresh_skills` acts on, asked without rendering
+    the body twice. Lets startup decide whether the agenda snapshot needs
+    computing at all: most starts find nothing stale and nothing wired.
+    """
+    if not body:
+        return False
+    for target in targets():
+        status = skill_status(target, name, body)
+        if status["supported"] and status["present"] and status["stale"]:
+            return True
+    return False
 
 
 def refresh_skills(name: str, body: str) -> list[dict]:

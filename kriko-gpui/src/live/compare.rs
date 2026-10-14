@@ -148,6 +148,7 @@ pub struct Question {
     pub answer: Option<String>,
     pub job_id: String,
     pub asked_at: String,
+    pub sources: Vec<(String, String)>,
 }
 
 #[derive(Clone, Default)]
@@ -161,6 +162,8 @@ pub struct QuestionRun {
     pub tokens_out: Option<u64>,
     pub brief_chars: Option<u64>,
     pub saved_checks: Vec<(String, usize)>,
+    pub web_searches: Option<u64>,
+    pub sources: Vec<(String, String)>,
     pub no_web_search: bool,
     pub steps: Vec<String>,
 }
@@ -179,6 +182,12 @@ impl QuestionRun {
             brief_chars: api::n(result, "brief_chars").map(|n| n as u64),
             saved_checks: api::arr(result, "saved_checks").iter()
                 .map(|v| (api::s(v, "name"), api::n(v, "risks").unwrap_or(0.0) as usize))
+                .collect(),
+            web_searches: api::n(result, "web_searches").map(|n| n as u64),
+            sources: api::arr(result, "sources")
+                .iter()
+                .map(|source| (api::s(source, "domain"), api::s(source, "url")))
+                .filter(|(_, url)| !url.is_empty())
                 .collect(),
             no_web_search: api::n(result, "web_searches") == Some(0.0),
             steps: api::s(job, "log").lines()
@@ -325,6 +334,11 @@ fn question_from(v: &Value) -> Question {
         answer: answer.filter(|a| !a.trim().is_empty()),
         job_id: api::s(v, "job_id"),
         asked_at: api::s(v, "asked_at"),
+        sources: api::arr(v, "sources")
+            .iter()
+            .map(|source| (api::s(source, "domain"), api::s(source, "url")))
+            .filter(|(_, url)| !url.is_empty())
+            .collect(),
     }
 }
 
@@ -1661,6 +1675,24 @@ mod tests {
         let unreported = QuestionRun::from_job(&json!({"state": "succeeded", "result": {}}));
         assert_eq!(unreported.tokens_used, None);
         assert!(!unreported.no_web_search);
+    }
+
+    #[test]
+    fn a_web_searched_question_keeps_its_source_links_on_the_job_and_saved_row() {
+        let job = json!({"state": "succeeded", "result": {
+            "web_searches": 2,
+            "sources": [{"domain": "example.test", "url": "https://example.test/page"}]
+        }});
+        let run = QuestionRun::from_job(&job);
+        assert_eq!(run.web_searches, Some(2));
+        assert!(!run.no_web_search);
+        assert_eq!(run.sources, vec![("example.test".into(), "https://example.test/page".into())]);
+
+        let question = question_from(&json!({
+            "question_id": "q1", "question": "What changed?", "answer": "A short answer.",
+            "sources": [{"domain": "example.test", "url": "https://example.test/page"}]
+        }));
+        assert_eq!(question.sources, run.sources);
     }
 
     fn check(name: &str, specs: &[(&str, &str)], risks: &[(&str, Level, bool)]) -> Check {

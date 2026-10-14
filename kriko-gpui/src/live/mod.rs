@@ -32,8 +32,6 @@ pub struct Health {
     pub app_state: String,
     pub log_file: String,
     pub releases_url: String,
-    pub extension_port: i64,
-    pub port_is_ours: bool,
     pub packs: Vec<(String, String)>,
 }
 
@@ -46,8 +44,9 @@ pub struct Live {
     pub run: run::State,
     pub knowledge: knowledge::State,
     pub local: local::State,
-    /// The last thing that went wrong talking to the engine, for the status
-    /// line; cleared by the next success.
+    /// The last thing that went wrong talking to the engine, for the shell's
+    /// retry notice. It stays until the reader dismisses it or retries this
+    /// screen, so an unrelated successful poll cannot hide a failure.
     pub problem: Option<String>,
 }
 
@@ -72,11 +71,10 @@ impl Kriko {
         .detach();
     }
 
-    /// Notes a failed call for the status line, or clears the last one.
+    /// Notes failed calls for the persistent shell notice.
     pub fn note<T>(&mut self, reply: &Result<T, api::ApiError>) {
-        match reply {
-            Ok(_) => self.live.problem = None,
-            Err(e) => self.live.problem = Some(e.message.clone()),
+        if let Err(e) = reply {
+            self.live.problem = Some(e.message.clone());
         }
     }
 
@@ -113,8 +111,6 @@ fn health_from(v: &Value) -> Health {
         app_state: api::s(v, "app_state"),
         log_file: api::s(v, "log_file"),
         releases_url: api::s(v, "releases_url"),
-        extension_port: api::n(v, "extension_port").unwrap_or(0.0) as i64,
-        port_is_ours: api::b(v, "port_is_ours"),
         packs: api::arr(v, "packs")
             .iter()
             .map(|p| (api::s(p, "pack_id"), api::s(p, "version")))

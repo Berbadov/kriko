@@ -421,6 +421,18 @@ def _mentions(term: str, text: str) -> bool:
     return len(words) >= 2 and words <= set(_TOKEN.findall(_normalize(text)))
 
 
+def names_subject(identity: ProductIdentity, text: str) -> bool:
+    """Whether the text names this product itself, by a name code can match.
+
+    For a product that is its own subject only: a part's applicability hangs
+    on what it fits, which a name on the page does not settle.
+    """
+    if identity.dependent or not identity.canonical_name.strip():
+        return False
+    return any(_mentions(term, text)
+               for term in [identity.canonical_name, *identity.aliases, *identity.identifiers] if term)
+
+
 def host_codes(identity: ProductIdentity) -> list[str]:
     """Letter-and-digit codes of the product the item fits (an engine, a series)."""
     return [token for token in _TOKEN.findall(identity.fits)

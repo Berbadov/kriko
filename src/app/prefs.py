@@ -404,11 +404,13 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
         harness.forget_located()
     found = harness.available()
     lists = harness.models_for_each(found, fresh=fresh)
+    efforts = harness.efforts_for_each(found, fresh=fresh)
     installed = [
         {
             "id": one.id, "label": one.label, "path": harness.locate(one),
             "llm": for_harness(conn, one.id),
             "llms": lists.get(one.id, []),
+            "llms_pending": harness.models_pending(one),
             "llms_note": harness.models_note(one, lists.get(one.id, [])),
             "llm_hint": one.model_hint,
             # `model_env` counts. Mistral Vibe has no `--model` — its switch is
@@ -420,7 +422,9 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
             # so a CLI that has no such flag reports `[]` and the screen shows
             # no control rather than one whose every choice fails.
             "effort": effort_for_harness(conn, one.id),
-            "efforts": harness.efforts_for(one),
+            "efforts": efforts.get(one.id, []),
+            "efforts_pending": harness.efforts_pending(one),
+            "efforts_note": harness.efforts_note(one, efforts.get(one.id, [])),
             "effort_hint": one.effort_hint,
         }
         for one in found

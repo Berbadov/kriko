@@ -87,12 +87,18 @@ class Script:
         self.quick = {}      # product title -> the quick look's JSON
         self.author = {}     # product title -> the authoring JSON
         self.amend = {}      # product title -> the amend JSON
+        self.categorize = {}  # product title -> the validated category reply
         self.prompts = []
+        self.ask_options = []
 
     def reply(self, prompt: str) -> str:
         self.prompts.append(prompt)
         if prompt.startswith("# Is this product identity unambiguous?"):
             return _fenced({"ambiguous": False})
+        if prompt.startswith("# Categorise this saved product check"):
+            for title, payload in self.categorize.items():
+                if f"Product: {title}\n" in prompt:
+                    return json.dumps(payload, ensure_ascii=False)
         for title, payload in self.quick.items():
             if prompt.startswith("# Quick look") and f"    {title}\n" in prompt:
                 return _fenced(payload)
@@ -119,7 +125,8 @@ def world(tmp_path, monkeypatch):
     class Agent:
         search_provider = "fixture-harness"
 
-        def ask(self, prompt):
+        def ask(self, prompt, **options):
+            script.ask_options.append(options)
             return script.reply(prompt)
 
     monkeypatch.setattr(keys, "ready", lambda *_, **__: True)
@@ -598,3 +605,291 @@ def test_a_claim_the_packs_own_gate_refuses_is_left_out(world, tmp_path):
     assert yaml.safe_load(
         (packdraft.open_draft(world.settings.store_path, "gaming-mice").root
          / "data" / "claims.yaml").read_text(encoding="utf-8")) in (None, [])
+
+
+# ── quick looks accumulate into a pack, without a second research run ─────
+
+
+def _look(client, title):
+    """One press of "Research this product": a saved quick look, not filed."""
+    response = client.post("/api/extension/research-plane", json={
+        "q": title, "allow_draft": True})
+    assert response.status_code == 200, response.text
+    quick = _wait(client, response.json()["job_id"])
+    assert quick["state"] == "succeeded", quick["message"]
+    return quick
+
+
+def test_a_product_the_catalog_holds_is_filed_without_asking_an_agent(world):
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    world.script.quick["Scyrox V8 Gaming Mouse"]["pack"] = "gaming.mice"
+    world.script.quick["Scyrox V8 Gaming Mouse"]["risks"] = [
+        _risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]
+    authored = len(world.script.asked("# Author")) + len(world.script.asked("# Extend"))
+
+    _, deepen = _check(world, "Scyrox V8 Gaming Mouse")
+
+    assert deepen["state"] == "succeeded", deepen["message"]
+    assert deepen["result"]["agent"] is False
+    assert deepen["result"]["claims_added"] == 1
+    assert len(world.script.asked("# Author")) + len(world.script.asked("# Extend")) == authored
+    assert ("Cable fraying", CABLE_PAGE, CABLE_QUOTE) in _claims_of(world, "Scyrox V8")
+
+
+def test_a_harvest_files_every_saved_quick_look_once_and_names_what_needs_an_agent(world):
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")            # the catalog, authored once
+    world.script.quick["Scyrox V8 Gaming Mouse"]["pack"] = "gaming.mice"
+    world.script.quick["Scyrox V8 Gaming Mouse"]["risks"] = [
+        _risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]
+    _look(world, "Scyrox V8 Gaming Mouse")             # saved, not filed
+    _script_v6(world.script)
+    _look(world, "Scyrox V6 Gaming Mouse")             # a product the catalog lacks
+    version = _packs(world)["gaming.mice"]["version"]
+    prompts = len(world.script.prompts)
+
+    first = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+
+    assert first["state"] == "succeeded", first["message"]
+    assert first["result"]["claims_added"] == 1
+    assert [one["product"] for one in first["result"]["needs_agent"]] == ["Scyrox V6 Gaming Mouse"]
+    assert len(world.script.prompts) == prompts         # no agent was asked anything
+    assert _packs(world)["gaming.mice"]["version"] != version
+    [shared] = first["result"]["packs"]
+    artifact = world.get(shared["artifact"])
+    assert artifact.status_code == 200 and artifact.content
+
+    again = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert again["result"]["claims_added"] == 0
+    assert [one["product"] for one in again["result"]["needs_agent"]] == ["Scyrox V6 Gaming Mouse"]
+
+
+def test_a_quick_look_that_read_the_identity_adds_a_new_product_without_an_agent(world):
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    _script_v6(world.script)
+    world.script.quick["Scyrox V6 Gaming Mouse"]["pack_identity"] = {"brand": "Scyrox", "model": "V6"}
+    _look(world, "Scyrox V6 Gaming Mouse")
+    world.script.quick["Logitech Mouse"] = {
+        "assumed": "", "category": "gaming mouse", "pack": "gaming.mice",
+        "pack_identity": {"brand": "Logitech"},              # no model: not enough to name it
+        "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]}
+    _look(world, "Logitech Mouse")
+    prompts = len(world.script.prompts)
+
+    done = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+
+    assert done["state"] == "succeeded", done["message"]
+    assert len(world.script.prompts) == prompts
+    assert done["result"]["needs_agent"] == []
+    assert [one["product"] for one in done["result"]["needs_categorization"]] == ["Logitech Mouse"]
+    listed = world.get("/api/subjects", params={"pack_id": "gaming.mice"}).json()
+    # Named by its identity, not by the listing's title.
+    assert sorted(one["label"] for one in listed) == ["Scyrox V6", "Scyrox V8"]
+    assert _claims_of(world, "Scyrox V6") == [("Side buttons rattle", V6_PAGE, V6_QUOTE)]
+
+
+def test_the_catalog_choice_shows_each_packs_identity_keys():
+    block = categorypack.choice_block([{
+        "pack_id": "gaming.mice", "name": "Gaming mice", "subjects": [], "blurb": "",
+        "identity": {"product": ["brand", "model"]}}])
+    assert "[identity product: brand, model]" in block
+
+
+def test_an_identity_value_the_listing_never_says_is_not_trusted(world):
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    _script_v6(world.script)
+    # The model "read" a model code that neither the title nor a quote contains.
+    world.script.quick["Scyrox V6 Gaming Mouse"]["pack_identity"] = {"brand": "Scyrox", "model": "V7"}
+    _look(world, "Scyrox V6 Gaming Mouse")
+
+    done = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+
+    assert [one["product"] for one in done["result"]["needs_agent"]] == ["Scyrox V6 Gaming Mouse"]
+    labels = [one["label"] for one in world.get(
+        "/api/subjects", params={"pack_id": "gaming.mice"}).json()]
+    assert labels == ["Scyrox V8"]
+
+
+def test_a_look_already_filed_by_its_research_run_is_not_harvested_again(world):
+    """Older rows link the other way: the look names the research run beside it."""
+    from app.web import state
+
+    conn = state.connect(world.settings.app_state_path)
+    try:
+        run = state.create_job(conn, "pack_author", {"product": "Scyrox V8 Gaming Mouse"})
+        state.finish_job(conn, run, state.SUCCEEDED, result={})
+        look = state.create_job(conn, "quick_look", {
+            "product": "Scyrox V8 Gaming Mouse", "deepen_job_id": run})
+        state.finish_job(conn, look, state.SUCCEEDED, result={
+            "pack": "gaming.mice", "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]})
+    finally:
+        conn.close()
+
+    done = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert done["state"] == "succeeded", done["message"]
+    assert done["result"]["filed_quick_looks"] == []
+    assert done["result"]["needs_agent"] == []
+
+
+def test_pages_that_cannot_be_read_leave_the_look_for_the_next_harvest(world, monkeypatch):
+    from app.web import tasks
+
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    world.script.quick["Scyrox V8 Gaming Mouse"]["pack"] = "gaming.mice"
+    world.script.quick["Scyrox V8 Gaming Mouse"]["risks"] = [
+        _risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)]
+    _look(world, "Scyrox V8 Gaming Mouse")
+
+    monkeypatch.setattr(tasks, "_page_reader", lambda: (lambda url: Fetched("")))
+    offline = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert offline["result"]["filed_quick_looks"] == []
+    assert offline["result"]["unread"] == ["Scyrox V8 Gaming Mouse"]
+
+    monkeypatch.setattr(tasks, "_page_reader", lambda: (lambda url: Fetched(PAGES.get(url, ""))))
+    online = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert online["result"]["claims_added"] == 1
+
+
+def test_saved_quick_look_categorization_is_explicit_persistent_and_stale_targets_clear(world):
+    from app.web import state
+
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    title = "Scyrox V7 Gaming Mouse"
+    world.script.quick[title] = {
+        "assumed": "the V7", "category": "wireless pointer", "pack": "",
+        "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)],
+    }
+    quick = _look(world, title)
+    quick_id = quick["job_id"]
+    original_risks = quick["result"]["risks"]
+    assert quick["result"]["categorization"]["status"] == "uncertain"
+
+    world.script.categorize[title] = {
+        "decision": "assigned", "pack_id": "gaming.mice", "confidence": "high",
+        "basis": [{"saved_text": title, "catalog_text": "Gaming mice"}],
+    }
+    started = world.post(f"/api/quick-looks/{quick_id}/categorize")
+    assert started.status_code == 200, started.text
+    categorized = _wait(world, started.json()["job_id"])
+    assert categorized["state"] == "succeeded", categorized["message"]
+    assert categorized["result"]["categorization"]["pack_id"] == "gaming.mice"
+    assert categorized["result"]["categorization"]["method"] == "agent"
+    assert world.script.asked("# Categorise this saved product check")
+    assert world.script.ask_options[-1] == {"allow_tools": False}
+
+    conn = state.connect(world.settings.app_state_path)
+    try:
+        saved = state.get_job(conn, quick_id)
+        assignment = state.quicklook_category(conn, quick_id)
+    finally:
+        conn.close()
+    assert assignment["pack_id"] == "gaming.mice"
+    assert saved["result"]["risks"] == original_risks
+
+    # Reader choices are validated against the installed set. `probe` is an
+    # installed catalog without an editable draft, so harvest reports the
+    # limitation rather than attempting a store write.
+    invalid = world.post(f"/api/quick-looks/{quick_id}/category", json={"pack_id": "made.up"})
+    assert invalid.status_code == 422
+    manual = world.post(f"/api/quick-looks/{quick_id}/category", json={"pack_id": "probe"})
+    assert manual.status_code == 200, manual.text
+    assert manual.json()["method"] == "reader"
+    record = next(one for one in world.get("/api/history/records").json()["items"]
+                  if one["lookup_id"] == f"job:{quick_id}")
+    assert record["categorization"]["pack_id"] == "probe"
+
+    harvested = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert harvested["state"] == "succeeded", harvested["message"]
+    assert any(one["quick_job_id"] == quick_id and one["pack_id"] == "probe"
+               for one in harvested["result"]["needs_agent"])
+    assert harvested["result"]["needs_categorization"] == []
+
+    store = _store(world)
+    try:
+        store.execute("DELETE FROM packs WHERE pack_id = 'probe'")
+        store.commit()
+    finally:
+        store.close()
+    refreshed = next(one for one in world.get("/api/history/records").json()["items"]
+                     if one["lookup_id"] == f"job:{quick_id}")
+    assert refreshed["categorization"]["status"] == "uncertain"
+    assert refreshed["categorization"]["pack_id"] == ""
+    assert refreshed["packs"] == []
+    assert world.get(f"/api/jobs/{quick_id}").json()["result"]["risks"] == original_risks
+
+
+def test_local_categorization_uses_the_bounded_json_completion_path(world, monkeypatch):
+    from app import categorizer
+    from app.web import state, tasks
+
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    title = "Scyrox V7 Gaming Mouse"
+    world.script.quick[title] = {
+        "assumed": "the V7", "category": "wireless pointer", "pack": "",
+        "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)],
+    }
+    quick = _look(world, title)
+    conn = state.connect(world.settings.app_state_path)
+    try:
+        job = state.get_job(conn, quick["job_id"])
+        params = job["params"]
+        params["backend"] = "local"
+        conn.execute("UPDATE jobs SET params_json = ? WHERE job_id = ?",
+                     (json.dumps(params), quick["job_id"]))
+        conn.commit()
+    finally:
+        conn.close()
+
+    calls = []
+
+    class Completer:
+        def prompt_chars_allowed(self):
+            return 20_000
+
+        def json(self, prompt, schema):
+            calls.append((prompt, schema))
+            return json.dumps({
+                "decision": "assigned", "pack_id": "gaming.mice", "confidence": "high",
+                "basis": [{"saved_text": title, "catalog_text": "Gaming mice"}],
+            })
+
+    monkeypatch.setattr(tasks, "_use_local_ask", lambda settings, params: True)
+    monkeypatch.setattr(tasks, "_local_structured_completer", lambda *args: Completer())
+    started = world.post(f"/api/quick-looks/{quick['job_id']}/categorize")
+    assert started.status_code == 200, started.text
+    categorized = _wait(world, started.json()["job_id"])
+
+    assert categorized["state"] == "succeeded", categorized["message"]
+    assert categorized["result"]["categorization"]["pack_id"] == "gaming.mice"
+    assert len(calls) == 1
+    assert calls[0][1] == categorizer.OUTPUT_SCHEMA
+    assert title in calls[0][0]
+    assert "Installed catalog definitions:" in calls[0][0]
+
+
+# ── #181: the seller's words are not the product ──────────────────────────
+
+
+def test_the_product_the_quick_look_grounded_is_what_the_pack_is_written_for(world):
+    """A listing title carries the seller's own words ("DEMİRAY OTODAN
+    DEĞİŞENSİZ BAKIMLI COROLLA 1.8 HYBRID"); the quick look separated the
+    product from them, and that is what the author is told about."""
+    title = "TUL-CAR SIFIR Scyrox V8 Gaming Mouse"
+    world.script.quick[title] = {
+        "assumed": "the wireless V8", "product": "Scyrox V8 Gaming Mouse",
+        "category": "gaming mouse", "pack": "",
+        "risks": [_risk("Scroll wheel wears", V8_PAGE, V8_QUOTE)]}
+    world.script.author["Scyrox V8 Gaming Mouse"] = MICE
+    quick, deepen = _check(world, title)
+
+    assert quick["result"]["product"] == "Scyrox V8 Gaming Mouse"
+    assert deepen["state"] == "succeeded", deepen["message"]
+    [brief] = world.script.asked("# Author a Kriko knowledge pack")
+    assert "TUL-CAR" not in brief
+    assert deepen["result"]["product"] == "Scyrox V8 Gaming Mouse"

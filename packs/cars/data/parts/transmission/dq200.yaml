@@ -1365,11 +1365,11 @@ claims:
   confidence: 0.6
   rationale: Early DQ200 DSG7 gearboxes had a known weak mechatronic unit that could
     fail, triggering transmission errors, safe mode, and inability to shift gears.
-    Replacing the mechatronic is expensive and a used car buyer cannot detect the
+    Replacing the mechatronic is expensive and a buyer cannot detect the
     failure from outside without a test drive or diagnostic scan.
   rationale_tr: İlk DQ200 DSG7 şanzımanlarında bilinen bir zayıf nokta olan mekatronik
     ünite arıza yapabilir; şanzıman hata mesajı, güvenli mod ve vites değiştirememe
-    sorunlarına yol açar. Mekatronik değişimi pahalıdır ve ikinci el alıcı bu arızayı
+    sorunlarına yol açar. Mekatronik değişimi pahalıdır ve alıcı bu arızayı
     test sürüşü veya diagnostik tarama olmadan dışarıdan fark edemez.
   inspection_advice: Test drive the car and watch for transmission error messages,
     safe mode activation, or jerky/hesitant gearshifts. If possible, run a diagnostic

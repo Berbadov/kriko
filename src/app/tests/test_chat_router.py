@@ -134,7 +134,7 @@ class Completer:
 def test_the_job_writes_the_answer_and_its_steps_to_the_thread(paths, monkeypatch):
     completer = Completer()
     monkeypatch.setattr(tasks, "_use_local_ask", lambda *a: True)
-    monkeypatch.setattr(tasks, "_local_compare_completer", lambda *a: completer)
+    monkeypatch.setattr(tasks, "_local_structured_completer", lambda *a: completer)
     app_state = state.connect(paths.app_state_path)
     thread = state.create_chat_thread(app_state)
     reader = state.add_chat_message(app_state, thread["thread_id"], role="reader",
@@ -169,7 +169,7 @@ def test_a_turn_with_no_packs_installed_still_answers(paths, monkeypatch):
     """A fresh install has no store file: the sources say so and nothing fails."""
     completer = Completer()
     monkeypatch.setattr(tasks, "_use_local_ask", lambda *a: True)
-    monkeypatch.setattr(tasks, "_local_compare_completer", lambda *a: completer)
+    monkeypatch.setattr(tasks, "_local_structured_completer", lambda *a: completer)
     app_state = state.connect(paths.app_state_path)
     thread = state.create_chat_thread(app_state)
     job_id = state.create_job(app_state, "chat_ask", {})
@@ -187,7 +187,7 @@ def test_a_turn_with_no_packs_installed_still_answers(paths, monkeypatch):
 
 def test_an_empty_answer_fails_the_job_and_keeps_the_question(paths, monkeypatch):
     monkeypatch.setattr(tasks, "_use_local_ask", lambda *a: True)
-    monkeypatch.setattr(tasks, "_local_compare_completer", lambda *a: (lambda prompt: ""))
+    monkeypatch.setattr(tasks, "_local_structured_completer", lambda *a: (lambda prompt: ""))
     app_state = state.connect(paths.app_state_path)
     thread = state.create_chat_thread(app_state)
     state.add_chat_message(app_state, thread["thread_id"], role="reader", text="anything")

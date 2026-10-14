@@ -614,6 +614,9 @@ def test_the_login_hint_names_the_cli_that_failed():
     said = harness_mod._hint("error: not logged in", vibe)
     assert "`vibe`" in said and vibe.label in said
     assert "claude" not in said.lower()
+    assert "system terminal" in said and "PowerShell on Windows" in said
+    assert "Agents" in said and "Check connection" in said
+    assert "terminal in this app" not in said
     assert "{" not in harness_mod._hint("usage limit reached")
 
 
@@ -661,15 +664,18 @@ def test_the_spawn_asks_for_the_readers_own_configuration_to_be_left_out(
     is one JSON object.
     """
     one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
-    assert one.preferred == ("--strict-mcp-config", "--safe-mode")
+    assert one.preferred == (
+        "--strict-mcp-config", "--safe-mode", "--include-partial-messages"
+    )
 
     found = harness_mod.locate(one) or one.executable
     monkeypatch.setitem(
         harness_mod._DECLARED, found,
-        frozenset({"--strict-mcp-config", "--safe-mode", "--output-format"}),
+        frozenset({"--strict-mcp-config", "--safe-mode", "--include-partial-messages",
+                   "--output-format"}),
     )
-    assert harness_mod.command_for(one)[-2:] == [
-        "--strict-mcp-config", "--safe-mode"]
+    assert harness_mod.command_for(one)[-3:] == [
+        "--strict-mcp-config", "--safe-mode", "--include-partial-messages"]
 
 
 def test_a_claude_run_loads_only_the_tools_it_may_use(monkeypatch):
@@ -1732,8 +1738,45 @@ def test_claude_help_examples_include_the_documented_fast_models(monkeypatch):
     monkeypatch.setattr(harness_mod, "helptext", lambda _: _CLAUDE_HELP)
     monkeypatch.setattr(harness_mod, "_MODELS", {})
     assert harness_mod.models_for(claude) == [
-        *harness_mod.CLAUDE_FAST_MODELS, "fable", "opus", "sonnet", "claude-fable-5",
+        "claude-haiku-5-5", "fable", "opus", "sonnet", "claude-fable-5",
     ]
+
+
+def test_claude_aliases_collapse_only_when_the_current_pin_is_offered(monkeypatch):
+    from app import modelcatalogue
+
+    monkeypatch.setattr(modelcatalogue, "load", lambda: {
+        "claude-sonnet-5": {}, "claude-opus-5": {}, "claude-fable-5-1": {},
+    })
+
+    names = harness_mod._dedupe_claude_aliases([
+        "sonnet", "sonnet-latest", "claude-sonnet-latest",
+        "claude-sonnet-4-6", "claude-sonnet-5", "claude-sonnet-5[1m]",
+        "fable", "claude-fable-5", "opus", "claude-opus-5",
+    ])
+
+    assert names == [
+        "claude-sonnet-4-6", "claude-sonnet-5", "claude-sonnet-5[1m]",
+        "fable", "claude-fable-5", "claude-opus-5",
+    ]
+
+
+def test_claude_picker_alias_metadata_names_only_the_catalogue_current_pin(monkeypatch):
+    from app import modelcatalogue
+
+    monkeypatch.setattr(modelcatalogue, "load", lambda: {
+        "claude-sonnet-5": {}, "claude-opus-5": {},
+    })
+    claude = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+
+    assert harness_mod.model_aliases_for(claude, ["claude-sonnet-4-6"]) == {}
+    assert harness_mod.model_aliases_for(claude, [
+        "claude-sonnet-4-6", "claude-sonnet-5", "claude-sonnet-5[1m]",
+    ]) == {
+        "sonnet": "claude-sonnet-5",
+        "sonnet-latest": "claude-sonnet-5",
+        "claude-sonnet-latest": "claude-sonnet-5",
+    }
 
 
 def test_an_updated_or_reasked_claude_has_its_help_read_again(monkeypatch):
@@ -1786,7 +1829,7 @@ def test_model_lists_are_cached_and_asked_concurrently(monkeypatch):
     monkeypatch.setattr(harness_mod, "_from_models_command", slow)
     monkeypatch.setattr(harness_mod, "_MODELS", {})
     started = clock.monotonic()
-    first = harness_mod.models_for_each(two)
+    first = harness_mod.models_for_each(two, fresh=True)
     assert clock.monotonic() - started < 0.3 * len(two)
     assert first == {h.id: [f"{h.id}/x"] for h in two}
     harness_mod.models_for_each(two)
