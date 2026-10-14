@@ -10,6 +10,16 @@ import urllib.request
 from app import prefs
 
 
+def _machine_has_gpu() -> bool:
+    """Whether the machine itself reports a GPU (`nvidia-smi`), cached a minute."""
+    from app import machine
+
+    try:
+        return bool(machine.read().get("gpu", {}).get("name"))
+    except Exception:  # noqa: BLE001 - a hint is never why an inspection fails
+        return False
+
+
 def options(mine: dict) -> dict:
     out = {}
     device = mine.get(prefs.LOCAL_DEVICE, "")
@@ -84,7 +94,17 @@ def inspect(url: str, runtime: str, model: str, mine: dict) -> dict:
                 out.update(memory_bytes=size, vram_bytes=vram,
                            device=actual, device_source="Ollama /api/ps",
                            gpu_offload_percent=min(100, round(vram * 100 / size)))
-                if actual == "cpu" and requested_device == "gpu":
+                if actual == "cpu" and _machine_has_gpu():
+                    # The usual cause on a laptop: Ollama started before the
+                    # graphics card was awake, found none, and keeps that
+                    # answer until it is restarted (observed, not assumed).
+                    out["reason"] = (
+                        "This computer has a GPU but Ollama is running the model on the CPU. "
+                        "Ollama looks for the GPU only when it starts, so if it started before "
+                        "the GPU was ready it keeps using the CPU. Quit Ollama from the tray, "
+                        "open it again, then run the model and refresh."
+                    )
+                elif actual == "cpu" and requested_device == "gpu":
                     out["reason"] = (
                         "Ollama reports CPU use for this loaded model despite the GPU request. "
                         "Check Ollama's GPU backend, driver and available memory, then refresh."
