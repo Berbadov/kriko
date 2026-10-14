@@ -978,7 +978,8 @@ def _is_text_delta(event: Mapping[str, Any]) -> bool:
 def _close_job(job: int | None) -> None:
     if job is None or os.name != "nt":
         return
-    import ctypes
+    import ctypes as _ctypes
+    ctypes: Any = _ctypes  # Windows-only attributes; the Linux type stubs lack them
 
     ctypes.WinDLL("kernel32", use_last_error=True).CloseHandle(job)
 
