@@ -283,13 +283,15 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
         found, timeout=timeout or harness.TIMEOUT_SECONDS, model=model.strip(),
         effort=effort.strip(), app_state_path=app_state_path,
     )
-    if app_state_path is not None and getattr(found, "protocol", "") == "codex" and not os.environ.get("KRIKO_CODEX_TRANSPORT"):
+    if app_state_path is not None and not harness.transport_env():
         from app import prefs
         from app.web import state
 
         conn = state.connect(app_state_path)
         try:
-            researcher.transport_mode = prefs.read(conn).get(prefs.CODEX_TRANSPORT) or "auto"
+            saved = prefs.read(conn)
+            researcher.transport_mode = (
+                saved.get(prefs.AGENT_TRANSPORT) or saved.get(prefs.CODEX_TRANSPORT) or "auto")
         finally:
             conn.close()
     if (model, effort) != picked:

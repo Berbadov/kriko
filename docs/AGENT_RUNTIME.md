@@ -1,7 +1,8 @@
-# Agent runtime branch experiment
+# Agent runtime
 
-Branch: `codex/agent-runtime-1.6.2`, based on Kriko 1.6.2 commit
-`399706f584274ebb35281aa7b0e9fdffb0061433`. This branch does not change the release version.
+Began as the `codex/agent-runtime-1.6.2` experiment on Kriko 1.6.2 commit
+`399706f584274ebb35281aa7b0e9fdffb0061433`; it ships in 1.7.0, where the persistent
+protocol was extended from Codex to Claude Code and Mistral Vibe.
 
 The [pinned OpenResearch audit](research/openresearch-agent-audit-2026-10-14.md)
 records the source and adoption rationale. This is a Kriko adaptation; no
@@ -19,31 +20,64 @@ and failure checks pass and measured results are available for review.
 ## Run the experiment
 
 Launch the sidecar from this checkout using the normal development commands.
-Select the installed Codex agent and your model through Agents. Its research
-answer uses an app-server worker while each independent request starts a fresh
-native thread. Search and page reading still happen through Kriko's existing
+Select an installed agent and your model through Agents. Its research
+answer uses a resident worker (see the table below) while each independent
+request starts a fresh conversation. Search and page reading still happen through Kriko's existing
 host readers, and findings still pass the existing evidence checks.
 
-The mode is controllable without rebuilding:
+The mode is controllable without rebuilding, and applies to every agent:
 
-- `KRIKO_CODEX_TRANSPORT=auto` is the default. It uses the persistent protocol
-  when the installed CLI supports it. A capability/startup failure before
-  prompt delivery can use the existing process path.
-- `KRIKO_CODEX_TRANSPORT=persistent` requires the protocol and surfaces a
-  startup failure instead of falling back.
-- `KRIKO_CODEX_TRANSPORT=exec` uses the existing process path for comparison.
+- `KRIKO_AGENT_TRANSPORT=auto` is the default. It uses the persistent protocol
+  when the agent has one and the installed CLI supports it. A capability or
+  startup failure before prompt delivery uses the existing process path.
+- `KRIKO_AGENT_TRANSPORT=persistent` requires the protocol and surfaces a
+  startup failure instead of falling back. For an agent with no persistent
+  protocol (Antigravity) it reports that, naming the agent.
+- `KRIKO_AGENT_TRANSPORT=exec` uses the existing process path for comparison.
 
-Persistent Codex runs rely on Kriko's host search and page reader because the
-app-server receives no web tools. If every host search fails and the prompt
-must ask Codex to search natively, `auto` selects the web-capable exec path
-before sending that prompt; `persistent` reports the missing host search
-instead of submitting a request the worker cannot fulfill.
+`KRIKO_CODEX_TRANSPORT` and the `codex_transport` setting are the names this had
+while only Codex had a worker; both are still read, the new name first.
 
 The same choice is stored through `PUT /api/prefs` with
-`{"codex_transport":"auto"}`, `"persistent"`, or `"exec"`. An explicitly set
-environment variable wins. Other coding-agent CLIs continue using their existing
-process adapters. No inference or background title request is made just to warm
-a worker; it starts when requested work needs it.
+`{"agent_transport":"auto"}`, `"persistent"`, or `"exec"`. An explicitly set
+environment variable wins. No inference or background title request is made
+just to warm a worker; it starts when requested work needs it.
+
+## One persistent protocol per agent
+
+| Agent | Persistent protocol | How a request stays independent | Tools |
+|---|---|---|---|
+| Codex | `codex app-server` (`providers/codex_transport.py`) | A new thread and turn per request | None: shell, web and multi-agent disabled; pages come from Kriko's host reader |
+| Claude Code | `claude -p --input-format stream-json --output-format stream-json` (`providers/resident.py`, `ClaudeWire`) | The worker is sent `/clear` before each reused request; the CLI answers `conversation_reset` and a new session id | The same `--allowedTools` allowlist, page-reader grant and budget flags as the process path |
+| Mistral Vibe | `vibe-acp`, an Agent Client Protocol server (`AcpWire`) | A new ACP session per request, closed afterwards where the agent supports it | None: every permission request is refused with the agent's own reject option; pages come from the host reader |
+| Antigravity | none: `agy` has a print mode only | n/a | n/a |
+
+Claude Code and Vibe share one pool (`ResidentTransport`): a worker is reused
+only when its complete profile matches (launch vector, executable stamp, folders,
+a hash of the environment, model, effort); a request waits for a free slot under
+the same host-wide child limit as every other adapter; an interrupted worker
+that does not confirm it stopped within two seconds is killed; idle workers are
+released after 15 minutes (2 minutes on a machine with 8 GB or less), and any
+other adapter that needs a slot releases them first. Failures before the prompt
+is written (the executable, the handshake, the `/clear`) are `TransportUnavailable`,
+which `auto` answers with a fresh process. After the prompt is written, a crash,
+timeout or lost worker is `DeliveryUncertain` and is never replayed. The ledger
+records the same delivery states for every agent.
+
+What this does not do:
+
+- A run the reader can answer mid-run (Claude Code's conversational mode) needs
+  its own process's stdin and keeps using it, in every mode.
+- A resident Claude Code worker reads its login when it starts, so a new login
+  takes effect after it idles out or Kriko restarts. Codex's worker is replaced
+  when its account file changes; Claude Code keeps its account in places Kriko
+  does not read.
+- Claude Code and Vibe run in an empty folder that lives as long as the worker;
+  as on the process path, Claude Code uses the reader's own home and login.
+- Vibe's worker has no web tools. If every host search fails, `auto` runs that
+  one request through a process, which does; `persistent` reports it instead.
+- A `.cmd` launcher (Windows npm installs) needs a shell and falls back to a
+  process.
 
 ## Implemented behavior
 
@@ -84,8 +118,9 @@ Advanced bounds are `KRIKO_MAX_AGENT_CHILDREN`, `KRIKO_MAX_PROBES`,
 override a provider's rate limits. Independent agent hosts in different
 operating-system processes do not share this process-local limiter.
 
-The protocol currently supports the installed Codex app-server schema;
-unsupported CLI installations keep the original adapter in auto mode. First
+Each protocol is checked against the installed CLI (`app-server --help` for
+Codex, `--input-format` for Claude Code, a `vibe-acp` beside `vibe`);
+installations without it keep the process adapter in auto mode. First
 use still pays for process creation, authentication, a fresh context and model
 generation. A resident process does not promise an instant response.
 
@@ -144,6 +179,13 @@ The retained [pre-fix trace](benchmarks/2026-10-14-persistent-transport-pre-fix.
 shows why checking the reply alone was inadequate: native model-cache writes
 invalidated worker identity, so nominal warm calls were actually respawns.
 That defect is fixed and covered by a behavioral regression test.
+
+Claude Code was also checked against the real CLI at 2.1.299 through the
+harness: two requests ran on one process (3.9 s cold, 2.3 s warm), and the second,
+asked for a codeword the first had been given, answered `NONE` after the
+`/clear`. `vibe-acp` 2.26.1 accepted the handshake and session and reached the
+provider with a prompt; no Mistral key was available, so a completed Vibe
+answer was not observed.
 
 Repeat with the selected model explicitly named:
 
