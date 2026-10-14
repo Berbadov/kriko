@@ -11,6 +11,7 @@
 //! and `local` (Local LLM, Benchmark).
 
 pub mod action;
+pub mod chat;
 pub mod compare;
 pub mod history;
 pub mod knowledge;
@@ -40,6 +41,7 @@ pub struct Live {
     pub health: Health,
     pub history: history::State,
     pub compare: compare::State,
+    pub chat: chat::State,
     pub run: run::State,
     pub knowledge: knowledge::State,
     pub local: local::State,
