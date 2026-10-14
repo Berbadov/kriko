@@ -42,7 +42,8 @@ class _ContainedPopen(subprocess.Popen):
 
 def _thread_for_process(pid: int) -> int:
     """Find the suspended child's primary thread on Windows."""
-    import ctypes
+    import ctypes as _ctypes
+    ctypes: Any = _ctypes  # Windows-only attributes; the Linux type stubs lack them
     from ctypes import wintypes
 
     class THREADENTRY32(ctypes.Structure):
@@ -72,7 +73,8 @@ def _thread_for_process(pid: int) -> int:
 
 
 def _resume_windows(proc: subprocess.Popen[Any]) -> None:
-    import ctypes
+    import ctypes as _ctypes
+    ctypes: Any = _ctypes  # Windows-only attributes; the Linux type stubs lack them
     from ctypes import wintypes
 
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -93,7 +95,8 @@ def _resume_windows(proc: subprocess.Popen[Any]) -> None:
 def _assign_windows_job(job: int | None, proc: subprocess.Popen[Any]) -> None:
     if job is None:
         return
-    import ctypes
+    import ctypes as _ctypes
+    ctypes: Any = _ctypes  # Windows-only attributes; the Linux type stubs lack them
 
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel32.AssignProcessToJobObject.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
@@ -121,7 +124,8 @@ def create_job_object() -> int | None:
     """Create a Windows tree owner that kills descendants when closed."""
     if os.name != "nt":
         return None
-    import ctypes
+    import ctypes as _ctypes
+    ctypes: Any = _ctypes  # Windows-only attributes; the Linux type stubs lack them
     from ctypes import wintypes
 
     class BASIC(ctypes.Structure):
@@ -228,7 +232,8 @@ def kill_tree(proc: subprocess.Popen[Any], job: int | None = None) -> None:
     """Terminate a Windows job or a POSIX session and wait briefly."""
     if os.name == "nt":
         if job is not None:
-            import ctypes
+            import ctypes as _ctypes
+            ctypes: Any = _ctypes  # Windows-only attributes; the Linux type stubs lack them
             ctypes.WinDLL("kernel32", use_last_error=True).TerminateJobObject(job, 1)
         else:
             subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
@@ -257,5 +262,6 @@ def close_process(proc: subprocess.Popen[Any], job: int | None = None) -> None:
     """Close a process tree's lifetime, including already-orphaned descendants."""
     kill_tree(proc, job)
     if os.name == "nt" and job is not None:
-        import ctypes
+        import ctypes as _ctypes
+        ctypes: Any = _ctypes  # Windows-only attributes; the Linux type stubs lack them
         ctypes.WinDLL("kernel32", use_last_error=True).CloseHandle(job)
