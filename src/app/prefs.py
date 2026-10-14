@@ -31,6 +31,7 @@ LOCAL_PICK = "local"
 AGENT_ORDER = "agent_order"
 MODEL = "llm_model"
 SEARCH = "search_provider"
+CODEX_TRANSPORT = "codex_transport"
 
 #: One key per stage of a run, and every one of them optional.
 #:
@@ -185,7 +186,7 @@ def run_concurrency(conn) -> int:
 
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, *RESEARCH_KEYS,
-        RUN_CONCURRENCY)
+        RUN_CONCURRENCY, CODEX_TRANSPORT)
 
 
 def for_role(conn, role: str, override: str = "") -> str:

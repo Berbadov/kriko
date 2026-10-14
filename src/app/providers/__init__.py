@@ -26,6 +26,8 @@ kept its own running total would be a second answer to "how much did this
 cost". These functions make one request and return its result.
 """
 
+import os
+
 from app.providers import exa, fetch, harness, llm
 
 
@@ -271,6 +273,15 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
         found, timeout=timeout or harness.TIMEOUT_SECONDS, model=model.strip(),
         effort=effort.strip(), app_state_path=app_state_path,
     )
+    if app_state_path is not None and getattr(found, "protocol", "") == "codex" and not os.environ.get("KRIKO_CODEX_TRANSPORT"):
+        from app import prefs
+        from app.web import state
+
+        conn = state.connect(app_state_path)
+        try:
+            researcher.transport_mode = prefs.read(conn).get(prefs.CODEX_TRANSPORT) or "auto"
+        finally:
+            conn.close()
     if (model, effort) != picked:
         # `found.label` spells the effort in its model ids, and a flag beside
         # one is refused. Said in the run's log, since the run is now on a

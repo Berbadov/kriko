@@ -29,10 +29,11 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 function loadBackground({
   routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
   grantedOrigins = [], responseHeaders = {}, loadedDigest = "", manifest = null, firefox = false,
+  localState = {},
 } = {}) {
   const state = {
     session: {},
-    local: {},
+    local: localState,
     badge: {},
     toolbarIcon: null,
     toolbarTitle: "",

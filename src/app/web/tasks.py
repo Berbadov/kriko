@@ -267,6 +267,11 @@ def _wire_researcher_text(researcher, progress: Progress) -> None:
     draft = getattr(progress, "draft", None)
     if hasattr(researcher, "on_text") and callable(draft):
         researcher.on_text = draft
+    if hasattr(researcher, "agent_ledger"):
+        researcher.agent_ledger = getattr(progress, "ledger", None)
+        researcher.agent_run_id = getattr(progress, "run_id", "")
+        if researcher.app_state_path is None:
+            researcher.app_state_path = getattr(getattr(progress, "ledger", None), "db_path", None)
 
 
 def _local_structured_completer(settings, params: dict, progress: Progress):

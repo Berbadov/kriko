@@ -34,6 +34,7 @@ from app.web.knowledge_clock import KnowledgeClock
 from app.web.routers import (
     agenda,
     agent,
+    agent_runtime,
     analyze,
     appupdate,
     bench,
@@ -188,9 +189,15 @@ async def lifespan(app: FastAPI):
         except Exception:
             log.warning("could not start the weekly pack update", exc_info=True)
 
-    yield
-    app.state.jobs.shutdown()
-    app.state.knowledge_clock.close()
+    try:
+        yield
+    finally:
+        app.state.jobs.shutdown()
+        from app.providers import codex_profile
+        try:
+            codex_profile.shutdown()
+        finally:
+            app.state.knowledge_clock.close()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -229,6 +236,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for router in (
         agenda.router,
         agent.router,
+        agent_runtime.router,
         packs.router,
         prefs_router.router,
         query.router,

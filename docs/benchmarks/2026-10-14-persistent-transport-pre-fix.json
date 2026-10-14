@@ -1,0 +1,221 @@
+{
+  "date": "2026-10-14T12:01:11.97674+03:00",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.7",
+  "kriko_version": "1.6.2",
+  "cli_version": "codex-cli 0.162.0",
+  "implementation_sha256": "dae523c8baeccc5dd3d01cba8f801acc5ed9365c3dbe7580b3098caefb8d91ad",
+  "model": "gpt-6-luna",
+  "effort": "low",
+  "samples_per_mode": 2,
+  "notes": "Identical tool-less profiles; fresh thread each call. Warm-up recorded separately. Provider caching and network/generation vary; no research-quality claim. This pre-fix run is not a valid warm comparison: all warm rows respawned because native model-cache writes changed worker identity.",
+  "results": [
+    {
+      "mode": "warm_up",
+      "index": 0,
+      "seconds": 8.903364,
+      "ready": true,
+      "thread_id": "01a139a4-efef-7822-a7c7-6c1010ebf0ef",
+      "turn_id": "01a139a4-f82f-7dd1-903f-1fbb868052cf",
+      "usage": {
+        "total": {
+          "totalTokens": 10479,
+          "inputTokens": 10474,
+          "cachedInputTokens": 7936,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 10479,
+          "inputTokens": 10474,
+          "cachedInputTokens": 7936,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "metrics": {
+        "queue_ms": 0.047199999244185165,
+        "worker_start_ms": 93.48060000047553,
+        "handshake_ms": 676.6413999994256,
+        "reused_worker": false,
+        "thread_start_ms": 2129.2548999990686,
+        "turn_accept_ms": 39.23240000040096,
+        "first_text_ms": 5863.67860000064,
+        "event_count": 8,
+        "model": "gpt-6-luna",
+        "total_ms": 8903.326699999525
+      }
+    },
+    {
+      "mode": "cold",
+      "index": 0,
+      "seconds": 4.375363,
+      "ready": true,
+      "thread_id": "01a139a5-109d-73d3-a9e6-c156a5092011",
+      "turn_id": "01a139a5-10d2-7150-a888-d74c16babafb",
+      "usage": {
+        "total": {
+          "totalTokens": 10479,
+          "inputTokens": 10474,
+          "cachedInputTokens": 1792,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 10479,
+          "inputTokens": 10474,
+          "cachedInputTokens": 1792,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "metrics": {
+        "queue_ms": 0.05000000055588316,
+        "worker_start_ms": 125.25269999969169,
+        "handshake_ms": 132.21880000128294,
+        "reused_worker": false,
+        "thread_start_ms": 61.69989999943937,
+        "turn_accept_ms": 13.77679999859538,
+        "first_text_ms": 4010.2252999986376,
+        "event_count": 8,
+        "model": "gpt-6-luna",
+        "total_ms": 4375.321299999996
+      }
+    },
+    {
+      "mode": "warm",
+      "index": 0,
+      "seconds": 3.801784,
+      "ready": true,
+      "thread_id": "01a139a5-21c7-7883-b911-71f4aeb7dcc4",
+      "turn_id": "01a139a5-2201-7f33-acfe-39efe8ecab54",
+      "usage": {
+        "total": {
+          "totalTokens": 10441,
+          "inputTokens": 10436,
+          "cachedInputTokens": 7936,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 10441,
+          "inputTokens": 10436,
+          "cachedInputTokens": 7936,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "metrics": {
+        "queue_ms": 33.25859999858949,
+        "worker_start_ms": 117.50089999986812,
+        "handshake_ms": 92.1053000001848,
+        "reused_worker": false,
+        "thread_start_ms": 66.54809999963618,
+        "turn_accept_ms": 26.96720000130881,
+        "first_text_ms": 3383.408800000325,
+        "event_count": 8,
+        "model": "gpt-6-luna",
+        "total_ms": 3801.7423000001145
+      }
+    },
+    {
+      "mode": "warm",
+      "index": 1,
+      "seconds": 4.655992,
+      "ready": true,
+      "thread_id": "01a139a5-30ab-7ca1-b573-31a3eacdb38d",
+      "turn_id": "01a139a5-30d7-7e62-a4f9-32c0f743295f",
+      "usage": {
+        "total": {
+          "totalTokens": 10441,
+          "inputTokens": 10436,
+          "cachedInputTokens": 1792,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 10441,
+          "inputTokens": 10436,
+          "cachedInputTokens": 1792,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "metrics": {
+        "queue_ms": 24.07140000104846,
+        "worker_start_ms": 113.28750000029686,
+        "handshake_ms": 116.76579999948444,
+        "reused_worker": false,
+        "thread_start_ms": 52.30240000128106,
+        "turn_accept_ms": 24.4540000003326,
+        "first_text_ms": 4286.652900000263,
+        "event_count": 8,
+        "model": "gpt-6-luna",
+        "total_ms": 4655.959300000177
+      }
+    },
+    {
+      "mode": "cold",
+      "index": 1,
+      "seconds": 4.372311,
+      "ready": true,
+      "thread_id": "01a139a5-42a1-7e72-ab60-c8f06b7519c1",
+      "turn_id": "01a139a5-42c6-7481-bfc8-caca0d32efd2",
+      "usage": {
+        "total": {
+          "totalTokens": 10441,
+          "inputTokens": 10436,
+          "cachedInputTokens": 7936,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "last": {
+          "totalTokens": 10441,
+          "inputTokens": 10436,
+          "cachedInputTokens": 7936,
+          "cacheWriteInputTokens": 0,
+          "outputTokens": 5,
+          "reasoningOutputTokens": 0
+        },
+        "modelContextWindow": 258400
+      },
+      "metrics": {
+        "queue_ms": 0.04540000009001233,
+        "worker_start_ms": 104.47109999950044,
+        "handshake_ms": 88.14440000060131,
+        "reused_worker": false,
+        "thread_start_ms": 45.898500000475906,
+        "turn_accept_ms": 13.565799999923911,
+        "first_text_ms": 4073.5155000002123,
+        "event_count": 8,
+        "model": "gpt-6-luna",
+        "total_ms": 4372.278499999084
+      }
+    }
+  ],
+  "summary": {
+    "cold": {
+      "completed": 2,
+      "failed": 0,
+      "median_seconds": 4.373837
+    },
+    "warm": {
+      "completed": 2,
+      "failed": 0,
+      "median_seconds": 4.228888
+    }
+  }
+}
