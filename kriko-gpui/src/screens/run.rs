@@ -78,7 +78,7 @@ fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
-    let mut page = div().flex().flex_col().gap(px(24.0));
+    let mut page = div().flex().flex_col().gap(px(SPACE_CARD));
 
     let job = app.live.run.current().cloned();
     match (&job, app.live.run.jobs_loaded) {
@@ -931,7 +931,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         s.open = !s.open;
         cx.notify();
     });
-    let mut c = card().flex().flex_col().gap(px(12.0)).child(
+    let mut c = card().flex().flex_col().gap(px(SPACE_CARD)).child(
         div()
             .flex()
             .items_center()
@@ -1141,7 +1141,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
             div()
                 .flex()
                 .items_center()
-                .gap(px(14.0))
+                .gap(px(SPACE_CARD))
                 .child(mark_tile("run-lane-tile", mark_for(agent), phase, 48.0, motion))
                 .child(
                     div()
