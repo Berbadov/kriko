@@ -19,7 +19,7 @@ use crate::theme::*;
 const NARROW_W: f32 = 760.0;
 
 pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let narrow = app.content_w > 0.0 && app.content_w < NARROW_W;
     let threads = thread_list(app, cx);
     let conversation = conversation(app, motion, window, cx);

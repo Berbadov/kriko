@@ -40,7 +40,7 @@ from pathlib import Path
 import tomllib
 import yaml
 
-from kriko.pack.build import _GATE_KINDS
+from kriko.pack.build import _GATE_KINDS, seal
 from kriko.store import ids
 from kriko.store.db import SCHEMA_VERSION, connect
 
@@ -143,13 +143,28 @@ def _search_names(variant: dict) -> list[str]:
 
 
 def _label(variant: dict) -> str:
+    """What a reader is shown for a variant: enough to tell it from its siblings.
+
+    Displacement and a power range are part of it because two variants of one
+    engine family can share everything else (a 1.0 and a 1.2 both sold at
+    105 hp); without them the reader is offered two identical names. Engine
+    codes are display text here, so an underscore reads as a space.
+    """
     bits = [str(variant.get("make", "")).title(), str(variant.get("model", "")).title()]
     if variant.get("generation"):
         bits.append(str(variant["generation"]))
-    if variant.get("engine_code"):
-        bits.append(str(variant["engine_code"]))
-    if variant.get("power_min_hp"):
-        bits.append(f"{variant['power_min_hp']} hp")
+    code = str(variant.get("engine_code") or "").replace("_", " ")
+    if variant.get("displacement_cc"):
+        litres = f"{int(variant['displacement_cc']) / 1000:.1f}"
+        if not code.startswith(litres):  # "1.5 TSI" already says it
+            bits.append(litres)
+    if code:
+        bits.append(code)
+    low, high = variant.get("power_min_hp"), variant.get("power_max_hp")
+    if low and high and high != low:
+        bits.append(f"{low}-{high} hp")
+    elif low:
+        bits.append(f"{low} hp")
     if variant.get("transmission_code") not in (None, "", "manual"):
         bits.append(str(variant["transmission_code"]).upper())
     return " ".join(b for b in bits if b)
@@ -199,6 +214,38 @@ _AUTO_ONLY_RE = re.compile(
 _MANUAL_ONLY_RE = re.compile(
     r"\b(manual gearbox|manuel şanzıman|clutch pedal|debriyaj pedal)\b", re.I
 )
+
+
+#: Generation numerals as cars name them: "Megane 3" and "Megane III" alike.
+_ROMAN = {"1": "I", "2": "II", "3": "III", "4": "IV", "5": "V", "6": "VI",
+          "7": "VII", "8": "VIII", "9": "IX"}
+
+
+def _names_another_generation(claim: dict, span: dict) -> bool:
+    """A claim filed on a one-model part that is about another generation of it.
+
+    A body or electrics part belongs to one model and generation; research
+    has filed a Mégane 3 parking-sensor fault on the Mégane 4 body part, and
+    it was served on every Mégane 4. Derived from the fitment data, not a
+    list: the part's models and generations are those of the cars fitted with
+    it. Parts fitted to more than one model (an engine, a gearbox) are left
+    alone, because a fault in a shared engine carries across generations.
+    Dropped at build and counted, never guessed at by the engine.
+    """
+    models = span.get("model") or set()
+    generations = {str(g).upper() for g in span.get("generation") or set()}
+    if len(models) != 1 or not generations:
+        return False
+    model = next(iter(models))
+    text = f"{claim.get('title', '')} {claim.get('rationale', '')}"
+    folded = text.replace("é", "e").replace("É", "E")
+    named = set()
+    for found in re.finditer(rf"\b{re.escape(model)}\s*((?:\d|[IVX]+)(?:\s*/\s*(?:\d|[IVX]+))*)\b",
+                             folded, re.I):
+        for one in re.split(r"\s*/\s*", found.group(1).upper()):
+            named.add(_ROMAN.get(one, one))
+    # "Mégane III/IV" names the part's own generation too, and stays.
+    return bool(named) and not (named & generations)
 
 
 def _compat_conditions(
@@ -398,6 +445,8 @@ def _part_spans() -> dict[str, dict[str, set]]:
                     "aftertreatment",
                     "transmission",
                     "transmission_code",
+                    "model",
+                    "generation",
                 ):
                     if variant.get(attribute):
                         bucket.setdefault(attribute, set()).add(variant[attribute])
@@ -720,6 +769,9 @@ def _emit_claim(
     if confidence <= 0:
         stats["claims_skipped_by_status"] += 1
         return
+    if _names_another_generation(claim, part_spans.get(part_code) or {}):
+        stats["claims_dropped_other_generation"] += 1
+        return
 
     claim_id = _emit_claim_row(
         conn, pack_id, subject_id, claim, components, confidence, row_ids, stats
@@ -987,7 +1039,7 @@ def build(out_path: Path) -> tuple[Path, dict]:
 
         _write_manifest(conn, pack_id, manifest, row_ids)
 
-    conn.close()
+    seal(conn)
     return out_path, {"stats": dict(stats), "id_map": id_map}
 
 

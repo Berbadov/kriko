@@ -7,10 +7,10 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.4.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
-[![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.6.2-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
-[Download for Windows](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [Model benchmarks](#model-benchmarks) · [Help](#get-help)
+[Downloads](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [What's new](#whats-new) · [Benchmarks](#model-benchmarks) · [Help](#get-help)
 
 </div>
 
@@ -34,55 +34,23 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.4.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.4.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.6.2-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.6.2-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
-The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Each release publishes its catalogs as `.kpack` files on the same page, and you install the ones you need with `kriko install`. You don't need to install Python, Node, or Rust.
+The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
-### What's new in 1.4.0
+#### macOS downloads
 
-- The installer no longer carries catalogs. A new install opens with none, and each catalog is installed separately.
-- Browse, Agents, Settings and Overview fit the window at its default size and at its minimum size. Nothing is cut off, and no screen scrolls sideways.
-- The Live panel starts closed on every launch. When you open it, it floats over the page on a glass panel, so the page layout does not change.
-- Local research tells a part from the product it fits. For a listing such as an air filter for a specific engine, Kriko searches for the filter by its name in your search language and skips pages that only discuss the engine.
-- A page no longer has to repeat the whole listing title. A part name matches wording variants, and the listing's trailing arrows and the dotless `ı` are handled.
-- Pages that were read but were not about the product give an empty result with counts, not a "check OpenSERP and the connection" error. That error now appears only when nothing could be read, and names the cause.
-- `gemma4:e2b` is the recommended local model: it is the default when you have not chosen one, what **Set up Ollama and the recommended model** downloads (allow about 8 GB), and it is marked *Recommended* in the model list.
-- When a research run finishes without keeping any claim, the extension's panel says that no data was found showing an issue, and that this is not proof there is no issue. Before, it only said "Open the research job for findings."
-- A run that left a brief to read keeps the previous wording, because the brief may hold the findings.
-- On **Local**, a choice of device, GPU layers, context tokens, answer language or search language shows as picked at once, with a spinner beside its row until the engine confirms it. If the engine refuses the change, the previous choice comes back.
-- **Refresh device** shows a spinner until the device information arrives.
-- Changing a Local choice or refreshing the device no longer clears a server address or search address you have typed but not saved.
-- Kriko checks for a newer version every time it starts. When one is published, the **Home** screen shows it at the top with **Install and restart**. Nothing installs until you press that button.
-- If the check cannot reach GitHub, Home stays quiet and **About** says why. A failed check does not hide a newer version that an earlier check found.
-- Follow-up questions about a saved check and about a quick look search the web for the answer. Answers are kept to a few sentences and list the pages they rely on as links.
-- Answers appear as they are written: three dots while the agent starts, then the text typed out with a caret until it is complete. A local model streams its answer word by word. A coding-agent CLI returns its answer all at once, and the panel types that out the same way.
-- Quick-look follow-ups no longer answer only from the quick look's own findings.
-- The installer build writes its Rust output to one shared folder outside the project, instead of a copy of about 2 GB inside every checkout and worktree.
+Apple Silicon and Intel Macs have separate builds. A file is downloadable only when that architecture's native build is attached to the [release](https://github.com/Berbadov/kriko/releases/latest):
 
-### What's new in 1.3.3
+| Mac | Disk image | Portable app bundle |
+|---|---|---|
+| Apple Silicon | `kriko-1.6.2-macos-arm64.dmg` | `kriko-1.6.2-macos-arm64-portable.zip` |
+| Intel | `kriko-1.6.2-macos-x86_64.dmg` | `kriko-1.6.2-macos-x86_64-portable.zip` |
 
-- Includes the extension's **Search this product** action, queue button for unrecognized products, and escaped bold/inline-code answer formatting from 1.3.2.
-- **Add site** checks for usable catalog identity information before starting an agent, with distinct messages for missing, disabled, or incomplete catalogs.
-- Antigravity site and catalog authoring prompts direct the agent to its permitted web tools instead of shell commands that headless mode denies.
+Open the `.dmg` and drag **Kriko.app** to **Applications**. For the portable ZIP, extract it and move **Kriko.app** where you want it. Each archive is a complete app for its named architecture, built on a matching Mac.
 
-### What's new in 1.3.2
-
-- The extension's main action is now **Search this product**, with **Search again** for a refresh.
-- **Add to queue** is available even when installed catalogs do not recognize the product.
-- Agent answers render bold and inline code while escaping agent-supplied HTML.
-
-### What's new in 1.3.1
-
-- Local research prioritizes exact-model issue forums and owner reports, filters ads and repair-service offers, and replaces irrelevant pages before using the page limit.
-- Exact model codes and the selected search language are preserved. Response and search languages can be set independently.
-- Bundled OpenSERP stays usable when some search engines are unavailable, and the desktop recovers its search process after it exits.
-- Coverage and evidence rejection reasons are visible. An empty result does not establish that a product has no problems.
-- The updater recognizes this as newer than 1.3.0. Release downloads include `SHA256SUMS.txt` for verified updates.
-
-Kriko offers a newer version on the Home screen when it starts, or you can install the newer MSI over your current version. Your catalogs, settings, and history are preserved. Refresh the staged browser extension in Kriko and reload it in the browser after updating.
-
-> The build is unsigned, so Windows may show a SmartScreen warning. See the [Windows installation guide](docs/INSTALL_WINDOWS.md) for the install steps.
+These macOS builds are unsigned unless the release explicitly says otherwise. On first launch, macOS may warn that it cannot verify the developer. In Finder, Control-click **Kriko.app**, choose **Open**, then confirm. If macOS still blocks it, use **System Settings → Privacy & Security → Open Anyway** for Kriko.
 
 ### 2. Add the browser extension
 
@@ -99,7 +67,7 @@ The extension is loaded from disk; it isn't distributed through a browser store.
 
 Open a supported listing and open the Kriko panel. Read the known risks, expand a finding, and follow its source. A catalog supplies the knowledge for its product category; it can only answer for products it covers. A new install has no catalog until you install one, so the panel has nothing to check against yet.
 
-When the product isn't covered, try **Quick look** with a configured agent. You can inspect the sources and ask another question after the result arrives. Quick look stays in your history; creating a catalog requires an explicit build action.
+When the product isn't covered, try **Quick look** with a configured agent. You can inspect the sources and ask another question after the result arrives. Quick look stays in your history. A catalog grows when you press **File quick looks** on **Overview**, or when you build one yourself.
 
 ### 4. Choose an agent when you want to research
 
@@ -109,47 +77,70 @@ The beta desktop supports **Claude Code, Codex, Antigravity, Mistral, and Local 
 
 Your model choices come from the provider or runtime. You can adjust a research run before starting it, follow its log, answer an agent's question, and stop it from the live panel.
 
-## Your data stays with you
+## Updates and your data
 
-Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.kriko`. Updating or uninstalling the app preserves that folder.
+Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.kriko` on Windows and `~/.kriko` on macOS. Updating or uninstalling the app preserves that folder.
 
-Closing the window keeps Kriko running so the browser extension can answer. To stop it completely, choose **Quit** from its tray icon.
+**Updating.** Kriko checks for a newer version each time it starts and offers it on the **Home** screen. Nothing installs until you press **Install and restart**. The in-app updater downloads and runs only the Windows x86_64 MSI; it does not update the Windows portable ZIP or macOS app bundles. To update those, download the newer archive from Releases and replace the old app or extracted files. After any update, refresh the staged browser extension in Kriko and reload it in the browser.
 
-Installed lookups run on your computer. Online research sends its questions and reading context to the providers you select; a local model runs inference on your computer and still needs web search to gather new sources.
+> The build is unsigned, so Windows may show a SmartScreen warning. See the [Windows installation guide](docs/INSTALL_WINDOWS.md) for the install steps.
+
+**Running in the background.** Closing the window keeps Kriko running so the browser extension can answer. To stop it completely, choose **Quit** from its tray icon.
+
+**What leaves your computer.** Installed lookups run on your computer. Online research sends its questions and reading context to the providers you select; a local model runs inference on your computer and still needs web search to gather new sources.
+
+## What's new
+
+### 1.6.2
+
+- Codex, Antigravity and Mistral Vibe Quick Looks now show each search and each page read as it happens. Before, the run sat on a blank screen for up to two minutes while Kriko searched, which looked like a hang.
+- Search asks Google, DuckDuckGo and Bing. The old list included Ecosia, which blocks the search helper, so every query waited for an engine that could not answer and often returned one page or none. In our checks, queries that took 17 s or more and found 0 to 1 results now take about 7 s and find 17 to 22. A real run on a fresh product found 29 pages where the same kind of run found 2.
+- An engine the search helper reports as failed is skipped for ten minutes and then tried again, so a block that appears later does not slow every search. Google's click-through links, which carry no readable address, are no longer offered as results.
+- After two searches in a row fail, Kriko skips the third instead of waiting out its timeout. If every search fails, Kriko says so, and the agent searches the web with its own tools, opening only a few pages. Its quotes are still checked against the pages, and any claim without a source is dropped.
+- **Local** says what to do when a model runs on the processor of a computer that has a graphics card: Ollama looks for the card only when it starts, so quit it from the tray and open it again.
+- Known limits: a first search after Kriko starts still takes 35 to 75 seconds while the search browser opens, and the search engines can block it again at any time. A run with no pages read is not evidence that a product has no problems.
+- For contributors: `tools/bump.py` also updates the macOS download filenames in this README, which it left at the old version before.
+
+### 1.6.1
+
+- Codex, Antigravity and Mistral Vibe Quick Looks no longer fail while counting model calls. Agent model choices omit duplicate entries.
+- Local research reserves context for source evidence, keeps product metadata compact, and searches product documentation alongside issue discussions. Ollama execution reports the model's observed GPU or CPU use.
+- A completed Quick Look with no supported issues remains a saved research result, with product facts, sources and coverage. It does not establish that the product is issue-free.
+- Product and comparison follow-ups carry the saved product context and can search and read fresh web evidence. Saved results show their evidence in Run and History.
+
+### 1.6.0
+
+- The desktop has a new glass-inspired layout, clearer navigation and live job panel, with animations that pause when the window is inactive and obey **Reduce motion**.
+- Home, Run, Local, and Browser extension now explain what to do while data loads and after success or failure. Retry actions report their state, and failed refreshes identify stale information instead of presenting it as current.
+- Saved Quick Looks can be filed into installed catalogs using exact matching or a grounded assignment from a local model or Mistral, with web tools disabled. CLI-only agents currently abstain and leave the catalog choice to the reader because a verified tool-less mode is unavailable; this does not affect ordinary CLI research. Filing does not rewrite the saved research evidence.
+- Local model requests negotiate supported structured-output formats while keeping Kriko's evidence checks in place. No Gemma 4 E2B quality evaluation was run on the 1.6.0 pipeline, whose evaluator digest is
+  `e647d1c957e01a8972ddef64ed0834a17ceb622613e0e1d998c8aa2affec6055`.
+  An older two-case Gemma 4 E2B fixture run at digest
+  `e686996dd0dadaa54e653ae0065e089521c9c4425284f3394d265f08c9e57e98`
+  recorded the expected findings and abstention, but its rows lack
+  host/runtime metadata and it is not a 1.6.0 benchmark. A separate [live
+  search observation](docs/benchmarks/2026-10-11-local-search-followup.md)
+  used an earlier pipeline and retained no findings for one product; this is
+  not evidence that the product has no faults. Neither result is a general
+  model-quality claim. No fine-tuning was performed; details are in the
+  [local-agent research note](docs/benchmarks/2026-10-12-local-agent-research.md).
+- Agent and model discovery shows when provider choices are still loading, and research screens give clearer feedback as runs start and finish. Hosted response time still depends on the selected provider, model, account, and network; this release makes no latency guarantee.
+- A native macOS packaging recipe now targets Apple Silicon (`arm64`) and Intel (`x86_64`) Macs and emits the filenames listed above. The screenshots in this checkout were captured on Linux; each release still needs a successful build and launch check on matching native hardware.
+
+Earlier releases are in the [changelog](CHANGELOG.md).
 
 ## Model benchmarks
 
-**Release 1.1.0 baseline:** we measured three fixed research cases per requested model on the release computer. Version 1.1.2 fixes local evidence handling and CLI research; the older measurements below do not include those fixes. Results and account availability are recorded in [the benchmark report](docs/benchmarks/README.md), together with the exact model IDs and commands to repeat the runs.
+The measurements below come from the 1.1.0 baseline: three fixed research cases per model, on one Windows 11 computer with an RTX 3060 Laptop GPU (6 GB). They are small samples of the whole research workflow, including search and reading, and describe that machine and those accounts. They are not a general model ranking.
 
-| Model | Cases completed | Median time | Grounded findings |
-|:---|:---:|:---:|:---:|
-| **GLM 5.3** via Mistral<br><sub>`zai-glm-5-3`</sub> | ✅ 3 / 3 | 63.0 s | **17** |
-| **Gemma** local agent<br><sub>`gemma3n:e2b`</sub> | ✅ 3 / 3 | 24.7 s | 0 <sup>1</sup> |
-| **Haiku 5.5** | ⚠️ not completed <sup>2</sup> | n/a | n/a |
-| **GPT 6 Luna** | ⚠️ not completed <sup>3</sup> | n/a | n/a |
+| Model | Cases completed | Grounded findings |
+|:---|:---:|:---:|
+| **GLM 5.3** via Mistral | 3 / 3 | **17** |
+| **Gemma** local agent | 3 / 3 | 0 |
+| **Haiku 5.5** | not completed | n/a |
+| **GPT 6 Luna** | not completed | n/a |
 
-<sup>1</sup> Gemma proposed candidates, but none passed the quote check, so none are counted.<br>
-<sup>2</sup> 0 of 3 cases ran: model/budget error, and the retry account had no credits.<br>
-<sup>3</sup> 0 of 3 cases ran: subscription inactive, and the retry account had no credits.
-
-Measured on Windows 11 with an RTX 3060 Laptop GPU (6 GB). A grounded finding passed the quote check; it is not independent proof of a fault. Hosted cost was unavailable for GLM, so no dollar figure is claimed.
-
-These are small samples of the complete research workflow, including search and reading. They describe this machine and these accounts; they don't establish a general model ranking. Failed requests are reported separately from successful answer times.
-
-### CLI startup on this computer
-
-Measured on 9 October 2026, three separate processes and three fresh chats per CLI:
-
-| Agent | Model | Launch (`--help`) | First reply |
-|:---|:---|---:|---:|
-| **Claude Code** | Haiku | 0.38 s | **3.93 s** |
-| **Codex** | GPT 6 Luna | 0.08 s | 4.36 s |
-| **Antigravity** | Gemini 3.8 Flash (low) | 0.36 s | 7.74 s |
-| **Mistral** | GLM 5.3 (high) | 0.59 s | 15.23 s |
-
-<sub>Medians of three runs. "First reply" is a fresh one-word answer in a new chat.</sub>
-
-All 12 replies completed. These are startup checks, not research scores: the reply times also include authentication, agent setup, network latency, and model generation. Keeping a terminal open cannot remove most of that wait. GLM varied from 12.55 to 35.23 seconds. Every reply used a new chat. [Raw measurements](docs/benchmarks/cli-startup-1.1.2.json) include the CLI-reported token totals; even a short answer includes the agent's initial instructions.
+A grounded finding passed the quote check; it is not independent proof of a fault. Median times, why two models did not complete, the CLI startup measurements, exact model IDs and the commands to repeat every run are in [the benchmark report](docs/benchmarks/README.md).
 
 ## Get help
 
@@ -162,11 +153,11 @@ If the panel says Kriko isn't running, open the desktop app first. After an upda
 
 ## Build or contribute
 
-The engine, command line, and local API can also run from source on macOS and Linux. The packaged desktop app is for Windows x64.
+The engine, command line, and local API can also run from source on macOS and Linux. The desktop packaging scripts target Windows x64 and native macOS builds for Apple Silicon and Intel.
 
 See the [desktop build guide](kriko-gpui/README.md) for the Windows installer recipe, [contributor guide](docs/DOCTRINE.md) for setup and checks, and [architecture guide](docs/ARCHITECTURE.md) for the code. To add a new product category, start with the [catalog contract](docs/PACK_CONTRACT.md).
 
-Every change set must bump the version and update this README before it is committed. Follow the [update protocol](docs/UPDATE_PROTOCOL.md); published versions and their assets are immutable.
+Versions and reader-visible release notes move at release, not with every change set. Follow the [update protocol](docs/UPDATE_PROTOCOL.md); published versions and their assets are immutable.
 
 ## License
 

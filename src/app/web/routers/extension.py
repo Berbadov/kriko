@@ -513,15 +513,15 @@ def ask_quick_look(
 ) -> dict:
     """A follow-up question about a finished quick look, as a job (#112).
 
-    The plane is the quick look's own, carried from its stored params, so the
-    answer comes from wherever the findings came from \u2014 never a surprise bill
-    on a different agent.
+    The plane is the quick look's own, carried from its stored params. The
+    follow-up uses that plane's web tools to answer against current pages and
+    keeps the listing and Quick Look evidence as context.
     """
     row = state.get_job(conn, job_id)
     if row is None or row.get("kind") != "quick_look":
         raise HTTPException(404, f"no quick look {job_id}")
-    if not row.get("done"):
-        raise HTTPException(409, f"the quick look is still {row.get('state')}")
+    if row.get("state") != state.SUCCEEDED:
+        raise HTTPException(409, "the quick look must succeed before it can be asked about")
     quick = row.get("params") or {}
     params = {
         "quick_job_id": job_id,
@@ -606,15 +606,6 @@ def stage_firefox(request: Request) -> dict:
     request.app.state.firefox_staged_digest = extension.content_digest(target)
     return {"path": str(target), "version": extension.version(target), "package_path": str(output),
             "signed": False, "note": "Ready for Load Temporary Add-on in Firefox. A permanent install needs Mozilla signing."}
-
-
-@router.post("/firefox/reveal")
-def reveal_firefox(request: Request) -> dict:
-    target = extension.target_for(request.app.state.settings.store_path, "firefox")
-    manifest = target / "manifest.json"
-    if not manifest.is_file():
-        raise HTTPException(status_code=409, detail="Prepare the Firefox add-on first.")
-    return {"path": str(manifest), "error": extension.reveal(manifest)}
 
 
 @router.post("/reveal")

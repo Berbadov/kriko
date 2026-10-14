@@ -489,11 +489,10 @@ claims:
   confidence: 0.6
   rationale: The DQ381 dual-clutch transmission can fail to select gears due to mechatronic
     unit or start-stop pump issues. This is a known, costly problem not detectable
-    by a standard inspection, making it a high-risk used-car concern.
+    by a standard inspection, making it a high-risk concern for a buyer.
   rationale_tr: DQ381 çift kavramalı şanzıman, mekatronik ünite veya start-stop pompası
     kaynaklı vites seçememe sorunları yaşayabilir. Bu, standart bir ekspertizde tespit
-    edilemeyen, bilinen ve pahalı bir sorundur ve kullanılmış araç için yüksek risk
-    oluşturur.
+    edilemeyen, bilinen ve pahalı bir sorundur ve alıcı için yüksek risk oluşturur.
   inspection_advice: During test drive, check for hesitation or failure to engage
     1st, 2nd, or 3rd gear. Scan for DTCs related to mechatronic or start-stop pump
     faults (e.g., P17xx, P07BF).

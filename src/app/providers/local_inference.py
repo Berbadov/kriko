@@ -21,6 +21,7 @@ plane says it in the job log.
 from collections.abc import Callable, Iterator
 import json
 import socket
+import threading
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -45,6 +46,10 @@ DEFAULT_CONTEXT_TOKENS = 4096
 CHARS_PER_TOKEN = 3.0
 #: Tokens kept free beside the reply budget, for the chat template.
 _TEMPLATE_TOKENS = 128
+#: A deliberately low UTF-8 byte estimate for a prompt token. Counting bytes
+#: instead of Python characters keeps accents and non-Latin text from getting
+#: a larger budget just because one character occupies several bytes.
+PROMPT_BYTES_PER_TOKEN = 2
 
 #: What a server says when the program that runs its models is missing, as
 #: opposed to the machine lacking memory for one. Both are HTTP 500 and only the
@@ -70,12 +75,67 @@ def forget_incomplete(base_url: str = "") -> None:
         _incomplete.clear()
 
 
+#: Every `(server, model)` this process has asked for a completion since the
+#: last `release`. A server keeps a model in memory after its last request
+#: (Ollama for five minutes by default), so a finished run went on holding
+#: gigabytes of video memory while Kriko sat in the background.
+_held: set[tuple[str, str]] = set()
+_held_lock = threading.Lock()
+
+
+def _hold(base_url: str, serving_name: str) -> None:
+    with _held_lock:
+        _held.add((base_url.rstrip("/"), serving_name))
+
+
+def release(timeout: float = 10.0) -> list[str]:
+    """Ask each server to unload every model this process ran; the names let go.
+
+    Called when no work is left, so the memory is the host's again the moment
+    a run ends rather than whenever the server's own timer runs out. Ollama
+    unloads on a request with `keep_alive` 0. A server without that endpoint
+    answers 404 and keeps its own policy; nothing here can fail a run.
+    """
+    with _held_lock:
+        held = sorted(_held)
+        _held.clear()
+    released = []
+    for base_url, name in held:
+        request = urllib.request.Request(
+            base_url + "/api/generate",
+            data=json.dumps({"model": name, "keep_alive": 0}).encode("utf-8"),
+            headers={"Content-Type": "application/json"}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                response.read()
+            released.append(name)
+        except Exception:  # noqa: BLE001 - a server that cannot unload keeps its own timer
+            pass
+    return released
+
+
 #: A second try after these, because a local server's failure modes are
 #: transient in exactly this way: an idle process paged out to disk answers
 #: late and dies mid-reply, then answers fine (Ollama loading a model on its
 #: first call; a proxy closing an idle keep-alive). Only these retry, once;
 #: a 400 or 404 is an answer, not a hiccup.
 _RETRY_STATUS = frozenset((408, 429, 500, 502, 503, 504))
+
+
+def _read_body(error: urllib.error.HTTPError) -> str:
+    """An error's body as text, left readable for whoever reads it next."""
+    import io
+
+    try:
+        raw = error.read() or b""
+    except Exception:  # noqa: BLE001 - an unreadable body is an empty one
+        raw = b""
+    error.fp = io.BytesIO(raw)
+    try:
+        error.read = error.fp.read  # type: ignore[method-assign,assignment]
+    except Exception:  # noqa: BLE001
+        pass
+    return raw.decode("utf-8", "replace")
 
 #: The reply a findings extraction must produce, as a JSON schema. Sent as the
 #: `json_schema` response format so a server that supports grammar constraint
@@ -129,9 +189,9 @@ class OpenAICompatSocket:
     serious local engine exposes, so the plane never learns which binary
     is behind the port. `response_json_schema` is sent as the `json_schema`
     response format — engine-level grammar constraint, the strongest guarantee
-    a small socket can get — and dropped for one retry when the server
-    refuses it (HTTP 400), since a server that cannot constrain its output
-    can still answer.
+    a small socket can get. A refusal of another optional field keeps that
+    schema; when the server rejects the format, the socket tries `json_object`
+    before an unconstrained completion and reports that degradation.
 
     Temperature 0 for extraction: creativity in front of a grounding gate
     buys refusals, not findings.
@@ -161,6 +221,9 @@ class OpenAICompatSocket:
             response_json_schema = (json.loads(response_json_schema)
                                     if response_json_schema.strip() else {})
         self._schema = response_json_schema or {}
+        self._response_format_mode = "json_schema" if self._schema else "not_requested"
+        self._response_format_reason = ""
+        self._reasoning_effort_supported = True
         self.tokens_used: int | None = None
         #: The two halves, for `app.meter.Meter`, which reads them off any
         #: completer by attribute.
@@ -181,18 +244,28 @@ class OpenAICompatSocket:
 
     def set_schema(self, schema: dict) -> None:
         self._schema = schema
+        if schema and self._response_format_mode == "not_requested":
+            self._response_format_mode = "json_schema"
+
+    @property
+    def structured_output(self) -> dict[str, str]:
+        """The structured-output mode negotiated for this socket, without raw server errors."""
+        return {"mode": self._response_format_mode, "reason": self._response_format_reason}
 
     def json(self, prompt: str, schema: dict) -> str:
         previous = self._schema
         self._schema = schema
+        if schema and self._response_format_mode == "not_requested":
+            self._response_format_mode = "json_schema"
         try:
-            if len(prompt.encode("utf-8")) > self.prompt_chars_allowed():
+            if len(prompt.encode("utf-8")) > self.prompt_bytes_allowed():
                 raise LocalInferenceError("Local prompt exceeds the configured context budget.")
             return self.complete(prompt)
         finally:
             self._schema = previous
 
     def complete(self, prompt: str) -> str:
+        _hold(self.base_url, self.serving_name)
         prompt = self.language_instruction + prompt
         body = {
             "model": self.serving_name,
@@ -208,16 +281,25 @@ class OpenAICompatSocket:
         # told not to think. Extraction wants the answer, so thinking is off
         # unless the reader chose an effort. A server that does not know the
         # field is handled below (HTTP 400 drops it and retries).
-        body["reasoning_effort"] = self.reasoning_effort or "none"
+        if self._reasoning_effort_supported:
+            body["reasoning_effort"] = self.reasoning_effort or "none"
         if self._schema:
-            body["response_format"] = {
-                "type": "json_schema",
-                "json_schema": {"name": "findings", "schema": self._schema},
-            }
+            if self._response_format_mode == "json_schema":
+                body["response_format"] = {
+                    "type": "json_schema",
+                    "json_schema": {"name": "findings", "schema": self._schema},
+                }
+            elif self._response_format_mode == "json_object":
+                body["response_format"] = {"type": "json_object", "schema": self._schema}
         try:
             payload = self._post(body)
         except urllib.error.HTTPError as error:
-            if error.code in _RETRY_STATUS:
+            said = _read_body(error)
+            format_mentioned = self._format_field_mentioned(said)
+            spelled = self._other_schema_spelling(body, error.code, said)
+            if spelled is not None:
+                payload = spelled
+            elif error.code in _RETRY_STATUS:
                 # Transient: the model was loading, the proxy dropped an
                 # idle connection. Retry with the same evidence grammar.
                 try:
@@ -228,22 +310,57 @@ class OpenAICompatSocket:
                     raise self._failed(other) from other
             elif error.code == 400 and ("response_format" in body
                                          or "reasoning_effort" in body):
-                # The server cannot take a field it does not know: it cannot
-                # constrain its output, or it does not speak this effort
-                # dialect. Either optional field may be the refused one, so
-                # they are dropped one at a time — schema first, the older
-                # refusal — and each drop earns one retry.
+                # Retain the evidence grammar when the error names the other
+                # optional field. For an ambiguous 400, remove the advisory
+                # reasoning hint first; only then negotiate or drop the schema.
                 payload = None
-                for optional in ("response_format", "reasoning_effort"):
+                order = self._refusal_order(body, said)
+                schema_spelling_tried = format_mentioned
+                last_error = error
+                last_said = said
+                reasoning_probe_pending = False
+                for optional in order:
                     if optional not in body:
                         continue
+                    if (optional == "response_format" and not schema_spelling_tried
+                            and ("reasoning_effort" not in body or
+                                 self._format_field_mentioned(last_said))):
+                        schema_spelling_tried = True
+                        spelled = self._other_schema_spelling(
+                            body, last_error.code, last_said, force=True)
+                        if spelled is not None:
+                            payload = spelled
+                            break
                     body.pop(optional)
+                    if optional == "reasoning_effort":
+                        if ("reasoning_effort" in last_said.casefold()
+                                and not self._format_field_mentioned(last_said)):
+                            self._reasoning_effort_supported = False
+                        else:
+                            reasoning_probe_pending = True
+                    elif optional == "response_format":
+                        self._response_format_mode = "unconstrained"
+                        self._response_format_reason = "response_format_refused"
                     try:
                         payload = self._post(body)
+                        if reasoning_probe_pending:
+                            self._reasoning_effort_supported = False
                         break
                     except urllib.error.HTTPError as again:
                         if again.code != 400:
                             raise self._refused(again) from again
+                        reasoning_probe_pending = False
+                        again_said = _read_body(again)
+                        if ("response_format" in body and not schema_spelling_tried
+                                and self._format_field_mentioned(again_said)):
+                            schema_spelling_tried = True
+                            spelled = self._other_schema_spelling(
+                                body, again.code, again_said, force=True)
+                            if spelled is not None:
+                                payload = spelled
+                                break
+                        last_error = again
+                        last_said = again_said
                     except Exception as other:  # noqa: BLE001
                         raise self._failed(other) from other
                 if payload is None:
@@ -280,6 +397,7 @@ class OpenAICompatSocket:
             text = self.complete(prompt)
             on_text(text)
             return text
+        _hold(self.base_url, self.serving_name)
         body: dict = {
             "model": self.serving_name,
             "messages": [{"role": "user", "content": self.language_instruction + prompt}],
@@ -377,7 +495,9 @@ class OpenAICompatSocket:
                       **self.runtime_options, "temperature": body["temperature"],
                       **({"num_predict": body["max_tokens"]} if "max_tokens" in body else {})}}
         if "response_format" in body:
-            native["format"] = body["response_format"]["json_schema"]["schema"]
+            fmt = body["response_format"]
+            native["format"] = (fmt["json_schema"]["schema"]
+                                 if fmt.get("type") == "json_schema" else fmt["schema"])
         return native
 
     def context_tokens(self) -> int:
@@ -406,6 +526,34 @@ class OpenAICompatSocket:
         reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
         tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
         return max(0, min(self.context_chars, int(tokens - 128)))
+
+    def prompt_bytes_allowed(self, *, reply_tokens: int | None = None) -> int:
+        """A conservative UTF-8 byte budget for one prompt.
+
+        The extraction pipeline needs both its policy and source evidence in
+        one request. Treating every byte as one token made ordinary 4k
+        contexts reject those requests before showing any evidence. Two bytes
+        per token remains conservative for multilingual text while using the
+        model's actual context and the stage's own reply reservation.
+        """
+        reply = (reply_tokens if isinstance(reply_tokens, int) and reply_tokens > 0
+                 else self.max_tokens if isinstance(self.max_tokens, int) else 1024)
+        tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS - 128
+        return max(0, int(tokens * PROMPT_BYTES_PER_TOKEN))
+
+    def window_chars(self) -> int:
+        """How many characters of prompt the window itself holds beside the reply.
+
+        Not `prompt_chars_allowed`: that is the research budget, one character
+        a token and capped at `context_chars`, and it bounds the evidence. The
+        whole prompt (instructions and evidence) is bounded by the window, at
+        `CHARS_PER_TOKEN`. Measuring the instructions against the evidence
+        budget left a 16k window no room after an 11.7k-character authoring
+        brief (#181).
+        """
+        reply = self.max_tokens if isinstance(self.max_tokens, int) else 1024
+        tokens = self.context_tokens() - reply - _TEMPLATE_TOKENS
+        return max(0, int(tokens * CHARS_PER_TOKEN))
 
     def _ask_context(self) -> int | None:
         def get(path: str):
@@ -483,6 +631,53 @@ class OpenAICompatSocket:
             self.tokens_used = (self.tokens_used or 0) + usage["prompt_tokens"] + usage["completion_tokens"]
         else:
             self.usage_complete = False
+
+    def _other_schema_spelling(self, body: dict, status: int, said: str,
+                               *, force: bool = False) -> dict | None:
+        """The same constraint in the spelling a server that refused ours takes.
+
+        Ollama and llama.cpp's own server take `json_schema`; llama-cpp-python's
+        server (and some others) refuse it, by name, and take the schema under
+        `json_object` instead. Dropping the constraint there let a small model
+        answer in prose, so the other spelling is tried first. None when the
+        refusal is not about the response format, or that spelling fails too.
+        """
+        fmt = body.get("response_format")
+        if not isinstance(fmt, dict) or fmt.get("type") != "json_schema" or status not in (400, 422, 500):
+            return None
+        if not force and not self._format_field_mentioned(said):
+            return None
+        body["response_format"] = {"type": "json_object", "schema": fmt["json_schema"]["schema"]}
+        try:
+            result = self._post(body)
+        except urllib.error.HTTPError as again:
+            # Neither spelling: the original refusal path drops the field.
+            body["response_format"] = fmt
+            _read_body(again)
+            return None
+        self._response_format_mode = "json_object"
+        self._response_format_reason = "json_schema_refused"
+        return result
+
+    @staticmethod
+    def _format_field_mentioned(said: str) -> bool:
+        folded = said.casefold()
+        return "response_format" in folded or "json_schema" in folded
+
+    @classmethod
+    def _refusal_order(cls, body: dict, said: str) -> tuple[str, ...]:
+        """Drop the named unsupported field first; ambiguous errors keep schema longest."""
+        fields = tuple(name for name in ("reasoning_effort", "response_format") if name in body)
+        folded = said.casefold()
+        names_reasoning = "reasoning_effort" in folded
+        names_format = cls._format_field_mentioned(said)
+        if names_reasoning and not names_format:
+            return ("reasoning_effort", "response_format")
+        if names_format and not names_reasoning:
+            return ("response_format", "reasoning_effort")
+        # `reasoning_effort` is advisory; retaining the output schema matters
+        # to the evidence parser and validators.
+        return ("reasoning_effort", "response_format") if fields else ()
 
     def _refused(self, error: urllib.error.HTTPError) -> LocalInferenceError:
         detail = ""

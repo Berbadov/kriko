@@ -314,6 +314,12 @@ try {
     & $Python packaging/smoke_app.py (Join-Path $bin "kriko.exe")
     Assert-LastExitCode "smoke_app.py"
 
+    # What a reader gets: the MSI installed, every screen of the installed
+    # app photographed, then the MSI removed. Screenshots in builds/windows-look.
+    Step "The installed app, looked at"
+    & $Python packaging/windows_look.py $msi (Join-Path $builds "windows-look")
+    Assert-LastExitCode "windows_look.py"
+
     Step "The portable zip"
     $zip = Join-Path $builds "kriko-$ver-win64-portable.zip"
     if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }

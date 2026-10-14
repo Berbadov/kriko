@@ -8,6 +8,8 @@ from __future__ import annotations
 import hashlib
 import argparse
 import json
+import os
+import platform
 import time
 from pathlib import Path
 import sys
@@ -15,6 +17,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from app.providers.local_agent import LocalAsker
 from app.providers.local_inference import OpenAICompatSocket
+from app.localruntime import inspect as inspect_runtime
 from app.quicklook import brief, parse
 
 PIPELINE_DIGEST = hashlib.sha256(b"".join(
@@ -53,10 +56,11 @@ ABSTENTION = {
         "We have no evidence of that problem on the Aster One."),
 }
 
-def run(model, context, case, language, search_language="en", plan_queries=False):
+def run(model, context, case, language, search_language="en", plan_queries=False,
+        url="http://127.0.0.1:11434", native=True):
     pages = EVIDENCE if case == "evidence" else ABSTENTION
     socket = OpenAICompatSocket(
-        "http://127.0.0.1:11434", model, native_ollama=True,
+        url, model, native_ollama=native,
         context_tokens=context, timeout=180, max_tokens=1024)
     search = lambda query, limit: [
         {"url": url, "title": text.split(".")[0]} for url, text in pages.items()
@@ -97,6 +101,13 @@ def run(model, context, case, language, search_language="en", plan_queries=False
         outcome.update({"error": f"{type(error).__name__}: {error}",
                         "coverage": asker.coverage, "identity": asker.identity})
     outcome["seconds"] = round(time.monotonic() - started, 3)
+    outcome["host"] = {
+        "platform": platform.platform(), "machine": platform.machine(),
+        "processor": platform.processor() or "unknown", "logical_cpus": os.cpu_count(),
+    }
+    runtime = inspect_runtime(url, "Ollama" if native else "OpenAI-compatible", model, {})
+    outcome["runtime"] = {key: runtime[key] for key in (
+        "runtime", "device", "memory_bytes", "vram_bytes", "context_tokens", "reason")}
     # plan and complete share this socket here; avoid double-counting its usage.
     outcome["tokens_used"] = socket.tokens_used
     outcome["calls"] = socket.calls
@@ -113,13 +124,18 @@ def main():
     parser.add_argument("--search-language", default="en")
     parser.add_argument("--plan-queries", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
+    # Any OpenAI-compatible server (llama.cpp's, LM Studio) as well as Ollama.
+    parser.add_argument("--url", default="http://127.0.0.1:11434")
+    parser.add_argument("--openai", action="store_true",
+                        help="the server speaks the OpenAI surface, not Ollama's native one")
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("a", encoding="utf-8") as output:
         for model in args.models:
             for context in args.contexts:
                 for case in args.cases:
-                    row = run(model, context, case, args.language, args.search_language, args.plan_queries)
+                    row = run(model, context, case, args.language, args.search_language,
+                              args.plan_queries, url=args.url, native=not args.openai)
                     output.write(json.dumps(row, ensure_ascii=False) + "\n")
                     output.flush()
                     print(json.dumps({key: value for key, value in row.items()

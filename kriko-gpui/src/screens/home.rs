@@ -1,6 +1,6 @@
 //! Home: what you were doing, what you saved, and the shape of the knowledge.
-//! Recent work and drafts side by side, then the graphs. Information only —
-//! no verdicts, no bare totals — and nothing asks you for anything here.
+//! Recent work and drafts side by side, then the graphs. The next-step card
+//! routes an empty or returning Home to a real action from current engine facts.
 //! Everything comes from the engine: `/api/history`, `/api/compare-drafts`,
 //! `/api/status` and `/api/packs`.
 
@@ -13,7 +13,173 @@ use crate::app::{Kriko, Tab};
 use crate::live::history::{ago, month_buckets, now_secs, Item};
 use crate::screens::history::clip;
 use crate::screens::{empty_note, mono, plate_s};
+use crate::screens::guidance;
 use crate::theme::*;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum HomeStep {
+    InstallCatalog,
+    EnableCatalog,
+    ConnectAgent,
+    FirstCheck,
+    ConnectExtension,
+    AnotherCheck,
+}
+
+impl HomeStep {
+    fn id(self) -> &'static str {
+        match self {
+            Self::InstallCatalog => "home-install-catalog",
+            Self::EnableCatalog => "home-enable-catalog",
+            Self::ConnectAgent => "home-connect-agent",
+            Self::FirstCheck => "home-first-check",
+            Self::ConnectExtension => "home-connect-extension",
+            Self::AnotherCheck => "home-another-check",
+        }
+    }
+
+    fn title(self) -> &'static str {
+        match self {
+            Self::InstallCatalog => "Install a catalog",
+            Self::EnableCatalog => "Switch on a catalog",
+            Self::ConnectAgent => "Set up an agent",
+            Self::FirstCheck => "Start your first check",
+            Self::ConnectExtension => "Use Kriko on listing pages",
+            Self::AnotherCheck => "Check another product",
+        }
+    }
+
+    fn detail(self) -> &'static str {
+        match self {
+            Self::InstallCatalog => "Choose a catalog in Overview to search its known products. Once an agent and browser extension are available, Quick Look can also start from a listing without a catalog.",
+            Self::EnableCatalog => "All installed catalogs are off. Switch one on in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing.",
+            Self::ConnectAgent => "No agent can run a check yet. Agents shows what is available and what needs setup.",
+            Self::FirstCheck => "Search a product title in Run, or open a product URL in your browser and use Quick Look on the listing. Then choose an available agent.",
+            Self::ConnectExtension => "Set up the browser extension to check pages as you read them. You can also run checks here.",
+            Self::AnotherCheck => "Search another product title in Run, or open its URL in your browser and use Quick Look from the listing.",
+        }
+    }
+
+    fn button(self) -> &'static str {
+        match self {
+            Self::InstallCatalog | Self::EnableCatalog => "Open Overview",
+            Self::ConnectAgent => "Open Agents",
+            Self::FirstCheck | Self::AnotherCheck => "Start a check",
+            Self::ConnectExtension => "Set up extension",
+        }
+    }
+
+    fn destination(self) -> Tab {
+        match self {
+            Self::InstallCatalog | Self::EnableCatalog => Tab::Overview,
+            Self::ConnectAgent => Tab::Agents,
+            Self::FirstCheck | Self::AnotherCheck => Tab::Run,
+            Self::ConnectExtension => Tab::Extension,
+        }
+    }
+}
+
+/// The top action on Home follows facts that have actually arrived from the
+/// engine. Unknown slices stay quiet while they load or if a request failed.
+fn next_home_step(
+    catalogs: Option<(usize, usize)>,
+    agents_ready: Option<bool>,
+    has_checks: Option<bool>,
+    extension: Option<(bool, bool)>,
+) -> Option<HomeStep> {
+    let (all, enabled) = catalogs?;
+    if all == 0 {
+        return Some(HomeStep::InstallCatalog);
+    }
+    if enabled == 0 {
+        return Some(HomeStep::EnableCatalog);
+    }
+    if !agents_ready? {
+        return Some(HomeStep::ConnectAgent);
+    }
+    if !has_checks? {
+        return Some(HomeStep::FirstCheck);
+    }
+    let (extension_available, extension_seen) = extension?;
+    if extension_available && !extension_seen {
+        return Some(HomeStep::ConnectExtension);
+    }
+    Some(HomeStep::AnotherCheck)
+}
+
+fn quick_look_available(step: HomeStep, agents_ready: Option<bool>, extension_available: bool) -> bool {
+    matches!(step, HomeStep::InstallCatalog | HomeStep::EnableCatalog)
+        && agents_ready == Some(true)
+        && extension_available
+}
+
+fn next_step_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<gpui::AnyElement> {
+    let h = &app.live.history;
+    let catalogs = h.packs.as_ref().map(|packs| {
+        (packs.len(), packs.iter().filter(|pack| pack.enabled).count())
+    });
+    let agents_ready = app.live.run.prefs_loaded.then(|| {
+        app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready))
+    });
+    let has_checks = h.loaded.then(|| !h.items.is_empty());
+    let extension = if has_checks == Some(true) {
+        app.live.knowledge.ext.as_ref().map(|e| (e.available, e.ever_connected))
+    } else {
+        None
+    };
+    let step = next_home_step(catalogs, agents_ready, has_checks, extension);
+    let Some(step) = step else {
+        let refresh = cx.listener(|this, _: &ClickEvent, _w, cx| {
+            this.refresh_history(cx);
+            this.refresh_agents(cx);
+            this.refresh_extension(cx);
+            cx.notify();
+        });
+        return Some(guidance::next_step(
+            "home-setup-loading",
+            "Checking your setup",
+            "Some setup details are still loading or a request failed. Check again to retry catalogs, agents, and recent checks.",
+            ghost("home-setup-refresh", "Check again").on_click(refresh).into_any_element(),
+            app.motion,
+        ));
+    };
+    let destination = step.destination();
+    let action = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+        this.tab = destination;
+        this.on_open_tab(cx);
+        match destination {
+            Tab::Run => {
+                this.refresh_jobs(cx);
+                this.refresh_agents(cx);
+            }
+            Tab::Agents => this.refresh_agents(cx),
+            _ => {}
+        }
+        cx.notify();
+    });
+    let primary = key("home-next-step", step.button()).on_click(action).into_any_element();
+    let extension_available = app.live.knowledge.ext.as_ref().is_some_and(|e| e.available);
+    let controls = if quick_look_available(step, agents_ready, extension_available) {
+        let quick_look = cx.listener(|this, _: &ClickEvent, _w, cx| {
+            this.tab = Tab::Extension;
+            this.on_open_tab(cx);
+            cx.notify();
+        });
+        div().flex().items_center().gap(px(8.0))
+            .child(primary)
+            .child(ghost("home-quick-look", "Quick Look a product").on_click(quick_look))
+            .into_any_element()
+    } else {
+        primary
+    };
+    Some(guidance::next_step(
+        step.id(),
+        step.title(),
+        step.detail(),
+        controls,
+        app.motion,
+    ))
+}
 
 /// One recent check: what it was about, which catalog, when. Info, no verdict.
 fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Stateful<Div> {
@@ -208,16 +374,23 @@ fn bar_rows(rows: &[(String, f32, String)]) -> Div {
 }
 
 /// The launch notice: a newer Kriko is published. The app opens on Home, so
-/// this is where the reader sees it without going to About. Installing stays a
-/// button the reader presses; nothing downloads on its own.
-fn update_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<Div> {
+/// this is where the reader sees it without going to About. Windows offers an
+/// explicit install action; other platforms link to the release downloads.
+fn update_card(app: &Kriko, _cx: &mut Context<Kriko>) -> Option<Div> {
     let k = &app.live.knowledge;
     let offer = k.app_update.as_ref().filter(|u| u.newer)?;
     let busy = k.app_update_busy;
+    #[cfg(windows)]
     let line = if busy {
         "Installing the update. Kriko will close and reopen.".to_string()
     } else {
         format!("Version {} is available. Installing keeps your catalogs and history.", offer.version)
+    };
+    #[cfg(not(windows))]
+    let line = if busy {
+        "Preparing the update information.".to_string()
+    } else {
+        format!("Version {} is available. Download it from Releases and follow the manual install steps.", offer.version)
     };
     let mut row = div()
         .flex()
@@ -225,11 +398,33 @@ fn update_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<Div> {
         .justify_between()
         .gap(px(24.0))
         .child(mono(&line, INK_2).min_w(px(0.0)));
-    if !busy {
-        row = row.child(
+    #[cfg(windows)]
+    let action = if !busy {
+        Some(
             key("home-app-update-install", "Install and restart")
-                .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| this.install_app_update(cx))),
-        );
+                .on_click(_cx.listener(|this, _: &ClickEvent, _w, cx| this.install_app_update(cx)))
+                .into_any_element(),
+        )
+    } else {
+        None
+    };
+    #[cfg(not(windows))]
+    let action = if !busy {
+        let releases_url = if app.live.health.releases_url.is_empty() {
+            "https://github.com/Berbadov/kriko/releases".to_string()
+        } else {
+            app.live.health.releases_url.clone()
+        };
+        Some(
+            key("home-app-update-releases", "Open release downloads")
+                .on_click(move |_, _, cx| cx.open_url(&releases_url))
+                .into_any_element(),
+        )
+    } else {
+        None
+    };
+    if let Some(action) = action {
+        row = row.child(action);
     }
     let mut notice = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Updates")).child(row);
     if let Some(note) = &k.app_update_note {
@@ -275,9 +470,29 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
     let mut drafts = card().flex().flex_col();
     drafts = drafts.child(div().mb(px(14.0)).child(eyebrow("Drafts")));
     if !h.drafts_loaded {
-        drafts = drafts.child(empty_note("Reading your drafts from the engine."));
+        let retry = cx.listener(|this, _: &ClickEvent, _w, cx| this.refresh_history(cx));
+        drafts = drafts
+            .child(empty_note("Drafts have not loaded yet. Check again if the request failed."))
+            .child(ghost("home-refresh-drafts", "Check again").on_click(retry));
     } else if h.drafts.is_empty() {
-        drafts = drafts.child(empty_note("No saved comparisons yet."));
+        let (destination, label, said) = if h.items.is_empty() {
+            (Tab::Run, "Start a check", "Run checks first, then line them up in Compare.")
+        } else {
+            (Tab::Compare, "Open Compare", "Choose saved checks in Compare to create a comparison.")
+        };
+        let go = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+            this.tab = destination;
+            if destination == Tab::Compare {
+                this.refresh_compare(cx);
+            } else {
+                this.refresh_jobs(cx);
+                this.refresh_agents(cx);
+            }
+            cx.notify();
+        });
+        drafts = drafts
+            .child(empty_note(&format!("No saved comparisons yet. {said}")))
+            .child(div().mt(px(10.0)).child(ghost("home-empty-drafts", label).on_click(go)));
     } else {
         let n = h.drafts.len();
         let rows: Vec<(String, String)> = h
@@ -305,8 +520,10 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
     let checks_body: gpui::AnyElement = if h.loaded && !h.items.is_empty() {
         let months = month_buckets(h.items.iter().filter_map(|i| i.ts), now, 6);
         checks_graph(&months).into_any_element()
-    } else {
+    } else if h.loaded {
         empty_note("No checks to count yet.").into_any_element()
+    } else {
+        empty_note("Check counts have not loaded yet. Use Check again in the next step above.").into_any_element()
     };
     let checks_card = card()
         .flex()
@@ -322,7 +539,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
             ("sources behind them".to_string(), c.evidence as f32, c.evidence.to_string()),
         ])
         .into_any_element(),
-        None => empty_note("Counting what the store holds.").into_any_element(),
+        None => empty_note("Evidence counts have not loaded yet. Use Check again in the next step above.").into_any_element(),
     };
     let claims_card = card()
         .flex()
@@ -336,7 +553,21 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
             let mut live: Vec<_> = packs.iter().filter(|p| p.enabled).collect();
             live.sort_by(|a, b| b.claims.cmp(&a.claims));
             if live.is_empty() {
-                empty_note("No catalog is switched on.").into_any_element()
+                // Either nothing is installed (every fresh install) or it is
+                // all switched off; both are fixed on the Knowledge screen,
+                // so the note is the way there.
+                let go = cx.listener(|this, _: &ClickEvent, _w, cx| {
+                    this.tab = Tab::Overview;
+                    this.on_open_tab(cx);
+                    cx.notify();
+                });
+                let say = if packs.is_empty() {
+                    "No catalog installed yet. Open Overview to install one."
+                } else {
+                    "Every catalog is switched off. Open Overview to switch one on."
+                };
+                div().id("home-no-catalog").cursor_pointer().on_click(go)
+                    .child(empty_note(say)).into_any_element()
             } else {
                 let rows: Vec<(String, f32, String)> = live
                     .iter()
@@ -352,7 +583,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
                 bar_rows(&rows).into_any_element()
             }
         }
-        None => empty_note("Reading the installed catalogs.").into_any_element(),
+        None => empty_note("Catalog details have not loaded yet. Use Check again in the next step above.").into_any_element(),
     };
     let packs_card = card()
         .flex()
@@ -364,6 +595,9 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
     let mut column = div().flex().flex_col().gap(px(24.0));
     if let Some(notice) = update_card(app, cx) {
         column = column.child(notice);
+    }
+    if let Some(next) = next_step_card(app, cx) {
+        column = column.child(next);
     }
     column
         .child(
@@ -385,4 +619,40 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .child(div().flex_1().min_w(px(300.0)).child(claims_card))
                 .child(div().flex_1().min_w(px(300.0)).child(packs_card)),
         )
+}
+
+#[cfg(test)]
+mod guidance_tests {
+    use super::{next_home_step, quick_look_available, HomeStep};
+
+    #[test]
+    fn home_waits_for_live_facts_before_recommending_a_route() {
+        assert_eq!(next_home_step(None, Some(true), Some(false), None), None);
+        assert_eq!(next_home_step(Some((1, 1)), None, Some(false), None), None);
+    }
+
+    #[test]
+    fn first_time_path_leads_from_catalog_to_agent_to_check() {
+        assert_eq!(next_home_step(Some((0, 0)), None, None, None), Some(HomeStep::InstallCatalog));
+        assert_eq!(next_home_step(Some((2, 0)), None, None, None), Some(HomeStep::EnableCatalog));
+        assert_eq!(next_home_step(Some((2, 1)), Some(false), None, None), Some(HomeStep::ConnectAgent));
+        assert_eq!(next_home_step(Some((2, 1)), Some(true), Some(false), None), Some(HomeStep::FirstCheck));
+    }
+
+    #[test]
+    fn returning_reader_gets_extension_then_another_check() {
+        let ready = (Some((1, 1)), Some(true), Some(true));
+        assert_eq!(next_home_step(ready.0, ready.1, ready.2, Some((true, false))), Some(HomeStep::ConnectExtension));
+        assert_eq!(next_home_step(ready.0, ready.1, ready.2, Some((true, true))), Some(HomeStep::AnotherCheck));
+        assert_eq!(next_home_step(ready.0, ready.1, ready.2, Some((false, false))), Some(HomeStep::AnotherCheck));
+    }
+
+    #[test]
+    fn quick_look_stays_available_without_catalogs_when_its_requirements_are_known() {
+        assert!(quick_look_available(HomeStep::InstallCatalog, Some(true), true));
+        assert!(quick_look_available(HomeStep::EnableCatalog, Some(true), true));
+        assert!(!quick_look_available(HomeStep::InstallCatalog, Some(false), true));
+        assert!(!quick_look_available(HomeStep::InstallCatalog, Some(true), false));
+        assert!(!quick_look_available(HomeStep::FirstCheck, Some(true), true));
+    }
 }

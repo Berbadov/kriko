@@ -39,7 +39,7 @@ REQUIRED_KEYS = frozenset({
     "inspection_advice_en", "inspection_advice_tr",
 })
 
-_PRODUCT_PRINCIPLE = """Kriko surfaces used-car risks a buyer CANNOT get from a standard
+_PRODUCT_PRINCIPLE = """This catalog surfaces car risks a buyer CANNOT get from a standard
 pre-purchase inspection (ekspertiz): config-specific (this engine/gearbox code),
 predictable from mileage/age/fuel/transmission alone, maintenance-interval items
 ("due unless the ad proves otherwise"), high-consequence/expensive systems.
@@ -79,7 +79,7 @@ RECALL RECORDS — at least one evidence item here has source_type "structured":
 it is an OFFICIAL safety recall record (e.g. NHTSA), not owner testimony.
 - The record itself IS the claim: supported=true unless another item refutes it.
 - An official safety recall affecting this model is exactly the config-specific,
-  high-consequence signal Kriko exists to surface — product_value "high" unless
+  high-consequence signal this catalog exists to surface — product_value "high" unless
   the recall is pure paperwork trivia (VIN label misprints, compliance docs).
 - Attribution: a recall covers the whole vehicle, so attribute it to the part
   the failed system belongs to — airbags/seatbelts/structure/locks/suspension
@@ -106,7 +106,7 @@ def build_prompt(payload: dict) -> str:
         if any(e.get("source_type") == "structured" for e in payload["evidence"])
         else ""
     )
-    return f"""You are auditing a candidate used-car reliability claim for component
+    return f"""You are auditing a candidate car reliability claim for component
 "{payload['component_id']}" (domain: {payload['domain']}).
 
 CRITICAL — sibling components that are DIFFERENT physical parts and must NOT be

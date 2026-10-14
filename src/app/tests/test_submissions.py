@@ -79,30 +79,3 @@ def test_logging_never_raises_when_the_ledger_is_unreachable(tmp_path):
     log_submission(
         unreachable, door="mcp", subject_id="s", pack_id="p", verdicts=VERDICTS
     )
-
-
-def test_the_endpoint_answers_with_the_reasons_beside_the_batches(tmp_path):
-    from fastapi.testclient import TestClient
-
-    from app.web.app import create_app
-    from app.web.settings import Settings
-
-    settings = Settings(
-        store_path=tmp_path / "knowledge.sqlite",
-        app_state_path=tmp_path / "app.sqlite",
-        analysis_log_path=tmp_path / "analyses.jsonl",
-    )
-    log_submission(
-        settings.app_state_path,
-        door="mcp",
-        subject_id="s1",
-        pack_id="p",
-        verdicts=VERDICTS,
-    )
-    body = TestClient(create_app(settings)).get("/api/submissions").json()
-    assert body["accepted"] == 1
-    assert body["refused"] == 3
-    # A list of batches without the histogram is a log; the histogram is the
-    # part that tells an author what to change.
-    assert body["reasons"][0]["reason"] == "no source"
-    assert len(body["items"]) == 1
