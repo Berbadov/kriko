@@ -905,8 +905,7 @@ claims:
   severity: medium
   confidence: 0.6
   rationale: Injectors on this engine can fail early if the car has had hard use,
-    missed service intervals, or poor fuel. Replacement is expensive, so a used taxi
-    or fleet vehicle is a higher risk unless the ad proves full maintenance.
+    missed service intervals, or poor fuel. Replacement is expensive, so an ex-taxi or ex-fleet vehicle is a higher risk unless the ad proves full maintenance.
   rationale_tr: Bu motorun enjektörleri, yoğun kullanım, aksatılmış bakım veya düşük
     kaliteli yakıt nedeniyle erken arızalanabilir. Değişim maliyetli olduğundan, bakımı
     tam yapıldığı kanıtlanmadıkça taksi veya filo çıkışlı araç daha risklidir.
@@ -1032,11 +1031,10 @@ claims:
   confidence: 0.6
   rationale: The K9K diesel engine's fuel injectors can wear out at high mileage,
     making the car hard to start and causing exhaust smoke. This is a known, expensive
-    issue specific to this engine code, so a used example may need injector replacement.
+    issue specific to this engine code, so a high-mileage example may need injector replacement.
   rationale_tr: K9K dizel motorun yakıt enjektörleri yüksek kilometrede aşınabilir.
     Bu, motorun zor çalışmasına ve egzozdan duman çıkmasına neden olabilir. Bu motor
-    tipine özgü bilinen ve pahalı bir sorundur; bu yüzden kullanılmış bir araçta enjektör
-    değişimi gerekebilir.
+    tipine özgü bilinen ve pahalı bir sorundur; bu yüzden yüksek kilometreli bir araçta enjektör değişimi gerekebilir.
   inspection_advice: Check for hard cold starting, excessive smoke, and uneven idle.
     Listen for ticking from injectors. A diagnostic scan can show injector correction
     values or fault codes like P0263-P0272. Ask for service history of injector replacement.

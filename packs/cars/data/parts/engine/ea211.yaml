@@ -257,11 +257,10 @@ claims:
   severity: medium
   confidence: 0.6
   rationale: Some early EA211 engines (2013–2015) had camshaft phaser failures, causing
-    rough idle and misfires. The manufacturer issued recalls, so a used car may already
-    be fixed but should be verified.
+    rough idle and misfires. The manufacturer issued recalls, so the car may already have been fixed, but check that the recall work was done.
   rationale_tr: Bazı erken EA211 motorlarında (2013–2015) kam mili fazlayıcı arızaları
     yaşandı; bu, rölantide titreme ve teklemelere neden olabilir. Üretici geri çağırma
-    başlattı, bu yüzden kullanılmış araçta bu işlemin yapıldığı doğrulanmalıdır.
+    başlattı, bu yüzden araçta bu işlemin yapıldığı doğrulanmalıdır.
   inspection_advice: Check the vehicle's recall history via VIN; listen for rough
     idle/misfires and inspect for stored DTCs like P000A/P000B or camshaft position
     correlation codes.
@@ -420,13 +419,11 @@ claims:
   rationale: The EA211 engine, including the 1.4 TFSI, can suffer from premature thermostat
     failure, causing the engine to reach operating temperature slowly or overheat.
     Coolant hoses may also crack, increasing the risk of leaks and serious engine
-    damage. This issue tends to appear between 60,000 and 120,000 km, so a used car
-    around that mileage is particularly at risk.
+    damage. This issue tends to appear between 60,000 and 120,000 km, so a car around that mileage is particularly at risk.
   rationale_tr: EA211 motor ailesi (1.4 TFSI dahil) erken termostat arızası yaşayabilir;
     bu, motorun çalışma sıcaklığına geç ulaşmasına veya aşırı ısınmasına neden olabilir.
     Soğutma hortumları da çatlayarak sızıntı ve ciddi motor hasarı riskini artırabilir.
-    Bu sorun genellikle 60.000-120.000 km arasında ortaya çıkar, bu yüzden bu kilometrelerdeki
-    ikinci el araçlar özellikle risk altındadır.
+    Bu sorun genellikle 60.000-120.000 km arasında ortaya çıkar, bu yüzden bu kilometrelerdeki araçlar özellikle risk altındadır.
   inspection_advice: During a test drive, let the engine idle and monitor the temperature
     gauge – it should reach mid-range steadily and stay stable. Inspect coolant hoses
     for cracks, bulges, or leaks, and check for any coolant smell. Use an OBD scanner
@@ -1427,10 +1424,10 @@ claims:
   rationale: After about 100,000 km, turbocharger shaft bearings can wear, allowing
     oil to leak into the intercooler. This contaminated oil can accelerate piston
     ring wear and cause oil burning. Regular inspection of the turbo and intercooler
-    is advised for used 1.4 TSI EA211 cars.
+    is advised for 1.4 TSI EA211 cars past that mileage.
   rationale_tr: Yaklaşık 100.000 km'den sonra turbo şaft yatakları aşınabilir ve yağın
     intercooler'a sızmasına izin verir. Bu kirlenmiş yağ, piston segmanı aşınmasını
-    hızlandırabilir ve yağ yakmaya neden olabilir. Kullanılmış 1.4 TSI EA211 araçlarda
+    hızlandırabilir ve yağ yakmaya neden olabilir. Bu kilometreyi geçmiş 1.4 TSI EA211 araçlarda
     turbo ve intercooler'ın düzenli kontrolü önerilir.
   inspection_advice: Check for oil in the intercooler piping, listen for turbo whine,
     and inspect turbo shaft play. Also check oil consumption history if available.
@@ -1462,12 +1459,10 @@ claims:
   confidence: 0.6
   rationale: The 1.4 TFSI engine (EA211) can develop turbocharger oil leaks between
     80,000 and 150,000 km. This causes blue exhaust smoke, power loss, and increased
-    oil consumption. Irregular oil changes accelerate the problem, so a used car with
-    this engine should be carefully checked.
+    oil consumption. Irregular oil changes accelerate the problem, so a car with this engine should be carefully checked.
   rationale_tr: 1.4 TFSI (EA211) motoru 80.000-150.000 km arasında turbo yağ kaçağı
     geliştirebilir. Bu, egzozdan mavi duman, güç kaybı ve artan yağ tüketimine neden
-    olur. Düzensiz yağ değişimleri sorunu hızlandırır, bu yüzden bu motora sahip ikinci
-    el araç dikkatle kontrol edilmelidir.
+    olur. Düzensiz yağ değişimleri sorunu hızlandırır, bu yüzden bu motora sahip araç dikkatle kontrol edilmelidir.
   inspection_advice: Check for blue smoke from exhaust, listen for turbo whine, inspect
     oil consumption records, and verify oil change history. A diagnostic scan may
     show turbo-related faults.

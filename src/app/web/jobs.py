@@ -43,6 +43,7 @@ job is asked to stop, never made to.
 
 import sqlite3
 import threading
+import time
 import traceback
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
@@ -55,7 +56,12 @@ from app.web import state
 
 #: Kinds that never write the store or a pack directory, and are short enough
 #: that queueing them behind long work would defeat them.
-QUICK_KINDS = frozenset({"quick_look", "quick_ask", "lookup_ask"})
+QUICK_KINDS = frozenset({
+    "quick_look", "quick_ask", "lookup_ask", "categorize_quick_look",
+})
+
+LIVE_DRAFT_CHARS = 8_192
+LIVE_DRAFT_INTERVAL = 0.1
 
 #: The claim that overlaps every other: a job holding it runs alone.
 EVERYTHING = "*"
@@ -78,13 +84,17 @@ def claims(kind: str, params: dict) -> frozenset[str]:
     by the agent mid-run, so two authors cannot be told apart up front, and an
     amend may be extending the very draft an author is writing.
     """
+    if kind == "categorize_quick_look":
+        # This writes a validated assignment to app state, not a pack or the
+        # knowledge store. It is safe alongside every other job.
+        return frozenset()
     if kind in ("research", "verify", "site_register", "agenda_run", "bench",
                 "pack_update"):
         return _named("pack", params.get("pack_id"))
     if kind == "pack_build":
         root = str(params.get("root") or "").replace("\\", "/").rstrip("/")
         return _named("pack", root.rsplit("/", 1)[-1])
-    if kind in ("pack_author", "pack_amend"):
+    if kind in ("pack_author", "pack_amend", "pack_harvest"):
         return frozenset({"drafts"})
     if kind == "compare_ask":
         return _named("compare", params.get("draft_id"))
@@ -115,16 +125,47 @@ class Progress:
 
     job_id: str
     _conn: sqlite3.Connection
+    _base_message: str = ""
+    _draft_message: str = ""
+    _draft_last_write: float = 0.0
 
     def log(self, line: str) -> None:
         state.update_job(self._conn, self.job_id, line=line)
 
     def set(self, progress: float, message: str = "") -> None:
+        if message:
+            self._base_message = message
+        shown = self._draft_message or message or self._base_message
         state.update_job(
             self._conn,
             self.job_id,
             progress=progress,
-            message=message or None,
+            message=shown or None,
+        )
+
+    def draft(self, text: str, *, force: bool = False) -> None:
+        """Show bounded live prose in the job's existing status field.
+
+        The first fragment is durable immediately. Later updates are
+        coalesced to at most ten snapshots per second, so a token stream does
+        not rewrite the SQLite row on every delta. Clearing the draft restores
+        the phase message; the action log remains a separate, append-only
+        record of completed events.
+        """
+        now = time.monotonic()
+        clean = str(text or "")[-(LIVE_DRAFT_CHARS - len("Writing: ")):]
+        visible = f"Writing: {clean}" if clean else ""
+        if visible == self._draft_message and not force:
+            return
+        if visible and self._draft_message and not force:
+            if now - self._draft_last_write < LIVE_DRAFT_INTERVAL:
+                self._draft_message = visible
+                return
+        self._draft_message = visible
+        self._draft_last_write = now
+        state.update_job(
+            self._conn, self.job_id,
+            message=visible or self._base_message or None,
         )
 
     @property
@@ -200,9 +241,15 @@ class _Waiting:
 
 
 class JobRunner:
-    def __init__(self, settings, handlers: Mapping[str, Handler]):
+    def __init__(self, settings, handlers: Mapping[str, Handler],
+                 on_idle: Callable[[], object] | None = None):
         self.settings = settings
         self.handlers = handlers
+        #: Called each time the last running job ends, both lanes counted:
+        #: what a job held for its run (a loaded model) goes back to the host
+        #: then, and never while another job may still be using it.
+        self._on_idle = on_idle
+        self._active = 0
         # Sized to the ceiling, not to the choice: the choice is read at every
         # start, so raising it in Settings needs no restart, and an idle
         # executor thread costs nothing.
@@ -351,6 +398,8 @@ class JobRunner:
 
     def _run(self, job_id: str, kind: str, params: dict, lane: bool = True,
              waited: bool = False) -> None:
+        with self._lock:
+            self._active += 1
         conn = self._connect()
         progress = Progress(job_id, conn)
         try:
@@ -413,8 +462,19 @@ class JobRunner:
             )
         finally:
             conn.close()
+            self._idle_check()
             if lane:
                 self._done(job_id)
+
+    def _idle_check(self) -> None:
+        with self._lock:
+            self._active -= 1
+            idle = self._active == 0 and not self._waiting
+        if idle and self._on_idle is not None:
+            try:
+                self._on_idle()
+            except Exception:  # noqa: BLE001 - letting go is a courtesy, never a failure
+                traceback.print_exc()
 
     def cancel(self, job_id: str) -> str | None:
         conn = self._connect()
@@ -432,3 +492,8 @@ class JobRunner:
             self._waiting.clear()
         self._pool.shutdown(wait=wait, cancel_futures=True)
         self._quick.shutdown(wait=wait, cancel_futures=True)
+        if self._on_idle is not None:
+            try:
+                self._on_idle()
+            except Exception:  # noqa: BLE001 - quitting goes on regardless
+                pass

@@ -241,6 +241,8 @@ def test_only_ollama_can_be_pulled_through(client):
     assert "LM Studio" in refused.json()["detail"]
     bad = client.post("/api/local-models/pull", json={"runtime": "ollama", "model": "a b; rm"})
     assert bad.status_code == 422
+    tiny = client.post("/api/local-models/pull", json={"runtime": "ollama", "model": "qwen3.5:0.8b"})
+    assert tiny.status_code == 422 and "under 2B" in tiny.json()["detail"]
 
 
 def test_a_pull_is_a_job_that_fails_with_the_runtimes_words(client, settings, monkeypatch, ollama):
@@ -248,7 +250,7 @@ def test_a_pull_is_a_job_that_fails_with_the_runtimes_words(client, settings, mo
 
     monkeypatch.setattr(modelpull, "ollama_base", lambda path=None: ollama)
     FakeOllama.script = [{"error": "model not found"}]
-    started = client.post("/api/local-models/pull", json={"runtime": "ollama", "model": "tiny:1b"})
+    started = client.post("/api/local-models/pull", json={"runtime": "ollama", "model": "small:4b"})
     assert started.status_code == 200 and started.json()["kind"] == "model_pull"
     assert "model_pull" in tasks.HANDLERS
     conn = state.connect(settings.app_state_path)
@@ -330,7 +332,8 @@ def test_the_library_rows_carry_sizes_and_a_line_and_not_the_pull_count():
         '<li><a href="/library/plain"><span>plain</span></a></li>'
     )
     rows = modelpull._library_rows(page)
-    assert rows[0] == {"name": "tiny", "sizes": ["1b", "270m", "8x7b"], "about": "Small & quick."}
+    # 1b and 270m are under the floor Kriko runs (#181), so they are not offered.
+    assert rows[0] == {"name": "tiny", "sizes": ["8x7b"], "about": "Small & quick."}
     assert rows[1] == {"name": "plain", "sizes": [], "about": ""}
 
 

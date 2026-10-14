@@ -65,22 +65,32 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
 }
 
 pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let key_input = app.input_field(Field::KeyValue, "key-value", "Paste the key, then Save", None, window, cx);
     let runtime = crate::screens::local::runtime_settings(app, cx);
     let k = &app.live.knowledge;
 
     // ---- general ----
-    let mut login = div().flex().gap(px(6.0)).opacity(if k.startup_busy { 0.5 } else { 1.0 });
+    let mut login = div().flex().flex_wrap().items_center().gap(px(6.0));
     for (id, label, mode) in [
         ("startup-off", "Off", StartupMode::Off),
         ("startup-window", "Window", StartupMode::Window),
         ("startup-tray", "Tray", StartupMode::Tray),
     ] {
         let button = if k.startup_mode == mode { key(id, label) } else { ghost(id, label) };
-        login = login.child(button.px(px(10.0)).h(px(34.0)).on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+        let set_mode = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.set_startup_mode(mode, cx);
-        })));
+        });
+        login = login.child(
+            button
+                .px(px(12.0))
+                .h(px(40.0))
+                .opacity(if k.startup_busy { 0.55 } else { 1.0 })
+                .when(!k.startup_busy, |b| b.on_click(set_mode)),
+        );
+    }
+    if k.startup_busy {
+        login = login.child(tag("startup-saving", TagState::Live, "Saving", motion).flex_none());
     }
     let reduce = switch_anim("sw-motion", app.reduce_motion, motion).on_click(cx.listener(
         |this, _: &gpui::ClickEvent, _w, cx| {
@@ -100,7 +110,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .child(hairline())
         .child(row(
             "Launch at login",
-            "Open the window or keep Kriko in the tray when Windows starts",
+            "Open the window or keep Kriko in the tray when your computer starts",
             login.into_any_element(),
         ))
         .child(hairline())
@@ -163,7 +173,12 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     }
     for (i, p) in k.keys.iter().enumerate() {
         let picked = k.key_provider.as_deref() == Some(p.id.as_str());
-        let (pid, rid) = (p.id.clone(), p.id.clone());
+        let (pid, rid, tid) = (p.id.clone(), p.id.clone(), p.id.clone());
+        let test = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.test_key(tid.clone(), cx);
+            cx.notify();
+        });
+        let tested = k.key_tests.get(&p.id).cloned();
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.live.knowledge.key_provider = Some(pid.clone());
             cx.notify();
@@ -186,9 +201,14 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     .items_center()
                     .gap(px(8.0))
                     .child(ghost(("key-pick", i), if picked { "Typing" } else { "Set" }).on_click(pick))
+                    .when(p.present, |d| d.child(ghost(("key-test", i), "Test").on_click(test)))
                     .when(p.present, |d| d.child(ghost(("key-remove", i), "Remove").on_click(remove)))
                     .into_any_element(),
             ))
+            .when_some(tested.filter(|_| p.present), |d, t| {
+                let ink = if t.busy { MUTED } else if t.ok { ICE } else { DANGER };
+                d.child(div().pb(px(10.0)).child(mono(&t.said, ink)))
+            })
             .child(hairline());
     }
     if let Some(target) = k.key_provider.as_ref().and_then(|id| k.keys.iter().find(|p| &p.id == id)) {

@@ -740,13 +740,11 @@ claims:
   confidence: 0.6
   rationale: The evidence indicates that dc4's actuator/gear shift motors can cause
     delayed or harsh shifts, or even complete failure. These faults can also affect
-    the transmission computer and clutch, leading to a costly repair. This is a specific,
-    predictable transmission issue for a used-car buyer.
+    the transmission computer and clutch, leading to a costly repair. This is a specific, predictable transmission issue a buyer should know about.
   rationale_tr: Kanıt, dc4'ün aktüatör/vites geçiş motorlarının gecikmeli veya sert
     vites geçişlerine, hatta tamamen vites geçiş yapılamamasına neden olabileceğini
     gösteriyor. Bu arızalar şanzıman beynini ve kavramayı da etkileyerek pahalı bir
-    onarıma yol açabilir. Bu, ikinci el araç alıcısı için spesifik ve öngörülebilir
-    bir şanzıman sorunudur.
+    onarıma yol açabilir. Bu, alıcının bilmesi gereken spesifik ve öngörülebilir bir şanzıman sorunudur.
   inspection_advice: Check for an EDC warning light, test gear shifts for delay or
     harshness, and read transmission fault codes (e.g., actuator errors) during a
     diagnostic scan.

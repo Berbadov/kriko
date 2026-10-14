@@ -118,8 +118,10 @@ def disposition(verdict: dict, n_independent: int, has_structured: bool) -> str 
     comp = (verdict.get("attribution") or {}).get("component_id") or ""
     if comp in ("", "foreign", "none"):
         return None
-    if verdict.get("severity") == "high":
-        return "review"   # invariant: high severity always needs a human
+    # Severity does not change the evidence rule. It used to send every high
+    # one to "review" for a person who is never asked (no human in the data
+    # path), and "review" ranks at 0.6 against 1.0, so the most expensive
+    # failures were shown below cheap ones with the same evidence.
     if n_independent >= 2 or has_structured:
         return "verified"
     return "review"

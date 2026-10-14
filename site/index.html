@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kriko</title>
+<meta name="description" content="Kriko shows what is known to go wrong with the product on the page you are reading, with the page and quote behind every finding. Free, open source, and it runs on your computer.">
+<meta property="og:title" content="Kriko">
+<meta property="og:description" content="Know what to check before you buy.">
+<meta property="og:image" content="assets/icon-128.png">
+<link rel="icon" href="assets/icon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* One dark instrument surface, one loud blue. Sky hero, then a dark stage
+   for the finding, then plain sections in one 1120px column.
+   Tokens are the desktop app's (kriko-gpui/src/theme.rs). */
+:root {
+  --ground: #05070f;
+  --surface-1: #090e1b;
+  --surface-2: #0d1427;
+  --glass-1: rgba(255, 255, 255, 0.05);
+  --glass-2: rgba(255, 255, 255, 0.08);
+  --hairline: rgba(255, 255, 255, 0.10);
+  --border-control: rgba(255, 255, 255, 0.35);
+  --ink: #f2f5ff;
+  --ink-2: #c9d1ea;
+  --muted: #98a3c2;
+  --dim: #8893b2;
+  --brand: #1f4fff;
+  --brand-hover: #3a64ff;
+  --brand-low: #1739c2;
+  --brand-deep: #0a1a66;
+  --brand-bright: #86a3ff;
+  --ice: #bfe4ff;
+  --on-brand: #ffffff;
+  --bezel-hi: #3a4156;
+  --bezel-lo: #181c2a;
+  --bezel-edge: #06080f;
+  --well: #080b16;
+
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --gutter: clamp(16px, 4vw, 48px);
+  --col: 1120px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 16px/1.55 var(--sans);
+}
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+a { color: var(--brand-bright); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+
+.wrap { max-width: var(--col); margin: 0 auto; padding-inline: var(--gutter); }
+
+.eyebrow {
+  font: 600 11px/14px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* keys and plates */
+.key, .plate {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 48px; padding: 0 20px;
+  border-radius: var(--r-md);
+  font: 600 16px/1 var(--display);
+  letter-spacing: 0.06em; text-transform: uppercase;
+  text-decoration: none;
+  transition: background-color 90ms linear, border-color 90ms linear;
+}
+.key { background: var(--brand); color: var(--on-brand); border: 1px solid transparent; }
+.key:hover { background: var(--brand-hover); }
+.key:active { background: var(--brand-low); }
+.plate { background: var(--bezel-lo); color: var(--ink-2); border: 1px solid var(--bezel-edge); }
+.plate:hover { background: var(--bezel-hi); }
+.key svg, .plate svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* top bar */
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  background: rgba(5, 7, 15, 0.92);
+  border-bottom: 1px solid var(--hairline);
+}
+.top .wrap { display: flex; align-items: center; gap: 24px; min-height: 64px; }
+.top img { height: 20px; width: auto; display: block; }
+.top nav { display: flex; gap: 20px; margin-left: 8px; }
+.top nav a {
+  color: var(--muted); text-decoration: none;
+  font: 600 15px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.top nav a:hover { color: var(--ink); }
+.top .sp { flex: 1; }
+.top .key { min-height: 40px; padding: 0 16px; font-size: 15px; }
+
+/* hero: the app's dithered sky, clouds right, text left on brand blue */
+.hero {
+  background: var(--brand) url("assets/sky-hero.png") right bottom / auto 100% no-repeat;
+  image-rendering: pixelated;
+  color: var(--on-brand);
+}
+.hero .wrap { padding-block: clamp(56px, 10vw, 120px) clamp(72px, 12vw, 150px); display: grid; gap: 24px; }
+.hero .eyebrow { color: var(--on-brand); opacity: 0.8; }
+.hero h1 {
+  font: 700 clamp(48px, 8vw, 96px)/0.92 var(--display);
+  letter-spacing: -0.01em; text-transform: uppercase;
+}
+.hero .lead { font-size: clamp(17px, 2vw, 19px); line-height: 1.5; max-width: 46ch; }
+.hero .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.hero .key { background: var(--on-brand); color: var(--brand-low); }
+.hero .key:hover { background: var(--ice); }
+.hero .plate { background: rgba(5, 7, 15, 0.28); color: var(--on-brand); border-color: rgba(255, 255, 255, 0.35); }
+.hero .plate:hover { background: rgba(5, 7, 15, 0.45); }
+.hero .note { font: 400 12px/16px var(--mono); opacity: 0.85; }
+
+/* sections */
+section.band { padding-block: clamp(56px, 8vw, 96px); border-top: 1px solid var(--hairline); }
+.head { display: grid; gap: 12px; margin-bottom: 40px; max-width: 62ch; }
+.head h2 {
+  font: 700 clamp(36px, 5vw, 56px)/1 var(--display);
+  text-transform: uppercase;
+}
+.head p { color: var(--muted); font-size: 17px; }
+
+/* the finding, as the extension panel shows it */
+.beside { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px; align-items: start; }
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.panel-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 20px; border-bottom: 1px solid var(--hairline);
+  font: 400 12px/16px var(--mono); color: var(--dim);
+}
+.panel-bar b { color: var(--ink-2); font-weight: 600; }
+.finding { padding: 24px 20px; display: grid; gap: 16px; }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: var(--r-sm);
+  background: var(--well);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.75), inset 0 -1px 0 rgba(255, 255, 255, 0.06);
+  font: 600 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted);
+}
+.tag.ok { color: var(--ice); }
+.finding h3 { font: 600 22px/1.3 var(--sans); color: var(--ink); }
+.finding .why { color: var(--ink-2); font-size: 15px; }
+.check {
+  background: var(--glass-1); border-radius: var(--r-md); padding: 14px 16px;
+  font-size: 15px; color: var(--ink-2);
+}
+.check .eyebrow { display: block; margin-bottom: 6px; color: var(--brand-bright); }
+.sources { list-style: none; margin: 0; padding: 0; display: grid; }
+.sources li { padding-block: 12px; border-top: 1px solid var(--hairline); display: grid; gap: 4px; }
+.sources q { color: var(--ink-2); font-size: 14px; }
+.sources a { font: 400 12px/16px var(--mono); text-decoration: none; }
+.sources a:hover { text-decoration: underline; }
+.caption { margin-top: 12px; font: 400 12px/16px var(--mono); color: var(--dim); }
+
+.points { list-style: none; margin: 0; padding: 0; display: grid; gap: 28px; }
+.points h3 { font: 600 24px/1.1 var(--display); text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink); margin-bottom: 6px; }
+.points p { color: var(--muted); }
+
+/* steps: a real sequence, so numbered */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
+.steps li {
+  counter-increment: step;
+  background: var(--glass-1); border: 1px solid var(--hairline); border-radius: var(--r-lg);
+  padding: 24px; display: grid; gap: 10px; align-content: start;
+}
+.steps li::before {
+  content: counter(step);
+  font: 700 40px/1 var(--display); color: var(--brand-bright);
+}
+.steps h3 { font: 600 20px/1.15 var(--display); text-transform: uppercase; letter-spacing: 0.03em; }
+.steps p { color: var(--muted); font-size: 15px; }
+.after { margin-top: 20px; color: var(--muted); max-width: 70ch; }
+.after strong { color: var(--ink-2); font-weight: 600; }
+
+/* catalogs */
+.cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.cat { border-radius: var(--r-lg); padding: 28px; display: grid; gap: 14px; align-content: start; }
+.cat.filled { background: var(--glass-1); border: 1px solid var(--hairline); }
+.cat.open { border: 1px dashed var(--border-control); }
+.cat h3 { font: 700 32px/1 var(--display); text-transform: uppercase; }
+.cat p { color: var(--muted); }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; }
+.facts div { display: grid; }
+.facts dt { font: 600 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.facts dd { margin: 0; font: 600 28px/1.1 var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* rules */
+.rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+.rules h3 { font: 600 24px/1.1 var(--display); text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 8px; }
+.rules p { color: var(--muted); }
+
+/* download */
+.dl { width: 100%; border-collapse: collapse; }
+.dl-scroll { overflow-x: auto; }
+.dl th, .dl td { text-align: left; padding: 16px 12px; border-top: 1px solid var(--hairline); vertical-align: top; }
+.dl th { font: 600 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); border-top: 0; padding-top: 0; }
+.dl td:first-child { font: 600 20px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
+.dl td { color: var(--muted); }
+.dl code { font: 400 13px/1 var(--mono); color: var(--ink-2); }
+.dl .soon { font: 600 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+
+/* pay what you want: the one brand block below the hero */
+.support {
+  background: var(--brand-deep);
+  border-radius: var(--r-lg);
+  padding: clamp(28px, 5vw, 56px);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 48px; align-items: center;
+}
+.support h2 { font: 700 clamp(32px, 4.5vw, 48px)/1 var(--display); text-transform: uppercase; margin-bottom: 12px; }
+.support p { color: var(--ink-2); max-width: 52ch; }
+.support .pending { font: 400 12px/16px var(--mono); color: var(--brand-bright); }
+
+footer { border-top: 1px solid var(--hairline); padding-block: 40px; color: var(--dim); font-size: 14px; }
+footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; }
+footer img { height: 16px; width: auto; display: block; opacity: 0.8; }
+footer nav { display: flex; flex-wrap: wrap; gap: 20px; }
+footer a { color: var(--muted); text-decoration: none; }
+footer a:hover { color: var(--ink); }
+footer .sp { flex: 1; }
+
+@media (max-width: 900px) {
+  .beside { grid-template-columns: minmax(0, 1fr); }
+  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rules { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .support { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .top nav { display: none; }
+  .hero { background-position: left bottom; }
+  .steps, .cats { grid-template-columns: minmax(0, 1fr); }
+  .dl td:first-child { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a href="#top" aria-label="Kriko home"><img src="assets/kriko-wordmark-white.svg" alt="Kriko" width="60" height="20"></a>
+    <nav aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#catalogs">Catalogs</a>
+      <a href="#download">Download</a>
+      <a href="https://github.com/Berbadov/kriko">GitHub</a>
+    </nav>
+    <span class="sp"></span>
+    <a class="key" href="#download">Download</a>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="hero">
+  <div class="wrap">
+    <div class="eyebrow">kriko / local product knowledge</div>
+    <h1>Know what to check<br> before you buy.</h1>
+    <p class="lead">Kriko shows what is known to go wrong with the product on the page you're reading, and the page and quote each finding came from. It runs on your computer.</p>
+    <div class="cta">
+      <a class="key" href="https://github.com/Berbadov/kriko/releases/latest">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Download for Windows
+      </a>
+      <a class="plate" href="https://github.com/Berbadov/kriko">View the source</a>
+    </div>
+    <p class="note">v1.5.0 · Windows x64 · no account · macOS coming</p>
+  </div>
+</section>
+
+<section class="band" id="beside">
+  <div class="wrap beside">
+    <figure style="margin:0">
+      <div class="panel" aria-label="A finding as the browser extension shows it">
+        <div class="panel-bar"><span><b>Volkswagen Golf 7</b></span><span>cars catalog</span></div>
+        <div class="finding">
+          <div class="tags">
+            <span class="tag ok">Reported · 3 sources</span>
+            <span class="tag">Bodywork</span>
+          </div>
+          <h3>Rear seals leak water into the boot</h3>
+          <p class="why">The seals around the rear lights and the rear air vents can deteriorate and let rainwater in. It collects in the spare wheel well.</p>
+          <div class="check"><span class="eyebrow">What to ask</span>Look for dampness, a musty smell or water stains in the spare wheel well and around the rear light casings.</div>
+          <ul class="sources">
+            <li><q>The seals on the rear air vents (hidden behind the back bumper) fail and allow sprayed up road water into the boot.</q><a href="https://www.deutsche-parts.co.uk/blog/post/golf-mk7-water-leaks.html">deutsche-parts.co.uk</a></li>
+            <li><q>These seals can deteriorate with time and if this happens they allow water into the boot area through the rear light apertures.</q><a href="https://www.telegraph.co.uk/cars/advice/should-volkswagen-pay-to-repair-my-leaking-golf/">telegraph.co.uk</a></li>
+          </ul>
+        </div>
+      </div>
+      <figcaption class="caption">A real finding from the Cars catalog, with two of its three quotes.</figcaption>
+    </figure>
+    <ul class="points">
+      <li><h3>Beside the listing</h3><p>The browser extension opens a panel next to the product you're reading and shows what is documented about that exact model.</p></li>
+      <li><h3>Every finding shows its source</h3><p>Open the page a finding came from and read the quote behind it. Kriko doesn't rate products or pick a winner.</p></li>
+      <li><h3>Ask about anything else</h3><p>When no catalog covers a product, Quick look sends the agent you chose to search and read, then shows its sources the same way.</p></li>
+    </ul>
+  </div>
+</section>
+
+<section class="band" id="how">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">How it works</div>
+      <h2>Set up once, then browse</h2>
+    </div>
+    <ol class="steps">
+      <li><h3>Install Kriko</h3><p>Run the Windows installer. No administrator rights, no Python or Node to install.</p></li>
+      <li><h3>Add the extension</h3><p>In Kriko, open Browser extension and follow the steps to add it to Chrome.</p></li>
+      <li><h3>Install a catalog</h3><p>Open Overview and press Install on the catalogs you want. They update every week.</p></li>
+      <li><h3>Open a listing</h3><p>Open the Kriko panel on a product page and read what is known about it.</p></li>
+    </ol>
+    <p class="after"><strong>Not covered yet?</strong> Quick look researches it with your agent. Save quick looks into a catalog and it grows from what you already found.</p>
+  </div>
+</section>
+
+<section class="band" id="catalogs">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Catalogs</div>
+      <h2>One category, one catalog</h2>
+      <p>The engine knows no category. Each catalog brings its own products, findings and sources, so a new category is new data, not a new app.</p>
+    </div>
+    <div class="cats">
+      <article class="cat filled">
+        <div class="eyebrow">Published · CC BY-SA 4.0</div>
+        <h3>Cars</h3>
+        <dl class="facts">
+          <div><dt>Findings</dt><dd>699</dd></div>
+          <div><dt>Languages</dt><dd>EN · TR</dd></div>
+        </dl>
+        <p>Engines, gearboxes, electrics and bodywork, each finding tied to the pages it came from. Install it from Overview in the app.</p>
+      </article>
+      <article class="cat open">
+        <div class="eyebrow">Any other product</div>
+        <h3>Yours next</h3>
+        <p>Quick look works on any product page. File what you find into a catalog, and share it as one file anyone can install.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="rules">
+  <div class="wrap rules">
+    <div><h3>Runs on your computer</h3><p>Looking up an installed catalog works offline. Catalogs and your history stay on your machine. There is no account.</p></div>
+    <div><h3>Your agent, your bill</h3><p>Research uses the agent or model you choose: a coding agent you already have, a local model, or your own API key.</p></div>
+    <div><h3>Open source</h3><p>The app is MIT licensed. Read the code, build it yourself, or write a catalog for a category you know.</p></div>
+  </div>
+</section>
+
+<section class="band" id="download">
+  <div class="wrap">
+    <div class="head">
+      <div class="eyebrow">Download</div>
+      <h2>Get Kriko</h2>
+    </div>
+    <div class="dl-scroll">
+      <table class="dl">
+        <thead><tr><th scope="col">Platform</th><th scope="col">File</th><th scope="col">Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Windows</td><td><a href="https://github.com/Berbadov/kriko/releases/latest"><code>kriko-1.5.0-x86_64.msi</code></a></td><td>Start menu and desktop shortcuts. No administrator rights needed.</td></tr>
+          <tr><td>Windows portable</td><td><a href="https://github.com/Berbadov/kriko/releases/latest"><code>kriko-1.5.0-win64-portable.zip</code></a></td><td>Unzip, keep the files together, open <code>kriko.exe</code>.</td></tr>
+          <tr><td>macOS</td><td><span class="soon">Coming</span></td><td>In progress.</td></tr>
+          <tr><td>Chrome extension</td><td><a data-link="chrome" hidden>Chrome Web Store</a><span data-unless="chrome">From the app</span></td><td>Kriko must be running for the extension to answer.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="support">
+  <div class="wrap">
+    <div class="support">
+      <div>
+        <h2>Pay what you want</h2>
+        <p>Kriko is free and stays free. If it saved you from a bad buy, pay what it was worth to you. It goes straight into more catalogs and the macOS build.</p>
+      </div>
+      <div>
+        <a class="key" data-link="pay" hidden>Pay what you want</a>
+        <span class="pending" data-unless="pay">Payments open soon.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <img src="assets/kriko-wordmark-white.svg" alt="Kriko" width="48" height="16">
+    <span>MIT licence. Each catalog carries its own.</span>
+    <span class="sp"></span>
+    <nav aria-label="Footer">
+      <a href="https://github.com/Berbadov/kriko">Source</a>
+      <a href="https://github.com/Berbadov/kriko/releases">Releases</a>
+      <a href="https://github.com/Berbadov/kriko/issues">Report a problem</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+// Fill these in when they exist; until then the links stay hidden and the
+// fallback text shows. pay: the Lemon Squeezy checkout link. chrome: the
+// Chrome Web Store listing.
+const LINKS = { pay: "", chrome: "" };
+
+document.querySelectorAll("[data-link]").forEach((a) => {
+  const url = LINKS[a.dataset.link];
+  if (url) { a.href = url; a.hidden = false; }
+});
+document.querySelectorAll("[data-unless]").forEach((el) => {
+  if (LINKS[el.dataset.unless]) el.hidden = true;
+});
+</script>
+</body>
+</html>

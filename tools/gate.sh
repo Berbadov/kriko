@@ -123,6 +123,14 @@ if [ "$only" = all ] || [ "$only" = node ]; then
     # that covers the extension reading a page. The quoting is fixed in
     # package.json; this is the part that makes the *next* such mistake loud.
     # An empty suite and a passing suite must not produce the same tick.
+    # And never `--test-force-exit`: it ends the run as soon as the tests
+    # registered so far have finished, so a file that registers its tests a
+    # moment later is skipped, silently. It cut 31 panel tests from about one
+    # run in six, each such run still printing "fail 0".
+    if grep -q -- "--test-force-exit" package.json; then
+        echo "package.json runs node with --test-force-exit, which drops tests silently." >&2
+        exit 1
+    fi
     node_out=$(npm test 2>&1)
     printf '%s\n' "$node_out"
     node_count=$(printf '%s' "$node_out" | sed -n 's/.*[^a-z]tests \([0-9][0-9]*\).*/\1/p' | tail -1)
@@ -183,6 +191,22 @@ if [ "$only" = all ] || [ "$only" = gpui ]; then
             result=0
             _gpui_cargo "the cargo tests" test "${cargo_profile_args[@]}" || result=$?
             [ "$result" = 1 ] && exit 1
+        fi
+
+        # The Windows-only code (tray, single instance, window sizing, the
+        # failure box) compiles only for Windows, and the reader is on
+        # Windows. Off a Windows host it is checked by cross-compiling when
+        # the target is installed; otherwise the gate says it was not.
+        case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) win_host=1 ;; *) win_host=0 ;; esac
+        if [ "$result" = 0 ] && [ "$win_host" = 0 ]; then
+            step "cargo check --target x86_64-pc-windows-gnu (kriko-gpui)"
+            if command -v rustup >/dev/null 2>&1 && rustup target list --installed 2>/dev/null | grep -qx x86_64-pc-windows-gnu; then
+                result=0
+                _gpui_cargo "the Windows cargo check" check --target x86_64-pc-windows-gnu "${cargo_profile_args[@]}" || result=$?
+                [ "$result" = 1 ] && exit 1
+            else
+                echo "not checked for Windows: the x86_64-pc-windows-gnu target is not installed (\`rustup target add x86_64-pc-windows-gnu\` adds it)"
+            fi
         fi
     fi
 fi

@@ -34,7 +34,7 @@ fn settle(
 }
 
 pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let search = app.input_field(Field::OverviewSearch, "overview-search", "Search packs or products", Some("search"), window, cx);
     let query = app.overview_search.value.to_lowercase();
     let pack_pick = app.overview_pack.clone();
@@ -104,8 +104,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         drawer = drawer.child(eyebrow("Status")).child(choices);
         panel = panel.child(drawer);
     }
-    controls = controls.child(div().mt(px(-12.0)).child(reveal(panel, "overview-filters-reveal", app.overview_filters_open, 1000.0, !app.reduce_motion)));
-    if matches == 0 && k.packs_loaded { controls = controls.child(empty_note("No record matches. Reset the filters or change the search.")); }
+    controls = controls.child(div().mt(px(-12.0)).child(reveal(panel, "overview-filters-reveal", app.overview_filters_open, 1000.0, app.motion)));
+    // Only a search or a filter can "not match"; an empty store is said by
+    // the packs card below, once.
+    let narrowed = active > 0 || !query.is_empty();
+    if matches == 0 && k.packs_loaded && narrowed { controls = controls.child(empty_note("No record matches. Reset the filters or change the search.")); }
 
     if !k.packs_loaded {
         return div().child(empty_note(
@@ -113,22 +116,33 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         ));
     }
 
-    // ---- pack updates: only when a newer version is on offer ----
-    let mut banner: Option<Div> = None;
-    if !k.offers.is_empty() {
+    // ---- what the index offers: packs to install, then newer versions ----
+    // One card per kind, because "Install" and "Update" are different
+    // promises: the first adds knowledge the store never had.
+    let working = k.update_job.as_ref().map(|j| !j.done).unwrap_or(false);
+    let (installable, newer): (Vec<_>, Vec<_>) = k.offers.iter().enumerate().partition(|(_, o)| o.installed.is_empty());
+    let mut offer_cards: Vec<Div> = Vec::new();
+    for (title, group, verb) in [("Packs you can install", installable, "Install"), ("Pack updates", newer, "Update")] {
+        if group.is_empty() {
+            continue;
+        }
         let mut b = card()
             .flex()
             .flex_col()
-            .child(div().mb(px(4.0)).child(eyebrow("Pack updates")))
+            .child(div().mb(px(4.0)).child(eyebrow(title)))
             .child(hairline());
-        let working = k.update_job.as_ref().map(|j| !j.done).unwrap_or(false);
-        for (i, o) in k.offers.iter().enumerate() {
+        for (i, o) in group {
             let id = o.pack_id.clone();
             let go = cx.listener(move |this, _: &ClickEvent, _w, cx| {
                 this.update_pack(id.clone(), cx);
             });
-            let button = key(("pack-update", i), "Update");
+            let button = key(("pack-offer", i), verb);
             let button = if working { button.opacity(0.5) } else { button.on_click(go) };
+            let version = if o.installed.is_empty() {
+                format!("version {}", o.offered)
+            } else {
+                format!("{} to {}", o.installed, o.offered)
+            };
             b = b.child(
                 div()
                     .py(px(10.0))
@@ -144,26 +158,70 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                             .flex_col()
                             .gap(px(2.0))
                             .child(row_title(&o.name))
-                            .child(mono(&format!("{} to {}", o.installed, o.offered), MUTED)),
+                            .child(mono(&version, MUTED)),
                     )
                     .child(button),
             );
         }
-        if let Some(job) = &k.update_job {
-            let line = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
-            b = b.child(mono(&line, if job.state == "failed" { DANGER } else { MUTED }));
-        }
-        banner = Some(b);
+        offer_cards.push(b);
     }
+    let job_line = k.update_job.as_ref().map(|job| {
+        let line = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
+        mono(&line, if job.state == "failed" { DANGER } else { MUTED })
+    });
+    // The job's line sits under the last offer card, or under the packs
+    // card when there is no offer to sit under.
+    let job_line = match (job_line, offer_cards.pop()) {
+        (Some(line), Some(last)) => {
+            offer_cards.push(last.child(line));
+            None
+        }
+        (line, last) => {
+            offer_cards.extend(last);
+            line
+        }
+    };
 
     // ---- packs with switches; the meter is each pack's share of subjects ----
     let max_subjects = k.packs.iter().map(|p| p.subjects).max().unwrap_or(1).max(1) as f32;
     let mut packs = card().flex().flex_col();
-    packs = packs.child(div().mb(px(4.0)).child(eyebrow("Packs")));
+    let harvest = cx.listener(|this, _: &ClickEvent, _w, cx| this.harvest_quick_looks(cx));
+    let harvest_btn = ghost("pack-harvest", "File quick looks").h(px(32.0)).px(px(14.0)).text_size(px(12.0));
+    let harvest_btn = if working { harvest_btn.opacity(0.5) } else { harvest_btn.on_click(harvest) };
+    let from_file = cx.listener(|this, _: &ClickEvent, _w, cx| this.install_pack_file(cx));
+    let file_btn = ghost("pack-from-file", "Install from a file").h(px(32.0)).px(px(14.0)).text_size(px(12.0));
+    let file_btn = if working { file_btn.opacity(0.5) } else { file_btn.on_click(from_file) };
+    packs = packs.child(
+        div().mb(px(4.0)).flex().items_center().justify_between()
+            .child(eyebrow("Packs"))
+            .child(div().flex().gap(px(8.0)).child(file_btn).child(harvest_btn)),
+    );
     packs = packs.child(hairline());
+    if let Some(line) = job_line {
+        packs = packs.child(div().py(px(8.0)).child(line));
+    }
+    for (i, one) in k.shared.iter().enumerate() {
+        // The engine builds the file on request; the browser saves it.
+        let url = crate::engine::base()
+            .map(|base| format!("{base}/api/packs/drafts/{}/artifact", crate::api::seg(&one.slug)));
+        let share = ghost(("pack-share", i), "Share as a file").h(px(32.0)).px(px(14.0)).text_size(px(12.0));
+        let share = match url {
+            Some(url) => share.on_click(move |_, _, cx| cx.open_url(&url)),
+            None => share.opacity(0.5),
+        };
+        packs = packs.child(
+            div().py(px(8.0)).flex().items_center().justify_between().gap(px(16.0))
+                .child(mono(&format!("{} changed", one.name), MUTED))
+                .child(share),
+        );
+    }
     if k.packs.is_empty() {
         packs = packs.child(div().pt(px(12.0)).child(empty_note(
-            "No packs are installed yet, so there is no knowledge to check listings against.",
+            if k.offers.iter().any(|o| o.installed.is_empty()) {
+                "No packs are installed yet. Install one above to start checking listings."
+            } else {
+                "No packs are installed yet, and none could be fetched. Check the connection, then reopen this screen."
+            },
         )));
     }
     for (i, pack) in pack_rows.iter().enumerate() {
@@ -198,11 +256,21 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                                 .flex_col()
                                 .gap(px(4.0))
                                 .min_w(px(0.0))
-                                .child(row_title(&pack.name))
+                                .child(row_title(&crate::screens::history::clip(&pack.name, 48)))
                                 .child(mono(&note, MUTED)),
                         )
                         .child(meter_slim(pack.subjects as f32 / max_subjects * 100.0, 10))
-                        .child(mono(&format!("{} · {}", pack.id, pack.version), DIM)),
+                        .child(mono(&format!("{} · {}", pack.id, pack.version), DIM))
+                        .when(!pack.previous.is_empty(), |d| {
+                            let id = pack.id.clone();
+                            let back = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                                this.rollback_pack(id.clone(), cx);
+                            });
+                            d.child(div().pt(px(4.0)).child(
+                                ghost(("pack-back", i), &format!("Back to {}", pack.previous))
+                                    .h(px(28.0)).px(px(12.0)).text_size(px(12.0)).on_click(back),
+                            ))
+                        }),
                 )
                 .child(switch_anim(("pack-sw", i), pack.enabled, motion).on_click(toggle)),
         );
@@ -217,7 +285,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     gaps_card = gaps_card.child(hairline());
     if gaps.is_empty() {
         gaps_card = gaps_card.child(div().pt(px(12.0)).child(empty_note(
-            "Every subject in the enabled packs has at least one claim.",
+            if k.packs.iter().any(|p| p.enabled) {
+                "Every subject in the enabled packs has at least one claim."
+            } else {
+                "Gaps show here once a pack is installed and switched on."
+            },
         )));
     }
     let shown = 8usize;
@@ -388,11 +460,10 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         total_card("Evidence", &t.evidence.to_string(), "quotes with their sources"),
     ]);
 
-    // Pack updates sits on its own row; packs and coverage gaps share a row
-    // of two (from 732 px of content) and stack below that, each at the
-    // page's full width.
+    // Each pack-update card sits on its own row; packs and coverage gaps share
+    // a row of two (from 732 px of content) and stack below that.
     let mut offers = div().flex().flex_col().gap(px(SPACE_CARD));
-    if let Some(b) = banner {
+    for b in offer_cards {
         offers = offers.child(b);
     }
     let pair = grid(app.content_w, 360.0, vec![packs, gaps_card]);

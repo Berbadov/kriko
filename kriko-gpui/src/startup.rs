@@ -1,4 +1,6 @@
-//! Windows login mode. The Run entry is the source of truth.
+//! Per-user launch-at-login mode. The Windows Run entry and macOS LaunchAgent
+//! are the platform sources of truth.
+#[cfg(any(windows, target_os = "macos", test))]
 use std::path::Path;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -9,10 +11,12 @@ pub enum Mode {
     Tray,
 }
 
+#[cfg(any(windows, test))]
 pub fn command(exe: &Path, mode: Mode) -> String {
     format!("\"{}\"{}", exe.display(), if mode == Mode::Tray { " --background" } else { "" })
 }
 
+#[cfg(any(windows, test))]
 pub fn command_mode(value: &str) -> Mode {
     // Ignore the executable itself, including spaces and flag-like filenames.
     let value = value.trim();
@@ -60,7 +64,37 @@ pub fn read(name: &str) -> Result<Mode, String> {
         let text = String::from_utf16_lossy(&data[..data.iter().position(|c| *c == 0).unwrap_or(data.len())]);
         Ok(command_mode(&text))
     }
-    #[cfg(not(windows))] { let _ = name; Ok(Mode::Off) }
+    #[cfg(target_os = "macos")]
+    {
+        let path = launch_agent_path(name)?;
+        if !path.exists() {
+            return Ok(Mode::Off);
+        }
+        let output = std::process::Command::new("/usr/bin/plutil")
+            .args(["-convert", "json", "-o", "-"])
+            .arg(&path)
+            .output()
+            .map_err(|e| format!("Could not read the macOS login item: {e}"))?;
+        if !output.status.success() {
+            return Err("The macOS login item is not a valid property list.".into());
+        }
+        let plist: serde_json::Value = serde_json::from_slice(&output.stdout)
+            .map_err(|e| format!("Could not read the macOS login item: {e}"))?;
+        let arguments = plist
+            .get("ProgramArguments")
+            .and_then(serde_json::Value::as_array)
+            .ok_or("The macOS login item has no program arguments.")?;
+        if arguments.is_empty() || arguments.iter().any(|arg| !arg.is_string()) {
+            return Err("The macOS login item has invalid program arguments.".into());
+        }
+        Ok(if arguments.iter().skip(1).any(|arg| arg == "--background") {
+            Mode::Tray
+        } else {
+            Mode::Window
+        })
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    { let _ = name; Ok(Mode::Off) }
 }
 
 pub fn write(name: &str, mode: Mode) -> Result<(), String> {
@@ -74,7 +108,87 @@ pub fn write(name: &str, mode: Mode) -> Result<(), String> {
         };
         if out.status.success() { Ok(()) } else { Err("Windows would not save the login setting.".into()) }
     }
-    #[cfg(not(windows))] { let _ = (name, mode); Err("Launch at login is only available on Windows.".into()) }
+    #[cfg(target_os = "macos")]
+    {
+        let path = launch_agent_path(name)?;
+        if mode == Mode::Off {
+            match std::fs::remove_file(path) {
+                Ok(()) => Ok(()),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+                Err(error) => Err(format!("Could not remove the macOS login item: {error}")),
+            }
+        } else {
+            let executable = std::env::current_exe().map_err(|e| e.to_string())?;
+            let parent = path.parent().ok_or("Could not find the LaunchAgents folder.")?;
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Could not create the LaunchAgents folder: {e}"))?;
+            let temporary = path.with_extension("plist.tmp");
+            std::fs::write(&temporary, launch_agent_plist(name, &executable, mode))
+                .map_err(|e| format!("Could not save the macOS login item: {e}"))?;
+            std::fs::rename(&temporary, &path)
+                .map_err(|e| format!("Could not install the macOS login item: {e}"))?;
+            Ok(())
+        }
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    { let _ = (name, mode); Err("Launch at login is only available on Windows and macOS.".into()) }
+}
+
+#[cfg(target_os = "macos")]
+fn launch_agent_path(name: &str) -> Result<std::path::PathBuf, String> {
+    let home = std::env::var_os("HOME").ok_or("Cannot find the user home directory.")?;
+    let label = launch_agent_label(name);
+    Ok(std::path::PathBuf::from(home)
+        .join("Library")
+        .join("LaunchAgents")
+        .join(format!("{label}.plist")))
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn launch_agent_label(name: &str) -> String {
+    let suffix: String = name
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    format!("com.kriko.{}", suffix.trim_matches('-'))
+}
+
+#[cfg(any(target_os = "macos", test))]
+fn launch_agent_plist(name: &str, executable: &Path, mode: Mode) -> String {
+    let xml = |value: &str| {
+        value
+            .replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
+            .replace('\'', "&apos;")
+    };
+    let mut arguments = vec![executable.display().to_string()];
+    if mode == Mode::Tray {
+        arguments.push("--background".into());
+    }
+    let arguments = arguments
+        .iter()
+        .map(|argument| format!("\t\t<string>{}</string>\n", xml(argument)))
+        .collect::<String>();
+    format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+         <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \
+         \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n\
+         <plist version=\"1.0\">\n<dict>\n\
+         \t<key>Label</key>\n\t<string>{}</string>\n\
+         \t<key>ProgramArguments</key>\n\t<array>\n{}\t</array>\n\
+         \t<key>RunAtLoad</key>\n\t<true/>\n\
+         </dict>\n</plist>\n",
+        xml(&launch_agent_label(name)),
+        arguments,
+    )
 }
 
 #[cfg(test)]
@@ -87,6 +201,19 @@ mod tests {
         assert_eq!(command_mode(&command(exe, Mode::Tray)), Mode::Tray);
         assert_eq!(command_mode(r#""C:\--background\kriko.exe""#), Mode::Window);
         assert_eq!(command_mode(r#""C:\Kriko\kriko.exe" --background-other"#), Mode::Window);
+    }
+    #[test]
+    fn mac_login_agent_escapes_its_path_and_selects_background_mode() {
+        let plist = launch_agent_plist(
+            "Kriko",
+            Path::new("/Applications/Kriko & Tools/Kriko.app/Contents/MacOS/kriko"),
+            Mode::Tray,
+        );
+        assert!(plist.contains("<string>/Applications/Kriko &amp; Tools/Kriko.app/Contents/MacOS/kriko</string>"));
+        assert!(plist.contains("<string>--background</string>"));
+        assert!(plist.contains("<string>com.kriko.kriko</string>"));
+        assert!(!launch_agent_plist("Kriko", Path::new("/Applications/Kriko.app/Contents/MacOS/kriko"), Mode::Window)
+            .contains("--background"));
     }
     #[cfg(windows)]
     #[test]

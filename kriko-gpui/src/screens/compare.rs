@@ -976,7 +976,7 @@ fn agent_key(
 /// researching them in turn, and the researched ones handed to the slots
 /// below as a new draft.
 fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let c = &app.live.compare;
     let running = c.queue_running;
     let n = c.queue.len();
@@ -1249,7 +1249,38 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         .child(keys)
 }
 
-fn question_run_detail(run: &QuestionRun) -> Div {
+fn question_source_link(id: impl Into<gpui::ElementId>, domain: &str, url: &str) -> gpui::Stateful<Div> {
+    let full_label = format!("{} · {url}", if domain.is_empty() { "Source" } else { domain });
+    let label = if full_label.chars().count() > 92 {
+        format!("{}…", full_label.chars().take(91).collect::<String>())
+    } else {
+        full_label
+    };
+    let link = url.to_string();
+    div()
+        .id(id)
+        .cursor_pointer()
+        .child(mono(&label, ICE))
+        .on_click(move |_, _, cx| cx.open_url(&link))
+}
+
+fn question_sources(sources: &[(String, String)], question_index: usize) -> Option<Div> {
+    if sources.is_empty() {
+        return None;
+    }
+    let mut detail = div().flex().flex_col().gap(px(5.0))
+        .child(mono(&format!("Sources read · {}", sources.len()), DIM));
+    for (source_index, (domain, url)) in sources.iter().enumerate() {
+        detail = detail.child(question_source_link(
+            gpui::ElementId::named_usize(format!("compare-question-source-{question_index}"), source_index),
+            domain,
+            url,
+        ));
+    }
+    Some(detail)
+}
+
+fn question_run_detail(run: &QuestionRun, saved_sources: &[(String, String)], question_index: usize) -> Div {
     let mut detail = div().pl(px(24.0)).flex().flex_col().gap(px(5.0));
     if !run.state.is_empty() {
         let stage = if run.state == "succeeded" { "Complete" }
@@ -1293,14 +1324,25 @@ fn question_run_detail(run: &QuestionRun) -> Div {
         };
         let brief = run.brief_chars.map(|n| format!(" · {n} brief characters (some risks may be omitted)"))
             .unwrap_or_default();
-        let search = if run.no_web_search { " · no new web search" } else { "" };
+        let search = match run.web_searches {
+            Some(0) => " · no web searches".to_string(),
+            Some(n) => format!(" · {n} web {}", if n == 1 { "search" } else { "searches" }),
+            None if run.no_web_search => " · no web searches".to_string(),
+            None => String::new(),
+        };
         detail = detail.child(mono(&format!("{usage}{brief}{search}"), MUTED));
+    }
+    let sources = if run.sources.is_empty() { saved_sources } else { &run.sources };
+    if let Some(source_rows) = question_sources(sources, question_index) {
+        detail = detail.child(source_rows);
+    } else if run.state == "succeeded" && run.web_searches.is_some_and(|count| count > 0) {
+        detail = detail.child(mono("No source pages were reported for this answer", DIM));
     }
     detail
 }
 
 pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
 
     // ---- drafts + the board toggle ----
     let board_toggle = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -1767,7 +1809,9 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             motion,
                         ))),
                 })
-                .children(run.map(question_run_detail))
+                .children(run.map(|run| question_run_detail(run, &q.sources, qi))
+                    .or_else(|| question_sources(&q.sources, qi)
+                        .map(|sources| div().pl(px(24.0)).child(sources))))
                 .child(mono(
                     &format!(
                         "kept with {} · asked {}",
@@ -1790,7 +1834,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .gap(px(12.0))
         .child(eyebrow("Ask about this comparison"))
         .child(row_desc(
-            "Ask from the saved checks in these slots. The local model reads a short, relevant brief without searching the web. Asking saves the slots to this draft first.",
+            "The selected agent searches the web using these saved checks as product context; cited pages appear with the answer. Asking saves the slots to this draft first.",
         ))
         .child(if app.live.compare.harnesses.is_empty() {
             let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -1820,7 +1864,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     // ---- assemble ----
     // The board sits directly under the toggle that opens it, so it is on
     // screen the moment it appears, with the slots above the table below.
-    let mut page = div().flex().flex_col().gap(px(SPACE_SECTION)).child(drafts_row);
+    let mut page = div().flex().flex_col().min_w(px(0.0)).gap(px(SPACE_SECTION)).child(drafts_row);
     if let Some(say) = app.live.compare.say.clone() {
         page = page.child(
             div()
@@ -1845,8 +1889,13 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .child(
             div()
                 .id("compare-table-scroll")
+                // min_w(0): without it the table's 860 px became the page's
+                // minimum, and every card ran past the right edge at 940
+                .min_w(px(0.0))
                 .overflow_x_scroll().map(horizontal_wheel)
-                .child(table(app, window, cx).min_w(px(860.0))),
+                // the columns' minimum only once there are columns: empty, the
+                // card fits the page instead of scrolling its own corner away
+                .child(table(app, window, cx).when(filled_n > 0, |t| t.min_w(px(860.0)))),
         )
         .child(questions_card);
     page
