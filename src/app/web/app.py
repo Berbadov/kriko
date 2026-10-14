@@ -194,9 +194,12 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         app.state.jobs.shutdown()
-        from app.providers import codex_profile
+        from app.providers import codex_profile, resident
         try:
-            codex_profile.shutdown()
+            try:
+                codex_profile.shutdown()
+            finally:
+                resident.shutdown()
         finally:
             app.state.knowledge_clock.close()
 
