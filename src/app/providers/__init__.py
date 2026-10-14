@@ -26,8 +26,6 @@ kept its own running total would be a second answer to "how much did this
 cost". These functions make one request and return its result.
 """
 
-import os
-
 from app.providers import exa, fetch, harness, llm
 
 
