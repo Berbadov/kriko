@@ -756,12 +756,11 @@ claims:
   rationale: Ignition coils in the EA888 2.0 TSI can fail prematurely, leading to
     misfires, power loss, and higher fuel consumption. If ignored, the unburned fuel
     can damage the catalytic converter, resulting in costly repairs. This is a known
-    issue for this engine, so a used car may need coil replacement soon.
+    issue for this engine, so a car with some mileage may need new coils soon.
   rationale_tr: EA888 2.0 TSI motorundaki ateşleme bobinleri erken arızalanabilir;
     bu da tekleme, güç kaybı ve artan yakıt tüketimine yol açar. Sorun ihmal edilirse,
     yanmamış yakıt katalitik konvertöre zarar verebilir ve pahalı onarımlara neden
-    olabilir. Bu, bu motor için bilinen bir sorundur, bu yüzden ikinci el bir araçta
-    bobin değişimi yakında gerekebilir.
+    olabilir. Bu, bu motor için bilinen bir sorundur, bu yüzden kilometresi ilerlemiş bir araçta bobin değişimi yakında gerekebilir.
   inspection_advice: Check for stored misfire codes (P0301-P0304), rough idle, hesitation
     during acceleration, and service records showing recent ignition coil and spark
     plug replacement.
@@ -1508,13 +1507,11 @@ claims:
   rationale: The EA888 2.0T engine, especially the first two generations, commonly
     burns excessive oil due to low-tension piston rings, leading to frequent top-ups
     and potential catalytic converter or engine damage. This is a known chronic issue
-    that can be anticipated based on engine code and model year, making it highly
-    relevant for used-car buyers.
+    that can be anticipated based on engine code and model year, making it highly relevant to buyers.
   rationale_tr: EA888 2.0T motor, özellikle ilk iki nesil, düşük gerilimli piston
     segmanları nedeniyle aşırı yağ yakma sorunu yaşar; bu durum sık yağ ilavesi ve
     potansiyel katalitik konvertör veya motor hasarına yol açar. Motor koduna ve model
-    yılına göre tahmin edilebilen kronik bir sorundur, bu yüzden ikinci el araç alıcıları
-    için oldukça önemlidir.
+    yılına göre tahmin edilebilen kronik bir sorundur, bu yüzden alıcılar için oldukça önemlidir.
   inspection_advice: Check engine oil level and service records; look for blue smoke
     on cold start or acceleration; confirm if the piston ring update (extended warranty)
     was performed. A compression and leak-down test can help, but oil consumption
@@ -2018,13 +2015,11 @@ claims:
   rationale: The EA888 2.0 TSI engine can suffer from PCV valve failure and oil consumption,
     which raises crankcase pressure. That pressure forces the timing cover gasket
     to leak, and if not fixed, it can cause oil loss and timing system damage. This
-    is a known secondary failure of a common engine defect, so it's worth checking
-    on any used car with this engine.
+    is a known secondary failure of a common engine defect, so it's worth checking on any car with this engine.
   rationale_tr: EA888 2.0 TSI motorunda PCV valfi arızası ve yağ tüketimi karter basıncını
     yükseltebilir. Bu basınç zamanlama kapağı contasını zorlayarak sızıntıya neden
     olur ve müdahale edilmezse yağ kaybı ve zamanlama sistemi hasarı oluşabilir. Bu,
-    yaygın bir motor kusurunun bilinen ikincil bir arızasıdır; bu motora sahip her
-    kullanılmış araçta kontrol edilmelidir.
+    yaygın bir motor kusurunun bilinen ikincil bir arızasıdır; bu motora sahip her araçta kontrol edilmelidir.
   inspection_advice: Look for oil residue around the timing cover and check the PCV
     valve for correct operation. Also inspect engine for signs of oil consumption
     and check for diagnostic trouble codes related to crankcase ventilation.
@@ -2551,11 +2546,10 @@ claims:
   confidence: 0.6
   rationale: This engine has a known manufacturing defect in the piston rings that
     lets oil leak into the cylinders. It can burn oil quickly, damage the engine over
-    time, and even lead to engine failure. A used car with this engine may need major
-    repairs.
+    time, and even lead to engine failure. A car with this engine may need major repairs.
   rationale_tr: Bu motorda, piston segmanlarındaki üretim hatası nedeniyle yağ silindirlere
     sızabilir. Bu durum hızlı yağ tüketimine, zamanla motor hasarına ve hatta motor
-    arızasına yol açabilir. Bu motora sahip ikinci el bir araç büyük onarımlar gerektirebilir.
+    arızasına yol açabilir. Bu motora sahip bir araç büyük onarımlar gerektirebilir.
   inspection_advice: Check oil level and condition, look for blue exhaust smoke, ask
     for oil consumption records. A compression test may help, but the defect can be
     present even without obvious symptoms. Consider a borescope inspection of cylinders.

@@ -237,11 +237,10 @@ claims:
   confidence: 0.6
   rationale: Owners of Renault Clio 5 (2019–present) frequently report electrical
     faults, especially in hybrid versions, often requiring dealer intervention. This
-    suggests a chronic electrical problem that could mean repair costs for a used
-    buyer.
+    suggests a chronic electrical problem that could mean repair costs for a buyer.
   rationale_tr: Renault Clio 5 (2019–günümüz) sahipleri, özellikle hibrit versiyonlarda
     olmak üzere sık sık elektrik arızaları bildirmektedir ve bu genellikle servis
-    müdahalesi gerektirir. Bu, kullanılmış bir alıcı için onarım maliyetlerine yol
+    müdahalesi gerektirir. Bu, alıcı için onarım maliyetlerine yol
     açabilecek kronik bir elektrik sorununa işaret eder.
   inspection_advice: At viewing, test all electrical features (lights, windows, infotainment,
     climate). Check for warning lights on the dash, especially hybrid system warnings.
@@ -435,12 +434,10 @@ claims:
   confidence: 0.6
   rationale: 2019 Renault Clio 5 models have been recalled for a short-circuiting
     risk in the electrical system. Electrical faults are a chronic issue across Clio
-    models, so this is a known risk for buyers. The recall should be verified as completed
-    on any used car.
+    models, so this is a known risk for buyers. Check that the recall work has been done on the car.
   rationale_tr: 2019 Renault Clio 5 modellerinde elektrik sisteminde kısa devre riski
     için geri çağırma yapıldı. Clio modellerinde elektrik arızaları kronik bir sorundur,
-    bu yüzden alıcılar için bilinen bir risktir. Kullanılmış araçta geri çağırmanın
-    yapıldığı doğrulanmalıdır.
+    bu yüzden alıcılar için bilinen bir risktir. Araçta geri çağırma işleminin yapıldığı doğrulanmalıdır.
   inspection_advice: Ask for service records proving the recall was performed. Check
     for any warning lights, especially electrical/charging system. Have a professional
     scan for DTCs in the BCM/electrical modules.
