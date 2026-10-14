@@ -68,6 +68,10 @@ def _env(tmp_path):
         "KRIKO_STORE": str(tmp_path / "knowledge.sqlite"),
         "KRIKO_APP_STATE": str(tmp_path / "app.sqlite"),
         "KRIKO_ANALYSES_LOG": str(tmp_path / "analyses.jsonl"),
+        # Without this every sidecar a test starts appends to the reader's own
+        # ~/.kriko/logs/app.log, and under pytest-xdist those appends come from
+        # several workers at once. A test's log belongs to that test.
+        "KRIKO_LOG": str(tmp_path / "app.log"),
         "PYTHONPATH": "src",
     }
 
