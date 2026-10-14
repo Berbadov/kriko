@@ -2,8 +2,8 @@
 
 The reader presses Add to queue on a listing; the panel posts the page's
 address, the product's name and the stored answer's id when there is one. An
-agent researches the queued products one after another and the compare
-screen lines them up. App state in `app.sqlite`, never knowledge: nothing in
+agent researches the queued products, as many at once as the reader's
+Settings allow, and the compare screen lines them up. App state in `app.sqlite`, never knowledge: nothing in
 `kriko/` reads it, and a pack update or uninstall leaves it alone.
 """
 
