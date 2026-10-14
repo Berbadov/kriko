@@ -157,6 +157,8 @@ The engine, command line, and local API can also run from source on macOS and Li
 
 See the [desktop build guide](kriko-gpui/README.md) for the Windows installer recipe, [contributor guide](docs/DOCTRINE.md) for setup and checks, and [architecture guide](docs/ARCHITECTURE.md) for the code. To add a new product category, start with the [catalog contract](docs/PACK_CONTRACT.md).
 
+The 1.6.2 [agent runtime branch experiment](docs/AGENT_RUNTIME.md) adds reusable Codex workers with fresh contexts, durable request and attempt records, shared resource limits, and retry protection. Its guide covers transport selection, inspection, validation, and measured startup timings.
+
 Versions and reader-visible release notes move at release, not with every change set. Follow the [update protocol](docs/UPDATE_PROTOCOL.md); published versions and their assets are immutable.
 
 ## License
