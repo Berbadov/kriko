@@ -190,7 +190,7 @@ fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Sta
     });
     div()
         .id(("home-recent", ri))
-        .py(px(12.0))
+        .py(px(10.0))
         .px(px(8.0))
         .flex()
         .items_center()
@@ -238,7 +238,7 @@ fn draft_row(cx: &mut Context<Kriko>, i: usize, name: &str, subjects: &str) -> S
     });
     div()
         .id(("home-draft", i))
-        .py(px(12.0))
+        .py(px(10.0))
         .px(px(8.0))
         .flex()
         .items_center()
@@ -326,13 +326,13 @@ fn checks_graph(months: &[(String, u32)]) -> Div {
 /// the biggest value, and the figures at the right.
 fn bar_rows(rows: &[(String, f32, String)]) -> Div {
     let max = rows.iter().map(|r| r.1).fold(0.0f32, f32::max).max(1.0);
-    let mut graph = div().flex().flex_col().gap(px(12.0));
+    let mut graph = div().flex().flex_col().gap(px(10.0));
     for (label, value, figure) in rows {
         graph = graph.child(
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(10.0))
                 .child(
                     div()
                         .w(px(130.0))
@@ -444,7 +444,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     // ---- recent work: the four newest checks ----
     let mut recent = card().flex().flex_col();
-    recent = recent.child(div().mb(px(14.0)).child(eyebrow("Recent work")));
+    recent = recent.child(div().mb(px(SPACE_TITLE)).child(eyebrow("Recent work")));
     if !h.loaded {
         recent = recent.child(empty_note("Reading your history from the engine."));
     } else if h.items.is_empty() {
@@ -458,7 +458,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
         }
         recent = recent.child(
             div()
-                .mt(px(16.0))
+                .mt(px(12.0))
                 .flex()
                 .items_center()
                 .justify_end()
@@ -468,7 +468,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     // ---- drafts: the saved comparisons ----
     let mut drafts = card().flex().flex_col();
-    drafts = drafts.child(div().mb(px(14.0)).child(eyebrow("Drafts")));
+    drafts = drafts.child(div().mb(px(SPACE_TITLE)).child(eyebrow("Drafts")));
     if !h.drafts_loaded {
         let retry = cx.listener(|this, _: &ClickEvent, _w, cx| this.refresh_history(cx));
         drafts = drafts
@@ -528,7 +528,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
     let checks_card = card()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(eyebrow("Checks per month"))
         .child(checks_body);
 
@@ -544,7 +544,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
     let claims_card = card()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(eyebrow("Evidence in the store"))
         .child(claims_body);
 
@@ -588,11 +588,13 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
     let packs_card = card()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(eyebrow("Claims per catalog"))
         .child(packs_body);
 
-    let mut column = div().flex().flex_col().gap(px(24.0));
+    // Recent work and drafts side by side from 300 px each; the three graphs
+    // side by side from 240 px each. Each row shares one height.
+    let mut column = div().flex().flex_col().gap(px(SPACE_SECTION));
     if let Some(notice) = update_card(app, cx) {
         column = column.child(notice);
     }
@@ -600,25 +602,8 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
         column = column.child(next);
     }
     column
-        .child(
-            div()
-                .flex()
-                .flex_wrap()
-                .gap(px(24.0))
-                .items_start()
-                .child(div().flex_1().min_w(px(380.0)).child(recent))
-                .child(div().flex_1().min_w(px(380.0)).child(drafts)),
-        )
-        .child(
-            div()
-                .flex()
-                .flex_wrap()
-                .gap(px(24.0))
-                .items_start()
-                .child(div().flex_1().min_w(px(300.0)).child(checks_card))
-                .child(div().flex_1().min_w(px(300.0)).child(claims_card))
-                .child(div().flex_1().min_w(px(300.0)).child(packs_card)),
-        )
+        .child(grid(app.content_w, 300.0, vec![recent, drafts]))
+        .child(grid(app.content_w, 240.0, vec![checks_card, claims_card, packs_card]))
 }
 
 #[cfg(test)]

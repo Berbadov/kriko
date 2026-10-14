@@ -23,8 +23,6 @@ gpui::actions!(kriko, [NewCheck, SearchKnowledge, JumpBrowse]);
 
 // ---- the window's room ----
 
-/// The page column's side padding below the hero when the window has room.
-const PAGE_PAD: f32 = 40.0;
 /// The live dock's width. Its open width is reserved from page content.
 const DOCK_W: f32 = DOCK_WIDTH;
 /// The titlebar's height; the floating dock starts under it so the window
@@ -178,8 +176,8 @@ impl Tab {
     /// content starts right under. Home and About keep a little more of it.
     fn hero_height(self) -> f32 {
         match self {
-            Tab::Home | Tab::About => 132.0,
-            _ => 108.0,
+            Tab::Home | Tab::About => 116.0,
+            _ => 100.0,
         }
     }
 }
@@ -1175,6 +1173,7 @@ impl Render for Kriko {
             .flex()
             .flex_col()
             .flex_none()
+            .w_full()
             .gap(px(16.0));
         if let Some(problem) = self.live.problem.clone() {
             let retry = cx.listener(|this, _: &ClickEvent, _w, cx| {
@@ -1275,6 +1274,7 @@ impl Render for Kriko {
                     .child(
                         div()
                             .id("main-scroll")
+                            .w_full()
                             .flex()
                             .flex_1()
                             .min_h(px(0.0))
@@ -1292,8 +1292,8 @@ impl Render for Kriko {
                                         page_content
                                             .pl(px(page_pad))
                                             .pr(px(page_pad + dock_inset))
-                                            .pt(px(20.0))
-                                            .pb(px(48.0)),
+                                            .pt(px(SPACE_SECTION))
+                                            .pb(px(32.0)),
                                     ),
                     )
                     // The bar floats on the sky, after the page so it

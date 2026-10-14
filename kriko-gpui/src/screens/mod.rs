@@ -53,20 +53,20 @@ pub fn screen(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 
 // ---- shared building blocks ----
 
-/// A big-number card: eyebrow, display value, mono note. Home's totals and
-/// knowledge's totals share it.
+/// A total tile: eyebrow, the figure at heading size, one note line. Totals
+/// sit in a row of tiles, so the figure reads as a number, not a poster.
 pub fn total_card(label: &str, value: &str, note: &str) -> Div {
     card()
         .flex()
         .flex_col()
-        .gap(px(8.0))
+        .gap(px(4.0))
         .child(eyebrow(label))
         .child(
             div()
                 .font_family(DISPLAY)
                 .font_weight(FontWeight::SEMIBOLD)
-                .text_size(px(64.0))
-                .line_height(px(60.0))
+                .text_size(px(34.0))
+                .line_height(px(34.0))
                 .text_color(rgb(INK))
                 .child(value.to_string()),
         )
@@ -97,7 +97,7 @@ pub fn row_desc(text: &str) -> Div {
 pub fn empty_note(text: &str) -> Div {
     well()
         .px(px(16.0))
-        .py(px(14.0))
+        .py(px(10.0))
         .font_family(SANS)
         .text_size(px(13.0))
         .text_color(rgb(DIM))

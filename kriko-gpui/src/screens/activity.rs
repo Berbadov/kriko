@@ -132,7 +132,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             .flex()
             .items_center()
             .gap(px(16.0))
-            .py(px(14.0))
+            .py(px(10.0))
             .hover(|s| s.bg(rgba(GLASS_1)))
             .child(
                 div()
@@ -219,7 +219,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .children(callout)
         .child(runs)
         .child(div().flex().child(filter))
