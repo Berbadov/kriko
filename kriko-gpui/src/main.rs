@@ -16,6 +16,7 @@ mod dock;
 mod engine;
 mod live;
 mod marks;
+mod motion;
 mod screens;
 mod shell;
 mod startup;

@@ -234,6 +234,8 @@ impl QItem {
 /// on or after it was passed over.
 #[derive(Clone, Default)]
 pub struct QRun {
+    /// The engine job this row is following, by id; keys its eased bar.
+    pub job: String,
     /// 0..=100.
     pub progress: f32,
     pub phase: Option<Phase>,
@@ -1490,6 +1492,7 @@ impl Kriko {
                                 this.live.compare.queue_run.insert(
                                     qid,
                                     QRun {
+                                        job: api::s(job, "job_id"),
                                         progress: (api::n(job, "progress").unwrap_or(0.0) * 100.0) as f32,
                                         phase: Some(phase_of(job)),
                                         line: doing_of(job),
