@@ -160,3 +160,13 @@ def test_a_harness_answer_pass_can_support_a_bounded_negative_result():
     assert "2 relevant page(s) checked" in quicklook.outcome(
         '{"risks": [], "specs": []}', {"risks": [], "specs": []},
         coverage=coverage)
+
+
+def test_every_brief_asks_for_the_listings_language_and_untranslated_quotes():
+    """The same listing answered in two languages when the sources' language
+    decided it. The rule rides in both shapes of the brief and names no language."""
+    for compact in (False, True):
+        text = quicklook.brief("Widget 5000", compact=compact)
+        assert quicklook.LANGUAGE_RULE in text
+    assert "Turk" not in quicklook.LANGUAGE_RULE
+    assert "never translate a quote" in quicklook.LANGUAGE_RULE
