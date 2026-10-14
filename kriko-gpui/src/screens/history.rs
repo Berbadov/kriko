@@ -459,7 +459,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .id(gpui::ElementId::named_usize("hist-row", gi))
             .flex()
             .items_center()
-            .py(px(10.0))
+            .py(px(6.0))
             .cursor_pointer()
             .hover(|s| s.bg(rgba(GLASS_1)))
             .on_click(toggle)

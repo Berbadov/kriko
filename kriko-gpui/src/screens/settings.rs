@@ -14,11 +14,11 @@ use crate::theme::*;
 /// One row of a card: title + description left, a control right.
 fn row(title: &str, desc: &str, control: gpui::AnyElement) -> Div {
     div()
-        .py(px(10.0))
+        .py(px(6.0))
         .flex()
         .items_center()
         .justify_between()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(
             div()
                 .flex_1()
@@ -48,11 +48,11 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
         caps = caps.child(keycap(k));
     }
     div()
-        .py(px(10.0))
+        .py(px(6.0))
         .flex()
         .items_center()
         .justify_between()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(
             div()
                 .flex()
@@ -118,7 +118,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .child(hairline())
         .child(
             div()
-                .py(px(10.0))
+                .py(px(6.0))
                 .flex()
                 .flex_col()
                 .gap(px(4.0))

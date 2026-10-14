@@ -77,7 +77,7 @@ fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     } else {
         action
     };
-    let mut row = div().flex().items_center().justify_between().gap(px(24.0)).child(mono(&line, INK_2).min_w(px(0.0)));
+    let mut row = div().flex().items_center().justify_between().gap(px(14.0)).child(mono(&line, INK_2).min_w(px(0.0)));
     if k.app_update_busy || k.app_update_note.as_deref() == Some("Checking for updates.") {
         row = row.child(spinner("app-update-spinner", 16.0, app.motion));
     }
