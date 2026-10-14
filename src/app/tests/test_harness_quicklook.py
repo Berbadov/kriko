@@ -234,3 +234,31 @@ def test_two_failed_searches_in_a_row_skip_the_third(monkeypatch):
     researcher.ask_quick("Widget", principle="pack bar")
 
     assert len(calls) == 2
+
+
+def test_host_read_searches_the_rendered_queries_not_the_pack_templates(monkeypatch):
+    calls = []
+    researcher = harness.HarnessResearcher(row("codex"))
+
+    class Reader:
+        sources = {URL: PAGE}
+        page_titles = {URL: "Widget owner report"}
+        telemetry = {"stages": []}
+        search_coverage = {"queries_searched": 1, "search_errors": 0, "pages_read": 1,
+                           "pages_unreadable": 0, "pages_timed_out": 0, "publishers_read": 1}
+        search_provider = "openserp"
+
+    monkeypatch.setattr(
+        researcher, "_read_web_pages",
+        lambda queries, **kwargs: (calls.append(queries) or
+                                   (Reader(), [(URL, PAGE)], _identity())),
+    )
+    monkeypatch.setattr(researcher, "_run", lambda prompt: '{"queries":[],"findings":[]}')
+
+    researcher.gather(ResearchTask(
+        subject_id="widget", subject_label="Widget Pro", subject_kind="product",
+        pack_id="products", queries=("{label} common problems",),
+        search_names=("Widget Pro",), max_documents=2,
+    ))
+
+    assert calls[0] == ["Widget Pro common problems"]
