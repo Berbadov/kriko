@@ -383,3 +383,71 @@ def test_uninstalling_one_pack_leaves_the_other_answering(two_packs):
                                      context={"usage_km": 200_000}))
     assert {c.pack_id for c in result.claims} == {"alpha"}
     assert "Chain tensioner fails" in _titles(result)
+
+
+def test_a_claim_with_no_evidence_is_not_served(tmp_path):
+    """Whatever builder made the pack, a claim reaches the reader with its
+    page and quote or not at all."""
+    claims = ALPHA_CLAIMS + """
+- subject: {kind: product, identity: {brand: acme, model: w100}}
+  kind: known_issue
+  domain: mech
+  severity: high
+  text: {en: {title: Unsourced hunch, body: b, advice: a}}
+"""
+    conn = connect(tmp_path / "bare.sqlite")
+    try:
+        packstore.install(conn, _pack(tmp_path, "bare", toml=ALPHA_TOML,
+                                      subjects=ALPHA_SUBJECTS, claims=claims))
+        result = lookup(conn, Query(kind="product",
+                                    identity={"brand": "acme", "model": "w100"}))
+        assert "Trim rattle" in _titles(result)
+        assert "Unsourced hunch" not in _titles(result)
+    finally:
+        conn.close()
+
+
+SHARED_SUBJECTS = """
+- kind: component
+  label: Timing chain
+  identity: {part: timing_chain}
+- kind: product
+  label: Widget 100
+  identity: {brand: acme, model: w100}
+  attributes: {trim: {value: base}}
+  relations:
+    - {predicate: part_of, object: {kind: component, identity: {part: timing_chain}}}
+- kind: product
+  label: Widget 150
+  identity: {brand: acme, model: w150}
+  attributes: {trim: {value: %s}}
+  relations:
+    - {predicate: part_of, object: {kind: component, identity: {part: timing_chain}}}
+"""
+
+GATED_CLAIM = """
+- subject: {kind: component, identity: {part: timing_chain}}
+  kind: known_issue
+  domain: mech
+  severity: high
+  text: {en: {title: Sport chain wears, body: b, advice: a}}
+  conditions:
+    - {key: trim, op: eq, value: sport, on_missing: ignore}
+  evidence:
+    - {url: "https://maker.example.com/tsb/9", quote: Sport trim chains stretched early.}
+"""
+
+
+@pytest.mark.parametrize("other_trim,served", [("touring", False), ("sport", True)])
+def test_a_claim_no_fitting_candidate_satisfies_is_withdrawn(tmp_path, other_trim, served):
+    """Several products fit and disagree on trim, so trim is unknown and fail
+    open applies, unless no candidate at all has the trim the claim needs."""
+    conn = connect(tmp_path / "gated.sqlite")
+    try:
+        packstore.install(conn, _pack(tmp_path, "gated", toml=ALPHA_TOML,
+                                      subjects=SHARED_SUBJECTS % other_trim, claims=GATED_CLAIM))
+        result = lookup(conn, Query(kind="product", identity={"brand": "acme"}))
+        assert result.resolution.method == "ambiguous"
+        assert ("Sport chain wears" in _titles(result)) is served
+    finally:
+        conn.close()

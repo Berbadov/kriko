@@ -30,6 +30,7 @@ class Stub:
         self.models: list | None = []
         self.models_path = "/v1/models"
         self.chat: list = []          # (status, body-dict) popped per call
+        self.responder = None         # or: body -> (status, body-dict), per call
         self.chat_seen: list = []
         self.serp = {"results": []}
         self.delay = 0.0
@@ -56,6 +57,9 @@ class Stub:
                         {"id": name} for name in stub.models]})
                 if path == "/mega/search":
                     return self._send(200, stub.serp)
+                if path == "/health":
+                    # OpenSERP's health document: the probe asks here, not at the root.
+                    return self._send(200, {"status": "healthy", "engines": []})
                 if path == "/":
                     return self._send(200, b"up", "text/plain")
                 self._send(404, {"error": "not found"})
@@ -66,6 +70,8 @@ class Stub:
                 if self.path in ("/v1/chat/completions", "/api/chat"):
                     stub.chat_seen.append(body)
                     time.sleep(stub.delay)
+                    if stub.responder is not None:
+                        return self._send(*stub.responder(body))
                     status, reply = stub.chat.pop(0) if stub.chat else (
                         200, {"choices": [{"message": {"content": "[]"}}]})
                     return self._send(status, reply)
@@ -158,14 +164,17 @@ def test_the_configured_address_is_probed_first_and_the_defaults_follow(machine,
 
 def test_ready_with_the_servers_own_model_list(machine, stub):
     stub.models = ["nomic-embed-text", "qwen3-4b"]
-    plan = localplane.resolve(url=stub.url, search_url=dead_url())
+    # Ready needs a chat model *and* the search service (localplane's rule).
+    plan = localplane.resolve(url=stub.url, search_url=stub.url)
     assert plan["ready"] is True
-    assert plan["models"] == ["nomic-embed-text", "qwen3-4b"]
+    # The chat models are listed; the embedding model is listed only as held.
+    assert plan["models"] == ["qwen3-4b"]
+    assert plan["all_models"] == ["nomic-embed-text", "qwen3-4b"]
     # An embedding model cannot answer a prompt, so it is not the default.
     assert plan["model"] == "qwen3-4b"
     assert plan["url"] == stub.url
-    assert plan["search_kind"] == ""
-    assert "no local search service" in plan["line"]
+    assert plan["search_kind"] == "openserp"
+    assert "on this machine" in plan["line"]
     assert plan["model"] in plan["line"]
 
 
@@ -205,7 +214,7 @@ def test_a_chosen_model_the_server_has_is_used(machine, stub):
 
 
 def test_openserp_is_used_when_it_answers(machine, stub):
-    stub.models = ["m"]
+    stub.models = ["gemma4:e2b"]
     plan = localplane.resolve(url=stub.url, search_url=stub.url)
     assert plan["search_kind"] == "openserp"
     assert "on this machine" in plan["line"]
@@ -237,14 +246,29 @@ def test_the_socket_posts_to_v1_with_the_real_model_name_and_a_schema(stub):
     assert (socket_.tokens_in, socket_.tokens_out, socket_.tokens_used) == (3, 4, 7)
 
 
-def test_a_server_that_refuses_the_schema_is_asked_again_plainly(stub):
-    stub.chat = [(400, {"error": {"message": "no response_format"}}),
+def test_a_server_that_refuses_the_schema_is_asked_in_its_other_spelling(stub):
+    """llama-cpp-python's server refuses `json_schema` by name (as a 500) and
+    takes the same schema under `json_object`; the constraint is kept."""
+    stub.chat = [(500, {"error": {"message": "response_format.type: Input should be "
+                                             "'text' or 'json_object', got json_schema"}}),
                  completion("[]")]
     socket_ = local_inference.OpenAICompatSocket(
         stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA)
     assert socket_("p") == "[]"
-    assert "response_format" in stub.chat_seen[0]
-    assert "response_format" not in stub.chat_seen[1]
+    assert stub.chat_seen[0]["response_format"]["type"] == "json_schema"
+    assert stub.chat_seen[1]["response_format"] == {
+        "type": "json_object", "schema": local_inference.FINDINGS_SCHEMA}
+
+
+def test_a_server_that_refuses_both_spellings_is_asked_again_plainly(stub):
+    stub.chat = [(400, {"error": {"message": "no response_format"}}),
+                 (400, {"error": {"message": "no response_format"}}),
+                 completion("[]")]
+    socket_ = local_inference.OpenAICompatSocket(
+        stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA)
+    assert socket_("p") == "[]"
+    assert stub.chat_seen[1]["response_format"]["type"] == "json_object"
+    assert "response_format" not in stub.chat_seen[2]
 
 
 def test_runtime_settings_survive_restart_and_reach_the_native_ollama_socket(machine, stub, tmp_path):
@@ -275,6 +299,49 @@ def test_unreported_runtime_device_stays_unknown_and_controls_stay_external(stub
     assert not runtime["supported"]
 
 
+def test_ollama_runtime_matches_implicit_latest_and_reports_actual_device(monkeypatch):
+    import io
+
+    from app import localruntime
+    from app.localruntime import inspect, options
+
+    monkeypatch.setattr(localruntime, "_machine_has_gpu", lambda: False)
+
+    monkeypatch.setattr(local_inference.urllib.request, "urlopen", lambda *_args, **_kwargs:
+                        io.BytesIO(json.dumps({"models": [{
+                            "name": "gemma4:latest", "size": 2000,
+                            "size_vram": 0, "context_length": 4096,
+                        }]}).encode()))
+    runtime = inspect("http://ollama.test", "Ollama", "gemma4",
+                      {prefs.LOCAL_DEVICE: "gpu", prefs.LOCAL_GPU_LAYERS: ""})
+
+    assert runtime["loaded"] is True
+    assert runtime["requested_device"] == "gpu"
+    assert runtime["device"] == "cpu"
+    assert runtime["device_source"] == "Ollama /api/ps"
+    assert "despite the GPU request" in runtime["reason"]
+    assert options({prefs.LOCAL_DEVICE: "gpu"})["num_gpu"] == -1
+
+
+def test_a_model_on_the_cpu_of_a_machine_with_a_gpu_says_to_restart_ollama(monkeypatch):
+    import io
+
+    from app import localruntime
+
+    monkeypatch.setattr(localruntime, "_machine_has_gpu", lambda: True)
+    monkeypatch.setattr(local_inference.urllib.request, "urlopen", lambda *_args, **_kwargs:
+                        io.BytesIO(json.dumps({"models": [{
+                            "name": "gemma4:latest", "size": 2000,
+                            "size_vram": 0, "context_length": 4096,
+                        }]}).encode()))
+    # Whatever the device setting says: the GPU being unused is the finding.
+    for device in ("", "gpu"):
+        runtime = localruntime.inspect("http://ollama.test", "Ollama", "gemma4",
+                                       {prefs.LOCAL_DEVICE: device})
+        assert runtime["device"] == "cpu"
+        assert "Quit Ollama from the tray" in runtime["reason"]
+
+
 def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):
     """A reasoning model left at full effort spends the reply's whole budget
     on thinking and writes nothing; the socket asks for low effort on the
@@ -295,18 +362,21 @@ def test_the_reasoning_effort_is_sent_and_dropped_when_refused(stub):
     assert "reasoning_effort" in stub.chat_seen[1]
     assert "reasoning_effort" not in stub.chat_seen[2]
 
-    # Both optional fields refused: the schema goes first, then the effort.
+    # Both optional fields refused: the schema goes first (after its other
+    # spelling is refused too), then the effort.
     stub.chat = [(400, {"error": {"message": "no response_format"}}),
+                 (400, {"error": {"message": "no response_format"}}),
                  (400, {"error": {"message": "no reasoning_effort"}}),
                  completion("[]")]
     socket_ = local_inference.OpenAICompatSocket(
         stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA,
         reasoning_effort="low")
     assert socket_("p") == "[]"
-    assert "response_format" in stub.chat_seen[3]
-    assert "response_format" not in stub.chat_seen[4]
-    assert "reasoning_effort" in stub.chat_seen[4]
-    assert "reasoning_effort" not in stub.chat_seen[5]
+    assert stub.chat_seen[3]["response_format"]["type"] == "json_schema"
+    assert stub.chat_seen[4]["response_format"]["type"] == "json_object"
+    assert "response_format" not in stub.chat_seen[5]
+    assert "reasoning_effort" in stub.chat_seen[5]
+    assert "reasoning_effort" not in stub.chat_seen[6]
 
 
 def test_a_missing_model_names_the_address_and_the_model(stub):
@@ -365,13 +435,15 @@ def test_max_tokens_none_sends_no_budget(stub):
     assert "max_tokens" not in stub.chat_seen[0]
 
 
-def test_a_transient_failure_is_retried_once_plainly(stub):
+def test_a_transient_failure_is_retried_once_with_the_same_grammar(stub):
+    # A retry keeps the evidence grammar: a schema dropped on retry let a
+    # small model answer in prose, which the evidence checks then reject.
     stub.chat = [(503, {"error": {"message": "loading"}}), completion("[]")]
     socket_ = local_inference.OpenAICompatSocket(
         stub.url, "m", response_json_schema=local_inference.FINDINGS_SCHEMA)
     assert socket_("p") == "[]"
     assert len(stub.chat_seen) == 2
-    assert "response_format" not in stub.chat_seen[1]
+    assert "response_format" in stub.chat_seen[1]
 
 
 def test_a_transient_failure_twice_is_said_not_swallowed(stub):
@@ -533,7 +605,8 @@ def test_the_planes_card_lists_local_first_while_ready(ready, tmp_path):
     from app.web.app import create_app
     from app.web.settings import Settings
 
-    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url})
+    path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url,
+                              prefs.LOCAL_SEARCH_URL: ready.url})
     client = TestClient(create_app(Settings(
         store_path=tmp_path / "k.sqlite", app_state_path=path,
         analysis_log_path=tmp_path / "a.jsonl")))
@@ -586,20 +659,33 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
         ready, tmp_path, monkeypatch):
     from app.providers import fetch
 
+    from app.tests.test_local_quicklook_output import PipelineModel
+
+    class Refusing(PipelineModel):
+        """The model also proposes an invented fault; the pipeline's check refuses it."""
+
+        def _answer(self, stage, prompt):
+            if stage == "verify" and '"title": "Invented fault"' in prompt:
+                return {"evidence_kind": "problem", "support": "unsupported", "identity": "match"}
+            return super()._answer(stage, prompt)
+
+    model = Refusing(findings=[
+        {"title": "Timing chain stretches early", "why": "Owners report it.",
+         "needle": "timing chain stretches early"},
+        {"title": "Invented fault", "why": "The gearbox fails.",
+         "needle": "timing chain stretches early"}],
+        queries=["renault 1.5 dci timing chain"])
+
+    def answer(body):
+        schema = body.get("response_format", {}).get("json_schema", {}).get("schema", {})
+        return completion(model.json(body["messages"][0]["content"], schema))
+
+    ready.responder = answer
     ready.serp = {"results": [{"url": "https://forum.test/t/1", "title": "Forum"}]}
+    # A page that names the product as the reader typed it, so it is about it.
+    page = "Renault Clio 1.5 dCi owners: " + PAGE
     monkeypatch.setattr(fetch, "reader", lambda *a, **k: (
-        lambda url: PAGE if url == "https://forum.test/t/1" else ""))
-    risks = {"assumed": "the 1.5 dCi", "category": "", "pack": "", "risks": [
-        {"title": "Timing chain stretches early", "url": "https://forum.test/t/1",
-         "quote": "the timing chain stretches early on the 1.5 dCi",
-         "why": "Owners report it.", "check": "Ask for the chain invoice.",
-         "severity": "high"},
-        {"title": "Invented fault", "url": "https://forum.test/t/1",
-         "quote": "this sentence is on no page", "why": "x", "check": "y",
-         "severity": "low"},
-    ]}
-    ready.chat = [completion('["renault 1.5 dci timing chain"]'),
-                  completion(json.dumps(risks)), completion(json.dumps(risks))]
+        lambda url: page if url == "https://forum.test/t/1" else ""))
     path = _path(tmp_path, **{prefs.LOCAL_URL: ready.url,
                               prefs.LOCAL_SEARCH_URL: ready.url})
     settings = type("S", (), {"store_path": tmp_path / "k.sqlite",
@@ -611,13 +697,13 @@ def test_a_quick_look_runs_on_the_local_model_with_grounded_quotes(
 
     assert [one["title"] for one in result["risks"]] == ["Timing chain stretches early"]
     assert result["risks"][0]["sources"][0]["grounded"] is True
-    assert result["dropped"] == 1
-    assert result["telemetry"]["repairs"] == 1
-    assert result["telemetry"]["verification"][0]["quote_in_read_page"] is True
+    assert result["telemetry"]["coverage"]["rejected_candidates"] == 1
     assert result["cost_basis"] == "self_hosted" and result["model"] == "qwen3-4b"
     assert any("local plane: Ready" in line for line in progress.lines)
     assert ready.chat_seen[0]["model"] == "qwen3-4b"
-    assert "Pages you fetched" in ready.chat_seen[1]["messages"][0]["content"]
+    # The model was shown the page's own sentence, and the answer came from it.
+    assert any("timing chain stretches early" in body["messages"][0]["content"]
+               for body in ready.chat_seen)
 
 
 def test_with_no_agent_and_a_ready_model_the_quick_look_picks_local_by_itself(
@@ -640,7 +726,8 @@ def test_a_quick_look_with_nothing_to_search_fails_loudly(ready, tmp_path, monke
                               "app_state_path": path})()
     with pytest.raises(local_inference.LocalInferenceError) as said:
         tasks.quick_look(settings, {"product": "X", "backend": "local"}, _Progress())
-    assert "no page could be read" in str(said.value)
+    # The search answered and found nothing: that is named, not blamed on the connection.
+    assert "found no results" in str(said.value)
 
 
 def test_naming_the_local_plane_while_it_is_not_ready_fails_with_the_reason(
@@ -659,7 +746,7 @@ def test_a_research_run_on_the_local_plane_builds_the_plane_from_the_server(
                                "model": "gpt-4o-mini"})
     assert plane.name == "local"
     assert plane.model == "qwen3-4b"          # the server's, not the Run screen's
-    assert plane.search_provider == "openserp:mega"
+    assert plane.search_provider == "openserp:bing"  # the shipped engine set's first
     assert plane._complete.base_url == ready.url
 
 

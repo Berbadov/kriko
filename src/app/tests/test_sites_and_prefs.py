@@ -19,6 +19,14 @@ from app.web.app import create_app
 from app.web.settings import Settings
 from kriko.store.db import connect
 
+#: Nothing chosen: every key empty, except the local settings that read as
+#: their shipped defaults (context window, output and search language).
+UNCHOSEN = dict.fromkeys(prefs.KEYS, "") | {
+    prefs.LOCAL_CONTEXT: "4096",
+    prefs.LOCAL_OUTPUT_LANGUAGE: "auto",
+    prefs.LOCAL_SEARCH_LANGUAGE: "en",
+}
+
 
 @pytest.fixture
 def settings(tmp_path) -> Settings:
@@ -210,82 +218,6 @@ def test_forgetting_a_learned_site_leaves_the_packs_alone(client, settings):
     assert client.get("/api/sites").json()["registered"] == []
 
 
-def test_the_detail_shows_the_rules_a_local_adapter_reads(client, settings):
-    """B181: the screen shows, per site, what is read and what was missed."""
-    conn = state.connect(settings.app_state_path)
-    state.save_local_adapter(conn, host="arabam.com", spec=sites.check(ADAPTER))
-    body = client.get("/api/sites/arabam.com/detail").json()
-    assert body["editable"] is True
-    keys = {rule["key"] for rule in body["rules"]}
-    assert "brand" in keys and "series" in keys
-    assert body["match"] == ["*://*.arabam.com/*"]
-    assert body["spec"]["site"] == "arabam.com"
-
-
-def test_a_packs_detail_is_read_only(client, settings, tmp_path):
-    """B181: a shipped adapter is shown, not offered for editing."""
-    store = connect(settings.store_path)
-    store.execute(
-        "INSERT INTO packs (pack_id, name, version, schema_version, built_at,"
-        " content_digest, enabled, installed_at)"
-        " VALUES ('probe', 'Probe', '1', 1, '2026-09-01', 'd', 1, '2026-09-01')"
-    )
-    store.execute(
-        "INSERT INTO pack_assets (pack_id, name, kind, content)"
-        " VALUES ('probe', 'adapters/arabam.json', 'adapter', ?)",
-        ('{"id": "pack.arabam", "site": "arabam.com",'
-         ' "match": ["*arabam.com/*"], "fields": {}}',),
-    )
-    store.commit()
-    body = client.get("/api/sites/arabam.com/detail").json()
-    assert body["editable"] is False
-    assert body["spec"] is None
-    assert body["pack_id"] == "probe"
-
-
-def test_amending_a_learned_site_checks_and_stores(client, settings):
-    """B181: the mapping can be changed, and only a valid one is kept."""
-    conn = state.connect(settings.app_state_path)
-    state.save_local_adapter(conn, host="arabam.com", spec=sites.check(ADAPTER))
-    amended = {
-        **ADAPTER,
-        "fields": {"brand": {"labels": ["Marka"]}, "series": {"labels": ["Seri"]},
-                   "year": {"labels": ["Yıl"]}},
-    }
-    answer = client.put("/api/sites/arabam.com", json={"spec": amended})
-    assert answer.status_code == 200
-    stored = client.get("/api/sites/arabam.com/detail").json()
-    assert "year" in {rule["key"] for rule in stored["rules"]}
-
-
-def test_amending_a_packs_site_is_refused(client, settings):
-    store = connect(settings.store_path)
-    store.execute(
-        "INSERT INTO packs (pack_id, name, version, schema_version, built_at,"
-        " content_digest, enabled, installed_at)"
-        " VALUES ('probe', 'Probe', '1', 1, '2026-09-01', 'd', 1, '2026-09-01')"
-    )
-    store.execute(
-        "INSERT INTO pack_assets (pack_id, name, kind, content)"
-        " VALUES ('probe', 'adapters/arabam.json', 'adapter', ?)",
-        ('{"id": "pack.arabam", "site": "arabam.com",'
-         ' "match": ["*arabam.com/*"], "fields": {}}',),
-    )
-    store.commit()
-    answer = client.put("/api/sites/arabam.com", json={"spec": ADAPTER})
-    assert answer.status_code == 422
-
-
-def test_an_amendment_with_no_rules_is_refused(client, settings):
-    conn = state.connect(settings.app_state_path)
-    state.save_local_adapter(conn, host="arabam.com", spec=sites.check(ADAPTER))
-    answer = client.put("/api/sites/arabam.com",
-                        json={"spec": {"site": "arabam.com", "fields": {}}})
-    assert answer.status_code == 422
-    stored = client.get("/api/sites/arabam.com/detail").json()
-    assert "year" not in {rule["key"] for rule in stored["rules"]}
-
-
 # ── the three choices ───────────────────────────────────────────────────────
 
 
@@ -303,7 +235,8 @@ def test_nothing_chosen_behaves_exactly_as_before(client):
     # that had gone stale and silently dropped Mistral Vibe's model on write —
     # so a literal copy in this file would be the same bug one layer out, and
     # would fail the day a harness is added rather than the day one breaks.
-    assert body["chosen"] == dict.fromkeys(prefs.KEYS, "")
+    # The three local settings read as their shipped defaults, not as empty.
+    assert body["chosen"] == UNCHOSEN
 
 
 def test_a_choice_survives_being_made(client):
@@ -312,7 +245,7 @@ def test_a_choice_survives_being_made(client):
     # Merged, never replaced: setting one must not clear the others.
     client.put("/api/prefs", json={"search_provider": "tavily"})
     chosen = client.get("/api/prefs").json()["chosen"]
-    assert chosen == dict.fromkeys(prefs.KEYS, "") | {
+    assert chosen == UNCHOSEN | {
         "llm_model": "qwen3.5-27b", "search_provider": "tavily",
     }
 

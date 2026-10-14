@@ -684,10 +684,12 @@ CREATE TABLE IF NOT EXISTS compare_questions (
   question_id TEXT NOT NULL,
   question    TEXT NOT NULL,
   answer      TEXT NOT NULL DEFAULT '',
+  sources_json TEXT NOT NULL DEFAULT '[]',
   job_id      TEXT NOT NULL DEFAULT '',
   asked_at    TEXT NOT NULL DEFAULT '',
   answered_at TEXT NOT NULL DEFAULT '',
-  PRIMARY KEY (draft_id, question_id));
+  PRIMARY KEY (draft_id, question_id)
+);
 
 -- One comparison's board: the reader's free marks over the table (B194),
 -- pen strokes and typed notes, saved as one JSON document per draft. A
@@ -701,7 +703,8 @@ CREATE TABLE IF NOT EXISTS compare_questions (
 CREATE TABLE IF NOT EXISTS compare_boards (
   draft_id  TEXT PRIMARY KEY,
   board     TEXT NOT NULL DEFAULT '{}',
-  updated_at TEXT NOT NULL DEFAULT '');
+  updated_at TEXT NOT NULL DEFAULT ''
+);
 
 -- The research queue: products the reader lined up from the browser
 -- extension's panel for an agent to research one after another, then compare.
@@ -715,14 +718,32 @@ CREATE TABLE IF NOT EXISTS research_queue (
   lookup_id TEXT NOT NULL DEFAULT '',   -- the stored answer, when there is one
   origin    TEXT NOT NULL DEFAULT '',   -- the host it was queued from
   state     TEXT NOT NULL DEFAULT 'waiting',  -- waiting | researching | done
-  added_at  TEXT NOT NULL DEFAULT '');
+  added_at  TEXT NOT NULL DEFAULT ''
+);
 -- the one-row-per-listing rule, as an index: a column constraint could never
 -- be added to a table that already exists
 CREATE UNIQUE INDEX IF NOT EXISTS research_queue_url ON research_queue (url);
 CREATE TABLE IF NOT EXISTS queue_history (
   queue_id TEXT PRIMARY KEY, url TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '',
   lookup_id TEXT NOT NULL DEFAULT '', origin TEXT NOT NULL DEFAULT '',
-  state TEXT NOT NULL DEFAULT 'waiting', added_at TEXT NOT NULL DEFAULT '');
+  state TEXT NOT NULL DEFAULT 'waiting', added_at TEXT NOT NULL DEFAULT ''
+);
+
+-- Where a saved Quick Look belongs. This is app state, not pack content: a
+-- reader or the configured agent can organise a look without changing its
+-- claims, evidence, or any catalog digest. A blank pack id with `uncertain`
+-- is a durable answer too, so the next screen can say what needs a decision.
+CREATE TABLE IF NOT EXISTS quicklook_categories (
+  quick_job_id TEXT PRIMARY KEY,
+  pack_id      TEXT NOT NULL DEFAULT '',
+  pack_name    TEXT NOT NULL DEFAULT '',
+  status       TEXT NOT NULL DEFAULT 'uncertain', -- assigned | uncertain
+  method       TEXT NOT NULL DEFAULT 'deterministic', -- deterministic | agent | reader
+  confidence   TEXT NOT NULL DEFAULT 'none',
+  basis_json   TEXT NOT NULL DEFAULT '[]',
+  message      TEXT NOT NULL DEFAULT '',
+  updated_at   TEXT NOT NULL DEFAULT ''
+);
 
 -- Chat with the reader's agent (app/chat.py). A thread is a conversation the
 -- reader keeps; a message is one of their questions (role 'reader') or one
@@ -744,6 +765,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   job_id       TEXT NOT NULL DEFAULT '',
   created_at   TEXT NOT NULL DEFAULT '');
 CREATE INDEX IF NOT EXISTS chat_messages_thread ON chat_messages (thread_id);
+
 """
 
 #: The most operations one installation keeps. A feed, not an archive: the
@@ -1115,76 +1137,6 @@ def extension_sightings(conn: sqlite3.Connection) -> list[dict]:
     ]
 
 
-# ── triage ───────────────────────────────────────────────────────────────
-
-
-def checked_keys(conn: sqlite3.Connection, lookup_id: str) -> list[str]:
-    return [
-        row["claim_key"]
-        for row in conn.execute(
-            "SELECT claim_key FROM claim_checks WHERE lookup_id = ?"
-            " ORDER BY claim_key",
-            (lookup_id,),
-        )
-    ]
-
-
-def set_checked(
-    conn: sqlite3.Connection, lookup_id: str, claim_key: str, checked: bool
-) -> list[str]:
-    if checked:
-        conn.execute(
-            "INSERT OR IGNORE INTO claim_checks (lookup_id, claim_key, created_at)"
-            " VALUES (?, ?, ?)",
-            (lookup_id, claim_key, datetime.now(UTC).isoformat(timespec="seconds")),
-        )
-    else:
-        conn.execute(
-            "DELETE FROM claim_checks WHERE lookup_id = ? AND claim_key = ?",
-            (lookup_id, claim_key),
-        )
-    conn.commit()
-    return checked_keys(conn, lookup_id)
-
-
-def notes(conn: sqlite3.Connection, lookup_id: str) -> dict[str, str]:
-    """Every note on one answer, keyed the way the UI keys a claim."""
-    return {
-        row["claim_key"]: row["note"]
-        for row in conn.execute(
-            "SELECT claim_key, note FROM claim_notes WHERE lookup_id = ?",
-            (lookup_id,),
-        )
-    }
-
-
-def set_note(
-    conn: sqlite3.Connection, lookup_id: str, claim_key: str, note: str
-) -> dict[str, str]:
-    """Write one note, or clear it.
-
-    An empty note deletes the row rather than storing `''`. A reader who
-    selects their own text and deletes it has said "there is no note here",
-    and an empty string would keep the claim in every "what did the seller
-    say" list forever.
-    """
-    if note.strip():
-        conn.execute(
-            "INSERT INTO claim_notes (lookup_id, claim_key, note, updated_at)"
-            " VALUES (?, ?, ?, ?)"
-            " ON CONFLICT (lookup_id, claim_key) DO UPDATE SET"
-            "   note = excluded.note, updated_at = excluded.updated_at",
-            (lookup_id, claim_key, note.strip(), _now()),
-        )
-    else:
-        conn.execute(
-            "DELETE FROM claim_notes WHERE lookup_id = ? AND claim_key = ?",
-            (lookup_id, claim_key),
-        )
-    conn.commit()
-    return notes(conn, lookup_id)
-
-
 # ── marks — what the reader thought of a claim ────────────────────────────
 
 
@@ -1269,88 +1221,6 @@ def mark_counts(conn: sqlite3.Connection) -> dict[str, int]:
     ):
         counts[row["verdict"]] = row["n"]
     return counts
-
-
-def mark_signals(conn: sqlite3.Connection, limit: int = 50) -> dict:
-    """The two queues a mark feeds, derived rather than curated.
-
-    A mark was a dead end: readers were answering "was this any use?" and the
-    answer went into a table nothing read. This is the mechanism that reads it,
-    and it is deliberately two queues rather than one list, because `wrong` and
-    `not_applicable` are failures of different systems:
-
-    * `research` — subjects carrying `wrong` marks. A knowledge problem: the
-      claim is not true of the thing it was written for, so the fix is another
-      research pass on that subject, which is a job this app already runs.
-    * `matching` — subjects carrying `not_applicable` marks. A *matching*
-      problem: the claim may be perfectly true of the product it was written
-      for and this was not that one, so the fix is upstream of the claim —
-      identity extraction, or a fitment gate that is too broad. `sources`
-      attributes it: a subject the reader only ever reached from a listing URL
-      points at the adapter, while one reached from the form points at the
-      reader's own typing or at the gate.
-
-    Both are counts and identifiers, never a review queue for a person: the
-    automation principle says nothing in the data path waits on sign-off. What
-    a human does with this is press "research", which is the same job an
-    automated pass calls.
-
-    `sources` is computed by asking the reader's own history which doors a
-    subject arrived through. A scan, because history is local and small — and
-    because the alternative is denormalising the door onto every mark, which
-    would make a mark's meaning depend on when it was written.
-    """
-    doors: dict[str, dict[str, int]] = {}
-    for row in conn.execute("SELECT source, response_json FROM lookups"):
-        payload = json.loads(row["response_json"] or "{}")
-        seen = {
-            str(claim.get("subject_id") or "")
-            for claim in payload.get("claims") or []
-        }
-        # `subjects` as well as the claims, and both shapes of it: /api/analyze
-        # sends resolved rows and /api/lookup sends bare ids. A subject that
-        # resolved and had nothing to say is exactly the interesting case here
-        # — there is no claim to carry it, and it is still a match the adapter
-        # made.
-        for entry in payload.get("subjects") or []:
-            seen.add(str(entry.get("subject_id") or "") if isinstance(entry, dict) else str(entry))
-        for subject in seen - {""}:
-            tally = doors.setdefault(subject, {})
-            tally[row["source"]] = tally.get(row["source"], 0) + 1
-
-    def queue(verdict: str, *, with_sources: bool) -> list[dict]:
-        grouped: dict[tuple[str, str], dict] = {}
-        for mark in marks(conn, verdict=verdict, limit=1000):
-            key = (mark["subject_id"], mark["pack_id"])
-            item = grouped.setdefault(
-                key,
-                {
-                    "subject_id": mark["subject_id"],
-                    "pack_id": mark["pack_id"],
-                    "count": 0,
-                    # The reader's own words are the most valuable field on a
-                    # mark, so they travel with the queue rather than being
-                    # aggregated away.
-                    "notes": [],
-                    "claim_ids": [],
-                },
-            )
-            item["count"] += 1
-            item["claim_ids"].append(mark["claim_id"])
-            if mark["note"]:
-                item["notes"].append(mark["note"])
-        out = sorted(
-            grouped.values(), key=lambda item: (-item["count"], item["subject_id"])
-        )
-        if with_sources:
-            for item in out:
-                item["sources"] = doors.get(item["subject_id"], {})
-        return out[:limit]
-
-    return {
-        "research": queue("wrong", with_sources=False),
-        "matching": queue("not_applicable", with_sources=True),
-    }
 
 
 # ── submissions ─ what a researcher sent, and what survived ────────
@@ -1687,6 +1557,7 @@ def _question(row: sqlite3.Row) -> dict:
         "question_id": row["question_id"],
         "question": row["question"],
         "answer": row["answer"],
+        "sources": json.loads(row["sources_json"] or "[]"),
         "job_id": row["job_id"],
         "asked_at": row["asked_at"],
         "answered_at": row["answered_at"],
@@ -1738,7 +1609,7 @@ def record_compare_question(
 
 def answer_compare_question(
     conn: sqlite3.Connection, draft_id: str, question_id: str,
-    answer: str, job_id: str = "",
+    answer: str, job_id: str = "", sources: list[dict] | None = None,
 ) -> dict | None:
     """The job's return path: what the agent said, onto the row it was asked on.
 
@@ -1750,9 +1621,10 @@ def answer_compare_question(
     looks like it was never asked.
     """
     cur = conn.execute(
-        "UPDATE compare_questions SET answer = ?, job_id = ?, answered_at = ?"
+        "UPDATE compare_questions SET answer = ?, sources_json = ?, job_id = ?, answered_at = ?"
         " WHERE draft_id = ? AND question_id = ?",
-        (answer.strip()[:ANSWER_MAX_CHARS], job_id, _now(), draft_id, question_id))
+        (answer.strip()[:ANSWER_MAX_CHARS], json.dumps(sources or [], default=str),
+         job_id, _now(), draft_id, question_id))
     conn.commit()
     if cur.rowcount != 1:
         return None
@@ -2315,6 +2187,52 @@ def create_job(conn: sqlite3.Connection, kind: str, params: dict) -> str:
     return job_id
 
 
+def save_quicklook_category(conn: sqlite3.Connection, quick_job_id: str,
+                            assignment: dict) -> dict:
+    """Keep a validated category decision beside the saved look."""
+    status = str(assignment.get("status") or "uncertain")
+    if status not in {"assigned", "uncertain"}:
+        status = "uncertain"
+    pack_id = str(assignment.get("pack_id") or "") if status == "assigned" else ""
+    basis = assignment.get("basis") if isinstance(assignment.get("basis"), list) else []
+    record = {
+        "quick_job_id": str(quick_job_id),
+        "pack_id": pack_id,
+        "pack_name": str(assignment.get("pack_name") or "") if pack_id else "",
+        "status": status,
+        "method": str(assignment.get("method") or "deterministic"),
+        "confidence": str(assignment.get("confidence") or "none"),
+        "basis": basis,
+        "message": str(assignment.get("message") or ""),
+        "updated_at": _now(),
+    }
+    conn.execute(
+        "INSERT INTO quicklook_categories"
+        " (quick_job_id, pack_id, pack_name, status, method, confidence,"
+        "  basis_json, message, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        " ON CONFLICT(quick_job_id) DO UPDATE SET"
+        " pack_id=excluded.pack_id, pack_name=excluded.pack_name,"
+        " status=excluded.status, method=excluded.method, confidence=excluded.confidence,"
+        " basis_json=excluded.basis_json, message=excluded.message, updated_at=excluded.updated_at",
+        (record["quick_job_id"], record["pack_id"], record["pack_name"], record["status"],
+         record["method"], record["confidence"], json.dumps(basis, ensure_ascii=False),
+         record["message"], record["updated_at"]),
+    )
+    conn.commit()
+    return record
+
+
+def quicklook_category(conn: sqlite3.Connection, quick_job_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT * FROM quicklook_categories WHERE quick_job_id = ?", (quick_job_id,)
+    ).fetchone()
+    if row is None:
+        return None
+    out = dict(row)
+    out["basis"] = json.loads(out.pop("basis_json") or "[]")
+    return out
+
+
 def start_job(conn: sqlite3.Connection, job_id: str) -> bool:
     cursor = conn.execute(
         "UPDATE jobs SET state = ?, started_at = ?"
@@ -2583,6 +2501,11 @@ def saved_answer(conn: sqlite3.Connection, answer_id: str) -> dict | None:
     return {"lookup_id": answer_id, "label": job["params"].get("product", ""),
             "response": {"claims": result.get("risks") or [],
                          "specs": result.get("specs") or [],
+                         "listing": result.get("listing") or {},
+                         "evidence_pages": result.get("evidence_pages") or [],
+                         "coverage": result.get("coverage") or {},
+                         "diagnostic": result.get("diagnostic") or {},
+                         "identity": result.get("identity") or {},
                          "category": result.get("category", ""),
                          "assumed": result.get("assumed", "")}}
 
@@ -2713,23 +2636,6 @@ def unmapped_labels(
         (*args, limit),
     ).fetchall()
     return [dict(row) for row in rows]
-
-
-def forget_unmapped(conn: sqlite3.Connection, adapter_id: str, label: str) -> bool:
-    """Drop one label.
-
-    The dismissal an author needs: "Takasa Uygun" is never going to be mapped
-    and a list that cannot be pruned stops being read. Deleting a row that
-    recurs is not permanent — the next listing carrying it puts it back with a
-    fresh `first_at`, which is the correct answer to "I said I did not care
-    and it is still happening".
-    """
-    cur = conn.execute(
-        "DELETE FROM unmapped_labels WHERE adapter_id = ? AND label = ?",
-        (adapter_id, label),
-    )
-    conn.commit()
-    return cur.rowcount > 0
 
 
 # ── fact checks — what the cited page says now ────────────────────────────
@@ -2948,70 +2854,6 @@ def research_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
 #: plane and not a rendering choice — a screen that invented the sentence
 #: would drift from the schema the first time a plane learned to count.
 METERED = ("spent_usd", "tokens_used")
-
-
-def usage_totals(conn: sqlite3.Connection) -> dict:
-    """What every run has cost, together, and what that buys per claim.
-
-    The per-run rows have always said what one run spent. Nobody could ask the
-    only question a reader actually has — *what has this cost me so far, and
-    is it worth it* — because that answer is a sum, and there was nowhere to
-    read a sum from.
-
-    Two habits from the per-run column carry over, and both are about the
-    difference between zero and unknown:
-
-    * `runs` and `metered_runs` are both reported. A total of $0.14 over two
-      hundred runs means something very different depending on whether two of
-      them were counted or all two hundred were, and a lone total cannot say
-      which.
-    * `cost_per_claim` is None rather than 0.0 whenever the numerator is
-      unmeasured or the denominator is zero. A cost-per-claim of "$0.00" on an
-      installation that has never metered anything is a lie with a decimal
-      point on it, and it is the number a reader would quote.
-
-    `claims` counts what the runs still own — an undone run has given its
-    claims back, and the cost of a run whose claims are gone is a sunk cost
-    rather than a cheaper claim.
-    """
-    row = conn.execute(
-        "SELECT COUNT(*) AS runs,"
-        " SUM(CASE WHEN spent_usd IS NOT NULL THEN 1 ELSE 0 END) AS metered_runs,"
-        " SUM(CASE WHEN tokens_used IS NOT NULL THEN 1 ELSE 0 END) AS counted_runs,"
-        " SUM(spent_usd) AS spent_usd, SUM(tokens_used) AS tokens_used"
-        " FROM research_runs"
-    ).fetchone()
-    claims = conn.execute(
-        "SELECT COUNT(*) FROM research_run_claims WHERE removed_at IS NULL"
-    ).fetchone()[0]
-    spent = row["spent_usd"]
-    planes = [
-        {
-            "plane": item["plane"] or "",
-            "runs": item["runs"],
-            "metered_runs": item["metered_runs"],
-            "spent_usd": item["spent_usd"],
-            "tokens_used": item["tokens_used"],
-        }
-        for item in conn.execute(
-            "SELECT plane, COUNT(*) AS runs,"
-            " SUM(CASE WHEN spent_usd IS NOT NULL THEN 1 ELSE 0 END) AS metered_runs,"
-            " SUM(spent_usd) AS spent_usd, SUM(tokens_used) AS tokens_used"
-            " FROM research_runs GROUP BY plane ORDER BY runs DESC, plane"
-        )
-    ]
-    return {
-        "runs": row["runs"] or 0,
-        "metered_runs": row["metered_runs"] or 0,
-        "counted_runs": row["counted_runs"] or 0,
-        "spent_usd": spent,
-        "tokens_used": row["tokens_used"],
-        "claims": claims,
-        "cost_per_claim": (
-            float(spent) / claims if spent is not None and claims else None
-        ),
-        "planes": planes,
-    }
 
 
 def get_research_run(conn: sqlite3.Connection, run_id: str) -> dict | None:

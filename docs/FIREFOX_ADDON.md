@@ -1,5 +1,14 @@
 # Firefox add-on
 
+## Set it up
+
+In Kriko, open **Browser extension** and press **Prepare Firefox**, then follow
+the Firefox steps the page shows. The release's unsigned XPI is a development
+package: regular Firefox needs Mozilla signing for a permanent installation. A
+temporary installation through `about:debugging` lasts until Firefox restarts.
+
+## How it is built
+
 Kriko uses one extension source for Chromium and Firefox. The Firefox build
 replaces the service worker with a background event page, adds a stable Gecko
 ID, declares its page-data use, and removes Chromium's dynamic resource URL

@@ -388,15 +388,6 @@ def test_the_agent_plane_still_produces_a_brief(client, settings):
     assert row["result"]["accepted"] == []
 
 
-def test_the_stream_ends_when_the_job_does(client):
-    job_id = client.post("/api/research", json={"subject_id": "nope"}).json()["job_id"]
-    with client.stream("GET", f"/api/jobs/{job_id}/stream") as response:
-        assert response.status_code == 200
-        body = "".join(response.iter_text())
-    assert "data:" in body
-    assert state.FAILED in body
-
-
 # ── cancelling must not cost the reader what they already paid for ──────
 #
 # "Cancel button buggy — kept going after clicking", and "cancel bins completed

@@ -18,6 +18,7 @@ pub(crate) mod browse;
 pub(crate) mod chat;
 pub(crate) mod compare;
 pub(crate) mod extension;
+pub(crate) mod guidance;
 pub(crate) mod history;
 pub(crate) mod logs;
 pub(crate) mod home;
@@ -158,15 +159,16 @@ pub fn segmented(
 pub fn plate_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
-        .h(px(36.0))
+        .h(px(40.0))
         .px(px(16.0))
         .flex()
         .items_center()
         .justify_center()
         .gap(px(8.0))
         .rounded(px(10.0))
-        .font_family(MONO)
-        .text_size(px(12.0))
+        .font_family(SANS)
+        .font_weight(FontWeight::MEDIUM)
+        .text_size(px(13.0))
         .text_color(rgb(INK_2))
         .cursor_pointer()
         .border_1()
@@ -174,7 +176,7 @@ pub fn plate_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .bg(rgb(BEZEL_LO))
         .hover(|s| s.bg(rgb(BEZEL_HI)).text_color(rgb(INK)))
         .active(|s| s.bg(rgb(WELL)))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// A control in a filter bar: flat glass with a control ring that lights when
@@ -190,8 +192,9 @@ pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevr
         .justify_center()
         .gap(px(8.0))
         .rounded(px(10.0))
-        .font_family(MONO)
-        .text_size(px(12.0))
+        .font_family(SANS)
+        .font_weight(FontWeight::MEDIUM)
+        .text_size(px(13.0))
         .cursor_pointer()
         .text_color(rgb(if open { ICE } else { INK_2 }))
         .bg(rgba(GLASS_1))
@@ -199,7 +202,7 @@ pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevr
         .border_color(rgba(BORDER_CONTROL))
         .when(open, |s| s.border_color(rgb(ICE)))
         .hover(|s| s.bg(rgba(GLASS_2)).text_color(rgb(INK)))
-        .child(label.to_uppercase())
+        .child(label.to_string())
         .when(chevron, |s| {
             s.child(icon(if open { "collapse" } else { "chevron-down" }, 12.0).text_color(rgb(MUTED)))
         })

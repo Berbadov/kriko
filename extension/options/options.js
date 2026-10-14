@@ -43,7 +43,7 @@ async function load() {
   // The *stored* value, not the effective one. Showing the default in the
   // field would make "I have not chosen" indistinguishable from "I chose the
   // default", and then emptying the field to go back would look like a no-op.
-  input.value = reply.stored;
+  input.value = reply.stored ?? "";
 }
 
 async function save(value) {
@@ -123,7 +123,10 @@ function renderSites(status) {
   pendingOrigins = sites
     .filter((row) => row.state === "pending" && row.pattern)
     .map((row) => row.pattern);
+  // Gone, not greyed, when nothing waits: a lit-looking button with nothing
+  // to allow read as a step the reader had missed.
   grantButton.disabled = pendingOrigins.length === 0;
+  grantButton.hidden = pendingOrigins.length === 0;
   grantButton.textContent = pendingOrigins.length > 1
     ? `Allow ${pendingOrigins.length} pending sites`
     : "Allow the pending site";

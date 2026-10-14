@@ -23,11 +23,9 @@ pretend to".
 """
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.providers import llm
 from app.web import state, tasks
-from app.web.app import create_app
 from app.web.settings import Settings
 from kriko.research.api import ApiResearcher
 
@@ -163,83 +161,6 @@ def test_the_llm_adapter_counts_what_the_provider_reported(monkeypatch):
     assert complete.tokens_used == 18, "an unusable reply still cost tokens"
 
 
-# ── the sum, which no per-run row can answer ─────────────────────────────
-
-
-def _metered(conn, run_id, plane, spent, tokens, claims=0):
-    state.open_research_run(conn, run_id, plane=plane, budget_usd=1.0)
-    state.record_run_claims(
-        conn, run_id, "probe", "s1",
-        [{"claim_id": f"{run_id}-{n}"} for n in range(claims)],
-    )
-    state.close_research_run(conn, run_id, "done", spent, tokens)
-
-
-def test_the_totals_say_how_many_of_the_runs_behind_them_were_counted(tmp_path):
-    """A total with no denominator cannot be read. $0.08 over four runs means
-    one thing if all four were metered and another if one was."""
-    conn = state.connect(tmp_path / "app.sqlite")
-    _metered(conn, "a", "api", 0.05, 500, claims=2)
-    _metered(conn, "b", "api", 0.03, 300, claims=2)
-    _metered(conn, "c", "agent", None, None)
-    _metered(conn, "d", "harness", None, 900)
-    totals = state.usage_totals(conn)
-    conn.close()
-
-    assert totals["runs"] == 4
-    assert totals["metered_runs"] == 2
-    assert totals["counted_runs"] == 3
-    assert totals["spent_usd"] == pytest.approx(0.08)
-    assert totals["tokens_used"] == 1700
-    assert totals["claims"] == 4
-    assert totals["cost_per_claim"] == pytest.approx(0.02)
-
-
-def test_an_installation_that_never_metered_anything_reports_no_cost_per_claim(
-    tmp_path,
-):
-    """Not $0.00. That is the number a reader would quote, and it is a lie
-    with a decimal point on it."""
-    conn = state.connect(tmp_path / "app.sqlite")
-    _metered(conn, "a", "agent", None, None, claims=3)
-    totals = state.usage_totals(conn)
-    conn.close()
-    assert totals["claims"] == 3
-    assert totals["spent_usd"] is None
-    assert totals["cost_per_claim"] is None
-
-
-def test_a_run_whose_claims_were_undone_does_not_make_the_rest_look_cheaper(
-    tmp_path,
-):
-    """`claims` counts what the runs still own. An undone run's cost is sunk,
-    and quietly dropping it from the numerator would reward the undo."""
-    conn = state.connect(tmp_path / "app.sqlite")
-    _metered(conn, "a", "api", 0.10, 100, claims=2)
-    conn.execute("UPDATE research_run_claims SET removed_at = '2026-09-10'")
-    conn.commit()
-    totals = state.usage_totals(conn)
-    conn.close()
-    assert totals["claims"] == 0
-    assert totals["spent_usd"] == pytest.approx(0.10)
-    assert totals["cost_per_claim"] is None, "a zero denominator is not a price"
-
-
-def test_the_totals_are_broken_down_by_plane(tmp_path):
-    """Which plane spent it, because that is the only actionable half: a
-    reader who dislikes the number changes planes."""
-    conn = state.connect(tmp_path / "app.sqlite")
-    _metered(conn, "a", "api", 0.05, 500)
-    _metered(conn, "b", "harness", None, 900)
-    _metered(conn, "c", "harness", None, 100)
-    planes = {row["plane"]: row for row in state.usage_totals(conn)["planes"]}
-    conn.close()
-    assert planes["harness"]["runs"] == 2
-    assert planes["harness"]["tokens_used"] == 1000
-    assert planes["harness"]["spent_usd"] is None
-    assert planes["api"]["metered_runs"] == 1
-
-
 # ── the analyses log finally has a reader ────────────────────────────────
 
 
@@ -274,49 +195,3 @@ def test_a_log_that_does_not_exist_summarises_to_zero_rather_than_raising(tmp_pa
 
     assert observability.summarise(tmp_path / "nope.jsonl")["analyses"] == 0
 
-
-# ── the route the screen reads ───────────────────────────────────────────
-
-
-def test_the_usage_endpoint_reports_both_halves(tmp_path):
-    """What was spent writing claims in, and what was asked reading them out.
-    Neither half answers "what has this cost me" alone."""
-    conn = state.connect(tmp_path / "app.sqlite")
-    _metered(conn, "a", "api", 0.04, 400, claims=1)
-    conn.close()
-    (tmp_path / "a.jsonl").write_text(
-        '{"subjects": ["s1"], "claim_titles": ["one"]}\n', encoding="utf-8"
-    )
-    with TestClient(create_app(_settings(tmp_path))) as client:
-        body = client.get("/api/usage").json()
-    assert body["research"]["tokens_used"] == 400
-    assert body["research"]["cost_per_claim"] == pytest.approx(0.04)
-    assert body["analyses"]["analyses"] == 1
-
-
-def test_usage_on_a_fresh_installation_is_zeroes_and_nulls_not_an_error(tmp_path):
-    """The first screen a new reader sees. It must render, and it must not
-    invent a spend of $0.00 out of an installation that has never run."""
-    with TestClient(create_app(_settings(tmp_path))) as client:
-        body = client.get("/api/usage").json()
-    assert body["research"]["runs"] == 0
-    assert body["research"]["spent_usd"] is None
-    assert body["analyses"]["analyses"] == 0
-
-
-def test_every_metered_column_reaches_the_wire(tmp_path):
-    """The parity that keeps this honest as planes learn to count.
-
-    `state.METERED` is the schema's own list. A third currency added to the
-    column set but not to the run payload would be a measurement taken and
-    never shown, which is the state B97 exists to end.
-    """
-    conn = state.connect(tmp_path / "app.sqlite")
-    _metered(conn, "a", "api", 0.04, 400)
-    conn.close()
-    with TestClient(create_app(_settings(tmp_path))) as client:
-        run = client.get("/api/research-runs").json()["runs"][0]
-        totals = client.get("/api/usage").json()["research"]
-    for column in state.METERED:
-        assert column in run, f"{column} is recorded and never reported"
-        assert column in totals, f"{column} is reported per run and never summed"

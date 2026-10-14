@@ -36,6 +36,9 @@ pub const GLASS_2: u32 = 0xffffff14;
 /// The live dock's panel: the ground colour at 94% so the page behind it
 /// reads as a faint shape, never as text competing with the dock's own.
 pub const DOCK_GLASS: u32 = 0x090e1bf0;
+/// The live dock's width. The page reserves this much room while it is open,
+/// so controls and text do not disappear beneath the floating panel.
+pub const DOCK_WIDTH: f32 = 320.0;
 pub const HAIRLINE: u32 = 0xffffff1a;
 pub const BORDER_CONTROL: u32 = 0xffffff59;
 pub const BRAND_WASH: u32 = 0x1f4fff29;
@@ -148,9 +151,16 @@ pub enum LedAnim {
 /// Flat glass card from the current design reference.
 pub fn card() -> Div {
     div()
-        .bg(rgba(GLASS_1))
+        .bg(linear_gradient(
+            180.0,
+            linear_color_stop(rgba(0xffffff1b), 0.0),
+            linear_color_stop(rgba(GLASS_1), 1.0),
+        ))
+        .border_1()
+        .border_color(rgba(0xffffff26))
         .rounded(px(20.0))
         .p(px(24.0))
+        .shadow(vec![shadow(0x00000045, 0.0, 10.0, 28.0, 0.0)])
 }
 
 /// Recessed well: darker fill and a hairline ring.
@@ -175,7 +185,13 @@ pub fn frost() -> Div {
 /// Brand-wash callout panel, full width: tag and lines left, a key right.
 pub fn callout() -> Div {
     div()
-        .bg(rgba(BRAND_WASH))
+        .bg(linear_gradient(
+            180.0,
+            linear_color_stop(rgba(0x527bff34), 0.0),
+            linear_color_stop(rgba(BRAND_WASH), 1.0),
+        ))
+        .border_1()
+        .border_color(rgba(0x86a3ff48))
         .rounded(px(20.0))
         .py(px(20.0))
         .px(px(24.0))
@@ -342,10 +358,11 @@ pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
         )
 }
 
-/// A translucent brand wash over the sky that slowly breathes, so the hero
-/// feels alive without anything moving in it. Still (dimmed) without motion.
-fn sky_veil(motion: bool) -> gpui::AnyElement {
-    let veil = div().absolute().top_0().left_0().size_full().bg(linear_gradient(
+/// A translucent brand wash over the sky. It used to breathe on a 14 s loop,
+/// which redrew the whole window every frame on every screen for a movement
+/// nobody could see (#184); the wash now holds the breath's middle.
+fn sky_veil(_motion: bool) -> gpui::AnyElement {
+    div().absolute().top_0().left_0().size_full().bg(linear_gradient(
         90.0,
         linear_color_stop(
             Hsla {
@@ -361,17 +378,9 @@ fn sky_veil(motion: bool) -> gpui::AnyElement {
             },
             1.0,
         ),
-    ));
-    if motion {
-        veil.with_animation(
-            "sky-breath",
-            Animation::new(std::time::Duration::from_secs(14)).repeat(),
-            |el, t| el.opacity(0.55 + 0.45 * (std::f32::consts::PI * t).sin()),
-        )
-        .into_any_element()
-    } else {
-        veil.opacity(0.6).into_any_element()
-    }
+    ))
+    .opacity(0.6)
+    .into_any_element()
 }
 
 /// The img source that reads from the embedded AssetSource. A bare string
@@ -479,7 +488,7 @@ pub fn titlebar_button(
     div()
         .id(id)
         .w(px(40.0))
-        .h(px(28.0))
+        .h(px(32.0))
         .flex()
         .items_center()
         .justify_center()
@@ -524,7 +533,7 @@ pub fn key(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .id(id)
         .flex_none()
         .h(px(44.0))
-        .px(px(24.0))
+        .px(px(20.0))
         .flex()
         .items_center()
         .justify_center()
@@ -534,10 +543,17 @@ pub fn key(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .text_color(rgb(0xffffff))
         .text_size(px(15.0))
         .cursor_pointer()
-        .bg(rgb(BRAND))
-        .hover(|s| s.bg(rgb(BRAND_HOVER)))
+        .bg(linear_gradient(
+            180.0,
+            linear_color_stop(hsla(BRAND_HOVER), 0.0),
+            linear_color_stop(hsla(BRAND), 1.0),
+        ))
+        .border_1()
+        .border_color(rgba(0xffffff59))
+        .shadow(vec![shadow(0x102b9c80, 0.0, 3.0, 12.0, 0.0)])
+        .hover(|s| s.bg(rgb(BRAND_HOVER)).border_color(rgba(0xffffff90)))
         .active(|s| s.bg(rgb(BRAND_LOW)))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// Ghost button: translucent fill, control-coloured ring.
@@ -545,21 +561,28 @@ pub fn ghost(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
         .flex_none()
-        .h(px(44.0))
-        .px(px(24.0))
+        .h(px(40.0))
+        .px(px(16.0))
         .flex()
         .items_center()
         .justify_center()
         .rounded(px(12.0))
-        .font_family(MONO)
+        .font_family(SANS)
+        .font_weight(FontWeight::MEDIUM)
         .text_color(rgb(INK_2))
-        .text_size(px(13.0))
+        .text_size(px(14.0))
         .cursor_pointer()
-        .bg(rgba(GLASS_1))
+        .bg(linear_gradient(
+            180.0,
+            linear_color_stop(rgba(GLASS_2), 0.0),
+            linear_color_stop(rgba(GLASS_1), 1.0),
+        ))
         .border_1()
         .border_color(rgba(BORDER_CONTROL))
-        .hover(|s| s.bg(rgba(GLASS_2)))
-        .child(label.to_uppercase())
+        .shadow(vec![shadow(0x00000035, 0.0, 2.0, 8.0, 0.0)])
+        .hover(|s| s.bg(rgba(0xffffff20)).border_color(rgba(0xffffff8a)))
+        .active(|s| s.bg(rgba(0xffffff0a)))
+        .child(label.to_string())
 }
 
 /// A compact danger key for a row that already carries its own label: the
@@ -568,22 +591,23 @@ pub fn danger_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
         .flex_none()
-        .h(px(22.0))
-        .px(px(8.0))
+        .h(px(32.0))
+        .px(px(10.0))
         .flex()
         .items_center()
         .justify_center()
         .rounded(px(6.0))
-        .font_family(MONO)
+        .font_family(SANS)
+        .font_weight(FontWeight::MEDIUM)
         .text_color(rgb(DANGER))
-        .text_size(px(10.0))
+        .text_size(px(12.0))
         .cursor_pointer()
         .bg(rgba(DANGER_WASH))
         .border_1()
         .border_color(rgba(DANGER_EDGE))
         .hover(|s| s.bg(rgba(0xff6b5e3d)))
         .active(|s| s.opacity(0.85))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// Danger button: danger wash fill, danger text.
@@ -592,22 +616,26 @@ pub fn danger(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .id(id)
         .flex_none()
         .h(px(44.0))
-        .px(px(24.0))
+        .px(px(18.0))
         .flex()
         .items_center()
         .justify_center()
         .rounded(px(12.0))
         .font_family(DISPLAY)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_color(rgb(DANGER))
+        .text_color(rgb(0xffd0ca))
         .text_size(px(15.0))
         .cursor_pointer()
-        .bg(rgba(DANGER_WASH))
+        .bg(linear_gradient(
+            180.0,
+            linear_color_stop(rgba(0xff6b5e35), 0.0),
+            linear_color_stop(rgba(DANGER_WASH), 1.0),
+        ))
         .border_1()
         .border_color(rgba(DANGER_EDGE))
         .hover(|s| s.bg(rgba(0xff6b5e3d)))
         .active(|s| s.opacity(0.85))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// Wide benchmark run plate: 72px, leading play glyph, big label.
@@ -737,16 +765,18 @@ pub fn led_matrix_anim(
                     .into_any_element()
                 } else if motion && anim == LedAnim::Blink {
                     // the marquee: bulb `index` dims out of turn, one after
-                    // another, so the sign never goes dark all at once
+                    // another, so the sign never goes dark all at once. It
+                    // runs BLINKS rounds when the tag appears, then rests lit:
+                    // a question can wait for days, and a loop would redraw
+                    // the whole window every frame for all of them (#184).
                     let phase = index as f32 / lit_dots as f32;
                     base.with_animation(
                         gpui::ElementId::named_usize(format!("{id}-blink"), index),
-                        Animation::new(std::time::Duration::from_millis(1200))
-                            .repeat()
+                        Animation::new(std::time::Duration::from_millis(1200 * BLINKS as u64))
                             .with_easing(|t| t),
                         move |el, t| {
-                            let k = (t + phase).fract();
-                            el.opacity(if k < 0.6 { 1.0 } else { 0.25 })
+                            let k = (t * BLINKS as f32 + phase).fract();
+                            el.opacity(if t >= 1.0 || k < 0.6 { 1.0 } else { 0.25 })
                         },
                     )
                     .into_any_element()
@@ -774,8 +804,11 @@ pub enum TagState {
     Block,
 }
 
+/// How many marquee rounds a needs-you tag runs before it rests lit.
+const BLINKS: u32 = 3;
+
 /// State tag: LED glyph plus a word, always both. The LED animates the way
-/// the CSS does: NEEDS YOU blinks, LIVE boots once on mount. `motion ==
+/// the CSS does: NEEDS YOU blinks a few rounds, LIVE boots once on mount. `motion ==
 /// false` (Reduce motion) keeps it static. `id` names the tag's animation:
 /// unique per tag on the screen, or two tags half-light each other.
 pub fn tag(id: impl Into<SharedString>, state: TagState, label: &str, motion: bool) -> Div {
@@ -1146,7 +1179,7 @@ pub fn nav_item(
 ) -> Stateful<Div> {
     let base = div()
         .id(id)
-        .h(px(36.0))
+        .h(px(42.0))
         .px(px(12.0))
         .flex()
         .items_center()

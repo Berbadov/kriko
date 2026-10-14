@@ -6,6 +6,10 @@ Four pictures, one per question people actually ask.
 
 A page is matched on its identity keys, never on its title. Exact on every key
 is *recognised*; a near miss is *probably*; anything else says why it failed.
+When every key the page gives fits several products in one catalog (a model
+named without its variant), the answer is *one of several*: only what all of
+them share is served, and the panel lists them so the reader can open the one
+on the listing. That is a question, never reported as a gap.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
@@ -15,7 +19,8 @@ flowchart TD
     B -- yes --> C["The adapter reads the page<br/>into key = value pairs"]
     C --> D["Normalise onto the catalog's<br/>own vocabulary"]
     D --> E{"Exact match on<br/>every identity key?"}
-    E -- yes --> F["<b>recognised</b><br/>score 1.0"]
+    E -- "yes, one subject" --> F["<b>recognised</b><br/>score 1.0"]
+    E -- "yes, several" --> K["<b>one of several</b><br/>what all share, and a choice"]
     E -- no --> G["Score every subject:<br/>exact 1.0, close 0 to 1, absent 0<br/>a contradiction counts double against"]
     G --> H{"Best score"}
     H -- "at or above the pack's floor" --> F
@@ -29,7 +34,7 @@ flowchart TD
     classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
     class A,B,C,D,E,G,H plain
     class F mark
-    class I ice
+    class I,K ice
     class B1,J danger
 ```
 
@@ -81,7 +86,7 @@ flowchart LR
     E --> I["<b>Ingestion</b><br/>ground the quote,<br/>apply the pack's bar"]
     I --> L["<b>Ledgering</b><br/>write down what was<br/>refused, and why"]
     E -. "cost cap hit" .-> STOP["Stops cleanly.<br/>Everything read is kept."]
-    I -. "one field missing" .-> R["Re-ask once,<br/>that field only"]
+    I -. "quote not in the document" .-> R["Re-ask once,<br/>refused quotes only"]
     R --> I
 
     classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
@@ -99,28 +104,10 @@ request.
 
 ## What is each part of the code?
 
-Imports flow one way, down the fan. The desktop app is a supervisor over HTTP,
-not a second engine.
-
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart TD
-    T["<b>kriko-gpui/</b> — the native desktop app<br/>owns the sidecar's lifetime, draws over HTTP"] --> A
-    A["<b>app/</b> — the interfaces<br/>web, CLI, MCP, operator console"] --> K
-    P["<b>packs/</b> — one directory per category<br/>data, vocabulary, trust, its own bar"] --> K
-    A --> PL["<b>app/pipeline/</b> — pipeline drivers"]
-    PL --> PP["<b>packs/#lt;name#gt;/pipeline/</b><br/>evidence ledger, grounded extraction"]
-    K["<b>kriko/</b> — the engine<br/>imports none of the others<br/><i>knows no category</i>"]
-
-    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    class K brand
-    class T,U,A,P,PL,PP plain
-```
-
-The engine importing anything above it is the unforgivable violation: the greps
-are in `CLAUDE.md` and an AST test holds them. A pack is consumed through the
-store, never imported.
+The packages, what each owns and which may import which are in
+[ARCHITECTURE.md](ARCHITECTURE.md). The rule that matters here: the engine
+imports nothing above it, and a pack is read through the store, never imported.
+The desktop app supervises the engine over HTTP and is not a second engine.
 
 ## Where do things live on disk?
 
