@@ -972,9 +972,9 @@ fn agent_key(
         )
 }
 
-/// Queue mode: the products queued from the browser extension, one agent
-/// researching them in turn, and the researched ones handed to the slots
-/// below as a new draft.
+/// Queue mode: the products queued from the browser extension, researched as
+/// many at once as Settings → Runs allows, and the researched ones handed to
+/// the slots below as a new draft.
 fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
     let c = &app.live.compare;
@@ -1158,11 +1158,17 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let summary = if !c.queue_loaded {
         "reading".to_string()
     } else if running {
-        format!("{agent_name} researching · {done_n} of {n} done")
+        let at_once = c.queue.iter().filter(|q| q.state == QState::Researching).count();
+        let together = if at_once > 1 { format!(" {at_once} at once") } else { String::new() };
+        format!("{agent_name} researching{together} · {done_n} of {n} done")
     } else if n > 0 && left_n == 0 {
         format!("all {n} researched · ready to compare")
     } else if n == 0 {
         "nothing queued".to_string()
+    } else if left_n > 1 && app.run_concurrency <= 1 {
+        format!(
+            "{left_n} waiting · {done_n} researched · one at a time, Settings → Runs sets how many together"
+        )
     } else {
         format!("{left_n} waiting · {done_n} researched")
     };
