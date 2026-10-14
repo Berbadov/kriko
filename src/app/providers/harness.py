@@ -66,6 +66,7 @@ import subprocess
 from collections import deque
 from app.loginpath import child_env, login_path
 from app.winprocess import hidden_startup
+from app import processcontrol
 import sys
 import tempfile
 import tomllib
@@ -83,6 +84,9 @@ from kriko.research.base import Document, Finding, ResearchTask
 #: before adding to this: a research plane that can write files or run shell
 #: commands is not a research plane.
 SEARCH_TOOLS = ("WebSearch", "WebFetch")
+
+_CODEX_SUPPORT: dict[tuple[str, float], bool] = {}
+_CODEX_SUPPORT_LOCK = threading.Lock()
 
 #: The page reader (B155): Parallel's hosted MCP reader. Only its fetch tool is
 #: granted; searches go through the CLI's normal WebSearch tool.
@@ -952,6 +956,16 @@ _OPTION = re.compile(r"--[A-Za-z][A-Za-z0-9-]*")
 
 
 def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
+    from app.agentresources import slot
+
+    try:
+        with slot("probe", key=executable, timeout=HELP_TIMEOUT_SECONDS):
+            return _ask_owned(executable, *argv, keep_lines=keep_lines)
+    except TimeoutError:
+        return ""
+
+
+def _ask_owned(executable: str, *argv: str, keep_lines: int = 400) -> str:
     """Run a CLI's own self-description and come back, whatever it does.
 
     **`subprocess.run(timeout=…)` is not enough on Windows**, and that is not
@@ -976,8 +990,9 @@ def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
     """
     out: list[str] = []
     try:
-        proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
+        proc = processcontrol.contained_popen(
             [executable, *argv],
+            factory=subprocess.Popen, resource_kind=None,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -2512,6 +2527,9 @@ class HarnessResearcher(AgentResearcher):
         self._reader_config = ""
         self.harness = harness
         self.app_state_path = app_state_path
+        self.agent_ledger = None
+        self.agent_run_id = ""
+        self.transport_mode = os.environ.get("KRIKO_CODEX_TRANSPORT", "auto").strip().lower()
         self._host_search_url = ""
         self.runtime: dict = {}
         self.timeout = timeout
@@ -2931,6 +2949,11 @@ class HarnessResearcher(AgentResearcher):
                 # own, so ask it to search rather than end the run; whatever it
                 # cites is still quote-checked, and an unsourced claim dropped.
                 own_search = True
+                if self.harness.protocol == "codex" and self.transport_mode == "persistent":
+                    raise NoHarness(
+                        "Host web search failed. Persistent Codex transport has web tools disabled "
+                        "and requires host-read pages; restore host search or use auto/exec mode."
+                    )
                 self._echo(f"The search service did not answer; {self.harness.label} "
                            "will search the web itself")
             if self.check_cancelled is not None:
@@ -2949,7 +2972,21 @@ class HarnessResearcher(AgentResearcher):
             before_tokens = self.tokens_used
             answer_started = time.perf_counter()
             try:
-                reply = self.ask(full_prompt)
+                if own_search and self.harness.protocol == "codex":
+                    if self.transport_mode == "auto":
+                        # This one request explicitly asks the CLI to search.
+                        # The persistent protocol has no web grant, so choose
+                        # the legacy web-capable CLI path before prompt delivery.
+                        previous_mode = self.transport_mode
+                        self.transport_mode = "exec"
+                        try:
+                            reply = self.ask(full_prompt)
+                        finally:
+                            self.transport_mode = previous_mode
+                    else:
+                        reply = self.ask(full_prompt)
+                else:
+                    reply = self.ask(full_prompt)
             except Exception:
                 answer_stage["failed"] = True
                 raise
@@ -3077,8 +3114,125 @@ class HarnessResearcher(AgentResearcher):
         receives one line per action the agent takes, while it takes it.
         """
         prompt = with_refused_page(prompt)
+        if self.harness.protocol == "codex" and self.transport_mode != "exec":
+            from app.providers.codex_transport import TransportUnavailable
+
+            try:
+                return self._run_codex(prompt, on_line)
+            except TransportUnavailable as error:
+                if self.transport_mode == "persistent":
+                    raise
+                say = on_line if on_line is not None else self.on_action
+                if say is not None:
+                    say(f"persistent protocol unavailable; using a fresh process ({error})")
         with self._workspace():
             return self._invoke(prompt, on_line)
+
+    def _run_codex(self, prompt: str, on_line=None) -> str:
+        from app.providers import codex_profile
+        from app.providers.codex_transport import CodexRequest, TransportUnavailable
+
+        if self.check_cancelled is not None:
+            self.check_cancelled()
+        if self.transport_mode not in {"auto", "persistent", "exec"}:
+            raise ValueError("KRIKO_CODEX_TRANSPORT must be auto, persistent, or exec")
+        executable = locate(self.harness)
+        if not executable:
+            raise NoHarness("Codex is not installed")
+        # Older CLI installations remain usable through exec. Discovery is
+        # cached by binary stamp, and happens before a research prompt is sent.
+        key = (executable, _stamp(executable))
+        with _CODEX_SUPPORT_LOCK:
+            supported = _CODEX_SUPPORT.get(key)
+        if supported is None:
+            supported = "--listen" in _ask(executable, "app-server", "--help")
+            with _CODEX_SUPPORT_LOCK:
+                _CODEX_SUPPORT[key] = supported
+        if not supported:
+            raise TransportUnavailable("the installed CLI has no verified app-server transport")
+        chosen = codex_profile.profile(
+            executable, model=self.requested_model, effort=self.requested_effort,
+            namespace=str(self.app_state_path or ""),
+        )
+        ledger = self.agent_ledger
+        run_id = self.agent_run_id
+        owned_run = False
+        if ledger is None and self.app_state_path is not None:
+            from app.agentledger import Ledger
+
+            ledger = Ledger(self.app_state_path)
+            saved = ledger.reserve(None, "harness", {
+                "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+                "provider": self.harness.id, "model": self.requested_model,
+                "effort": self.requested_effort,
+            })
+            run_id = saved["run_id"]
+            owned_run = True
+        attempt = ledger.start_attempt(run_id, self.harness.id, self.requested_model, {
+            "prompt_sha256": hashlib.sha256(prompt.encode()).hexdigest(),
+            "prompt_bytes": len(prompt.encode()), "effort": self.requested_effort,
+            "transport": "app-server", "tools": [],
+        }) if ledger is not None and run_id else ""
+
+        def delivery(status, context_id="", turn_id="", detail=None):
+            if ledger is not None and attempt:
+                ledger.update_delivery(attempt, status, context_id, turn_id, detail)
+
+        say = on_line if on_line is not None else self.on_action
+        if say is not None:
+            if self.effort_settled:
+                say(self.effort_settled)
+            say("answering with the selected agent over a persistent protocol")
+        started = time.monotonic()
+        self._live_parts.clear()
+        self._live_chars = 0
+        self._live_detector_tail = ""
+        self._live_suppressed = False
+        self._live_published = ""
+        self._live_last_emit = 0.0
+        try:
+            result = codex_profile.transport().run(
+                chosen, CodexRequest(prompt, {}, timeout=self.timeout),
+                check_cancelled=self.check_cancelled, on_text=self._append_live_text,
+                on_delivery=delivery,
+            )
+        except BaseException as error:
+            outcome = "cancelled" if getattr(error, "cancelled", False) else "failed"
+            if ledger is not None and attempt:
+                ledger.finish_attempt(attempt, outcome, error=type(error).__name__)
+            if ledger is not None and owned_run:
+                ledger.finish(run_id, outcome)
+            raise
+        finally:
+            if self.on_text is not None and self._live_published:
+                self.on_text("")
+        usage = dict(result.usage)
+        actual_model = result.metrics.get("model")
+        if isinstance(actual_model, str) and actual_model:
+            self.model = actual_model
+            usage["model"] = actual_model
+        measured = usage.get("last") or usage.get("total") or usage
+        measured = measured if isinstance(measured, dict) else {}
+        count = measured.get("totalTokens", measured.get("total_tokens"))
+        if count is None:
+            incoming = measured.get("inputTokens", measured.get("input_tokens"))
+            outgoing = measured.get("outputTokens", measured.get("output_tokens"))
+            if incoming is not None or outgoing is not None:
+                count = _int(incoming) + _int(outgoing)
+        if count is not None:
+            self.tokens_used = (self.tokens_used or 0) + _int(count)
+        self.runtime.update(transport="app-server", context_id=result.thread_id,
+                            turn_id=result.turn_id)
+        self.telemetry["transport"] = self.runtime.copy()
+        self.telemetry["transport_metrics"] = dict(result.metrics)
+        self.telemetry["prompt_bytes"] = len(prompt.encode())
+        if ledger is not None and attempt:
+            ledger.finish_attempt(attempt, "succeeded", result=result.text, usage=usage)
+            if owned_run:
+                ledger.finish(run_id, "succeeded", result={"reply_sha256": hashlib.sha256(
+                    result.text.encode()).hexdigest()}, usage=usage)
+        self.telemetry["transport_ms"] = round((time.monotonic() - started) * 1000, 3)
+        return result.text
 
     def _place_reader(self, folder: Path) -> None:
         """Write this run's page-reader config into its own folder (B155).
@@ -3490,6 +3644,12 @@ class HarnessResearcher(AgentResearcher):
                 pass
 
     def _stream(self, command, stdin_read, say, opening: str = "") -> tuple[int, str, str]:
+        from app.providers import codex_profile
+
+        codex_profile.release_idle()
+        return self._stream_owned(command, stdin_read, say, opening)
+
+    def _stream_owned(self, command, stdin_read, say, opening: str = "") -> tuple[int, str, str]:
         """Run the CLI, reading its output line by line as it is produced.
 
         Three threads' worth of care for one subprocess, and each one is
@@ -3531,8 +3691,10 @@ class HarnessResearcher(AgentResearcher):
         # same way regardless of which platform gave it.
         job = self._new_job_object()
         try:
-            proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
+            proc = processcontrol.contained_popen(
                 command,
+                job=job, factory=subprocess.Popen, check=self.check_cancelled,
+                permit_timeout=self.timeout,
                 # A pipe only for a conversation. A one-shot CLI cannot hear a
                 # line mid-run, and an open pipe to one is all risk: a CLI that
                 # reads a non-tty stdin to EOF (`claude -p` does, for three
@@ -3563,7 +3725,6 @@ class HarnessResearcher(AgentResearcher):
             raise NoHarness(
                 f"{self.harness.label} is not on PATH ({self.harness.executable})"
             ) from exc
-        self._assign_job(job, proc)
 
         # The opening message. A conversational child has no prompt until this
         # lands — it is the run, not a preamble to it.
