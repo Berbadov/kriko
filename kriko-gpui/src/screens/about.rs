@@ -18,6 +18,26 @@ fn kv(k: &str, v: &str) -> Div {
         .child(mono(v, INK_2).min_w(px(0.0)))
 }
 
+#[cfg(windows)]
+fn update_busy_message() -> String {
+    "Installing the update. Kriko will close and reopen.".to_string()
+}
+
+#[cfg(not(windows))]
+fn update_busy_message() -> String {
+    "Preparing the update information.".to_string()
+}
+
+#[cfg(windows)]
+fn update_available_message(version: &str) -> String {
+    format!("Version {version} is available. Installing keeps your catalogs and history.")
+}
+
+#[cfg(not(windows))]
+fn update_available_message(version: &str) -> String {
+    format!("Version {version} is available. Download it from Releases and follow the manual install steps.")
+}
+
 fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     let k = &app.live.knowledge;
     let check = |label: &str, cx: &mut Context<Kriko>| {
@@ -26,20 +46,41 @@ fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
             .into_any_element()
     };
     let (line, action) = match (&k.app_update, k.app_update_busy) {
-        (_, true) => ("Installing the update. Kriko will close and reopen.".to_string(), None),
-        (Some(u), _) if u.newer => (
-            format!("Version {} is available. Installing keeps your catalogs and history.", u.version),
-            Some(
-                key("app-update-install", "Install and restart")
-                    .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.install_app_update(cx)))
-                    .into_any_element(),
-            ),
-        ),
+        (_, true) => (update_busy_message(), None),
+        (Some(u), _) if u.newer => (update_available_message(&u.version), None),
         (Some(u), _) if !u.error.is_empty() => (format!("Could not check: {}.", u.error), Some(check("Check again", cx))),
         (Some(_), _) => ("This is the newest version.".to_string(), Some(check("Check again", cx))),
         (None, _) => ("Not checked yet.".to_string(), Some(check("Check for updates", cx))),
     };
-    let mut row = div().flex().items_center().justify_between().gap(px(SPACE_SECTION)).child(mono(&line, INK_2).min_w(px(0.0)));
+    #[cfg(windows)]
+    let action = if k.app_update.as_ref().is_some_and(|u| u.newer) && !k.app_update_busy {
+        Some(
+            key("app-update-install", "Install and restart")
+                .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.install_app_update(cx)))
+                .into_any_element(),
+        )
+    } else {
+        action
+    };
+    #[cfg(not(windows))]
+    let action = if k.app_update.as_ref().is_some_and(|u| u.newer) && !k.app_update_busy {
+        let releases_url = if app.live.health.releases_url.is_empty() {
+            "https://github.com/Berbadov/kriko/releases".to_string()
+        } else {
+            app.live.health.releases_url.clone()
+        };
+        Some(
+            key("app-update-releases", "Open release downloads")
+                .on_click(move |_, _, cx| cx.open_url(&releases_url))
+                .into_any_element(),
+        )
+    } else {
+        action
+    };
+    let mut row = div().flex().items_center().justify_between().gap(px(24.0)).child(mono(&line, INK_2).min_w(px(0.0)));
+    if k.app_update_busy || k.app_update_note.as_deref() == Some("Checking for updates.") {
+        row = row.child(spinner("app-update-spinner", 16.0, app.motion));
+    }
     if let Some(button) = action {
         row = row.child(button);
     }

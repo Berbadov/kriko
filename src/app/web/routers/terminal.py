@@ -48,12 +48,9 @@ everywhere else. A shell is the one thing in this process that is worth more to
 an attacker than the knowledge store.
 """
 
-import asyncio
-import json
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from app.providers.termpty import SESSION
@@ -177,22 +174,6 @@ def terminal_close() -> dict:
     return SESSION.state()
 
 
-@router.post("/restart", dependencies=[guard])
-def terminal_restart(body: Size) -> dict:
-    """A new shell, and a clean transcript.
-
-    `exit` is an ordinary thing to type, and before this the terminal had no
-    way back from it for the life of the app. So is a shell that dies on its
-    own, which is the state the 0.8.0 Windows install landed in permanently.
-    """
-    try:
-        SESSION.restart(cols=body.cols, rows=body.rows)
-    except Exception as exc:
-        logger.exception("terminal session failed to restart")
-        raise HTTPException(503, f"{type(exc).__name__}: {exc}") from exc
-    return SESSION.state()
-
-
 @router.post("/resize", dependencies=[guard])
 def terminal_resize(body: Size) -> dict:
     failure = _ensure(cols=body.cols, rows=body.rows)
@@ -206,52 +187,3 @@ def terminal_resize(body: Size) -> dict:
     return {"ok": True}
 
 
-@router.get("/stream", dependencies=[guard])
-async def terminal_stream(offset: int = 0, cols: int = 80, rows: int = 24):
-    """Follow the transcript from `offset`.
-
-    Every frame is the same JSON shape the client already knew from the socket
-    (`{"type": "data" | "error", ...}`), so the panel's message handling did
-    not have to be rewritten to lose the socket — only its transport.
-    """
-    failure = _ensure(cols=cols, rows=rows)
-
-    async def events():
-        cursor = offset
-        if failure:
-            yield f"data: {json.dumps({'type': 'error', 'message': failure})}\n\n"
-            return
-        idle = 0.0
-        reported = ""
-        while True:
-            chunk, cursor, dropped = SESSION.since(cursor)
-            if dropped:
-                yield "data: " + json.dumps(
-                    {
-                        "type": "error",
-                        "message": "Some output scrolled out of the buffer before it could be shown.",
-                    }
-                ) + "\n\n"
-            if chunk:
-                idle = 0.0
-                yield f"data: {json.dumps({'type': 'data', 'data': chunk, 'offset': cursor})}\n\n"
-            state = SESSION.state()
-            if state["failure"] and state["failure"] != reported:
-                reported = state["failure"]
-                yield "data: " + json.dumps(
-                    {"type": "error", "message": state["failure"]}
-                ) + "\n\n"
-            if state["ended"] and not chunk:
-                yield "data: " + json.dumps({"type": "ended"}) + "\n\n"
-                return
-            await asyncio.sleep(POLL_SECONDS)
-            idle += POLL_SECONDS
-            if idle >= HEARTBEAT_SECONDS:
-                idle = 0.0
-                yield ": keepalive\n\n"
-
-    return StreamingResponse(
-        events(),
-        media_type="text/event-stream",
-        headers={"cache-control": "no-cache", "x-accel-buffering": "no"},
-    )

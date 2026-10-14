@@ -331,6 +331,12 @@ def _run_fixed(settings, case: dict, *, plane: str, protocol: str,
     judged["proposed_specs"] = precisionbench.payload(reply).get("specs", [])
     judged["delivered"] = gold_mod.judge(case, produced) if evidence is None else {
         "accepted": len(produced), "dropped": int(found.get("dropped") or 0)}
+    # The score is what reaches the reader. What the local pipeline refused on
+    # the way stays visible beside it, so a model that proposes much and keeps
+    # little is not scored the same as one that proposes little.
+    coverage = getattr(researcher, "coverage", None)
+    judged["pipeline_rejected"] = int(coverage.get("rejected_candidates") or 0) \
+        if isinstance(coverage, dict) else 0
     row["gold"] = judged
     from app.packauthor import _payload
     raw_answer = _payload(reply)

@@ -46,8 +46,8 @@ opens.
     runtime precisely because a typed list is stale within days. A path under
     `packs/<name>/` is a location, not a category claim, and stays. A worked
     example built on one category is a claim, and goes.
-12. **No document is a status list.** Open work is GitHub issues (mirrored
-    to Linear), never a file in the repo. Finished work is a commit, and its message carries the
+12. **No document is a status list.** Open work is GitHub issues (Linear
+    mirroring optional), never a file in the repo. Finished work is a commit, and its message carries the
     reasoning, so no document can drift away from the tree.
 
 ## Draw a diagram in the app's colours

@@ -7,7 +7,6 @@ cheaper to hold, because the failure is a *field on the session* rather than a
 frame someone had to be connected to receive.
 """
 
-import json
 import time
 
 import pytest
@@ -57,10 +56,11 @@ def test_an_extension_origin_is_refused_with_a_reason(tmp_path):
     """The global `only_from_here` middleware lets extensions reach every other
     route in this app. A shell is not every other route."""
     client = _client(tmp_path)
-    for path in ("/api/terminal/state", "/api/terminal/stream"):
-        response = client.get(path, headers={"origin": "chrome-extension://abc"})
-        assert response.status_code == 403
-        assert "not allowed" in response.json()["detail"]
+    response = client.get(
+        "/api/terminal/state", headers={"origin": "chrome-extension://abc"}
+    )
+    assert response.status_code == 403
+    assert "not allowed" in response.json()["detail"]
 
 
 def test_a_rejected_origin_says_which_origin(tmp_path):
@@ -86,23 +86,6 @@ def test_a_start_failure_is_reported_without_any_live_connection(tmp_path, monke
     client = _client(tmp_path)
     body = client.get("/api/terminal/state").json()
     assert "no such shell" in body["failure"]
-
-
-def test_the_stream_reports_a_start_failure_and_then_ends(tmp_path, monkeypatch):
-    def boom(*args, **kwargs):
-        raise OSError("winpty-agent.exe is missing")
-
-    monkeypatch.setattr(termpty.TermSession, "start", boom)
-    client = _client(tmp_path)
-    with client.stream("GET", "/api/terminal/stream") as response:
-        assert response.status_code == 200
-        frames = [
-            json.loads(line[len("data: ") :])
-            for line in response.iter_lines()
-            if line.startswith("data: ")
-        ]
-    assert frames[0]["type"] == "error"
-    assert "winpty-agent" in frames[0]["message"]
 
 
 def test_input_answers_with_the_reason_it_could_not_be_delivered(tmp_path, monkeypatch):
@@ -286,24 +269,6 @@ def test_a_shell_that_dies_without_speaking_says_which_shell_and_how(_fresh_sess
     assert "cmd.exe" in failure, failure
     assert "status 1" in failure, failure
     assert "without producing any output" in failure, failure
-
-
-def test_restart_gives_a_new_shell_and_a_clean_transcript(tmp_path, _fresh_session):
-    pytest.importorskip("ptyprocess")
-    client = _client(tmp_path)
-    assert client.get("/api/terminal/state").json()["running"] is True
-
-    deadline = time.time() + 10
-    while time.time() < deadline and not _fresh_session.since(0)[0]:
-        time.sleep(0.05)
-    assert _fresh_session.state()["offset"] > 0
-
-    body = client.post("/api/terminal/restart", json={"cols": 80, "rows": 24}).json()
-    assert body["ended"] is False
-    assert body["failure"] == ""
-    # The transcript went with the old shell: a client still holding byte 400
-    # of a session that no longer exists would wait forever.
-    assert body["offset"] < 400
 
 
 def test_close_ends_a_running_shell_and_it_stays_ended(tmp_path, _fresh_session):

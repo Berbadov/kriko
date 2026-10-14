@@ -144,7 +144,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
                                 .text_color(rgb(INK_2))
                                 .child(clip(&c.title, 110)),
                         )
-                        .child(mono(&c.domain, DIM)),
+                        .child(mono(&if c.via.is_empty() { c.domain.clone() } else { format!("{} · through {}", c.domain, clip(&c.via, 48)) }, DIM)),
                 )
                 .child(severity_word_chip(&c.severity)),
         );
@@ -166,7 +166,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
 }
 
 pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let search = app.input_field(
         Field::BrowseSearch,
         "browse-search",
@@ -310,7 +310,16 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .items_center()
                 .gap(px(8.0))
                 .child(led_matrix(&QUEUE5, LED_DIM, 4.0, 2.0))
-                .child(mono("Nothing matches this search.", MUTED)),
+                .child(mono(
+                    if !app.browse_search.value.trim().is_empty() || active_filters > 0 {
+                        "Nothing matches this search."
+                    } else if app.live.knowledge.totals.subjects == 0 {
+                        "No products yet. Install a catalog on Overview."
+                    } else {
+                        "Nothing to show here yet."
+                    },
+                    MUTED,
+                )),
         );
     }
 

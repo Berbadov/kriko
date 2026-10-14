@@ -484,6 +484,11 @@ def rollback(conn: sqlite3.Connection, pack_id: str, revision=None) -> str:
     return result
 
 
+def previous(conn: sqlite3.Connection, pack_id: str):
+    """The revision `rollback` would return to, or None when there is none."""
+    return _find_revision(conn, pack_id)
+
+
 def uninstall(conn: sqlite3.Connection, pack_id: str) -> None:
     """Remove a pack and its retained revisions completely."""
     current = conn.execute(

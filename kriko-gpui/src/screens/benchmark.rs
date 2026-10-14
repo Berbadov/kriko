@@ -16,8 +16,12 @@ use crate::theme::*;
 
 fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let b = &app.live.local.bench;
+    let locked = matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating);
     let mut result = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Run setup"))
         .child(row_desc("Configuration accuracy uses the same fictional documents on each plane, with exact codes, years, revisions, markets and missing information. Live web research uses changing search results. These development cases measure behavior; they do not establish real-world coverage."));
+    if locked {
+        result = result.child(tag("bench-setup-locked", TagState::Live, "Setup is locked while pricing or running. Stop the benchmark to change it.", app.motion));
+    }
     let mut suites = div().flex().flex_wrap().gap(px(8.0));
     for (id, label) in [("precision", "Configuration accuracy"), ("web", "Live web research")] {
         let selected = b.suite == id || (b.suite.is_empty() && id == "precision");
@@ -44,7 +48,7 @@ fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         }
         result = result.child(row);
     }
-    let mut temp = div().flex().gap(px(8.0)).child(row_desc("Local temperature"));
+    let mut temp = div().flex().flex_wrap().gap(px(8.0)).child(row_desc("Local temperature"));
     for (i, value) in [0.0, 0.2, 0.5, 1.0].into_iter().enumerate() {
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             if matches!(this.live.local.bench.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
@@ -272,7 +276,7 @@ fn machine_cells(m: Option<&Machine>) -> Vec<(&'static str, String)> {
 }
 
 pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let motion = !app.reduce_motion;
+    let motion = app.motion;
     let bench = app.live.local.bench.clone();
     let b = &bench;
     if !b.loaded {
@@ -288,6 +292,11 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let press = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.bench_press(cx));
     let all = batches(&b.runs);
     let running = matches!(b.phase, BenchPhase::Running { .. });
+    let estimating = matches!(b.phase, BenchPhase::Estimating);
+    let progress = match &b.phase {
+        BenchPhase::Running { progress, .. } => Some((progress / 100.0).clamp(0.0, 1.0)),
+        _ => None,
+    };
     let setup_panel = setup(app, window, cx);
     let mut progress_panel = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Live progress"));
     let jobs: Vec<_> = app.live.run.jobs.iter().filter(|j| j.kind == "bench").take(5).cloned().collect();
@@ -364,39 +373,57 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             pill(("bench-plane", i), plane, b.picked.contains(plane)).on_click(toggle),
         );
     }
+    let run_button = plate_wide("bench-run", key_label)
+        .when(running, |d| {
+            d.bg(rgba(DANGER_WASH))
+                .border_color(rgba(DANGER_EDGE))
+                .text_color(rgb(0xffd0ca))
+                .hover(|s| s.bg(rgba(0xff6b5e3d)))
+        })
+        .on_click(press);
+    let mut run_status = div()
+        .flex()
+        .items_center()
+        .gap(px(12.0))
+        .flex_wrap()
+        .child(status)
+        .when(estimating, |d| d.child(spinner("bench-estimate-spinner", 16.0, motion)))
+        .child(planes);
+    if let Some(value) = progress {
+        run_status = run_status.child(progress_bar("bench-live-progress", value, motion).w_full());
+    }
+    let start_copy = div()
+        .flex_1()
+        .min_w(px(0.0))
+        .flex()
+        .flex_col()
+        .gap(px(2.0))
+        .child(row_desc(
+            "Runs the engine's fixed test set on the planes picked below and records time, tokens, \
+             cost and how many claims were accepted. The first press prices it; a second spends.",
+        ))
+        .child(mono(
+            &format!(
+                "{} · {} run{} on record",
+                if b.set_label.trim() == "· 0 cases" { "test set" } else { &b.set_label },
+                b.runs.len(),
+                if b.runs.len() == 1 { "" } else { "s" }
+            ),
+            DIM,
+        ));
+    let start_intro = div()
+        .flex()
+        .items_center()
+        .gap(px(24.0))
+        .when(app.content_w < 700.0, |d| d.flex_col().items_start())
+        .child(run_button)
+        .child(start_copy);
     let start_panel = card()
         .flex()
         .flex_col()
         .gap(px(16.0))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(SPACE_SECTION))
-                .child(plate_wide("bench-run", key_label).on_click(press))
-                .child(
-                    div()
-                        .flex_1()
-                        .min_w(px(0.0))
-                        .flex()
-                        .flex_col()
-                        .gap(px(2.0))
-                        .child(row_desc(
-                            "Runs the engine's fixed test set on the planes picked below and records time, tokens, \
-                             cost and how many claims were accepted. The first press prices it; a second spends.",
-                        ))
-                        .child(mono(
-                            &format!(
-                                "{} · {} run{} on record",
-                                if b.set_label.trim() == "· 0 cases" { "test set" } else { &b.set_label },
-                                b.runs.len(),
-                                if b.runs.len() == 1 { "" } else { "s" }
-                            ),
-                            DIM,
-                        )),
-                ),
-        )
-        .child(div().flex().items_center().gap(px(16.0)).flex_wrap().child(status).child(planes))
+        .child(start_intro)
+        .child(run_status)
         .children(b.last.clone().map(|l| mono(&l, MUTED)))
         .child(div().pt(px(4.0)).child(eyebrow("Measured on")))
         .child(machine);

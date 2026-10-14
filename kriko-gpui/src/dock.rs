@@ -16,8 +16,26 @@ use crate::screens::run::option_chip;
 use crate::screens::{empty_note, mono, row_desc};
 use crate::theme::*;
 
+/// Keep the newest part of a long live narration in view. The job log keeps
+/// the complete thought; the dock shows a few readable lines beside its bar.
+fn status_tail(text: &str) -> String {
+    const MAX_CHARS: usize = 170;
+    let total = text.chars().count();
+    if total <= MAX_CHARS {
+        return text.to_string();
+    }
+    let start = text
+        .char_indices()
+        .nth(total - MAX_CHARS)
+        .map(|(index, _)| index)
+        .unwrap_or(0);
+    format!("…{}", &text[start..])
+}
+
 pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
-    let motion = !app.reduce_motion;
+    // Closed, the dock is still laid out at zero width for its slide, and its
+    // waiting marks would loop unseen at full frame rate (#184).
+    let motion = app.motion && app.dock_open;
 
     let send = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         this.send_reply(cx);
@@ -125,7 +143,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
     for (i, job) in app.live.run.running().enumerate() {
         let phase = job.lane_phase();
         let agent = mark_for(&job.harness);
-        let status = if job.message.is_empty() { job.state.clone() } else { job.message.clone() };
+        let status = status_tail(if job.message.is_empty() { &job.state } else { &job.message });
         let stop: gpui::AnyElement = if job.state == "cancelling" {
             row_desc("Stopping…").into_any_element()
         } else {
@@ -173,16 +191,24 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                         .child(
                                             div()
                                                 .min_w(px(0.0))
-                                                .truncate()
                                                 .font_family(SANS)
                                                 .font_weight(FontWeight::SEMIBOLD)
                                                 .text_size(px(13.0))
                                                 .text_color(rgb(INK))
-                                                .child(app.live.run.task(job)),
+                                                .child(crate::screens::history::clip(&app.live.run.task(job), 56)),
                                         )
                                         .child(stop),
                                 )
-                                .child(div().truncate().child(mono(&status, MUTED)))
+                                .child(
+                                    div()
+                                        .min_w(px(0.0))
+                                        .max_h(px(72.0))
+                                        .font_family(SANS)
+                                        .text_size(px(12.0))
+                                        .line_height(px(17.0))
+                                        .text_color(rgb(ICE))
+                                        .child(status),
+                                )
                                 .child(
                                     div().pt(px(4.0)).child(progress_bar(
                                         &format!("dock-lane-bar-{i}"),
@@ -254,8 +280,8 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .max_h(px(180.0))
                         .overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                         .font_family(MONO)
-                        .text_size(px(10.0))
-                        .text_color(rgb(MUTED))
+                        .text_size(px(11.0))
+                        .text_color(rgb(INK_2))
                         .child(if log.is_empty() {
                             "Waiting for agent output.".to_string()
                         } else {
@@ -402,19 +428,32 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
     // The dock: a pinned head, a scrolling middle, a pinned reply drawer.
     // The head never scrolls away and the drawer is always in reach; only
     // the requests, lanes and feed move.
-    let nothing_running = lanes.is_empty();
     let loaded = app.live.run.jobs_loaded;
+    let nothing_running = lanes.is_empty();
+    let (dock_state, dock_label) = if !loaded {
+        (TagState::Queue, "Waiting")
+    } else if !requests.is_empty() {
+        (TagState::Need, "Needs you")
+    } else if !nothing_running {
+        (TagState::Live, "Working")
+    } else {
+        (TagState::Done, "Ready")
+    };
     div()
         .id("dock-scroll")
         .h_full()
         .min_h(px(0.0))
-        .w(px(300.0))
+        .w(px(DOCK_WIDTH))
         .flex_none()
         .rounded(px(18.0))
-        .bg(rgba(DOCK_GLASS))
+        .bg(gpui::linear_gradient(
+            180.0,
+            gpui::linear_color_stop(rgba(0xffffff1a), 0.0),
+            gpui::linear_color_stop(rgba(DOCK_GLASS), 1.0),
+        ))
         .border_1()
-        .border_color(rgba(HAIRLINE))
-        .shadow(card_shadow())
+        .border_color(rgba(0xffffff3d))
+        .shadow(vec![shadow(0x000000a8, 0.0, 18.0, 44.0, 0.0)])
         .flex()
         .flex_col()
         .p(px(16.0))
@@ -432,14 +471,14 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .items_center()
                         .gap(px(6.0))
                         .child(
-                            key(
+                            ghost(
                                 "dock-logs-toggle",
                                 if app.dock_logs_open { "Hide logs" } else { "Logs" },
                             )
-                            .h(px(32.0)).px(px(12.0)).text_size(px(12.0))
+                            .h(px(34.0)).px(px(10.0)).text_size(px(12.0))
                             .on_click(toggle_logs),
                         )
-                        .child(tag("dock-live", TagState::Live, "Live", motion).flex_none()),
+                        .child(tag("dock-live", dock_state, dock_label, motion).flex_none()),
                 ),
         )
         .child(reveal(log_drawer, "dock-log-reveal", app.dock_logs_open, 280.0, motion))
