@@ -52,7 +52,9 @@ PLACES = (
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 README_VERSION = re.compile(r"(badge/version-)(\d+\.\d+\.\d+)(-)")
-README_DOWNLOAD = re.compile(r"(kriko-)(\d+\.\d+\.\d+)(-(?:x86_64\.msi|win64-portable\.zip))")
+README_DOWNLOAD = re.compile(
+    r"(kriko-)(\d+\.\d+\.\d+)"
+    r"(-(?:x86_64\.msi|win64-portable\.zip|macos-(?:arm64|x86_64)(?:-portable\.zip|\.dmg)))")
 
 
 def current() -> dict[Path, str]:

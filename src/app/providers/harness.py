@@ -2764,7 +2764,7 @@ class HarnessResearcher(AgentResearcher):
                 pass
         search_url = local_discovery.base_of(search_url) or local_discovery.SEARCH_DEFAULT_URL
         search = openserp.searcher(
-            search_url, engine="bing,duckduckgo,ecosia", language=search_language)
+            search_url, engine="google,duckduckgo,bing", language=search_language)
 
         def no_completion(_prompt):
             raise RuntimeError("host page gathering must not call a local model")
@@ -2919,14 +2919,29 @@ class HarnessResearcher(AgentResearcher):
                 "tokens_in": None, "tokens_out": None, "tokens_used": None,
             }]
             self.queries_run = list(queries)
+            own_search = False
             if not sources and not int(reader.search_coverage.get("pages_read") or 0):
                 from app.providers.local_search_plan import nothing_read
 
-                raise NoHarness(nothing_read(reader.search_coverage, self._host_search_url))
+                found = reader.search_coverage
+                if not (found.get("search_errors") and not found.get("queries_searched")):
+                    raise NoHarness(nothing_read(found, self._host_search_url))
+                # Every search failed: the service is down or blocked, which
+                # says nothing about the product. The CLI has web tools of its
+                # own, so ask it to search rather than end the run; whatever it
+                # cites is still quote-checked, and an unsourced claim dropped.
+                own_search = True
+                self._echo(f"The search service did not answer; {self.harness.label} "
+                           "will search the web itself")
             if self.check_cancelled is not None:
                 self.check_cancelled()
-            full_prompt = prompt + self._page_context(sources, self.page_titles)
-            if source_line:
+            full_prompt = prompt + (
+                "\n\nNo pages were read for you. Search the web with your own tools, "
+                f"open at most {max(1, self.max_documents or 3)} pages, then answer: "
+                "do not keep searching. Cite only URLs you actually opened and copy "
+                "every quote verbatim from the page it came from.\n" if own_search
+                else self._page_context(sources, self.page_titles))
+            if source_line and not own_search:
                 full_prompt += (
                     "\n\nThe Sources line may name only URLs from the host-read pages above. "
                     "Include only pages that support the answer.\n"
