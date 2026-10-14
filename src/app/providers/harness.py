@@ -3258,6 +3258,7 @@ class HarnessResearcher(AgentResearcher):
             raise ValueError("the agent transport must be auto, persistent, or exec")
         if self.transport_mode != "exec":
             from app.providers.codex_transport import TransportUnavailable
+            from app.providers.resident import ProtocolAbsent
 
             try:
                 if self.harness.protocol == "codex":
@@ -3274,14 +3275,14 @@ class HarnessResearcher(AgentResearcher):
                     else:
                         return self._run_resident(prompt, on_line)
                 else:
-                    raise TransportUnavailable(
+                    raise ProtocolAbsent(
                         f"{self.harness.label} has no persistent protocol; its print mode "
                         "starts one process per request")
             except TransportUnavailable as error:
                 if self.transport_mode == "persistent":
                     raise
                 say = on_line if on_line is not None else self.on_action
-                if say is not None:
+                if say is not None and not isinstance(error, ProtocolAbsent):
                     say(f"persistent protocol unavailable; using a fresh process ({error})")
         with self._workspace():
             return self._invoke(prompt, on_line)
@@ -3509,14 +3510,16 @@ class HarnessResearcher(AgentResearcher):
     def _resident_profile(self):
         """The launch vector, environment and folders of this agent's worker."""
         from app.providers import resident
-        from app.providers.codex_transport import TransportUnavailable
+        from app.providers.resident import ProtocolAbsent
 
         executable = locate(self.harness)
         if not executable:
-            raise NoHarness(f"{self.harness.label} is not installed")
+            # The process path says what is wrong with a missing agent in its
+            # own words; this one only declines.
+            raise ProtocolAbsent(f"{self.harness.label} is not installed")
         if self.harness.protocol == "claude":
             if "--input-format" not in declared(executable):
-                raise TransportUnavailable("the installed CLI has no stream-json input mode")
+                raise ProtocolAbsent("the installed CLI has no stream-json input mode")
             folder = resident.owned_folder("claude-work")
             self._place_reader(folder)
             command = command_for(
@@ -3525,7 +3528,7 @@ class HarnessResearcher(AgentResearcher):
                 reader_config=self._reader_config,
             )
             if "stream-json" not in command or "--verbose" not in command:
-                raise TransportUnavailable("this vector does not stream JSON")
+                raise ProtocolAbsent("this vector does not stream JSON")
             command += ["--input-format", "stream-json"]
             if "--no-session-persistence" in declared(executable):
                 command.append("--no-session-persistence")
@@ -3536,7 +3539,7 @@ class HarnessResearcher(AgentResearcher):
         else:
             acp = _sibling_executable(executable, "vibe-acp")
             if not acp:
-                raise TransportUnavailable("vibe-acp is not installed; update Mistral Vibe")
+                raise ProtocolAbsent("vibe-acp is not installed; update Mistral Vibe")
             root = resident.owned_folder(f"vibe:{self.requested_model}:{self.requested_effort}")
             home, work = root / "home", root / "work"
             config = home / ".vibe"
@@ -3558,7 +3561,7 @@ class HarnessResearcher(AgentResearcher):
                     env[name] = os.environ[name]
             wire = "acp"
         if self._needs_shell(command):
-            raise TransportUnavailable("a .cmd launcher needs a shell, which a resident worker does not use")
+            raise ProtocolAbsent("a .cmd launcher needs a shell, which a resident worker does not use")
         return resident.ResidentProfile(
             wire, tuple(unshim(command)), str(work), env,
             model=self.requested_model, effort=self.requested_effort,
