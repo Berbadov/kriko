@@ -53,7 +53,7 @@ fn step(n: usize, title: &str, desc: &str, control: Option<gpui::AnyElement>) ->
         .py(px(12.0))
         .flex()
         .items_start()
-        .gap(px(14.0))
+        .gap(px(SPACE_CARD))
         .child(
             well()
                 .size(px(32.0))
@@ -249,7 +249,7 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let mut status = card()
         .flex()
         .flex_col()
-        .gap(px(14.0))
+        .gap(px(SPACE_CARD))
         .child(eyebrow("Has it been seen"))
         .child(tag("extension-seen", state, label, motion))
         .child(row_desc(&said));
@@ -297,9 +297,7 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .children(next_step)
         // The steps most browsers take come first; Firefox's own path, which
         // is a temporary add-on, follows them.
-        .child(div().flex().flex_wrap().gap(px(24.0)).items_start()
-            .child(div().flex_1().min_w(px(320.0)).child(steps_card))
-            .child(div().flex_1().min_w(px(320.0)).child(status)))
+        .child(grid(app.content_w, 320.0, vec![steps_card, status]))
         .child(firefox)
 }
 

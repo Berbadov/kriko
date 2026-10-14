@@ -294,7 +294,9 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let running = matches!(b.phase, BenchPhase::Running { .. });
     let estimating = matches!(b.phase, BenchPhase::Estimating);
     let progress = match &b.phase {
-        BenchPhase::Running { progress, .. } => Some((progress / 100.0).clamp(0.0, 1.0)),
+        BenchPhase::Running { job_id, progress, .. } => Some(
+            app.live.run.bar_value(job_id, (progress / 100.0).clamp(0.0, 1.0), motion).clamp(0.0, 1.0),
+        ),
         _ => None,
     };
     let setup_panel = setup(app, window, cx);
@@ -432,7 +434,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         return div()
             .flex()
             .flex_col()
-            .gap(px(24.0))
+            .gap(px(SPACE_SECTION))
             .child(start_panel)
             .child(setup_panel)
             .child(accuracy(&app.live.local.bench))
@@ -732,7 +734,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(start_panel)
         .child(setup_panel)
         .child(accuracy(&app.live.local.bench))
@@ -744,7 +746,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             div()
                 .flex()
                 .flex_wrap()
-                .gap(px(24.0))
+                .gap(px(SPACE_SECTION))
                 .items_start()
                 .child(div().id("bench-agent-table-scroll").flex_1().min_w(px(560.0)).overflow_x_scroll().map(horizontal_wheel).child(agents.min_w(px(880.0))))
                 .child(div().flex_1().min_w(px(360.0)).child(history)),

@@ -35,9 +35,6 @@ fn settle(
 
 pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
-    // The packs card and the gaps card side by side only when each has its
-    // 360 px; narrower, they stack at the page's width.
-    let beside = app.content_w >= 760.0;
     let search = app.input_field(Field::OverviewSearch, "overview-search", "Search packs or products", Some("search"), window, cx);
     let query = app.overview_search.value.to_lowercase();
     let pack_pick = app.overview_pack.clone();
@@ -148,7 +145,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             };
             b = b.child(
                 div()
-                    .py(px(12.0))
+                    .py(px(10.0))
                     .flex()
                     .items_center()
                     .justify_between()
@@ -240,11 +237,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         };
         packs = packs.child(
             div()
-                .py(px(14.0))
+                .py(px(10.0))
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(24.0))
+                .gap(px(16.0))
                 .when(!pack.enabled, |s| s.opacity(0.5))
                 .child(
                     div()
@@ -299,7 +296,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     for (gi, gap) in gaps.iter().take(shown).enumerate() {
         gaps_card = gaps_card.child(
             div()
-                .py(px(12.0))
+                .py(px(10.0))
                 .flex()
                 .items_center()
                 .justify_between()
@@ -338,7 +335,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     } else if thin.is_empty() {
         thin_card = thin_card.child(
             div()
-                .py(px(32.0))
+                .py(px(16.0))
                 .flex()
                 .flex_col()
                 .items_center()
@@ -359,7 +356,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         } else {
             tag(format!("thin-{ti}"), TagState::Queue, "Thin", motion)
         };
-        let mut line = div().id(("thin-row", ti)).py(px(12.0)).flex().flex_col().child(
+        let mut line = div().id(("thin-row", ti)).py(px(10.0)).flex().flex_col().child(
             div()
                 .id(("thin-open", ti))
                 .flex()
@@ -405,7 +402,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 ),
         );
         if open {
-            let mut panel = well().mt(px(4.0)).mb(px(6.0)).p(px(14.0)).flex().flex_col().gap(px(10.0));
+            let mut panel = well().mt(px(4.0)).mb(px(6.0)).p(px(PAD_CARD_TIGHT)).flex().flex_col().gap(px(10.0));
             if !k.thin_quotes_loaded {
                 panel = panel.child(row_desc("Reading the evidence."));
             } else if k.thin_quotes.is_empty() {
@@ -455,53 +452,30 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     );
     let claims_note = format!("{} packs installed", t.packs);
 
-    let mut left = div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(24.0));
+    // The three totals are one row of tiles: three across once the content
+    // is 624 px wide (three of 200 with their gaps), fewer columns below.
+    let tiles = grid(app.content_w, 200.0, vec![
+        total_card("Subjects", &t.subjects.to_string(), &packs_note),
+        total_card("Claims", &t.claims.to_string(), &claims_note),
+        total_card("Evidence", &t.evidence.to_string(), "quotes with their sources"),
+    ]);
+
+    // Each pack-update card sits on its own row; packs and coverage gaps share
+    // a row of two (from 732 px of content) and stack below that.
+    let mut offers = div().flex().flex_col().gap(px(SPACE_CARD));
     for b in offer_cards {
-        left = left.child(b);
+        offers = offers.child(b);
     }
-    left = left.child(packs);
+    let pair = grid(app.content_w, 360.0, vec![packs, gaps_card]);
 
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(controls)
-        .child(
-            div()
-                .flex()
-                .flex_wrap()
-                .gap(px(24.0))
-                .child(settle(gpui::ElementId::named_usize("ov-total", 0), 0.0, motion)(
-                    total_card("Subjects", &t.subjects.to_string(), &packs_note).flex_1(),
-                ))
-                .child(settle(gpui::ElementId::named_usize("ov-total", 1), 90.0, motion)(
-                    total_card("Claims", &t.claims.to_string(), &claims_note).flex_1(),
-                ))
-                .child(settle(gpui::ElementId::named_usize("ov-total", 2), 180.0, motion)(
-                    total_card("Evidence", &t.evidence.to_string(), "quotes with their sources").flex_1(),
-                )),
-        )
-        .child(if beside {
-            div()
-                .flex()
-                .gap(px(24.0))
-                .items_start()
-                .child(settle(gpui::ElementId::named_usize("ov-card", 0), 260.0, motion)(left))
-                .child(settle(gpui::ElementId::named_usize("ov-card", 1), 340.0, motion)(
-                    div().flex_1().min_w(px(0.0)).child(gaps_card),
-                ))
-                .into_any_element()
-        } else {
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(24.0))
-                .w_full()
-                .child(settle(gpui::ElementId::named_usize("ov-card", 0), 260.0, motion)(left.w_full()))
-                .child(settle(gpui::ElementId::named_usize("ov-card", 1), 340.0, motion)(
-                    div().w_full().child(gaps_card),
-                ))
-                .into_any_element()
-        })
+        .child(settle(gpui::ElementId::named_usize("ov-totals", 0), 0.0, motion)(tiles))
+        .child(settle(gpui::ElementId::named_usize("ov-cards", 0), 260.0, motion)(
+            div().flex().flex_col().gap(px(SPACE_CARD)).w_full().child(offers).child(pair),
+        ))
         .child(settle(gpui::ElementId::named_usize("ov-card", 2), 420.0, motion)(thin_card))
 }

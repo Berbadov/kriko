@@ -7,6 +7,7 @@
 //! the engine has no job, a quiet note stands in.
 
 use gpui::{
+    AnimationExt,
     div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba,
     Context, Div, FontWeight, Stateful, Styled, Window,
 };
@@ -77,7 +78,7 @@ fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
-    let mut page = div().flex().flex_col().gap(px(24.0));
+    let mut page = div().flex().flex_col().gap(px(SPACE_CARD));
 
     let job = app.live.run.current().cloned();
     match (&job, app.live.run.jobs_loaded) {
@@ -754,6 +755,18 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
                 }))
                 .child(name),
         );
+        // the live stage slides in with the segmented thumb's ease, keyed by
+        // the stage it names, so a new stage replays it
+        let seg: gpui::AnyElement = if live && motion {
+            seg.with_animation(
+                gpui::ElementId::NamedInteger(gpui::SharedString::from("run-stage"), at as u64),
+                gpui::Animation::new(std::time::Duration::from_millis(260)),
+                |el, t| el.relative().left(px(-12.0 * (1.0 - ease_mech(t)))),
+            )
+            .into_any_element()
+        } else {
+            seg.into_any_element()
+        };
         stepper = stepper.child(seg);
     }
     stepper = stepper.child(div().flex_1());
@@ -780,11 +793,8 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
         meta.push(format!("model {}", job.model));
     }
     let duration = job.duration_word();
-    if !duration.is_empty() {
+    if !duration.is_empty() && job.done {
         meta.push(duration);
-    }
-    if !job.done {
-        meta.push(format!("{}%", (job.progress * 100.0).round() as i64));
     }
 
     card()
@@ -801,7 +811,11 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
                 .child(app.live.run.task(job)),
         )
         .child(mono(&meta.join(" · "), DIM))
-        .when(!job.message.is_empty(), |c| c.child(row_desc(&job.message)))
+        .child(if job.done {
+            div().when(!job.message.is_empty(), |c| c.child(row_desc(&job.message))).into_any_element()
+        } else {
+            crate::screens::action_trail::action_trail(job, motion).into_any_element()
+        })
         .child(div().mt(px(8.0)).child(stepper))
 }
 
@@ -917,7 +931,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         s.open = !s.open;
         cx.notify();
     });
-    let mut c = card().flex().flex_col().gap(px(12.0)).child(
+    let mut c = card().flex().flex_col().gap(px(SPACE_CARD)).child(
         div()
             .flex()
             .items_center()
@@ -1113,7 +1127,11 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         .map(|h| h.label.clone())
         .unwrap_or_else(|| if job.harness.is_empty() { "Agent".to_string() } else { job.harness.clone() });
     let phase = job.lane_phase();
-    let progress = if job.stage() == Stage::Stored { 100.0 } else { job.progress * 100.0 };
+    let progress = if job.stage() == Stage::Stored {
+        100.0
+    } else {
+        app.live.run.bar_value(&job.id, job.progress, motion) * 100.0
+    };
     card()
         .flex()
         .flex_col()
@@ -1123,7 +1141,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
             div()
                 .flex()
                 .items_center()
-                .gap(px(14.0))
+                .gap(px(SPACE_CARD))
                 .child(mark_tile("run-lane-tile", mark_for(agent), phase, 48.0, motion))
                 .child(
                     div()
@@ -1156,6 +1174,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
                     led_ripple("run-lane", motion)
                 }),
         )
+        .when(!job.done, |c| c.child(crate::screens::action_trail::compact_line(job, motion)))
 }
 
 #[cfg(test)]
