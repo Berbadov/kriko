@@ -23,6 +23,7 @@ pub const NAV: &[NavGroupDef] = &[
             NavDef { key: "run", label: "Run", icon: "run", count: None, badge: None },
             NavDef { key: "history", label: "History", icon: "history", count: None, badge: None },
             NavDef { key: "compare", label: "Compare", icon: "compare", count: None, badge: None },
+            NavDef { key: "chat", label: "Chat", icon: "agents", count: None, badge: None },
             NavDef { key: "extension", label: "Browser extension", icon: "extension", count: None, badge: None },
         ],
     },
@@ -55,6 +56,16 @@ pub const NAV: &[NavGroupDef] = &[
 // ---- history: past checks ----
 
 pub const PAGE_SIZE: usize = 5;
+
+// ---- chat ----
+
+/// Example questions for an empty conversation. Generic on purpose: the words
+/// in brackets are for the reader to fill, whatever the catalogues hold.
+pub const CHAT_EXAMPLES: &[&str] = &[
+    "I need a <product> with <constraint a> and <constraint b>. Which fits best?",
+    "Which of my saved checks record a serious risk?",
+    "What do my quick looks say about <product>?",
+];
 
 // ---- compare ----
 

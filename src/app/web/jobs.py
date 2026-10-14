@@ -88,6 +88,9 @@ def claims(kind: str, params: dict) -> frozenset[str]:
         return frozenset({"drafts"})
     if kind == "compare_ask":
         return _named("compare", params.get("draft_id"))
+    if kind == "chat_ask":
+        # One turn at a time per conversation; other conversations may run beside it.
+        return _named("chat", params.get("thread_id"))
     if kind == "model_pull":
         return _named("model", params.get("model"))
     if kind == "agent_install":

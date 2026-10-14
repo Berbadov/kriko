@@ -15,6 +15,7 @@ pub(crate) mod activity;
 pub(crate) mod agents;
 pub(crate) mod benchmark;
 pub(crate) mod browse;
+pub(crate) mod chat;
 pub(crate) mod compare;
 pub(crate) mod extension;
 pub(crate) mod history;
@@ -33,6 +34,7 @@ pub fn screen(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         crate::app::Tab::Run => run::run(app, window, cx).into_any_element(),
         crate::app::Tab::History => history::history(app, window, cx).into_any_element(),
         crate::app::Tab::Compare => compare::compare(app, window, cx).into_any_element(),
+        crate::app::Tab::Chat => chat::chat(app, window, cx).into_any_element(),
         crate::app::Tab::Extension => extension::extension(app, window, cx).into_any_element(),
         crate::app::Tab::Overview => knowledge::overview(app, window, cx).into_any_element(),
         crate::app::Tab::Browse => browse::browse(app, window, cx).into_any_element(),

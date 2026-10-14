@@ -723,6 +723,27 @@ CREATE TABLE IF NOT EXISTS queue_history (
   queue_id TEXT PRIMARY KEY, url TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '',
   lookup_id TEXT NOT NULL DEFAULT '', origin TEXT NOT NULL DEFAULT '',
   state TEXT NOT NULL DEFAULT 'waiting', added_at TEXT NOT NULL DEFAULT '');
+
+-- Chat with the reader's agent (app/chat.py). A thread is a conversation the
+-- reader keeps; a message is one of their questions (role 'reader') or one
+-- answer (role 'agent') with the steps that produced it. App state for the
+-- same reason as every comparison row: what the agent says is the reader's
+-- own conversation, never knowledge, and a pack update must not erase it.
+CREATE TABLE IF NOT EXISTS chat_threads (
+  thread_id  TEXT PRIMARY KEY,
+  title      TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS chat_messages (
+  message_id   TEXT PRIMARY KEY,
+  thread_id    TEXT NOT NULL DEFAULT '',
+  role         TEXT NOT NULL DEFAULT '',
+  text         TEXT NOT NULL DEFAULT '',
+  steps_json   TEXT NOT NULL DEFAULT '[]',
+  sources_json TEXT NOT NULL DEFAULT '[]',
+  job_id       TEXT NOT NULL DEFAULT '',
+  created_at   TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS chat_messages_thread ON chat_messages (thread_id);
 """
 
 #: The most operations one installation keeps. A feed, not an archive: the
@@ -3030,3 +3051,118 @@ def mark_claim_removed(
         " WHERE run_id = ? AND pack_id = ? AND claim_id = ?",
         (_now(), run_id, pack_id, claim_id),
     )
+
+
+#: How much of a reader's own question is kept on a thread's title.
+CHAT_TITLE_CHARS = 60
+#: The most one chat message may hold, reader's or agent's. A question is a
+#: short paragraph; an answer is a few hundred words. Runaway guard only.
+CHAT_MESSAGE_CHARS = 20000
+
+
+def _thread(row: sqlite3.Row) -> dict:
+    return {"thread_id": row["thread_id"], "title": row["title"],
+            "created_at": row["created_at"], "updated_at": row["updated_at"]}
+
+
+def _chat_message(row: sqlite3.Row) -> dict:
+    return {
+        "message_id": row["message_id"],
+        "thread_id": row["thread_id"],
+        "role": row["role"],
+        "text": row["text"],
+        "steps": json.loads(row["steps_json"] or "[]"),
+        "sources": json.loads(row["sources_json"] or "[]"),
+        "job_id": row["job_id"],
+        "created_at": row["created_at"],
+    }
+
+
+def chat_threads(conn: sqlite3.Connection) -> list[dict]:
+    """Newest conversation first: the one the reader last wrote in leads."""
+    return [
+        _thread(row) for row in conn.execute(
+            "SELECT * FROM chat_threads ORDER BY updated_at DESC, rowid DESC")
+    ]
+
+
+def get_chat_thread(conn: sqlite3.Connection, thread_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT * FROM chat_threads WHERE thread_id = ?", (thread_id,)).fetchone()
+    return _thread(row) if row else None
+
+
+def create_chat_thread(conn: sqlite3.Connection, title: str = "") -> dict:
+    thread_id = secrets.token_hex(8)
+    now = _now()
+    conn.execute(
+        "INSERT INTO chat_threads (thread_id, title, created_at, updated_at)"
+        " VALUES (?,?,?,?)",
+        (thread_id, " ".join(str(title or "").split())[:CHAT_TITLE_CHARS], now, now))
+    conn.commit()
+    return _thread(conn.execute(
+        "SELECT * FROM chat_threads WHERE thread_id = ?", (thread_id,)).fetchone())
+
+
+def delete_chat_thread(conn: sqlite3.Connection, thread_id: str) -> bool:
+    """Forget a conversation and every message in it. Its jobs stay in Activity."""
+    cur = conn.execute("DELETE FROM chat_threads WHERE thread_id = ?", (thread_id,))
+    conn.execute("DELETE FROM chat_messages WHERE thread_id = ?", (thread_id,))
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def chat_messages(conn: sqlite3.Connection, thread_id: str) -> list[dict]:
+    """The conversation in the order it was said."""
+    return [
+        _chat_message(row) for row in conn.execute(
+            "SELECT * FROM chat_messages WHERE thread_id = ? ORDER BY rowid",
+            (thread_id,))
+    ]
+
+
+def chat_history(conn: sqlite3.Connection, thread_id: str, *,
+                 before: str = "", limit: int = 8) -> list[dict]:
+    """The messages a turn is shown: those said before `before`, oldest first."""
+    ceiling = 2**62
+    if before:
+        found = conn.execute(
+            "SELECT rowid FROM chat_messages WHERE message_id = ?", (before,)).fetchone()
+        if found:
+            ceiling = found[0]
+    rows = conn.execute(
+        "SELECT * FROM chat_messages WHERE thread_id = ? AND rowid < ?"
+        " ORDER BY rowid DESC LIMIT ?", (thread_id, ceiling, limit)).fetchall()
+    return [_chat_message(row) for row in reversed(rows)]
+
+
+def add_chat_message(
+    conn: sqlite3.Connection, thread_id: str, *, role: str, text: str,
+    steps: list | None = None, sources: list | None = None, job_id: str = "",
+) -> dict:
+    """Store one message and move its thread to the top of the list."""
+    if role not in ("reader", "agent"):
+        raise ValueError(f"no such chat role: {role}")
+    text = str(text or "").strip()[:CHAT_MESSAGE_CHARS]
+    message_id = secrets.token_hex(8)
+    now = _now()
+    conn.execute(
+        "INSERT INTO chat_messages (message_id, thread_id, role, text, steps_json,"
+        " sources_json, job_id, created_at) VALUES (?,?,?,?,?,?,?,?)",
+        (message_id, thread_id, role, text, json.dumps(steps or [], default=str),
+         json.dumps(sources or [], default=str), job_id, now))
+    conn.execute("UPDATE chat_threads SET updated_at = ? WHERE thread_id = ?",
+                 (now, thread_id))
+    conn.commit()
+    row = conn.execute(
+        "SELECT * FROM chat_messages WHERE message_id = ?", (message_id,)).fetchone()
+    return _chat_message(row)
+
+
+def title_chat_thread(conn: sqlite3.Connection, thread_id: str, text: str) -> None:
+    """Name a thread after its first question, if it has no name yet."""
+    words = " ".join(str(text or "").split())[:CHAT_TITLE_CHARS]
+    conn.execute(
+        "UPDATE chat_threads SET title = ? WHERE thread_id = ? AND title = ''",
+        (words, thread_id))
+    conn.commit()
