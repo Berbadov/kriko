@@ -20,11 +20,13 @@ plane says it in the job log.
 
 from collections.abc import Callable, Iterator
 import json
+import queue
 import socket
 import threading
 import urllib.error
 import urllib.parse
 import urllib.request
+from app.providers import network
 
 #: Long enough for a small model on a CPU to read a page and write a JSON
 #: array, which is minutes rather than the 45 seconds a hosted API needs.
@@ -106,7 +108,7 @@ def release(timeout: float = 10.0) -> list[str]:
             data=json.dumps({"model": name, "keep_alive": 0}).encode("utf-8"),
             headers={"Content-Type": "application/json"}, method="POST")
         try:
-            with urllib.request.urlopen(request, timeout=timeout) as response:
+            with network.urlopen(request, timeout=timeout, kind="inference") as response:
                 response.read()
             released.append(name)
         except Exception:  # noqa: BLE001 - a server that cannot unload keeps its own timer
@@ -182,6 +184,37 @@ def _event(event: dict, native: bool) -> tuple[str, str, dict | None]:
     return text, str(choice.get("finish_reason") or ""), (usage if isinstance(usage, dict) else None)
 
 
+class _OwnerCancelled(BaseException):
+    """Carry an owner's cancellation through transport error handling unchanged."""
+
+    def __init__(self, original: BaseException):
+        super().__init__(str(original))
+        self.original = original
+
+
+class _ReaderStopped(Exception):
+    """A network-reader thread was asked to stop by its owner."""
+
+
+def _abort_response_read(response) -> None:
+    """Abort the underlying socket without closing its buffered reader cross-thread."""
+    raw = getattr(response, "_response", response)
+    fp = getattr(raw, "fp", None)
+    sock = getattr(getattr(fp, "raw", None), "_sock", None)
+    if sock is not None:
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        try:
+            sock.close()
+        except OSError:
+            pass
+    abort = getattr(response, "abort", None)
+    if callable(abort):
+        abort()
+
+
 class OpenAICompatSocket:
     """A completion socket for a local inference server.
 
@@ -238,6 +271,127 @@ class OpenAICompatSocket:
         self.usage_complete = True
         self.last_usage_complete = False
         self._context: int | None = None
+        # Installed by LocalAsker's _MeasuredSocket. This callback can touch a
+        # job's SQLite connection, so it is only called on the socket owner
+        # thread; reader threads see only a thread-safe stop event.
+        self.check_cancelled: Callable[[], None] | None = None
+
+    def set_cancel_check(self, check: Callable[[], None] | None) -> None:
+        self.check_cancelled = check
+
+    def _check_cancel(self) -> None:
+        if self.check_cancelled is not None:
+            self.check_cancelled()
+
+    def _read_cancelable(self, response, read):
+        """Read a whole response off-thread while the owner polls cancellation.
+
+        `Progress.check` owns a SQLite connection and must not be invoked from
+        the reader. Closing the response is safe from the owner thread and
+        interrupts a socket read so its outbound permit is released promptly.
+        """
+        result_queue: queue.Queue = queue.Queue(maxsize=1)
+
+        def reader() -> None:
+            try:
+                result_queue.put((True, read()))
+            except BaseException as error:
+                result_queue.put((False, error))
+
+        thread = threading.Thread(target=reader, name="kriko-inference-read", daemon=True)
+        thread.start()
+        try:
+            while True:
+                try:
+                    self._check_cancel()
+                except BaseException as error:
+                    _abort_response_read(response)
+                    thread.join(timeout=0.5)
+                    raise _OwnerCancelled(error) from None
+                try:
+                    ok, value = result_queue.get(timeout=0.025)
+                except queue.Empty:
+                    continue
+                if ok:
+                    return value
+                raise value
+        finally:
+            # On success/errors, the surrounding response context closes it;
+            # on cancellation its socket was aborted above to interrupt it.
+            if thread.is_alive():
+                _abort_response_read(response)
+                thread.join(timeout=0.2)
+
+    def _response_lines(self, request):
+        """Yield network lines while the owner thread checks job cancellation."""
+        events: queue.Queue = queue.Queue(maxsize=16)
+        stop = threading.Event()
+        holder: dict[str, object] = {}
+        holder_lock = threading.Lock()
+
+        def publish(value) -> bool:
+            while not stop.is_set():
+                try:
+                    events.put(value, timeout=0.05)
+                    return True
+                except queue.Full:
+                    continue
+            return False
+
+        def check_stopped() -> None:
+            if stop.is_set():
+                raise _ReaderStopped()
+
+        def reader() -> None:
+            response = None
+            try:
+                with network.urlopen(request, timeout=self.timeout, kind="inference",
+                                    check=check_stopped) as response:
+                    with holder_lock:
+                        holder["response"] = response
+                    for raw in response:
+                        if not publish(("line", raw)):
+                            return
+                publish(("done", None))
+            except BaseException as error:
+                publish(("error", error))
+
+        thread = threading.Thread(target=reader, name="kriko-inference-stream", daemon=True)
+        thread.start()
+        interrupted = False
+        try:
+            while True:
+                try:
+                    self._check_cancel()
+                except BaseException as error:
+                    stop.set()
+                    with holder_lock:
+                        response = holder.get("response")
+                    if response is not None:
+                        _abort_response_read(response)
+                    interrupted = True
+                    thread.join(timeout=0.5)
+                    raise _OwnerCancelled(error) from None
+                try:
+                    kind, value = events.get(timeout=0.025)
+                except queue.Empty:
+                    continue
+                if kind == "line":
+                    yield value
+                elif kind == "error":
+                    raise value
+                else:
+                    return
+        finally:
+            stop.set()
+            with holder_lock:
+                response = holder.get("response")
+            if response is not None and not interrupted:
+                try:
+                    response.close()
+                except Exception:
+                    pass
+            thread.join(timeout=0.2)
 
     def __call__(self, prompt: str) -> str:
         return self.complete(prompt)
@@ -306,6 +460,8 @@ class OpenAICompatSocket:
                     payload = self._post(body)
                 except urllib.error.HTTPError as again:
                     raise self._refused(again) from again
+                except _OwnerCancelled as stopped:
+                    raise stopped.original from None
                 except Exception as other:  # noqa: BLE001
                     raise self._failed(other) from other
             elif error.code == 400 and ("response_format" in body
@@ -361,12 +517,16 @@ class OpenAICompatSocket:
                                 break
                         last_error = again
                         last_said = again_said
+                    except _OwnerCancelled as stopped:
+                        raise stopped.original from None
                     except Exception as other:  # noqa: BLE001
                         raise self._failed(other) from other
                 if payload is None:
                     raise self._refused(error) from error
             else:
                 raise self._refused(error) from error
+        except _OwnerCancelled as stopped:
+            raise stopped.original from None
         except Exception as error:  # noqa: BLE001 - named for the reader below
             raise self._failed(error) from error
         self.calls += 1
@@ -446,20 +606,9 @@ class OpenAICompatSocket:
             request = urllib.request.Request(
                 url, data=json.dumps(sent).encode("utf-8"),
                 headers={"Content-Type": "application/json"}, method="POST")
+            delivered = False
             try:
-                response = urllib.request.urlopen(request, timeout=self.timeout)
-            except urllib.error.HTTPError as error:
-                optional = [key for key in ("stream_options", "reasoning_effort") if key in body]
-                if error.code == 400 and optional:
-                    body.pop(optional[0])
-                    continue
-                raise self._refused(error) from error
-            except Exception as error:  # noqa: BLE001 - named for the reader below
-                raise self._failed(error) from error
-            break
-        try:
-            with response:
-                for raw in response:
+                for raw in self._response_lines(request):
                     line = raw.decode("utf-8", "replace").strip()
                     if line.startswith("data:"):
                         line = line[5:].strip()
@@ -470,9 +619,21 @@ class OpenAICompatSocket:
                     except ValueError:
                         continue
                     if isinstance(event, dict):
+                        delivered = True
                         yield _event(event, native)
-        except Exception as error:  # noqa: BLE001 - named for the reader below
-            raise self._failed(error) from error
+                return
+            except _OwnerCancelled as stopped:
+                raise stopped.original from None
+            except urllib.error.HTTPError as error:
+                if delivered:
+                    raise self._refused(error) from error
+                optional = [key for key in ("stream_options", "reasoning_effort") if key in body]
+                if error.code == 400 and optional:
+                    body.pop(optional[0])
+                    continue
+                raise self._refused(error) from error
+            except Exception as error:  # noqa: BLE001 - named for the reader below
+                raise self._failed(error) from error
 
     def _empty(self, finish: str) -> LocalInferenceError:
         """Why a reply with no text is an error, said in the reader's terms."""
@@ -558,8 +719,12 @@ class OpenAICompatSocket:
     def _ask_context(self) -> int | None:
         def get(path: str):
             try:
-                with urllib.request.urlopen(self.base_url + path, timeout=5) as resp:
-                    return json.loads(resp.read().decode("utf-8", "replace"))
+                with network.urlopen(self.base_url + path, timeout=5, kind="inference",
+                                     check=self._check_cancel) as resp:
+                    raw = self._read_cancelable(resp, resp.read)
+                    return json.loads(raw.decode("utf-8", "replace"))
+            except _OwnerCancelled as stopped:
+                raise stopped.original from None
             except Exception:  # noqa: BLE001 - an engine that does not say is "unknown"
                 return None
 
@@ -592,8 +757,10 @@ class OpenAICompatSocket:
             request = urllib.request.Request(
                 self.base_url + "/api/chat", data=json.dumps(native).encode("utf-8"),
                 headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(request, timeout=self.timeout) as resp:
-                result = json.load(resp)
+            with network.urlopen(request, timeout=self.timeout, kind="inference",
+                                 check=self._check_cancel) as resp:
+                result = json.loads(self._read_cancelable(resp, resp.read).decode(
+                    "utf-8", "replace"))
             incoming, outgoing = result.get("prompt_eval_count"), result.get("eval_count")
             usage = {"prompt_tokens": incoming, "completion_tokens": outgoing}
             if isinstance(incoming, int) and isinstance(outgoing, int):
@@ -606,8 +773,10 @@ class OpenAICompatSocket:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=self.timeout) as resp:
-            return json.loads(resp.read().decode("utf-8", "replace"))
+        with network.urlopen(request, timeout=self.timeout, kind="inference",
+                             check=self._check_cancel) as resp:
+            return json.loads(self._read_cancelable(resp, resp.read).decode(
+                "utf-8", "replace"))
 
     def _count(self, payload) -> None:
         usage = payload.get("usage") if isinstance(payload, dict) else None
@@ -650,6 +819,8 @@ class OpenAICompatSocket:
         body["response_format"] = {"type": "json_object", "schema": fmt["json_schema"]["schema"]}
         try:
             result = self._post(body)
+        except _OwnerCancelled as stopped:
+            raise stopped.original from None
         except urllib.error.HTTPError as again:
             # Neither spelling: the original refusal path drops the field.
             body["response_format"] = fmt

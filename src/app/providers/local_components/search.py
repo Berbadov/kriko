@@ -83,6 +83,8 @@ def gather(search, fetch, queries, *, seen: set, searched: set,
     """
     wanted: list[str] = []
     pending = []
+    if hasattr(search, "check_cancelled"):
+        search.check_cancelled = check
     for query in queries:
         low = query.casefold()
         if low in searched:

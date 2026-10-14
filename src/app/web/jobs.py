@@ -41,6 +41,8 @@ Killing a thread mid-write is how a half-installed pack happens, so a running
 job is asked to stop, never made to.
 """
 
+import hashlib
+import functools
 import sqlite3
 import threading
 import time
@@ -48,8 +50,12 @@ import traceback
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from app import operations, prefs
+from app.agentledger import Ledger
+from app.version import app_version
 from kriko.store.db import connect
 from app.web import state
 
@@ -110,8 +116,144 @@ def _overlap(one: frozenset[str], other: frozenset[str]) -> bool:
         EVERYTHING in other and bool(one))
 
 
+_PROMPT_EVALUATOR_SOURCES = (
+    "app/web/tasks.py",
+    "app/providers/harness.py",
+    "app/providers/local_agent.py",
+    "app/providers/apiagent.py",
+    "app/findings.py",
+    "kriko/extract/grounding.py",
+    "kriko/ledger/extraction.py",
+)
+
+
+def _hash_prompt_evaluator_sources(source_root: Path) -> dict[str, Any]:
+    """Hash logical package-relative sources and report how many were present."""
+    digest = hashlib.sha256()
+    available = 0
+    for relative in _PROMPT_EVALUATOR_SOURCES:
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        try:
+            with (source_root / relative).open("rb") as source:
+                available += 1
+                for block in iter(lambda: source.read(65_536), b""):
+                    digest.update(block)
+        except OSError:
+            digest.update(b"[missing]")
+        digest.update(b"\0")
+    if available == len(_PROMPT_EVALUATOR_SOURCES):
+        status = "available"
+    elif available:
+        status = "partial"
+    else:
+        status = "unavailable"
+    return {"sha256": digest.hexdigest(), "source_status": status,
+            "sources_available": available, "sources_expected": len(_PROMPT_EVALUATOR_SOURCES)}
+
+
+@functools.cache
+def _prompt_evaluator_identity() -> dict[str, Any]:
+    """Memoized digest of application-owned prompt and evidence-gate sources."""
+    # In a checkout this is ``src/``; in an installed wheel it is the package
+    # directory in site-packages. The package-relative names stay identical.
+    source_root = Path(__file__).resolve().parents[2]
+    return _hash_prompt_evaluator_sources(source_root)
+
+
+def _manifest_snapshot(settings, params: dict) -> dict:
+    """Capture relevant settings and installed-pack identity at submission."""
+    stored = {}
+    try:
+        preference_conn = state.connect(settings.app_state_path)
+        try:
+            stored = prefs.read(preference_conn)
+        finally:
+            preference_conn.close()
+    except (OSError, sqlite3.Error):
+        pass
+    backend = str(params.get("backend") or params.get("provider") or "").strip()
+    if not backend:
+        try:
+            from app.web.tasks import default_backend
+            backend = str(default_backend(settings.app_state_path))
+        except Exception:
+            backend = ""
+    chosen_harness = str(params.get("harness") or stored.get(prefs.HARNESS) or "").strip()
+    model = str(params.get("model") or "").strip()
+    if not model:
+        if backend == "local":
+            model = str(stored.get(prefs.LOCAL_MODEL) or "")
+        elif backend == "api" or (backend == "harness" and chosen_harness):
+            model_conn: sqlite3.Connection | None = None
+            try:
+                model_conn = state.connect(settings.app_state_path)
+                model = (prefs.for_role(model_conn, "synthesise") if backend == "api"
+                         else prefs.for_harness(model_conn, chosen_harness))
+                model = model or str(stored.get(prefs.MODEL) or "")
+            except Exception:
+                model = ""
+            finally:
+                if model_conn is not None:
+                    model_conn.close()
+    search = str(params.get("search_provider") or stored.get(prefs.SEARCH) or "").strip()
+    snapshot: dict[str, Any] = {
+        "implementation": {
+            "version": app_version(),
+            "prompt_evaluator": _prompt_evaluator_identity(),
+        },
+        "settings": {"preferred_harness": chosen_harness,
+                     "llm_model": str(stored.get(prefs.MODEL) or ""),
+                     "local_model": str(stored.get(prefs.LOCAL_MODEL) or ""),
+                     "search_provider": search},
+        "backend": backend,
+        "provider": str(params.get("backend") or params.get("provider") or backend),
+        "harness": chosen_harness,
+        "model": model,
+        "search_provider": search,
+    }
+    pack_id = str(params.get("pack_id") or "").strip()
+    try:
+        from kriko.store.db import connect
+        store = connect(settings.store_path, read_only=True)
+        try:
+            if not pack_id and params.get("subject_id"):
+                subject = store.execute("SELECT pack_id FROM subjects WHERE subject_id=?",
+                                        (str(params["subject_id"]),)).fetchone()
+                pack_id = str(subject[0]) if subject else ""
+            if pack_id:
+                row = store.execute(
+                    "SELECT version, content_digest FROM packs WHERE pack_id=?", (pack_id,)
+                ).fetchone()
+                if row:
+                    snapshot["pack"] = {"pack_id": pack_id, "version": row[0],
+                                        "content_digest": row[1]}
+                    if row[1]:
+                        snapshot["pack"]["revision_id"] = f"{pack_id}@{row[1]}"
+        finally:
+            store.close()
+    except (OSError, sqlite3.Error, AttributeError):
+        pass
+    if pack_id:
+        try:
+            packs_dir = Path(settings.packs_dir).resolve()
+            principle = (packs_dir / pack_id / "research" / "principle.md").resolve()
+            principle.relative_to(packs_dir)
+            if principle.is_file():
+                digest = hashlib.sha256()
+                with principle.open("rb") as source:
+                    for block in iter(lambda: source.read(65_536), b""):
+                        digest.update(block)
+                snapshot["principle"] = {"sha256": digest.hexdigest()}
+        except (OSError, ValueError, AttributeError):
+            pass
+    return snapshot
+
+
 class Cancelled(Exception):
     """Raised by `Progress.check` when the reader asked the job to stop."""
+
+    cancelled = True
 
 
 @dataclass
@@ -128,6 +270,8 @@ class Progress:
     _base_message: str = ""
     _draft_message: str = ""
     _draft_last_write: float = 0.0
+    ledger: Ledger | None = None
+    run_id: str = ""
 
     def log(self, line: str) -> None:
         state.update_job(self._conn, self.job_id, line=line)
@@ -206,6 +350,8 @@ class Progress:
         delta and there is no partial-of-a-partial to reason about.
         """
         state.save_partial(self._conn, self.job_id, result)
+        if self.ledger is not None and self.run_id:
+            self.ledger.checkpoint(self.run_id, result)
 
 
 #: A handler is `(settings, params, progress) -> dict`. It returns the job's
@@ -261,6 +407,7 @@ class JobRunner:
         self._waiting: list[_Waiting] = []
         self._running: dict[str, frozenset[str]] = {}
         self._closed = False
+        self.ledger = Ledger(self.settings.app_state_path)
 
     def _limit(self) -> int:
         conn = self._connect()
@@ -359,11 +506,17 @@ class JobRunner:
 
     def recover(self) -> int:
         """Mark orphaned rows `interrupted`. Called once, at app startup."""
+        # Classify delivery while a formerly running job still says running.
+        # Once state.interrupt_running marks it terminal, recovery would mistake
+        # that synthetic interruption for a job that completed before its
+        # manifest did, losing the retry-vs-reconcile distinction.
+        self.ledger.recover()
         conn = self._connect()
         try:
-            return state.interrupt_running(conn)
+            count = state.interrupt_running(conn)
         finally:
             conn.close()
+        return count
 
     def retry(self, kind: str, params: dict) -> str:
         """One child per parent, including a child that has already finished.
@@ -379,14 +532,23 @@ class JobRunner:
                 conn.close()
             return existing["job_id"] if existing else self.submit(kind, params)
 
-    def submit(self, kind: str, params: dict) -> str:
+    def submit(self, kind: str, params: dict, *, client_request_id: str | None = None,
+               snapshot: dict | None = None) -> str:
         if kind not in self.handlers:
             raise KeyError(f"no such job kind: {kind}")
         conn = self._connect()
         try:
-            job_id = state.create_job(conn, kind, params)
+            # Request identity, manifest and job row share one SQLite write.
+            # A duplicate client ID therefore never leaves an orphan job.
+            manifest = self.ledger.reserve_job(
+                conn, client_request_id, kind, params,
+                snapshot or _manifest_snapshot(self.settings, params),
+            )
+            job_id = manifest["job_id"]
         finally:
             conn.close()
+        if not manifest["created"]:
+            return job_id
         if kind in QUICK_KINDS:
             self._quick.submit(self._run, job_id, kind, params, False)
             return job_id
@@ -401,11 +563,24 @@ class JobRunner:
         with self._lock:
             self._active += 1
         conn = self._connect()
-        progress = Progress(job_id, conn)
+        manifest = self.ledger.lookup_job(job_id)
+        run_id = manifest["run_id"] if manifest else ""
+        progress = Progress(job_id, conn, ledger=self.ledger, run_id=run_id)
         try:
             # The row may have been cancelled while it sat in the queue.
             if not state.start_job(conn, job_id):
+                job = state.get_job(conn, job_id)
+                if job and job["state"] in state.TERMINAL and run_id:
+                    self.ledger.finish(run_id, job["state"], result=job.get("result"))
                 return
+            if run_id:
+                ledger_conn = self.ledger.connect()
+                try:
+                    with ledger_conn:
+                        ledger_conn.execute("UPDATE agent_runs SET state='running' WHERE run_id=? AND terminal_at IS NULL",
+                                            (run_id,))
+                finally:
+                    ledger_conn.close()
             if waited:
                 # A row that waited still says why; it is not waiting now.
                 # Blank, so the handler's first `set` is the next word on it.
@@ -441,6 +616,12 @@ class JobRunner:
             # it succeeded, produced a brief, and reported a word carrying no
             # information at all.
             state.finish_job(conn, job_id, state.SUCCEEDED, result=result)
+            if run_id:
+                usd, tokens = operations.metered(result)
+                final = state.get_job(conn, job_id) or {}
+                self.ledger.finish(run_id, final.get("state", state.SUCCEEDED),
+                                   result=final.get("result") or result,
+                                   usage={"usd": usd, "tokens": tokens})
         except Cancelled:
             # Whatever the handler checkpointed stays. A cancel is the reader
             # deciding they have enough, or enough of nothing — either way it
@@ -452,6 +633,9 @@ class JobRunner:
                 result={**kept, "partial": True} if kept else None,
                 message=_stopped(kept),
             )
+            if run_id:
+                self.ledger.finish(run_id, state.CANCELLED,
+                                   result={**kept, "partial": True} if kept else None)
         except Exception as exc:  # noqa: BLE001 — a failed job is data, not a crash
             # The traceback goes in the log rather than to stderr: an operator
             # reading the job in the app should not have to find the terminal that
@@ -460,6 +644,10 @@ class JobRunner:
             state.finish_job(
                 conn, job_id, state.FAILED, message=f"{type(exc).__name__}: {exc}"
             )
+            if run_id:
+                kept = state.partial_of(conn, job_id)
+                self.ledger.finish(run_id, state.FAILED,
+                                   result={**kept, "partial": True} if kept else None)
         finally:
             conn.close()
             self._idle_check()

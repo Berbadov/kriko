@@ -519,6 +519,8 @@ class LocalAsker:
 
         def answer(query: str) -> tuple[list, str]:
             try:
+                if hasattr(self._search, "check_cancelled"):
+                    self._search.check_cancelled = self._check
                 return self._search(query, limit) or [], ""
             except LocalSearchError as error:
                 return [], str(error)
@@ -715,12 +717,22 @@ class _MeasuredSocket:
     def __setattr__(self, name, value):
         setattr(self.socket, name, value)
 
+    def _invoke(self, call):
+        setter = getattr(self.socket, "set_cancel_check", None)
+        if not callable(setter):
+            return self.owner._measured(self.stage, self.socket, call)
+        previous = getattr(self.socket, "check_cancelled", None)
+        setter(self.owner._check if self.owner.check_cancelled is not None else None)
+        try:
+            return self.owner._measured(self.stage, self.socket, call)
+        finally:
+            setter(previous)
+
     def json(self, prompt, schema):
         """The structured reply, or, from a plain socket that has no schema, the text."""
         if not callable(getattr(self.socket, "json", None)):
             return self(prompt)
-        return self.owner._measured(self.stage, self.socket,
-                                   lambda: self.socket.json(prompt, schema))
+        return self._invoke(lambda: self.socket.json(prompt, schema))
 
     def stream(self, prompt, on_text):
         """The reply as it is written, or, from a socket that cannot stream, whole."""
@@ -728,9 +740,19 @@ class _MeasuredSocket:
             text = self(prompt)
             on_text(text)
             return text
-        return self.owner._measured(self.stage, self.socket,
-                                   lambda: self.socket.stream(prompt, on_text))
+        return self._invoke(lambda: self.socket.stream(prompt, on_text))
 
     def __call__(self, prompt):
         stage = "verify" if prompt.startswith("Check evidence for ") else self.stage
-        return self.owner._measured(stage, self.socket, lambda: self.socket(prompt))
+        return self._invoke_for(stage, lambda: self.socket(prompt))
+
+    def _invoke_for(self, stage, call):
+        setter = getattr(self.socket, "set_cancel_check", None)
+        if not callable(setter):
+            return self.owner._measured(stage, self.socket, call)
+        previous = getattr(self.socket, "check_cancelled", None)
+        setter(self.owner._check if self.owner.check_cancelled is not None else None)
+        try:
+            return self.owner._measured(stage, self.socket, call)
+        finally:
+            setter(previous)

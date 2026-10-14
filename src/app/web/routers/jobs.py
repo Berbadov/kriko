@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import AliasChoices, BaseModel, Field
 
 from app import prefs
+from app.agentledger import RequestConflict
 from app.web import livefeed, state, tasks
 from app.web.deps import get_app_state, get_jobs
 
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/api", tags=["jobs"])
 
 
 class ResearchRequest(BaseModel):
+    client_request_id: str = Field("", max_length=200)
     subject_id: str
     pack_id: str | None = None
     #: Empty means `tasks.default_backend()`: the best plane that is free
@@ -66,7 +68,11 @@ class UpdateRequest(BaseModel):
 
 def _submit(runner, kind: str, params: dict) -> dict:
     try:
-        job_id = runner.submit(kind, params)
+        request_id = params.pop("client_request_id", "")
+        job_id = (runner.submit(kind, params, client_request_id=request_id) if request_id
+                  else runner.submit(kind, params))
+    except RequestConflict as exc:
+        raise HTTPException(409, str(exc)) from exc
     except KeyError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {"job_id": job_id, "kind": kind}
