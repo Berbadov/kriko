@@ -209,12 +209,12 @@ test("deeper research progress keeps quick-look cards expanded without blinking"
   assert.ok(card.isConnected, "a progress poll replaced the quick-look card");
   assert.equal(card.dataset.open, "1");
   const status = p.shadow().querySelector(".lite-research-status").textContent;
-  assert.match(status, /1 thing to know, from a quick look/);
+  assert.match(status, /1 to know from a quick look/);
   assert.doesNotMatch(status, /%/);
   assert.equal(p.sent.filter(m => m.type === "JOB_STATUS" && m.payload.job_id !== "quick").length, 0);
 });
 
-test("a research run that kept nothing says no data showed an issue", () => {
+test("a research run that kept nothing shows the no-evidence card", () => {
   const p = loadPanel({ workerResponse: m => {
     if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "agent" } };
     if (m.type === "JOB_STATUS") return { ok: true, job: { job_id: "research", kind: "research",
@@ -230,10 +230,13 @@ test("a research run that kept nothing says no data showed an issue", () => {
   p.click(".lite-research-start");
   p.flushTimers();
   const status = p.shadow().querySelector(".lite-research-status").textContent;
-  assert.match(status, /No data found that shows an issue/);
-  assert.match(status, /read 4 source\(s\), none of them said anything keepable/);
-  assert.match(status, /not proof that there is no issue/);
+  assert.match(status, /Research done/);
   assert.doesNotMatch(status, /Open the research job for findings/);
+  const card = p.shadow().querySelector(".lite-noe-slot .lite-noevidence");
+  assert.ok(card, "an empty run produced no card");
+  assert.match(card.textContent, /No evidence of an issue found/);
+  assert.match(card.textContent, /read 4 source\(s\), none of them said anything keepable/);
+  assert.match(card.textContent, /not proof there is no issue/);
 });
 
 test("a research run with a kept claim or a brief is not called empty", () => {
@@ -279,7 +282,7 @@ test("a quick look is one saved job, and joins a pack only when asked", () => {
   p.click(".lite-research-product");
   p.type(".lite-research-name", "An uncovered product");
   p.click(".lite-research-start");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /Saved in Kriko/);
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /saved in Kriko/i);
   assert.ok(!sent.some(m => m.type === "QUICK_TO_PACK"), "a pack run started by itself");
   p.click(".lite-research-pack");
   const asked = sent.find(m => m.type === "QUICK_TO_PACK");
@@ -307,7 +310,16 @@ test("a zero-issue quick look retains listing facts, evidence and a web follow-u
   p.click(".lite-research-product");
   p.type(".lite-research-name", "Example oil");
   p.click(".lite-research-start");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /No supported issues found/);
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /saved in Kriko/i);
+  const noe = p.shadow().querySelector(".lite-quick .lite-noevidence");
+  assert.ok(noe, "a zero-issue quick look produced no card");
+  assert.match(noe.textContent, /No evidence of an issue found/);
+  assert.match(noe.textContent, /2 pages read/);
+  assert.match(noe.textContent, /No supported issues found in the pages checked\./);
+  const ask = noe.querySelector(".lite-noe-ask");
+  assert.ok(ask, "the card offers no further questions");
+  ask.click();
+  assert.ok(p.sent.some(m => m.type === "QUICK_ASK"), "a chip press did not ask");
   assert.match(p.shadow().querySelector(".lite-quick-specs").textContent, /Volume: 4 L/);
   assert.equal(p.shadow().querySelector(".lite-quick-source-list a").href, "https://example.test/datasheet");
   assert.ok(p.shadow().querySelector(".lite-follow-input"));

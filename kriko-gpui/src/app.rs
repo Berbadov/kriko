@@ -138,6 +138,7 @@ impl Tab {
         match self {
             Tab::Extension => "Browser extension",
             Tab::Local => "Local LLM",
+            Tab::Overview => "Knowledge",
             _ => self.key(),
         }
     }
@@ -372,6 +373,9 @@ pub struct Kriko {
     pub library_search: InputState,
     pub quick_ask_input: InputState,
     pub sidebar_collapsed: bool,
+    /// The reader's own open or closed for the rail's More tier; a route to
+    /// one of its screens opens it regardless, until the reader chooses.
+    pub sidebar_more_open: bool,
     /// The reader's own open or closed; None follows the window's width.
     pub sidebar_choice: Option<bool>,
     /// True while the Live panel temporarily folds an otherwise expanded
@@ -442,6 +446,7 @@ impl Kriko {
             library_search: InputState::new(cx),
             quick_ask_input: InputState::new(cx),
             sidebar_collapsed: false,
+            sidebar_more_open: false,
             sidebar_choice: None,
             sidebar_folded_for_live: false,
             content_w: 0.0,
@@ -853,6 +858,36 @@ impl Kriko {
 
     // ---- sidebar ----
 
+    /// One tier of the rail's rows: the destination itself, the live count or
+    /// badge the engine knows, and the click that turns the screen over.
+    fn nav_rows(
+        &self,
+        mut nav: Stateful<Div>,
+        items: &'static [data::NavDef],
+        browse_count: &Option<String>,
+        activity_badge: &Option<String>,
+        cx: &mut Context<Self>,
+    ) -> Stateful<Div> {
+        for item in items {
+            let key = item.key;
+            let current = self.tab.key() == key;
+            let (count, badge) = match key {
+                "browse" => (browse_count.as_deref(), None),
+                "activity" => (None, activity_badge.as_deref()),
+                _ => (item.count, item.badge),
+            };
+            let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { count }, if self.sidebar_collapsed { None } else { badge })
+                .flex_none()
+                .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                    this.tab = Tab::from_key(key);
+                    this.on_open_tab(cx);
+                    cx.notify();
+                }));
+            nav = nav.child(row);
+        }
+        nav
+    }
+
     fn sidebar(&self, cx: &mut Context<Self>) -> Div {
         let mut nav = div()
             .id("nav-scroll")
@@ -871,32 +906,30 @@ impl Kriko {
         let browse_count = (subjects > 0).then(|| subjects.to_string());
         let running = self.live.run.jobs.iter().filter(|j| !j.done).count();
         let activity_badge = (running > 0).then(|| running.to_string());
-        for (gi, group) in data::NAV.iter().enumerate() {
-            nav = nav.child(
-                div()
-                    .mt(px(if gi == 0 { 8.0 } else { 18.0 }))
-                    .mb(px(4.0))
-                    .px(px(12.0))
-                    .flex_none()
-                    .when(!self.sidebar_collapsed, |d| d.child(eyebrow(group.label))),
-            );
-            for item in group.items {
-                let key = item.key;
-                let current = self.tab.key() == key;
-                let (count, badge) = match key {
-                    "browse" => (browse_count.as_deref(), None),
-                    "activity" => (None, activity_badge.as_deref()),
-                    _ => (item.count, item.badge),
-                };
-                let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { count }, if self.sidebar_collapsed { None } else { badge })
-                    .flex_none()
-                    .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                        this.tab = Tab::from_key(key);
-                        this.on_open_tab(cx);
-                        cx.notify();
-                    }));
-                nav = nav.child(row);
-            }
+        let nav = self.nav_rows(nav, data::NAV_MAIN, &browse_count, &activity_badge, cx);
+        // The More tier, folded until asked for. A route can land on one of
+        // its screens, and a selected row behind a fold is invisible, so the
+        // fold opens itself while the tab on now is one of its own.
+        let more_open = self.sidebar_more_open
+            || data::NAV_MORE.iter().any(|item| item.key == self.tab.key());
+        let mut nav = nav.child(
+            nav_item(
+                "nav-more",
+                if more_open { "collapse" } else { "chevron-down" },
+                if self.sidebar_collapsed { "" } else { "More" },
+                false,
+                None,
+                None,
+            )
+            .mt(px(10.0))
+            .flex_none()
+            .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
+                this.sidebar_more_open = !this.sidebar_more_open;
+                cx.notify();
+            })),
+        );
+        if more_open {
+            nav = self.nav_rows(nav, data::NAV_MORE, &browse_count, &activity_badge, cx);
         }
         div()
             .w(px(if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W }))

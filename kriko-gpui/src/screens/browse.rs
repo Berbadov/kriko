@@ -314,7 +314,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     if !app.browse_search.value.trim().is_empty() || active_filters > 0 {
                         "Nothing matches this search."
                     } else if app.live.knowledge.totals.subjects == 0 {
-                        "No products yet. Install a catalog on Overview."
+                        "No products yet. Install a catalog in Knowledge."
                     } else {
                         "Nothing to show here yet."
                     },

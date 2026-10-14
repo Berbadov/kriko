@@ -10,46 +10,31 @@ pub struct NavDef {
     pub badge: Option<&'static str>,
 }
 
-pub struct NavGroupDef {
-    pub label: &'static str,
-    pub items: &'static [NavDef],
-}
+/// The rail the newcomer reads first: the work they came for, and Settings.
+/// Every screen stays reachable through a route, but the rail no longer asks
+/// them to choose between fourteen destinations before they have done
+/// anything.
+pub const NAV_MAIN: &[NavDef] = &[
+    NavDef { key: "home", label: "Home", icon: "home", count: None, badge: None },
+    NavDef { key: "run", label: "Run", icon: "run", count: None, badge: None },
+    NavDef { key: "history", label: "History", icon: "history", count: None, badge: None },
+    NavDef { key: "compare", label: "Compare", icon: "compare", count: None, badge: None },
+    NavDef { key: "extension", label: "Extension", icon: "extension", count: None, badge: None },
+    NavDef { key: "overview", label: "Knowledge", icon: "overview", count: None, badge: None },
+    NavDef { key: "browse", label: "Browse", icon: "browse", count: None, badge: None },
+    NavDef { key: "activity", label: "Activity", icon: "activity", count: None, badge: None },
+    NavDef { key: "settings", label: "Settings", icon: "settings", count: None, badge: None },
+];
 
-pub const NAV: &[NavGroupDef] = &[
-    NavGroupDef {
-        label: "Check",
-        items: &[
-            NavDef { key: "home", label: "Home", icon: "home", count: None, badge: None },
-            NavDef { key: "run", label: "Run", icon: "run", count: None, badge: None },
-            NavDef { key: "history", label: "History", icon: "history", count: None, badge: None },
-            NavDef { key: "compare", label: "Compare", icon: "compare", count: None, badge: None },
-            NavDef { key: "extension", label: "Browser extension", icon: "extension", count: None, badge: None },
-        ],
-    },
-    NavGroupDef {
-        label: "Knowledge",
-        items: &[
-            NavDef { key: "overview", label: "Overview", icon: "overview", count: None, badge: None },
-            NavDef { key: "browse", label: "Browse", icon: "browse", count: None, badge: None },
-        ],
-    },
-    NavGroupDef {
-        label: "System",
-        items: &[
-            NavDef { key: "sites", label: "Sites", icon: "sites", count: None, badge: None },
-            NavDef { key: "activity", label: "Activity", icon: "activity", count: None, badge: None },
-            NavDef { key: "agents", label: "Agents", icon: "agents", count: None, badge: None },
-            NavDef { key: "benchmark", label: "Benchmark", icon: "benchmark", count: None, badge: None },
-        ],
-    },
-    NavGroupDef {
-        label: "This install",
-        items: &[
-            NavDef { key: "local", label: "Local LLM", icon: "local", count: None, badge: None },
-            NavDef { key: "settings", label: "Settings", icon: "settings", count: None, badge: None },
-            NavDef { key: "about", label: "About", icon: "about", count: None, badge: None },
-        ],
-    },
+/// The rest, folded behind one row until asked for. They are diagnostics and
+/// setup, not a newcomer's first choices, and none of them carries a badge a
+/// reader must not miss.
+pub const NAV_MORE: &[NavDef] = &[
+    NavDef { key: "sites", label: "Sites", icon: "sites", count: None, badge: None },
+    NavDef { key: "agents", label: "Agents", icon: "agents", count: None, badge: None },
+    NavDef { key: "benchmark", label: "Benchmark", icon: "benchmark", count: None, badge: None },
+    NavDef { key: "local", label: "Local LLM", icon: "local", count: None, badge: None },
+    NavDef { key: "about", label: "About", icon: "about", count: None, badge: None },
 ];
 
 // ---- history: past checks ----

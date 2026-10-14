@@ -30,10 +30,10 @@
    * ever mounts on a page an adapter matched, so naming *which* site was never
    * information the reader needed; it was only a sentence that would be wrong
    * on the second site and unnoticed on the third. */
-  const IDLE_HINT = "Quick search: see what is known about this product.";
+  const IDLE_HINT = "See what is known about this product.";
   // A product nothing installed knows: the button researches it, so the hint
   // says what it will do rather than promising a search that cannot find it.
-  const UNKNOWN_HINT = "Nothing installed knows this product yet. Research it to find out what is known.";
+  const UNKNOWN_HINT = "No pack knows this product yet. Research it to find out.";
 
   /* The engine's verdict, as a word the panel shows. Three of the four are
    * worth a banner; `recognised` is the ordinary case and gets none. */
@@ -798,13 +798,13 @@
     if (plane.backend === "api" || plane.cost_basis === "per_token") {
       const cap = Number(plane.budget_usd || 0);
       return cap > 0
-        ? `Costs money; this run is capped at $${cap.toFixed(2)} of your API keys.`
-        : "Costs money; spent through your configured API keys.";
+        ? `Costs money, capped at $${cap.toFixed(2)}.`
+        : "Costs money, from your API keys.";
     }
     if (plane.backend === "local") {
-      return "Costs nothing. Runs on the model on this computer.";
+      return "Free — runs on this computer's model.";
     }
-    return "Costs nothing; runs through your coding agent.";
+    return "Free — runs through your coding agent.";
   }
 
   // Nothing known about a subject the packs *do* recognise. That is the one
@@ -906,8 +906,8 @@
     const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
     const found = state.researchQuick.risks.length;
     const said = job.state === "succeeded"
-      ? (found ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look. Saved in Kriko.`
-        : (result.diagnostic?.message || "No sourced issues were found in this quick look.") + " Saved in Kriko.")
+      ? (found ? `${found} to know from a quick look — saved in Kriko.`
+        : "Quick look saved in Kriko; no sourced issues found.")
       : "The quick look did not finish.";
     if (!deepen) {
       // A quick look is not a pack: it is saved as it is, and joins a pack
@@ -1013,8 +1013,6 @@
     const editingId = editing?.dataset.id;
     const selection = editing ? [editing.selectionStart, editing.selectionEnd] : null;
     const quickCoverage = state.researchQuick?.coverage;
-    const quickIsEmpty = Boolean(state.researchQuick
-      && !state.researchQuick.risks?.length && !state.researchQuick.specs?.length);
     const rejectionReasons = quickCoverage?.rejection_reasons;
     const rejectionSummary = rejectionReasons && typeof rejectionReasons === "object"
       ? Object.entries(rejectionReasons)
@@ -1023,14 +1021,6 @@
         .slice(0, 3)
         .map(([reason, count]) => `${reason.replaceAll("_", " ")} (${count})`)
         .join(", ")
-      : "";
-    const quickEmptyExplanation = quickIsEmpty && quickCoverage
-      ? ({
-        no_matching_product_evidence: "No pages matched this exact product.",
-        evidence_rejected: "Relevant pages were checked, but candidate findings did not pass the evidence checks.",
-        no_supported_findings: "Relevant pages were checked, but none supported a finding.",
-        partial: "Some research stages were incomplete.",
-      }[quickCoverage.status] || "No supported findings were kept.")
       : "";
     const markup = `
       <section class="lite-research">
@@ -1046,11 +1036,9 @@
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
         ${state.researchSavedAt ? `<p class="lite-saved-result">Saved result · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
-        ${quickCoverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
-          `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched product · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} pages cited`
-          + (quickEmptyExplanation ? ` · ${quickEmptyExplanation}` : "")
-          + (quickIsEmpty ? " This describes the pages checked; it does not prove the product has no problems." : "")
-          + (rejectionSummary ? ` Reasons: ${rejectionSummary}.` : ""))}</p>` : ""}
+        ${(quickCoverage && (state.researchQuick?.risks || []).length) ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
+          `${quickCoverage.pages_read || 0} pages · ${quickCoverage.pages_relevant || 0} matched · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.sources_cited || 0} cited`
+          + (rejectionSummary ? ` · refused: ${rejectionSummary}` : ""))}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
         ${state.researchQuick ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
@@ -1061,7 +1049,7 @@
           </details>
         </div>` : ""}
         ${state.researchQuick && state.researchQuickJob ? `<div class="lite-follow">
-          <p class="lite-follow-lede">Ask a follow-up. Your agent can use the saved product facts and search the web.</p>
+          <p class="lite-follow-lede">Ask a follow-up — it can use the saved facts and search the web.</p>
           ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
             <p class="lite-follow-q">${escapeHtml(a.q)}</p>
             <div class="lite-follow-answer lite-answer" data-answer="${escapeHtml(a.job_id || "")}"></div>
@@ -1073,8 +1061,8 @@
         </div>` : ""}
         ${asked.length ? `<div class="lite-asked" aria-live="polite">
           <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
-            ? "Your agent has a question. Pick an answer and it hears it now."
-            : "Your agent had a question and went with its guess. Pick an answer to run it again."}</p>
+            ? "Answer and the agent hears it now."
+            : "It went with its guess — answer to run it again."}</p>
           ${asked.map((q, qi) => `<fieldset class="lite-asked-q"><legend>${renderRichText(q.ask)}</legend>
             ${(q.options || []).length ? `<div class="lite-chips">${q.options.map((o, oi) => `
               <button type="button" class="lite-chip" data-q="${qi}" data-o="${oi}"
@@ -1088,6 +1076,7 @@
             ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
           </fieldset>`).join("")}
         </div>` : ""}
+        <div class="lite-noe-slot"></div>
         <div class="lite-research-actions">
           ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Refresh Quick Look" : "Research this product"}</button>` : ""}
           ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
@@ -1119,6 +1108,11 @@
     slot._researchMarkup = signature;
     slot.innerHTML = markup;
     paintReplies(slot);
+    // The no-evidence cards, in the same rebuild the claims get: the deep
+    // run's under the results, the quick look's where its claim cards would
+    // have been. A rebuild resets the DOM, so both append fresh.
+    const deepNone = deepNoEvidence();
+    if (deepNone) slot.querySelector(".lite-noe-slot")?.appendChild(noEvidenceCard(deepNone));
     // The card drops in once, when it is opened, and not again each time a
     // poll rebuilds it. Context stays folded until it is asked for (or has
     // words in it already); the fold eases open rather than snapping.
@@ -1163,6 +1157,12 @@
       slot.querySelector(".lite-follow-ask")?.addEventListener("click", () => askQuick(followInput.value.trim()));
     }
     const quickCards = slot.querySelector(".lite-quick-cards");
+    if (quickCards) {
+      const quickNone = quickNoEvidence();
+      if (quickNone) quickCards.appendChild(noEvidenceCard(quickNone));
+    }
+    slot.querySelectorAll(".lite-noe-ask").forEach((btn) =>
+      btn.addEventListener("click", () => askQuick(btn.dataset.q)));
     const sourceList = slot.querySelector(".lite-quick-source-list");
     const sources = new Map();
     const specsSlot = slot.querySelector(".lite-quick-specs");
@@ -1438,19 +1438,105 @@
     });
   }
 
-  /* A finished research run that kept nothing. The panel used to say "Research
-   * completed. Open the research job for findings." and stop there, so a run
-   * that read sources and found nothing looked like one that produced cards.
-   * The app's own outcome line already says what happened ("read 4 source(s),
-   * none of them said anything keepable"); this states the one claim that
-   * evidence supports. No data showing an issue is not the same as no issue,
-   * so the sentence says that too. A brief the reader can open is never
-   * called "no data": it may hold the findings. */
-  function noKeptData(result) {
-    const plain = "Research completed. Open the research job for findings.";
-    if (!result || !Array.isArray(result.accepted) || result.accepted.length || result.brief) return plain;
-    const what = result.outcome || "nothing kept";
-    return `No data found that shows an issue (${what}). This is absence of evidence in the sources read, not proof that there is no issue.`;
+  /* ── The no-evidence card ──────────────────────────────────────────────
+   *
+   * A run that read sources and kept no issue is a result, and it used to be
+   * a sentence of small print under the status line: easy to mistake for a
+   * glitch, saying nothing about how far the search actually reached, and
+   * offering nowhere to go next. The card is the same shape as a claim card
+   * on purpose — it stands where the claims would have stood.
+   *
+   * It carries the search's own account (pages read, queries tried) and the
+   * one honest caveat: no data showing an issue is not the same as no issue.
+   * Then it asks the questions that would extend the evidence — through the
+   * quick look's follow-up pipe when there is one, which is the flow that
+   * reaches the agent with the saved facts and the web behind it. */
+
+  const NO_EVIDENCE_ASKS = [
+    "What fails most often on this?",
+    "Any recalls or safety notices?",
+    "What do owners complain about?",
+  ];
+
+  /* The shape of a finished run that kept nothing and holds no brief: the
+   * one case the card answers. A brief the reader can open is never called
+   * "no data" — it may hold the findings. */
+  function noEvidenceFromResult(result) {
+    return Boolean(result && Array.isArray(result.accepted)
+      && !result.accepted.length && !result.brief);
+  }
+
+  /* A quick look that kept nothing: what its own coverage says, in the fewest
+   * words that still name every stage. */
+  function quickNoEvidence() {
+    const q = state.researchQuick;
+    if (!q || (q.risks || []).length) return null;
+    const c = q.coverage || {};
+    const explanation = ({
+      no_matching_product_evidence: "No pages matched this exact product.",
+      evidence_rejected: "Pages matched, but no finding passed the evidence checks.",
+      no_supported_findings: "Pages matched, but none supported a finding.",
+      partial: "Some research stages were incomplete.",
+    })[c.status] || "";
+    const reasons = c.rejection_reasons && typeof c.rejection_reasons === "object"
+      ? Object.entries(c.rejection_reasons)
+        .filter(([, count]) => Number(count) > 0)
+        .sort((a, b) => Number(b[1]) - Number(a[1]))
+        .slice(0, 3)
+        .map(([reason, count]) => `${reason.replaceAll("_", " ")} (${count})`)
+        .join(", ")
+      : "";
+    return {
+      meta: `${c.pages_read || 0} pages read · ${c.pages_relevant || 0} matched · ${c.pages_extracted || 0} evidence checks · ${c.publishers_read || 0} publishers · ${c.sources_cited || 0} cited`,
+      notes: [
+        q.diagnostic?.message || explanation || "No sourced issues were kept.",
+        reasons ? `Refused: ${reasons}` : "",
+      ].filter(Boolean),
+      queries: [],
+    };
+  }
+
+  /* A deep run that kept nothing: its outcome line names the search, and its
+   * queries are the context worth carrying — what was asked, not just that
+   * nothing came back. */
+  function deepNoEvidence() {
+    const job = state.researchJob;
+    const result = job?.result;
+    if (!result || job.kind === "quick_look" || job.kind === "pack_author") return null;
+    if (state.researchState !== "succeeded" || !noEvidenceFromResult(result)) return null;
+    return {
+      meta: result.outcome || "nothing kept",
+      notes: [result.note || ""].filter(Boolean),
+      queries: (Array.isArray(result.queries) ? result.queries : []).slice(0, 4),
+    };
+  }
+
+  function noEvidenceCard(info) {
+    const canAsk = Boolean(state.researchQuickJob) && !state.researching;
+    const article = document.createElement("article");
+    article.className = "lite-rc lite-noevidence";
+    article.dataset.open = "1";
+    article.innerHTML = `
+      <div class="lite-rc-head">
+        <div class="lite-rc-domain" aria-hidden="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="miter"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-5.5"/></svg>
+        </div>
+        <div class="lite-rc-titlebox">
+          <div class="lite-rc-title">No evidence of an issue found</div>
+          <div class="lite-rc-meta">${escapeHtml(info.meta)}</div>
+        </div>
+      </div>
+      <div class="lite-rc-bodywrap"><div class="lite-rc-bodyclip"><div class="lite-rc-body">
+        <p class="lite-rc-text">The sources read said nothing — that is absence of evidence, not proof there is no issue.</p>
+        ${info.notes.length ? `<div class="lite-noe-notes">${info.notes.map((n) => `<p>${renderRichText(n)}</p>`).join("")}</div>` : ""}
+        ${info.queries.length ? `<div class="lite-rc-why">${info.queries.map((q) => `<span class="lite-rc-why-chip">Searched: ${renderRichText(q)}</span>`).join("")}</div>` : ""}
+        ${canAsk ? `
+          <div class="lite-noe-asks">
+            <div class="lite-rc-insp-label">Ask further questions</div>
+            <div class="lite-chips">${NO_EVIDENCE_ASKS.map((a) => `<button type="button" class="lite-chip lite-noe-ask" data-q="${escapeHtml(a)}">${escapeHtml(a)}</button>`).join("")}</div>
+          </div>` : ""}
+      </div></div></div>`;
+    return article;
   }
 
   function pollResearchJob(jobId) {
@@ -1489,7 +1575,9 @@
             : `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko; it could not install itself; open it there.`)
           : job.result?.brief && !job.result?.documents
             ? "Brief ready. Open the research job to continue with your agent."
-            : noKeptData(job.result))
+            : (noEvidenceFromResult(job.result)
+              ? "Research done — see the card below."
+              : "Research completed. Open the research job for findings."))
         : job.state === "interrupted" ? "Research interrupted by an app restart."
         : `Research failed. ${job.error || job.message || "Open the job for details."}`;
       const installed = job.state === "succeeded" && Boolean(job.result?.installed);

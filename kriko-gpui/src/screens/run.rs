@@ -962,11 +962,11 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     if let Some(packs) = app.live.history.packs.as_ref() {
         if !packs.iter().any(|pack| pack.enabled) {
             let (title, detail) = if packs.is_empty() {
-                ("Install a catalog", "Install a catalog in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing without a catalog.")
+                ("Install a catalog", "Install a catalog in Knowledge to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing without a catalog.")
             } else {
-                ("Switch on a catalog", "Every installed catalog is off. Switch one on in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing.")
+                ("Switch on a catalog", "Every installed catalog is off. Switch one on in Knowledge to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing.")
             };
-            let primary = route_button(cx, "run-open-overview", "Open Overview", Tab::Overview);
+            let primary = route_button(cx, "run-open-overview", "Open Knowledge", Tab::Overview);
             let can_quick_look = quick_look_available(
                 app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
                 app.live.knowledge.ext.as_ref().is_some_and(|e| e.available),

@@ -51,8 +51,8 @@ impl HomeStep {
 
     fn detail(self) -> &'static str {
         match self {
-            Self::InstallCatalog => "Choose a catalog in Overview to search its known products. Once an agent and browser extension are available, Quick Look can also start from a listing without a catalog.",
-            Self::EnableCatalog => "All installed catalogs are off. Switch one on in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing.",
+            Self::InstallCatalog => "Choose a catalog in Knowledge to search its known products. Once an agent and browser extension are available, Quick Look can also start from a listing without a catalog.",
+            Self::EnableCatalog => "All installed catalogs are off. Switch one on in Knowledge to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing.",
             Self::ConnectAgent => "No agent can run a check yet. Agents shows what is available and what needs setup.",
             Self::FirstCheck => "Search a product title in Run, or open a product URL in your browser and use Quick Look on the listing. Then choose an available agent.",
             Self::ConnectExtension => "Set up the browser extension to check pages as you read them. You can also run checks here.",
@@ -62,7 +62,7 @@ impl HomeStep {
 
     fn button(self) -> &'static str {
         match self {
-            Self::InstallCatalog | Self::EnableCatalog => "Open Overview",
+            Self::InstallCatalog | Self::EnableCatalog => "Open Knowledge",
             Self::ConnectAgent => "Open Agents",
             Self::FirstCheck | Self::AnotherCheck => "Start a check",
             Self::ConnectExtension => "Set up extension",
@@ -562,9 +562,9 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
                     cx.notify();
                 });
                 let say = if packs.is_empty() {
-                    "No catalog installed yet. Open Overview to install one."
+                    "No catalog installed yet. Open Knowledge to install one."
                 } else {
-                    "Every catalog is switched off. Open Overview to switch one on."
+                    "Every catalog is switched off. Open Knowledge to switch one on."
                 };
                 div().id("home-no-catalog").cursor_pointer().on_click(go)
                     .child(empty_note(say)).into_any_element()

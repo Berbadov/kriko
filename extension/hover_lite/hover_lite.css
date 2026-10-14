@@ -774,6 +774,14 @@
 .lite-rc[data-sev="medium"] .lite-rc-domain { background: var(--med-surface);  border-color: var(--med-border);  color: var(--med-ink); }
 .lite-rc[data-sev="low"]    .lite-rc-domain { background: var(--low-surface);  border-color: var(--low-border);  color: var(--low-ink); }
 
+/* The no-evidence card: no severity and no toggle — a run that searched and
+   kept nothing, stating how far its evidence reached. It borrows the low
+   tone so it reads as settled, not alarming. */
+.lite-noevidence .lite-rc-domain { background: var(--low-surface); border-color: var(--low-border); color: var(--low-ink); }
+.lite-noe-notes { display: grid; gap: 4px; }
+.lite-noe-notes p { margin: 0; color: var(--fg-muted); font-size: 12px; }
+.lite-noe-asks { display: grid; gap: 6px; margin-top: 10px; }
+
 /* Title + meta area */
 .lite-rc-titlebox {
   flex: 1;
