@@ -14,9 +14,11 @@ the whole point of the jobs layer.
 
 import importlib
 import secrets
+import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import asdict, replace
+from typing import cast
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -3140,6 +3142,118 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
             "agent": agent, "sources": sources}
 
 
+class _QuietProgress:
+    """The job's channel without `set`, for an agent that would overwrite the
+    chat turn's own progress with its generic "asking" line."""
+
+    def __init__(self, progress: Progress):
+        self._progress = progress
+
+    def set(self, progress: float, message: str = "") -> None:
+        pass
+
+    def log(self, line: str) -> None:
+        self._progress.log(line)
+
+    def check(self) -> None:
+        self._progress.check()
+
+    def partial(self, result: dict) -> None:
+        self._progress.partial(result)
+
+    def replies(self) -> list[str]:
+        return self._progress.replies()
+
+
+class _TurnHooks:
+    """What a chat turn reports through: every snapshot names its thread,
+    its messages and the agent that is answering."""
+
+    def __init__(self, progress: Progress, ids: dict, agent: dict):
+        self._progress = progress
+        self._ids = ids
+        self._agent = agent
+
+    def set(self, progress: float, message: str = "") -> None:
+        self._progress.set(progress, message)
+
+    def log(self, line: str) -> None:
+        self._progress.log(line)
+
+    def check(self) -> None:
+        self._progress.check()
+
+    def partial(self, snapshot: dict) -> None:
+        self._progress.partial({**self._ids, "agent": dict(self._agent), **snapshot})
+
+
+def chat_ask(settings, params: dict, progress: Progress) -> dict:
+    """One turn of a conversation with the reader's own agent (app/chat.py).
+
+    The agent is told the names of the app's records and reads each one only
+    when it asks. The answer is written to the thread in `app.sqlite` as an
+    agent message, with the steps that produced it. Nothing is written to the
+    knowledge store: a chat answer is the reader's, never a claim.
+    """
+    from app import chat, chatdata
+
+    thread_id = str(params.get("thread_id") or "").strip()
+    message_id = str(params.get("message_id") or "").strip()
+    text = str(params.get("text") or "").strip()
+    if not (thread_id and text):
+        raise ValueError("which conversation? `thread_id` and the message are required")
+    app_state = state.connect(settings.app_state_path)
+    try:
+        if state.get_chat_thread(app_state, thread_id) is None:
+            raise ValueError(f"no conversation {thread_id}")
+        history = state.chat_history(app_state, thread_id, before=message_id)
+        try:
+            store = connect(settings.store_path, read_only=True)
+        except (sqlite3.Error, OSError):
+            store = None  # no packs installed yet: the sources say so, nothing fails
+        ctx = chatdata.Context(store=store, app=app_state)
+        agent: dict = {}
+        # The same channel as the job, minus `set`. `_ask_about_checks` takes a
+        # Progress; the cast says the one thing it may not do is set progress.
+        quiet = cast(Progress, _QuietProgress(progress))
+        try:
+            if _use_local_ask(settings, params):
+                completer = _local_compare_completer(settings, params, progress)
+                agent.update(id="local", label="Local model",
+                             model=str(getattr(completer, "model", "")))
+                ask = completer
+            else:
+                def ask(prompt: str) -> str:
+                    reply, _ = _ask_about_checks(settings, {**params, "question": text},
+                                                 quiet, prompt, on_agent=agent.update)
+                    return reply
+
+            hooks = _TurnHooks(progress, {"thread_id": thread_id, "message_id": message_id},
+                               agent)
+            result = chat.run_turn(text, ask=ask, ctx=ctx, history=history, hooks=hooks)
+        finally:
+            if store is not None:
+                store.close()
+        if not result["answer"]:
+            raise ValueError("The agent returned no answer. Try asking again.")
+        stored = state.add_chat_message(
+            app_state, thread_id, role="agent", text=result["answer"],
+            steps=result["steps"], sources=result["sources"], job_id=progress.job_id)
+    finally:
+        app_state.close()
+    progress.partial({"thread_id": thread_id, "message_id": message_id,
+                      "agent": dict(agent), "steps": result["steps"],
+                      "answer": result["answer"], "sources": result["sources"]})
+    progress.set(1.0, "answered")
+    return {
+        "thread_id": thread_id, "message_id": stored["message_id"],
+        "reader_message_id": message_id, "answer": result["answer"],
+        "steps": result["steps"], "sources": result["sources"], "agent": agent,
+        "agent_calls": result["agent_calls"], "search_rounds": result["search_rounds"],
+        "fallback": result["fallback"],
+    }
+
+
 def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       on_agent: Callable[[dict], None] | None = None,
                       timeout: float = 0.0, effort: str = "",
@@ -3403,4 +3517,5 @@ HANDLERS = {
     "compare_ask": compare_ask,
     "model_pull": model_pull,
     "lookup_ask": lookup_ask,
+    "chat_ask": chat_ask,
 }

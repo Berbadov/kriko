@@ -101,6 +101,7 @@ in a document, because a surface nobody knows exists cannot be reasoned about.
 | live | `GET /api/knowledge/clock`, `GET /api/lookup/{lookup_id}/refresh` | What changed in the store, and re-read one past check. |
 | marks | `GET\|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}`, `GET /api/marks/signals` | Author verdicts, pack-keyed, and the research signals they feed. |
 | compare | `GET\|POST /api/compare-drafts`, `PUT\|DELETE /api/compare-drafts/{draft_id}` | Named comparisons of saved checks. App state, never knowledge. |
+| chat | `GET /api/chat/sources`, `GET\|POST /api/chat/threads`, `DELETE /api/chat/threads/{thread_id}`, `GET\|POST /api/chat/threads/{thread_id}/messages` | A conversation with the reader's own agent. The agent is told the names of the app's records and reads each one only when it asks (`app/chatdata.py`); a turn (`app/chat.py`) runs as a `chat_ask` job. App state, never knowledge. |
 | queue | `GET\|POST /api/queue`, `PATCH\|DELETE /api/queue/{queue_id}` | The research queue: products queued from the extension's panel (Add to queue), researched in turn, then compared. One row per listing address; a second press answers `added: false`; PATCH sets `state` (waiting, researching, done) and the fresh `lookup_id` as the window researches them. App state, never knowledge. |
 | jobs | `POST /api/research`, `POST /api/packs/build`, `POST /api/packs/author`, `POST /api/packs/update`, `GET /api/packs/updates`, `GET /api/jobs`, `GET /api/jobs/{job_id}`, `POST /api/jobs/{job_id}/cancel`, `POST /api/jobs/{job_id}/retry`, `POST /api/jobs/{job_id}/say`, `GET /api/jobs/{job_id}/stream` | SSE polls the row, so a reconnect is safe. |
 | pipeline | `GET /api/pipeline/runs`, `GET /api/pipeline/runs/{run_id}`, `GET /api/pipeline/stream` | What came of a run: sources, kept findings, refusals with their reason. |
@@ -167,6 +168,8 @@ flowchart LR
 | `queue_history` | Durable queue entries, including completed and removed products; active entries are reconciled from `research_queue`. |
 | `research_queue` | Products queued from the extension, in research order, with the site each came from. |
 | `compare_questions` | The reader's own questions about a comparison, and the answers their agent gave. |
+| `chat_threads` | The reader's conversations with their agent, newest first. App state, never knowledge. |
+| `chat_messages` | Each question the reader asked and each answer, with the steps (records read) and sources that produced the answer. |
 | `compare_boards` | One comparison's pen marks and typed notes over the table, one JSON document per draft. Cleared when the draft is saved over, because a mark on a column that is gone is a mark about nothing. |
 
 **Migration.** `connect()` stamps `PRAGMA user_version` with
