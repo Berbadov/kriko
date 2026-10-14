@@ -523,6 +523,11 @@ class LocalAsker:
             except LocalSearchError as error:
                 return [], str(error)
 
+        # Said before the wait, not after it: a search can take half a minute,
+        # and a screen that shows nothing meanwhile reads as a hang.
+        for query in queries:
+            self._say(f"searching: {query}")
+
         # On a hosted search the queries go out together; their hits are
         # still taken in the queries' order, and the log is written from
         # this thread only.
@@ -533,6 +538,12 @@ class LocalAsker:
             answered = []
             for query in queries:
                 self._check()
+                if len(answered) >= 2 and all(failure for _, failure in answered):
+                    # Two searches in a row failed outright: a service that is
+                    # down answers the third no better, and each one waits out
+                    # its own timeout first (measured: 127 s of silence).
+                    answered.append(([], "skipped, the search service is not answering"))
+                    continue
                 answered.append(answer(query))
         hits_by_query = []
         for query, (hits, failure) in zip(queries, answered):
@@ -615,6 +626,7 @@ class LocalAsker:
         # search hits made unrelated video/shop pages spend the whole fetch
         # deadline before a usable report or product document was reached.
         wanted = prioritized[:self.max_pages + SPARE_PAGES]
+        self._say(f"found {len(seen)} page(s); reading up to {self.max_pages}")
 
         def read_one(url: str) -> tuple[str, str]:
             try:
@@ -647,6 +659,7 @@ class LocalAsker:
                     url, text = future.result()
                     if not text:
                         self.search_coverage["pages_unreadable"] += 1
+                        self._say(f"could not read: {url}")
                         continue
                     self.search_coverage["pages_read"] += 1
                     read_domains.add(publisher(url))
@@ -674,6 +687,7 @@ class LocalAsker:
                     fingerprints.add(fingerprint)
                     pages.append((url, text))
                     self.sources[url] = text
+                    self._say(f"read: {url}")
                 fill()
             if pending and time.monotonic() >= deadline:
                 self.search_coverage["pages_timed_out"] = len(pending)

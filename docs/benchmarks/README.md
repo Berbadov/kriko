@@ -58,3 +58,18 @@ The output files contain the requested and selected model, per-case timings, tok
 - [Haiku via OpenRouter retry](2026-10-09-haiku-openrouter.jsonl)
 - [Luna via OpenRouter retry](2026-10-09-luna-openrouter.jsonl)
 - [Luna via GitHub Copilot retry](2026-10-09-luna-copilot.jsonl)
+
+## CLI startup on this computer
+
+Measured on 9 October 2026, three separate processes and three fresh chats per CLI:
+
+| Agent | Model | Launch (`--help`) | First reply |
+|:---|:---|---:|---:|
+| **Claude Code** | Haiku | 0.38 s | **3.93 s** |
+| **Codex** | GPT 6 Luna | 0.08 s | 4.36 s |
+| **Antigravity** | Gemini 3.8 Flash (low) | 0.36 s | 7.74 s |
+| **Mistral** | GLM 5.3 (high) | 0.59 s | 15.23 s |
+
+Medians of three runs. "First reply" is a fresh one-word answer in a new chat.
+
+All 12 replies completed. These are startup checks, not research scores: the reply times also include authentication, agent setup, network latency, and model generation. Keeping a terminal open cannot remove most of that wait. GLM varied from 12.55 to 35.23 seconds. Every reply used a new chat. [Raw measurements](cli-startup-1.1.2.json) include the CLI-reported token totals; even a short answer includes the agent's initial instructions.
