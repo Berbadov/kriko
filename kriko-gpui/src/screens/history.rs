@@ -184,7 +184,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         }
         let title = match field.as_str() { "pack" => "pack", "time" => "date", "kind" => "kind", _ => "status" };
         let close = cx.listener(|this, _: &ClickEvent, _w, cx| { this.live.history.filter_open = None; cx.notify(); });
-        let drawer = card().flex().flex_col().gap(px(14.0)).child(
+        let drawer = card().flex().flex_col().gap(px(SPACE_CARD)).child(
             div().flex().items_center().justify_between()
                 .child(eyebrow(&format!("Filter by {title}")))
                 .child(filter_btn("history-filter-close", "Close", false, false).on_click(close)),
@@ -459,7 +459,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .id(gpui::ElementId::named_usize("hist-row", gi))
             .flex()
             .items_center()
-            .py(px(14.0))
+            .py(px(10.0))
             .cursor_pointer()
             .hover(|s| s.bg(rgba(GLASS_1)))
             .on_click(toggle)

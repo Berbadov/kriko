@@ -284,6 +284,7 @@ impl Kriko {
                 self.refresh_jobs(cx);
             }
             Tab::Sites => self.refresh_sites(cx),
+            Tab::Chat => self.refresh_chat(cx),
             Tab::Extension => self.refresh_extension(cx),
             Tab::Settings => {
                 self.refresh_local(cx);
