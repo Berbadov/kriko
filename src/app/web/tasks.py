@@ -430,6 +430,37 @@ def _research_options(params: dict, app_state_path=None) -> dict:
             conn.close()
 
 
+def _apply_source_options(researcher, params: dict, app_state_path=None) -> None:
+    """Hand a CLI agent what the reader set for every agent run.
+
+    The source count, the kinds of source to go to first, and the language
+    answers are written in. A run's own value wins; otherwise the Agents tab
+    and Settings apply. The local plane takes these from its own plan
+    (`_local_asker`); a CLI has no flag for any of them, so they are set on the
+    researcher, which turns them into queries, page limits and prompt lines.
+    """
+    from app import prefs
+
+    wanted = _research_options(params, app_state_path)
+    if wanted["sources"] > 0:
+        researcher.max_documents = wanted["sources"]
+    researcher.source_kinds = list(wanted["kinds"])
+    researcher.source_instructions = _source_kinds_line(wanted["kinds"])
+    language = str(params.get("output_language") or "").strip()
+    path = app_state_path or params.get("app_state_path")
+    if not language and path:
+        try:
+            conn = state.connect(path)
+        except Exception:  # noqa: BLE001 - an unreadable preference is no preference
+            conn = None
+        if conn is not None:
+            try:
+                language = prefs.read(conn).get(prefs.LOCAL_OUTPUT_LANGUAGE, "")
+            finally:
+                conn.close()
+    researcher.output_language = language or "auto"
+
+
 def _cap_agent(researcher, params: dict) -> None:
     """Give a per-token agent the ceiling its caller named.
 
@@ -1983,15 +2014,18 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             preferred=str(params.get("harness") or ""),
             app_state_path=settings.app_state_path,
             timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
-            # Low, whatever the reader's everyday dial says: this is the chat-speed
-            # pass. A CLI that does not declare `low` has it dropped rather than
-            # refused (`harness_researcher`), so the dial never costs the run.
-            effort="low",
+            # The reader's level for this CLI wins (Agents tab); `low` is only
+            # what a chat-speed pass uses when nobody chose one. A CLI that does
+            # not declare it has it dropped rather than refused
+            # (`harness_researcher`), so the dial never costs the run.
+            effort=str(params.get("effort") or ""),
+            default_effort="low",
         )
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
         _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
+        _apply_source_options(researcher, params, settings.app_state_path)
 
     catalog_context_error = ""
     try:
@@ -2285,7 +2319,8 @@ def categorize_quick_look(settings, params: dict, progress: Progress) -> dict:
                     app_state_path=settings.app_state_path,
                     timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
                     model=str(params.get("model") or ""),
-                    effort="low",
+                    effort=str(params.get("effort") or ""),
+                    default_effort="low",
                 )
                 _cap_agent(researcher, {**params, "budget_usd": CATEGORIZATION_BUDGET_USD})
                 researcher.on_action = progress.log
@@ -3706,12 +3741,14 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
             preferred=str(params.get("harness") or ""),
             app_state_path=settings.app_state_path,
             timeout=float(params.get("timeout_seconds") or timeout or COMPARE_ASK_TIMEOUT_SECONDS),
-            effort=effort,
+            effort=str(params.get("effort") or ""),
+            default_effort=effort,
         )
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
         _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
+        _apply_source_options(researcher, params, settings.app_state_path)
     # Read the resolved researcher: a requested CLI can fall back to a
     # different one. CLI `model` is its id, whereas API/local `model`
     # names the model; only show the CLI's explicitly selected model.

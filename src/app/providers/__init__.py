@@ -192,8 +192,12 @@ def _preferred_model(app_state_path) -> str:
 
 def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
                        app_state_path=None, model: str = "", effort: str = "",
-                       api: bool = True):
+                       default_effort: str = "", api: bool = True):
     """The $0 plane that actually runs, wired to whichever CLI is installed.
+
+    `effort` is the run's own choice and wins; then the level the reader set
+    for this CLI on the Agents tab; then `default_effort`, the job's own
+    preference when nobody chose one.
 
     The sibling of `api_researcher` in shape and its opposite in cost: this one
     spends nothing of Kriko's because the subscription is the reader's own. It
@@ -259,12 +263,18 @@ def harness_researcher(*, preferred: str = "", timeout: float = 0.0,
     # cross-harness value is still dropped against the cached list, or the
     # roster's known choices while discovery is in flight. `command_for`
     # performs the final declared-flag check before launching the CLI.
-    if effort.strip():
+    if effort.strip() or default_effort.strip():
         known_efforts = harness.cached_efforts_for(found)
         allowed_efforts = (known_efforts if known_efforts is not None
                            else list(getattr(found, "effort_choices", ())))
-        if effort.strip() not in allowed_efforts:
+        if effort.strip() and effort.strip() not in allowed_efforts:
             effort = ""
+        # The job's own default applies only where neither the run nor the
+        # reader named a level: a chat-speed pass is `low` until the Agents
+        # tab says otherwise, and a level the reader set for this CLI is
+        # theirs to keep.
+        if not effort.strip() and default_effort.strip() in allowed_efforts:
+            effort = default_effort
     picked = (model.strip(), effort.strip())
     model, effort = harness.settle_effort(found, *picked)
     researcher = harness.HarnessResearcher(
