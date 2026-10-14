@@ -2638,7 +2638,10 @@ class HarnessResearcher(AgentResearcher):
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
         prompt = self.brief(task) + "\n" + self._contract()
         if self.harness.id in {"antigravity-cli", "mistral-vibe", "codex"}:
-            queries = list(task.queries)[:3] or [
+            # `task.queries` are the pack's templates (`{make} {model} ...`);
+            # the rendered ones are what a search engine can be asked. Searching
+            # the template text returned pages about image generation.
+            queries = list(task.rendered_queries())[:3] or [
                 f"{task.subject_label} failures owner reports"]
             reply = self._ask_with_pages(
                 queries, prompt, product=task.subject_label, prefer_issues=True,
