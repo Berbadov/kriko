@@ -2534,7 +2534,12 @@ class HarnessResearcher(AgentResearcher):
         #: Named for the provenance row, like the paid plane's `model`.
         self.model = harness.id
         self.search_provider = harness.label
-        self.sources: dict[str, str] = {}
+        #: url -> the page text Kriko itself read and showed the CLI, which a
+        #: quote is checked against. `None` is the other answer, and not the
+        #: same as empty: a CLI that searched with its own tools gave Kriko no
+        #: text, so a quote can only be required to exist (`quicklook.parse`).
+        #: `{}` would read as "every page was checked" and drop every claim.
+        self.sources: dict[str, str] | None = None
         self.relevant_sources: dict[str, str] = {}
         self.page_titles: dict[str, str] = {}
         self.telemetry: dict = {}
@@ -2671,7 +2676,7 @@ class HarnessResearcher(AgentResearcher):
             if self.harness.id in {"codex", "antigravity-cli", "mistral-vibe"}:
                 from kriko.extract.grounding import loose_span
 
-                page_text = self.sources.get(url, "")
+                page_text = (self.sources or {}).get(url, "")
                 quote = loose_span(page_text, quote)
                 if not quote:
                     continue
@@ -2928,9 +2933,11 @@ class HarnessResearcher(AgentResearcher):
                     raise NoHarness(nothing_read(found, self._host_search_url))
                 # Every search failed: the service is down or blocked, which
                 # says nothing about the product. The CLI has web tools of its
-                # own, so ask it to search rather than end the run; whatever it
-                # cites is still quote-checked, and an unsourced claim dropped.
+                # own, so ask it to search rather than end the run. Kriko holds
+                # no page text then, so what it cites must name a page and a
+                # quote, and an unsourced claim is dropped.
                 own_search = True
+                self.sources = None
                 self._echo(f"The search service did not answer; {self.harness.label} "
                            "will search the web itself")
             if self.check_cancelled is not None:
