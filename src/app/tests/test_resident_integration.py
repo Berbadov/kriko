@@ -72,7 +72,7 @@ def test_an_agent_with_only_a_print_mode_uses_a_process_in_auto_and_refuses_in_p
     monkeypatch.setattr(researcher, "_invoke", lambda prompt, on_line: "from a process")
     researcher.transport_mode = "auto"
     assert researcher._run("research", said.append) == "from a process"
-    assert any("no persistent protocol" in line for line in said)
+    assert said == []  # having no persistent mode is not a failure worth a log line
     researcher.transport_mode = "persistent"
     with pytest.raises(TransportUnavailable, match="no persistent protocol"):
         researcher._run("research")
