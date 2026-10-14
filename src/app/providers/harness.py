@@ -84,6 +84,13 @@ from kriko.research.base import Document, Finding, ResearchTask
 #: commands is not a research plane.
 SEARCH_TOOLS = ("WebSearch", "WebFetch")
 
+#: The CLIs for which Kriko searches and reads the pages itself, then hands
+#: them the text, instead of letting the CLI browse. What such a CLI was shown
+#: is therefore known (`HarnessResearcher.sources`), a quote is checked against
+#: it, and a benchmark can serve it a fixed web. The others search with their
+#: own tools, which Kriko can neither see into nor replace.
+HOST_READ_HARNESSES = frozenset({"codex", "antigravity-cli", "mistral-vibe"})
+
 #: The page reader (B155): Parallel's hosted MCP reader. Only its fetch tool is
 #: granted; searches go through the CLI's normal WebSearch tool.
 READER_SERVER = "parallel"
@@ -2526,6 +2533,11 @@ class HarnessResearcher(AgentResearcher):
         #: and a ceiling that applied to only one of them would be a ceiling
         #: the reader could not predict.
         self.max_documents = 0
+        #: The reader's picked kinds of source and the language they asked
+        #: answers in, from the Agents tab and Settings (`tasks._apply_source_options`).
+        #: Empty and `auto` mean nothing was chosen.
+        self.source_kinds: list[str] = []
+        self.output_language = "auto"
         self.budget_usd = 0.0
         #: Read duck-typed by `app/web/tasks.py`. `None` until a run happens,
         #: which is the difference between "spent nothing" and "cannot count".
@@ -2534,7 +2546,12 @@ class HarnessResearcher(AgentResearcher):
         #: Named for the provenance row, like the paid plane's `model`.
         self.model = harness.id
         self.search_provider = harness.label
-        self.sources: dict[str, str] = {}
+        #: url -> the page text Kriko itself read and showed the CLI, which a
+        #: quote is checked against. `None` is the other answer, and not the
+        #: same as empty: a CLI that searched with its own tools gave Kriko no
+        #: text, so a quote can only be required to exist (`quicklook.parse`).
+        #: `{}` would read as "every page was checked" and drop every claim.
+        self.sources: dict[str, str] | None = None
         self.relevant_sources: dict[str, str] = {}
         self.page_titles: dict[str, str] = {}
         self.telemetry: dict = {}
@@ -2637,7 +2654,7 @@ class HarnessResearcher(AgentResearcher):
         # drops it.
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
         prompt = self.brief(task) + "\n" + self._contract()
-        if self.harness.id in {"antigravity-cli", "mistral-vibe", "codex"}:
+        if self.harness.id in HOST_READ_HARNESSES:
             # `task.queries` are the pack's templates (`{make} {model} ...`);
             # the rendered ones are what a search engine can be asked. Searching
             # the template text returned pages about image generation.
@@ -2671,10 +2688,10 @@ class HarnessResearcher(AgentResearcher):
             quote = str(item.get("quote") or "").strip()
             if not url or not quote:
                 continue
-            if self.harness.id in {"codex", "antigravity-cli", "mistral-vibe"}:
+            if self.harness.id in HOST_READ_HARNESSES:
                 from kriko.extract.grounding import loose_span
 
-                page_text = self.sources.get(url, "")
+                page_text = (self.sources or {}).get(url, "")
                 quote = loose_span(page_text, quote)
                 if not quote:
                     continue
@@ -2736,22 +2753,16 @@ class HarnessResearcher(AgentResearcher):
         """What `gather` already parsed, per document. No second model call."""
         return list(self._by_url.get(document.url, ()))
 
-    def _read_web_pages(self, queries: list[str], *, product: str = "",
-                        page=None, prefer_issues: bool = False,
-                        max_pages: int | None = None):
-        """Search and read bounded pages without starting a local model.
+    def _search_settings(self) -> tuple[str, str]:
+        """The search service address and search language the reader set.
 
-        `LocalAsker._read` already owns the host's OpenSERP/fetch path and its
-        relevance and publisher checks. Give it inert completion sockets: this
-        quick path uses the selected CLI once, after the pages are in hand.
+        Read once here for the queries and the pages alike, so the words a
+        search is asked in and the language the engine is asked for cannot
+        come from two places. Empty and `en` when nothing was set.
         """
-        from app import pagefacts, prefs
-        from app.providers import fetch, local_agent, local_discovery, openserp
-        from app.providers.local_identity import extract_identity
-        from kriko.research.politeness import LocalSearchError
+        from app import prefs
 
-        search_url = ""
-        search_language = "en"
+        search_url, search_language = "", "en"
         if self.app_state_path is not None:
             try:
                 from app.web import state
@@ -2765,6 +2776,23 @@ class HarnessResearcher(AgentResearcher):
                 search_language = str(settings.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en")
             except Exception:  # noqa: BLE001 - a missing preference uses OpenSERP defaults
                 pass
+        return search_url, search_language
+
+    def _read_web_pages(self, queries: list[str], *, product: str = "",
+                        page=None, prefer_issues: bool = False,
+                        max_pages: int | None = None):
+        """Search and read bounded pages without starting a local model.
+
+        `LocalAsker._read` already owns the host's OpenSERP/fetch path and its
+        relevance and publisher checks. Give it inert completion sockets: this
+        quick path uses the selected CLI once, after the pages are in hand.
+        """
+        from app import pagefacts
+        from app.providers import fetch, local_agent, local_discovery, openserp
+        from app.providers.local_identity import extract_identity
+        from kriko.research.politeness import LocalSearchError
+
+        search_url, search_language = self._search_settings()
         search_url = local_discovery.base_of(search_url) or local_discovery.SEARCH_DEFAULT_URL
         search = openserp.searcher(
             search_url, engine="google,duckduckgo,bing", language=search_language)
@@ -2821,26 +2849,33 @@ class HarnessResearcher(AgentResearcher):
                   packs: str = "", attributes: str = "") -> str:
         from app import quicklook
 
-        brief = quicklook.brief(product, principle, page, packs, attributes)
+        from app.providers import local_search_plan
+
         source_note = getattr(self, "source_instructions", "")
-        if self.harness.id not in {"codex", "antigravity-cli", "mistral-vibe"}:
-            return self.ask(brief + source_note)
+        language = str(getattr(self, "output_language", "") or "auto")
+        if self.harness.id not in HOST_READ_HARNESSES:
+            return self.ask(quicklook.brief(
+                product, principle, page, packs, attributes,
+                max_sources=max(1, self.max_documents or 5), language=language,
+            ) + source_note)
+        _url, search_language = self._search_settings()
+        # The reader's picked kinds of source decide what is searched for, and
+        # their search language decides in which words; not a fixed trio.
         queries = [
-            f'"{product}" problems owner reports',
-            f'"{product}" failures review',
-            f'"{product}" specifications manual recalls',
-        ]
+            f'"{product}" {angle}' for angle in local_search_plan.quick_angles(
+                getattr(self, "source_kinds", ()), search_language)]
         return self._ask_with_pages(
             queries,
             quicklook.brief(product, principle, page, packs, attributes,
-                            compact=True, max_sources=max(1, self.max_documents or 3))
+                            compact=True, max_sources=max(1, self.max_documents or 3),
+                            language=language)
             + source_note,
             product=product, page=page, prefer_issues=True, quicklook_answer=True,
         )
 
     def ask_followup(self, prompt: str, *, product: str = "", question: str = "") -> str:
         """Answer a web follow-up from host-read pages in one CLI session."""
-        if self.harness.id not in {"codex", "antigravity-cli", "mistral-vibe"}:
+        if self.harness.id not in HOST_READ_HARNESSES:
             return self.ask(prompt)
         product = product.strip()
         question = question.strip()
@@ -2868,7 +2903,10 @@ class HarnessResearcher(AgentResearcher):
         # filtering used for Quick Look risk claims.
         return self._ask_with_pages(
             queries, prompt, prefer_issues=False,
-            max_pages=min(8, max(3, len(queries) * 2)),
+            # A count the reader set is a ceiling, not a suggestion: "I dont
+            # want my agent to search 30 sources, maybe I want 3".
+            max_pages=(min(8, self.max_documents) if self.max_documents
+                       else min(8, max(3, len(queries) * 2))),
             quicklook_answer=False, source_line=True,
         )
 
@@ -2931,9 +2969,11 @@ class HarnessResearcher(AgentResearcher):
                     raise NoHarness(nothing_read(found, self._host_search_url))
                 # Every search failed: the service is down or blocked, which
                 # says nothing about the product. The CLI has web tools of its
-                # own, so ask it to search rather than end the run; whatever it
-                # cites is still quote-checked, and an unsourced claim dropped.
+                # own, so ask it to search rather than end the run. Kriko holds
+                # no page text then, so what it cites must name a page and a
+                # quote, and an unsourced claim is dropped.
                 own_search = True
+                self.sources = None
                 self._echo(f"The search service did not answer; {self.harness.label} "
                            "will search the web itself")
             if self.check_cancelled is not None:
