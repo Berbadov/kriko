@@ -190,11 +190,11 @@ fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Sta
     });
     div()
         .id(("home-recent", ri))
-        .py(px(10.0))
+        .py(px(6.0))
         .px(px(8.0))
         .flex()
         .items_center()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .ml(px(-8.0))
         .mr(px(-8.0))
         .rounded(px(10.0))
@@ -238,11 +238,11 @@ fn draft_row(cx: &mut Context<Kriko>, i: usize, name: &str, subjects: &str) -> S
     });
     div()
         .id(("home-draft", i))
-        .py(px(10.0))
+        .py(px(6.0))
         .px(px(8.0))
         .flex()
         .items_center()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .ml(px(-8.0))
         .mr(px(-8.0))
         .rounded(px(10.0))
@@ -396,7 +396,7 @@ fn update_card(app: &Kriko, _cx: &mut Context<Kriko>) -> Option<Div> {
         .flex()
         .items_center()
         .justify_between()
-        .gap(px(24.0))
+        .gap(px(14.0))
         .child(mono(&line, INK_2).min_w(px(0.0)));
     #[cfg(windows)]
     let action = if !busy {
@@ -490,9 +490,13 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
             }
             cx.notify();
         });
-        drafts = drafts
-            .child(empty_note(&format!("No saved comparisons yet. {said}")))
-            .child(div().mt(px(10.0)).child(ghost("home-empty-drafts", label).on_click(go)));
+        drafts = drafts.child(empty_note(&format!("No saved comparisons yet. {said}")));
+        // With no checks yet the next-step card above already offers Run, so a
+        // second "Start a check" here would only repeat it.
+        if destination == Tab::Compare {
+            drafts = drafts
+                .child(div().mt(px(SPACE_CARD)).child(ghost("home-empty-drafts", label).on_click(go)));
+        }
     } else {
         let n = h.drafts.len();
         let rows: Vec<(String, String)> = h

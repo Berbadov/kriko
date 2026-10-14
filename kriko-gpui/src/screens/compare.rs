@@ -632,7 +632,7 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
             if detail {
                 let mut d = div()
                     .pl(px(8.0))
-                    .py(px(10.0))
+                    .py(px(6.0))
                     .flex()
                     .flex_col()
                     .gap(px(6.0))
@@ -744,7 +744,7 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
             if detail {
                 let mut d = div()
                     .pl(px(8.0))
-                    .py(px(10.0))
+                    .py(px(6.0))
                     .flex()
                     .flex_col()
                     .gap(px(8.0))
@@ -1070,7 +1070,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         };
         rows = rows.child(
             div()
-                .py(px(10.0))
+                .py(px(6.0))
                 .flex()
                 .items_center()
                 .gap(px(SPACE_CARD))
@@ -1113,7 +1113,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         }
     }
     if n == 0 {
-        rows = rows.child(div().py(px(10.0)).child(row_desc(if c.queue_loaded {
+        rows = rows.child(div().py(px(6.0)).child(row_desc(if c.queue_loaded {
             "The queue is empty. Queue the products you are weighing up from their listings."
         } else {
             "Reading the queue..."
@@ -1236,7 +1236,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             // how a product gets here: from its listing, through the panel
             well()
                 .px(px(14.0))
-                .py(px(10.0))
+                .py(px(6.0))
                 .flex()
                 .items_center()
                 .gap(px(12.0))
@@ -1568,7 +1568,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             list = list.child(
                 div()
                     .id(("pick", ci))
-                    .py(px(8.0))
+                    .py(px(5.0))
                     .px(px(12.0))
                     .flex()
                     .items_center()

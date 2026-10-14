@@ -292,7 +292,7 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     div()
         .flex()
         .flex_col()
-        .gap(px(20.0))
+        .gap(px(12.0))
         .children(stale_notice)
         .children(next_step)
         // The steps most browsers take come first; Firefox's own path, which

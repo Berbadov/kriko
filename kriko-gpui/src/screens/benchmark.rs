@@ -325,7 +325,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         machine = machine.child(
             well()
                 .px(px(12.0))
-                .py(px(8.0))
+                .py(px(5.0))
                 .flex()
                 .flex_col()
                 .gap(px(2.0))
@@ -416,14 +416,14 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let start_intro = div()
         .flex()
         .items_center()
-        .gap(px(24.0))
+        .gap(px(14.0))
         .when(app.content_w < 700.0, |d| d.flex_col().items_start())
         .child(run_button)
         .child(start_copy);
     let start_panel = card()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(start_intro)
         .child(run_status)
         .children(b.last.clone().map(|l| mono(&l, MUTED)))
@@ -457,7 +457,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let heads = div()
         .flex()
         .flex_wrap()
-        .gap(px(16.0))
+        .gap(px(12.0))
         .child(headline(
             "Median answer",
             &latest.median_ms.map(|m| format!("{:.1}", m / 1000.0)).unwrap_or_else(|| "n/a".into()),
@@ -530,7 +530,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         let tps = speeds[k];
         agents = agents.child(
             div()
-                .py(px(10.0))
+                .py(px(6.0))
                 .flex()
                 .items_center()
                 .child(
@@ -698,7 +698,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(16.0))
+                        .gap(px(12.0))
                         .child(
                             div()
                                 .flex_1()
@@ -839,7 +839,7 @@ fn accuracy(b: &crate::live::local::Bench) -> Div {
         let mut record = well().p(px(12.0)).flex().flex_col().gap(px(8.0))
             .child(row_title(&format!("{} · {}", crate::api::s(r, "plane"), crate::api::s(r, "llm"))))
             .child(mono(&format!("{} {} · {} · {} runs", crate::api::s(r, "set_id"), crate::api::s(r, "set_version"), crate::api::s(r, "protocol"), crate::api::n(r, "runs").unwrap_or(0.0)), DIM));
-        let mut scores = div().flex().flex_wrap().gap(px(16.0));
+        let mut scores = div().flex().flex_wrap().gap(px(12.0));
         for (label, key) in [("Unsupported claims", "hallucination_rate"), ("Expected facts found", "recall"), ("Specifications found", "spec_recall"), ("Correct abstention", "abstention_accuracy")] {
             let value = crate::api::n(r, key).map(|v| format!("{:.1}%", v * 100.0)).unwrap_or_else(|| "unmeasured".into());
             scores = scores.child(div().flex().flex_col().gap(px(3.0)).child(row_desc(label)).child(mono(&value, INK)));

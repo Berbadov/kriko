@@ -221,7 +221,7 @@ fn reader_line(message: &Message) -> Div {
     div().flex().justify_end().child(
         well()
             .px(px(14.0))
-            .py(px(10.0))
+            .py(px(6.0))
             .max_w(px(560.0))
             .font_family(SANS)
             .text_size(px(14.0))
@@ -334,7 +334,7 @@ fn text_block(text: &str) -> Div {
 fn danger_line(text: &str) -> Div {
     well()
         .px(px(14.0))
-        .py(px(10.0))
+        .py(px(6.0))
         .font_family(MONO)
         .text_size(px(12.0))
         .text_color(rgb(DANGER))

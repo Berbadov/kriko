@@ -386,7 +386,7 @@ fn setup(
                 .when(in_use, |d| d.bg(rgba(GLASS_1)))
                 .flex()
                 .items_center()
-                .gap(px(16.0))
+                .gap(px(12.0))
                 .child(mark_tile(&format!("rt-tile-{i}"), mark_of(&server.name), phase, 40.0, motion))
                 .child(body)
                 .child(div().flex_none().child(action)),
@@ -493,7 +493,7 @@ fn setup(
                 left = left.child(row_desc(&crate::screens::history::clip(&m.about, 140)));
             }
             let mut row = div().flex().flex_col().gap(px(10.0)).py(px(12.0)).child(
-                div().flex().items_start().justify_between().gap(px(16.0)).child(left).child(
+                div().flex().items_start().justify_between().gap(px(12.0)).child(left).child(
                     if busy { ghost(("local-offered", i), "Busy").h(px(36.0)).px(px(16.0)).text_size(px(12.0)).into_any_element() } else { ghost(("local-offered", i), "Get").h(px(36.0)).px(px(16.0)).text_size(px(12.0)).on_click(get).into_any_element() },
                 ),
             );
@@ -640,7 +640,7 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
             div()
                 .flex()
                 .items_end()
-                .gap(px(16.0))
+                .gap(px(12.0))
                 .flex_wrap()
                 .child(
                     div()
@@ -667,7 +667,7 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
             div()
                 .flex()
                 .items_end()
-                .gap(px(16.0))
+                .gap(px(12.0))
                 .flex_wrap()
                 .child(
                     div()
@@ -783,7 +783,7 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
         };
         models = models.child(
             div()
-                .py(px(10.0))
+                .py(px(6.0))
                 .flex()
                 .items_center()
                 .justify_between()
@@ -1047,7 +1047,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             _ => TagState::Queue,
         };
         work = work.child(div().id(("local-work", i))
-            .py(px(10.0)).flex().items_center().gap(px(12.0))
+            .py(px(6.0)).flex().items_center().gap(px(12.0))
             .cursor_pointer().hover(|s| s.bg(rgba(GLASS_1)))
             .on_click(open)
             .child(tag(format!("local-work-state-{i}"), state, &job.state, motion))

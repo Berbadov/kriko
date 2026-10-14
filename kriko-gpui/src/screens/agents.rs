@@ -262,7 +262,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             div()
                 .flex()
                 .flex_col()
-                .gap(px(24.0))
+                .gap(px(14.0))
                 // no w_full: a percentage resolved against the page's
                 // indefinite width and left this column at its content's size
                 .child(table)
@@ -366,7 +366,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
             div()
                 .flex()
                 .items_center()
-                .gap(px(16.0))
+                .gap(px(12.0))
                 .child(mark_tile(
                     &format!("agents-detail-tile-{}", e.id),
                     mark_for(&e.id),
