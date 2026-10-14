@@ -64,7 +64,11 @@ jobs:
                   [[ "$BUILD_RUN" =~ ^[0-9]+$ ]]
                   [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
                   gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN" > build.json
-                  gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > draft.json
+                  # GitHub's by-tag endpoint omits unpublished drafts. Locate
+                  # the unique draft in the inventory, then keep using its ID.
+                  gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+                      | jq -se '[.[][] | select(.tag_name == env.RELEASE_TAG)] | if length == 1 then .[0] else error("Expected one release for the tag") end' > draft.json
+                  echo "RELEASE_ID=$(jq -r .id draft.json)" >> "$GITHUB_ENV"
                   python - <<'PY'
                   import json, os, subprocess, tomllib
                   source = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
@@ -156,7 +160,7 @@ jobs:
             - name: Validate existing assets and upload only missing assets
               run: |
                   set -euo pipefail
-                  gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > current.json
+                  gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" > current.json
                   python - <<'PY'
                   import hashlib, json, os, subprocess
                   from pathlib import Path
@@ -180,7 +184,7 @@ jobs:
             - name: Verify remote asset digests and publish latest stable
               run: |
                   set -euo pipefail
-                  gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > uploaded.json
+                  gh api "repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID" > uploaded.json
                   python - <<'PY'
                   import hashlib, json
                   from pathlib import Path
