@@ -2627,7 +2627,7 @@ def _file_quick_look(settings, quick: dict, product: str, progress: Progress,
         "category": target["name"], "product": product, "joined": True, "agent": False,
         "subject": attached["subject"], "claims_added": attached["claims_added"],
         "evidence_added": attached["evidence_added"], "left_out": dropped,
-        "subject_added": added,
+        "subject_added": added, "subject_claims": attached["subject_claims"],
         # Every page refused this time: nothing was judged, so try again later.
         "unread": unread,
     })
@@ -2666,6 +2666,10 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
         authored: set[str] = set()
         for one in jobs:
             if one["kind"] == "pack_author" and one["state"] == state.SUCCEEDED:
+                # A check that filed no claim for its product did not file its
+                # look: the look stays unfilled and is looked at again below.
+                if (one["result"] or {}).get("no_claims"):
+                    continue
                 # Linked both ways: "Add to a pack" names the look it files, and
                 # "Research this product" is named by the look beside it.
                 filed.add(str((one["params"] or {}).get("quick_job_id") or ""))
@@ -2734,10 +2738,22 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
             if written["unread"]:
                 unread.append(product)
                 continue
-            done.append(look["job_id"])
-            claims += written["claims_added"]
             if _changed(written):
                 touched[written["slug"]] = written
+            if not written["claims_added"] and not written["subject_claims"]:
+                # Its risks reached no page-checked claim and the product holds
+                # none: the look is unfilled, so it waits for an agent.
+                reason = "none of its risks reached the catalog"
+                if written["left_out"]:
+                    reason += f": {written['left_out'][0]['reason']}"
+                needs_agent.append({
+                    "quick_job_id": look["job_id"], "product": product,
+                    "pack_id": assignment["pack_id"], "category": target["name"],
+                    "reason": f"{reason}; use Add to a pack to research it.",
+                })
+                continue
+            done.append(look["job_id"])
+            claims += written["claims_added"]
         shared = []
         for slug, written in touched.items():
             if params.get("install", True):
@@ -2758,6 +2774,29 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
                 "unread": unread, "packs": shared}
     finally:
         conn.close()
+
+
+def _no_claims_reason(dropped: list[dict], attached: dict, bare: int) -> str:
+    """Why a product check leaves its subject with no claim, in one line.
+
+    Read from what was already counted, never from a second look at the pages:
+    the first reason each claim was stopped, in the order the checks run (the
+    quote on its page, the catalog's own gate, the subject, then a claim that
+    named no page at all).
+    """
+    if dropped:
+        first = dropped[0]
+        return (f"{len(dropped)} claim(s) left out, the first because {first['reason']} "
+                f"({first['title']!r})")
+    if attached["refused"]:
+        first = attached["refused"][0]
+        return (f"{len(attached['refused'])} claim(s) refused by the catalog, the first "
+                f"because {first['reason']}")
+    if attached["subject"] is None:
+        return "the catalog has no subject for this product to attach claims to"
+    if bare:
+        return f"{bare} claim(s) named no page"
+    return "the agent proposed no claims and the quick look found no risk to file"
 
 
 def _product_check(settings, researcher, params: dict, progress: Progress,
@@ -2823,7 +2862,12 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
             + packauthor.category_appendix(
                 product, naming, categorypack.taken_ids(settings.store_path))
             + listing)
-    reply = researcher.ask(prompt)
+    # The pages the product's quick look reads, handed to a host-read agent
+    # with the brief (`HarnessResearcher.ask_author`): a toolless session cannot
+    # search for itself. Any other researcher is asked as before.
+    author = getattr(researcher, "ask_author", None)
+    reply = (author(prompt, product=product, page=params.get("page"))
+             if callable(author) else researcher.ask(prompt))
     progress.check()
     progress.set(0.7, "writing the draft")
     progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
@@ -2886,6 +2930,13 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
         subject_rows=written.get("subject_rows"), vocab=vocab)
     for one in attached["refused"]:
         progress.log(f"left out {one['title']!r}: {one['reason']}")
+    # A product with no claim is not a research success, however the agent
+    # printed: it is said in the log and in the result, where the queue and the
+    # harvest read it. The job still succeeds; the draft was written.
+    no_claims = "" if attached["subject_claims"] else _no_claims_reason(
+        dropped, attached, bare)
+    if no_claims:
+        progress.log(f"no claims: {no_claims}")
 
     installed = _install_draft(settings, written, progress) if params.get("install") else ""
     where = written["name"]
@@ -2901,6 +2952,9 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
         "claims_added": attached["claims_added"],
         "evidence_added": attached["evidence_added"],
         "left_out": dropped,
+        # Additive: why this check filed no claim for its product, or "" when
+        # it did. Read by the queue and by the harvest.
+        "no_claims": no_claims,
     })
     written["claims"] = int(written.get("claims") or 0) + attached["claims_added"]
     if getattr(researcher, "cost_basis", "") == "per_token":
