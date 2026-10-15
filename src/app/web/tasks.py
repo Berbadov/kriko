@@ -276,6 +276,22 @@ def _wire_researcher_text(researcher, progress: Progress) -> None:
             researcher.app_state_path = getattr(getattr(progress, "ledger", None), "db_path", None)
 
 
+def _wire_codex_answer_stream(researcher, agent_id: str,
+                              on_text: Callable[[str], None]) -> bool:
+    """Forward a final chat answer into its live card for the resolved Codex only."""
+    if agent_id != "codex" or not hasattr(researcher, "on_text"):
+        return False
+    prior_text = getattr(researcher, "on_text", None)
+
+    def stream(text: str) -> None:
+        if callable(prior_text):
+            prior_text(text)
+        on_text(text)
+
+    researcher.on_text = stream
+    return True
+
+
 def _local_structured_completer(settings, params: dict, progress: Progress):
     """A bounded local completion for structured tasks without web research."""
     from app.providers.local_inference import OpenAICompatSocket
@@ -3800,15 +3816,23 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 agent.update(id="local", label="Local model",
                              model=str(getattr(completer, "model", "")))
                 ask = completer
+                ask_stream = None
             else:
                 def ask(prompt: str) -> str:
                     reply, _ = _ask_about_checks(settings, {**params, "question": text},
                                                  quiet, prompt, on_agent=agent.update)
                     return reply
 
+                def ask_stream(prompt: str, on_text: Callable[[str], None]) -> str:
+                    reply, _ = _ask_about_checks(settings, {**params, "question": text},
+                                                 quiet, prompt, on_agent=agent.update,
+                                                 on_text=on_text)
+                    return reply
+
             hooks = _TurnHooks(progress, {"thread_id": thread_id, "message_id": message_id},
                                agent)
-            result = chat.run_turn(text, ask=ask, ctx=ctx, history=history, hooks=hooks)
+            result = chat.run_turn(text, ask=ask, ask_stream=ask_stream, ctx=ctx,
+                                   history=history, hooks=hooks)
         finally:
             if store is not None:
                 store.close()
@@ -3834,6 +3858,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
 
 def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       on_agent: Callable[[dict], None] | None = None,
+                      on_text: Callable[[str], None] | None = None,
                       timeout: float = 0.0, effort: str = "",
                       follow_up: bool = False, product: str = "",
                       question: str = "") -> tuple[str, list[dict]]:
@@ -3881,6 +3906,12 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     if on_agent is not None:
         on_agent(identity)
     _wire_researcher_text(researcher, progress)
+    if on_text is not None:
+        # Chat can ask for a live answer stream on its final call. Preserve
+        # the normal run-status draft while also publishing the answer card's
+        # transient partial. The identity is resolved after fallback, so this
+        # only exposes prose when Codex is the agent that will actually run.
+        _wire_codex_answer_stream(researcher, identity["id"], on_text)
     if follow_up:
         writer = followup.Reply(progress.partial, base={"agent": identity})
         prior_text = getattr(researcher, "on_text", None)

@@ -114,6 +114,24 @@ def test_one_turn_at_a_time_per_conversation_and_others_run_beside_it():
     assert not _overlap(same, claims("chat_ask", {"thread_id": "t2"}))
 
 
+def test_only_the_resolved_codex_stream_is_forwarded_to_the_chat_answer():
+    class Researcher:
+        def __init__(self):
+            self.on_text = None
+
+    previous, answer = [], []
+    codex = Researcher()
+    codex.on_text = previous.append
+    assert tasks._wire_codex_answer_stream(codex, "codex", answer.append)
+    codex.on_text("A live sentence")
+    assert previous == answer == ["A live sentence"]
+
+    claude = Researcher()
+    assert not tasks._wire_codex_answer_stream(claude, "claude-code", answer.append)
+    assert claude.on_text is None
+    assert answer == ["A live sentence"]
+
+
 class Completer:
     """A local model that asks for one search, then answers with a source line."""
 
