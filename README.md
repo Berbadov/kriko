@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.6.4-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.7.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Downloads](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [What's new](#whats-new) · [Benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,8 +34,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.6.4-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.6.4-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.7.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.7.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
@@ -45,8 +45,8 @@ Apple Silicon and Intel Macs have separate builds. A file is downloadable only w
 
 | Mac | Disk image | Portable app bundle |
 |---|---|---|
-| Apple Silicon | `kriko-1.6.4-macos-arm64.dmg` | `kriko-1.6.4-macos-arm64-portable.zip` |
-| Intel | `kriko-1.6.4-macos-x86_64.dmg` | `kriko-1.6.4-macos-x86_64-portable.zip` |
+| Apple Silicon | `kriko-1.7.0-macos-arm64.dmg` | `kriko-1.7.0-macos-arm64-portable.zip` |
+| Intel | `kriko-1.7.0-macos-x86_64.dmg` | `kriko-1.7.0-macos-x86_64-portable.zip` |
 
 Open the `.dmg` and drag **Kriko.app** to **Applications**. For the portable ZIP, extract it and move **Kriko.app** where you want it. Each archive is a complete app for its named architecture, built on a matching Mac.
 
@@ -90,6 +90,14 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 **What leaves your computer.** Installed lookups run on your computer. Online research sends its questions and reading context to the providers you select; a local model runs inference on your computer and still needs web search to gather new sources.
 
 ## What's new
+
+### 1.7.0
+
+- **Chat answers ordinary questions directly and finds products on the web.** Answers stream as they arrive, keep clickable sources, and support Stop, Retry and Copy. Each conversation keeps its own draft and running answer. The composer wraps across lines; Shift+Enter adds a new line.
+- **Compare fits four products together.** The comparison comes first, the research queue can collapse, and failed or stopped items explain what happened and offer a retry. Follow-up answers resume after leaving the screen.
+- **Concurrent runs stay independent.** Queue entries are claimed atomically, switching conversations cannot attach an answer to another thread, and cancellation checks no longer hold the shared agent-slot lock.
+- **Quick Look starts showing useful work sooner.** Search and reading overlap, completed pages appear progressively, and initial gathering has a 15-second budget. Slow fallback readers stop when cancelled or out of time. Deep research retains its longer gathering path.
+- Four live Chat checks completed in 6.2–11.4 seconds with the saved low-effort model setting, including two simultaneous conversations and two web requests. These are small samples, not a completion guarantee; model speed and source availability still matter. See the [measurement report](docs/benchmarks/interactive-workflows.md).
 
 ### 1.6.4
 
