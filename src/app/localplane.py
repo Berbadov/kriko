@@ -196,7 +196,10 @@ def resolve(
         **search,
     }
 
-    if chosen is None or not chosen["up"]:
+    if ((chosen is not None and chosen.get("busy"))
+            or (chosen is None and any(server.get("busy") for server in servers))):
+        out["reason"] = "Local model discovery is busy. Check again shortly."
+    elif chosen is None or not chosen["up"]:
         looked = ", ".join(f"{s['name']} at {s['url']}" for s in servers)
         out["reason"] = (
             f"Nothing answers at {want_url}. Start that server or correct the "

@@ -152,6 +152,42 @@ def test_nothing_listening_is_down():
     assert local_discovery.probe(dead_url())["up"] is False
 
 
+def test_busy_discovery_is_not_a_failed_screen_and_can_retry(stub, monkeypatch):
+    from app.agentresources import slot
+
+    monkeypatch.setenv("KRIKO_MAX_PROBES", "1")
+    stub.models = ["qwen3-4b"]
+    with slot("probe", "another-discovery"):
+        row = local_discovery.probe(stub.url, timeout=0.02)
+    assert row == {"url": stub.url, "up": False, "models": [], "busy": True}
+    assert local_discovery.probe(stub.url)["models"] == ["qwen3-4b"]
+
+
+def test_busy_discovery_does_not_fail_the_local_plane_screen(monkeypatch, tmp_path):
+    from fastapi.testclient import TestClient
+
+    from app.agentresources import slot
+    from app.providers import harness
+    from app.web.app import create_app
+    from app.web.settings import Settings
+
+    monkeypatch.setenv("KRIKO_MAX_PROBES", "1")
+    monkeypatch.setattr(local_discovery, "discover", real_discover)
+    monkeypatch.setattr(harness, "warm_models", lambda: None)
+    client = TestClient(create_app(Settings(
+        store_path=tmp_path / "knowledge.sqlite",
+        app_state_path=tmp_path / "app.sqlite",
+        analysis_log_path=tmp_path / "analysis.jsonl",
+    )))
+    with slot("probe", "another-discovery"):
+        response = client.get("/api/local-plane")
+    assert response.status_code == 200
+    plane = response.json()
+    assert not plane["ready"]
+    assert "busy" in plane["reason"].lower()
+    assert "Nothing answers" not in plane["reason"]
+
+
 def test_the_configured_address_is_probed_first_and_the_defaults_follow(machine, stub):
     stub.models = ["m"]
     rows = local_discovery.discover(stub.url)

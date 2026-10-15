@@ -101,6 +101,7 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 - Research requests are recorded durably (inputs, attempts, delivery state, results and usage), a lost response no longer submits the same research twice, and a run's manifest, log tail and event stream can be inspected through the API.
 - Quick Looks obey the settings in the app (effort per agent, number and kinds of sources, search and output language) and answer in the listing's language. `kriko agent-bench` runs the real Quick Look path against a fixed fake web and reports how often each agent is right and how consistent it is; it spends your subscription only with `--yes`.
 - Codex, Antigravity and Mistral Vibe search for the product itself, not for the catalog's `{make} {model}` templates.
+- Busy local-model discovery no longer fails the app's screens. It reports that discovery is busy and can be checked again, rather than saying a server is down before it was probed.
 - `tools/gate.sh` runs the Python tests in parallel and its stages concurrently: about 3 minutes instead of 13.
 - Known limits: the Chat screen and the parallel queue were compiled and unit-tested but not driven in a real window; nothing here was checked on macOS. Resident Claude Code workers pick up a new login only after they idle out or Kriko restarts. Vibe's persistent worker was checked up to a prompt against the real `vibe-acp` (no Mistral key here); Claude Code was checked end to end.
 

@@ -261,6 +261,14 @@ def main(argv: list[str]) -> int:
 
         print(f"health ok: {health}")
 
+        # Desktop startup asks these while CLI discovery is warming up. A
+        # shared probe quota must not turn a busy host into a failed screen.
+        local = fetch(port, "/api/local-plane")
+        if not isinstance(local.get("ready"), bool) or "servers" not in local:
+            print(f"local discovery did not return a usable screen state: {local}")
+            return 1
+        print("local discovery screen state ok")
+
         # ── is anything being written down? ───────────────────────────────
         #
         # This is the gate that was missing for two months. The analysis log
