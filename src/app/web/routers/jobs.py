@@ -129,12 +129,15 @@ def install_agent(agent_id: str, runner=Depends(get_jobs)):
 def list_jobs(
     limit: int = Query(30, ge=1, le=200),
     app_state=Depends(get_app_state),
+    runner=Depends(get_jobs),
 ):
     # Decorated here too, not only on the single-job read: the Jobs screen
     # builds its list from this, so without it a reload is what makes an
-    # unanswered question disappear.
+    # unanswered question disappear. The scheduler's counts ride along, so the
+    # screen can say "2 running of 4 at once" beside the rows.
     return {"items": [_with_attention(row)
-                      for row in state.list_jobs(app_state, limit)]}
+                      for row in state.list_jobs(app_state, limit)],
+            **runner.concurrency()}
 
 
 def _with_attention(row: dict) -> dict:

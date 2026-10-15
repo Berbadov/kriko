@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
+from app import agentresources
 from app.agentresources import slot
 from app.processcontrol import contained_popen, create_job_object
 from app.providers.codex_transport import (
@@ -48,7 +49,6 @@ from app.providers.codex_transport import (
     TurnCancelled,
     TurnRejected,
     _PropagateCallbackError,
-    _agent_child_limit,
     _close_job,
     _error_message,
     _terminate,
@@ -259,11 +259,28 @@ class ResidentTransport:
         self._lock = threading.RLock()
         self._available = threading.Condition(self._lock)
         self._starting = 0
-        self.max_workers = _agent_child_limit()
+        self._max_workers: int | None = None
         self._closed = False
         self._reaper_stop = threading.Event()
         self._reaper = threading.Thread(target=self._reap_loop, name="resident-worker-reaper", daemon=True)
         self._reaper.start()
+
+    @property
+    def max_workers(self) -> int:
+        """How many workers may be alive at once, read live.
+
+        The reader's run choice can change between two requests, so this is
+        the host's current agent-child budget and not a number taken at
+        construction; a fixed value would keep the pool at two after Settings
+        said four. Assigning it pins the value (a test's one slot).
+        """
+        if self._max_workers is not None:
+            return self._max_workers
+        return agentresources.agent_child_limit()
+
+    @max_workers.setter
+    def max_workers(self, value: int | None) -> None:
+        self._max_workers = value
 
     # ── one request ──────────────────────────────────────────────────────────
 

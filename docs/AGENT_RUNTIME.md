@@ -118,6 +118,10 @@ Advanced bounds are `KRIKO_MAX_AGENT_CHILDREN`, `KRIKO_MAX_PROBES`,
 override a provider's rate limits. Independent agent hosts in different
 operating-system processes do not share this process-local limiter.
 
+The agent-child budget is the profile's number or the reader's run choice
+(Settings → Runs), whichever is larger, so a choice of four runs four agent
+processes. An explicit `KRIKO_MAX_AGENT_CHILDREN` is exact and is not raised.
+
 Each protocol is checked against the installed CLI (`app-server --help` for
 Codex, `--input-format` for Claude Code, a `vibe-acp` beside `vibe`);
 installations without it keep the process adapter in auto mode. First
