@@ -66,7 +66,7 @@ fn claim_block(claim: &ClaimView) -> Div {
         div()
             .flex()
             .items_start()
-            .gap(px(12.0))
+            .gap(px(8.0))
             .child(div().pt(px(2.0)).child(led_matrix(&CHECK5, INK_2, 3.0, 1.0)))
             .child(
                 div()
@@ -98,7 +98,7 @@ fn claim_block(claim: &ClaimView) -> Div {
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(10.0))
+                        .gap(px(6.0))
                         .child(mono(
                             if src.domain.is_empty() { &src.url } else { &src.domain },
                             ICE,
@@ -139,7 +139,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     );
 
     let mut controls = div().flex().flex_col().mb(px(24.0));
-    let mut bar = div().flex().flex_wrap().items_center().gap(px(10.0)).pb(px(12.0))
+    let mut bar = div().flex().flex_wrap().items_center().gap(px(6.0)).pb(px(12.0))
         .child(div().flex_1().min_w(px(220.0)).child(search));
     let open_field = app.live.history.filter_open.clone();
     let filters = [
@@ -245,7 +245,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         app.live.history.pack.as_deref().unwrap_or("all"),
         span.word()
     );
-    let mut bars = div().flex().items_end().gap(px(10.0)).h(px(96.0));
+    let mut bars = div().flex().items_end().gap(px(6.0)).h(px(96.0));
     for (bi, (label, value)) in months.iter().enumerate() {
         let value = *value;
         let height = if value == 0 {
@@ -370,7 +370,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .min_w(px(240.0))
                 .flex()
                 .flex_col()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(eyebrow("Records per month"))
                 .child(bars),
         )
@@ -459,7 +459,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .id(gpui::ElementId::named_usize("hist-row", gi))
             .flex()
             .items_center()
-            .py(px(6.0))
+            .py(px(4.0))
             .cursor_pointer()
             .hover(|s| s.bg(rgba(GLASS_1)))
             .on_click(toggle)
@@ -497,7 +497,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .p(px(16.0))
                 .flex()
                 .flex_col()
-                .gap(px(10.0));
+                .gap(px(6.0));
             if check.source == "quick_look" {
                 match &app.live.history.quick_look_detail {
                     Some(detail) if detail.id == check.id => {
@@ -567,7 +567,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         this.categorize_saved_look(quick_id.clone(), cx);
                     });
                     panel = panel.child(
-                        div().flex().flex_wrap().items_center().gap(px(10.0))
+                        div().flex().flex_wrap().items_center().gap(px(6.0))
                             .child(key(
                                 gpui::ElementId::named_usize("hist-categorize", gi),
                                 if busy { "Categorising…" } else { "Categorise with agent" },
@@ -613,7 +613,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             });
                             panel = panel.child(
                                 div().flex().flex_wrap().items_center().justify_between().gap(px(8.0))
-                                    .py(px(6.0))
+                                    .py(px(4.0))
                                     .child(div().flex().flex_col().gap(px(2.0))
                                         .child(div().font_family(SANS).text_size(px(13.0))
                                             .text_color(rgb(INK_2)).child(label.clone()))
@@ -666,7 +666,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                                     div()
                                         .flex()
                                         .items_center()
-                                        .gap(px(10.0))
+                                        .gap(px(6.0))
                                         .child(icon("arrow-right", 12.0).text_color(rgb(MUTED)))
                                         .child(
                                             div()
@@ -693,7 +693,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .flex()
                         .items_center()
                         .justify_between()
-                        .gap(px(12.0))
+                        .gap(px(8.0))
                         .child(
                             div()
                                 .font_family(MONO)
@@ -786,7 +786,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .pt(px(16.0))
         .flex()
         .flex_wrap()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .items_center()
         .justify_between()
         .child(
@@ -800,7 +800,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .child(
                     plate_s("hist-prev", "Previous")
                         .when(page == 0, |b| b.opacity(0.4))

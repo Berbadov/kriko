@@ -101,7 +101,7 @@ pub fn action_trail(job: &Job, motion: bool) -> Div {
     let headline = div()
         .flex()
         .items_center()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .min_w(px(0.0))
         .child(dot(&format!("trail-{}-now", job.id), &text, current.dot, motion))
         .child(line);
@@ -126,7 +126,7 @@ pub fn action_trail(job: &Job, motion: bool) -> Div {
     let meta = div()
         .flex()
         .items_center()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .child(chip)
         .child(div().flex_1())
         .child(mono(&clock, INK_2));

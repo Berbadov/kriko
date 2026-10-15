@@ -14,11 +14,11 @@ use crate::theme::*;
 /// One row of a card: title + description left, a control right.
 fn row(title: &str, desc: &str, control: gpui::AnyElement) -> Div {
     div()
-        .py(px(6.0))
+        .py(px(4.0))
         .flex()
         .items_center()
         .justify_between()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(
             div()
                 .flex_1()
@@ -48,11 +48,11 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
         caps = caps.child(keycap(k));
     }
     div()
-        .py(px(6.0))
+        .py(px(4.0))
         .flex()
         .items_center()
         .justify_between()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(
             div()
                 .flex()
@@ -118,7 +118,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .child(hairline())
         .child(
             div()
-                .py(px(6.0))
+                .py(px(4.0))
                 .flex()
                 .flex_col()
                 .gap(px(4.0))
@@ -224,7 +224,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 .pt(px(12.0))
                 .flex()
                 .flex_col()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(row_desc(&format!(
                     "A key for {}. It goes to the engine's own key file and nowhere else.",
                     target.label
@@ -232,7 +232,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 .child(
                     div()
                         .flex()
-                        .gap(px(12.0))
+                        .gap(px(8.0))
                         .child(div().flex_1().min_w(px(0.0)).child(key_input))
                         .child(plate_s("key-save", "Save").on_click(save)),
                 ),
@@ -304,7 +304,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .when(confirm && !busy, |d| d.child(ghost("erase-cancel", "Cancel").on_click(cancel)))
                 .child(danger("erase", label).on_click(erase))
                 .into_any_element(),

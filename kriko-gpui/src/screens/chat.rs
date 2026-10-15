@@ -24,16 +24,16 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
     let threads = thread_list(app, cx);
     let conversation = conversation(app, motion, window, cx);
     let body = if narrow {
-        div().flex().flex_col().gap(px(14.0)).child(threads).child(conversation)
+        div().flex().flex_col().gap(px(8.0)).child(threads).child(conversation)
     } else {
         div()
             .flex()
             .items_start()
-            .gap(px(14.0))
+            .gap(px(8.0))
             .child(threads.w(px(240.0)).flex_none())
             .child(conversation.flex_1().min_w(px(0.0)))
     };
-    div().flex().flex_col().gap(px(14.0)).child(body)
+    div().flex().flex_col().gap(px(8.0)).child(body)
 }
 
 // ---- the thread list ----
@@ -79,7 +79,7 @@ fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         .p(px(14.0))
         .flex()
         .flex_col()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .child(
             div()
                 .flex()
@@ -103,7 +103,7 @@ fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Con
         .unwrap_or_else(|| "Ask your agent".to_string());
     let open = chat.thread.is_some();
     let say = chat.say.clone();
-    let mut head = div().flex().items_center().justify_between().gap(px(12.0)).child(
+    let mut head = div().flex().items_center().justify_between().gap(px(8.0)).child(
         div()
             .min_w(px(0.0))
             .font_family(DISPLAY)
@@ -125,7 +125,7 @@ fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Con
         .p(px(16.0))
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(head)
         .child(messages);
     if let Some(text) = say {
@@ -136,7 +136,7 @@ fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Con
 
 fn messages_view(app: &Kriko, motion: bool, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
     let chat = &app.live.chat;
-    let mut column = div().flex().flex_col().gap(px(12.0));
+    let mut column = div().flex().flex_col().gap(px(8.0));
     if chat.messages.is_empty() && chat.in_flight.is_none() {
         column = column.child(intro(app, cx));
     }
@@ -200,7 +200,7 @@ fn intro(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
             div()
                 .flex()
                 .items_baseline()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(mono(&source.name, INK_2).flex_none())
                 .child(row_desc(&source.description)),
         );
@@ -208,7 +208,7 @@ fn intro(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     div()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(row_desc(
             "Ask in your own words. The agent plans what to look up, reads only that, and answers with the sources it used.",
         ))
@@ -221,7 +221,7 @@ fn reader_line(message: &Message) -> Div {
     div().flex().justify_end().child(
         well()
             .px(px(14.0))
-            .py(px(6.0))
+            .py(px(4.0))
             .max_w(px(560.0))
             .font_family(SANS)
             .text_size(px(14.0))
@@ -231,7 +231,7 @@ fn reader_line(message: &Message) -> Div {
 }
 
 fn agent_block(message: &Message) -> Div {
-    let mut body = div().flex().flex_col().gap(px(10.0)).child(eyebrow("Agent"));
+    let mut body = div().flex().flex_col().gap(px(6.0)).child(eyebrow("Agent"));
     body = body.child(text_block(&message.text));
     if !message.steps.is_empty() {
         body = body.child(steps_view(&format!("chat-done-{}", message.message_id), &message.steps, false));
@@ -255,7 +255,7 @@ fn pending_block(partial: &Partial, job_message: &str, motion: bool) -> Div {
     let mut body = div()
         .flex()
         .flex_col()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .child(eyebrow(&format!("{who} · working")));
     if partial.steps.is_empty() {
         let words = if job_message.is_empty() { "Starting..." } else { job_message };
@@ -290,7 +290,7 @@ fn step_row(key: String, step: &Step, motion: bool) -> Div {
     div()
         .flex()
         .items_center()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .child(div().w(px(16.0)).flex().justify_center().child(mark))
         .child(
             div()
@@ -334,7 +334,7 @@ fn text_block(text: &str) -> Div {
 fn danger_line(text: &str) -> Div {
     well()
         .px(px(14.0))
-        .py(px(6.0))
+        .py(px(4.0))
         .font_family(MONO)
         .text_size(px(12.0))
         .text_color(rgb(DANGER))
@@ -377,13 +377,13 @@ fn composer(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     div()
         .flex()
         .flex_col()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .child(agents)
         .child(
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(div().flex_1().min_w(px(0.0)).child(input))
                 .child(key_or_busy(busy).on_click(send)),
         )
