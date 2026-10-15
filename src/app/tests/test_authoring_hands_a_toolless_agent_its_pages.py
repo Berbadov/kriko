@@ -31,8 +31,11 @@ from app.tests.test_category_packs import (
     _script_v6,
     _script_v8,
     _wait,
-    world,  # noqa: F401 - the fixture, imported so this module can use it
 )
+from app.tests.test_category_packs import world as _category_world
+
+# The fixture, re-exported under its own name so this module's tests can ask for it.
+world = _category_world
 
 TITLE = "Scyrox V8 Gaming Mouse"
 V6_TITLE = "Scyrox V6 Gaming Mouse"
