@@ -151,6 +151,10 @@ class _Worker:
     worker_start_ms: float = 0.0
     handshake_ms: float = 0.0
     startup_queue_ms: float = 0.0
+    #: When the process was asked to start, and how long until it first printed
+    #: anything: the agent's own readiness, recorded for the run's facts.
+    spawned_at: float = 0.0
+    first_line_ms: float | None = None
     lock: threading.Lock = field(default_factory=threading.Lock)
     write_lock: threading.Lock = field(default_factory=threading.Lock)
     next_id: int = 0
@@ -313,6 +317,11 @@ class ResidentTransport:
                 }
                 result = wire.run_turn(self, worker, request, cancel, deadline, metrics)
                 metrics["total_ms"] = (time.monotonic() - run_started) * 1000
+                # How long the agent took to be ready for this prompt: a reused
+                # worker's `/clear` round trip, or a new worker's start to its
+                # first message. Same meaning as a process's first output line.
+                metrics["ready_ms"] = (metrics.get("reset_ms", 0.0) if acquisition.reused
+                                       else worker.first_line_ms)
                 return result
         finally:
             with self._lock:
@@ -443,7 +452,7 @@ class ResidentTransport:
         worker = _Worker(
             profile, identity, process, queue.Queue(maxsize=_MAX_BUFFERED_MESSAGES), wire, job=job,
             worker_start_ms=(time.monotonic() - spawn_started) * 1000,
-            startup_queue_ms=startup_queue_ms,
+            startup_queue_ms=startup_queue_ms, spawned_at=spawn_started,
         )
         worker.resource_guard = resource_guard
         worker.thread = threading.Thread(target=self._read_loop, args=(worker,),
@@ -475,6 +484,8 @@ class ResidentTransport:
                 line = worker.process.stdout.readline(wire.max_line + 1)
                 if not line:
                     break
+                if worker.first_line_ms is None:
+                    worker.first_line_ms = (time.monotonic() - worker.spawned_at) * 1000
                 if len(line) > wire.max_line:
                     _fail(worker, f"{wire.name} message exceeds the {wire.max_line // 1024} KiB limit")
                     _terminate(worker.process, worker.job)
