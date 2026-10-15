@@ -37,6 +37,59 @@ fn extension_port_path() -> Option<std::path::PathBuf> {
         .map(|home| std::path::PathBuf::from(home).join(".kriko").join("extension-port"))
 }
 
+/// What OpenSERP is started with unless the reader has their own file.
+///
+/// Two stock settings made a quick look's searches the slowest part of it
+/// (measured, four searches: 52 s). Its limiter lets each engine answer one
+/// query in ten seconds: 3 s for the first, then 10.0 s for every one after.
+/// And an engine that times out is tried four times before the search
+/// answers, because a search waits for its slowest engine: 35-40 s for one
+/// query. One query per three seconds with a burst of three, and no retries
+/// (the other engine answers meanwhile), brings a search to 3-8 s. The file is
+/// written once and never again, so an edit survives every update, as
+/// `models.toml` does.
+const OPENSERP_CONFIG: &str = "# Written once by Kriko and never rewritten: edit freely.
+# Each engine answers one query per `rate_seconds`, with `rate_burst` allowed
+# at once; the stock limiter is about one query in ten seconds. `max_retries`
+# is how often a timed-out engine is asked again before the search answers
+# (stock: 3, which made a failing engine cost 35 s).
+resilience:
+  max_retries: 0
+bing:
+  rate_requests: 1
+  rate_seconds: 3
+  rate_burst: 3
+duckduckgo:
+  rate_requests: 1
+  rate_seconds: 3
+  rate_burst: 3
+google:
+  rate_requests: 1
+  rate_seconds: 3
+  rate_burst: 3
+";
+
+fn openserp_config_path() -> Option<std::path::PathBuf> {
+    extension_port_path().map(|path| path.with_file_name("openserp.yaml"))
+}
+
+/// The config file to start OpenSERP with: the reader's own, else the default
+/// written beside it. `None` (stock limits) when it cannot be written.
+fn ensure_openserp_config() -> Option<std::path::PathBuf> {
+    let path = openserp_config_path()?;
+    write_openserp_config_once(&path)?;
+    Some(path)
+}
+
+/// Writes the default only when no file is there, so an edit is never lost.
+fn write_openserp_config_once(path: &std::path::Path) -> Option<()> {
+    if !path.is_file() {
+        std::fs::create_dir_all(path.parent()?).ok()?;
+        std::fs::write(path, OPENSERP_CONFIG).ok()?;
+    }
+    Some(())
+}
+
 /// The reader's saved listener port, or the default on a new install.
 pub fn configured_extension_port() -> u16 {
     extension_port_path()
@@ -449,8 +502,19 @@ fn ensure_openserp(generation: u64) {
         return;
     };
     let mut command = Command::new(&executable);
+    command.args(["serve", "--host", "127.0.0.1", "--port", "7000", "--quiet"]);
+    // Only the OpenSERP shipped beside this app, whose config schema the file
+    // was written against; another binary keeps its own stock limits.
+    let bundled = std::env::current_exe()
+        .ok()
+        .and_then(|app| app.parent().map(|dir| dir == executable.parent().unwrap_or(dir)))
+        .unwrap_or(false);
+    if bundled {
+        if let Some(config) = ensure_openserp_config() {
+            command.arg("-c").arg(config);
+        }
+    }
     command
-        .args(["serve", "--host", "127.0.0.1", "--port", "7000", "--quiet"])
         .current_dir(executable.parent().unwrap_or_else(|| std::path::Path::new(".")))
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -625,4 +689,28 @@ pub fn host_port(base: &str) -> Result<(String, u16), String> {
     let port = port.parse::<u16>().map_err(|e| format!("{base}: {e}"))?;
     let host = if host == "localhost" { "127.0.0.1" } else { host };
     Ok((host.to_string(), port))
+}
+
+#[cfg(test)]
+mod openserp_config_tests {
+    use super::*;
+
+    #[test]
+    fn the_default_is_written_once_and_an_edit_survives() {
+        let dir = std::env::temp_dir().join(format!("kriko-openserp-{}", std::process::id()));
+        let path = dir.join("nested").join("openserp.yaml");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        assert!(write_openserp_config_once(&path).is_some());
+        let written = std::fs::read_to_string(&path).unwrap();
+        assert!(written.contains("rate_seconds: 3"));
+        assert!(written.contains("max_retries: 0"));
+
+        std::fs::write(&path, "# mine
+").unwrap();
+        assert!(write_openserp_config_once(&path).is_some());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "# mine
+");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

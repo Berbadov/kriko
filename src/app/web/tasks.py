@@ -338,11 +338,11 @@ def _researcher(params: dict):
         # the engine owns no sockets and no politeness policy. The scheduler
         # sources mirror the SERP adapter's engine names, so rotation maps
         # one-to-one onto what a challenge page rotated away from.
-        from app.providers import local_researcher
+        from app.providers import local_researcher, openserp
         from kriko.research.politeness import PolitenessScheduler
 
         plan = _local_plan(params)
-        engines = str(params.get("engines") or "bing,duckduckgo,ecosia")
+        engines = str(params.get("engines") or openserp.LOCAL_ENGINES)
         sources = {
             engine.strip(): float(params.get("min_interval") or 3.5)
             for engine in engines.split(",") if engine.strip()
@@ -357,7 +357,10 @@ def _researcher(params: dict):
             context_tokens=plan.get("context_tokens"),
             output_language=plan.get("output_language", "auto"),
             search_language=plan.get("search_language", "en"),
-            engine=sources and next(iter(sources)) or "",
+            # All of them, not the first: asking only the first made every
+            # research run depend on one engine, and that one is the flaky
+            # one (`openserp.LOCAL_ENGINES`).
+            engine=",".join(sources),
             scheduler=PolitenessScheduler(sources or {"duckduckgo": 3.5}),
         )
     if backend != "api":

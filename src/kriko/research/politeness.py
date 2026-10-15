@@ -47,7 +47,8 @@ _MAX_SLEEP = 20.0
 _BLOCK_MARKERS = (
     "captcha", "challenge", "unusual traffic", "are you a robot",
     "verify you are a human", "access denied", "blocked",
-    "attention required",
+    "attention required", "checking your browser",
+    "verifying your connection", "drag the handle", "just a moment",
 )
 
 

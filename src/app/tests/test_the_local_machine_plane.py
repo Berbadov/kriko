@@ -782,7 +782,8 @@ def test_a_research_run_on_the_local_plane_builds_the_plane_from_the_server(
                                "model": "gpt-4o-mini"})
     assert plane.name == "local"
     assert plane.model == "qwen3-4b"          # the server's, not the Run screen's
-    assert plane.search_provider == "openserp:bing"  # the shipped engine set's first
+    # the whole shipped engine set, not its first (`openserp.LOCAL_ENGINES`)
+    assert plane.search_provider == "openserp:google,duckduckgo,bing"
     assert plane._complete.base_url == ready.url
 
 

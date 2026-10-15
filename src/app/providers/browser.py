@@ -108,7 +108,7 @@ def _switches(profile: str) -> list[str]:
     ]
 
 
-def read(url: str) -> str:
+def read(url: str, timeout: float = TIMEOUT) -> str:
     """The page's DOM text through a real browser, "" when it cannot.
 
     "" on every failure, exactly as `fetch._download` and
@@ -126,7 +126,7 @@ def read(url: str) -> str:
     try:
         done = subprocess.run(
             [browser, *_switches(profile), url], capture_output=True,
-            timeout=TIMEOUT, check=False,
+            timeout=timeout, check=False,
             startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except (OSError, subprocess.TimeoutExpired):
         return ""
