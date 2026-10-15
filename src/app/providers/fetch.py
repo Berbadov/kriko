@@ -91,12 +91,21 @@ def reader(timeout: float = TIMEOUT):
     metadata. Read here or not at all.
     """
 
-    def fetch(url: str) -> Fetched:
-        raw = _download(url, timeout)
+    timeout_default = timeout
+
+    def fetch(url: str, *, timeout: float | None = None, check_cancelled=None,
+              allow_fallback: bool = True) -> Fetched:
+        request_timeout = (min(timeout, timeout_default)
+                           if timeout is not None else timeout_default)
+        raw = _download(url, request_timeout, check_cancelled=check_cancelled,
+                        allow_fallback=allow_fallback)
         if not raw:
             return Fetched("")
         return Fetched(to_text(raw), published_at(raw))
 
+    fetch.supports_cancel_check = True  # type: ignore[attr-defined]
+    fetch.supports_timeout = True  # type: ignore[attr-defined]
+    fetch.supports_fallback = True  # type: ignore[attr-defined]
     return fetch
 
 
@@ -131,24 +140,35 @@ def _bounded(value: str) -> str:
     return stamp
 
 
-def _download(url: str, timeout: float) -> str:
+class FetchCancelled(Exception):
+    """A caller stopped waiting for a page; do not try another reader rung."""
+
+
+def _download(url: str, timeout: float, *, check_cancelled=None,
+              allow_fallback: bool = True) -> str:
     # http(s) only. `fetch` is handed URLs a search provider returned, and a
     # `file:` URL among them would read this machine's disk — urllib is happy
     # to do that, which makes the scheme check a boundary rather than a nicety.
     if not url.lower().startswith(("http://", "https://")):
         return ""
+    if check_cancelled is not None:
+        check_cancelled()
     request = urllib.request.Request(url, headers={"user-agent": USER_AGENT})
     try:
-        with network.urlopen(request, timeout=timeout) as response:
+        with network.urlopen(request, timeout=timeout,
+                             check=check_cancelled) as response:
             kind = (response.headers.get_content_type() or "").lower()
             if kind and not (
                 kind.startswith("text/") or "html" in kind or "xml" in kind
             ):
                 return ""
             charset = response.headers.get_content_charset() or "utf-8"
-            return response.read(MAX_BYTES).decode(charset, "replace")
+            raw = response.read(MAX_BYTES).decode(charset, "replace")
+        if check_cancelled is not None:
+            check_cancelled()
+        return raw
     except urllib.error.HTTPError as error:
-        if error.code in REFUSED:
+        if error.code in REFUSED and allow_fallback:
             # The site answered, and its answer was a refusal aimed at this
             # app's own fetcher — the class B155 recorded. The hosted readers
             # are the next rung: they read the page from elsewhere, and the
@@ -157,9 +177,15 @@ def _download(url: str, timeout: float) -> str:
             # half-read.
             from app.providers import browser, pagereader  # noqa: PLC0415 — optional rungs
 
-            page = pagereader.read(url)
+            if check_cancelled is not None:
+                check_cancelled()
+            page = pagereader.read(url, timeout=timeout,
+                                   check_cancelled=check_cancelled)
             if not page:
-                page = browser.read(url)
+                if check_cancelled is not None:
+                    check_cancelled()
+                page = browser.read(url, timeout=timeout,
+                                    check_cancelled=check_cancelled)
             if page:
                 log.info("a source refused the plain fetch and a later rung read it")
                 return page

@@ -15,9 +15,10 @@ page is *not* a result set, and `LocalSearchError` is what tells the plane's
 politeness scheduler to mark the source hot and rotate — the fail-fast rule
 the reader set: never wait on a challenge, move to the next engine.
 
-Politeness lives in the scheduler, not here. This adapter does one query at
-a time and reports what it saw; pacing, rotation and cooldown are the
-scheduler's to enforce, in one place.
+The caller chooses query fan-out. Local Quick Look keeps public-engine
+queries serialized while it reads pages concurrently; every request still
+uses the shared start pace here, and engines recently reported as failing are
+skipped for the cooldown below.
 """
 
 import json
@@ -32,6 +33,7 @@ from kriko.research.politeness import LocalSearchError
 
 DEFAULT_BASE_URL = "http://127.0.0.1:7000"
 DEFAULT_ENGINE = "duckduckgo"
+DEFAULT_PACE_INTERVAL = 0.25
 
 #: `/mega/search` waits for its slowest engine, so one blocked engine costs
 #: every query the time it takes to fail (measured: Ecosia blocked, Baidu 36 s
@@ -117,7 +119,8 @@ def _is_ad_or_search_redirect(url: str, result_type: object = "") -> bool:
     return False
 
 
-def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
+def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
+             timeout: float = TIMEOUT, mode: str = ""):
     """`search(query, limit) -> [{"url", "title", "site"}]`.
 
     Same injected shape as the paid plane's search sockets, so the local
@@ -126,72 +129,148 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
     """
     endpoint = (base_url or DEFAULT_BASE_URL).rstrip("/")
     chosen = engine or DEFAULT_ENGINE
+    default_mode = mode
     stats = {"queries": 0, "hits": 0, "challenges": 0}
+    stats_lock = threading.Lock()
 
-    def search(query: str, limit: int = 5) -> list[dict]:
-        params = urllib.parse.urlencode(
-            {
-                "text": query,
-                "engines": _engines_to_ask(chosen),
-                "limit": max(1, int(limit)),
-                "format": "json",
-                "lang": language,
-            }
-        )
-        request = urllib.request.Request(
-            f"{endpoint}/mega/search?{params}",
-            headers={"Accept": "application/json"},
-        )
-        try:
-            check_cancelled = getattr(search, "check_cancelled", None)
-            with network.urlopen(request, timeout=TIMEOUT,
-                                 pace_interval=0.25,
-                                 check=check_cancelled) as response:
-                body = response.read().decode("utf-8", "replace")
-        except Exception as error:  # noqa: BLE001 — network, rotate
-            raise LocalSearchError(str(error)) from error
-        stats["queries"] += 1
-        try:
-            payload = json.loads(body)
-        except json.JSONDecodeError as error:
-            if any(marker in body[:4096].casefold() for marker in _BLOCK_MARKERS):
-                stats["challenges"] += 1
-                raise LocalSearchError(
-                    "the SERP answered with a challenge page"
-                ) from error
-            raise LocalSearchError("the SERP did not answer with JSON") from error
-        _note_failed_engines(payload)
-        results = payload.get("results") if isinstance(payload, dict) else []
-        if not isinstance(results, list):
-            raise LocalSearchError("the SERP returned an invalid results array")
-        if not results and isinstance(payload, dict):
-            message = str(payload.get("error") or payload.get("message") or "")
-            if any(marker in message.casefold() for marker in _BLOCK_MARKERS):
-                stats["challenges"] += 1
-                raise LocalSearchError("the SERP answered with a challenge")
-            if payload.get("error"):
-                raise LocalSearchError(message[:250])
-        out = []
-        for hit in results or []:
-            if not isinstance(hit, dict):
-                continue
-            url = str(hit.get("url", "")).strip()
-            if not url or _is_ad_or_search_redirect(url, hit.get("type")):
-                continue
-            site = str(hit.get("domain", "")).strip()
-            if not site:
-                netloc = urllib.parse.urlsplit(url).netloc
-                site = netloc.split("@")[-1].split(":")[0]
-            out.append(
-                {
-                    "url": url,
-                    "title": str(hit.get("title", "")).strip(),
-                    "site": site,
+    def search(query: str, limit: int = 5, *, timeout: float | None = None,
+               pace_interval: float | None = None, mode: str | None = None,
+               engines: str | None = None) -> list[dict]:
+        request_mode = mode or default_mode
+        total_timeout = timeout if timeout is not None else search_timeout
+        engine_names = _engines_to_ask(engines or chosen).split(",")
+        # Mega's `any` considers a search successful if the engine returned
+        # rows, before this adapter removes click-throughs. Ask each selected
+        # engine's documented endpoint in turn so a Google `/goto`-only
+        # response does not hide usable Bing or DuckDuckGo results. All
+        # attempts share one deadline and the shared outbound start pace.
+        per_engine = request_mode == "any"
+        routes = engine_names if per_engine else [""]
+        deadline = time.monotonic() + total_timeout if per_engine else 0.0
+        last_error: Exception | None = None
+        had_response = False
+        check_cancelled = getattr(search, "check_cancelled", None)
+        callback_error: BaseException | None = None
+
+        def check_request() -> None:
+            nonlocal callback_error
+            if check_cancelled is None:
+                return
+            try:
+                check_cancelled()
+            except BaseException as error:
+                # The broad request handler below retries network failures,
+                # but a caller's cancellation is control flow and must escape
+                # with its original concrete exception type.
+                callback_error = error
+                raise
+
+        start_pace = (pace_interval if pace_interval is not None
+                      else DEFAULT_PACE_INTERVAL)
+
+        for engine_name in routes:
+            if per_engine:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                engine_path = "duck" if engine_name == "duckduckgo" else engine_name
+                path = f"{engine_path}/search"
+                request_timeout = remaining
+                params = {"text": query, "limit": max(1, int(limit)),
+                          "format": "json", "lang": language}
+            else:
+                path = "mega/search"
+                request_timeout = total_timeout
+                params = {
+                    "text": query,
+                    "engines": ",".join(engine_names),
+                    "limit": max(1, int(limit)),
+                    "format": "json",
+                    "lang": language,
                 }
+                if request_mode:
+                    params["mode"] = request_mode
+            request = urllib.request.Request(
+                f"{endpoint}/{path}?{urllib.parse.urlencode(params)}",
+                headers={"Accept": "application/json"},
             )
-        stats["hits"] += len(out)
-        return out
+            try:
+                with network.urlopen(request, timeout=request_timeout,
+                                     pace_interval=start_pace,
+                                     check=check_request if check_cancelled is not None else None) as response:
+                    body = response.read().decode("utf-8", "replace")
+            except Exception as error:  # noqa: BLE001 — network, rotate
+                if callback_error is not None:
+                    raise callback_error
+                last_error = error
+                if per_engine:
+                    continue
+                raise LocalSearchError(str(error)) from error
+            with stats_lock:
+                stats["queries"] += 1
+            try:
+                payload = json.loads(body)
+            except json.JSONDecodeError as error:
+                challenge = any(marker in body[:4096].casefold()
+                                for marker in _BLOCK_MARKERS)
+                if challenge:
+                    with stats_lock:
+                        stats["challenges"] += 1
+                last_error = LocalSearchError(
+                    "the SERP answered with a challenge page" if challenge
+                    else "the SERP did not answer with JSON")
+                if per_engine:
+                    continue
+                raise last_error from error
+            _note_failed_engines(payload)
+            results = payload.get("results") if isinstance(payload, dict) else []
+            if not isinstance(results, list):
+                last_error = LocalSearchError("the SERP returned an invalid results array")
+                if per_engine:
+                    continue
+                raise last_error
+            if not results and isinstance(payload, dict):
+                message = str(payload.get("error") or payload.get("message") or "")
+                challenge = any(marker in message.casefold() for marker in _BLOCK_MARKERS)
+                if challenge:
+                    with stats_lock:
+                        stats["challenges"] += 1
+                if challenge or payload.get("error"):
+                    last_error = LocalSearchError(
+                        "the SERP answered with a challenge" if challenge
+                        else message[:250])
+                    if per_engine:
+                        continue
+                    raise last_error
+            had_response = True
+            out = []
+            for hit in results:
+                if not isinstance(hit, dict):
+                    continue
+                url = str(hit.get("url", "")).strip()
+                if not url or _is_ad_or_search_redirect(url, hit.get("type")):
+                    continue
+                site = str(hit.get("domain", "")).strip()
+                if not site:
+                    netloc = urllib.parse.urlsplit(url).netloc
+                    site = netloc.split("@")[-1].split(":")[0]
+                out.append({"url": url, "title": str(hit.get("title", "")).strip(),
+                            "site": site})
+            with stats_lock:
+                stats["hits"] += len(out)
+            if out or not per_engine:
+                return out
 
+        if per_engine and not had_response and last_error is not None:
+            raise LocalSearchError(str(last_error)) from last_error
+        return []
+
+    search_timeout = timeout
     search.stats = stats  # type: ignore[attr-defined]
     search.check_cancelled = None  # type: ignore[attr-defined]
+    search.supports_timeout = True  # type: ignore[attr-defined]
+    search.supports_pacing = True  # type: ignore[attr-defined]
+    search.supports_fast_options = True  # type: ignore[attr-defined]
+    search.engines = tuple(name.strip() for name in chosen.split(",") if name.strip())  # type: ignore[attr-defined]
+    search.stats_lock = stats_lock  # type: ignore[attr-defined]
     return search

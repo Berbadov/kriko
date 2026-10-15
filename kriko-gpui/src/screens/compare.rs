@@ -12,7 +12,7 @@ use gpui::{
 };
 
 use crate::app::{Field, Kriko, Tab};
-use crate::live::compare::{self as live, Check, Level, Loaded, Note, QState, QuestionRun, MAX_SLOTS};
+use crate::live::compare::{self as live, Check, Level, Loaded, Note, QState, QueueOutcome, QuestionRun, MAX_SLOTS};
 use crate::marks::{self, mark_tile, phase_beat, Phase};
 use crate::screens::{empty_note, mono, plate_s, row_desc, th, trust_icon};
 use crate::theme::*;
@@ -86,6 +86,27 @@ fn x_button(
         .hover(|s| s.bg(rgba(DANGER_WASH)))
         .child(icon("x", 12.0).text_color(rgb(MUTED)))
         .on_click(listener)
+}
+
+/// A compact action used inside the shortlist cards.
+fn mini_action(id: impl Into<gpui::ElementId>, label: &str) -> gpui::Stateful<Div> {
+    div()
+        .id(id)
+        .h(px(26.0))
+        .px(px(9.0))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded(px(7.0))
+        .cursor_pointer()
+        .font_family(MONO)
+        .text_size(px(10.0))
+        .text_color(rgb(ICE))
+        .bg(rgba(GLASS_1))
+        .border_1()
+        .border_color(rgba(HAIRLINE))
+        .hover(|s| s.bg(rgba(BRAND_WASH)).border_color(rgba(BORDER_CONTROL)))
+        .child(label.to_string())
 }
 
 /// The fraction of the board's box a window position lands on.
@@ -477,20 +498,9 @@ fn preferred_chip() -> Div {
 /// saved check and its product say; a column still being read says so.
 fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let all: Vec<Option<String>> = app.live.compare.slots.clone();
-    // the column window: three products at a time when many are lined
-    // up, scrubbed by the slider that sits above the table
-    let filled: Vec<String> = all.iter().flatten().cloned().collect();
-    let visible = filled.len().min(3);
-    let first = if filled.len() > visible {
-        (app.live.compare.scroll * (filled.len() - visible) as f32).round() as usize
-    } else {
-        0
-    };
-    let slots: Vec<Option<String>> = if filled.len() > visible {
-        filled[first..first + visible].iter().cloned().map(Some).collect()
-    } else {
-        all
-    };
+    // Four is the draft and screen cap. Keep every selected product visible
+    // in one table, with horizontal scrolling only on narrow windows.
+    let slots = all;
     let columns: Vec<Option<&Check>> = slots.iter().map(|s| check_in(app, s)).collect();
     let specs = live::spec_rows(&columns);
     let risks = live::risk_rows(&columns);
@@ -503,7 +513,7 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
             None => "Empty slot".to_string(),
         })
         .collect();
-    let col_w = px(190.0);
+    let col_w = px(170.0);
     let marks_now: Vec<String> = app.marks_now().to_vec();
 
     // The header: the attribute column, then one per slot.
@@ -828,112 +838,6 @@ fn section_head(
 
 // ---- the screen ----
 
-/// The column slider: when more products are lined up than the screen
-/// shows, its thumb scrubs through the columns. Drag it or click the
-/// track; the table windows to wherever it sits.
-fn column_slider(
-    app: &mut Kriko,
-    filled: usize,
-    visible: usize,
-    cx: &mut Context<Kriko>,
-) -> Div {
-    let cell: Rc<RefCell<Option<Bounds<Pixels>>>> = Rc::new(RefCell::new(None));
-
-    let jump_cell = cell.clone();
-    let jump = cx.listener(move |this, ev: &gpui::MouseDownEvent, _w, cx| {
-        let bounds = jump_cell.borrow().unwrap_or_default();
-        if bounds.size.width <= px(0.0) {
-            return;
-        }
-        this.live.compare.dragging = true;
-        this.live.compare.scroll = (f32::from(ev.position.x - bounds.origin.x)
-            / f32::from(bounds.size.width))
-            .clamp(0.0, 1.0);
-        cx.notify();
-    });
-    let drag_cell = cell.clone();
-    let drag = cx.listener(move |this, ev: &gpui::MouseMoveEvent, _w, cx| {
-        if !this.live.compare.dragging {
-            return;
-        }
-        let bounds = drag_cell.borrow().unwrap_or_default();
-        if bounds.size.width <= px(0.0) {
-            return;
-        }
-        this.live.compare.scroll = (f32::from(ev.position.x - bounds.origin.x)
-            / f32::from(bounds.size.width))
-            .clamp(0.0, 1.0);
-        cx.notify();
-    });
-    let release = cx.listener(|this, _: &gpui::MouseUpEvent, _w, cx| {
-        this.live.compare.dragging = false;
-        cx.notify();
-    });
-
-    let track_w = 220.0;
-    let thumb_w = (track_w * visible as f32 / filled as f32)
-        .max(24.0)
-        .min(track_w);
-    let thumb_x = app.live.compare.scroll * (track_w - thumb_w);
-    let first = (app.live.compare.scroll * (filled - visible) as f32).round() as usize;
-
-    // the canvas quietly records the track's box, so the next drag knows
-    // where the track sits on screen
-    let capture = cell;
-    let surface = canvas(
-        move |bounds, _, _| {
-            *capture.borrow_mut() = Some(bounds);
-            bounds
-        },
-        |_, _, _, _| {},
-    )
-    .absolute()
-    .size_full();
-
-    div()
-        .flex()
-        .items_center()
-        .gap(px(8.0))
-        .child(mono("PRODUCTS", DIM))
-        .child(
-            div()
-                .id("cmp-slider")
-                .relative()
-                .w(px(track_w))
-                .h(px(12.0))
-                .rounded(px(6.0))
-                .bg(rgb(WELL))
-                .border_1()
-                .border_color(rgba(HAIRLINE))
-                .cursor_pointer()
-                .on_mouse_down(MouseButton::Left, jump)
-                .on_mouse_move(drag)
-                .on_mouse_up(MouseButton::Left, release)
-                .child(
-                    div()
-                        .absolute()
-                        .top(px(1.0))
-                        .left(px(1.0 + thumb_x))
-                        .w(px(thumb_w - 2.0))
-                        .h(px(8.0))
-                        .rounded(px(4.0))
-                        .bg(rgb(ICE))
-                        .opacity(0.8)
-                        .shadow(vec![shadow(0xbfe4ff66, 0.0, 0.0, 8.0, 0.0)]),
-                )
-                .child(surface),
-        )
-        .child(mono(
-            &format!(
-                "{}-{} of {}",
-                first + 1,
-                (first + visible).min(filled),
-                filled
-            ),
-            MUTED,
-        ))
-}
-
 /// One agent in a row of agent keys: its own mark, lit while it works.
 fn agent_key(
     id: impl Into<gpui::ElementId>,
@@ -979,6 +883,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
     let c = &app.live.compare;
     let running = c.queue_running;
+    let open = c.queue_open || running;
     let n = c.queue.len();
     let done_n = c.queue.iter().filter(|q| q.state == QState::Done).count();
     let ready_n = c
@@ -1044,13 +949,20 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                     None => "Researched".to_string(),
                 },
             ),
-            (QState::Waiting, Some(note)) if note == "not in your catalogs" => {
+            (QState::Waiting, Some(_)) if run.outcome == Some(QueueOutcome::NotInCatalogs) => {
                 (TagState::Need, "Not in catalogs".to_string())
             }
-            (QState::Waiting, Some(_)) => (TagState::Need, "Passed over".to_string()),
+            (QState::Waiting, Some(_)) => (
+                TagState::Need,
+                if run.outcome == Some(QueueOutcome::Stopped) { "Stopped" } else { "Failed" }.to_string(),
+            ),
             (QState::Waiting, None) => (TagState::Queue, "Queued".to_string()),
         };
         let status: gpui::AnyElement = match item.state {
+            QState::Researching if run.outcome == Some(QueueOutcome::InAnotherWindow) => {
+                tag(format!("queue-tag-{qi}"), TagState::Live, "Another window", motion)
+                    .into_any_element()
+            }
             QState::Researching => {
                 phase_beat(&format!("queue-beat-{qi}"), phase, motion).into_any_element()
             }
@@ -1159,7 +1071,9 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             .sum::<f32>()
             / n as f32
     };
-    let summary = if !c.queue_loaded {
+    let summary = if let Some(error) = c.queue_error.as_deref() {
+        format!("could not read queue · {error}")
+    } else if !c.queue_loaded {
         "reading".to_string()
     } else if running {
         let at_once = c.queue.iter().filter(|q| q.state == QState::Researching).count();
@@ -1178,6 +1092,10 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     };
     let can_start = running
         || (c.queue.iter().any(|q| q.state == QState::Waiting) && !c.harnesses.is_empty());
+    let retrying = c.queue.iter().any(|q| {
+        q.state == QState::Waiting
+            && c.queue_run.get(&q.queue_id).is_some_and(|run| run.outcome.is_some())
+    });
 
     let keys = div()
         .flex()
@@ -1190,8 +1108,8 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                     "queue-start",
                     if running {
                         "Stop queue"
-                    } else if done_n > 0 && left_n > 0 {
-                        "Resume queue"
+                    } else if retrying {
+                        "Retry waiting"
                     } else {
                         "Start queue"
                     },
@@ -1200,7 +1118,14 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             )
         })
         .when(ready_n >= 2, |d| {
-            d.child(plate_s("queue-compare", &format!("Compare {ready_n} below")).on_click(to_compare))
+            d.child(plate_s(
+                "queue-compare",
+                &if ready_n > MAX_SLOTS {
+                    format!("Compare first {MAX_SLOTS}")
+                } else {
+                    format!("Compare {ready_n}")
+                },
+            ).on_click(to_compare))
         })
         .when(done_n > 0 && !running, |d| {
             d.child(plate_s("queue-clear", "Clear done").on_click(clear_done))
@@ -1211,9 +1136,62 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                 .flex()
                 .items_center()
                 .gap(px(6.0))
-                .child(mono("FILL SLOTS WHEN DONE", DIM))
+                .child(mono("OPEN DRAFT WHEN DONE", DIM))
                 .child(switch_anim("queue-auto", auto_on, motion).on_click(auto_toggle)),
         );
+
+    let toggle_open = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.live.compare.queue_open = !this.live.compare.queue_open;
+        cx.notify();
+    });
+    let retry_queue_load = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.load_queue(cx);
+    });
+    let details = if open {
+        let queue_rows: gpui::AnyElement = if let Some(error) = c.queue_error.as_deref() {
+            div().flex().flex_col().gap(px(8.0))
+                .child(row_desc(&format!("Could not read the research queue: {error}")))
+                .child(mini_action("queue-load-retry", "Retry").on_click(retry_queue_load))
+                .into_any_element()
+        } else {
+            well()
+                .id("queue-list-scroll")
+                .px(px(14.0))
+                .py(px(4.0))
+                .max_h(px(280.0))
+                .overflow_y_scroll()
+                .occlude()
+                .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+                .child(rows)
+                .into_any_element()
+        };
+        div().flex().flex_col().gap(px(SPACE_CARD))
+            .child(row_desc(
+                "Products queued from the browser are researched in order, up to your concurrency setting. Saved checks become available to compare here.",
+            ))
+            .child(meter_live("queue-overall", overall, 28, running, motion))
+            .child(if c.harnesses.is_empty() {
+                empty_note("No agent is ready on this machine. Settings shows which ones Kriko can start.")
+                    .into_any_element()
+            } else {
+                agent_row.into_any_element()
+            })
+            .child(well()
+                .px(px(14.0))
+                .py(px(4.0))
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(icon("extension", 16.0).text_color(rgb(ICE)))
+                .child(div().flex_1().min_w(px(0.0)).child(row_desc(
+                    "On a listing, open the Kriko panel and press Add to queue. Products keep the order you added them.",
+                )))
+                .child(keycap("Alt"))
+                .child(keycap("K")))
+            .child(queue_rows)
+    } else {
+        div()
+    };
 
     card()
         .flex()
@@ -1221,41 +1199,19 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         .gap(px(SPACE_CARD))
         .child(
             div()
+                .id("queue-toggle")
                 .flex()
                 .items_center()
                 .gap(px(8.0))
+                .child(icon(if open { "chevron-down" } else { "arrow-right" }, 14.0)
+                    .text_color(rgb(if open { ICE } else { MUTED })))
                 .child(eyebrow("Research queue"))
                 .child(div().flex_1())
-                .child(mono(&summary, if running { ICE } else { MUTED })),
+                .child(mono(&summary, if running { ICE } else { MUTED }))
+                .cursor_pointer()
+                .on_click(toggle_open),
         )
-        .child(row_desc(
-            "Products you queue from the browser extension. One agent researches each in turn, sources first, then claims, and the researched ones land in the slots below to compare.",
-        ))
-        .child(meter_live("queue-overall", overall, 28, running, motion))
-        .child(if c.harnesses.is_empty() {
-            empty_note("No agent is ready on this machine. Settings shows which ones Kriko can start.")
-                .into_any_element()
-        } else {
-            agent_row.into_any_element()
-        })
-        .child(
-            // how a product gets here: from its listing, through the panel
-            well()
-                .px(px(14.0))
-                .py(px(4.0))
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .child(icon("extension", 16.0).text_color(rgb(ICE)))
-                .child(
-                    div().flex_1().min_w(px(0.0)).child(row_desc(
-                        "On a listing, open the Kriko panel and press Add to queue. It lands here, in the order you queued it.",
-                    )),
-                )
-                .child(keycap("Alt"))
-                .child(keycap("K")),
-        )
-        .child(well().px(px(14.0)).py(px(4.0)).child(rows))
+        .child(details)
         .child(keys)
 }
 
@@ -1365,6 +1321,9 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .gap(px(8.0))
         .flex_wrap()
         .child(mono("DRAFTS", DIM));
+    let retry_drafts = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.load_drafts(true, cx);
+    });
     let open_draft = app.live.compare.draft.clone();
     for (i, draft) in app.live.compare.drafts.iter().enumerate() {
         let id = draft.draft_id.clone();
@@ -1395,7 +1354,13 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         );
     }
     if !app.live.compare.drafts_loaded {
-        drafts_row = drafts_row.child(mono("reading", DIM));
+        if let Some(error) = app.live.compare.drafts_error.as_deref() {
+            drafts_row = drafts_row
+                .child(mono(&format!("could not read drafts · {error}"), DANGER))
+                .child(mini_action("draft-retry-load", "Retry").on_click(retry_drafts));
+        } else {
+            drafts_row = drafts_row.child(mono("reading…", DIM));
+        }
     } else if app.live.compare.drafts.is_empty() {
         drafts_row = drafts_row.child(mono("none saved yet", DIM));
     }
@@ -1411,13 +1376,24 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         this.delete_draft(cx);
         cx.notify();
     });
+    let revert_draft = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.revert_draft(cx);
+        cx.notify();
+    });
     let unsaved = app.draft_unsaved();
+    let draft_pending = app.live.compare.draft_pending;
     drafts_row = drafts_row
-        .child(plate_s("draft-new", "+ New").on_click(new_draft))
-        .child(plate_s("draft-save", "Save").on_click(save_draft))
-        .when(open_draft.is_some(), |d| {
-            d.child(plate_s("draft-delete", "Delete").on_click(delete_draft))
+        .when(!draft_pending, |d| {
+            d.child(plate_s("draft-new", "+ New").on_click(new_draft))
+                .child(plate_s("draft-save", if unsaved { "Save changes" } else { "Save" }).on_click(save_draft))
+                .when(open_draft.is_some(), |d| {
+                    d.child(plate_s("draft-delete", "Delete").on_click(delete_draft))
+                })
+                .when(unsaved, |d| {
+                    d.child(plate_s("draft-revert", "Revert").on_click(revert_draft))
+                })
         })
+        .when(draft_pending, |d| d.child(mono("saving draft…", ICE)))
         .when(unsaved, |d| d.child(mono("UNSAVED SLOTS", DIM)))
         .child(div().flex_1().min_w(px(0.0)))
         .child(
@@ -1447,7 +1423,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .on_click(board_toggle),
         );
 
-    // ---- the slots: at least two, one trailing empty, eight at most ----
+    // ---- the slots: at least two, one trailing empty, four at most ----
     let mut slots: Vec<Option<String>> = app.live.compare.slots.clone();
     while slots.len() < 2 {
         slots.push(None);
@@ -1474,17 +1450,15 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             this.clear_slot(i);
             cx.notify();
         };
-        let label = ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SIXTH", "SEVENTH", "EIGHTH"][i];
+        let label = ["FIRST", "SECOND", "THIRD", "FOURTH"][i];
         let mut col = well()
             .id(("slot", i))
             .flex_1()
-            .min_w(px(190.0))
-            .p(px(12.0))
+            .min_w(px(160.0))
+            .p(px(10.0))
             .flex()
             .flex_col()
-            .gap(px(8.0))
-            .cursor_pointer()
-            .on_click(open_picker)
+            .gap(px(6.0))
             .child(
                 div()
                     .flex()
@@ -1492,6 +1466,10 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     .gap(px(8.0))
                     .child(mono(label, DIM))
                     .child(div().flex_1())
+                    .child(
+                        mini_action(("slot-pick", i), if slot.is_some() { "Change" } else { "Choose" })
+                            .on_click(open_picker),
+                    )
                     .children(slot.as_ref().map(|_| x_button(("slot-clear", i), cx, clear_slot).into_any_element())),
             );
         col = match slot.as_ref().map(|id| (id, app.live.compare.checks.get(id))) {
@@ -1519,11 +1497,17 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .child(mono("INFO", DIM))
                         .child(meter_slim(rating, 10).flex_1()),
                 )
-                .child(mono(&format!("{sources} sources · vs the best-read here"), MUTED))
+                .child(mono(&format!("{sources} sources · relative coverage"), MUTED))
             }
-            Some((id, Some(Loaded::Missing(why)))) => col
-                .child(mono("NOT FOUND", DIM))
-                .child(row_desc(&format!("The saved check {id} could not be read: {why}"))),
+            Some((id, Some(Loaded::Missing(why)))) => {
+                let retry = cx.listener({
+                    let id = id.clone();
+                    move |this, _: &gpui::ClickEvent, _w, cx| this.retry_check(id.clone(), cx)
+                });
+                col.child(mono("COULD NOT READ THIS CHECK", DANGER))
+                    .child(row_desc(why))
+                    .child(mini_action(("slot-retry", i), "Retry").on_click(retry))
+            }
             Some((id, _)) => {
                 let name = app
                     .live
@@ -1541,7 +1525,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .text_color(rgb(INK_2))
                         .child(name),
                 )
-                .child(mono("reading...", DIM))
+                .child(mono("Loading saved check…", DIM))
             }
             None => col.child(
                 div()
@@ -1561,29 +1545,26 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         slot_row = slot_row.child(col);
     }
 
-    // ---- the picker: every saved check, one click to assign ----
+    // ---- the picker: saved checks are unique across the shortlist ----
     let picker_card = app.live.compare.picker.map(|slot_i| {
         let mut list = div().flex().flex_col().flex_none();
         for (ci, item) in app.live.compare.history.iter().enumerate() {
-            let taken = slots.contains(&Some(item.lookup_id.clone()));
+            let taken = !live::slot_available(&slots, slot_i, &item.lookup_id);
             let lookup_id = item.lookup_id.clone();
             let assign = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
                 this.assign_slot(slot_i, lookup_id.clone(), cx);
                 cx.notify();
             });
-            list = list.child(
-                div()
+            let mut option = div()
                     .id(("pick", ci))
-                    .py(px(3.0))
+                    .py(px(5.0))
                     .px(px(12.0))
                     .flex()
                     .items_center()
                     .gap(px(8.0))
                     .rounded(px(10.0))
-                    .cursor_pointer()
                     .when(!taken, |s| s.hover(|h| h.bg(rgba(GLASS_1))))
                     .when(taken, |s| s.opacity(0.35))
-                    .on_click(assign)
                     .child(
                         div().flex_1().min_w(px(0.0)).flex().flex_col().child(
                             div()
@@ -1600,11 +1581,24 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             format!("{} · {}", item.category, live::ago(&item.created_at))
                         },
                         MUTED,
-                    )),
-            );
+                    ));
+            if taken {
+                option = option.child(mono("In another slot", DIM));
+            } else {
+                option = option.cursor_pointer().on_click(assign);
+            }
+            list = list.child(option);
         }
         let body: gpui::AnyElement = if !app.live.compare.history_loaded {
-            empty_note("Reading your saved checks...").into_any_element()
+            if let Some(error) = app.live.compare.history_error.as_deref() {
+                let retry = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_compare(cx));
+                div().flex().flex_col().gap(px(8.0))
+                    .child(row_desc(&format!("Could not read saved checks: {error}")))
+                    .child(mini_action("picker-retry-history", "Retry").on_click(retry))
+                    .into_any_element()
+            } else {
+                empty_note("Reading your saved checks…").into_any_element()
+            }
         } else if app.live.compare.history.is_empty() {
             empty_note("No saved checks yet. Run a check, or use the extension on a listing, and it will be here.")
                 .into_any_element()
@@ -1749,6 +1743,22 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     for (qi, q) in saved_questions.iter().enumerate() {
         let failure = app.live.compare.failed.get(&q.question_id);
         let run = app.live.compare.question_runs.get(&q.job_id);
+        let retry_question = {
+            let text = q.text.clone();
+            cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.compare_question_input.set_value(text.clone());
+                this.ask_compare_question(cx);
+                cx.notify();
+            })
+        };
+        let retry_untracked = {
+            let text = q.text.clone();
+            cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.compare_question_input.set_value(text.clone());
+                this.ask_compare_question(cx);
+                cx.notify();
+            })
+        };
         questions = questions.child(
             well()
                 .p(px(PAD_CARD_TIGHT))
@@ -1802,11 +1812,59 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             "no answer",
                             motion,
                         )))
-                        .child(row_desc(why)),
+                        .child(row_desc(why))
+                        .child(mini_action(("compare-retry-question", qi), "Ask again")
+                            .on_click(retry_question)),
+                    (None, None) if run.is_some_and(|r| {
+                        matches!(r.state.as_str(), "failed" | "cancelled" | "interrupted")
+                    }) => div()
+                        .pl(px(24.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(tag(format!("compare-terminal-{qi}"), TagState::Need,
+                            "no answer", motion))
+                        .child(row_desc(&run.map(|r| r.message.as_str()).unwrap_or("The agent stopped before answering.")))
+                        .child(mini_action(("compare-retry-terminal", qi), "Ask again")
+                            .on_click(retry_question)),
+                    (None, None) if run.is_some_and(|r| !r.answer.trim().is_empty()) => div()
+                        .pl(px(24.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(div().flex().items_center().gap(px(8.0)).child(tag(
+                            format!("compare-streaming-{qi}"),
+                            TagState::Live,
+                            "writing answer",
+                            motion,
+                        )))
+                        .child(
+                            div()
+                                .font_family(SANS)
+                                .text_size(px(14.0))
+                                .line_height(px(21.0))
+                                .text_color(rgb(INK_2))
+                                .child(run.map(|r| r.answer.clone()).unwrap_or_default()),
+                        ),
                     (None, None) if run.is_some_and(|r| r.state == "succeeded") => div()
                         .pl(px(24.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
                         .child(tag(format!("compare-empty-{qi}"), TagState::Need,
-                            "no text returned", motion)),
+                            "no text returned", motion))
+                        .child(mini_action(("compare-retry-empty", qi), "Ask again")
+                            .on_click(retry_question)),
+                    (None, None) if q.job_id.is_empty() => div()
+                        .pl(px(24.0))
+                        .flex()
+                        .flex_col()
+                        .gap(px(6.0))
+                        .child(tag(format!("compare-untracked-{qi}"), TagState::Need,
+                            "no job saved", motion))
+                        .child(row_desc("This question cannot be tracked. Ask it again to get a live answer."))
+                        .child(mini_action(gpui::ElementId::named_usize("compare-retry-untracked", qi), "Ask again")
+                            .on_click(retry_untracked)),
                     (None, None) => div()
                         .pl(px(24.0))
                         .flex()
@@ -1856,7 +1914,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .gap(px(8.0))
         .child(eyebrow("Ask about this comparison"))
         .child(row_desc(
-            "The selected agent searches the web using these saved checks as product context; cited pages appear with the answer. Asking saves the slots to this draft first.",
+            "Ask about the shortlist and see the answer as it arrives. Later questions can refer to earlier replies; saved checks remain the evidence. Cited pages appear with the answer.",
         ))
         .child(if app.live.compare.harnesses.is_empty() {
             let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -1899,17 +1957,13 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .child(say),
         );
     }
-    page = page.child(queue_card(app, cx)).children(picker_card);
+    page = page.children(picker_card);
     if app.live.compare.board_open {
         page = page.child(board(app, window, cx));
     }
     page = page.child(slot_row);
-    // the slider appears once the shortlist outgrows the screen
-    let filled_n = app.live.compare.slots.iter().flatten().count();
-    if filled_n > 3 {
-        page = page.child(column_slider(app, filled_n, 3, cx));
-    }
     page = page.children(answer_card);
+    let filled_n = app.live.compare.slots.iter().flatten().count();
     page = page
         .child(
             div()
@@ -1922,6 +1976,9 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 // card fits the page instead of scrolling its own corner away
                 .child(table(app, window, cx).when(filled_n > 0, |t| t.min_w(px(860.0)))),
         )
-        .child(questions_card);
+        .child(questions_card)
+        // The research queue is useful, but it should not push the actual
+        // shortlist and comparison table below the first screen.
+        .child(queue_card(app, cx));
     page
 }
