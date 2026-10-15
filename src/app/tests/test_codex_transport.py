@@ -64,6 +64,17 @@ for line in sys.stdin:
             send({"jsonrpc":"2.0", "method":"turn/completed", "params":{"threadId":current["threadId"], "turn":{"id":current["turnId"], "status":"failed", "error":{"message":"command approval denied"}, "items":[]}}})
         elif mode == "cancel":
             continue
+        elif mode == "long_stream":
+            # A real answer streams one delta per token; 1500 deltas written in a
+            # burst is past both the per-turn cap and the 64-line reader queue.
+            answer = "".join(f"w{i} " for i in range(1500))
+            for start in range(0, len(answer), 4):
+                send({"jsonrpc":"2.0", "method":"item/agentMessage/delta", "params":{"threadId":current["threadId"], "turnId":current["turnId"], "itemId":"item-1", "delta":answer[start:start+4]}})
+            send({"jsonrpc":"2.0", "method":"turn/completed", "params":{"threadId":current["threadId"], "turn":{"id":current["turnId"], "status":"completed", "items":[{"type":"agentMessage", "id":"item-1", "text":answer}]}}})
+        elif mode == "long_answer":
+            # The whole final answer travels in one turn/completed line.
+            answer = "a" * 100_000
+            send({"jsonrpc":"2.0", "method":"turn/completed", "params":{"threadId":current["threadId"], "turn":{"id":current["turnId"], "status":"completed", "items":[{"type":"agentMessage", "id":"item-1", "text":answer}]}}})
         else:
             send({"jsonrpc":"2.0", "method":"item/agentMessage/delta", "params":{"threadId":current["threadId"], "turnId":current["turnId"], "itemId":"item-1", "delta":"answer"}})
             send({"jsonrpc":"2.0", "method":"thread/tokenUsage/updated", "params":{"threadId":current["threadId"], "turnId":current["turnId"], "tokenUsage":{"inputTokens":12,"outputTokens":3}}})
@@ -263,6 +274,41 @@ def test_server_capability_request_is_denied(environment: tuple[Path, Path, Path
         records = [json.loads(line) for line in (tmp_path / "capability.jsonl").read_text(encoding="utf-8").splitlines()]
         reply = next(row for row in records if row.get("id") == "approval-1")
         assert "error" in reply and reply["error"]["message"] == "client capability denied"
+    finally:
+        transport.close()
+
+
+def test_a_long_streamed_answer_is_a_result_not_a_failed_turn(
+    environment: tuple[Path, Path, Path], tmp_path: Path,
+) -> None:
+    """Regression: the per-turn event cap raised on the 257th event, and every
+    streamed token is an event. Real research replies stream hundreds of deltas,
+    so each was failed a few seconds into the turn, recorded as DeliveryUncertain.
+    The same burst also overran the 64-line reader queue, which killed the
+    worker; a busy consumer must make the reader wait, not fail the turn."""
+    exe, home, script = environment
+    transport, _ = make_transport(script)
+    profile = make_profile(exe, home, tmp_path, "long_stream")
+    try:
+        result = transport.run(profile, request())
+        assert result.text == "".join(f"w{i} " for i in range(1500)).strip()
+        assert result.metrics["event_count"] > 256
+    finally:
+        transport.close()
+
+
+def test_a_final_answer_longer_than_one_protocol_line_is_not_rejected(
+    environment: tuple[Path, Path, Path], tmp_path: Path,
+) -> None:
+    """Regression: a whole answer arrives as one JSON line, and a 64 KiB line
+    cap failed any answer past roughly 16k tokens, well inside what a research
+    reply can be. The cap is a memory guard, so it must sit above a real answer."""
+    exe, home, script = environment
+    transport, _ = make_transport(script)
+    profile = make_profile(exe, home, tmp_path, "long_answer")
+    try:
+        result = transport.run(profile, request())
+        assert result.text == "a" * 100_000
     finally:
         transport.close()
 

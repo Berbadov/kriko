@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import threading
 import time
+from collections import deque
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -201,9 +202,39 @@ class _Acquisition:
 
 
 DeliveryCallback = Callable[..., None]
-_MAX_LINE_CHARS = 64 * 1024
+#: One protocol line carries a whole final answer (`turn/completed` holds the
+#: agent message), so this cap is the largest answer the transport accepts. It
+#: was 64 KiB, which failed any answer past roughly 16k tokens; it is now a
+#: memory guard far above that.
+_MAX_LINE_CHARS = 8 * 1024 * 1024
 _MAX_BUFFERED_MESSAGES = 64
+#: How many of a turn's events are kept for the caller to inspect. A bound on
+#: memory only: a turn that streams more than this is a long answer, and is
+#: not a failure.
 _MAX_RETAINED_EVENTS = 256
+
+
+class _EventLog:
+    """The events of one turn: the most recent ones kept, and how many arrived.
+
+    Every streamed token is an event, so the count is the length of the answer.
+    It used to raise past 256, which failed each reply that streamed more than
+    256 events a few seconds into the turn, recorded as DeliveryUncertain.
+    """
+
+    def __init__(self) -> None:
+        self._recent: deque[Mapping[str, Any]] = deque(maxlen=_MAX_RETAINED_EVENTS)
+        self.total = 0
+
+    def append(self, event: Mapping[str, Any]) -> None:
+        self.total += 1
+        self._recent.append(event)
+
+    def __len__(self) -> int:
+        return self.total
+
+    def snapshot(self) -> tuple[Mapping[str, Any], ...]:
+        return tuple(self._recent)
 
 
 class CodexTransport:
@@ -478,7 +509,7 @@ class CodexTransport:
         thread_id = ""
         turn_id = ""
         sent = False
-        events: list[Mapping[str, Any]] = []
+        events = _EventLog()
         usage: dict[str, Any] = {}
         try:
             if cancel.is_set():
@@ -622,7 +653,7 @@ class CodexTransport:
                         "total_ms": (time.monotonic() - run_started) * 1000,
                         "first_text_ms": first_text_ms,
                     })
-                    return CodexResult(text, thread_id, turn_id, usage, tuple(events), metrics)
+                    return CodexResult(text, thread_id, turn_id, usage, events.snapshot(), metrics)
         except _PropagateCallbackError as exc:
             raise exc.original
         except TurnRejected:
@@ -654,7 +685,7 @@ class CodexTransport:
 
     def _wait_turn_stop(
         self, worker: _Worker, thread_id: str, turn_id: str, seconds: float,
-        events: list[Mapping[str, Any]], usage: dict[str, Any], callback: Callable[[Mapping[str, Any]], None] | None,
+        events: _EventLog, usage: dict[str, Any], callback: Callable[[Mapping[str, Any]], None] | None,
     ) -> bool:
         deadline = time.monotonic() + seconds
         while time.monotonic() < deadline:
@@ -842,7 +873,7 @@ def _route_event(message: Mapping[str, Any], thread_id: str, turn_id: str) -> Ma
 
 def _handle_event(
     event: Mapping[str, Any], thread_id: str, turn_id: str,
-    events: list[Mapping[str, Any]], usage: dict[str, Any], callback: Callable[[Mapping[str, Any]], None] | None,
+    events: _EventLog, usage: dict[str, Any], callback: Callable[[Mapping[str, Any]], None] | None,
     action_callback: Callable[[Mapping[str, Any]], None] | None = None,
     text_callback: Callable[[str], None] | None = None,
 ) -> Mapping[str, Any] | None:
@@ -863,8 +894,6 @@ def _handle_event(
         if isinstance(item, Mapping) and item.get("type") in {"commandExecution", "fileChange", "mcpToolCall"}:
             raise CodexTransportError(f"Codex requested denied capability: {item.get('type')}")
     events.append(event)
-    if len(events) > _MAX_RETAINED_EVENTS:
-        raise CodexTransportError("Codex app-server exceeded the per-turn event limit")
     if callback:
         callback(event)
     if action_callback:
@@ -917,12 +946,22 @@ def _check_cancelled(callback: Callable[[], None] | None) -> None:
 
 
 def _queue_message(worker: _Worker, value: dict[str, Any]) -> None:
-    try:
-        worker.incoming.put_nowait(value)
-    except queue.Full:
-        _queue_failure(worker, "Codex app-server exceeded the buffered event limit")
-        _terminate(worker.process, worker.job)
-        worker.job = None
+    """Hand a message to the consumer, waiting for it if it is busy.
+
+    A full queue means the consumer is slower than a burst of output (a
+    progress write, a log line), which is not a fault in the server. The
+    failure used to kill the worker, so a long answer died as soon as it
+    out-ran the consumer by 64 lines. The server's own pipe is the flow
+    control: the reader waits, and gives up only when the process has exited,
+    since then nothing will read the queue again.
+    """
+    while True:
+        try:
+            worker.incoming.put(value, timeout=0.2)
+            return
+        except queue.Full:
+            if worker.process.poll() is not None:
+                return
 
 
 def _queue_failure(worker: _Worker, message: str) -> None:

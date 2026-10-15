@@ -92,6 +92,42 @@ def test_cancellation_is_recorded_as_cancelled_not_failed(monkeypatch, tmp_path)
     assert ledger.attempts(run_id)[0]["outcome"] == "cancelled"
 
 
+def test_a_failed_attempt_records_why_not_only_its_class(monkeypatch, tmp_path):
+    """The run history read "DeliveryUncertain" for every failed turn, with no
+    reason, which is a blank failure on the screen that shows the history."""
+    researcher = _researcher(monkeypatch, tmp_path)
+
+    def run(profile, request, **callbacks):
+        callbacks["on_delivery"]("accepted", "thread", "turn")
+        raise DeliveryUncertain("Codex delivery became uncertain: model overloaded")
+
+    monkeypatch.setattr(codex_profile, "transport", lambda: SimpleNamespace(run=run))
+    with pytest.raises(DeliveryUncertain):
+        researcher._run("one request")
+    ledger = Ledger(tmp_path / "app.sqlite")
+    conn = ledger.connect()
+    try:
+        run_id = conn.execute("SELECT run_id FROM agent_runs").fetchone()[0]
+    finally:
+        conn.close()
+    assert ledger.attempts(run_id)[0]["error"] == (
+        "DeliveryUncertain: Codex delivery became uncertain: model overloaded")
+
+
+def test_an_unanswered_help_probe_is_asked_again_not_remembered(monkeypatch, tmp_path):
+    """`_ask` answers "" when the probe times out. Remembering that as "no
+    app-server" demoted the binary to a process for the life of the app."""
+    researcher = _researcher(monkeypatch, tmp_path)
+    answers = iter(["", "--listen"])
+    monkeypatch.setattr(harness, "_ask", lambda *args, **kwargs: next(answers))
+    monkeypatch.setattr(codex_profile, "transport", lambda: SimpleNamespace(run=lambda profile, request, **callbacks: SimpleNamespace(
+        text="answer", thread_id="thread", turn_id="turn", usage={}, events=(), metrics={})))
+    researcher.transport_mode = "persistent"
+    with pytest.raises(TransportUnavailable, match="did not describe its app-server"):
+        researcher._run("one request")
+    assert researcher._run("one request") == "answer"
+
+
 def test_pre_delivery_unavailability_falls_back_only_in_auto_mode(monkeypatch, tmp_path):
     researcher = _researcher(monkeypatch, tmp_path)
     monkeypatch.setattr(researcher, "_run_codex", lambda *args: (_ for _ in ()).throw(
