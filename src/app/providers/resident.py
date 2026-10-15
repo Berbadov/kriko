@@ -715,7 +715,9 @@ class ClaudeWire(Wire):
                     metrics["turn_accept_ms"] = (time.monotonic() - sent_at) * 1000
                     _delivery(delivery, "accepted", str(message.get("session_id") or ""), "", None)
                 events += 1
-                if events > _MAX_RETAINED_EVENTS:
+                # Partial-token frames are the answer arriving, one per token;
+                # capping them fails any long answer. The deadline bounds them.
+                if events > _MAX_RETAINED_EVENTS and kind != "stream_event":
                     raise ResidentError("the agent exceeded the per-turn event limit")
                 sid = message.get("session_id")
                 if isinstance(sid, str) and sid:
@@ -885,11 +887,14 @@ class AcpWire(Wire):
                     return None
                 accept()
                 events += 1
-                if events > _MAX_RETAINED_EVENTS:
+                kind = update.get("sessionUpdate")
+                # Message and thought chunks are the answer arriving, one per
+                # token; capping them fails any long answer. The deadline bounds them.
+                if events > _MAX_RETAINED_EVENTS and kind not in {
+                        "agent_message_chunk", "agent_thought_chunk"}:
                     raise ResidentError("the agent exceeded the per-turn event limit")
                 if req.on_event:
                     req.on_event(message)
-                kind = update.get("sessionUpdate")
                 if kind == "agent_message_chunk":
                     content = update.get("content")
                     text = content.get("text") if isinstance(content, Mapping) else None
