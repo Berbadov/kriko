@@ -23,8 +23,10 @@ scheduler's to enforce, in one place.
 import json
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from app.providers import network
 
 from app.providers._http import TIMEOUT
@@ -32,6 +34,15 @@ from kriko.research.politeness import LocalSearchError
 
 DEFAULT_BASE_URL = "http://127.0.0.1:7000"
 DEFAULT_ENGINE = "duckduckgo"
+
+#: The engines a local run asks together. Measured on this service, one engine
+#: at a time: Google answered 6 of 6 (9 hits, 5-6 s) while two others had
+#: their breakers open; DuckDuckGo times out on some queries; Bing answers
+#: empty about half the time (4 of 8, under stock and tuned pacing alike) and
+#: otherwise scrapes its own landing page into "results"; Ecosia was blocked
+#: on every query. Several engines at once, because a search answers with what
+#: any of them found.
+LOCAL_ENGINES = "google,duckduckgo,bing"
 
 #: `/mega/search` waits for its slowest engine, so one blocked engine costs
 #: every query the time it takes to fail (measured: Ecosia blocked, Baidu 36 s
@@ -117,7 +128,74 @@ def _is_ad_or_search_redirect(url: str, result_type: object = "") -> bool:
     return False
 
 
-def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Report a redirect instead of following it: the address is the answer."""
+
+    def redirect_request(self, *args, **kwargs):  # noqa: ANN002, ANN003
+        return None
+
+
+_NO_REDIRECT = urllib.request.build_opener(_NoRedirect)
+USER_AGENT = "Kriko/1.0 (+https://github.com/Berbadov/kriko)"
+
+
+def _is_google_goto(url: str) -> bool:
+    try:
+        parsed = urllib.parse.urlsplit(url)
+    except ValueError:
+        return False
+    return ((parsed.hostname or "").casefold() in {"google.com", "www.google.com"}
+            and parsed.path.casefold().rstrip("/") == "/goto")
+
+
+def unwrap_goto(url: str, *, check=None, timeout: float = 6.0) -> str:
+    """The page behind a Google click-through link, or "" when it will not say.
+
+    The link carries an opaque token and no address, so it was dropped on the
+    belief that it "can neither be read nor unwrapped". It can: Google answers
+    it with a plain 302 whose `Location` is the page, and Google was the one
+    engine answering every query when the others timed out or came back empty
+    (measured: titles such as "Crucial MX500 SSDs world of pain" behind links
+    the adapter threw away). One request, redirect not followed; the page
+    itself is read later by the reader as any other.
+    """
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+
+    def opener(target, timeout=None):
+        return _NO_REDIRECT.open(target, timeout=timeout)
+
+    try:
+        with network.urlopen(request, timeout=timeout, opener=opener, check=check):
+            return ""  # answered with a page, not a redirect: nothing to unwrap
+    except urllib.error.HTTPError as error:
+        location = (error.headers.get("Location") or "").strip() if error.headers else ""
+        if error.code in (301, 302, 303, 307, 308) and location.lower().startswith(
+                ("http://", "https://")) and not _is_google_goto(location):
+            return location
+        return ""
+    except Exception:  # noqa: BLE001 - an unwrappable link is dropped, as before
+        return ""
+
+
+def _unwrapped(results: list, check=None, resolve=None) -> list:
+    """`results` with each Google click-through replaced by the page it names."""
+    resolve = resolve or unwrap_goto
+    wrapped = [index for index, hit in enumerate(results)
+               if isinstance(hit, dict) and _is_google_goto(str(hit.get("url", "")))]
+    if not wrapped:
+        return results
+    with ThreadPoolExecutor(max_workers=min(4, len(wrapped))) as pool:
+        opened = list(pool.map(lambda index: resolve(str(results[index]["url"]),
+                                                     check=check), wrapped))
+    out = list(results)
+    for index, address in zip(wrapped, opened):
+        # The engine's `domain` named Google, the page's host is the site.
+        out[index] = {**results[index], "url": address, "domain": ""}
+    return out
+
+
+def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
+             resolve=None):
     """`search(query, limit) -> [{"url", "title", "site"}]`.
 
     Same injected shape as the paid plane's search sockets, so the local
@@ -171,6 +249,8 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en"):
                 raise LocalSearchError("the SERP answered with a challenge")
             if payload.get("error"):
                 raise LocalSearchError(message[:250])
+        results = _unwrapped(results or [], getattr(search, "check_cancelled", None),
+                             resolve)
         out = []
         for hit in results or []:
             if not isinstance(hit, dict):

@@ -133,7 +133,7 @@ def search_answers(url: str = "", timeout: float = PROBE_TIMEOUT) -> bool:
         and (payload.get("status") in ("healthy", "ok") or payload.get("ok") is True
              or (payload.get("status") == "degraded"
                  and any(isinstance(engine, dict)
-                         and engine.get("name") in ("bing", "duckduckgo", "ecosia")
+                         and engine.get("name") in ("google", "bing", "duckduckgo")
                          and engine.get("initialized") is True
                          and engine.get("status") == "ready"
                          for engine in engines)))
