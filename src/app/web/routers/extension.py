@@ -202,6 +202,7 @@ def research_plane(request: Request) -> dict:
 
 
 class ExtensionResearchRequest(BaseModel):
+    client_request_id: str = Field("", max_length=200)
     q: str = Field("", max_length=500)
     subject_id: str = Field("", max_length=200)
     harness: str = Field("", max_length=200)
@@ -260,6 +261,16 @@ def start_research_plane(
     store=Depends(get_store), runner=Depends(get_jobs),
     conn=Depends(get_app_state),
 ) -> dict:
+    def submit(kind: str, params: dict) -> str:
+        if not body.client_request_id:
+            return runner.submit(kind, params)
+        from app.agentledger import RequestConflict
+
+        try:
+            return runner.submit(kind, params, client_request_id=body.client_request_id)
+        except RequestConflict as error:
+            raise HTTPException(409, str(error)) from error
+
     try:
         subject = resolve_research_subject(store, q=body.q, subject_id=body.subject_id)
     except HTTPException as exc:
@@ -297,7 +308,7 @@ def start_research_plane(
 
             page = pagefacts.clean(body.facts, body.description)
             if not body.quick:
-                deepen = runner.submit("pack_author", {
+                deepen = submit("pack_author", {
                     "category": body.q.strip(), "product": body.q.strip(),
                     "harness": "", "backend": "local", "install": True,
                     "page": page, "budget_usd": 0.0,
@@ -311,7 +322,7 @@ def start_research_plane(
             # One job, not two: a quick look is saved on its own and joins a
             # pack only when the reader asks (`POST /quick-looks/{id}/pack`).
             pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
-            quick = runner.submit("quick_look", {
+            quick = submit("quick_look", {
                 "product": body.q.strip(), "page_url": body.url, "harness": "", "backend": "local",
                 "pack_id": pack_id, "page": page, "budget_usd": 0.0,
             })
@@ -377,7 +388,7 @@ def start_research_plane(
         # the quick look runs in its own lane (`jobs.QUICK_KINDS`) and is the
         # id the panel follows.
         if not body.quick:
-            deepen = runner.submit("pack_author", params)
+            deepen = submit("pack_author", params)
             if billed:
                 label = apiagent.BY_ID[selected].label
                 return {
@@ -392,7 +403,7 @@ def start_research_plane(
                 "note": "Uses your harness subscription and installs its product research when done.",
             }
         pack_id = _listing_pack(store, conn, body.url, body.facts, body.q.strip())
-        quick = runner.submit("quick_look", {
+        quick = submit("quick_look", {
             "product": body.q.strip(), "page_url": body.url, "harness": selected,
             "pack_id": pack_id, "page": page, "budget_usd": quick_budget,
         })
@@ -425,7 +436,7 @@ def start_research_plane(
         "budget_usd": budget if plane["cost_basis"] == "per_token" else 0.0,
     }
     return {
-        "job_id": runner.submit("research", params), "kind": "research",
+        "job_id": submit("research", params), "kind": "research",
         **subject, **plane, "budget_usd": params["budget_usd"],
     }
 
@@ -453,8 +464,22 @@ def saved_quick_look(url: str, product: str = "", conn=Depends(get_app_state)) -
     return {"job": None}
 
 
+class RequestIdentity(BaseModel):
+    client_request_id: str = Field("", max_length=200)
+
+
+def _identified_submit(runner, kind: str, params: dict, client_request_id: str = "") -> str:
+    from app.agentledger import RequestConflict
+
+    try:
+        return (runner.submit(kind, params, client_request_id=client_request_id)
+                if client_request_id else runner.submit(kind, params))
+    except RequestConflict as error:
+        raise HTTPException(409, str(error)) from error
+
+
 @router.post("/quick-looks/{job_id}/pack")
-def add_quick_look_to_pack(job_id: str, runner=Depends(get_jobs),
+def add_quick_look_to_pack(job_id: str, body: RequestIdentity | None = None, runner=Depends(get_jobs),
                            conn=Depends(get_app_state)) -> dict:
     """Make a saved quick look part of a pack.
 
@@ -483,14 +508,14 @@ def add_quick_look_to_pack(job_id: str, runner=Depends(get_jobs),
 
     harness = str(look.get("harness") or "")
     billed = harness in apiagent.BY_ID
-    deepen = runner.submit("pack_author", {
+    deepen = _identified_submit(runner, "pack_author", {
         "category": product, "product": product,
         "harness": "" if local else harness,
         "backend": "local" if local else "harness",
         "install": True, "page": look.get("page") or {},
         "quick_job_id": job_id,
         "budget_usd": apiagent.DEFAULT_BUDGET_USD if billed else 0.0,
-    })
+    }, body.client_request_id if body else "")
     return {"job_id": deepen, "kind": "pack_author", "quick_job_id": job_id,
             "backend": "local" if local else "harness", "harness": harness}
 
@@ -502,7 +527,7 @@ def _running_version(sightings: list[dict]) -> str:
     return ""
 
 
-class QuickAskRequest(BaseModel):
+class QuickAskRequest(RequestIdentity):
     q: str = Field(min_length=1, max_length=500)
 
 
@@ -532,7 +557,7 @@ def ask_quick_look(
         "budget_usd": 0.0,
         "max_tokens": followup.MAX_TOKENS,
     }
-    job = runner.submit("quick_ask", params)
+    job = _identified_submit(runner, "quick_ask", params, body.client_request_id)
     return {"job_id": job, "kind": "quick_ask", "quick_job_id": job_id}
 
 

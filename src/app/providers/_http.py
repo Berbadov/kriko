@@ -11,6 +11,7 @@ import logging
 import threading
 import urllib.error
 import urllib.request
+from app.providers import network
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ def post_json_or_why(url: str, payload: dict, headers: dict,
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with network.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read().decode("utf-8", "replace")) or {}, ""
     except urllib.error.HTTPError as error:
         # The status is diagnostic and safe; the body may quote the request.
@@ -108,7 +109,7 @@ def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,
             count += 1
 
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with network.urlopen(request, timeout=timeout) as response:
             watcher_done = threading.Event()
             watcher = None
             if cancel_event is not None:

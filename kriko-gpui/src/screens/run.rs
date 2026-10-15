@@ -7,6 +7,7 @@
 //! the engine has no job, a quiet note stands in.
 
 use gpui::{
+    AnimationExt,
     div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba,
     Context, Div, FontWeight, Stateful, Styled, Window,
 };
@@ -77,7 +78,7 @@ fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
-    let mut page = div().flex().flex_col().gap(px(24.0));
+    let mut page = div().flex().flex_col().gap(px(SPACE_CARD));
 
     let job = app.live.run.current().cloned();
     match (&job, app.live.run.jobs_loaded) {
@@ -122,7 +123,7 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
                 card()
                     .flex()
                     .flex_col()
-                    .gap(px(12.0))
+                    .gap(px(8.0))
                     .child(eyebrow("Run"))
                     .child(empty),
             );
@@ -239,7 +240,7 @@ fn answer_card(job: &Job) -> Option<Div> {
     }
     let answer = job.answer.trim();
     let reason = job.no_answer_why.trim();
-    let mut result = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Agent answer"));
+    let mut result = card().flex().flex_col().gap(px(6.0)).child(eyebrow("Agent answer"));
     if answer.is_empty() {
         result = result.child(row_title("The agent returned no answer"));
         result = result.child(row_desc(if reason.is_empty() {
@@ -268,7 +269,7 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
         .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")))
         .filter(|value| value.is_object());
     let listing = result.get("listing").filter(|value| value.is_object());
-    let mut card = card().flex().flex_col().gap(px(10.0))
+    let mut card = card().flex().flex_col().gap(px(6.0))
         .child(eyebrow("Quick Look · saved evidence"));
     let saved_product = api::s(result, "product");
     let label = if !saved_product.is_empty() { saved_product }
@@ -652,7 +653,7 @@ fn follow_up_card(
             cx.notify();
         }
     });
-    let mut c = card().flex().flex_col().gap(px(10.0)).child(eyebrow("Ask a follow-up"))
+    let mut c = card().flex().flex_col().gap(px(6.0)).child(eyebrow("Ask a follow-up"))
         .child(row_desc("Follow-ups search the web using this product's saved listing details and Quick Look evidence."));
     for (ask_index, a) in app.live.run.quick_asks.iter().enumerate() {
         c = c.child(row_title(&a.question));
@@ -720,7 +721,7 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
             .flex()
             .items_center()
             .px(px(14.0))
-            .gap(px(10.0))
+            .gap(px(6.0))
             .when(live, |s| {
                 s.bg(linear_gradient(
                     180.0,
@@ -754,6 +755,18 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
                 }))
                 .child(name),
         );
+        // the live stage slides in with the segmented thumb's ease, keyed by
+        // the stage it names, so a new stage replays it
+        let seg: gpui::AnyElement = if live && motion {
+            seg.with_animation(
+                gpui::ElementId::NamedInteger(gpui::SharedString::from("run-stage"), at as u64),
+                gpui::Animation::new(std::time::Duration::from_millis(260)),
+                |el, t| el.relative().left(px(-12.0 * (1.0 - ease_mech(t)))),
+            )
+            .into_any_element()
+        } else {
+            seg.into_any_element()
+        };
         stepper = stepper.child(seg);
     }
     stepper = stepper.child(div().flex_1());
@@ -780,11 +793,8 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
         meta.push(format!("model {}", job.model));
     }
     let duration = job.duration_word();
-    if !duration.is_empty() {
+    if !duration.is_empty() && job.done {
         meta.push(duration);
-    }
-    if !job.done {
-        meta.push(format!("{}%", (job.progress * 100.0).round() as i64));
     }
 
     card()
@@ -801,7 +811,11 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
                 .child(app.live.run.task(job)),
         )
         .child(mono(&meta.join(" · "), DIM))
-        .when(!job.message.is_empty(), |c| c.child(row_desc(&job.message)))
+        .child(if job.done {
+            div().when(!job.message.is_empty(), |c| c.child(row_desc(&job.message))).into_any_element()
+        } else {
+            crate::screens::action_trail::action_trail(job, motion).into_any_element()
+        })
         .child(div().mt(px(8.0)).child(stepper))
 }
 
@@ -809,10 +823,10 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
 /// a new run that carries them.
 fn questions_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> gpui::AnyElement {
     let Some(att) = &job.attention else { return div().into_any_element() };
-    let mut c = card().flex().flex_col().gap(px(12.0));
+    let mut c = card().flex().flex_col().gap(px(8.0));
     c = c
         .child(
-            div().flex().items_center().justify_between().gap(px(12.0))
+            div().flex().items_center().justify_between().gap(px(8.0))
                 .child(eyebrow("Needs you"))
                 .child(tag(format!("run-needs-user-{}", job.id), TagState::Need, "Choose answers", motion)),
         )
@@ -857,7 +871,7 @@ fn questions_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>)
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .child(key("run-answer", "Run again with answers").on_click(go))
                 .child(row_desc("A new run that carries these answers.")),
         );
@@ -917,7 +931,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         s.open = !s.open;
         cx.notify();
     });
-    let mut c = card().flex().flex_col().gap(px(12.0)).child(
+    let mut c = card().flex().flex_col().gap(px(SPACE_CARD)).child(
         div()
             .flex()
             .items_center()
@@ -1113,17 +1127,21 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         .map(|h| h.label.clone())
         .unwrap_or_else(|| if job.harness.is_empty() { "Agent".to_string() } else { job.harness.clone() });
     let phase = job.lane_phase();
-    let progress = if job.stage() == Stage::Stored { 100.0 } else { job.progress * 100.0 };
+    let progress = if job.stage() == Stage::Stored {
+        100.0
+    } else {
+        app.live.run.bar_value(&job.id, job.progress, motion) * 100.0
+    };
     card()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(eyebrow("Agent"))
         .child(
             div()
                 .flex()
                 .items_center()
-                .gap(px(14.0))
+                .gap(px(SPACE_CARD))
                 .child(mark_tile("run-lane-tile", mark_for(agent), phase, 48.0, motion))
                 .child(
                     div()
@@ -1137,7 +1155,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
                                 .flex()
                                 .items_center()
                                 .justify_between()
-                                .gap(px(12.0))
+                                .gap(px(8.0))
                                 .child(row_title(&label))
                                 .child(phase_beat("run-lane-beat", phase, motion)),
                         )
@@ -1148,7 +1166,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .child(meter_live("run-lane-meter", progress, 28, !job.done, motion).flex_1())
                 .child(if job.done {
                     led_matrix(&CHECK5, INK_2, 3.0, 1.0)
@@ -1156,6 +1174,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
                     led_ripple("run-lane", motion)
                 }),
         )
+        .when(!job.done, |c| c.child(crate::screens::action_trail::compact_line(job, motion)))
 }
 
 #[cfg(test)]

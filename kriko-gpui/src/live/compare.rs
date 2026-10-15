@@ -18,6 +18,7 @@ use serde_json::json;
 
 use crate::api::{self, Value};
 use crate::app::{Kriko, Tab};
+use crate::live::knowledge::RUNS_MAX;
 use crate::marks::Phase;
 
 /// The most products that can be lined up at once.
@@ -200,7 +201,7 @@ impl QuestionRun {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum QState {
     Waiting,
     Researching,
@@ -234,6 +235,8 @@ impl QItem {
 /// on or after it was passed over.
 #[derive(Clone, Default)]
 pub struct QRun {
+    /// The engine job this row is following, by id; keys its eased bar.
+    pub job: String,
     /// 0..=100.
     pub progress: f32,
     pub phase: Option<Phase>,
@@ -299,6 +302,9 @@ pub struct State {
     pub queue_max: usize,
     pub queue_loaded: bool,
     pub queue_running: bool,
+    /// Workers still going, including ones winding down after Stop. The queue
+    /// is finished when the last of them returns, never when the first does.
+    pub queue_workers: usize,
     pub queue_auto: bool,
     pub queue_run: HashMap<String, QRun>,
     pub poller: bool,
@@ -1371,45 +1377,48 @@ impl Kriko {
         self.live.compare.queue_running = false;
     }
 
-    /// Start: each waiting product in order, one research job at a time.
+    /// Start: the waiting products in order, as many research jobs at once as
+    /// Settings → Runs allows (one unless the reader raised it). Each worker
+    /// takes the next waiting product the moment it is free; the pick marks the
+    /// product researching on the window's own thread, so two workers never
+    /// hold one. The engine keeps two runs on the same pack apart on its own.
     pub fn queue_start(&mut self, cx: &mut Context<Self>) {
+        let limit = self.run_concurrency.clamp(1, RUNS_MAX);
         let c = &mut self.live.compare;
-        if c.queue_running || !c.queue.iter().any(|q| q.state == QState::Waiting) {
+        // A stopped queue may still have workers finishing their last poll;
+        // starting over them would run more than the reader allowed.
+        if c.queue_running || c.queue_workers > 0 {
             return;
         }
+        let waiting = c.queue.iter().filter(|q| q.state == QState::Waiting).count();
+        if waiting == 0 {
+            return;
+        }
+        let workers = limit.min(waiting);
         c.queue_running = true;
+        c.queue_workers = workers;
         c.say = None;
         for run in c.queue_run.values_mut() {
             run.note = None;
         }
-        let harness = c.queue_harness.clone();
+        for _ in 0..workers {
+            self.queue_worker(cx);
+        }
+    }
+
+    /// One queue worker: takes waiting products one after another until none
+    /// is left or the queue is stopped. The last worker out closes the run.
+    fn queue_worker(&mut self, cx: &mut Context<Self>) {
+        let harness = self.live.compare.queue_harness.clone();
         cx.spawn(async move |this, cx| {
             let ex = cx.background_executor().clone();
             loop {
                 // the next waiting product not already passed over
                 let next = this
                     .update(cx, |this, cx| {
-                        let c = &mut this.live.compare;
-                        if !c.queue_running {
-                            return None;
-                        }
-                        let item = c
-                            .queue
-                            .iter()
-                            .find(|q| {
-                                q.state == QState::Waiting
-                                    && c.queue_run.get(&q.queue_id).map(|r| r.note.is_none()).unwrap_or(true)
-                            })
-                            .cloned()?;
-                        if let Some(q) = c.queue.iter_mut().find(|q| q.queue_id == item.queue_id) {
-                            q.state = QState::Researching;
-                        }
-                        c.queue_run.insert(
-                            item.queue_id.clone(),
-                            QRun { line: "finding the product".into(), ..QRun::default() },
-                        );
+                        let item = claim_next(&mut this.live.compare);
                         cx.notify();
-                        Some(item)
+                        item
                     })
                     .ok()
                     .flatten();
@@ -1490,6 +1499,7 @@ impl Kriko {
                                 this.live.compare.queue_run.insert(
                                     qid,
                                     QRun {
+                                        job: api::s(job, "job_id"),
                                         progress: (api::n(job, "progress").unwrap_or(0.0) * 100.0) as f32,
                                         phase: Some(phase_of(job)),
                                         line: doing_of(job),
@@ -1576,9 +1586,14 @@ impl Kriko {
                     }
                 }
             }
-            // finished, or stopped
+            // finished, or stopped; only the last worker out closes the run
             let _ = this.update(cx, |this, cx| {
-                this.live.compare.queue_running = false;
+                let c = &mut this.live.compare;
+                c.queue_workers = c.queue_workers.saturating_sub(1);
+                if c.queue_workers > 0 {
+                    return;
+                }
+                c.queue_running = false;
                 let done = this.live.compare.queue.iter().any(|q| q.state == QState::Done && !q.lookup_id.is_empty());
                 if this.live.compare.queue_auto && done {
                     this.queue_to_compare(cx);
@@ -1641,6 +1656,31 @@ impl Kriko {
             },
         );
     }
+}
+
+/// The next waiting product not already passed over, marked researching in
+/// the same step. Workers call this on the window's own thread, one at a
+/// time, so the marking is what keeps two of them off one product.
+fn claim_next(c: &mut State) -> Option<QItem> {
+    if !c.queue_running {
+        return None;
+    }
+    let item = c
+        .queue
+        .iter()
+        .find(|q| {
+            q.state == QState::Waiting
+                && c.queue_run.get(&q.queue_id).map(|r| r.note.is_none()).unwrap_or(true)
+        })
+        .cloned()?;
+    if let Some(q) = c.queue.iter_mut().find(|q| q.queue_id == item.queue_id) {
+        q.state = QState::Researching;
+    }
+    c.queue_run.insert(
+        item.queue_id.clone(),
+        QRun { line: "finding the product".into(), ..QRun::default() },
+    );
+    Some(item)
 }
 
 fn queue_passed_over(this: &mut Kriko, queue_id: &str, why: String) {
@@ -1745,6 +1785,59 @@ mod tests {
         let said = answer_lines(&[Some(&a), Some(&b)]).join(" ");
         assert!(said.contains("Fewest high-severity risks on record: B (1)"), "{said}");
         assert!(answer_lines(&[Some(&a), None]).is_empty(), "one column has nothing to compare");
+    }
+
+    fn queued(id: &str) -> QItem {
+        QItem {
+            queue_id: id.into(),
+            url: format!("https://example.test/{id}"),
+            name: id.into(),
+            lookup_id: String::new(),
+            origin: String::new(),
+            state: QState::Waiting,
+            added_at: String::new(),
+        }
+    }
+
+    fn running_queue(ids: &[&str]) -> State {
+        State {
+            queue: ids.iter().map(|id| queued(id)).collect(),
+            queue_running: true,
+            ..State::default()
+        }
+    }
+
+    #[test]
+    fn parallel_workers_claim_different_products() {
+        let mut c = running_queue(&["a", "b", "c"]);
+        let first = claim_next(&mut c).expect("a is waiting");
+        let second = claim_next(&mut c).expect("b is waiting");
+        assert_eq!((first.queue_id.as_str(), second.queue_id.as_str()), ("a", "b"));
+        assert_eq!(c.queue[0].state, QState::Researching);
+        assert_eq!(c.queue[1].state, QState::Researching);
+        assert_eq!(c.queue[2].state, QState::Waiting);
+        let third = claim_next(&mut c).expect("c is waiting");
+        assert_eq!(third.queue_id, "c");
+        assert!(claim_next(&mut c).is_none(), "nothing is left to claim");
+    }
+
+    #[test]
+    fn a_passed_over_product_is_not_claimed_again_in_the_same_run() {
+        let mut c = running_queue(&["a", "b"]);
+        let a = claim_next(&mut c).unwrap();
+        c.queue[0].state = QState::Waiting;
+        c.queue_run
+            .insert(a.queue_id, QRun { note: Some("not in your catalogs".into()), ..QRun::default() });
+        assert_eq!(claim_next(&mut c).unwrap().queue_id, "b");
+        assert!(claim_next(&mut c).is_none());
+    }
+
+    #[test]
+    fn a_stopped_queue_hands_out_nothing() {
+        let mut c = running_queue(&["a"]);
+        c.queue_running = false;
+        assert!(claim_next(&mut c).is_none());
+        assert_eq!(c.queue[0].state, QState::Waiting);
     }
 
     #[test]

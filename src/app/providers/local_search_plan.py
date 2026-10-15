@@ -31,7 +31,51 @@ ISSUE_WORDS: dict[str, tuple[str, ...]] = {
            "reparación defecto recurrente", "problemas uso prolongado foro"),
 }
 
+#: How a search engine is asked for each kind of source the reader can pick
+#: on the Agents tab (`prefs.SOURCE_KINDS`). A closed vocabulary of where
+#: evidence comes from, true of any category: no product appears in it. The
+#: forum angle is the language's own `issue_words`, so it is not listed here.
+KIND_TERMS: dict[str, str] = {
+    "reviews": "long term review problems",
+    "recalls": "recall service bulletin official notice",
+    "manufacturer": "official manual specifications",
+    "video": "video review teardown problems",
+    "news": "news problems reported",
+}
+
+#: What a quick look asks when the reader picked no kind: owner reports, a
+#: review angle, and the manual for the figures a buyer compares.
+DEFAULT_ANGLES = ("problems owner reports", "failures review",
+                  "specifications manual recalls")
+
 _YEAR = re.compile(r"^(?:19|20)\d{2}$")
+
+
+def quick_angles(kinds: list[str] | tuple[str, ...] = (), language: str = "en",
+                 limit: int = 3) -> list[str]:
+    """The words to add to a product's name for each quick-look search.
+
+    The reader's picked kinds come first, in the order the Agents tab lists
+    them, each as its own search so one kind cannot crowd out another. What is
+    left of `limit` is filled from the defaults, because "go to these first"
+    never meant "ask nowhere else". Without kinds in English this is the
+    fixed default set; in another language the owner-report angles are that
+    language's own words.
+    """
+    words = issue_words(language)
+    base = (DEFAULT_ANGLES if language.split("-")[0].lower() == "en"
+            else (words[0], words[1], DEFAULT_ANGLES[2]))
+    chosen: list[str] = []
+    for kind in kinds:
+        angle = words[0] if kind == "forums" else KIND_TERMS.get(kind, "")
+        if angle and angle not in chosen:
+            chosen.append(angle)
+    for angle in base:
+        if len(chosen) >= limit:
+            break
+        if angle not in chosen:
+            chosen.append(angle)
+    return chosen[:limit]
 
 
 def issue_words(language: str) -> tuple[str, ...]:
