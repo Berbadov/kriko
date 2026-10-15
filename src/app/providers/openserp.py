@@ -206,11 +206,11 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
     chosen = engine or DEFAULT_ENGINE
     stats = {"queries": 0, "hits": 0, "challenges": 0}
 
-    def search(query: str, limit: int = 5) -> list[dict]:
+    def search(query: str, limit: int = 5, engines: str = "") -> list[dict]:
         params = urllib.parse.urlencode(
             {
                 "text": query,
-                "engines": _engines_to_ask(chosen),
+                "engines": _engines_to_ask(engines or chosen),
                 "limit": max(1, int(limit)),
                 "format": "json",
                 "lang": language,
@@ -272,6 +272,10 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
         stats["hits"] += len(out)
         return out
 
+    #: What a caller may aim one query at. `engines=` on a call asks just those,
+    #: so several queries can run at once with no engine asked by two.
+    search.engines = [name.strip() for name in chosen.split(",")  # type: ignore[attr-defined]
+                      if name.strip()]
     search.stats = stats  # type: ignore[attr-defined]
     search.check_cancelled = None  # type: ignore[attr-defined]
     return search
