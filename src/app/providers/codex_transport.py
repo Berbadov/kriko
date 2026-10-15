@@ -258,11 +258,24 @@ class CodexTransport:
         self._lock = threading.RLock()
         self._available = threading.Condition(self._lock)
         self._starting = 0
-        self.max_workers = _agent_child_limit()
+        self._max_workers: int | None = None
         self._closed = False
         self._reaper_stop = threading.Event()
         self._reaper = threading.Thread(target=self._reap_loop, name="codex-worker-reaper", daemon=True)
         self._reaper.start()
+
+    @property
+    def max_workers(self) -> int:
+        """How many workers may be alive at once, read live from the host's
+        agent-child budget, so a raised run choice reaches Codex too.
+        Assigning it pins the value."""
+        if self._max_workers is not None:
+            return self._max_workers
+        return _agent_child_limit()
+
+    @max_workers.setter
+    def max_workers(self, value: int | None) -> None:
+        self._max_workers = value
 
     def run(
         self,
@@ -993,14 +1006,9 @@ def _total_memory_gib() -> float:
 
 
 def _agent_child_limit() -> int:
-    profiles = {"quiet": 1, "balanced": 2, "fast": 4}
-    profile = os.environ.get("KRIKO_RESOURCE_PROFILE", "balanced").strip().lower()
-    default = profiles.get(profile, 2)
-    try:
-        value = int(os.environ.get("KRIKO_MAX_AGENT_CHILDREN", default))
-    except (TypeError, ValueError):
-        value = default
-    return min(16, max(1, value))
+    from app.agentresources import agent_child_limit
+
+    return agent_child_limit()
 
 
 def _remaining(deadline: float) -> float:

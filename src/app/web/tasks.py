@@ -1910,7 +1910,7 @@ def pack_author(settings, params: dict, progress: Progress) -> dict:
 
     prompt += pagefacts.block(params.get("page"))
     prompt += _source_ceiling(params, settings.app_state_path)
-    reply = researcher.ask(prompt)
+    reply = _ask_author(researcher, prompt, category, params.get("page"))
     progress.check()
     progress.set(0.7, "writing the draft")
     # The reply is kept in the log whatever happens next: an agent that read
@@ -2865,9 +2865,7 @@ def _product_check(settings, researcher, params: dict, progress: Progress,
     # The pages the product's quick look reads, handed to a host-read agent
     # with the brief (`HarnessResearcher.ask_author`): a toolless session cannot
     # search for itself. Any other researcher is asked as before.
-    author = getattr(researcher, "ask_author", None)
-    reply = (author(prompt, product=product, page=params.get("page"))
-             if callable(author) else researcher.ask(prompt))
+    reply = _ask_author(researcher, prompt, product, params.get("page"))
     progress.check()
     progress.set(0.7, "writing the draft")
     progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
@@ -3019,7 +3017,9 @@ def pack_amend(settings, params: dict, progress: Progress) -> dict:
     if note:
         progress.log(f"asked for: {note}")
 
-    reply = researcher.ask(packauthor.amend_brief(state_of, note))
+    reply = _ask_author(
+        researcher, packauthor.amend_brief(state_of, note),
+        note or str(state_of.get("name") or slug), None)
     progress.check()
     progress.set(0.7, "merging the additions")
     progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
@@ -3124,6 +3124,16 @@ def _repair(conn, subject_id, pack_id, verdicts, findings, *, researcher, task,
     rejected += second.get("rejected", [])
     return {**verdicts, "accepted": accepted, "rejected": rejected,
             "summary": summarise(accepted, rejected)}
+
+
+def _ask_author(researcher, prompt: str, product: str, page) -> str:
+    """An authoring brief, answered from pages Kriko read when the agent is a
+    host-read one that cannot search for itself; any other researcher is asked
+    as before."""
+    author = getattr(researcher, "ask_author", None)
+    if callable(author):
+        return author(prompt, product=product, page=page)
+    return researcher.ask(prompt)
 
 
 def _disambiguate(settings, researcher, subject, params,
