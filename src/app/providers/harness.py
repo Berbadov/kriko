@@ -3195,12 +3195,17 @@ class HarnessResearcher(AgentResearcher):
             before_tokens = self.tokens_used
             answer_started = time.perf_counter()
             try:
-                if own_search and self.harness.protocol in TOOLLESS_PROTOCOLS:
+                if (not own_search and self.transport_mode != "exec" and
+                        self.harness.protocol in TOOLLESS_PROTOCOLS):
+                    # The host already read these pages, so this completion
+                    # does not need the CLI's web/MCP tools. Keep it on the
+                    # persistent, tool-less protocol even when auto mode is
+                    # selected. Native search below is the opposite case.
+                    reply = self.ask(full_prompt, allow_tools=False)
+                elif own_search and self.harness.protocol in TOOLLESS_PROTOCOLS:
                     if self.transport_mode == "auto":
                         # This one request explicitly asks the CLI to search.
-                        # The persistent protocol has no web grant, so choose
-                        # the process path, which has web tools, before the
-                        # prompt is delivered.
+                        # Select the capable process path before delivery.
                         previous_mode = self.transport_mode
                         self.transport_mode = "exec"
                         try:
@@ -3284,11 +3289,44 @@ class HarnessResearcher(AgentResearcher):
         category and reads back a proposed pack. The plane's value is the
         *sandboxed spawn* — the allowlist, the neutral working directory, the
         one MCP server that only reads a page — and that is worth reusing rather than
-        reimplementing next to it. `allow_tools=False` is a strict completion
-        request; this CLI adapter refuses it unless a protocol has a verified
-        way to disable every tool. It must never silently fall back to the
-        research allowlist.
+        reimplementing next to it. `allow_tools=False` pins Codex and Vibe to
+        their verified tool-less persistent protocols. A tool-dependent job
+        uses the capable process path in auto mode, or refuses before delivery
+        when persistent mode was explicitly requested.
         """
+        if self.transport_mode not in {"auto", "persistent", "exec"}:
+            raise ValueError("the agent transport must be auto, persistent, or exec")
+        if self.harness.protocol in TOOLLESS_PROTOCOLS:
+            if allow_tools:
+                if self.transport_mode == "persistent":
+                    raise NoHarness(
+                        f"{self.harness.label} persistent transport has web/MCP tools "
+                        "disabled; use auto or exec mode for a task that needs tools"
+                    )
+                if self.transport_mode == "auto":
+                    # Choose the capable path before sending the prompt. If
+                    # it fails, the caller can see that result; no delivered
+                    # persistent request is replayed through another transport.
+                    previous_mode = self.transport_mode
+                    self.transport_mode = "exec"
+                    try:
+                        return self._run(prompt + self.harness.ask_note)
+                    finally:
+                        self.transport_mode = previous_mode
+                return self._run(prompt + self.harness.ask_note)
+
+            if self.transport_mode == "exec":
+                raise NoHarness(
+                    f"{self.harness.label} exec transport enables tools; this task "
+                    "requires a verified tool-less completion"
+                )
+            previous_mode = self.transport_mode
+            self.transport_mode = "persistent"
+            try:
+                return self._run(prompt + self.harness.ask_note)
+            finally:
+                self.transport_mode = previous_mode
+
         if not allow_tools:
             raise NoHarness(
                 f"{self.harness.label} has no verified tool-less completion mode; "
