@@ -2382,6 +2382,9 @@ def _install_draft(settings, written: dict, progress: Progress) -> str:
     try:
         done = categorypack.install_draft(settings.store_path, slug)
     except Exception as exc:  # noqa: BLE001 — the draft is kept either way
+        # Kept on the result as well as in the log: the research queue shows
+        # the reason against the product, and a log is not where a reader looks.
+        written["install_error"] = str(exc)
         progress.log(f"kept as a draft, not installed: {exc}")
         return ""
     written["installed"] = True
@@ -2683,6 +2686,9 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
         unread: list[str] = []
         touched: dict[str, dict] = {}
         claims = 0
+        # The products this pass filed, by subject: the research queue and Compare
+        # read the result, so a filed product is one they can find (productchecks).
+        filed_subjects: list[dict] = []
         for position, look in enumerate(looks, start=1):
             progress.check()
             product = str((look["params"] or {}).get("product") or "").strip()
@@ -2736,6 +2742,9 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
                 continue
             done.append(look["job_id"])
             claims += written["claims_added"]
+            if isinstance(written.get("subject"), dict) and written["subject"].get("subject_id"):
+                filed_subjects.append({"subject_id": written["subject"]["subject_id"],
+                                       "pack_id": written["pack_id"]})
             if _changed(written):
                 touched[written["slug"]] = written
         shared = []
@@ -2753,7 +2762,8 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
                              if waiting else "")
                           + (f"; pages unreadable, try again later: {', '.join(unread[:3])}"
                              if unread else ""))
-        return {"filed_quick_looks": done, "claims_added": claims,
+        return {"filed_quick_looks": done, "filed_subjects": filed_subjects,
+                "claims_added": claims,
                 "needs_agent": needs_agent, "needs_categorization": needs_categorization,
                 "unread": unread, "packs": shared}
     finally:

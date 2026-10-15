@@ -634,53 +634,44 @@ fn doing_of(job: &Value) -> String {
     }
 }
 
-/// The product a queued row stands for, and how to ask about it afterwards.
+/// The product a queued row stands for. The engine decides it
+/// (`/api/queue/{id}/target`): the product a finished job produced when
+/// `job_id` is given, else the one the stored answer or the listing's title
+/// names. `Err` is the reason, in the engine's words; "not in your catalogs"
+/// is the one the queue researches a new product on.
 struct Target {
     subject_id: String,
     pack_id: String,
-    kind: String,
-    identity: Value,
 }
 
-/// A queued row's subject: the product its stored answer matched, else what
-/// the installed catalogs find for its name. `Err` is why there is none.
-fn resolve_target(item: &QItem) -> Result<Target, String> {
-    let mut subject_id = String::new();
-    if !item.lookup_id.is_empty() {
-        if let Ok(stored) = api::get(&format!("/api/lookup/{}", api::seg(&item.lookup_id))) {
-            let response = stored.get("response").cloned().unwrap_or(Value::Null);
-            subject_id = matched_subject(&response).unwrap_or_default();
-        }
+fn resolve_target(item: &QItem, job_id: &str) -> Result<Target, String> {
+    let mut path = format!("/api/queue/{}/target", api::seg(&item.queue_id));
+    if !job_id.is_empty() {
+        path = format!("{path}?job_id={}", api::seg(job_id));
     }
-    if subject_id.is_empty() {
-        let name = item.name.trim();
-        if name.is_empty() {
-            return Err("not in your catalogs".to_string());
-        }
-        let found = api::get(&format!("/api/search?q={}&limit=5", api::seg(name)))
-            .map_err(|e| e.message)?;
-        subject_id = api::arr(&found, "items")
-            .first()
-            .map(|i| api::s(i, "subject_id"))
-            .unwrap_or_default();
-    }
-    if subject_id.is_empty() {
-        return Err("not in your catalogs".to_string());
-    }
-    let subject = api::get(&format!("/api/subjects/{}", api::seg(&subject_id)))
-        .map_err(|e| e.message)?;
-    let mut identity = serde_json::Map::new();
-    for a in api::arr(&subject, "attributes") {
-        if api::b(a, "is_identity") {
-            identity.insert(api::s(a, "key"), Value::String(api::s(a, "value_text")));
-        }
-    }
+    let found = api::get(&path).map_err(|e| e.message)?;
     Ok(Target {
-        subject_id,
-        pack_id: api::s(&subject, "pack_id"),
-        kind: api::s(&subject, "kind"),
-        identity: Value::Object(identity),
+        subject_id: api::s(&found, "subject_id"),
+        pack_id: api::s(&found, "pack_id"),
     })
+}
+
+/// Puts a product back to waiting with the reason it was passed over, so the
+/// reason is kept by the engine and still reads after this window closes.
+async fn persist_passed_over(ex: &BackgroundExecutor, id: &str, why: &str) {
+    let body = json!({"state": "waiting", "note": why});
+    let path = format!("/api/queue/{}", api::seg(id));
+    let _ = bg(ex, move || api::request("PATCH", &path, Some(body))).await;
+}
+
+/// Why a research did not finish, in words the reader can act on: the state
+/// the engine ended it in, and what it said.
+fn passed_over_reason(outcome: &(String, String)) -> String {
+    if outcome.1.is_empty() {
+        format!("research {}", outcome.0)
+    } else {
+        format!("research {}: {}", outcome.0, outcome.1)
+    }
 }
 
 fn say_error<T>(this: &mut Kriko, reply: &Result<T, api::ApiError>) {
@@ -691,7 +682,7 @@ fn say_error<T>(this: &mut Kriko, reply: &Result<T, api::ApiError>) {
 impl Kriko {
     /// Everything Compare holds, asked for when the engine first answers.
     pub fn refresh_compare(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::get("/api/history?limit=50"), |this, reply, cx| {
+        self.fetch(cx, || api::get("/api/history?limit=200"), |this, reply, cx| {
             this.note(&reply);
             if let Ok(v) = reply {
                 this.live.compare.history = api::arr(&v, "items").iter().map(history_from).collect();
@@ -1316,6 +1307,12 @@ impl Kriko {
             if let Ok(v) = reply {
                 let c = &mut this.live.compare;
                 let mut items: Vec<QItem> = api::arr(&v, "items").iter().map(queued_from).collect();
+                // why each waiting row was passed over, as the engine kept it
+                let notes: Vec<(String, String)> = api::arr(&v, "items")
+                    .iter()
+                    .map(|i| (api::s(i, "queue_id"), api::s(i, "note")))
+                    .filter(|(_, note)| !note.is_empty())
+                    .collect();
                 // a row the engine says is researching, with nothing of ours
                 // working on it, is one an earlier run left behind
                 if !c.queue_running {
@@ -1331,6 +1328,17 @@ impl Kriko {
                 }
                 let c = &mut this.live.compare;
                 c.queue_run.retain(|id, _| items.iter().any(|i| i.queue_id == *id));
+                // a run in progress keeps its own words; the rest read the engine's
+                if !c.queue_running {
+                    for (id, note) in notes {
+                        if items.iter().any(|i| i.queue_id == id && i.state == QState::Waiting) {
+                            let run = c.queue_run.entry(id).or_default();
+                            if run.note.is_none() {
+                                run.note = Some(note);
+                            }
+                        }
+                    }
+                }
                 c.queue = items;
                 c.queue_max = api::n(&v, "max").unwrap_or(0.0) as usize;
                 c.queue_loaded = true;
@@ -1435,12 +1443,12 @@ impl Kriko {
 
                 // 1. which product is it
                 let it = item.clone();
-                let resolved = bg(&ex, move || resolve_target(&it)).await;
+                let resolved = bg(&ex, move || resolve_target(&it, "")).await;
                 let (mut target, draft_research) = match resolved {
                     Ok(t) => (Some(t), false),
                     Err(why) if why == "not in your catalogs" => (None, true),
                     Err(why) => {
-                        let _ = bg(&ex, patch("waiting", None, id.clone())).await;
+                        persist_passed_over(&ex, &id, &why).await;
                         let qid = id.clone();
                         let _ = this.update(cx, |this, cx| {
                             queue_passed_over(this, &qid, why);
@@ -1473,7 +1481,7 @@ impl Kriko {
                 let job_id = match started {
                     Ok(v) => api::s(&v, "job_id"),
                     Err(e) => {
-                        let _ = bg(&ex, patch("waiting", None, id.clone())).await;
+                        persist_passed_over(&ex, &id, &e.message).await;
                         let qid = id.clone();
                         let _ = this.update(cx, |this, cx| {
                             queue_passed_over(this, &qid, e.message);
@@ -1531,36 +1539,42 @@ impl Kriko {
                 }
 
                 // A new catalog product exists only after pack authoring has
-                // installed it. Resolve that subject before making its compare
-                // lookup, without launching a second research job.
+                // installed it. The engine names the product that job produced,
+                // and says why it is not installed when it is not.
                 if outcome.0 == "succeeded" && draft_research {
                     let it = item.clone();
-                    target = bg(&ex, move || resolve_target(&it)).await.ok();
-                    if target.is_none() {
-                        outcome = (
-                            "failed".into(),
-                            "Research finished, but the product is not in the installed catalogs yet."
-                                .into(),
-                        );
+                    let by_job = job_id.clone();
+                    match bg(&ex, move || resolve_target(&it, &by_job)).await {
+                        Ok(t) => target = Some(t),
+                        Err(why) => outcome = ("failed".into(), why),
                     }
                 }
 
-                // 4. the product's fresh answer, so Compare reads what was found
+                // 4. the product's saved check, so Compare reads what was found.
+                // The engine keeps one per product. A check that fails to save
+                // passes the product over with that reason, never a Done row
+                // with nothing to compare.
+                let mut saved: Option<(String, Option<usize>)> = None;
                 if outcome.0 == "succeeded" {
                     let found = target.expect("a successful queue run has a product");
-                    let lookup = bg(&ex, move || {
-                        api::post(
-                            "/api/lookup",
-                            json!({"kind": found.kind, "identity": found.identity}),
-                        )
+                    let subject = found.subject_id.clone();
+                    let check = bg(&ex, move || {
+                        api::post(&format!("/api/products/{}/check", api::seg(&subject)), json!({}))
                     })
                     .await;
-                    let (lookup_id, claims) = match &lookup {
-                        Ok(v) => (api::s(v, "lookup_id"), Some(api::arr(v, "claims").len())),
-                        Err(_) => (item.lookup_id.clone(), None),
-                    };
-                    let kept = (!lookup_id.is_empty()).then(|| lookup_id.clone());
-                    let _ = bg(&ex, patch("done", kept, id.clone())).await;
+                    match check {
+                        Ok(v) if !api::s(&v, "lookup_id").is_empty() => {
+                            saved = Some((api::s(&v, "lookup_id"), Some(api::arr(&v, "claims").len())));
+                        }
+                        Ok(_) => outcome = ("failed".into(), "the answer was not saved".into()),
+                        Err(e) => {
+                            outcome = ("failed".into(), format!("the answer could not be saved: {}", e.message))
+                        }
+                    }
+                }
+
+                if let Some((lookup_id, claims)) = saved {
+                    let _ = bg(&ex, patch("done", Some(lookup_id.clone()), id.clone())).await;
                     let qid = id.clone();
                     let _ = this.update(cx, |this, cx| {
                         let c = &mut this.live.compare;
@@ -1574,9 +1588,9 @@ impl Kriko {
                         cx.notify();
                     });
                 } else {
-                    let _ = bg(&ex, patch("waiting", None, id.clone())).await;
+                    let why = passed_over_reason(&outcome);
+                    persist_passed_over(&ex, &id, &why).await;
                     let qid = id.clone();
-                    let why = if outcome.1.is_empty() { outcome.0.clone() } else { outcome.1.clone() };
                     let _ = this.update(cx, |this, cx| {
                         queue_passed_over(this, &qid, why);
                         cx.notify();
@@ -1606,7 +1620,7 @@ impl Kriko {
     }
 
     fn refresh_history_for_compare(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::get("/api/history?limit=50"), |this, reply, _| {
+        self.fetch(cx, || api::get("/api/history?limit=200"), |this, reply, _| {
             if let Ok(v) = reply {
                 this.live.compare.history = api::arr(&v, "items").iter().map(history_from).collect();
             }

@@ -55,6 +55,7 @@ from app.web.routers import (
     marks,
     operations,
     packs,
+    products,
     queue,
     prefs as prefs_router,
     query,
@@ -116,6 +117,13 @@ async def lifespan(app: FastAPI):
     # so at startup is the difference between durable status and a row that
     # lies forever.
     app.state.jobs.recover()
+    # The same for the research queue: a product left being researched when the
+    # app closed has no worker coming back for it, so it waits again, with why.
+    queue_conn = state.connect(app.state.settings.app_state_path)
+    try:
+        state.recover_queue(queue_conn)
+    finally:
+        queue_conn.close()
     # And the same for the pipeline's own rows. A run left `running` is a run
     # that was killed — the process cannot resume one it has no memory of, and
     # a row that says `running` forever renders as a pipeline that never
@@ -265,6 +273,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         compare.router,
         compareq.router,
         queue.router,
+        products.router,
         marks.router,
         operations.router,
         sites.router,
