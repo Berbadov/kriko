@@ -257,6 +257,17 @@ fn answer_card(job: &Job) -> Option<Div> {
 /// Render the saved result separately from the narrated job log. This accepts
 /// every quick-look backend so a persisted result is still readable in
 /// history after the active run has gone away.
+/// The engine's one line on how the agent was reached (`telemetry.run.summary`:
+/// a reused worker or a fresh process, how long it took to be ready, and the
+/// share of its input the provider served from cache). Empty when none was kept.
+fn run_line(result: &Value) -> String {
+    result
+        .get("telemetry")
+        .and_then(|telemetry| telemetry.get("run"))
+        .map(|run| api::s(run, "summary"))
+        .unwrap_or_default()
+}
+
 pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str) -> Option<Div> {
     if result.is_null() {
         return None;
@@ -283,6 +294,10 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
         .unwrap_or_else(|| "token use not reported".into());
     card = card.child(row_desc(&format!("{} · {tokens} · {} sourced risk(s) · {} sourced product fact(s) · {} unsupported item(s) omitted",
         if model.is_empty() { "Model not reported" } else { &model }, risks.len(), specs.len(), dropped)));
+    let run_text = run_line(result);
+    if !run_text.is_empty() {
+        card = card.child(row_desc(&run_text));
+    }
     let diagnostic = result.get("diagnostic").unwrap_or(&Value::Null);
     let diagnostic_message = api::s(diagnostic, "message");
     if risks.is_empty() {
@@ -605,8 +620,18 @@ fn quick_look_empty_message(result: &Value, state: &str) -> String {
 
 #[cfg(test)]
 mod quick_look_result_tests {
-    use super::quick_look_empty_message;
+    use super::{quick_look_empty_message, run_line};
     use crate::api::Value;
+
+    #[test]
+    fn the_run_line_is_the_engine_summary_or_nothing() {
+        let saved: Value = serde_json::json!({
+            "telemetry": {"run": {"summary": "reused worker · started in 0.1 s"}}
+        });
+        assert_eq!(run_line(&saved), "reused worker · started in 0.1 s");
+        assert_eq!(run_line(&serde_json::json!({"telemetry": {}})), "");
+        assert_eq!(run_line(&serde_json::json!({})), "");
+    }
 
     #[test]
     fn an_empty_success_describes_coverage_without_claiming_the_product_is_clear() {

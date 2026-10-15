@@ -115,6 +115,54 @@ def test_claude_reads_cost_usage_and_text_from_the_agents_own_result(monkeypatch
     assert ledger.attempts(ids[0])[0]["delivery"] == "accepted"
 
 
+def test_a_reused_resident_claude_run_says_so_and_how_much_context_was_cached(monkeypatch, tmp_path):
+    researcher = _researcher(monkeypatch, tmp_path, "claude-code")
+    _profile(monkeypatch, researcher, "claude")
+    said: list[str] = []
+    researcher.on_action = said.append
+    usage = {"input_tokens": 600, "cache_creation_input_tokens": 0,
+             "cache_read_input_tokens": 9800, "output_tokens": 40}
+    envelope = {"type": "result", "is_error": False, "result": "done", "usage": usage}
+    metrics = {"reused_worker": True, "ready_ms": 412.0, "reset_ms": 412.0}
+    _install(monkeypatch, ResidentResult("done", "sess", "turn", usage, envelope, metrics))
+    assert researcher._run("Research it") == "done"
+    assert researcher.telemetry["run"] == {
+        "transport": "resident", "reused_session": True, "ready_ms": 412,
+        "context": {"input_tokens": 600, "cache_creation_tokens": 0,
+                    "cache_read_tokens": 9800, "output_tokens": 40},
+        "summary": "reused worker · started in 0.4 s · 9,800 of 10,400 input tokens cached",
+    }
+    assert said[-1] == researcher.telemetry["run"]["summary"]
+
+
+def test_a_new_resident_claude_worker_says_so_and_claims_no_cache_it_was_not_told_of(monkeypatch, tmp_path):
+    researcher = _researcher(monkeypatch, tmp_path, "claude-code")
+    _profile(monkeypatch, researcher, "claude")
+    envelope = {"type": "result", "is_error": False, "result": "done"}
+    metrics = {"reused_worker": False, "ready_ms": 2100.0}
+    _install(monkeypatch, ResidentResult("done", "sess", "turn", {}, envelope, metrics))
+    researcher._run("Research it")
+    run = researcher.telemetry["run"]
+    assert run["reused_session"] is False and run["transport"] == "resident"
+    assert run["context"] is None  # the CLI reported no usage, so none is claimed
+    assert run["summary"] == "new worker · started in 2.1 s"
+
+
+def test_a_fresh_process_run_records_its_start_and_the_cache_it_read(monkeypatch, tmp_path):
+    researcher = _researcher(monkeypatch, tmp_path, "claude-code")
+    # `_stream_owned` sets this from the first output line of the child.
+    researcher._ready_ms = 395.0
+    stdout = json.dumps({"type": "result", "is_error": False, "result": "ok", "usage": {
+        "input_tokens": 300, "cache_creation_input_tokens": 1000,
+        "cache_read_input_tokens": 4000, "output_tokens": 5}})
+    assert researcher._finish_process(0, stdout, "") == "ok"
+    run = researcher.telemetry["run"]
+    assert run["transport"] == "process" and run["reused_session"] is False
+    assert run["ready_ms"] == 395
+    assert run["context"]["cache_read_tokens"] == 4000
+    assert run["summary"] == "fresh process · started in 0.4 s · 4,000 of 5,300 input tokens cached"
+
+
 def test_claude_an_error_the_agent_reported_fails_the_run_as_it_does_from_a_process(monkeypatch, tmp_path):
     researcher = _researcher(monkeypatch, tmp_path, "claude-code")
     _profile(monkeypatch, researcher, "claude")

@@ -665,17 +665,40 @@ def test_the_spawn_asks_for_the_readers_own_configuration_to_be_left_out(
     """
     one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
     assert one.preferred == (
-        "--strict-mcp-config", "--safe-mode", "--include-partial-messages"
+        "--strict-mcp-config", "--safe-mode", "--include-partial-messages",
+        "--exclude-dynamic-system-prompt-sections",
     )
 
     found = harness_mod.locate(one) or one.executable
     monkeypatch.setitem(
         harness_mod._DECLARED, found,
         frozenset({"--strict-mcp-config", "--safe-mode", "--include-partial-messages",
-                   "--output-format"}),
+                   "--exclude-dynamic-system-prompt-sections", "--output-format"}),
     )
-    assert harness_mod.command_for(one)[-3:] == [
-        "--strict-mcp-config", "--safe-mode", "--include-partial-messages"]
+    assert harness_mod.command_for(one)[-4:] == [
+        "--strict-mcp-config", "--safe-mode", "--include-partial-messages",
+        "--exclude-dynamic-system-prompt-sections"]
+
+
+def test_a_claude_run_keeps_its_tools_inline_and_its_folder_out_of_the_prompt(monkeypatch):
+    """Two startup costs the CLI's own defaults add to every Claude run.
+
+    Tool search is on by default on 2.1.300: the first turn of a Sonnet run
+    was a `ToolSearch` call to load the two search tools, and the same
+    run's `--debug-file` said `mode=tst` where `ENABLE_TOOL_SEARCH=auto:100`
+    says `mode=standard`. The working folder of a process run is new every
+    time, and with the default prompt it sits in the system prompt, so the
+    cacheable prefix is never the same twice. Both are pinned here so a
+    later edit cannot quietly restore either default.
+    """
+    one = next(h for h in harness_mod.KNOWN if h.id == "claude-code")
+    assert one.env == {"ENABLE_TOOL_SEARCH": "auto:100"}
+    assert "--exclude-dynamic-system-prompt-sections" in one.preferred
+
+    found = harness_mod.locate(one) or one.executable
+    monkeypatch.setitem(harness_mod._HELP, found, "--output-format stream-json json")
+    monkeypatch.setitem(harness_mod._DECLARED, found, frozenset({"--output-format"}))
+    assert "--exclude-dynamic-system-prompt-sections" not in harness_mod.command_for(one)
 
 
 def test_a_claude_run_loads_only_the_tools_it_may_use(monkeypatch):
@@ -1463,8 +1486,11 @@ def test_narration_is_capped_and_says_that_it_stopped(tmp_path, monkeypatch):
     researcher = HarnessResearcher(one, timeout=30)
     researcher.on_action = seen.append
     researcher.gather(_task())
-    assert len(seen) == 6
-    assert "not shown" in seen[-1]
+    # The run's own facts close the log, after the narration and its cap.
+    assert seen[-1].startswith("fresh process")
+    narrated = seen[:-1]
+    assert len(narrated) == 6
+    assert "not shown" in narrated[-1]
 
 
 def test_a_silent_run_says_it_is_still_working(tmp_path, monkeypatch):
