@@ -12,10 +12,17 @@ import time
 
 import pytest
 
-from app import prefs
+from app import agentresources, prefs
 from app.web import state
 from app.web.jobs import EVERYTHING, JobRunner, claims
 from app.web.settings import Settings
+
+
+@pytest.fixture(autouse=True)
+def _no_child_floor_leaks():
+    """The agent-child budget is process-wide; a run raises it, a test must not keep it."""
+    yield
+    agentresources.set_agent_children_floor(0)
 
 
 @pytest.fixture
@@ -195,3 +202,60 @@ def test_claims_name_the_pack_from_the_jobs_own_params():
     assert claims("pack_author", {}) == claims("pack_amend", {"slug": "s"})
     assert claims("model_pull", {"model": "m"}) == {"model:m"}
     assert claims("never_heard_of_it", {"pack_id": "x"}) == {EVERYTHING}
+
+
+@pytest.mark.parametrize("width", [2, 3, 4])
+def test_n_runs_on_n_different_packs_all_overlap_at_width_n(settings, conn, width):
+    """Guard: the scheduler alone is not what serialised the reader's queue."""
+    state.put_settings(conn, {prefs.RUN_CONCURRENCY: width})
+    gate = Gate()
+    jobs = runner(settings, gate)
+    ids = [jobs.submit("research", {"pack_id": f"p{i}", "name": f"r{i}"}) for i in range(width)]
+    wait_until(lambda: len(gate.running) == width)
+    gate.release.set()
+    wait_all_done(conn, ids)
+    assert gate.peak == width
+    jobs.shutdown()
+
+
+def test_quick_looks_run_as_many_at_once_as_settings_say(settings, conn):
+    """Reproduction: the quick lane was a fixed pool of two, whatever Settings said."""
+    state.put_settings(conn, {prefs.RUN_CONCURRENCY: 4})
+    gate = Gate()
+    jobs = JobRunner(settings, {"quick_look": gate})
+    ids = [jobs.submit("quick_look", {"name": f"q{i}"}) for i in range(4)]
+    wait_until(lambda: len(gate.running) == 4)
+    gate.release.set()
+    wait_all_done(conn, ids)
+    assert gate.peak == 4
+    jobs.shutdown()
+
+
+def test_a_quick_look_beyond_the_setting_waits_and_says_why(settings, conn):
+    """Reproduction: beyond the pool of two, a quick look sat silently 'queued' with no reason."""
+    gate = Gate()
+    jobs = JobRunner(settings, {"quick_look": gate})
+    ids = [jobs.submit("quick_look", {"name": f"q{i}"}) for i in range(2)]
+    wait_until(lambda: len(gate.running) == 1)
+    time.sleep(0.2)
+    assert len(gate.running) == 1
+    second = state.get_job(conn, ids[1])
+    assert second["state"] == state.QUEUED
+    assert "at once" in second["message"]
+    gate.release.set()
+    wait_all_done(conn, ids)
+    assert gate.peak == 1
+    jobs.shutdown()
+
+
+def test_the_readers_choice_is_handed_to_the_agent_child_budget(settings, conn):
+    """Reproduction: four runs at once need four agent processes, not the profile's two."""
+    state.put_settings(conn, {prefs.RUN_CONCURRENCY: 4})
+    gate = Gate()
+    jobs = runner(settings, gate)
+    ids = [jobs.submit("research", {"pack_id": "p", "name": "a"})]
+    wait_until(lambda: "a" in gate.running)
+    assert agentresources.agent_child_limit() == 4
+    gate.release.set()
+    wait_all_done(conn, ids)
+    jobs.shutdown()

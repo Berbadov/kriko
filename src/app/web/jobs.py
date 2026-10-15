@@ -34,7 +34,15 @@ stream of small ones that keep slipping past it.
 call that writes nothing to the store, and the reader is waiting on the
 listing for it. Queued behind a forty-minute pack author — which it is
 usually submitted *beside* — it would be the slowness it exists to fix. So
-kinds in `QUICK_KINDS` get their own small pool, outside the limit above.
+kinds in `QUICK_KINDS` are counted apart from research, outside the limit
+above, and they too run as many at once as Settings says (a quick look that
+waits says why on its row, like any other).
+
+**The agents themselves.** Each run is an agent process, and the host caps
+those (`agentresources`, the agent-child budget). The job runner hands the
+reader's choice to that budget at every start, so the processes can be as many
+as the runs; without it, a choice of four ran two and the rest said "running"
+while they waited for a process.
 
 **Cooperative cancel.** Cancel sets a flag the handler reads between steps.
 Killing a thread mid-write is how a half-installed pack happens, so a running
@@ -53,7 +61,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from app import operations, prefs
+from app import agentresources, operations, prefs
 from app.agentledger import Ledger
 from app.version import app_version
 from kriko.store.db import connect
@@ -404,22 +412,32 @@ class JobRunner:
         # executor thread costs nothing.
         self._pool = ThreadPoolExecutor(
             max_workers=prefs.MAX_RUN_CONCURRENCY, thread_name_prefix="kriko-job")
-        self._quick = ThreadPoolExecutor(max_workers=2, thread_name_prefix="kriko-quick")
+        # Sized to the ceiling for the same reason, and gated by the choice in
+        # `_pump_quick`. It was a fixed two, so a quick look beyond two waited
+        # silently whatever Settings said.
+        self._quick = ThreadPoolExecutor(
+            max_workers=prefs.MAX_RUN_CONCURRENCY, thread_name_prefix="kriko-quick")
         self._lock = threading.Lock()
         self._retry_lock = threading.Lock()
         self._waiting: list[_Waiting] = []
         self._running: dict[str, frozenset[str]] = {}
+        self._quick_waiting: list[_Waiting] = []
+        #: Quick looks handed to the quick pool and not yet finished.
+        self._quick_running = 0
         self._closed = False
         self.ledger = Ledger(self.settings.app_state_path)
 
     def _limit(self) -> int:
+        """The reader's choice, read now; the agent-child budget follows it."""
         conn = self._connect()
         try:
-            return prefs.run_concurrency(conn)
+            limit = prefs.run_concurrency(conn)
         except sqlite3.Error:
-            return 1
+            limit = 1
         finally:
             conn.close()
+        agentresources.set_agent_children_floor(limit)
+        return limit
 
     def _pump(self) -> None:
         """Start every waiting job that may start now, oldest first.
@@ -470,6 +488,44 @@ class JobRunner:
                                       True, bool(one.said))
         finally:
             conn.close()
+        self._pump_quick()
+
+    def _pump_quick(self) -> None:
+        """Start waiting quick looks, as many at once as Settings allow.
+
+        Counted apart from research: a quick look must not queue behind a long
+        pack build it was submitted beside. The reader's number is the one
+        limit on each lane, so a choice of four means four of each at most.
+        """
+        limit = self._limit()
+        conn = self._connect()
+        try:
+            with self._lock:
+                if self._closed:
+                    return
+                live = state.live_job_ids(conn, [w.job_id for w in self._quick_waiting])
+                start: list[_Waiting] = []
+                keep: list[_Waiting] = []
+                for one in self._quick_waiting:
+                    # A row cancelled while it waited is dispatched anyway, so
+                    # `_run` sees the cancel and returns at once. It takes a
+                    # count, which `_done` gives back like any other.
+                    if one.job_id not in live or self._quick_running < limit:
+                        self._quick_running += 1
+                        start.append(one)
+                        continue
+                    reason = (f"waiting: {limit} run(s) at once already "
+                              "going; Settings → Runs sets how many")
+                    if reason != one.said:
+                        one.said = reason
+                        state.update_job(conn, one.job_id, message=reason)
+                    keep.append(one)
+                self._quick_waiting = keep
+                for one in start:
+                    self._quick.submit(self._run, one.job_id, one.kind, one.params,
+                                       True, bool(one.said))
+        finally:
+            conn.close()
 
     def _with_pack(self, params: dict) -> dict:
         """The params, with the pack named when only the subject was.
@@ -496,9 +552,12 @@ class JobRunner:
             store.close()
         return {**params, "pack_id": row[0]} if row else params
 
-    def _done(self, job_id: str) -> None:
+    def _done(self, job_id: str, kind: str = "") -> None:
         with self._lock:
-            self._running.pop(job_id, None)
+            if kind in QUICK_KINDS:
+                self._quick_running -= 1
+            else:
+                self._running.pop(job_id, None)
         self._pump()
 
     # Each job opens its own connection. sqlite3 connections belong to the
@@ -553,7 +612,9 @@ class JobRunner:
         if not manifest["created"]:
             return job_id
         if kind in QUICK_KINDS:
-            self._quick.submit(self._run, job_id, kind, params, False)
+            with self._lock:
+                self._quick_waiting.append(_Waiting(job_id, kind, params, frozenset()))
+            self._pump_quick()
             return job_id
         with self._lock:
             self._waiting.append(
@@ -655,7 +716,7 @@ class JobRunner:
             conn.close()
             self._idle_check()
             if lane:
-                self._done(job_id)
+                self._done(job_id, kind)
 
     def _idle_check(self) -> None:
         with self._lock:
@@ -677,10 +738,27 @@ class JobRunner:
         self._pump()
         return answer
 
+    def concurrency(self) -> dict[str, int]:
+        """What the scheduler is doing now, for the jobs and queue screens.
+
+        `running` is what this process has started and not finished, both
+        lanes; `queued` is what it is holding back; `concurrency` is the Settings
+        choice in force, clamped; `agent_slots` is the host's agent-process
+        budget, which is never below the choice unless an operator bounds it
+        by hand.
+        """
+        limit = self._limit()
+        with self._lock:
+            running = len(self._running) + self._quick_running
+            queued = len(self._waiting) + len(self._quick_waiting)
+        return {"running": running, "queued": queued, "concurrency": limit,
+                "agent_slots": agentresources.agent_child_limit()}
+
     def shutdown(self, wait: bool = False) -> None:
         with self._lock:
             self._closed = True
             self._waiting.clear()
+            self._quick_waiting.clear()
         self._pool.shutdown(wait=wait, cancel_futures=True)
         self._quick.shutdown(wait=wait, cancel_futures=True)
         if self._on_idle is not None:
