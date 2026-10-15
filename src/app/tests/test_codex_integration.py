@@ -139,6 +139,96 @@ def test_pre_delivery_unavailability_falls_back_only_in_auto_mode(monkeypatch, t
         researcher._run("one request")
 
 
+def test_tool_dependent_codex_ask_uses_exec_before_delivery_in_auto(monkeypatch, tmp_path):
+    researcher = _researcher(monkeypatch, tmp_path)
+    researcher.transport_mode = "auto"
+    observed = []
+    monkeypatch.setattr(
+        researcher, "_run",
+        lambda prompt: observed.append((researcher.transport_mode, prompt)) or "answer",
+    )
+
+    assert researcher.ask("Build a pack using the MCP catalog") == "answer"
+    assert observed[0][0] == "exec"
+    assert "Build a pack using the MCP catalog" in observed[0][1]
+    assert researcher.transport_mode == "auto"
+
+
+def test_tool_dependent_codex_ask_in_persistent_mode_refuses_before_delivery(
+    monkeypatch, tmp_path,
+):
+    researcher = _researcher(monkeypatch, tmp_path)
+    researcher.transport_mode = "persistent"
+    monkeypatch.setattr(researcher, "_run", lambda *_: pytest.fail("prompt was delivered"))
+
+    with pytest.raises(NoHarness, match="persistent transport has web/MCP tools disabled"):
+        researcher.ask("Build a pack using the MCP catalog")
+    assert researcher.transport_mode == "persistent"
+
+
+def test_toolless_codex_completion_uses_persistent_protocol_and_restores_auto(
+    monkeypatch, tmp_path,
+):
+    researcher = _researcher(monkeypatch, tmp_path)
+    researcher.transport_mode = "auto"
+    observed = []
+    monkeypatch.setattr(
+        researcher, "_run",
+        lambda prompt: observed.append((researcher.transport_mode, prompt)) or "answer",
+    )
+
+    assert researcher.ask("Classify this saved listing", allow_tools=False) == "answer"
+    assert observed[0][0] == "persistent"
+    assert "Classify this saved listing" in observed[0][1]
+    assert researcher.transport_mode == "auto"
+
+
+def test_host_read_codex_answer_uses_toolless_completion(monkeypatch, tmp_path):
+    researcher = _researcher(monkeypatch, tmp_path)
+    reader = SimpleNamespace(
+        page_titles={"https://example.com/manual": "Manual"},
+        search_coverage={"pages_read": 1},
+        telemetry={"stages": []},
+    )
+    monkeypatch.setattr(
+        researcher, "_read_web_pages",
+        lambda *args, **kwargs: (reader, [("https://example.com/manual", "host-read evidence")], None),
+    )
+    observed = []
+    monkeypatch.setattr(
+        researcher, "_run",
+        lambda prompt: observed.append((researcher.transport_mode, prompt)) or "grounded answer",
+    )
+
+    assert researcher._ask_with_pages(["query"], "research prompt") == "grounded answer"
+    assert observed[0][0] == "persistent"
+    assert "host-read evidence" in observed[0][1]
+    assert researcher.transport_mode == "auto"
+
+
+def test_host_read_codex_answer_respects_explicit_exec_mode(monkeypatch, tmp_path):
+    researcher = _researcher(monkeypatch, tmp_path)
+    researcher.transport_mode = "exec"
+    reader = SimpleNamespace(
+        page_titles={"https://example.com/manual": "Manual"},
+        search_coverage={"pages_read": 1},
+        telemetry={"stages": []},
+    )
+    monkeypatch.setattr(
+        researcher, "_read_web_pages",
+        lambda *args, **kwargs: (reader, [("https://example.com/manual", "host-read evidence")], None),
+    )
+    observed = []
+    monkeypatch.setattr(
+        researcher, "_run",
+        lambda prompt: observed.append((researcher.transport_mode, prompt)) or "grounded answer",
+    )
+
+    assert researcher._ask_with_pages(["query"], "research prompt") == "grounded answer"
+    assert observed[0][0] == "exec"
+    assert researcher.transport_mode == "exec"
+
+
 def _install_failed_host_reader(monkeypatch, researcher):
     reader = SimpleNamespace(
         page_titles={},
