@@ -140,6 +140,7 @@ impl Tab {
         match self {
             Tab::Extension => "Browser extension",
             Tab::Local => "Local LLM",
+            Tab::Chat => "Find a product",
             _ => self.key(),
         }
     }
@@ -150,7 +151,7 @@ impl Tab {
             Tab::Run => "One check, from question to stored claims, every step in the open.",
             Tab::History => "Every check you have run, with the evidence it was based on.",
             Tab::Compare => "Up to three subjects side by side, attribute by attribute.",
-            Tab::Chat => "Ask your own agent about what this app holds, and watch it look things up.",
+            Tab::Chat => "Describe what you need. Kriko finds the products that fit.",
             Tab::Extension => "Send pages from your browser straight into Kriko's knowledge.",
             Tab::Overview => "What the packs know, and where they run thin.",
             Tab::Browse => "Every subject, attribute and claim in the local store.",
