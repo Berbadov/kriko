@@ -19,6 +19,7 @@ from typing import Any
 
 import pytest
 
+from app import agentresources
 from app.providers.codex_transport import DeliveryUncertain, TransportUnavailable, TurnCancelled
 from app.providers.resident import (
     ResidentError,
@@ -59,6 +60,11 @@ for line in sys.stdin:
         continue
     send({"type": "system", "subtype": "init", "session_id": session, "model": "fake"})
     send({"type": "rate_limit_event"})
+    if mode == "gate":
+        # Hold the answer until the test opens the gate: lets a test count
+        # how many workers are alive while none of them has finished.
+        while not os.path.exists(os.environ["FAKE_GATE"]):
+            time.sleep(0.02)
     if mode in ("hang", "hang_then_stop"):
         continue
     if mode == "crash":
@@ -244,6 +250,48 @@ def test_claude_profiles_that_differ_get_their_own_workers(claude) -> None:
     pool.run(_profile("claude", tmp_path, model="b"), ResidentRequest("hello"))
     pool.run(_profile("claude", tmp_path, model="b"), ResidentRequest("hello"))
     assert factory.starts == 2
+
+
+def test_four_reader_runs_each_get_their_own_agent_process_at_once(tmp_path: Path) -> None:
+    """Reproduction: with the reader's choice of four, four runs must be four processes.
+
+    The agent-child budget was the profile's two, so the third and fourth run
+    waited for a worker while the job said it was running. Each run is busy on
+    its own worker here; none is reused, so the count is the number of
+    processes alive while none has answered.
+    """
+    script = tmp_path / "claude.py"
+    script.write_text(FAKE_CLAUDE, encoding="utf-8")
+    factory = Factory(script)
+    pool = ResidentTransport(popen=factory, idle_seconds=600, low_memory_idle_seconds=600)
+    gate = tmp_path / "gate-open"
+    base = _profile("claude", tmp_path, mode="gate")
+    profile = ResidentProfile(base.wire, base.argv, base.cwd, {**base.env, "FAKE_GATE": str(gate)})
+    errors: list[BaseException] = []
+
+    def ask() -> None:
+        try:
+            pool.run(profile, ResidentRequest("hello", timeout=60))
+        except BaseException as exc:  # noqa: BLE001 - reported by the assertion below
+            errors.append(exc)
+
+    agentresources.set_agent_children_floor(4)
+    threads = [threading.Thread(target=ask) for _ in range(4)]
+    try:
+        for thread in threads:
+            thread.start()
+        deadline = time.monotonic() + 20
+        while factory.starts < 4 and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert factory.starts == 4
+    finally:
+        gate.write_text("open", encoding="utf-8")
+        for thread in threads:
+            thread.join(30)
+        pool.close()
+        agentresources.set_agent_children_floor(0)
+    assert not any(thread.is_alive() for thread in threads)
+    assert errors == []
 
 
 def test_claude_lines_longer_than_a_default_limit_are_read(claude) -> None:
