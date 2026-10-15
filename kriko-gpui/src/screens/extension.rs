@@ -225,7 +225,7 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     }
 
     let firefox_path = e.firefox_path.clone();
-    let firefox = card().flex().flex_col().gap(px(10.0))
+    let firefox = card().flex().flex_col().gap(px(6.0))
         .child(eyebrow("Firefox"))
         .child(row_desc("Firefox 140 or newer. Prepare the add-on, then open about:debugging#/runtime/this-firefox and choose Load Temporary Add-on. Choose manifest.json below."))
         .child(mono(&e.firefox_path, MUTED))
@@ -281,7 +281,7 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
         .child(ghost("ext-check", if k.ext_checking { "Checking…" } else { "Check again" }).flex_none().on_click(check))
                 // flex_1 and min_w(0) so the sentence wraps inside the card.
                 .child(div().flex_1().min_w(px(0.0)).child(row_desc(
@@ -292,7 +292,7 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     div()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .children(stale_notice)
         .children(next_step)
         // The steps most browsers take come first; Firefox's own path, which
