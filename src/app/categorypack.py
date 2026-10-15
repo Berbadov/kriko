@@ -445,8 +445,8 @@ def attach(store_path, slug: str, product: str, sourced: list[dict], *,
         if row is None:
             row = pick_subject(subjects, product, floor=0.75)
         out: dict[str, Any] = {"subject": None, "claims_added": 0, "evidence_added": 0,
-               "refused": [], "written": []}
-        if row is None or not sourced:
+               "subject_claims": 0, "refused": [], "written": []}
+        if row is None:
             return out
         kind = str(row.get("kind") or "")
         identity = dict(row.get("identity") or {})
@@ -460,6 +460,7 @@ def attach(store_path, slug: str, product: str, sourced: list[dict], *,
         domains = _declared_domains(root)
         claims = _yaml_rows(root, "data/claims.yaml")
         index: dict[str, int] = {}
+        held = 0
         for pos, existing in enumerate(claims):
             if not isinstance(existing, dict) or not isinstance(existing.get("subject"), dict):
                 continue
@@ -471,6 +472,13 @@ def attach(store_path, slug: str, product: str, sourced: list[dict], *,
                 index[ids.claim_id(sid, existing.get("kind", ""),
                                    existing.get("domain", ""),
                                    (primary or {}).get("title", ""))] = pos
+            if sid == subject_id:
+                held += 1
+        # What the subject holds, counted even when nothing is sourced now: a
+        # product whose risks all fail to check still keeps the claims it had.
+        out["subject_claims"] = held
+        if not sourced:
+            return out
 
         changed = False
         for item in sourced:
@@ -513,6 +521,9 @@ def attach(store_path, slug: str, product: str, sourced: list[dict], *,
                     have.append(ev)
                     out["evidence_added"] += 1
                     changed = True
+        # Every claim added above is on this subject, so it holds what it held
+        # plus what this call added.
+        out["subject_claims"] = held + out["claims_added"]
         if changed:
             out["written"].append(packdraft.write(
                 store_path, slug=slug, path="data/claims.yaml",
