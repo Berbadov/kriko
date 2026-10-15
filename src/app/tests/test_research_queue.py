@@ -79,6 +79,8 @@ def test_history_keeps_completed_and_removed_queue_work_after_restart(tmp_path):
     client = _client(tmp_path)
     item = client.post("/api/queue", json={"url": "https://shop.example/1", "name": "Widget"}).json()["item"]
     conn = state.connect(tmp_path / "app.sqlite")
+    # Researched first, as the worker does: a row cannot go from waiting to done.
+    state.update_queued(conn, item["queue_id"], state="researching")
     state.update_queued(conn, item["queue_id"], state="done")
     conn.close()
     client.delete(f"/api/queue/{item['queue_id']}")
@@ -112,3 +114,73 @@ def test_a_state_the_queue_does_not_have_is_refused_and_a_gone_row_is_missing(tm
 
     assert client.patch(f"/api/queue/{item['queue_id']}", json={"state": "lost"}).status_code == 422
     assert client.patch("/api/queue/nope", json={"state": "done"}).status_code == 404
+
+
+# ---- the queue's state machine ------------------------------------------
+#
+# A row moves waiting -> researching -> (done | waiting), and a finished row
+# goes back to waiting when the reader presses Add to queue on it again. Any
+# other move is refused, so a row cannot be finished without having been
+# researched, and cannot be researched twice at once.
+
+
+def _queued(client, name="P", url="https://shop.example/1"):
+    return client.post("/api/queue", json={"url": url, "name": name}).json()["item"]
+
+
+def test_pressing_add_again_on_a_finished_product_queues_it_again(tmp_path):
+    client = _client(tmp_path)
+    item = _queued(client, url="https://shop.example/1")
+    path = f"/api/queue/{item['queue_id']}"
+    client.patch(path, json={"state": "researching"})
+    client.patch(path, json={"state": "done", "lookup_id": "fresh"})
+
+    again = client.post("/api/queue", json={"url": "https://shop.example/1", "name": "P"}).json()
+
+    assert again["added"] is False
+    assert again["requeued"] is True
+    row = client.get("/api/queue").json()["items"][0]
+    assert (row["state"], row["lookup_id"]) == ("waiting", "fresh")
+
+
+def test_a_move_the_queue_does_not_allow_is_refused(tmp_path):
+    client = _client(tmp_path)
+    item = _queued(client)
+    path = f"/api/queue/{item['queue_id']}"
+
+    # waiting cannot jump straight to done: nothing was researched
+    assert client.patch(path, json={"state": "done"}).status_code == 409
+    client.patch(path, json={"state": "researching"})
+    client.patch(path, json={"state": "done"})
+    # done cannot go back to researching: it is queued again first
+    assert client.patch(path, json={"state": "researching"}).status_code == 409
+    assert client.get("/api/queue").json()["items"][0]["state"] == "done"
+
+
+def test_a_passed_over_reason_is_kept_on_the_row_until_it_is_claimed_again(tmp_path):
+    client = _client(tmp_path)
+    item = _queued(client)
+    path = f"/api/queue/{item['queue_id']}"
+
+    client.patch(path, json={"state": "waiting",
+                             "note": "research failed: the agent printed nothing"})
+    kept = client.get("/api/queue").json()["items"][0]
+    assert kept["note"] == "research failed: the agent printed nothing"
+
+    client.patch(path, json={"state": "researching"})
+    assert client.get("/api/queue").json()["items"][0]["note"] == ""
+
+
+def test_a_row_left_researching_by_a_closed_app_is_waiting_again_at_startup(tmp_path):
+    client = _client(tmp_path)
+    item = _queued(client)
+    client.patch(f"/api/queue/{item['queue_id']}", json={"state": "researching"})
+
+    conn = state.connect(tmp_path / "app.sqlite")
+    try:
+        assert state.recover_queue(conn) == 1
+    finally:
+        conn.close()
+    row = client.get("/api/queue").json()["items"][0]
+    assert row["state"] == "waiting"
+    assert "stopped" in row["note"]
