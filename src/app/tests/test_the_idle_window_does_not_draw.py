@@ -146,3 +146,20 @@ def test_a_waiting_mark_rests():
 def test_the_page_head_does_not_breathe():
     veil = _block(_code(SRC / "theme.rs"), "fn sky_veil")
     assert "with_animation" not in veil
+
+
+def test_a_bar_asks_for_frames_only_from_render_while_it_moves():
+    """A job's bar eases a frame at a time (motion.rs). `render` advances the
+    bars and asks for the next frame only while one still moves, so a window
+    with no job running asks for nothing. The other frame requests in the
+    crate are one-shot easings that stop once they settle; nothing else may
+    advance the bars, or a frame would be asked for outside the render."""
+    app = _code(SRC / "app.rs")
+    render = _block(app, "impl Render for Kriko")
+    assert render.index("advance_bars(self.motion)") < render.index("request_animation_frame(")
+    callers = sorted(
+        path.relative_to(SRC).as_posix()
+        for path in _sources()
+        if "advance_bars(" in _code(path)
+    )
+    assert callers == ["app.rs", "live/run.rs"], callers

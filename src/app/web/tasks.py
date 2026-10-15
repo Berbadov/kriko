@@ -15,9 +15,11 @@ the whole point of the jobs layer.
 import importlib
 import json
 import secrets
+import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import asdict, replace
+from typing import cast
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -267,6 +269,11 @@ def _wire_researcher_text(researcher, progress: Progress) -> None:
     draft = getattr(progress, "draft", None)
     if hasattr(researcher, "on_text") and callable(draft):
         researcher.on_text = draft
+    if hasattr(researcher, "agent_ledger"):
+        researcher.agent_ledger = getattr(progress, "ledger", None)
+        researcher.agent_run_id = getattr(progress, "run_id", "")
+        if researcher.app_state_path is None:
+            researcher.app_state_path = getattr(getattr(progress, "ledger", None), "db_path", None)
 
 
 def _local_structured_completer(settings, params: dict, progress: Progress):
@@ -428,6 +435,37 @@ def _research_options(params: dict, app_state_path=None) -> dict:
     finally:
         if conn is not None:
             conn.close()
+
+
+def _apply_source_options(researcher, params: dict, app_state_path=None) -> None:
+    """Hand a CLI agent what the reader set for every agent run.
+
+    The source count, the kinds of source to go to first, and the language
+    answers are written in. A run's own value wins; otherwise the Agents tab
+    and Settings apply. The local plane takes these from its own plan
+    (`_local_asker`); a CLI has no flag for any of them, so they are set on the
+    researcher, which turns them into queries, page limits and prompt lines.
+    """
+    from app import prefs
+
+    wanted = _research_options(params, app_state_path)
+    if wanted["sources"] > 0:
+        researcher.max_documents = wanted["sources"]
+    researcher.source_kinds = list(wanted["kinds"])
+    researcher.source_instructions = _source_kinds_line(wanted["kinds"])
+    language = str(params.get("output_language") or "").strip()
+    path = app_state_path or params.get("app_state_path")
+    if not language and path:
+        try:
+            conn = state.connect(path)
+        except Exception:  # noqa: BLE001 - an unreadable preference is no preference
+            conn = None
+        if conn is not None:
+            try:
+                language = prefs.read(conn).get(prefs.LOCAL_OUTPUT_LANGUAGE, "")
+            finally:
+                conn.close()
+    researcher.output_language = language or "auto"
 
 
 def _cap_agent(researcher, params: dict) -> None:
@@ -1983,15 +2021,18 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             preferred=str(params.get("harness") or ""),
             app_state_path=settings.app_state_path,
             timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
-            # Low, whatever the reader's everyday dial says: this is the chat-speed
-            # pass. A CLI that does not declare `low` has it dropped rather than
-            # refused (`harness_researcher`), so the dial never costs the run.
-            effort="low",
+            # The reader's level for this CLI wins (Agents tab); `low` is only
+            # what a chat-speed pass uses when nobody chose one. A CLI that does
+            # not declare it has it dropped rather than refused
+            # (`harness_researcher`), so the dial never costs the run.
+            effort=str(params.get("effort") or ""),
+            default_effort="low",
         )
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
         _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
+        _apply_source_options(researcher, params, settings.app_state_path)
 
     catalog_context_error = ""
     try:
@@ -2285,7 +2326,8 @@ def categorize_quick_look(settings, params: dict, progress: Progress) -> dict:
                     app_state_path=settings.app_state_path,
                     timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
                     model=str(params.get("model") or ""),
-                    effort="low",
+                    effort=str(params.get("effort") or ""),
+                    default_effort="low",
                 )
                 _cap_agent(researcher, {**params, "budget_usd": CATEGORIZATION_BUDGET_USD})
                 researcher.on_action = progress.log
@@ -3678,6 +3720,118 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
             "agent": agent, "sources": sources}
 
 
+class _QuietProgress:
+    """The job's channel without `set`, for an agent that would overwrite the
+    chat turn's own progress with its generic "asking" line."""
+
+    def __init__(self, progress: Progress):
+        self._progress = progress
+
+    def set(self, progress: float, message: str = "") -> None:
+        pass
+
+    def log(self, line: str) -> None:
+        self._progress.log(line)
+
+    def check(self) -> None:
+        self._progress.check()
+
+    def partial(self, result: dict) -> None:
+        self._progress.partial(result)
+
+    def replies(self) -> list[str]:
+        return self._progress.replies()
+
+
+class _TurnHooks:
+    """What a chat turn reports through: every snapshot names its thread,
+    its messages and the agent that is answering."""
+
+    def __init__(self, progress: Progress, ids: dict, agent: dict):
+        self._progress = progress
+        self._ids = ids
+        self._agent = agent
+
+    def set(self, progress: float, message: str = "") -> None:
+        self._progress.set(progress, message)
+
+    def log(self, line: str) -> None:
+        self._progress.log(line)
+
+    def check(self) -> None:
+        self._progress.check()
+
+    def partial(self, snapshot: dict) -> None:
+        self._progress.partial({**self._ids, "agent": dict(self._agent), **snapshot})
+
+
+def chat_ask(settings, params: dict, progress: Progress) -> dict:
+    """One turn of a conversation with the reader's own agent (app/chat.py).
+
+    The agent is told the names of the app's records and reads each one only
+    when it asks. The answer is written to the thread in `app.sqlite` as an
+    agent message, with the steps that produced it. Nothing is written to the
+    knowledge store: a chat answer is the reader's, never a claim.
+    """
+    from app import chat, chatdata
+
+    thread_id = str(params.get("thread_id") or "").strip()
+    message_id = str(params.get("message_id") or "").strip()
+    text = str(params.get("text") or "").strip()
+    if not (thread_id and text):
+        raise ValueError("which conversation? `thread_id` and the message are required")
+    app_state = state.connect(settings.app_state_path)
+    try:
+        if state.get_chat_thread(app_state, thread_id) is None:
+            raise ValueError(f"no conversation {thread_id}")
+        history = state.chat_history(app_state, thread_id, before=message_id)
+        try:
+            store = connect(settings.store_path, read_only=True)
+        except (sqlite3.Error, OSError):
+            store = None  # no packs installed yet: the sources say so, nothing fails
+        ctx = chatdata.Context(store=store, app=app_state)
+        agent: dict = {}
+        # The same channel as the job, minus `set`. `_ask_about_checks` takes a
+        # Progress; the cast says the one thing it may not do is set progress.
+        quiet = cast(Progress, _QuietProgress(progress))
+        try:
+            if _use_local_ask(settings, params):
+                completer = _local_structured_completer(settings, params, progress)
+                agent.update(id="local", label="Local model",
+                             model=str(getattr(completer, "model", "")))
+                ask = completer
+            else:
+                def ask(prompt: str) -> str:
+                    reply, _ = _ask_about_checks(settings, {**params, "question": text},
+                                                 quiet, prompt, on_agent=agent.update)
+                    return reply
+
+            hooks = _TurnHooks(progress, {"thread_id": thread_id, "message_id": message_id},
+                               agent)
+            result = chat.run_turn(text, ask=ask, ctx=ctx, history=history, hooks=hooks)
+        finally:
+            if store is not None:
+                store.close()
+        if not result["answer"]:
+            raise ValueError("The agent returned no answer. Try asking again.")
+        stored = state.add_chat_message(
+            app_state, thread_id, role="agent", text=result["answer"],
+            steps=result["steps"], sources=result["sources"], job_id=progress.job_id)
+    finally:
+        app_state.close()
+    progress.partial({"thread_id": thread_id, "message_id": message_id,
+                      "agent": dict(agent), "steps": result["steps"],
+                      "answer": result["answer"], "sources": result["sources"]})
+    progress.set(1.0, "answered")
+    return {
+        "thread_id": thread_id, "message_id": stored["message_id"],
+        "reader_message_id": message_id, "answer": result["answer"],
+        "steps": result["steps"], "sources": result["sources"], "agent": agent,
+        "agent_calls": result["agent_calls"], "search_rounds": result["search_rounds"],
+        "fallback": result["fallback"],
+    }
+
+
 def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       on_agent: Callable[[dict], None] | None = None,
                       timeout: float = 0.0, effort: str = "",
@@ -3706,12 +3860,14 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
             preferred=str(params.get("harness") or ""),
             app_state_path=settings.app_state_path,
             timeout=float(params.get("timeout_seconds") or timeout or COMPARE_ASK_TIMEOUT_SECONDS),
-            effort=effort,
+            effort=str(params.get("effort") or ""),
+            default_effort=effort,
         )
         _cap_agent(researcher, params)
         researcher.on_action = progress.log
         _wire_researcher_text(researcher, progress)
         researcher.check_cancelled = progress.check
+        _apply_source_options(researcher, params, settings.app_state_path)
     # Read the resolved researcher: a requested CLI can fall back to a
     # different one. CLI `model` is its id, whereas API/local `model`
     # names the model; only show the CLI's explicitly selected model.
@@ -4052,4 +4208,5 @@ HANDLERS = {
     "compare_ask": compare_ask,
     "model_pull": model_pull,
     "lookup_ask": lookup_ask,
+    "chat_ask": chat_ask,
 }

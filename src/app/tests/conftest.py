@@ -106,14 +106,14 @@ def no_test_starts_a_real_coding_agent(monkeypatch):
     real = harness.HarnessResearcher._run
     theirs = {h.executable for h in harness.KNOWN}
 
-    def guarded(self, prompt):
+    def guarded(self, prompt, *args, **kwargs):
         executable = str(getattr(self.harness, "executable", ""))
         if Path(executable).name in theirs:
             raise AssertionError(
                 f"a test tried to start {executable!r}, the reader's own coding "
                 "agent. Name a plane (`backend: 'agent'`), or point the harness "
                 "at a fake CLI as `_fake_cli` does.")
-        return real(self, prompt)
+        return real(self, prompt, *args, **kwargs)
 
     monkeypatch.setattr(harness.HarnessResearcher, "_run", guarded)
 

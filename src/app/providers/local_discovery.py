@@ -21,6 +21,9 @@ import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+from app.agentresources import slot
+from app.providers import network
+
 #: name, base address. Where to look, not what is there.
 CANDIDATES = (
     ("Ollama", "http://127.0.0.1:11434"),
@@ -43,7 +46,7 @@ def _get(url: str, timeout: float, *, health: bool = False):
     """`(reached, payload)`. Reached means *something* answered over HTTP,
     including a 404, because a server that refuses one path is still up."""
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with network.urlopen(url, timeout=timeout) as response:
             raw = response.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as error:
         # OpenSERP may return 503 for partial engine degradation. Preserve its
@@ -82,14 +85,15 @@ def probe(url: str, timeout: float = PROBE_TIMEOUT) -> dict:
     """
     base = base_of(url)
     up = False
-    for path in ("/v1/models", "/models"):
-        reached, payload = _get(base + path, timeout)
-        up = up or reached
-        models = _ids(payload)
-        if models is not None:
-            return {"url": base, "up": True, "models": models}
-        if not reached:
-            break  # nothing listens here; the second path cannot differ
+    with slot("probe", base, timeout=timeout * 2):
+        for path in ("/v1/models", "/models"):
+            reached, payload = _get(base + path, timeout)
+            up = up or reached
+            models = _ids(payload)
+            if models is not None:
+                return {"url": base, "up": True, "models": models}
+            if not reached:
+                break  # nothing listens here; the second path cannot differ
     return {"url": base, "up": up, "models": []}
 
 

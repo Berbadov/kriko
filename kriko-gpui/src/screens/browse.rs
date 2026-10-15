@@ -82,7 +82,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
     let mut d = card()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(eyebrow("Evidence"))
         .child(
             div()
@@ -101,7 +101,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
                     .flex()
                     .items_start()
                     .justify_between()
-                    .gap(px(12.0))
+                    .gap(px(8.0))
                     .child(
                         div()
                             .font_family(SANS)
@@ -129,7 +129,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
             div()
                 .flex()
                 .items_start()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(
                     div()
                         .flex_1()
@@ -199,7 +199,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let mut filter_drawer = card()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(8.0))
         .child(
             div()
                 .flex()
@@ -259,7 +259,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let head = div()
         .flex()
         .items_center()
-        .gap(px(16.0))
+        .gap(px(8.0))
         .flex_wrap()
         .child(div().flex_1().min_w(px(280.0)).child(search))
         .child(filter_button)
@@ -269,7 +269,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         return div()
             .flex()
             .flex_col()
-            .gap(px(24.0))
+            .gap(px(SPACE_SECTION))
             .child(head)
             .child(empty_note("Reading the subjects from the store."));
     }
@@ -371,8 +371,8 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                         .id(("browse-list-row", ri))
                         .flex()
                         .items_center()
-                        .gap(px(14.0))
-                        .py(px(10.0))
+                        .gap(px(SPACE_CARD))
+                        .py(px(4.0))
                         .px(px(16.0))
                         .mx(px(-16.0))
                         .rounded(px(10.0))
@@ -391,7 +391,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         }
         2 => {
             // grid: subject tiles
-            let mut grid = div().flex().flex_wrap().gap(px(16.0));
+            let mut grid = div().flex().flex_wrap().gap(px(8.0));
             for (ri, row) in rows.iter().enumerate() {
                 let sel = is_sel(row);
                 grid = grid.child(
@@ -473,7 +473,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .items_center()
         .justify_between()
         .flex_wrap()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(mono(&page_summary, MUTED))
         .child(
             div()
@@ -503,7 +503,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let picked = if side_by_side {
         div()
             .flex()
-            .gap(px(24.0))
+            .gap(px(SPACE_SECTION))
             .items_start()
             .child(div().flex_1().min_w(px(0.0)).child(body))
             .child(div().w(px(320.0)).flex_none().child(drawer))
@@ -511,7 +511,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         div()
             .flex()
             .flex_col()
-            .gap(px(24.0))
+            .gap(px(SPACE_SECTION))
             .child(div().w_full().min_w(px(0.0)).child(body))
             .child(div().w_full().child(drawer))
     };
@@ -519,7 +519,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     div()
         .flex()
         .flex_col()
-        .gap(px(24.0))
+        .gap(px(SPACE_SECTION))
         .child(head)
         // always mounted so it can slide; the negative margin takes back the
         // page gap a closed, zero-height panel would otherwise leave

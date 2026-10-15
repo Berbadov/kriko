@@ -170,6 +170,51 @@ def test_claude_quicklook_keeps_its_native_web_tool_path(monkeypatch):
     assert "Host-read pages" not in prompts[0]
 
 
+def test_a_native_tools_agent_keeps_the_claims_it_cites_from_its_own_pages(monkeypatch):
+    """Claude fetches its own pages, so Kriko holds no text to check a quote against.
+
+    An empty `sources` mapping reads as "check against these pages" and drops
+    every claim (a run of five forum threads kept none). `None` is the
+    contract for "nothing to check against": a quote is then only required to
+    exist, as it was before the host-read planes.
+    """
+    from app import quicklook
+
+    researcher = harness.HarnessResearcher(row("claude-code"))
+    reply = (
+        '{"risks":[{"title":"Charging port failure","why":"It may fail.",'
+        '"check":"Check charging.","severity":"medium","url":"' + URL +
+        '","quote":"' + QUOTE + '"}],"specs":[]}'
+    )
+    monkeypatch.setattr(researcher, "_run", lambda prompt: reply)
+
+    researcher.ask_quick("Widget")
+    found = quicklook.parse(reply, researcher.sources)
+
+    assert researcher.sources is None
+    assert [risk["title"] for risk in found["risks"]] == ["Charging port failure"]
+    assert found["dropped"] == 0
+
+
+def test_a_cli_that_searches_for_itself_after_a_dead_search_keeps_its_cited_claims(monkeypatch):
+    from app import quicklook
+
+    _dead_search(monkeypatch, [])
+    researcher = harness.HarnessResearcher(row("codex"))
+    reply = (
+        '{"risks":[{"title":"Charging port failure","why":"It may fail.",'
+        '"check":"","severity":"medium","url":"' + URL +
+        '","quote":"' + QUOTE + '"}],"specs":[]}'
+    )
+    monkeypatch.setattr(researcher, "_run", lambda prompt: reply)
+
+    researcher.ask_quick("Widget", principle="pack bar")
+    found = quicklook.parse(reply, researcher.sources)
+
+    assert researcher.sources is None
+    assert len(found["risks"]) == 1 and found["dropped"] == 0
+
+
 def test_oil_compatibility_followup_can_read_the_vehicle_manual(monkeypatch):
     manual_url = "https://vehicle.example/owners-manual"
     manual = ("The 2018 Honda Civic owner's manual specifies SAE 0W-20 engine oil. "
@@ -234,3 +279,31 @@ def test_two_failed_searches_in_a_row_skip_the_third(monkeypatch):
     researcher.ask_quick("Widget", principle="pack bar")
 
     assert len(calls) == 2
+
+
+def test_host_read_searches_the_rendered_queries_not_the_pack_templates(monkeypatch):
+    calls = []
+    researcher = harness.HarnessResearcher(row("codex"))
+
+    class Reader:
+        sources = {URL: PAGE}
+        page_titles = {URL: "Widget owner report"}
+        telemetry = {"stages": []}
+        search_coverage = {"queries_searched": 1, "search_errors": 0, "pages_read": 1,
+                           "pages_unreadable": 0, "pages_timed_out": 0, "publishers_read": 1}
+        search_provider = "openserp"
+
+    monkeypatch.setattr(
+        researcher, "_read_web_pages",
+        lambda queries, **kwargs: (calls.append(queries) or
+                                   (Reader(), [(URL, PAGE)], _identity())),
+    )
+    monkeypatch.setattr(researcher, "_run", lambda prompt: '{"queries":[],"findings":[]}')
+
+    researcher.gather(ResearchTask(
+        subject_id="widget", subject_label="Widget Pro", subject_kind="product",
+        pack_id="products", queries=("{label} common problems",),
+        search_names=("Widget Pro",), max_documents=2,
+    ))
+
+    assert calls[0] == ["Widget Pro common problems"]

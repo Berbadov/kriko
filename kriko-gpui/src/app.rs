@@ -23,8 +23,6 @@ gpui::actions!(kriko, [NewCheck, SearchKnowledge, JumpBrowse]);
 
 // ---- the window's room ----
 
-/// The page column's side padding below the hero when the window has room.
-const PAGE_PAD: f32 = 40.0;
 /// The live dock's width. Its open width is reserved from page content.
 const DOCK_W: f32 = DOCK_WIDTH;
 /// The titlebar's height; the floating dock starts under it so the window
@@ -46,6 +44,7 @@ pub enum Tab {
     Run,
     History,
     Compare,
+    Chat,
     Extension,
     Overview,
     Browse,
@@ -65,6 +64,7 @@ impl Tab {
             Tab::Run => "run",
             Tab::History => "history",
             Tab::Compare => "compare",
+            Tab::Chat => "chat",
             Tab::Extension => "extension",
             Tab::Overview => "overview",
             Tab::Browse => "browse",
@@ -83,6 +83,7 @@ impl Tab {
             "run" => Tab::Run,
             "history" => Tab::History,
             "compare" => Tab::Compare,
+            "chat" => Tab::Chat,
             "extension" => Tab::Extension,
             "overview" => Tab::Overview,
             "browse" => Tab::Browse,
@@ -121,6 +122,7 @@ impl Tab {
             Tab::Run => "check / run",
             Tab::History => "history",
             Tab::Compare => "check / compare",
+            Tab::Chat => "check / chat",
             Tab::Extension => "check / browser extension",
             Tab::Overview => "knowledge / overview",
             Tab::Browse => "knowledge / browse",
@@ -148,6 +150,7 @@ impl Tab {
             Tab::Run => "One check, from question to stored claims, every step in the open.",
             Tab::History => "Every check you have run, with the evidence it was based on.",
             Tab::Compare => "Up to three subjects side by side, attribute by attribute.",
+            Tab::Chat => "Ask your own agent about what this app holds, and watch it look things up.",
             Tab::Extension => "Send pages from your browser straight into Kriko's knowledge.",
             Tab::Overview => "What the packs know, and where they run thin.",
             Tab::Browse => "Every subject, attribute and claim in the local store.",
@@ -173,8 +176,8 @@ impl Tab {
     /// content starts right under. Home and About keep a little more of it.
     fn hero_height(self) -> f32 {
         match self {
-            Tab::Home | Tab::About => 132.0,
-            _ => 108.0,
+            Tab::Home | Tab::About => 100.0,
+            _ => 96.0,
         }
     }
 }
@@ -191,6 +194,7 @@ pub enum Field {
     BrowseSearch,
     DockReply,
     CompareAsk,
+    ChatAsk,
     BoardNote,
     RunSearch,
     LocalUrl,
@@ -361,6 +365,7 @@ pub struct Kriko {
     // compare: the engine's own rows live in `live.compare`
     pub compare_note_input: InputState,
     pub compare_question_input: InputState,
+    pub chat_input: InputState,
     // local llm: the address, the search service and the model to get; the
     // rest of this area is `live::local`
     pub local_url: InputState,
@@ -433,6 +438,7 @@ impl Kriko {
             dock_open: false,
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
+            chat_input: InputState::new(cx),
             local_url: InputState::new(cx),
             local_search: InputState::new(cx),
             local_get: InputState::new(cx),
@@ -596,6 +602,7 @@ impl Kriko {
             }
             Tab::History => self.refresh_history(cx),
             Tab::Compare => self.refresh_compare(cx),
+            Tab::Chat => self.refresh_chat(cx),
             Tab::Extension => self.refresh_extension(cx),
             Tab::Overview => {
                 self.refresh_packs(cx);
@@ -636,6 +643,7 @@ impl Kriko {
             Field::BrowseSearch => &self.browse_search,
             Field::DockReply => &self.dock_reply,
             Field::CompareAsk => &self.compare_question_input,
+            Field::ChatAsk => &self.chat_input,
             Field::BoardNote => &self.compare_note_input,
             Field::RunSearch => &self.run_search,
             Field::LocalUrl => &self.local_url,
@@ -659,6 +667,7 @@ impl Kriko {
             Field::BrowseSearch => &mut self.browse_search,
             Field::DockReply => &mut self.dock_reply,
             Field::CompareAsk => &mut self.compare_question_input,
+            Field::ChatAsk => &mut self.chat_input,
             Field::BoardNote => &mut self.compare_note_input,
             Field::RunSearch => &mut self.run_search,
             Field::LocalUrl => &mut self.local_url,
@@ -748,6 +757,12 @@ impl Kriko {
         // Enter on the compare question asks it, the same as the Ask key.
         if ks.key.as_str() == "enter" && field == Field::CompareAsk {
             this.ask_compare_question(cx);
+            cx.notify();
+            return;
+        }
+        // Enter in the chat composer sends the message.
+        if ks.key.as_str() == "enter" && field == Field::ChatAsk {
+            this.send_chat_message(cx);
             cx.notify();
             return;
         }
@@ -1112,6 +1127,12 @@ impl Kriko {
 impl Render for Kriko {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.motion = !self.reduce_motion && window.is_window_active();
+        // A job's bar eases a frame at a time. Ask for the next frame while
+        // one still moves (a job is running, in front, motion on), and nowhere
+        // else: the idle guard in test_the_idle_window_does_not_draw.py.
+        if self.live.run.advance_bars(self.motion) {
+            window.request_animation_frame();
+        }
         if !matches!(self.engine, engine::Status::Ready { .. }) {
             let maximized = window.is_maximized();
             return self.boot_screen(maximized, cx).into_any_element();
@@ -1152,6 +1173,7 @@ impl Render for Kriko {
             .flex()
             .flex_col()
             .flex_none()
+            .w_full()
             .gap(px(16.0));
         if let Some(problem) = self.live.problem.clone() {
             let retry = cx.listener(|this, _: &ClickEvent, _w, cx| {
@@ -1252,6 +1274,7 @@ impl Render for Kriko {
                     .child(
                         div()
                             .id("main-scroll")
+                            .w_full()
                             .flex()
                             .flex_1()
                             .min_h(px(0.0))
@@ -1269,8 +1292,8 @@ impl Render for Kriko {
                                         page_content
                                             .pl(px(page_pad))
                                             .pr(px(page_pad + dock_inset))
-                                            .pt(px(20.0))
-                                            .pb(px(48.0)),
+                                            .pt(px(SPACE_SECTION))
+                                            .pb(px(32.0)),
                                     ),
                     )
                     // The bar floats on the sky, after the page so it
