@@ -110,7 +110,8 @@ schema (`/openapi.json`) is the authoritative list; this table is a map.
 | marks | `GET\|POST /api/marks`, `DELETE /api/marks/{pack_id}/{claim_id}` | Author verdicts, pack-keyed. Counted by `GET /api/marks`; no route reads the verdicts back as a queue. |
 | compare | `GET\|POST /api/compare-drafts`, `PUT\|DELETE /api/compare-drafts/{draft_id}`, `GET\|POST /api/compare-drafts/{draft_id}/questions`, `GET\|PUT /api/compare-drafts/{draft_id}/board` | Named comparisons of saved checks. App state, never knowledge. |
 | chat | `GET /api/chat/sources`, `GET\|POST /api/chat/threads`, `DELETE /api/chat/threads/{thread_id}`, `GET\|POST /api/chat/threads/{thread_id}/messages` | A conversation with the reader's own agent. The agent is told the names of the app's records and reads each one only when it asks (`app/chatdata.py`); a turn (`app/chat.py`) runs as a `chat_ask` job. App state, never knowledge. |
-| queue | `GET\|POST /api/queue`, `PATCH\|DELETE /api/queue/{queue_id}` | The research queue: products queued from the extension's panel (Add to queue), researched in turn, then compared. One row per listing address; a second press answers `added: false`; PATCH sets `state` (waiting, researching, done) and the fresh `lookup_id` as the window researches them. App state, never knowledge. |
+| queue | `GET\|POST /api/queue`, `PATCH\|DELETE /api/queue/{queue_id}`, `GET /api/queue/{queue_id}/target` | The research queue: products queued from the extension's panel (Add to queue), researched in turn, then compared. One row per listing address; a second press answers `added: false`, and on a product already researched it queues it again (`requeued: true`). PATCH moves `state` along `QUEUE_MOVES` only (waiting, researching, done; anything else is 409), sets the fresh `lookup_id`, and keeps the `note` saying why a product was passed over. `/target` names the installed product a row stands for (`app/web/productchecks.py`). App state, never knowledge. |
+| products | `POST /api/products/{subject_id}/check` | The saved check of one researched product: one row per product, refreshed in place (`product_checks`). Saved by the engine itself when a finished research files claims for it, so Compare lists it without a further step. |
 | jobs | `POST /api/research`, `POST /api/packs/update`, `POST /api/packs/harvest`, `GET /api/packs/updates`, `GET /api/jobs`, `GET /api/jobs/{job_id}`, `POST /api/jobs/{job_id}/cancel`, `POST /api/jobs/{job_id}/retry`, `POST /api/jobs/{job_id}/say` | A client follows a job by polling `GET /api/jobs/{job_id}`; there is no push stream. |
 | agenda | `GET /api/agenda` | Computed on read from demand, gaps and thinness. |
 | research | `GET /api/research-planes`, `GET /api/local-plane` | The planes read off the researcher classes, with a cost sentence and `ready` each; the local plane's own state. |
@@ -173,7 +174,8 @@ flowchart LR
 | `site_activation` | The browser's per-site permission verdict. |
 | `compare_drafts` | Named comparisons: which checks, in which order. |
 | `queue_history` | Durable queue entries, including completed and removed products; active entries are reconciled from `research_queue`. |
-| `research_queue` | Products queued from the extension, in research order, with the site each came from. |
+| `research_queue` | Products queued from the extension, in research order, with the site each came from, and the reason the last pass over it gave (`note`). |
+| `product_checks` | The one saved check (a `lookups` row) that answers for each researched product, by `(subject_id, pack_id)`. |
 | `compare_questions` | The reader's own questions about a comparison, and the answers their agent gave. |
 | `chat_threads` | The reader's conversations with their agent, newest first. App state, never knowledge. |
 | `chat_messages` | Each question the reader asked and each answer, with the steps (records read) and sources that produced the answer. |
