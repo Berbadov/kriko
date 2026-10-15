@@ -55,11 +55,35 @@ def test_a_thread_round_trip(http):
     assert http.delete(f"/api/chat/threads/{thread['thread_id']}").status_code == 404
 
 
+def test_active_chat_turn_is_reconnectable_and_prevents_thread_deletion(http, paths):
+    app_state = state.connect(paths.app_state_path)
+    try:
+        thread = state.create_chat_thread(app_state)
+        job_id = state.create_job(app_state, "chat_ask", {"thread_id": thread["thread_id"]})
+    finally:
+        app_state.close()
+
+    messages = http.get(f"/api/chat/threads/{thread['thread_id']}/messages").json()
+    assert messages == {"items": [], "job_id": job_id}
+    refused = http.delete(f"/api/chat/threads/{thread['thread_id']}")
+    assert refused.status_code == 409
+    assert "active chat turn" in refused.json()["detail"]
+
+    app_state = state.connect(paths.app_state_path)
+    try:
+        state.finish_job(app_state, job_id, state.CANCELLED, message="stopped")
+    finally:
+        app_state.close()
+    assert http.get(f"/api/chat/threads/{thread['thread_id']}/messages").json() == {
+        "items": []}
+    assert http.delete(f"/api/chat/threads/{thread['thread_id']}").status_code == 200
+
+
 def test_posting_a_message_stores_it_and_starts_a_chat_turn(http):
     thread = http.post("/api/chat/threads", json={}).json()
     tid = thread["thread_id"]
     posted = http.post(f"/api/chat/threads/{tid}/messages", json={
-        "text": "  I need a   widget with  blue paint ", "harness": "h1", "backend": "harness",
+        "text": "  I need a widget with blue paint ", "harness": "h1", "backend": "harness",
     })
     assert posted.status_code == 200
     body = posted.json()
@@ -90,6 +114,16 @@ def test_a_message_is_refused_before_anything_runs(http):
     assert http.get(f"/api/chat/threads/{tid}/messages").json()["items"] == []
 
 
+def test_chat_keeps_paragraphs_and_indentation_in_the_posted_message(http):
+    tid = http.post("/api/chat/threads", json={}).json()["thread_id"]
+    text = "Explain this:\n\n    first step\n    second step"
+    response = http.post(f"/api/chat/threads/{tid}/messages", json={"text": text})
+    assert response.status_code == 200
+    assert http.submitted[0][1]["text"] == text
+    stored = http.get(f"/api/chat/threads/{tid}/messages").json()["items"]
+    assert stored[0]["text"] == text
+
+
 def test_a_turn_is_shown_the_messages_said_before_its_own_question(paths):
     app_state = state.connect(paths.app_state_path)
     try:
@@ -114,7 +148,7 @@ def test_one_turn_at_a_time_per_conversation_and_others_run_beside_it():
     assert not _overlap(same, claims("chat_ask", {"thread_id": "t2"}))
 
 
-def test_only_the_resolved_codex_stream_is_forwarded_to_the_chat_answer():
+def test_provider_prose_streams_are_forwarded_to_the_chat_answer():
     class Researcher:
         def __init__(self):
             self.on_text = None
@@ -127,9 +161,10 @@ def test_only_the_resolved_codex_stream_is_forwarded_to_the_chat_answer():
     assert previous == answer == ["A live sentence"]
 
     claude = Researcher()
-    assert not tasks._wire_codex_answer_stream(claude, "claude-code", answer.append)
-    assert claude.on_text is None
-    assert answer == ["A live sentence"]
+    assert tasks._wire_codex_answer_stream(claude, "claude-code", answer.append)
+    claude.on_text("Another live sentence")
+    assert answer == ["A live sentence", "Another live sentence"]
+    assert not tasks._wire_codex_answer_stream(object(), "unknown", answer.append)
 
 
 class Completer:
@@ -156,13 +191,13 @@ def test_the_job_writes_the_answer_and_its_steps_to_the_thread(paths, monkeypatc
     app_state = state.connect(paths.app_state_path)
     thread = state.create_chat_thread(app_state)
     reader = state.add_chat_message(app_state, thread["thread_id"], role="reader",
-                                    text="find a widget")
+                                    text="find a widget in my catalogue")
     job_id = state.create_job(app_state, "chat_ask", {"thread_id": thread["thread_id"]})
     progress = Progress(job_id, app_state)
     try:
         result = tasks.chat_ask(paths, {"thread_id": thread["thread_id"],
                                         "message_id": reader["message_id"],
-                                        "text": "find a widget", "backend": "local"},
+                                        "text": "find a widget in my catalogue", "backend": "local"},
                                 progress)
     finally:
         app_state.close()
@@ -177,7 +212,8 @@ def test_the_job_writes_the_answer_and_its_steps_to_the_thread(paths, monkeypatc
     stored = TestClient(create_app(paths)).get(
         f"/api/chat/threads/{thread['thread_id']}/messages").json()["items"]
     assert [(m["role"], m["text"]) for m in stored] == [
-        ("reader", "find a widget"), ("agent", "No widget is recorded yet.")]
+        ("reader", "find a widget in my catalogue"),
+        ("agent", "No widget is recorded yet.")]
     assert stored[1]["sources"] == ["catalogue_search"]
     assert stored[1]["steps"][0]["label"].startswith("no rows from")
     assert stored[1]["job_id"] == job_id
@@ -193,7 +229,7 @@ def test_a_turn_with_no_packs_installed_still_answers(paths, monkeypatch):
     job_id = state.create_job(app_state, "chat_ask", {})
     try:
         result = tasks.chat_ask(paths, {"thread_id": thread["thread_id"], "message_id": "",
-                                        "text": "find a widget", "backend": "local"},
+                                        "text": "find a widget in my catalogue", "backend": "local"},
                                 Progress(job_id, app_state))
     finally:
         app_state.close()
@@ -201,6 +237,58 @@ def test_a_turn_with_no_packs_installed_still_answers(paths, monkeypatch):
     assert result["steps"][0]["state"] == "empty"
     assert result["steps"][0]["detail"] == "the engine store has no packs yet"
     assert result["answer"] == "No widget is recorded yet."
+
+
+def test_the_chat_job_wires_web_search_and_saves_fetched_urls(paths, monkeypatch):
+    class WebCompleter:
+        model = "local-test-model"
+
+        def __init__(self):
+            self.prompts = []
+
+        def __call__(self, prompt):
+            self.prompts.append(prompt)
+            return ("The fetched maker page lists the purifier's CADR. Check room size "
+                    "and noise claims on the product page.")
+
+    completer = WebCompleter()
+    searched, fetched = [], []
+
+    def search(query, limit):
+        searched.append((query, limit))
+        return [{"title": "Maker product page", "url": "https://maker.example/purifier",
+                 "site": "maker.example"}]
+
+    def read(url):
+        fetched.append(url)
+        return "Air purifier CADR 300 m³/h."
+
+    monkeypatch.setattr(tasks, "_use_local_ask", lambda *a: True)
+    monkeypatch.setattr(tasks, "_local_structured_completer", lambda *a: completer)
+    monkeypatch.setattr(tasks, "_chat_web_sources", lambda *a: (search, read))
+    monkeypatch.setattr("app.chatweb.reader", lambda **kwargs: read)
+    app_state = state.connect(paths.app_state_path)
+    thread = state.create_chat_thread(app_state)
+    reader = state.add_chat_message(app_state, thread["thread_id"], role="reader",
+                                    text="Find a quiet air purifier for a small bedroom")
+    job_id = state.create_job(app_state, "chat_ask", {"thread_id": thread["thread_id"]})
+    try:
+        result = tasks.chat_ask(
+            paths,
+            {"thread_id": thread["thread_id"], "message_id": reader["message_id"],
+             "text": reader["text"], "backend": "local"},
+            Progress(job_id, app_state),
+        )
+        stored = state.chat_messages(app_state, thread["thread_id"])[-1]
+    finally:
+        app_state.close()
+
+    assert searched == [("a quiet air purifier for a small bedroom", 5)]
+    assert fetched == ["https://maker.example/purifier"]
+    assert "CADR 300 m³/h" in completer.prompts[0]
+    assert result["agent_calls"] == 1
+    assert result["sources"] == ["web_search", "https://maker.example/purifier"]
+    assert stored["sources"] == result["sources"]
 
 
 def test_an_empty_answer_fails_the_job_and_keeps_the_question(paths, monkeypatch):

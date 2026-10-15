@@ -930,7 +930,8 @@ class QuickLookPipeline:
         telemetry = getattr(agent, "telemetry", None)
         if isinstance(telemetry, dict):
             telemetry["queries"] = list(queries)
-        pages = agent._read(queries, identity=self.identity, prefer_issues=True)
+        pages = agent._read(queries, identity=self.identity, prefer_issues=True,
+                            quick=True)
         self.coverage.update(agent.search_coverage)
         self.coverage.setdefault("pages_selected", len(pages))
         if agent.given_sources is not None:

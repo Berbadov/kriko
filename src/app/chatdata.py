@@ -1,4 +1,4 @@
-"""What a chat agent may read, and only when it asks for it.
+"""Bounded, on-demand sources for ordinary conversation and web research.
 
 The chat screen never loads the app's data into the agent. The agent is told
 the *names and one-line meanings* of the sources below, then asks for the ones
@@ -6,15 +6,14 @@ its question needs, and each source is read at that moment. So a source that
 is not asked for is never read at all, and `describe_sources()` is the whole
 of what the agent knows before it asks: no rows, no record, no secret.
 
-Every source is read-only and derives everything from the stores it is given
-(the engine's knowledge store and `app.sqlite`). None of them names a product,
-make, model or component: the words a reader types are matched against what
-the installed catalogues hold, so a new category needs no line here (G6).
+Local sources are read-only and derive everything from the stores they are
+given (the knowledge store and `app.sqlite`). The web source reads a few public
+pages through a bounded reader; fetched text is evidence, never instructions.
 
 Two rules a source keeps, and the dispatcher enforces the second:
 
-* **Capped.** At most `ROWS_CAP` rows and `TEXT_CAP` characters per text field,
-  so one answer cannot flood the agent's context.
+* **Capped.** At most `ROWS_CAP` rows. Ordinary fields use `TEXT_CAP`; fetched
+  excerpts and URLs have separate bounded limits.
 * **Never raises.** A source that fails returns no rows and a note saying so;
   the agent sees the failure as data and can ask something else.
 
@@ -29,11 +28,17 @@ a recorded fact that covers it; a recorded high-severity risk that covers it is
 from __future__ import annotations
 
 import inspect
+import ipaddress
+import json
 import re
 import sqlite3
 import unicodedata
+import time
+import threading
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from collections.abc import Callable
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 #: Rows one source may return to the agent.
 ROWS_CAP = 12
@@ -51,6 +56,14 @@ MET_AT = 0.6
 CONTRADICT_AT = 0.5
 #: Most recorded risks one candidate contributes to the match.
 RISKS_CAP = 200
+# The web source returns at most five search hits and reads only the first
+# three. Readers can open the remaining links themselves from the answer.
+WEB_RESULTS_CAP = 5
+WEB_PAGES_CAP = 3
+WEB_READ_DEADLINE_SECONDS = 8.0
+WEB_PAGE_EXCERPT_CAP = 2800
+WEB_URL_CAP = 2000
+WEB_ROWS_BUDGET = 10000
 
 #: Small closed vocabulary: function words that never name a thing. Constants
 #: are allowed here by CLAUDE.md's exception for closed sets; nothing in this
@@ -75,6 +88,9 @@ class Context:
 
     store: sqlite3.Connection | None = None
     app: sqlite3.Connection | None = None
+    web_search: Callable[[str, int], list[dict]] | None = None
+    web_read: Callable[[str], object] | None = None
+    check_cancelled: Callable[[], None] | None = None
 
 
 @dataclass(frozen=True)
@@ -150,15 +166,21 @@ def _clip(text, limit: int = TEXT_CAP) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def _tidy(value, truncated: list[bool]):
+def _tidy(value, truncated: list[bool], key: str = ""):
     """Clip every string and cap every list, recording whether anything was cut."""
     if isinstance(value, str):
-        clipped = _clip(value)
+        if key == "url":
+            # A cut URL is not a citation. Drop overlong URLs rather than
+            # presenting a truncated link as if it were real.
+            clipped = value if len(value) <= WEB_URL_CAP else ""
+        else:
+            cap = WEB_PAGE_EXCERPT_CAP if key == "page_excerpt" else TEXT_CAP
+            clipped = _clip(value, cap)
         if clipped != value:
             truncated[0] = True
         return clipped
     if isinstance(value, dict):
-        return {key: _tidy(one, truncated) for key, one in value.items()}
+        return {name: _tidy(one, truncated, name) for name, one in value.items()}
     if isinstance(value, list | tuple):
         if len(value) > ROWS_CAP:
             truncated[0] = True
@@ -563,6 +585,218 @@ def _coverage_gaps(ctx: Context, pack_id: str = "") -> dict:
     return _result(rows, report.get("note", ""))
 
 
+def _public_http_url(value: object) -> str:
+    """Accept only ordinary public HTTP(S) destinations from search results."""
+    url = str(value or "").strip()
+    try:
+        parsed = urlsplit(url)
+        host = (parsed.hostname or "").rstrip(".").casefold()
+        if (parsed.scheme.casefold() not in {"http", "https"} or not host
+                or parsed.username is not None or parsed.password is not None
+                or host == "localhost" or host.endswith(".localhost")):
+            return ""
+        try:
+            address = ipaddress.ip_address(host.split("%", 1)[0])
+        except ValueError:
+            address = None
+        if address is not None and not address.is_global:
+            return ""
+    except ValueError:
+        return ""
+    return url if len(url) <= WEB_URL_CAP else ""
+
+
+def _fit_web_results(rows: list[dict]) -> tuple[list[dict], bool]:
+    """Keep fetched evidence and exact citation URLs inside a prompt budget."""
+    for row in rows:
+        row["page_excerpt"] = _clip(row.get("page_excerpt", ""), WEB_PAGE_EXCERPT_CAP)
+    result = [dict(row) for row in rows]
+    truncated = False
+
+    def size() -> int:
+        return len(json.dumps(result, ensure_ascii=False, default=str))
+
+    # Search-only rows are useful leads but expendable if unusually long URLs
+    # and snippets would crowd out fetched evidence.
+    while size() > WEB_ROWS_BUDGET:
+        unread = next((i for i in range(len(result) - 1, -1, -1)
+                       if not result[i].get("page_read")), None)
+        if unread is None:
+            break
+        result.pop(unread)
+        truncated = True
+
+    while size() > WEB_ROWS_BUDGET:
+        candidates = [(len(row.get("page_excerpt", "")), row) for row in result
+                      if row.get("page_excerpt")]
+        if not candidates:
+            break
+        _, row = max(candidates, key=lambda item: item[0])
+        excess = size() - WEB_ROWS_BUDGET
+        # JSON escapes some characters; measure again after each conservative
+        # cut instead of ever slicing a source URL.
+        cut = max(1, excess // 2)
+        row["page_excerpt"] = row["page_excerpt"][:-cut]
+        truncated = True
+    return result, truncated
+
+
+def _read_web_page(ctx: Context, url: str) -> tuple[str, str]:
+    """Read one selected result; text remains untrusted evidence, not instructions."""
+    checker = getattr(ctx.web_read, "check_cancelled", None)
+    if callable(checker):
+        checker()
+    if ctx.web_read is None:
+        return "", "no page reader is configured"
+    try:
+        fetched = ctx.web_read(url)
+    except Exception as exc:  # noqa: BLE001 - one unreadable page need not drop its neighbours
+        return "", type(exc).__name__
+    if callable(checker):
+        checker()
+    if isinstance(fetched, dict):
+        text = fetched.get("text", "")
+        published_at = fetched.get("published_at", "")
+    else:
+        text = getattr(fetched, "text", fetched)
+        published_at = getattr(fetched, "published_at", "")
+    return _clip(text, 12000), _clip(published_at, 40)
+
+
+def _web_search(ctx: Context, query: str = "") -> dict:
+    """Search the configured web plane and read up to three result pages.
+
+    Search titles/snippets identify results only. A page excerpt is kept in a
+    separate field so an answer can ground factual claims in text actually
+    fetched from that page. All result content is untrusted data.
+    """
+    if not query.strip():
+        return _empty("add words to search the web")
+    if ctx.check_cancelled is not None:
+        ctx.check_cancelled()
+    try:
+        search = ctx.web_search
+        direct = re.search(r"(?:https?://|\bwww\.)[^\s<>\"']+", query, re.I)
+        if direct:
+            # A reader-provided page is the question's subject. Open it directly
+            # instead of hoping a search engine returns the same URL.
+            url = direct.group(0).rstrip(".,;:!?)]}")
+            if url.casefold().startswith("www."):
+                url = "https://" + url
+            hits = [{"url": url, "title": "Reader-provided page", "snippet": ""}]
+        else:
+            if search is None:
+                return _empty("web search is not configured on this machine")
+            # OpenSERP supports this cooperative hook; paid adapters simply ignore
+            # the extra attribute and are checked immediately before and after.
+            try:
+                setattr(search, "check_cancelled", ctx.check_cancelled)
+            except (AttributeError, TypeError):
+                pass
+            hits = search(query[:300], WEB_RESULTS_CAP) or []
+    except Exception as exc:  # noqa: BLE001 - report a failed search as a source row
+        return {"rows": [], "truncated": False,
+                "note": f"web search failed: {type(exc).__name__}", "error": True}
+    if ctx.check_cancelled is not None:
+        ctx.check_cancelled()
+
+    results: list[dict] = []
+    seen: set[str] = set()
+    for hit in hits if isinstance(hits, list) else []:
+        if not isinstance(hit, dict):
+            continue
+        url = _public_http_url(hit.get("url"))
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        parsed = urlsplit(url)
+        results.append({
+            "title": _clip(hit.get("title") or "Untitled result", 180),
+            "site": _clip(hit.get("site") or parsed.hostname or "", 120),
+            "url": url,
+            "search_snippet": _clip(hit.get("snippet") or hit.get("content") or "", 400),
+            "page_excerpt": "",
+            "published_at": _clip(hit.get("published_at") or "", 40),
+            "page_read": False,
+        })
+        if len(results) >= WEB_RESULTS_CAP:
+            break
+    if not results:
+        return _empty("web search returned no usable public pages")
+
+    indexes = list(range(min(WEB_PAGES_CAP, len(results))))
+    reader_cancelled = threading.Event()
+
+    def check_reader_cancelled() -> None:
+        if reader_cancelled.is_set():
+            raise RuntimeError("chat web page read cancelled")
+
+    if ctx.web_read is not None:
+        try:
+            # Page reads run on worker threads. Their callback must be a
+            # thread-safe event check, never Progress.check on its owner-only
+            # SQLite connection.
+            setattr(ctx.web_read, "check_cancelled", check_reader_cancelled)
+        except (AttributeError, TypeError):
+            pass
+
+    def read_at(index: int) -> tuple[int, str, str]:
+        text, published_at = _read_web_page(ctx, results[index]["url"])
+        return index, text, published_at
+
+    executor = ThreadPoolExecutor(max_workers=WEB_PAGES_CAP,
+                                  thread_name_prefix="kriko-chat-web")
+    futures = {executor.submit(read_at, index): index for index in indexes}
+    pending = set(futures)
+    deadline = time.monotonic() + WEB_READ_DEADLINE_SECONDS
+
+    def check_main_thread() -> None:
+        if ctx.check_cancelled is not None:
+            try:
+                ctx.check_cancelled()
+            except BaseException:
+                reader_cancelled.set()
+                raise
+
+    try:
+        while pending and time.monotonic() < deadline:
+            check_main_thread()
+            done, pending = wait(pending, timeout=min(0.1, deadline - time.monotonic()),
+                                 return_when=FIRST_COMPLETED)
+            for future in done:
+                index = futures[future]
+                try:
+                    _, text, published_at = future.result()
+                except Exception as exc:  # noqa: BLE001 - record the page failure, not a traceback
+                    results[index]["read_error"] = type(exc).__name__
+                    continue
+                if text:
+                    results[index]["page_excerpt"] = text
+                    results[index]["page_read"] = True
+                    if published_at:
+                        results[index]["published_at"] = published_at
+                else:
+                    results[index]["read_error"] = "page returned no readable text"
+        if pending:
+            # A page reader may be partway through a redirect chain. Wake it
+            # cooperatively before returning the partial results at deadline.
+            reader_cancelled.set()
+        for future in pending:
+            future.cancel()
+    finally:
+        executor.shutdown(wait=not pending, cancel_futures=True)
+    check_main_thread()
+
+    results, context_truncated = _fit_web_results(results)
+    read_count = sum(bool(row["page_read"]) for row in results)
+    note = (f"{len(results)} web result(s); fetched {read_count} page(s). "
+            "Search titles and snippets are leads, not verified page evidence.")
+    if context_truncated:
+        note += " Some leads or excerpts were shortened to fit the context limit."
+    return _result(results, note,
+                   truncated=len(hits) > WEB_RESULTS_CAP or context_truncated)
+
+
 # ── the registry ─────────────────────────────────────────────────────────
 
 
@@ -571,6 +805,11 @@ def _quoted(args: dict) -> str:
 
 
 SOURCES: dict[str, Source] = {s.name: s for s in (
+    Source(
+        "web_search",
+        "Searches the public web and reads up to three result pages. Page excerpts are fetched text; search titles and snippets are leads only.",
+        {"query": "words to search the public web for"},
+        "web pages", lambda a: f"searching the web for {_quoted(a)}", _web_search),
     Source(
         "product_match",
         "Finds the products that fit a need and checks each reader constraint "

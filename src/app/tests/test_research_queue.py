@@ -157,6 +157,19 @@ def test_a_move_the_queue_does_not_allow_is_refused(tmp_path):
     assert client.get("/api/queue").json()["items"][0]["state"] == "done"
 
 
+def test_a_product_claimed_by_one_window_cannot_start_twice(tmp_path):
+    client = _client(tmp_path)
+    item = _queued(client)
+    path = f"/api/queue/{item['queue_id']}"
+
+    first = client.patch(path, json={"state": "researching"})
+    second = client.patch(path, json={"state": "researching"})
+
+    assert first.status_code == 200
+    assert second.status_code == 409
+    assert client.get("/api/queue").json()["items"][0]["state"] == "researching"
+
+
 def test_a_passed_over_reason_is_kept_on_the_row_until_it_is_claimed_again(tmp_path):
     client = _client(tmp_path)
     item = _queued(client)

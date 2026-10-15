@@ -79,7 +79,8 @@ def test_a_follow_up_question_is_stored_listed_and_refused_for_a_gone_draft(clie
     assert asked["question"] == "which of these two is cheaper to fix?"
     assert asked["answer"] == "" and asked["job_id"]
     listed = http.get(f"/api/compare-drafts/{made['draft_id']}/questions").json()
-    assert [q["question"] for q in listed["items"]] == [asked["question"]]
+    assert [(q["question"], q["job_id"]) for q in listed["items"]] == [
+        (asked["question"], asked["job_id"])]
     assert http.post("/api/compare-drafts/nope/questions",
                      json={"question": "x"}).status_code == 404
     assert http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
@@ -147,6 +148,13 @@ def test_the_job_handler_searches_with_quicklook_product_context_and_persists_so
     app_state.close()
     made = http.post("/api/compare-drafts",
                      json={"name": "Two oils", "lookup_ids": [quick_id, b2]}).json()
+    app_state = state.connect(settings.app_state_path)
+    prior = state.record_compare_question(
+        app_state, made["draft_id"], "What does the manual specify?")
+    state.answer_compare_question(
+        app_state, made["draft_id"], prior["question_id"],
+        "The manual specifies 0W-20.", "previous-job")
+    app_state.close()
     monkeypatch.setattr(http.app.state.jobs, "submit", lambda *_: "queued-test-job")
     asked = http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
                       json={"question": "Is the first oil right for my car?"}).json()
@@ -194,6 +202,8 @@ def test_the_job_handler_searches_with_quicklook_product_context_and_persists_so
     assert researcher.product == "Acme 5W-30 oil, Acme 0W-20 oil"
     assert researcher.question == "Is the first oil right for my car?"
     assert "QUESTION: Is the first oil right for my car?" in researcher.prompt
+    assert "What does the manual specify?" in researcher.prompt
+    assert "The manual specifies 0W-20." in researcher.prompt
     assert "## Acme 5W-30 oil" in researcher.prompt and "## Acme 0W-20 oil" in researcher.prompt
     assert "2018 Honda Civic" in researcher.prompt and "1.5L turbo" in researcher.prompt
     assert "SAE 5W-30 full synthetic engine oil." in researcher.prompt
