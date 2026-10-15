@@ -2585,8 +2585,12 @@ class _Attempt:
 
     def fail(self, error: BaseException) -> None:
         outcome = "cancelled" if getattr(error, "cancelled", False) else "failed"
+        # The class alone is not a reason: every post-delivery failure used to
+        # read "DeliveryUncertain", and the run history could not say why. The
+        # ledger redacts and bounds the text (`_safe_text`).
+        reason = f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
         if self.ledger is not None and self.attempt:
-            self.ledger.finish_attempt(self.attempt, outcome, error=type(error).__name__)
+            self.ledger.finish_attempt(self.attempt, outcome, error=reason)
         if self.ledger is not None and self.owned_run:
             self.ledger.finish(self.run_id, outcome)
 
@@ -3304,7 +3308,14 @@ class HarnessResearcher(AgentResearcher):
         with _CODEX_SUPPORT_LOCK:
             supported = _CODEX_SUPPORT.get(key)
         if supported is None:
-            supported = "--listen" in _ask(executable, "app-server", "--help")
+            described = _ask(executable, "app-server", "--help")
+            if not described.strip():
+                # `_ask` answers "" on a timeout or a failed start. That says
+                # nothing about the protocol, so it is not remembered for this
+                # binary: the next request asks again.
+                raise TransportUnavailable(
+                    "the installed CLI did not describe its app-server in time")
+            supported = "--listen" in described
             with _CODEX_SUPPORT_LOCK:
                 _CODEX_SUPPORT[key] = supported
         if not supported:
