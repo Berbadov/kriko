@@ -4,6 +4,25 @@ Reader-visible changes for releases older than the three shown in the
 [README](README.md#whats-new). Newest first. Published versions are immutable; a
 correction is a newer version (see [the update protocol](docs/UPDATE_PROTOCOL.md)).
 
+### 1.6.0
+
+- The desktop has a new glass-inspired layout, clearer navigation and live job panel, with animations that pause when the window is inactive and obey **Reduce motion**.
+- Home, Run, Local, and Browser extension now explain what to do while data loads and after success or failure. Retry actions report their state, and failed refreshes identify stale information instead of presenting it as current.
+- Saved Quick Looks can be filed into installed catalogs using exact matching or a grounded assignment from a local model or Mistral, with web tools disabled. CLI-only agents currently abstain and leave the catalog choice to the reader because a verified tool-less mode is unavailable; this does not affect ordinary CLI research. Filing does not rewrite the saved research evidence.
+- Local model requests negotiate supported structured-output formats while keeping Kriko's evidence checks in place. No Gemma 4 E2B quality evaluation was run on the 1.6.0 pipeline, whose evaluator digest is
+  `e647d1c957e01a8972ddef64ed0834a17ceb622613e0e1d998c8aa2affec6055`.
+  An older two-case Gemma 4 E2B fixture run at digest
+  `e686996dd0dadaa54e653ae0065e089521c9c4425284f3394d265f08c9e57e98`
+  recorded the expected findings and abstention, but its rows lack
+  host/runtime metadata and it is not a 1.6.0 benchmark. A separate [live
+  search observation](docs/benchmarks/2026-10-11-local-search-followup.md)
+  used an earlier pipeline and retained no findings for one product; this is
+  not evidence that the product has no faults. Neither result is a general
+  model-quality claim. No fine-tuning was performed; details are in the
+  [local-agent research note](docs/benchmarks/2026-10-12-local-agent-research.md).
+- Agent and model discovery shows when provider choices are still loading, and research screens give clearer feedback as runs start and finish. Hosted response time still depends on the selected provider, model, account, and network; this release makes no latency guarantee.
+- A native macOS packaging recipe now targets Apple Silicon (`arm64`) and Intel (`x86_64`) Macs and emits the filenames listed above. The screenshots in this checkout were captured on Linux; each release still needs a successful build and launch check on matching native hardware.
+
 ### 1.5.0
 
 - The recommended local model, running on a CPU with no graphics card, now finds both documented problems in Kriko's test evidence instead of one, still reports nothing where nothing is documented, and ignores instructions planted in a page. It no longer throws away a correct finding that names the product word for word because it was unsure of its own answer.
