@@ -49,7 +49,7 @@ USER_AGENT = "Kriko/1.0 (+https://github.com/Berbadov/kriko)"
 REFUSED = (403, 429, 503)
 
 _DROP = re.compile(
-    r"<(script|style|noscript|nav|header|footer|aside|form|svg|template|iframe"
+    r"<(script|style|noscript|nav|header|footer|aside|svg|template|iframe"
     r"|select|button|dialog|menu|object|canvas|picture|video|audio)(?![\w-])[^>]*>.*?</\1>",
     re.IGNORECASE | re.DOTALL,
 )
@@ -93,10 +93,22 @@ def reader(timeout: float = TIMEOUT):
     """
 
     def fetch(url: str) -> Fetched:
+        began = time.monotonic()
         raw = _download(url, timeout)
         if not raw:
             return Fetched("")
-        return Fetched(to_text(raw), published_at(raw))
+        text = to_text(raw)
+        if challenged(text):
+            # Answered 200, with a bot check where the page should be. It is
+            # the same refusal a 403 is, and was taken for a page (measured:
+            # 145 and 89 characters of "Drag the handle to the target" and
+            # "Checking your browser", counted as read). Climb from here,
+            # inside what is left of the page's time.
+            raw = _climb(url, began + 2 * timeout)
+            if not raw:
+                return Fetched("")
+            text = to_text(raw)
+        return Fetched(text, published_at(raw))
 
     return fetch
 
@@ -160,21 +172,8 @@ def _download(url: str, timeout: float) -> str:
             return _body(response, timeout).decode(charset, "replace")
     except urllib.error.HTTPError as error:
         if error.code in REFUSED:
-            # The site answered, and its answer was a refusal aimed at this
-            # app's own fetcher — the class B155 recorded. The hosted readers
-            # are the next rung: they read the page from elsewhere, and the
-            # browser after them reads it with a genuine fingerprint. "" from
-            # a rung leaves the page unread exactly as before, never
-            # half-read.
-            from app.providers import browser, pagereader  # noqa: PLC0415 — optional rungs
-
-            left = ladder_ends - time.monotonic()
-            page = pagereader.read(url, timeout=max(1.0, left)) if left > 1.0 else ""
-            left = ladder_ends - time.monotonic()
-            if not page and left >= BROWSER_MIN_SECONDS:
-                page = browser.read(url, timeout=left)
+            page = _climb(url, ladder_ends)
             if page:
-                log.info("a source refused the plain fetch and a later rung read it")
                 return page
         log.info("could not read a source: HTTP %s", error.code)
         return ""
@@ -208,6 +207,45 @@ def _body(response, timeout: float) -> bytes:
         chunks.append(chunk)
         size += len(chunk)
     return b"".join(chunks)
+
+
+def _climb(url: str, ladder_ends: float) -> str:
+    """The page through the later rungs, within what is left of its time.
+
+    The site answered, and its answer was a refusal aimed at this app's own
+    fetcher — the class B155 recorded. The hosted readers are the next rung:
+    they read the page from elsewhere, and the browser after them reads it
+    with a genuine fingerprint. "" from a rung leaves the page unread, never
+    half-read.
+    """
+    from app.providers import browser, pagereader  # noqa: PLC0415 — optional rungs
+
+    left = ladder_ends - time.monotonic()
+    page = pagereader.read(url, timeout=max(1.0, left)) if left > 1.0 else ""
+    left = ladder_ends - time.monotonic()
+    if not page and left >= BROWSER_MIN_SECONDS:
+        page = browser.read(url, timeout=left)
+    if page:
+        log.info("a source refused the plain fetch and a later rung read it")
+    return page
+
+
+#: A bot check is a few lines; a page that says "blocked" in a long article
+#: is an article. Above this many characters of prose it is read as a page.
+CHALLENGE_MAX_CHARS = 600
+
+
+def challenged(text: str) -> bool:
+    """Whether what came back is a bot check rather than the page.
+
+    By the shape of the answer: short, and in the words these pages are made
+    of (`politeness.looks_blocked`, the one list of them). Never by a site's
+    name, so it holds for every host a search returns.
+    """
+    from kriko.research.politeness import looks_blocked  # noqa: PLC0415
+
+    stripped = " ".join(text.split())
+    return 0 < len(stripped) <= CHALLENGE_MAX_CHARS and looks_blocked(200, stripped)
 
 
 def to_text(markup: str) -> str:
