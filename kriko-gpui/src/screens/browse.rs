@@ -13,6 +13,9 @@ use crate::screens::run::option_chip;
 use crate::screens::{empty_note, filter_btn, mono, plate_s, segmented, th};
 use crate::theme::*;
 
+/// The evidence drawer's width, one column beside the table.
+const DRAWER_W: f32 = 320.0;
+
 /// A catalog's name, from the filter options the engine sent; its id when
 /// the options do not list it.
 fn pack_name(h: &State, id: &str) -> String {
@@ -218,8 +221,11 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .enumerate()
                 .map(|(option, (_, label))| (option + 1, label.clone())),
         );
-        let mut row = div().flex().items_center().flex_wrap().gap(px(8.0));
-        row = row.child(div().w(px(120.0)).child(eyebrow(&filter.label)));
+        // the label keeps a fixed column; the chips wrap inside the rest, so a
+        // second line of chips starts under the first chip, not under the label
+        let mut row = div().flex().items_center().gap(px(8.0));
+        row = row.child(div().flex_none().w(px(120.0)).child(eyebrow(&filter.label)));
+        let mut chips = div().flex().flex_wrap().gap(px(8.0)).flex_1().min_w(px(0.0));
         for (choice, label) in choices {
             let is_selected = selected == choice;
             let pick = cx.listener(move |this, _: &ClickEvent, _w, cx| {
@@ -231,8 +237,9 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 is_selected,
             )
             .on_click(pick);
-            row = row.child(control);
+            chips = chips.child(control);
         }
+        row = row.child(chips);
         filter_drawer = filter_drawer.child(row);
     }
     if active_filters > 0 {
@@ -325,6 +332,8 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 
     for (ri, row) in rows.iter().enumerate() {
         let sel = is_sel(row);
+        // a 1px border on every row, lit only when picked: a picked row keeps
+        // the same inner edge as the others, so its cells do not jump
         let r = div()
             .id(("browse-row", ri))
             .flex()
@@ -332,7 +341,9 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .py(px(12.0))
             .cursor_pointer()
             .hover(|s| s.bg(rgba(GLASS_1)))
-            .when(sel, |s| s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE)))
+            .border_1()
+            .border_color(rgba(if sel { HAIRLINE } else { 0x00000000 }))
+            .when(sel, |s| s.bg(rgb(WELL)))
             .on_click(click_for!(cx, row))
             .child(
                 div()
@@ -347,17 +358,24 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                             .font_weight(FontWeight::SEMIBOLD)
                             .text_size(px(15.0))
                             .text_color(rgb(if sel { ICE } else { INK }))
+                            .truncate()
                             .child(row.label.clone()),
                     )
                     .child(mono(&clip(&pack_name(h, &row.pack_id), 50), MUTED)),
             )
-            .child(div().w(px(130.0)).child(mono(&row.kind, INK_2)))
+            .child(div().w(px(130.0)).child(mono(&row.kind, INK_2).truncate()))
             .child(div().w(px(100.0)).child(mono(&format!("{} claims", row.claims), INK)));
         table = table.child(r);
         if ri + 1 < rows.len() {
             table = table.child(hairline());
         }
     }
+
+    // Side by side when the page has room for the table (at least 520 px)
+    // beside the drawer (DRAWER_W, SPACE_SECTION apart). Narrower, the drawer
+    // stacks under the table at the page's full width: it is never cut off at
+    // the edge, and nothing needs a sideways scroll to be reached.
+    let side_by_side = app.content_w >= 864.0;
 
     // ---- the picked view ----
     let body: gpui::AnyElement = match app.browse_view {
@@ -373,31 +391,35 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                         .items_center()
                         .gap(px(SPACE_CARD))
                         .py(px(4.0))
-                        .px(px(16.0))
-                        .mx(px(-16.0))
+                        // card()'s inner edge: the highlight reaches it, and the
+                        // text keeps the card's text edge
+                        .px(px(PAD_CARD + 2.0))
+                        .mx(px(-(PAD_CARD + 2.0)))
                         .rounded(px(10.0))
                         .cursor_pointer()
                         .hover(|s| s.bg(rgba(GLASS_1)))
                         .when(sel, |s| s.bg(rgb(WELL)))
                         .on_click(click_for!(cx, row))
-                        .child(mono(&clip(&row.label, 40), if sel { ICE } else { INK }))
+                        .child(mono(&clip(&row.label, 40), if sel { ICE } else { INK }).min_w(px(0.0)).truncate())
                         .child(div().w(px(8.0)))
-                        .child(mono(&row.kind, MUTED))
+                        .child(mono(&row.kind, MUTED).flex_none())
                         .child(div().flex_1().min_w(px(0.0)))
-                        .child(mono(&format!("{} claims", row.claims), INK_2)),
+                        .child(mono(&format!("{} claims", row.claims), INK_2).flex_none()),
                 );
             }
             list.into_any_element()
         }
         2 => {
-            // grid: subject tiles
-            let mut grid = div().flex().flex_wrap().gap(px(8.0));
+            // grid: subject tiles in the shared grid, so the columns fill the
+            // width the list has (the drawer keeps its own column beside it)
+            let width = if side_by_side { app.content_w - DRAWER_W - SPACE_SECTION } else { app.content_w };
+            let mut tiles: Vec<Div> = Vec::new();
             for (ri, row) in rows.iter().enumerate() {
                 let sel = is_sel(row);
-                grid = grid.child(
+                tiles.push(div().flex().child(
                     div()
                         .id(("browse-grid-tile", ri))
-                        .w(px(210.0))
+                        .flex_1()
                         .cursor_pointer()
                         .when(sel, |s| s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE)))
                         .when(!sel, |s| s.bg(rgba(GLASS_1)).border_1().border_color(rgba(HAIRLINE)))
@@ -424,9 +446,9 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                                 .text_color(rgb(ICE))
                                 .child(format!("{} claims", row.claims)),
                         ),
-                );
+                ));
             }
-            div().child(grid).into_any_element()
+            grid(width, 210.0, tiles).into_any_element()
         }
         _ => div()
             .id("browse-table-scroll")
@@ -468,17 +490,21 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .on_click(pick_size);
         page_sizes = page_sizes.child(button);
     }
+    // the controls take the rest of the row and sit at its end; on a line of
+    // their own (a narrow list) they still end at the list's right edge
     let pagination = div()
         .flex()
         .items_center()
-        .justify_between()
         .flex_wrap()
         .gap(px(8.0))
         .child(mono(&page_summary, MUTED))
         .child(
             div()
                 .flex()
+                .flex_grow()
+                .justify_end()
                 .items_center()
+                .flex_wrap()
                 .gap(px(8.0))
                 .child(page_sizes)
                 .child(
@@ -495,24 +521,27 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 
     let drawer = drawer(app, motion);
 
-    // Side by side when the page has room for the table (at least 520 px)
-    // beside the drawer (320 px, 24 px apart). Narrower, the drawer stacks
-    // under the table at the page's full width: it is never cut off at the
-    // edge, and nothing needs a sideways scroll to be reached.
-    let side_by_side = app.content_w >= 864.0;
+    // The paging belongs to the list, so it sits under the list's own column
+    // and shares the list's edges, not the drawer's.
+    let column = div()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_SECTION))
+        .child(body)
+        .child(pagination);
     let picked = if side_by_side {
         div()
             .flex()
             .gap(px(SPACE_SECTION))
             .items_start()
-            .child(div().flex_1().min_w(px(0.0)).child(body))
-            .child(div().w(px(320.0)).flex_none().child(drawer))
+            .child(div().flex_1().min_w(px(0.0)).child(column))
+            .child(div().w(px(DRAWER_W)).flex_none().child(drawer))
     } else {
         div()
             .flex()
             .flex_col()
             .gap(px(SPACE_SECTION))
-            .child(div().w_full().min_w(px(0.0)).child(body))
+            .child(div().w_full().min_w(px(0.0)).child(column))
             .child(div().w_full().child(drawer))
     };
 
@@ -521,15 +550,15 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex_col()
         .gap(px(SPACE_SECTION))
         .child(head)
-        // always mounted so it can slide; the negative margin takes back the
-        // page gap a closed, zero-height panel would otherwise leave
-        .child(div().mt(px(-24.0)).child(reveal(
-            div().pt(px(24.0)).child(if filters_open { filter_drawer.into_any_element() } else { div().into_any_element() }),
+        // always mounted so it can slide. A closed panel is zero-high but still
+        // sits between two page gaps, so the negative top margin takes one back;
+        // open, its top padding is that same gap.
+        .child(div().mt(px(-SPACE_SECTION)).child(reveal(
+            div().pt(px(SPACE_SECTION)).child(if filters_open { filter_drawer.into_any_element() } else { div().into_any_element() }),
             "browse-filters-reveal",
             filters_open,
             900.0,
             motion,
         )))
         .child(picked)
-        .child(pagination)
 }
