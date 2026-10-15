@@ -153,7 +153,12 @@ def test_harness_research_gather_uses_selected_cli_and_host_read_quote(monkeypat
         pack_id="products"), documents[0])[0].quote == QUOTE
 
 
-def test_claude_quicklook_keeps_its_native_web_tool_path(monkeypatch):
+def test_a_harness_outside_the_host_read_set_keeps_its_native_web_tool_path(monkeypatch):
+    # No shipped agent is in this position since Claude Code joined the host-read
+    # set; the native path stays for an agent whose row is added without it.
+    monkeypatch.setattr(
+        harness, "HOST_READ_HARNESSES",
+        harness.HOST_READ_HARNESSES - {"claude-code"})
     researcher = harness.HarnessResearcher(row("claude-code"))
     prompts = []
     monkeypatch.setattr(
@@ -180,6 +185,9 @@ def test_a_native_tools_agent_keeps_the_claims_it_cites_from_its_own_pages(monke
     """
     from app import quicklook
 
+    monkeypatch.setattr(
+        harness, "HOST_READ_HARNESSES",
+        harness.HOST_READ_HARNESSES - {"claude-code"})
     researcher = harness.HarnessResearcher(row("claude-code"))
     reply = (
         '{"risks":[{"title":"Charging port failure","why":"It may fail.",'
