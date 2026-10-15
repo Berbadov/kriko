@@ -487,3 +487,28 @@ def test_one_absolute_deadline_times_out_without_capability_fallback(
         assert [item[0] for item in states] == ["not_sent"]
     finally:
         transport.close()
+
+
+def test_a_long_reply_streamed_in_many_chunks_is_not_an_event_overflow() -> None:
+    from app.providers import codex_transport as ct
+
+    events: list = []
+    text: list[str] = []
+    for index in range(1000):
+        ct._handle_event(
+            {"method": "item/agentMessage/delta",
+             "params": {"threadId": "t", "turnId": "u", "delta": f"{index} "}},
+            "t", "u", events, {}, None, None, text.append)
+
+    assert len(text) == 1000 and events == []
+    for _ in range(ct._MAX_RETAINED_EVENTS + 1):
+        try:
+            ct._handle_event(
+                {"method": "item/started", "params": {"threadId": "t", "turnId": "u",
+                                                       "item": {"type": "reasoning"}}},
+                "t", "u", events, {}, None, None, None)
+        except ct.CodexTransportError as error:
+            assert "event limit" in str(error)
+            break
+    else:
+        raise AssertionError("other events are still bounded")

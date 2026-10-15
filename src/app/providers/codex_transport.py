@@ -862,9 +862,14 @@ def _handle_event(
         item = params.get("item", {})
         if isinstance(item, Mapping) and item.get("type") in {"commandExecution", "fileChange", "mcpToolCall"}:
             raise CodexTransportError(f"Codex requested denied capability: {item.get('type')}")
-    events.append(event)
-    if len(events) > _MAX_RETAINED_EVENTS:
-        raise CodexTransportError("Codex app-server exceeded the per-turn event limit")
+    # A text delta is handed to the callbacks below and not kept: the answer is
+    # read from the completed turn, and a reply of a few kilobytes arrives as
+    # hundreds of chunks (measured: 251 deltas for a 2 KB reply), so counting
+    # them aborted every long answer with "exceeded the per-turn event limit".
+    if not _is_text_delta(event):
+        events.append(event)
+        if len(events) > _MAX_RETAINED_EVENTS:
+            raise CodexTransportError("Codex app-server exceeded the per-turn event limit")
     if callback:
         callback(event)
     if action_callback:
