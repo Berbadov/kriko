@@ -98,6 +98,26 @@ def test_idle_policy_uses_available_memory():
     assert agentresources.idle_policy(ram_available_mb=8192) == "keep"
 
 
+def test_the_readers_run_choice_raises_the_agent_child_budget(monkeypatch):
+    """Reproduction: the budget was the profile's two, so Settings' four ran two at once.
+
+    The profile stays the floor (a reader on one run keeps today's two children,
+    so a chat beside a research run is not queued), and an operator's explicit
+    KRIKO_MAX_AGENT_CHILDREN is the one bound that is not raised.
+    """
+    monkeypatch.delenv("KRIKO_MAX_AGENT_CHILDREN", raising=False)
+    monkeypatch.delenv("KRIKO_RESOURCE_PROFILE", raising=False)
+    try:
+        agentresources.set_agent_children_floor(1)
+        assert agentresources.agent_child_limit() == 2
+        agentresources.set_agent_children_floor(4)
+        assert agentresources.agent_child_limit() == 4
+        monkeypatch.setenv("KRIKO_MAX_AGENT_CHILDREN", "1")
+        assert agentresources.agent_child_limit() == 1
+    finally:
+        agentresources.set_agent_children_floor(0)
+
+
 def test_native_memory_snapshot_reports_positive_host_ram():
     snapshot = agentresources.memory_snapshot()
     assert snapshot is not None

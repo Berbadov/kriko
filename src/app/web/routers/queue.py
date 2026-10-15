@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from app.web import state
-from app.web.deps import get_app_state
+from app.web.deps import get_app_state, get_jobs
 
 router = APIRouter(prefix="/api/queue", tags=["queue"])
 
@@ -23,8 +23,12 @@ class QueueRequest(BaseModel):
 
 
 @router.get("")
-def list_queue(conn=Depends(get_app_state)) -> dict:
-    return {"items": state.research_queue(conn), "max": state.QUEUE_MAX}
+def list_queue(conn=Depends(get_app_state), runner=Depends(get_jobs)) -> dict:
+    # `running`, `queued` and `concurrency` say how the queue is being run
+    # right now (the scheduler's counts, not this list's): a reader who set
+    # four and sees one running can see why, instead of guessing.
+    return {"items": state.research_queue(conn), "max": state.QUEUE_MAX,
+            **runner.concurrency()}
 
 
 @router.post("")

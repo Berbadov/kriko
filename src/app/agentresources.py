@@ -31,6 +31,35 @@ def _profile() -> str:
     return value if value in _PROFILES else "balanced"
 
 
+#: How many runs the reader asked to have going at once (Settings → Runs). The
+#: job runner hands it in at every start. Before this, the agent-child budget
+#: was the profile's number alone, so a reader who chose four runs got two
+#: agent processes, and the other two sat waiting while their jobs said
+#: "running" (the bug #133's reader hit). The profile stays the floor, so one
+#: run beside a chat keeps today's two children; an operator's explicit
+#: KRIKO_MAX_AGENT_CHILDREN is exact and is never raised.
+_CHILD_FLOOR = 0
+
+
+def set_agent_children_floor(runs: int) -> None:
+    """The reader's run choice, as the least agent children that may run at once."""
+    global _CHILD_FLOOR
+    with _LIMITER.condition:
+        _CHILD_FLOOR = max(0, min(16, int(runs)))
+        _LIMITER.condition.notify_all()
+
+
+def agent_child_limit() -> int:
+    """How many agent processes may run on this host at once, right now."""
+    return _LIMITER.limits("agent_child")[0]
+
+
+def _agent_child_budget(profile: int) -> int:
+    if os.environ.get("KRIKO_MAX_AGENT_CHILDREN", "").strip():
+        return _bounded_env("KRIKO_MAX_AGENT_CHILDREN", profile, 1, 16)
+    return max(profile, _CHILD_FLOOR)
+
+
 class _Limiter:
     def __init__(self) -> None:
         self.condition = threading.Condition()
@@ -42,7 +71,7 @@ class _Limiter:
     def limits(self, kind: str) -> tuple[int, int]:
         profile = _PROFILES[_profile()]
         if kind in {"cli", "agent_child"}:
-            total = _bounded_env("KRIKO_MAX_AGENT_CHILDREN", profile, 1, 16)
+            total = _agent_child_budget(profile)
             return total, total
         if kind in {"outbound", "network"}:
             total = _bounded_env("KRIKO_MAX_OUTBOUND", max(4, profile * 4), 1, 64)
@@ -60,7 +89,6 @@ class _Limiter:
                  else "cli" if kind in {"cli", "agent_child"}
                  else "probe" if kind in {"probe", "cli_probe"}
                  else "inference")
-        total, per_source = self.limits(kind)
         source_id = (group, key)
         ticket = object()
         began = time.monotonic()
@@ -72,6 +100,9 @@ class _Limiter:
                 while True:
                     if check is not None:
                         check()
+                    # Read again on every pass: the reader may raise the run
+                    # choice while this caller is already waiting for a slot.
+                    total, per_source = self.limits(kind)
                     # A full per-source bucket must not stall unrelated hosts.
                     # Still keep callers for one source in arrival order, so a
                     # later request cannot overtake an earlier one for it.

@@ -17,6 +17,8 @@ from fastapi.testclient import TestClient
 from app.web import state
 from app.web.app import create_app
 from app.web.jobs import Cancelled, JobRunner
+from app.web.routers.jobs import list_jobs
+from app.web.routers.queue import list_queue
 from app.web.settings import Settings
 
 
@@ -572,3 +574,34 @@ def test_the_flag_survives_the_run_finishing(settings):
 
     with TestClient(create_app(settings)) as client:
         assert client.get(f"/api/jobs/{job_id}").json()["attention"]["count"] == 1
+
+
+def test_the_jobs_payload_says_how_many_run_and_how_many_are_allowed(settings):
+    """Concurrency must be visible: the reader sees "2 running of 2 at once, 1 waiting"."""
+    gate = threading.Event()
+
+    def handler(_settings, params, _progress):
+        gate.wait(10)
+        return {"name": params["name"]}
+
+    conn = state.connect(settings.app_state_path)
+    state.put_settings(conn, {"run_concurrency": 2})
+    runner = JobRunner(settings, {"research": handler})
+    ids = []
+    try:
+        ids = [runner.submit("research", {"pack_id": f"p{i}", "name": f"r{i}"}) for i in range(3)]
+        deadline = time.time() + 5
+        while time.time() < deadline and state.get_job(conn, ids[1])["state"] != state.RUNNING:
+            time.sleep(0.02)
+        body = list_jobs(limit=30, app_state=conn, runner=runner)
+        queue = list_queue(conn=conn, runner=runner)
+        assert body["running"] == 2
+        assert body["concurrency"] == 2
+        assert body["queued"] == 1
+        assert queue["running"] == 2
+        assert queue["concurrency"] == 2
+    finally:
+        gate.set()
+        for job_id in ids:
+            wait_for_done(conn, job_id)
+        runner.shutdown(wait=True)
