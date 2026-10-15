@@ -297,6 +297,8 @@ pub struct State {
     pub harnesses: Vec<(String, String)>,
     pub harness: String,
     pub queue_harness: String,
+    /// Why the Local agent is not among `harnesses`, when it is not ready.
+    pub local_note: String,
 
     pub queue: Vec<QItem>,
     pub queue_max: usize,
@@ -736,6 +738,7 @@ impl Kriko {
                     if this.live.compare.queue_harness.is_empty() {
                         this.live.compare.queue_harness = pick;
                     }
+                    this.live.compare.local_note = crate::live::chat::local_note(&p);
                 }
                 if let Ok(s) = settings {
                     this.live.compare.queue_auto =

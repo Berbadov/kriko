@@ -44,9 +44,10 @@ HISTORY_MESSAGES = 8
 HISTORY_CHARS = 400
 #: A plan reply is parsed from at most this much text.
 PLAN_CHARS = 20000
-#: What the answer should run to, unless the reader asked for detail.
-ANSWER_WORDS = 150
-DETAIL_WORDS = 400
+#: What the answer should run to, unless the reader asked for detail. The reader
+#: reads the whole reply in a card, so a shortlist is cut to what it needs.
+ANSWER_WORDS = 100
+DETAIL_WORDS = 300
 #: A round's records, as the agent reads them, capped so a refinement fits.
 ROUND_CHARS = 12000
 

@@ -3,8 +3,9 @@
 //! reads each one only when it asks; the steps are drawn as it reads them, and
 //! the answer names the sources it used.
 //!
-//! A thread list sits beside the conversation (above it when the window is
-//! narrow); the composer at the bottom picks the agent and sends the question.
+//! The conversation comes first and the composer sits at its foot, with the
+//! agent picker beside the input. The conversations list sits beside it, and
+//! below it when the window is narrow.
 
 use gpui::{div, prelude::*, px, rgb, rgba, ClickEvent, Context, Div, FontWeight, Styled, Window};
 
@@ -15,7 +16,7 @@ use crate::screens::local::pill;
 use crate::screens::{empty_note, mono, plate_s, row_desc};
 use crate::theme::*;
 
-/// Below this content width the thread list stacks above the conversation.
+/// Below this content width the conversations list stacks under the conversation.
 const NARROW_W: f32 = 760.0;
 
 pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
@@ -24,7 +25,7 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
     let threads = thread_list(app, cx);
     let conversation = conversation(app, motion, window, cx);
     let body = if narrow {
-        div().flex().flex_col().gap(px(8.0)).child(threads).child(conversation)
+        div().flex().flex_col().gap(px(8.0)).child(conversation).child(threads)
     } else {
         div()
             .flex()
@@ -36,7 +37,7 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
     div().flex().flex_col().gap(px(8.0)).child(body)
 }
 
-// ---- the thread list ----
+// ---- the conversations ----
 
 fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     let chat = &app.live.chat;
@@ -44,12 +45,12 @@ fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         this.new_chat_thread(cx);
         cx.notify();
     });
-    let mut list = div().flex().flex_col().gap(px(4.0));
+    let mut list = div().flex().flex_col().gap(px(2.0));
     if chat.threads.is_empty() {
         list = list.child(empty_note(if chat.loaded {
-            "No conversations yet. Start one with New."
+            "No conversations yet."
         } else {
-            "Reading your conversations..."
+            "Loading..."
         }));
     }
     for (i, thread) in chat.threads.iter().enumerate() {
@@ -63,7 +64,7 @@ fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
             div()
                 .id(("chat-thread", i))
                 .px(px(12.0))
-                .py(px(9.0))
+                .py(px(8.0))
                 .rounded(px(10.0))
                 .cursor_pointer()
                 .font_family(SANS)
@@ -76,18 +77,11 @@ fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         );
     }
     card()
-        .p(px(14.0))
+        .p(px(10.0))
         .flex()
         .flex_col()
-        .gap(px(6.0))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .child(eyebrow("Conversations"))
-                .child(plate_s("chat-new", "New").on_click(new_one)),
-        )
+        .gap(px(8.0))
+        .child(div().flex().justify_end().child(plate_s("chat-new", "New").on_click(new_one)))
         .child(list)
 }
 
@@ -95,39 +89,39 @@ fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
 
 fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let chat = &app.live.chat;
-    let title = chat
+    let mut column = card().p(px(16.0)).flex().flex_col().gap(px(10.0));
+    if let Some(name) = chat
         .thread
         .as_ref()
         .and_then(|id| chat.threads.iter().find(|t| t.thread_id == *id))
         .map(|t| t.name())
-        .unwrap_or_else(|| "Ask your agent".to_string());
-    let open = chat.thread.is_some();
-    let say = chat.say.clone();
-    let mut head = div().flex().items_center().justify_between().gap(px(8.0)).child(
-        div()
-            .min_w(px(0.0))
-            .font_family(DISPLAY)
-            .font_weight(FontWeight::SEMIBOLD)
-            .text_size(px(18.0))
-            .text_color(rgb(INK))
-            .child(title),
-    );
-    if open {
+    {
         let delete = cx.listener(|this, _: &ClickEvent, _w, cx| {
             this.delete_chat_thread(cx);
             cx.notify();
         });
-        head = head.child(plate_s("chat-delete", "Delete").on_click(delete));
+        column = column.child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .gap(px(8.0))
+                .child(
+                    div()
+                        .min_w(px(0.0))
+                        .font_family(DISPLAY)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(px(18.0))
+                        .text_color(rgb(INK))
+                        .child(name),
+                )
+                .child(plate_s("chat-delete", "Delete").on_click(delete)),
+        );
     }
+    let say = chat.say.clone();
     let messages = messages_view(app, motion, cx);
     let composer = composer(app, window, cx);
-    let mut column = card()
-        .p(px(16.0))
-        .flex()
-        .flex_col()
-        .gap(px(8.0))
-        .child(head)
-        .child(messages);
+    column = column.child(messages);
     if let Some(text) = say {
         column = column.child(danger_line(&text));
     }
@@ -136,9 +130,9 @@ fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Con
 
 fn messages_view(app: &Kriko, motion: bool, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
     let chat = &app.live.chat;
-    let mut column = div().flex().flex_col().gap(px(8.0));
+    let mut column = div().flex().flex_col().gap(px(10.0));
     if chat.messages.is_empty() && chat.in_flight.is_none() {
-        column = column.child(intro(app, cx));
+        column = column.child(examples(cx));
     }
     for message in chat.messages.iter() {
         column = column.child(match message.role {
@@ -167,20 +161,20 @@ fn messages_view(app: &Kriko, motion: bool, cx: &mut Context<Kriko>) -> gpui::St
         .child(column)
 }
 
-/// What an empty conversation says: how to ask, three generic examples, and
-/// the names of what the agent may read. Names only, never a record.
-fn intro(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
-    let mut examples = div().flex().flex_col().gap(px(8.0));
+/// An empty conversation starts from one of these questions. Nothing else: the
+/// first look is the question box and what it can be asked.
+fn examples(cx: &mut Context<Kriko>) -> Div {
+    let mut column = div().flex().flex_col().gap(px(6.0));
     for (i, text) in CHAT_EXAMPLES.iter().enumerate() {
         let fill = cx.listener(move |this, _: &ClickEvent, _w, cx| {
             this.chat_input.set_value(text.to_string());
             cx.notify();
         });
-        examples = examples.child(
+        column = column.child(
             div()
                 .id(("chat-example", i))
                 .px(px(12.0))
-                .py(px(9.0))
+                .py(px(8.0))
                 .rounded(px(10.0))
                 .cursor_pointer()
                 .bg(rgb(WELL))
@@ -194,27 +188,7 @@ fn intro(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
                 .on_click(fill),
         );
     }
-    let mut reads = div().flex().flex_col().gap(px(6.0));
-    for source in &app.live.chat.sources {
-        reads = reads.child(
-            div()
-                .flex()
-                .items_baseline()
-                .gap(px(6.0))
-                .child(mono(&source.name, INK_2).flex_none())
-                .child(row_desc(&source.description)),
-        );
-    }
-    div()
-        .flex()
-        .flex_col()
-        .gap(px(8.0))
-        .child(row_desc(
-            "Ask in your own words. The agent plans what to look up, reads only that, and answers with the sources it used.",
-        ))
-        .child(examples)
-        .child(eyebrow("It can read"))
-        .child(reads)
+    column
 }
 
 fn reader_line(message: &Message) -> Div {
@@ -231,8 +205,7 @@ fn reader_line(message: &Message) -> Div {
 }
 
 fn agent_block(message: &Message) -> Div {
-    let mut body = div().flex().flex_col().gap(px(6.0)).child(eyebrow("Agent"));
-    body = body.child(text_block(&message.text));
+    let mut body = div().flex().flex_col().gap(px(8.0)).child(text_block(&message.text));
     if !message.steps.is_empty() {
         body = body.child(steps_view(&format!("chat-done-{}", message.message_id), &message.steps, false));
     }
@@ -312,23 +285,39 @@ fn sources_view(names: &[String]) -> Div {
     row
 }
 
-/// An answer, line by line, so a shortlist keeps its breaks.
+/// An answer, line by line. A line that opens a list item (a number, a dash or
+/// a star) is a compact row with a hairline above it, so a shortlist reads as
+/// rows, not as one paragraph.
 fn text_block(text: &str) -> Div {
     let mut column = div()
         .flex()
         .flex_col()
-        .gap(px(6.0))
+        .gap(px(4.0))
         .font_family(SANS)
         .text_size(px(14.0))
         .text_color(rgb(INK));
-    for line in text.lines() {
-        column = if line.trim().is_empty() {
-            column.child(div().h(px(6.0)))
+    for line in text.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        column = if is_list_item(line) {
+            column.child(
+                div()
+                    .py(px(6.0))
+                    .border_t_1()
+                    .border_color(rgba(HAIRLINE))
+                    .child(line.to_string()),
+            )
         } else {
             column.child(line.to_string())
         };
     }
     column
+}
+
+/// A line that opens a list item: "1." or "2)" or a dash or star bullet.
+fn is_list_item(line: &str) -> bool {
+    let digits = line.chars().take_while(|c| c.is_ascii_digit()).count();
+    (digits > 0 && digits <= 2 && matches!(line.chars().nth(digits), Some('.') | Some(')')))
+        || line.starts_with("- ")
+        || line.starts_with("* ")
 }
 
 fn danger_line(text: &str) -> Div {
@@ -343,29 +332,40 @@ fn danger_line(text: &str) -> Div {
 
 // ---- the composer ----
 
+/// The question box, with the agent picker beside it and Send at its end. The
+/// picker is one chip that names the agent and steps to the next on each press.
 fn composer(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let chat = &app.live.chat;
     let busy = chat.sending || chat.in_flight.is_some();
-    let mut agents = div().flex().items_center().gap(px(8.0)).flex_wrap();
-    for (i, (id, label)) in chat.harnesses.iter().enumerate() {
-        let picked = *id == chat.harness;
-        let pick = {
-            let id = id.clone();
-            cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                // The agent is fixed for a turn in flight: changing it mid-answer
-                // would make the steps and the answer disagree about who gave them.
-                if this.live.chat.in_flight.is_none() {
-                    this.live.chat.harness = id.clone();
-                }
-                cx.notify();
-            })
-        };
-        agents = agents.child(pill(("chat-agent", i), label, picked).on_click(pick));
-    }
+    let label = chat
+        .harnesses
+        .iter()
+        .find(|(id, _)| *id == chat.harness)
+        .map(|(_, label)| label.clone())
+        .unwrap_or_else(|| "No agent".to_string());
+    let cycle = cx.listener(|this, _: &ClickEvent, _w, cx| {
+        // The agent is fixed for a turn in flight: changing it mid-answer would
+        // make the steps and the answer disagree about who gave them.
+        let count = this.live.chat.harnesses.len();
+        if this.live.chat.in_flight.is_none() && count > 0 {
+            let at = this
+                .live
+                .chat
+                .harnesses
+                .iter()
+                .position(|(id, _)| *id == this.live.chat.harness)
+                .map_or(0, |i| i + 1);
+            this.live.chat.harness = this.live.chat.harnesses[at % count].0.clone();
+        }
+        cx.notify();
+    });
+    let agent = pill("chat-agent", &label, true).on_click(cycle);
+    let note = (!chat.local_note.is_empty())
+        .then(|| row_desc(&format!("Local agent: {}", chat.local_note)));
     let input = app.input_field(
         Field::ChatAsk,
         "chat-input",
-        "Ask about what this app holds...",
+        "Describe what you need...",
         Some("agents"),
         window,
         cx,
@@ -378,12 +378,13 @@ fn composer(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         .flex()
         .flex_col()
         .gap(px(6.0))
-        .child(agents)
+        .children(note)
         .child(
             div()
                 .flex()
                 .items_center()
                 .gap(px(6.0))
+                .child(agent)
                 .child(div().flex_1().min_w(px(0.0)).child(input))
                 .child(key_or_busy(busy).on_click(send)),
         )
