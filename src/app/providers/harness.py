@@ -2598,6 +2598,20 @@ class _Attempt:
                     "reply_sha256": hashlib.sha256(text.encode()).hexdigest()}, usage=usage)
 
 
+#: Said before the pages when an authoring brief is answered from them. The
+#: brief was written for an agent that searches for itself, so this takes the
+#: searching away from it and says where the research now is. Not used when
+#: the search failed and the CLI is asked to search, because then it can.
+AUTHOR_PAGES_NOTE = (
+    "\n\n## Research already done\n\n"
+    "The searching for this brief is finished: Kriko ran it and read the pages "
+    "listed under \"Host-read pages\" below. Do not try to search or open pages "
+    "yourself. Where the brief above asks you to search, research or open pages, "
+    "use those pages instead, and claim only what they say. Copy every quote word "
+    "for word from the page it is cited to.\n"
+)
+
+
 class HarnessResearcher(AgentResearcher):
     """Research by *running* the harness, rather than by writing to it.
 
@@ -2986,6 +3000,31 @@ class HarnessResearcher(AgentResearcher):
             product=product, page=page, prefer_issues=True, quicklook_answer=True,
         )
 
+    def ask_author(self, prompt: str, *, product: str, page=None) -> str:
+        """One pack-authoring brief, answered from pages Kriko read for it.
+
+        A brief that says "research the category first" assumes the agent can
+        search. A host-read CLI running as a toolless persistent session (codex,
+        vibe) cannot: every search is refused, so it tried a dozen times and
+        shipped a catalog with no claims. Here Kriko runs the search and page
+        read a quick look runs, and the pages travel with the brief, so the
+        claims can be checked against text the agent was shown. When no page
+        can be read, `_ask_with_pages` raises `NoHarness` before the agent is
+        asked anything. Any other agent is asked as before.
+        """
+        if self.harness.id not in HOST_READ_HARNESSES:
+            return self.ask(prompt)
+        from app.providers import local_search_plan
+
+        source_note = getattr(self, "source_instructions", "")
+        _url, search_language = self._search_settings()
+        queries = [f'"{product}" {angle}' for angle in local_search_plan.quick_angles(
+            getattr(self, "source_kinds", ()), search_language)]
+        return self._ask_with_pages(
+            queries, prompt + source_note, product=product, page=page,
+            prefer_issues=True, pages_note=AUTHOR_PAGES_NOTE,
+        )
+
     def ask_followup(self, prompt: str, *, product: str = "", question: str = "") -> str:
         """Answer a web follow-up from host-read pages in one CLI session."""
         if self.harness.id not in HOST_READ_HARNESSES:
@@ -3027,7 +3066,8 @@ class HarnessResearcher(AgentResearcher):
                         page=None, prefer_issues: bool = False,
                         quicklook_answer: bool = False,
                         max_pages: int | None = None,
-                        source_line: bool = False) -> str:
+                        source_line: bool = False,
+                        pages_note: str = "") -> str:
         from app import quicklook
         started = time.perf_counter()
         reader = None
@@ -3102,7 +3142,7 @@ class HarnessResearcher(AgentResearcher):
                 f"open at most {max(1, self.max_documents or 3)} pages, then answer: "
                 "do not keep searching. Cite only URLs you actually opened and copy "
                 "every quote verbatim from the page it came from.\n" if own_search
-                else self._page_context(sources, self.page_titles))
+                else pages_note + self._page_context(sources, self.page_titles))
             if source_line and not own_search:
                 full_prompt += (
                     "\n\nThe Sources line may name only URLs from the host-read pages above. "
