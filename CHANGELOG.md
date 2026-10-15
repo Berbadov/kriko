@@ -4,6 +4,13 @@ Reader-visible changes for releases older than the three shown in the
 [README](README.md#whats-new). Newest first. Published versions are immutable; a
 correction is a newer version (see [the update protocol](docs/UPDATE_PROTOCOL.md)).
 
+### 1.6.1
+
+- Codex, Antigravity and Mistral Vibe Quick Looks no longer fail while counting model calls. Agent model choices omit duplicate entries.
+- Local research reserves context for source evidence, keeps product metadata compact, and searches product documentation alongside issue discussions. Ollama execution reports the model's observed GPU or CPU use.
+- A completed Quick Look with no supported issues remains a saved research result, with product facts, sources and coverage. It does not establish that the product is issue-free.
+- Product and comparison follow-ups carry the saved product context and can search and read fresh web evidence. Saved results show their evidence in Run and History.
+
 ### 1.6.0
 
 - The desktop has a new glass-inspired layout, clearer navigation and live job panel, with animations that pause when the window is inactive and obey **Reduce motion**.
