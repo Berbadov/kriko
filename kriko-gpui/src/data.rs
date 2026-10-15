@@ -62,8 +62,8 @@ pub const PAGE_SIZE: usize = 5;
 /// Example questions for an empty conversation. Generic on purpose: the words
 /// in brackets are for the reader to fill, whatever the catalogues hold.
 pub const CHAT_EXAMPLES: &[&str] = &[
-    "I need a <product> with <constraint a> and <constraint b>. Which fits best?",
-    "Which of my saved checks record a serious risk?",
+    "I need a <product> with <constraint>. Which fits best?",
+    "Which saved checks record a serious risk?",
     "What do my quick looks say about <product>?",
 ];
 
