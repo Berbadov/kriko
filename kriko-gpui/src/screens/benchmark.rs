@@ -17,7 +17,7 @@ use crate::theme::*;
 fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let b = &app.live.local.bench;
     let locked = matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating);
-    let mut result = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Run setup"))
+    let mut result = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Run setup"))
         .child(row_desc("Configuration accuracy uses the same fictional documents on each plane, with exact codes, years, revisions, markets and missing information. Live web research uses changing search results. These development cases measure behavior; they do not establish real-world coverage."));
     if locked {
         result = result.child(tag("bench-setup-locked", TagState::Live, "Setup is locked while pricing or running. Stop the benchmark to change it.", app.motion));
@@ -300,7 +300,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         _ => None,
     };
     let setup_panel = setup(app, window, cx);
-    let mut progress_panel = card().flex().flex_col().gap(px(12.0)).child(eyebrow("Live progress"));
+    let mut progress_panel = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Live progress"));
     let jobs: Vec<_> = app.live.run.jobs.iter().filter(|j| j.kind == "bench").take(5).cloned().collect();
     if jobs.is_empty() { progress_panel = progress_panel.child(empty_note("No benchmark task yet.")); }
     for job in &jobs { progress_panel = progress_panel.child(crate::screens::logs::job_logs(app, job, cx)); }
@@ -314,7 +314,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     progress_panel = progress_panel.child(row_desc(&format!("Local runtime: {} · model {} · active device {} · {}",
         crate::api::s(&runtime, "runtime"), crate::api::s(&runtime, "model"),
         crate::api::s(&runtime, "device"), crate::api::s(&runtime, "reason"))));
-    progress_panel = progress_panel.child(div().flex().flex_wrap().gap(px(10.0))
+    progress_panel = progress_panel.child(div().flex().flex_wrap().gap(px(6.0))
         .child(plate_s("bench-export", "Copy detailed results JSON").on_click(copy))
         .child(plate_s("bench-source", "Open benchmark source").on_click(source))
         .child(plate_s("bench-runtime-settings", "Local runtime settings").on_click(runtime_settings)));
@@ -325,7 +325,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         machine = machine.child(
             well()
                 .px(px(12.0))
-                .py(px(8.0))
+                .py(px(3.0))
                 .flex()
                 .flex_col()
                 .gap(px(2.0))
@@ -386,7 +386,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let mut run_status = div()
         .flex()
         .items_center()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .flex_wrap()
         .child(status)
         .when(estimating, |d| d.child(spinner("bench-estimate-spinner", 16.0, motion)))
@@ -416,14 +416,14 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let start_intro = div()
         .flex()
         .items_center()
-        .gap(px(24.0))
+        .gap(px(8.0))
         .when(app.content_w < 700.0, |d| d.flex_col().items_start())
         .child(run_button)
         .child(start_copy);
     let start_panel = card()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(8.0))
         .child(start_intro)
         .child(run_status)
         .children(b.last.clone().map(|l| mono(&l, MUTED)))
@@ -457,7 +457,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let heads = div()
         .flex()
         .flex_wrap()
-        .gap(px(16.0))
+        .gap(px(8.0))
         .child(headline(
             "Median answer",
             &latest.median_ms.map(|m| format!("{:.1}", m / 1000.0)).unwrap_or_else(|| "n/a".into()),
@@ -530,7 +530,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         let tps = speeds[k];
         agents = agents.child(
             div()
-                .py(px(10.0))
+                .py(px(4.0))
                 .flex()
                 .items_center()
                 .child(
@@ -539,7 +539,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                         .min_w(px(170.0))
                         .flex()
                         .items_center()
-                        .gap(px(12.0))
+                        .gap(px(8.0))
                         .child(mark_glyph(
                             &format!("bench-agent-{k}"),
                             mark_for(&row.plane, &row.llm, &server),
@@ -564,11 +564,11 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 )
                 .child(div().w(px(84.0)).child(mono(&seconds(row.ms), INK_2)))
                 .child(
-                    div().w(px(180.0)).flex().items_center().gap(px(10.0)).child(match tps {
+                    div().w(px(180.0)).flex().items_center().gap(px(6.0)).child(match tps {
                         Some(t) => div()
                             .flex()
                             .items_center()
-                            .gap(px(10.0))
+                            .gap(px(6.0))
                             .child(led_bar(
                                 if fastest > 0.0 { (t / fastest * 100.0) as f32 } else { 0.0 },
                                 10,
@@ -634,7 +634,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let history = card()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(
             div()
                 .flex()
@@ -698,7 +698,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(16.0))
+                        .gap(px(8.0))
                         .child(
                             div()
                                 .flex_1()
@@ -821,7 +821,7 @@ fn latest_score(runs: &[&BenchRun]) -> Div {
         if let Some(g)=run.raw.get("attempted_gold").filter(|g| !g.is_null()) { attempted_scored+=1; attempted+=crate::api::arr(g,"hallucinated").len(); }
         if let Some(t)=run.tokens { tokens+=t; measured+=1; }
     }
-    card().flex().flex_col().gap(px(10.0)).child(eyebrow("Benchmark score explained"))
+    card().flex().flex_col().gap(px(6.0)).child(eyebrow("Benchmark score explained"))
         .child(row_desc(&format!("Completed {completed}/{} runs. {}", runs.len(), if wanted>0 { format!("Found {found}/{wanted} expected issues ({:.0}%).", found as f64/wanted as f64*100.0) } else { "Expected-answer success rate was not measured.".into() })))
         .child(row_desc(&format!("Passed all expected-answer checks: {passed}/{scored} scored runs. Configuration checks include issues, specifications, applicability and abstention; older records score issues only.")))
         .child(row_desc(&format!("Forbidden claims in scored answers: {traps} ({scored} scored runs). {}", if attempted_scored>0 { format!("Final candidates contained {attempted} forbidden claims before filtering, across {attempted_scored} measured runs.") } else { "Attempts before filtering were not recorded in these older runs.".into() })))
@@ -830,7 +830,7 @@ fn latest_score(runs: &[&BenchRun]) -> Div {
 }
 
 fn accuracy(b: &crate::live::local::Bench) -> Div {
-    let mut panel = card().flex().flex_col().gap(px(12.0))
+    let mut panel = card().flex().flex_col().gap(px(8.0))
         .child(eyebrow("Configuration accuracy and usage"))
         .child(row_desc("Scores inspect proposed claims before source filtering. Empty answers still lose recall. Timings include failed attempts; missing token usage and prices remain unmeasured. Results stay separate by test set, model and protocol."));
     let rows = crate::api::arr(&b.snapshot, "readout");
@@ -839,7 +839,7 @@ fn accuracy(b: &crate::live::local::Bench) -> Div {
         let mut record = well().p(px(12.0)).flex().flex_col().gap(px(8.0))
             .child(row_title(&format!("{} · {}", crate::api::s(r, "plane"), crate::api::s(r, "llm"))))
             .child(mono(&format!("{} {} · {} · {} runs", crate::api::s(r, "set_id"), crate::api::s(r, "set_version"), crate::api::s(r, "protocol"), crate::api::n(r, "runs").unwrap_or(0.0)), DIM));
-        let mut scores = div().flex().flex_wrap().gap(px(16.0));
+        let mut scores = div().flex().flex_wrap().gap(px(8.0));
         for (label, key) in [("Unsupported claims", "hallucination_rate"), ("Expected facts found", "recall"), ("Specifications found", "spec_recall"), ("Correct abstention", "abstention_accuracy")] {
             let value = crate::api::n(r, key).map(|v| format!("{:.1}%", v * 100.0)).unwrap_or_else(|| "unmeasured".into());
             scores = scores.child(div().flex().flex_col().gap(px(3.0)).child(row_desc(label)).child(mono(&value, INK)));
@@ -858,7 +858,7 @@ fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Statefu
     let detail=r.raw.get("detail").cloned().unwrap_or(crate::api::Value::Null);
     let answer=detail.get("answer").cloned().unwrap_or(crate::api::Value::Null);
     let mut d=well().id(("bench-answer-scroll",i)).h(px(400.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_,_,cx|cx.stop_propagation())
-        .p(px(16.0)).flex().flex_col().gap(px(12.0))
+        .p(px(16.0)).flex().flex_col().gap(px(8.0))
         .child(row_desc(&score_words(&r.raw)).flex_none())
         .child(row_desc(&format!("{} · tokens: {} · {} risks backed by evidence · {} candidates rejected", seconds(r.ms), r.tokens.map(|v|format!("{v:.0}")).unwrap_or_else(||"not reported".into()),r.accepted,r.refused)));
     if !r.error.is_empty() { d=d.child(row_desc(&r.error)); }

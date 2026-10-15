@@ -150,17 +150,17 @@ pub enum LedAnim {
 
 /// The page column's side gutter, below the hero. The page head uses it too,
 /// so the title and the content share one left edge.
-pub const PAGE_PAD: f32 = 28.0;
+pub const PAGE_PAD: f32 = 20.0;
 /// Between two sections of one page.
-pub const SPACE_SECTION: f32 = 16.0;
+pub const SPACE_SECTION: f32 = 10.0;
 /// Between cards that sit side by side or stacked within a section.
-pub const SPACE_CARD: f32 = 12.0;
+pub const SPACE_CARD: f32 = 6.0;
 /// Between a section's title and what it holds.
-pub const SPACE_TITLE: f32 = 10.0;
+pub const SPACE_TITLE: f32 = 4.0;
 /// Inside a card.
-pub const PAD_CARD: f32 = 16.0;
+pub const PAD_CARD: f32 = 10.0;
 /// Inside a dense card: a list of rows, a table, a settings group.
-pub const PAD_CARD_TIGHT: f32 = 12.0;
+pub const PAD_CARD_TIGHT: f32 = 6.0;
 
 // ---- surfaces ----
 
@@ -174,9 +174,10 @@ pub fn card() -> Div {
         ))
         .border_1()
         .border_color(rgba(0xffffff26))
-        .rounded(px(14.0))
-        .p(px(PAD_CARD))
-        .shadow(vec![shadow(0x00000045, 0.0, 10.0, 28.0, 0.0)])
+        .rounded(px(10.0))
+        .px(px(PAD_CARD + 2.0))
+        .py(px(PAD_CARD))
+        .shadow(vec![shadow(0x00000045, 0.0, 6.0, 16.0, 0.0)])
 }
 
 /// A titled section: the eyebrow title over its body, at one distance on
@@ -249,14 +250,14 @@ pub fn callout() -> Div {
         ))
         .border_1()
         .border_color(rgba(0x86a3ff48))
-        .rounded(px(20.0))
-        .py(px(20.0))
-        .px(px(24.0))
+        .rounded(px(10.0))
+        .py(px(12.0))
+        .px(px(12.0))
         .flex()
         .flex_wrap()
         .items_center()
         .justify_between()
-        .gap(px(24.0))
+        .gap(px(12.0))
 }
 
 /// One horizontal hairline separator.
@@ -1428,9 +1429,10 @@ mod grid_tests {
 
     #[test]
     fn the_gaps_between_columns_count_against_the_width() {
-        // two of 300 need 612 px with the gap between them, not 600
-        assert_eq!(column_count(611.0, 300.0, 3), 1);
-        assert_eq!(column_count(612.0, 300.0, 3), 2);
+        // two of 300 need the gap between them as well, not just 600
+        let need = 600.0 + SPACE_CARD;
+        assert_eq!(column_count(need - 1.0, 300.0, 3), 1);
+        assert_eq!(column_count(need, 300.0, 3), 2);
     }
 
     #[test]

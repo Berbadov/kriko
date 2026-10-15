@@ -158,7 +158,7 @@ def test_a_bar_asks_for_frames_only_from_render_while_it_moves():
     render = _block(app, "impl Render for Kriko")
     assert render.index("advance_bars(self.motion)") < render.index("request_animation_frame(")
     callers = sorted(
-        str(path.relative_to(SRC))
+        path.relative_to(SRC).as_posix()
         for path in _sources()
         if "advance_bars(" in _code(path)
     )
