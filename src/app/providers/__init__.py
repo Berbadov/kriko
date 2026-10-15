@@ -510,8 +510,11 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
         search_kind=search_kind, timeout=timeout,
         schema=local_inference.FINDINGS_SCHEMA, runtime_options=runtime_options,
         context_tokens=context_tokens, search_language=search_language, engine=engine)
+    # Ten seconds a page, as the quick look reads (8): the default 30 let one
+    # slow host hold a whole run, and a page that is not there in ten is
+    # replaced by the next hit rather than waited for.
     researcher = LocalPlane(
-        search, fetch.reader(), complete, scheduler=scheduler, spend=spend,
+        search, fetch.reader(timeout=10.0), complete, scheduler=scheduler, spend=spend,
     )
     complete.language_instruction = (
         f"Write summaries and advice in {output_language}; preserve exact source quotes, "
@@ -537,14 +540,14 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
     It searches and reads for itself (`local_agent.LocalAsker`) and keeps the
     pages it read, so a risk whose quote is on no fetched page is dropped.
     """
-    from app.providers import local_agent, local_inference
+    from app.providers import local_agent, local_inference, openserp
 
     complete, search, provider = _local_parts(
         base_url=base_url, serving_name=serving_name,
         search_base_url=search_base_url, search_kind=search_kind,
         timeout=timeout, schema="", runtime_options=runtime_options,
         temperature=temperature, max_tokens=max_tokens, context_tokens=context_tokens,
-        search_language=search_language, engine="bing,duckduckgo,ecosia")
+        search_language=search_language, engine=openserp.LOCAL_ENGINES)
     plan = local_inference.OpenAICompatSocket(
         base_url, serving_name,
         timeout=timeout or local_inference.DEFAULT_TIMEOUT,
