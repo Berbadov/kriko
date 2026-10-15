@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.6.3-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.6.4-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Downloads](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [What's new](#whats-new) · [Benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,8 +34,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.6.3-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.6.3-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.6.4-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.6.4-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
@@ -45,8 +45,8 @@ Apple Silicon and Intel Macs have separate builds. A file is downloadable only w
 
 | Mac | Disk image | Portable app bundle |
 |---|---|---|
-| Apple Silicon | `kriko-1.6.3-macos-arm64.dmg` | `kriko-1.6.3-macos-arm64-portable.zip` |
-| Intel | `kriko-1.6.3-macos-x86_64.dmg` | `kriko-1.6.3-macos-x86_64-portable.zip` |
+| Apple Silicon | `kriko-1.6.4-macos-arm64.dmg` | `kriko-1.6.4-macos-arm64-portable.zip` |
+| Intel | `kriko-1.6.4-macos-x86_64.dmg` | `kriko-1.6.4-macos-x86_64-portable.zip` |
 
 Open the `.dmg` and drag **Kriko.app** to **Applications**. For the portable ZIP, extract it and move **Kriko.app** where you want it. Each archive is a complete app for its named architecture, built on a matching Mac.
 
@@ -91,6 +91,18 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 
 ## What's new
 
+### 1.6.4
+
+- **Codex works again on long answers.** Kriko stopped a Codex turn after 256 streamed events, so any structured answer of a few hundred tokens failed; in the author's own history 14 of 16 accepted turns died that way. The event limit, a reader queue limit and a line-size limit are gone or raised, a failed attempt now records why it failed, and a timed-out version probe is no longer remembered as "Codex has no persistent mode". Claude Code and Mistral Vibe get the same relief for long streamed answers. Codex also shows its first streamed answer text sooner in Chat and in the Run card, and a request that needs web tools goes to the process path before it is sent instead of failing after delivery.
+- **Concurrent research runs concurrently.** The number of agent processes was capped at two by the resource profile whatever **Settings → Runs** said. The setting now raises that cap, for Codex too, and quick looks follow it. Jobs waiting for a slot say so. On the quiet resource profile the setting now wins over the profile. Unknown products that need a new catalog still take turns, because catalog drafts share one claim.
+- **A new catalog is built from pages Kriko reads.** Codex, Antigravity and Mistral Vibe cannot search in persistent mode, so authoring a catalog used to send them to browse with no tools and ended in an installed catalog with no claims. They are now handed the pages, like a Quick Look, and a catalog with no claims says so and goes back to "needs an agent" instead of counting as filed.
+- **Queue and Compare.** The engine resolves a queued listing to a product (the seller's title rarely matches a catalog word for word, so known products were researched again and "passed over"), a finished research job saves a check so the product appears in Compare, queue states only move in valid steps, and an interrupted run returns to waiting after a restart. A skipped row now says why.
+- **Chat is shorter and built around the question.** One header and hint, a conversation with the input at its foot and the agent picker beside it, and product answers as compact rows. About a fifth of the words it had.
+- **The Local agent can be picked in Chat and Compare**, and when it is found but not ready, both screens say why instead of hiding it. A Compare follow-up with the Local agent and no search service answers from the saved checks, without web search, and says so.
+- **Browse** lines up: the filter card no longer overlaps the controls, every table row has the same height, long names truncate, and the grid and paging row follow the list.
+- **Claude Code runs show what reuse did**, for example "reused worker · started in 0.1 s · 9,800 of 10,400 input tokens cached", in the Quick Look card and the job log. Reusing a worker saves about 1.4 s a request; most of a run is the model's own turns and page fetches. Tool search is off for Claude Code runs, which removes a first step that Sonnet sometimes spent on it.
+- Known limits: the Windows desktop screens above were compiled and tested but not yet observed in a window for this release, and nothing was checked on macOS. Mistral Vibe authoring and the Claude Code changes were exercised against fakes, not a paid run. A catalog already installed with no claims is not rechecked; add the product to it again.
+
 ### 1.6.3
 
 - **Chat** (Check group): pick an agent and hold a threaded conversation. The agent is told only the names and one-line descriptions of what the app has gathered, and reads a source only when it asks; each ask shows as a step, then the answer with its sources. "I need X, with constraints a, b, c" becomes a ranked shortlist that says, per candidate, what is met, unknown or contradicted. Keys and settings cannot be reached from chat. Numeric limits are word-matched, so "under 2 kg" is met by "2 kg" whatever the direction.
@@ -115,12 +127,6 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 - Known limits: a first search after Kriko starts still takes 35 to 75 seconds while the search browser opens, and the search engines can block it again at any time. A run with no pages read is not evidence that a product has no problems.
 - For contributors: `tools/bump.py` also updates the macOS download filenames in this README, which it left at the old version before.
 
-### 1.6.1
-
-- Codex, Antigravity and Mistral Vibe Quick Looks no longer fail while counting model calls. Agent model choices omit duplicate entries.
-- Local research reserves context for source evidence, keeps product metadata compact, and searches product documentation alongside issue discussions. Ollama execution reports the model's observed GPU or CPU use.
-- A completed Quick Look with no supported issues remains a saved research result, with product facts, sources and coverage. It does not establish that the product is issue-free.
-- Product and comparison follow-ups carry the saved product context and can search and read fresh web evidence. Saved results show their evidence in Run and History.
 Earlier releases are in the [changelog](CHANGELOG.md).
 
 ## Model benchmarks
