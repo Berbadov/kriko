@@ -718,7 +718,8 @@ CREATE TABLE IF NOT EXISTS research_queue (
   lookup_id TEXT NOT NULL DEFAULT '',   -- the stored answer, when there is one
   origin    TEXT NOT NULL DEFAULT '',   -- the host it was queued from
   state     TEXT NOT NULL DEFAULT 'waiting',  -- waiting | researching | done
-  added_at  TEXT NOT NULL DEFAULT ''
+  added_at  TEXT NOT NULL DEFAULT '',
+  note      TEXT NOT NULL DEFAULT ''   -- why it was last passed over, '' when it was not
 );
 -- the one-row-per-listing rule, as an index: a column constraint could never
 -- be added to a table that already exists
@@ -726,7 +727,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS research_queue_url ON research_queue (url);
 CREATE TABLE IF NOT EXISTS queue_history (
   queue_id TEXT PRIMARY KEY, url TEXT NOT NULL DEFAULT '', name TEXT NOT NULL DEFAULT '',
   lookup_id TEXT NOT NULL DEFAULT '', origin TEXT NOT NULL DEFAULT '',
-  state TEXT NOT NULL DEFAULT 'waiting', added_at TEXT NOT NULL DEFAULT ''
+  state TEXT NOT NULL DEFAULT 'waiting', added_at TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT ''
+);
+
+-- The saved check that answers for one researched product: one row per
+-- product, refreshed in place when research adds to it, so Compare lists each
+-- product once however many times it was researched. App state, not knowledge.
+CREATE TABLE IF NOT EXISTS product_checks (
+  subject_id TEXT NOT NULL DEFAULT '',
+  pack_id    TEXT NOT NULL DEFAULT '',
+  lookup_id  TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (subject_id, pack_id)
 );
 
 -- Where a saved Quick Look belongs. This is app state, not pack content: a
@@ -1437,7 +1449,7 @@ QUEUE_MAX = 8
 
 def _queued(row: sqlite3.Row) -> dict:
     return {k: row[k] for k in
-            ("queue_id", "url", "name", "lookup_id", "origin", "state", "added_at")}
+            ("queue_id", "url", "name", "lookup_id", "origin", "state", "added_at", "note")}
 
 
 def research_queue(conn: sqlite3.Connection) -> list[dict]:
@@ -1459,13 +1471,18 @@ def queue_history(conn: sqlite3.Connection) -> list[dict]:
 
 def queue_product(
     conn: sqlite3.Connection, url: str, name: str, lookup_id: str = "",
-) -> tuple[dict, bool]:
-    """Queue the product a listing shows. Returns the row and whether it is new.
+) -> tuple[dict, bool, bool]:
+    """Queue the product a listing shows. Returns the row, whether it is new,
+    and whether a finished row was queued again.
 
     Keyed by the listing address: pressing again on the same page answers with
     the row already queued (its name and answer refreshed) rather than a
-    second copy. Raises `ValueError` for no address, and `OverflowError` when
-    the queue is full, so the panel can say which.
+    second copy. A product already researched goes back to waiting when it is
+    pressed again: the reader asked for it, and a finished row that nothing
+    can move would be a product that can never be researched again. A row
+    being researched right now is left as it is, its worker is on it. Raises
+    `ValueError` for no address, and `OverflowError` when the queue is full,
+    so the panel can say which.
     """
     url = str(url or "").strip()[:2000]
     if not url:
@@ -1475,13 +1492,18 @@ def queue_product(
     origin = urlsplit(url).hostname or ""
     row = conn.execute("SELECT * FROM research_queue WHERE url = ?", (url,)).fetchone()
     if row:
+        requeue = row["state"] == "done"
         conn.execute(
             "UPDATE research_queue SET name = ?,"
-            " lookup_id = COALESCE(NULLIF(?, ''), lookup_id) WHERE url = ?",
-            (name, lookup_id, url))
+            " lookup_id = COALESCE(NULLIF(?, ''), lookup_id),"
+            " state = CASE WHEN ? THEN 'waiting' ELSE state END,"
+            " note = CASE WHEN ? THEN '' ELSE note END"
+            " WHERE url = ?",
+            (name, lookup_id, requeue, requeue, url))
+        _remember_queue(conn, row["queue_id"])
         conn.commit()
         return _queued(conn.execute(
-            "SELECT * FROM research_queue WHERE url = ?", (url,)).fetchone()), False
+            "SELECT * FROM research_queue WHERE url = ?", (url,)).fetchone()), False, requeue
     count = conn.execute("SELECT COUNT(*) FROM research_queue").fetchone()[0]
     if count >= QUEUE_MAX:
         raise OverflowError(f"the queue holds {QUEUE_MAX} products")
@@ -1492,32 +1514,93 @@ def queue_product(
     _remember_queue(conn, queue_id)
     conn.commit()
     return _queued(conn.execute(
-        "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()), True
+        "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()), True, False
 
 
 #: The states a queued product moves through; the window sets them, in order.
 QUEUE_STATES = ("waiting", "researching", "done")
 
+#: Which state a queued product may move to from each state. Waiting is claimed
+#: by a worker (researching) or passed over again with a reason (waiting).
+#: Researching ends done, or goes back to waiting when it did not finish. Done
+#: goes back to waiting only when the reader queues it again. Nothing else, so
+#: a row cannot be finished without being researched, nor researched twice.
+QUEUE_MOVES = {
+    "waiting": frozenset({"waiting", "researching"}),
+    "researching": frozenset({"waiting", "done"}),
+    "done": frozenset({"waiting"}),
+}
+
+
+class QueueConflict(ValueError):
+    """A move the queue does not allow from the state a row is in."""
+
+
+def queued_item(conn: sqlite3.Connection, queue_id: str) -> dict | None:
+    row = conn.execute(
+        "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()
+    return _queued(row) if row else None
+
+
+#: The reason a passed-over row keeps for a product whose worker stopped with the app.
+RESTART_NOTE = "research stopped when Kriko closed; queued again"
+
 
 def update_queued(conn: sqlite3.Connection, queue_id: str, *,
-                  state: str | None = None, lookup_id: str | None = None) -> dict | None:
-    """Move one queued product along: its state, and the stored answer once
-    researching has made a fresher one. None when it is not queued any more
-    (the reader removed it while an agent was working on it)."""
+                  state: str | None = None, lookup_id: str | None = None,
+                  note: str | None = None) -> dict | None:
+    """Move one queued product along: its state, the stored answer once
+    researching has made a fresher one, and the reason it was passed over.
+
+    `note` is kept until the product is claimed or finished, so the row says
+    why it is waiting again, including after a restart; `None` leaves the note
+    as it is, `""` clears it. None when it is not queued any more (the reader
+    removed it while an agent was working on it). `QueueConflict` for a move
+    QUEUE_MOVES does not allow.
+    """
     if state is not None and state not in QUEUE_STATES:
         raise ValueError(f"a queued product is one of {', '.join(QUEUE_STATES)}")
     row = conn.execute(
         "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()
     if row is None:
         return None
+    current = row["state"]
+    if state is not None and state != current and state not in QUEUE_MOVES.get(current, ()):
+        raise QueueConflict(f"a {current} product cannot become {state}")
+    new_state = state if state is not None else current
+    if note is not None:
+        new_note = " ".join(str(note).split())[:300]
+    elif new_state in ("researching", "done"):
+        new_note = ""
+    else:
+        new_note = row["note"]
     conn.execute(
-        "UPDATE research_queue SET state = ?, lookup_id = ? WHERE queue_id = ?",
-        (state if state is not None else row["state"],
-         lookup_id if lookup_id is not None else row["lookup_id"], queue_id))
+        "UPDATE research_queue SET state = ?, lookup_id = ?, note = ? WHERE queue_id = ?",
+        (new_state,
+         lookup_id if lookup_id is not None else row["lookup_id"],
+         new_note, queue_id))
     _remember_queue(conn, queue_id)
     conn.commit()
     return _queued(conn.execute(
         "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone())
+
+
+def recover_queue(conn: sqlite3.Connection) -> int:
+    """Rows a closed app left mid-research go back to waiting, with the reason.
+
+    The worker that was researching them ended with the app, so nothing will
+    finish them. Called once at startup, as interrupted jobs are, and returns
+    how many rows it put back.
+    """
+    ids = [row["queue_id"] for row in conn.execute(
+        "SELECT queue_id FROM research_queue WHERE state = 'researching'")]
+    for queue_id in ids:
+        conn.execute(
+            "UPDATE research_queue SET state = 'waiting', note = ? WHERE queue_id = ?",
+            (RESTART_NOTE, queue_id))
+        _remember_queue(conn, queue_id)
+    conn.commit()
+    return len(ids)
 
 
 def unqueue_product(conn: sqlite3.Connection, queue_id: str) -> bool:
