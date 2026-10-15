@@ -73,7 +73,7 @@ import tomllib
 import time
 from contextlib import contextmanager
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -481,7 +481,19 @@ KNOWN: tuple[Harness, ...] = (
         # `CLAUDE.md`, hooks, skills, plugins, output style — while leaving
         # auth, the built-in tools and permissions alone. Both are what this
         # spawn already claimed to be.
-        preferred=("--strict-mcp-config", "--safe-mode", "--include-partial-messages"),
+        # `--exclude-dynamic-system-prompt-sections` keeps the working folder
+        # out of the system prompt. Every process run here gets a new temporary
+        # folder, so with the default prompt no two runs share the cacheable
+        # prefix; with it the prefix is the same run after run.
+        preferred=("--strict-mcp-config", "--safe-mode", "--include-partial-messages",
+                   "--exclude-dynamic-system-prompt-sections"),
+        # Tool search defers tool definitions behind a `ToolSearch` call, and on
+        # 2.1.300 it is the default (`tst` in the `--debug-file` log). Sonnet 5.5
+        # spent its first turn on `ToolSearch select:WebSearch,WebFetch` in every
+        # logged run that had one; Haiku, which keeps its tools inline, never did.
+        # `auto:100` is the CLI's own "load them all inline" (`standard`), the
+        # mode the two fixed search tools and one page reader are small enough for.
+        env={"ENABLE_TOOL_SEARCH": "auto:100"},
         # `--allowedTools` only *permits* the two search tools; every other
         # built-in tool's definition is still loaded into the context of
         # every turn. `--tools` is the list of tools that exist at all.
@@ -2061,6 +2073,31 @@ def _tokens(usage) -> int:
     )
 
 
+def _run_summary(transport: str, reused: bool, ready_ms, context: dict | None) -> str:
+    """How the agent was reached, in one line: the log's line and the Run screen's.
+
+    `reused worker` is a resident worker that served this request too (for
+    Claude Code its conversation was cleared first; for Vibe its session is new);
+    `new worker` is one started for this request; `fresh process` is a child of
+    its own. `started in` is `ready_ms`, the time until the agent was ready for
+    the prompt. The cached share is the cache reads over every input token the
+    run was charged for (`cache_read` is the part the provider served from cache,
+    so it is the context reused rather than re-sent).
+    """
+    if transport == "resident":
+        parts = ["reused worker" if reused else "new worker"]
+    else:
+        parts = ["fresh process"]
+    if ready_ms is not None:
+        parts.append(f"started in {float(ready_ms) / 1000:.1f} s")
+    if context:
+        total = (context["input_tokens"] + context["cache_creation_tokens"]
+                 + context["cache_read_tokens"])
+        if total:
+            parts.append(f"{context['cache_read_tokens']:,} of {total:,} input tokens cached")
+    return " · ".join(parts)
+
+
 def _envelope(stdout: str) -> dict:
     """The CLI's result object, out of any of the three shapes it prints.
 
@@ -2627,6 +2664,9 @@ class HarnessResearcher(AgentResearcher):
         self._run_cwd: str | None = None
         #: The path of this run's page-reader config while a run has one (B155).
         self._reader_config = ""
+        #: Milliseconds from spawning the child to its first output line, for the
+        #: run that is in flight. Read into `telemetry["run"]` (`_note_run`).
+        self._ready_ms: float | None = None
         self.harness = harness
         self.app_state_path = app_state_path
         self.agent_ledger = None
@@ -3504,6 +3544,8 @@ class HarnessResearcher(AgentResearcher):
         except BaseException as error:
             attempt.fail(error)
             raise
+        self._note_run(result.envelope, "resident", ready_ms=result.metrics.get("ready_ms"),
+                       reused=bool(result.metrics.get("reused_worker")))
         attempt.succeed(text, usage)
         return text
 
@@ -3769,7 +3811,7 @@ class HarnessResearcher(AgentResearcher):
                     "be answered"
                 )
             else:
-                return self._finish(code, stdout, stderr)
+                return self._finish_process(code, stdout, stderr)
 
         if self.harness.prompt_flag:
             # A CLI whose prompt is a flag's value, with no `--` convention
@@ -3803,7 +3845,7 @@ class HarnessResearcher(AgentResearcher):
             finally:
                 os.remove(stdin_path)
 
-        return self._finish(code, stdout, stderr)
+        return self._finish_process(code, stdout, stderr)
 
     def _finish(self, code: int, stdout: str, stderr: str) -> str:
         """What a completed spawn means, whichever vector produced it.
@@ -3828,6 +3870,46 @@ class HarnessResearcher(AgentResearcher):
         if not self.harness.structured:
             return stdout
         return self._unwrap(stdout)
+
+    def _finish_process(self, code: int, stdout: str, stderr: str) -> str:
+        """`_finish` for a run that was a child process of its own, with its facts kept."""
+        text = self._finish(code, stdout, stderr)
+        envelope = _envelope(stdout) if self.harness.structured else {}
+        self._note_run(envelope, "process", ready_ms=self._ready_ms, reused=False)
+        return text
+
+    def _note_run(self, envelope, transport: str, *, ready_ms, reused: bool) -> None:
+        """Keep what this run cost to start and how much of its context was cached.
+
+        Written to `telemetry["run"]`, which a quick look's saved result carries
+        to the desktop, and said once in the run's log, so the reader can see
+        whether a reused worker or a cache did anything. The counts are the
+        CLI's own (`usage` of its result object); a CLI that reports none gets
+        `context: None` rather than a guess.
+        """
+        usage = envelope.get("usage") if isinstance(envelope, Mapping) else None
+        context = None
+        if isinstance(usage, Mapping) and any(
+                isinstance(usage.get(key), int) for key in (
+                    "input_tokens", "cache_creation_input_tokens",
+                    "cache_read_input_tokens", "output_tokens")):
+            context = {
+                "input_tokens": _int(usage.get("input_tokens")),
+                "cache_creation_tokens": _int(usage.get("cache_creation_input_tokens")),
+                "cache_read_tokens": _int(usage.get("cache_read_input_tokens")),
+                "output_tokens": _int(usage.get("output_tokens")),
+            }
+        summary = _run_summary(transport, reused, ready_ms, context)
+        self.telemetry["run"] = {
+            "transport": transport,
+            "reused_session": bool(reused),
+            "ready_ms": None if ready_ms is None else round(float(ready_ms)),
+            "context": context,
+            "summary": summary,
+        }
+        # Through `_echo`, so the transcript keeps it with the actions it follows.
+        if summary:
+            self._echo(summary)
 
     def _can_converse(self) -> bool:
         """Whether this run can be *answered*, rather than merely noted.
@@ -3995,6 +4077,7 @@ class HarnessResearcher(AgentResearcher):
         self._live_last_emit = 0.0
         self._live_published = ""
         self._streamed_blocks = {}
+        self._ready_ms = None
         command = unshim(command)
         # See `_new_job_object`: on Windows this is what lets a cancel reach
         # a descendant `taskkill /T` cannot, because its parent already
@@ -4002,6 +4085,7 @@ class HarnessResearcher(AgentResearcher):
         # cover the tree — every caller of `_kill_tree` below treats it the
         # same way regardless of which platform gave it.
         job = self._new_job_object()
+        spawned = time.monotonic()
         try:
             proc = processcontrol.contained_popen(
                 command,
@@ -4142,6 +4226,8 @@ class HarnessResearcher(AgentResearcher):
                     continue
                 self._spoke = True
                 last_heard = last_line = time.monotonic()
+                if self._ready_ms is None:
+                    self._ready_ms = (last_line - spawned) * 1000
                 self._keep(line)
                 try:
                     event = json.loads(line)

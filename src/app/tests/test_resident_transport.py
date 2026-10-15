@@ -199,6 +199,9 @@ def test_claude_reuses_one_process_and_isolates_conversations(claude) -> None:
     assert factory.starts == 1
     assert second.metrics["reused_worker"] is True
     assert second.metrics["handshake_ms"] == 0.0
+    # Readiness: a new worker's start to its first message; a reused one's /clear.
+    assert first.metrics["ready_ms"] is not None and first.metrics["ready_ms"] >= 0
+    assert second.metrics["ready_ms"] == second.metrics["reset_ms"] >= 0
     assert first.context_id != second.context_id
     sent = [m["message"]["content"][0]["text"] for m in _log(tmp_path, "claude") if m.get("type") == "user"]
     assert sent == ["remember PINEAPPLE", "/clear", "recall the codeword"]
