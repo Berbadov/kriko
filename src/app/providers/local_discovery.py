@@ -85,15 +85,21 @@ def probe(url: str, timeout: float = PROBE_TIMEOUT) -> dict:
     """
     base = base_of(url)
     up = False
-    with slot("probe", base, timeout=timeout * 2):
-        for path in ("/v1/models", "/models"):
-            reached, payload = _get(base + path, timeout)
-            up = up or reached
-            models = _ids(payload)
-            if models is not None:
-                return {"url": base, "up": True, "models": models}
-            if not reached:
-                break  # nothing listens here; the second path cannot differ
+    try:
+        with slot("probe", base, timeout=timeout * 2):
+            for path in ("/v1/models", "/models"):
+                reached, payload = _get(base + path, timeout)
+                up = up or reached
+                models = _ids(payload)
+                if models is not None:
+                    return {"url": base, "up": True, "models": models}
+                if not reached:
+                    break  # nothing listens here; the second path cannot differ
+    except TimeoutError:
+        # CLI capability checks and other screens share this capacity. A busy
+        # host has not tested this address; it must not fail the whole screen
+        # or claim the server is down. A later refresh can probe it again.
+        return {"url": base, "up": False, "models": [], "busy": True}
     return {"url": base, "up": up, "models": []}
 
 
