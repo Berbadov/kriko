@@ -51,6 +51,7 @@ DETAIL_WORDS = 400
 ROUND_CHARS = 12000
 
 Ask = Callable[[str], str]
+StreamAsk = Callable[[str, Callable[[str], None]], str]
 
 
 class _Silent:
@@ -301,6 +302,7 @@ def _finish(step: dict, out: dict, ms: int) -> None:
 
 
 def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
+             ask_stream: StreamAsk | None = None,
              history: Sequence[dict] = (), hooks=None) -> dict:
     """Plan, search and answer one message. Returns the answer and its trail.
 
@@ -312,11 +314,13 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
     message = " ".join(str(message or "").split())[:2000]
     spent = {"calls": 0}
 
-    def agent(prompt: str) -> str:
+    def agent(prompt: str, *, on_text: Callable[[str], None] | None = None) -> str:
         if spent["calls"] >= MAX_AGENT_CALLS:
             raise RuntimeError("the chat turn has no agent call left")
         spent["calls"] += 1
         hooks.check()
+        if on_text is not None and ask_stream is not None:
+            return ask_stream(prompt, on_text)
         return ask(prompt)
 
     steps: list[dict] = []
@@ -368,7 +372,26 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
 
     detailed = bool(re.search(r"\b(detail|details|explain|in depth|everything)\b", message, re.I))
     hooks.set(0.9, "writing the answer")
-    text = agent(answer_brief(message, history, need, trail, detailed=detailed))
+
+    last_streamed_answer = ""
+    last_streamed_at = 0.0
+
+    def stream_answer(text: str) -> None:
+        nonlocal last_streamed_answer, last_streamed_at
+        # The answer card is transient until the call completes. Strip a
+        # streamed Sources tail just as we do for the finished reply, so the
+        # reader sees the answer rather than a half-written citation list.
+        answer, _ = split_sources(text)
+        now = time.monotonic()
+        if answer and answer != last_streamed_answer and (
+            not last_streamed_answer or now - last_streamed_at >= 0.25
+        ):
+            last_streamed_answer = answer
+            last_streamed_at = now
+            hooks.partial(snapshot(answer))
+
+    text = agent(answer_brief(message, history, need, trail, detailed=detailed),
+                 on_text=stream_answer)
     answer, named = split_sources(text)
     ran_with_rows = [s["source"] for s in steps if s["state"] == "done"]
     sources = named or list(dict.fromkeys(ran_with_rows))
