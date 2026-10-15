@@ -106,7 +106,7 @@ pub const FOUR5: [&str; 5] = ["#..#.", "#..#.", "#####", "...#.", "...#."];
 // in Settings) skips the wrapper entirely.
 
 /// cubic-bezier(.3, 1.25, .5, 1): the --ease-mech overshoot of the hardware.
-fn ease_mech(t: f32) -> f32 {
+pub(crate) fn ease_mech(t: f32) -> f32 {
     let c1 = 1.70158;
     let c3 = c1 + 1.0;
     let x = t - 1.0;
@@ -146,6 +146,22 @@ pub enum LedAnim {
     Blink,
 }
 
+// ---- rhythm: the one place for every gap and inset a screen uses ----
+
+/// The page column's side gutter, below the hero. The page head uses it too,
+/// so the title and the content share one left edge.
+pub const PAGE_PAD: f32 = 20.0;
+/// Between two sections of one page.
+pub const SPACE_SECTION: f32 = 10.0;
+/// Between cards that sit side by side or stacked within a section.
+pub const SPACE_CARD: f32 = 6.0;
+/// Between a section's title and what it holds.
+pub const SPACE_TITLE: f32 = 4.0;
+/// Inside a card.
+pub const PAD_CARD: f32 = 10.0;
+/// Inside a dense card: a list of rows, a table, a settings group.
+pub const PAD_CARD_TIGHT: f32 = 6.0;
+
 // ---- surfaces ----
 
 /// Flat glass card from the current design reference.
@@ -158,9 +174,51 @@ pub fn card() -> Div {
         ))
         .border_1()
         .border_color(rgba(0xffffff26))
-        .rounded(px(20.0))
-        .p(px(24.0))
-        .shadow(vec![shadow(0x00000045, 0.0, 10.0, 28.0, 0.0)])
+        .rounded(px(10.0))
+        .px(px(PAD_CARD + 2.0))
+        .py(px(PAD_CARD))
+        .shadow(vec![shadow(0x00000045, 0.0, 6.0, 16.0, 0.0)])
+}
+
+/// A titled section: the eyebrow title over its body, at one distance on
+/// every screen. Cards inside keep their own inset.
+#[allow(dead_code)] // the shared builder for the next screen that titles a group
+pub fn section(title: &str, body: impl IntoElement) -> Div {
+    div()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_TITLE))
+        .child(eyebrow(title))
+        .child(body)
+}
+
+/// How many columns of at least `min_w` fit in `width`, `SPACE_CARD` apart,
+/// never more than `max` and never fewer than one. A width that is too
+/// narrow for two columns gives one, so cards stack instead of squeezing.
+pub fn column_count(width: f32, min_w: f32, max: usize) -> usize {
+    if width <= 0.0 || min_w <= 0.0 || max <= 1 {
+        return 1;
+    }
+    let fit = ((width + SPACE_CARD) / (min_w + SPACE_CARD)).floor();
+    (fit.max(1.0) as usize).min(max)
+}
+
+/// Sibling cards laid out in rows of `column_count` equal columns. Cards in one
+/// row share a height; a short last row keeps its columns, so the grid never
+/// leaves a gap of unused width. `width` is the page's content width.
+pub fn grid(width: f32, min_w: f32, items: Vec<Div>) -> Div {
+    let per_row = column_count(width, min_w, items.len());
+    let mut rows = div().flex().flex_col().gap(px(SPACE_CARD)).w_full();
+    let mut items = items.into_iter().peekable();
+    while items.peek().is_some() {
+        // a row is a flex row: its children stretch to the tallest one
+        let mut row = div().flex().gap(px(SPACE_CARD));
+        for item in items.by_ref().take(per_row) {
+            row = row.child(item.flex_1().min_w(px(0.0)));
+        }
+        rows = rows.child(row);
+    }
+    rows
 }
 
 /// Recessed well: darker fill and a hairline ring.
@@ -192,14 +250,14 @@ pub fn callout() -> Div {
         ))
         .border_1()
         .border_color(rgba(0x86a3ff48))
-        .rounded(px(20.0))
-        .py(px(20.0))
-        .px(px(24.0))
+        .rounded(px(10.0))
+        .py(px(12.0))
+        .px(px(12.0))
         .flex()
         .flex_wrap()
         .items_center()
         .justify_between()
-        .gap(px(24.0))
+        .gap(px(12.0))
 }
 
 /// One horizontal hairline separator.
@@ -425,8 +483,8 @@ pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str, motion: bool) -
         .child(
             div()
                 .relative()
-                .px(px(40.0))
-                .pt(px(46.0))
+                .px(px(PAGE_PAD))
+                .pt(px(42.0))
                 .flex()
                 .flex_col()
                 .child(
@@ -1245,7 +1303,9 @@ pub fn reveal(child: impl IntoElement, id: impl Into<SharedString>, open: bool, 
 /// Page arrival keeps the natural layout while fading and rising twelve pixels.
 /// Unlike a drawer, it never clips a long page through a changing max-height.
 pub fn arrive(child: impl IntoElement, id: impl Into<SharedString>, motion: bool) -> gpui::AnyElement {
-    let base = div().relative().flex_none().child(child);
+    // w_full: the page is as wide as its column. Without it a screen was sized
+    // by its widest child's natural width, so a table could narrow the page.
+    let base = div().relative().flex_none().w_full().child(child);
     if motion {
         base.with_animation(
             gpui::ElementId::Name(id.into()),
@@ -1332,6 +1392,54 @@ pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
                 .text_color(rgb(0xffffffd9))
                 .child(tagline.to_string()),
         )
+}
+
+#[cfg(test)]
+mod grid_tests {
+    use super::*;
+
+    /// The page's content width at a window width: the window less the
+    /// expanded sidebar and the page gutter on both sides.
+    fn content_at(window_w: f32) -> f32 {
+        window_w - SIDEBAR_W - 2.0 * PAGE_PAD
+    }
+
+    #[test]
+    fn the_smallest_window_keeps_two_columns_where_cards_are_wide_enough() {
+        // 940x640 is the minimum window; its content is 644 px wide
+        let w = content_at(940.0);
+        assert_eq!(column_count(w, 300.0, 3), 2);
+        assert_eq!(column_count(w, 200.0, 4), 3);
+    }
+
+    #[test]
+    fn the_common_window_fits_three_cards_of_three_hundred() {
+        // 1280x800: 984 px of content
+        let w = content_at(1280.0);
+        assert_eq!(column_count(w, 300.0, 3), 3);
+        assert_eq!(column_count(w, 300.0, 2), 2, "the cap wins over the width");
+    }
+
+    #[test]
+    fn a_narrow_column_stacks_instead_of_squeezing() {
+        assert_eq!(column_count(300.0, 300.0, 3), 1);
+        assert_eq!(column_count(200.0, 300.0, 3), 1);
+        assert_eq!(column_count(0.0, 300.0, 3), 1);
+    }
+
+    #[test]
+    fn the_gaps_between_columns_count_against_the_width() {
+        // two of 300 need the gap between them as well, not just 600
+        let need = 600.0 + SPACE_CARD;
+        assert_eq!(column_count(need - 1.0, 300.0, 3), 1);
+        assert_eq!(column_count(need, 300.0, 3), 2);
+    }
+
+    #[test]
+    fn a_single_item_or_cap_never_asks_for_more_than_one_column() {
+        assert_eq!(column_count(2000.0, 300.0, 1), 1);
+        assert_eq!(column_count(2000.0, 300.0, 0), 1);
+    }
 }
 
 #[cfg(test)]

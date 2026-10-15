@@ -71,6 +71,9 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
         for key, value in body.model_dump().items()
         if value is not None and key in prefs.KEYS
     }
+    for key in (prefs.AGENT_TRANSPORT, prefs.CODEX_TRANSPORT):
+        if key in written and written[key] not in {"", "auto", "exec", "persistent"}:
+            raise HTTPException(422, detail=f"{key} must be auto, exec, or persistent")
     for key in (prefs.LOCAL_OUTPUT_LANGUAGE, prefs.LOCAL_SEARCH_LANGUAGE):
         if key not in written:
             continue

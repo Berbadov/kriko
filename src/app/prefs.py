@@ -31,6 +31,12 @@ LOCAL_PICK = "local"
 AGENT_ORDER = "agent_order"
 MODEL = "llm_model"
 SEARCH = "search_provider"
+#: How an agent is run: `auto` (a resident worker where the agent has a
+#: persistent protocol, else a process), `persistent` (require it) or `exec`.
+#: It applies to every agent. `codex_transport` is the name it had while only
+#: Codex had a worker, and is still read when `agent_transport` is unset.
+AGENT_TRANSPORT = "agent_transport"
+CODEX_TRANSPORT = "codex_transport"
 
 #: One key per stage of a run, and every one of them optional.
 #:
@@ -185,7 +191,7 @@ def run_concurrency(conn) -> int:
 
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, *RESEARCH_KEYS,
-        RUN_CONCURRENCY)
+        RUN_CONCURRENCY, AGENT_TRANSPORT, CODEX_TRANSPORT)
 
 
 def for_role(conn, role: str, override: str = "") -> str:

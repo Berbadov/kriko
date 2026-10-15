@@ -20,7 +20,9 @@ runs from any working directory with no asset paths to install.
 
 - `src/theme.rs` — the whole look: colour tokens, shadows, and the small
   builders (key, plate, well, LED matrix, tag, verdict, meter, switch, agent
-  tile, hero, frost, input, keycap, badge, titlebar). Written against only
+  tile, hero, frost, input, keycap, badge, titlebar, section, grid). Every gap
+  and inset a screen uses is a token there too (`PAGE_PAD`, `SPACE_SECTION`,
+  `SPACE_CARD`, `PAD_CARD`), so a screen's density is changed in one place. Written against only
   the primitives GPUI has: fills, gradients, 1px borders, outer shadows,
   images, SVG alpha masks. No backdrop blur, no inset shadows, no text-shadow.
 - `src/dock.rs` — the live actions bar: the needs-you requests with their

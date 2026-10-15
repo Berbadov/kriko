@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kriko"
-version = "1.6.2"
+version = "1.6.3"
 description = "A local-first, open knowledge engine for manufactured products"
 readme = "README.md"
 license = "MIT"
@@ -57,7 +57,7 @@ pipeline = [
     "anthropic",
     "python-dotenv",
 ]
-dev = ["pytest>=8.0.0", "ruff>=0.16", "mypy>=2.3"]
+dev = ["pytest>=8.0.0", "pytest-xdist>=3.5", "ruff>=0.16", "mypy>=2.3"]
 
 [tool.setuptools.package-data]
 # The store's DDL is read from disk at every `connect()`, not imported. Without
@@ -70,6 +70,9 @@ dev = ["pytest>=8.0.0", "ruff>=0.16", "mypy>=2.3"]
 # like the DDL above, so it fails the same way if it is not declared: an
 # editable install finds it in the checkout and a real wheel does not.
 "app" = ["*.toml", "*.json", "*.dat"]
+# The agent benchmark's tasks (`kriko agent-bench`), read from disk like the
+# files above. A terminal command, so the frozen sidecar does not carry them.
+"app.agentbench" = ["*.json"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

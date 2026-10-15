@@ -31,6 +31,35 @@ MAX_SPECS = 10
 #: What the panel's card knows how to colour. Anything else reads as `medium`.
 SEVERITIES = ("high", "medium", "low")
 
+#: The reader's language, said to every plane that has no language step of its
+#: own. Five runs of one listing came back in two languages, because the
+#: sources' language and not the reader's decided it. Neither the listing's
+#: language nor any word of it is named here: the agent reads it from the
+#: product and listing it was given.
+LANGUAGE_RULE = (
+    "Write title, why, check and assumed in the language of the product name "
+    "and listing above, even when a page is in another language. Copy every "
+    "quote exactly as its page words it, and never translate a quote."
+)
+
+
+def language_rule(language: str = "auto") -> str:
+    """The language instruction: the reader's own pick, else the listing's.
+
+    `local_output_language` in Settings is a BCP 47 code or `auto`. A code is
+    the reader's decision and overrides the listing; anything that is not a
+    language code is no decision, and reads as `auto` rather than as text put
+    into a prompt.
+    """
+    import re
+
+    code = str(language or "").strip()
+    if not re.fullmatch(r"[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})?", code) or code.lower() == "auto":
+        return LANGUAGE_RULE
+    return (f'Write title, why, check and assumed in the language with BCP 47 code "{code}", '
+            "whatever language the pages or the listing use. Copy every quote exactly "
+            "as its page words it, and never translate a quote.")
+
 # The local runtime can enforce this shape while it generates the answer.
 # Empty lists remain valid: a schema must never force an unsupported claim.
 REPLY_SCHEMA: dict = {
@@ -55,7 +84,7 @@ REPLY_SCHEMA: dict = {
 
 def brief(product: str, principle: str = "", page: dict | None = None,
           packs: str = "", attributes: str = "", *, compact: bool = False,
-          max_sources: int = 5) -> str:
+          max_sources: int = 5, language: str = "auto") -> str:
     """The quick pass, as instructions. Fast on purpose: a few searches, no essay.
 
     `page` is what the listing itself says (`app.pagefacts`, B150): the
@@ -72,6 +101,7 @@ def brief(product: str, principle: str = "", page: dict | None = None,
     from app import pagefacts
 
     max_sources = max(1, min(50, int(max_sources)))
+    rule = language_rule(language)
     listing = pagefacts.block(page)
     bar = (
         f"\n## What is worth saying\n\nThe installed pack's own bar, verbatim:\n\n"
@@ -97,6 +127,7 @@ def brief(product: str, principle: str = "", page: dict | None = None,
             f"# Quick look: what is known to go wrong with this one?\n\n{product}\n"
             f"{listing}{bar}{belongs}{named}\n"
             "Use only the fetched pages below. Be specific to this variant. "
+            f"{rule} "
             f"Return one JSON object, with short fields and at most {MAX_RISKS} risks "
             f"and {MAX_SPECS} specifications. Every risk needs an exact URL and a "
             "verbatim quote from that page. Leave unsupported items out. "
@@ -128,6 +159,7 @@ friend would in a chat: fast, specific, sourced.
 * If the name leaves the variant open, state what is missing in `assumed`.
   Omit claims that depend on an unproven configuration. Do not guess a part
   code or assume that a nearby revision, year or market has the same fault.
+* {rule}
 {bar}{belongs}
 ## Every risk needs its page
 

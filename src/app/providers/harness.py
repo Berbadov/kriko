@@ -66,6 +66,7 @@ import subprocess
 from collections import deque
 from app.loginpath import child_env, login_path
 from app.winprocess import hidden_startup
+from app import processcontrol
 import sys
 import tempfile
 import tomllib
@@ -83,6 +84,35 @@ from kriko.research.base import Document, Finding, ResearchTask
 #: before adding to this: a research plane that can write files or run shell
 #: commands is not a research plane.
 SEARCH_TOOLS = ("WebSearch", "WebFetch")
+
+#: The CLIs for which Kriko searches and reads the pages itself, then hands
+#: them the text, instead of letting the CLI browse. What such a CLI was shown
+#: is therefore known (`HarnessResearcher.sources`), a quote is checked against
+#: it, and a benchmark can serve it a fixed web. The others search with their
+#: own tools, which Kriko can neither see into nor replace.
+HOST_READ_HARNESSES = frozenset({"codex", "antigravity-cli", "mistral-vibe"})
+
+#: The agents that have a persistent protocol Kriko can drive, by the `protocol`
+#: of their row. Codex keeps one app-server (`codex_transport`); the rest share
+#: `resident`: Claude Code over `stream-json` stdin, Mistral Vibe over ACP.
+#: Antigravity's `agy` has only a print mode and so appears in neither.
+RESIDENT_PROTOCOLS = frozenset({"claude", "vibe"})
+
+
+def transport_env() -> str:
+    """`KRIKO_AGENT_TRANSPORT`, or its earlier name `KRIKO_CODEX_TRANSPORT`."""
+    for name in ("KRIKO_AGENT_TRANSPORT", "KRIKO_CODEX_TRANSPORT"):
+        value = os.environ.get(name, "").strip().lower()
+        if value:
+            return value
+    return ""
+
+#: The persistent protocols that hand the model no tools. Those agents are fed
+#: pages Kriko read itself; asking one to search natively needs a process.
+TOOLLESS_PROTOCOLS = frozenset({"codex", "vibe"})
+
+_CODEX_SUPPORT: dict[tuple[str, float], bool] = {}
+_CODEX_SUPPORT_LOCK = threading.Lock()
 
 #: The page reader (B155): Parallel's hosted MCP reader. Only its fetch tool is
 #: granted; searches go through the CLI's normal WebSearch tool.
@@ -952,6 +982,16 @@ _OPTION = re.compile(r"--[A-Za-z][A-Za-z0-9-]*")
 
 
 def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
+    from app.agentresources import slot
+
+    try:
+        with slot("probe", key=executable, timeout=HELP_TIMEOUT_SECONDS):
+            return _ask_owned(executable, *argv, keep_lines=keep_lines)
+    except TimeoutError:
+        return ""
+
+
+def _ask_owned(executable: str, *argv: str, keep_lines: int = 400) -> str:
     """Run a CLI's own self-description and come back, whatever it does.
 
     **`subprocess.run(timeout=…)` is not enough on Windows**, and that is not
@@ -976,8 +1016,9 @@ def _ask(executable: str, *argv: str, keep_lines: int = 400) -> str:
     """
     out: list[str] = []
     try:
-        proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
+        proc = processcontrol.contained_popen(
             [executable, *argv],
+            factory=subprocess.Popen, resource_kind=None,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -1765,6 +1806,57 @@ def scale_args(one: Harness, *, max_documents: int = 0, budget_usd: float = 0.0,
     return out
 
 
+def _sibling_executable(executable: str, name: str) -> str:
+    """`name` installed beside `executable`, or on the machine's own PATH."""
+    folder = Path(executable).parent
+    for suffix in _SUFFIXES:
+        candidate = folder / f"{name}{suffix}"
+        try:
+            if candidate.is_file() and os.access(candidate, os.X_OK):
+                return str(candidate)
+        except OSError:
+            continue
+    return shutil.which(name, path=child_env().get("PATH")) or ""
+
+
+def _vibe_config(model: str, effort: str, sessions: Path, *, log_sessions: bool = True) -> tuple[str, str]:
+    """The per-run `config.toml` for Mistral Vibe, and the model it names.
+
+    Only the things that are nobody's business on a research run: update
+    checks, telemetry, the reader's MCP servers and skills. The reader's own
+    model rows are carried across so an alias they defined keeps working, and
+    the requested effort is written onto the chosen row. A resident worker
+    passes `log_sessions=False`: it serves many requests, and a session log per
+    request would grow without bound in a folder nobody reads.
+    """
+    try:
+        own = tomllib.loads((Path.home() / ".vibe" / "config.toml").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        own = {}
+    chosen = model or str(own.get("active_model") or "")
+    rows = own.get("models") or []
+    text = 'enable_update_checks = false\nenable_telemetry = false\nmcp_servers = []\ndisabled_skills = ["*"]\n'
+    if chosen:
+        text += "active_model = " + json.dumps(chosen) + "\n"
+    if effort and not any(isinstance(r, dict) and r.get("alias") == chosen for r in rows) and chosen:
+        rows = [*rows, {"alias": chosen}]
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        text += "\n[[models]]\n"
+        for key in ("name", "provider", "alias", "thinking"):
+            value = row.get(key)
+            if key == "thinking" and (row.get("alias") == chosen or row.get("name") == chosen) and effort:
+                value = effort
+            if isinstance(value, str):
+                text += key + " = " + json.dumps(value) + "\n"
+        if "thinking" not in row and effort and row.get("alias") == chosen:
+            text += "thinking = " + json.dumps(effort) + "\n"
+    text += "\n[session_logging]\ngenerate_titles = false\n"
+    text += ("save_dir = " + json.dumps(str(sessions)) + "\n") if log_sessions else "enabled = false\n"
+    return text, chosen
+
+
 def command_for(one: Harness, *, model: str = "", effort: str = "",
                 max_documents: int = 0, budget_usd: float = 0.0,
                 reader_config: str = "") -> list[str]:
@@ -2481,6 +2573,31 @@ def _hint(reason: str, harness: "Harness | None" = None) -> str:
     return ""
 
 
+class _Attempt:
+    """Ledger bookkeeping for one persistent request."""
+
+    def __init__(self, ledger, run_id: str, attempt: str, owned_run: bool) -> None:
+        self.ledger, self.run_id, self.attempt, self.owned_run = ledger, run_id, attempt, owned_run
+
+    def delivery(self, status, context_id="", turn_id="", detail=None) -> None:
+        if self.ledger is not None and self.attempt:
+            self.ledger.update_delivery(self.attempt, status, context_id, turn_id, detail)
+
+    def fail(self, error: BaseException) -> None:
+        outcome = "cancelled" if getattr(error, "cancelled", False) else "failed"
+        if self.ledger is not None and self.attempt:
+            self.ledger.finish_attempt(self.attempt, outcome, error=type(error).__name__)
+        if self.ledger is not None and self.owned_run:
+            self.ledger.finish(self.run_id, outcome)
+
+    def succeed(self, text: str, usage: dict) -> None:
+        if self.ledger is not None and self.attempt:
+            self.ledger.finish_attempt(self.attempt, "succeeded", result=text, usage=usage)
+            if self.owned_run:
+                self.ledger.finish(self.run_id, "succeeded", result={
+                    "reply_sha256": hashlib.sha256(text.encode()).hexdigest()}, usage=usage)
+
+
 class HarnessResearcher(AgentResearcher):
     """Research by *running* the harness, rather than by writing to it.
 
@@ -2512,6 +2629,9 @@ class HarnessResearcher(AgentResearcher):
         self._reader_config = ""
         self.harness = harness
         self.app_state_path = app_state_path
+        self.agent_ledger = None
+        self.agent_run_id = ""
+        self.transport_mode = transport_env() or "auto"
         self._host_search_url = ""
         self.runtime: dict = {}
         self.timeout = timeout
@@ -2526,6 +2646,11 @@ class HarnessResearcher(AgentResearcher):
         #: and a ceiling that applied to only one of them would be a ceiling
         #: the reader could not predict.
         self.max_documents = 0
+        #: The reader's picked kinds of source and the language they asked
+        #: answers in, from the Agents tab and Settings (`tasks._apply_source_options`).
+        #: Empty and `auto` mean nothing was chosen.
+        self.source_kinds: list[str] = []
+        self.output_language = "auto"
         self.budget_usd = 0.0
         #: Read duck-typed by `app/web/tasks.py`. `None` until a run happens,
         #: which is the difference between "spent nothing" and "cannot count".
@@ -2534,7 +2659,12 @@ class HarnessResearcher(AgentResearcher):
         #: Named for the provenance row, like the paid plane's `model`.
         self.model = harness.id
         self.search_provider = harness.label
-        self.sources: dict[str, str] = {}
+        #: url -> the page text Kriko itself read and showed the CLI, which a
+        #: quote is checked against. `None` is the other answer, and not the
+        #: same as empty: a CLI that searched with its own tools gave Kriko no
+        #: text, so a quote can only be required to exist (`quicklook.parse`).
+        #: `{}` would read as "every page was checked" and drop every claim.
+        self.sources: dict[str, str] | None = None
         self.relevant_sources: dict[str, str] = {}
         self.page_titles: dict[str, str] = {}
         self.telemetry: dict = {}
@@ -2637,8 +2767,11 @@ class HarnessResearcher(AgentResearcher):
         # drops it.
         self.budget_usd = max(0.0, float(task.budget_usd or 0.0))
         prompt = self.brief(task) + "\n" + self._contract()
-        if self.harness.id in {"antigravity-cli", "mistral-vibe", "codex"}:
-            queries = list(task.queries)[:3] or [
+        if self.harness.id in HOST_READ_HARNESSES:
+            # `task.queries` are the pack's templates (`{make} {model} ...`);
+            # the rendered ones are what a search engine can be asked. Searching
+            # the template text returned pages about image generation.
+            queries = list(task.rendered_queries())[:3] or [
                 f"{task.subject_label} failures owner reports"]
             reply = self._ask_with_pages(
                 queries, prompt, product=task.subject_label, prefer_issues=True,
@@ -2668,10 +2801,10 @@ class HarnessResearcher(AgentResearcher):
             quote = str(item.get("quote") or "").strip()
             if not url or not quote:
                 continue
-            if self.harness.id in {"codex", "antigravity-cli", "mistral-vibe"}:
+            if self.harness.id in HOST_READ_HARNESSES:
                 from kriko.extract.grounding import loose_span
 
-                page_text = self.sources.get(url, "")
+                page_text = (self.sources or {}).get(url, "")
                 quote = loose_span(page_text, quote)
                 if not quote:
                     continue
@@ -2733,22 +2866,16 @@ class HarnessResearcher(AgentResearcher):
         """What `gather` already parsed, per document. No second model call."""
         return list(self._by_url.get(document.url, ()))
 
-    def _read_web_pages(self, queries: list[str], *, product: str = "",
-                        page=None, prefer_issues: bool = False,
-                        max_pages: int | None = None):
-        """Search and read bounded pages without starting a local model.
+    def _search_settings(self) -> tuple[str, str]:
+        """The search service address and search language the reader set.
 
-        `LocalAsker._read` already owns the host's OpenSERP/fetch path and its
-        relevance and publisher checks. Give it inert completion sockets: this
-        quick path uses the selected CLI once, after the pages are in hand.
+        Read once here for the queries and the pages alike, so the words a
+        search is asked in and the language the engine is asked for cannot
+        come from two places. Empty and `en` when nothing was set.
         """
-        from app import pagefacts, prefs
-        from app.providers import fetch, local_agent, local_discovery, openserp
-        from app.providers.local_identity import extract_identity
-        from kriko.research.politeness import LocalSearchError
+        from app import prefs
 
-        search_url = ""
-        search_language = "en"
+        search_url, search_language = "", "en"
         if self.app_state_path is not None:
             try:
                 from app.web import state
@@ -2762,6 +2889,23 @@ class HarnessResearcher(AgentResearcher):
                 search_language = str(settings.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en")
             except Exception:  # noqa: BLE001 - a missing preference uses OpenSERP defaults
                 pass
+        return search_url, search_language
+
+    def _read_web_pages(self, queries: list[str], *, product: str = "",
+                        page=None, prefer_issues: bool = False,
+                        max_pages: int | None = None):
+        """Search and read bounded pages without starting a local model.
+
+        `LocalAsker._read` already owns the host's OpenSERP/fetch path and its
+        relevance and publisher checks. Give it inert completion sockets: this
+        quick path uses the selected CLI once, after the pages are in hand.
+        """
+        from app import pagefacts
+        from app.providers import fetch, local_agent, local_discovery, openserp
+        from app.providers.local_identity import extract_identity
+        from kriko.research.politeness import LocalSearchError
+
+        search_url, search_language = self._search_settings()
         search_url = local_discovery.base_of(search_url) or local_discovery.SEARCH_DEFAULT_URL
         search = openserp.searcher(
             search_url, engine="google,duckduckgo,bing", language=search_language)
@@ -2818,26 +2962,33 @@ class HarnessResearcher(AgentResearcher):
                   packs: str = "", attributes: str = "") -> str:
         from app import quicklook
 
-        brief = quicklook.brief(product, principle, page, packs, attributes)
+        from app.providers import local_search_plan
+
         source_note = getattr(self, "source_instructions", "")
-        if self.harness.id not in {"codex", "antigravity-cli", "mistral-vibe"}:
-            return self.ask(brief + source_note)
+        language = str(getattr(self, "output_language", "") or "auto")
+        if self.harness.id not in HOST_READ_HARNESSES:
+            return self.ask(quicklook.brief(
+                product, principle, page, packs, attributes,
+                max_sources=max(1, self.max_documents or 5), language=language,
+            ) + source_note)
+        _url, search_language = self._search_settings()
+        # The reader's picked kinds of source decide what is searched for, and
+        # their search language decides in which words; not a fixed trio.
         queries = [
-            f'"{product}" problems owner reports',
-            f'"{product}" failures review',
-            f'"{product}" specifications manual recalls',
-        ]
+            f'"{product}" {angle}' for angle in local_search_plan.quick_angles(
+                getattr(self, "source_kinds", ()), search_language)]
         return self._ask_with_pages(
             queries,
             quicklook.brief(product, principle, page, packs, attributes,
-                            compact=True, max_sources=max(1, self.max_documents or 3))
+                            compact=True, max_sources=max(1, self.max_documents or 3),
+                            language=language)
             + source_note,
             product=product, page=page, prefer_issues=True, quicklook_answer=True,
         )
 
     def ask_followup(self, prompt: str, *, product: str = "", question: str = "") -> str:
         """Answer a web follow-up from host-read pages in one CLI session."""
-        if self.harness.id not in {"codex", "antigravity-cli", "mistral-vibe"}:
+        if self.harness.id not in HOST_READ_HARNESSES:
             return self.ask(prompt)
         product = product.strip()
         question = question.strip()
@@ -2865,7 +3016,10 @@ class HarnessResearcher(AgentResearcher):
         # filtering used for Quick Look risk claims.
         return self._ask_with_pages(
             queries, prompt, prefer_issues=False,
-            max_pages=min(8, max(3, len(queries) * 2)),
+            # A count the reader set is a ceiling, not a suggestion: "I dont
+            # want my agent to search 30 sources, maybe I want 3".
+            max_pages=(min(8, self.max_documents) if self.max_documents
+                       else min(8, max(3, len(queries) * 2))),
             quicklook_answer=False, source_line=True,
         )
 
@@ -2928,9 +3082,17 @@ class HarnessResearcher(AgentResearcher):
                     raise NoHarness(nothing_read(found, self._host_search_url))
                 # Every search failed: the service is down or blocked, which
                 # says nothing about the product. The CLI has web tools of its
-                # own, so ask it to search rather than end the run; whatever it
-                # cites is still quote-checked, and an unsourced claim dropped.
+                # own, so ask it to search rather than end the run. Kriko holds
+                # no page text then, so what it cites must name a page and a
+                # quote, and an unsourced claim is dropped.
                 own_search = True
+                self.sources = None
+                if self.harness.protocol in TOOLLESS_PROTOCOLS and self.transport_mode == "persistent":
+                    raise NoHarness(
+                        f"Host web search failed. Persistent {self.harness.label} transport "
+                        "has web tools disabled and requires host-read pages; restore host "
+                        "search or use auto/exec mode."
+                    )
                 self._echo(f"The search service did not answer; {self.harness.label} "
                            "will search the web itself")
             if self.check_cancelled is not None:
@@ -2949,7 +3111,22 @@ class HarnessResearcher(AgentResearcher):
             before_tokens = self.tokens_used
             answer_started = time.perf_counter()
             try:
-                reply = self.ask(full_prompt)
+                if own_search and self.harness.protocol in TOOLLESS_PROTOCOLS:
+                    if self.transport_mode == "auto":
+                        # This one request explicitly asks the CLI to search.
+                        # The persistent protocol has no web grant, so choose
+                        # the process path, which has web tools, before the
+                        # prompt is delivered.
+                        previous_mode = self.transport_mode
+                        self.transport_mode = "exec"
+                        try:
+                            reply = self.ask(full_prompt)
+                        finally:
+                            self.transport_mode = previous_mode
+                    else:
+                        reply = self.ask(full_prompt)
+                else:
+                    reply = self.ask(full_prompt)
             except Exception:
                 answer_stage["failed"] = True
                 raise
@@ -3077,8 +3254,318 @@ class HarnessResearcher(AgentResearcher):
         receives one line per action the agent takes, while it takes it.
         """
         prompt = with_refused_page(prompt)
+        if self.transport_mode not in {"auto", "persistent", "exec"}:
+            raise ValueError("the agent transport must be auto, persistent, or exec")
+        if self.transport_mode != "exec":
+            from app.providers.codex_transport import TransportUnavailable
+            from app.providers.resident import ProtocolAbsent
+
+            try:
+                if self.harness.protocol == "codex":
+                    return self._run_codex(prompt, on_line)
+                if self.harness.protocol in RESIDENT_PROTOCOLS:
+                    if self._can_converse():
+                        # A run the reader can answer talks to its own process
+                        # mid-run; a shared worker cannot be handed one reader's
+                        # replies. This is a capability, not a failure, so it
+                        # does not depend on the mode.
+                        say = on_line if on_line is not None else self.on_action
+                        if say is not None:
+                            say("this run can be answered, so it uses its own process")
+                    else:
+                        return self._run_resident(prompt, on_line)
+                else:
+                    raise ProtocolAbsent(
+                        f"{self.harness.label} has no persistent protocol; its print mode "
+                        "starts one process per request")
+            except TransportUnavailable as error:
+                if self.transport_mode == "persistent":
+                    raise
+                say = on_line if on_line is not None else self.on_action
+                if say is not None and not isinstance(error, ProtocolAbsent):
+                    say(f"persistent protocol unavailable; using a fresh process ({error})")
         with self._workspace():
             return self._invoke(prompt, on_line)
+
+    def _run_codex(self, prompt: str, on_line=None) -> str:
+        from app.providers import codex_profile, resident
+        from app.providers.codex_transport import CodexRequest, TransportUnavailable
+
+        if self.check_cancelled is not None:
+            self.check_cancelled()
+        if self.transport_mode not in {"auto", "persistent", "exec"}:
+            raise ValueError("KRIKO_CODEX_TRANSPORT must be auto, persistent, or exec")
+        executable = locate(self.harness)
+        if not executable:
+            raise NoHarness("Codex is not installed")
+        # Older CLI installations remain usable through exec. Discovery is
+        # cached by binary stamp, and happens before a research prompt is sent.
+        key = (executable, _stamp(executable))
+        with _CODEX_SUPPORT_LOCK:
+            supported = _CODEX_SUPPORT.get(key)
+        if supported is None:
+            supported = "--listen" in _ask(executable, "app-server", "--help")
+            with _CODEX_SUPPORT_LOCK:
+                _CODEX_SUPPORT[key] = supported
+        if not supported:
+            raise TransportUnavailable("the installed CLI has no verified app-server transport")
+        chosen = codex_profile.profile(
+            executable, model=self.requested_model, effort=self.requested_effort,
+            namespace=str(self.app_state_path or ""),
+        )
+        attempt = self._open_attempt(prompt, "app-server")
+        delivery = attempt.delivery
+        say = on_line if on_line is not None else self.on_action
+        if say is not None:
+            if self.effort_settled:
+                say(self.effort_settled)
+            say("answering with the selected agent over a persistent protocol")
+        started = time.monotonic()
+        self._live_parts.clear()
+        self._live_chars = 0
+        self._live_detector_tail = ""
+        self._live_suppressed = False
+        self._live_published = ""
+        self._live_last_emit = 0.0
+        resident.release_idle()
+        try:
+            result = codex_profile.transport().run(
+                chosen, CodexRequest(prompt, {}, timeout=self.timeout),
+                check_cancelled=self.check_cancelled, on_text=self._append_live_text,
+                on_delivery=delivery,
+            )
+        except BaseException as error:
+            attempt.fail(error)
+            raise
+        finally:
+            if self.on_text is not None and self._live_published:
+                self.on_text("")
+        usage = dict(result.usage)
+        actual_model = result.metrics.get("model")
+        if isinstance(actual_model, str) and actual_model:
+            self.model = actual_model
+            usage["model"] = actual_model
+        measured = usage.get("last") or usage.get("total") or usage
+        measured = measured if isinstance(measured, dict) else {}
+        count = measured.get("totalTokens", measured.get("total_tokens"))
+        if count is None:
+            incoming = measured.get("inputTokens", measured.get("input_tokens"))
+            outgoing = measured.get("outputTokens", measured.get("output_tokens"))
+            if incoming is not None or outgoing is not None:
+                count = _int(incoming) + _int(outgoing)
+        if count is not None:
+            self.tokens_used = (self.tokens_used or 0) + _int(count)
+        self.runtime.update(transport="app-server", context_id=result.thread_id,
+                            turn_id=result.turn_id)
+        self.telemetry["transport"] = self.runtime.copy()
+        self.telemetry["transport_metrics"] = dict(result.metrics)
+        self.telemetry["prompt_bytes"] = len(prompt.encode())
+        attempt.succeed(result.text, usage)
+        self.telemetry["transport_ms"] = round((time.monotonic() - started) * 1000, 3)
+        return result.text
+
+    def _open_attempt(self, prompt: str, transport: str) -> "_Attempt":
+        """The durable record of one persistent request, shared by every agent.
+
+        Reserved here and not in each adapter so that provenance does not
+        depend on which agent answered: the prompt digest, model, effort and
+        transport are recorded before anything is sent, and the delivery state
+        follows the protocol's own acknowledgements.
+        """
+        ledger = self.agent_ledger
+        run_id = self.agent_run_id
+        owned_run = False
+        digest = hashlib.sha256(prompt.encode()).hexdigest()
+        if ledger is None and self.app_state_path is not None:
+            from app.agentledger import Ledger
+
+            ledger = Ledger(self.app_state_path)
+            saved = ledger.reserve(None, "harness", {
+                "prompt_sha256": digest, "provider": self.harness.id,
+                "model": self.requested_model, "effort": self.requested_effort,
+            })
+            run_id = saved["run_id"]
+            owned_run = True
+        attempt = ledger.start_attempt(run_id, self.harness.id, self.requested_model, {
+            "prompt_sha256": digest, "prompt_bytes": len(prompt.encode()),
+            "effort": self.requested_effort, "transport": transport, "tools": [],
+        }) if ledger is not None and run_id else ""
+        return _Attempt(ledger, run_id, attempt, owned_run)
+
+    def _run_resident(self, prompt: str, on_line=None) -> str:
+        """One request on a resident worker: Claude Code or Mistral Vibe.
+
+        The worker is the process adapter's child kept alive, so the launch
+        vector and the child environment come from the same rules; what is new
+        is only that it is reused, and that a request never sees another's
+        conversation (`resident` says how, per agent). Everything that goes
+        wrong before the prompt is written is `TransportUnavailable`, which
+        `auto` answers with a fresh process.
+        """
+        from app.providers import codex_profile, resident
+
+        if self.check_cancelled is not None:
+            self.check_cancelled()
+        try:
+            profile = self._resident_profile()
+            if (self._reader_config and self.harness.reader is not None
+                    and self.harness.reader.config_flag in profile.argv):
+                prompt = with_page_reader(prompt, reader_tools(self.harness))
+        finally:
+            self._reader_config = ""
+        attempt = self._open_attempt(prompt, profile.wire)
+        say = on_line if on_line is not None else self.on_action
+        if say is not None:
+            if self.effort_settled:
+                say(self.effort_settled)
+            say("answering with the selected agent over a persistent protocol")
+        self.transcript = ""
+        self._spoke = False
+        self._live_parts.clear()
+        self._live_chars = 0
+        self._live_detector_tail = ""
+        self._live_suppressed = False
+        self._live_published = ""
+        self._live_last_emit = 0.0
+        self._streamed_blocks = {}
+        self.actions = []
+        narrated = 0
+
+        def line(raw: str) -> None:
+            nonlocal narrated, say
+            self._spoke = True
+            self._keep(raw)
+            try:
+                event = json.loads(raw)
+            except (TypeError, ValueError):
+                return
+            if not isinstance(event, dict):
+                return
+            self._draft_from_event(event)
+            if say is None or narrated > MAX_NARRATED:
+                return
+            if narrated == MAX_NARRATED:
+                narrated += 1
+                say(f"(still running; the next actions are not shown — {MAX_NARRATED}-line cap)")
+                return
+            spoken = self._narrate(raw)
+            if spoken:
+                narrated += 1
+                self.actions.append(spoken)
+                try:
+                    say(spoken)
+                except Exception:  # noqa: BLE001 - a worse log, not a lost run
+                    say = None
+
+        def action(sentence: str) -> None:
+            if say is not None:
+                self.actions.append(sentence)
+                try:
+                    say(sentence)
+                except Exception:  # noqa: BLE001
+                    pass
+
+        started = time.monotonic()
+        codex_profile.release_idle()
+        try:
+            result = resident.transport().run(profile, resident.ResidentRequest(
+                prompt, timeout=self.timeout,
+                on_line=line if profile.wire == "claude" else None,
+                on_action=action if profile.wire == "acp" else None,
+                on_text=self._append_live_text if profile.wire == "acp" else None,
+                on_delivery=attempt.delivery, check_cancelled=self.check_cancelled,
+            ))
+        except BaseException as error:
+            attempt.fail(error)
+            raise
+        finally:
+            if self.on_text is not None and self._live_published:
+                self.on_text("")
+        usage = dict(result.usage)
+        self.runtime.update(transport=profile.wire, context_id=result.context_id,
+                            turn_id=result.turn_id)
+        self.telemetry["transport"] = self.runtime.copy()
+        self.telemetry["transport_metrics"] = dict(result.metrics)
+        self.telemetry["prompt_bytes"] = len(prompt.encode())
+        self.telemetry["transport_ms"] = round((time.monotonic() - started) * 1000, 3)
+        try:
+            if profile.wire == "claude":
+                # The agent's own `result` object goes through the code that
+                # reads the process adapter's output, so cost, usage and an
+                # error it reported are read one way, whichever door it used.
+                text = self._finish(0, json.dumps(result.envelope, ensure_ascii=False), "")
+            else:
+                text = result.text
+                count = usage.get("totalTokens", usage.get("total_tokens"))
+                if count is None and ("inputTokens" in usage or "outputTokens" in usage):
+                    count = _int(usage.get("inputTokens")) + _int(usage.get("outputTokens"))
+                if count is not None:
+                    self.tokens_used = (self.tokens_used or 0) + _int(count)
+        except BaseException as error:
+            attempt.fail(error)
+            raise
+        attempt.succeed(text, usage)
+        return text
+
+    def _resident_profile(self):
+        """The launch vector, environment and folders of this agent's worker."""
+        from app.providers import resident
+        from app.providers.resident import ProtocolAbsent
+
+        executable = locate(self.harness)
+        if not executable:
+            # The process path says what is wrong with a missing agent in its
+            # own words; this one only declines.
+            raise ProtocolAbsent(f"{self.harness.label} is not installed")
+        if self.harness.protocol == "claude":
+            if "--input-format" not in declared(executable):
+                raise ProtocolAbsent("the installed CLI has no stream-json input mode")
+            folder = resident.owned_folder("claude-work")
+            self._place_reader(folder)
+            command = command_for(
+                self.harness, model=self.requested_model, effort=self.requested_effort,
+                max_documents=self.max_documents, budget_usd=self.budget_usd,
+                reader_config=self._reader_config,
+            )
+            if "stream-json" not in command or "--verbose" not in command:
+                raise ProtocolAbsent("this vector does not stream JSON")
+            command += ["--input-format", "stream-json"]
+            if "--no-session-persistence" in declared(executable):
+                command.append("--no-session-persistence")
+            env = {**child_env(extra_dirs=(str(Path(command[0]).parent),) if os.path.isabs(command[0]) else ()),
+                   **CHILD_ENCODING_ENV, **self.harness.env, "PWD": str(folder)}
+            work = folder
+            wire = "claude"
+        else:
+            acp = _sibling_executable(executable, "vibe-acp")
+            if not acp:
+                raise ProtocolAbsent("vibe-acp is not installed; update Mistral Vibe")
+            root = resident.owned_folder(f"vibe:{self.requested_model}:{self.requested_effort}")
+            home, work = root / "home", root / "work"
+            config = home / ".vibe"
+            config.mkdir(parents=True, exist_ok=True)
+            work.mkdir(exist_ok=True)
+            text, chosen = _vibe_config(self.requested_model, self.requested_effort,
+                                        config / "sessions", log_sessions=False)
+            if chosen:
+                self.model = chosen
+            (config / "config.toml").write_text(text, encoding="utf-8")
+            command = [acp]
+            env = {**child_env(extra_dirs=(str(Path(acp).parent),)), **CHILD_ENCODING_ENV,
+                   **self.harness.env, "HOME": str(home), "USERPROFILE": str(home),
+                   "PWD": str(work), "VIBE_HOME": str(config)}
+            if self.requested_model and self.harness.model_env:
+                env[self.harness.model_env] = self.requested_model
+            for name in ("MISTRAL_API_KEY", "VIBE_API_KEY"):
+                if os.environ.get(name):
+                    env[name] = os.environ[name]
+            wire = "acp"
+        if self._needs_shell(command):
+            raise ProtocolAbsent("a .cmd launcher needs a shell, which a resident worker does not use")
+        return resident.ResidentProfile(
+            wire, tuple(unshim(command)), str(work), env,
+            model=self.requested_model, effort=self.requested_effort,
+        )
 
     def _place_reader(self, folder: Path) -> None:
         """Write this run's page-reader config into its own folder (B155).
@@ -3173,32 +3660,10 @@ class HarnessResearcher(AgentResearcher):
                 # and no schema of Mistral's for Kriko to keep in step with.
                 config = home / ".vibe"
                 config.mkdir(parents=True)
-                try:
-                    own = tomllib.loads((Path.home() / ".vibe" / "config.toml").read_text(encoding="utf-8"))
-                except (OSError, ValueError):
-                    own = {}
-                chosen = self.requested_model or str(own.get("active_model") or "")
+                text, chosen = _vibe_config(
+                    self.requested_model, self.requested_effort, config / "sessions")
                 if chosen:
                     self.model = chosen
-                rows = own.get("models") or []
-                text = 'enable_update_checks = false\nenable_telemetry = false\nmcp_servers = []\ndisabled_skills = ["*"]\n'
-                if chosen:
-                    text += "active_model = " + json.dumps(chosen) + "\n"
-                if self.requested_effort and not any(isinstance(r, dict) and r.get("alias") == chosen for r in rows) and chosen:
-                    rows = [*rows, {"alias": chosen}]
-                for row in rows:
-                    if not isinstance(row, dict):
-                        continue
-                    text += "\n[[models]]\n"
-                    for key in ("name", "provider", "alias", "thinking"):
-                        value = row.get(key)
-                        if key == "thinking" and (row.get("alias") == chosen or row.get("name") == chosen) and self.requested_effort:
-                            value = self.requested_effort
-                        if isinstance(value, str):
-                            text += key + " = " + json.dumps(value) + "\n"
-                    if "thinking" not in row and self.requested_effort and row.get("alias") == chosen:
-                        text += "thinking = " + json.dumps(self.requested_effort) + "\n"
-                text += "\n[session_logging]\ngenerate_titles = false\nsave_dir = " + json.dumps(str(config / "sessions")) + "\n"
                 (config / "config.toml").write_text(text, encoding="utf-8")
                 self._run_env["VIBE_HOME"] = str(config)
                 # The CLI reads its key from the environment, and the
@@ -3490,6 +3955,13 @@ class HarnessResearcher(AgentResearcher):
                 pass
 
     def _stream(self, command, stdin_read, say, opening: str = "") -> tuple[int, str, str]:
+        from app.providers import codex_profile, resident
+
+        codex_profile.release_idle()
+        resident.release_idle()
+        return self._stream_owned(command, stdin_read, say, opening)
+
+    def _stream_owned(self, command, stdin_read, say, opening: str = "") -> tuple[int, str, str]:
         """Run the CLI, reading its output line by line as it is produced.
 
         Three threads' worth of care for one subprocess, and each one is
@@ -3531,8 +4003,10 @@ class HarnessResearcher(AgentResearcher):
         # same way regardless of which platform gave it.
         job = self._new_job_object()
         try:
-            proc = subprocess.Popen(  # noqa: S603 - fixed executable, no shell
+            proc = processcontrol.contained_popen(
                 command,
+                job=job, factory=subprocess.Popen, check=self.check_cancelled,
+                permit_timeout=self.timeout,
                 # A pipe only for a conversation. A one-shot CLI cannot hear a
                 # line mid-run, and an open pipe to one is all risk: a CLI that
                 # reads a non-tty stdin to EOF (`claude -p` does, for three
@@ -3563,7 +4037,6 @@ class HarnessResearcher(AgentResearcher):
             raise NoHarness(
                 f"{self.harness.label} is not on PATH ({self.harness.executable})"
             ) from exc
-        self._assign_job(job, proc)
 
         # The opening message. A conversational child has no prompt until this
         # lands — it is the run, not a preamble to it.

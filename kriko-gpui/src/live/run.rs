@@ -21,6 +21,7 @@ use gpui::Context;
 use crate::api::{self, Value};
 use crate::app::{DockFeedEntry, Kriko, Tab};
 use crate::marks::{self, Mark, Phase};
+use crate::motion::{unknown_ceiling, Smoothed};
 use crate::theme::TagState;
 
 // ---- what the engine says ----
@@ -226,7 +227,7 @@ pub fn kind_word(kind: &str) -> String {
     }
 }
 
-fn job_from(v: &Value) -> Job {
+pub(crate) fn job_from(v: &Value) -> Job {
     let params = v.get("params").cloned().unwrap_or(Value::Null);
     let attention = v
         .get("attention")
@@ -349,7 +350,7 @@ pub fn epoch(ts: &str) -> Option<i64> {
     Some(days_from_civil(y, m, day) * 86400 + hh * 3600 + mm * 60 + ss)
 }
 
-fn now_epoch() -> i64 {
+pub(crate) fn now_epoch() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
@@ -553,6 +554,11 @@ pub struct State {
     pub quick_asking: bool,
     pub quick_ask_note: Option<String>,
     last_quick_asks: Option<Instant>,
+    /// Each job's progress bar as the eye sees it (`motion.rs`), by job id.
+    /// Advanced once per frame while motion is on; read by every screen that
+    /// draws a job's bar through `bar_value`.
+    pub bars: HashMap<String, Smoothed>,
+    bars_epoch: Option<Instant>,
 }
 
 const RETRY_PENDING_WINDOW: Duration = Duration::from_secs(20);
@@ -591,6 +597,53 @@ impl State {
 
     pub fn running(&self) -> impl Iterator<Item = &Job> {
         self.jobs.iter().filter(|j| !j.done)
+    }
+
+    /// Moves every job's bar one frame toward what the engine last said of
+    /// it. Called once per frame, and only while motion is on, so a still
+    /// window and Reduce motion never advance anything. A job that stopped
+    /// or failed keeps its bar where it was. Returns whether a bar is still
+    /// moving, which is what asks GPUI for the next frame.
+    pub fn advance_bars(&mut self, motion: bool) -> bool {
+        if !motion {
+            return false;
+        }
+        let epoch = *self.bars_epoch.get_or_insert_with(Instant::now);
+        let now = Instant::now().duration_since(epoch).as_secs_f64();
+        let mut moving = false;
+        for job in &self.jobs {
+            // the followed job is read every 250 ms, fresher than the list
+            let seen = match &self.detail {
+                Some(d) if d.id == job.id => d,
+                _ => job,
+            };
+            if seen.done && seen.state != "succeeded" {
+                self.bars
+                    .entry(job.id.clone())
+                    .or_insert_with(|| Smoothed::at(seen.progress));
+                continue;
+            }
+            let succeeded = seen.state == "succeeded";
+            let reported = if succeeded { 1.0 } else { seen.progress };
+            let bar = self
+                .bars
+                .entry(job.id.clone())
+                .or_insert_with(|| Smoothed::at(reported));
+            bar.advance(reported, unknown_ceiling(reported), now, succeeded);
+            moving |= !seen.done || !bar.settled();
+        }
+        let jobs = &self.jobs;
+        self.bars.retain(|id, _| jobs.iter().any(|j| &j.id == id));
+        moving
+    }
+
+    /// The value a screen draws for a job's bar: the eased one while motion
+    /// is on, the engine's own report when it is off.
+    pub fn bar_value(&self, id: &str, reported: f32, motion: bool) -> f32 {
+        if !motion {
+            return reported;
+        }
+        self.bars.get(id).map_or(reported, Smoothed::shown)
     }
 
     /// The job a reply goes to: one with a question, else the one being

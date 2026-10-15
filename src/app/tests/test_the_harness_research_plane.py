@@ -1358,7 +1358,7 @@ def test_a_cancel_kills_the_whole_process_tree_and_the_signal_survives(tmp_path)
 
     def check_cancelled():
         calls["n"] += 1
-        if calls["n"] >= 1:
+        if marker.exists():
             raise _StopIt("the reader asked to stop")
 
     researcher.check_cancelled = check_cancelled
