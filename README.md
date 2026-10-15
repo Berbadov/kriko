@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.7.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.6.3-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Downloads](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [What's new](#whats-new) · [Benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,8 +34,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.7.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.7.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.6.3-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.6.3-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
@@ -45,8 +45,8 @@ Apple Silicon and Intel Macs have separate builds. A file is downloadable only w
 
 | Mac | Disk image | Portable app bundle |
 |---|---|---|
-| Apple Silicon | `kriko-1.7.0-macos-arm64.dmg` | `kriko-1.7.0-macos-arm64-portable.zip` |
-| Intel | `kriko-1.7.0-macos-x86_64.dmg` | `kriko-1.7.0-macos-x86_64-portable.zip` |
+| Apple Silicon | `kriko-1.6.3-macos-arm64.dmg` | `kriko-1.6.3-macos-arm64-portable.zip` |
+| Intel | `kriko-1.6.3-macos-x86_64.dmg` | `kriko-1.6.3-macos-x86_64-portable.zip` |
 
 Open the `.dmg` and drag **Kriko.app** to **Applications**. For the portable ZIP, extract it and move **Kriko.app** where you want it. Each archive is a complete app for its named architecture, built on a matching Mac.
 
@@ -91,11 +91,11 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 
 ## What's new
 
-### 1.7.0
+### 1.6.3
 
 - **Chat** (Check group): pick an agent and hold a threaded conversation. The agent is told only the names and one-line descriptions of what the app has gathered, and reads a source only when it asks; each ask shows as a step, then the answer with its sources. "I need X, with constraints a, b, c" becomes a ranked shortlist that says, per candidate, what is met, unknown or contradicted. Keys and settings cannot be reached from chat. Numeric limits are word-matched, so "under 2 kg" is met by "2 kg" whatever the direction.
 - Agent progress moves steadily: bars ease and creep instead of freezing and leaping, and every running agent shows what it is doing in words, its stage, a ticking clock and a short trail of recent actions. Reduce motion keeps them still.
-- Screens are more compact and consistent: shared spacing, a responsive grid, smaller cards and totals.
+- The desktop is denser: smaller cards, rows, gaps and totals, related cards side by side where they fit, and shorter page headings. More fits on each screen, including at the 940 px minimum.
 - **Compare → Start queue** researches several products at once, as many as Settings → Runs allows (default 1). Runs on the same catalog still take turns.
 - **Persistent agents.** Claude Code and Mistral Vibe now keep one worker alive across requests, as Codex already did, so a request skips process start-up. Every request still gets a fresh conversation: Claude Code is reset with `/clear` and Vibe opens a new ACP session. Workers get no tools beyond what the process path granted, are released when idle or when another agent needs the slot, and a request that may have been delivered is never sent twice. Antigravity has no persistent mode, so it keeps starting a process. `Settings → agent_transport` (or `KRIKO_AGENT_TRANSPORT`) accepts `auto` (default), `persistent` or `exec`; the older `codex_transport` and `KRIKO_CODEX_TRANSPORT` names still work. A run the reader can answer mid-run keeps its own process. Details: [docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md).
 - Research requests are recorded durably (inputs, attempts, delivery state, results and usage), a lost response no longer submits the same research twice, and a run's manifest, log tail and event stream can be inspected through the API.
@@ -120,26 +120,6 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 - Local research reserves context for source evidence, keeps product metadata compact, and searches product documentation alongside issue discussions. Ollama execution reports the model's observed GPU or CPU use.
 - A completed Quick Look with no supported issues remains a saved research result, with product facts, sources and coverage. It does not establish that the product is issue-free.
 - Product and comparison follow-ups carry the saved product context and can search and read fresh web evidence. Saved results show their evidence in Run and History.
-
-### 1.6.0
-
-- The desktop has a new glass-inspired layout, clearer navigation and live job panel, with animations that pause when the window is inactive and obey **Reduce motion**.
-- Home, Run, Local, and Browser extension now explain what to do while data loads and after success or failure. Retry actions report their state, and failed refreshes identify stale information instead of presenting it as current.
-- Saved Quick Looks can be filed into installed catalogs using exact matching or a grounded assignment from a local model or Mistral, with web tools disabled. CLI-only agents currently abstain and leave the catalog choice to the reader because a verified tool-less mode is unavailable; this does not affect ordinary CLI research. Filing does not rewrite the saved research evidence.
-- Local model requests negotiate supported structured-output formats while keeping Kriko's evidence checks in place. No Gemma 4 E2B quality evaluation was run on the 1.6.0 pipeline, whose evaluator digest is
-  `e647d1c957e01a8972ddef64ed0834a17ceb622613e0e1d998c8aa2affec6055`.
-  An older two-case Gemma 4 E2B fixture run at digest
-  `e686996dd0dadaa54e653ae0065e089521c9c4425284f3394d265f08c9e57e98`
-  recorded the expected findings and abstention, but its rows lack
-  host/runtime metadata and it is not a 1.6.0 benchmark. A separate [live
-  search observation](docs/benchmarks/2026-10-11-local-search-followup.md)
-  used an earlier pipeline and retained no findings for one product; this is
-  not evidence that the product has no faults. Neither result is a general
-  model-quality claim. No fine-tuning was performed; details are in the
-  [local-agent research note](docs/benchmarks/2026-10-12-local-agent-research.md).
-- Agent and model discovery shows when provider choices are still loading, and research screens give clearer feedback as runs start and finish. Hosted response time still depends on the selected provider, model, account, and network; this release makes no latency guarantee.
-- A native macOS packaging recipe now targets Apple Silicon (`arm64`) and Intel (`x86_64`) Macs and emits the filenames listed above. The screenshots in this checkout were captured on Linux; each release still needs a successful build and launch check on matching native hardware.
-
 Earlier releases are in the [changelog](CHANGELOG.md).
 
 ## Model benchmarks

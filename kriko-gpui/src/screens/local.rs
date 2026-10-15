@@ -20,9 +20,9 @@ pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
     let reading = app.live.local.device_reading;
     let refresh = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_device(cx));
-    let mut result = card().flex().flex_col().gap(px(12.0))
+    let mut result = card().flex().flex_col().gap(px(8.0))
         .child(div().flex().items_center().justify_between().child(eyebrow("Local inference device"))
-            .child(div().flex().items_center().gap(px(10.0))
+            .child(div().flex().items_center().gap(px(6.0))
                 .children(reading.then(|| spinner("runtime-refresh-spinner", 14.0, motion)))
                 .child(ghost("runtime-refresh", "Refresh device").on_click(refresh))))
         .child(row_desc(&format!("Active: {} · {}", crate::api::s(&runtime, "device"), crate::api::s(&runtime, "reason"))))
@@ -119,7 +119,7 @@ fn step_cell(n: usize, title: &str, value: String, done: bool, current: bool) ->
         .rounded(px(12.0))
         .flex()
         .items_center()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .when(current, |d| d.border_color(rgb(BRAND_LOW)))
         .child(
             div()
@@ -223,13 +223,13 @@ fn setup(
     let guide = card()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(
             div()
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .child(eyebrow("Use AI on this computer"))
                 .child(if current == 2 {
                     tag("local-setup-done", TagState::Done, "Ready", motion)
@@ -301,14 +301,14 @@ fn setup(
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .pb(px(8.0))
                 .child(eyebrow("1 · App that runs the model"))
                 .child(
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(12.0))
+                        .gap(px(8.0))
                         .child(mono("found on this machine", DIM))
                         .child(ghost("local-recheck", if checking { "Checking" } else { "Check again" }).on_click(recheck)),
                 ),
@@ -371,7 +371,7 @@ fn setup(
                 div()
                     .flex()
                     .items_center()
-                    .gap(px(10.0))
+                    .gap(px(6.0))
                     .flex_wrap()
                     .child(row_title(&server.name))
                     .child(tag(format!("rt-state-{i}-{tag_label}"), tag_state, tag_label, motion)),
@@ -386,7 +386,7 @@ fn setup(
                 .when(in_use, |d| d.bg(rgba(GLASS_1)))
                 .flex()
                 .items_center()
-                .gap(px(16.0))
+                .gap(px(8.0))
                 .child(mark_tile(&format!("rt-tile-{i}"), mark_of(&server.name), phase, 40.0, motion))
                 .child(body)
                 .child(div().flex_none().child(action)),
@@ -408,14 +408,14 @@ fn setup(
     });
     let refresh_catalogue = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_local_catalogue(cx));
     let library = cx.listener(|_this, _: &gpui::ClickEvent, _w, cx| cx.open_url("https://ollama.com/library"));
-    let mut catalogue = card().flex().flex_col().gap(px(12.0));
+    let mut catalogue = card().flex().flex_col().gap(px(8.0));
     catalogue = catalogue
         .child(
             div()
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .flex_wrap()
                 .child(eyebrow("2 · Get a model"))
                 .child(ghost("local-download-drawer", if app.live.local.catalogue_open { "Close model drawer" } else { "Browse downloadable models" }).on_click(drawer)),
@@ -433,7 +433,7 @@ fn setup(
     // The library drawer: search, then each model with the parameter sizes it
     // comes in. It is built only while open and slides in through `reveal`.
     let open = app.live.local.catalogue_open;
-    let mut drawer_body = div().flex().flex_col().gap(px(12.0));
+    let mut drawer_body = div().flex().flex_col().gap(px(8.0));
     if open {
         let raw_query = app.library_search.value.trim().to_string();
         let query = raw_query.to_lowercase();
@@ -473,7 +473,7 @@ fn setup(
                     this.local_get.set_value(typed.clone());
                     this.local_pull(cx);
                 });
-                drawer_body = drawer_body.child(div().flex().items_center().gap(px(12.0))
+                drawer_body = drawer_body.child(div().flex().items_center().gap(px(8.0))
                     .child(ghost("local-get-typed", &format!("Get {raw_query}")).on_click(get_typed)));
             }
         }
@@ -492,8 +492,8 @@ fn setup(
             if !m.about.is_empty() {
                 left = left.child(row_desc(&crate::screens::history::clip(&m.about, 140)));
             }
-            let mut row = div().flex().flex_col().gap(px(10.0)).py(px(12.0)).child(
-                div().flex().items_start().justify_between().gap(px(16.0)).child(left).child(
+            let mut row = div().flex().flex_col().gap(px(6.0)).py(px(12.0)).child(
+                div().flex().items_start().justify_between().gap(px(8.0)).child(left).child(
                     if busy { ghost(("local-offered", i), "Busy").h(px(36.0)).px(px(16.0)).text_size(px(12.0)).into_any_element() } else { ghost(("local-offered", i), "Get").h(px(36.0)).px(px(16.0)).text_size(px(12.0)).on_click(get).into_any_element() },
                 ),
             );
@@ -539,7 +539,7 @@ fn setup(
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(12.0))
+                        .gap(px(8.0))
                         .child(row_title(&p.model))
                         .child(ghost("local-get-cancel", "Stop").on_click(cancel)),
                 )
@@ -554,7 +554,7 @@ fn setup(
             PullPhase::Done => div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .child(tag("local-get-done", TagState::Done, "Downloaded", motion))
                 .child(row_desc(&format!("{} is on this machine.", p.model))),
             PullPhase::Failed(why) => {
@@ -617,13 +617,13 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
     card()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(
             div()
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .child(eyebrow("Already running a server?"))
                 .child(if plane.ready {
                     tag("local-live", TagState::Live, "Live", motion)
@@ -640,7 +640,7 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
             div()
                 .flex()
                 .items_end()
-                .gap(px(16.0))
+                .gap(px(8.0))
                 .flex_wrap()
                 .child(
                     div()
@@ -667,7 +667,7 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
             div()
                 .flex()
                 .items_end()
-                .gap(px(16.0))
+                .gap(px(8.0))
                 .flex_wrap()
                 .child(
                     div()
@@ -683,7 +683,7 @@ fn server_card(app: &mut Kriko, plane: &Plane, window: &mut Window, cx: &mut Con
                                 .flex()
                                 .items_center()
                                 .justify_between()
-                                .gap(px(12.0))
+                                .gap(px(8.0))
                                 .rounded(px(12.0))
                                 .bg(rgb(WELL))
                                 .border_1()
@@ -726,7 +726,7 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .pb(px(4.0))
                 .child(ghost("local-installed-drawer", if app.live.local.models_open { "Close downloaded models" } else { "Choose downloaded model" }).on_click(drawer))
                 .child(mono(&format!("{} on {}", plane.models.len(), if plane.name.is_empty() { "the server" } else { &plane.name }), DIM)),
@@ -783,7 +783,7 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
         };
         models = models.child(
             div()
-                .py(px(10.0))
+                .py(px(4.0))
                 .flex()
                 .items_center()
                 .justify_between()
@@ -799,7 +799,7 @@ fn model_card(app: &mut Kriko, plane: &Plane, held: &[Held], machine: Option<&Ma
                             div()
                                 .flex()
                                 .items_center()
-                                .gap(px(10.0))
+                                .gap(px(6.0))
                                 .flex_wrap()
                                 .child(row_title(name))
                                 .children(recommended.then(|| mono("RECOMMENDED", ICE)))
@@ -898,7 +898,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             }
             PlaneReadState::Stale | PlaneReadState::Ready => unreachable!("no plane has no ready or stale state"),
         };
-        return div().flex().flex_col().gap(px(12.0)).child(status);
+        return div().flex().flex_col().gap(px(8.0)).child(status);
     };
     let machine = app.live.local.machine.clone();
     let held = app.live.local.held.clone().unwrap_or_default();
@@ -910,7 +910,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     let memory = card()
         .flex()
         .flex_col()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .child(eyebrow("Memory"))
         .child(row_title(
             &machine
@@ -922,7 +922,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             Some((used, total)) if total > 0.0 => div()
                 .flex()
                 .items_center()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(mono("VRAM", DIM))
                 .child(meter((used / total * 100.0) as f32, 20))
                 .child(mono(&format!("{} / {}", gb_mb(used), gb_mb(total)), INK_2)),
@@ -1005,21 +1005,21 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         this.refresh_jobs(cx);
         cx.notify();
     });
-    let use_card = card().flex().flex_col().gap(px(10.0))
+    let use_card = card().flex().flex_col().gap(px(6.0))
         .child(eyebrow("Use and inspect"))
         .child(row_desc(if plane.ready {
             "Ask the local model about saved checks in Compare. The answer stays with the draft, including its model, source summary, and reported token use. Open a local run below for its log, cited pages, and self-check verdict."
         } else {
             "Start a runtime and pick a model above. Compare will then offer it beside connected agents."
         }))
-        .child(div().flex().gap(px(10.0)).flex_wrap()
+        .child(div().flex().gap(px(6.0)).flex_wrap()
             .child(key("local-open-compare", "Open Compare").on_click(open_compare))
             .child(ghost("local-open-run", "View runs").on_click(open_run)));
     let refresh_work = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_jobs(cx));
     let recent_jobs: Vec<_> = app.live.run.jobs.iter()
         .filter(|j| j.backend == "local" || j.harness == "local")
         .take(5).cloned().collect();
-    let mut work = card().flex().flex_col().gap(px(10.0))
+    let mut work = card().flex().flex_col().gap(px(6.0))
         .child(div().flex().items_center().justify_between()
             .child(eyebrow("Recent local work"))
             .child(ghost("local-refresh-work", "Refresh").on_click(refresh_work)))
@@ -1047,7 +1047,7 @@ pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             _ => TagState::Queue,
         };
         work = work.child(div().id(("local-work", i))
-            .py(px(10.0)).flex().items_center().gap(px(12.0))
+            .py(px(4.0)).flex().items_center().gap(px(8.0))
             .cursor_pointer().hover(|s| s.bg(rgba(GLASS_1)))
             .on_click(open)
             .child(tag(format!("local-work-state-{i}"), state, &job.state, motion))

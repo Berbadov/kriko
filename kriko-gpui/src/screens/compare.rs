@@ -272,7 +272,7 @@ fn board(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     div()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(tools)
         .child(
             div()
@@ -632,7 +632,7 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
             if detail {
                 let mut d = div()
                     .pl(px(8.0))
-                    .py(px(10.0))
+                    .py(px(4.0))
                     .flex()
                     .flex_col()
                     .gap(px(6.0))
@@ -744,7 +744,7 @@ fn table(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div 
             if detail {
                 let mut d = div()
                     .pl(px(8.0))
-                    .py(px(10.0))
+                    .py(px(4.0))
                     .flex()
                     .flex_col()
                     .gap(px(8.0))
@@ -807,7 +807,7 @@ fn section_head(
         .py(px(12.0))
         .flex()
         .items_center()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .cursor_pointer()
         .hover(|s| s.bg(rgba(GLASS_1)))
         .child(icon(icon_name, 15.0).text_color(rgb(if open { ICE } else { MUTED })))
@@ -893,7 +893,7 @@ fn column_slider(
     div()
         .flex()
         .items_center()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(mono("PRODUCTS", DIM))
         .child(
             div()
@@ -1070,7 +1070,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         };
         rows = rows.child(
             div()
-                .py(px(10.0))
+                .py(px(4.0))
                 .flex()
                 .items_center()
                 .gap(px(SPACE_CARD))
@@ -1113,7 +1113,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
         }
     }
     if n == 0 {
-        rows = rows.child(div().py(px(10.0)).child(row_desc(if c.queue_loaded {
+        rows = rows.child(div().py(px(4.0)).child(row_desc(if c.queue_loaded {
             "The queue is empty. Queue the products you are weighing up from their listings."
         } else {
             "Reading the queue..."
@@ -1182,7 +1182,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
     let keys = div()
         .flex()
         .items_center()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .flex_wrap()
         .when(can_start, |d| {
             d.child(
@@ -1210,7 +1210,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(mono("FILL SLOTS WHEN DONE", DIM))
                 .child(switch_anim("queue-auto", auto_on, motion).on_click(auto_toggle)),
         );
@@ -1223,7 +1223,7 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .child(eyebrow("Research queue"))
                 .child(div().flex_1())
                 .child(mono(&summary, if running { ICE } else { MUTED })),
@@ -1242,10 +1242,10 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
             // how a product gets here: from its listing, through the panel
             well()
                 .px(px(14.0))
-                .py(px(10.0))
+                .py(px(4.0))
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .child(icon("extension", 16.0).text_color(rgb(ICE)))
                 .child(
                     div().flex_1().min_w(px(0.0)).child(row_desc(
@@ -1464,7 +1464,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .max()
         .unwrap_or(1)
         .max(1);
-    let mut slot_row = div().flex().items_start().gap(px(12.0)).flex_wrap();
+    let mut slot_row = div().flex().items_start().gap(px(8.0)).flex_wrap();
     for (i, slot) in slots.iter().take(MAX_SLOTS).enumerate() {
         let open_picker = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.live.compare.picker = if this.live.compare.picker == Some(i) { None } else { Some(i) };
@@ -1574,11 +1574,11 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             list = list.child(
                 div()
                     .id(("pick", ci))
-                    .py(px(8.0))
+                    .py(px(3.0))
                     .px(px(12.0))
                     .flex()
                     .items_center()
-                    .gap(px(12.0))
+                    .gap(px(8.0))
                     .rounded(px(10.0))
                     .cursor_pointer()
                     .when(!taken, |s| s.hover(|h| h.bg(rgba(GLASS_1))))
@@ -1744,7 +1744,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         .and_then(|id| app.live.compare.drafts.iter().find(|d| d.draft_id == *id))
         .map(|d| d.name.clone())
         .unwrap_or_default();
-    let mut questions = div().flex().flex_col().gap(px(10.0));
+    let mut questions = div().flex().flex_col().gap(px(6.0));
     let saved_questions = app.live.compare.questions.clone();
     for (qi, q) in saved_questions.iter().enumerate() {
         let failure = app.live.compare.failed.get(&q.question_id);
@@ -1759,7 +1759,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(10.0))
+                        .gap(px(6.0))
                         .child(icon("agents", 14.0).text_color(rgb(BRAND_BRIGHT)))
                         .child(
                             div()
@@ -1853,7 +1853,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     let questions_card = card()
         .flex()
         .flex_col()
-        .gap(px(12.0))
+        .gap(px(8.0))
         .child(eyebrow("Ask about this comparison"))
         .child(row_desc(
             "The selected agent searches the web using these saved checks as product context; cited pages appear with the answer. Asking saves the slots to this draft first.",
@@ -1863,7 +1863,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 this.tab = Tab::Local;
                 cx.notify();
             });
-            div().flex().items_center().gap(px(12.0))
+            div().flex().items_center().gap(px(8.0))
                 .child(empty_note("No agent or local model is ready."))
                 .child(ghost("compare-open-local", "Set up Local LLM").on_click(open_local))
                 .into_any_element()
@@ -1875,7 +1875,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             div()
                 .flex()
                 .items_center()
-                .gap(px(12.0))
+                .gap(px(8.0))
                 .flex_wrap()
                 .child(div().flex_1().min_w(px(260.0)).child(ask_input))
                 .child(key("cmp-ask", if app.live.compare.asking { "Asking..." } else { "Ask" }).on_click(ask)),

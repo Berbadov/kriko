@@ -65,8 +65,8 @@ pub fn total_card(label: &str, value: &str, note: &str) -> Div {
             div()
                 .font_family(DISPLAY)
                 .font_weight(FontWeight::SEMIBOLD)
-                .text_size(px(34.0))
-                .line_height(px(34.0))
+                .text_size(px(28.0))
+                .line_height(px(30.0))
                 .text_color(rgb(INK))
                 .child(value.to_string()),
         )
@@ -78,7 +78,7 @@ pub fn row_title(text: &str) -> Div {
     div()
         .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(15.0))
+        .text_size(px(14.0))
         .text_color(rgb(INK))
         .child(text.to_string())
 }
@@ -97,7 +97,7 @@ pub fn row_desc(text: &str) -> Div {
 pub fn empty_note(text: &str) -> Div {
     well()
         .px(px(16.0))
-        .py(px(10.0))
+        .py(px(4.0))
         .font_family(SANS)
         .text_size(px(13.0))
         .text_color(rgb(DIM))

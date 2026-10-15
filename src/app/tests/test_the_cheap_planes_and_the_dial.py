@@ -182,6 +182,9 @@ def test_vibes_model_is_a_per_run_choice_even_with_no_flag_for_one():
 
 
 def test_vibe_model_choice_is_applied_as_the_environment_it_reads(monkeypatch):
+    # This assertion exercises the process adapter; an installed vibe-acp must
+    # not redirect the test into a real persistent worker.
+    monkeypatch.setenv("KRIKO_AGENT_TRANSPORT", "exec")
     monkeypatch.setattr(harness_mod, "locate", lambda one: f"/usr/bin/{one.executable}")
     monkeypatch.setattr(
         harness_mod, "declared",

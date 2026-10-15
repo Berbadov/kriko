@@ -176,8 +176,8 @@ impl Tab {
     /// content starts right under. Home and About keep a little more of it.
     fn hero_height(self) -> f32 {
         match self {
-            Tab::Home | Tab::About => 116.0,
-            _ => 100.0,
+            Tab::Home | Tab::About => 100.0,
+            _ => 96.0,
         }
     }
 }

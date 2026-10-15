@@ -50,7 +50,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     let add_row = div()
         .flex()
-        .gap(px(16.0))
+        .gap(px(8.0))
         .child(div().flex_1().min_w(px(0.0)).child(add_field))
         .child(plate_s("sites-add-btn", "Add site").on_click(add_click));
 
@@ -71,7 +71,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .flex()
                 .flex_wrap()
                 .items_center()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(tag("site-registration", state, label, motion))
                 .child(row_desc(&format!("{host}: {said}")))
                 .when(!job.done, |d| d.child(spinner("site-registration-spinner", 16.0, motion))),
@@ -85,7 +85,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         return div()
             .flex()
             .flex_col()
-            .gap(px(16.0))
+            .gap(px(8.0))
             .child(add_row)
             .child(status)
             .child(empty_note("Waiting for Kriko's engine. The sites it can read appear here."));
@@ -166,7 +166,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             div()
             .flex()
             .items_center()
-            .py(px(10.0))
+            .py(px(4.0))
             .hover(|s| s.bg(rgba(GLASS_1)))
             .child(
                 div()
@@ -174,7 +174,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                     .min_w(px(120.0))
                     .flex()
                     .items_center()
-                    .gap(px(12.0))
+                    .gap(px(8.0))
                     .child(icon("sites", 16.0).text_color(rgb(MUTED)))
                     .child(
                         div()
@@ -260,7 +260,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             div()
                 .flex()
                 .items_center()
-                .py(px(10.0))
+                .py(px(4.0))
                 .hover(|s| s.bg(rgba(GLASS_1)))
                 .child(
                     div()
@@ -294,7 +294,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     div()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(8.0))
         .child(add_row)
         .child(status)
         .child(table)

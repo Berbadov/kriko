@@ -131,8 +131,8 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         let row = div()
             .flex()
             .items_center()
-            .gap(px(16.0))
-            .py(px(10.0))
+            .gap(px(8.0))
+            .py(px(4.0))
             .hover(|s| s.bg(rgba(GLASS_1)))
             .child(
                 div()
@@ -165,7 +165,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             job.state, app.live.run.task(job)).to_lowercase().contains(&query))
         .take(20).cloned()
         .collect();
-    let mut runs = card().flex().flex_col().gap(px(10.0))
+    let mut runs = card().flex().flex_col().gap(px(6.0))
         .child(div().mb(px(4.0)).child(eyebrow("Agent runs")));
     if recent_jobs.is_empty() {
         runs = runs.child(empty_note(if app.live.run.jobs_loaded {
@@ -190,7 +190,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         let model = if job.model.is_empty() { "model not reported" } else { &job.model };
         let line = format!("{} · {} · {} · {}", kind_word(&job.kind), agent, model, job.state);
         runs = runs.child(
-            div().flex().items_center().gap(px(12.0))
+            div().flex().items_center().gap(px(8.0))
                 .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(3.0))
                     .child(row_title(&app.live.run.task(job)))
                     .child(row_desc(&line))

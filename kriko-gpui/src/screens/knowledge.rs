@@ -56,8 +56,8 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let active = usize::from(!pack_pick.is_empty()) + usize::from(!status_pick.is_empty()) + usize::from(!product_pick.is_empty());
     let toggle = cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_filters_open = !this.overview_filters_open; cx.notify(); });
     let reset = cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_pack.clear(); this.overview_status.clear(); this.overview_product.clear(); this.overview_search.set_value(String::new()); cx.notify(); });
-    let mut controls = div().flex().flex_col().gap(px(12.0)).child(
-        div().flex().flex_wrap().gap(px(10.0)).child(search)
+    let mut controls = div().flex().flex_col().gap(px(8.0)).child(
+        div().flex().flex_wrap().gap(px(6.0)).child(search)
             .child(filter_btn("overview-filters", &format!("Filters · {active} active"), app.overview_filters_open, true).on_click(toggle))
             .child(filter_btn("overview-reset", "Reset filters", false, false).on_click(reset)))
         .child(row_desc(&format!("{matches} matching records · Pack: {} · Status: {} · Product: {}",
@@ -68,7 +68,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let mut panel = div().pt(px(12.0));
     if app.overview_filters_open {
         let close = cx.listener(|this, _: &ClickEvent, _w, cx| { this.overview_filters_open = false; cx.notify(); });
-        let mut drawer = card().flex().flex_col().gap(px(12.0)).child(
+        let mut drawer = card().flex().flex_col().gap(px(8.0)).child(
             div().flex().items_center().justify_between()
                 .child(eyebrow("Overview filters"))
                 .child(filter_btn("overview-filter-close", "Close", false, false).on_click(close)),
@@ -145,11 +145,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             };
             b = b.child(
                 div()
-                    .py(px(10.0))
+                    .py(px(4.0))
                     .flex()
                     .items_center()
                     .justify_between()
-                    .gap(px(16.0))
+                    .gap(px(8.0))
                     .child(
                         div()
                             .flex_1()
@@ -198,7 +198,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     );
     packs = packs.child(hairline());
     if let Some(line) = job_line {
-        packs = packs.child(div().py(px(8.0)).child(line));
+        packs = packs.child(div().py(px(3.0)).child(line));
     }
     for (i, one) in k.shared.iter().enumerate() {
         // The engine builds the file on request; the browser saves it.
@@ -210,7 +210,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             None => share.opacity(0.5),
         };
         packs = packs.child(
-            div().py(px(8.0)).flex().items_center().justify_between().gap(px(16.0))
+            div().py(px(3.0)).flex().items_center().justify_between().gap(px(8.0))
                 .child(mono(&format!("{} changed", one.name), MUTED))
                 .child(share),
         );
@@ -237,11 +237,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         };
         packs = packs.child(
             div()
-                .py(px(10.0))
+                .py(px(4.0))
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(16.0))
+                .gap(px(8.0))
                 .when(!pack.enabled, |s| s.opacity(0.5))
                 .child(
                     div()
@@ -296,11 +296,11 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     for (gi, gap) in gaps.iter().take(shown).enumerate() {
         gaps_card = gaps_card.child(
             div()
-                .py(px(10.0))
+                .py(px(4.0))
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(16.0))
+                .gap(px(8.0))
                 .child(
                     div()
                         .flex_1()
@@ -335,7 +335,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     } else if thin.is_empty() {
         thin_card = thin_card.child(
             div()
-                .py(px(16.0))
+                .py(px(5.0))
                 .flex()
                 .flex_col()
                 .items_center()
@@ -356,13 +356,13 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         } else {
             tag(format!("thin-{ti}"), TagState::Queue, "Thin", motion)
         };
-        let mut line = div().id(("thin-row", ti)).py(px(10.0)).flex().flex_col().child(
+        let mut line = div().id(("thin-row", ti)).py(px(4.0)).flex().flex_col().child(
             div()
                 .id(("thin-open", ti))
                 .flex()
                 .items_center()
                 .justify_between()
-                .gap(px(16.0))
+                .gap(px(8.0))
                 .cursor_pointer()
                 .hover(|s| s.bg(rgba(GLASS_1)))
                 .on_click(toggle)
@@ -378,7 +378,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                                 .flex()
                                 .items_center()
                                 .justify_between()
-                                .gap(px(16.0))
+                                .gap(px(8.0))
                                 .child(row_title(&row.title))
                                 .child(mono(
                                     &format!(
@@ -396,13 +396,13 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(10.0))
+                        .gap(px(6.0))
                         .child(icon(if open { "collapse" } else { "expand" }, 14.0).text_color(rgb(MUTED)))
                         .child(state_tag),
                 ),
         );
         if open {
-            let mut panel = well().mt(px(4.0)).mb(px(6.0)).p(px(PAD_CARD_TIGHT)).flex().flex_col().gap(px(10.0));
+            let mut panel = well().mt(px(4.0)).mb(px(6.0)).p(px(PAD_CARD_TIGHT)).flex().flex_col().gap(px(6.0));
             if !k.thin_quotes_loaded {
                 panel = panel.child(row_desc("Reading the evidence."));
             } else if k.thin_quotes.is_empty() {
@@ -415,7 +415,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     div()
                         .flex()
                         .items_start()
-                        .gap(px(12.0))
+                        .gap(px(8.0))
                         .child(led_matrix(glyph, color, 3.0, 1.0))
                         .child(
                             div()
@@ -462,10 +462,7 @@ pub fn overview(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
 
     // Each pack-update card sits on its own row; packs and coverage gaps share
     // a row of two (from 732 px of content) and stack below that.
-    let mut offers = div().flex().flex_col().gap(px(SPACE_CARD));
-    for b in offer_cards {
-        offers = offers.child(b);
-    }
+    let offers = if offer_cards.is_empty() { div() } else { grid(app.content_w, 360.0, offer_cards) };
     let pair = grid(app.content_w, 360.0, vec![packs, gaps_card]);
 
     div()

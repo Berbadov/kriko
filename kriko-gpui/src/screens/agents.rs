@@ -90,7 +90,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         let mut empty = div()
             .flex()
             .flex_col()
-            .gap(px(10.0))
+            .gap(px(6.0))
             .child(empty_note(if loaded {
                 "No agent was found on this machine."
             } else {
@@ -210,15 +210,15 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .on_click(click);
             let row = if compact {
                 row.flex_col()
-                    .gap(px(10.0))
-                    .child(div().flex().items_center().gap(px(12.0)).child(mark).child(name).child(order))
+                    .gap(px(6.0))
+                    .child(div().flex().items_center().gap(px(8.0)).child(mark).child(name).child(order))
                     .child(
                         div()
                             .pl(px(52.0))
                             .flex()
                             .flex_wrap()
                             .items_center()
-                            .gap(px(10.0))
+                            .gap(px(6.0))
                             // No column headers in this layout, so each value
                             // carries its own word; a bare "-" or "0" said nothing.
                             .child(runs_cell)
@@ -231,7 +231,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     )
             } else {
                 row.items_center()
-                    .child(div().flex_1().min_w(px(180.0)).flex().items_center().gap(px(12.0)).child(mark).child(name))
+                    .child(div().flex_1().min_w(px(180.0)).flex().items_center().gap(px(8.0)).child(mark).child(name))
                     .child(div().w(px(200.0)).flex_none().child(runs_cell))
                     .child(div().w(px(140.0)).flex_none().child(mcp_cell))
                     .child(div().w(px(100.0)).flex_none().child(runs_n))
@@ -262,7 +262,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             div()
                 .flex()
                 .flex_col()
-                .gap(px(24.0))
+                .gap(px(8.0))
                 // no w_full: a percentage resolved against the page's
                 // indefinite width and left this column at its content's size
                 .child(table)
@@ -308,7 +308,7 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     card()
         .flex()
         .flex_col()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .child(eyebrow("Research sources"))
         .child(row_desc(
             "Choose source types to read first. No types selected lets the agent choose. The limit caps pages read, not the number of findings included in the answer.",
@@ -361,12 +361,12 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
     let mut c = card()
         .flex()
         .flex_col()
-        .gap(px(10.0))
+        .gap(px(6.0))
         .child(
             div()
                 .flex()
                 .items_center()
-                .gap(px(16.0))
+                .gap(px(8.0))
                 .child(mark_tile(
                     &format!("agents-detail-tile-{}", e.id),
                     mark_for(&e.id),
@@ -396,7 +396,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                 div()
                     .flex()
                     .items_center()
-                    .gap(px(10.0))
+                    .gap(px(6.0))
                     .child(tag("agents-detail-run", state, word, motion))
                     .when(chosen, |d| d.child(chip("used for runs"))),
             );
@@ -464,7 +464,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
             };
             c = c.child(row_desc(skill));
         }
-        let mut keys = div().flex().items_center().gap(px(10.0)).child(ghost("agent-connect", label).on_click(connect));
+        let mut keys = div().flex().items_center().gap(px(6.0)).child(ghost("agent-connect", label).on_click(connect));
         if t.skill_supported {
             let id = e.id.clone();
             let refresh = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -490,7 +490,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
         div()
             .flex()
             .items_center()
-            .gap(px(10.0))
+            .gap(px(6.0))
             .child(
                 ghost(
                     "agent-verify",
@@ -510,7 +510,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
             div()
                 .flex()
                 .items_center()
-                .gap(px(10.0))
+                .gap(px(6.0))
                 .child(led_ripple("agent-verify-progress", motion))
                 .child(row_desc("Checking the configured command and available tools…")),
         );
@@ -527,7 +527,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                 div()
                     .flex()
                     .items_center()
-                    .gap(px(10.0))
+                    .gap(px(6.0))
                     .child(tag(format!("agents-verify-{i}"), ts, word, motion))
                     .child(mono(step, INK_2)),
             );
@@ -568,7 +568,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
 /// own model list, the CLI's own `--help` effort levels); "Default" leaves
 /// the choice to the agent. A dial the agent does not have is not drawn.
 fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let mut out = div().flex().flex_col().gap(px(10.0));
+    let mut out = div().flex().flex_col().gap(px(6.0));
     if h.llm_selectable {
         let mut names = model_choices(h);
         out = out.child(app.input_field(Field::ModelSearch, "agent-model-search", "Search models or type an ID", Some("search"), window, cx));
