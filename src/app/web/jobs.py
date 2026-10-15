@@ -680,6 +680,7 @@ class JobRunner:
             # it succeeded, produced a brief, and reported a word carrying no
             # information at all.
             state.finish_job(conn, job_id, state.SUCCEEDED, result=result)
+            self._save_product_checks(kind, result)
             if run_id:
                 usd, tokens = operations.metered(result)
                 final = state.get_job(conn, job_id) or {}
@@ -717,6 +718,26 @@ class JobRunner:
             self._idle_check()
             if lane:
                 self._done(job_id, kind)
+
+    def _save_product_checks(self, kind: str, result) -> None:
+        """Save the check of every product a finished job filed claims for.
+
+        So a finished research is in Compare whichever door started it, with no
+        step left to remember. The job has already succeeded, so a failure here
+        is printed and never turns the job into a failure.
+        """
+        from app.web import productchecks
+
+        try:
+            store = connect(self.settings.store_path, read_only=True)
+            app_conn = self._connect()
+            try:
+                productchecks.record_finished(app_conn, store, kind, result)
+            finally:
+                app_conn.close()
+                store.close()
+        except Exception:  # noqa: BLE001 - the job is done; its check can be made again
+            traceback.print_exc()
 
     def _idle_check(self) -> None:
         with self._lock:
