@@ -63,6 +63,10 @@ duckduckgo:
   rate_requests: 1
   rate_seconds: 3
   rate_burst: 3
+google:
+  rate_requests: 1
+  rate_seconds: 3
+  rate_burst: 3
 ";
 
 fn openserp_config_path() -> Option<std::path::PathBuf> {
