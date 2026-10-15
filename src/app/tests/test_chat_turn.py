@@ -141,6 +141,26 @@ def test_the_reader_and_the_steps_are_reported_as_they_happen(ctx):
     assert any("no rows from products" in line for line in hooks.lines)
 
 
+def test_streamed_answer_text_updates_the_live_partial_before_the_call_finishes(ctx):
+    hooks = Hooks()
+    agent = Script(plan(SEARCH, ready=True),
+                   "Widget Zed fits.\nSources: catalogue_search")
+
+    def ask_stream(prompt, on_text):
+        on_text("Widget Zed is a match.")
+        on_text("Widget Zed is a match.\nSources: catalogue_search")
+        return agent(prompt)
+
+    out = chat.run_turn("find a widget", ask=agent, ask_stream=ask_stream,
+                        ctx=ctx, hooks=hooks)
+
+    live_answers = [one["answer"] for one in hooks.partials if one.get("answer")]
+    assert live_answers[0] == "Widget Zed is a match."
+    assert live_answers[-1] == "Widget Zed fits."
+    assert out["answer"] == "Widget Zed fits."
+    assert out["sources"] == ["catalogue_search"]
+
+
 # ── the budget ──────────────────────────────────────────────────────────
 
 

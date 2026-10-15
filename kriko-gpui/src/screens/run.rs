@@ -154,6 +154,17 @@ fn next_for_job(done: bool, stage: Stage, needs_answers: bool) -> Option<RunNext
     }
 }
 
+fn live_codex_answer<'a>(
+    harness: &str,
+    done: bool,
+    message: &'a str,
+) -> Option<&'a str> {
+    if harness != "codex" || done {
+        return None;
+    }
+    message.strip_prefix("Writing: ").filter(|text| !text.trim().is_empty())
+}
+
 fn terminal_next_step(
     app: &Kriko,
     job: &Job,
@@ -839,7 +850,22 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
         .child(if job.done {
             div().when(!job.message.is_empty(), |c| c.child(row_desc(&job.message))).into_any_element()
         } else {
-            crate::screens::action_trail::action_trail(job, motion).into_any_element()
+            let trail = crate::screens::action_trail::action_trail(job, motion);
+            let active = if let Some(answer) =
+                live_codex_answer(&job.harness, job.done, &job.message)
+            {
+                trail.child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(eyebrow("Codex · live text"))
+                        .child(row_desc(&short_text(answer, 800))),
+                )
+            } else {
+                trail
+            };
+            active.into_any_element()
         })
         .child(div().mt(px(8.0)).child(stepper))
 }
@@ -1204,7 +1230,10 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
 
 #[cfg(test)]
 mod guidance_tests {
-    use super::{attention_detail, next_for_job, pending_agent_choice_labels, quick_look_available, RunNext};
+    use super::{
+        attention_detail, live_codex_answer, next_for_job, pending_agent_choice_labels,
+        quick_look_available, RunNext,
+    };
     use crate::live::run::Stage;
 
     #[test]
@@ -1237,5 +1266,22 @@ mod guidance_tests {
         assert_eq!(pending_agent_choice_labels(true, true), vec![
             "Checking available models…", "Checking effort choices…"
         ]);
+    }
+
+    #[test]
+    fn only_active_codex_runs_show_the_live_answer_draft() {
+        assert_eq!(
+            live_codex_answer("codex", false, "Writing: First useful text"),
+            Some("First useful text")
+        );
+        assert_eq!(
+            live_codex_answer("claude-code", false, "Writing: Other agent text"),
+            None
+        );
+        assert_eq!(
+            live_codex_answer("codex", true, "Writing: Finished text"),
+            None
+        );
+        assert_eq!(live_codex_answer("codex", false, "thinking"), None);
     }
 }
