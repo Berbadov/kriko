@@ -1870,6 +1870,9 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         } else {
             agent_row.into_any_element()
         })
+        .children((!app.live.compare.local_note.is_empty()).then(|| {
+            row_desc(&format!("Local agent: {}", app.live.compare.local_note))
+        }))
         .child(div().font_family(MONO).text_size(px(11.0)).text_color(rgb(MUTED)).child(attached))
         .child(
             div()
