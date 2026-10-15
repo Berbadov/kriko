@@ -3641,7 +3641,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     answer, sources = _ask_about_checks(
         settings, {**params, "max_tokens": followup.MAX_TOKENS}, progress, brief,
         on_agent=report_agent, timeout=COMPARE_ASK_TIMEOUT_SECONDS,
-        effort="low", follow_up=True, product=products, question=question)
+        effort="low", follow_up=True, product=products, question=question,
+        fallback_brief=followup.saved_brief(question, product=products, context=context))
     if not answer:
         raise ValueError("The agent returned no answer. Try asking again.")
     progress.log(answer[:4000])
@@ -3832,23 +3833,57 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
     }
 
 
+def _local_saved_answer(settings, params: dict, progress: Progress, brief: str,
+                        on_agent: Callable[[dict], None] | None) -> tuple[str, list[dict]]:
+    """A follow-up the local model answers from the saved checks alone.
+
+    Only for a machine whose model answers and whose search service does not:
+    the picker offered the Local agent on the model's word, and the saved checks
+    already carry the evidence. The answer names no page, because none was read.
+    """
+    from app import followup
+
+    completer = _local_structured_completer(settings, params, progress)
+    identity = {"id": "local", "label": "Local model",
+                "model": str(getattr(completer, "model", ""))}
+    if on_agent is not None:
+        on_agent(identity)
+    progress.log("no local search service is answering: answering from the saved checks, "
+                 "with no web search")
+    progress.set(0.2, "answering from the saved checks")
+    reply = str(completer(brief) or "").strip()
+    progress.check()
+    answer, _cited = followup.split(reply)
+    return answer, []
+
+
 def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       on_agent: Callable[[dict], None] | None = None,
                       timeout: float = 0.0, effort: str = "",
                       follow_up: bool = False, product: str = "",
-                      question: str = "") -> tuple[str, list[dict]]:
+                      question: str = "", fallback_brief: str = "") -> tuple[str, list[dict]]:
     """The reader's plane answers one brief. Returns the reply and the pages behind it.
 
     A `follow_up` answer is written into the job as the agent writes it
     (`app/followup.py`), and its `Sources:` line comes off the text and back as
     pages. Any other answer comes back exactly as the agent wrote it.
+
+    A local follow-up with no search service answering is answered from the
+    saved checks instead, with `fallback_brief` (see `followup.saved_brief`).
     """
     from app import followup
     from app.providers import agent_ready, harness_researcher
 
     local = _use_local_ask(settings, params)
     if local:
-        researcher = _local_asker(settings, params, progress)
+        try:
+            researcher = _local_asker(settings, params, progress)
+        except LocalNotReady:
+            if not (follow_up and fallback_brief):
+                raise
+            # A model that answers is enough for a question about saved records;
+            # if the model itself is not ready, the completer says why.
+            return _local_saved_answer(settings, params, progress, fallback_brief, on_agent)
     else:
         if not agent_ready(settings.app_state_path, str(params.get("harness") or "")):
             raise ValueError(

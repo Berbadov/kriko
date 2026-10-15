@@ -170,11 +170,18 @@ fn thread_from(v: &Value) -> Thread {
     }
 }
 
-/// The source names and meanings the agent may ask for. Names only; no data.
-#[derive(Clone)]
-pub struct SourceInfo {
-    pub name: String,
-    pub description: String,
+/// Why the Local agent is not offered here, in the engine's own words. The
+/// engine lists a local model that is not ready under `unusable` (found) or
+/// `missing` (not found), and the agent pickers drop both, so the reason would
+/// be lost without this. Empty when the Local agent is ready or not configured.
+pub fn local_note(p: &Value) -> String {
+    for row in api::arr(p, "unusable").iter().chain(api::arr(p, "missing").iter()) {
+        if api::s(row, "id") == "local" {
+            let why = api::s(row, "why");
+            return if why.is_empty() { api::s(row, "install_hint") } else { why };
+        }
+    }
+    String::new()
 }
 
 #[derive(Clone)]
@@ -193,7 +200,8 @@ pub struct State {
     /// (id, label) of every agent that can answer, the Local model among them.
     pub harnesses: Vec<(String, String)>,
     pub harness: String,
-    pub sources: Vec<SourceInfo>,
+    /// Why the Local agent is not among `harnesses`, when it is not ready.
+    pub local_note: String,
     /// A question is being posted (before its job exists).
     pub sending: bool,
     pub in_flight: Option<InFlight>,
@@ -219,8 +227,8 @@ async fn bg<T: Send + 'static>(ex: &BackgroundExecutor, work: impl FnOnce() -> T
 }
 
 impl Kriko {
-    /// Everything the Chat screen shows, read when it is opened: the threads,
-    /// the agents that can answer, and the names of what the agent may read.
+    /// Everything the Chat screen shows, read when it is opened: the threads
+    /// and the agents that can answer.
     pub fn refresh_chat(&mut self, cx: &mut Context<Self>) {
         self.fetch(cx, || api::get("/api/chat/threads"), |this, reply, cx| {
             this.note(&reply);
@@ -261,21 +269,9 @@ impl Kriko {
                 if this.live.chat.harness.is_empty() || !this.live.chat.harnesses.iter().any(|(id, _)| *id == this.live.chat.harness) {
                     this.live.chat.harness = if known { preferred } else { first.unwrap_or_default() };
                 }
+                this.live.chat.local_note = local_note(&p);
             },
         );
-        if self.live.chat.sources.is_empty() {
-            self.fetch(cx, || api::get("/api/chat/sources"), |this, reply, _| {
-                if let Ok(v) = reply {
-                    this.live.chat.sources = api::arr(&v, "items")
-                        .iter()
-                        .map(|s| SourceInfo {
-                            name: api::s(s, "name"),
-                            description: api::s(s, "description"),
-                        })
-                        .collect();
-                }
-            });
-        }
     }
 
     /// Reads one conversation's messages and, if a turn is still running in

@@ -350,3 +350,108 @@ def test_the_brief_carries_each_claims_sources():
     assert "cite the recorded source" in full
     compact = _compare_brief("which is safer?", answers, max_chars=4000)
     assert "https://example.org/thread" in compact
+
+
+def _local_plane(monkeypatch, *, search_answers: bool):
+    """The local plane as `localplane.resolve` reports it: a model server with a
+    chat model, and a search service that may or may not be answering."""
+    from app import localplane
+
+    def resolve(app_state_path=None, *, url="", model="", search_url="",
+                with_search=True):
+        plan = {
+            "ready": True, "reason": "", "url": "http://127.0.0.1:11434",
+            "name": "Ollama", "model": "gemma4:e2b", "models": ["gemma4:e2b"],
+            "timeout": 60.0, "search_url": "", "search_kind": "",
+            "runtime_options": {}, "context_tokens": 4096,
+            "output_language": "auto", "search_language": "en", "line": "",
+        }
+        if with_search and not search_answers:
+            plan.update(ready=False,
+                        reason="No local search service is answering at http://127.0.0.1:7070.")
+        return plan
+
+    monkeypatch.setattr(localplane, "resolve", resolve)
+
+
+def test_the_local_agent_is_offered_to_chat_and_compare_when_its_model_answers(
+        client, monkeypatch):
+    """The picker in Chat and Compare reads `/api/prefs`. A model that answers is
+    offered there even with no search service: the picker must not ask for one."""
+    http, _ = client
+    _local_plane(monkeypatch, search_answers=False)
+    harnesses = http.get("/api/prefs").json()["harnesses"]
+    assert [row["id"] for row in harnesses if row.get("local")] == ["local"]
+
+
+def test_a_local_agent_that_is_not_ready_says_why_in_the_picker_payload(client, monkeypatch):
+    """Chat and Compare drop an unusable row, so the reason has to travel in the
+    payload where the screens can show it, and not only on the Agents tab."""
+    from app import localplane
+
+    http, _ = client
+    monkeypatch.setattr(localplane, "resolve", lambda *a, **k: {
+        "ready": False, "url": "http://127.0.0.1:11434", "name": "Ollama",
+        "reason": "Ollama is running but no model is downloaded.", "model": "",
+        "models": [], "timeout": 60.0, "search_url": "", "search_kind": "",
+        "runtime_options": {}, "context_tokens": 4096, "output_language": "auto",
+        "search_language": "en"})
+    payload = http.get("/api/prefs").json()
+    assert "local" not in [row["id"] for row in payload["harnesses"]]
+    unusable = [row for row in payload["unusable"] if row["id"] == "local"]
+    assert unusable == [{"id": "local", "label": "Local agent",
+                         "why": "Ollama is running but no model is downloaded."}]
+
+
+def test_a_follow_up_naming_the_local_agent_answers_when_no_search_service_answers(
+        client, monkeypatch):
+    """A reader picks the Local agent in Compare, the model answers, and no search
+    service is running. The run used to reject the pick with "No local search
+    service is answering" although the picker had offered it. It now answers from
+    the saved checks alone, and says it did not search."""
+    from app.providers import local_inference
+    from app.web import tasks
+
+    http, settings = client
+    _local_plane(monkeypatch, search_answers=False)
+    first = _one_lookup(settings, "Acme 5W-30 oil", {
+        "claims": [], "context": {"engine": "2.0L"}})
+    second = _one_lookup(settings, "Acme 0W-20 oil", {
+        "claims": [{"claim_id": "c", "pack_id": "p", "title": "Timing chain",
+                    "body": "Stretches early.", "severity": "high"}],
+        "context": {},
+    })
+    made = http.post("/api/compare-drafts",
+                     json={"name": "Two oils", "lookup_ids": [first, second]}).json()
+    monkeypatch.setattr(http.app.state.jobs, "submit", lambda *_: "queued-test-job")
+    asked = http.post(f"/api/compare-drafts/{made['draft_id']}/questions",
+                      json={"question": "Which one has the known risk?",
+                            "backend": "local", "harness": "local"}).json()
+
+    class Socket:
+        def __init__(self, base_url, model, **_kwargs):
+            self.model = model
+            self.prompts = []
+
+        def __call__(self, prompt):
+            self.prompts.append(prompt)
+            return "The 0W-20 oil has the timing chain risk, from the saved checks."
+
+    monkeypatch.setattr(local_inference, "OpenAICompatSocket", Socket)
+    logged: list[str] = []
+
+    class _Progress:
+        job_id = "job-local"
+        def log(self, line): logged.append(line)
+        def set(self, *a, **k): pass
+        def check(self): pass
+        def partial(self, result): pass
+
+    result = tasks.compare_ask(settings, {
+        "draft_id": made["draft_id"], "question_id": asked["question_id"],
+        "question": asked["question"], "backend": "local", "harness": "local"},
+        _Progress())
+    assert result["answer"].startswith("The 0W-20 oil has the timing chain risk")
+    assert result["sources"] == []
+    assert result["model"] == "gemma4:e2b"
+    assert any("no web search" in line for line in logged)
