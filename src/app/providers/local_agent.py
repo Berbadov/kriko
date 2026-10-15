@@ -61,6 +61,10 @@ READ_DEADLINE = 25.0
 #: Candidate pages asked for beyond `MAX_PAGES`, so a page that is slow or
 #: unreadable is replaced by the next one instead of leaving a gap.
 SPARE_PAGES = 3
+
+#: When no page has answered for this long, this many more are read at once.
+HEDGE_AFTER = 4.0
+HEDGED_PAGES = 2
 #: Text shorter than a sentence or so is a refusal, a cookie wall or an empty
 #: shell, not a page: it is a miss, so a spare takes its place.
 MIN_PAGE_CHARS = 80
@@ -517,13 +521,17 @@ class LocalAsker:
             return list(self.sources.items())
         limit = 10 if prefer_issues else HITS_PER_QUERY
 
-        def answer(query: str) -> tuple[list, str]:
+        def answer(query: str, engine: str = "") -> tuple[list, str]:
             try:
                 if hasattr(self._search, "check_cancelled"):
                     self._search.check_cancelled = self._check
+                if engine:
+                    return self._search(query, limit, engine) or [], ""
                 return self._search(query, limit) or [], ""
             except LocalSearchError as error:
                 return [], str(error)
+
+        engines = [str(name) for name in getattr(self._search, "engines", None) or ()]
 
         # Said before the wait, not after it: a search can take half a minute,
         # and a screen that shows nothing meanwhile reads as a hang.
@@ -536,6 +544,28 @@ class LocalAsker:
         if self.parallel_search and len(queries) > 1:
             with ThreadPoolExecutor(max_workers=len(queries)) as pool:
                 answered = list(pool.map(answer, queries))
+        elif len(engines) > 1 and len(queries) > 1:
+            # One query to each engine at once: an engine is still asked one
+            # query at a time, which is what the pacing protects, and three
+            # queries cost one search instead of three (measured 20 s -> ~7 s).
+            # A query whose engine came back empty or failed (Bing answers
+            # empty about half the time) is asked again of every engine, one
+            # after another, so no angle is lost to a single engine's bad turn.
+            answered = []
+            for start in range(0, len(queries), len(engines)):
+                batch = queries[start:start + len(engines)]
+                with ThreadPoolExecutor(max_workers=len(batch)) as pool:
+                    answered.extend(pool.map(
+                        lambda pair: answer(pair[0], pair[1]),
+                        zip(batch, engines)))
+            # Every one failing outright means the service is down, and a retry
+            # would wait out each timeout again.
+            if not all(failure for _hits, failure in answered):
+                for index, query in enumerate(queries):
+                    if answered[index][0]:
+                        continue
+                    self._check()
+                    answered[index] = answer(query)
         else:
             answered = []
             for query in queries:
@@ -642,10 +672,13 @@ class LocalAsker:
         fingerprints, read_domains = set(), set()
         queue = iter(wanted)
         deadline = time.monotonic() + READ_DEADLINE
-        pool = ThreadPoolExecutor(max_workers=4)
+        pool = ThreadPoolExecutor(max_workers=4 + HEDGED_PAGES)
         pending: dict[Future, str] = {}
+        hedge = [0]
+        last_progress = [time.monotonic()]
+
         def fill() -> None:
-            while len(pending) < min(4, self.max_pages - len(pages)):
+            while len(pending) < (4 + hedge[0] if hedge[0] else min(4, self.max_pages - len(pages))):
                 url = next(queue, None)
                 if url is None:
                     break
@@ -654,8 +687,18 @@ class LocalAsker:
             fill()
             while pending and len(pages) < self.max_pages and time.monotonic() < deadline:
                 self._check()
+                if not hedge[0] and time.monotonic() - last_progress[0] >= HEDGE_AFTER:
+                    # Nothing has come back for a while: the pages in flight
+                    # may be dead ones (measured: 16 s each). Read a few more
+                    # beside them rather than after them; whichever answer
+                    # first fill the places, in the order they answer.
+                    hedge[0] = HEDGED_PAGES
+                    self._say("slow pages; reading spares beside them")
+                    fill()
                 done, _ = wait(pending, timeout=min(1.0, max(0.0, deadline - time.monotonic())),
                                return_when=FIRST_COMPLETED)
+                if done:
+                    last_progress[0] = time.monotonic()
                 for future in sorted(done, key=lambda item: wanted.index(pending[item])):
                     pending.pop(future)
                     url, text = future.result()

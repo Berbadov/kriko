@@ -2908,7 +2908,7 @@ class HarnessResearcher(AgentResearcher):
         search_url, search_language = self._search_settings()
         search_url = local_discovery.base_of(search_url) or local_discovery.SEARCH_DEFAULT_URL
         search = openserp.searcher(
-            search_url, engine="google,duckduckgo,bing", language=search_language)
+            search_url, engine=openserp.LOCAL_ENGINES, language=search_language)
 
         def no_completion(_prompt):
             raise RuntimeError("host page gathering must not call a local model")
