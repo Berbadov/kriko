@@ -24,6 +24,7 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 from app.winprocess import hidden_startup
 from pathlib import Path
 
@@ -108,7 +109,7 @@ def _switches(profile: str) -> list[str]:
     ]
 
 
-def read(url: str) -> str:
+def read(url: str, *, timeout: float = TIMEOUT, check_cancelled=None) -> str:
     """The page's DOM text through a real browser, "" when it cannot.
 
     "" on every failure, exactly as `fetch._download` and
@@ -124,15 +125,38 @@ def read(url: str) -> str:
 
     profile = tempfile.mkdtemp(prefix="kriko-browser-")
     try:
-        done = subprocess.run(
-            [browser, *_switches(profile), url], capture_output=True,
-            timeout=TIMEOUT, check=False,
-            startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        command = [browser, *_switches(profile), url]
+        startup = hidden_startup()
+        flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        if check_cancelled is None:
+            done = subprocess.run(
+                command, capture_output=True, timeout=timeout, check=False,
+                startupinfo=startup, creationflags=flags)
+            stdout, returncode = done.stdout, done.returncode
+        else:
+            process = subprocess.Popen(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                startupinfo=startup, creationflags=flags)
+            deadline = time.monotonic() + timeout
+            try:
+                while process.poll() is None:
+                    check_cancelled()
+                    if time.monotonic() >= deadline:
+                        process.kill()
+                        process.communicate()
+                        return ""
+                    time.sleep(0.05)
+                stdout, _stderr = process.communicate()
+                returncode = process.returncode
+            except BaseException:
+                process.kill()
+                process.communicate()
+                raise
     except (OSError, subprocess.TimeoutExpired):
         return ""
     finally:
         shutil.rmtree(profile, ignore_errors=True)
-    dom = done.stdout[:MAX_BYTES].decode("utf-8", "replace")
-    if not dom.strip() or done.returncode != 0:
+    dom = stdout[:MAX_BYTES].decode("utf-8", "replace")
+    if not dom.strip() or returncode != 0:
         return ""
     return dom

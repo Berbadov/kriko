@@ -544,7 +544,7 @@ def local_asker(*, base_url: str, serving_name: str, search_base_url: str = "",
         search_base_url=search_base_url, search_kind=search_kind,
         timeout=timeout, schema="", runtime_options=runtime_options,
         temperature=temperature, max_tokens=max_tokens, context_tokens=context_tokens,
-        search_language=search_language, engine="bing,duckduckgo,ecosia")
+        search_language=search_language, engine="duckduckgo,bing,ecosia")
     plan = local_inference.OpenAICompatSocket(
         base_url, serving_name,
         timeout=timeout or local_inference.DEFAULT_TIMEOUT,

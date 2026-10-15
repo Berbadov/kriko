@@ -23,6 +23,7 @@ web differs.
 import json
 import re
 from collections.abc import Callable
+import threading
 import time
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 
@@ -58,6 +59,13 @@ PAGE_CHARS = 6000
 #: on the slowest page when the others are in. A page still out at the
 #: deadline is a miss, exactly as an unreadable one.
 READ_DEADLINE = 25.0
+# Quick Look is interactive: gather a first page set promptly, while still
+# leaving enough of the budget to read those pages. Deep research keeps the
+# longer deadlines above.
+QUICK_SEARCH_TIMEOUT = 8.0
+QUICK_SEARCH_PACE_INTERVAL = 1.0
+QUICK_SEARCH_DEADLINE = 12.0
+QUICK_READ_DEADLINE = 15.0
 #: Candidate pages asked for beyond `MAX_PAGES`, so a page that is slow or
 #: unreadable is replaced by the next one instead of leaving a gap.
 SPARE_PAGES = 3
@@ -498,7 +506,8 @@ class LocalAsker:
         return queries
 
     def _read(self, queries: list[str], *, identity=None,
-              prefer_issues: bool = False) -> list[tuple[str, str]]:
+              prefer_issues: bool = False,
+              quick: bool = False) -> list[tuple[str, str]]:
         """Prefer issue discussions and replace unreadable/unrelated pages."""
         from app.providers.local_pipeline import canonical_url, publisher, repair_offer_page
         from app.providers.local_identity import relevant_source, source_scope
@@ -516,11 +525,74 @@ class LocalAsker:
             self.relevant_sources = dict(self.sources)
             return list(self.sources.items())
         limit = 10 if prefer_issues else HITS_PER_QUERY
+        gather_started = time.monotonic()
+        gather_deadline = (gather_started + QUICK_READ_DEADLINE
+                           if quick else None)
+        read_stop = threading.Event()
+        timed_out_reads: set[str] = set()
+        timed_out_lock = threading.Lock()
 
-        def answer(query: str) -> tuple[list, str]:
+        def worker_read_check(url: str = "") -> None:
+            # The job thread owns cancellation checks; fetch workers only see
+            # this event and the monotonic gathering deadline. This check is
+            # also passed into the fetch ladder so a refused page cannot
+            # launch hosted-reader or browser fallbacks after the run stops.
+            if read_stop.is_set():
+                from app.providers.fetch import FetchCancelled
+                raise FetchCancelled("page read cancelled")
+            if gather_deadline is not None and time.monotonic() >= gather_deadline:
+                read_stop.set()
+                if url:
+                    with timed_out_lock:
+                        timed_out_reads.add(url)
+                from app.providers.fetch import FetchCancelled
+                raise FetchCancelled("page reading budget reached")
+
+        def read_one(url: str) -> tuple[str, str]:
             try:
-                if hasattr(self._search, "check_cancelled"):
-                    self._search.check_cancelled = self._check
+                options: dict[str, object] = {}
+                if getattr(self._fetch, "supports_cancel_check", False):
+                    options["check_cancelled"] = lambda: worker_read_check(url)
+                if getattr(self._fetch, "supports_timeout", False):
+                    if gather_deadline is not None:
+                        remaining = gather_deadline - time.monotonic()
+                        if remaining <= 0:
+                            worker_read_check(url)
+                        options["timeout"] = remaining
+                if getattr(self._fetch, "supports_fallback", False) and quick:
+                    # Quick Look is a bounded evidence pass. The plain fetch
+                    # gets its remaining budget; a 403 must not start two
+                    # more remote requests (or a browser process) after it.
+                    options["allow_fallback"] = False
+                worker_read_check(url)
+                got = self._fetch(url, **options)
+            except Exception:  # noqa: BLE001 - fetch is a network boundary
+                return url, ""
+            text = str(getattr(got, "text", got) or "").strip()
+            return url, text[:24000] if len(text) >= MIN_PAGE_CHARS else ""
+
+        search_deadline = (gather_started + min(QUICK_SEARCH_DEADLINE,
+                                                 QUICK_READ_DEADLINE)
+                           if quick else None)
+
+        def answer(query: str, index: int = 0) -> tuple[list, str]:
+            try:
+                if quick and getattr(self._search, "supports_timeout", False):
+                    remaining = (search_deadline - time.monotonic()
+                                 if search_deadline is not None else QUICK_SEARCH_TIMEOUT)
+                    if remaining <= 0:
+                        return [], "quick-look search budget reached"
+                    options: dict[str, float | str] = {
+                        "timeout": min(QUICK_SEARCH_TIMEOUT, remaining)}
+                    if getattr(self._search, "supports_pacing", False):
+                        options["pace_interval"] = QUICK_SEARCH_PACE_INTERVAL
+                    if getattr(self._search, "supports_fast_options", False):
+                        options["mode"] = "any"
+                        engines = tuple(getattr(self._search, "engines", ()))
+                        if engines:
+                            offset = index % len(engines)
+                            options["engines"] = ",".join(engines[offset:] + engines[:offset])
+                    return (self._search(query, limit, **options) or [], "")
                 return self._search(query, limit) or [], ""
             except LocalSearchError as error:
                 return [], str(error)
@@ -530,27 +602,179 @@ class LocalAsker:
         for query in queries:
             self._say(f"searching: {query}")
 
+        # In a Quick Look, page reads start as soon as the first query has
+        # results, alongside the remaining searches. A slow secondary query
+        # therefore does not hold the first useful page behind it.
+        prefetch_pool = ThreadPoolExecutor(max_workers=4) if quick else None
+        prefetch_futures: dict[str, Future] = {}
+        prefetch_announced: set[Future] = set()
+        prefetch_seen: set[str] = set()
+        prefetch_per_query: dict[int, int] = {}
+        prefetch_results: list[tuple[list, str] | None] = [None] * len(queries)
+
+        def prefetch_ready() -> None:
+            if prefetch_pool is None:
+                return
+            # Use a fast secondary result while an earlier query is still
+            # running, but reserve three candidates for query zero. Once the
+            # first query answers (or times out), any unused slots are shared.
+            for index, result in enumerate(prefetch_results):
+                if result is None:
+                    continue
+                hits, _failure = result
+                budget = self.max_pages + SPARE_PAGES
+                quota = min(3, budget) if index == 0 else (
+                    budget if prefetch_results[0] is not None else 2)
+                for hit in hits:
+                    if prefetch_per_query.get(index, 0) >= quota:
+                        break
+                    if not isinstance(hit, dict):
+                        continue
+                    url = canonical_url(str(hit.get("url", "")))
+                    if not url or url in prefetch_seen:
+                        continue
+                    if len(prefetch_futures) >= self.max_pages + SPARE_PAGES:
+                        break
+                    prefetch_seen.add(url)
+                    self.page_titles[url] = str(hit.get("title") or "")[:240]
+                    prefetch_per_query[index] = prefetch_per_query.get(index, 0) + 1
+                    prefetch_futures[url] = prefetch_pool.submit(read_one, url)
+
         # On a hosted search the queries go out together; their hits are
         # still taken in the queries' order, and the log is written from
         # this thread only.
-        if self.parallel_search and len(queries) > 1:
-            with ThreadPoolExecutor(max_workers=len(queries)) as pool:
-                answered = list(pool.map(answer, queries))
+        has_search_check = hasattr(self._search, "check_cancelled")
+        prior_search_check = getattr(self._search, "check_cancelled", None)
+        search_stop = threading.Event()
+
+        def worker_check() -> None:
+            # Progress.check may read SQLite through a connection owned by the
+            # job thread. Search workers use only this thread-safe signal; the
+            # job thread sets it when its own cancellation check fires.
+            if search_stop.is_set():
+                raise LocalSearchError("search cancelled")
+
+        concurrent_search = ((self.parallel_search or quick) and len(queries) > 1)
+        if has_search_check:
+            self._search.check_cancelled = (
+                worker_check if concurrent_search
+                else self._check
+            )
+        if concurrent_search:
+            # OpenSERP asks public engines from this machine's address. Its
+            # quick-look requests stay serial but overlap page reads; hosted
+            # search sockets can safely fan out.
+            workers = min(len(queries), QUERIES) if self.parallel_search else 1
+            pool = ThreadPoolExecutor(max_workers=workers)
+            search_futures = {pool.submit(answer, query, index): index
+                               for index, query in enumerate(queries)}
+            search_pending = set(search_futures)
+            ordered: list[tuple[list, str] | None] = [None] * len(queries)
+            stopped = False
+            try:
+                while search_pending:
+                    try:
+                        self._check()
+                    except BaseException:
+                        stopped = True
+                        search_stop.set()
+                        read_stop.set()
+                        raise
+                    search_done, not_done = wait(
+                        search_pending, timeout=(min(0.05, max(0.0, search_deadline - time.monotonic()))
+                                          if search_deadline is not None else 0.05),
+                        return_when=FIRST_COMPLETED)
+                    search_pending = not_done
+                    for search_future in search_done:
+                        index = search_futures[search_future]
+                        result = search_future.result()
+                        ordered[index] = result
+                        prefetch_results[index] = result
+                        prefetch_ready()
+                        hits, failure = result
+                        if failure:
+                            self._say(f"search failed for {queries[index]!r}: {failure}")
+                        else:
+                            self._say(
+                                f"search returned {len(hits)} result(s) for {queries[index]!r}")
+                    if quick:
+                        for url, prefetch_future in prefetch_futures.items():
+                            if prefetch_future.done() and prefetch_future not in prefetch_announced:
+                                prefetch_announced.add(prefetch_future)
+                                self._say(f"page fetched; checking product match: {url}")
+                    if search_pending and search_deadline is not None and time.monotonic() >= search_deadline:
+                        stopped = True
+                        search_stop.set()
+                        for search_future in tuple(search_pending):
+                            index = search_futures[search_future]
+                            ordered[index] = ([], "quick-look search budget reached")
+                            prefetch_results[index] = ordered[index]
+                        search_pending.clear()
+                        prefetch_ready()
+                        self._say("quick-look search budget reached; keeping completed results")
+            except BaseException:
+                stopped = True
+                search_stop.set()
+                read_stop.set()
+                if prefetch_pool is not None:
+                    prefetch_pool.shutdown(wait=False, cancel_futures=True)
+                raise
+            finally:
+                if has_search_check:
+                    unfinished = {search_future for search_future in search_futures
+                                  if not search_future.done()}
+                    if stopped and unfinished:
+                        # Keep the event-backed callback installed until an
+                        # abandoned worker has left the search function. It
+                        # may still poll the callback while unwinding after the
+                        # job has returned from cancellation.
+                        restore_lock = threading.Lock()
+
+                        def restore_after(search_future):
+                            def finished(_completed):
+                                with restore_lock:
+                                    unfinished.discard(search_future)
+                                    if not unfinished:
+                                        self._search.check_cancelled = prior_search_check
+                            return finished
+
+                        for search_future in tuple(unfinished):
+                            search_future.add_done_callback(restore_after(search_future))
+                    else:
+                        self._search.check_cancelled = prior_search_check
+                # A canceled run must return without joining a slow network
+                # request. The workers see search_stop while waiting for a
+                # host permit; active sockets retain their own finite timeout.
+                pool.shutdown(wait=not stopped, cancel_futures=stopped)
+            answered = [one for one in ordered if one is not None]
         else:
-            answered = []
-            for query in queries:
-                self._check()
-                if len(answered) >= 2 and all(failure for _, failure in answered):
-                    # Two searches in a row failed outright: a service that is
-                    # down answers the third no better, and each one waits out
-                    # its own timeout first (measured: 127 s of silence).
-                    answered.append(([], "skipped, the search service is not answering"))
-                    continue
-                answered.append(answer(query))
+            try:
+                answered = []
+                for query in queries:
+                    self._check()
+                    if len(answered) >= 2 and all(failure for _, failure in answered):
+                        # Two searches in a row failed outright: a service that is
+                        # down answers the third no better, and each one waits out
+                        # its own timeout first (measured: 127 s of silence).
+                        answered.append(([], "skipped, the search service is not answering"))
+                        continue
+                    answered.append(answer(query, len(answered)))
+            except BaseException:
+                read_stop.set()
+                if prefetch_pool is not None:
+                    prefetch_pool.shutdown(wait=False, cancel_futures=True)
+                raise
+            finally:
+                if has_search_check:
+                    self._search.check_cancelled = prior_search_check
+            for index, result in enumerate(answered):
+                prefetch_results[index] = result
+            prefetch_ready()
         hits_by_query = []
         for query, (hits, failure) in zip(queries, answered):
             if failure:
-                self._say(f"search failed for {query!r}: {failure}")
+                if not concurrent_search:
+                    self._say(f"search failed for {query!r}: {failure}")
                 self.search_coverage["search_errors"] += 1
                 continue
             self.search_coverage["queries_searched"] += 1
@@ -630,45 +854,55 @@ class LocalAsker:
         wanted = prioritized[:self.max_pages + SPARE_PAGES]
         self._say(f"found {len(seen)} page(s); reading up to {self.max_pages}")
 
-        def read_one(url: str) -> tuple[str, str]:
-            try:
-                got = self._fetch(url)
-            except Exception:  # noqa: BLE001 - fetch is a network boundary
-                return url, ""
-            text = str(getattr(got, "text", got) or "").strip()
-            return url, text[:24000] if len(text) >= MIN_PAGE_CHARS else ""
-
         pages: list[tuple[str, str]] = []
         fingerprints, read_domains = set(), set()
+        processed_urls: set[str] = set()
         queue = iter(wanted)
-        deadline = time.monotonic() + READ_DEADLINE
-        pool = ThreadPoolExecutor(max_workers=4)
-        pending: dict[Future, str] = {}
+        deadline = (gather_deadline if gather_deadline is not None
+                    else time.monotonic() + READ_DEADLINE)
+        pool = prefetch_pool or ThreadPoolExecutor(max_workers=4)
+        read_pending: dict[Future, str] = {}
         def fill() -> None:
-            while len(pending) < min(4, self.max_pages - len(pages)):
+            while len(read_pending) < min(4, self.max_pages - len(pages)):
                 url = next(queue, None)
                 if url is None:
                     break
-                pending[pool.submit(read_one, url)] = url
+                prefetch_future = prefetch_futures.get(url)
+                read_pending[prefetch_future or pool.submit(read_one, url)] = url
         try:
             fill()
-            while pending and len(pages) < self.max_pages and time.monotonic() < deadline:
+            while read_pending and len(pages) < self.max_pages:
                 self._check()
-                done, _ = wait(pending, timeout=min(1.0, max(0.0, deadline - time.monotonic())),
-                               return_when=FIRST_COMPLETED)
-                for future in sorted(done, key=lambda item: wanted.index(pending[item])):
-                    pending.pop(future)
-                    url, text = future.result()
-                    if not text:
-                        self.search_coverage["pages_unreadable"] += 1
-                        self._say(f"could not read: {url}")
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    read_done = {read_future for read_future in read_pending
+                                 if read_future.done()}
+                    if not read_done:
+                        break
+                else:
+                    read_done, _ = wait(read_pending, timeout=min(1.0, left),
+                                        return_when=FIRST_COMPLETED)
+                for read_future in sorted(
+                        read_done, key=lambda item: wanted.index(read_pending[item])):
+                    read_pending.pop(read_future)
+                    url, page_text = read_future.result()
+                    processed_urls.add(url)
+                    if not page_text:
+                        with timed_out_lock:
+                            timed_out = url in timed_out_reads
+                        if timed_out:
+                            self.search_coverage["pages_timed_out"] += 1
+                            self._say(f"page read budget reached: {url}")
+                        else:
+                            self.search_coverage["pages_unreadable"] += 1
+                            self._say(f"could not read: {url}")
                         continue
                     self.search_coverage["pages_read"] += 1
                     read_domains.add(publisher(url))
                     if identity is not None and not relevant_source(
-                            identity, self.page_titles.get(url, ""), text):
+                            identity, self.page_titles.get(url, ""), page_text):
                         self.search_coverage["pages_irrelevant"] += 1
-                        scope = source_scope(identity, self.page_titles.get(url, ""), text)
+                        scope = source_scope(identity, self.page_titles.get(url, ""), page_text)
                         if scope == "host_only":
                             self.search_coverage["pages_host_only"] = (
                                 self.search_coverage.get("pages_host_only", 0) + 1)
@@ -677,8 +911,8 @@ class LocalAsker:
                         else:
                             self._say(f"replacing page without an exact product match: {url}")
                         continue
-                    fingerprint = hashlib.sha256(" ".join(text.casefold().split()).encode()).hexdigest()
-                    if prefer_issues and repair_offer_page(url, self.page_titles.get(url, ""), text):
+                    fingerprint = hashlib.sha256(" ".join(page_text.casefold().split()).encode()).hexdigest()
+                    if prefer_issues and repair_offer_page(url, self.page_titles.get(url, ""), page_text):
                         self.search_coverage["pages_service_offers"] += 1
                         self._say(f"replacing repair-service advertisement, not an incident report: {url}")
                         continue
@@ -687,14 +921,21 @@ class LocalAsker:
                         self._say(f"replacing copied page: {url}")
                         continue
                     fingerprints.add(fingerprint)
-                    pages.append((url, text))
-                    self.sources[url] = text
+                    pages.append((url, page_text))
+                    self.sources[url] = page_text
                     self._say(f"read: {url}")
                 fill()
-            if pending and time.monotonic() >= deadline:
-                self.search_coverage["pages_timed_out"] = len(pending)
-                self._say(f"page reading deadline reached; {len(pending)} page(s) still waiting")
+            if read_pending and time.monotonic() >= deadline:
+                if quick:
+                    self.search_coverage["pages_timed_out"] = len(set(wanted) - processed_urls)
+                else:
+                    self.search_coverage["pages_timed_out"] = len(read_pending)
+                self._say(f"page reading deadline reached; {self.search_coverage['pages_timed_out']} page(s) still waiting")
+        except BaseException:
+            read_stop.set()
+            raise
         finally:
+            read_stop.set()
             pool.shutdown(wait=False, cancel_futures=True)
         self.search_coverage["pages_selected"] = len(pages)
         self.search_coverage["publishers_read"] = len(read_domains)

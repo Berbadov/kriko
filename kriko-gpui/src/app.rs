@@ -140,7 +140,7 @@ impl Tab {
         match self {
             Tab::Extension => "Browser extension",
             Tab::Local => "Local LLM",
-            Tab::Chat => "Find a product",
+            Tab::Chat => "Chat",
             _ => self.key(),
         }
     }
@@ -150,8 +150,8 @@ impl Tab {
             Tab::Home => "Recent work, saved drafts, and where the knowledge stands.",
             Tab::Run => "One check, from question to stored claims, every step in the open.",
             Tab::History => "Every check you have run, with the evidence it was based on.",
-            Tab::Compare => "Up to three subjects side by side, attribute by attribute.",
-            Tab::Chat => "Describe what you need. Kriko finds the products that fit.",
+            Tab::Compare => "Compare products, specifications, and the evidence behind them.",
+            Tab::Chat => "Ask questions, discover products online, and explore your research.",
             Tab::Extension => "Send pages from your browser straight into Kriko's knowledge.",
             Tab::Overview => "What the packs know, and where they run thin.",
             Tab::Browse => "Every subject, attribute and claim in the local store.",
@@ -214,8 +214,10 @@ pub struct InputState {
     pub cursor: Option<usize>,
     pub anchor: Option<usize>,
     pub layout: Option<gpui::ShapedLine>,
+    pub wrapped: Vec<(usize, gpui::WrappedLine, gpui::Pixels)>,
     pub bounds: Option<gpui::Bounds<gpui::Pixels>>,
     pub scroll_x: gpui::Pixels,
+    pub scroll_y: gpui::Pixels,
     pub selecting: bool,
 }
 
@@ -227,8 +229,10 @@ impl InputState {
             cursor: None,
             anchor: None,
             layout: None,
+            wrapped: Vec::new(),
             bounds: None,
             scroll_x: px(0.0),
+            scroll_y: px(0.0),
             selecting: false,
         }
     }
@@ -238,7 +242,9 @@ impl InputState {
         self.cursor = None;
         self.anchor = None;
         self.layout = None;
+        self.wrapped.clear();
         self.scroll_x = px(0.0);
+        self.scroll_y = px(0.0);
         self.selecting = false;
     }
 
@@ -699,7 +705,9 @@ impl Kriko {
                 }
                 "v" => {
                     if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
-                        this.input_mut(field).replace_selection(&text.replace(['\r', '\n'], " "));
+                        let text = if field == Field::ChatAsk { text.replace("\r\n", "\n").replace('\r', "\n") }
+                            else { text.replace(['\r', '\n'], " ") };
+                        this.input_mut(field).replace_selection(&text);
                     }
                 }
                 _ => return,
@@ -763,11 +771,17 @@ impl Kriko {
         }
         // Enter in the chat composer sends the message.
         if ks.key.as_str() == "enter" && field == Field::ChatAsk {
-            this.send_chat_message(cx);
+            if ks.modifiers.shift { this.chat_input.replace_selection("\n"); }
+            else { this.send_chat_message(cx); }
             cx.notify();
             return;
         }
         let input = this.input_mut(field);
+        if field == Field::ChatAsk && matches!(ks.key.as_str(), "up" | "down") {
+            crate::text_input::move_chat_line(input, ks.key == "down", ks.modifiers.shift);
+            cx.notify();
+            return;
+        }
         let at = input.position();
         let previous = input.value[..at].char_indices().last().map(|(i, _)| i).unwrap_or(0);
         let next = input.value[at..].chars().next().map(|c| at + c.len_utf8()).unwrap_or(at);
@@ -794,7 +808,8 @@ impl Kriko {
             "space" => input.replace_selection(" "),
             _ => {
                 let text = ks.key_char.as_deref().unwrap_or(ks.key.as_str());
-                if text.chars().count() == 1 && input.value.chars().count() < 200 {
+                let max_chars = if matches!(field, Field::ChatAsk | Field::CompareAsk) { 2000 } else { 200 };
+                if text.chars().count() == 1 && input.value.chars().count() < max_chars {
                     input.replace_selection(text);
                 }
             }
