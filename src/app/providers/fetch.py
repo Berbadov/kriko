@@ -21,6 +21,7 @@ document". An empty string is a legitimate answer here, not an error.
 import html
 import logging
 import re
+import time
 import urllib.error
 import urllib.request
 from app.providers import network
@@ -131,6 +132,11 @@ def _bounded(value: str) -> str:
     return stamp
 
 
+#: The least a browser needs to open a page and print it; with less left in a
+#: page's budget the rung is not tried, since it would only be killed.
+BROWSER_MIN_SECONDS = 15.0
+
+
 def _download(url: str, timeout: float) -> str:
     # http(s) only. `fetch` is handed URLs a search provider returned, and a
     # `file:` URL among them would read this machine's disk — urllib is happy
@@ -138,6 +144,11 @@ def _download(url: str, timeout: float) -> str:
     if not url.lower().startswith(("http://", "https://")):
         return ""
     request = urllib.request.Request(url, headers={"user-agent": USER_AGENT})
+    # A page costs at most twice `timeout` in all, whichever rungs it climbs.
+    # Each rung had its own 45 s on top of the plain fetch's, so one refused
+    # page could hold a run for a minute and a half (measured: 48 s of an
+    # 8 s reader, on a page that answered 429).
+    ladder_ends = time.monotonic() + 2 * timeout
     try:
         with network.urlopen(request, timeout=timeout) as response:
             kind = (response.headers.get_content_type() or "").lower()
@@ -146,7 +157,7 @@ def _download(url: str, timeout: float) -> str:
             ):
                 return ""
             charset = response.headers.get_content_charset() or "utf-8"
-            return response.read(MAX_BYTES).decode(charset, "replace")
+            return _body(response, timeout).decode(charset, "replace")
     except urllib.error.HTTPError as error:
         if error.code in REFUSED:
             # The site answered, and its answer was a refusal aimed at this
@@ -157,9 +168,11 @@ def _download(url: str, timeout: float) -> str:
             # half-read.
             from app.providers import browser, pagereader  # noqa: PLC0415 — optional rungs
 
-            page = pagereader.read(url)
-            if not page:
-                page = browser.read(url)
+            left = ladder_ends - time.monotonic()
+            page = pagereader.read(url, timeout=max(1.0, left)) if left > 1.0 else ""
+            left = ladder_ends - time.monotonic()
+            if not page and left >= BROWSER_MIN_SECONDS:
+                page = browser.read(url, timeout=left)
             if page:
                 log.info("a source refused the plain fetch and a later rung read it")
                 return page
@@ -174,6 +187,27 @@ def _download(url: str, timeout: float) -> str:
     ) as error:
         log.info("could not read a source: %s", type(error).__name__)
         return ""
+
+
+def _body(response, timeout: float) -> bytes:
+    """What the page sent within `timeout` seconds in all, at most `MAX_BYTES`.
+
+    `urlopen`'s timeout bounds each wait on the socket, not the page: a server
+    that drips a byte every few seconds never trips it (measured: 48 s on an
+    8 s timeout, and the run waited for it). The budget is for the whole
+    body, and what had arrived when it ran out is kept, since prose cut short
+    is still prose the model can quote, exactly as the `MAX_BYTES` cut is.
+    """
+    deadline = time.monotonic() + timeout
+    chunks: list[bytes] = []
+    size = 0
+    while size < MAX_BYTES and time.monotonic() < deadline:
+        chunk = response.read(min(65536, MAX_BYTES - size))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        size += len(chunk)
+    return b"".join(chunks)
 
 
 def to_text(markup: str) -> str:

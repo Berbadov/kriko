@@ -27,6 +27,7 @@ fill fields with a phrase.
 import json
 import re
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 
 from kriko.research.window import focus, terms_of
 from kriko.research.base import (
@@ -43,6 +44,10 @@ from kriko.research.politeness import (
 #: that keeps polling for a source that is not coming back is a run that
 #: hangs — the exact thing fail-fast exists to prevent.
 _MAX_GATE_WAIT = 60.0
+
+#: Pages downloaded at once for one query's hits. Four is what the quick look's
+#: reader uses; the hosts differ, so it is not a burst on any one of them.
+_FETCH_AT_ONCE = 4
 
 #: Briefs kept before the cache empties. A run is one task; this only needs
 #: to survive a multi-task session (the quick look's, the bench's).
@@ -199,23 +204,28 @@ class LocalPlane:
             if len(documents) >= task.max_documents:
                 break
             hits = self._search_polite(query, task.max_documents) or []
+            fresh: list[dict] = []
             for hit in hits:
-                self.check_cancelled()
-                if len(documents) >= task.max_documents:
-                    break
                 url = str(hit.get("url", "")).strip()
-                if not url or url in seen:
-                    continue
-                seen.add(url)
-                text, published = self._fetch_polite(url)
-                if not text.strip():
-                    continue
-                documents.append(Document(
-                    url=url, text=text,
-                    title=str(hit.get("title", "")).strip(),
-                    published_at=published,
-                    site_or_channel=str(hit.get("site", "")).strip(),
-                ))
+                if url and url not in seen:
+                    seen.add(url)
+                    fresh.append(hit)
+            position = 0
+            while position < len(fresh) and len(documents) < task.max_documents:
+                self.check_cancelled()
+                wanted = task.max_documents - len(documents)
+                window = fresh[position:position + min(_FETCH_AT_ONCE, wanted)]
+                position += len(window)
+                pages = self._fetch_together([str(hit["url"]).strip() for hit in window])
+                for hit, (text, published) in zip(window, pages):
+                    if not text.strip():
+                        continue
+                    documents.append(Document(
+                        url=str(hit["url"]).strip(), text=text,
+                        title=str(hit.get("title", "")).strip(),
+                        published_at=published,
+                        site_or_channel=str(hit.get("site", "")).strip(),
+                    ))
         return documents
 
     def extract(self, task: ResearchTask, document: Document) -> list[Finding]:
@@ -228,16 +238,31 @@ class LocalPlane:
         return self._through_gate(
             lambda: self._search(query, limit) or [])
 
-    def _fetch_polite(self, url: str) -> tuple[str, str]:
-        if self._scheduler is None:
-            got = self._fetch(url)
+    def _fetch_together(self, urls: list[str]) -> list[tuple[str, str]]:
+        """`(text, published_at)` for each url, in order, fetched at once.
+
+        Pages are not searches. The gate below paces the search engines, which
+        answer to one address; a page comes from whichever host the hit named,
+        and the per-host and total limits of `network.urlopen` already keep
+        any one of them from being hammered. Taking pages through the gate one
+        at a time made a run wait for the sum of its slowest downloads, not
+        the slowest one (measured: 70 s of reads that overlap to 18 s), and
+        the gate is not safe to share between threads. An unreadable page is a
+        miss, as before.
+        """
+        def one(url: str) -> tuple[str, str]:
+            try:
+                got = self._fetch(url)
+            except Exception as error:  # noqa: BLE001 - said, not swallowed
+                self._say(f"{type(error).__name__} while reading a page: {error}")
+                return "", ""
             text = got.text if isinstance(got, Fetched) else (got or "")
             return text, (got.published_at if isinstance(got, Fetched) else "")
-        got = self._through_gate(lambda: self._fetch(url))
-        if got is None:
-            return "", ""
-        text = got.text if isinstance(got, Fetched) else (got or "")
-        return text, (got.published_at if isinstance(got, Fetched) else "")
+
+        if len(urls) < 2:
+            return [one(url) for url in urls]
+        with ThreadPoolExecutor(max_workers=len(urls)) as pool:
+            return list(pool.map(one, urls))
 
     def _through_gate(self, attempt):
         """One call through the politeness gate: wait, rotate, fail fast.

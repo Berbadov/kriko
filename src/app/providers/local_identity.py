@@ -97,6 +97,11 @@ class ProductIdentity:
     item: str = ""
     item_terms: tuple[str, ...] = ()
     fits: str = ""
+    #: Every word of the reader's own product title, and each pair of
+    #: neighbours run together (`500 GB` -> `500gb`). A page that says the
+    #: model name followed by one of these is describing this product, not a
+    #: neighbouring version of it. Never sent to a model (`as_dict`).
+    stated: tuple[str, ...] = ()
 
     def prompt_dict(self) -> dict[str, Any]:
         """What a model needs to know, without empty fields or the quotes it was derived from.
@@ -205,6 +210,18 @@ def _distinctive_identifier(value: str) -> bool:
     )
 
 
+def stated_tokens(value: str) -> tuple[str, ...]:
+    """The words of a product title as a page may spell them.
+
+    Pages spell a size or a rating `500GB` where a listing says `500 GB`, so
+    neighbouring words are also kept joined. Whole tokens only: a substring
+    match would let `pro` pass because the title says `improved`.
+    """
+    words = _TOKEN.findall(_normalize(value))
+    joined = [first + second for first, second in zip(words, words[1:])]
+    return tuple(dict.fromkeys([*words, *joined]))
+
+
 def _meaningful_tokens(value: str) -> set[str]:
     return {
         token
@@ -242,7 +259,8 @@ def _fallback(
 ) -> ProductIdentity:
     """Preserve the reader's seed without claiming a resolved variant."""
     name = clean_product_name(product_prompt or "") or "Unknown product"
-    return ProductIdentity(canonical_name=name, unknowns=unknowns, resolved=False)
+    return ProductIdentity(canonical_name=name, unknowns=unknowns, resolved=False,
+                           stated=stated_tokens(product_prompt or ""))
 
 
 def _grounded(value: object, corpus: str) -> bool:
@@ -370,6 +388,7 @@ def parse_identity(
         source="listing text"
         if listing_text and (variant or identifiers)
         else "product prompt",
+        stated=stated_tokens(product_prompt or ""),
         **facets,
     )
 
@@ -556,7 +575,7 @@ def conflicting_identity(identity: ProductIdentity, text: str) -> bool:
             continue
         token = following.group(1).rstrip(".,:;")
         folded = token.casefold()
-        if folded in structural or folded in known:
+        if folded in structural or folded in known or fold(token) in identity.stated:
             continue
         modifiers = {"pro", "plus", "max", "mini", "ultra", "lite", "gen",
                      "generation", "mk", "rev", "revision", "edition", "series"}

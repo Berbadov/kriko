@@ -44,7 +44,8 @@ def user_agent() -> str:
     return f"kriko/{app_version()} (+https://github.com/Berbadov/kriko)"
 
 
-def _rpc(endpoint: str, body: dict, session: str = "") -> tuple[dict, str]:
+def _rpc(endpoint: str, body: dict, session: str = "",
+         timeout: float = TIMEOUT) -> tuple[dict, str]:
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
@@ -56,7 +57,7 @@ def _rpc(endpoint: str, body: dict, session: str = "") -> tuple[dict, str]:
         endpoint, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST"
     )
     try:
-        with network.urlopen(request, timeout=TIMEOUT) as response:
+        with network.urlopen(request, timeout=timeout) as response:
             session = response.headers.get("mcp-session-id") or session
             raw = response.read().decode("utf-8", "replace")
     except (urllib.error.URLError, urllib.error.HTTPError, OSError):
@@ -148,7 +149,7 @@ def parse_parallel(text: str, url: str) -> str:
     return ""
 
 
-def _asked(target: str, tool: str, url: str) -> str:
+def _asked(target: str, tool: str, url: str, timeout: float = TIMEOUT) -> str:
     """One reader's raw text answer, "" on any failure."""
     reply, session = _rpc(
         target,
@@ -162,6 +163,7 @@ def _asked(target: str, tool: str, url: str) -> str:
                 "clientInfo": {"name": "kriko", "version": "0"},
             },
         },
+        timeout=timeout,
     )
     if not session:
         return ""
@@ -177,6 +179,7 @@ def _asked(target: str, tool: str, url: str) -> str:
             },
         },
         session,
+        timeout=timeout,
     )
     result = reply.get("result") or {}
     if reply.get("error") or result.get("isError"):
@@ -188,7 +191,7 @@ def _asked(target: str, tool: str, url: str) -> str:
     )
 
 
-def read(url: str, endpoint: str = "") -> str:
+def read(url: str, endpoint: str = "", timeout: float = TIMEOUT) -> str:
     """The page's text through the hosted readers, "" when none read it.
 
     One initialize and one call per page, so a kept session would be state
@@ -204,5 +207,5 @@ def read(url: str, endpoint: str = "") -> str:
         target = endpoint
     else:
         target = PARALLEL_ENDPOINT
-    page = plain(parse_parallel(_asked(target, PARALLEL_TOOL, url), url))
+    page = plain(parse_parallel(_asked(target, PARALLEL_TOOL, url, timeout), url))
     return page[:MAX_CHARACTERS]

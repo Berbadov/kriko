@@ -510,8 +510,11 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
         search_kind=search_kind, timeout=timeout,
         schema=local_inference.FINDINGS_SCHEMA, runtime_options=runtime_options,
         context_tokens=context_tokens, search_language=search_language, engine=engine)
+    # Ten seconds a page, as the quick look reads (8): the default 30 let one
+    # slow host hold a whole run, and a page that is not there in ten is
+    # replaced by the next hit rather than waited for.
     researcher = LocalPlane(
-        search, fetch.reader(), complete, scheduler=scheduler, spend=spend,
+        search, fetch.reader(timeout=10.0), complete, scheduler=scheduler, spend=spend,
     )
     complete.language_instruction = (
         f"Write summaries and advice in {output_language}; preserve exact source quotes, "
