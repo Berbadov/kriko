@@ -27,7 +27,7 @@ def test_harness_quicklook_searches_host_pages_then_calls_selected_cli_once(monk
     cli_calls = []
 
     def searcher(_url, *, engine, language):
-        assert engine == "google,duckduckgo,bing"
+        assert engine == "duck,bing,google"
         assert language == "en"
 
         def search(query, limit):

@@ -179,6 +179,7 @@ class Agent:
         self.read_coverage = coverage
         self.search_coverage: dict = {}
         self.searched: list = []
+        self.read_options: dict = {}
         self.said: list = []
 
     def _check(self):
@@ -187,8 +188,10 @@ class Agent:
     def _say(self, line):
         self.said.append(line)
 
-    def _read(self, queries, *, identity=None, prefer_issues=False):
+    def _read(self, queries, *, identity=None, prefer_issues=False, quick=False):
         self.searched = queries
+        self.read_options = {"identity": identity, "prefer_issues": prefer_issues,
+                             "quick": quick}
         self.search_coverage = dict(self.read_coverage)
         return []
 
@@ -207,6 +210,7 @@ def test_pages_read_but_none_about_the_part_is_an_empty_result_not_a_connection_
     assert pipeline.coverage["status"] == "no_matching_product_evidence"
     assert pipeline.coverage["pages_read"] == 24
     assert any("none was about this product" in line for line in agent.said)
+    assert agent.read_options["quick"] is True
     assert all("Hava" not in query and "->" not in query for query in agent.searched)
     assert any("filtre à air" in query for query in agent.searched)
 
