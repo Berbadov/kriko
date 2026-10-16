@@ -18,11 +18,11 @@ const DRAWER_W: f32 = 320.0;
 
 fn section_title(label: &str) -> Div {
     div()
-        .font_family(DISPLAY)
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
         .text_size(px(18.0))
         .text_color(rgb(BRAND_BRIGHT))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// A catalog's name, from the filter options the engine sent; its id when

@@ -38,8 +38,8 @@ fn level_chip(level: Level) -> Div {
     let (glyph, fg, bg): (&str, u32, u32) = match level {
         Level::Critical => ("alert", DANGER, DANGER_WASH),
         Level::High => ("alert", BRAND_BRIGHT, BRAND_WASH),
-        Level::Medium => ("alert", INK_2, WELL),
-        Level::Low | Level::Unrated => ("clock", MUTED, WELL),
+        Level::Medium => ("alert", INK_2, (WELL << 8) | 0xff),
+        Level::Low | Level::Unrated => ("clock", MUTED, (WELL << 8) | 0xff),
     };
     div()
         .h(px(24.0))
@@ -48,11 +48,11 @@ fn level_chip(level: Level) -> Div {
         .items_center()
         .gap(px(7.0))
         .rounded(px(7.0))
-        .bg(rgb(bg))
+        .bg(rgba(bg))
         .border_1()
         .border_color(rgba(HAIRLINE))
-        .font_family(MONO)
-        .text_size(px(10.0))
+        .font_family(SANS)
+        .text_size(px(12.0))
         .text_color(rgb(fg))
         .child(icon(glyph, 14.0).text_color(rgb(fg)))
         .child(level.word())
@@ -706,7 +706,7 @@ fn table(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
                                     if backed { "BACKED" } else { "NO EVIDENCE" },
                                     if backed { MUTED } else { DIM },
                                 ))
-                                .child(mono(if backed { "1 source" } else { "0 sources" }, DIM)),
+                                .when(backed, |d| d.child(mono("1 source", DIM))),
                         )
                 }
                 None => div()
@@ -715,7 +715,7 @@ fn table(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
                     .flex_col()
                     .gap(px(6.0))
                     .child(mono("Not stated", DIM))
-                    .child(mono("NO EVIDENCE · 0 SOURCES", DIM)),
+                    .child(mono("No evidence", DIM)),
             };
             row = row.child(cell_div);
         }
@@ -865,7 +865,7 @@ fn table(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
                                 },
                                 if c.disputed { BRAND_BRIGHT } else { MUTED },
                             ))
-                            .child(mono(&format!("{} sources", c.sources.len()), DIM)),
+                            .when(!c.sources.is_empty(), |d| d.child(mono(&format!("{} sources", c.sources.len()), DIM))),
                     ),
                 None => div()
                     .w(col_w)
@@ -873,7 +873,7 @@ fn table(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
                     .flex_col()
                     .gap(px(6.0))
                     .child(mono("Not recorded", DIM))
-                    .child(mono("NO EVIDENCE · 0 SOURCES", DIM)),
+                    .child(mono("No evidence", DIM)),
             };
             row = row.child(cell_div);
         }
@@ -1718,11 +1718,13 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         };
         let label = ["FIRST", "SECOND", "THIRD", "FOURTH"][i];
         let mut col =
-            well()
+            div()
                 .id(("slot", i))
                 .flex_1()
                 .min_w(px(160.0))
-                .p(px(10.0))
+                .py(px(14.0))
+                .border_b_1()
+                .border_color(rgba(HAIRLINE))
                 .flex()
                 .flex_col()
                 .gap(px(6.0))
@@ -1759,13 +1761,6 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .text_color(rgb(INK))
                         .child(check.name.clone()),
                 )
-                .child(mono(
-                    &format!(
-                        "{} claims · {sources} sources",
-                        check.specs.len() + check.risks.len()
-                    ),
-                    MUTED,
-                ))
                 .child(mono(
                     &format!(
                         "{} claims · {sources} sources",
@@ -1911,39 +1906,6 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .collect::<Vec<_>>()
         })
         .collect();
-    let ready_for_summary: Vec<Option<&Check>> = app
-        .live
-        .compare
-        .slots
-        .iter()
-        .flatten()
-        .map(|id| match app.live.compare.checks.get(id) {
-            Some(Loaded::Ready(check)) => Some(check),
-            _ => None,
-        })
-        .collect();
-    let said = live::answer_lines(&ready_for_summary);
-    let answer_card = (!said.is_empty()).then(|| {
-        let mut lines = div().flex().flex_col().gap(px(6.0));
-        for line in said {
-            lines = lines.child(
-                div()
-                    .font_family(SANS)
-                    .text_size(px(14.0))
-                    .line_height(px(21.0))
-                    .text_color(rgb(INK_2))
-                    .child(line),
-            );
-        }
-        card()
-            .flex()
-            .flex_col()
-            .gap(px(8.0))
-            .child(eyebrow("What the lined-up data says"))
-            .child(lines)
-            .child(mono("COUNTED FROM THE COLUMNS BELOW · NOT A RANKING", DIM))
-    });
-
     // ---- the picker: saved checks are unique across the shortlist ----
     let picker_card = app.live.compare.picker.map(|slot_i| {
         let mut list = div().flex().flex_col().flex_none();
@@ -2475,19 +2437,9 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     // ---- assemble ----
     // The board sits directly under the toggle that opens it, so it is on
     // screen the moment it appears, with the slots above the table below.
-    let title = div()
-        .flex()
-        .flex_col()
-        .gap(px(3.0))
-        .child(
-            div()
-                .font_family(DISPLAY)
-                .font_weight(FontWeight::BOLD)
-                .text_size(px(42.0))
-                .text_color(rgb(INK))
-                .child("COMPARE"),
-        )
-        .child(row_desc("Line up saved checks and see what differs."));
+    let title = div().flex().flex_col().gap(px(6.0))
+        .child(crate::screens::row_title("Compare products"))
+        .child(row_desc("Line up saved checks and follow the evidence. Missing findings do not establish safety."));
     let mut page = div()
         .flex()
         .flex_col()
@@ -2512,7 +2464,6 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     if app.live.compare.board_open {
         page = page.child(board(app, window, cx));
     }
-    page = page.children(answer_card);
     let filled_n = app.live.compare.slots.iter().flatten().count();
     page = page
         .child(

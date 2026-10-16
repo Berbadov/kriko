@@ -10,8 +10,8 @@ use crate::screens::{mono, row_desc};
 use crate::theme::*;
 
 /// Reserve enough width for the conversation rail and a readable transcript.
-const NARROW_W: f32 = 620.0;
-const THREAD_RAIL_W: f32 = 168.0;
+const NARROW_W: f32 = 760.0;
+const THREAD_RAIL_W: f32 = 260.0;
 
 pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     // A clean install opens on the chat welcome. Once a saved or new thread
@@ -22,9 +22,9 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
     }
 
     let viewport_h = f32::from(window.viewport_size().height);
-    // The surrounding shell uses 96 px for its page head and about 42 px for
-    // content spacing. This keeps the composer on screen in a 640 px window.
-    let height = (viewport_h - 200.0).clamp(300.0, 700.0);
+    // Window controls, section tabs, and gutters occupy 166 px. Short windows
+    // can scroll the page while the conversation retains a usable composer.
+    let height = (viewport_h - 166.0).clamp(360.0, 1200.0);
     let narrow = app.content_w < NARROW_W;
     let threads = thread_list(app, narrow, cx);
     let conversation = conversation(app, window, cx);
@@ -35,25 +35,34 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
             .flex()
             .flex_col()
             .gap(px(8.0))
-            .child(threads.h(px(68.0)).flex_none())
+            .overflow_hidden()
+            .child(threads.h(px(120.0)).flex_none())
             .child(
                 conversation
-                    .h(px((height - 76.0).max(224.0)))
+                    .p(px(16.0))
+                    .h(px((height - 128.0).max(232.0)))
                     .min_h(px(0.0)),
             )
     } else {
         div()
             .h(px(height))
             .flex()
-            .gap(px(12.0))
+            .overflow_hidden()
             .child(threads.w(px(THREAD_RAIL_W)).h_full().flex_none())
-            .child(conversation.flex_1().h_full().min_w(px(0.0)).min_h(px(0.0)))
+            .child(
+                conversation
+                    .p(px(24.0))
+                    .flex_1()
+                    .h_full()
+                    .min_w(px(0.0))
+                    .min_h(px(0.0)),
+            )
     }
 }
 
 fn welcome(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let viewport_h = f32::from(window.viewport_size().height);
-    let height = (viewport_h - 200.0).clamp(420.0, 760.0);
+    let height = (viewport_h - 166.0).clamp(360.0, 1000.0);
     let composer = composer(app, window, cx);
     let mut suggestions = div().flex().flex_wrap().justify_center().gap(px(8.0));
     for (i, text) in CHAT_EXAMPLES.iter().enumerate() {
@@ -161,30 +170,30 @@ fn thread_list(app: &Kriko, compact: bool, cx: &mut Context<Kriko>) -> Div {
         list = list.child(
             div()
                 .id(("chat-thread", i))
-                .h(px(36.0))
-                .px(px(10.0))
+                .h(px(64.0))
+                .px(px(12.0))
                 .flex_none()
                 .flex()
                 .items_center()
-                .gap(px(6.0))
-                .rounded(px(8.0))
+                .gap(px(10.0))
+                .rounded(px(14.0))
                 .cursor_pointer()
                 .font_family(SANS)
-                .text_size(px(13.0))
+                .text_size(px(15.0))
                 .text_color(rgb(if picked { INK } else { INK_2 }))
                 .when(compact, |d| d.w(px(190.0)))
                 .when(!compact, |d| d.w_full())
                 .when(picked, |d| {
-                    d.bg(rgba(GLASS_1)).border_1().border_color(rgba(HAIRLINE))
+                    d.bg(rgb(SURFACE_2))
+                        .border_1()
+                        .border_color(rgba(BORDER_CONTROL))
                 })
                 .when(!picked, |d| d.hover(|h| h.bg(rgba(GLASS_1))))
                 .child(
                     div()
                         .flex_1()
                         .min_w(px(0.0))
-                        .overflow_hidden()
-                        .whitespace_nowrap()
-                        .text_ellipsis()
+                        .font_weight(FontWeight::SEMIBOLD)
                         .child(name),
                 )
                 .when(running, |d| {
@@ -209,23 +218,34 @@ fn thread_list(app: &Kriko, compact: bool, cx: &mut Context<Kriko>) -> Div {
             div()
                 .font_family(SANS)
                 .font_weight(FontWeight::MEDIUM)
-                .text_size(px(12.0))
-                .text_color(rgb(MUTED))
+                .text_size(px(15.0))
+                .text_color(rgb(INK))
                 .child("Conversations"),
         )
         .child(text_action("chat-new", "New").on_click(new_one));
 
     if compact {
-        div().flex().flex_col().gap(px(4.0)).child(heading).child(
-            div()
-                .id("chat-thread-list")
-                .h(px(36.0))
-                .overflow_x_scroll()
-                .overflow_y_hidden()
-                .child(list),
-        )
+        div()
+            .p(px(12.0))
+            .bg(rgb(SURFACE_1))
+            .flex()
+            .flex_col()
+            .gap(px(4.0))
+            .child(heading)
+            .child(
+                div()
+                    .id("chat-thread-list")
+                    .h(px(64.0))
+                    .overflow_x_scroll()
+                    .overflow_y_hidden()
+                    .child(list),
+            )
     } else {
         div()
+            .p(px(14.0))
+            .bg(rgb(SURFACE_1))
+            .border_r_1()
+            .border_color(rgba(HAIRLINE))
             .flex()
             .flex_col()
             .gap(px(8.0))
@@ -284,9 +304,9 @@ fn conversation(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     div()
                         .flex_1()
                         .min_w(px(0.0))
-                        .font_family(DISPLAY)
+                        .font_family(SANS)
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(17.0))
+                        .text_size(px(18.0))
                         .text_color(rgb(INK))
                         .overflow_hidden()
                         .whitespace_nowrap()
@@ -433,7 +453,8 @@ fn reader_line(message: &Message) -> Div {
             .rounded(px(10.0))
             .bg(rgba(BRAND_WASH))
             .font_family(SANS)
-            .text_size(px(14.0))
+            .text_size(px(16.0))
+            .line_height(px(24.0))
             .text_color(rgb(INK))
             .child(message.text.clone()),
     )
@@ -691,8 +712,8 @@ fn text_block(text: &str) -> Div {
         .flex_col()
         .gap(px(4.0))
         .font_family(SANS)
-        .text_size(px(14.0))
-        .line_height(px(21.0))
+        .text_size(px(16.0))
+        .line_height(px(26.0))
         .text_color(rgb(INK));
     let mut code = false;
     for line in text.lines() {

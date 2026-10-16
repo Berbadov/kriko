@@ -79,7 +79,8 @@ pub fn row_title(text: &str) -> Div {
     div()
         .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(14.0))
+        .text_size(px(16.0))
+        .line_height(px(22.0))
         .text_color(rgb(INK))
         .child(text.to_string())
 }
@@ -88,7 +89,8 @@ pub fn row_title(text: &str) -> Div {
 pub fn row_desc(text: &str) -> Div {
     div()
         .font_family(SANS)
-        .text_size(px(13.0))
+        .text_size(px(15.0))
+        .line_height(px(22.0))
         .text_color(rgb(MUTED))
         .child(text.to_string())
 }
@@ -96,11 +98,10 @@ pub fn row_desc(text: &str) -> Div {
 /// What a card shows while its slice of the engine has not arrived, or when
 /// the engine holds nothing for it: one quiet well, never sample numbers.
 pub fn empty_note(text: &str) -> Div {
-    well()
-        .px(px(16.0))
-        .py(px(4.0))
+    div()
+        .py(px(12.0))
         .font_family(SANS)
-        .text_size(px(13.0))
+        .text_size(px(14.0))
         .text_color(rgb(DIM))
         .child(text.to_string())
 }
@@ -112,6 +113,16 @@ pub fn mono(text: &str, color: u32) -> Div {
         .text_size(px(12.0))
         .text_color(rgb(color))
         .child(text.to_string())
+}
+
+/// A stored citation opens only an ordinary web URL.
+pub fn source_link(id: impl Into<gpui::ElementId>, label: &str, url: &str) -> Stateful<Div> {
+    let target = url.to_string();
+    let enabled = target.starts_with("https://") || target.starts_with("http://");
+    div().id(id).font_family(SANS).text_size(px(13.0)).text_color(rgb(BRAND_BRIGHT))
+        .when(enabled, |d| d.cursor_pointer().hover(|s| s.text_color(rgb(ICE)))
+            .on_click(move |_, _, cx| cx.open_url(&target)))
+        .child(label.to_string())
 }
 
 /// A table header cell: mono capitals in DIM.

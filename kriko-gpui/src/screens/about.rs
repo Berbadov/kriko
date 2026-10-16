@@ -1,7 +1,7 @@
 //! About: Kriko, local product knowledge. The wordmark over the hero, and
 //! the key-value rows that say what this install is.
 
-use gpui::{div, prelude::*, px, rgb, svg, Context, Div, FontWeight, SharedString, Styled, Window};
+use gpui::{div, prelude::*, px, rgb, Context, Div, FontWeight, Styled, Window};
 
 use crate::app::Kriko;
 use crate::screens::mono;
@@ -9,11 +9,11 @@ use crate::theme::*;
 
 fn section_title(label: &str) -> Div {
     div()
-        .font_family(DISPLAY)
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(19.0))
+        .text_size(px(18.0))
         .text_color(rgb(BRAND_BRIGHT))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 fn kv(k: &str, v: &str) -> Div {
@@ -156,31 +156,9 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
         facts = facts.child(hairline()).child(kv(id, version));
     }
 
-    let brand = card()
-        .flex()
-        .items_center()
-        .gap(px(SPACE_SECTION))
-        .bg(rgb(BRAND))
-        .child(
-            svg()
-                .path(SharedString::from("kriko-mark-white.svg"))
-                .size(px(64.0))
-                .text_color(rgb(0xffffff)),
-        )
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(2.0))
-                .child(
-                    svg()
-                        .path(SharedString::from("kriko-wordmark-white.svg"))
-                        .w(px(160.0))
-                        .h(px(52.0))
-                        .text_color(rgb(0xffffff)),
-                )
-                .child(mono("local product knowledge", DIM)),
-        );
+    let brand = div().flex().flex_col().gap(px(8.0)).py(px(12.0))
+        .child(section_title("About Kriko"))
+        .child(crate::screens::row_desc(&format!("Local product knowledge · v{}", env!("CARGO_PKG_VERSION"))));
 
     let blurb = card()
         .flex()
