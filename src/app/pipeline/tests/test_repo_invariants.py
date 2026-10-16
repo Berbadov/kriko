@@ -311,19 +311,48 @@ def test_the_shell_holds_no_engine_logic():
     rust = [p for p in (GPUI / "src").rglob("*.rs")]
     assert rust, "no Rust sources found: fix this path, not the test"
 
-    forbidden = re.compile(
-        r"(sqlite|rusqlite|sqlx|\bSELECT\s|\bINSERT\s+INTO\b|\bDELETE\s+FROM\b|"
-        r"\bCREATE\s+TABLE\b)",
-        re.IGNORECASE,
-    )
     for path in rust:
         for number, line in enumerate(_rust_code(path).splitlines(), start=1):
-            assert not forbidden.search(line), (
+            assert not _FORBIDDEN.search(line), (
                 f"{_rel(path)}:{number} puts engine logic in the shell: "
                 f"{line.strip()!r}. Rust owns the sidecar's lifetime and "
                 f"draws what the engine says over HTTP; it never reads the "
                 f"store. See kriko-gpui/README.md."
             )
+
+
+#: What only an engine does. `SELECT` is matched in the shape SQL takes —
+#: SELECT … FROM — and not as the bare word, because a screen's empty-state
+#: sentence ("Select a subject to inspect it.") is prose, not a query, and the
+#: first draft of this pattern failed the whole gate on exactly that line.
+_FORBIDDEN = re.compile(
+    r"(sqlite|rusqlite|sqlx|\bSELECT\s+(?:\*|[\w,`\s]+)\s*\bFROM\b|"
+    r"\bINSERT\s+INTO\b|\bDELETE\s+FROM\b|\bCREATE\s+TABLE\b)",
+    re.IGNORECASE,
+)
+
+
+def test_the_engine_pattern_tells_sql_from_english():
+    """A gate that a screen's own sentence can trip flags nothing useful.
+
+    The invariant above bans SQL from the shell, and `SELECT` in English
+    prose ("Select a subject to inspect it.") is not SQL. This pins the
+    distinction the pattern draws, so loosening it back to the bare word
+    fails here rather than on whatever prose the screens happen to carry.
+    """
+    sql = [
+        'let rows = conn.query("SELECT * FROM claims")',
+        "SELECT id, label FROM subjects",
+        "select severity from claims",
+    ]
+    prose = [
+        'return pick("Select a subject to inspect it.");',
+        "Select the pack to install.",
+    ]
+    for line in sql:
+        assert _FORBIDDEN.search(line), f"a query the gate must catch: {line!r}"
+    for line in prose:
+        assert not _FORBIDDEN.search(line), f"prose the gate must not flag: {line!r}"
 
     manifest = (GPUI / "Cargo.toml").read_text(encoding="utf-8")
     lock = (GPUI / "Cargo.lock").read_text(encoding="utf-8")

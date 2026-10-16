@@ -238,10 +238,34 @@ def cmd_agenda(args, store) -> int:
 def cmd_brief(args, store) -> int:
     from app import agentops
 
+    app_state, _ = _siblings(args)
     return _agent_op(
-        args, "research_brief", {"subject_id": args.subject_id, "pack_id": args.pack},
-        lambda: agentops.brief(store, args.subject_id, args.pack),
+        args, "research_brief",
+        {"subject_id": args.subject_id, "pack_id": args.pack, "mode": args.effort},
+        lambda: agentops.brief(store, args.subject_id, args.pack,
+                               effort=args.effort, app_state_path=app_state),
     )
+
+
+def cmd_loopscore(args, store) -> int:
+    """`kriko loopscore SUBJECT --pack P`: how well the research loop is running.
+
+    The agent planes are scored by the benches; the *loop* — submit, read
+    the gaps, follow up — is scored here, off the submission log every door
+    writes. The metrics are the loop's own: pass rate on the first submit
+    against the last (did the verdicts teach it anything), findings kept per
+    search, and how much of what it ran was its own work rather than a
+    re-roll of the pack's seeds.
+    """
+    from app import agentops, loopmetrics
+    from kriko.research import plan_task
+
+    app_state, _ = _siblings(args)
+    runs = agentops.prior_runs(app_state, args.subject_id, args.pack,
+                               limit=args.limit)
+    seeds = plan_task(store, args.subject_id, args.pack).rendered_queries()
+    print(json.dumps(loopmetrics.score(runs, seeds), indent=2, ensure_ascii=False))
+    return 0
 
 
 def cmd_submit(args, store) -> int:
@@ -764,7 +788,19 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("brief", help="what to research about one subject (JSON)")
     p.add_argument("subject_id")
     p.add_argument("--pack", required=True, help="the pack the subject is in")
+    p.add_argument("--effort", choices=("fast", "deep"), default="fast",
+                   help="how much run this is: fast (minutes) or deep "
+                        "(a budgeted tree with follow-up rounds)")
     p.set_defaults(fn=cmd_brief)
+
+    p = sub.add_parser(
+        "loopscore", help="how well the research loop is running for one "
+                          "subject (JSON)")
+    p.add_argument("subject_id")
+    p.add_argument("--pack", required=True, help="the pack the subject is in")
+    p.add_argument("--limit", type=int, default=50,
+                   help="how many submissions to read (default 50)")
+    p.set_defaults(fn=cmd_loopscore)
 
     p = sub.add_parser(
         "submit", help="file findings for one subject; ungrounded ones are refused")

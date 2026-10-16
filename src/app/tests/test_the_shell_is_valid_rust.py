@@ -94,6 +94,13 @@ def test_every_rust_source_parses(tmp_path):
     edition = _edition()
     offenders = []
     checked = 0
+    # `env!` reads the environment at compile time, and `cargo` always sets
+    # `CARGO_PKG_VERSION` when it compiles the crate — so a single-file parse
+    # must set it too, or an `env!("CARGO_PKG_VERSION")` expansion failure
+    # (an uncoded error, indistinguishable from a parse error by the filter
+    # below) fails the gate on source the real build accepts. The value is
+    # a placeholder: the parse checks syntax, not the manifest's version.
+    env = {**os.environ, "CARGO_PKG_VERSION": "0.0.0"}
     for source in _sources():
         checked += 1
         done = subprocess.run(
@@ -101,7 +108,7 @@ def test_every_rust_source_parses(tmp_path):
              # a real file, not os.devnull: a source that resolves every name
              # gets written, and Windows will not rename a temp file onto `nul`
              "--emit=metadata", "-o", str(tmp_path / "out.rmeta"), str(source)],
-            capture_output=True, text=True, cwd=CRATE,
+            capture_output=True, text=True, cwd=CRATE, env=env,
         )
         for line in done.stderr.splitlines():
             if not line.startswith("error"):
