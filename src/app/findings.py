@@ -74,6 +74,20 @@ def accept_findings(
     of its quotes or claims did not make it instead of discovering later that
     half the work vanished.
 
+    The answer also carries what the run did not establish (`gaps` and
+    `next_step`, below): the pack's domains that still hold no claim for this
+    subject, and the refused findings one field short. A submit used to be a
+    mailbox — the verdict arrived, the run stopped — and the agent's next
+    search, if any, was a guess. Now the answer is the loop's turn: the next
+    queries are written from the gaps it names, and an answer that names
+    nothing missing is the stop signal.
+
+    A finding whose claim is already known is neither kept nor refused: it
+    lands in `already_known`, with the existing claim's id. Its *source* is
+    still filed as evidence — a second page saying the same thing is exactly
+    what turns a reported claim into a corroborated one — and `corroborated`
+    says whether this submission added evidence the claim did not have.
+
     `retain` is where the *documents* go (B120): pass a list and it is filled
     with `{source_id, pack_id, url, text}` for every finding that was accepted,
     for `log_submission` to keep in `app.sqlite`. A collecting list rather than
@@ -83,7 +97,7 @@ def accept_findings(
     to the agent that submitted them — echoing its own page text at it would
     be a protocol change nobody asked for.
     """
-    accepted, rejected = [], []
+    accepted, rejected, already = [], [], []
 
     subject = conn.execute(
         "SELECT 1 FROM subjects WHERE subject_id = ? AND pack_id = ?",
@@ -161,6 +175,16 @@ def accept_findings(
             item.get("domain", "general"),
             title,
         )
+        # The verifier's mechanical half. A claim that already exists is not
+        # new work — reporting it as accepted made a resubmission
+        # indistinguishable from a discovery — but its source is still
+        # evidence: a second page saying the same thing is what corroborates
+        # a reported claim, so the finding is answered as `already_known`
+        # and the page is filed either way.
+        known = conn.execute(
+            "SELECT 1 FROM claims WHERE claim_id = ? AND pack_id = ?",
+            (claim_id, pack_id),
+        ).fetchone()
         conn.execute(
             "INSERT OR IGNORE INTO sources (source_id, pack_id, url,"
             " domain, site_or_channel, title, lang, source_type,"
@@ -178,6 +202,43 @@ def accept_findings(
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),
             ),
         )
+        evidence_id = ids.evidence_id(source_id, quote)
+        had_evidence = conn.execute(
+            "SELECT 1 FROM evidence WHERE evidence_id = ? AND pack_id = ?",
+            (evidence_id, pack_id),
+        ).fetchone()
+        if known is not None:
+            if had_evidence is None:
+                conn.execute(
+                    "INSERT OR IGNORE INTO evidence (evidence_id, pack_id,"
+                    " claim_id, source_id, quote, locator, stance, independent)"
+                    " VALUES (?,?,?,?,?,?,?,?)",
+                    (
+                        evidence_id,
+                        pack_id,
+                        claim_id,
+                        source_id,
+                        quote,
+                        "",
+                        item.get("stance", "supports"),
+                        1,
+                    ),
+                )
+            already.append({
+                "title": title,
+                "claim_id": claim_id,
+                "corroborated": had_evidence is None,
+            })
+            if retain is not None:
+                retain.append(
+                    {
+                        "source_id": source_id,
+                        "pack_id": pack_id,
+                        "url": url,
+                        "text": document,
+                    }
+                )
+            continue
         conn.execute(
             "INSERT OR IGNORE INTO claims (claim_id, pack_id, subject_id,"
             " kind, domain, severity, consequence, detection, component,"
@@ -237,14 +298,20 @@ def accept_findings(
                 }
             )
 
+    # Computed after the inserts, so the map answers for the store as this
+    # batch leaves it, not as it found it.
+    gaps = gap_map(conn, subject_id, pack_id)
     return {
         "accepted": accepted,
         "rejected": rejected,
+        "already_known": already,
+        "gaps": gaps,
+        "next": next_step(gaps["domains_empty"], rejected),
         # Two audiences, two sentences. `rejected[].reason` is written at the
         # model — "rationale is 0 chars" is an instruction it can act on. The
         # reader got that same string in their face, which is debug output
         # leaking through an interface, so they get this instead.
-        "summary": summarise(accepted, rejected),
+        "summary": summarise(accepted, rejected, already),
         "note": f"author_confidence is {AGENT_CONFIDENCE} — agent-written "
         "claims rank as reported, not confirmed, until corroborated",
     }
@@ -276,8 +343,80 @@ def _repairable(reasons: Sequence[str]) -> str:
     return fields.pop() if len(fields) == 1 and len(reasons) == 1 else ""
 
 
-def summarise(accepted: Sequence, rejected: Sequence) -> str:
+def gap_map(conn, subject_id: str, pack_id: str) -> dict:
+    """What this subject has claims in, against the domains the pack declares.
+
+    The pack draws the map (its `terms` with role `domain`); the claims this
+    subject holds say which parts of it a run has covered. The difference is
+    the half of the loop that was missing: a submit could say what it kept,
+    but nothing could say what was still open, so the agent's next search —
+    if it ran one — was a guess. A domain a claim names that the pack never
+    declared appears in neither list: the pack's vocabulary is the map, and
+    `claims` is the count regardless of domain, so a pack that declares no
+    domains still reports what it holds.
+    """
+    declared = [
+        row["term_id"]
+        for row in conn.execute(
+            "SELECT term_id FROM terms WHERE pack_id = ? AND role = 'domain'"
+            " ORDER BY term_id",
+            (pack_id,),
+        )
+    ]
+    held = {
+        row["domain"]
+        for row in conn.execute(
+            "SELECT DISTINCT domain FROM claims"
+            " WHERE subject_id = ? AND pack_id = ?",
+            (subject_id, pack_id),
+        )
+    }
+    claims = conn.execute(
+        "SELECT COUNT(*) FROM claims WHERE subject_id = ? AND pack_id = ?",
+        (subject_id, pack_id),
+    ).fetchone()[0]
+    return {
+        "claims": claims,
+        "domains_covered": [d for d in declared if d in held],
+        "domains_empty": [d for d in declared if d not in held],
+    }
+
+
+def next_step(domains_empty: Sequence[str], rejected: Sequence) -> str:
+    """The instruction the submit answer carries, written at the model.
+
+    One sentence per thing worth doing next, and "" when there is nothing —
+    an empty answer is the loop's stop signal, not a silence the agent has
+    to interpret. Follow-ups are named for the empty domains specifically,
+    because "search more" is exactly the instruction that produces seed
+    re-rolls: the documented failure of every budget-less research loop.
+    """
+    parts = []
+    if domains_empty:
+        parts.append(
+            "No claim in these domains yet: "
+            + ", ".join(domains_empty)
+            + ". Write the next queries for them, not re-runs of the brief's "
+            "seeds."
+        )
+    held = [one for one in rejected if one.get("fix")]
+    if held:
+        parts.append(
+            f"{len(held)} refused finding(s) {'is' if len(held) == 1 else 'are'} "
+            "one field short: fill in the field each verdict names and submit "
+            "them again."
+        )
+    return " ".join(parts)
+
+
+def summarise(accepted: Sequence, rejected: Sequence,
+              already: Sequence | None = None) -> str:
     """What happened, for somebody who is not going to read a verdict list.
+
+    `already` is the third verdict a batch can carry: findings whose claim
+    was already known. Said plainly for the reader — "already known" —
+    because "3 accepted" that includes work the store had would be a lie
+    about what the run produced.
 
     The reader saw `rationale is 0 chars — write 2–3 plain sentences a
     non-expert can act on (min 60)` three times over. That is a good sentence
@@ -286,12 +425,27 @@ def summarise(accepted: Sequence, rejected: Sequence) -> str:
     cannot redo by hand.
     """
     kept = len(accepted)
+    known = list(already or [])
     if not rejected:
-        return f"{kept} finding(s) kept." if kept else "Nothing was submitted."
+        if kept:
+            return f"{kept} finding(s) kept."
+        if known:
+            said = f"{len(known)} finding(s) already known"
+            second = sum(1 for one in known if one.get("corroborated"))
+            if second:
+                said += f", {second} with a new source"
+            return said + "."
+        return "Nothing was submitted."
 
     held = [one for one in rejected if one.get("fix")]
     refused = len(rejected) - len(held)
     parts = [f"{kept} finding(s) kept" if kept else "Nothing was kept"]
+    if known:
+        second = sum(1 for one in known if one.get("corroborated"))
+        said = f"{len(known)} already known"
+        if second:
+            said += f", {second} with a new source"
+        parts.append(said)
     if held:
         parts.append(
             f"{len(held)} could not be explained well enough to be useful and "
