@@ -63,7 +63,46 @@ def installed_dir() -> Path:
     return Path(os.environ["LOCALAPPDATA"]) / "Programs" / "Kriko"
 
 
-def screenshot(path: Path) -> None:
+def screenshot(path: Path, process: subprocess.Popen) -> None:
+    # A runner console can reclaim the foreground between launches. Keep only
+    # this installed app above it while capturing; restore the normal z-order
+    # afterwards. A live process alone does not prove its screen was observed.
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+    user32.EnumWindows.restype = wintypes.BOOL
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+    user32.GetWindowRect.restype = wintypes.BOOL
+    user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
+                                  ctypes.c_int, ctypes.c_int, wintypes.UINT]
+    user32.SetWindowPos.restype = wintypes.BOOL
+    windows: list[tuple[int, int]] = []
+
+    @callback_type
+    def collect(hwnd, _):
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        rect = wintypes.RECT()
+        if (pid.value == process.pid and user32.IsWindowVisible(hwnd)
+                and user32.GetWindowRect(hwnd, ctypes.byref(rect))):
+            width, height = rect.right - rect.left, rect.bottom - rect.top
+            if width >= 200 and height >= 100:
+                windows.append((width * height, hwnd))
+        return True
+
+    if not user32.EnumWindows(collect, 0) or not windows:
+        raise RuntimeError(f"no visible installed-app window for {path.name}")
+    _, hwnd = max(windows)
+    # HWND_TOPMOST, SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW.
+    if not user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0043):
+        raise ctypes.WinError(ctypes.get_last_error())
     script = (
         "Add-Type -AssemblyName System.Windows.Forms,System.Drawing; "
         "$b=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; "
@@ -72,7 +111,12 @@ def screenshot(path: Path) -> None:
         "$g.CopyFromScreen($b.Location,[System.Drawing.Point]::Empty,$b.Size); "
         f"$bmp.Save('{path}')"
     )
-    subprocess.run(["powershell", "-NoProfile", "-Command", script], check=True, timeout=60)
+    try:
+        time.sleep(0.2)
+        subprocess.run(["powershell", "-NoProfile", "-Command", script], check=True, timeout=60)
+    finally:
+        # HWND_NOTOPMOST, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE.
+        user32.SetWindowPos(hwnd, -2, 0, 0, 0, 0, 0x0013)
 
 
 def msiexec(*args: str, log: Path) -> int:
@@ -120,7 +164,7 @@ def look(exe: Path, out: Path) -> list[str]:
                 first = False
                 alive = process.poll() is None
                 if alive:
-                    screenshot(out / f"{key}-{size}.png")
+                    screenshot(out / f"{key}-{size}.png", process)
                     end_tree(process)
                 try:
                     said = process.communicate(timeout=20)[0] or ""
@@ -175,7 +219,7 @@ def look(exe: Path, out: Path) -> list[str]:
                     time.sleep(HOLD)
                     alive = process.poll() is None
                     if alive:
-                        screenshot(out / f"populated-{key}-940x640.png")
+                        screenshot(out / f"populated-{key}-940x640.png", process)
                         end_tree(process)
                     try:
                         said = process.communicate(timeout=20)[0] or ""
