@@ -115,6 +115,40 @@ def test_a_404_is_not_a_refusal_and_never_asks_the_reader(sites, monkeypatch):
     assert sites.reader_calls == 0
 
 
+def test_quick_fetch_does_not_escalate_a_refusal_to_more_network_rungs(sites, monkeypatch):
+    monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
+    page = fetch.reader()(sites.url, allow_fallback=False)
+    assert page.text == ""
+    assert sites.reader_calls == 0
+
+
+def test_cancellation_after_a_refusal_stops_before_hosted_reader_or_browser(monkeypatch):
+    import urllib.error
+
+    calls = []
+
+    def refused(*_args, **_kwargs):
+        raise urllib.error.HTTPError("https://source.test/page", 403, "refused", {}, None)
+
+    monkeypatch.setattr(fetch.network, "urlopen", refused)
+    monkeypatch.setattr(pagereader, "read", lambda *_args, **_kwargs:
+                        calls.append("reader") or "reader words")
+    monkeypatch.setattr("app.providers.browser.read", lambda *_args, **_kwargs:
+                        calls.append("browser") or "browser words")
+    checks = [0]
+
+    def check_cancelled():
+        checks[0] += 1
+        if checks[0] == 2:
+            raise fetch.FetchCancelled("job stopped")
+
+    import pytest
+
+    with pytest.raises(fetch.FetchCancelled, match="job stopped"):
+        fetch.reader()("https://source.test/page", check_cancelled=check_cancelled)
+    assert calls == []
+
+
 def test_the_reader_names_itself_honestly(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     sites.reader_text = _parallel_answer(sites.url, ["words"])

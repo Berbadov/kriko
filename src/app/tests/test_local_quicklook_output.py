@@ -134,13 +134,21 @@ class SpecificationPipelineModel(PipelineModel):
         return super()._answer(stage, prompt)
 
 
-def test_the_local_plane_searches_on_this_machine_whatever_the_setting_says():
+def test_the_local_plane_searches_on_this_machine_whatever_the_setting_says(monkeypatch):
     """Exa left the local plane: its search is OpenSERP on this machine, and a
     local scraper is asked one query at a time, never in a burst."""
+    engines = []
+
+    def make_searcher(_base, *, engine, language):
+        engines.append(engine)
+        return lambda *_args: []
+
+    monkeypatch.setattr("app.providers.openserp.searcher", make_searcher)
     asker = local_asker(base_url="http://127.0.0.1:1", serving_name="test",
                         search_kind="exa")
     assert asker.search_provider == "openserp"
     assert asker.parallel_search is False
+    assert engines == ["duckduckgo,bing,ecosia"]
 
 
 def test_a_4k_context_keeps_identity_unknowns_and_a_source_sentence():

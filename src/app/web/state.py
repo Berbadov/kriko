@@ -1560,6 +1560,26 @@ def update_queued(conn: sqlite3.Connection, queue_id: str, *,
     """
     if state is not None and state not in QUEUE_STATES:
         raise ValueError(f"a queued product is one of {', '.join(QUEUE_STATES)}")
+    # Claiming is a compare-and-set. Two desktop windows can both have read a
+    # row as waiting; only the first update may move it to researching. A
+    # read/check followed by an unconditional UPDATE let both windows start
+    # duplicate work.
+    if state == "researching":
+        cur = conn.execute(
+            "UPDATE research_queue SET state = 'researching', note = ''"
+            " WHERE queue_id = ? AND state = 'waiting'", (queue_id,))
+        if cur.rowcount == 0:
+            row = conn.execute(
+                "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()
+            if row is None:
+                return None
+            raise QueueConflict(
+                f"a {row['state']} product cannot be claimed for research")
+        _remember_queue(conn, queue_id)
+        conn.commit()
+        return _queued(conn.execute(
+            "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone())
+
     row = conn.execute(
         "SELECT * FROM research_queue WHERE queue_id = ?", (queue_id,)).fetchone()
     if row is None:
@@ -1688,6 +1708,25 @@ def record_compare_question(
     return _question(conn.execute(
         "SELECT * FROM compare_questions WHERE draft_id = ? AND question_id = ?",
         (draft_id, question_id)).fetchone())
+
+
+def set_compare_question_job(
+    conn: sqlite3.Connection, draft_id: str, question_id: str, job_id: str,
+) -> bool:
+    """Attach the submitted job before returning the question to the screen.
+
+    The desktop can then follow an unanswered question after a draft switch or
+    restart, including when the job later fails. The job id used to be saved
+    only on successful answer, which stranded pending questions without a
+    progress or failure path.
+    """
+    cur = conn.execute(
+        "UPDATE compare_questions SET job_id = ?"
+        " WHERE draft_id = ? AND question_id = ?",
+        (str(job_id or "")[:64], draft_id, question_id),
+    )
+    conn.commit()
+    return cur.rowcount == 1
 
 
 def answer_compare_question(

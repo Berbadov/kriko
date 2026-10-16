@@ -514,7 +514,7 @@ def local_researcher(*, base_url: str = "", serving_name: str = "",
     # slow host hold a whole run, and a page that is not there in ten is
     # replaced by the next hit rather than waited for.
     researcher = LocalPlane(
-        search, fetch.reader(timeout=10.0), complete, scheduler=scheduler, spend=spend,
+        search, fetch.reader(), complete, scheduler=scheduler, spend=spend,
     )
     complete.language_instruction = (
         f"Write summaries and advice in {output_language}; preserve exact source quotes, "
