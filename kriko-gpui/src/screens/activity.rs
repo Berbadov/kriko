@@ -4,7 +4,7 @@
 //! screen. The feed is `/api/operations`, refreshed every five seconds while
 //! this tab is open; the callout reads `attention` off `/api/jobs`.
 
-use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
+use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
 use crate::live::history::{ago, feed_kind, now_secs};
@@ -12,6 +12,15 @@ use crate::live::run::kind_word;
 use crate::screens::history::clip;
 use crate::screens::{empty_note, mono, row_desc, row_title};
 use crate::theme::*;
+
+fn panel_title(label: &str) -> Div {
+    div()
+        .font_family(DISPLAY)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(22.0))
+        .text_color(rgb(INK_2))
+        .child(label.to_uppercase())
+}
 
 /// An operation's name as words: `pack_update` reads "Pack update".
 fn words(name: &str) -> String {
@@ -30,6 +39,26 @@ fn tag_state(state: &str) -> TagState {
         "failed" | "error" => TagState::Block,
         "ok" | "done" => TagState::Done,
         _ => TagState::Queue,
+    }
+}
+
+fn job_tag_state(state: &str) -> TagState {
+    match state {
+        "running" => TagState::Live,
+        "failed" | "interrupted" => TagState::Block,
+        "succeeded" => TagState::Done,
+        _ => TagState::Queue,
+    }
+}
+
+fn job_state_word(state: &str) -> &'static str {
+    match state {
+        "running" => "Running",
+        "queued" => "Queued",
+        "succeeded" => "Done",
+        "failed" | "interrupted" => "Failed",
+        "cancelled" => "Cancelled",
+        _ => "Waiting",
     }
 }
 
@@ -99,7 +128,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .collect();
 
     let mut feed = card();
-    feed = feed.child(div().mb(px(14.0)).child(eyebrow("Recent")));
+    feed = feed.child(div().mb(px(14.0)).child(panel_title("Recent activity")));
 
     if !h.ops_loaded {
         feed = feed.child(empty_note("Reading the activity from the engine."));
@@ -159,14 +188,30 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
 
     // Agent runs have a richer job record than the operations feed above:
     // name the agent/model and let the reader open the complete answer/log.
-    let recent_jobs: Vec<_> = app.live.run.jobs.iter()
+    let recent_jobs: Vec<_> = app
+        .live
+        .run
+        .jobs
+        .iter()
         .filter(|job| job.is_research_like() || job.kind == "compare_ask")
-        .filter(|job| query.is_empty() || format!("{} {} {} {} {}", job.kind, job.harness, job.model,
-            job.state, app.live.run.task(job)).to_lowercase().contains(&query))
-        .take(20).cloned()
+        .filter(|job| {
+            query.is_empty()
+                || format!(
+                    "{} {} {} {} {}",
+                    job.kind,
+                    job.harness,
+                    job.model,
+                    job.state,
+                    app.live.run.task(job)
+                )
+                .to_lowercase()
+                .contains(&query)
+        })
+        .take(20)
+        .cloned()
         .collect();
-    let mut runs = card().flex().flex_col().gap(px(6.0))
-        .child(div().mb(px(4.0)).child(eyebrow("Agent runs")));
+    let mut runs = card().flex().flex_col().gap(px(6.0));
+    runs = runs.child(div().mb(px(4.0)).child(panel_title("Agent runs")));
     if recent_jobs.is_empty() {
         runs = runs.child(empty_note(if app.live.run.jobs_loaded {
             "No agent runs yet."
@@ -174,45 +219,123 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             "Reading completed and running agent jobs."
         }));
     }
-    for (i, job) in recent_jobs.iter().enumerate() {
-        if i > 0 { runs = runs.child(hairline()); }
-        let id = job.id.clone();
-        let open = app.live.run.activity_log_open.as_deref() == Some(job.id.as_str());
-        let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.live.run.activity_log_open = if this.live.run.activity_log_open.as_deref() == Some(id.as_str()) {
-                None
-            } else {
-                Some(id.clone())
-            };
-            cx.notify();
-        });
-        let agent = if job.harness.is_empty() { "Agent not reported" } else { &job.harness };
-        let model = if job.model.is_empty() { "model not reported" } else { &job.model };
-        let line = format!("{} · {} · {} · {}", kind_word(&job.kind), agent, model, job.state);
+    let active_count = recent_jobs.iter().filter(|job| !job.done).count();
+    let finished_count = recent_jobs.len() - active_count;
+    let mut rendered = 0usize;
+    for (active, heading, count) in [
+        (true, "In progress", active_count),
+        (false, "Finished", finished_count),
+    ] {
+        if count == 0 {
+            continue;
+        }
+        if rendered > 0 {
+            runs = runs.child(hairline());
+        }
         runs = runs.child(
-            div().flex().items_center().gap(px(8.0))
-                .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(3.0))
-                    .child(row_title(&app.live.run.task(job)))
-                    .child(row_desc(&line))
-                    .when(!job.done, |d| d.child(crate::screens::action_trail::compact_line(job, motion)))
-                    .when(!job.done, |d| d.child(progress_bar(
-                        &format!("activity-run-bar-{i}"),
-                        app.live.run.bar_value(&job.id, job.progress, motion),
-                        motion,
-                    ))))
-                .child(ghost(("activity-run", i), if open { "Hide details" } else { "View details" }).on_click(toggle)),
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .py(px(3.0))
+                .child(eyebrow(heading))
+                .child(mono(&count.to_string(), MUTED)),
         );
-        runs = runs.child(crate::screens::logs::job_logs(app, job, cx));
-        if open {
-            if !job.answer.is_empty() {
-                runs = runs.child(row_desc(&format!("Answer: {}", job.answer)));
-            } else if job.done {
-                let reason = if job.state == "failed" { job.message.as_str() } else if !job.no_answer_why.is_empty() {
-                    job.no_answer_why.as_str()
-                } else { "The agent returned no answer text. Open the saved run for its findings and evidence." };
-                runs = runs.child(row_desc(&format!("No answer: {reason}")));
+        let section_jobs: Vec<_> = recent_jobs
+            .iter()
+            .filter(|job| job.done != active)
+            .collect();
+        for job in section_jobs {
+            let i = rendered;
+            rendered += 1;
+            let id = job.id.clone();
+            let open = app.live.run.activity_log_open.as_deref() == Some(job.id.as_str());
+            let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.live.run.activity_log_open =
+                    if this.live.run.activity_log_open.as_deref() == Some(id.as_str()) {
+                        None
+                    } else {
+                        Some(id.clone())
+                    };
+                cx.notify();
+            });
+            let agent = if job.harness.is_empty() {
+                String::new()
+            } else {
+                format!(" · {}", job.harness)
+            };
+            let detail = if job.done {
+                let elapsed = job.duration_word();
+                if elapsed.is_empty() {
+                    format!("{}{}", kind_word(&job.kind), agent)
+                } else {
+                    format!("{}{} · {}", kind_word(&job.kind), agent, elapsed)
+                }
+            } else {
+                format!("{}{}", kind_word(&job.kind), agent)
+            };
+            runs = runs.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .py(px(3.0))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w(px(0.0))
+                            .flex()
+                            .flex_col()
+                            .gap(px(3.0))
+                            .child(row_title(&app.live.run.task(job)))
+                            .child(row_desc(&detail))
+                            .when(!job.done, |d| {
+                                d.child(crate::screens::action_trail::compact_line(job, motion))
+                            })
+                            .when(!job.done, |d| {
+                                d.child(progress_bar(
+                                    &format!("activity-run-bar-{i}"),
+                                    app.live.run.bar_value(&job.id, job.progress, motion),
+                                    motion,
+                                ))
+                            }),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .items_end()
+                            .gap(px(5.0))
+                            .child(tag(
+                                format!("activity-run-state-{i}"),
+                                job_tag_state(&job.state),
+                                job_state_word(&job.state),
+                                motion,
+                            ))
+                            .child(
+                                ghost(
+                                    ("activity-run", i),
+                                    if open { "Hide details" } else { "View details" },
+                                )
+                                .on_click(toggle),
+                            ),
+                    ),
+            );
+            runs = runs.child(crate::screens::logs::job_logs(app, job, cx));
+            if open {
+                if !job.answer.is_empty() {
+                    runs = runs.child(row_desc(&format!("Answer: {}", job.answer)));
+                } else if job.done {
+                    let reason = if job.state == "failed" {
+                        job.message.as_str()
+                    } else if !job.no_answer_why.is_empty() {
+                        job.no_answer_why.as_str()
+                    } else {
+                        "The agent returned no answer text. Open the saved run for its findings and evidence."
+                    };
+                    runs = runs.child(row_desc(&format!("No answer: {reason}")));
+                }
             }
-
         }
     }
 
@@ -221,7 +344,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .flex_col()
         .gap(px(SPACE_SECTION))
         .children(callout)
-        .child(runs)
         .child(div().flex().child(filter))
         .child(feed)
+        .child(runs)
 }

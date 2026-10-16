@@ -4,18 +4,16 @@
 //! method over one state struct.
 
 use gpui::{
-    AnimationExt, div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba, App, ClickEvent,
-    Context, Div, FocusHandle, IntoElement,
-    KeyDownEvent, ParentElement, Render, ScrollDelta, ScrollWheelEvent, Stateful, Styled, Window,
-    WindowControlArea,
+    div, prelude::*, px, rgb, rgba, AnimationExt, App, ClickEvent, Context, Div, FocusHandle,
+    IntoElement, KeyDownEvent, ParentElement, Render, ScrollDelta, ScrollWheelEvent, Stateful,
+    Styled, Window, WindowControlArea,
 };
 
-use crate::data;
 use crate::dock;
 use crate::engine;
 use crate::live::Live;
-use crate::shell;
 use crate::screens;
+use crate::shell;
 use crate::theme::*;
 
 // ---- keyboard actions (bound in main.rs) ----
@@ -56,6 +54,17 @@ pub enum Tab {
     Settings,
     About,
 }
+
+const CHAT_PAGES: &[Tab] = &[Tab::Chat, Tab::Home, Tab::Run, Tab::History];
+const COMPARE_PAGES: &[Tab] = &[Tab::Compare, Tab::Overview, Tab::Browse, Tab::Sites];
+const AGENT_PAGES: &[Tab] = &[
+    Tab::Agents,
+    Tab::Local,
+    Tab::Activity,
+    Tab::Benchmark,
+    Tab::Extension,
+    Tab::Settings,
+];
 
 impl Tab {
     pub fn key(self) -> &'static str {
@@ -104,7 +113,11 @@ impl Tab {
     /// its first segment decides; a word it does not know
     /// opens Home, never whatever happened to be on screen.
     pub fn from_route(route: &str) -> Tab {
-        let head = route.trim_start_matches(['#', '/']).split('/').next().unwrap_or("");
+        let head = route
+            .trim_start_matches(['#', '/'])
+            .split('/')
+            .next()
+            .unwrap_or("");
         match head {
             "packs" | "knowledge" => Tab::Overview,
             "subject" => Tab::Browse,
@@ -138,29 +151,57 @@ impl Tab {
 
     fn title(self) -> &'static str {
         match self {
+            Tab::Home => "Home",
+            Tab::Run => "New check",
+            Tab::History => "History",
+            Tab::Compare => "Compare",
+            Tab::Chat => "New chat",
             Tab::Extension => "Browser extension",
-            Tab::Local => "Local LLM",
-            _ => self.key(),
+            Tab::Overview => "Overview",
+            Tab::Browse => "Browse",
+            Tab::Sites => "Sites",
+            Tab::Activity => "Activity",
+            Tab::Agents => "Agents",
+            Tab::Benchmark => "Benchmarks",
+            Tab::Local => "Local models",
+            Tab::Settings => "Settings",
+            Tab::About => "About",
         }
     }
 
     fn lead(self) -> &'static str {
         match self {
-            Tab::Home => "Recent work, saved drafts, and where the knowledge stands.",
-            Tab::Run => "One check, from question to stored claims, every step in the open.",
-            Tab::History => "Every check you have run, with the evidence it was based on.",
-            Tab::Compare => "Up to three subjects side by side, attribute by attribute.",
-            Tab::Chat => "Ask your own agent about what this app holds, and watch it look things up.",
-            Tab::Extension => "Send pages from your browser straight into Kriko's knowledge.",
-            Tab::Overview => "What the packs know, and where they run thin.",
-            Tab::Browse => "Every subject, attribute and claim in the local store.",
-            Tab::Sites => "The sites Kriko reads, and how far each one is trusted.",
-            Tab::Activity => "What Kriko did today, and what is waiting for you.",
-            Tab::Agents => "The coding agents on this machine that can reach Kriko.",
-            Tab::Benchmark => "How the agents and planes do on a fixed test set, here.",
-            Tab::Local => "Choose a model on this machine and see where its answers come from.",
-            Tab::Settings => "Control how Kriko starts, reads and stores things.",
-            Tab::About => "Kriko. Local product knowledge.",
+            Tab::Home => "Review your product files and recent research.",
+            Tab::Run => "Track sources, findings, and saved claims.",
+            Tab::History => "Find completed and active research.",
+            Tab::Compare => "Inspect differences across product knowledge.",
+            Tab::Chat => "",
+            Tab::Extension => "Connect your browser to local product knowledge.",
+            Tab::Overview => "Manage the catalogs behind product research.",
+            Tab::Browse => "Inspect stored subjects and evidence.",
+            Tab::Sites => "Manage the site adapters you have taught.",
+            Tab::Activity => "Follow jobs and database writes.",
+            Tab::Agents => "Configure research agents for this machine.",
+            Tab::Benchmark => "Measure agent extraction on the same cases.",
+            Tab::Local => "Manage local language models.",
+            Tab::Settings => "Set how Kriko behaves on this machine.",
+            Tab::About => "See the build and local storage details.",
+        }
+    }
+
+    fn group(self) -> usize {
+        match self {
+            Tab::Chat | Tab::Home | Tab::Run | Tab::History => 0,
+            Tab::Compare | Tab::Overview | Tab::Browse | Tab::Sites => 1,
+            _ => 2,
+        }
+    }
+
+    fn group_pages(self) -> &'static [Tab] {
+        match self.group() {
+            0 => CHAT_PAGES,
+            1 => COMPARE_PAGES,
+            _ => AGENT_PAGES,
         }
     }
 
@@ -176,8 +217,11 @@ impl Tab {
     /// content starts right under. Home and About keep a little more of it.
     fn hero_height(self) -> f32 {
         match self {
-            Tab::Home | Tab::About => 100.0,
-            _ => 96.0,
+            Tab::Chat => 40.0,
+            Tab::Home => 256.0,
+            Tab::About => 220.0,
+            Tab::Local => 204.0,
+            _ => 184.0,
         }
     }
 }
@@ -257,7 +301,11 @@ impl InputState {
     }
 
     pub fn move_cursor(&mut self, at: usize, extend_selection: bool) {
-        self.anchor = if extend_selection { Some(self.anchor.unwrap_or(self.position())) } else { None };
+        self.anchor = if extend_selection {
+            Some(self.anchor.unwrap_or(self.position()))
+        } else {
+            None
+        };
         self.cursor = Some(at);
     }
 }
@@ -292,7 +340,6 @@ impl SpanFilter {
             SpanFilter::Half => 180,
         }
     }
-
 }
 
 /// One line in the dock's own feed.
@@ -396,13 +443,12 @@ pub struct Kriko {
     pub scroll_tick: std::time::Instant,
 }
 
-
 impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let mut extension_port_input = InputState::new(cx);
         extension_port_input.set_value(engine::configured_extension_port().to_string());
         let mut app = Self {
-            tab: Tab::Home,
+            tab: Tab::Chat,
             engine: engine::status(),
             live: Live::default(),
             reduce_motion: false,
@@ -681,7 +727,12 @@ impl Kriko {
         }
     }
 
-    pub(crate) fn handle_key(this: &mut Kriko, field: Field, event: &KeyDownEvent, cx: &mut Context<Kriko>) {
+    pub(crate) fn handle_key(
+        this: &mut Kriko,
+        field: Field,
+        event: &KeyDownEvent,
+        cx: &mut Context<Kriko>,
+    ) {
         let ks = &event.keystroke;
         if ks.modifiers.control || ks.modifiers.platform {
             let selected = this.input(field).selection();
@@ -693,12 +744,17 @@ impl Kriko {
                     input.cursor = Some(len);
                 }
                 "c" | "x" if !selected.is_empty() => {
-                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(this.input(field).value[selected].to_string()));
-                    if ks.key == "x" { this.input_mut(field).replace_selection(""); }
+                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(
+                        this.input(field).value[selected].to_string(),
+                    ));
+                    if ks.key == "x" {
+                        this.input_mut(field).replace_selection("");
+                    }
                 }
                 "v" => {
                     if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
-                        this.input_mut(field).replace_selection(&text.replace(['\r', '\n'], " "));
+                        this.input_mut(field)
+                            .replace_selection(&text.replace(['\r', '\n'], " "));
                     }
                 }
                 _ => return,
@@ -706,7 +762,9 @@ impl Kriko {
             this.input_changed(field, cx);
             return;
         }
-        if ks.modifiers.alt { return; }
+        if ks.modifiers.alt {
+            return;
+        }
         // Enter in the dock reply says it to the running job.
         if ks.key.as_str() == "enter" && field == Field::DockReply {
             this.send_reply(cx);
@@ -768,25 +826,45 @@ impl Kriko {
         }
         let input = this.input_mut(field);
         let at = input.position();
-        let previous = input.value[..at].char_indices().last().map(|(i, _)| i).unwrap_or(0);
-        let next = input.value[at..].chars().next().map(|c| at + c.len_utf8()).unwrap_or(at);
+        let previous = input.value[..at]
+            .char_indices()
+            .last()
+            .map(|(i, _)| i)
+            .unwrap_or(0);
+        let next = input.value[at..]
+            .chars()
+            .next()
+            .map(|c| at + c.len_utf8())
+            .unwrap_or(at);
         match ks.key.as_str() {
             "left" => {
-                let to = if !ks.modifiers.shift && !input.selection().is_empty() { input.selection().start } else { previous };
+                let to = if !ks.modifiers.shift && !input.selection().is_empty() {
+                    input.selection().start
+                } else {
+                    previous
+                };
                 input.move_cursor(to, ks.modifiers.shift);
             }
             "right" => {
-                let to = if !ks.modifiers.shift && !input.selection().is_empty() { input.selection().end } else { next };
+                let to = if !ks.modifiers.shift && !input.selection().is_empty() {
+                    input.selection().end
+                } else {
+                    next
+                };
                 input.move_cursor(to, ks.modifiers.shift);
             }
             "home" => input.move_cursor(0, ks.modifiers.shift),
             "end" => input.move_cursor(input.value.len(), ks.modifiers.shift),
             "backspace" => {
-                if input.selection().is_empty() { input.anchor = Some(previous); }
+                if input.selection().is_empty() {
+                    input.anchor = Some(previous);
+                }
                 input.replace_selection("");
             }
             "delete" => {
-                if input.selection().is_empty() { input.anchor = Some(next); }
+                if input.selection().is_empty() {
+                    input.anchor = Some(next);
+                }
                 input.replace_selection("");
             }
             "escape" => {}
@@ -802,8 +880,12 @@ impl Kriko {
     }
 
     pub(crate) fn input_changed(&mut self, field: Field, cx: &mut Context<Self>) {
-        if field == Field::HistorySearch { self.page = 0; }
-        if field == Field::BrowseSearch { self.browse_search_typed(cx); }
+        if field == Field::HistorySearch {
+            self.page = 0;
+        }
+        if field == Field::BrowseSearch {
+            self.browse_search_typed(cx);
+        }
         cx.notify();
     }
 
@@ -863,75 +945,249 @@ impl Kriko {
         } else {
             window.request_animation_frame();
         }
-        self.main_scroll.set_offset(gpui::point(px(0.0), px(self.scroll_shown)));
+        self.main_scroll
+            .set_offset(gpui::point(px(0.0), px(self.scroll_shown)));
     }
 
     // ---- sidebar ----
 
-    fn sidebar(&self, cx: &mut Context<Self>) -> Div {
-        let mut nav = div()
-            .id("nav-scroll")
+    fn sidebar(&self, height: f32, cx: &mut Context<Self>) -> Div {
+        let group = self.tab.group();
+        let primary = [
+            (Tab::Chat, "chat", "Chat"),
+            (Tab::Compare, "compare", "Compare"),
+            (Tab::Agents, "agents", "Agents & settings"),
+        ];
+        let mut main_nav = div()
             .flex()
             .flex_col()
+            .gap(px(3.0))
+            .px(px(8.0))
+            .pt(px(10.0));
+        for (index, (tab, glyph, label)) in primary.iter().copied().enumerate() {
+            let row = nav_item(
+                gpui::ElementId::Name(format!("primary-tab-{index}").into()),
+                glyph,
+                if self.sidebar_collapsed { "" } else { label },
+                group == index,
+                None,
+                None,
+            )
+            .h(px(42.0))
+            .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                this.tab = tab;
+                this.on_open_tab(cx);
+                cx.notify();
+            }));
+            main_nav = main_nav.child(row);
+        }
+
+        let new_research = div()
+            .id("sidebar-new-research")
+            .h(px(42.0))
+            .mx(px(8.0))
+            .mt(px(12.0))
             .px(px(12.0))
-            .pt(px(4.0))
-            .pb(px(20.0))
+            .flex()
+            .items_center()
+            .justify_center()
+            .gap(px(8.0))
+            .rounded(px(12.0))
+            .bg(rgb(BRAND))
+            .text_color(rgb(0xffffff))
+            .font_family(DISPLAY)
+            .font_weight(gpui::FontWeight::SEMIBOLD)
+            .text_size(px(16.0))
+            .cursor_pointer()
+            .hover(|s| s.bg(rgb(BRAND_HOVER)))
+            .active(|s| s.bg(rgb(BRAND_LOW)))
+            .when(self.sidebar_collapsed, |d| d.px(px(0.0)))
+            .child(icon("plus", 16.0).text_color(rgb(0xffffff)))
+            .when(!self.sidebar_collapsed, |d| d.child("NEW RESEARCH"))
+            .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
+                this.tab = Tab::Run;
+                this.on_open_tab(cx);
+                cx.notify();
+            }));
+
+        let mut support = div()
+            .id("sidebar-support")
+            .flex()
+            .flex_col()
             .gap(px(2.0))
+            .px(px(12.0))
+            .pt(px(24.0))
             .flex_1()
             .min_h(px(0.0))
-            .overflow_y_scroll().occlude();
-        // Counts from the engine, not from the mock-up: products in the
-        // store beside Browse, jobs still running beside Activity.
-        let subjects = self.live.knowledge.totals.subjects;
-        let browse_count = (subjects > 0).then(|| subjects.to_string());
-        let running = self.live.run.jobs.iter().filter(|j| !j.done).count();
-        let activity_badge = (running > 0).then(|| running.to_string());
-        for (gi, group) in data::NAV.iter().enumerate() {
-            nav = nav.child(
+            .overflow_y_scroll()
+            .occlude();
+
+        if !self.sidebar_collapsed {
+            let subject_count = self.live.knowledge.totals.subjects.max(0);
+            support = support.child(
                 div()
-                    .mt(px(if gi == 0 { 8.0 } else { 18.0 }))
-                    .mb(px(4.0))
-                    .px(px(12.0))
-                    .flex_none()
-                    .when(!self.sidebar_collapsed, |d| d.child(eyebrow(group.label))),
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .pb(px(7.0))
+                    .child(eyebrow("PRODUCT FILES"))
+                    .child(screens::mono(&subject_count.to_string(), DIM)),
             );
-            for item in group.items {
-                let key = item.key;
-                let current = self.tab.key() == key;
-                let (count, badge) = match key {
-                    "browse" => (browse_count.as_deref(), None),
-                    "activity" => (None, activity_badge.as_deref()),
-                    _ => (item.count, item.badge),
-                };
-                let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { count }, if self.sidebar_collapsed { None } else { badge })
-                    .flex_none()
-                    .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                        this.tab = Tab::from_key(key);
+            if self.live.history.subjects.is_empty() {
+                support = support.child(
+                    nav_item(
+                        "sidebar-files",
+                        "file",
+                        "Open product files",
+                        false,
+                        None,
+                        None,
+                    )
+                    .h(px(34.0))
+                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
+                        this.tab = Tab::Browse;
                         this.on_open_tab(cx);
                         cx.notify();
-                    }));
-                nav = nav.child(row);
+                    })),
+                );
+            } else {
+                for subject in self.live.history.subjects.iter().take(4) {
+                    let id = subject.id.clone();
+                    let mut label: String = subject.label.chars().take(25).collect();
+                    if subject.label.chars().count() > 25 {
+                        label.push('…');
+                    }
+                    support = support.child(
+                        div()
+                            .id(gpui::ElementId::Name(
+                                format!("sidebar-subject-{id}").into(),
+                            ))
+                            .h(px(34.0))
+                            .px(px(8.0))
+                            .flex()
+                            .items_center()
+                            .gap(px(8.0))
+                            .rounded(px(8.0))
+                            .text_color(rgb(INK_2))
+                            .font_family(SANS)
+                            .text_size(px(13.0))
+                            .cursor_pointer()
+                            .hover(|s| s.bg(rgba(GLASS_3)))
+                            .child(icon("file", 14.0).text_color(rgb(MUTED)))
+                            .child(div().flex_1().overflow_hidden().child(label))
+                            .child(screens::mono(&subject.claims.to_string(), DIM))
+                            .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                                let _ = &id;
+                                this.tab = Tab::Browse;
+                                this.on_open_tab(cx);
+                                cx.notify();
+                            })),
+                    );
+                }
             }
+
+            let active: Vec<_> = self.live.run.jobs.iter().filter(|job| !job.done).collect();
+            support = support.child(
+                div()
+                    .mt(px(20.0))
+                    .pb(px(7.0))
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .child(eyebrow("RIGHT NOW"))
+                    .child(screens::mono(&active.len().to_string(), DIM)),
+            );
+            if active.is_empty() {
+                support = support.child(
+                    div()
+                        .px(px(4.0))
+                        .py(px(5.0))
+                        .font_family(SANS)
+                        .text_size(px(12.0))
+                        .text_color(rgb(DIM))
+                        .child("No active work"),
+                );
+            } else {
+                for job in active.iter().take(2) {
+                    let task: String = if job.product.is_empty() {
+                        job.kind.chars().take(26).collect()
+                    } else {
+                        job.product.chars().take(26).collect()
+                    };
+                    let label = if job.attention.is_some() {
+                        "NEEDS YOU"
+                    } else {
+                        "LIVE"
+                    };
+                    support = support.child(
+                        div()
+                            .flex()
+                            .items_center()
+                            .gap(px(8.0))
+                            .py(px(5.0))
+                            .child(icon("term", 16.0).text_color(rgb(BRAND_BRIGHT)))
+                            .child(
+                                div()
+                                    .flex()
+                                    .flex_col()
+                                    .min_w(px(0.0))
+                                    .child(
+                                        div()
+                                            .font_family(SANS)
+                                            .text_size(px(12.0))
+                                            .text_color(rgb(INK_2))
+                                            .child(task),
+                                    )
+                                    .child(tag(
+                                        format!("sidebar-job-{}", job.id),
+                                        if job.attention.is_some() {
+                                            TagState::Need
+                                        } else {
+                                            TagState::Live
+                                        },
+                                        label,
+                                        self.motion,
+                                    )),
+                            ),
+                    );
+                }
+            }
+
+            let totals = &self.live.knowledge.totals;
+            support = support.child(div().mt(px(20.0)).pb(px(7.0)).child(eyebrow("STORE")));
+            support = support.child(
+                div()
+                    .font_family(MONO)
+                    .text_size(px(11.0))
+                    .text_color(rgb(MUTED))
+                    .child(format!(
+                        "{} packs · {} products · {} claims",
+                        totals.packs, totals.subjects, totals.claims
+                    )),
+            );
         }
-        div()
-            .w(px(if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W }))
-            .overflow_hidden()
-            .flex_none()
-            .bg(rgb(SURFACE_1))
-            .border_r_1()
-            .border_color(rgba(HAIRLINE))
+
+        let footer = div()
+            .px(px(12.0))
+            .pt(px(10.0))
             .flex()
-            .flex_col()
-            .when(!self.sidebar_collapsed, |d| d.child(brand_block("kriko-wordmark-white.svg", "local product knowledge")))
-            // An icon, not a labelled key: the panel icon says "this side
-            // panel", and it sits in the same well as the window controls.
-            .child(div().px(px(12.0)).py(px(8.0)).flex().when(self.sidebar_collapsed, |d| d.justify_center())
-                .child(titlebar_button("sidebar-minimise", "sidebar", false)
-                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
+            .items_center()
+            .justify_between()
+            .border_t_1()
+            .border_color(rgba(HAIRLINE))
+            .when(!self.sidebar_collapsed, |d| {
+                d.child(
+                    div()
+                        .font_family(MONO)
+                        .text_size(px(10.0))
+                        .text_color(rgb(DIM))
+                        .child(format!("v{} · no account", env!("CARGO_PKG_VERSION"))),
+                )
+            })
+            .child(
+                titlebar_button("sidebar-minimise", "sidebar", false).on_click(cx.listener(
+                    |this, _: &ClickEvent, _w, cx| {
                         if this.sidebar_folded_for_live {
-                            // The user asked to expand the rail while it was
-                            // temporarily folded. Close Live to honor that
-                            // action, then retain the expanded preference.
                             this.dock_open = false;
                             this.sidebar_choice = Some(false);
                             this.sidebar_collapsed = false;
@@ -941,8 +1197,242 @@ impl Kriko {
                             this.sidebar_collapsed = !this.sidebar_collapsed;
                         }
                         cx.notify();
-                    }))))
-            .child(nav)
+                    },
+                )),
+            );
+
+        div()
+            .w(px(if self.sidebar_collapsed {
+                76.0
+            } else {
+                SIDEBAR_W
+            }))
+            .h(px((height - 24.0).max(0.0)))
+            .mt(px(12.0))
+            .mb(px(12.0))
+            .ml(px(12.0))
+            .mr(px(8.0))
+            .p(px(8.0))
+            .overflow_hidden()
+            .flex_none()
+            .bg(rgb(SURFACE_1))
+            .border_1()
+            .border_color(rgba(HAIRLINE))
+            .rounded(px(24.0))
+            .flex()
+            .flex_col()
+            .when(!self.sidebar_collapsed, |d| {
+                d.child(brand_block(
+                    "kriko-wordmark-white.svg",
+                    "local product knowledge",
+                ))
+            })
+            .child(main_nav)
+            .child(new_research)
+            .child(support)
+            .child(footer)
+    }
+
+    fn page_subnav(&self, cx: &mut Context<Self>) -> Div {
+        let mut row = div()
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .gap(px(4.0))
+            .p(px(4.0))
+            .rounded(px(14.0))
+            .bg(rgb(WELL))
+            .border_1()
+            .border_color(rgba(HAIRLINE));
+        for tab in self.tab.group_pages() {
+            let current = self.tab == *tab;
+            let name = tab.title().to_uppercase();
+            let target = *tab;
+            let item = div()
+                .id(gpui::ElementId::Name(
+                    format!("page-subnav-{}", target.key()).into(),
+                ))
+                .h(px(36.0))
+                .px(px(14.0))
+                .flex()
+                .items_center()
+                .justify_center()
+                .rounded(px(10.0))
+                .font_family(DISPLAY)
+                .font_weight(gpui::FontWeight::SEMIBOLD)
+                .text_size(px(15.0))
+                .text_color(rgb(if current { ICE } else { MUTED }))
+                .bg(rgba(if current { BRAND_WASH } else { 0x00000000 }))
+                .cursor_pointer()
+                .hover(|s| s.bg(rgba(GLASS_3)).text_color(rgb(INK)))
+                .child(name)
+                .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                    this.tab = target;
+                    this.on_open_tab(cx);
+                    cx.notify();
+                }));
+            row = row.child(item);
+        }
+        row
+    }
+
+    fn working_rail(&self, cx: &mut Context<Self>) -> Div {
+        let jobs: Vec<_> = self.live.run.jobs.iter().filter(|job| !job.done).collect();
+        let mut rail = div()
+            .w(px(340.0))
+            .h_full()
+            .px(px(16.0))
+            .pt(px(64.0))
+            .pb(px(18.0))
+            .flex_none()
+            .flex()
+            .flex_col()
+            .gap(px(12.0))
+            .bg(rgb(SURFACE_1))
+            .border_l_1()
+            .border_color(rgba(HAIRLINE));
+        rail = rail.child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .pb(px(4.0))
+                .child(eyebrow("WORKING AGENTS"))
+                .child(
+                    div()
+                        .min_w(px(28.0))
+                        .h(px(28.0))
+                        .px(px(8.0))
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .rounded(px(8.0))
+                        .bg(rgb(WELL))
+                        .border_1()
+                        .border_color(rgba(HAIRLINE))
+                        .font_family(MONO)
+                        .text_size(px(12.0))
+                        .text_color(rgb(ICE))
+                        .child(jobs.len().to_string()),
+                ),
+        );
+        if jobs.is_empty() {
+            rail = rail.child(
+                card()
+                    .flex()
+                    .flex_col()
+                    .gap(px(10.0))
+                    .child(icon("term", 20.0).text_color(rgb(BRAND_BRIGHT)))
+                    .child(
+                        div()
+                            .font_family(SANS)
+                            .font_weight(gpui::FontWeight::SEMIBOLD)
+                            .text_size(px(14.0))
+                            .text_color(rgb(INK_2))
+                            .child("No active work"),
+                    )
+                    .child(
+                        div()
+                            .font_family(SANS)
+                            .text_size(px(12.0))
+                            .text_color(rgb(MUTED))
+                            .child("New research appears here while it runs."),
+                    ),
+            );
+        } else {
+            for job in jobs.iter().take(5) {
+                let label = if job.attention.is_some() {
+                    "NEEDS YOU"
+                } else if job.state == "queued" {
+                    "QUEUED"
+                } else {
+                    "LIVE"
+                };
+                let state = if job.attention.is_some() {
+                    TagState::Need
+                } else if job.state == "queued" {
+                    TagState::Queue
+                } else {
+                    TagState::Live
+                };
+                let name = if !job.model.is_empty() {
+                    job.model.clone()
+                } else if !job.harness.is_empty() {
+                    job.harness.clone()
+                } else {
+                    "Research agent".to_string()
+                };
+                let task = if !job.product.is_empty() {
+                    job.product.clone()
+                } else if !job.message.is_empty() {
+                    job.message.clone()
+                } else {
+                    job.kind.clone()
+                };
+                let job_id = job.id.clone();
+                let progress = job.progress.clamp(0.0, 1.0) * 100.0;
+                let action = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                    this.tab = Tab::Run;
+                    this.on_open_tab(cx);
+                    cx.notify();
+                });
+                rail = rail.child(
+                    card()
+                        .flex()
+                        .flex_col()
+                        .gap(px(10.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .gap(px(10.0))
+                                .child(
+                                    well()
+                                        .size(px(40.0))
+                                        .flex()
+                                        .items_center()
+                                        .justify_center()
+                                        .child(icon("term", 18.0).text_color(rgb(BRAND_BRIGHT))),
+                                )
+                                .child(
+                                    div()
+                                        .flex()
+                                        .flex_col()
+                                        .min_w(px(0.0))
+                                        .child(
+                                            div()
+                                                .font_family(SANS)
+                                                .font_weight(gpui::FontWeight::SEMIBOLD)
+                                                .text_size(px(14.0))
+                                                .text_color(rgb(INK_2))
+                                                .child(name),
+                                        )
+                                        .child(
+                                            div()
+                                                .font_family(MONO)
+                                                .text_size(px(11.0))
+                                                .text_color(rgb(MUTED))
+                                                .child(task),
+                                        ),
+                                ),
+                        )
+                        .child(tag(format!("rail-job-{job_id}"), state, label, self.motion))
+                        .child(progress_bar(
+                            &format!("rail-meter-{job_id}"),
+                            progress / 100.0,
+                            self.motion,
+                        ))
+                        .child(ghost("rail-open-run", "Open run").on_click(action)),
+                );
+            }
+        }
+        rail.child(div().flex_1()).child(
+            div()
+                .font_family(MONO)
+                .text_size(px(10.0))
+                .text_color(rgb(DIM))
+                .child("All data stays on this machine"),
+        )
     }
 }
 
@@ -1081,7 +1571,9 @@ impl Kriko {
                             .bg(rgba(GLASS_1))
                             .border_1()
                             .border_color(rgba(HAIRLINE))
-                            .when(self.dock_open, |d| d.bg(rgba(GLASS_2)).border_color(rgba(BRAND_BRIGHT)))
+                            .when(self.dock_open, |d| {
+                                d.bg(rgba(GLASS_2)).border_color(rgba(BRAND_BRIGHT))
+                            })
                             .on_click(toggle_dock)
                             .child(icon("agents", 14.0).text_color(rgb(if self.dock_open {
                                 ICE
@@ -1092,11 +1584,7 @@ impl Kriko {
                                 div()
                                     .font_family(MONO)
                                     .text_size(px(11.0))
-                                    .text_color(rgb(if self.dock_open {
-                                        ICE
-                                    } else {
-                                        MUTED
-                                    }))
+                                    .text_color(rgb(if self.dock_open { ICE } else { MUTED }))
                                     .child("Live"),
                             ),
                     )
@@ -1143,38 +1631,69 @@ impl Render for Kriko {
         // is open, reserve its width plus a gutter from the content column so
         // buttons and text stay clear of the floating panel.
         let viewport_w = f32::from(window.viewport_size().width);
+        let viewport_h = f32::from(window.viewport_size().height);
         // Narrow windows give the page the room: the sidebar folds to its
         // icons below this width unless the reader opened it themselves.
         let open = self.dock_open;
-        let preferred_sidebar_collapsed = self.sidebar_choice.unwrap_or(viewport_w < SIDEBAR_FOLD_BELOW);
-        let page_pad = if viewport_w < SIDEBAR_FOLD_BELOW { 28.0 } else { PAGE_PAD };
+        let preferred_sidebar_collapsed = self
+            .sidebar_choice
+            .unwrap_or(viewport_w < SIDEBAR_FOLD_BELOW);
+        let page_pad = if viewport_w < SIDEBAR_FOLD_BELOW {
+            20.0
+        } else {
+            40.0
+        };
         let dock_inset = if open { DOCK_W + 24.0 } else { 0.0 };
-        let expanded_content_w = viewport_w - SIDEBAR_W - 2.0 * page_pad - dock_inset;
-        self.sidebar_folded_for_live = open
-            && !preferred_sidebar_collapsed
-            && expanded_content_w < MIN_COMFORTABLE_CONTENT_W;
+        let rail_w = if viewport_w >= 1100.0 && tab != Tab::Chat && !open {
+            340.0
+        } else {
+            0.0
+        };
+        let rail_inset = if rail_w > 0.0 { rail_w + 8.0 } else { 0.0 };
+        let expanded_content_w = viewport_w - SIDEBAR_W - 2.0 * page_pad - dock_inset - rail_inset;
+        self.sidebar_folded_for_live =
+            open && !preferred_sidebar_collapsed && expanded_content_w < MIN_COMFORTABLE_CONTENT_W;
         self.sidebar_collapsed = preferred_sidebar_collapsed || self.sidebar_folded_for_live;
-        let sidebar_w = if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W };
-        self.content_w = (viewport_w - sidebar_w - 2.0 * page_pad - dock_inset).max(0.0);
+        let sidebar_w = if self.sidebar_collapsed {
+            76.0
+        } else {
+            SIDEBAR_W
+        };
+        self.content_w =
+            (viewport_w - sidebar_w - 2.0 * page_pad - dock_inset - rail_inset).max(0.0);
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
-        let sidebar = self.sidebar(cx);
+        let sidebar = self.sidebar(viewport_h, cx);
+        let rail = if rail_w > 0.0 {
+            Some(self.working_rail(cx))
+        } else {
+            None
+        };
         let collapsed = self.sidebar_collapsed;
         let sidebar = if self.motion {
-            sidebar.with_animation(gpui::ElementId::named_usize("sidebar-slide", collapsed as usize),
-                gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
-                    let t = t * t * (3.0 - 2.0 * t);
-                    d.w(px(if collapsed { SIDEBAR_W + (76.0 - SIDEBAR_W) * t } else { 76.0 + (SIDEBAR_W - 76.0) * t }))
-                }).into_any_element()
-        } else { sidebar.into_any_element() };
+            sidebar
+                .with_animation(
+                    gpui::ElementId::named_usize("sidebar-slide", collapsed as usize),
+                    gpui::Animation::new(std::time::Duration::from_millis(260)),
+                    move |d, t| {
+                        let t = t * t * (3.0 - 2.0 * t);
+                        d.w(px(if collapsed {
+                            SIDEBAR_W + (76.0 - SIDEBAR_W) * t
+                        } else {
+                            76.0 + (SIDEBAR_W - 76.0) * t
+                        }))
+                    },
+                )
+                .into_any_element()
+        } else {
+            sidebar.into_any_element()
+        };
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
-        let mut page_content = div()
-            .flex()
-            .flex_col()
-            .flex_none()
-            .w_full()
-            .gap(px(16.0));
+        let mut page_content = div().flex().flex_col().flex_none().w_full().gap(px(16.0));
+        if tab != Tab::About {
+            page_content = page_content.child(self.page_subnav(cx));
+        }
         if let Some(problem) = self.live.problem.clone() {
             let retry = cx.listener(|this, _: &ClickEvent, _w, cx| {
                 this.retry_current_screen(cx);
@@ -1183,43 +1702,40 @@ impl Render for Kriko {
                 this.live.problem = None;
                 cx.notify();
             });
-            page_content = page_content.child(
-                card()
-                    .bg(linear_gradient(
-                        180.0,
-                        linear_color_stop(rgba(0xff6b5e29), 0.0),
-                        linear_color_stop(rgba(DANGER_WASH), 1.0),
-                    ))
-                    .border_color(rgba(DANGER_EDGE))
-                    .flex()
-                    .flex_col()
-                    .gap(px(10.0))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_wrap()
-                            .items_center()
-                            .justify_between()
-                            .gap(px(12.0))
-                            .child(tag(
-                                "engine-request-failed",
-                                TagState::Block,
-                                "Engine request failed",
-                                self.motion,
-                            ))
-                            .child(ghost("engine-error-dismiss", "Dismiss").on_click(dismiss)),
-                    )
-                    .child(screens::row_desc(&problem))
-                    .child(
-                        div()
-                            .flex()
-                            .flex_wrap()
-                            .gap(px(8.0))
-                            .child(key("engine-error-retry", "Refresh this screen").on_click(retry)),
-                    ),
-            );
+            page_content =
+                page_content.child(
+                    card()
+                        .bg(rgba(DANGER_WASH))
+                        .border_color(rgba(DANGER_EDGE))
+                        .flex()
+                        .flex_col()
+                        .gap(px(10.0))
+                        .child(
+                            div()
+                                .flex()
+                                .flex_wrap()
+                                .items_center()
+                                .justify_between()
+                                .gap(px(12.0))
+                                .child(tag(
+                                    "engine-request-failed",
+                                    TagState::Block,
+                                    "Engine request failed",
+                                    self.motion,
+                                ))
+                                .child(ghost("engine-error-dismiss", "Dismiss").on_click(dismiss)),
+                        )
+                        .child(screens::row_desc(&problem))
+                        .child(div().flex().flex_wrap().gap(px(8.0)).child(
+                            key("engine-error-retry", "Refresh this screen").on_click(retry),
+                        )),
+                );
         }
-        page_content = page_content.child(arrive(content, format!("page-{}", tab.key()), self.motion));
+        page_content =
+            page_content.child(arrive(content, format!("page-{}", tab.key()), self.motion));
+        if tab == Tab::Chat {
+            page_content = page_content.flex_1().min_h(px(560.0));
+        }
         // A glass panel floating under the titlebar, inset from the window's
         // edges. The page reserves its width only while it is open.
         let dock_wrap = div()
@@ -1231,14 +1747,33 @@ impl Render for Kriko {
             .w(px(if open { DOCK_W } else { 0.0 }))
             .child(dock);
         let dock_wrap = if self.motion {
-            dock_wrap.with_animation(gpui::ElementId::named_usize("live-slide", open as usize),
-                gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
-                    let t = t * t * (3.0 - 2.0 * t); d.w(px(DOCK_W * if open { t } else { 1.0 - t }))
-                }).into_any_element()
-        } else { dock_wrap.into_any_element() };
-        let hero = hero(tab.hero_sky(), tab.hero_height(), self.motion)
-            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), self.motion));
-        div()
+            dock_wrap
+                .with_animation(
+                    gpui::ElementId::named_usize("live-slide", open as usize),
+                    gpui::Animation::new(std::time::Duration::from_millis(260)),
+                    move |d, t| {
+                        let t = t * t * (3.0 - 2.0 * t);
+                        d.w(px(DOCK_W * if open { t } else { 1.0 - t }))
+                    },
+                )
+                .into_any_element()
+        } else {
+            dock_wrap.into_any_element()
+        };
+        let hero = hero(tab.hero_sky(), tab.hero_height(), self.motion);
+        let hero = if tab == Tab::Chat {
+            hero
+        } else {
+            hero.child(page_head(
+                tab.hero_sky(),
+                tab.crumb(),
+                tab.title(),
+                tab.lead(),
+                page_pad,
+                self.motion,
+            ))
+        };
+        let root = div()
             .id("kriko-root")
             .size_full()
             .relative()
@@ -1288,26 +1823,32 @@ impl Render for Kriko {
                             // overflows and scrolls instead of every
                             // child being squeezed to fit.
                             .child(hero.flex_none())
-                                    .child(
-                                        page_content
-                                            .pl(px(page_pad))
-                                            .pr(px(page_pad + dock_inset))
-                                            .pt(px(SPACE_SECTION))
-                                            .pb(px(32.0)),
-                                    ),
+                            .child(
+                                page_content
+                                    .pl(px(page_pad))
+                                    .pr(px(page_pad + dock_inset))
+                                    .pt(px(16.0))
+                                    .pb(px(32.0)),
+                            ),
                     )
                     // The bar floats on the sky, after the page so it
                     // paints on top of the hero it blends into.
                     .child(titlebar),
-            )
-            .child(dock_wrap)
-            .into_any_element()
+            );
+        let root = if let Some(rail) = rail {
+            root.child(rail)
+        } else {
+            root
+        };
+        root.child(dock_wrap).into_any_element()
     }
 }
 
 fn text_boundary(value: &str, requested: usize) -> usize {
     let mut at = requested.min(value.len());
-    while !value.is_char_boundary(at) { at -= 1; }
+    while !value.is_char_boundary(at) {
+        at -= 1;
+    }
     at
 }
 
