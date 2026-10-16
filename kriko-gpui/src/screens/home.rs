@@ -375,7 +375,13 @@ fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Sta
 
 /// A saved comparison draft, openable straight into Compare. `subjects` are
 /// the products' names, read from the history by lookup id.
-fn draft_row(cx: &mut Context<Kriko>, i: usize, id: &str, name: &str, subjects: &str) -> Stateful<Div> {
+fn draft_row(
+    cx: &mut Context<Kriko>,
+    i: usize,
+    id: &str,
+    name: &str,
+    subjects: &str,
+) -> Stateful<Div> {
     let draft_id = id.to_string();
     let open_draft = cx.listener(move |this, _: &ClickEvent, _w, cx| {
         this.tab = Tab::Compare;
