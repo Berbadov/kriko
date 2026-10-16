@@ -22,6 +22,16 @@ use crate::theme::*;
 /// The run's phases, in order, as the LEDs name them.
 const PHASES: [&str; 4] = ["QUEUED", "READING", "GROUNDING", "STORED"];
 
+fn web_discovery_prompt(query: &str) -> String {
+    let query = query.trim();
+    let lower = query.to_lowercase();
+    if lower.starts_with("find ") || lower.starts_with("search for ") {
+        query.to_string()
+    } else {
+        format!("Find {query}")
+    }
+}
+
 /// A small choice chip: one answer to a question, one agent to pick. The
 /// chosen one runs in the brand blue.
 pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> Stateful<Div> {
@@ -1127,12 +1137,25 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .child(ghost("run-back", "Back").on_click(back)),
         );
     } else if start.searched && start.hits.is_empty() && start.note.is_empty() {
+        let prompt = web_discovery_prompt(&app.run_search.value);
+        let find_on_web = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.tab = Tab::Chat;
+            this.open_discovery_chat(prompt.clone(), cx);
+            cx.notify();
+        });
+        let actions = div()
+            .flex()
+            .items_center()
+            .gap(px(8.0))
+            .child(route_button(cx, "run-browse-products", "Browse catalogs", Tab::Browse))
+            .child(plate_s("run-search-web", "Find on the web").on_click(find_on_web))
+            .into_any_element();
         c = c.child(empty_note("Nothing in the installed catalogs matches that."))
             .child(guidance::next_step(
                 "run-search-no-match",
-                "Browse catalog products",
-                "See which products are available in the catalogs installed here.",
-                route_button(cx, "run-browse-products", "Open Browse", Tab::Browse),
+                "Try product discovery",
+                "Browse installed catalogs, or open Chat with this product request ready for web discovery.",
+                actions,
                 app.motion,
             ));
     } else {
@@ -1283,5 +1306,12 @@ mod guidance_tests {
             None
         );
         assert_eq!(live_codex_answer("codex", false, "thinking"), None);
+    }
+
+    #[test]
+    fn web_discovery_handoff_keeps_find_language_without_duplicating_it() {
+        assert_eq!(super::web_discovery_prompt("air purifier"), "Find air purifier");
+        assert_eq!(super::web_discovery_prompt("  Find a quiet purifier  "), "Find a quiet purifier");
+        assert_eq!(super::web_discovery_prompt("Search for a quiet purifier"), "Search for a quiet purifier");
     }
 }

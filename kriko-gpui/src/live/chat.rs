@@ -17,7 +17,7 @@ use gpui::{BackgroundExecutor, Context};
 use serde_json::json;
 
 use crate::api::{self, Value};
-use crate::app::Kriko;
+use crate::app::{Kriko, Tab};
 
 /// Who wrote a message.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -204,6 +204,9 @@ pub struct State {
     pub local_note: String,
     /// A question is being posted (before its job exists).
     pub sending: bool,
+    /// A no-match handoff is creating an unsent conversation. Do not auto-open
+    /// an older thread while its creation response is in flight.
+    pub discovery_pending: bool,
     pub in_flight: Option<InFlight>,
     /// The turn so far, while its job runs.
     pub partial: Option<Partial>,
@@ -223,6 +226,27 @@ pub struct State {
 }
 
 impl State {
+    fn finish_discovery(
+        &mut self,
+        thread: Thread,
+        prompt: String,
+        origin: (Option<&str>, &str),
+        current_input: &str,
+        visible: bool,
+    ) -> Option<String> {
+        self.discovery_pending = false;
+        let id = thread.thread_id.clone();
+        self.drafts.insert(id.clone(), prompt.clone());
+        self.threads.insert(0, thread);
+        if visible && self.thread.as_deref() == origin.0 && current_input == origin.1 {
+            self.drafts.insert(origin.0.unwrap_or_default().to_string(), current_input.to_string());
+            self.select_thread(id);
+            Some(prompt)
+        } else {
+            None
+        }
+    }
+
     fn select_thread(&mut self, thread_id: String) {
         self.in_flight = self.running.get(&thread_id).map(|job_id| InFlight {
             thread_id: thread_id.clone(), job_id: job_id.clone(),
@@ -272,7 +296,7 @@ impl Kriko {
                 this.live.chat.loaded = true;
                 // Only when nothing is open: a conversation just started may not
                 // be in this list yet, and must not be replaced by the first one.
-                if this.live.chat.thread.is_none() {
+                if this.live.chat.thread.is_none() && !this.live.chat.discovery_pending {
                     // The newest conversation, or none: a fresh install shows
                     // the empty state, never a blank conversation.
                     if let Some(id) = this.live.chat.threads.first().map(|t| t.thread_id.clone()) {
@@ -365,6 +389,43 @@ impl Kriko {
                 Err(e) => this.live.chat.say = Some(e.message),
             }
         });
+    }
+
+    /// Keep a discovery request in its own unsent thread. Existing drafts and
+    /// running turns survive; navigation or typing during the request wins.
+    pub fn open_discovery_chat(&mut self, prompt: String, cx: &mut Context<Self>) {
+        if self.live.chat.discovery_pending {
+            return;
+        }
+        self.live.chat.discovery_pending = true;
+        let previous = self.live.chat.thread.clone();
+        let typed = self.chat_input.value.clone();
+        let title: String = prompt.chars().take(200).collect();
+        self.fetch(cx, move || api::post("/api/chat/threads", json!({"title": title})),
+            move |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => {
+                        let thread = thread_from(&v);
+                        let id = thread.thread_id.clone();
+                        let input = this.live.chat.finish_discovery(
+                            thread, prompt,
+                            (previous.as_deref(), &typed),
+                            &this.chat_input.value,
+                            this.tab == Tab::Chat,
+                        );
+                        if let Some(input) = input {
+                            this.chat_input.set_value(input);
+                            this.load_chat_messages(id, cx);
+                            this.refresh_chat(cx);
+                        }
+                    }
+                    Err(e) => {
+                        this.live.chat.discovery_pending = false;
+                        this.live.chat.say = Some(e.message);
+                    }
+                }
+            });
     }
 
     /// Forgets the open conversation and its messages, then opens the next one.
@@ -539,6 +600,56 @@ impl Kriko {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn discovery_keeps_the_old_draft_and_job_in_its_original_thread() {
+        let mut state = State::default();
+        state.running.insert("old".into(), "job-old".into());
+        state.select_thread("old".into());
+        state.discovery_pending = true;
+        let input = state.finish_discovery(
+            Thread { thread_id: "new".into(), title: "Find a device".into() },
+            "Find a device".into(), (Some("old"), "My unfinished question"),
+            "My unfinished question", true,
+        );
+        assert_eq!(input.as_deref(), Some("Find a device"));
+        assert_eq!(state.thread.as_deref(), Some("new"));
+        assert_eq!(state.drafts.get("old").map(String::as_str), Some("My unfinished question"));
+        assert_eq!(state.drafts.get("new").map(String::as_str), Some("Find a device"));
+        assert_eq!(state.running.get("old").map(String::as_str), Some("job-old"));
+        assert!(state.in_flight.is_none());
+        assert!(!state.discovery_pending);
+    }
+
+    #[test]
+    fn typing_while_discovery_opens_cannot_be_overwritten_by_its_response() {
+        let mut state = State::default();
+        let input = state.finish_discovery(
+            Thread { thread_id: "new".into(), title: "Find a device".into() },
+            "Find a device".into(), (None, ""), "A question just typed", true,
+        );
+        assert!(input.is_none());
+        assert!(state.thread.is_none());
+        assert_eq!(state.drafts.get("new").map(String::as_str), Some("Find a device"));
+    }
+
+    #[test]
+    fn discovery_cannot_switch_back_after_the_reader_leaves_the_thread() {
+        let mut state = State::default();
+        state.select_thread("other".into());
+        let input = state.finish_discovery(
+            Thread { thread_id: "new".into(), title: "Find a device".into() },
+            "Find a device".into(), (Some("old"), ""), "", true,
+        );
+        assert!(input.is_none());
+        assert_eq!(state.thread.as_deref(), Some("other"));
+        let background_input = state.finish_discovery(
+            Thread { thread_id: "background".into(), title: "Find another".into() },
+            "Find another".into(), (Some("other"), ""), "", false,
+        );
+        assert!(background_input.is_none());
+        assert_eq!(state.thread.as_deref(), Some("other"));
+    }
 
     #[test]
     fn changing_threads_keeps_their_independent_jobs() {

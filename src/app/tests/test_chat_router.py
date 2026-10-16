@@ -265,8 +265,7 @@ def test_the_chat_job_wires_web_search_and_saves_fetched_urls(paths, monkeypatch
 
     monkeypatch.setattr(tasks, "_use_local_ask", lambda *a: True)
     monkeypatch.setattr(tasks, "_local_structured_completer", lambda *a: completer)
-    monkeypatch.setattr(tasks, "_chat_web_sources", lambda *a: (search, read))
-    monkeypatch.setattr("app.chatweb.reader", lambda **kwargs: read)
+    monkeypatch.setattr(tasks, "_chat_web_accessors", lambda *a: (search, read))
     app_state = state.connect(paths.app_state_path)
     thread = state.create_chat_thread(app_state)
     reader = state.add_chat_message(app_state, thread["thread_id"], role="reader",

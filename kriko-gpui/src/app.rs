@@ -1277,7 +1277,12 @@ impl Render for Kriko {
                     ),
             );
         }
-        page_content = page_content.child(arrive(content, format!("page-{}", tab.key()), self.motion));
+        let content = if tab == Tab::Chat {
+            content
+        } else {
+            arrive(content, format!("page-{}", tab.key()), self.motion)
+        };
+        page_content = page_content.child(content);
         // A glass panel floating under the titlebar, inset from the window's
         // edges. The page reserves its width only while it is open.
         let dock_wrap = div()

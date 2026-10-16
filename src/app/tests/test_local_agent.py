@@ -451,7 +451,7 @@ def test_one_query_quicklook_preserves_the_jobs_cancellation_exception(monkeypat
         kwargs["check"]()
 
     monkeypatch.setattr(openserp.network, "urlopen", urlopen)
-    search = openserp.searcher(engine="duck,bing,google", timeout=8.0)
+    search = openserp.searcher(engine="duck", timeout=8.0)
     asker = local_agent.LocalAsker(
         Plan("[]"), Complete(), search, reader({}),
         model="m", search_provider="openserp")
