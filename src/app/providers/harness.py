@@ -2980,7 +2980,7 @@ class HarnessResearcher(AgentResearcher):
         search_url, search_language = self._search_settings()
         search_url = local_discovery.base_of(search_url) or local_discovery.SEARCH_DEFAULT_URL
         search = openserp.searcher(
-            search_url, engine="duck,bing,google", language=search_language)
+            search_url, engine=openserp.LOCAL_ENGINES, language=search_language)
 
         def no_completion(_prompt):
             raise RuntimeError("host page gathering must not call a local model")
@@ -3337,7 +3337,7 @@ class HarnessResearcher(AgentResearcher):
             previous_mode = self.transport_mode
             self.transport_mode = "persistent"
             try:
-                return self._run(prompt + self.harness.ask_note)
+                return self._run(prompt + TOOLLESS_NOTE)
             finally:
                 self.transport_mode = previous_mode
 
@@ -3346,10 +3346,7 @@ class HarnessResearcher(AgentResearcher):
                 f"{self.harness.label} has no verified tool-less completion mode; "
                 "this task needs an agent with web tools disabled"
             )
-        note = self.harness.ask_note
-        if self.harness.protocol in TOOLLESS_PROTOCOLS and self.transport_mode != "exec":
-            note = TOOLLESS_NOTE
-        return self._run(prompt + note)
+        return self._run(prompt + self.harness.ask_note)
 
     # ── the subprocess ───────────────────────────────────────────────────────
 
