@@ -25,7 +25,9 @@ flowchart LR
 ## 1. Run it
 
 Install `kriko-<version>-x86_64.msi` (a per-user install with no admin prompt)
-and launch it. `kriko-gpui/package.ps1` builds it; the `desktop` workflow runs
+and launch it — the installer's last screen offers to do that for you. A first
+launch walks the places a check needs (a catalog, an agent, the extension);
+Settings → General → **Take the tour** shows it again. `kriko-gpui/package.ps1` builds it; the `desktop` workflow runs
 the same recipe. See `kriko-gpui/README.md`, and
 [INSTALL_WINDOWS.md](INSTALL_WINDOWS.md) for the steps. From a checkout:
 

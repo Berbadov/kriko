@@ -361,6 +361,8 @@ pub struct Kriko {
     pub dock_reply: InputState,
     /// The reply drawer: closed unless you are answering an agent.
     pub dock_reply_open: bool,
+    /// The first-run tutorial's open step; `None` while it is closed.
+    pub tutorial: Option<usize>,
     /// A route KRIKO_VERIFY asked for, opened once the engine answers.
     pub pending_route: Option<String>,
     /// A saved check a route asked for: History turns to its page.
@@ -437,6 +439,7 @@ impl Kriko {
             run_search: InputState::new(cx),
             dock_reply: InputState::new(cx),
             dock_reply_open: false,
+            tutorial: None,
             pending_route: None,
             history_focus: None,
             dock_logs_open: false,
@@ -482,6 +485,8 @@ impl Kriko {
             Ok("dock") => {
                 app.dock_reply_open = true;
             }
+            // The tour itself, captured for review: no screen changes.
+            Ok("tutorial") => {}
             // Any other screen by the name the extension uses for it; a route
             // with an id is opened once the engine answers.
             Ok(other) => {
@@ -489,6 +494,14 @@ impl Kriko {
                 app.pending_route = Some(other.to_string());
             }
             Err(_) => {}
+        }
+        // The tour: on a first run, or asked for by name in review. A review
+        // launch is otherwise exactly the page asked for (above), so its
+        // screenshots never carry an unasked-for overlay.
+        if matches!(std::env::var("KRIKO_VERIFY").as_deref(), Ok("tutorial")) {
+            app.tutorial = Some(0);
+        } else if screens::tutorial::due_for_tour() {
+            app.tutorial = Some(0);
         }
         shell::set_tray_status(
             matches!(app.engine, engine::Status::Ready { .. }),
@@ -588,6 +601,33 @@ impl Kriko {
         engine::stop();
         shell::remove_tray();
         cx.quit();
+    }
+
+    // ---- the first-run tutorial ----
+
+    /// Offer the tour from its first step (Settings' "Show the tour").
+    pub fn start_tour(&mut self, cx: &mut Context<Self>) {
+        self.tutorial = Some(0);
+        cx.notify();
+    }
+
+    /// The tour is finished or skipped, and is not offered again unasked.
+    pub fn close_tour(&mut self, cx: &mut Context<Self>) {
+        screens::tutorial::mark_seen();
+        self.tutorial = None;
+        cx.notify();
+    }
+
+    /// One step forward. The last step's key is its own exit, so this never
+    /// runs past the end.
+    pub fn advance_tour(&mut self, cx: &mut Context<Self>) {
+        let Some(step) = self.tutorial else { return };
+        if step + 1 >= screens::tutorial::STEPS_LEN {
+            self.close_tour(cx);
+        } else {
+            self.tutorial = Some(step + 1);
+            cx.notify();
+        }
     }
 
     /// Retry the data shown by the screen under the persistent shell error.
@@ -1185,6 +1225,8 @@ impl Render for Kriko {
         } else { sidebar.into_any_element() };
         let content = screens::screen(self, window, cx);
         let dock = dock::dock(self, window, cx);
+        // The tour paints over everything, so it is built last.
+        let tour = self.tutorial.is_some().then(|| screens::tutorial::overlay(self, cx));
         let mut page_content = div()
             .flex()
             .flex_col()
@@ -1317,6 +1359,8 @@ impl Render for Kriko {
                     .child(titlebar),
             )
             .child(dock_wrap)
+            // The tour's scrim, above the dock and the titlebar.
+            .children(tour)
             .into_any_element()
     }
 }
