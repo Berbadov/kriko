@@ -15,11 +15,11 @@ use crate::theme::*;
 
 fn panel_title(label: &str) -> Div {
     div()
-        .font_family(DISPLAY)
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(22.0))
+        .text_size(px(18.0))
         .text_color(rgb(INK_2))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// An operation's name as words: `pack_update` reads "Pack update".

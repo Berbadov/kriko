@@ -15,11 +15,11 @@ use crate::theme::*;
 
 fn panel_title(label: &str) -> Div {
     div()
-        .font_family(DISPLAY)
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(22.0))
+        .text_size(px(18.0))
         .text_color(rgb(INK_2))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
@@ -1273,7 +1273,497 @@ mod model_group_tests {
     }
 }
 
+/// The everyday model workspace: list on the left, one selection on the right.
 pub fn local(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let Some(plane) = app.live.local.plane.clone() else {
+        return diagnostics(app, window, cx);
+    };
+    let refresh = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.local_check_again(cx);
+        if this.live.local.library_view {
+            this.refresh_local_catalogue(cx);
+        }
+    });
+    let advanced = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.live.local.advanced_open = !this.live.local.advanced_open;
+        cx.notify();
+    });
+    let toolbar = div()
+        .flex()
+        .items_center()
+        .justify_between()
+        .gap(px(16.0))
+        .child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(6.0))
+                .child(row_title("Local models"))
+                .child(row_desc("Choose a model to run research on your computer.")),
+        )
+        .child(ghost("model-hub-refresh", "Refresh").on_click(refresh));
+    let mut connection = div()
+        .py(px(16.0))
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap(px(16.0))
+        .border_b_1()
+        .border_color(rgba(HAIRLINE))
+        .child(icon("cpu", 20.0).text_color(rgb(MUTED)))
+        .child(
+            div()
+                .flex_1()
+                .min_w(px(200.0))
+                .flex()
+                .flex_col()
+                .gap(px(4.0))
+                .child(row_title(if plane.model.is_empty() {
+                    "No model selected"
+                } else {
+                    &plane.model
+                }))
+                .child(mono(
+                    if plane.url.is_empty() {
+                        "No local runtime connected"
+                    } else {
+                        &plane.url
+                    },
+                    MUTED,
+                )),
+        )
+        .child(tag(
+            "hub-runtime-status",
+            if plane.ready {
+                TagState::Done
+            } else {
+                TagState::Queue
+            },
+            if plane.ready { "Ready" } else { "Setup needed" },
+            false,
+        ))
+        .child(
+            ghost(
+                "model-hub-connection",
+                if app.live.local.advanced_open {
+                    "Hide setup"
+                } else {
+                    "Connection & setup"
+                },
+            )
+            .on_click(advanced),
+        );
+    if let Some(error) = &app.live.local.plane_error {
+        connection = connection.child(row_desc(&format!("Refresh failed: {error}")));
+    }
+    let browser = model_browser(app, &plane, window, cx);
+    let mut content = div()
+        .flex()
+        .flex_col()
+        .gap(px(24.0))
+        .child(toolbar)
+        .child(connection)
+        .child(browser);
+    if let Some(pull) = app.live.local.pull.clone() {
+        let running = pull.phase == PullPhase::Running;
+        let mut download = div()
+            .py(px(16.0))
+            .flex()
+            .flex_col()
+            .gap(px(10.0))
+            .border_t_1()
+            .border_color(rgba(HAIRLINE))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(12.0))
+                    .child(row_title(&pull.model))
+                    .child(tag(
+                        "hub-download-status",
+                        if running {
+                            TagState::Live
+                        } else if pull.phase == PullPhase::Done {
+                            TagState::Done
+                        } else {
+                            TagState::Block
+                        },
+                        if running {
+                            "Downloading"
+                        } else if pull.phase == PullPhase::Done {
+                            "Downloaded"
+                        } else {
+                            "Stopped"
+                        },
+                        app.motion,
+                    )),
+            )
+            .child(progress_bar(
+                "hub-download-progress",
+                pull.progress / 100.0,
+                app.motion,
+            ))
+            .child(row_desc(&pull.message));
+        if running {
+            download = download.child(ghost("hub-download-cancel", "Cancel download").on_click(
+                cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_pull_cancel(cx)),
+            ));
+        } else if let PullPhase::Failed(why) = pull.phase {
+            download = download.child(row_desc(&why));
+        }
+        content = content.child(download);
+    }
+    if let Some(note) = app.live.local.note.clone() {
+        content = content.child(row_desc(&note));
+    }
+    if app.live.local.advanced_open {
+        content = content.child(diagnostics(app, window, cx));
+    }
+    content
+}
+
+fn model_browser(
+    app: &mut Kriko,
+    plane: &Plane,
+    window: &mut Window,
+    cx: &mut Context<Kriko>,
+) -> Div {
+    let library_view = app.live.local.library_view;
+    let query = app.library_search.value.trim().to_lowercase();
+    let models: Vec<LibraryModel> = if library_view {
+        app.live.local.library.clone()
+    } else {
+        plane
+            .models
+            .iter()
+            .map(|name| LibraryModel {
+                name: name.clone(),
+                sizes: vec![],
+                about: String::new(),
+            })
+            .collect()
+    };
+    let shown: Vec<_> = models
+        .into_iter()
+        .filter(|m| {
+            query.is_empty()
+                || m.name.to_lowercase().contains(&query)
+                || m.about.to_lowercase().contains(&query)
+        })
+        .collect();
+    let selected = app
+        .live
+        .local
+        .model_focus
+        .as_ref()
+        .and_then(|name| shown.iter().find(|m| m.name == *name))
+        .or_else(|| shown.iter().find(|m| m.name == plane.model))
+        .or_else(|| shown.first())
+        .cloned();
+    let mut tabs = div().flex().gap(px(8.0));
+    for (id, label, library) in [
+        ("hub-installed", "Downloaded", false),
+        ("hub-library", "Discover", true),
+    ] {
+        tabs = tabs.child(
+            pill(id, label, library == library_view).on_click(cx.listener(
+                move |this, _: &gpui::ClickEvent, _w, cx| {
+                    this.live.local.library_view = library;
+                    this.live.local.model_focus = None;
+                    this.library_search.set_value(String::new());
+                    if library && this.live.local.library.is_empty() {
+                        this.refresh_local_catalogue(cx);
+                    }
+                    cx.notify();
+                },
+            )),
+        );
+    }
+    let search = app.input_field(
+        Field::LibrarySearch,
+        "hub-search",
+        "Search models…",
+        Some("search"),
+        window,
+        cx,
+    );
+    let mut list = div().flex().flex_col().gap(px(4.0));
+    for (i, model) in shown.iter().enumerate() {
+        let name = model.name.clone();
+        let current = selected.as_ref().is_some_and(|m| m.name == name);
+        let mut row = div()
+            .id(("hub-model", i))
+            .w_full()
+            .py(px(14.0))
+            .px(px(12.0))
+            .flex()
+            .items_start()
+            .gap(px(12.0))
+            .rounded(px(10.0))
+            .cursor_pointer()
+            .when(current, |d| d.bg(rgba(GLASS_3)))
+            .hover(|d| d.bg(rgba(GLASS_2)))
+            .child(icon("cpu", 22.0).text_color(rgb(if current { ICE } else { MUTED })))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w(px(0.0))
+                    .flex()
+                    .flex_col()
+                    .gap(px(5.0))
+                    .child(row_title(&model.name))
+                    .when(!model.about.is_empty(), |d| {
+                        d.child(row_desc(&crate::screens::history::clip(&model.about, 84)))
+                    }),
+            )
+            .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.live.local.model_focus = Some(name.clone());
+                cx.notify();
+            }));
+        if model.name == plane.model {
+            row = row.child(icon("check", 16.0).text_color(rgb(ICE)));
+        }
+        list = list.child(row);
+    }
+    if shown.is_empty() {
+        list = list.child(row_desc(if app.live.local.catalogue_loading {
+            "Loading the model library…"
+        } else if !query.is_empty() {
+            "No models match your search."
+        } else if library_view {
+            "The model library is empty. Refresh to try again."
+        } else {
+            "No downloaded models. Open Discover to choose one."
+        }));
+    }
+    if library_view && !app.live.local.catalogue_error.is_empty() {
+        list = list.child(row_desc(&app.live.local.catalogue_error));
+    }
+    let height = (f32::from(window.viewport_size().height) - 340.0).max(380.0);
+    let left = div()
+        .flex()
+        .flex_col()
+        .gap(px(16.0))
+        .child(tabs)
+        .child(search)
+        .child(
+            div()
+                .id("hub-model-scroll")
+                .flex_1()
+                .min_h(px(0.0))
+                .overflow_y_scroll()
+                .child(list),
+        );
+    let detail = if let Some(model) = selected {
+        model_detail(app, plane, &model, cx)
+    } else {
+        div().flex().flex_col().gap(px(12.0))
+            .child(icon("cpu", 32.0).text_color(rgb(MUTED)))
+            .child(row_title("Your local research agent"))
+            .child(row_desc("Select a model to see its details and available sizes."))
+            .child(row_desc("Ollama handles downloads. Connect another compatible server in Connection & setup."))
+    };
+    if app.content_w >= 800.0 {
+        div()
+            .flex()
+            .gap(px(32.0))
+            .items_start()
+            .child(
+                left.w(px(300.0))
+                    .h(px(height))
+                    .flex_none()
+                    .pr(px(24.0))
+                    .border_r_1()
+                    .border_color(rgba(HAIRLINE)),
+            )
+            .child(detail.flex_1().min_w(px(0.0)).pt(px(8.0)))
+    } else {
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(24.0))
+            .child(left.h(px(320.0)))
+            .child(detail)
+    }
+}
+
+fn model_detail(app: &Kriko, plane: &Plane, model: &LibraryModel, cx: &mut Context<Kriko>) -> Div {
+    let size = app
+        .live
+        .local
+        .library_size
+        .get(&model.name)
+        .cloned()
+        .unwrap_or_default();
+    let target = if size.is_empty() {
+        model.name.clone()
+    } else {
+        format!("{}:{size}", model.name)
+    };
+    let installed = plane.models.iter().any(|name| name == &target);
+    let in_use = plane.model == target;
+    let busy = matches!(&app.live.local.pull, Some(p) if p.phase == PullPhase::Running);
+    let info = app
+        .live
+        .local
+        .held
+        .as_ref()
+        .and_then(|items| items.iter().find(|h| h.name == target));
+    let mut detail = div()
+        .flex()
+        .flex_col()
+        .gap(px(24.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(14.0))
+                .child(icon("cpu", 32.0).text_color(rgb(BRAND_BRIGHT)))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .font_family(SANS)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_size(px(24.0))
+                        .text_color(rgb(INK))
+                        .child(model.name.clone()),
+                ),
+        )
+        .when(!model.about.is_empty(), |d| d.child(row_desc(&model.about)));
+    if !model.sizes.is_empty() {
+        let mut sizes = div().flex().flex_wrap().gap(px(8.0));
+        for (i, choice) in std::iter::once(String::new())
+            .chain(model.sizes.iter().cloned())
+            .enumerate()
+        {
+            let name = model.name.clone();
+            let wanted = choice.clone();
+            sizes = sizes.child(
+                pill(
+                    ("hub-size", i),
+                    if choice.is_empty() {
+                        "Default"
+                    } else {
+                        &choice
+                    },
+                    choice == size,
+                )
+                .on_click(cx.listener(
+                    move |this, _: &gpui::ClickEvent, _w, cx| {
+                        this.live
+                            .local
+                            .library_size
+                            .insert(name.clone(), wanted.clone());
+                        cx.notify();
+                    },
+                )),
+            );
+        }
+        detail = detail.child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(12.0))
+                .child(row_title("Model size"))
+                .child(sizes),
+        );
+    }
+    let chosen = target.clone();
+    let download_ready = plane
+        .servers
+        .iter()
+        .any(|server| server.up && runtime_id(&server.name) == "ollama");
+    let action = key(
+        "hub-model-action",
+        if in_use {
+            "In use"
+        } else if installed {
+            "Use this model"
+        } else if busy {
+            "Download in progress"
+        } else if !download_ready {
+            "Set up downloads"
+        } else {
+            "Download model"
+        },
+    )
+    .opacity(if in_use || (!installed && busy) {
+        0.5
+    } else {
+        1.0
+    })
+    .when(!in_use && (installed || !busy), |d| {
+        d.on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            if installed {
+                this.local_use_model(chosen.clone(), cx);
+            } else if !download_ready {
+                this.live.local.advanced_open = true;
+                cx.notify();
+            } else {
+                this.local_get.set_value(chosen.clone());
+                this.local_pull(cx);
+            }
+        }))
+    });
+    detail = detail.child(
+        div()
+            .flex()
+            .items_center()
+            .gap(px(12.0))
+            .child(action)
+            .child(mono(
+                if installed {
+                    "On this computer"
+                } else {
+                    "Downloads through Ollama"
+                },
+                MUTED,
+            )),
+    );
+    if let Some(held) = info {
+        let mut facts = div()
+            .flex()
+            .flex_col()
+            .gap(px(16.0))
+            .py(px(20.0))
+            .border_t_1()
+            .border_color(rgba(HAIRLINE));
+        for (label, value) in [
+            ("Parameters", held.params.clone()),
+            ("Quantization", held.quant.clone()),
+            ("Download size", held.size_bytes.map(gb_bytes)),
+        ] {
+            if let Some(value) = value {
+                facts = facts.child(
+                    div()
+                        .flex()
+                        .justify_between()
+                        .gap(px(16.0))
+                        .child(row_desc(label))
+                        .child(mono(&value, INK)),
+                );
+            }
+        }
+        detail = detail.child(facts);
+    }
+    if in_use {
+        detail = detail.child(ghost("hub-extension", "Use in browser extension").on_click(
+            cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                    this.prefer_agent("local".into(), cx);
+                this.tab = Tab::Extension;
+                this.refresh_extension(cx);
+                cx.notify();
+            }),
+        ));
+    }
+    detail.child(row_desc(
+        "Model inference runs at your connected server. New research also needs web search.",
+    ))
+}
+
+fn diagnostics(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
     let plane_status = plane_read_state(
         app.live.local.plane.is_some(),
@@ -1637,7 +2127,7 @@ pub fn pill(id: impl Into<gpui::ElementId>, label: &str, picked: bool) -> gpui::
         .flex()
         .items_center()
         .rounded(px(10.0))
-        .font_family(MONO)
+        .font_family(SANS)
         .text_size(px(12.0))
         .cursor_pointer()
         .text_color(rgb(if picked { ICE } else { MUTED }))
@@ -1647,6 +2137,6 @@ pub fn pill(id: impl Into<gpui::ElementId>, label: &str, picked: bool) -> gpui::
                 .border_color(rgba(BORDER_CONTROL))
         })
         .hover(|s| s.text_color(rgb(INK)))
-        .active(|s| s.opacity(0.75).mt(px(2.0)))
+        .active(|s| s.opacity(0.85))
         .child(label.to_string())
 }

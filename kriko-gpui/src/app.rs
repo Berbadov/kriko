@@ -4,7 +4,7 @@
 //! method over one state struct.
 
 use gpui::{
-    div, prelude::*, px, rgb, rgba, AnimationExt, App, ClickEvent, Context, Div, FocusHandle,
+    div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle,
     IntoElement, KeyDownEvent, ParentElement, Render, ScrollDelta, ScrollWheelEvent, Stateful,
     Styled, Window, WindowControlArea,
 };
@@ -217,7 +217,7 @@ impl Tab {
     /// content starts right under. Home and About keep a little more of it.
     fn hero_height(self) -> f32 {
         match self {
-            Tab::Chat => 40.0,
+            Tab::Chat => 184.0,
             Tab::Home => 256.0,
             Tab::About => 220.0,
             Tab::Local => 204.0,
@@ -417,6 +417,10 @@ pub struct Kriko {
     pub dock_logs_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
     pub dock_open: bool,
+    pub extension_advanced_open: bool,
+    pub extension_firefox_open: bool,
+    pub agents_options_open: bool,
+    pub history_insights_open: bool,
     // compare: the engine's own rows live in `live.compare`
     pub compare_note_input: InputState,
     pub compare_question_input: InputState,
@@ -491,6 +495,10 @@ impl Kriko {
             dock_feed: Vec::new(),
             // Every launch starts with the live dock closed.
             dock_open: false,
+            extension_advanced_open: false,
+            extension_firefox_open: false,
+            agents_options_open: false,
+            history_insights_open: false,
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
             chat_input: InputState::new(cx),
@@ -1025,8 +1033,8 @@ impl Kriko {
         let mut main_nav = div()
             .flex()
             .flex_col()
-            .gap(px(3.0))
-            .px(px(8.0))
+            .gap(px(6.0))
+            .px(px(0.0))
             .pt(px(10.0));
         for (index, (tab, glyph, label)) in primary.iter().copied().enumerate() {
             let row = nav_item(
@@ -1037,7 +1045,7 @@ impl Kriko {
                 None,
                 None,
             )
-            .h(px(42.0))
+            .h(px(50.0))
             .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
                 this.tab = tab;
                 this.on_open_tab(cx);
@@ -1048,8 +1056,8 @@ impl Kriko {
 
         let new_research = div()
             .id("sidebar-new-research")
-            .h(px(42.0))
-            .mx(px(8.0))
+            .h(px(46.0))
+            .mx(px(0.0))
             .mt(px(12.0))
             .px(px(12.0))
             .flex()
@@ -1059,15 +1067,15 @@ impl Kriko {
             .rounded(px(12.0))
             .bg(rgb(BRAND))
             .text_color(rgb(0xffffff))
-            .font_family(DISPLAY)
+            .font_family(SANS)
             .font_weight(gpui::FontWeight::SEMIBOLD)
             .text_size(px(16.0))
             .cursor_pointer()
             .hover(|s| s.bg(rgb(BRAND_HOVER)))
             .active(|s| s.bg(rgb(BRAND_LOW)))
             .when(self.sidebar_collapsed, |d| d.px(px(0.0)))
-            .child(icon("plus", 16.0).text_color(rgb(0xffffff)))
-            .when(!self.sidebar_collapsed, |d| d.child("NEW RESEARCH"))
+            .child(icon("plus", 18.0).text_color(rgb(0xffffff)))
+            .when(!self.sidebar_collapsed, |d| d.child("New research"))
             .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
                 this.tab = Tab::Run;
                 this.on_open_tab(cx);
@@ -1094,7 +1102,7 @@ impl Kriko {
                     .items_center()
                     .justify_between()
                     .pb(px(7.0))
-                    .child(eyebrow("PRODUCT FILES"))
+                    .child(eyebrow("Products"))
                     .child(screens::mono(&subject_count.to_string(), DIM)),
             );
             if self.live.history.subjects.is_empty() {
@@ -1107,7 +1115,8 @@ impl Kriko {
                         None,
                         None,
                     )
-                    .h(px(34.0))
+                    .h(px(40.0))
+                    .text_size(px(15.0))
                     .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
                         this.tab = Tab::Browse;
                         this.on_open_tab(cx);
@@ -1126,7 +1135,7 @@ impl Kriko {
                             .id(gpui::ElementId::Name(
                                 format!("sidebar-subject-{id}").into(),
                             ))
-                            .h(px(34.0))
+                            .h(px(40.0))
                             .px(px(8.0))
                             .flex()
                             .items_center()
@@ -1134,16 +1143,16 @@ impl Kriko {
                             .rounded(px(8.0))
                             .text_color(rgb(INK_2))
                             .font_family(SANS)
-                            .text_size(px(13.0))
+                            .text_size(px(15.0))
                             .cursor_pointer()
                             .hover(|s| s.bg(rgba(GLASS_3)))
                             .child(icon("file", 14.0).text_color(rgb(MUTED)))
                             .child(div().flex_1().overflow_hidden().child(label))
                             .child(screens::mono(&subject.claims.to_string(), DIM))
                             .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                                let _ = &id;
                                 this.tab = Tab::Browse;
                                 this.on_open_tab(cx);
+                                this.select_subject(id.clone(), cx);
                                 cx.notify();
                             })),
                     );
@@ -1151,6 +1160,7 @@ impl Kriko {
             }
 
             let active: Vec<_> = self.live.run.jobs.iter().filter(|job| !job.done).collect();
+            if !active.is_empty() {
             support = support.child(
                 div()
                     .mt(px(20.0))
@@ -1158,20 +1168,9 @@ impl Kriko {
                     .flex()
                     .items_center()
                     .justify_between()
-                    .child(eyebrow("RIGHT NOW"))
+                    .child(eyebrow("Live now"))
                     .child(screens::mono(&active.len().to_string(), DIM)),
             );
-            if active.is_empty() {
-                support = support.child(
-                    div()
-                        .px(px(4.0))
-                        .py(px(5.0))
-                        .font_family(SANS)
-                        .text_size(px(12.0))
-                        .text_color(rgb(DIM))
-                        .child("No active work"),
-                );
-            } else {
                 for job in active.iter().take(2) {
                     let task: String = if job.product.is_empty() {
                         job.kind.chars().take(26).collect()
@@ -1217,18 +1216,7 @@ impl Kriko {
                 }
             }
 
-            let totals = &self.live.knowledge.totals;
-            support = support.child(div().mt(px(20.0)).pb(px(7.0)).child(eyebrow("STORE")));
-            support = support.child(
-                div()
-                    .font_family(MONO)
-                    .text_size(px(11.0))
-                    .text_color(rgb(MUTED))
-                    .child(format!(
-                        "{} packs · {} products · {} claims",
-                        totals.packs, totals.subjects, totals.claims
-                    )),
-            );
+
         }
 
         let footer = div()
@@ -1242,9 +1230,17 @@ impl Kriko {
             .when(!self.sidebar_collapsed, |d| {
                 d.child(
                     div()
+                        .id("footer-about")
                         .font_family(MONO)
-                        .text_size(px(10.0))
+                        .text_size(px(12.0))
                         .text_color(rgb(DIM))
+                        .cursor_pointer()
+                        .hover(|d| d.text_color(rgb(INK)))
+                        .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
+                            this.tab = Tab::About;
+                            this.on_open_tab(cx);
+                            cx.notify();
+                        }))
                         .child(format!("v{} · no account", env!("CARGO_PKG_VERSION"))),
                 )
             })
@@ -1276,7 +1272,9 @@ impl Kriko {
             .mb(px(12.0))
             .ml(px(12.0))
             .mr(px(8.0))
-            .p(px(8.0))
+            .px(px(12.0))
+            .pt(px(20.0))
+            .pb(px(14.0))
             .overflow_hidden()
             .flex_none()
             .bg(rgb(SURFACE_1))
@@ -1302,34 +1300,36 @@ impl Kriko {
             .flex()
             .flex_wrap()
             .items_center()
-            .gap(px(4.0))
-            .p(px(4.0))
-            .rounded(px(14.0))
-            .bg(rgb(WELL))
-            .border_1()
+            .gap(px(6.0))
+            .pb(px(10.0))
+            .border_b_1()
             .border_color(rgba(HAIRLINE));
         for tab in self.tab.group_pages() {
             let current = self.tab == *tab;
-            let name = tab.title().to_uppercase();
+            let name = if *tab == Tab::Chat {
+                "Chat"
+            } else {
+                tab.title()
+            };
             let target = *tab;
             let item = div()
                 .id(gpui::ElementId::Name(
                     format!("page-subnav-{}", target.key()).into(),
                 ))
-                .h(px(36.0))
+                .h(px(40.0))
                 .px(px(14.0))
                 .flex()
                 .items_center()
                 .justify_center()
-                .rounded(px(10.0))
-                .font_family(DISPLAY)
+                .rounded(px(12.0))
+                .font_family(SANS)
                 .font_weight(gpui::FontWeight::SEMIBOLD)
                 .text_size(px(15.0))
                 .text_color(rgb(if current { ICE } else { MUTED }))
                 .bg(rgba(if current { BRAND_WASH } else { 0x00000000 }))
                 .cursor_pointer()
                 .hover(|s| s.bg(rgba(GLASS_3)).text_color(rgb(INK)))
-                .child(name)
+                .child(name.to_string())
                 .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
                     this.tab = target;
                     this.on_open_tab(cx);
@@ -1495,7 +1495,7 @@ impl Kriko {
                 .font_family(MONO)
                 .text_size(px(10.0))
                 .text_color(rgb(DIM))
-                .child("All data stays on this machine"),
+                .child("Research saved on this machine"),
         )
     }
 }
@@ -1639,15 +1639,16 @@ impl Kriko {
                                 d.bg(rgba(GLASS_2)).border_color(rgba(BRAND_BRIGHT))
                             })
                             .on_click(toggle_dock)
-                            .child(icon("agents", 14.0).text_color(rgb(if self.dock_open {
+                            .child(icon("activity", 18.0).text_color(rgb(if self.dock_open {
                                 ICE
                             } else {
                                 MUTED
                             })))
                             .child(
                                 div()
-                                    .font_family(MONO)
-                                    .text_size(px(11.0))
+                                    .font_family(SANS)
+                                    .font_weight(gpui::FontWeight::SEMIBOLD)
+                                    .text_size(px(13.0))
                                     .text_color(rgb(if self.dock_open { ICE } else { MUTED }))
                                     .child("Live"),
                             ),
@@ -1708,13 +1709,11 @@ impl Render for Kriko {
             40.0
         };
         let dock_inset = if open { DOCK_W + 24.0 } else { 0.0 };
-        let rail_w = if viewport_w >= 1100.0 && tab != Tab::Chat && !open {
-            340.0
-        } else {
-            0.0
-        };
+        // Live work is available on demand; an idle rail need not occupy the page.
+        let rail_w = 0.0;
         let rail_inset = if rail_w > 0.0 { rail_w + 8.0 } else { 0.0 };
-        let expanded_content_w = viewport_w - SIDEBAR_W - 2.0 * page_pad - dock_inset - rail_inset;
+        let expanded_content_w =
+            viewport_w - SIDEBAR_W - 20.0 - 2.0 * page_pad - dock_inset - rail_inset;
         self.sidebar_folded_for_live =
             open && !preferred_sidebar_collapsed && expanded_content_w < MIN_COMFORTABLE_CONTENT_W;
         self.sidebar_collapsed = preferred_sidebar_collapsed || self.sidebar_folded_for_live;
@@ -1724,7 +1723,7 @@ impl Render for Kriko {
             SIDEBAR_W
         };
         self.content_w =
-            (viewport_w - sidebar_w - 2.0 * page_pad - dock_inset - rail_inset).max(0.0);
+            (viewport_w - sidebar_w - 20.0 - 2.0 * page_pad - dock_inset - rail_inset).max(0.0);
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
         let sidebar = self.sidebar(viewport_h, cx);
@@ -1733,33 +1732,27 @@ impl Render for Kriko {
         } else {
             None
         };
-        let collapsed = self.sidebar_collapsed;
-        let sidebar = if self.motion {
-            sidebar
-                .with_animation(
-                    gpui::ElementId::named_usize("sidebar-slide", collapsed as usize),
-                    gpui::Animation::new(std::time::Duration::from_millis(260)),
-                    move |d, t| {
-                        let t = t * t * (3.0 - 2.0 * t);
-                        d.w(px(if collapsed {
-                            SIDEBAR_W + (76.0 - SIDEBAR_W) * t
-                        } else {
-                            76.0 + (SIDEBAR_W - 76.0) * t
-                        }))
-                    },
-                )
-                .into_any_element()
-        } else {
-            sidebar.into_any_element()
-        };
         let content = screens::screen(self, window, cx);
-        let dock = dock::dock(self, window, cx);
+        // A closed panel has no element tree. Opening it lays out the page
+        // once instead of animating the widths of two entire columns.
+        let dock_wrap = if open {
+            Some(div()
+                .absolute()
+                .top(px(TITLEBAR_H + 8.0))
+                .bottom(px(12.0))
+                .right(px(12.0))
+                .w(px(DOCK_W))
+                .overflow_hidden()
+                .child(dock::dock(self, window, cx)))
+        } else {
+            None
+        };
         // The tour paints over everything, so it is built last.
         let tour = self
             .tutorial
             .is_some()
             .then(|| screens::tutorial::overlay(self, cx));
-        let mut page_content = div().flex().flex_col().flex_none().w_full().gap(px(16.0));
+        let mut page_content = div().flex().flex_col().flex_none().w_full().gap(px(24.0));
         if tab != Tab::About {
             page_content = page_content.child(self.page_subnav(cx));
         }
@@ -1807,45 +1800,8 @@ impl Render for Kriko {
         };
         page_content = page_content.child(content);
         if tab == Tab::Chat {
-            page_content = page_content.flex_1().min_h(px(560.0));
+            page_content = page_content.flex_1().min_h(px(0.0));
         }
-        // A glass panel floating under the titlebar, inset from the window's
-        // edges. The page reserves its width only while it is open.
-        let dock_wrap = div()
-            .absolute()
-            .top(px(TITLEBAR_H + 8.0))
-            .bottom(px(12.0))
-            .right(px(12.0))
-            .overflow_hidden()
-            .w(px(if open { DOCK_W } else { 0.0 }))
-            .child(dock);
-        let dock_wrap = if self.motion {
-            dock_wrap
-                .with_animation(
-                    gpui::ElementId::named_usize("live-slide", open as usize),
-                    gpui::Animation::new(std::time::Duration::from_millis(260)),
-                    move |d, t| {
-                        let t = t * t * (3.0 - 2.0 * t);
-                        d.w(px(DOCK_W * if open { t } else { 1.0 - t }))
-                    },
-                )
-                .into_any_element()
-        } else {
-            dock_wrap.into_any_element()
-        };
-        let hero = hero(tab.hero_sky(), tab.hero_height(), self.motion);
-        let hero = if tab == Tab::Chat {
-            hero
-        } else {
-            hero.child(page_head(
-                tab.hero_sky(),
-                tab.crumb(),
-                tab.title(),
-                tab.lead(),
-                page_pad,
-                self.motion,
-            ))
-        };
         let root = div()
             .id("kriko-root")
             .size_full()
@@ -1891,11 +1847,9 @@ impl Render for Kriko {
                             .overflow_x_hidden()
                             .track_scroll(&self.main_scroll)
                             .on_scroll_wheel(cx.listener(Self::wheel))
-                            // flex_none keeps the hero and the content
-                            // at their natural heights, so the column
-                            // overflows and scrolls instead of every
-                            // child being squeezed to fit.
-                            .child(hero.flex_none())
+                            // Reserve only the native window controls; page
+                            // navigation replaces the old sky and title banner.
+                            .child(div().h(px(TITLEBAR_H)).flex_none())
                             .child(
                                 page_content
                                     .pl(px(page_pad))
@@ -1913,7 +1867,7 @@ impl Render for Kriko {
         } else {
             root
         };
-        root.child(dock_wrap)
+        root.children(dock_wrap)
             // The tour's scrim, above the dock and the titlebar.
             .children(tour)
             .into_any_element()
