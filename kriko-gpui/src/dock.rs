@@ -11,7 +11,7 @@ use gpui::{
 
 use crate::app::{Field, Kriko};
 use crate::live::run::mark_for;
-use crate::marks::{mark_glyph, mark_tile, Phase};
+use crate::marks::{agent_tile, mark_glyph, mark_tile, Phase};
 use crate::screens::run::option_chip;
 use crate::screens::{empty_note, mono, row_desc};
 use crate::theme::*;
@@ -48,8 +48,9 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                     .flex()
                     .items_center()
                     .gap(px(10.0))
-                    .child(mark_tile(
+                    .child(agent_tile(
                         &format!("dock-req-{i}"),
+                        &job.harness,
                         mark_for(&job.harness),
                         Phase::Waiting,
                         40.0,
@@ -256,7 +257,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .max_h(px(180.0))
                         .overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                         .font_family(MONO)
-                        .text_size(px(11.0))
+                        .text_size(px(12.0))
                         .text_color(rgb(INK_2))
                         .child(if log.is_empty() {
                             "Waiting for agent output.".to_string()

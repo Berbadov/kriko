@@ -49,7 +49,7 @@ pub(crate) fn severity_word_chip(word: &str) -> Div {
         .border_1()
         .border_color(rgba(HAIRLINE))
         .font_family(MONO)
-        .text_size(px(10.0))
+        .text_size(px(12.0))
         .text_color(rgb(fg))
         .child(led_matrix(glyph, fg, 3.0, 1.0))
         .child(if word.is_empty() {
@@ -300,7 +300,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .child(
                     div()
                         .font_family(MONO)
-                        .text_size(px(10.0))
+                        .text_size(px(12.0))
                         .text_color(rgb(MUTED))
                         .child(label.clone()),
                 ),
@@ -697,7 +697,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .child(
                             div()
                                 .font_family(MONO)
-                                .text_size(px(11.0))
+                                .text_size(px(12.0))
                                 .text_color(rgb(MUTED))
                                 .child(format!(
                                     "{} claims · from {} · stored to {}",

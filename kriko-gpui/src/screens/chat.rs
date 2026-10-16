@@ -105,7 +105,7 @@ fn thread_list(app: &Kriko, compact: bool, cx: &mut Context<Kriko>) -> Div {
                     d.child(
                         div()
                             .font_family(SANS)
-                            .text_size(px(11.0))
+                            .text_size(px(12.0))
                             .text_color(rgb(ICE))
                             .child("Working"),
                     )
@@ -594,7 +594,7 @@ fn status_label(value: &str) -> Div {
         .rounded(px(6.0))
         .bg(rgba(GLASS_1))
         .font_family(SANS)
-        .text_size(px(11.0))
+        .text_size(px(12.0))
         .text_color(rgb(ICE))
         .child(value.to_string())
 }

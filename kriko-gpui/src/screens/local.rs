@@ -154,6 +154,64 @@ fn gb_bytes(bytes: f64) -> String {
     format!("{:.1} GB", bytes / 1e9)
 }
 
+/// The quantisation a library size tag names, when it does. Ollama's plain
+/// tags (`7b`, `13b`) are the default q4_K_M; an explicit tag may add a
+/// quant (`-q4_0`, `-q8_0`) or a variant (`-fp16`, `-iq4_xs`).
+fn quant_of(size: &str) -> Option<String> {
+    let lower = size.to_ascii_lowercase();
+    let tail = lower.rsplit(['-', ':']).next()?.to_string();
+    if tail.starts_with('q') || tail.starts_with("iq") || tail.starts_with("fp16") || tail.starts_with("bf16") {
+        return Some(tail);
+    }
+    None
+}
+
+/// A rough download weight for one library size, so a choice can be judged
+/// against the VRAM this machine reports before anything is fetched. The
+/// plain tags weigh q4_K_M at about half a gigabyte per billion parameters,
+/// and an explicit quant tag scales that by its bits per weight.
+fn size_gb_estimate(size: &str) -> Option<f64> {
+    let lower = size.to_ascii_lowercase();
+    let mut params = 0.0;
+    for part in lower.split(['-', ':']) {
+        let trimmed = part.trim_end_matches('b');
+        if let Ok(n) = trimmed.parse::<f64>() {
+            if n > 0.0 && n < 2000.0 {
+                params = n;
+            }
+        }
+    }
+    if params == 0.0 {
+        return None;
+    }
+    let bits = if lower.contains("fp16") || lower.contains("bf16") {
+        16.0
+    } else if lower.contains("q8") {
+        8.5
+    } else if lower.contains("q6") {
+        6.6
+    } else if lower.contains("q5") {
+        5.7
+    } else if lower.contains("q4") {
+        4.5
+    } else if lower.contains("q3") {
+        3.8
+    } else if lower.contains("q2") {
+        3.0
+    } else {
+        4.5
+    };
+    Some(params * bits / 8.0)
+}
+
+/// Whether one library size fits the VRAM this machine reports, with the
+/// room the runtime itself already uses taken off the top.
+fn fits_vram(size: &str, vram_bytes: Option<f64>) -> Option<bool> {
+    let total = vram_bytes?;
+    let estimate = size_gb_estimate(size)?;
+    Some(estimate <= total * 0.9)
+}
+
 fn gb_mb(mb: f64) -> String {
     format!("{:.1} GB", mb / 1024.0)
 }
@@ -397,6 +455,7 @@ fn setup(
     }
 
     // ---- getting a model, sized to this machine ----
+    let vram_bytes = machine.and_then(|m| m.vram_total_mb).map(|mb| mb * 1024.0 * 1024.0);
     let ollama_installed = machine
         .map(|m| m.runtimes.iter().any(|r| r.id == "ollama" && r.installed))
         .unwrap_or(false);
@@ -504,7 +563,7 @@ fn setup(
                     cx.notify();
                 });
                 let mut sizes = div().flex().flex_wrap().items_center().gap(px(6.0))
-                    .child(mono("SIZE", DIM))
+                    .child(icon("layers", 13.0).text_color(rgb(DIM)))
                     .child(option_chip(gpui::ElementId::named_usize(format!("lib-default-{i}"), 0), "default", picked.is_empty()).on_click(default_pick));
                 for (si, size) in m.sizes.iter().enumerate() {
                     let (name, want) = (m.name.clone(), size.clone());
@@ -512,11 +571,32 @@ fn setup(
                         this.live.local.library_size.insert(name.clone(), want.clone());
                         cx.notify();
                     });
-                    sizes = sizes.child(option_chip(gpui::ElementId::named_usize(format!("lib-size-{i}"), si + 1), &size.to_uppercase(), picked == *size).on_click(pick));
+                    let fit = fits_vram(size, vram_bytes);
+                    let weight = size_gb_estimate(size).map(|gb| format!(" · ~{gb:.1} GB")) .unwrap_or_default();
+                    let quant = quant_of(size).unwrap_or_else(|| "q4_K_M".to_string());
+                    let label = format!("{} · {quant}{weight}", size.to_uppercase());
+                    let mut chip = option_chip(gpui::ElementId::named_usize(format!("lib-size-{i}"), si + 1), &label, picked == *size);
+                    chip = match fit {
+                        Some(true) => chip.child(icon("circle-check", 12.0).text_color(rgb(0x53d98c))),
+                        Some(false) => chip.child(icon("circle-alert", 12.0).text_color(rgb(DANGER))),
+                        None => chip,
+                    };
+                    sizes = sizes.child(chip.on_click(pick));
                 }
-                row = row.child(sizes);
+                let fit_note = match vram_bytes {
+                    Some(_) => " · ✓ fits your device · ! may exceed VRAM",
+                    None => "",
+                };
+                row = row.child(sizes).child(mono(&format!("Size tags are quantisations; default is q4_K_M{fit_note}"), DIM));
             }
-            row = row.child(mono(&format!("downloads {target}"), DIM));
+            row = row.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(6.0))
+                    .child(icon("download", 13.0).text_color(rgb(DIM)))
+                    .child(mono(&format!("downloads {target}"), DIM)),
+            );
             choices = choices.child(row);
             if i + 1 < shown.len() {
                 choices = choices.child(hairline());

@@ -109,7 +109,7 @@ pub fn empty_note(text: &str) -> Div {
 pub fn mono(text: &str, color: u32) -> Div {
     div()
         .font_family(MONO)
-        .text_size(px(12.0))
+        .text_size(px(12.5))
         .text_color(rgb(color))
         .child(text.to_string())
 }
@@ -118,7 +118,7 @@ pub fn mono(text: &str, color: u32) -> Div {
 pub fn th(label: &str) -> Div {
     div()
         .font_family(MONO)
-        .text_size(px(11.0))
+        .text_size(px(12.0))
         .text_color(rgb(DIM))
         .child(label.to_uppercase())
 }

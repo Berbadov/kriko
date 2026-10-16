@@ -15,7 +15,7 @@ use gpui::{
 use crate::app::{Field, Kriko, Tab};
 use crate::api::{self, Value};
 use crate::live::run::{ago, mark_for, Job, Stage};
-use crate::marks::{mark_tile, phase_beat};
+use crate::marks::{agent_tile, mark_tile, phase_beat};
 use crate::screens::{empty_note, guidance, mono, plate_s, row_desc, row_title};
 use crate::theme::*;
 
@@ -789,7 +789,7 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
         seg = seg.child(glyph).child(
             div()
                 .font_family(MONO)
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(rgb(if live {
                     0xffffff
                 } else if lit {
@@ -1216,7 +1216,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
                 .flex()
                 .items_center()
                 .gap(px(SPACE_CARD))
-                .child(mark_tile("run-lane-tile", mark_for(agent), phase, 48.0, motion))
+                .child(agent_tile("run-lane-tile", agent, mark_for(agent), phase, 48.0, motion))
                 .child(
                     div()
                         .flex_1()

@@ -50,6 +50,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     let add_row = div()
         .flex()
+        .items_center()
         .gap(px(8.0))
         .child(div().flex_1().min_w(px(0.0)).child(add_field))
         .child(plate_s("sites-add-btn", "Add site").on_click(add_click));
@@ -296,6 +297,19 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         .flex_col()
         .gap(px(8.0))
         .child(add_row)
+        .child(
+            div()
+                .flex()
+                .items_start()
+                .gap(px(8.0))
+                .child(icon("sparkles", 14.0).text_color(rgb(DIM)))
+                .child(row_desc(
+                    "Adding a site sends an agent to read its pages and write the \
+                     reading rules. After it finishes, the browser extension must \
+                     still be granted permission for the site — its icon sits \
+                     beside each learned site until it is active.",
+                )),
+        )
         .child(status)
         .child(table)
         .child(asked)

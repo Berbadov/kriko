@@ -298,7 +298,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             div().mb(px(4.0)).child(
                 div()
                     .font_family(MONO)
-                    .text_size(px(11.0))
+                    .text_size(px(12.0))
                     .text_color(rgb(DANGER))
                     .child("DANGER ZONE"),
             ),

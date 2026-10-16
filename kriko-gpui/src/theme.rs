@@ -12,30 +12,30 @@ use gpui::{
 };
 
 // ---- colour tokens (match tokens.json / the screenshots) ----
-pub const GROUND: u32 = 0x05070f;
-pub const SURFACE_1: u32 = 0x090e1b;
-pub const BRAND: u32 = 0x1f4fff;
-pub const BRAND_HOVER: u32 = 0x3a64ff;
-pub const BRAND_LOW: u32 = 0x1739c2;
-pub const BRAND_BRIGHT: u32 = 0x86a3ff;
+pub const GROUND: u32 = 0x030308;
+pub const SURFACE_1: u32 = 0x070a14;
+pub const BRAND: u32 = 0x2f6bff;
+pub const BRAND_HOVER: u32 = 0x4a80ff;
+pub const BRAND_LOW: u32 = 0x1c48d6;
+pub const BRAND_BRIGHT: u32 = 0x8fb4ff;
 pub const ICE: u32 = 0xbfe4ff;
 pub const INK: u32 = 0xf2f5ff;
 pub const INK_2: u32 = 0xc9d1ea;
-pub const MUTED: u32 = 0x98a3c2;
-pub const DIM: u32 = 0x8893b2;
+pub const MUTED: u32 = 0x9aa5c4;
+pub const DIM: u32 = 0x74809e;
 pub const DANGER: u32 = 0xff6b5e;
-pub const WELL: u32 = 0x080b16;
-pub const LED_OFF: u32 = 0x161d36;
+pub const WELL: u32 = 0x05070d;
+pub const LED_OFF: u32 = 0x131a30;
 pub const LED_DIM: u32 = 0x6b7799;
-pub const BEZEL_HI: u32 = 0x3a4156;
-pub const BEZEL_LO: u32 = 0x181c2a;
-pub const BEZEL_EDGE: u32 = 0x06080f;
+pub const BEZEL_HI: u32 = 0x2c3244;
+pub const BEZEL_LO: u32 = 0x12162a;
+pub const BEZEL_EDGE: u32 = 0x05070d;
 // translucent: 0xRRGGBBAA
 pub const GLASS_1: u32 = 0xffffff0d;
 pub const GLASS_2: u32 = 0xffffff14;
 /// The live dock's panel: the ground colour at 94% so the page behind it
 /// reads as a faint shape, never as text competing with the dock's own.
-pub const DOCK_GLASS: u32 = 0x090e1bf0;
+pub const DOCK_GLASS: u32 = 0x070a14f0;
 /// The live dock's width. The page reserves this much room while it is open,
 /// so controls and text do not disappear beneath the floating panel.
 pub const DOCK_WIDTH: f32 = 320.0;
@@ -56,9 +56,10 @@ pub const SANS: &str = "Kriko Sans";
 /// (a label, a figure) and the face stays one decision, here.
 pub const MONO: &str = SANS;
 /// The one place a fixed-width face is still right: text that is code, such
-/// as a run's log, where the columns line up. The machine's own, so nothing
-/// is shipped for it.
-pub const CODE: &str = "Consolas";
+/// as a run's log, where the columns line up. Bundled, so every machine the
+/// app reaches shows the same face and nothing falls back to a system mono
+/// the reader did not choose.
+pub const CODE: &str = "JetBrains Mono";
 
 pub fn register_fonts(cx: &mut gpui::App, fonts: Vec<std::borrow::Cow<'static, [u8]>>) {
     cx.text_system().add_fonts(fonts).expect("fonts");
@@ -150,17 +151,17 @@ pub enum LedAnim {
 
 /// The page column's side gutter, below the hero. The page head uses it too,
 /// so the title and the content share one left edge.
-pub const PAGE_PAD: f32 = 20.0;
+pub const PAGE_PAD: f32 = 28.0;
 /// Between two sections of one page.
-pub const SPACE_SECTION: f32 = 10.0;
+pub const SPACE_SECTION: f32 = 14.0;
 /// Between cards that sit side by side or stacked within a section.
-pub const SPACE_CARD: f32 = 6.0;
+pub const SPACE_CARD: f32 = 10.0;
 /// Between a section's title and what it holds.
-pub const SPACE_TITLE: f32 = 4.0;
+pub const SPACE_TITLE: f32 = 6.0;
 /// Inside a card.
-pub const PAD_CARD: f32 = 10.0;
+pub const PAD_CARD: f32 = 16.0;
 /// Inside a dense card: a list of rows, a table, a settings group.
-pub const PAD_CARD_TIGHT: f32 = 6.0;
+pub const PAD_CARD_TIGHT: f32 = 12.0;
 
 // ---- surfaces ----
 
@@ -281,7 +282,7 @@ pub fn horizontal_wheel<T: Styled + gpui::InteractiveElement>(mut element: T) ->
 pub fn eyebrow(label: &str) -> Div {
     div()
         .font_family(MONO)
-        .text_size(px(11.0))
+        .text_size(px(12.0))
         .text_color(rgb(DIM))
         .child(label.to_uppercase())
 }
@@ -743,7 +744,7 @@ pub fn chip(text: &str) -> Div {
         .flex()
         .items_center()
         .font_family(MONO)
-        .text_size(px(11.0))
+        .text_size(px(12.0))
         .text_color(rgb(INK_2))
         .child(text.to_string())
 }
@@ -891,7 +892,7 @@ pub fn tag(id: impl Into<SharedString>, state: TagState, label: &str, motion: bo
         .gap(px(8.0))
         .rounded(px(8.0))
         .font_family(MONO)
-        .text_size(px(11.0))
+        .text_size(px(12.0))
         .text_color(rgb(fg))
         .border_1()
         .border_color(rgba(HAIRLINE));
@@ -1208,6 +1209,14 @@ pub fn icon(name: &str, size: f32) -> Svg {
         .flex_none()
 }
 
+/// A bundled brand logo, at the asset root's `logos/` directory.
+pub fn logo(name: &str, size: f32) -> Svg {
+    svg()
+        .path(SharedString::from(format!("logos/{name}.svg")))
+        .size(px(size))
+        .flex_none()
+}
+
 /// A loading mark: the loader arc turning while the engine answers. It stays
 /// still under reduced motion, so the wait is still shown without movement.
 pub fn spinner(id: impl Into<SharedString>, size: f32, motion: bool) -> gpui::AnyElement {
@@ -1287,7 +1296,7 @@ pub fn nav_item(
                 .bg(rgb(BRAND))
                 .shadow(vec![shadow(0x0f2a9c99, 0.0, 2.0, 0.0, 0.0)])
                 .font_family(MONO)
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(rgb(0xffffff))
                 .child(b.to_string()),
         ),
@@ -1383,12 +1392,12 @@ pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
                 .w(px(66.4))
                 .h(px(22.0))
                 .flex_none()
-                .text_color(rgb(0xffffff))).child(div().flex_none().font_family(MONO).text_size(px(10.0)).text_color(rgb(ICE)).px(px(6.0)).py(px(3.0)).border_1().border_color(rgba(0xffffff59)).rounded(px(4.0)).child("BETA")),
+                .text_color(rgb(0xffffff))).child(div().flex_none().font_family(MONO).text_size(px(12.0)).text_color(rgb(ICE)).px(px(6.0)).py(px(3.0)).border_1().border_color(rgba(0xffffff59)).rounded(px(4.0)).child("BETA")),
         )
         .child(
             div()
                 .font_family(MONO)
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(rgb(0xffffffd9))
                 .child(tagline.to_string()),
         )
@@ -1406,7 +1415,7 @@ mod grid_tests {
 
     #[test]
     fn the_smallest_window_keeps_two_columns_where_cards_are_wide_enough() {
-        // 940x640 is the minimum window; its content is 644 px wide
+        // 940x640 is the minimum window; its content is 624 px wide
         let w = content_at(940.0);
         assert_eq!(column_count(w, 300.0, 3), 2);
         assert_eq!(column_count(w, 200.0, 4), 3);
@@ -1414,7 +1423,7 @@ mod grid_tests {
 
     #[test]
     fn the_common_window_fits_three_cards_of_three_hundred() {
-        // 1280x800: 984 px of content
+        // 1280x800: 964 px of content
         let w = content_at(1280.0);
         assert_eq!(column_count(w, 300.0, 3), 3);
         assert_eq!(column_count(w, 300.0, 2), 2, "the cap wins over the width");
