@@ -7,6 +7,7 @@ after fixture data has been built; no real store, lifespan jobs, or agents run.
 from __future__ import annotations
 
 import json
+import ast
 import os
 import socket
 import sys
@@ -22,7 +23,6 @@ import uvicorn  # noqa: E402
 from fastapi.responses import JSONResponse  # noqa: E402
 
 from app import chat  # noqa: E402
-from app.tests.test_chat_sources import CLAIMS, SUBJECTS, TERMS, TOML  # noqa: E402
 from app.web import state  # noqa: E402
 from app.web.app import create_app  # noqa: E402
 from app.web.routers.query import LookupRequest, answer  # noqa: E402
@@ -30,6 +30,19 @@ from app.web.settings import Settings  # noqa: E402
 from kriko.pack import build  # noqa: E402
 from kriko.store import packstore  # noqa: E402
 from kriko.store.db import connect  # noqa: E402
+
+# Read only the neutral fixture's literal data. Importing the test module
+# would pull pytest into a packaging job that installs runtime dependencies.
+fixture_source = Path(__file__).resolve().parents[1] / "src/app/tests/test_chat_sources.py"
+fixture_values = {
+    node.targets[0].id: ast.literal_eval(node.value)
+    for node in ast.parse(fixture_source.read_text(encoding="utf-8")).body
+    if isinstance(node, ast.Assign) and len(node.targets) == 1
+    and isinstance(node.targets[0], ast.Name)
+    and node.targets[0].id in {"CLAIMS", "SUBJECTS", "TERMS", "TOML"}
+}
+CLAIMS, SUBJECTS, TERMS, TOML = (fixture_values[key] for key in
+                               ("CLAIMS", "SUBJECTS", "TERMS", "TOML"))
 
 
 def main() -> None:
