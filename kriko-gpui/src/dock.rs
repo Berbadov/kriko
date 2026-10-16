@@ -17,8 +17,7 @@ use crate::screens::{empty_note, mono, row_desc};
 use crate::theme::*;
 
 pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
-    // Closed, the dock is still laid out at zero width for its slide, and its
-    // waiting marks would loop unseen at full frame rate (#184).
+    // The shell constructs this panel only while it is visible.
     let motion = app.motion && app.dock_open;
 
     let send = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -422,13 +421,9 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
         .w(px(DOCK_WIDTH))
         .flex_none()
         .rounded(px(18.0))
-        .bg(gpui::linear_gradient(
-            180.0,
-            gpui::linear_color_stop(rgba(0xffffff1a), 0.0),
-            gpui::linear_color_stop(rgba(DOCK_GLASS), 1.0),
-        ))
+        .bg(rgb(SURFACE_1))
         .border_1()
-        .border_color(rgba(0xffffff3d))
+        .border_color(rgba(HAIRLINE))
         .shadow(vec![shadow(0x000000a8, 0.0, 18.0, 44.0, 0.0)])
         .flex()
         .flex_col()

@@ -239,6 +239,21 @@ class ResearchTask:
     #: the interface (which kinds of source to go to first). Opaque here: the
     #: engine appends it to the brief and never reads it.
     guidance: str = ""
+    #: How much run the reader is buying: `fast` (one breadth of searches, a
+    #: single read pass, stop at the first covered map) or `deep` (a budgeted
+    #: tree — parallel threads, a round of follow-ups from the gaps, a second
+    #: corroboration round). The effort *is* the budget: a brief that asks for
+    #: depth without naming a number is what produces the documented failure
+    #: mode of every research loop that has none — searching endlessly for
+    #: sources that do not exist. Anything other than these two words is
+    #: refused by the caller that accepted the argument, not here.
+    effort: str = "fast"
+    #: What earlier submissions on this subject did: one dict per submit, the
+    #: runs the interface has logged (kept and refused counts, the queries
+    #: that ran). Opaque here — the brief renders it and the engine never reads
+    #: it — so a researcher that runs with no history beside it simply renders
+    #: a brief with no memory section, and the two planes stay one protocol.
+    prior_runs: tuple = ()
 
     @property
     def rationale_rule(self) -> str:
