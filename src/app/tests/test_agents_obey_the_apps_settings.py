@@ -258,6 +258,9 @@ def test_a_quick_look_asks_for_the_readers_output_language(tmp_path, monkeypatch
 
 
 def test_a_cli_that_searches_for_itself_is_told_the_readers_count_and_language(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        harness, "HOST_READ_HARNESSES",
+        harness.HOST_READ_HARNESSES - {"claude-code"})
     researcher, _ = _agent(
         tmp_path, "claude-code", research_sources="2", local_output_language="tr",
         research_source_kinds="forums")

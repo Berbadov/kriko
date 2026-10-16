@@ -10,14 +10,14 @@
 //! `Kriko::fetch`, so the screen draws from this state and never waits on the
 //! network.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use gpui::{BackgroundExecutor, Context};
 use serde_json::json;
 
 use crate::api::{self, Value};
-use crate::app::Kriko;
+use crate::app::{Kriko, Tab};
 
 /// Who wrote a message.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -204,6 +204,9 @@ pub struct State {
     pub local_note: String,
     /// A question is being posted (before its job exists).
     pub sending: bool,
+    /// A no-match handoff is creating an unsent conversation. Do not auto-open
+    /// an older thread while its creation response is in flight.
+    pub discovery_pending: bool,
     pub in_flight: Option<InFlight>,
     /// The turn so far, while its job runs.
     pub partial: Option<Partial>,
@@ -214,6 +217,62 @@ pub struct State {
     pub say: Option<String>,
     /// Jobs this session is already following, so one turn is watched once.
     pub watching: HashSet<String>,
+    /// Jobs belonging to other conversations keep running when the reader switches.
+    pub running: HashMap<String, String>,
+    pub drafts: HashMap<String, String>,
+    pub details: HashSet<String>,
+    pub scroll: gpui::ScrollHandle,
+    pub rendered_chars: usize,
+}
+
+impl State {
+    fn finish_discovery(
+        &mut self,
+        thread: Thread,
+        prompt: String,
+        origin: (Option<&str>, &str),
+        current_input: &str,
+        visible: bool,
+    ) -> Option<String> {
+        self.discovery_pending = false;
+        let id = thread.thread_id.clone();
+        self.drafts.insert(id.clone(), prompt.clone());
+        self.threads.insert(0, thread);
+        if visible && self.thread.as_deref() == origin.0 && current_input == origin.1 {
+            self.drafts.insert(origin.0.unwrap_or_default().to_string(), current_input.to_string());
+            self.select_thread(id);
+            Some(prompt)
+        } else {
+            None
+        }
+    }
+
+    fn select_thread(&mut self, thread_id: String) {
+        self.in_flight = self.running.get(&thread_id).map(|job_id| InFlight {
+            thread_id: thread_id.clone(), job_id: job_id.clone(),
+        });
+        self.thread = Some(thread_id);
+        self.messages.clear();
+        self.partial = None;
+        self.job_message.clear();
+        self.failed = None;
+        self.say = None;
+        self.rendered_chars = 0;
+    }
+
+    fn finish_job(&mut self, thread_id: &str, job_id: &str, failure: Option<String>) {
+        self.watching.remove(job_id);
+        if self.running.get(thread_id).is_some_and(|id| id == job_id) {
+            self.running.remove(thread_id);
+        }
+        if self.thread.as_deref() == Some(thread_id)
+            && self.in_flight.as_ref().is_some_and(|f| f.job_id == job_id) {
+            self.in_flight = None;
+            self.partial = None;
+            self.job_message.clear();
+            self.failed = failure;
+        }
+    }
 }
 
 // ---- reading the engine ----
@@ -237,7 +296,7 @@ impl Kriko {
                 this.live.chat.loaded = true;
                 // Only when nothing is open: a conversation just started may not
                 // be in this list yet, and must not be replaced by the first one.
-                if this.live.chat.thread.is_none() {
+                if this.live.chat.thread.is_none() && !this.live.chat.discovery_pending {
                     // The newest conversation, or none: a fresh install shows
                     // the empty state, never a blank conversation.
                     if let Some(id) = this.live.chat.threads.first().map(|t| t.thread_id.clone()) {
@@ -277,10 +336,11 @@ impl Kriko {
     /// Reads one conversation's messages and, if a turn is still running in
     /// it, starts following that turn again.
     pub fn open_chat_thread(&mut self, thread_id: String, cx: &mut Context<Self>) {
-        self.live.chat.thread = Some(thread_id.clone());
-        self.live.chat.messages.clear();
-        self.live.chat.failed = None;
-        self.live.chat.say = None;
+        let previous = self.live.chat.thread.clone().unwrap_or_default();
+        self.live.chat.drafts.insert(previous, self.chat_input.value.clone());
+        let draft = self.live.chat.drafts.get(&thread_id).cloned().unwrap_or_default();
+        self.chat_input.set_value(draft);
+        self.live.chat.select_thread(thread_id.clone());
         self.load_chat_messages(thread_id, cx);
     }
 
@@ -296,6 +356,11 @@ impl Kriko {
                 }
                 if let Ok(v) = reply {
                     this.live.chat.messages = api::arr(&v, "items").iter().map(message_from).collect();
+                    let recovered = api::s(&v, "job_id");
+                    if !recovered.is_empty() {
+                        this.live.chat.running.insert(thread_id.clone(), recovered.clone());
+                        this.live.chat.in_flight = Some(InFlight { thread_id: thread_id.clone(), job_id: recovered });
+                    }
                     let running = this
                         .live
                         .chat
@@ -326,6 +391,43 @@ impl Kriko {
         });
     }
 
+    /// Keep a discovery request in its own unsent thread. Existing drafts and
+    /// running turns survive; navigation or typing during the request wins.
+    pub fn open_discovery_chat(&mut self, prompt: String, cx: &mut Context<Self>) {
+        if self.live.chat.discovery_pending {
+            return;
+        }
+        self.live.chat.discovery_pending = true;
+        let previous = self.live.chat.thread.clone();
+        let typed = self.chat_input.value.clone();
+        let title: String = prompt.chars().take(200).collect();
+        self.fetch(cx, move || api::post("/api/chat/threads", json!({"title": title})),
+            move |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => {
+                        let thread = thread_from(&v);
+                        let id = thread.thread_id.clone();
+                        let input = this.live.chat.finish_discovery(
+                            thread, prompt,
+                            (previous.as_deref(), &typed),
+                            &this.chat_input.value,
+                            this.tab == Tab::Chat,
+                        );
+                        if let Some(input) = input {
+                            this.chat_input.set_value(input);
+                            this.load_chat_messages(id, cx);
+                            this.refresh_chat(cx);
+                        }
+                    }
+                    Err(e) => {
+                        this.live.chat.discovery_pending = false;
+                        this.live.chat.say = Some(e.message);
+                    }
+                }
+            });
+    }
+
     /// Forgets the open conversation and its messages, then opens the next one.
     pub fn delete_chat_thread(&mut self, cx: &mut Context<Self>) {
         let Some(id) = self.live.chat.thread.clone() else { return };
@@ -338,6 +440,7 @@ impl Kriko {
             this.note(&reply);
             if reply.is_ok() {
                 this.live.chat.threads.retain(|t| t.thread_id != id);
+                this.live.chat.drafts.remove(&id);
                 this.live.chat.thread = None;
                 this.live.chat.messages.clear();
                 this.live.chat.partial = None;
@@ -357,12 +460,18 @@ impl Kriko {
         if text.is_empty() || self.live.chat.sending || self.live.chat.in_flight.is_some() {
             return;
         }
+        if text.chars().count() > 2000 {
+            self.live.chat.say = Some("Message too long. Shorten it to 2000 characters before sending.".into());
+            return;
+        }
         self.live.chat.sending = true;
         self.live.chat.say = None;
         self.live.chat.failed = None;
         let harness = self.live.chat.harness.clone();
         let backend = if harness == "local" { "local" } else { "harness" };
         let existing = self.live.chat.thread.clone();
+        let selected_at_submit = existing.clone();
+        let submitted_text = text.clone();
         self.fetch(
             cx,
             move || {
@@ -384,19 +493,52 @@ impl Kriko {
                 match reply {
                     Ok((thread, posted)) => {
                         let job_id = api::s(&posted, "job_id");
-                        this.chat_input.set_value(String::new());
-                        this.live.chat.thread = Some(thread.clone());
-                        this.live.chat.in_flight = Some(InFlight { thread_id: thread.clone(), job_id: job_id.clone() });
-                        this.live.chat.partial = Some(Partial::default());
-                        this.live.chat.job_message = "queued".into();
+                        this.live.chat.running.insert(thread.clone(), job_id.clone());
+                        if this.live.chat.drafts.get(&thread).is_some_and(|draft| draft.trim() == submitted_text) {
+                            this.live.chat.drafts.remove(&thread);
+                        }
+                        if this.live.chat.thread == selected_at_submit {
+                            if this.chat_input.value.trim() == submitted_text {
+                                this.chat_input.set_value(String::new());
+                                this.live.chat.drafts.remove(&thread);
+                            }
+                            this.live.chat.thread = Some(thread.clone());
+                            this.live.chat.in_flight = Some(InFlight { thread_id: thread.clone(), job_id: job_id.clone() });
+                            this.live.chat.partial = Some(Partial::default());
+                            this.live.chat.job_message = "queued".into();
+                            this.load_chat_messages(thread.clone(), cx);
+                        }
                         this.refresh_chat(cx);
-                        this.load_chat_messages(thread.clone(), cx);
                         this.watch_chat_job(thread, job_id, cx);
                     }
-                    Err(e) => this.live.chat.say = Some(e.message),
+                    Err(e) => {
+                        if this.live.chat.thread == selected_at_submit {
+                            this.live.chat.say = Some(e.message);
+                        }
+                    }
                 }
             },
         );
+    }
+
+    pub fn stop_chat_turn(&mut self, cx: &mut Context<Self>) {
+        let Some(flight) = self.live.chat.in_flight.clone() else { return };
+        let job_id = flight.job_id.clone();
+        self.fetch(cx, move || api::post(&format!("/api/jobs/{}/cancel", api::seg(&job_id)), json!({})),
+            move |this, reply, _| {
+                if this.live.chat.thread.as_deref() != Some(flight.thread_id.as_str()) { return; }
+                match reply {
+                    Ok(_) => this.live.chat.job_message = "Stopping…".into(),
+                    Err(e) => this.live.chat.say = Some(e.message),
+                }
+            });
+    }
+
+    pub fn retry_chat_turn(&mut self, cx: &mut Context<Self>) {
+        if let Some(message) = self.live.chat.messages.iter().rev().find(|m| m.role == Role::Reader) {
+            self.chat_input.set_value(message.text.clone());
+            self.send_chat_message(cx);
+        }
     }
 
     /// Follows one turn's job until it ends: the steps as they are read, then
@@ -424,16 +566,11 @@ impl Kriko {
                             cx.notify();
                             return false;
                         }
-                        this.live.chat.watching.remove(&jid);
-                        if this.live.chat.in_flight.as_ref().is_some_and(|f| f.job_id == jid) {
-                            this.live.chat.in_flight = None;
-                        }
-                        this.live.chat.partial = None;
-                        this.live.chat.job_message.clear();
-                        if api::s(&job, "state") != "succeeded" {
+                        let failure = if api::s(&job, "state") != "succeeded" {
                             let why = api::s(&job, "message");
-                            this.live.chat.failed = Some(if why.is_empty() { "The turn did not finish.".into() } else { why });
-                        }
+                            Some(if why.is_empty() { "The turn did not finish.".into() } else { why })
+                        } else { None };
+                        this.live.chat.finish_job(&tid, &jid, failure);
                         if this.live.chat.thread.as_deref() == Some(tid.as_str()) {
                             this.load_chat_messages(tid, cx);
                         }
@@ -441,10 +578,12 @@ impl Kriko {
                         true
                     }
                     Err(e) => {
+                        // A failed poll says nothing about whether the agent stopped.
+                        // Keep the job identity so Stop and a later reconnect still work.
                         this.live.chat.watching.remove(&jid);
-                        this.live.chat.in_flight = None;
-                        this.live.chat.partial = None;
-                        this.live.chat.failed = Some(e.message);
+                        if this.live.chat.thread.as_deref() == Some(tid.as_str()) {
+                            this.live.chat.say = Some(format!("Connection interrupted: {}. Reopen this conversation to reconnect.", e.message));
+                        }
                         true
                     }
                 })
@@ -461,6 +600,87 @@ impl Kriko {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn discovery_keeps_the_old_draft_and_job_in_its_original_thread() {
+        let mut state = State::default();
+        state.running.insert("old".into(), "job-old".into());
+        state.select_thread("old".into());
+        state.discovery_pending = true;
+        let input = state.finish_discovery(
+            Thread { thread_id: "new".into(), title: "Find a device".into() },
+            "Find a device".into(), (Some("old"), "My unfinished question"),
+            "My unfinished question", true,
+        );
+        assert_eq!(input.as_deref(), Some("Find a device"));
+        assert_eq!(state.thread.as_deref(), Some("new"));
+        assert_eq!(state.drafts.get("old").map(String::as_str), Some("My unfinished question"));
+        assert_eq!(state.drafts.get("new").map(String::as_str), Some("Find a device"));
+        assert_eq!(state.running.get("old").map(String::as_str), Some("job-old"));
+        assert!(state.in_flight.is_none());
+        assert!(!state.discovery_pending);
+    }
+
+    #[test]
+    fn typing_while_discovery_opens_cannot_be_overwritten_by_its_response() {
+        let mut state = State::default();
+        let input = state.finish_discovery(
+            Thread { thread_id: "new".into(), title: "Find a device".into() },
+            "Find a device".into(), (None, ""), "A question just typed", true,
+        );
+        assert!(input.is_none());
+        assert!(state.thread.is_none());
+        assert_eq!(state.drafts.get("new").map(String::as_str), Some("Find a device"));
+    }
+
+    #[test]
+    fn discovery_cannot_switch_back_after_the_reader_leaves_the_thread() {
+        let mut state = State::default();
+        state.select_thread("other".into());
+        let input = state.finish_discovery(
+            Thread { thread_id: "new".into(), title: "Find a device".into() },
+            "Find a device".into(), (Some("old"), ""), "", true,
+        );
+        assert!(input.is_none());
+        assert_eq!(state.thread.as_deref(), Some("other"));
+        let background_input = state.finish_discovery(
+            Thread { thread_id: "background".into(), title: "Find another".into() },
+            "Find another".into(), (Some("other"), ""), "", false,
+        );
+        assert!(background_input.is_none());
+        assert_eq!(state.thread.as_deref(), Some("other"));
+    }
+
+    #[test]
+    fn changing_threads_keeps_their_independent_jobs() {
+        let mut state = State::default();
+        state.running.insert("first".into(), "job-a".into());
+        state.select_thread("first".into());
+        assert_eq!(state.in_flight.as_ref().unwrap().job_id, "job-a");
+        state.select_thread("second".into());
+        assert!(state.in_flight.is_none(), "another conversation can send while the first answers");
+        state.running.insert("second".into(), "job-b".into());
+        state.select_thread("second".into());
+        state.partial = Some(Partial { answer: "Second answer so far".into(), ..Partial::default() });
+        state.finish_job("first", "job-a", Some("First failed".into()));
+        assert_eq!(state.in_flight.as_ref().unwrap().job_id, "job-b");
+        assert_eq!(state.partial.as_ref().unwrap().answer, "Second answer so far");
+        assert!(state.failed.is_none(), "a background failure belongs to its own conversation");
+        state.finish_job("second", "job-b", None);
+        assert!(state.in_flight.is_none());
+        assert!(state.running.is_empty());
+    }
+
+    #[test]
+    fn an_older_job_cannot_clear_a_newer_turn_in_the_same_thread() {
+        let mut state = State::default();
+        state.running.insert("thread".into(), "new-job".into());
+        state.select_thread("thread".into());
+        state.finish_job("thread", "old-job", Some("old failure".into()));
+        assert_eq!(state.running.get("thread").map(String::as_str), Some("new-job"));
+        assert_eq!(state.in_flight.as_ref().unwrap().job_id, "new-job");
+        assert!(state.failed.is_none());
+    }
 
     #[test]
     fn a_step_state_word_maps_to_its_state_and_an_unknown_one_is_still_running() {

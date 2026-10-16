@@ -26,7 +26,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from typing import Any
 from app.providers import network
 
 from app.providers._http import TIMEOUT
@@ -34,6 +35,35 @@ from kriko.research.politeness import LocalSearchError
 
 DEFAULT_BASE_URL = "http://127.0.0.1:7000"
 DEFAULT_ENGINE = "duckduckgo"
+MAX_SEARCH_BYTES = 4_000_000
+
+
+def _response_body(response, deadline: float, check) -> bytes:
+    """Poll cancellation between available HTTP chunks, including trickled bodies."""
+    read_chunk = getattr(response, "read1", None)
+    if not callable(read_chunk):
+        # Simple injected responses may expose only a whole-body read. urllib's
+        # HTTPResponse has read1, which returns available bytes without waiting
+        # for an entire large buffer to fill.
+        check()
+        body = response.read()
+        check()
+        if len(body) > MAX_SEARCH_BYTES or time.monotonic() >= deadline:
+            raise LocalSearchError("search response exceeded its size or time budget")
+        return body
+    parts: list[bytes] = []
+    size = 0
+    while True:
+        check()
+        if time.monotonic() >= deadline:
+            raise LocalSearchError("search response budget reached")
+        chunk = read_chunk(min(65536, MAX_SEARCH_BYTES + 1 - size))
+        if not chunk:
+            return b"".join(parts)
+        size += len(chunk)
+        if size > MAX_SEARCH_BYTES:
+            raise LocalSearchError("search response was too large")
+        parts.append(chunk)
 
 #: The engines a local run asks together. Measured on this service, one engine
 #: at a time: Google answered 6 of 6 (9 hits, 5-6 s) while two others had
@@ -195,7 +225,7 @@ def _unwrapped(results: list, check=None, resolve=None) -> list:
 
 
 def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
-             resolve=None):
+             resolve=None, timeout: float = TIMEOUT, mode: str = ""):
     """`search(query, limit) -> [{"url", "title", "site"}]`.
 
     Same injected shape as the paid plane's search sockets, so the local
@@ -204,74 +234,200 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
     """
     endpoint = (base_url or DEFAULT_BASE_URL).rstrip("/")
     chosen = engine or DEFAULT_ENGINE
+    default_mode = mode
     stats = {"queries": 0, "hits": 0, "challenges": 0}
+    stats_lock = threading.Lock()
 
-    def search(query: str, limit: int = 5) -> list[dict]:
-        params = urllib.parse.urlencode(
-            {
-                "text": query,
-                "engines": _engines_to_ask(chosen),
-                "limit": max(1, int(limit)),
-                "format": "json",
-                "lang": language,
-            }
-        )
-        request = urllib.request.Request(
-            f"{endpoint}/mega/search?{params}",
-            headers={"Accept": "application/json"},
-        )
-        try:
-            check_cancelled = getattr(search, "check_cancelled", None)
-            with network.urlopen(request, timeout=TIMEOUT,
-                                 pace_interval=0.25,
-                                 check=check_cancelled) as response:
-                body = response.read().decode("utf-8", "replace")
-        except Exception as error:  # noqa: BLE001 — network, rotate
-            raise LocalSearchError(str(error)) from error
-        stats["queries"] += 1
-        try:
-            payload = json.loads(body)
-        except json.JSONDecodeError as error:
-            if any(marker in body[:4096].casefold() for marker in _BLOCK_MARKERS):
-                stats["challenges"] += 1
-                raise LocalSearchError(
-                    "the SERP answered with a challenge page"
-                ) from error
-            raise LocalSearchError("the SERP did not answer with JSON") from error
-        _note_failed_engines(payload)
-        results = payload.get("results") if isinstance(payload, dict) else []
-        if not isinstance(results, list):
-            raise LocalSearchError("the SERP returned an invalid results array")
-        if not results and isinstance(payload, dict):
-            message = str(payload.get("error") or payload.get("message") or "")
-            if any(marker in message.casefold() for marker in _BLOCK_MARKERS):
-                stats["challenges"] += 1
-                raise LocalSearchError("the SERP answered with a challenge")
-            if payload.get("error"):
-                raise LocalSearchError(message[:250])
-        results = _unwrapped(results or [], getattr(search, "check_cancelled", None),
-                             resolve)
-        out = []
-        for hit in results or []:
-            if not isinstance(hit, dict):
-                continue
-            url = str(hit.get("url", "")).strip()
-            if not url or _is_ad_or_search_redirect(url, hit.get("type")):
-                continue
-            site = str(hit.get("domain", "")).strip()
-            if not site:
-                netloc = urllib.parse.urlsplit(url).netloc
-                site = netloc.split("@")[-1].split(":")[0]
-            out.append(
-                {
-                    "url": url,
-                    "title": str(hit.get("title", "")).strip(),
-                    "site": site,
-                }
+    def search(query: str, limit: int = 5, *, timeout: float | None = None,
+               pace_interval: float | None = None, mode: str | None = None,
+               engines: str = "") -> list[dict]:
+        request_mode = mode or default_mode
+        total_timeout = timeout if timeout is not None else search_timeout
+        engine_names = _engines_to_ask(engines or chosen).split(",")
+        # In `any` mode use the selected engines' own endpoints. Mega
+        # counts a Google click-through as a result before this adapter can
+        # reject it, so the next engine must get a chance to return a page.
+        per_engine = request_mode == "any"
+        routes = engine_names if per_engine else [""]
+        deadline = time.monotonic() + total_timeout if per_engine else 0.0
+        last_error: Exception | None = None
+        had_response = False
+        check_cancelled = getattr(search, "check_cancelled", None)
+        callback_error: BaseException | None = None
+        start_pace = pace_interval if pace_interval is not None else 0.25
+
+        if per_engine and len(engine_names) > 1:
+            # A slow first engine must not consume the whole interactive
+            # budget before the next engine gets a chance. Each selected
+            # engine receives this query once; outbound pacing still applies.
+            if check_cancelled is not None:
+                check_cancelled()
+            stop = threading.Event()
+
+            def check_worker() -> None:
+                if stop.is_set() or time.monotonic() >= deadline:
+                    raise LocalSearchError("search stopped")
+
+            def one_engine(name: str) -> list[dict]:
+                child = searcher(endpoint, engine=name, language=language,
+                                 timeout=total_timeout, mode="any", resolve=resolve)
+                child.check_cancelled = check_worker
+                try:
+                    check_worker()
+                    return child(query, limit, timeout=max(0.001, deadline - time.monotonic()),
+                                 pace_interval=start_pace)
+                finally:
+                    with stats_lock:
+                        for key in stats:
+                            stats[key] += child.stats[key]
+
+            pool = ThreadPoolExecutor(max_workers=min(3, len(engine_names)),
+                                      thread_name_prefix="kriko-search")
+            jobs = {pool.submit(one_engine, name): index
+                    for index, name in enumerate(engine_names)}
+            pending = set(jobs)
+            failures: list[Exception] = []
+            answered = False
+            try:
+                while pending and time.monotonic() < deadline:
+                    if check_cancelled is not None:
+                        check_cancelled()
+                    done, pending = wait(pending, timeout=min(0.05, max(0.0, deadline - time.monotonic())),
+                                         return_when=FIRST_COMPLETED)
+                    for future in sorted(done, key=jobs.__getitem__):
+                        try:
+                            hits = future.result()
+                        except LocalSearchError as error:
+                            failures.append(error)
+                            continue
+                        answered = True
+                        if hits:
+                            return hits
+                if check_cancelled is not None:
+                    check_cancelled()
+                if not answered and failures and not pending:
+                    raise LocalSearchError(str(failures[-1])) from failures[-1]
+                return []
+            finally:
+                stop.set()
+                pool.shutdown(wait=False, cancel_futures=True)
+
+        def check_request() -> None:
+            nonlocal callback_error
+            if check_cancelled is None:
+                return
+            try:
+                check_cancelled()
+            except BaseException as error:
+                callback_error = error
+                raise
+
+        for engine_name in routes:
+            if per_engine:
+                request_timeout = deadline - time.monotonic()
+                if request_timeout <= 0:
+                    break
+                engine_path = "duck" if engine_name == "duckduckgo" else engine_name
+                path = f"{engine_path}/search"
+                params = {"text": query, "limit": max(1, int(limit)),
+                          "format": "json", "lang": language}
+            else:
+                request_timeout = total_timeout
+                path = "mega/search"
+                params = {"text": query, "engines": ",".join(engine_names),
+                          "limit": max(1, int(limit)), "format": "json",
+                          "lang": language}
+                if request_mode:
+                    params["mode"] = request_mode
+            request = urllib.request.Request(
+                f"{endpoint}/{path}?{urllib.parse.urlencode(params)}",
+                headers={"Accept": "application/json"},
             )
-        stats["hits"] += len(out)
-        return out
+            try:
+                request_ends = time.monotonic() + request_timeout
+                options: dict[str, Any] = {"check": check_request} if check_cancelled is not None else {}
+                with network.urlopen(request, timeout=request_timeout,
+                                     pace_interval=start_pace, **options) as response:
+                    body = _response_body(response, request_ends, check_request).decode("utf-8", "replace")
+            except Exception as error:  # noqa: BLE001 — network, rotate
+                if callback_error is not None:
+                    raise callback_error
+                last_error = error
+                if per_engine:
+                    continue
+                raise LocalSearchError(str(error)) from error
+            with stats_lock:
+                stats["queries"] += 1
+            try:
+                payload = json.loads(body)
+            except json.JSONDecodeError as error:
+                challenge = any(marker in body[:4096].casefold()
+                                for marker in _BLOCK_MARKERS)
+                if challenge:
+                    with stats_lock:
+                        stats["challenges"] += 1
+                last_error = LocalSearchError(
+                    "the SERP answered with a challenge page" if challenge
+                    else "the SERP did not answer with JSON")
+                if per_engine:
+                    continue
+                raise last_error from error
+            _note_failed_engines(payload)
+            results = payload.get("results") if isinstance(payload, dict) else []
+            if not isinstance(results, list):
+                last_error = LocalSearchError("the SERP returned an invalid results array")
+                if per_engine:
+                    continue
+                raise last_error
+            if not results and isinstance(payload, dict):
+                message = str(payload.get("error") or payload.get("message") or "")
+                challenge = any(marker in message.casefold() for marker in _BLOCK_MARKERS)
+                if challenge:
+                    with stats_lock:
+                        stats["challenges"] += 1
+                if challenge or payload.get("error"):
+                    last_error = LocalSearchError(
+                        "the SERP answered with a challenge" if challenge
+                        else message[:250])
+                    if per_engine:
+                        continue
+                    raise last_error
+            had_response = True
+            # Mega searches retain main's click-through resolver. In `any`
+            # mode a click-through is filtered below, allowing the loop to
+            # ask the next engine within the shared deadline.
+            candidates = (results if per_engine else _unwrapped(
+                results, check_cancelled, resolve))
+            out = []
+            for hit in candidates:
+                if not isinstance(hit, dict):
+                    continue
+                url = str(hit.get("url", "")).strip()
+                if not url or _is_ad_or_search_redirect(url, hit.get("type")):
+                    continue
+                site = str(hit.get("domain", "")).strip()
+                if not site:
+                    netloc = urllib.parse.urlsplit(url).netloc
+                    site = netloc.split("@")[-1].split(":")[0]
+                out.append({"url": url, "title": str(hit.get("title", "")).strip(),
+                            "site": site})
+            with stats_lock:
+                stats["hits"] += len(out)
+            if out or not per_engine:
+                return out
 
+        if per_engine and not had_response and last_error is not None:
+            raise LocalSearchError(str(last_error)) from last_error
+        return []
+
+    search_timeout = timeout
+    #: What a caller may aim one query at. `engines=` on a call asks just those,
+    #: so several queries can run at once with no engine asked by two.
+    search.engines = [name.strip() for name in chosen.split(",")  # type: ignore[attr-defined]
+                      if name.strip()]
     search.stats = stats  # type: ignore[attr-defined]
     search.check_cancelled = None  # type: ignore[attr-defined]
+    search.supports_timeout = True  # type: ignore[attr-defined]
+    search.supports_pacing = True  # type: ignore[attr-defined]
+    search.supports_fast_options = True  # type: ignore[attr-defined]
     return search

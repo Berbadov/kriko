@@ -122,6 +122,7 @@ for line in sys.stdin:
         text = msg["params"]["prompt"][0]["text"]
         pending = (msg["id"], sid)
         if mode == "hang":
+            update(sid, sessionUpdate="agent_thought_chunk", content={"type": "text", "text": "thinking"})
             continue
         if mode == "permission":
             send({"jsonrpc": "2.0", "id": "perm-1", "method": "session/request_permission",
@@ -415,9 +416,12 @@ def test_acp_a_stop_that_is_not_end_of_turn_is_an_error_not_an_answer(acp) -> No
 def test_acp_cancel_asks_the_session_to_stop(acp) -> None:
     pool, _, tmp_path = acp
     cancel = threading.Event()
-    threading.Timer(0.4, cancel.set).start()
+    def received(status, *_args):
+        if status == "accepted":
+            cancel.set()
     with pytest.raises(TurnCancelled):
-        pool.run(_profile("acp", tmp_path, "hang"), ResidentRequest("hello", timeout=20), cancel_event=cancel)
+        pool.run(_profile("acp", tmp_path, "hang"),
+                 ResidentRequest("hello", timeout=20, on_delivery=received), cancel_event=cancel)
     assert any(m.get("method") == "session/cancel" for m in _log(tmp_path, "acp", "hang"))
     assert pool.worker_count() == 1  # the agent answered `cancelled`
 

@@ -243,6 +243,271 @@ def test_the_searches_go_out_together_on_a_hosted_search():
     assert len(inside) == 3
 
 
+def test_parallel_search_checks_cancellation_only_on_the_job_thread():
+    """Search callbacks may run in workers; the job's SQLite connection may not."""
+    owner = threading.get_ident()
+    calls = []
+
+    def search(query, limit):
+        search.check_cancelled()
+        calls.append(query)
+        return [{"url": "https://a.test/1", "title": "A"}]
+
+    search.check_cancelled = None
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), search, reader({"https://a.test/1": "text"}),
+        model="m", search_provider="stub", parallel_search=True)
+
+    def owner_only_check():
+        assert threading.get_ident() == owner, "job state was read in a search worker"
+
+    asker.check_cancelled = owner_only_check
+    asker.on_action = lambda line: None
+    pages = asker._read(["q1", "q2"], identity=None)
+    assert pages == [("https://a.test/1", "text")]
+    assert set(calls) == {"q1", "q2"}
+
+
+def test_parallel_search_reports_a_completed_query_while_another_is_slow():
+    """A quick first response is visible without waiting for the slowest query."""
+    slow_started = threading.Event()
+    release_slow = threading.Event()
+    fast_reported = threading.Event()
+    said = []
+
+    def search(query, limit):
+        if query == "slow":
+            slow_started.set()
+            assert release_slow.wait(2)
+        return [{"url": f"https://{query}.test/1", "title": query}]
+
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), search, reader({
+            "https://fast.test/1": "fast page", "https://slow.test/1": "slow page",
+        }), model="m", search_provider="stub", parallel_search=True)
+    def record(line):
+        said.append(line)
+        if "search returned" in line and "fast" in line:
+            fast_reported.set()
+
+    asker.on_action = record
+    worker = threading.Thread(target=lambda: asker._read(["fast", "slow"]))
+    worker.start()
+    try:
+        assert slow_started.wait(1)
+        assert fast_reported.wait(0.5), "fast query was hidden behind the slow query"
+    finally:
+        release_slow.set()
+        worker.join(2)
+    assert not worker.is_alive()
+
+
+def test_cancelling_parallel_search_stops_waiting_without_a_sqlite_cross_thread_check():
+    slow_started = threading.Event()
+    worker_stopped = threading.Event()
+    checks = [0]
+
+    def search(query, limit):
+        if query == "slow":
+            slow_started.set()
+            while True:
+                try:
+                    search.check_cancelled()
+                except local_agent.LocalSearchError:
+                    worker_stopped.set()
+                    return []
+                threading.Event().wait(0.01)
+        return [{"url": "https://fast.test/1", "title": "fast"}]
+
+    search.check_cancelled = None
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), search,
+        reader({"https://fast.test/1": "fast page"}), model="m",
+        search_provider="stub", parallel_search=True)
+
+    def cancel_after_search_starts():
+        checks[0] += 1
+        if checks[0] > 1:
+            raise RuntimeError("cancelled")
+
+    asker.check_cancelled = cancel_after_search_starts
+    worker = threading.Thread(target=lambda: _expect_cancelled_search(asker))
+    worker.start()
+    assert slow_started.wait(1)
+    worker.join(1)
+    assert not worker.is_alive(), "the canceled job waited for a search future"
+    assert worker_stopped.wait(1), "the search worker did not see its stop signal"
+
+
+def test_quicklook_reads_first_query_pages_while_secondary_search_is_still_running():
+    secondary_started = threading.Event()
+    first_page_started = threading.Event()
+    first_page_reported = threading.Event()
+    release_secondary = threading.Event()
+    result = []
+
+    def search(query, limit):
+        if query == "secondary":
+            secondary_started.set()
+            assert release_secondary.wait(2)
+        return [{"url": f"https://{query}.test/report", "title": query}]
+
+    def fetch(url):
+        first_page_started.set()
+        return f"A sourced report about {url}."
+
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), search, fetch,
+        model="m", search_provider="openserp")
+    def report(line):
+        if "page fetched; checking product match: https://first.test/report" in line:
+            first_page_reported.set()
+    asker.on_action = report
+    worker = threading.Thread(
+        target=lambda: result.extend(asker._read(["first", "secondary"], quick=True)))
+    worker.start()
+    try:
+        assert secondary_started.wait(1)
+        assert first_page_started.wait(0.5), "page reading waited for the secondary search"
+        assert first_page_reported.wait(0.5), "the first fetched page was hidden by a secondary search"
+    finally:
+        release_secondary.set()
+        worker.join(2)
+    assert not worker.is_alive()
+    assert result and result[0][0] == "https://first.test/report"
+
+
+def test_quicklook_keeps_completed_pages_when_search_budget_expires(monkeypatch):
+    monkeypatch.setattr(local_agent, "QUICK_SEARCH_DEADLINE", 0.08)
+    monkeypatch.setattr(local_agent, "QUICK_READ_DEADLINE", 0.5)
+    slow_started = threading.Event()
+    release_slow = threading.Event()
+    seen_timeouts = []
+
+    def search(query, limit, *, timeout=None):
+        seen_timeouts.append(timeout)
+        if query == "slow":
+            slow_started.set()
+            release_slow.wait(1)
+        return [{"url": f"https://{query}.test/report", "title": query}]
+
+    search.supports_timeout = True
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), search,
+        reader({"https://fast.test/report": "A sufficiently sourced report."}),
+        model="m", search_provider="openserp")
+    asker.on_action = lambda _line: None
+    import time
+    started = time.monotonic()
+    try:
+        pages = asker._read(["fast", "slow"], quick=True)
+    finally:
+        release_slow.set()
+    elapsed = time.monotonic() - started
+
+    assert slow_started.is_set()
+    assert elapsed < 0.5
+    assert pages == [("https://fast.test/report", "A sufficiently sourced report.")]
+    assert asker.search_coverage["search_errors"] == 1
+    assert len(seen_timeouts) == 2
+    assert all(0 < timeout <= 0.08 for timeout in seen_timeouts)
+
+
+def test_quicklook_passes_remaining_read_budget_and_disables_fallbacks(monkeypatch):
+    monkeypatch.setattr(local_agent, "QUICK_READ_DEADLINE", 0.5)
+    received = []
+
+    def search(query, limit, **_kwargs):
+        return [{"url": "https://source.test/report", "title": "Owner report"}]
+
+    def fetch(url, **kwargs):
+        received.append(kwargs)
+        return "A sufficiently long report about a product issue. " * 3
+
+    fetch.supports_cancel_check = True
+    fetch.supports_timeout = True
+    fetch.supports_fallback = True
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), search, fetch,
+        model="m", search_provider="openserp")
+    asker.on_action = lambda _line: None
+
+    pages = asker._read(["owner report"], quick=True)
+
+    assert pages and pages[0][0] == "https://source.test/report"
+    assert 0 < received[0]["timeout"] <= 0.5
+    assert received[0]["allow_fallback"] is False
+    assert callable(received[0]["check_cancelled"])
+
+
+def test_one_query_quicklook_preserves_the_jobs_cancellation_exception(monkeypatch):
+    from app.providers import openserp
+    from app.web.jobs import Cancelled
+
+    calls = []
+
+    def urlopen(_request, **kwargs):
+        calls.append("request")
+        kwargs["check"]()
+
+    monkeypatch.setattr(openserp.network, "urlopen", urlopen)
+    search = openserp.searcher(engine="duck", timeout=8.0)
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), search, reader({}),
+        model="m", search_provider="openserp")
+    checks = [0]
+
+    def cancel_during_request():
+        checks[0] += 1
+        if checks[0] == 2:
+            raise Cancelled("reader stopped this run")
+
+    asker.check_cancelled = cancel_during_request
+    asker.on_action = lambda _line: None
+
+    with pytest.raises(Cancelled, match="reader stopped this run"):
+        asker._read(["one product query"], quick=True)
+
+    assert calls == ["request"]
+
+
+def test_quicklook_uses_a_fast_secondary_query_while_primary_search_is_pending():
+    primary_started = threading.Event()
+    fast_page_started = threading.Event()
+    release_primary = threading.Event()
+
+    def search(query, limit):
+        if query == "primary":
+            primary_started.set()
+            assert release_primary.wait(2)
+        return [{"url": f"https://{query}.test/report", "title": query}]
+
+    def fetch(url):
+        if url == "https://fast.test/report":
+            fast_page_started.set()
+        return f"A report about {url}."
+
+    asker = local_agent.LocalAsker(
+        Plan("[]"), Complete(), search, fetch,
+        model="m", search_provider="openserp", parallel_search=True)
+    asker.on_action = lambda _line: None
+    worker = threading.Thread(
+        target=lambda: asker._read(["primary", "fast"], quick=True))
+    worker.start()
+    try:
+        assert primary_started.wait(1)
+        assert fast_page_started.wait(0.5), "fast secondary hits waited behind the primary search"
+    finally:
+        release_primary.set()
+        worker.join(2)
+    assert not worker.is_alive()
+
+
+def _expect_cancelled_search(asker):
+    with pytest.raises(RuntimeError, match="cancelled"):
+        asker._read(["fast", "slow"])
+
+
 def test_a_local_scraper_is_searched_one_query_at_a_time():
     """No burst at a public search engine from the reader's own address."""
     inside = [0]

@@ -116,6 +116,16 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .child(hairline())
         .child(row("Reduce motion", "Turns off loops and flicker", reduce.into_any_element()))
         .child(hairline())
+        .child(row(
+            "Take the tour",
+            "The first-run walkthrough of checking a product with Kriko",
+            plate_s("tour-show", "Show the tour")
+                .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                    this.start_tour(cx);
+                }))
+                .into_any_element(),
+        ))
+        .child(hairline())
         .child(
             div()
                 .py(px(4.0))

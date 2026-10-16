@@ -92,9 +92,18 @@ def reader(timeout: float = TIMEOUT):
     metadata. Read here or not at all.
     """
 
-    def fetch(url: str) -> Fetched:
+    timeout_default = timeout
+
+    def fetch(url: str, *, timeout: float | None = None, check_cancelled=None,
+              allow_fallback: bool = True) -> Fetched:
+        request_timeout = (min(timeout, timeout_default)
+                           if timeout is not None else timeout_default)
+        if request_timeout <= 0:
+            return Fetched("")
         began = time.monotonic()
-        raw = _download(url, timeout)
+        ladder_ends = began + 2 * request_timeout
+        raw = _download(url, request_timeout, check_cancelled=check_cancelled,
+                        allow_fallback=allow_fallback, ladder_ends=ladder_ends)
         if not raw:
             return Fetched("")
         text = to_text(raw)
@@ -104,11 +113,21 @@ def reader(timeout: float = TIMEOUT):
             # 145 and 89 characters of "Drag the handle to the target" and
             # "Checking your browser", counted as read). Climb from here,
             # inside what is left of the page's time.
-            raw = _climb(url, began + 2 * timeout)
+            if not allow_fallback:
+                return Fetched("")
+            if check_cancelled is not None:
+                check_cancelled()
+            raw = _climb(url, ladder_ends, check_cancelled=check_cancelled)
             if not raw:
                 return Fetched("")
             text = to_text(raw)
+            if challenged(text):
+                return Fetched("")
         return Fetched(text, published_at(raw))
+
+    fetch.supports_cancel_check = True  # type: ignore[attr-defined]
+    fetch.supports_timeout = True  # type: ignore[attr-defined]
+    fetch.supports_fallback = True  # type: ignore[attr-defined]
 
     return fetch
 
@@ -149,30 +168,46 @@ def _bounded(value: str) -> str:
 BROWSER_MIN_SECONDS = 15.0
 
 
-def _download(url: str, timeout: float) -> str:
+class FetchCancelled(Exception):
+    """A caller stopped waiting for a page; do not try another reader rung."""
+
+
+def _download(url: str, timeout: float, *, check_cancelled=None,
+              allow_fallback: bool = True, ladder_ends: float | None = None) -> str:
     # http(s) only. `fetch` is handed URLs a search provider returned, and a
     # `file:` URL among them would read this machine's disk — urllib is happy
     # to do that, which makes the scheme check a boundary rather than a nicety.
     if not url.lower().startswith(("http://", "https://")):
         return ""
+    if check_cancelled is not None:
+        check_cancelled()
     request = urllib.request.Request(url, headers={"user-agent": USER_AGENT})
     # A page costs at most twice `timeout` in all, whichever rungs it climbs.
     # Each rung had its own 45 s on top of the plain fetch's, so one refused
     # page could hold a run for a minute and a half (measured: 48 s of an
     # 8 s reader, on a page that answered 429).
-    ladder_ends = time.monotonic() + 2 * timeout
+    if ladder_ends is None:
+        ladder_ends = time.monotonic() + 2 * timeout
+    plain_ends = time.monotonic() + timeout
     try:
-        with network.urlopen(request, timeout=timeout) as response:
+        options = {"check": check_cancelled} if check_cancelled is not None else {}
+        with network.urlopen(request, timeout=timeout, **options) as response:
             kind = (response.headers.get_content_type() or "").lower()
             if kind and not (
                 kind.startswith("text/") or "html" in kind or "xml" in kind
             ):
                 return ""
             charset = response.headers.get_content_charset() or "utf-8"
-            return _body(response, timeout).decode(charset, "replace")
+            body_timeout = max(0.0, min(timeout, plain_ends - time.monotonic()))
+            raw = _body(response, body_timeout, check_cancelled=check_cancelled)
+        if check_cancelled is not None:
+            check_cancelled()
+        return raw.decode(charset, "replace")
     except urllib.error.HTTPError as error:
-        if error.code in REFUSED:
-            page = _climb(url, ladder_ends)
+        if error.code in REFUSED and allow_fallback:
+            if check_cancelled is not None:
+                check_cancelled()
+            page = _climb(url, ladder_ends, check_cancelled=check_cancelled)
             if page:
                 return page
         log.info("could not read a source: HTTP %s", error.code)
@@ -188,7 +223,7 @@ def _download(url: str, timeout: float) -> str:
         return ""
 
 
-def _body(response, timeout: float) -> bytes:
+def _body(response, timeout: float, *, check_cancelled=None) -> bytes:
     """What the page sent within `timeout` seconds in all, at most `MAX_BYTES`.
 
     `urlopen`'s timeout bounds each wait on the socket, not the page: a server
@@ -201,6 +236,8 @@ def _body(response, timeout: float) -> bytes:
     chunks: list[bytes] = []
     size = 0
     while size < MAX_BYTES and time.monotonic() < deadline:
+        if check_cancelled is not None:
+            check_cancelled()
         chunk = response.read(min(65536, MAX_BYTES - size))
         if not chunk:
             break
@@ -209,7 +246,7 @@ def _body(response, timeout: float) -> bytes:
     return b"".join(chunks)
 
 
-def _climb(url: str, ladder_ends: float) -> str:
+def _climb(url: str, ladder_ends: float, *, check_cancelled=None) -> str:
     """The page through the later rungs, within what is left of its time.
 
     The site answered, and its answer was a refusal aimed at this app's own
@@ -221,10 +258,19 @@ def _climb(url: str, ladder_ends: float) -> str:
     from app.providers import browser, pagereader  # noqa: PLC0415 — optional rungs
 
     left = ladder_ends - time.monotonic()
-    page = pagereader.read(url, timeout=max(1.0, left)) if left > 1.0 else ""
+    if left > 1.0:
+        if check_cancelled is not None:
+            page = pagereader.read(url, timeout=left, check_cancelled=check_cancelled)
+        else:
+            page = pagereader.read(url, timeout=left)
+    else:
+        page = ""
     left = ladder_ends - time.monotonic()
     if not page and left >= BROWSER_MIN_SECONDS:
-        page = browser.read(url, timeout=left)
+        if check_cancelled is not None:
+            page = browser.read(url, timeout=left, check_cancelled=check_cancelled)
+        else:
+            page = browser.read(url, timeout=left)
     if page:
         log.info("a source refused the plain fetch and a later rung read it")
     return page

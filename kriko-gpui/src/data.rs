@@ -59,12 +59,12 @@ pub const PAGE_SIZE: usize = 5;
 
 // ---- chat ----
 
-/// Example questions for an empty conversation. Generic on purpose: the words
-/// in brackets are for the reader to fill, whatever the catalogues hold.
+/// Example questions for an empty conversation. Keep them useful for any
+/// product category the reader has installed.
 pub const CHAT_EXAMPLES: &[&str] = &[
-    "I need a <product> with <constraint>. Which fits best?",
-    "Which saved checks record a serious risk?",
-    "What do my quick looks say about <product>?",
+    "Find products that fit my needs.",
+    "Help me compare the products in my saved checks.",
+    "Search the web for recent information about a product.",
 ];
 
 // ---- compare ----
