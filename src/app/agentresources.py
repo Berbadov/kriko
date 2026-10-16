@@ -96,10 +96,15 @@ class _Limiter:
             queue = self.waiters.setdefault(group, deque())
             entry = (ticket, key)
             queue.append(entry)
-            try:
-                while True:
-                    if check is not None:
-                        check()
+        try:
+            while True:
+                # A cancellation check can read SQLite and block behind a
+                # writer. Never run caller code under the host-wide limiter
+                # lock: one slow job must not stop unrelated permits releasing
+                # or being acquired.
+                if check is not None:
+                    check()
+                with self.condition:
                     # Read again on every pass: the reader may raise the run
                     # choice while this caller is already waiting for a slot.
                     total, per_source = self.limits(kind)
@@ -127,10 +132,11 @@ class _Limiter:
                         self.condition.wait(min(left, 0.05))
                     else:
                         self.condition.wait(0.05)
-            except BaseException:
+        except BaseException:
+            with self.condition:
                 queue.remove(entry)
                 self.condition.notify_all()
-                raise
+            raise
 
     def release(self, kind: str, key: str) -> None:
         group = ("outbound" if kind in {"outbound", "network"}
@@ -153,10 +159,11 @@ class _Limiter:
         """Wait for this source's next monotonic start time across all jobs."""
         if not source or interval <= 0:
             return
-        with self.condition:
-            while True:
-                if check is not None:
-                    check()
+        while True:
+            # Same rule as acquire(): checks may reach outside this lock.
+            if check is not None:
+                check()
+            with self.condition:
                 now = time.monotonic()
                 ready = self.next_source.get(source, now)
                 delay = ready - now

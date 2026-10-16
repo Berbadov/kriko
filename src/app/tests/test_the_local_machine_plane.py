@@ -3,7 +3,8 @@
 The reader's words: "Local agent: finish the work it needs, then implement it"
 and "Add our new local machine and make it the prioritised one". Every server
 here is a loopback stub in a thread: a model server (`/v1/models`,
-`/v1/chat/completions`) and a self-hosted search (`/mega/search`). No model is
+`/v1/chat/completions`) and a self-hosted search (`/mega/search` and engine
+search routes). No model is
 downloaded, no real server is started and nothing
 leaves 127.0.0.1.
 """
@@ -56,6 +57,14 @@ class Stub:
                     return self._send(200, {"object": "list", "data": [
                         {"id": name} for name in stub.models]})
                 if path == "/mega/search":
+                    return self._send(200, stub.serp)
+                if (path.count("/") == 2 and path.endswith("/search")
+                        and path.strip("/").split("/")[0] in {
+                            "bing", "brave", "duck", "duckduckgo", "ecosia",
+                            "google", "yahoo", "yandex", "wikipedia",
+                        }):
+                    # Fast OpenSERP mode addresses one public engine at a time,
+                    # rather than waiting for the aggregate /mega/search route.
                     return self._send(200, stub.serp)
                 if path == "/health":
                     # OpenSERP's health document: the probe asks here, not at the root.
@@ -570,6 +579,10 @@ def ready(monkeypatch, stub):
     """A machine with a model server and search, found the way the real
     discovery finds them: through the configured address."""
     stub.models = ["qwen3-4b"]
+    # This fixture represents one configured server. Conventional endpoints
+    # could reach the developer's actual model and exhaust the probe slots.
+    # The `machine` fixture below exercises discovery's fallback candidates.
+    monkeypatch.setattr(local_discovery, "CANDIDATES", ())
     monkeypatch.setattr(local_discovery, "discover", real_discover)
     monkeypatch.setattr(local_discovery, "search_answers", real_search_answers)
     return stub

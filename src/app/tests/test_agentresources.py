@@ -148,3 +148,39 @@ def test_pacing_wait_checks_cancellation():
     with pytest.raises(RuntimeError, match="cancelled"):
         agentresources.pace(source, 0.5, check=cancel)
     assert time.monotonic() - began < 0.2
+
+
+def test_a_slow_cancel_check_does_not_hold_the_host_limiter_lock():
+    """One run's state read must not stop every unrelated run getting a permit."""
+    checking = threading.Event()
+    resume_check = threading.Event()
+
+    def slow_check():
+        checking.set()
+        assert resume_check.wait(2)
+
+    waiter = threading.Thread(
+        target=lambda: _wait_for_inference_with_check(slow_check), daemon=True)
+    waiter.start()
+    assert checking.wait(1)
+    entered = threading.Event()
+
+    def unrelated():
+        with agentresources.slot("outbound", "free.example", timeout=0.2):
+            entered.set()
+
+    other = threading.Thread(target=unrelated)
+    other.start()
+    try:
+        assert entered.wait(0.5), "a cancellation check blocked the shared limiter"
+    finally:
+        resume_check.set()
+        waiter.join(1)
+        other.join(1)
+    assert not waiter.is_alive()
+    assert not other.is_alive()
+
+
+def _wait_for_inference_with_check(check):
+    with agentresources.slot("inference", check=check):
+        pass
