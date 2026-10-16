@@ -209,11 +209,11 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
     stats_lock = threading.Lock()
 
     def search(query: str, limit: int = 5, *, timeout: float | None = None,
-               pace_interval: float | None = None,
-               mode: str | None = None) -> list[dict]:
+               pace_interval: float | None = None, mode: str | None = None,
+               engines: str = "") -> list[dict]:
         request_mode = mode or default_mode
         total_timeout = timeout if timeout is not None else search_timeout
-        engine_names = _engines_to_ask(chosen).split(",")
+        engine_names = _engines_to_ask(engines or chosen).split(",")
         # In `any` mode ask each selected engine's endpoint in turn. Mega
         # counts a Google click-through as a result before this adapter can
         # reject it, so the next engine must get a chance to return a page.
@@ -262,7 +262,7 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
                 with network.urlopen(request, timeout=request_timeout,
                                      pace_interval=start_pace, **options) as response:
                     body = response.read().decode("utf-8", "replace")
-            except Exception as error:  # noqa: BLE001 â€” network, rotate
+            except Exception as error:  # noqa: BLE001 — network, rotate
                 if callback_error is not None:
                     raise callback_error
                 last_error = error
@@ -306,8 +306,8 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
                         continue
                     raise last_error
             had_response = True
-            # Keep main's click-through resolver for mega searches. In `any`
-            # mode the click-through is filtered below, allowing the loop to
+            # Mega searches retain main's click-through resolver. In `any`
+            # mode a click-through is filtered below, allowing the loop to
             # ask the next engine within the shared deadline.
             candidates = (results if per_engine else _unwrapped(
                 results, check_cancelled, resolve))
@@ -334,6 +334,10 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
         return []
 
     search_timeout = timeout
+    #: What a caller may aim one query at. `engines=` on a call asks just those,
+    #: so several queries can run at once with no engine asked by two.
+    search.engines = [name.strip() for name in chosen.split(",")  # type: ignore[attr-defined]
+                      if name.strip()]
     search.stats = stats  # type: ignore[attr-defined]
     search.check_cancelled = None  # type: ignore[attr-defined]
     search.supports_timeout = True  # type: ignore[attr-defined]

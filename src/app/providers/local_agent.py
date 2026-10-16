@@ -69,6 +69,8 @@ QUICK_READ_DEADLINE = 15.0
 #: Candidate pages asked for beyond `MAX_PAGES`, so a page that is slow or
 #: unreadable is replaced by the next one instead of leaving a gap.
 SPARE_PAGES = 3
+HEDGE_AFTER = 4.0
+HEDGED_PAGES = 2
 #: Text shorter than a sentence or so is a refusal, a cookie wall or an empty
 #: shell, not a page: it is a miss, so a spare takes its place.
 MIN_PAGE_CHARS = 80
@@ -574,26 +576,40 @@ class LocalAsker:
         search_deadline = (gather_started + min(QUICK_SEARCH_DEADLINE,
                                                  QUICK_READ_DEADLINE)
                            if quick else None)
+        engines = tuple(dict.fromkeys(str(name) for name in
+                        getattr(self._search, "engines", None) or ()))
+        engine_locks = {name: threading.Lock() for name in engines}
+        engine_parallel = len(engines) > 1 and not self.parallel_search
 
-        def answer(query: str, index: int = 0) -> tuple[list, str]:
+        def answer(query: str, index: int = 0, engine: str = "") -> tuple[list, str]:
             try:
+                options: dict[str, float | str] = {}
                 if quick and getattr(self._search, "supports_timeout", False):
                     remaining = (search_deadline - time.monotonic()
                                  if search_deadline is not None else QUICK_SEARCH_TIMEOUT)
                     if remaining <= 0:
                         return [], "quick-look search budget reached"
-                    options: dict[str, float | str] = {
-                        "timeout": min(QUICK_SEARCH_TIMEOUT, remaining)}
+                    options["timeout"] = min(QUICK_SEARCH_TIMEOUT, remaining)
                     if getattr(self._search, "supports_pacing", False):
                         options["pace_interval"] = QUICK_SEARCH_PACE_INTERVAL
                     if getattr(self._search, "supports_fast_options", False):
                         options["mode"] = "any"
-                        engines = tuple(getattr(self._search, "engines", ()))
                         if engines:
                             offset = index % len(engines)
                             options["engines"] = ",".join(engines[offset:] + engines[:offset])
-                    return (self._search(query, limit, **options) or [], "")
-                return self._search(query, limit) or [], ""
+                if engine:
+                    options["engines"] = engine
+                    lock = engine_locks[engine]
+                    while not lock.acquire(timeout=0.05):
+                        worker_check()
+                        if search_deadline is not None and time.monotonic() >= search_deadline:
+                            return [], "quick-look search budget reached"
+                    try:
+                        worker_check()
+                        return self._search(query, limit, **options) or [], ""
+                    finally:
+                        lock.release()
+                return self._search(query, limit, **options) or [], ""
             except LocalSearchError as error:
                 return [], str(error)
 
@@ -654,19 +670,22 @@ class LocalAsker:
             if search_stop.is_set():
                 raise LocalSearchError("search cancelled")
 
-        concurrent_search = ((self.parallel_search or quick) and len(queries) > 1)
+        concurrent_search = ((self.parallel_search or quick or engine_parallel)
+                             and len(queries) > 1)
         if has_search_check:
             self._search.check_cancelled = (
                 worker_check if concurrent_search
                 else self._check
             )
         if concurrent_search:
-            # OpenSERP asks public engines from this machine's address. Its
-            # quick-look requests stay serial but overlap page reads; hosted
-            # search sockets can safely fan out.
-            workers = min(len(queries), QUERIES) if self.parallel_search else 1
+            # Independent public engines can answer together. Each engine has
+            # its own lock, so another query cannot overlap it; hosted search
+            # sockets retain their existing parallel path.
+            workers = (min(len(queries), QUERIES) if self.parallel_search else
+                       min(len(queries), len(engines)) if engine_parallel else 1)
             pool = ThreadPoolExecutor(max_workers=workers)
-            search_futures = {pool.submit(answer, query, index): index
+            search_futures = {pool.submit(answer, query, index,
+                                         engines[index % len(engines)] if engine_parallel else ""): index
                                for index, query in enumerate(queries)}
             search_pending = set(search_futures)
             ordered: list[tuple[list, str] | None] = [None] * len(queries)
@@ -712,6 +731,18 @@ class LocalAsker:
                         search_pending.clear()
                         prefetch_ready()
                         self._say("quick-look search budget reached; keeping completed results")
+                if engine_parallel and not stopped and not all(
+                        result is not None and result[1] for result in ordered):
+                    # Retry empty angles across the configured engines only
+                    # after the independent first pass has finished. A dead
+                    # service is never retried query by query.
+                    for index, result in enumerate(ordered):
+                        if result is None or result[0]:
+                            continue
+                        self._check()
+                        ordered[index] = answer(queries[index], index)
+                        prefetch_results[index] = ordered[index]
+                        prefetch_ready()
             except BaseException:
                 stopped = True
                 search_stop.set()
@@ -860,10 +891,13 @@ class LocalAsker:
         queue = iter(wanted)
         deadline = (gather_deadline if gather_deadline is not None
                     else time.monotonic() + READ_DEADLINE)
-        pool = prefetch_pool or ThreadPoolExecutor(max_workers=4)
+        pool = prefetch_pool or ThreadPoolExecutor(max_workers=4 + HEDGED_PAGES)
         read_pending: dict[Future, str] = {}
+        hedge = False
+        last_progress = time.monotonic()
         def fill() -> None:
-            while len(read_pending) < min(4, self.max_pages - len(pages)):
+            while len(read_pending) < (4 + HEDGED_PAGES if hedge else
+                                      min(4, self.max_pages - len(pages))):
                 url = next(queue, None)
                 if url is None:
                     break
@@ -873,6 +907,10 @@ class LocalAsker:
             fill()
             while read_pending and len(pages) < self.max_pages:
                 self._check()
+                if not hedge and time.monotonic() - last_progress >= HEDGE_AFTER:
+                    hedge = True
+                    self._say("slow pages; reading spares beside them")
+                    fill()
                 left = deadline - time.monotonic()
                 if left <= 0:
                     read_done = {read_future for read_future in read_pending
@@ -882,6 +920,8 @@ class LocalAsker:
                 else:
                     read_done, _ = wait(read_pending, timeout=min(1.0, left),
                                         return_when=FIRST_COMPLETED)
+                if read_done:
+                    last_progress = time.monotonic()
                 for read_future in sorted(
                         read_done, key=lambda item: wanted.index(read_pending[item])):
                     read_pending.pop(read_future)
