@@ -47,7 +47,7 @@ pub fn field(app: &Kriko, field: Field, id: &'static str, placeholder: &str,
             input.scroll_x = scroll;
         });
     }).w_full().h(px(22.0));
-    div().id(id).track_focus(&input.handle).h(px(48.0)).min_w(px(0.0))
+    div().id(id).track_focus(&input.handle).h(px(48.0)).min_h(px(48.0)).max_h(px(48.0)).min_w(px(0.0))
         .flex().flex_1().items_center().gap(px(12.0)).px(px(16.0))
         .rounded(px(12.0)).bg(rgb(WELL)).border_1().border_color(rgba(BORDER_CONTROL))
         .when(focused, |d| d.border_color(rgb(ICE)))

@@ -94,7 +94,12 @@ pub fn step_meta(step: &Step) -> String {
     match step.state {
         StepState::Running => "reading".to_string(),
         StepState::Error => "failed".to_string(),
-        _ => format!("{} {} · {} ms", step.rows, if step.rows == 1 { "row" } else { "rows" }, step.ms),
+        _ => format!(
+            "{} {} · {} ms",
+            step.rows,
+            if step.rows == 1 { "row" } else { "rows" },
+            step.ms
+        ),
     }
 }
 
@@ -138,7 +143,10 @@ impl Partial {
     /// Read a job's `result` while it runs. Missing parts are empty, never an error.
     pub fn from_result(result: &Value) -> Partial {
         Partial {
-            steps: api::arr(result, "steps").iter().map(Step::from_value).collect(),
+            steps: api::arr(result, "steps")
+                .iter()
+                .map(Step::from_value)
+                .collect(),
             answer: api::s(result, "answer"),
             sources: names(result, "sources"),
             agent: api::s(result.get("agent").unwrap_or(&Value::Null), "label"),
@@ -175,10 +183,17 @@ fn thread_from(v: &Value) -> Thread {
 /// `missing` (not found), and the agent pickers drop both, so the reason would
 /// be lost without this. Empty when the Local agent is ready or not configured.
 pub fn local_note(p: &Value) -> String {
-    for row in api::arr(p, "unusable").iter().chain(api::arr(p, "missing").iter()) {
+    for row in api::arr(p, "unusable")
+        .iter()
+        .chain(api::arr(p, "missing").iter())
+    {
         if api::s(row, "id") == "local" {
             let why = api::s(row, "why");
-            return if why.is_empty() { api::s(row, "install_hint") } else { why };
+            return if why.is_empty() {
+                api::s(row, "install_hint")
+            } else {
+                why
+            };
         }
     }
     String::new()
@@ -239,7 +254,10 @@ impl State {
         self.drafts.insert(id.clone(), prompt.clone());
         self.threads.insert(0, thread);
         if visible && self.thread.as_deref() == origin.0 && current_input == origin.1 {
-            self.drafts.insert(origin.0.unwrap_or_default().to_string(), current_input.to_string());
+            self.drafts.insert(
+                origin.0.unwrap_or_default().to_string(),
+                current_input.to_string(),
+            );
             self.select_thread(id);
             Some(prompt)
         } else {
@@ -249,7 +267,8 @@ impl State {
 
     fn select_thread(&mut self, thread_id: String) {
         self.in_flight = self.running.get(&thread_id).map(|job_id| InFlight {
-            thread_id: thread_id.clone(), job_id: job_id.clone(),
+            thread_id: thread_id.clone(),
+            job_id: job_id.clone(),
         });
         self.thread = Some(thread_id);
         self.messages.clear();
@@ -266,7 +285,8 @@ impl State {
             self.running.remove(thread_id);
         }
         if self.thread.as_deref() == Some(thread_id)
-            && self.in_flight.as_ref().is_some_and(|f| f.job_id == job_id) {
+            && self.in_flight.as_ref().is_some_and(|f| f.job_id == job_id)
+        {
             self.in_flight = None;
             self.partial = None;
             self.job_message.clear();
@@ -281,7 +301,10 @@ fn thread_list(v: &Value) -> Vec<Thread> {
     api::arr(v, "items").iter().map(thread_from).collect()
 }
 
-async fn bg<T: Send + 'static>(ex: &BackgroundExecutor, work: impl FnOnce() -> T + Send + 'static) -> T {
+async fn bg<T: Send + 'static>(
+    ex: &BackgroundExecutor,
+    work: impl FnOnce() -> T + Send + 'static,
+) -> T {
     ex.spawn(async move { work() }).await
 }
 
@@ -289,22 +312,28 @@ impl Kriko {
     /// Everything the Chat screen shows, read when it is opened: the threads
     /// and the agents that can answer.
     pub fn refresh_chat(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::get("/api/chat/threads"), |this, reply, cx| {
-            this.note(&reply);
-            if let Ok(v) = reply {
-                this.live.chat.threads = thread_list(&v);
-                this.live.chat.loaded = true;
-                // Only when nothing is open: a conversation just started may not
-                // be in this list yet, and must not be replaced by the first one.
-                if this.live.chat.thread.is_none() && !this.live.chat.discovery_pending {
-                    // The newest conversation, or none: a fresh install shows
-                    // the empty state, never a blank conversation.
-                    if let Some(id) = this.live.chat.threads.first().map(|t| t.thread_id.clone()) {
-                        this.open_chat_thread(id, cx);
+        self.fetch(
+            cx,
+            || api::get("/api/chat/threads"),
+            |this, reply, cx| {
+                this.note(&reply);
+                if let Ok(v) = reply {
+                    this.live.chat.threads = thread_list(&v);
+                    this.live.chat.loaded = true;
+                    // Only when nothing is open: a conversation just started may not
+                    // be in this list yet, and must not be replaced by the first one.
+                    if this.live.chat.thread.is_none() && !this.live.chat.discovery_pending {
+                        // The newest conversation, or none: a fresh install shows
+                        // the empty state, never a blank conversation.
+                        if let Some(id) =
+                            this.live.chat.threads.first().map(|t| t.thread_id.clone())
+                        {
+                            this.open_chat_thread(id, cx);
+                        }
                     }
                 }
-            }
-        });
+            },
+        );
         self.fetch(
             cx,
             || api::get("/api/prefs"),
@@ -323,10 +352,26 @@ impl Kriko {
                     .get("chosen")
                     .map(|c| api::s(c, "preferred_harness"))
                     .unwrap_or_default();
-                let known = this.live.chat.harnesses.iter().any(|(id, _)| *id == preferred);
+                let known = this
+                    .live
+                    .chat
+                    .harnesses
+                    .iter()
+                    .any(|(id, _)| *id == preferred);
                 let first = this.live.chat.harnesses.first().map(|(id, _)| id.clone());
-                if this.live.chat.harness.is_empty() || !this.live.chat.harnesses.iter().any(|(id, _)| *id == this.live.chat.harness) {
-                    this.live.chat.harness = if known { preferred } else { first.unwrap_or_default() };
+                if this.live.chat.harness.is_empty()
+                    || !this
+                        .live
+                        .chat
+                        .harnesses
+                        .iter()
+                        .any(|(id, _)| *id == this.live.chat.harness)
+                {
+                    this.live.chat.harness = if known {
+                        preferred
+                    } else {
+                        first.unwrap_or_default()
+                    };
                 }
                 this.live.chat.local_note = local_note(&p);
             },
@@ -337,8 +382,17 @@ impl Kriko {
     /// it, starts following that turn again.
     pub fn open_chat_thread(&mut self, thread_id: String, cx: &mut Context<Self>) {
         let previous = self.live.chat.thread.clone().unwrap_or_default();
-        self.live.chat.drafts.insert(previous, self.chat_input.value.clone());
-        let draft = self.live.chat.drafts.get(&thread_id).cloned().unwrap_or_default();
+        self.live
+            .chat
+            .drafts
+            .insert(previous, self.chat_input.value.clone());
+        let draft = self
+            .live
+            .chat
+            .drafts
+            .get(&thread_id)
+            .cloned()
+            .unwrap_or_default();
         self.chat_input.set_value(draft);
         self.live.chat.select_thread(thread_id.clone());
         self.load_chat_messages(thread_id, cx);
@@ -355,11 +409,18 @@ impl Kriko {
                     return;
                 }
                 if let Ok(v) = reply {
-                    this.live.chat.messages = api::arr(&v, "items").iter().map(message_from).collect();
+                    this.live.chat.messages =
+                        api::arr(&v, "items").iter().map(message_from).collect();
                     let recovered = api::s(&v, "job_id");
                     if !recovered.is_empty() {
-                        this.live.chat.running.insert(thread_id.clone(), recovered.clone());
-                        this.live.chat.in_flight = Some(InFlight { thread_id: thread_id.clone(), job_id: recovered });
+                        this.live
+                            .chat
+                            .running
+                            .insert(thread_id.clone(), recovered.clone());
+                        this.live.chat.in_flight = Some(InFlight {
+                            thread_id: thread_id.clone(),
+                            job_id: recovered,
+                        });
                     }
                     let running = this
                         .live
@@ -378,17 +439,21 @@ impl Kriko {
 
     /// A new, empty conversation, opened at once.
     pub fn new_chat_thread(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::post("/api/chat/threads", json!({})), |this, reply, cx| {
-            this.note(&reply);
-            match reply {
-                Ok(v) => {
-                    let thread = thread_from(&v);
-                    this.live.chat.threads.insert(0, thread.clone());
-                    this.open_chat_thread(thread.thread_id, cx);
+        self.fetch(
+            cx,
+            || api::post("/api/chat/threads", json!({})),
+            |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => {
+                        let thread = thread_from(&v);
+                        this.live.chat.threads.insert(0, thread.clone());
+                        this.open_chat_thread(thread.thread_id, cx);
+                    }
+                    Err(e) => this.live.chat.say = Some(e.message),
                 }
-                Err(e) => this.live.chat.say = Some(e.message),
-            }
-        });
+            },
+        );
     }
 
     /// Keep a discovery request in its own unsent thread. Existing drafts and
@@ -401,7 +466,9 @@ impl Kriko {
         let previous = self.live.chat.thread.clone();
         let typed = self.chat_input.value.clone();
         let title: String = prompt.chars().take(200).collect();
-        self.fetch(cx, move || api::post("/api/chat/threads", json!({"title": title})),
+        self.fetch(
+            cx,
+            move || api::post("/api/chat/threads", json!({"title": title})),
             move |this, reply, cx| {
                 this.note(&reply);
                 match reply {
@@ -409,7 +476,8 @@ impl Kriko {
                         let thread = thread_from(&v);
                         let id = thread.thread_id.clone();
                         let input = this.live.chat.finish_discovery(
-                            thread, prompt,
+                            thread,
+                            prompt,
                             (previous.as_deref(), &typed),
                             &this.chat_input.value,
                             this.tab == Tab::Chat,
@@ -425,31 +493,45 @@ impl Kriko {
                         this.live.chat.say = Some(e.message);
                     }
                 }
-            });
+            },
+        );
     }
 
     /// Forgets the open conversation and its messages, then opens the next one.
     pub fn delete_chat_thread(&mut self, cx: &mut Context<Self>) {
-        let Some(id) = self.live.chat.thread.clone() else { return };
-        if self.live.chat.in_flight.as_ref().is_some_and(|f| f.thread_id == id) {
-            self.live.chat.say = Some("Wait for the answer, or stop it, before deleting this conversation.".into());
+        let Some(id) = self.live.chat.thread.clone() else {
+            return;
+        };
+        if self
+            .live
+            .chat
+            .in_flight
+            .as_ref()
+            .is_some_and(|f| f.thread_id == id)
+        {
+            self.live.chat.say =
+                Some("Wait for the answer, or stop it, before deleting this conversation.".into());
             return;
         }
         let path = format!("/api/chat/threads/{}", api::seg(&id));
-        self.fetch(cx, move || api::delete(&path), move |this, reply, cx| {
-            this.note(&reply);
-            if reply.is_ok() {
-                this.live.chat.threads.retain(|t| t.thread_id != id);
-                this.live.chat.drafts.remove(&id);
-                this.live.chat.thread = None;
-                this.live.chat.messages.clear();
-                this.live.chat.partial = None;
-                this.live.chat.failed = None;
-                this.refresh_chat(cx);
-            } else {
-                this.live.chat.say = Some("That conversation is already gone.".into());
-            }
-        });
+        self.fetch(
+            cx,
+            move || api::delete(&path),
+            move |this, reply, cx| {
+                this.note(&reply);
+                if reply.is_ok() {
+                    this.live.chat.threads.retain(|t| t.thread_id != id);
+                    this.live.chat.drafts.remove(&id);
+                    this.live.chat.thread = None;
+                    this.live.chat.messages.clear();
+                    this.live.chat.partial = None;
+                    this.live.chat.failed = None;
+                    this.refresh_chat(cx);
+                } else {
+                    this.live.chat.say = Some("That conversation is already gone.".into());
+                }
+            },
+        );
     }
 
     /// Sends the composer's question into the open conversation (starting one
@@ -461,14 +543,19 @@ impl Kriko {
             return;
         }
         if text.chars().count() > 2000 {
-            self.live.chat.say = Some("Message too long. Shorten it to 2000 characters before sending.".into());
+            self.live.chat.say =
+                Some("Message too long. Shorten it to 2000 characters before sending.".into());
             return;
         }
         self.live.chat.sending = true;
         self.live.chat.say = None;
         self.live.chat.failed = None;
         let harness = self.live.chat.harness.clone();
-        let backend = if harness == "local" { "local" } else { "harness" };
+        let backend = if harness == "local" {
+            "local"
+        } else {
+            "harness"
+        };
         let existing = self.live.chat.thread.clone();
         let selected_at_submit = existing.clone();
         let submitted_text = text.clone();
@@ -484,7 +571,10 @@ impl Kriko {
                         .unwrap_or_default(),
                 };
                 let path = format!("/api/chat/threads/{}/messages", api::seg(&thread));
-                let posted = api::post(&path, json!({"text": text, "harness": harness, "backend": backend}))?;
+                let posted = api::post(
+                    &path,
+                    json!({"text": text, "harness": harness, "backend": backend}),
+                )?;
                 Ok::<(String, Value), api::ApiError>((thread, posted))
             },
             move |this, reply, cx| {
@@ -493,8 +583,17 @@ impl Kriko {
                 match reply {
                     Ok((thread, posted)) => {
                         let job_id = api::s(&posted, "job_id");
-                        this.live.chat.running.insert(thread.clone(), job_id.clone());
-                        if this.live.chat.drafts.get(&thread).is_some_and(|draft| draft.trim() == submitted_text) {
+                        this.live
+                            .chat
+                            .running
+                            .insert(thread.clone(), job_id.clone());
+                        if this
+                            .live
+                            .chat
+                            .drafts
+                            .get(&thread)
+                            .is_some_and(|draft| draft.trim() == submitted_text)
+                        {
                             this.live.chat.drafts.remove(&thread);
                         }
                         if this.live.chat.thread == selected_at_submit {
@@ -503,7 +602,10 @@ impl Kriko {
                                 this.live.chat.drafts.remove(&thread);
                             }
                             this.live.chat.thread = Some(thread.clone());
-                            this.live.chat.in_flight = Some(InFlight { thread_id: thread.clone(), job_id: job_id.clone() });
+                            this.live.chat.in_flight = Some(InFlight {
+                                thread_id: thread.clone(),
+                                job_id: job_id.clone(),
+                            });
                             this.live.chat.partial = Some(Partial::default());
                             this.live.chat.job_message = "queued".into();
                             this.load_chat_messages(thread.clone(), cx);
@@ -522,20 +624,39 @@ impl Kriko {
     }
 
     pub fn stop_chat_turn(&mut self, cx: &mut Context<Self>) {
-        let Some(flight) = self.live.chat.in_flight.clone() else { return };
+        let Some(flight) = self.live.chat.in_flight.clone() else {
+            return;
+        };
         let job_id = flight.job_id.clone();
-        self.fetch(cx, move || api::post(&format!("/api/jobs/{}/cancel", api::seg(&job_id)), json!({})),
+        self.fetch(
+            cx,
+            move || {
+                api::post(
+                    &format!("/api/jobs/{}/cancel", api::seg(&job_id)),
+                    json!({}),
+                )
+            },
             move |this, reply, _| {
-                if this.live.chat.thread.as_deref() != Some(flight.thread_id.as_str()) { return; }
+                if this.live.chat.thread.as_deref() != Some(flight.thread_id.as_str()) {
+                    return;
+                }
                 match reply {
                     Ok(_) => this.live.chat.job_message = "Stopping…".into(),
                     Err(e) => this.live.chat.say = Some(e.message),
                 }
-            });
+            },
+        );
     }
 
     pub fn retry_chat_turn(&mut self, cx: &mut Context<Self>) {
-        if let Some(message) = self.live.chat.messages.iter().rev().find(|m| m.role == Role::Reader) {
+        if let Some(message) = self
+            .live
+            .chat
+            .messages
+            .iter()
+            .rev()
+            .find(|m| m.role == Role::Reader)
+        {
             self.chat_input.set_value(message.text.clone());
             self.send_chat_message(cx);
         }
@@ -548,7 +669,9 @@ impl Kriko {
             return;
         }
         cx.spawn(async move |this, cx| loop {
-            cx.background_executor().timer(Duration::from_millis(700)).await;
+            cx.background_executor()
+                .timer(Duration::from_millis(700))
+                .await;
             let ex = cx.background_executor().clone();
             let path = format!("/api/jobs/{}", api::seg(&job_id));
             let reply = bg(&ex, move || api::get(&path)).await;
@@ -608,15 +731,29 @@ mod tests {
         state.select_thread("old".into());
         state.discovery_pending = true;
         let input = state.finish_discovery(
-            Thread { thread_id: "new".into(), title: "Find a device".into() },
-            "Find a device".into(), (Some("old"), "My unfinished question"),
-            "My unfinished question", true,
+            Thread {
+                thread_id: "new".into(),
+                title: "Find a device".into(),
+            },
+            "Find a device".into(),
+            (Some("old"), "My unfinished question"),
+            "My unfinished question",
+            true,
         );
         assert_eq!(input.as_deref(), Some("Find a device"));
         assert_eq!(state.thread.as_deref(), Some("new"));
-        assert_eq!(state.drafts.get("old").map(String::as_str), Some("My unfinished question"));
-        assert_eq!(state.drafts.get("new").map(String::as_str), Some("Find a device"));
-        assert_eq!(state.running.get("old").map(String::as_str), Some("job-old"));
+        assert_eq!(
+            state.drafts.get("old").map(String::as_str),
+            Some("My unfinished question")
+        );
+        assert_eq!(
+            state.drafts.get("new").map(String::as_str),
+            Some("Find a device")
+        );
+        assert_eq!(
+            state.running.get("old").map(String::as_str),
+            Some("job-old")
+        );
         assert!(state.in_flight.is_none());
         assert!(!state.discovery_pending);
     }
@@ -625,12 +762,21 @@ mod tests {
     fn typing_while_discovery_opens_cannot_be_overwritten_by_its_response() {
         let mut state = State::default();
         let input = state.finish_discovery(
-            Thread { thread_id: "new".into(), title: "Find a device".into() },
-            "Find a device".into(), (None, ""), "A question just typed", true,
+            Thread {
+                thread_id: "new".into(),
+                title: "Find a device".into(),
+            },
+            "Find a device".into(),
+            (None, ""),
+            "A question just typed",
+            true,
         );
         assert!(input.is_none());
         assert!(state.thread.is_none());
-        assert_eq!(state.drafts.get("new").map(String::as_str), Some("Find a device"));
+        assert_eq!(
+            state.drafts.get("new").map(String::as_str),
+            Some("Find a device")
+        );
     }
 
     #[test]
@@ -638,14 +784,26 @@ mod tests {
         let mut state = State::default();
         state.select_thread("other".into());
         let input = state.finish_discovery(
-            Thread { thread_id: "new".into(), title: "Find a device".into() },
-            "Find a device".into(), (Some("old"), ""), "", true,
+            Thread {
+                thread_id: "new".into(),
+                title: "Find a device".into(),
+            },
+            "Find a device".into(),
+            (Some("old"), ""),
+            "",
+            true,
         );
         assert!(input.is_none());
         assert_eq!(state.thread.as_deref(), Some("other"));
         let background_input = state.finish_discovery(
-            Thread { thread_id: "background".into(), title: "Find another".into() },
-            "Find another".into(), (Some("other"), ""), "", false,
+            Thread {
+                thread_id: "background".into(),
+                title: "Find another".into(),
+            },
+            "Find another".into(),
+            (Some("other"), ""),
+            "",
+            false,
         );
         assert!(background_input.is_none());
         assert_eq!(state.thread.as_deref(), Some("other"));
@@ -658,14 +816,26 @@ mod tests {
         state.select_thread("first".into());
         assert_eq!(state.in_flight.as_ref().unwrap().job_id, "job-a");
         state.select_thread("second".into());
-        assert!(state.in_flight.is_none(), "another conversation can send while the first answers");
+        assert!(
+            state.in_flight.is_none(),
+            "another conversation can send while the first answers"
+        );
         state.running.insert("second".into(), "job-b".into());
         state.select_thread("second".into());
-        state.partial = Some(Partial { answer: "Second answer so far".into(), ..Partial::default() });
+        state.partial = Some(Partial {
+            answer: "Second answer so far".into(),
+            ..Partial::default()
+        });
         state.finish_job("first", "job-a", Some("First failed".into()));
         assert_eq!(state.in_flight.as_ref().unwrap().job_id, "job-b");
-        assert_eq!(state.partial.as_ref().unwrap().answer, "Second answer so far");
-        assert!(state.failed.is_none(), "a background failure belongs to its own conversation");
+        assert_eq!(
+            state.partial.as_ref().unwrap().answer,
+            "Second answer so far"
+        );
+        assert!(
+            state.failed.is_none(),
+            "a background failure belongs to its own conversation"
+        );
         state.finish_job("second", "job-b", None);
         assert!(state.in_flight.is_none());
         assert!(state.running.is_empty());
@@ -677,7 +847,10 @@ mod tests {
         state.running.insert("thread".into(), "new-job".into());
         state.select_thread("thread".into());
         state.finish_job("thread", "old-job", Some("old failure".into()));
-        assert_eq!(state.running.get("thread").map(String::as_str), Some("new-job"));
+        assert_eq!(
+            state.running.get("thread").map(String::as_str),
+            Some("new-job")
+        );
         assert_eq!(state.in_flight.as_ref().unwrap().job_id, "new-job");
         assert!(state.failed.is_none());
     }
@@ -725,23 +898,43 @@ mod tests {
     #[test]
     fn a_step_says_how_many_rows_and_how_long_once_it_has_finished() {
         let done = Step {
-            id: "s1".into(), source: "packs".into(), label: "read 2 catalogues".into(),
-            state: StepState::Done, rows: 2, ms: 9, detail: String::new(),
+            id: "s1".into(),
+            source: "packs".into(),
+            label: "read 2 catalogues".into(),
+            state: StepState::Done,
+            rows: 2,
+            ms: 9,
+            detail: String::new(),
         };
         assert_eq!(step_meta(&done), "2 rows · 9 ms");
-        let one = Step { rows: 1, ..done.clone() };
+        let one = Step {
+            rows: 1,
+            ..done.clone()
+        };
         assert_eq!(step_meta(&one), "1 row · 9 ms");
-        let running = Step { state: StepState::Running, ..done.clone() };
+        let running = Step {
+            state: StepState::Running,
+            ..done.clone()
+        };
         assert_eq!(step_meta(&running), "reading");
-        let failed = Step { state: StepState::Error, ..done };
+        let failed = Step {
+            state: StepState::Error,
+            ..done
+        };
         assert_eq!(step_meta(&failed), "failed");
     }
 
     #[test]
     fn a_thread_with_no_title_has_a_plain_name() {
-        let untitled = Thread { thread_id: "t".into(), title: "  ".into() };
+        let untitled = Thread {
+            thread_id: "t".into(),
+            title: "  ".into(),
+        };
         assert_eq!(untitled.name(), "New conversation");
-        let named = Thread { title: "Find a widget".into(), ..untitled };
+        let named = Thread {
+            title: "Find a widget".into(),
+            ..untitled
+        };
         assert_eq!(named.name(), "Find a widget");
     }
 

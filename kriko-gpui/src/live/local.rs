@@ -228,6 +228,9 @@ fn should_fill_plane_form(fill: bool, loaded: bool) -> bool {
 
 #[derive(Default)]
 pub struct State {
+    pub model_focus: Option<String>,
+    pub library_view: bool,
+    pub advanced_open: bool,
     pub loaded: bool,
     pub plane: Option<Plane>,
     /// The last `/api/local-plane` failure, kept with this slice so the Local
