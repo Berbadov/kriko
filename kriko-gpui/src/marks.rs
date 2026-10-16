@@ -423,6 +423,67 @@ fn mark_dots(
     grid
 }
 
+/// An agent's real brand mark, where it has one, as a bundled SVG. `None`
+/// for the agents whose owner publishes no open mark, so they keep the
+/// LED-matrix look.
+pub fn logo_for(id: &str) -> Option<&'static str> {
+    match id {
+        "claude-code" | "claude-desktop" | "claude" => Some("claude"),
+        "codex" => Some("openai"),
+        "antigravity-cli" => Some("gemini"),
+        "mistral-vibe" | "mistral-api" => None,
+        "github-copilot" => Some("copilot"),
+        "cursor" => None,
+        "opencode" => None,
+        "local" => Some("ollama"),
+        _ => None,
+    }
+}
+
+/// The tile for one agent: its brand mark where it has one, else its
+/// LED-matrix mark. Same well, same phase lighting, so a lane of mixed
+/// agents reads as one family.
+pub fn agent_tile(id: &str, agent: &str, mark: &Mark, phase: Phase, size: f32, motion: bool) -> gpui::AnyElement {
+    if let Some(logo) = logo_for(agent) {
+        return logo_tile(logo, phase, size, motion);
+    }
+    mark_tile(id, mark, phase, size, motion).into_any_element()
+}
+
+/// A brand mark in the same recessed well the LED matrices sit in. The
+/// working phases breathe a soft opacity pulse, so a running agent is still
+/// told apart from an idle one without the dot animation.
+pub fn logo_tile(logo: &str, phase: Phase, size: f32, motion: bool) -> gpui::AnyElement {
+    let edge = match phase {
+        Phase::Thinking | Phase::Reading | Phase::Writing => rgb(BRAND_LOW),
+        Phase::Waiting => rgb(LED_DIM),
+        _ => rgb(BEZEL_EDGE),
+    };
+    let glyph = crate::theme::logo(logo, size * 0.62)
+        .text_color(rgb(INK));
+    let lit = matches!(phase, Phase::Thinking | Phase::Reading | Phase::Writing);
+    let base = well()
+        .relative()
+        .size(px(size))
+        .flex_none()
+        .flex()
+        .items_center()
+        .justify_center()
+        .border_color(edge)
+        .when(lit, |t| t.shadow(glow(BRAND, 10.0)))
+        .child(glyph);
+    if lit && motion {
+        return base
+            .with_animation(
+                gpui::ElementId::Name(format!("logo-{logo}-{size}").into()),
+                gpui::Animation::new(std::time::Duration::from_millis(1600)).repeat(),
+                |tile, t| tile.opacity(0.75 + 0.25 * (t * std::f32::consts::PI).sin()),
+            )
+            .into_any_element();
+    }
+    base.into_any_element()
+}
+
 /// An agent's tile: a recessed well holding its mark, moving for its phase.
 /// `size` is the tile's side; 40 in lanes and lists, larger on detail cards.
 pub fn mark_tile(id: &str, mark: &Mark, phase: Phase, size: f32, motion: bool) -> Div {
@@ -521,7 +582,7 @@ pub fn phase_beat(id: &str, phase: Phase, motion: bool) -> Div {
         .child(
             div()
                 .font_family(MONO)
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(rgb(palette[0]))
                 .child(phase.label().to_uppercase()),
         )
