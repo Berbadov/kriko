@@ -323,7 +323,7 @@ fn checks_graph(months: &[(String, u32)]) -> Div {
                 .child(
                     div()
                         .font_family(MONO)
-                        .text_size(px(10.0))
+                        .text_size(px(12.0))
                         .text_color(rgb(DIM))
                         .child(label.clone()),
                 ),
@@ -347,7 +347,7 @@ fn bar_rows(rows: &[(String, f32, String)]) -> Div {
                     div()
                         .w(px(130.0))
                         .font_family(MONO)
-                        .text_size(px(11.0))
+                        .text_size(px(12.0))
                         .text_color(rgb(MUTED))
                         .child(label.clone()),
                 )
@@ -374,7 +374,7 @@ fn bar_rows(rows: &[(String, f32, String)]) -> Div {
                         .flex()
                         .justify_end()
                         .font_family(MONO)
-                        .text_size(px(10.0))
+                        .text_size(px(12.0))
                         .text_color(rgb(DIM))
                         .child(figure.clone()),
                 ),

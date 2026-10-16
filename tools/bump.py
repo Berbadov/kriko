@@ -127,15 +127,22 @@ def show(strict: bool = False) -> int:
     return 0
 
 
-def bump(version: str) -> int:
+def bump(version: str, reset: bool = False) -> int:
     if not SEMVER.match(version):
         raise SystemExit(f"{version!r} is not X.Y.Z")
     previous = set(current().values())
     if len(previous) != 1:
         raise SystemExit("version files disagree; reconcile them before bumping")
     old = previous.pop()
-    if tuple(map(int, version.split("."))) <= tuple(map(int, old.split("."))):
-        raise SystemExit(f"{version} must be newer than {old}; published versions are immutable")
+    # A reset is an explicit product decision, not an accident the tool
+    # quietly allows: going backwards is refused unless the caller names it,
+    # so a mistyped `1.8.1` as `1.7.1` still stops here. Uniqueness against
+    # the published inventory is the release step's own check.
+    if tuple(map(int, version.split("."))) <= tuple(map(int, old.split("."))) and not reset:
+        raise SystemExit(
+            f"{version} must be newer than {old}; published versions are immutable. "
+            "If this is the deliberate version reset, pass --reset."
+        )
     readme_path = ROOT / "README.md"
     readme = readme_path.read_text(encoding="utf-8")
     readme, count = README_VERSION.subn(rf"\g<1>{version}\g<3>", readme)
@@ -187,10 +194,15 @@ def main(argv=None) -> int:
         action="store_true",
         help="also fail when the installed distribution is not the tree",
     )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="allow going backwards: the deliberate version reset",
+    )
     args = parser.parse_args(argv)
     if args.show or not args.version:
         return show(strict=args.strict)
-    return bump(args.version)
+    return bump(args.version, reset=args.reset)
 
 
 if __name__ == "__main__":

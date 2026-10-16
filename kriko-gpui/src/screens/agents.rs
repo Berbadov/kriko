@@ -8,7 +8,7 @@ use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, S
 
 use crate::app::{Field, Kriko};
 use crate::live::run::{mark_for, AgentEntry, Harness, RunState, Target};
-use crate::marks::{mark_tile, phase_beat, Phase};
+use crate::marks::{agent_tile, mark_tile, phase_beat, Phase};
 use crate::screens::run::{option_chip, option_chip_wrapping};
 use crate::screens::{empty_note, mono, row_desc, row_title, th};
 use crate::theme::*;
@@ -160,8 +160,9 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 None => div().child(mono("-", DIM)),
             };
             let runs_n = mono(&app.live.run.runs_of(&e.id).to_string(), INK_2);
-            let mark = mark_tile(
+            let mark = agent_tile(
                 &format!("agents-row-tile-{i}"),
+                &e.id,
                 mark_for(&e.id),
                 entry_phase(app, e),
                 40.0,
@@ -367,8 +368,9 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                 .flex()
                 .items_center()
                 .gap(px(8.0))
-                .child(mark_tile(
+                .child(agent_tile(
                     &format!("agents-detail-tile-{}", e.id),
+                    &e.id,
                     mark_for(&e.id),
                     phase,
                     72.0,

@@ -14,6 +14,7 @@ use crate::data;
 use crate::dock;
 use crate::engine;
 use crate::live::Live;
+use crate::live::compare::QState;
 use crate::shell;
 use crate::screens;
 use crate::theme::*;
@@ -942,6 +943,8 @@ impl Kriko {
         let browse_count = (subjects > 0).then(|| subjects.to_string());
         let running = self.live.run.jobs.iter().filter(|j| !j.done).count();
         let activity_badge = (running > 0).then(|| running.to_string());
+        let queued = self.live.compare.queue.iter().filter(|q| q.state == QState::Waiting).count();
+        let queue_badge = (queued > 0).then(|| queued.to_string());
         for (gi, group) in data::NAV.iter().enumerate() {
             nav = nav.child(
                 div()
@@ -957,6 +960,7 @@ impl Kriko {
                 let (count, badge) = match key {
                     "browse" => (browse_count.as_deref(), None),
                     "activity" => (None, activity_badge.as_deref()),
+                    "compare" => (None, queue_badge.as_deref()),
                     _ => (item.count, item.badge),
                 };
                 let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { count }, if self.sidebar_collapsed { None } else { badge })
@@ -1147,7 +1151,7 @@ impl Kriko {
                             .child(
                                 div()
                                     .font_family(MONO)
-                                    .text_size(px(11.0))
+                                    .text_size(px(12.0))
                                     .text_color(rgb(if self.dock_open {
                                         ICE
                                     } else {
