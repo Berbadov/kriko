@@ -7,7 +7,7 @@
 Kriko brings known product problems, their sources, and useful checks<br>
 next to the listing you're reading.
 
-[![version](https://img.shields.io/badge/version-1.7.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-1.8.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 [Downloads](https://github.com/Berbadov/kriko/releases/latest) · [Get started](#get-started) · [What's new](#whats-new) · [Benchmarks](#model-benchmarks) · [Help](#get-help)
@@ -34,8 +34,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | Download | Best for |
 |---|---|
-| `kriko-1.7.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
-| `kriko-1.7.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
+| `kriko-1.8.0-x86_64.msi` | Installing Kriko with Start menu and desktop shortcuts. No administrator rights needed. |
+| `kriko-1.8.0-win64-portable.zip` | Trying Kriko without an installer. Unzip it, keep the programs together, and open `kriko.exe`. |
 
 The Windows app includes everything it needs to start. It does not include catalogs: a new install starts with none. Open **Overview**, under **Knowledge**, in the app: it lists the catalogs this release publishes, each with an **Install** button, and keeps installed ones current every week. (`kriko install <file.kpack>` still works from a terminal.) You don't need to install Python, Node, or Rust.
 
@@ -45,8 +45,8 @@ Apple Silicon and Intel Macs have separate builds. A file is downloadable only w
 
 | Mac | Disk image | Portable app bundle |
 |---|---|---|
-| Apple Silicon | `kriko-1.7.0-macos-arm64.dmg` | `kriko-1.7.0-macos-arm64-portable.zip` |
-| Intel | `kriko-1.7.0-macos-x86_64.dmg` | `kriko-1.7.0-macos-x86_64-portable.zip` |
+| Apple Silicon | `kriko-1.8.0-macos-arm64.dmg` | `kriko-1.8.0-macos-arm64-portable.zip` |
+| Intel | `kriko-1.8.0-macos-x86_64.dmg` | `kriko-1.8.0-macos-x86_64-portable.zip` |
 
 Open the `.dmg` and drag **Kriko.app** to **Applications**. For the portable ZIP, extract it and move **Kriko.app** where you want it. Each archive is a complete app for its named architecture, built on a matching Mac.
 
@@ -90,6 +90,15 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 **What leaves your computer.** Installed lookups run on your computer. Online research sends its questions and reading context to the providers you select; a local model runs inference on your computer and still needs web search to gather new sources.
 
 ## What's new
+
+### 1.8.0
+
+- **Chat can research products with every supported agent.** Product searches use bounded, parallel web gathering and keep sources beside the answer. Tool-capable agents can use their web tools. Ordinary conversation and saved-record questions avoid unnecessary research.
+- **A calmer Chat workspace.** The conversation and composer come first. Real research phases replace the artificial percentage bar, and streaming answers no longer trigger repeated animations. Stop, Retry, Copy and source links stay close to the conversation.
+- **Buyer decisions respect the evidence.** Catalog shortlists honor conditions and supporting citations, distinguish unknown requirements from matches, and no longer prefer a product simply because fewer serious problems were recorded for it.
+- **Navigation opens what you chose.** Home opens the selected saved check or comparison. Run ignores obsolete search replies and can start a separate, unsent discovery conversation when a product is missing locally.
+- **Research spends less time waiting.** Independent search engines answer concurrently, each engine receives one query at a time, and spare pages can replace stalled reads. Claude Code also receives pages gathered by Kriko. Cancellation and Quick Look gathering budgets remain enforced; bot-check pages are discarded.
+- **First-run setup is guided.** A five-step tour introduces catalogs, agents, the extension and a first check. Settings can replay it. The Windows installer offers **Open Kriko** on its final screen; silent installs launch nothing.
 
 ### 1.7.0
 

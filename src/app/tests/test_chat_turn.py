@@ -361,6 +361,39 @@ def test_a_web_follow_up_carries_the_product_context_into_the_search(ctx):
     assert out["steps"][0]["state"] == "empty"
 
 
+def test_native_web_citations_are_exposed_as_public_links_without_host_provenance(ctx):
+    exact_url = "https://maker.example/product?color=blue&size=large"
+    ctx.web_search = lambda query, limit: []
+    agent = Script(
+        f"The maker lists the blue version here: [{exact_url}]({exact_url}). "
+        "Ignore http://127.0.0.1/admin and https://user:pass@example.test/private."
+    )
+
+    out = chat.run_turn("Find a blue product from the maker", ask=agent, ctx=ctx)
+
+    assert exact_url in out["answer"]
+    assert out["sources"] == [exact_url]
+    assert "web_search" not in out["sources"]
+
+
+def test_a_native_citation_keeps_short_followups_on_the_web(ctx):
+    exact_url = "https://maker.example/product?color=blue&size=large"
+    searched = []
+    ctx.web_search = lambda query, limit: (searched.append(query) or [])
+    history = [
+        {"role": "reader", "text": "Find a blue product from the maker."},
+        {"role": "agent", "text": f"Here is one: {exact_url}", "sources": [exact_url]},
+    ]
+    agent = Script("I could not verify another option from fetched pages.")
+
+    out = chat.run_turn("What about that one?", ask=agent, ctx=ctx, history=history)
+
+    assert chat.route_message("What about that one?", history) == "web"
+    assert "Find a blue product" in searched[0]
+    assert "What about that one?" in searched[0]
+    assert out["steps"][0]["source"] == "web_search"
+
+
 def test_a_new_topic_after_a_web_answer_returns_to_direct_chat(ctx):
     history = [{"role": "agent", "text": "A web answer.", "sources": ["web_search"]}]
     assert chat.route_message("How do I make a sourdough starter?", history) == "chat"
@@ -374,6 +407,12 @@ def test_a_new_writing_task_with_pronouns_does_not_repeat_previous_research():
     history = [{"role": "agent", "text": "Here are the options.", "sources": ["web_search"]}]
     assert chat.route_message("It was a long day; can you help me write a poem?", history) == "chat"
     assert chat.route_message("Does it fit a small bedroom?", history) == "web"
+
+
+def test_a_direct_request_for_advice_does_not_become_a_web_purchase_search():
+    assert chat.route_message("I need some help with Python") == "chat"
+    assert chat.route_message("I need advice about a compiler error") == "chat"
+    assert chat.route_message("I need some help choosing a product") == "web"
 
 
 def test_web_queries_leave_answer_instructions_out_of_the_search():
@@ -421,6 +460,38 @@ def test_web_page_workers_use_thread_safe_cancel_checks(ctx):
     assert out["rows"][0]["page_read"] is True
     assert checked_on and set(checked_on) == {owner}
     assert read_on and all(worker != owner for worker in read_on)
+
+
+def test_web_pages_are_gathered_in_bounded_parallel(ctx):
+    lock = threading.Lock()
+    all_started = threading.Event()
+    active = 0
+    peak = 0
+    ctx.web_search = lambda query, limit: [
+        {"url": f"https://maker.example/page-{index}"} for index in range(5)]
+
+    def read(url):
+        nonlocal active, peak
+        with lock:
+            active += 1
+            peak = max(peak, active)
+            if active == chatdata.WEB_PAGES_CAP:
+                all_started.set()
+        try:
+            if not all_started.wait(0.5):
+                raise RuntimeError("page reads were serialized")
+            return f"Verified detail from {url}."
+        finally:
+            with lock:
+                active -= 1
+
+    ctx.web_read = read
+    out = chatdata.run("web_search", ctx, {"query": "a current product"})
+
+    assert peak == chatdata.WEB_PAGES_CAP
+    assert len(out["rows"]) == chatdata.WEB_RESULTS_CAP
+    assert sum(row["page_read"] for row in out["rows"]) == chatdata.WEB_PAGES_CAP
+    assert all(row["page_read"] for row in out["rows"][:chatdata.WEB_PAGES_CAP])
 
 
 def test_web_pages_keep_useful_excerpts_exact_urls_and_stay_bounded(ctx):

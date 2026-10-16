@@ -26,7 +26,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+from typing import Any
 from app.providers import network
 
 from app.providers._http import TIMEOUT
@@ -34,6 +35,35 @@ from kriko.research.politeness import LocalSearchError
 
 DEFAULT_BASE_URL = "http://127.0.0.1:7000"
 DEFAULT_ENGINE = "duckduckgo"
+MAX_SEARCH_BYTES = 4_000_000
+
+
+def _response_body(response, deadline: float, check) -> bytes:
+    """Poll cancellation between available HTTP chunks, including trickled bodies."""
+    read_chunk = getattr(response, "read1", None)
+    if not callable(read_chunk):
+        # Simple injected responses may expose only a whole-body read. urllib's
+        # HTTPResponse has read1, which returns available bytes without waiting
+        # for an entire large buffer to fill.
+        check()
+        body = response.read()
+        check()
+        if len(body) > MAX_SEARCH_BYTES or time.monotonic() >= deadline:
+            raise LocalSearchError("search response exceeded its size or time budget")
+        return body
+    parts: list[bytes] = []
+    size = 0
+    while True:
+        check()
+        if time.monotonic() >= deadline:
+            raise LocalSearchError("search response budget reached")
+        chunk = read_chunk(min(65536, MAX_SEARCH_BYTES + 1 - size))
+        if not chunk:
+            return b"".join(parts)
+        size += len(chunk)
+        if size > MAX_SEARCH_BYTES:
+            raise LocalSearchError("search response was too large")
+        parts.append(chunk)
 
 #: The engines a local run asks together. Measured on this service, one engine
 #: at a time: Google answered 6 of 6 (9 hits, 5-6 s) while two others had
@@ -214,7 +244,7 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
         request_mode = mode or default_mode
         total_timeout = timeout if timeout is not None else search_timeout
         engine_names = _engines_to_ask(engines or chosen).split(",")
-        # In `any` mode ask each selected engine's endpoint in turn. Mega
+        # In `any` mode use the selected engines' own endpoints. Mega
         # counts a Google click-through as a result before this adapter can
         # reject it, so the next engine must get a chance to return a page.
         per_engine = request_mode == "any"
@@ -224,6 +254,63 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
         had_response = False
         check_cancelled = getattr(search, "check_cancelled", None)
         callback_error: BaseException | None = None
+        start_pace = pace_interval if pace_interval is not None else 0.25
+
+        if per_engine and len(engine_names) > 1:
+            # A slow first engine must not consume the whole interactive
+            # budget before the next engine gets a chance. Each selected
+            # engine receives this query once; outbound pacing still applies.
+            if check_cancelled is not None:
+                check_cancelled()
+            stop = threading.Event()
+
+            def check_worker() -> None:
+                if stop.is_set() or time.monotonic() >= deadline:
+                    raise LocalSearchError("search stopped")
+
+            def one_engine(name: str) -> list[dict]:
+                child = searcher(endpoint, engine=name, language=language,
+                                 timeout=total_timeout, mode="any", resolve=resolve)
+                child.check_cancelled = check_worker
+                try:
+                    check_worker()
+                    return child(query, limit, timeout=max(0.001, deadline - time.monotonic()),
+                                 pace_interval=start_pace)
+                finally:
+                    with stats_lock:
+                        for key in stats:
+                            stats[key] += child.stats[key]
+
+            pool = ThreadPoolExecutor(max_workers=min(3, len(engine_names)),
+                                      thread_name_prefix="kriko-search")
+            jobs = {pool.submit(one_engine, name): index
+                    for index, name in enumerate(engine_names)}
+            pending = set(jobs)
+            failures: list[Exception] = []
+            answered = False
+            try:
+                while pending and time.monotonic() < deadline:
+                    if check_cancelled is not None:
+                        check_cancelled()
+                    done, pending = wait(pending, timeout=min(0.05, max(0.0, deadline - time.monotonic())),
+                                         return_when=FIRST_COMPLETED)
+                    for future in sorted(done, key=jobs.__getitem__):
+                        try:
+                            hits = future.result()
+                        except LocalSearchError as error:
+                            failures.append(error)
+                            continue
+                        answered = True
+                        if hits:
+                            return hits
+                if check_cancelled is not None:
+                    check_cancelled()
+                if not answered and failures and not pending:
+                    raise LocalSearchError(str(failures[-1])) from failures[-1]
+                return []
+            finally:
+                stop.set()
+                pool.shutdown(wait=False, cancel_futures=True)
 
         def check_request() -> None:
             nonlocal callback_error
@@ -235,7 +322,6 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
                 callback_error = error
                 raise
 
-        start_pace = pace_interval if pace_interval is not None else 0.25
         for engine_name in routes:
             if per_engine:
                 request_timeout = deadline - time.monotonic()
@@ -258,11 +344,12 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
                 headers={"Accept": "application/json"},
             )
             try:
-                options = {"check": check_request} if check_cancelled is not None else {}
+                request_ends = time.monotonic() + request_timeout
+                options: dict[str, Any] = {"check": check_request} if check_cancelled is not None else {}
                 with network.urlopen(request, timeout=request_timeout,
                                      pace_interval=start_pace, **options) as response:
-                    body = response.read().decode("utf-8", "replace")
-            except Exception as error:  # noqa: BLE001 — network, rotate
+                    body = _response_body(response, request_ends, check_request).decode("utf-8", "replace")
+            except Exception as error:  # noqa: BLE001 â€” network, rotate
                 if callback_error is not None:
                     raise callback_error
                 last_error = error

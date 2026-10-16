@@ -208,6 +208,7 @@ pub struct QuickLookDetail {
 
 #[derive(Clone)]
 pub struct Draft {
+    pub draft_id: String,
     pub name: String,
     pub lookup_ids: Vec<String>,
 }
@@ -368,6 +369,13 @@ impl State {
                 .map(|p| p.1.clone())
                 .unwrap_or_else(|| id.clone()),
         }
+    }
+
+    /// A Home recent-check link means "show this check", regardless of the
+    /// kind or status filter the reader last used on History.
+    pub fn clear_kind_status_filters(&mut self) {
+        self.record_kind.clear();
+        self.record_status.clear();
     }
 
     /// Indices into `items` that the search, the catalog and the span admit,
@@ -651,6 +659,7 @@ impl Kriko {
                 this.live.history.drafts = api::arr(&v, "items")
                     .iter()
                     .map(|d| Draft {
+                        draft_id: api::s(d, "draft_id"),
                         name: api::s(d, "name"),
                         lookup_ids: api::arr(d, "lookup_ids").iter().filter_map(|x| x.as_str().map(String::from)).collect(),
                     })
@@ -1151,6 +1160,33 @@ mod tests {
         assert_eq!(s.pack_word(), "ALL");
         s.pack = Some("x.a".into());
         assert_eq!(s.filtered("", u32::MAX, 0), vec![1]);
+    }
+
+    #[test]
+    fn a_recent_check_is_admitted_after_history_kind_and_status_filters_are_cleared() {
+        let check = Item {
+            id: "check-1".into(),
+            ts: None,
+            label: "Saved check".into(),
+            source: String::new(),
+            kind: "check".into(),
+            status: "succeeded".into(),
+            agent: String::new(),
+            claims: 0,
+            category: String::new(),
+            categorization: None,
+            packs: vec![],
+        };
+        let mut state = State {
+            items: vec![check],
+            record_kind: "run".into(),
+            record_status: "failed".into(),
+            ..State::default()
+        };
+
+        assert!(state.filtered("", u32::MAX, 0).is_empty());
+        state.clear_kind_status_filters();
+        assert_eq!(state.filtered("", u32::MAX, 0), vec![0]);
     }
 
     #[test]
