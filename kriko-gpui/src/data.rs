@@ -17,38 +17,131 @@ pub struct NavGroupDef {
 
 pub const NAV: &[NavGroupDef] = &[
     NavGroupDef {
+        label: "Start",
+        items: &[NavDef {
+            key: "chat",
+            label: "New Chat",
+            icon: "message",
+            count: None,
+            badge: None,
+        }],
+    },
+    NavGroupDef {
         label: "Check",
         items: &[
-            NavDef { key: "home", label: "Home", icon: "home", count: None, badge: None },
-            NavDef { key: "run", label: "Run", icon: "run", count: None, badge: None },
-            NavDef { key: "history", label: "History", icon: "history", count: None, badge: None },
-            NavDef { key: "compare", label: "Compare", icon: "compare", count: None, badge: None },
-            NavDef { key: "chat", label: "Chat", icon: "agents", count: None, badge: None },
-            NavDef { key: "extension", label: "Browser extension", icon: "extension", count: None, badge: None },
+            NavDef {
+                key: "home",
+                label: "Home",
+                icon: "home",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "run",
+                label: "Run",
+                icon: "run",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "history",
+                label: "History",
+                icon: "history",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "compare",
+                label: "Compare",
+                icon: "compare",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "extension",
+                label: "Browser extension",
+                icon: "extension",
+                count: None,
+                badge: None,
+            },
         ],
     },
     NavGroupDef {
         label: "Knowledge",
         items: &[
-            NavDef { key: "overview", label: "Overview", icon: "overview", count: None, badge: None },
-            NavDef { key: "browse", label: "Browse", icon: "browse", count: None, badge: None },
+            NavDef {
+                key: "overview",
+                label: "Overview",
+                icon: "overview",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "browse",
+                label: "Browse",
+                icon: "browse",
+                count: None,
+                badge: None,
+            },
         ],
     },
     NavGroupDef {
         label: "System",
         items: &[
-            NavDef { key: "sites", label: "Sites", icon: "sites", count: None, badge: None },
-            NavDef { key: "activity", label: "Activity", icon: "activity", count: None, badge: None },
-            NavDef { key: "agents", label: "Agents", icon: "agents", count: None, badge: None },
-            NavDef { key: "benchmark", label: "Benchmark", icon: "benchmark", count: None, badge: None },
+            NavDef {
+                key: "sites",
+                label: "Sites",
+                icon: "sites",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "activity",
+                label: "Activity",
+                icon: "activity",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "agents",
+                label: "Agents",
+                icon: "agents",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "benchmark",
+                label: "Benchmark",
+                icon: "benchmark",
+                count: None,
+                badge: None,
+            },
         ],
     },
     NavGroupDef {
         label: "This install",
         items: &[
-            NavDef { key: "local", label: "Local LLM", icon: "local", count: None, badge: None },
-            NavDef { key: "settings", label: "Settings", icon: "settings", count: None, badge: None },
-            NavDef { key: "about", label: "About", icon: "about", count: None, badge: None },
+            NavDef {
+                key: "local",
+                label: "Local LLM",
+                icon: "local",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "settings",
+                label: "Settings",
+                icon: "settings",
+                count: None,
+                badge: None,
+            },
+            NavDef {
+                key: "about",
+                label: "About",
+                icon: "about",
+                count: None,
+                badge: None,
+            },
         ],
     },
 ];
@@ -62,9 +155,9 @@ pub const PAGE_SIZE: usize = 5;
 /// Example questions for an empty conversation. Generic on purpose: the words
 /// in brackets are for the reader to fill, whatever the catalogues hold.
 pub const CHAT_EXAMPLES: &[&str] = &[
-    "I need a <product> with <constraint a> and <constraint b>. Which fits best?",
-    "Which of my saved checks record a serious risk?",
-    "What do my quick looks say about <product>?",
+    "What do we know about this product?",
+    "Summarize my saved checks",
+    "What did my quick looks find?",
 ];
 
 // ---- compare ----
