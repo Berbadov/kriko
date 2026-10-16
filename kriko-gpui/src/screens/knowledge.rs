@@ -15,24 +15,21 @@ use crate::theme::*;
 
 fn section_title(label: &str) -> Div {
     div()
-        .font_family(DISPLAY)
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(19.0))
+        .text_size(px(18.0))
         .text_color(rgb(BRAND_BRIGHT))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// The smooth settle the whole page shares: a fade with a stagger.
-fn settle(id: gpui::ElementId, delay: f32, motion: bool) -> impl FnMut(Div) -> gpui::AnyElement {
+fn settle(id: gpui::ElementId, _delay: f32, motion: bool) -> impl FnMut(Div) -> gpui::AnyElement {
     move |el: Div| -> gpui::AnyElement {
         if motion {
             el.with_animation(
                 id.clone(),
-                Animation::new(std::time::Duration::from_millis(900)).with_easing(move |t| {
-                    let local = ((t * 900.0 - delay) / 500.0).clamp(0.0, 1.0);
-                    1.0 - (1.0 - local).powi(3)
-                }),
-                |el, v| el.opacity(v),
+                Animation::new(std::time::Duration::from_millis(140)),
+                |el, v| el.opacity(0.85 + 0.15 * v),
             )
             .into_any_element()
         } else {

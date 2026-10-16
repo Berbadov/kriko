@@ -105,6 +105,31 @@ def main() -> None:
     @app.middleware("http")
     async def fixture_boundaries(request, call_next):
         path = request.url.path
+        if "--desktop-review" in sys.argv:
+            model_names = ["review-small:3b", "review-medium:8b", "review-large:14b"]
+            if path == "/api/prefs":
+                return JSONResponse({"harnesses": [
+                    {"id": "local", "label": "Local model", "llm": model_names[0]},
+                    {"id": "claude-code", "label": "Claude Code", "llm": "review-model",
+                     "llm_selectable": True, "llms": ["review-model", "review-alternative"]}],
+                    "missing": [{"id": "codex", "label": "Codex", "install_hint": "Synthetic review entry."}],
+                    "chosen": {"preferred_harness": "local"}})
+            if path == "/api/agent-targets":
+                return JSONResponse({"targets": []})
+            if path == "/api/local-plane":
+                return JSONResponse({"ready": True, "model": model_names[0], "models": model_names,
+                                     "name": "Ollama", "url": "http://127.0.0.1:11434",
+                                     "line": "Synthetic desktop review data", "search_label": "Review fixture",
+                                     "servers": [{"name": "Ollama", "url": "http://127.0.0.1:11434",
+                                                  "up": True, "models": model_names}]})
+            if path == "/api/local-models":
+                return JSONResponse({"models": [{"name": name, "params": size, "quant": "Q4_K_M",
+                                                 "size_bytes": (i + 1) * 2_000_000_000}
+                                                for i, (name, size) in enumerate(zip(model_names, ["3B", "8B", "14B"]))],
+                                     "library": [{"name": "review-small", "sizes": ["3b", "7b"],
+                                                  "about": "Synthetic model for checking the desktop layout."},
+                                                 {"name": "review-medium", "sizes": ["8b", "14b"],
+                                                  "about": "A second synthetic model with selectable download sizes."}]})
         if path == "/api/prefs":
             return JSONResponse({"harnesses": [{"id": "review", "label": "Review fixture"}],
                                  "unusable": [], "chosen": {"preferred_harness": "review"}})

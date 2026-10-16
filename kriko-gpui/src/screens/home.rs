@@ -1,16 +1,16 @@
 //! Home: what you were doing, what you saved, and the shape of the knowledge.
-//! Recent work and drafts side by side, then the graphs. The next-step card
+//! Recent work and drafts side by side. The next-step section
 //! routes an empty or returning Home to a real action from current engine facts.
 //! Everything comes from the engine: `/api/history`, `/api/compare-drafts`,
 //! `/api/status` and `/api/packs`.
 
 use gpui::{
-    div, prelude::*, px, relative, rgb, rgba, ClickEvent, Context, Div, FontWeight, Stateful,
+    div, prelude::*, px, rgb, rgba, ClickEvent, Context, Div, FontWeight, Stateful,
     Styled, Window,
 };
 
 use crate::app::{Kriko, SpanFilter, Tab};
-use crate::live::history::{ago, month_buckets, now_secs, Item};
+use crate::live::history::{ago, now_secs, Item};
 use crate::screens::history::clip;
 use crate::screens::{empty_note, mono, plate_s, row_desc, row_title};
 use crate::theme::*;
@@ -164,20 +164,20 @@ fn next_step_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<gpui::AnyEleme
             .flex()
             .flex_col()
             .gap(px(4.0))
-            .child(eyebrow("Up next").text_color(rgb(0x293247)))
+            .child(eyebrow("Up next").text_color(rgb(MUTED)))
             .child(
                 div()
                     .font_family(DISPLAY)
                     .font_weight(FontWeight::SEMIBOLD)
                     .text_size(px(24.0))
-                    .text_color(rgb(0x101522))
+                    .text_color(rgb(INK))
                     .child("CHECK SETUP"),
             )
             .child(
                 div()
                     .font_family(SANS)
                     .text_size(px(13.0))
-                    .text_color(rgb(0x39455f))
+                    .text_color(rgb(MUTED))
                     .child("Refresh to try again."),
             );
         return Some(
@@ -233,20 +233,20 @@ fn next_step_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<gpui::AnyEleme
         .flex()
         .flex_col()
         .gap(px(4.0))
-        .child(eyebrow("Up next").text_color(rgb(0x293247)))
+        .child(eyebrow("Up next"))
         .child(
             div()
                 .font_family(DISPLAY)
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(24.0))
-                .text_color(rgb(0x101522))
+                .text_color(rgb(INK))
                 .child(title.to_uppercase()),
         )
         .child(
             div()
                 .font_family(SANS)
                 .text_size(px(13.0))
-                .text_color(rgb(0x39455f))
+                .text_color(rgb(MUTED))
                 .child(detail),
         );
     Some(
@@ -427,104 +427,6 @@ fn draft_row(
         .child(icon("compare", 16.0).text_color(rgb(DIM)))
 }
 
-/// The activity graph: one column per month, the bar as tall as the count.
-fn checks_graph(months: &[(String, u32)]) -> Div {
-    let max = months.iter().map(|(_, v)| *v).max().unwrap_or(1).max(1) as f32;
-    let mut cols = div().flex().items_end().gap(px(6.0));
-    for (label, value) in months {
-        let height = 8.0 + 80.0 * (*value as f32) / max;
-        cols = cols.child(
-            div()
-                .flex_1()
-                .flex()
-                .flex_col()
-                .items_center()
-                .gap(px(8.0))
-                .child(
-                    div()
-                        .w_full()
-                        .max_w(px(28.0))
-                        .flex()
-                        .flex_col()
-                        .justify_end()
-                        .h(px(88.0))
-                        .child(
-                            div()
-                                .w_full()
-                                .h(px(if *value == 0 { 3.0 } else { height }))
-                                .rounded(px(3.0))
-                                .bg(rgb(ICE))
-                                .opacity(if *value == 0 {
-                                    0.15
-                                } else {
-                                    0.55 + 0.45 * (*value as f32) / max
-                                })
-                                .shadow(vec![shadow(0xbfe4ff40, 0.0, 0.0, 8.0, 0.0)]),
-                        ),
-                )
-                .child(
-                    div()
-                        .font_family(MONO)
-                        .text_size(px(10.0))
-                        .text_color(rgb(DIM))
-                        .child(label.clone()),
-                ),
-        );
-    }
-    cols
-}
-
-/// Horizontal bars, longest on top: a label, a bar as long as its share of
-/// the biggest value, and the figures at the right.
-fn bar_rows(rows: &[(String, f32, String)]) -> Div {
-    let max = rows.iter().map(|r| r.1).fold(0.0f32, f32::max).max(1.0);
-    let mut graph = div().flex().flex_col().gap(px(6.0));
-    for (label, value, figure) in rows {
-        graph = graph.child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(6.0))
-                .child(
-                    div()
-                        .w(px(112.0))
-                        .font_family(MONO)
-                        .text_size(px(11.0))
-                        .text_color(rgb(MUTED))
-                        .child(label.clone()),
-                )
-                .child(
-                    div()
-                        .flex_1()
-                        .h(px(10.0))
-                        .rounded(px(2.0))
-                        .bg(rgb(WELL))
-                        .border_1()
-                        .border_color(rgba(HAIRLINE))
-                        .child(
-                            div()
-                                .h_full()
-                                .w(relative(value / max))
-                                .rounded(px(2.0))
-                                .bg(rgb(ICE))
-                                .opacity(0.8),
-                        ),
-                )
-                .child(
-                    div()
-                        .w(px(70.0))
-                        .flex()
-                        .justify_end()
-                        .font_family(MONO)
-                        .text_size(px(10.0))
-                        .text_color(rgb(DIM))
-                        .child(figure.clone()),
-                ),
-        );
-    }
-    graph
-}
-
 /// The launch notice: a newer Kriko is published. The app opens on Home, so
 /// this is where the reader sees it without going to About. Windows offers an
 /// explicit install action; other platforms link to the release downloads.
@@ -687,96 +589,6 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
         }
     }
 
-    // ---- the graphs ----
-    let checks_body: gpui::AnyElement = if h.loaded && !h.items.is_empty() {
-        let months = month_buckets(h.items.iter().filter_map(|i| i.ts), now, 6);
-        checks_graph(&months).into_any_element()
-    } else if h.loaded {
-        empty_note("No checks yet.").into_any_element()
-    } else {
-        empty_note("Check counts unavailable.").into_any_element()
-    };
-    let checks_card = card()
-        .flex()
-        .flex_col()
-        .gap(px(8.0))
-        .child(eyebrow("Checks per month"))
-        .child(checks_body);
-
-    let claims_body: gpui::AnyElement = match &h.counts {
-        Some(c) => bar_rows(&[
-            (
-                "subjects".to_string(),
-                c.subjects as f32,
-                c.subjects.to_string(),
-            ),
-            ("claims".to_string(), c.claims as f32, c.claims.to_string()),
-            (
-                "sources".to_string(),
-                c.evidence as f32,
-                c.evidence.to_string(),
-            ),
-        ])
-        .into_any_element(),
-        None => empty_note("Evidence counts unavailable.").into_any_element(),
-    };
-    let claims_card = card()
-        .flex()
-        .flex_col()
-        .gap(px(8.0))
-        .child(eyebrow("Evidence in the store"))
-        .child(claims_body);
-
-    let packs_body: gpui::AnyElement = match &h.packs {
-        Some(packs) => {
-            let mut live: Vec<_> = packs.iter().filter(|p| p.enabled).collect();
-            live.sort_by(|a, b| b.claims.cmp(&a.claims));
-            if live.is_empty() {
-                // Either nothing is installed (every fresh install) or it is
-                // all switched off; both are fixed on the Knowledge screen,
-                // so the note is the way there.
-                let go = cx.listener(|this, _: &ClickEvent, _w, cx| {
-                    this.tab = Tab::Overview;
-                    this.on_open_tab(cx);
-                    cx.notify();
-                });
-                let say = if packs.is_empty() {
-                    "No catalog installed yet. Open Overview to install one."
-                } else {
-                    "Every catalog is switched off. Open Overview to switch one on."
-                };
-                div()
-                    .id("home-no-catalog")
-                    .cursor_pointer()
-                    .on_click(go)
-                    .child(empty_note(say))
-                    .into_any_element()
-            } else {
-                let rows: Vec<(String, f32, String)> = live
-                    .iter()
-                    .take(4)
-                    .map(|p| {
-                        (
-                            clip(&p.name, 20),
-                            p.claims as f32,
-                            format!("{} claims", p.claims),
-                        )
-                    })
-                    .collect();
-                bar_rows(&rows).into_any_element()
-            }
-        }
-        None => empty_note("Catalog details unavailable.").into_any_element(),
-    };
-    let packs_card = card()
-        .flex()
-        .flex_col()
-        .gap(px(8.0))
-        .child(eyebrow("Claims per catalog"))
-        .child(packs_body);
-
-    // Recent work and drafts side by side from 300 px each; the three graphs
-    // side by side from 240 px each. Each row shares one height.
     let mut column = div().flex().flex_col().gap(px(SPACE_SECTION));
     if let Some(notice) = update_card(app, cx) {
         column = column.child(notice);
@@ -787,13 +599,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
     if let Some(next) = next_step_card(app, cx) {
         column = column.child(next);
     }
-    column
-        .child(grid(app.content_w, 300.0, vec![recent, drafts]))
-        .child(grid(
-            app.content_w,
-            240.0,
-            vec![checks_card, claims_card, packs_card],
-        ))
+    column.child(grid(app.content_w, 360.0, vec![recent, drafts]))
 }
 
 #[cfg(test)]

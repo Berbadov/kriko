@@ -3,25 +3,25 @@
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, Styled, Window};
 
 use crate::app::{Field, Kriko};
-use crate::live::run::{mark_for, AgentEntry, Harness, RunState, Target};
-use crate::marks::{mark_tile, phase_beat, Phase};
+use crate::live::run::{AgentEntry, Harness, RunState, Target};
+use crate::marks::{phase_beat, Phase};
 use crate::screens::run::{option_chip, option_chip_wrapping};
 use crate::screens::{empty_note, mono, row_desc, th};
 use crate::theme::*;
 
 fn panel_title(label: &str) -> Div {
     div()
-        .font_family(DISPLAY)
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(22.0))
+        .text_size(px(18.0))
         .text_color(rgb(INK_2))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// How an agent stands as a runner of checks: the tag state and its word.
 fn run_word(h: &RunState) -> (TagState, &'static str) {
     match h {
-        RunState::Ready => (TagState::Live, "Ready"),
+        RunState::Ready => (TagState::Done, "Ready"),
         RunState::Unusable(_) => (TagState::Need, "Needs sign-in"),
         RunState::Missing { .. } => (TagState::Queue, "Not installed"),
     }
@@ -30,7 +30,7 @@ fn run_word(h: &RunState) -> (TagState, &'static str) {
 /// How an agent stands as an MCP connection target.
 fn mcp_word(t: &Target) -> (TagState, &'static str) {
     match t.state.as_str() {
-        "connected" => (TagState::Live, "Connected"),
+        "connected" => (TagState::Done, "Connected"),
         "stale" => (TagState::Need, "Stale"),
         "unreadable" => (TagState::Block, "Unreadable"),
         _ => (TagState::Queue, "Not connected"),
@@ -89,8 +89,8 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let loaded = app.live.run.prefs_loaded || app.live.run.targets_loaded;
     // Keep the selected-agent controls beside the list whenever the compact
     // model-hub layout can fit. Wider pages restore the full data columns.
-    let compact = app.content_w < 1184.0;
-    let beside = app.content_w >= 900.0;
+    let compact = true;
+    let beside = app.content_w >= 800.0;
 
     let body: Div = if entries.is_empty() {
         let mut empty = div()
@@ -207,13 +207,9 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 None => div().child(mono("-", DIM)),
             };
             let runs_n = mono(&app.live.run.runs_of(&e.id).to_string(), INK_2);
-            let mark = mark_tile(
-                &format!("agents-row-tile-{i}"),
-                mark_for(&e.id),
-                entry_phase(app, e),
-                40.0,
-                motion,
-            );
+            let mark = div().size(px(36.0)).flex_none().flex().items_center().justify_center()
+                .child(icon(if e.id == "local" { "cpu" } else if e.id == "builtin" { "cloud" } else { "term" }, 22.0)
+                    .text_color(rgb(MUTED)));
             let name = div()
                 .flex_1()
                 .min_w(px(0.0))
@@ -240,7 +236,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 None => name,
             };
             let order = div()
-                .w(px(168.0))
+                .w(px(if i > 0 && i + 1 < entries.len() { 144.0 } else { 72.0 }))
                 .flex_none()
                 .flex()
                 .justify_end()
@@ -275,7 +271,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                             .gap(px(8.0))
                             .child(mark)
                             .child(name)
-                            .child(order),
+                            .when(is_selected && entries.len() > 1, |d| d.child(order)),
                     )
                     .child(
                         div()
@@ -332,11 +328,14 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .w_full()
                 .child(
                     div()
-                        .flex_1()
-                        .min_w(px(if compact { 480.0 } else { 840.0 }))
+                        .w(px(340.0))
+                        .flex_none()
+                        .pr(px(24.0))
+                        .border_r_1()
+                        .border_color(rgba(HAIRLINE))
                         .child(table),
                 )
-                .child(div().w(px(320.0)).flex_none().child(detail))
+                .child(div().flex_1().min_w(px(0.0)).child(detail))
         } else {
             // Not room for both beside each other: the detail card takes the
             // page's width under the table, rather than a 320 px column that
@@ -358,7 +357,12 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex_col()
         .gap(px(SPACE_SECTION))
         .child(body)
-        .when(app.live.run.prefs_loaded, |d| {
+        .child(ghost("agents-research-options", if app.agents_options_open { "Hide research options" } else { "Research options" })
+            .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                this.agents_options_open = !this.agents_options_open;
+                cx.notify();
+            })))
+        .when(app.live.run.prefs_loaded && app.agents_options_open, |d| {
             d.child(research_card(app, cx))
         })
 }
@@ -434,7 +438,7 @@ fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kr
     };
     let mut block = div().flex().flex_col().gap(px(8.0));
     if offered && !busy && !succeeded {
-        block = block.child(div().child(key(("agent-install", 0usize), label).on_click(
+        block = block.child(div().flex().child(key(("agent-install", 0usize), label).on_click(
             cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
                 this.install_agent(id.clone(), cx)
             }),
@@ -478,13 +482,8 @@ fn detail_card(
             .flex()
             .items_center()
             .gap(px(8.0))
-            .child(mark_tile(
-                &format!("agents-detail-tile-{}", e.id),
-                mark_for(&e.id),
-                phase,
-                72.0,
-                motion,
-            ))
+            .child(icon(if e.id == "local" { "cpu" } else if e.id == "builtin" { "cloud" } else { "term" }, 32.0)
+                .text_color(rgb(BRAND_BRIGHT)))
             .child(
                 div()
                     .flex()
@@ -492,11 +491,11 @@ fn detail_card(
                     .gap(px(4.0))
                     .child(panel_title(&e.label))
                     .child(mono(&e.id, MUTED))
-                    .child(phase_beat(
+                    .when(!matches!(phase, Phase::Idle | Phase::Off), |d| d.child(phase_beat(
                         &format!("agents-detail-beat-{}", e.id),
                         phase,
                         motion,
-                    )),
+                    ))),
             ),
     );
 
@@ -522,7 +521,7 @@ fn detail_card(
                         this.prefer_agent(id.clone(), cx);
                         cx.notify();
                     });
-                    c = c.child(div().child(ghost("agent-use", "Use for runs").on_click(use_it)));
+                    c = c.child(div().flex().child(key("agent-use", "Use for runs").on_click(use_it)));
                 }
                 let models =
                     cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.open_agent_models(cx));

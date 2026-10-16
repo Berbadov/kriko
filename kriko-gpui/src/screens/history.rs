@@ -34,10 +34,10 @@ pub(crate) fn clip(text: &str, n: usize) -> String {
 /// The engine's own severity word in its own tint: the hot ones run warm,
 /// the rest sit quiet. Whatever word the catalog used is the word shown.
 pub(crate) fn severity_word_chip(word: &str) -> Div {
-    let (glyph, fg, bg): (&[&str], u32, u32) = match word {
-        "critical" => (&X5, DANGER, DANGER_WASH),
-        "high" | "serious" => (&BANG5, BRAND_BRIGHT, BRAND_WASH),
-        _ => (&QUEUE5, MUTED, WELL),
+    let (glyph, fg, bg): (&str, u32, u32) = match word {
+        "critical" => ("alert", DANGER, DANGER_WASH),
+        "high" | "serious" => ("alert", BRAND_BRIGHT, BRAND_WASH),
+        _ => ("clock", MUTED, (WELL << 8) | 0xff),
     };
     div()
         .h(px(24.0))
@@ -47,13 +47,13 @@ pub(crate) fn severity_word_chip(word: &str) -> Div {
         .items_center()
         .gap(px(7.0))
         .rounded(px(7.0))
-        .bg(rgb(bg))
+        .bg(rgba(bg))
         .border_1()
         .border_color(rgba(HAIRLINE))
-        .font_family(MONO)
-        .text_size(px(10.0))
+        .font_family(SANS)
+        .text_size(px(12.0))
         .text_color(rgb(fg))
-        .child(led_matrix(glyph, fg, 3.0, 1.0))
+        .child(icon(glyph, 14.0).text_color(rgb(fg)))
         .child(if word.is_empty() {
             "NOTED".to_string()
         } else {
@@ -93,7 +93,7 @@ fn status_chip(word: &str) -> Div {
 
 /// One claim of an opened check: its severity and title, then the sources
 /// behind it, each with its domain, its stance and the quote it was read from.
-fn claim_block(claim: &ClaimView) -> Div {
+fn claim_block(claim: &ClaimView, key: &str) -> Div {
     let mut block = div().flex().flex_col().gap(px(6.0)).child(
         div()
             .flex()
@@ -122,7 +122,7 @@ fn claim_block(claim: &ClaimView) -> Div {
                 .child(mono("No source stored behind this one yet.", DIM)),
         );
     }
-    for src in claim.sources.iter().take(4) {
+    for (source_index, src) in claim.sources.iter().take(4).enumerate() {
         let against = src.stance == "refutes";
         block = block.child(
             div()
@@ -135,13 +135,14 @@ fn claim_block(claim: &ClaimView) -> Div {
                         .flex()
                         .items_center()
                         .gap(px(6.0))
-                        .child(mono(
+                        .child(crate::screens::source_link(
+                            gpui::ElementId::named_usize(format!("history-source-{key}"), source_index),
                             if src.domain.is_empty() {
                                 &src.url
                             } else {
                                 &src.domain
                             },
-                            ICE,
+                            &src.url,
                         ))
                         .child(mono(
                             if against { "AGAINST" } else { "FOR" },
@@ -719,7 +720,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         let mut row = div().flex().flex_col().child(columns);
         if open {
             // A Quick Look has a separate, explicit catalog-assignment flow.
-            let mut panel = well()
+            let mut panel = div()
                 .mt(px(2.0))
                 .mb(px(6.0))
                 .p(px(12.0))
@@ -935,21 +936,15 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             panel = panel.child(mono("This check grounded no claim.", MUTED));
                         }
                         for (item, claim) in detail.claims.iter().enumerate() {
-                            let line = claim_block(claim);
+                            let line = claim_block(claim, &format!("{}-{item}", check.id));
                             let line: gpui::AnyElement = if motion {
-                                let delay = 120.0 + item.min(8) as f32 * 90.0;
                                 line.with_animation(
                                     gpui::ElementId::named_usize(
                                         format!("hist-claim-{}", check.id),
                                         item,
                                     ),
-                                    Animation::new(std::time::Duration::from_millis(800))
-                                        .with_easing(move |t| {
-                                            let local =
-                                                ((t * 800.0 - delay) / 450.0).clamp(0.0, 1.0);
-                                            1.0 - (1.0 - local).powi(3)
-                                        }),
-                                    |el, v| el.opacity(v),
+                                    Animation::new(std::time::Duration::from_millis(140)),
+                                    |el, v| el.opacity(0.85 + 0.15 * v),
                                 )
                                 .into_any_element()
                             } else {
@@ -965,12 +960,8 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                                     .gap(px(6.0))
                                     .child(icon("arrow-right", 12.0).text_color(rgb(MUTED)))
                                     .child(
-                                        div()
-                                            .min_w(px(0.0))
-                                            .font_family(MONO)
-                                            .text_size(px(12.0))
-                                            .text_color(rgb(ICE))
-                                            .child(clip(&detail.url, 90)),
+                                        crate::screens::source_link("history-original-page", &clip(&detail.url, 90), &detail.url)
+                                            .min_w(px(0.0)),
                                     ),
                             );
                         }
@@ -1025,17 +1016,13 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         // the rows cascade in whenever the page or the filters change;
         // opening a drawer does not replay it (the ids hold steady)
         let row: gpui::AnyElement = if motion {
-            let delay = ri as f32 * 60.0;
             row.with_animation(
                 gpui::ElementId::named_usize(
                     format!("hist-row-in-{page}-{pack_key}-{}", span.word()),
                     ri,
                 ),
-                Animation::new(std::time::Duration::from_millis(900)).with_easing(move |t| {
-                    let local = ((t * 900.0 - delay) / 600.0).clamp(0.0, 1.0);
-                    1.0 - (1.0 - local).powi(3)
-                }),
-                |el, v| el.opacity(v),
+                Animation::new(std::time::Duration::from_millis(140)),
+                |el, v| el.opacity(0.85 + 0.15 * v),
             )
             .into_any_element()
         } else {
@@ -1123,7 +1110,13 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
 
     table = table.child(hairline()).child(pagination);
 
-    div().flex().flex_col().child(controls).child(stats).child(
+    let insights = ghost("history-insights", if app.history_insights_open { "Hide activity summary" } else { "Activity summary" })
+        .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+            this.history_insights_open = !this.history_insights_open;
+            cx.notify();
+        }));
+    div().flex().flex_col().gap(px(16.0)).child(controls)
+        .child(insights).when(app.history_insights_open, |d| d.child(stats)).child(
         div()
             .id("hist-table-scroll")
             .overflow_x_scroll()

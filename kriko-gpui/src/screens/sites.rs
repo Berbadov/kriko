@@ -12,11 +12,11 @@ use crate::theme::*;
 
 fn section_title(label: &str) -> Div {
     div()
-        .font_family(DISPLAY)
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(19.0))
+        .text_size(px(18.0))
         .text_color(rgb(BRAND_BRIGHT))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 fn activation_tag(state: &str) -> (TagState, &'static str) {

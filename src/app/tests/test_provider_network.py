@@ -2,7 +2,17 @@ import os
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import pytest
+
 from app.providers import network
+
+
+@pytest.fixture(autouse=True)
+def isolated_engine_cooldowns(monkeypatch):
+    # The parallel-engine tests require both engines to be eligible. Another
+    # test's process-wide cooldown must not silently turn them into one-engine tests.
+    from app.providers import openserp
+    monkeypatch.setattr(openserp, "_failed_at", {})
 
 
 def test_loopback_ignores_hostile_proxy_environment(monkeypatch):

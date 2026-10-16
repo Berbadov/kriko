@@ -13,11 +13,11 @@ use crate::theme::*;
 
 fn section_title(label: &str) -> Div {
     div()
-        .font_family(DISPLAY)
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(19.0))
+        .text_size(px(18.0))
         .text_color(rgb(BRAND_BRIGHT))
-        .child(label.to_uppercase())
+        .child(label.to_string())
 }
 
 /// One row of a card: title + description left, a control right.
@@ -83,7 +83,13 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         window,
         cx,
     );
-    let runtime = crate::screens::local::runtime_settings(app, cx);
+    let runtime = ghost("settings-local-models", "Local model settings")
+        .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+            this.tab = crate::app::Tab::Local;
+            this.live.local.advanced_open = true;
+            this.refresh_local(cx);
+            cx.notify();
+        }));
     let k = &app.live.knowledge;
 
     // ---- general ----
