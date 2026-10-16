@@ -163,6 +163,9 @@ def test_a_migrated_installation_gains_the_column_rather_than_losing_the_rows(
 
 
 def test_the_harness_reports_the_searches_it_says_it_ran(monkeypatch):
+    monkeypatch.setattr(
+        harness, "HOST_READ_HARNESSES",
+        harness.HOST_READ_HARNESSES - {"claude-code"})
     researcher = harness.HarnessResearcher(harness.KNOWN[0])
     monkeypatch.setattr(
         harness.HarnessResearcher,
@@ -181,6 +184,9 @@ def test_the_harness_reports_the_searches_it_says_it_ran(monkeypatch):
 def test_a_harness_that_reports_nothing_usable_reports_nothing(
     monkeypatch, reported
 ):
+    monkeypatch.setattr(
+        harness, "HOST_READ_HARNESSES",
+        harness.HOST_READ_HARNESSES - {"claude-code"})
     researcher = harness.HarnessResearcher(harness.KNOWN[0])
     monkeypatch.setattr(
         harness.HarnessResearcher,
