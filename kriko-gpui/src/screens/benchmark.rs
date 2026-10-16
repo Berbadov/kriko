@@ -8,105 +8,296 @@
 use gpui::{div, point, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
-use crate::live::local::{batches, change, BenchPhase, BenchRun, Batch, Machine};
+use crate::live::local::{batches, change, Batch, BenchPhase, BenchRun, Machine};
 use crate::marks::{self, mark_glyph, Mark, Phase};
 use crate::screens::local::pill;
 use crate::screens::{empty_note, mono, plate_s, row_desc, row_title, th};
 use crate::theme::*;
 
+fn panel_title(label: &str) -> Div {
+    div()
+        .font_family(DISPLAY)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(22.0))
+        .text_color(rgb(INK_2))
+        .child(label.to_uppercase())
+}
+
 fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let b = &app.live.local.bench;
     let locked = matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating);
-    let mut result = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Run setup"))
-        .child(row_desc("Configuration accuracy uses the same fictional documents on each plane, with exact codes, years, revisions, markets and missing information. Live web research uses changing search results. These development cases measure behavior; they do not establish real-world coverage."));
+    let mut result = card()
+        .flex()
+        .flex_col()
+        .gap(px(8.0))
+        .child(panel_title("Configure run"));
     if locked {
-        result = result.child(tag("bench-setup-locked", TagState::Live, "Setup is locked while pricing or running. Stop the benchmark to change it.", app.motion));
+        result = result.child(tag(
+            "bench-setup-locked",
+            TagState::Live,
+            "Setup is locked while pricing or running. Stop the benchmark to change it.",
+            app.motion,
+        ));
     }
     let mut suites = div().flex().flex_wrap().gap(px(8.0));
-    for (id, label) in [("precision", "Configuration accuracy"), ("web", "Live web research")] {
+    for (id, label) in [
+        ("precision", "Configuration accuracy"),
+        ("web", "Live web research"),
+    ] {
         let selected = b.suite == id || (b.suite.is_empty() && id == "precision");
-        suites = suites.child(pill(gpui::ElementId::Name(format!("bench-suite-{id}").into()), label, selected).on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.bench_pick_suite(id.into(), cx))));
+        suites = suites.child(
+            pill(
+                gpui::ElementId::Name(format!("bench-suite-{id}").into()),
+                label,
+                selected,
+            )
+            .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.bench_pick_suite(id.into(), cx)
+            })),
+        );
     }
     result = result.child(suites);
     for (name, key, values, current) in [
-        ("First cases (or choose below)", "cases", vec![1, 3, 5, 10], b.case_count),
-        ("Pages per case", "documents", vec![1, 3, 5, 10, 20], b.documents),
-        ("Repetitions", "repeats", vec![1, 2, 3, 5, 10], b.repeats),
-        ("Timeout seconds per inference / agent call", "timeout", vec![60, 120, 240, 600, 1200], b.timeout),
-        ("Local reply tokens", "tokens", vec![512, 1024, 2048, 4096], b.max_tokens),
+        ("Cases", "cases", vec![1, 3, 5, 10], b.case_count),
+        (
+            "Pages / case",
+            "documents",
+            vec![1, 3, 5, 10, 20],
+            b.documents,
+        ),
+        ("Repeats", "repeats", vec![1, 2, 3, 5, 10], b.repeats),
+        (
+            "Timeout (s)",
+            "timeout",
+            vec![60, 120, 240, 600, 1200],
+            b.timeout,
+        ),
+        (
+            "Reply tokens",
+            "tokens",
+            vec![512, 1024, 2048, 4096],
+            b.max_tokens,
+        ),
     ] {
-        let mut row = div().flex().flex_wrap().items_center().gap(px(8.0)).child(row_desc(name));
+        let mut row = div()
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .gap(px(8.0))
+            .child(row_desc(name));
         for (i, value) in values.into_iter().enumerate() {
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
                 let b = &mut this.live.local.bench;
-                if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
-                match key { "cases" => { b.case_count = value; b.case_ids.clear(); }, "documents" => b.documents = value,
-                    "repeats" => b.repeats = value, "timeout" => b.timeout = value, _ => b.max_tokens = value }
-                b.phase = BenchPhase::Idle; cx.notify();
+                if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) {
+                    return;
+                }
+                match key {
+                    "cases" => {
+                        b.case_count = value;
+                        b.case_ids.clear();
+                    }
+                    "documents" => b.documents = value,
+                    "repeats" => b.repeats = value,
+                    "timeout" => b.timeout = value,
+                    _ => b.max_tokens = value,
+                }
+                b.phase = BenchPhase::Idle;
+                cx.notify();
             });
-            row = row.child(pill(gpui::ElementId::named_usize(format!("bench-setup-{key}"), i), &value.to_string(), current == value).on_click(pick));
+            row = row.child(
+                pill(
+                    gpui::ElementId::named_usize(format!("bench-setup-{key}"), i),
+                    &value.to_string(),
+                    current == value,
+                )
+                .on_click(pick),
+            );
         }
         result = result.child(row);
     }
-    let mut temp = div().flex().flex_wrap().gap(px(8.0)).child(row_desc("Local temperature"));
+    let mut temp = div()
+        .flex()
+        .flex_wrap()
+        .gap(px(8.0))
+        .child(row_desc("Temperature"));
     for (i, value) in [0.0, 0.2, 0.5, 1.0].into_iter().enumerate() {
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            if matches!(this.live.local.bench.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
-            this.live.local.bench.temperature = value; this.live.local.bench.phase = BenchPhase::Idle; cx.notify();
+            if matches!(
+                this.live.local.bench.phase,
+                BenchPhase::Running { .. } | BenchPhase::Estimating
+            ) {
+                return;
+            }
+            this.live.local.bench.temperature = value;
+            this.live.local.bench.phase = BenchPhase::Idle;
+            cx.notify();
         });
-        temp = temp.child(pill(("bench-temperature", i), &value.to_string(), b.temperature == value).on_click(pick));
+        temp = temp.child(
+            pill(
+                ("bench-temperature", i),
+                &value.to_string(),
+                b.temperature == value,
+            )
+            .on_click(pick),
+        );
     }
-    result = result.child(temp).child(hairline()).child(eyebrow("Agents and served models"));
-    result = result.child(app.input_field(Field::BenchModelSearch, "bench-model-search", "Search this agent's models", Some("search"), window, cx));
+    result = result
+        .child(temp)
+        .child(hairline())
+        .child(eyebrow("Agent and model"));
+    result = result.child(app.input_field(
+        Field::BenchModelSearch,
+        "bench-model-search",
+        "Search models",
+        Some("search"),
+        window,
+        cx,
+    ));
     for (i, entry) in app.live.run.agent_entries().iter().enumerate() {
         let Some(h) = &entry.harness else { continue };
-        if !matches!(h.state, crate::live::run::RunState::Ready) { continue; }
+        if !matches!(h.state, crate::live::run::RunState::Ready) {
+            continue;
+        }
         let id = entry.id.clone();
         let select_agent = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             let b = &mut this.live.local.bench;
-            if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
-            b.harness = id.clone(); b.models.clear();
-            b.picked = vec![if id == "local" { "local" } else if id.ends_with("-api") { "api" } else { "harness" }.to_string()];
-            b.phase = BenchPhase::Idle; cx.notify();
+            if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) {
+                return;
+            }
+            b.harness = id.clone();
+            b.models.clear();
+            b.picked = vec![if id == "local" {
+                "local"
+            } else if id.ends_with("-api") {
+                "api"
+            } else {
+                "harness"
+            }
+            .to_string()];
+            b.phase = BenchPhase::Idle;
+            cx.notify();
         });
-        let row = div().flex().flex_wrap().gap(px(8.0))
+        let row = div()
+            .flex()
+            .flex_wrap()
+            .gap(px(8.0))
             .child(plate_s(("bench-agent-pick", i), &entry.label).on_click(select_agent))
-            .child(row_desc(&format!("{} · {}", entry.id, if h.llm.is_empty() { "agent default" } else { &h.llm })));
+            .child(row_desc(&format!(
+                "{} · {}",
+                entry.id,
+                if h.llm.is_empty() {
+                    "agent default"
+                } else {
+                    &h.llm
+                }
+            )));
         result = result.child(row);
-        if b.harness != entry.id { continue; }
+        if b.harness != entry.id {
+            continue;
+        }
         let query = app.bench_model_search.value.trim().to_lowercase();
-        let mut row = div().id("bench-model-options").h(px(180.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_,_,cx| cx.stop_propagation())
-            .flex().flex_col().gap(px(6.0));
-        for (n, model) in h.llms.iter().enumerate().filter(|(_,m)| query.is_empty() || m.to_lowercase().contains(&query)) {
-            let chosen = model.clone(); let agent = entry.id.clone();
+        let mut row = div()
+            .id("bench-model-options")
+            .h(px(180.0))
+            .overflow_y_scroll()
+            .occlude()
+            .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+            .flex()
+            .flex_col()
+            .gap(px(6.0));
+        for (n, model) in h
+            .llms
+            .iter()
+            .enumerate()
+            .filter(|(_, m)| query.is_empty() || m.to_lowercase().contains(&query))
+        {
+            let chosen = model.clone();
+            let agent = entry.id.clone();
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
                 let b = &mut this.live.local.bench;
-                if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
-                if b.harness != agent { b.models.clear(); }
-                b.harness = agent.clone(); b.picked = vec![if agent == "local" { "local" } else if agent.ends_with("-api") { "api" } else { "harness" }.to_string()];
-                if b.models.contains(&chosen) { b.models.retain(|m| m != &chosen); } else { b.models.push(chosen.clone()); }
-                b.phase = BenchPhase::Idle; cx.notify();
+                if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) {
+                    return;
+                }
+                if b.harness != agent {
+                    b.models.clear();
+                }
+                b.harness = agent.clone();
+                b.picked = vec![if agent == "local" {
+                    "local"
+                } else if agent.ends_with("-api") {
+                    "api"
+                } else {
+                    "harness"
+                }
+                .to_string()];
+                if b.models.contains(&chosen) {
+                    b.models.retain(|m| m != &chosen);
+                } else {
+                    b.models.push(chosen.clone());
+                }
+                b.phase = BenchPhase::Idle;
+                cx.notify();
             });
-            row = row.child(pill(gpui::ElementId::named_usize(format!("bench-served-{i}"), n), model, b.models.contains(model)).on_click(pick));
+            row = row.child(
+                pill(
+                    gpui::ElementId::named_usize(format!("bench-served-{i}"), n),
+                    model,
+                    b.models.contains(model),
+                )
+                .on_click(pick),
+            );
         }
         result = result.child(row);
     }
-    result = result.child(hairline()).child(eyebrow("Test cases and expected answers"));
+    result = result.child(hairline()).child(eyebrow("Cases"));
     for (i, case) in b.cases.iter().enumerate() {
-        let id = crate::api::s(case, "id"); let selected = b.case_ids.contains(&id) || (b.case_ids.is_empty() && i < b.case_count);
+        let id = crate::api::s(case, "id");
+        let selected = b.case_ids.contains(&id) || (b.case_ids.is_empty() && i < b.case_count);
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             let b = &mut this.live.local.bench;
-            if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) { return; }
-            if b.case_ids.is_empty() { b.case_ids = b.cases.iter().take(b.case_count).map(|c| crate::api::s(c, "id")).collect(); }
-            if b.case_ids.contains(&id) { if b.case_ids.len() == 1 { return; } b.case_ids.retain(|x| x != &id); } else { b.case_ids.push(id.clone()); }
-            b.phase = BenchPhase::Idle; cx.notify();
+            if matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating) {
+                return;
+            }
+            if b.case_ids.is_empty() {
+                b.case_ids = b
+                    .cases
+                    .iter()
+                    .take(b.case_count)
+                    .map(|c| crate::api::s(c, "id"))
+                    .collect();
+            }
+            if b.case_ids.contains(&id) {
+                if b.case_ids.len() == 1 {
+                    return;
+                }
+                b.case_ids.retain(|x| x != &id);
+            } else {
+                b.case_ids.push(id.clone());
+            }
+            b.phase = BenchPhase::Idle;
+            cx.notify();
         });
-        result = result.child(div().flex().flex_col().gap(px(4.0))
-            .child(pill(("bench-case-pick", i), &crate::api::s(case, "product"), selected).on_click(pick))
-            .child(row_desc(&format!("Expected: {} · forbidden: {}",
-                case_words(case, "must_find"), case_words(case, "must_not_find")))));
+        result = result.child(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(4.0))
+                .child(
+                    pill(
+                        ("bench-case-pick", i),
+                        &crate::api::s(case, "product"),
+                        selected,
+                    )
+                    .on_click(pick),
+                )
+                .child(row_desc(&format!(
+                    "Find: {} · avoid: {}",
+                    case_words(case, "must_find"),
+                    case_words(case, "must_not_find")
+                ))),
+        );
     }
-    result.child(row_desc("Correctness: expected findings matched / expected findings. Unsupported rate: unsupported findings / produced findings. Source coverage and accuracy are not independently measured by this test set. Task token rate includes input and output over total task time; it is not inference speed. n/a means not measured."))
+    result
 }
 
 fn glow(color: u32, blur: f32) -> Vec<gpui::BoxShadow> {
@@ -140,7 +331,8 @@ fn clock(secs: f64) -> String {
 }
 
 fn seconds(ms: Option<f64>) -> String {
-    ms.map(|m| format!("{:.1} s", m / 1000.0)).unwrap_or_else(|| "n/a".to_string())
+    ms.map(|m| format!("{:.1} s", m / 1000.0))
+        .unwrap_or_else(|| "n/a".to_string())
 }
 
 /// The change since the benchmark before: an LED arrow and the percent, in
@@ -166,12 +358,22 @@ fn delta(pct: Option<i8>, higher_better: bool) -> Div {
         .items_center()
         .gap(px(6.0))
         .child(led_matrix(arrow, color, 2.0, 1.0))
-        .child(mono(&format!("{}{}%", if pct > 0 { "+" } else { "" }, pct), color))
+        .child(mono(
+            &format!("{}{}%", if pct > 0 { "+" } else { "" }, pct),
+            color,
+        ))
 }
 
 /// One headline number: label, the figure in display type, its unit, the
 /// change, and a strip of the benchmarks before it.
-fn headline(label: &str, value: &str, unit: &str, pct: Option<i8>, higher_better: bool, series: &[Option<f64>]) -> Div {
+fn headline(
+    label: &str,
+    value: &str,
+    unit: &str,
+    pct: Option<i8>,
+    higher_better: bool,
+    series: &[Option<f64>],
+) -> Div {
     let mut spark = div().flex().items_end().gap(px(2.0)).h(px(22.0));
     let known: Vec<f64> = series.iter().flatten().copied().collect();
     let lo = known.iter().copied().fold(f64::MAX, f64::min);
@@ -187,7 +389,13 @@ fn headline(label: &str, value: &str, unit: &str, pct: Option<i8>, higher_better
                 .w(px(5.0))
                 .h(px(h.round() as f32))
                 .rounded(px(1.0))
-                .bg(rgb(if v.is_none() { LED_OFF } else if last { ICE } else { LED_DIM }))
+                .bg(rgb(if v.is_none() {
+                    LED_OFF
+                } else if last {
+                    ICE
+                } else {
+                    LED_DIM
+                }))
                 .when(last && v.is_some(), |d| d.shadow(glow(ICE, 5.0))),
         );
     }
@@ -269,9 +477,16 @@ fn machine_cells(m: Option<&Machine>) -> Vec<(&'static str, String)> {
         ("GPU", m.gpu.clone().unwrap_or_else(na)),
         (
             "VRAM",
-            m.vram_total_mb.map(|v| format!("{:.1} GB", v / 1024.0)).unwrap_or_else(na),
+            m.vram_total_mb
+                .map(|v| format!("{:.1} GB", v / 1024.0))
+                .unwrap_or_else(na),
         ),
-        ("Memory", m.ram_mb.map(|v| format!("{:.1} GB", v / 1024.0)).unwrap_or_else(na)),
+        (
+            "Memory",
+            m.ram_mb
+                .map(|v| format!("{:.1} GB", v / 1024.0))
+                .unwrap_or_else(na),
+        ),
     ]
 }
 
@@ -280,7 +495,9 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let bench = app.live.local.bench.clone();
     let b = &bench;
     if !b.loaded {
-        return div().child(empty_note("Asking Kriko's engine for its benchmark results."));
+        return div().child(empty_note(
+            "Asking Kriko's engine for its benchmark results.",
+        ));
     }
     let server = app
         .live
@@ -294,30 +511,74 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let running = matches!(b.phase, BenchPhase::Running { .. });
     let estimating = matches!(b.phase, BenchPhase::Estimating);
     let progress = match &b.phase {
-        BenchPhase::Running { job_id, progress, .. } => Some(
-            app.live.run.bar_value(job_id, (progress / 100.0).clamp(0.0, 1.0), motion).clamp(0.0, 1.0),
+        BenchPhase::Running {
+            job_id, progress, ..
+        } => Some(
+            app.live
+                .run
+                .bar_value(job_id, (progress / 100.0).clamp(0.0, 1.0), motion)
+                .clamp(0.0, 1.0),
         ),
         _ => None,
     };
     let setup_panel = setup(app, window, cx);
-    let mut progress_panel = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Live progress"));
-    let jobs: Vec<_> = app.live.run.jobs.iter().filter(|j| j.kind == "bench").take(5).cloned().collect();
-    if jobs.is_empty() { progress_panel = progress_panel.child(empty_note("No benchmark task yet.")); }
-    for job in &jobs { progress_panel = progress_panel.child(crate::screens::logs::job_logs(app, job, cx)); }
+    let mut progress_panel = card()
+        .flex()
+        .flex_col()
+        .gap(px(8.0))
+        .child(panel_title("Run activity"));
+    let jobs: Vec<_> = app
+        .live
+        .run
+        .jobs
+        .iter()
+        .filter(|j| j.kind == "bench")
+        .take(5)
+        .cloned()
+        .collect();
+    if jobs.is_empty() {
+        progress_panel = progress_panel.child(empty_note("No benchmark task yet."));
+    }
+    for job in &jobs {
+        progress_panel = progress_panel.child(crate::screens::logs::job_logs(app, job, cx));
+    }
     let export = b.snapshot.to_string();
-    let copy = cx.listener(move |_this, _: &gpui::ClickEvent, _w, cx| cx.write_to_clipboard(gpui::ClipboardItem::new_string(export.clone())));
-    let source = cx.listener(|_this, _: &gpui::ClickEvent, _w, cx| { cx.open_url("https://github.com/Berbadov/kriko/blob/main/src/app/bench.py"); });
-    let runtime_settings = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-        this.tab = Tab::Settings; this.refresh_local(cx); cx.notify();
+    let copy = cx.listener(move |_this, _: &gpui::ClickEvent, _w, cx| {
+        cx.write_to_clipboard(gpui::ClipboardItem::new_string(export.clone()))
     });
-    let runtime = app.live.local.plane.as_ref().map(|p| p.runtime.clone()).unwrap_or(crate::api::Value::Null);
-    progress_panel = progress_panel.child(row_desc(&format!("Local runtime: {} · model {} · active device {} · {}",
-        crate::api::s(&runtime, "runtime"), crate::api::s(&runtime, "model"),
-        crate::api::s(&runtime, "device"), crate::api::s(&runtime, "reason"))));
-    progress_panel = progress_panel.child(div().flex().flex_wrap().gap(px(6.0))
-        .child(plate_s("bench-export", "Copy detailed results JSON").on_click(copy))
-        .child(plate_s("bench-source", "Open benchmark source").on_click(source))
-        .child(plate_s("bench-runtime-settings", "Local runtime settings").on_click(runtime_settings)));
+    let source = cx.listener(|_this, _: &gpui::ClickEvent, _w, cx| {
+        cx.open_url("https://github.com/Berbadov/kriko/blob/main/src/app/bench.py");
+    });
+    let runtime_settings = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.tab = Tab::Settings;
+        this.refresh_local(cx);
+        cx.notify();
+    });
+    let runtime = app
+        .live
+        .local
+        .plane
+        .as_ref()
+        .map(|p| p.runtime.clone())
+        .unwrap_or(crate::api::Value::Null);
+    progress_panel = progress_panel.child(row_desc(&format!(
+        "Runtime {} · model {} · device {} · {}",
+        crate::api::s(&runtime, "runtime"),
+        crate::api::s(&runtime, "model"),
+        crate::api::s(&runtime, "device"),
+        crate::api::s(&runtime, "reason")
+    )));
+    progress_panel = progress_panel.child(
+        div()
+            .flex()
+            .flex_wrap()
+            .gap(px(6.0))
+            .child(plate_s("bench-export", "Copy results JSON").on_click(copy))
+            .child(plate_s("bench-source", "Source code").on_click(source))
+            .child(
+                plate_s("bench-runtime-settings", "Runtime settings").on_click(runtime_settings),
+            ),
+    );
 
     // ---- the machine and the run key ----
     let mut machine = div().flex().flex_wrap().gap(px(8.0));
@@ -334,8 +595,14 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         );
     }
     let (status, key_label) = match &b.phase {
-        BenchPhase::Idle => (tag("bench-idle", TagState::Done, "Idle", motion), "Run benchmark"),
-        BenchPhase::Estimating => (tag("bench-est", TagState::Live, "Pricing the grid", motion), "Pricing"),
+        BenchPhase::Idle => (
+            tag("bench-idle", TagState::Done, "Idle", motion),
+            "Run benchmark",
+        ),
+        BenchPhase::Estimating => (
+            tag("bench-est", TagState::Live, "Estimating cost", motion),
+            "Pricing",
+        ),
         BenchPhase::Confirm(e) => (
             tag(
                 "bench-confirm",
@@ -354,7 +621,9 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             ),
             "Confirm and run",
         ),
-        BenchPhase::Running { progress, message, .. } => (
+        BenchPhase::Running {
+            progress, message, ..
+        } => (
             tag(
                 "bench-running",
                 TagState::Live,
@@ -363,7 +632,10 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             ),
             "Stop benchmark",
         ),
-        BenchPhase::Failed(why) => (tag("bench-failed", TagState::Block, why, motion), "Run benchmark"),
+        BenchPhase::Failed(why) => (
+            tag("bench-failed", TagState::Block, why, motion),
+            "Run benchmark",
+        ),
     };
     let mut planes = div().flex().items_center().gap(px(6.0)).flex_wrap();
     for (i, (plane, _meaning)) in b.planes.iter().enumerate() {
@@ -371,16 +643,15 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.bench_toggle_plane(&name, cx);
         });
-        planes = planes.child(
-            pill(("bench-plane", i), plane, b.picked.contains(plane)).on_click(toggle),
-        );
+        planes = planes
+            .child(pill(("bench-plane", i), plane, b.picked.contains(plane)).on_click(toggle));
     }
     let run_button = plate_wide("bench-run", key_label)
         .when(running, |d| {
             d.bg(rgba(DANGER_WASH))
                 .border_color(rgba(DANGER_EDGE))
                 .text_color(rgb(0xffd0ca))
-                .hover(|s| s.bg(rgba(0xff6b5e3d)))
+                .hover(|s| s.bg(rgba(DANGER_WASH)))
         })
         .on_click(press);
     let mut run_status = div()
@@ -389,7 +660,9 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .gap(px(8.0))
         .flex_wrap()
         .child(status)
-        .when(estimating, |d| d.child(spinner("bench-estimate-spinner", 16.0, motion)))
+        .when(estimating, |d| {
+            d.child(spinner("bench-estimate-spinner", 16.0, motion))
+        })
         .child(planes);
     if let Some(value) = progress {
         run_status = run_status.child(progress_bar("bench-live-progress", value, motion).w_full());
@@ -401,13 +674,16 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .flex_col()
         .gap(px(2.0))
         .child(row_desc(
-            "Runs the engine's fixed test set on the planes picked below and records time, tokens, \
-             cost and how many claims were accepted. The first press prices it; a second spends.",
+            "Run the selected cases. First press estimates cost; second press starts.",
         ))
         .child(mono(
             &format!(
-                "{} · {} run{} on record",
-                if b.set_label.trim() == "· 0 cases" { "test set" } else { &b.set_label },
+                "{} · {} recorded run{}",
+                if b.set_label.trim() == "· 0 cases" {
+                    "test set"
+                } else {
+                    &b.set_label
+                },
                 b.runs.len(),
                 if b.runs.len() == 1 { "" } else { "s" }
             ),
@@ -427,7 +703,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .child(start_intro)
         .child(run_status)
         .children(b.last.clone().map(|l| mono(&l, MUTED)))
-        .child(div().pt(px(4.0)).child(eyebrow("Measured on")))
+        .child(div().pt(px(4.0)).child(eyebrow("This machine")))
         .child(machine);
 
     if b.runs.is_empty() {
@@ -436,10 +712,12 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             .flex_col()
             .gap(px(SPACE_SECTION))
             .child(start_panel)
+            .child(progress_panel)
             .child(setup_panel)
             .child(accuracy(&app.live.local.bench))
-            .child(progress_panel)
-            .child(empty_note("Nothing has been benchmarked here yet. Run one to see how an agent does."));
+            .child(empty_note(
+                "Nothing has been benchmarked here yet. Run one to see how an agent does.",
+            ));
     }
 
     // ---- the headline numbers: the latest benchmark against the one before ----
@@ -460,7 +738,10 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .gap(px(8.0))
         .child(headline(
             "Median answer",
-            &latest.median_ms.map(|m| format!("{:.1}", m / 1000.0)).unwrap_or_else(|| "n/a".into()),
+            &latest
+                .median_ms
+                .map(|m| format!("{:.1}", m / 1000.0))
+                .unwrap_or_else(|| "n/a".into()),
             "s",
             change(latest.median_ms, before.as_ref().and_then(ms)),
             false,
@@ -468,7 +749,10 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         ))
         .child(headline(
             "Tokens per run",
-            &latest.median_tokens.map(|t| format!("{:.0}", t)).unwrap_or_else(|| "n/a".into()),
+            &latest
+                .median_tokens
+                .map(|t| format!("{:.0}", t))
+                .unwrap_or_else(|| "n/a".into()),
             "tokens",
             change(latest.median_tokens, before.as_ref().and_then(tokens)),
             false,
@@ -476,15 +760,25 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         ))
         .child(headline(
             "Cost per run",
-            &latest.median_usd.map(|u| format!("{u:.3}")).unwrap_or_else(|| "n/a".into()),
-            if latest.median_usd.is_some() { "USD" } else { "not measured" },
+            &latest
+                .median_usd
+                .map(|u| format!("{u:.3}"))
+                .unwrap_or_else(|| "n/a".into()),
+            if latest.median_usd.is_some() {
+                "USD"
+            } else {
+                "not measured"
+            },
             change(latest.median_usd, before.as_ref().and_then(usd)),
             false,
             &take(|x| x.median_usd),
         ))
         .child(headline(
             "Evidence kept",
-            &latest.acceptance.map(|a| format!("{:.0}", a * 100.0)).unwrap_or_else(|| "n/a".into()),
+            &latest
+                .acceptance
+                .map(|a| format!("{:.0}", a * 100.0))
+                .unwrap_or_else(|| "n/a".into()),
             "%",
             change(latest.acceptance, before.as_ref().and_then(accept)),
             true,
@@ -496,7 +790,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let mut agents = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(12.0)).child(eyebrow("All recorded runs by agent")))
+        .child(div().mb(px(12.0)).child(panel_title("Agent results")))
         .child(
             div()
                 .flex()
@@ -520,8 +814,16 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .collect();
     let fastest = speeds.iter().flatten().copied().fold(0.0f64, f64::max);
     for (k, row) in b.summary.iter().enumerate() {
-        let name = if row.llm.is_empty() { row.plane.clone() } else { row.llm.clone() };
-        let finished = if row.runs > 0.0 { Some((row.runs - row.failures) / row.runs * 100.0) } else { None };
+        let name = if row.llm.is_empty() {
+            row.plane.clone()
+        } else {
+            row.llm.clone()
+        };
+        let finished = if row.runs > 0.0 {
+            Some((row.runs - row.failures) / row.runs * 100.0)
+        } else {
+            None
+        };
         let ungrounded = b
             .scored
             .iter()
@@ -543,7 +845,11 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                         .child(mark_glyph(
                             &format!("bench-agent-{k}"),
                             mark_for(&row.plane, &row.llm, &server),
-                            if running { Phase::Thinking } else { Phase::Idle },
+                            if running {
+                                Phase::Thinking
+                            } else {
+                                Phase::Idle
+                            },
                             30.0,
                             motion,
                         ))
@@ -559,36 +865,57 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                                         .text_color(rgb(INK))
                                         .child(name),
                                 )
-                                .child(mono(&format!("{} · {} · {:.0} runs", row.plane, row.protocol, row.runs), DIM)),
+                                .child(mono(
+                                    &format!(
+                                        "{} · {} · {:.0} runs",
+                                        row.plane, row.protocol, row.runs
+                                    ),
+                                    DIM,
+                                )),
                         ),
                 )
                 .child(div().w(px(84.0)).child(mono(&seconds(row.ms), INK_2)))
                 .child(
-                    div().w(px(180.0)).flex().items_center().gap(px(6.0)).child(match tps {
-                        Some(t) => div()
-                            .flex()
-                            .items_center()
-                            .gap(px(6.0))
-                            .child(led_bar(
-                                if fastest > 0.0 { (t / fastest * 100.0) as f32 } else { 0.0 },
-                                10,
-                                if t >= fastest { ICE } else { LED_DIM },
-                            ))
-                            .child(mono(&format!("{t:.0}"), INK_2)),
-                        None => div().child(mono("n/a", DIM)),
-                    }),
-                )
-                .child(
                     div()
-                        .w(px(112.0))
-                        .child(mono(&if row.runs > 0.0 { format!("{:.1}", row.accepted / row.runs) } else { "n/a".into() }, INK_2)),
+                        .w(px(180.0))
+                        .flex()
+                        .items_center()
+                        .gap(px(6.0))
+                        .child(match tps {
+                            Some(t) => div()
+                                .flex()
+                                .items_center()
+                                .gap(px(6.0))
+                                .child(led_bar(
+                                    if fastest > 0.0 {
+                                        (t / fastest * 100.0) as f32
+                                    } else {
+                                        0.0
+                                    },
+                                    10,
+                                    if t >= fastest { ICE } else { LED_DIM },
+                                ))
+                                .child(mono(&format!("{t:.0}"), INK_2)),
+                            None => div().child(mono("n/a", DIM)),
+                        }),
                 )
+                .child(div().w(px(112.0)).child(mono(
+                    &if row.runs > 0.0 {
+                        format!("{:.1}", row.accepted / row.runs)
+                    } else {
+                        "n/a".into()
+                    },
+                    INK_2,
+                )))
                 .child(div().w(px(84.0)).child(match finished {
                     Some(f) => mono(&format!("{f:.0}%"), if f >= 95.0 { ICE } else { INK_2 }),
                     None => mono("n/a", DIM),
                 }))
                 .child(div().w(px(96.0)).child(match ungrounded {
-                    Some(h) => mono(&format!("{:.0}%", h * 100.0), if h > 0.0 { DANGER } else { ICE }),
+                    Some(h) => mono(
+                        &format!("{:.0}%", h * 100.0),
+                        if h > 0.0 { DANGER } else { ICE },
+                    ),
                     None => mono("not scored", DIM),
                 })),
         );
@@ -598,7 +925,11 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     }
 
     // ---- the history of benchmarks ----
-    let mut series: Vec<&Batch> = all.iter().filter(|x| x.median_ms.is_some()).take(10).collect();
+    let mut series: Vec<&Batch> = all
+        .iter()
+        .filter(|x| x.median_ms.is_some())
+        .take(10)
+        .collect();
     series.reverse();
     let vals: Vec<f64> = series.iter().filter_map(|x| x.median_ms).collect();
     let lo = vals.iter().copied().fold(f64::MAX, f64::min);
@@ -610,12 +941,20 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         let lit = (2.0 + (v - lo) / (hi - lo).max(1.0) * (rows as f64 - 2.0)).round() as usize;
         let last = k + 1 == series.len();
         let best = v == lo;
-        let color = if last { ICE } else if best { INK_2 } else { MUTED };
+        let color = if last {
+            ICE
+        } else if best {
+            INK_2
+        } else {
+            MUTED
+        };
         let mut col = div().flex().flex_col().gap(px(2.0)).items_center();
         for r in 0..rows {
             let d = div().w(px(18.0)).h(px(6.0)).rounded(px(1.5));
             col = col.child(if rows - r <= lit {
-                d.bg(rgb(color)).opacity(if last { 1.0 } else { 0.7 }).when(last, |d| d.shadow(glow(ICE, 5.0)))
+                d.bg(rgb(color))
+                    .opacity(if last { 1.0 } else { 0.7 })
+                    .when(last, |d| d.shadow(glow(ICE, 5.0)))
             } else {
                 d.bg(rgb(LED_OFF))
             });
@@ -626,7 +965,16 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex_col()
                 .items_center()
                 .gap(px(6.0))
-                .child(mono(&clock(v / 1000.0), if last { ICE } else if best { INK_2 } else { DIM }))
+                .child(mono(
+                    &clock(v / 1000.0),
+                    if last {
+                        ICE
+                    } else if best {
+                        INK_2
+                    } else {
+                        DIM
+                    },
+                ))
                 .child(col),
         );
     }
@@ -640,52 +988,86 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex()
                 .items_center()
                 .justify_between()
-                .child(eyebrow("Typical answer, benchmark by benchmark"))
+                .child(panel_title("Answer time history"))
                 .child(delta(
-                    change(series.last().and_then(|x| x.median_ms), series.first().and_then(|x| x.median_ms)),
+                    change(
+                        series.last().and_then(|x| x.median_ms),
+                        series.first().and_then(|x| x.median_ms),
+                    ),
                     false,
                 )),
         )
         .child(row_desc(&match (series.first(), series.last()) {
             (Some(a), Some(z)) if series.len() > 1 => format!(
-                "Shorter is faster. The median answer went from {} to {} between {} and {}.",
+                "Median: {} → {} · {} to {}",
                 seconds(a.median_ms),
                 seconds(z.median_ms),
                 date(a),
                 date(z)
             ),
-            _ => "Shorter is faster. One benchmark is on record; the next one draws the line.".to_string(),
+            _ => "One benchmark recorded".to_string(),
         }))
         .child(columns)
         .children(match (series.first(), series.last()) {
             (Some(a), Some(z)) => Some(
-                div().flex().justify_between().child(mono(&date(a), DIM)).child(mono(&date(z), DIM)),
+                div()
+                    .flex()
+                    .justify_between()
+                    .child(mono(&date(a), DIM))
+                    .child(mono(&date(z), DIM)),
             ),
             _ => None,
         });
 
     // ---- the latest benchmark, run by run ----
 
-    let mut variation = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Repeated case variation"))
-        .child(row_desc("Elapsed range includes the entire task. Compare repeated samples of the same case and agent; these are not inference-speed measurements."));
+    let mut variation = card()
+        .flex()
+        .flex_col()
+        .gap(px(8.0))
+        .child(panel_title("Repeat variation"));
     let mut groups = std::collections::BTreeMap::<(String, String, String), Vec<&BenchRun>>::new();
-    for run in &mine { groups.entry((run.plane.clone(), run.llm.clone(), run.subject.clone())).or_default().push(run); }
+    for run in &mine {
+        groups
+            .entry((run.plane.clone(), run.llm.clone(), run.subject.clone()))
+            .or_default()
+            .push(run);
+    }
     for ((plane, llm, subject), runs) in groups {
         let times: Vec<f64> = runs.iter().filter_map(|r| r.ms).collect();
         let failed = runs.iter().filter(|r| !r.error.is_empty()).count();
-        let range = if times.len() < 2 { "Variation unavailable: fewer than two timed samples".into() } else {
-            format!("task range {:.2}–{:.2} s", times.iter().copied().fold(f64::INFINITY, f64::min) / 1000.0,
-                times.iter().copied().fold(f64::NEG_INFINITY, f64::max) / 1000.0)
+        let range = if times.len() < 2 {
+            "range n/a".into()
+        } else {
+            format!(
+                "{:.2}–{:.2} s",
+                times.iter().copied().fold(f64::INFINITY, f64::min) / 1000.0,
+                times.iter().copied().fold(f64::NEG_INFINITY, f64::max) / 1000.0
+            )
         };
-        variation = variation.child(row_desc(&format!("{subject} · {plane} / {llm} · n={} · failures {failed}/{} · {range}", runs.len(), runs.len())));
+        variation = variation.child(row_desc(&format!(
+            "{subject} · {plane} / {llm} · n={} · failed {failed} · {range}",
+            runs.len()
+        )));
     }
-    variation = variation.child(row_desc("Expected findings = the known issues this case should report. Traps = deliberately forbidden or known-absent claims. Rejected = candidates the evidence gate removed, not proven hallucinations. A finished run can still find none of the expected issues."));
+    variation = variation.child(row_desc(
+        "Ranges include the full task, not just inference.",
+    ));
     let slowest = mine.iter().filter_map(|r| r.ms).fold(1.0f64, f64::max);
     let mut bars = card().flex().flex_col();
-    bars = bars.child(div().mb(px(12.0)).child(eyebrow("Latest benchmark, run by run")));
+    bars = bars.child(
+        div()
+            .mb(px(12.0))
+            .child(panel_title("Latest benchmark · run by run")),
+    );
     for (i, r) in mine.iter().enumerate() {
         let detail = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            this.live.local.bench.detail = if this.live.local.bench.detail == Some(i) { None } else { Some(i) }; cx.notify();
+            this.live.local.bench.detail = if this.live.local.bench.detail == Some(i) {
+                None
+            } else {
+                Some(i)
+            };
+            cx.notify();
         });
         let failed = !r.error.is_empty();
         bars = bars.child(
@@ -712,19 +1094,41 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                                 )),
                         )
                         .child(mono(
-                            &if failed { format!("failed: {}", r.error) } else { format!("{:.0} accepted, {:.0} refused", r.accepted, r.refused) },
+                            &if failed {
+                                format!("failed: {}", r.error)
+                            } else {
+                                format!("{:.0} accepted, {:.0} refused", r.accepted, r.refused)
+                            },
                             if failed { DANGER } else { DIM },
                         ))
-                        .child(div().w(px(72.0)).flex().justify_end().child(mono(&seconds(r.ms), INK))),
+                        .child(
+                            div()
+                                .w(px(72.0))
+                                .flex()
+                                .justify_end()
+                                .child(mono(&seconds(r.ms), INK)),
+                        ),
                 )
-                .child(mono("Elapsed time relative to the slowest case in this batch", DIM))
+                .child(mono("Elapsed time · relative to slowest", DIM))
                 .child(led_bar(
                     r.ms.map(|m| (m / slowest * 100.0) as f32).unwrap_or(0.0),
                     28,
-                    if failed { DANGER } else if i == 0 { ICE } else { LED_DIM },
+                    if failed {
+                        DANGER
+                    } else if i == 0 {
+                        ICE
+                    } else {
+                        LED_DIM
+                    },
                 ))
                 .child(plate_s(("bench-case-detail", i), "View answer and score").on_click(detail))
-                .child(reveal(run_detail(r, i, cx), format!("bench-answer-{i}"), b.detail == Some(i), 650.0, motion)),
+                .child(reveal(
+                    run_detail(r, i, cx),
+                    format!("bench-answer-{i}"),
+                    b.detail == Some(i),
+                    650.0,
+                    motion,
+                )),
         );
         if i + 1 < mine.len() {
             bars = bars.child(crate::theme::hairline());
@@ -736,10 +1140,10 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .flex_col()
         .gap(px(SPACE_SECTION))
         .child(start_panel)
+        .child(progress_panel)
         .child(setup_panel)
         .child(accuracy(&app.live.local.bench))
-        .child(progress_panel)
-        .child(row_title("Results"))
+        .child(panel_title("Results"))
         .child(latest_score(&mine))
         .child(heads)
         .child(
@@ -764,17 +1168,37 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
 }
 
 fn case_words(case: &crate::api::Value, key: &str) -> String {
-    let words: Vec<String> = crate::api::arr(case,key).iter().map(|v| if let Some(s)=v.as_str() { s.to_string() } else { crate::api::s(v,"claim") }).filter(|s| !s.is_empty()).collect();
-    if words.is_empty() { "none specified".into() } else { words.join("; ") }
+    let words: Vec<String> = crate::api::arr(case, key)
+        .iter()
+        .map(|v| {
+            if let Some(s) = v.as_str() {
+                s.to_string()
+            } else {
+                crate::api::s(v, "claim")
+            }
+        })
+        .filter(|s| !s.is_empty())
+        .collect();
+    if words.is_empty() {
+        "none specified".into()
+    } else {
+        words.join("; ")
+    }
 }
 
 fn score_words(raw: &crate::api::Value) -> String {
-    let Some(gold) = raw.get("gold").filter(|g| !g.is_null()) else { return "This older run was not scored against expected answers.".into(); };
-    let found = crate::api::arr(gold,"found").len(); let missed=crate::api::arr(gold,"missed").len();
-    let traps = crate::api::arr(gold,"hallucinated").len();
-    let specs = crate::api::arr(gold,"spec_errors").len() + crate::api::arr(gold,"spec_missed").len();
+    let Some(gold) = raw.get("gold").filter(|g| !g.is_null()) else {
+        return "This older run was not scored against expected answers.".into();
+    };
+    let found = crate::api::arr(gold, "found").len();
+    let missed = crate::api::arr(gold, "missed").len();
+    let traps = crate::api::arr(gold, "hallucinated").len();
+    let specs =
+        crate::api::arr(gold, "spec_errors").len() + crate::api::arr(gold, "spec_missed").len();
     let abstention = match gold.get("abstention_correct").and_then(|v| v.as_bool()) {
-        Some(true) => " · correct abstention", Some(false) => " · failed abstention", None => "",
+        Some(true) => " · correct abstention",
+        Some(false) => " · failed abstention",
+        None => "",
     };
     format!("Expected issues found: {found}/{} · missed: {missed} · forbidden claims: {traps} · specification errors or misses: {specs}{abstention}", found+missed)
 }
@@ -782,8 +1206,12 @@ fn score_words(raw: &crate::api::Value) -> String {
 fn gold_passed(gold: &crate::api::Value) -> bool {
     // New configuration records include specifications and applicability in
     // the engine's verdict. Older issue-only records have no pass field.
-    gold.get("pass").and_then(|v| v.as_bool()).unwrap_or_else(||
-        crate::api::arr(gold,"missed").is_empty() && crate::api::arr(gold,"hallucinated").is_empty())
+    gold.get("pass")
+        .and_then(|v| v.as_bool())
+        .unwrap_or_else(|| {
+            crate::api::arr(gold, "missed").is_empty()
+                && crate::api::arr(gold, "hallucinated").is_empty()
+        })
 }
 
 #[cfg(test)]
@@ -802,52 +1230,172 @@ mod score_tests {
 
     #[test]
     fn legacy_issue_only_runs_remain_readable() {
-        assert!(gold_passed(&json!({"found": ["leak"], "missed": [], "hallucinated": []})));
-        assert!(!gold_passed(&json!({"missed": ["leak"], "hallucinated": []})));
-        assert!(!gold_passed(&json!({"missed": [], "hallucinated": ["host fault"]})));
+        assert!(gold_passed(
+            &json!({"found": ["leak"], "missed": [], "hallucinated": []})
+        ));
+        assert!(!gold_passed(
+            &json!({"missed": ["leak"], "hallucinated": []})
+        ));
+        assert!(!gold_passed(
+            &json!({"missed": [], "hallucinated": ["host fault"]})
+        ));
     }
 }
 
 fn latest_score(runs: &[&BenchRun]) -> Div {
     let completed = runs.iter().filter(|r| r.error.is_empty()).count();
-    let mut passed=0;
-    let mut found=0; let mut wanted=0; let mut traps=0; let mut attempted=0; let mut attempted_scored=0; let mut scored=0;
-    let mut tokens=0.0; let mut measured=0;
+    let mut passed = 0;
+    let mut found = 0;
+    let mut wanted = 0;
+    let mut traps = 0;
+    let mut attempted = 0;
+    let mut attempted_scored = 0;
+    let mut scored = 0;
+    let mut tokens = 0.0;
+    let mut measured = 0;
     for run in runs {
-        if let Some(g)=run.raw.get("gold").filter(|g| !g.is_null()) {
-            if run.error.is_empty() && gold_passed(g) { passed+=1; }
-            scored+=1; found+=crate::api::arr(g,"found").len(); wanted+=crate::api::arr(g,"found").len()+crate::api::arr(g,"missed").len(); traps+=crate::api::arr(g,"hallucinated").len();
+        if let Some(g) = run.raw.get("gold").filter(|g| !g.is_null()) {
+            if run.error.is_empty() && gold_passed(g) {
+                passed += 1;
+            }
+            scored += 1;
+            found += crate::api::arr(g, "found").len();
+            wanted += crate::api::arr(g, "found").len() + crate::api::arr(g, "missed").len();
+            traps += crate::api::arr(g, "hallucinated").len();
         }
-        if let Some(g)=run.raw.get("attempted_gold").filter(|g| !g.is_null()) { attempted_scored+=1; attempted+=crate::api::arr(g,"hallucinated").len(); }
-        if let Some(t)=run.tokens { tokens+=t; measured+=1; }
+        if let Some(g) = run.raw.get("attempted_gold").filter(|g| !g.is_null()) {
+            attempted_scored += 1;
+            attempted += crate::api::arr(g, "hallucinated").len();
+        }
+        if let Some(t) = run.tokens {
+            tokens += t;
+            measured += 1;
+        }
     }
-    card().flex().flex_col().gap(px(6.0)).child(eyebrow("Benchmark score explained"))
-        .child(row_desc(&format!("Completed {completed}/{} runs. {}", runs.len(), if wanted>0 { format!("Found {found}/{wanted} expected issues ({:.0}%).", found as f64/wanted as f64*100.0) } else { "Expected-answer success rate was not measured.".into() })))
-        .child(row_desc(&format!("Passed all expected-answer checks: {passed}/{scored} scored runs. Configuration checks include issues, specifications, applicability and abstention; older records score issues only.")))
-        .child(row_desc(&format!("Forbidden claims in scored answers: {traps} ({scored} scored runs). {}", if attempted_scored>0 { format!("Final candidates contained {attempted} forbidden claims before filtering, across {attempted_scored} measured runs.") } else { "Attempts before filtering were not recorded in these older runs.".into() })))
-        .child(row_desc(&format!("Tokens burned: {}. Counts include input and output; missing usage is not zero.", if measured>0 { format!("{tokens:.0} across {measured}/{} measured runs",runs.len()) } else { "not reported by this agent".into() })))
-        .child(row_desc("Evidence kept measures quote checks. It does not mean the answer is complete or correct. Trap scoring compares wording against the versioned case list; it is not an independent accuracy audit."))
+    let metric = |label: &str, value: String, note: String, color: u32| {
+        well()
+            .flex_1()
+            .min_w(px(125.0))
+            .p(px(12.0))
+            .flex()
+            .flex_col()
+            .gap(px(3.0))
+            .child(mono(label, DIM))
+            .child(
+                div()
+                    .font_family(DISPLAY)
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_size(px(25.0))
+                    .line_height(px(28.0))
+                    .text_color(rgb(color))
+                    .child(value),
+            )
+            .child(mono(&note, MUTED))
+    };
+    let completion = format!("{completed}/{}", runs.len());
+    let expected = if wanted > 0 {
+        format!("{found}/{wanted}")
+    } else {
+        "n/a".into()
+    };
+    let expected_note = if wanted > 0 {
+        format!("{:.0}% found", found as f64 / wanted as f64 * 100.0)
+    } else {
+        "expected answers unmeasured".into()
+    };
+    let passed_note = format!("{scored} scored runs");
+    let token_note = if measured > 0 {
+        format!("{measured}/{} runs", runs.len())
+    } else {
+        "usage unreported".into()
+    };
+    let attempted_note = if attempted_scored > 0 {
+        format!("{attempted} before filtering")
+    } else {
+        "not recorded".into()
+    };
+    card().flex().flex_col().gap(px(8.0)).child(panel_title("Latest run"))
+        .child(div().flex().flex_wrap().gap(px(8.0))
+            .child(metric("COMPLETED", completion, "runs".to_string(), INK))
+            .child(metric("EXPECTED FOUND", expected, expected_note, ICE))
+            .child(metric("FULL PASS", format!("{passed}/{scored}"), passed_note, ICE))
+            .child(metric("FORBIDDEN", traps.to_string(), format!("{attempted} before filter"), if traps > 0 { DANGER } else { INK })))
+        .child(row_desc(&format!("Tokens: {} · final forbidden claims: {traps} · before filtering: {attempted_note}. Full pass includes configuration checks when recorded; older runs score expected issues only.", if measured>0 { format!("{tokens:.0} across {token_note}") } else { token_note })))
+        .child(mono("Evidence kept counts quote checks; it does not measure completeness or accuracy.", MUTED))
 }
 
 fn accuracy(b: &crate::live::local::Bench) -> Div {
-    let mut panel = card().flex().flex_col().gap(px(8.0))
-        .child(eyebrow("Configuration accuracy and usage"))
-        .child(row_desc("Scores inspect proposed claims before source filtering. Empty answers still lose recall. Timings include failed attempts; missing token usage and prices remain unmeasured. Results stay separate by test set, model and protocol."));
+    let mut panel = card()
+        .flex()
+        .flex_col()
+        .gap(px(8.0))
+        .child(panel_title("Configuration suite"));
     let rows = crate::api::arr(&b.snapshot, "readout");
-    if rows.is_empty() { return panel.child(empty_note("Run the configuration suite to measure unsupported claims, specifications, abstention, time and tokens.")); }
+    if rows.is_empty() {
+        return panel.child(empty_note("Run the configuration suite to measure unsupported claims, specifications, abstention, time and tokens."));
+    }
     for r in rows {
-        let mut record = well().p(px(12.0)).flex().flex_col().gap(px(8.0))
-            .child(row_title(&format!("{} · {}", crate::api::s(r, "plane"), crate::api::s(r, "llm"))))
-            .child(mono(&format!("{} {} · {} · {} runs", crate::api::s(r, "set_id"), crate::api::s(r, "set_version"), crate::api::s(r, "protocol"), crate::api::n(r, "runs").unwrap_or(0.0)), DIM));
+        let mut record = well()
+            .p(px(12.0))
+            .flex()
+            .flex_col()
+            .gap(px(8.0))
+            .child(row_title(&format!(
+                "{} · {}",
+                crate::api::s(r, "plane"),
+                crate::api::s(r, "llm")
+            )))
+            .child(mono(
+                &format!(
+                    "{} {} · {} · {} runs",
+                    crate::api::s(r, "set_id"),
+                    crate::api::s(r, "set_version"),
+                    crate::api::s(r, "protocol"),
+                    crate::api::n(r, "runs").unwrap_or(0.0)
+                ),
+                DIM,
+            ));
         let mut scores = div().flex().flex_wrap().gap(px(8.0));
-        for (label, key) in [("Unsupported claims", "hallucination_rate"), ("Expected facts found", "recall"), ("Specifications found", "spec_recall"), ("Correct abstention", "abstention_accuracy")] {
-            let value = crate::api::n(r, key).map(|v| format!("{:.1}%", v * 100.0)).unwrap_or_else(|| "unmeasured".into());
-            scores = scores.child(div().flex().flex_col().gap(px(3.0)).child(row_desc(label)).child(mono(&value, INK)));
+        for (label, key) in [
+            ("Unsupported claims", "hallucination_rate"),
+            ("Expected facts found", "recall"),
+            ("Specifications found", "spec_recall"),
+            ("Correct abstention", "abstention_accuracy"),
+        ] {
+            let value = crate::api::n(r, key)
+                .map(|v| format!("{:.1}%", v * 100.0))
+                .unwrap_or_else(|| "unmeasured".into());
+            scores = scores.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(3.0))
+                    .child(row_desc(label))
+                    .child(mono(&value, INK)),
+            );
         }
-        record = record.child(scores)
-            .child(mono(&format!("Time p50 {} · p95 {}", seconds(crate::api::n(r, "latency_p50_ms")), seconds(crate::api::n(r, "latency_p95_ms"))), MUTED));
-        let count = |key| crate::api::n(r, key).map(|v| format!("{v:.0}")).unwrap_or_else(|| "unmeasured".into());
-        record = record.child(row_desc(&format!("Tokens: {} total · {} input · {} output · {} per run · {} runs with partial usage", count("tokens_total"), count("tokens_in"), count("tokens_out"), count("tokens_mean"), count("partial_usage_runs"))))
+        record = record.child(scores).child(mono(
+            &format!(
+                "Time p50 {} · p95 {}",
+                seconds(crate::api::n(r, "latency_p50_ms")),
+                seconds(crate::api::n(r, "latency_p95_ms"))
+            ),
+            MUTED,
+        ));
+        let count = |key| {
+            crate::api::n(r, key)
+                .map(|v| format!("{v:.0}"))
+                .unwrap_or_else(|| "unmeasured".into())
+        };
+        record = record
+            .child(row_desc(&format!(
+                "Tokens: {} total · {} input · {} output · {} per run · {} runs with partial usage",
+                count("tokens_total"),
+                count("tokens_in"),
+                count("tokens_out"),
+                count("tokens_mean"),
+                count("partial_usage_runs")
+            )))
             .child(row_desc(&crate::api::s(r, "note")));
         panel = panel.child(record);
     }
@@ -855,29 +1403,112 @@ fn accuracy(b: &crate::live::local::Bench) -> Div {
 }
 
 fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
-    let detail=r.raw.get("detail").cloned().unwrap_or(crate::api::Value::Null);
-    let answer=detail.get("answer").cloned().unwrap_or(crate::api::Value::Null);
-    let mut d=well().id(("bench-answer-scroll",i)).h(px(400.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_,_,cx|cx.stop_propagation())
-        .p(px(16.0)).flex().flex_col().gap(px(8.0))
+    let detail = r
+        .raw
+        .get("detail")
+        .cloned()
+        .unwrap_or(crate::api::Value::Null);
+    let answer = detail
+        .get("answer")
+        .cloned()
+        .unwrap_or(crate::api::Value::Null);
+    let mut d = well()
+        .id(("bench-answer-scroll", i))
+        .h(px(400.0))
+        .overflow_y_scroll()
+        .occlude()
+        .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
+        .p(px(16.0))
+        .flex()
+        .flex_col()
+        .gap(px(8.0))
         .child(row_desc(&score_words(&r.raw)).flex_none())
-        .child(row_desc(&format!("{} · tokens: {} · {} risks backed by evidence · {} candidates rejected", seconds(r.ms), r.tokens.map(|v|format!("{v:.0}")).unwrap_or_else(||"not reported".into()),r.accepted,r.refused)));
-    if !r.error.is_empty() { d=d.child(row_desc(&r.error)); }
-    if let Some(g)=r.raw.get("gold") {
-        for (key,label) in [("found","Found"),("missed","Missed"),("hallucinated","Forbidden claim"),("unlisted","Additional finding"),("spec_errors","Incorrect specification"),("spec_missed","Missing specification")] {
-            for item in crate::api::arr(g,key) { d=d.child(row_desc(&format!("{label}: {}",item.as_str().unwrap_or("unreported"))).flex_none()); }
+        .child(row_desc(&format!(
+            "{} · tokens: {} · {} risks backed by evidence · {} candidates rejected",
+            seconds(r.ms),
+            r.tokens
+                .map(|v| format!("{v:.0}"))
+                .unwrap_or_else(|| "not reported".into()),
+            r.accepted,
+            r.refused
+        )));
+    if !r.error.is_empty() {
+        d = d.child(row_desc(&r.error));
+    }
+    if let Some(g) = r.raw.get("gold") {
+        for (key, label) in [
+            ("found", "Found"),
+            ("missed", "Missed"),
+            ("hallucinated", "Forbidden claim"),
+            ("unlisted", "Additional finding"),
+            ("spec_errors", "Incorrect specification"),
+            ("spec_missed", "Missing specification"),
+        ] {
+            for item in crate::api::arr(g, key) {
+                d = d.child(
+                    row_desc(&format!(
+                        "{label}: {}",
+                        item.as_str().unwrap_or("unreported")
+                    ))
+                    .flex_none(),
+                );
+            }
         }
     }
-    let risks=crate::api::arr(&answer,"risks");
-    if risks.is_empty() && r.error.is_empty() { d=d.child(row_desc("No risk passed the evidence checks. This is not proof that the product has no problems.")); }
+    let risks = crate::api::arr(&answer, "risks");
+    if risks.is_empty() && r.error.is_empty() {
+        d=d.child(row_desc("No risk passed the evidence checks. This is not proof that the product has no problems."));
+    }
     for (risk_index, risk) in risks.iter().enumerate() {
-        d=d.child(hairline()).child(row_title(&crate::api::s(risk,"title")).flex_none()).child(row_desc(&crate::api::s(risk,"body")).flex_none());
-        for source in crate::api::arr(risk,"sources") {
-            let url=crate::api::s(source,"url"); let link=url.clone();
-            d=d.child(mono(&crate::api::s(source,"quote"),INK_2).flex_none())
-                .child(div().id(gpui::ElementId::named_usize(format!("bench-source-{i}-{risk_index}-{url}"),0)).cursor_pointer().child(mono(&url,ICE)).on_click(move |_,_,cx|cx.open_url(&link)));
+        d = d
+            .child(hairline())
+            .child(row_title(&crate::api::s(risk, "title")).flex_none())
+            .child(row_desc(&crate::api::s(risk, "body")).flex_none());
+        for source in crate::api::arr(risk, "sources") {
+            let url = crate::api::s(source, "url");
+            let link = url.clone();
+            d = d
+                .child(mono(&crate::api::s(source, "quote"), INK_2).flex_none())
+                .child(
+                    div()
+                        .id(gpui::ElementId::named_usize(
+                            format!("bench-source-{i}-{risk_index}-{url}"),
+                            0,
+                        ))
+                        .cursor_pointer()
+                        .child(mono(&url, ICE))
+                        .on_click(move |_, _, cx| cx.open_url(&link)),
+                );
         }
     }
-    d=d.child(hairline()).child(row_desc(&format!("Settings used: {}", detail.get("settings").map(|s| format!("{} pages · {} reply tokens · {} s timeout · agent {}",crate::api::n(s,"max_documents").map(|v|v.to_string()).unwrap_or_else(||"run default".into()),crate::api::n(s,"max_tokens").map(|v|v.to_string()).unwrap_or_else(||"default".into()),crate::api::n(s,"timeout_seconds").map(|v|v.to_string()).unwrap_or_else(||"default".into()),crate::api::s(s,"harness"))).unwrap_or_else(||"not recorded".into()))).flex_none());
-    let copy=r.raw.to_string();
-    d.child(plate_s(("bench-copy-record",i),"Copy full technical record").on_click(move |_,_,cx|cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy.clone()))).flex_none())
+    d = d.child(hairline()).child(
+        row_desc(&format!(
+            "Settings used: {}",
+            detail
+                .get("settings")
+                .map(|s| format!(
+                    "{} pages · {} reply tokens · {} s timeout · agent {}",
+                    crate::api::n(s, "max_documents")
+                        .map(|v| v.to_string())
+                        .unwrap_or_else(|| "run default".into()),
+                    crate::api::n(s, "max_tokens")
+                        .map(|v| v.to_string())
+                        .unwrap_or_else(|| "default".into()),
+                    crate::api::n(s, "timeout_seconds")
+                        .map(|v| v.to_string())
+                        .unwrap_or_else(|| "default".into()),
+                    crate::api::s(s, "harness")
+                ))
+                .unwrap_or_else(|| "not recorded".into())
+        ))
+        .flex_none(),
+    );
+    let copy = r.raw.to_string();
+    d.child(
+        plate_s(("bench-copy-record", i), "Copy full technical record")
+            .on_click(move |_, _, cx| {
+                cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy.clone()))
+            })
+            .flex_none(),
+    )
 }

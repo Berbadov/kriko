@@ -94,7 +94,12 @@ pub fn step_meta(step: &Step) -> String {
     match step.state {
         StepState::Running => "reading".to_string(),
         StepState::Error => "failed".to_string(),
-        _ => format!("{} {} · {} ms", step.rows, if step.rows == 1 { "row" } else { "rows" }, step.ms),
+        _ => format!(
+            "{} {} · {} ms",
+            step.rows,
+            if step.rows == 1 { "row" } else { "rows" },
+            step.ms
+        ),
     }
 }
 
@@ -138,7 +143,10 @@ impl Partial {
     /// Read a job's `result` while it runs. Missing parts are empty, never an error.
     pub fn from_result(result: &Value) -> Partial {
         Partial {
-            steps: api::arr(result, "steps").iter().map(Step::from_value).collect(),
+            steps: api::arr(result, "steps")
+                .iter()
+                .map(Step::from_value)
+                .collect(),
             answer: api::s(result, "answer"),
             sources: names(result, "sources"),
             agent: api::s(result.get("agent").unwrap_or(&Value::Null), "label"),
@@ -214,7 +222,10 @@ fn thread_list(v: &Value) -> Vec<Thread> {
     api::arr(v, "items").iter().map(thread_from).collect()
 }
 
-async fn bg<T: Send + 'static>(ex: &BackgroundExecutor, work: impl FnOnce() -> T + Send + 'static) -> T {
+async fn bg<T: Send + 'static>(
+    ex: &BackgroundExecutor,
+    work: impl FnOnce() -> T + Send + 'static,
+) -> T {
     ex.spawn(async move { work() }).await
 }
 
@@ -222,22 +233,17 @@ impl Kriko {
     /// Everything the Chat screen shows, read when it is opened: the threads,
     /// the agents that can answer, and the names of what the agent may read.
     pub fn refresh_chat(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::get("/api/chat/threads"), |this, reply, cx| {
-            this.note(&reply);
-            if let Ok(v) = reply {
-                this.live.chat.threads = thread_list(&v);
-                this.live.chat.loaded = true;
-                // Only when nothing is open: a conversation just started may not
-                // be in this list yet, and must not be replaced by the first one.
-                if this.live.chat.thread.is_none() {
-                    // The newest conversation, or none: a fresh install shows
-                    // the empty state, never a blank conversation.
-                    if let Some(id) = this.live.chat.threads.first().map(|t| t.thread_id.clone()) {
-                        this.open_chat_thread(id, cx);
-                    }
+        self.fetch(
+            cx,
+            || api::get("/api/chat/threads"),
+            |this, reply, _cx| {
+                this.note(&reply);
+                if let Ok(v) = reply {
+                    this.live.chat.threads = thread_list(&v);
+                    this.live.chat.loaded = true;
                 }
-            }
-        });
+            },
+        );
         self.fetch(
             cx,
             || api::get("/api/prefs"),
@@ -256,25 +262,45 @@ impl Kriko {
                     .get("chosen")
                     .map(|c| api::s(c, "preferred_harness"))
                     .unwrap_or_default();
-                let known = this.live.chat.harnesses.iter().any(|(id, _)| *id == preferred);
+                let known = this
+                    .live
+                    .chat
+                    .harnesses
+                    .iter()
+                    .any(|(id, _)| *id == preferred);
                 let first = this.live.chat.harnesses.first().map(|(id, _)| id.clone());
-                if this.live.chat.harness.is_empty() || !this.live.chat.harnesses.iter().any(|(id, _)| *id == this.live.chat.harness) {
-                    this.live.chat.harness = if known { preferred } else { first.unwrap_or_default() };
+                if this.live.chat.harness.is_empty()
+                    || !this
+                        .live
+                        .chat
+                        .harnesses
+                        .iter()
+                        .any(|(id, _)| *id == this.live.chat.harness)
+                {
+                    this.live.chat.harness = if known {
+                        preferred
+                    } else {
+                        first.unwrap_or_default()
+                    };
                 }
             },
         );
         if self.live.chat.sources.is_empty() {
-            self.fetch(cx, || api::get("/api/chat/sources"), |this, reply, _| {
-                if let Ok(v) = reply {
-                    this.live.chat.sources = api::arr(&v, "items")
-                        .iter()
-                        .map(|s| SourceInfo {
-                            name: api::s(s, "name"),
-                            description: api::s(s, "description"),
-                        })
-                        .collect();
-                }
-            });
+            self.fetch(
+                cx,
+                || api::get("/api/chat/sources"),
+                |this, reply, _| {
+                    if let Ok(v) = reply {
+                        this.live.chat.sources = api::arr(&v, "items")
+                            .iter()
+                            .map(|s| SourceInfo {
+                                name: api::s(s, "name"),
+                                description: api::s(s, "description"),
+                            })
+                            .collect();
+                    }
+                },
+            );
         }
     }
 
@@ -299,7 +325,8 @@ impl Kriko {
                     return;
                 }
                 if let Ok(v) = reply {
-                    this.live.chat.messages = api::arr(&v, "items").iter().map(message_from).collect();
+                    this.live.chat.messages =
+                        api::arr(&v, "items").iter().map(message_from).collect();
                     let running = this
                         .live
                         .chat
@@ -317,40 +344,57 @@ impl Kriko {
 
     /// A new, empty conversation, opened at once.
     pub fn new_chat_thread(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::post("/api/chat/threads", json!({})), |this, reply, cx| {
-            this.note(&reply);
-            match reply {
-                Ok(v) => {
-                    let thread = thread_from(&v);
-                    this.live.chat.threads.insert(0, thread.clone());
-                    this.open_chat_thread(thread.thread_id, cx);
+        self.fetch(
+            cx,
+            || api::post("/api/chat/threads", json!({})),
+            |this, reply, cx| {
+                this.note(&reply);
+                match reply {
+                    Ok(v) => {
+                        let thread = thread_from(&v);
+                        this.live.chat.threads.insert(0, thread.clone());
+                        this.open_chat_thread(thread.thread_id, cx);
+                    }
+                    Err(e) => this.live.chat.say = Some(e.message),
                 }
-                Err(e) => this.live.chat.say = Some(e.message),
-            }
-        });
+            },
+        );
     }
 
     /// Forgets the open conversation and its messages, then opens the next one.
     pub fn delete_chat_thread(&mut self, cx: &mut Context<Self>) {
-        let Some(id) = self.live.chat.thread.clone() else { return };
-        if self.live.chat.in_flight.as_ref().is_some_and(|f| f.thread_id == id) {
-            self.live.chat.say = Some("Wait for the answer, or stop it, before deleting this conversation.".into());
+        let Some(id) = self.live.chat.thread.clone() else {
+            return;
+        };
+        if self
+            .live
+            .chat
+            .in_flight
+            .as_ref()
+            .is_some_and(|f| f.thread_id == id)
+        {
+            self.live.chat.say =
+                Some("Wait for the answer, or stop it, before deleting this conversation.".into());
             return;
         }
         let path = format!("/api/chat/threads/{}", api::seg(&id));
-        self.fetch(cx, move || api::delete(&path), move |this, reply, cx| {
-            this.note(&reply);
-            if reply.is_ok() {
-                this.live.chat.threads.retain(|t| t.thread_id != id);
-                this.live.chat.thread = None;
-                this.live.chat.messages.clear();
-                this.live.chat.partial = None;
-                this.live.chat.failed = None;
-                this.refresh_chat(cx);
-            } else {
-                this.live.chat.say = Some("That conversation is already gone.".into());
-            }
-        });
+        self.fetch(
+            cx,
+            move || api::delete(&path),
+            move |this, reply, cx| {
+                this.note(&reply);
+                if reply.is_ok() {
+                    this.live.chat.threads.retain(|t| t.thread_id != id);
+                    this.live.chat.thread = None;
+                    this.live.chat.messages.clear();
+                    this.live.chat.partial = None;
+                    this.live.chat.failed = None;
+                    this.refresh_chat(cx);
+                } else {
+                    this.live.chat.say = Some("That conversation is already gone.".into());
+                }
+            },
+        );
     }
 
     /// Sends the composer's question into the open conversation (starting one
@@ -365,7 +409,11 @@ impl Kriko {
         self.live.chat.say = None;
         self.live.chat.failed = None;
         let harness = self.live.chat.harness.clone();
-        let backend = if harness == "local" { "local" } else { "harness" };
+        let backend = if harness == "local" {
+            "local"
+        } else {
+            "harness"
+        };
         let existing = self.live.chat.thread.clone();
         self.fetch(
             cx,
@@ -379,7 +427,10 @@ impl Kriko {
                         .unwrap_or_default(),
                 };
                 let path = format!("/api/chat/threads/{}/messages", api::seg(&thread));
-                let posted = api::post(&path, json!({"text": text, "harness": harness, "backend": backend}))?;
+                let posted = api::post(
+                    &path,
+                    json!({"text": text, "harness": harness, "backend": backend}),
+                )?;
                 Ok::<(String, Value), api::ApiError>((thread, posted))
             },
             move |this, reply, cx| {
@@ -390,7 +441,10 @@ impl Kriko {
                         let job_id = api::s(&posted, "job_id");
                         this.chat_input.set_value(String::new());
                         this.live.chat.thread = Some(thread.clone());
-                        this.live.chat.in_flight = Some(InFlight { thread_id: thread.clone(), job_id: job_id.clone() });
+                        this.live.chat.in_flight = Some(InFlight {
+                            thread_id: thread.clone(),
+                            job_id: job_id.clone(),
+                        });
                         this.live.chat.partial = Some(Partial::default());
                         this.live.chat.job_message = "queued".into();
                         this.refresh_chat(cx);
@@ -410,7 +464,9 @@ impl Kriko {
             return;
         }
         cx.spawn(async move |this, cx| loop {
-            cx.background_executor().timer(Duration::from_millis(700)).await;
+            cx.background_executor()
+                .timer(Duration::from_millis(700))
+                .await;
             let ex = cx.background_executor().clone();
             let path = format!("/api/jobs/{}", api::seg(&job_id));
             let reply = bg(&ex, move || api::get(&path)).await;
@@ -429,14 +485,24 @@ impl Kriko {
                             return false;
                         }
                         this.live.chat.watching.remove(&jid);
-                        if this.live.chat.in_flight.as_ref().is_some_and(|f| f.job_id == jid) {
+                        if this
+                            .live
+                            .chat
+                            .in_flight
+                            .as_ref()
+                            .is_some_and(|f| f.job_id == jid)
+                        {
                             this.live.chat.in_flight = None;
                         }
                         this.live.chat.partial = None;
                         this.live.chat.job_message.clear();
                         if api::s(&job, "state") != "succeeded" {
                             let why = api::s(&job, "message");
-                            this.live.chat.failed = Some(if why.is_empty() { "The turn did not finish.".into() } else { why });
+                            this.live.chat.failed = Some(if why.is_empty() {
+                                "The turn did not finish.".into()
+                            } else {
+                                why
+                            });
                         }
                         if this.live.chat.thread.as_deref() == Some(tid.as_str()) {
                             this.load_chat_messages(tid, cx);
@@ -509,23 +575,43 @@ mod tests {
     #[test]
     fn a_step_says_how_many_rows_and_how_long_once_it_has_finished() {
         let done = Step {
-            id: "s1".into(), source: "packs".into(), label: "read 2 catalogues".into(),
-            state: StepState::Done, rows: 2, ms: 9, detail: String::new(),
+            id: "s1".into(),
+            source: "packs".into(),
+            label: "read 2 catalogues".into(),
+            state: StepState::Done,
+            rows: 2,
+            ms: 9,
+            detail: String::new(),
         };
         assert_eq!(step_meta(&done), "2 rows · 9 ms");
-        let one = Step { rows: 1, ..done.clone() };
+        let one = Step {
+            rows: 1,
+            ..done.clone()
+        };
         assert_eq!(step_meta(&one), "1 row · 9 ms");
-        let running = Step { state: StepState::Running, ..done.clone() };
+        let running = Step {
+            state: StepState::Running,
+            ..done.clone()
+        };
         assert_eq!(step_meta(&running), "reading");
-        let failed = Step { state: StepState::Error, ..done };
+        let failed = Step {
+            state: StepState::Error,
+            ..done
+        };
         assert_eq!(step_meta(&failed), "failed");
     }
 
     #[test]
     fn a_thread_with_no_title_has_a_plain_name() {
-        let untitled = Thread { thread_id: "t".into(), title: "  ".into() };
+        let untitled = Thread {
+            thread_id: "t".into(),
+            title: "  ".into(),
+        };
         assert_eq!(untitled.name(), "New conversation");
-        let named = Thread { title: "Find a widget".into(), ..untitled };
+        let named = Thread {
+            title: "Find a widget".into(),
+            ..untitled
+        };
         assert_eq!(named.name(), "Find a widget");
     }
 

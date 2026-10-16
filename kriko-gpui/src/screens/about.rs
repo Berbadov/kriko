@@ -1,11 +1,20 @@
 //! About: Kriko, local product knowledge. The wordmark over the hero, and
 //! the key-value rows that say what this install is.
 
-use gpui::{div, prelude::*, px, rgb, svg, Context, Div, SharedString, Styled, Window};
+use gpui::{div, prelude::*, px, rgb, svg, Context, Div, FontWeight, SharedString, Styled, Window};
 
 use crate::app::Kriko;
 use crate::screens::mono;
 use crate::theme::*;
+
+fn section_title(label: &str) -> Div {
+    div()
+        .font_family(DISPLAY)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(19.0))
+        .text_color(rgb(BRAND_BRIGHT))
+        .child(label.to_uppercase())
+}
 
 fn kv(k: &str, v: &str) -> Div {
     div()
@@ -20,22 +29,22 @@ fn kv(k: &str, v: &str) -> Div {
 
 #[cfg(windows)]
 fn update_busy_message() -> String {
-    "Installing the update. Kriko will close and reopen.".to_string()
+    "Installing update · Kriko will restart".to_string()
 }
 
 #[cfg(not(windows))]
 fn update_busy_message() -> String {
-    "Preparing the update information.".to_string()
+    "Preparing update information".to_string()
 }
 
 #[cfg(windows)]
 fn update_available_message(version: &str) -> String {
-    format!("Version {version} is available. Installing keeps your catalogs and history.")
+    format!("Version {version} ready to install")
 }
 
 #[cfg(not(windows))]
 fn update_available_message(version: &str) -> String {
-    format!("Version {version} is available. Download it from Releases and follow the manual install steps.")
+    format!("Version {version} available · download from Releases")
 }
 
 fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
@@ -48,15 +57,26 @@ fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     let (line, action) = match (&k.app_update, k.app_update_busy) {
         (_, true) => (update_busy_message(), None),
         (Some(u), _) if u.newer => (update_available_message(&u.version), None),
-        (Some(u), _) if !u.error.is_empty() => (format!("Could not check: {}.", u.error), Some(check("Check again", cx))),
-        (Some(_), _) => ("This is the newest version.".to_string(), Some(check("Check again", cx))),
-        (None, _) => ("Not checked yet.".to_string(), Some(check("Check for updates", cx))),
+        (Some(u), _) if !u.error.is_empty() => (
+            format!("Check failed · {}", u.error),
+            Some(check("Check again", cx)),
+        ),
+        (Some(_), _) => (
+            "This is the newest version.".to_string(),
+            Some(check("Check again", cx)),
+        ),
+        (None, _) => (
+            "Not checked yet.".to_string(),
+            Some(check("Check for updates", cx)),
+        ),
     };
     #[cfg(windows)]
     let action = if k.app_update.as_ref().is_some_and(|u| u.newer) && !k.app_update_busy {
         Some(
             key("app-update-install", "Install and restart")
-                .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.install_app_update(cx)))
+                .on_click(
+                    cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.install_app_update(cx)),
+                )
                 .into_any_element(),
         )
     } else {
@@ -77,14 +97,24 @@ fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     } else {
         action
     };
-    let mut row = div().flex().items_center().justify_between().gap(px(8.0)).child(mono(&line, INK_2).min_w(px(0.0)));
+    let mut row = div()
+        .flex()
+        .items_center()
+        .justify_between()
+        .gap(px(8.0))
+        .child(mono(&line, INK_2).min_w(px(0.0)));
     if k.app_update_busy || k.app_update_note.as_deref() == Some("Checking for updates.") {
         row = row.child(spinner("app-update-spinner", 16.0, app.motion));
     }
     if let Some(button) = action {
         row = row.child(button);
     }
-    let mut panel = card().flex().flex_col().gap(px(6.0)).child(eyebrow("Updates")).child(row);
+    let mut panel = card()
+        .flex()
+        .flex_col()
+        .gap(px(6.0))
+        .child(section_title("Updates"))
+        .child(row);
     if let Some(note) = &k.app_update_note {
         panel = panel.child(mono(note, DIM));
     }
@@ -101,11 +131,15 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
             "not reported yet".to_string()
         }
     };
-    let schema = if h.loaded { h.schema_version.to_string() } else { "not reported yet".to_string() };
+    let schema = if h.loaded {
+        h.schema_version.to_string()
+    } else {
+        "not reported yet".to_string()
+    };
     let mut facts = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(4.0)).child(eyebrow("This install")))
+        .child(div().mb(px(4.0)).child(section_title("This install")))
         .child(hairline())
         .child(kv("Version", &said(&h.version)))
         .child(hairline())
@@ -126,6 +160,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex()
         .items_center()
         .gap(px(SPACE_SECTION))
+        .bg(rgb(BRAND))
         .child(
             svg()
                 .path(SharedString::from("kriko-mark-white.svg"))
@@ -151,7 +186,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex()
         .flex_col()
         .gap(px(6.0))
-        .child(eyebrow("What it is"))
+        .child(section_title("Local by design"))
         .child(
             div()
                 .font_family(SANS)
@@ -159,7 +194,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .line_height(px(24.0))
                 .text_color(rgb(INK_2))
                 .child(
-                    "Kriko reads what the web says about a product, keeps every claim next to its source, and tells you what is actually known. Everything it stores stays on your machine.",
+                    "Kriko checks products against sourced claims. Your knowledge stays on this device.",
                 ),
         )
         .child(
@@ -169,7 +204,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .line_height(px(20.0))
                 .text_color(rgb(MUTED))
                 .child(
-                    "A check runs locally: agents read, claims are grounded against the store, and the verdict names its evidence. Nothing is uploaded.",
+                    "Each result links back to its evidence. No data is uploaded.",
                 ),
         );
 

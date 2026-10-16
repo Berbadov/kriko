@@ -8,11 +8,11 @@
 
 use gpui::{div, prelude::*, px, rgb, rgba, ClickEvent, Context, Div, FontWeight, Styled, Window};
 
-use crate::app::{Field, Kriko};
+use crate::app::{Field, Kriko, Tab};
 use crate::data::CHAT_EXAMPLES;
 use crate::live::chat::{self as live, Message, Partial, Role, Step, StepState};
 use crate::screens::local::pill;
-use crate::screens::{empty_note, mono, plate_s, row_desc};
+use crate::screens::{mono, plate_s, row_desc};
 use crate::theme::*;
 
 /// Below this content width the thread list stacks above the conversation.
@@ -21,19 +21,123 @@ const NARROW_W: f32 = 760.0;
 pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
     let narrow = app.content_w > 0.0 && app.content_w < NARROW_W;
+    let (active, has_threads) = {
+        let data = &app.live.chat;
+        (
+            data.thread.is_some() || data.in_flight.is_some() || !data.messages.is_empty(),
+            !data.threads.is_empty(),
+        )
+    };
+    let main = if active {
+        conversation(app, motion, window, cx)
+    } else {
+        welcome(app, window, cx)
+    };
+    if !has_threads {
+        return div()
+            .flex()
+            .flex_col()
+            .flex_1()
+            .min_h(px(560.0))
+            .child(main);
+    }
     let threads = thread_list(app, cx);
-    let conversation = conversation(app, motion, window, cx);
     let body = if narrow {
-        div().flex().flex_col().gap(px(8.0)).child(threads).child(conversation)
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(10.0))
+            .child(threads)
+            .child(main)
     } else {
         div()
             .flex()
             .items_start()
-            .gap(px(8.0))
-            .child(threads.w(px(240.0)).flex_none())
-            .child(conversation.flex_1().min_w(px(0.0)))
+            .gap(px(12.0))
+            .child(threads.w(px(232.0)).flex_none())
+            .child(main.flex_1().min_w(px(0.0)))
     };
-    div().flex().flex_col().gap(px(8.0)).child(body)
+    div()
+        .flex()
+        .flex_col()
+        .flex_1()
+        .min_h(px(560.0))
+        .child(body)
+}
+
+fn welcome(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let height = (f32::from(window.viewport_size().height) - 88.0).max(560.0);
+    let composer = composer(app, window, cx);
+    let mut suggestions = div().flex().flex_wrap().justify_center().gap(px(8.0));
+    for (i, text) in CHAT_EXAMPLES.iter().enumerate() {
+        let fill = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+            this.chat_input.set_value(text.to_string());
+            cx.notify();
+        });
+        suggestions = suggestions.child(
+            div()
+                .id(("chat-welcome-suggestion", i))
+                .max_w(px(250.0))
+                .px(px(14.0))
+                .py(px(11.0))
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .rounded(px(12.0))
+                .cursor_pointer()
+                .bg(rgb(SURFACE_1))
+                .border_1()
+                .border_color(rgba(HAIRLINE))
+                .hover(|s| s.bg(rgba(GLASS_3)).border_color(rgba(BORDER_CONTROL)))
+                .text_size(px(13.0))
+                .text_color(rgb(INK_2))
+                .child(icon("message", 15.0).text_color(rgb(BRAND_BRIGHT)))
+                .child(text.to_string())
+                .on_click(fill),
+        );
+    }
+    div()
+        .w_full()
+        .min_h(px(height))
+        .flex()
+        .items_center()
+        .justify_center()
+        .px(px(12.0))
+        .child(
+            div()
+                .w_full()
+                .max_w(px(820.0))
+                .flex()
+                .flex_col()
+                .items_center()
+                .gap(px(20.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .items_center()
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .font_family(DISPLAY)
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(38.0))
+                                .line_height(px(40.0))
+                                .text_color(rgb(INK))
+                                .text_align(gpui::TextAlign::Center)
+                                .child("ASK KRIKO"),
+                        )
+                        .child(
+                            div()
+                                .text_size(px(14.0))
+                                .text_color(rgb(MUTED))
+                                .text_align(gpui::TextAlign::Center)
+                                .child("Ask about a product or saved research."),
+                        ),
+                )
+                .child(suggestions)
+                .child(composer),
+        )
 }
 
 // ---- the thread list ----
@@ -45,13 +149,6 @@ fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         cx.notify();
     });
     let mut list = div().flex().flex_col().gap(px(4.0));
-    if chat.threads.is_empty() {
-        list = list.child(empty_note(if chat.loaded {
-            "No conversations yet. Start one with New."
-        } else {
-            "Reading your conversations..."
-        }));
-    }
     for (i, thread) in chat.threads.iter().enumerate() {
         let picked = chat.thread.as_deref() == Some(thread.thread_id.as_str());
         let id = thread.thread_id.clone();
@@ -69,17 +166,21 @@ fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
                 .font_family(SANS)
                 .text_size(px(13.0))
                 .text_color(rgb(if picked { INK } else { INK_2 }))
-                .when(picked, |d| d.bg(rgb(WELL)).border_1().border_color(rgba(BORDER_CONTROL)))
+                .when(picked, |d| {
+                    d.bg(rgb(WELL))
+                        .border_1()
+                        .border_color(rgba(BORDER_CONTROL))
+                })
                 .when(!picked, |d| d.hover(|h| h.bg(rgba(GLASS_1))))
                 .child(thread.name())
                 .on_click(open),
         );
     }
     card()
-        .p(px(14.0))
+        .p(px(10.0))
         .flex()
         .flex_col()
-        .gap(px(6.0))
+        .gap(px(8.0))
         .child(
             div()
                 .flex()
@@ -93,7 +194,12 @@ fn thread_list(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
 
 // ---- the conversation ----
 
-fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+fn conversation(
+    app: &mut Kriko,
+    motion: bool,
+    window: &mut Window,
+    cx: &mut Context<Kriko>,
+) -> Div {
     let chat = &app.live.chat;
     let title = chat
         .thread
@@ -103,15 +209,20 @@ fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Con
         .unwrap_or_else(|| "Ask your agent".to_string());
     let open = chat.thread.is_some();
     let say = chat.say.clone();
-    let mut head = div().flex().items_center().justify_between().gap(px(8.0)).child(
-        div()
-            .min_w(px(0.0))
-            .font_family(DISPLAY)
-            .font_weight(FontWeight::SEMIBOLD)
-            .text_size(px(18.0))
-            .text_color(rgb(INK))
-            .child(title),
-    );
+    let mut head = div()
+        .flex()
+        .items_center()
+        .justify_between()
+        .gap(px(8.0))
+        .child(
+            div()
+                .min_w(px(0.0))
+                .font_family(DISPLAY)
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_size(px(18.0))
+                .text_color(rgb(INK))
+                .child(title),
+        );
     if open {
         let delete = cx.listener(|this, _: &ClickEvent, _w, cx| {
             this.delete_chat_thread(cx);
@@ -122,10 +233,10 @@ fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Con
     let messages = messages_view(app, motion, cx);
     let composer = composer(app, window, cx);
     let mut column = card()
-        .p(px(16.0))
+        .p(px(14.0))
         .flex()
         .flex_col()
-        .gap(px(8.0))
+        .gap(px(10.0))
         .child(head)
         .child(messages);
     if let Some(text) = say {
@@ -134,11 +245,11 @@ fn conversation(app: &mut Kriko, motion: bool, window: &mut Window, cx: &mut Con
     column.child(composer)
 }
 
-fn messages_view(app: &Kriko, motion: bool, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
+fn messages_view(app: &Kriko, motion: bool, _cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
     let chat = &app.live.chat;
     let mut column = div().flex().flex_col().gap(px(8.0));
     if chat.messages.is_empty() && chat.in_flight.is_none() {
-        column = column.child(intro(app, cx));
+        column = column.child(intro());
     }
     for message in chat.messages.iter() {
         column = column.child(match message.role {
@@ -167,54 +278,16 @@ fn messages_view(app: &Kriko, motion: bool, cx: &mut Context<Kriko>) -> gpui::St
         .child(column)
 }
 
-/// What an empty conversation says: how to ask, three generic examples, and
-/// the names of what the agent may read. Names only, never a record.
-fn intro(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
-    let mut examples = div().flex().flex_col().gap(px(8.0));
-    for (i, text) in CHAT_EXAMPLES.iter().enumerate() {
-        let fill = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-            this.chat_input.set_value(text.to_string());
-            cx.notify();
-        });
-        examples = examples.child(
-            div()
-                .id(("chat-example", i))
-                .px(px(12.0))
-                .py(px(9.0))
-                .rounded(px(10.0))
-                .cursor_pointer()
-                .bg(rgb(WELL))
-                .border_1()
-                .border_color(rgba(HAIRLINE))
-                .hover(|s| s.border_color(rgba(BORDER_CONTROL)))
-                .font_family(MONO)
-                .text_size(px(12.0))
-                .text_color(rgb(INK_2))
-                .child(text.to_string())
-                .on_click(fill),
-        );
-    }
-    let mut reads = div().flex().flex_col().gap(px(6.0));
-    for source in &app.live.chat.sources {
-        reads = reads.child(
-            div()
-                .flex()
-                .items_baseline()
-                .gap(px(6.0))
-                .child(mono(&source.name, INK_2).flex_none())
-                .child(row_desc(&source.description)),
-        );
-    }
+/// A blank thread needs one quiet prompt; examples live on the welcome screen.
+fn intro() -> Div {
     div()
+        .min_h(px(200.0))
         .flex()
-        .flex_col()
-        .gap(px(8.0))
-        .child(row_desc(
-            "Ask in your own words. The agent plans what to look up, reads only that, and answers with the sources it used.",
-        ))
-        .child(examples)
-        .child(eyebrow("It can read"))
-        .child(reads)
+        .items_center()
+        .justify_center()
+        .text_size(px(14.0))
+        .text_color(rgb(MUTED))
+        .child("Ask a question to start.")
 }
 
 fn reader_line(message: &Message) -> Div {
@@ -234,7 +307,11 @@ fn agent_block(message: &Message) -> Div {
     let mut body = div().flex().flex_col().gap(px(6.0)).child(eyebrow("Agent"));
     body = body.child(text_block(&message.text));
     if !message.steps.is_empty() {
-        body = body.child(steps_view(&format!("chat-done-{}", message.message_id), &message.steps, false));
+        body = body.child(steps_view(
+            &format!("chat-done-{}", message.message_id),
+            &message.steps,
+            false,
+        ));
     }
     if !message.sources.is_empty() {
         body = body.child(sources_view(&message.sources));
@@ -245,20 +322,32 @@ fn agent_block(message: &Message) -> Div {
 /// The turn in flight: its steps as they are read, and the answer once written.
 fn pending_block(partial: &Partial, job_message: &str, motion: bool) -> Div {
     let total = partial.steps.len().max(1) as f32;
-    let settled = partial.steps.iter().filter(|s| s.state.is_settled()).count() as f32;
+    let settled = partial
+        .steps
+        .iter()
+        .filter(|s| s.state.is_settled())
+        .count() as f32;
     let share = if partial.steps.is_empty() {
         0.08
     } else {
         (settled / total).clamp(0.08, 1.0)
     };
-    let who = if partial.agent.is_empty() { "Agent" } else { partial.agent.as_str() };
+    let who = if partial.agent.is_empty() {
+        "Agent"
+    } else {
+        partial.agent.as_str()
+    };
     let mut body = div()
         .flex()
         .flex_col()
         .gap(px(6.0))
         .child(eyebrow(&format!("{who} · working")));
     if partial.steps.is_empty() {
-        let words = if job_message.is_empty() { "Starting..." } else { job_message };
+        let words = if job_message.is_empty() {
+            "Starting..."
+        } else {
+            job_message
+        };
         body = body.child(row_desc(words));
     } else {
         body = body.child(steps_view("chat-live", &partial.steps, motion));
@@ -285,7 +374,12 @@ fn step_row(key: String, step: &Step, motion: bool) -> Div {
         StepState::Running => spinner(key.clone(), 12.0, motion),
         StepState::Done => icon("check", 12.0).text_color(rgb(ICE)).into_any_element(),
         StepState::Error => icon("x", 12.0).text_color(rgb(DANGER)).into_any_element(),
-        StepState::Empty => div().w(px(6.0)).h(px(6.0)).rounded(px(3.0)).bg(rgb(MUTED)).into_any_element(),
+        StepState::Empty => div()
+            .w(px(6.0))
+            .h(px(6.0))
+            .rounded(px(3.0))
+            .bg(rgb(MUTED))
+            .into_any_element(),
     };
     div()
         .flex()
@@ -346,7 +440,13 @@ fn danger_line(text: &str) -> Div {
 fn composer(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let chat = &app.live.chat;
     let busy = chat.sending || chat.in_flight.is_some();
-    let mut agents = div().flex().items_center().gap(px(8.0)).flex_wrap();
+    let configure = cx.listener(|this, _: &ClickEvent, _w, cx| {
+        this.tab = Tab::Agents;
+        this.on_open_tab(cx);
+        this.refresh_agents(cx);
+        cx.notify();
+    });
+    let mut agents = div().flex().items_center().gap(px(6.0)).flex_wrap();
     for (i, (id, label)) in chat.harnesses.iter().enumerate() {
         let picked = *id == chat.harness;
         let pick = {
@@ -365,7 +465,7 @@ fn composer(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let input = app.input_field(
         Field::ChatAsk,
         "chat-input",
-        "Ask about what this app holds...",
+        "Ask Kriko about a product, check, or source...",
         Some("agents"),
         window,
         cx,
@@ -377,8 +477,22 @@ fn composer(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     div()
         .flex()
         .flex_col()
-        .gap(px(6.0))
-        .child(agents)
+        .gap(px(8.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .flex_wrap()
+                .gap(px(8.0))
+                .child(eyebrow("Reply with"))
+                .child(agents),
+        )
+        .child(
+            div()
+                .flex()
+                .justify_end()
+                .child(plate_s("chat-configure-agents", "Configure agents").on_click(configure)),
+        )
         .child(
             div()
                 .flex()

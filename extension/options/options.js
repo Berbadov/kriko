@@ -59,15 +59,9 @@ async function save(value) {
   // actually kept, and it keeps nothing when the reader asked for the default.
   input.value = reply.stored ?? "";
   if (reply.reachable) {
-    say(
-      `Saved. Kriko ${reply.version || ""} answered at ${reply.base}.`.replace(
-        /\s+/g, " "),
-      "ok");
+    say(`Connected to Kriko ${reply.version || ""} at ${reply.base}.`.replace(/\s+/g, " "), "ok");
   } else {
-    say(
-      `Saved ${reply.base}, but nothing answered there yet. ${reply.detail || ""}`
-        .trim(),
-      "warn");
+    say(`Saved ${reply.base}; Kriko is not reachable yet. ${reply.detail || ""}`.trim(), "warn");
   }
 }
 
@@ -164,8 +158,7 @@ function renderSites(status) {
   if (status && status.error) {
     saySites(
       status.code === "APP_NOT_RUNNING"
-        ? "Kriko is not running, so this list is the last one it gave us. "
-          + "Start the app and press Check again."
+        ? "Kriko is offline. Start it, then refresh."
         : status.error,
       "warn");
   } else if (status) {
@@ -222,22 +215,19 @@ function renderCompat(compat) {
     // Never having reached the app is not a version problem, and saying
     // "up to date" would be a claim we have no evidence for.
     compatEl.textContent =
-      `Extension ${chrome.runtime.getManifest().version}. `
-      + "The app has not answered yet, so there is nothing to compare it to.";
+      `Extension ${chrome.runtime.getManifest().version} · waiting for Kriko.`;
     delete compatEl.dataset.state;
     return;
   }
   if (compat.stale) {
     compatEl.textContent =
-      `Extension ${compat.running} is older than the ${compat.minimum} this `
-      + "app needs. Open Kriko's Extension page and load the copy it wrote: "
-      + "yours is out of date, not broken.";
+      `Extension ${compat.running} is older than required ${compat.minimum}. `
+      + "Load the copy from Kriko → Browser extension.";
     compatEl.dataset.state = "error";
     return;
   }
   compatEl.textContent =
-    `Extension ${compat.running}, and the app accepts ${compat.minimum} or `
-    + "newer. Nothing to do.";
+    `Extension ${compat.running} · compatible with ${compat.minimum} or newer.`;
   compatEl.dataset.state = "ok";
 }
 
