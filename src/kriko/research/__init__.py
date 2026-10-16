@@ -117,7 +117,8 @@ def _templates(raw, primary: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
 
 
 def plan_task(conn, subject_id: str, pack_id: str, *,
-              budget_usd: float = 0.0, max_documents: int = 5) -> ResearchTask:
+              budget_usd: float = 0.0, max_documents: int = 5,
+              effort: str = "fast", prior_runs: tuple = ()) -> ResearchTask:
     """Assemble everything the pack knows about how to research this subject.
 
     Everything category-specific — query templates, the product principle —
@@ -173,4 +174,6 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
         budget_usd=budget_usd,
         max_documents=max_documents,
         min_rationale_chars=load_gates(conn, pack_id).min_rationale_chars,
+        effort=effort if effort in ("fast", "deep") else "fast",
+        prior_runs=tuple(prior_runs),
     )
