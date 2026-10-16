@@ -10,6 +10,9 @@ at the default size and at the 940x640 minimum, lands in the output folder
 for a person or an agent to look at; the run is the observation the Linux
 gate cannot make.
 
+The 1280x860 capture can be clipped on a smaller physical display; the
+940x640 minimum capture is always included.
+
 Asserted: the install and uninstall succeed, the installed files appear and
 go, and no launch panics or exits on its own. Not asserted: what a screenshot
 shows. Pixels are for looking at, and a check on them would fail for reasons
@@ -22,11 +25,13 @@ at without an edit here.
 from __future__ import annotations
 
 import os
+import json
 import re
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
 from pathlib import Path
 
 from smoke_app import PANIC, end_tree
@@ -74,6 +79,20 @@ def msiexec(*args: str, log: Path) -> int:
     return subprocess.run(["msiexec", *args, "/qn", "/l*v", str(log)], timeout=600).returncode
 
 
+def fixture_data(url: str) -> None:
+    """Confirm the isolated service exposes the synthetic history and drafts."""
+    def get(path: str) -> dict:
+        with urllib.request.urlopen(url + path, timeout=5) as response:
+            return json.load(response)
+
+    if not get("/api/health").get("ok"):
+        raise RuntimeError("fixture health did not report ok")
+    recent = get("/api/history?limit=200").get("items", [])
+    drafts = get("/api/compare-drafts").get("items", [])
+    if len(recent) < 2 or len(drafts) < 2:
+        raise RuntimeError(f"fixture data missing: {len(recent)} recent checks, {len(drafts)} drafts")
+
+
 def look(exe: Path, out: Path) -> list[str]:
     """Open every screen at every size; return what went wrong."""
     failures: list[str] = []
@@ -87,9 +106,11 @@ def look(exe: Path, out: Path) -> list[str]:
     }
     base.pop("KRIKO_URL", None)
     first = True
+    fixture: subprocess.Popen | None = None
+    fixture_log = None
     try:
         for size in SIZES:
-            for key in screens():
+            for key in [*screens(), "tutorial"]:
                 env = base | {"KRIKO_VERIFY": key, "KRIKO_WINDOW_SIZE": size}
                 process = subprocess.Popen(
                     [str(exe)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -111,7 +132,66 @@ def look(exe: Path, out: Path) -> list[str]:
                 elif PANIC in said:
                     failures.append(f"{key} at {size}: panicked\n{said}")
                 print(f"{key} at {size}: {'ok' if alive and PANIC not in said else 'FAILED'}")
+
+        ready = Path(scratch.name) / "ready.json"
+        fixture_log = (out / "buyer-fixture.log").open("w", encoding="utf-8")
+        fixture_env = base | {
+            "PYTHONPATH": str(ROOT / "src") + os.pathsep + os.environ.get("PYTHONPATH", ""),
+            "KRIKO_LOG": str(Path(scratch.name) / "fixture-engine.log"),
+        }
+        fixture = subprocess.Popen(
+            [sys.executable, str(ROOT / "packaging" / "buyer_fixture.py"), scratch.name],
+            stdout=fixture_log, stderr=subprocess.STDOUT, text=True, env=fixture_env,
+        )
+        deadline = time.monotonic() + 60
+        while not ready.exists() and fixture.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.25)
+        if not ready.exists():
+            failures.append(f"buyer fixture did not become ready; see {out / 'buyer-fixture.log'}")
+        else:
+            url = json.loads(ready.read_text(encoding="utf-8"))["url"]
+            try:
+                while True:
+                    try:
+                        fixture_data(url)
+                        break
+                    except (OSError, ValueError, RuntimeError):
+                        if time.monotonic() >= deadline or fixture.poll() is not None:
+                            raise
+                        time.sleep(0.25)
+            except (OSError, ValueError, RuntimeError) as error:
+                failures.append(f"buyer fixture HTTP checks failed: {error}; see {out / 'buyer-fixture.log'}")
+            else:
+                for key in ("home", "run", "about", "compare", "chat"):
+                    env = base | {
+                        "KRIKO_URL": url,
+                        "KRIKO_VERIFY": key,
+                        "KRIKO_WINDOW_SIZE": "940x640",
+                    }
+                    process = subprocess.Popen(
+                        [str(exe)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                        text=True, env=env,
+                    )
+                    time.sleep(HOLD)
+                    alive = process.poll() is None
+                    if alive:
+                        screenshot(out / f"populated-{key}-940x640.png")
+                        end_tree(process)
+                    try:
+                        said = process.communicate(timeout=20)[0] or ""
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        said = process.communicate()[0] or ""
+                    if not alive:
+                        failures.append(f"populated {key}: exited on its own ({process.returncode})\n{said}")
+                    elif PANIC in said:
+                        failures.append(f"populated {key}: panicked\n{said}")
+                    print(f"populated {key} at 940x640: {'ok' if alive and PANIC not in said else 'FAILED'}")
     finally:
+        if fixture is not None and fixture.poll() is None:
+            end_tree(fixture)
+        if fixture_log is not None:
+            fixture_log.close()
         scratch.cleanup()
     return failures
 

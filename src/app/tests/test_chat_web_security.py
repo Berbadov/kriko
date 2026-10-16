@@ -47,6 +47,14 @@ def _dns(monkeypatch, addresses):
     monkeypatch.setattr(socket, "getaddrinfo", lookup)
 
 
+def test_a_successful_http_response_containing_a_bot_check_is_not_evidence(monkeypatch):
+    _dns(monkeypatch, {"source.example": ["93.184.216.34"]})
+    page = Response(200, body=(b"<html><body><p>Checking your browser before accessing "
+                               b"the site.</p></body></html>"))
+    monkeypatch.setattr(network, "urlopen", lambda *_args, **_kwargs: page)
+    assert chatweb.reader()("https://source.example/blocked").text == ""
+
+
 def test_dns_validation_rejects_private_and_mixed_addresses(monkeypatch):
     _dns(monkeypatch, {
         "public.example": ["93.184.216.34"],
@@ -91,6 +99,31 @@ def test_each_redirect_host_is_resolved_before_its_request(monkeypatch):
 
     assert page.text == ""
     assert calls == ["https://source.example/redirect"]
+
+
+def test_page_reader_checks_cancellation_before_following_a_redirect(monkeypatch):
+    _dns(monkeypatch, {"source.example": ["93.184.216.34"]})
+    requests = []
+    checks = 0
+
+    def check_cancelled():
+        nonlocal checks
+        checks += 1
+        if checks == 3:
+            raise RuntimeError("cancelled")
+
+    def open_url(url, **kwargs):
+        requests.append(url)
+        return Response(302, headers={"Location": "https://source.example/next"})
+
+    monkeypatch.setattr(network, "urlopen", open_url)
+    read = chatweb.reader(check_cancelled=check_cancelled)
+
+    import pytest
+    with pytest.raises(RuntimeError, match="cancelled"):
+        read("https://source.example/start")
+
+    assert requests == ["https://source.example/start"]
 
 
 def test_public_redirect_chain_reads_page_text_and_uses_shared_network(monkeypatch):

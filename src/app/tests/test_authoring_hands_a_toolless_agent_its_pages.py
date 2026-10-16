@@ -193,10 +193,11 @@ def test_a_toolless_agent_is_not_sent_to_browse_when_no_page_could_be_read(
     assert not [one for one in handed if one.startswith(AUTHOR)]
 
 
-def test_an_agent_with_its_own_search_is_asked_the_authoring_brief_as_before(monkeypatch):
+def test_an_agent_outside_host_read_is_asked_the_authoring_brief_as_before(monkeypatch):
     from app.providers import harness
 
     researcher = harness.HarnessResearcher(row("claude-code"))
+    monkeypatch.setattr(harness, "HOST_READ_HARNESSES", harness.HOST_READ_HARNESSES - {"claude-code"})
 
     def no_reader(*_args, **_kwargs):
         raise AssertionError("Claude searches for itself; Kriko reads no pages for it")

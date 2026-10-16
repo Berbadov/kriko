@@ -159,7 +159,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .line_height(px(24.0))
                 .text_color(rgb(INK_2))
                 .child(
-                    "Kriko reads what the web says about a product, keeps every claim next to its source, and tells you what is actually known. Everything it stores stays on your machine.",
+                    "Kriko reads what the web says about a product, keeps every claim next to its source, and tells you what is actually known. Installed lookups, saved checks, and saved conversations stay on your machine.",
                 ),
         )
         .child(
@@ -169,7 +169,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .line_height(px(20.0))
                 .text_color(rgb(MUTED))
                 .child(
-                    "A check runs locally: agents read, claims are grounded against the store, and the verdict names its evidence. Nothing is uploaded.",
+                    "A web-backed run sends its question and reading context to the providers used for that run. A local model keeps inference on your machine, but web search still contacts its search provider to gather sources.",
                 ),
         );
 

@@ -241,15 +241,30 @@ def _facts(store, subject_id: str, pack_id: str) -> list[dict]:
     ]
 
 
-def _risks(store, subject_id: str, pack_id: str) -> list[dict]:
+def _risk_context(facts: list[dict], context: dict | None = None) -> dict:
+    """The product's recorded attributes plus facts the reader supplied.
+
+    Reader context wins: a listing-wide attribute can be stale or describe a
+    different example, while the reader may know the specific product's use.
+    """
+    values = {fact["key"]: fact["value"] for fact in facts}
+    values.update(context or {})
+    return values
+
+
+def _risks(store, subject_id: str, pack_id: str,
+           context: dict | None = None) -> list[dict]:
     """The recorded risks a subject serves, relations included, with their sources.
 
     Reached the same way the lookup reaches them (`expand`), so a risk on a
     shared part counts for the product that carries the part.
     """
+    from kriko.lookup import _conditions_for
+    from kriko.lookup.conditions import evaluate_all
     from kriko.lookup.match import expand
 
     reached = set(expand(store, (subject_id,), (pack_id,))) | {subject_id}
+    risk_context = _risk_context(_facts(store, subject_id, pack_id), context)
     marks = ",".join("?" * len(reached))
     claims = store.execute(
         f"SELECT c.claim_id, c.severity, c.kind, c.subject_id FROM claims c"
@@ -269,15 +284,25 @@ def _risks(store, subject_id: str, pack_id: str) -> list[dict]:
             titles[row["claim_id"]] = (row["title"], row["body"])
     evidence: dict[str, list[dict]] = {}
     for row in store.execute(
-            f"SELECT e.claim_id, e.quote, s.url FROM evidence e"
+            f"SELECT e.claim_id, e.quote, e.stance, s.url FROM evidence e"
             f" JOIN sources s USING (source_id, pack_id)"
             f" WHERE e.pack_id = ? AND e.claim_id IN ({idmarks})", (pack_id, *ids)):
         evidence.setdefault(row["claim_id"], []).append(
-            {"url": row["url"], "quote": row["quote"]})
+            {"url": row["url"], "quote": row["quote"], "stance": row["stance"]})
     out = []
     for row in claims:
         title, body = titles.get(row["claim_id"], ("", ""))
-        cited = evidence.get(row["claim_id"], [])[:2]
+        all_cited = evidence.get(row["claim_id"], [])
+        supporting = next((item for item in all_cited
+                           if item["stance"] == "supports"), None)
+        cited = all_cited[:2]
+        if supporting and supporting not in cited:
+            cited = [cited[0], supporting] if cited else [supporting]
+        _, _, outcomes = evaluate_all(
+            _conditions_for(store, row["claim_id"], pack_id), risk_context)
+        states = [outcome.state for outcome in outcomes]
+        served = all(outcome.served for outcome in outcomes)
+        conditional = served and any(state == "unknown" for state in states)
         out.append({
             "claim_id": row["claim_id"],
             "title": title,
@@ -285,10 +310,52 @@ def _risks(store, subject_id: str, pack_id: str) -> list[dict]:
             "severity": row["severity"],
             "kind": row["kind"],
             "text": f"{title}. {body[:300]}",
-            "source": cited[0]["url"] if cited else "",
+            "source": supporting["url"] if supporting else "",
             "sources": cited,
+            "applicability": "conditional" if conditional else (
+                "applicable" if served else "not_applicable"),
+            "conditions": [
+                {"state": outcome.state, "reason": outcome.reason}
+                for outcome in outcomes
+            ],
         })
     return out
+
+
+def _risk_coverage(risks: list[dict]) -> dict:
+    """Keep catalogue size, applicable risks, and evidence presence distinct."""
+    applicable = [risk for risk in risks
+                  if risk.get("applicability") in {"applicable", "conditional"}]
+    return {
+        "catalogue": len(risks),
+        "applicable": len(applicable),
+        "conditional": sum(risk.get("applicability") == "conditional"
+                           for risk in applicable),
+        "sourced": sum(bool(risk.get("source")) for risk in risks),
+        "unsourced": sum(not risk.get("source") for risk in risks),
+        "refuting": sum(
+            not risk.get("source") and any(
+                item.get("stance") == "refutes" for item in risk.get("sources", []))
+            for risk in risks),
+    }
+
+
+def _fact_is_positive(fact: dict) -> bool:
+    """Do not treat a feature's own name as proof when its value denies it."""
+    value = _fold(fact.get("value", "")).strip()
+    if value in {"false", "no", "off", "disabled", "absent", "none",
+                 "unavailable", "unsupported"}:
+        return False
+    return not re.search(
+        r"\b(?:not|no|never|without|false|disabled|unavailable|unsupported)\b",
+        value)
+
+
+def _use_requirement(row: dict, result: dict) -> dict:
+    """Copy a structured judgment without bypassing chat's field size cap."""
+    row.update(result)
+    row["evidence"] = _clip(row.get("evidence", ""))
+    return row
 
 
 def _subject_row(store, subject_id: str, pack_id: str, label: str, kind: str,
@@ -298,8 +365,10 @@ def _subject_row(store, subject_id: str, pack_id: str, label: str, kind: str,
         "subject_id": subject_id, "pack_id": pack_id, "label": label, "kind": kind,
         "identity": identity or {},
         "claims": len(risks),
+        "risk_coverage": _risk_coverage(risks),
         "risks": [{"title": r["title"], "severity": r["severity"], "kind": r["kind"],
-                   "sources": r["sources"]} for r in risks],
+                   "sources": r["sources"], "applicability": r["applicability"],
+                   "conditions": r["conditions"]} for r in risks],
     }
 
 
@@ -350,21 +419,35 @@ def _gather(conn, query: str, pack_ids, kind: str) -> tuple[list[dict], int]:
 def _judge(phrase: str, facts: list[dict], risks: list[dict]) -> dict:
     """One constraint against one candidate: met, contradicted or unknown.
 
-    `contradicted` is checked first: a recorded serious risk that names the
-    constraint's subject outweighs a fact that happens to share a word with it.
+    Parsed numeric facts take precedence over incidental risk wording. A
+    sourced, applicable serious risk can contradict ordinary text constraints.
     """
     words = _content(phrase)
     row = {"text": _clip(phrase, 200), "status": "unknown", "evidence": "", "source": ""}
     if not words:
         return row
-    contra = [(_coverage(words, r["text"]), r) for r in risks if r["severity"] == "high"]
+    from app.requirements import evaluate_requirement
+
+    structured = evaluate_requirement(phrase, facts)
+    # A parsed measurement is more specific than incidental shared wording in
+    # a risk title. Keep the number check from turning a matching spec into a
+    # contradiction; ambiguous numeric phrases remain unknown below.
+    if structured is not None and structured["status"] == "met":
+        return _use_requirement(row, structured)
+    contra = [(_coverage(words, r["text"]), r) for r in risks
+              if r["severity"] == "high"
+              and r.get("applicability", "applicable") == "applicable"
+              and r.get("source")]
     contra = [(score, r) for score, r in contra if score >= CONTRADICT_AT]
     if contra:
         score, risk = max(contra, key=lambda pair: pair[0])
         row.update(status="contradicted", evidence=_clip(risk["title"] or risk["text"]),
                    source=risk["source"])
         return row
-    stated = [(_coverage(words, f["text"]), f) for f in facts]
+    if structured is not None:
+        return _use_requirement(row, structured)
+    stated = [(_coverage(words, f["text"]), f) for f in facts
+              if _fact_is_positive(f)]
     stated = [(score, f) for score, f in stated if score >= MET_AT]
     if stated:
         score, fact = max(stated, key=lambda pair: (pair[0], pair[1]["identity"]))
@@ -372,10 +455,11 @@ def _judge(phrase: str, facts: list[dict], risks: list[dict]) -> dict:
     return row
 
 
-def _evaluate(conn, hit: dict, must: list[str], prefer: list[str]) -> dict:
+def _evaluate(conn, hit: dict, must: list[str], prefer: list[str],
+              context: dict | None = None) -> dict:
     sid, pid = hit["subject_id"], hit["pack_id"]
     facts = _facts(conn, sid, pid)
-    risks = _risks(conn, sid, pid)
+    risks = _risks(conn, sid, pid, context)
     must_rows = [_judge(p, facts, risks) for p in must]
     prefer_rows = [_judge(p, facts, risks) for p in prefer]
     everything = must_rows + prefer_rows
@@ -384,11 +468,16 @@ def _evaluate(conn, hit: dict, must: list[str], prefer: list[str]) -> dict:
         "label": hit.get("label", ""), "kind": hit.get("kind", ""),
         "identity": hit.get("identity") or {},
         "claims": len(risks),
+        "risk_coverage": _risk_coverage(risks),
         "all_musts_met": all(r["status"] == "met" for r in must_rows),
         "contradicted_musts": sum(r["status"] == "contradicted" for r in must_rows),
+        "unknown_musts": sum(r["status"] == "unknown" for r in must_rows),
         "unknown": sum(r["status"] == "unknown" for r in everything),
         "prefs_met": sum(r["status"] == "met" for r in prefer_rows),
-        "serious": sum(r["severity"] == "high" for r in risks),
+        "unknown_preferences": sum(r["status"] == "unknown" for r in prefer_rows),
+        "serious": sum(r["severity"] == "high" and
+                        r.get("applicability") in {"applicable", "conditional"}
+                        for r in risks),
         "must": must_rows,
         "prefer": prefer_rows,
     }
@@ -396,14 +485,15 @@ def _evaluate(conn, hit: dict, must: list[str], prefer: list[str]) -> dict:
 
 def _rank_key(row: dict) -> tuple:
     """Musts first (all met, then fewest contradicted, then fewest unknown),
-    then the preferences met, then the fewest serious risks. Total: ties fall
-    to the label and the id, so the same question reads the same way twice."""
-    return (not row["all_musts_met"], row["contradicted_musts"], row["unknown"],
-            -row["prefs_met"], row["serious"], row["label"], row["subject_id"])
+    then the preferences met. Risk counts do not break ties: a thinner catalogue
+    is not evidence of a safer product. Ties fall to label and id."""
+    return (not row["all_musts_met"], row["contradicted_musts"], row["unknown_musts"],
+            -row["prefs_met"], row["unknown_preferences"], row["label"], row["subject_id"])
 
 
 def _product_match(ctx: Context, query: str = "", must: list | None = None,
-                   prefer: list | None = None, kind: str = "", pack_id: str = "") -> dict:
+                   prefer: list | None = None, kind: str = "", pack_id: str = "",
+                   context: dict | None = None) -> dict:
     store = ctx.store
     if store is None:
         return _empty("the engine store has no packs yet")
@@ -414,7 +504,7 @@ def _product_match(ctx: Context, query: str = "", must: list | None = None,
         return _empty("say what the product is, in words")
     pack_ids = [pack_id] if pack_id else None
     candidates, searches = _gather(store, text, pack_ids, kind)
-    rows = [_evaluate(store, hit, must_list, prefer_list) for hit in candidates]
+    rows = [_evaluate(store, hit, must_list, prefer_list, context) for hit in candidates]
     rows.sort(key=_rank_key)
     for position, row in enumerate(rows, start=1):
         row["rank"] = position
@@ -813,10 +903,12 @@ SOURCES: dict[str, Source] = {s.name: s for s in (
     Source(
         "product_match",
         "Finds the products that fit a need and checks each reader constraint "
-        "against what is recorded: met, unknown or contradicted, ranked.",
+        "against recorded facts and sourced applicable risks: met, unknown or contradicted. "
+        "Risk coverage separates catalogue claims, conditional claims, and cited evidence.",
         {"query": "the product, in words", "must": "hard constraints, one phrase each",
          "prefer": "preferences, one phrase each", "kind": "optional kind of product",
-         "pack_id": "optional catalogue to search"},
+         "pack_id": "optional catalogue to search",
+         "context": "optional facts about this specific item, as key/value pairs"},
         "products", lambda a: f"searching the catalogue for {_quoted(a)}",
         _product_match, lists=("must", "prefer")),
     Source(
@@ -899,6 +991,22 @@ def _arguments(source: Source, args: dict) -> tuple[dict, list[str]]:
             items = value if isinstance(value, list) else [value]
             phrases: list[str] = [_clip(item, 200) for item in items if str(item).strip()]
             accepted[key] = phrases[:12]
+        elif key == "context":
+            if isinstance(value, dict):
+                bounded: dict[str, bool | int | float | str] = {}
+                for raw_key, raw_value in list(value.items())[:20]:
+                    name = _clip(raw_key, 80).strip()
+                    if not name or isinstance(raw_value, (dict, list, tuple, set)):
+                        continue
+                    if isinstance(raw_value, bool):
+                        bounded[name] = raw_value
+                    elif isinstance(raw_value, (int, float)):
+                        bounded[name] = raw_value
+                    elif isinstance(raw_value, str):
+                        bounded[name] = _clip(raw_value, 200)
+                accepted[key] = bounded
+            else:
+                ignored.append(key)
         else:
             accepted[key] = _clip(value, 300) if value is not None else ""
     return accepted, ignored

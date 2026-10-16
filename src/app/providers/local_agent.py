@@ -621,7 +621,7 @@ class LocalAsker:
         # In a Quick Look, page reads start as soon as the first query has
         # results, alongside the remaining searches. A slow secondary query
         # therefore does not hold the first useful page behind it.
-        prefetch_pool = ThreadPoolExecutor(max_workers=4) if quick else None
+        prefetch_pool = ThreadPoolExecutor(max_workers=4 + HEDGED_PAGES) if quick else None
         prefetch_futures: dict[str, Future] = {}
         prefetch_announced: set[Future] = set()
         prefetch_seen: set[str] = set()
@@ -736,8 +736,10 @@ class LocalAsker:
                     # Retry empty angles across the configured engines only
                     # after the independent first pass has finished. A dead
                     # service is never retried query by query.
-                    for index, result in enumerate(ordered):
-                        if result is None or result[0]:
+                    if has_search_check:
+                        self._search.check_cancelled = self._check
+                    for index, initial_result in enumerate(ordered):
+                        if initial_result is None or initial_result[0]:
                             continue
                         self._check()
                         ordered[index] = answer(queries[index], index)

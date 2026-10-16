@@ -49,7 +49,7 @@ USER_AGENT = "Kriko/1.0 (+https://github.com/Berbadov/kriko)"
 REFUSED = (403, 429, 503)
 
 _DROP = re.compile(
-    r"<(script|style|noscript|nav|header|footer|aside|form|svg|template|iframe"
+    r"<(script|style|noscript|nav|header|footer|aside|svg|template|iframe"
     r"|select|button|dialog|menu|object|canvas|picture|video|audio)(?![\w-])[^>]*>.*?</\1>",
     re.IGNORECASE | re.DOTALL,
 )
@@ -259,18 +259,18 @@ def _climb(url: str, ladder_ends: float, *, check_cancelled=None) -> str:
 
     left = ladder_ends - time.monotonic()
     if left > 1.0:
-        options = {"timeout": left}
         if check_cancelled is not None:
-            options["check_cancelled"] = check_cancelled
-        page = pagereader.read(url, **options)
+            page = pagereader.read(url, timeout=left, check_cancelled=check_cancelled)
+        else:
+            page = pagereader.read(url, timeout=left)
     else:
         page = ""
     left = ladder_ends - time.monotonic()
     if not page and left >= BROWSER_MIN_SECONDS:
-        options = {"timeout": left}
         if check_cancelled is not None:
-            options["check_cancelled"] = check_cancelled
-        page = browser.read(url, **options)
+            page = browser.read(url, timeout=left, check_cancelled=check_cancelled)
+        else:
+            page = browser.read(url, timeout=left)
     if page:
         log.info("a source refused the plain fetch and a later rung read it")
     return page

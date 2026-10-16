@@ -37,8 +37,9 @@ const STEPS: &[Step] = &[
         icon: "check",
         title: "Welcome to Kriko",
         body: "Kriko brings known product problems, their sources, and useful \
-checks next to the listing you are reading. Everything stays on this \
-computer: your catalogs, history and drafts do not leave it.",
+checks next to the listing you are reading. Your catalogs and history are \
+stored on this computer. Online research sends your question and relevant \
+context to the providers you choose.",
         dest: None,
         go: None,
         key: "Begin",
@@ -57,7 +58,7 @@ installed catalog works offline and needs no key.",
     Step {
         icon: "agents",
         title: "Set up an agent",
-        body: "A check asks an agent to search and read. Agents shows what is \
+        body: "Online research asks an agent to search and read. Agents shows what is \
 available on this machine — an installed coding agent, a local model, or a \
 paid API with your own key — and what each one still needs.",
         dest: Some(Tab::Agents),

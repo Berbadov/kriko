@@ -40,7 +40,7 @@ def test_a_session_with_no_tools_is_told_so_before_it_tries_one(monkeypatch):
     researcher = harness.HarnessResearcher(row("mistral-vibe"))
     monkeypatch.setattr(researcher, "_run", lambda prompt: prompts.append(prompt) or "{}")
 
-    researcher.ask("Write the pack.")
+    researcher.ask("Write the pack.", allow_tools=False)
 
     assert prompts[0].startswith("Write the pack.")
     assert "no tools of any kind" in prompts[0]

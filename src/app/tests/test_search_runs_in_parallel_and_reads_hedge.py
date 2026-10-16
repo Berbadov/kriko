@@ -103,6 +103,20 @@ def test_a_search_with_one_engine_is_still_asked_one_query_at_a_time():
     assert [asked for _q, asked in search.calls] == ["google", "google", "google"]
 
 
+@pytest.mark.parametrize("quick", [False, True])
+def test_more_queries_than_engines_never_overlap_the_same_engine(quick):
+    queries = ["q1", "q2", "q3", "q4", "q5"]
+    search = Engines(["google", "bing"], delay=0.05)
+    pages = {f"https://a.test/{query}": f"Page about {query}. " * 15
+             for query in queries}
+
+    _asker(search, pages)._read(queries, quick=quick)
+
+    assert len(search.calls) == len(queries)
+    assert search.most_per_engine == 1
+    assert {asked for _query, asked in search.calls} == {"google", "bing"}
+
+
 def test_spares_are_read_beside_pages_that_do_not_answer(monkeypatch):
     monkeypatch.setattr(local_agent, "HEDGE_AFTER", 0.2)
     monkeypatch.setattr(local_agent, "READ_DEADLINE", 5.0)

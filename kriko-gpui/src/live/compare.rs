@@ -282,6 +282,8 @@ pub struct State {
     pub drafts_max: usize,
     pub drafts_loaded: bool,
     pub drafts_error: Option<String>,
+    /// A Home row asked to open this saved draft; fulfilled after drafts refresh.
+    pub requested_draft: Option<String>,
     /// One draft create, save or delete at a time; rapid clicks used to race
     /// snapshot writes and let an older request win last.
     pub draft_pending: bool,
@@ -357,6 +359,12 @@ fn draft_from(v: &Value) -> Draft {
             .filter_map(|x| x.as_str().map(String::from))
             .collect(),
     }
+}
+
+fn requested_draft_id(drafts: &[Draft], requested: Option<&str>) -> Option<String> {
+    requested
+        .filter(|id| drafts.iter().any(|draft| draft.draft_id == *id))
+        .map(str::to_string)
 }
 
 fn question_from(v: &Value) -> Question {
@@ -802,6 +810,13 @@ impl Kriko {
         }
     }
 
+    /// Home has its own recent draft snapshot. Refresh Compare before selecting
+    /// the clicked ID so a stale list cannot silently open a different draft.
+    pub fn open_home_draft(&mut self, draft_id: String, cx: &mut Context<Self>) {
+        self.live.compare.requested_draft = Some(draft_id);
+        self.refresh_compare(cx);
+    }
+
     // ---- drafts ----
 
     /// Reads the saved drafts; on the first read, opens the first one.
@@ -810,18 +825,31 @@ impl Kriko {
             this.note(&reply);
             match reply {
                 Ok(v) => {
-                    let c = &mut this.live.compare;
-                    c.drafts = api::arr(&v, "items").iter().map(draft_from).collect();
-                    c.drafts_max = api::n(&v, "max").unwrap_or(0.0) as usize;
-                    c.drafts_loaded = true;
-                    c.drafts_error = None;
-                    c.loaded = true;
-                    let keep = c.draft.clone().filter(|id| c.drafts.iter().any(|d| d.draft_id == *id));
-                    if keep.is_none() {
-                        c.draft = None;
-                    }
-                    if open_first && c.draft.is_none() {
-                        if let Some(first) = c.drafts.first().map(|d| d.draft_id.clone()) {
+                    let (requested, requested_any, current) = {
+                        let c = &mut this.live.compare;
+                        c.drafts = api::arr(&v, "items").iter().map(draft_from).collect();
+                        c.drafts_max = api::n(&v, "max").unwrap_or(0.0) as usize;
+                        c.drafts_loaded = true;
+                        c.drafts_error = None;
+                        c.loaded = true;
+                        let requested = c.requested_draft.take();
+                        let requested_any = requested.is_some();
+                        let current = c.draft.clone().filter(|id| c.drafts.iter().any(|d| d.draft_id == *id));
+                        if requested.is_none() {
+                            c.draft = current.clone();
+                        }
+                        let requested = requested_draft_id(&c.drafts, requested.as_deref());
+                        (requested, requested_any, c.draft.clone())
+                    };
+                    if let Some(id) = requested {
+                        this.select_draft(&id, cx);
+                    } else if requested_any {
+                        this.live.compare.say = Some("That saved comparison is no longer available.".into());
+                    } else if this.live.compare.draft.is_none()
+                        && current.is_none()
+                        && open_first
+                    {
+                        if let Some(first) = this.live.compare.drafts.first().map(|d| d.draft_id.clone()) {
                             this.select_draft(&first, cx);
                         }
                     }
@@ -1840,6 +1868,17 @@ fn round4(v: f32) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_home_draft_request_selects_its_id_instead_of_the_first_draft() {
+        let drafts = vec![
+            Draft { draft_id: "first".into(), name: "First".into(), lookup_ids: vec![] },
+            Draft { draft_id: "clicked".into(), name: "Clicked".into(), lookup_ids: vec![] },
+        ];
+        assert_eq!(requested_draft_id(&drafts, Some("clicked")).as_deref(), Some("clicked"));
+        assert_eq!(requested_draft_id(&drafts, Some("gone")), None);
+        assert_eq!(requested_draft_id(&drafts, None), None);
+    }
 
     #[test]
     fn question_job_keeps_source_and_usage_facts_without_inventing_missing_tokens() {

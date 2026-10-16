@@ -5,7 +5,7 @@ import json
 import pytest
 
 from app import quicklook
-from app.providers import local_agent, local_asker
+from app.providers import local_agent, local_asker, openserp
 from app.providers.local_inference import LocalInferenceError
 from app.providers.local_pipeline import (
     EXTRACT_SCHEMA, GROUP_SCHEMA, IDENTITY_SCHEMA, LANGUAGE_CHECK_SCHEMA,
@@ -148,7 +148,7 @@ def test_the_local_plane_searches_on_this_machine_whatever_the_setting_says(monk
                         search_kind="exa")
     assert asker.search_provider == "openserp"
     assert asker.parallel_search is False
-    assert engines == ["duckduckgo,bing,ecosia"]
+    assert engines == [openserp.LOCAL_ENGINES]
 
 
 def test_a_4k_context_keeps_identity_unknowns_and_a_source_sentence():

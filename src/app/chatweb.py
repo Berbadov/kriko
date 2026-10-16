@@ -118,7 +118,10 @@ def reader(timeout: float = 5.0, *, check_cancelled=None):
                             return Fetched("")
                         charset = response.headers.get_content_charset() or "utf-8"
                         markup = response.read(MAX_BYTES).decode(charset, "replace")
-                        return Fetched(fetch.to_text(markup), fetch.published_at(markup))
+                        text = fetch.to_text(markup)
+                        if fetch.challenged(text):
+                            return Fetched("")
+                        return Fetched(text, fetch.published_at(markup))
             except (urllib.error.URLError, TimeoutError, OSError,
                     LookupError, ValueError, socket.gaierror):
                 return Fetched("")

@@ -57,6 +57,13 @@ def test_a_bot_check_answered_200_climbs_the_ladder_and_is_not_kept(site, rungs)
     assert rungs[0] == "hosted"
 
 
+def test_a_quick_look_drops_a_bot_check_without_starting_fallbacks(site, rungs):
+    site["/check"] = CHECK
+    page = fetch.reader(timeout=10.0)(site["base"] + "/check", allow_fallback=False)
+    assert page.text == ""
+    assert rungs == []
+
+
 def test_a_bot_check_hidden_in_a_large_page_is_still_a_bot_check(site, rungs):
     # The real one was 118 KB of markup around 145 characters of words.
     site["/big"] = ("<html><head><script>" + "x=1;" * 30000

@@ -3876,9 +3876,9 @@ class _TurnHooks:
         self._progress.partial({**self._ids, "agent": dict(self._agent), **snapshot})
 
 
-def _chat_web_sources(app_state, app_state_path, progress: Progress):
-    """Reuse the reader's search choice; no model or search readiness probe per turn."""
-    from app import chatweb, prefs
+def _chat_web_searcher(app_state, app_state_path, progress: Progress):
+    """Build the selected host search on the turn's owner thread."""
+    from app import prefs
     from app.providers import openserp
 
     chosen = prefs.read(app_state)
@@ -3892,7 +3892,48 @@ def _chat_web_sources(app_state, app_state_path, progress: Progress):
             language=chosen.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en", timeout=8.0,
             mode="any")
     search.check_cancelled = progress.check
-    return search, chatweb.reader(timeout=5.0)
+    return search
+
+
+def _chat_web_sources(app_state, app_state_path, progress: Progress):
+    """Compatibility pair for callers that need both host web callables."""
+    from app import chatweb
+
+    return (_chat_web_searcher(app_state, app_state_path, progress),
+            chatweb.reader(timeout=5.0))
+
+
+def _chat_web_accessors(app_state, app_state_path, progress: Progress):
+    """Build the page reader on the owner thread and reuse one lazy searcher."""
+    from app import chatweb
+
+    page_reader = chatweb.reader(timeout=5.0)
+    searcher = None
+
+    def search(query: str, limit: int = 5):
+        nonlocal searcher
+        progress.check()
+        if searcher is None:
+            searcher = _chat_web_searcher(app_state, app_state_path, progress)
+        return searcher(query, limit)
+
+    def read(url: str):
+        # `chatdata` installs its worker-safe event check on the reader
+        # accessor. Forward it to the underlying HTTP reader so cancellation
+        # is also checked between redirect hops.
+        checker = getattr(read, "check_cancelled", None)
+        if checker is not None:
+            page_reader.check_cancelled = checker
+        return page_reader(url)
+
+    return search, read
+
+
+def _chat_native_tools(message: str, history: list[dict]) -> bool | None:
+    """Use native web tools for internet requests; let each CLI keep its fast path otherwise."""
+    from app import chat
+
+    return True if chat.route_message(message, history) == "web" else None
 
 
 def _stream_chat_completion(completer, prompt: str, on_text: Callable[[str], None]) -> str:
@@ -3930,22 +3971,19 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             store = connect(settings.store_path, read_only=True)
         except (sqlite3.Error, OSError):
             store = None  # no packs installed yet: the sources say so, nothing fails
-        # Construct sockets lazily: a normal conversation never starts a search.
-        def web_search(query: str, limit: int = 5) -> list[dict]:
-            progress.check()
-            search, _read = _chat_web_sources(app_state, settings.app_state_path, progress)
-            return search(query, limit)
-
-        from app import chatweb
-
+        # Construct sockets lazily and at most once: a normal conversation
+        # never starts a search, while repeated reads share the same bounded pair.
+        web_search, web_read = _chat_web_accessors(
+            app_state, settings.app_state_path, progress)
         ctx = chatdata.Context(store=store, app=app_state, web_search=web_search,
-                               web_read=chatweb.reader(timeout=5.0),
+                               web_read=web_read,
                                check_cancelled=progress.check)
         agent: dict = {}
         # The same channel as the job, minus `set`. `_ask_about_checks` takes a
         # Progress; the cast says the one thing it may not do is set progress.
         quiet = cast(Progress, _QuietProgress(progress))
         ask_stream: chat.StreamAsk | None = None
+        native_tools = _chat_native_tools(text, history)
         try:
             if _use_local_ask(settings, params):
                 completer = _local_structured_completer(settings, params, progress)
@@ -3960,13 +3998,13 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 def ask(prompt: str) -> str:
                     reply, _ = _ask_about_checks(settings, {**params, "question": text},
                                                  quiet, prompt, on_agent=agent.update,
-                                                 allow_tools=False)
+                                                 allow_tools=native_tools)
                     return reply
 
                 def stream_harness(prompt: str, on_text: Callable[[str], None]) -> str:
                     reply, _ = _ask_about_checks(settings, {**params, "question": text},
                                                  quiet, prompt, on_agent=agent.update,
-                                                 on_text=on_text, allow_tools=False)
+                                                 on_text=on_text, allow_tools=native_tools)
                     return reply
                 ask_stream = stream_harness
 
@@ -4025,7 +4063,7 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       on_agent: Callable[[dict], None] | None = None,
                       on_text: Callable[[str], None] | None = None,
                       timeout: float = 0.0, effort: str = "",
-                      allow_tools: bool = True,
+                      allow_tools: bool | None = True,
                       follow_up: bool = False, product: str = "",
                       question: str = "", fallback_brief: str = "") -> tuple[str, list[dict]]:
     """The reader's plane answers one brief. Returns the reply and the pages behind it.
@@ -4100,9 +4138,51 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     if follow_up and not local and callable(host_followup):
         reply = host_followup(brief, product=product, question=question).strip()
     else:
-        reply = (researcher.ask(brief) if allow_tools or local
-                 else researcher.ask(brief, allow_tools=False)).strip()
+        use_tools = allow_tools
+        protocol = ""
+        tool_transport = ""
+        if not local:
+            # Codex and Vibe have a verified fast persistent completion path.
+            # Other CLIs have no verified tool-less mode, so keep their normal
+            # ask path. In particular, Chat can always turn native tools on
+            # explicitly for web requests without changing saved preferences.
+            from app.providers.harness import TOOLLESS_PROTOCOLS
+
+            protocol = str(getattr(getattr(researcher, "harness", None), "protocol", ""))
+            tool_transport = str(getattr(researcher, "transport_mode", ""))
+            if use_tools is None:
+                use_tools = protocol not in TOOLLESS_PROTOCOLS
+        restore_transport = None
+        if (not local and use_tools is True and protocol in TOOLLESS_PROTOCOLS
+                and tool_transport == "persistent"):
+            # A web request needs tools even when the reader's general CLI
+            # preference is persistent. Choose a capable path on this
+            # researcher only, restore its preference, and log what happened.
+            restore_transport = tool_transport
+            researcher.transport_mode = "auto"
+            progress.log(f"{identity['label']}: using the tool-enabled path for this web answer")
+        try:
+            if local or use_tools is not False:
+                reply = researcher.ask(brief).strip()
+            else:
+                reply = researcher.ask(brief, allow_tools=False).strip()
+        finally:
+            if restore_transport is not None:
+                researcher.transport_mode = restore_transport
     progress.check()
+    if on_agent is not None and not local:
+        telemetry = getattr(researcher, "telemetry", {})
+        actual_transport = None
+        if isinstance(telemetry, dict):
+            run = telemetry.get("run")
+            if isinstance(run, dict):
+                actual_transport = run.get("transport")
+            if not actual_transport:
+                transport = telemetry.get("transport")
+                if isinstance(transport, dict):
+                    actual_transport = transport.get("transport")
+        if actual_transport:
+            on_agent({**identity, "transport": str(actual_transport)})
     if not follow_up:
         return reply, []
     answer, cited = followup.split(reply)
