@@ -2089,6 +2089,25 @@ def submissions(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
     ]
 
 
+def submissions_for(conn: sqlite3.Connection, subject_id: str, pack_id: str,
+                    limit: int = 20) -> list[dict]:
+    """One subject's batches, oldest first — the order a brief retells them in.
+
+    The brief's memory section runs on this: what earlier runs kept, what
+    they lost, and which searches went nowhere. Oldest first because that
+    is the story's own order — a run that learns starts with the first
+    attempt, not the newest.
+    """
+    return [
+        _submission(row)
+        for row in conn.execute(
+            "SELECT * FROM submissions WHERE subject_id = ? AND pack_id = ?"
+            " ORDER BY created_at ASC, rowid ASC LIMIT ?",
+            (subject_id, pack_id, max(0, limit)),
+        )
+    ]
+
+
 def refusal_reasons(conn: sqlite3.Connection, limit: int = 400) -> list[dict]:
     """Why findings are being refused, commonest first.
 

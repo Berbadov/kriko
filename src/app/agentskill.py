@@ -150,9 +150,18 @@ Run them in order. Step 2 is for when step 1 returns nothing.
 
 {loop}
 
+Step 5 is not the end. Its answer names what the run did not establish — the
+pack's domains with no claim yet — and any refused finding one field short.
+Write the next queries from those gaps, not from the brief's seeds, and
+submit again. An answer that names nothing missing is the stop signal; so
+is two rounds of gap queries that keep nothing new. Then say what could not
+be established.
+
 Never skip step 3. Its output comes from the pack, not from the tools, and it
 is the only statement of what this category considers worth keeping: the same
-finding is valuable for one pack and noise for another.
+finding is valuable for one pack and noise for another. The brief from step 3
+also states the effort this run is — fast or deep — and its budget. The budget
+is part of the task: work inside it, and do not turn a fast run into a deep one.
 
 ## A finding
 
@@ -173,6 +182,13 @@ Optional: `component` or `component_hint` (the concrete part), `advice`.
 `document_text` is what makes the grounding check possible: without it there is
 nothing to check the quote against. Findings arrive as drafts, so one you are
 unsure of is better filed with its weak source than dropped.
+
+Before submitting, grade each finding against the bar from step 3: the quote
+copied character for character, a rationale that says what goes wrong and
+when, a title that could only be this subject. Drop the ones you would
+refuse yourself. A finding the store already knows is answered as already
+known — its page still counts as evidence, but the search that found it is
+done.
 
 ## When a finding is refused
 
