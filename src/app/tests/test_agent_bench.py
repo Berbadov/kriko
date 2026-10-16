@@ -213,7 +213,10 @@ def test_the_old_behaviour_that_forced_low_effort_fails_the_benchmark(tasks_):
 
 # ── running it responsibly ──────────────────────────────────────────────────
 
-def test_an_agent_that_browses_for_itself_is_listed_and_not_scored(tasks_):
+def test_an_agent_that_browses_for_itself_is_listed_and_not_scored(tasks_, monkeypatch):
+    monkeypatch.setattr(
+        harness, "HOST_READ_HARNESSES",
+        harness.HOST_READ_HARNESSES - {"claude-code"})
     ran = runner.run_bench(tasks_[:1], ["claude-code"], reps=1, profile="clean")
 
     assert ran["trials"] == [] and ran["agents"] == []
