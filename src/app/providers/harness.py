@@ -88,9 +88,12 @@ SEARCH_TOOLS = ("WebSearch", "WebFetch")
 #: The CLIs for which Kriko searches and reads the pages itself, then hands
 #: them the text, instead of letting the CLI browse. What such a CLI was shown
 #: is therefore known (`HarnessResearcher.sources`), a quote is checked against
-#: it, and a benchmark can serve it a fixed web. The others search with their
-#: own tools, which Kriko can neither see into nor replace.
-HOST_READ_HARNESSES = frozenset({"codex", "antigravity-cli", "mistral-vibe"})
+#: it, and a benchmark can serve it a fixed web. Every shipped CLI is here:
+#: Kriko searches and reads pages in parallel on the reader's machine and the
+#: agent makes one call, where a CLI browsing turn by turn took 53 s against
+#: 15-26 s for the same quick look. A CLI not listed searches with its own
+#: tools, which Kriko can neither see into nor replace.
+HOST_READ_HARNESSES = frozenset({"codex", "antigravity-cli", "mistral-vibe", "claude-code"})
 
 #: The agents that have a persistent protocol Kriko can drive, by the `protocol`
 #: of their row. Codex keeps one app-server (`codex_transport`); the rest share
@@ -110,6 +113,17 @@ def transport_env() -> str:
 #: The persistent protocols that hand the model no tools. Those agents are fed
 #: pages Kriko read itself; asking one to search natively needs a process.
 TOOLLESS_PROTOCOLS = frozenset({"codex", "vibe"})
+
+#: Said to an agent whose persistent session has no tools at all. Left unsaid it
+#: tries them: a measured Vibe pack-authoring run asked to search, open a page
+#: and run `curl` some fifteen times, each a refused round trip, and finished
+#: after five minutes with no claim. One sentence up front costs nothing.
+TOOLLESS_NOTE = (
+    "\n\nThis session has no tools of any kind: no web search, no page opening, "
+    "no shell, no files. Every attempt is refused and costs a turn. Do not try "
+    "one. Answer at once from this prompt and what you already know, and leave "
+    "out any claim you cannot ground in text given here."
+)
 
 _CODEX_SUPPORT: dict[tuple[str, float], bool] = {}
 _CODEX_SUPPORT_LOCK = threading.Lock()
@@ -2966,7 +2980,7 @@ class HarnessResearcher(AgentResearcher):
         search_url, search_language = self._search_settings()
         search_url = local_discovery.base_of(search_url) or local_discovery.SEARCH_DEFAULT_URL
         search = openserp.searcher(
-            search_url, engine="google,duckduckgo,bing", language=search_language)
+            search_url, engine=openserp.LOCAL_ENGINES, language=search_language)
 
         def no_completion(_prompt):
             raise RuntimeError("host page gathering must not call a local model")
@@ -3323,7 +3337,7 @@ class HarnessResearcher(AgentResearcher):
             previous_mode = self.transport_mode
             self.transport_mode = "persistent"
             try:
-                return self._run(prompt + self.harness.ask_note)
+                return self._run(prompt + TOOLLESS_NOTE)
             finally:
                 self.transport_mode = previous_mode
 

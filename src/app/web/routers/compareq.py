@@ -66,6 +66,8 @@ def ask_question(
         })
     except KeyError as exc:  # pragma: no cover - the handler is registered
         raise HTTPException(400, str(exc)) from exc
+    state.set_compare_question_job(
+        conn, draft_id, question["question_id"], job_id)
     return {**question, "job_id": job_id, "kind": "compare_ask"}
 
 

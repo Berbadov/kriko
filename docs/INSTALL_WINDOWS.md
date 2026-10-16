@@ -31,6 +31,11 @@ Double-click `kriko-<version>-x86_64.msi`. It is a per-user install: no
 administrator prompt, nothing under Program Files, and it lands in
 `%LOCALAPPDATA%\Programs\Kriko`. Two programs go there, with three shortcuts.
 
+The install shows its progress bar and then one last screen with a checkbox,
+**Open Kriko**, ticked by default. Leave it ticked and press **Finish** and the
+app you just installed opens; untick it to start it later yourself. A silent
+install (`msiexec /qn`) never launches anything.
+
 | Shortcut | Opens |
 |---|---|
 | **Kriko** (Start menu, desktop) | `kriko.exe`, the app. It starts the engine, `kriko-sidecar.exe`, and stops it again |
@@ -48,7 +53,10 @@ refuses to install over a newer one.
 
 ### 2. Open it
 
-Start **Kriko**. The window says it is starting, then shows the app. Your data
+Start **Kriko**. The window says it is starting, then shows the app. A first
+launch walks you through the places a check needs — a catalog, an agent, the
+browser extension — and offers the first check; **Skip tour** ends it, and
+Settings has it back under **General → Take the tour**. Your data
 lives in `$HOME\.kriko`: the store `knowledge.sqlite` and your history
 `app.sqlite`.
 

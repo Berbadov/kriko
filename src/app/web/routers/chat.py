@@ -10,6 +10,7 @@ Nothing here reads the knowledge store: the sources do, and only when the agent
 asks for them during a turn.
 """
 
+import json
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -20,6 +21,23 @@ from app.web import state
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+
+def _active_chat_job(conn, thread_id: str) -> str:
+    """Latest queued or running chat turn for one conversation, if any."""
+    rows = conn.execute(
+        "SELECT job_id, params_json FROM jobs WHERE kind = 'chat_ask'"
+        " AND state IN (?, ?, ?) ORDER BY rowid DESC",
+        (state.QUEUED, state.RUNNING, state.CANCELLING),
+    ).fetchall()
+    for row in rows:
+        try:
+            params = json.loads(row["params_json"] or "{}")
+        except (TypeError, ValueError):
+            continue
+        if isinstance(params, dict) and params.get("thread_id") == thread_id:
+            return str(row["job_id"])
+    return ""
 
 
 class ThreadRequest(BaseModel):
@@ -50,6 +68,10 @@ def create_thread(body: ThreadRequest, conn=Depends(get_app_state)) -> dict:
 
 @router.delete("/threads/{thread_id}")
 def delete_thread(thread_id: str, conn=Depends(get_app_state)) -> dict:
+    if state.get_chat_thread(conn, thread_id) is None:
+        raise HTTPException(404, f"no conversation {thread_id}")
+    if _active_chat_job(conn, thread_id):
+        raise HTTPException(409, "conversation has an active chat turn")
     if not state.delete_chat_thread(conn, thread_id):
         raise HTTPException(404, f"no conversation {thread_id}")
     return {"deleted": thread_id}
@@ -59,7 +81,11 @@ def delete_thread(thread_id: str, conn=Depends(get_app_state)) -> dict:
 def list_messages(thread_id: str, conn=Depends(get_app_state)) -> dict:
     if state.get_chat_thread(conn, thread_id) is None:
         raise HTTPException(404, f"no conversation {thread_id}")
-    return {"items": state.chat_messages(conn, thread_id)}
+    out: dict[str, object] = {"items": state.chat_messages(conn, thread_id)}
+    active = _active_chat_job(conn, thread_id)
+    if active:
+        out["job_id"] = active
+    return out
 
 
 @router.post("/threads/{thread_id}/messages")
@@ -75,7 +101,7 @@ def post_message(
     """
     if state.get_chat_thread(conn, thread_id) is None:
         raise HTTPException(404, f"no conversation {thread_id}")
-    text = " ".join(body.text.split())
+    text = body.text.strip()
     if not text:
         raise HTTPException(422, "a question needs words")
     message = state.add_chat_message(conn, thread_id, role="reader", text=text)

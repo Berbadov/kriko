@@ -278,8 +278,12 @@ def _wire_researcher_text(researcher, progress: Progress) -> None:
 
 def _wire_codex_answer_stream(researcher, agent_id: str,
                               on_text: Callable[[str], None]) -> bool:
-    """Forward a final chat answer into its live card for the resolved Codex only."""
-    if agent_id != "codex" or not hasattr(researcher, "on_text"):
+    """Forward the provider's parsed prose deltas into the live answer card.
+
+    The historic helper name is retained for callers. Every supported researcher
+    filters protocol events before publishing `on_text`; these are never raw stdout.
+    """
+    if not hasattr(researcher, "on_text"):
         return False
     prior_text = getattr(researcher, "on_text", None)
 
@@ -3714,6 +3718,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
             stored = state.saved_answer(app_state, lookup_id)
             if stored:
                 answers.append(stored)
+        previous = [q for q in state.compare_questions(app_state, draft_id)
+                    if q["question_id"] != question_id and q["answer"]][:6]
     finally:
         app_state.close()
     if len(answers) < 2:
@@ -3725,6 +3731,17 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     products = ", ".join(str(stored.get("label") or "").strip()[:120]
                           for stored in answers if stored.get("label"))[:1000]
     context = _compare_brief(question, answers, max_chars=10000)
+    if previous:
+        # Later questions can refer to an earlier answer. Keep this as
+        # conversation context, clearly separate from the saved checks that
+        # remain the evidence for the comparison.
+        history = [
+            "Previous questions and agent replies in this comparison (context, not evidence):"
+        ]
+        for earlier in reversed(previous):
+            history.append(f"Question: {earlier['question'][:500]}")
+            history.append(f"Agent reply: {earlier['answer'][:1000]}")
+        context += "\n\n" + "\n".join(history)[:4000]
     brief = followup.web_brief(question, product=products, context=context)
     progress.log(f"comparison brief: {len(brief)} characters from {len(answers)} saved checks")
 
@@ -3859,6 +3876,77 @@ class _TurnHooks:
         self._progress.partial({**self._ids, "agent": dict(self._agent), **snapshot})
 
 
+def _chat_web_searcher(app_state, app_state_path, progress: Progress):
+    """Build the selected host search on the turn's owner thread."""
+    from app import prefs
+    from app.providers import openserp
+
+    chosen = prefs.read(app_state)
+    if chosen.get(prefs.SEARCH):
+        from app.providers import _searcher
+
+        search, _provider = _searcher(app_state_path, chosen[prefs.SEARCH])
+    else:
+        search = openserp.searcher(
+            chosen.get(prefs.LOCAL_SEARCH_URL, ""), engine="duckduckgo,bing,google",
+            language=chosen.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en", timeout=8.0,
+            mode="any")
+    search.check_cancelled = progress.check
+    return search
+
+
+def _chat_web_sources(app_state, app_state_path, progress: Progress):
+    """Compatibility pair for callers that need both host web callables."""
+    from app import chatweb
+
+    return (_chat_web_searcher(app_state, app_state_path, progress),
+            chatweb.reader(timeout=5.0))
+
+
+def _chat_web_accessors(app_state, app_state_path, progress: Progress):
+    """Build the page reader on the owner thread and reuse one lazy searcher."""
+    from app import chatweb
+
+    page_reader = chatweb.reader(timeout=5.0)
+    searcher = None
+
+    def search(query: str, limit: int = 5):
+        nonlocal searcher
+        progress.check()
+        if searcher is None:
+            searcher = _chat_web_searcher(app_state, app_state_path, progress)
+        return searcher(query, limit)
+
+    def read(url: str):
+        # `chatdata` installs its worker-safe event check on the reader
+        # accessor. Forward it to the underlying HTTP reader so cancellation
+        # is also checked between redirect hops.
+        checker = getattr(read, "check_cancelled", None)
+        if checker is not None:
+            page_reader.check_cancelled = checker
+        return page_reader(url)
+
+    return search, read
+
+
+def _chat_native_tools(message: str, history: list[dict]) -> bool | None:
+    """Use native web tools for internet requests; let each CLI keep its fast path otherwise."""
+    from app import chat
+
+    return True if chat.route_message(message, history) == "web" else None
+
+
+def _stream_chat_completion(completer, prompt: str, on_text: Callable[[str], None]) -> str:
+    """Local sockets emit deltas; the Chat view consumes complete drafts."""
+    pieces: list[str] = []
+
+    def append(piece: str) -> None:
+        pieces.append(piece)
+        on_text("".join(pieces))
+
+    return completer.stream(prompt, append)
+
+
 def chat_ask(settings, params: dict, progress: Progress) -> dict:
     """One turn of a conversation with the reader's own agent (app/chat.py).
 
@@ -3883,29 +3971,42 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             store = connect(settings.store_path, read_only=True)
         except (sqlite3.Error, OSError):
             store = None  # no packs installed yet: the sources say so, nothing fails
-        ctx = chatdata.Context(store=store, app=app_state)
+        # Construct sockets lazily and at most once: a normal conversation
+        # never starts a search, while repeated reads share the same bounded pair.
+        web_search, web_read = _chat_web_accessors(
+            app_state, settings.app_state_path, progress)
+        ctx = chatdata.Context(store=store, app=app_state, web_search=web_search,
+                               web_read=web_read,
+                               check_cancelled=progress.check)
         agent: dict = {}
         # The same channel as the job, minus `set`. `_ask_about_checks` takes a
         # Progress; the cast says the one thing it may not do is set progress.
         quiet = cast(Progress, _QuietProgress(progress))
+        ask_stream: chat.StreamAsk | None = None
+        native_tools = _chat_native_tools(text, history)
         try:
             if _use_local_ask(settings, params):
                 completer = _local_structured_completer(settings, params, progress)
                 agent.update(id="local", label="Local model",
                              model=str(getattr(completer, "model", "")))
                 ask = completer
-                ask_stream = None
+                if callable(getattr(completer, "stream", None)):
+                    def stream_local(prompt: str, on_text: Callable[[str], None]) -> str:
+                        return _stream_chat_completion(completer, prompt, on_text)
+                    ask_stream = stream_local
             else:
                 def ask(prompt: str) -> str:
                     reply, _ = _ask_about_checks(settings, {**params, "question": text},
-                                                 quiet, prompt, on_agent=agent.update)
+                                                 quiet, prompt, on_agent=agent.update,
+                                                 allow_tools=native_tools)
                     return reply
 
-                def ask_stream(prompt: str, on_text: Callable[[str], None]) -> str:
+                def stream_harness(prompt: str, on_text: Callable[[str], None]) -> str:
                     reply, _ = _ask_about_checks(settings, {**params, "question": text},
                                                  quiet, prompt, on_agent=agent.update,
-                                                 on_text=on_text)
+                                                 on_text=on_text, allow_tools=native_tools)
                     return reply
+                ask_stream = stream_harness
 
             hooks = _TurnHooks(progress, {"thread_id": thread_id, "message_id": message_id},
                                agent)
@@ -3962,6 +4063,7 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       on_agent: Callable[[dict], None] | None = None,
                       on_text: Callable[[str], None] | None = None,
                       timeout: float = 0.0, effort: str = "",
+                      allow_tools: bool | None = True,
                       follow_up: bool = False, product: str = "",
                       question: str = "", fallback_brief: str = "") -> tuple[str, list[dict]]:
     """The reader's plane answers one brief. Returns the reply and the pages behind it.
@@ -4019,10 +4121,7 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
         on_agent(identity)
     _wire_researcher_text(researcher, progress)
     if on_text is not None:
-        # Chat can ask for a live answer stream on its final call. Preserve
-        # the normal run-status draft while also publishing the answer card's
-        # transient partial. The identity is resolved after fallback, so this
-        # only exposes prose when Codex is the agent that will actually run.
+        # Preserve the run-status draft while publishing the answer's prose.
         _wire_codex_answer_stream(researcher, identity["id"], on_text)
     if follow_up:
         writer = followup.Reply(progress.partial, base={"agent": identity})
@@ -4039,8 +4138,51 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     if follow_up and not local and callable(host_followup):
         reply = host_followup(brief, product=product, question=question).strip()
     else:
-        reply = researcher.ask(brief).strip()
+        use_tools = allow_tools
+        protocol = ""
+        tool_transport = ""
+        if not local:
+            # Codex and Vibe have a verified fast persistent completion path.
+            # Other CLIs have no verified tool-less mode, so keep their normal
+            # ask path. In particular, Chat can always turn native tools on
+            # explicitly for web requests without changing saved preferences.
+            from app.providers.harness import TOOLLESS_PROTOCOLS
+
+            protocol = str(getattr(getattr(researcher, "harness", None), "protocol", ""))
+            tool_transport = str(getattr(researcher, "transport_mode", ""))
+            if use_tools is None:
+                use_tools = protocol not in TOOLLESS_PROTOCOLS
+        restore_transport = None
+        if (not local and use_tools is True and protocol in TOOLLESS_PROTOCOLS
+                and tool_transport == "persistent"):
+            # A web request needs tools even when the reader's general CLI
+            # preference is persistent. Choose a capable path on this
+            # researcher only, restore its preference, and log what happened.
+            restore_transport = tool_transport
+            researcher.transport_mode = "auto"
+            progress.log(f"{identity['label']}: using the tool-enabled path for this web answer")
+        try:
+            if local or use_tools is not False:
+                reply = researcher.ask(brief).strip()
+            else:
+                reply = researcher.ask(brief, allow_tools=False).strip()
+        finally:
+            if restore_transport is not None:
+                researcher.transport_mode = restore_transport
     progress.check()
+    if on_agent is not None and not local:
+        telemetry = getattr(researcher, "telemetry", {})
+        actual_transport = None
+        if isinstance(telemetry, dict):
+            run = telemetry.get("run")
+            if isinstance(run, dict):
+                actual_transport = run.get("transport")
+            if not actual_transport:
+                transport = telemetry.get("transport")
+                if isinstance(transport, dict):
+                    actual_transport = transport.get("transport")
+        if actual_transport:
+            on_agent({**identity, "transport": str(actual_transport)})
     if not follow_up:
         return reply, []
     answer, cited = followup.split(reply)

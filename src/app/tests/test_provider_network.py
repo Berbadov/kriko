@@ -80,3 +80,174 @@ def test_network_kind_alias_acquires_one_outbound_slot(monkeypatch):
                         opener=lambda *_args, **_kwargs: Response()):
         pass
     assert acquired == ["outbound"]
+
+
+def test_openserp_search_timeout_can_be_shortened_by_the_caller(monkeypatch):
+    from app.providers import openserp
+
+    seen = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self):
+            return b'{"results": []}'
+
+    monkeypatch.setattr(openserp.network, "urlopen",
+                        lambda *args, **kwargs: seen.append(kwargs) or Response())
+    search = openserp.searcher(timeout=45.0)
+    search("default")
+    search("short", timeout=8.0)
+    assert [call["timeout"] for call in seen] == [45.0, 8.0]
+
+
+def test_openserp_search_mode_can_be_chosen_per_instance_or_call(monkeypatch):
+    from app.providers import openserp
+
+    seen = []
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self):
+            return b'{"results": []}'
+
+    def urlopen(request, **kwargs):
+        seen.append(request.full_url)
+        return Response()
+
+    monkeypatch.setattr(openserp.network, "urlopen", urlopen)
+    search = openserp.searcher(engine="bing", mode="any")
+    search("default")
+    search("override", mode="fast")
+    assert "/bing/search?" in seen[0]
+    assert "/mega/search?" in seen[1]
+    assert "mode=fast" in seen[1]
+
+
+def test_any_mode_keeps_usable_results_when_another_engine_only_returns_clickthroughs(monkeypatch):
+    from app.providers import openserp
+
+    seen = []
+    replies = {
+        "google": {"results": [{"url": "https://www.google.com/goto?url=opaque",
+                                 "title": "Sponsored result", "domain": "google.com"}]},
+        "bing": {"results": [{"url": "https://review.example/air-purifier",
+                               "title": "Air purifier review", "domain": "review.example"}]},
+    }
+
+    class Response:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self):
+            import json
+            return json.dumps(self.payload).encode()
+
+    def urlopen(request, **_kwargs):
+        seen.append(request.full_url)
+        return Response(replies["google" if "/google/" in request.full_url else "bing"])
+
+    monkeypatch.setattr(openserp.network, "urlopen", urlopen)
+    search = openserp.searcher(engine="google,bing", mode="any", timeout=8.0)
+
+    assert search("air purifier reviews", 5) == [{
+        "url": "https://review.example/air-purifier",
+        "title": "Air purifier review", "site": "review.example",
+    }]
+    assert any("/bing/search?" in url for url in seen)
+    assert all("/mega/" not in url for url in seen)
+
+
+def test_any_mode_returns_a_useful_engine_without_waiting_for_a_stalled_one(monkeypatch):
+    import json
+    import threading
+    import time
+    from app.providers import openserp
+
+    stalled = threading.Event()
+    release = threading.Event()
+
+    class Response:
+        def __init__(self, request, check):
+            self.request = request
+            self.check = check
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self):
+            if "/google/" in self.request.full_url:
+                stalled.set()
+                release.wait(3)
+                self.check()
+                return b'{"results": []}'
+            assert stalled.wait(1)
+            return json.dumps({"results": [{"url": "https://maker.example/spec",
+                                             "title": "Specification"}]}).encode()
+
+    monkeypatch.setattr(openserp.network, "urlopen",
+                        lambda request, **kwargs: Response(request, kwargs["check"]))
+    search = openserp.searcher(engine="google,bing", mode="any", timeout=2)
+    try:
+        began = time.monotonic()
+        assert search("a product")[0]["url"] == "https://maker.example/spec"
+        assert time.monotonic() - began < 1.0
+        assert not release.is_set()
+    finally:
+        release.set()
+
+
+def test_any_mode_polls_cancellation_on_the_owner_thread_and_stops_workers(monkeypatch):
+    import threading
+    import pytest
+    from app.providers import openserp
+
+    owner = threading.get_ident()
+    started = threading.Event()
+    exited = threading.Event()
+
+    class Response:
+        def __init__(self, check):
+            self.check = check
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            exited.set()
+
+        def read1(self, _size):
+            started.set()
+            exited.wait(0.01)
+            return b" "
+
+    def check():
+        assert threading.get_ident() == owner
+        if started.is_set():
+            raise RuntimeError("reader cancelled")
+
+    monkeypatch.setattr(openserp.network, "urlopen",
+                        lambda _request, **kwargs: Response(kwargs["check"]))
+    search = openserp.searcher(engine="google,bing", mode="any", timeout=1)
+    search.check_cancelled = check
+    with pytest.raises(RuntimeError, match="reader cancelled"):
+        search("a product")
+    assert exited.wait(1)

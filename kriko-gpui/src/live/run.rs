@@ -522,6 +522,9 @@ pub struct State {
     /// The option picked for each question, by question id.
     pub answers: HashMap<String, String>,
     pub start: Start,
+    /// Newest Run search request. A completed older request must not replace
+    /// the hits, error or loading state for a query sent after it.
+    search_generation: u64,
     // agents
     pub harnesses: Vec<Harness>,
     pub preferred: String,
@@ -559,6 +562,47 @@ pub struct State {
     /// draws a job's bar through `bar_value`.
     pub bars: HashMap<String, Smoothed>,
     bars_epoch: Option<Instant>,
+}
+
+fn begin_search(start: &mut Start, generation: &mut u64) -> u64 {
+    *generation = generation.wrapping_add(1);
+    start.searching = true;
+    start.searched = false;
+    start.hits.clear();
+    start.note.clear();
+    *generation
+}
+
+fn cancel_search(start: &mut Start, generation: &mut u64) {
+    *generation = generation.wrapping_add(1);
+    start.searching = false;
+    start.searched = false;
+    start.hits.clear();
+    start.note.clear();
+}
+
+fn finish_search(
+    start: &mut Start,
+    current_generation: u64,
+    response_generation: u64,
+    reply: Result<Vec<Hit>, String>,
+) -> bool {
+    if current_generation != response_generation {
+        return false;
+    }
+    start.searching = false;
+    start.searched = true;
+    match reply {
+        Ok(hits) => {
+            start.hits = hits;
+            start.note.clear();
+        }
+        Err(note) => {
+            start.hits.clear();
+            start.note = note;
+        }
+    }
+    true
 }
 
 const RETRY_PENDING_WINDOW: Duration = Duration::from_secs(20);
@@ -1289,24 +1333,26 @@ impl Kriko {
     pub fn search_subjects(&mut self, cx: &mut Context<Self>) {
         let q = self.run_search.value.trim().to_string();
         if q.is_empty() {
+            cancel_search(&mut self.live.run.start, &mut self.live.run.search_generation);
             return;
         }
-        let start = &mut self.live.run.start;
-        start.searching = true;
-        start.note.clear();
+        let generation = begin_search(
+            &mut self.live.run.start,
+            &mut self.live.run.search_generation,
+        );
         let path = format!("/api/search?q={}&limit=8", api::seg(&q));
-        self.fetch(cx, move || api::get(&path), |this, reply, _| {
-            this.note(&reply);
-            let start = &mut this.live.run.start;
-            start.searching = false;
-            start.searched = true;
-            match reply {
-                Ok(v) => start.hits = hits_from(&v),
-                Err(e) => {
-                    start.hits.clear();
-                    start.note = e.message;
-                }
+        self.fetch(cx, move || api::get(&path), move |this, reply, _| {
+            if this.live.run.search_generation != generation {
+                return;
             }
+            this.note(&reply);
+            let reply = reply.map(|v| hits_from(&v)).map_err(|e| e.message);
+            finish_search(
+                &mut this.live.run.start,
+                this.live.run.search_generation,
+                generation,
+                reply,
+            );
         });
     }
 
@@ -1630,6 +1676,76 @@ mod tests {
         assert!(retry_pending(&pending, "parent", started + Duration::from_secs(1)));
         assert!(!retry_pending(&pending, "parent", started + Duration::from_secs(21)));
         assert!(!retry_pending(&pending, "other", started + Duration::from_secs(1)));
+    }
+
+    #[test]
+    fn an_old_search_reply_cannot_replace_or_finish_the_newer_query() {
+        let mut start = Start::default();
+        let mut generation = 0;
+        let first = begin_search(&mut start, &mut generation);
+        let second = begin_search(&mut start, &mut generation);
+        let newer = Hit {
+            subject_id: "new".into(),
+            pack_id: "catalog".into(),
+            label: "New query result".into(),
+            identity: String::new(),
+            claims: 1,
+        };
+
+        assert!(!finish_search(&mut start, generation, first, Ok(Vec::new())));
+        assert!(start.searching, "the old reply must not clear B's spinner");
+        assert!(!start.searched);
+
+        assert!(finish_search(&mut start, generation, second, Ok(vec![newer])));
+        assert!(!start.searching);
+        assert!(start.searched);
+        assert_eq!(start.hits.len(), 1);
+        assert_eq!(start.hits[0].subject_id, "new");
+    }
+
+    #[test]
+    fn an_old_search_error_does_not_replace_the_newer_query_state() {
+        let mut start = Start::default();
+        let mut generation = 0;
+        let first = begin_search(&mut start, &mut generation);
+        let second = begin_search(&mut start, &mut generation);
+
+        assert!(!finish_search(
+            &mut start,
+            generation,
+            first,
+            Err("stale failure".into()),
+        ));
+        assert!(start.searching);
+        assert!(start.note.is_empty());
+        assert!(!start.searched);
+        assert!(finish_search(&mut start, generation, second, Ok(Vec::new())));
+        assert!(!start.searching);
+        assert!(start.note.is_empty());
+    }
+
+    #[test]
+    fn clearing_the_search_invalidates_an_in_flight_reply() {
+        let mut start = Start::default();
+        let mut generation = 0;
+        let request = begin_search(&mut start, &mut generation);
+        cancel_search(&mut start, &mut generation);
+
+        assert!(!finish_search(
+            &mut start,
+            generation,
+            request,
+            Ok(vec![Hit {
+                subject_id: "stale".into(),
+                pack_id: "catalog".into(),
+                label: "Stale hit".into(),
+                identity: String::new(),
+                claims: 0,
+            }]),
+        ));
+        assert!(!start.searching);
+        assert!(!start.searched);
+        assert!(start.hits.is_empty());
     }
 
     #[test]
