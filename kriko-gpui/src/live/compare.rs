@@ -21,8 +21,14 @@ use crate::app::{Kriko, Tab};
 use crate::live::knowledge::RUNS_MAX;
 use crate::marks::Phase;
 
-/// The most products that can be lined up at once.
-pub const MAX_SLOTS: usize = 8;
+/// The API keeps four checks per draft; keep the picker and table on that cap.
+pub const MAX_SLOTS: usize = 4;
+
+pub fn slot_available(slots: &[Option<String>], index: usize, lookup_id: &str) -> bool {
+    !slots.iter().enumerate().any(|(other, slot)| {
+        other != index && slot.as_deref() == Some(lookup_id)
+    })
+}
 
 // ---- what the engine holds ----
 
@@ -154,6 +160,8 @@ pub struct Question {
 
 #[derive(Clone, Default)]
 pub struct QuestionRun {
+    /// Text the agent has written so far, streamed through the job's partial result.
+    pub answer: String,
     pub state: String,
     pub progress: f32,
     pub message: String,
@@ -173,6 +181,7 @@ impl QuestionRun {
     fn from_job(job: &Value) -> Self {
         let result = job.get("result").unwrap_or(&Value::Null);
         Self {
+            answer: api::s(result, "answer"),
             state: api::s(job, "state"),
             progress: api::n(job, "progress").unwrap_or(0.0) as f32,
             message: api::s(job, "message"),
@@ -244,8 +253,19 @@ pub struct QRun {
     pub line: String,
     /// Why it was passed over ("not in your catalogs", a failure).
     pub note: Option<String>,
+    /// Why this row is waiting again: a missing catalog, a failed run, or a
+    /// stop requested by the reader. Retry remains available for all three.
+    pub outcome: Option<QueueOutcome>,
     /// How many claims the fresh answer holds, once done.
     pub claims: Option<usize>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum QueueOutcome {
+    NotInCatalogs,
+    Failed,
+    Stopped,
+    InAnotherWindow,
 }
 
 #[derive(Default)]
@@ -257,17 +277,22 @@ pub struct State {
 
     pub history: Vec<HistoryItem>,
     pub history_loaded: bool,
+    pub history_error: Option<String>,
     pub drafts: Vec<Draft>,
     pub drafts_max: usize,
     pub drafts_loaded: bool,
+    pub drafts_error: Option<String>,
+    /// A Home row asked to open this saved draft; fulfilled after drafts refresh.
+    pub requested_draft: Option<String>,
+    /// One draft create, save or delete at a time; rapid clicks used to race
+    /// snapshot writes and let an older request win last.
+    pub draft_pending: bool,
     pub draft: Option<String>,
 
     pub slots: Vec<Option<String>>,
     pub picker: Option<usize>,
     pub section: usize,
     pub detail: Option<(usize, usize)>,
-    pub scroll: f32,
-    pub dragging: bool,
     pub checks: HashMap<String, Loaded>,
 
     pub board_open: bool,
@@ -303,6 +328,8 @@ pub struct State {
     pub queue: Vec<QItem>,
     pub queue_max: usize,
     pub queue_loaded: bool,
+    pub queue_error: Option<String>,
+    pub queue_open: bool,
     pub queue_running: bool,
     /// Workers still going, including ones winding down after Stop. The queue
     /// is finished when the last of them returns, never when the first does.
@@ -332,6 +359,12 @@ fn draft_from(v: &Value) -> Draft {
             .filter_map(|x| x.as_str().map(String::from))
             .collect(),
     }
+}
+
+fn requested_draft_id(drafts: &[Draft], requested: Option<&str>) -> Option<String> {
+    requested
+        .filter(|id| drafts.iter().any(|draft| draft.draft_id == *id))
+        .map(str::to_string)
 }
 
 fn question_from(v: &Value) -> Question {
@@ -686,11 +719,15 @@ impl Kriko {
     pub fn refresh_compare(&mut self, cx: &mut Context<Self>) {
         self.fetch(cx, || api::get("/api/history?limit=200"), |this, reply, cx| {
             this.note(&reply);
-            if let Ok(v) = reply {
-                this.live.compare.history = api::arr(&v, "items").iter().map(history_from).collect();
-                this.live.compare.history_loaded = true;
-                // columns read before the history arrived learn their category
-                this.ensure_checks(cx);
+            match reply {
+                Ok(v) => {
+                    this.live.compare.history = api::arr(&v, "items").iter().map(history_from).collect();
+                    this.live.compare.history_loaded = true;
+                    this.live.compare.history_error = None;
+                    // columns read before the history arrived learn their category
+                    this.ensure_checks(cx);
+                }
+                Err(e) => this.live.compare.history_error = Some(e.message),
             }
         });
         self.fetch(
@@ -773,27 +810,51 @@ impl Kriko {
         }
     }
 
+    /// Home has its own recent draft snapshot. Refresh Compare before selecting
+    /// the clicked ID so a stale list cannot silently open a different draft.
+    pub fn open_home_draft(&mut self, draft_id: String, cx: &mut Context<Self>) {
+        self.live.compare.requested_draft = Some(draft_id);
+        self.refresh_compare(cx);
+    }
+
     // ---- drafts ----
 
     /// Reads the saved drafts; on the first read, opens the first one.
     pub fn load_drafts(&mut self, open_first: bool, cx: &mut Context<Self>) {
         self.fetch(cx, || api::get("/api/compare-drafts"), move |this, reply, cx| {
             this.note(&reply);
-            if let Ok(v) = reply {
-                let c = &mut this.live.compare;
-                c.drafts = api::arr(&v, "items").iter().map(draft_from).collect();
-                c.drafts_max = api::n(&v, "max").unwrap_or(0.0) as usize;
-                c.drafts_loaded = true;
-                c.loaded = true;
-                let keep = c.draft.clone().filter(|id| c.drafts.iter().any(|d| d.draft_id == *id));
-                if keep.is_none() {
-                    c.draft = None;
-                }
-                if open_first && c.draft.is_none() {
-                    if let Some(first) = c.drafts.first().map(|d| d.draft_id.clone()) {
-                        this.select_draft(&first, cx);
+            match reply {
+                Ok(v) => {
+                    let (requested, requested_any, current) = {
+                        let c = &mut this.live.compare;
+                        c.drafts = api::arr(&v, "items").iter().map(draft_from).collect();
+                        c.drafts_max = api::n(&v, "max").unwrap_or(0.0) as usize;
+                        c.drafts_loaded = true;
+                        c.drafts_error = None;
+                        c.loaded = true;
+                        let requested = c.requested_draft.take();
+                        let requested_any = requested.is_some();
+                        let current = c.draft.clone().filter(|id| c.drafts.iter().any(|d| d.draft_id == *id));
+                        if requested.is_none() {
+                            c.draft = current.clone();
+                        }
+                        let requested = requested_draft_id(&c.drafts, requested.as_deref());
+                        (requested, requested_any, c.draft.clone())
+                    };
+                    if let Some(id) = requested {
+                        this.select_draft(&id, cx);
+                    } else if requested_any {
+                        this.live.compare.say = Some("That saved comparison is no longer available.".into());
+                    } else if this.live.compare.draft.is_none()
+                        && current.is_none()
+                        && open_first
+                    {
+                        if let Some(first) = this.live.compare.drafts.first().map(|d| d.draft_id.clone()) {
+                            this.select_draft(&first, cx);
+                        }
                     }
                 }
+                Err(e) => this.live.compare.drafts_error = Some(e.message),
             }
         });
     }
@@ -801,6 +862,18 @@ impl Kriko {
     /// Opens a saved draft: its checks fill the slots, and its board,
     /// questions and pinned rows load. The one entry other screens use.
     pub fn select_draft(&mut self, draft_id: &str, cx: &mut Context<Self>) {
+        if self.live.compare.draft.as_deref() == Some(draft_id) {
+            return;
+        }
+        if self.live.compare.draft.as_deref() != Some(draft_id) && self.draft_unsaved() {
+            self.live.compare.say = Some(
+                "Save the current shortlist before opening another draft.".into());
+            return;
+        }
+        self.open_draft(draft_id, cx);
+    }
+
+    fn open_draft(&mut self, draft_id: &str, cx: &mut Context<Self>) {
         let Some(draft) = self.live.compare.drafts.iter().find(|d| d.draft_id == draft_id).cloned()
         else {
             return;
@@ -814,6 +887,7 @@ impl Kriko {
         c.notes.clear();
         c.note_open = None;
         c.questions.clear();
+        c.failed.clear();
         c.say = None;
         self.ensure_checks(cx);
         self.load_board(draft.draft_id.clone(), cx);
@@ -855,12 +929,17 @@ impl Kriko {
 
     pub fn assign_slot(&mut self, i: usize, lookup_id: String, cx: &mut Context<Self>) {
         let c = &mut self.live.compare;
+        if !slot_available(&c.slots, i, &lookup_id) {
+            c.say = Some("That saved check is already in another slot.".into());
+            return;
+        }
         while c.slots.len() <= i {
             c.slots.push(None);
         }
         c.slots[i] = Some(lookup_id);
         c.picker = None;
         c.detail = None;
+        c.say = None;
         self.ensure_checks(cx);
     }
 
@@ -870,6 +949,14 @@ impl Kriko {
             c.slots[i] = None;
         }
         c.detail = None;
+        c.picker = None;
+        c.say = None;
+    }
+
+    /// Retry one saved check after a visible read failure.
+    pub fn retry_check(&mut self, lookup_id: String, cx: &mut Context<Self>) {
+        self.live.compare.checks.remove(&lookup_id);
+        self.ensure_checks(cx);
     }
 
     /// Whether the slots differ from what the open draft holds.
@@ -878,6 +965,22 @@ impl Kriko {
         match c.draft.as_ref().and_then(|id| c.drafts.iter().find(|d| d.draft_id == *id)) {
             Some(d) => d.lookup_ids != self.slot_ids(),
             None => !self.slot_ids().is_empty(),
+        }
+    }
+
+    /// Restore the open draft's saved slot list, or clear a new unsaved list.
+    pub fn revert_draft(&mut self, cx: &mut Context<Self>) {
+        if self.live.compare.draft_pending {
+            return;
+        }
+        if let Some(id) = self.live.compare.draft.clone() {
+            self.open_draft(&id, cx);
+        } else {
+            let c = &mut self.live.compare;
+            c.slots.clear();
+            c.picker = None;
+            c.detail = None;
+            c.say = None;
         }
     }
 
@@ -932,20 +1035,25 @@ impl Kriko {
 
     /// New: the slots as they stand, kept as a fresh draft.
     pub fn new_draft(&mut self, cx: &mut Context<Self>) {
+        if self.live.compare.draft_pending {
+            return;
+        }
+        self.live.compare.draft_pending = true;
         let name = self.next_draft_name("Draft");
         let ids = self.slot_ids();
         self.fetch(
             cx,
             move || api::post("/api/compare-drafts", json!({"name": name, "lookup_ids": ids})),
             |this, reply, cx| {
+                this.live.compare.draft_pending = false;
                 say_error(this, &reply);
                 if let Ok(v) = reply {
                     let d = draft_from(&v);
                     let id = d.draft_id.clone();
                     this.live.compare.drafts.push(d);
-                    this.live.compare.draft = Some(id.clone());
-                    this.load_board(id.clone(), cx);
-                    this.load_questions(id, cx);
+                    // select_draft clears prior board and question state before
+                    // the new draft's reads finish.
+                    this.open_draft(&id, cx);
                 }
             },
         );
@@ -953,6 +1061,9 @@ impl Kriko {
 
     /// Save: the open draft takes the slots; with no draft open it is New.
     pub fn save_draft(&mut self, cx: &mut Context<Self>) {
+        if self.live.compare.draft_pending {
+            return;
+        }
         let Some(id) = self.live.compare.draft.clone() else {
             self.new_draft(cx);
             return;
@@ -966,6 +1077,7 @@ impl Kriko {
             .map(|d| d.name.clone())
             .unwrap_or_default();
         let ids = self.slot_ids();
+        self.live.compare.draft_pending = true;
         self.fetch(
             cx,
             move || {
@@ -975,6 +1087,7 @@ impl Kriko {
                 )
             },
             |this, reply, _| {
+                this.live.compare.draft_pending = false;
                 say_error(this, &reply);
                 if let Ok(v) = reply {
                     let saved = draft_from(&v);
@@ -993,7 +1106,11 @@ impl Kriko {
     }
 
     pub fn delete_draft(&mut self, cx: &mut Context<Self>) {
+        if self.live.compare.draft_pending {
+            return;
+        }
         let Some(id) = self.live.compare.draft.clone() else { return };
+        self.live.compare.draft_pending = true;
         self.fetch(
             cx,
             {
@@ -1001,6 +1118,7 @@ impl Kriko {
                 move || api::delete(&format!("/api/compare-drafts/{}", api::seg(&id)))
             },
             move |this, reply, cx| {
+                this.live.compare.draft_pending = false;
                 say_error(this, &reply);
                 if reply.is_ok() {
                     let c = &mut this.live.compare;
@@ -1305,30 +1423,19 @@ impl Kriko {
     // ---- the research queue ----
 
     pub fn load_queue(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::get("/api/queue"), |this, reply, cx| {
+        self.fetch(cx, || api::get("/api/queue"), |this, reply, _cx| {
             this.note(&reply);
             if let Ok(v) = reply {
-                let c = &mut this.live.compare;
-                let mut items: Vec<QItem> = api::arr(&v, "items").iter().map(queued_from).collect();
+                let items: Vec<QItem> = api::arr(&v, "items").iter().map(queued_from).collect();
                 // why each waiting row was passed over, as the engine kept it
                 let notes: Vec<(String, String)> = api::arr(&v, "items")
                     .iter()
                     .map(|i| (api::s(i, "queue_id"), api::s(i, "note")))
                     .filter(|(_, note)| !note.is_empty())
                     .collect();
-                // a row the engine says is researching, with nothing of ours
-                // working on it, is one an earlier run left behind
-                if !c.queue_running {
-                    for item in items.iter_mut().filter(|i| i.state == QState::Researching) {
-                        item.state = QState::Waiting;
-                        let id = item.queue_id.clone();
-                        this.fetch(
-                            cx,
-                            move || api::request("PATCH", &format!("/api/queue/{}", api::seg(&id)), Some(json!({"state": "waiting"}))),
-                            |_, _, _| {},
-                        );
-                    }
-                }
+                // The API recovers abandoned rows when its process starts.
+                // A reader here may be another open window's live worker, so
+                // never reset `researching` from a client refresh.
                 let c = &mut this.live.compare;
                 c.queue_run.retain(|id, _| items.iter().any(|i| i.queue_id == *id));
                 // a run in progress keeps its own words; the rest read the engine's
@@ -1337,6 +1444,7 @@ impl Kriko {
                         if items.iter().any(|i| i.queue_id == id && i.state == QState::Waiting) {
                             let run = c.queue_run.entry(id).or_default();
                             if run.note.is_none() {
+                                run.outcome = Some(queue_outcome(&note));
                                 run.note = Some(note);
                             }
                         }
@@ -1345,6 +1453,9 @@ impl Kriko {
                 c.queue = items;
                 c.queue_max = api::n(&v, "max").unwrap_or(0.0) as usize;
                 c.queue_loaded = true;
+                c.queue_error = None;
+            } else if let Err(e) = reply {
+                this.live.compare.queue_error = Some(e.message);
             }
         });
     }
@@ -1407,10 +1518,12 @@ impl Kriko {
         }
         let workers = limit.min(waiting);
         c.queue_running = true;
+        c.queue_open = true;
         c.queue_workers = workers;
         c.say = None;
         for run in c.queue_run.values_mut() {
             run.note = None;
+            run.outcome = None;
         }
         for _ in 0..workers {
             self.queue_worker(cx);
@@ -1442,7 +1555,32 @@ impl Kriko {
                     }
                     move || api::request("PATCH", &format!("/api/queue/{}", api::seg(&id)), Some(body))
                 };
-                let _ = bg(&ex, patch("researching", None, id.clone())).await;
+                if let Err(error) = bg(&ex, patch("researching", None, id.clone())).await {
+                    // The queue API claims with an atomic waiting -> researching
+                    // transition. Another window may have won after this
+                    // window read its copy, so refresh and continue to the next
+                    // local item instead of running the same product twice.
+                    let qid = id.clone();
+                    let message = error.message;
+                    let _ = this.update(cx, |this, cx| {
+                        if let Some(item) = this.live.compare.queue.iter_mut()
+                            .find(|item| item.queue_id == qid)
+                        {
+                            item.state = QState::Waiting;
+                        }
+                        this.live.compare.queue_run.insert(qid.clone(), QRun {
+                            note: Some("another Compare window already claimed this product".into()),
+                            outcome: Some(QueueOutcome::InAnotherWindow),
+                            ..QRun::default()
+                        });
+                        this.live.compare.say = Some(format!(
+                            "A queued product was claimed elsewhere ({message}); refreshing the queue."
+                        ));
+                        this.load_queue(cx);
+                        cx.notify();
+                    });
+                    continue;
+                }
 
                 // 1. which product is it
                 let it = item.clone();
@@ -1611,7 +1749,9 @@ impl Kriko {
                     return;
                 }
                 c.queue_running = false;
-                let done = this.live.compare.queue.iter().any(|q| q.state == QState::Done && !q.lookup_id.is_empty());
+                let done = this.live.compare.queue.iter()
+                    .filter(|q| q.state == QState::Done && !q.lookup_id.is_empty())
+                    .count() >= 2;
                 if this.live.compare.queue_auto && done {
                     this.queue_to_compare(cx);
                 }
@@ -1641,7 +1781,7 @@ impl Kriko {
             .map(|q| q.lookup_id.clone())
             .take(MAX_SLOTS)
             .collect();
-        if ids.is_empty() {
+        if ids.len() < 2 {
             return;
         }
         let name = self.next_draft_name("Queue");
@@ -1702,10 +1842,23 @@ fn claim_next(c: &mut State) -> Option<QItem> {
 
 fn queue_passed_over(this: &mut Kriko, queue_id: &str, why: String) {
     let c = &mut this.live.compare;
+    let outcome = queue_outcome(&why);
     if let Some(q) = c.queue.iter_mut().find(|q| q.queue_id == queue_id) {
         q.state = QState::Waiting;
     }
-    c.queue_run.insert(queue_id.to_string(), QRun { note: Some(why), ..QRun::default() });
+    c.queue_run.insert(queue_id.to_string(), QRun {
+        note: Some(why), outcome: Some(outcome), ..QRun::default()
+    });
+}
+
+fn queue_outcome(why: &str) -> QueueOutcome {
+    if why == "not in your catalogs" {
+        QueueOutcome::NotInCatalogs
+    } else if why.contains("cancelled") || why.contains("stopped") {
+        QueueOutcome::Stopped
+    } else {
+        QueueOutcome::Failed
+    }
 }
 
 fn round4(v: f32) -> f64 {
@@ -1717,13 +1870,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_home_draft_request_selects_its_id_instead_of_the_first_draft() {
+        let drafts = vec![
+            Draft { draft_id: "first".into(), name: "First".into(), lookup_ids: vec![] },
+            Draft { draft_id: "clicked".into(), name: "Clicked".into(), lookup_ids: vec![] },
+        ];
+        assert_eq!(requested_draft_id(&drafts, Some("clicked")).as_deref(), Some("clicked"));
+        assert_eq!(requested_draft_id(&drafts, Some("gone")), None);
+        assert_eq!(requested_draft_id(&drafts, None), None);
+    }
+
+    #[test]
     fn question_job_keeps_source_and_usage_facts_without_inventing_missing_tokens() {
         let done = json!({"state": "succeeded", "progress": 1.0, "message": "answered",
             "log": "local comparison: saved checks only\nOne: 2 known risk(s)\ncomparison brief: 2500 characters from saved checks; no web search\nFull answer that should not be doubled in the step trail",
-            "result": {"model": "small:4b", "tokens_used": 141, "tokens_in": 100,
+            "result": {"answer": "A streamed answer", "model": "small:4b", "tokens_used": 141, "tokens_in": 100,
                 "tokens_out": 41, "brief_chars": 2500, "web_searches": 0,
                 "saved_checks": [{"name": "One", "risks": 2}, {"name": "Two", "risks": 0}]}});
         let run = QuestionRun::from_job(&done);
+        assert_eq!(run.answer, "A streamed answer");
         assert_eq!(run.model, "small:4b");
         assert_eq!(run.tokens_used, Some(141));
         assert_eq!(run.saved_checks, [("One".into(), 2), ("Two".into(), 0)]);
@@ -1783,6 +1948,14 @@ mod tests {
         assert!(rows[0].differs);
         assert!(!rows[1].differs);
         assert!(rows[2].cells[0].is_none(), "missing is not stated, not blank");
+    }
+
+    #[test]
+    fn a_saved_check_can_only_fill_one_slot() {
+        let slots = vec![Some("check-a".into()), None, Some("check-b".into())];
+        assert!(!slot_available(&slots, 1, "check-a"));
+        assert!(slot_available(&slots, 1, "check-c"));
+        assert!(slot_available(&slots, 0, "check-a"), "replacing this slot keeps its own check");
     }
 
     #[test]
@@ -1855,6 +2028,13 @@ mod tests {
         c.queue_running = false;
         assert!(claim_next(&mut c).is_none());
         assert_eq!(c.queue[0].state, QState::Waiting);
+    }
+
+    #[test]
+    fn queue_waiting_reasons_keep_their_meaning_after_reload() {
+        assert_eq!(queue_outcome("not in your catalogs"), QueueOutcome::NotInCatalogs);
+        assert_eq!(queue_outcome("research failed: agent unavailable"), QueueOutcome::Failed);
+        assert_eq!(queue_outcome("research cancelled: stopped"), QueueOutcome::Stopped);
     }
 
     #[test]

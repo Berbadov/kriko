@@ -1,4 +1,4 @@
-"""What a chat agent may read, and only when it asks for it.
+"""Bounded, on-demand sources for ordinary conversation and web research.
 
 The chat screen never loads the app's data into the agent. The agent is told
 the *names and one-line meanings* of the sources below, then asks for the ones
@@ -6,15 +6,14 @@ its question needs, and each source is read at that moment. So a source that
 is not asked for is never read at all, and `describe_sources()` is the whole
 of what the agent knows before it asks: no rows, no record, no secret.
 
-Every source is read-only and derives everything from the stores it is given
-(the engine's knowledge store and `app.sqlite`). None of them names a product,
-make, model or component: the words a reader types are matched against what
-the installed catalogues hold, so a new category needs no line here (G6).
+Local sources are read-only and derive everything from the stores they are
+given (the knowledge store and `app.sqlite`). The web source reads a few public
+pages through a bounded reader; fetched text is evidence, never instructions.
 
 Two rules a source keeps, and the dispatcher enforces the second:
 
-* **Capped.** At most `ROWS_CAP` rows and `TEXT_CAP` characters per text field,
-  so one answer cannot flood the agent's context.
+* **Capped.** At most `ROWS_CAP` rows. Ordinary fields use `TEXT_CAP`; fetched
+  excerpts and URLs have separate bounded limits.
 * **Never raises.** A source that fails returns no rows and a note saying so;
   the agent sees the failure as data and can ask something else.
 
@@ -29,11 +28,17 @@ a recorded fact that covers it; a recorded high-severity risk that covers it is
 from __future__ import annotations
 
 import inspect
+import ipaddress
+import json
 import re
 import sqlite3
 import unicodedata
+import time
+import threading
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from collections.abc import Callable
 from dataclasses import dataclass
+from urllib.parse import urlsplit
 
 #: Rows one source may return to the agent.
 ROWS_CAP = 12
@@ -51,6 +56,14 @@ MET_AT = 0.6
 CONTRADICT_AT = 0.5
 #: Most recorded risks one candidate contributes to the match.
 RISKS_CAP = 200
+# The web source returns at most five search hits and reads only the first
+# three. Readers can open the remaining links themselves from the answer.
+WEB_RESULTS_CAP = 5
+WEB_PAGES_CAP = 3
+WEB_READ_DEADLINE_SECONDS = 8.0
+WEB_PAGE_EXCERPT_CAP = 2800
+WEB_URL_CAP = 2000
+WEB_ROWS_BUDGET = 10000
 
 #: Small closed vocabulary: function words that never name a thing. Constants
 #: are allowed here by CLAUDE.md's exception for closed sets; nothing in this
@@ -75,6 +88,9 @@ class Context:
 
     store: sqlite3.Connection | None = None
     app: sqlite3.Connection | None = None
+    web_search: Callable[[str, int], list[dict]] | None = None
+    web_read: Callable[[str], object] | None = None
+    check_cancelled: Callable[[], None] | None = None
 
 
 @dataclass(frozen=True)
@@ -150,15 +166,21 @@ def _clip(text, limit: int = TEXT_CAP) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def _tidy(value, truncated: list[bool]):
+def _tidy(value, truncated: list[bool], key: str = ""):
     """Clip every string and cap every list, recording whether anything was cut."""
     if isinstance(value, str):
-        clipped = _clip(value)
+        if key == "url":
+            # A cut URL is not a citation. Drop overlong URLs rather than
+            # presenting a truncated link as if it were real.
+            clipped = value if len(value) <= WEB_URL_CAP else ""
+        else:
+            cap = WEB_PAGE_EXCERPT_CAP if key == "page_excerpt" else TEXT_CAP
+            clipped = _clip(value, cap)
         if clipped != value:
             truncated[0] = True
         return clipped
     if isinstance(value, dict):
-        return {key: _tidy(one, truncated) for key, one in value.items()}
+        return {name: _tidy(one, truncated, name) for name, one in value.items()}
     if isinstance(value, list | tuple):
         if len(value) > ROWS_CAP:
             truncated[0] = True
@@ -219,15 +241,30 @@ def _facts(store, subject_id: str, pack_id: str) -> list[dict]:
     ]
 
 
-def _risks(store, subject_id: str, pack_id: str) -> list[dict]:
+def _risk_context(facts: list[dict], context: dict | None = None) -> dict:
+    """The product's recorded attributes plus facts the reader supplied.
+
+    Reader context wins: a listing-wide attribute can be stale or describe a
+    different example, while the reader may know the specific product's use.
+    """
+    values = {fact["key"]: fact["value"] for fact in facts}
+    values.update(context or {})
+    return values
+
+
+def _risks(store, subject_id: str, pack_id: str,
+           context: dict | None = None) -> list[dict]:
     """The recorded risks a subject serves, relations included, with their sources.
 
     Reached the same way the lookup reaches them (`expand`), so a risk on a
     shared part counts for the product that carries the part.
     """
+    from kriko.lookup import _conditions_for
+    from kriko.lookup.conditions import evaluate_all
     from kriko.lookup.match import expand
 
     reached = set(expand(store, (subject_id,), (pack_id,))) | {subject_id}
+    risk_context = _risk_context(_facts(store, subject_id, pack_id), context)
     marks = ",".join("?" * len(reached))
     claims = store.execute(
         f"SELECT c.claim_id, c.severity, c.kind, c.subject_id FROM claims c"
@@ -247,15 +284,25 @@ def _risks(store, subject_id: str, pack_id: str) -> list[dict]:
             titles[row["claim_id"]] = (row["title"], row["body"])
     evidence: dict[str, list[dict]] = {}
     for row in store.execute(
-            f"SELECT e.claim_id, e.quote, s.url FROM evidence e"
+            f"SELECT e.claim_id, e.quote, e.stance, s.url FROM evidence e"
             f" JOIN sources s USING (source_id, pack_id)"
             f" WHERE e.pack_id = ? AND e.claim_id IN ({idmarks})", (pack_id, *ids)):
         evidence.setdefault(row["claim_id"], []).append(
-            {"url": row["url"], "quote": row["quote"]})
+            {"url": row["url"], "quote": row["quote"], "stance": row["stance"]})
     out = []
     for row in claims:
         title, body = titles.get(row["claim_id"], ("", ""))
-        cited = evidence.get(row["claim_id"], [])[:2]
+        all_cited = evidence.get(row["claim_id"], [])
+        supporting = next((item for item in all_cited
+                           if item["stance"] == "supports"), None)
+        cited = all_cited[:2]
+        if supporting and supporting not in cited:
+            cited = [cited[0], supporting] if cited else [supporting]
+        _, _, outcomes = evaluate_all(
+            _conditions_for(store, row["claim_id"], pack_id), risk_context)
+        states = [outcome.state for outcome in outcomes]
+        served = all(outcome.served for outcome in outcomes)
+        conditional = served and any(state == "unknown" for state in states)
         out.append({
             "claim_id": row["claim_id"],
             "title": title,
@@ -263,10 +310,52 @@ def _risks(store, subject_id: str, pack_id: str) -> list[dict]:
             "severity": row["severity"],
             "kind": row["kind"],
             "text": f"{title}. {body[:300]}",
-            "source": cited[0]["url"] if cited else "",
+            "source": supporting["url"] if supporting else "",
             "sources": cited,
+            "applicability": "conditional" if conditional else (
+                "applicable" if served else "not_applicable"),
+            "conditions": [
+                {"state": outcome.state, "reason": outcome.reason}
+                for outcome in outcomes
+            ],
         })
     return out
+
+
+def _risk_coverage(risks: list[dict]) -> dict:
+    """Keep catalogue size, applicable risks, and evidence presence distinct."""
+    applicable = [risk for risk in risks
+                  if risk.get("applicability") in {"applicable", "conditional"}]
+    return {
+        "catalogue": len(risks),
+        "applicable": len(applicable),
+        "conditional": sum(risk.get("applicability") == "conditional"
+                           for risk in applicable),
+        "sourced": sum(bool(risk.get("source")) for risk in risks),
+        "unsourced": sum(not risk.get("source") for risk in risks),
+        "refuting": sum(
+            not risk.get("source") and any(
+                item.get("stance") == "refutes" for item in risk.get("sources", []))
+            for risk in risks),
+    }
+
+
+def _fact_is_positive(fact: dict) -> bool:
+    """Do not treat a feature's own name as proof when its value denies it."""
+    value = _fold(fact.get("value", "")).strip()
+    if value in {"false", "no", "off", "disabled", "absent", "none",
+                 "unavailable", "unsupported"}:
+        return False
+    return not re.search(
+        r"\b(?:not|no|never|without|false|disabled|unavailable|unsupported)\b",
+        value)
+
+
+def _use_requirement(row: dict, result: dict) -> dict:
+    """Copy a structured judgment without bypassing chat's field size cap."""
+    row.update(result)
+    row["evidence"] = _clip(row.get("evidence", ""))
+    return row
 
 
 def _subject_row(store, subject_id: str, pack_id: str, label: str, kind: str,
@@ -276,8 +365,10 @@ def _subject_row(store, subject_id: str, pack_id: str, label: str, kind: str,
         "subject_id": subject_id, "pack_id": pack_id, "label": label, "kind": kind,
         "identity": identity or {},
         "claims": len(risks),
+        "risk_coverage": _risk_coverage(risks),
         "risks": [{"title": r["title"], "severity": r["severity"], "kind": r["kind"],
-                   "sources": r["sources"]} for r in risks],
+                   "sources": r["sources"], "applicability": r["applicability"],
+                   "conditions": r["conditions"]} for r in risks],
     }
 
 
@@ -328,21 +419,35 @@ def _gather(conn, query: str, pack_ids, kind: str) -> tuple[list[dict], int]:
 def _judge(phrase: str, facts: list[dict], risks: list[dict]) -> dict:
     """One constraint against one candidate: met, contradicted or unknown.
 
-    `contradicted` is checked first: a recorded serious risk that names the
-    constraint's subject outweighs a fact that happens to share a word with it.
+    Parsed numeric facts take precedence over incidental risk wording. A
+    sourced, applicable serious risk can contradict ordinary text constraints.
     """
     words = _content(phrase)
     row = {"text": _clip(phrase, 200), "status": "unknown", "evidence": "", "source": ""}
     if not words:
         return row
-    contra = [(_coverage(words, r["text"]), r) for r in risks if r["severity"] == "high"]
+    from app.requirements import evaluate_requirement
+
+    structured = evaluate_requirement(phrase, facts)
+    # A parsed measurement is more specific than incidental shared wording in
+    # a risk title. Keep the number check from turning a matching spec into a
+    # contradiction; ambiguous numeric phrases remain unknown below.
+    if structured is not None and structured["status"] == "met":
+        return _use_requirement(row, structured)
+    contra = [(_coverage(words, r["text"]), r) for r in risks
+              if r["severity"] == "high"
+              and r.get("applicability", "applicable") == "applicable"
+              and r.get("source")]
     contra = [(score, r) for score, r in contra if score >= CONTRADICT_AT]
     if contra:
         score, risk = max(contra, key=lambda pair: pair[0])
         row.update(status="contradicted", evidence=_clip(risk["title"] or risk["text"]),
                    source=risk["source"])
         return row
-    stated = [(_coverage(words, f["text"]), f) for f in facts]
+    if structured is not None:
+        return _use_requirement(row, structured)
+    stated = [(_coverage(words, f["text"]), f) for f in facts
+              if _fact_is_positive(f)]
     stated = [(score, f) for score, f in stated if score >= MET_AT]
     if stated:
         score, fact = max(stated, key=lambda pair: (pair[0], pair[1]["identity"]))
@@ -350,10 +455,11 @@ def _judge(phrase: str, facts: list[dict], risks: list[dict]) -> dict:
     return row
 
 
-def _evaluate(conn, hit: dict, must: list[str], prefer: list[str]) -> dict:
+def _evaluate(conn, hit: dict, must: list[str], prefer: list[str],
+              context: dict | None = None) -> dict:
     sid, pid = hit["subject_id"], hit["pack_id"]
     facts = _facts(conn, sid, pid)
-    risks = _risks(conn, sid, pid)
+    risks = _risks(conn, sid, pid, context)
     must_rows = [_judge(p, facts, risks) for p in must]
     prefer_rows = [_judge(p, facts, risks) for p in prefer]
     everything = must_rows + prefer_rows
@@ -362,11 +468,16 @@ def _evaluate(conn, hit: dict, must: list[str], prefer: list[str]) -> dict:
         "label": hit.get("label", ""), "kind": hit.get("kind", ""),
         "identity": hit.get("identity") or {},
         "claims": len(risks),
+        "risk_coverage": _risk_coverage(risks),
         "all_musts_met": all(r["status"] == "met" for r in must_rows),
         "contradicted_musts": sum(r["status"] == "contradicted" for r in must_rows),
+        "unknown_musts": sum(r["status"] == "unknown" for r in must_rows),
         "unknown": sum(r["status"] == "unknown" for r in everything),
         "prefs_met": sum(r["status"] == "met" for r in prefer_rows),
-        "serious": sum(r["severity"] == "high" for r in risks),
+        "unknown_preferences": sum(r["status"] == "unknown" for r in prefer_rows),
+        "serious": sum(r["severity"] == "high" and
+                        r.get("applicability") in {"applicable", "conditional"}
+                        for r in risks),
         "must": must_rows,
         "prefer": prefer_rows,
     }
@@ -374,14 +485,15 @@ def _evaluate(conn, hit: dict, must: list[str], prefer: list[str]) -> dict:
 
 def _rank_key(row: dict) -> tuple:
     """Musts first (all met, then fewest contradicted, then fewest unknown),
-    then the preferences met, then the fewest serious risks. Total: ties fall
-    to the label and the id, so the same question reads the same way twice."""
-    return (not row["all_musts_met"], row["contradicted_musts"], row["unknown"],
-            -row["prefs_met"], row["serious"], row["label"], row["subject_id"])
+    then the preferences met. Risk counts do not break ties: a thinner catalogue
+    is not evidence of a safer product. Ties fall to label and id."""
+    return (not row["all_musts_met"], row["contradicted_musts"], row["unknown_musts"],
+            -row["prefs_met"], row["unknown_preferences"], row["label"], row["subject_id"])
 
 
 def _product_match(ctx: Context, query: str = "", must: list | None = None,
-                   prefer: list | None = None, kind: str = "", pack_id: str = "") -> dict:
+                   prefer: list | None = None, kind: str = "", pack_id: str = "",
+                   context: dict | None = None) -> dict:
     store = ctx.store
     if store is None:
         return _empty("the engine store has no packs yet")
@@ -392,7 +504,7 @@ def _product_match(ctx: Context, query: str = "", must: list | None = None,
         return _empty("say what the product is, in words")
     pack_ids = [pack_id] if pack_id else None
     candidates, searches = _gather(store, text, pack_ids, kind)
-    rows = [_evaluate(store, hit, must_list, prefer_list) for hit in candidates]
+    rows = [_evaluate(store, hit, must_list, prefer_list, context) for hit in candidates]
     rows.sort(key=_rank_key)
     for position, row in enumerate(rows, start=1):
         row["rank"] = position
@@ -563,6 +675,218 @@ def _coverage_gaps(ctx: Context, pack_id: str = "") -> dict:
     return _result(rows, report.get("note", ""))
 
 
+def _public_http_url(value: object) -> str:
+    """Accept only ordinary public HTTP(S) destinations from search results."""
+    url = str(value or "").strip()
+    try:
+        parsed = urlsplit(url)
+        host = (parsed.hostname or "").rstrip(".").casefold()
+        if (parsed.scheme.casefold() not in {"http", "https"} or not host
+                or parsed.username is not None or parsed.password is not None
+                or host == "localhost" or host.endswith(".localhost")):
+            return ""
+        try:
+            address = ipaddress.ip_address(host.split("%", 1)[0])
+        except ValueError:
+            address = None
+        if address is not None and not address.is_global:
+            return ""
+    except ValueError:
+        return ""
+    return url if len(url) <= WEB_URL_CAP else ""
+
+
+def _fit_web_results(rows: list[dict]) -> tuple[list[dict], bool]:
+    """Keep fetched evidence and exact citation URLs inside a prompt budget."""
+    for row in rows:
+        row["page_excerpt"] = _clip(row.get("page_excerpt", ""), WEB_PAGE_EXCERPT_CAP)
+    result = [dict(row) for row in rows]
+    truncated = False
+
+    def size() -> int:
+        return len(json.dumps(result, ensure_ascii=False, default=str))
+
+    # Search-only rows are useful leads but expendable if unusually long URLs
+    # and snippets would crowd out fetched evidence.
+    while size() > WEB_ROWS_BUDGET:
+        unread = next((i for i in range(len(result) - 1, -1, -1)
+                       if not result[i].get("page_read")), None)
+        if unread is None:
+            break
+        result.pop(unread)
+        truncated = True
+
+    while size() > WEB_ROWS_BUDGET:
+        candidates = [(len(row.get("page_excerpt", "")), row) for row in result
+                      if row.get("page_excerpt")]
+        if not candidates:
+            break
+        _, row = max(candidates, key=lambda item: item[0])
+        excess = size() - WEB_ROWS_BUDGET
+        # JSON escapes some characters; measure again after each conservative
+        # cut instead of ever slicing a source URL.
+        cut = max(1, excess // 2)
+        row["page_excerpt"] = row["page_excerpt"][:-cut]
+        truncated = True
+    return result, truncated
+
+
+def _read_web_page(ctx: Context, url: str) -> tuple[str, str]:
+    """Read one selected result; text remains untrusted evidence, not instructions."""
+    checker = getattr(ctx.web_read, "check_cancelled", None)
+    if callable(checker):
+        checker()
+    if ctx.web_read is None:
+        return "", "no page reader is configured"
+    try:
+        fetched = ctx.web_read(url)
+    except Exception as exc:  # noqa: BLE001 - one unreadable page need not drop its neighbours
+        return "", type(exc).__name__
+    if callable(checker):
+        checker()
+    if isinstance(fetched, dict):
+        text = fetched.get("text", "")
+        published_at = fetched.get("published_at", "")
+    else:
+        text = getattr(fetched, "text", fetched)
+        published_at = getattr(fetched, "published_at", "")
+    return _clip(text, 12000), _clip(published_at, 40)
+
+
+def _web_search(ctx: Context, query: str = "") -> dict:
+    """Search the configured web plane and read up to three result pages.
+
+    Search titles/snippets identify results only. A page excerpt is kept in a
+    separate field so an answer can ground factual claims in text actually
+    fetched from that page. All result content is untrusted data.
+    """
+    if not query.strip():
+        return _empty("add words to search the web")
+    if ctx.check_cancelled is not None:
+        ctx.check_cancelled()
+    try:
+        search = ctx.web_search
+        direct = re.search(r"(?:https?://|\bwww\.)[^\s<>\"']+", query, re.I)
+        if direct:
+            # A reader-provided page is the question's subject. Open it directly
+            # instead of hoping a search engine returns the same URL.
+            url = direct.group(0).rstrip(".,;:!?)]}")
+            if url.casefold().startswith("www."):
+                url = "https://" + url
+            hits = [{"url": url, "title": "Reader-provided page", "snippet": ""}]
+        else:
+            if search is None:
+                return _empty("web search is not configured on this machine")
+            # OpenSERP supports this cooperative hook; paid adapters simply ignore
+            # the extra attribute and are checked immediately before and after.
+            try:
+                setattr(search, "check_cancelled", ctx.check_cancelled)
+            except (AttributeError, TypeError):
+                pass
+            hits = search(query[:300], WEB_RESULTS_CAP) or []
+    except Exception as exc:  # noqa: BLE001 - report a failed search as a source row
+        return {"rows": [], "truncated": False,
+                "note": f"web search failed: {type(exc).__name__}", "error": True}
+    if ctx.check_cancelled is not None:
+        ctx.check_cancelled()
+
+    results: list[dict] = []
+    seen: set[str] = set()
+    for hit in hits if isinstance(hits, list) else []:
+        if not isinstance(hit, dict):
+            continue
+        url = _public_http_url(hit.get("url"))
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        parsed = urlsplit(url)
+        results.append({
+            "title": _clip(hit.get("title") or "Untitled result", 180),
+            "site": _clip(hit.get("site") or parsed.hostname or "", 120),
+            "url": url,
+            "search_snippet": _clip(hit.get("snippet") or hit.get("content") or "", 400),
+            "page_excerpt": "",
+            "published_at": _clip(hit.get("published_at") or "", 40),
+            "page_read": False,
+        })
+        if len(results) >= WEB_RESULTS_CAP:
+            break
+    if not results:
+        return _empty("web search returned no usable public pages")
+
+    indexes = list(range(min(WEB_PAGES_CAP, len(results))))
+    reader_cancelled = threading.Event()
+
+    def check_reader_cancelled() -> None:
+        if reader_cancelled.is_set():
+            raise RuntimeError("chat web page read cancelled")
+
+    if ctx.web_read is not None:
+        try:
+            # Page reads run on worker threads. Their callback must be a
+            # thread-safe event check, never Progress.check on its owner-only
+            # SQLite connection.
+            setattr(ctx.web_read, "check_cancelled", check_reader_cancelled)
+        except (AttributeError, TypeError):
+            pass
+
+    def read_at(index: int) -> tuple[int, str, str]:
+        text, published_at = _read_web_page(ctx, results[index]["url"])
+        return index, text, published_at
+
+    executor = ThreadPoolExecutor(max_workers=WEB_PAGES_CAP,
+                                  thread_name_prefix="kriko-chat-web")
+    futures = {executor.submit(read_at, index): index for index in indexes}
+    pending = set(futures)
+    deadline = time.monotonic() + WEB_READ_DEADLINE_SECONDS
+
+    def check_main_thread() -> None:
+        if ctx.check_cancelled is not None:
+            try:
+                ctx.check_cancelled()
+            except BaseException:
+                reader_cancelled.set()
+                raise
+
+    try:
+        while pending and time.monotonic() < deadline:
+            check_main_thread()
+            done, pending = wait(pending, timeout=min(0.1, deadline - time.monotonic()),
+                                 return_when=FIRST_COMPLETED)
+            for future in done:
+                index = futures[future]
+                try:
+                    _, text, published_at = future.result()
+                except Exception as exc:  # noqa: BLE001 - record the page failure, not a traceback
+                    results[index]["read_error"] = type(exc).__name__
+                    continue
+                if text:
+                    results[index]["page_excerpt"] = text
+                    results[index]["page_read"] = True
+                    if published_at:
+                        results[index]["published_at"] = published_at
+                else:
+                    results[index]["read_error"] = "page returned no readable text"
+        if pending:
+            # A page reader may be partway through a redirect chain. Wake it
+            # cooperatively before returning the partial results at deadline.
+            reader_cancelled.set()
+        for future in pending:
+            future.cancel()
+    finally:
+        executor.shutdown(wait=not pending, cancel_futures=True)
+    check_main_thread()
+
+    results, context_truncated = _fit_web_results(results)
+    read_count = sum(bool(row["page_read"]) for row in results)
+    note = (f"{len(results)} web result(s); fetched {read_count} page(s). "
+            "Search titles and snippets are leads, not verified page evidence.")
+    if context_truncated:
+        note += " Some leads or excerpts were shortened to fit the context limit."
+    return _result(results, note,
+                   truncated=len(hits) > WEB_RESULTS_CAP or context_truncated)
+
+
 # ── the registry ─────────────────────────────────────────────────────────
 
 
@@ -572,12 +896,19 @@ def _quoted(args: dict) -> str:
 
 SOURCES: dict[str, Source] = {s.name: s for s in (
     Source(
+        "web_search",
+        "Searches the public web and reads up to three result pages. Page excerpts are fetched text; search titles and snippets are leads only.",
+        {"query": "words to search the public web for"},
+        "web pages", lambda a: f"searching the web for {_quoted(a)}", _web_search),
+    Source(
         "product_match",
         "Finds the products that fit a need and checks each reader constraint "
-        "against what is recorded: met, unknown or contradicted, ranked.",
+        "against recorded facts and sourced applicable risks: met, unknown or contradicted. "
+        "Risk coverage separates catalogue claims, conditional claims, and cited evidence.",
         {"query": "the product, in words", "must": "hard constraints, one phrase each",
          "prefer": "preferences, one phrase each", "kind": "optional kind of product",
-         "pack_id": "optional catalogue to search"},
+         "pack_id": "optional catalogue to search",
+         "context": "optional facts about this specific item, as key/value pairs"},
         "products", lambda a: f"searching the catalogue for {_quoted(a)}",
         _product_match, lists=("must", "prefer")),
     Source(
@@ -660,6 +991,22 @@ def _arguments(source: Source, args: dict) -> tuple[dict, list[str]]:
             items = value if isinstance(value, list) else [value]
             phrases: list[str] = [_clip(item, 200) for item in items if str(item).strip()]
             accepted[key] = phrases[:12]
+        elif key == "context":
+            if isinstance(value, dict):
+                bounded: dict[str, bool | int | float | str] = {}
+                for raw_key, raw_value in list(value.items())[:20]:
+                    name = _clip(raw_key, 80).strip()
+                    if not name or isinstance(raw_value, (dict, list, tuple, set)):
+                        continue
+                    if isinstance(raw_value, bool):
+                        bounded[name] = raw_value
+                    elif isinstance(raw_value, (int, float)):
+                        bounded[name] = raw_value
+                    elif isinstance(raw_value, str):
+                        bounded[name] = _clip(raw_value, 200)
+                accepted[key] = bounded
+            else:
+                ignored.append(key)
         else:
             accepted[key] = _clip(value, 300) if value is not None else ""
     return accepted, ignored

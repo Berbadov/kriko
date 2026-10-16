@@ -9,7 +9,7 @@ use gpui::{
     Styled, Window,
 };
 
-use crate::app::{Kriko, Tab};
+use crate::app::{Kriko, SpanFilter, Tab};
 use crate::live::history::{ago, month_buckets, now_secs, Item};
 use crate::screens::history::clip;
 use crate::screens::{empty_note, mono, plate_s};
@@ -183,9 +183,18 @@ fn next_step_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<gpui::AnyEleme
 
 /// One recent check: what it was about, which catalog, when. Info, no verdict.
 fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Stateful<Div> {
+    let id = check.id.clone();
     let open_history = cx.listener(move |this, _: &ClickEvent, _w, cx| {
         this.tab = Tab::History;
         this.page = 0;
+        this.history_search.set_value(String::new());
+        this.history_span = SpanFilter::All;
+        this.live.history.pack = None;
+        this.live.history.clear_kind_status_filters();
+        this.history_focus = Some(id.clone());
+        if this.live.history.open.as_deref() != Some(id.as_str()) {
+            this.toggle_history_open(id.clone(), cx);
+        }
         cx.notify();
     });
     div()
@@ -230,10 +239,11 @@ fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Sta
 
 /// A saved comparison draft, openable straight into Compare. `subjects` are
 /// the products' names, read from the history by lookup id.
-fn draft_row(cx: &mut Context<Kriko>, i: usize, name: &str, subjects: &str) -> Stateful<Div> {
-    // Compare loads its own drafts; Home only takes you there.
+fn draft_row(cx: &mut Context<Kriko>, i: usize, id: &str, name: &str, subjects: &str) -> Stateful<Div> {
+    let draft_id = id.to_string();
     let open_draft = cx.listener(move |this, _: &ClickEvent, _w, cx| {
         this.tab = Tab::Compare;
+        this.open_home_draft(draft_id.clone(), cx);
         cx.notify();
     });
     div()
@@ -499,7 +509,7 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
         }
     } else {
         let n = h.drafts.len();
-        let rows: Vec<(String, String)> = h
+        let rows: Vec<(String, String, String)> = h
             .drafts
             .iter()
             .map(|d| {
@@ -510,12 +520,12 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
                 } else {
                     names.join(" · ")
                 };
-                (d.name.clone(), line)
+                (d.draft_id.clone(), d.name.clone(), line)
             })
             .collect();
-        for (i, (name, line)) in rows.iter().enumerate() {
+        for (i, (id, name, line)) in rows.iter().enumerate() {
             drafts = drafts
-                .child(draft_row(cx, i, name, line))
+                .child(draft_row(cx, i, id, name, line))
                 .when(i + 1 < n, |d| d.child(hairline()));
         }
     }

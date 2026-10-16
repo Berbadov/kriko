@@ -322,5 +322,8 @@ def test_a_unit_beside_a_number_is_part_of_the_constraint():
     assert chatdata._content("a drill x wheel") == ["drill", "wheel"]
     model_code = [_fact("model TC-CD-18-2", identity=True)]
     assert chatdata._judge("18V", model_code, [])["status"] == "unknown"
-    with_unit = [_fact("voltage_v 18 v")]
+    # Match the row shape returned by chatdata._facts: a separate schema key,
+    # numeric value, and unit, rather than a flattened text-only test value.
+    with_unit = [{"text": "voltage_v 18 v", "key": "voltage_v", "value": "18",
+                  "unit": "v", "identity": False, "source": ""}]
     assert chatdata._judge("18V", with_unit, [])["status"] == "met"

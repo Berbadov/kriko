@@ -28,6 +28,7 @@ pub(crate) mod local;
 pub(crate) mod run;
 pub(crate) mod settings;
 pub(crate) mod sites;
+pub(crate) mod tutorial;
 
 /// Dispatch to the active tab's screen.
 pub fn screen(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gpui::AnyElement {

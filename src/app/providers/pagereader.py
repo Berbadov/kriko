@@ -44,8 +44,8 @@ def user_agent() -> str:
     return f"kriko/{app_version()} (+https://github.com/Berbadov/kriko)"
 
 
-def _rpc(endpoint: str, body: dict, session: str = "",
-         timeout: float = TIMEOUT) -> tuple[dict, str]:
+def _rpc(endpoint: str, body: dict, session: str = "", *,
+         timeout: float = TIMEOUT, check_cancelled=None) -> tuple[dict, str]:
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
@@ -57,9 +57,14 @@ def _rpc(endpoint: str, body: dict, session: str = "",
         endpoint, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST"
     )
     try:
-        with network.urlopen(request, timeout=timeout) as response:
+        if check_cancelled is not None:
+            check_cancelled()
+        options = {"check": check_cancelled} if check_cancelled is not None else {}
+        with network.urlopen(request, timeout=timeout, **options) as response:
             session = response.headers.get("mcp-session-id") or session
             raw = response.read().decode("utf-8", "replace")
+        if check_cancelled is not None:
+            check_cancelled()
     except (urllib.error.URLError, urllib.error.HTTPError, OSError):
         return {}, ""
     for line in raw.splitlines():
@@ -149,7 +154,8 @@ def parse_parallel(text: str, url: str) -> str:
     return ""
 
 
-def _asked(target: str, tool: str, url: str, timeout: float = TIMEOUT) -> str:
+def _asked(target: str, tool: str, url: str, *, timeout: float = TIMEOUT,
+           check_cancelled=None) -> str:
     """One reader's raw text answer, "" on any failure."""
     reply, session = _rpc(
         target,
@@ -162,11 +168,12 @@ def _asked(target: str, tool: str, url: str, timeout: float = TIMEOUT) -> str:
                 "capabilities": {},
                 "clientInfo": {"name": "kriko", "version": "0"},
             },
-        },
-        timeout=timeout,
+        }, timeout=timeout, check_cancelled=check_cancelled,
     )
     if not session:
         return ""
+    if check_cancelled is not None:
+        check_cancelled()
     reply, _ = _rpc(
         target,
         {
@@ -178,8 +185,7 @@ def _asked(target: str, tool: str, url: str, timeout: float = TIMEOUT) -> str:
                 "arguments": {"urls": [url], "maxCharacters": MAX_CHARACTERS},
             },
         },
-        session,
-        timeout=timeout,
+        session, timeout=timeout, check_cancelled=check_cancelled,
     )
     result = reply.get("result") or {}
     if reply.get("error") or result.get("isError"):
@@ -191,7 +197,8 @@ def _asked(target: str, tool: str, url: str, timeout: float = TIMEOUT) -> str:
     )
 
 
-def read(url: str, endpoint: str = "", timeout: float = TIMEOUT) -> str:
+def read(url: str, endpoint: str = "", *, timeout: float = TIMEOUT,
+         check_cancelled=None) -> str:
     """The page's text through the hosted readers, "" when none read it.
 
     One initialize and one call per page, so a kept session would be state
@@ -203,9 +210,12 @@ def read(url: str, endpoint: str = "", timeout: float = TIMEOUT) -> str:
         return ""
     if urlsplit(url).netloc == urlsplit(PARALLEL_ENDPOINT).netloc:
         return ""
+    if check_cancelled is not None:
+        check_cancelled()
     if endpoint:
         target = endpoint
     else:
         target = PARALLEL_ENDPOINT
-    page = plain(parse_parallel(_asked(target, PARALLEL_TOOL, url, timeout), url))
+    page = plain(parse_parallel(_asked(target, PARALLEL_TOOL, url, timeout=timeout,
+                                       check_cancelled=check_cancelled), url))
     return page[:MAX_CHARACTERS]
