@@ -311,15 +311,29 @@ def lookup(
 
 
 @tool()
-def research_brief(subject_id: str, pack_id: str) -> dict:
+def research_brief(subject_id: str, pack_id: str, mode: str = "fast") -> dict:
     """What to research about this subject, in this pack's own terms.
 
     The brief carries the pack's value principle and query templates, so the
     same agent researching a car and a power tool is told two different things
-    about what is worth keeping — without a line of code knowing either.
+    about what is worth keeping — without a line of code knowing either. It
+    also carries what earlier runs on this subject did (the searches that led
+    to kept findings, the ones that went nowhere, the refusals to write
+    past), so a run starts from their lessons rather than their dead ends.
+
+    `mode` is how much run this is: `fast` — one breadth of searches, a
+    single read pass, minutes — or `deep` — a budgeted tree with follow-up
+    rounds from the gaps the submit answers name. The brief states the
+    budget either way; anything else is refused here rather than handed to
+    the agent as a word that means nothing.
     """
+    if mode not in ("fast", "deep"):
+        return {"error": f"mode must be fast or deep, not {mode!r}"}
     with _store() as conn:
-        return agentops.brief(conn, subject_id, pack_id)
+        return agentops.brief(
+            conn, subject_id, pack_id, effort=mode,
+            app_state_path=_app_state_path(),
+        )
 
 
 @tool()
@@ -447,7 +461,22 @@ def submit_findings(
 
     Returns a per-finding verdict so the agent learns which of its quotes or
     claims did not survive, rather than discovering later that half its work
-    vanished.
+    vanished. The answer also carries what the run did not establish:
+
+    * `gaps` — the pack's declared domains that still hold no claim for this
+      subject (`domains_empty`), the ones that do (`domains_covered`), and the
+      claim count.
+    * `next` — the follow-up, written out: queries for the empty domains, and
+      the refused findings one field short. An empty `next` names nothing
+      missing and is the stop signal.
+
+    That is the research loop. Follow-up queries come from the gaps, never
+    from re-running the brief's seeds; a refused finding with a fix named in
+    its verdict is worth resubmitting once that field is filled in. A
+    finding whose claim is already known is answered in `already_known`
+    rather than accepted: the claim is not new work, but its source is still
+    filed as evidence — and `corroborated` says whether it was a source the
+    claim did not already have.
     """
     # The refusals in this payload are what an author tunes the skill against,
     # so `agentops.submit` logs them to app.sqlite as well as returning them.

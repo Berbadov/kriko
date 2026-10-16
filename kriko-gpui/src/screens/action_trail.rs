@@ -19,7 +19,7 @@ use crate::screens::mono;
 use crate::theme::*;
 
 /// The failed dot and text, the same warm tone the stepper uses for a stop.
-const WARN: u32 = 0xffb86b;
+const WARN: u32 = DANGER;
 
 /// A key for an element that must replay its animation when its state
 /// changes: the same words in the same place keep one key.
@@ -97,13 +97,23 @@ pub fn action_trail(job: &Job, motion: bool) -> Div {
         .text_color(rgb(line_colour(current.dot)))
         .truncate()
         .child(text.clone());
-    let line = fade_in(line, &format!("trail-{}", job.id), key_of(&text, job.feed.len() as u64), motion);
+    let line = fade_in(
+        line,
+        &format!("trail-{}", job.id),
+        key_of(&text, job.feed.len() as u64),
+        motion,
+    );
     let headline = div()
         .flex()
         .items_center()
         .gap(px(6.0))
         .min_w(px(0.0))
-        .child(dot(&format!("trail-{}-now", job.id), &text, current.dot, motion))
+        .child(dot(
+            &format!("trail-{}-now", job.id),
+            &text,
+            current.dot,
+            motion,
+        ))
         .child(line);
 
     let step = action::step_word(job);
@@ -122,7 +132,9 @@ pub fn action_trail(job: &Job, motion: bool) -> Div {
     } else {
         chip.into_any_element()
     };
-    let clock = action::elapsed_now(job).map(action::clock).unwrap_or_default();
+    let clock = action::elapsed_now(job)
+        .map(action::clock)
+        .unwrap_or_default();
     let meta = div()
         .flex()
         .items_center()
@@ -179,8 +191,15 @@ pub fn compact_line(job: &Job, motion: bool) -> Div {
         .text_color(rgb(line_colour(current.dot)))
         .truncate()
         .child(text.clone());
-    let line = fade_in(line, &format!("compact-{}", job.id), key_of(&text, job.feed.len() as u64), motion);
-    let clock = action::elapsed_now(job).map(action::clock).unwrap_or_default();
+    let line = fade_in(
+        line,
+        &format!("compact-{}", job.id),
+        key_of(&text, job.feed.len() as u64),
+        motion,
+    );
+    let clock = action::elapsed_now(job)
+        .map(action::clock)
+        .unwrap_or_default();
     div()
         .flex()
         .items_center()

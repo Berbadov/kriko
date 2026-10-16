@@ -21,10 +21,10 @@ pub(crate) mod compare;
 pub(crate) mod extension;
 pub(crate) mod guidance;
 pub(crate) mod history;
-pub(crate) mod logs;
 pub(crate) mod home;
 pub(crate) mod knowledge;
 pub(crate) mod local;
+pub(crate) mod logs;
 pub(crate) mod run;
 pub(crate) mod settings;
 pub(crate) mod sites;
@@ -150,9 +150,7 @@ pub fn segmented(
         let listener = cx.listener(move |this, _: &ClickEvent, _w, cx| {
             on_pick(this, i, cx);
         });
-        track = track.child(
-            segmented_cell((id, i), *glyph, i == current).on_click(listener),
-        );
+        track = track.child(segmented_cell((id, i), *glyph, i == current).on_click(listener));
     }
     track
 }
@@ -183,7 +181,12 @@ pub fn plate_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
 
 /// A control in a filter bar: flat glass with a control ring that lights when
 /// the panel it opens is showing. `chevron` marks the ones that open a panel.
-pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevron: bool) -> Stateful<Div> {
+pub fn filter_btn(
+    id: impl Into<gpui::ElementId>,
+    label: &str,
+    open: bool,
+    chevron: bool,
+) -> Stateful<Div> {
     div()
         .id(id)
         .h(px(40.0))
@@ -203,10 +206,12 @@ pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevr
         .border_1()
         .border_color(rgba(BORDER_CONTROL))
         .when(open, |s| s.border_color(rgb(ICE)))
-        .hover(|s| s.bg(rgba(GLASS_2)).text_color(rgb(INK)))
+        .hover(|s| s.bg(rgba(GLASS_3)).text_color(rgb(INK)))
         .child(label.to_string())
         .when(chevron, |s| {
-            s.child(icon(if open { "collapse" } else { "chevron-down" }, 12.0).text_color(rgb(MUTED)))
+            s.child(
+                icon(if open { "collapse" } else { "chevron-down" }, 12.0).text_color(rgb(MUTED)),
+            )
         })
 }
 
@@ -216,9 +221,13 @@ pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevr
 /// NO EVIDENCE (queue), or nothing when nothing is recorded.
 pub fn trust_icon(backed: Option<bool>) -> gpui::AnyElement {
     match backed {
-        Some(true) => led_matrix(&CHECK5, ICE, 3.0, 1.0),
-        Some(false) => led_matrix(&BANG5, 0xffb86b, 3.0, 1.0),
-        None => led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0),
+        Some(true) => icon("check", 16.0).text_color(rgb(ICE)).into_any_element(),
+        Some(false) => icon("alert", 16.0)
+            .text_color(rgb(DANGER))
+            .into_any_element(),
+        None => icon("clock", 16.0)
+            .text_color(rgb(MUTED))
+            .into_any_element(),
     }
 }
 
@@ -302,4 +311,3 @@ pub fn stepper(
                 .on_click(plus),
         )
 }
-
