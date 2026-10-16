@@ -137,7 +137,6 @@ pub fn due_for_tour() -> bool {
 /// card at a time. Painted last in `render`, so it sits over the dock and the
 /// titlebar too; `occlude` keeps the app under the scrim out of reach.
 pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
-    let motion = app.motion;
     let step = app.tutorial.unwrap_or(0).min(STEPS.len() - 1);
     let page = &STEPS[step];
     let last = step + 1 == STEPS.len();
@@ -183,6 +182,10 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         .id("tutorial-card")
         .flex()
         .flex_col()
+        // Keep the centered overlay card at its measured content height. The
+        // default flex shrink squeezed the body to one line-height even when
+        // its text wrapped, which let the footer paint over the last lines.
+        .flex_none()
         .gap(px(10.0))
         .max_w(px(520.0))
         .w_full()
@@ -195,6 +198,8 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         .child(
             div()
                 .flex()
+                .flex_none()
+                .w_full()
                 .items_center()
                 .gap(px(10.0))
                 .child(icon(page.icon, 20.0).text_color(rgb(BRAND_BRIGHT)))
@@ -202,6 +207,8 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         )
         .child(
             div()
+                .flex_none()
+                .w_full()
                 .font_family(DISPLAY)
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(24.0))
@@ -211,6 +218,8 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         )
         .child(
             div()
+                .flex_none()
+                .w_full()
                 .font_family(SANS)
                 .text_size(px(14.0))
                 .line_height(px(21.0))
@@ -219,6 +228,8 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         )
         .child(
             div()
+                .flex_none()
+                .w_full()
                 .mt(px(6.0))
                 .flex()
                 .items_center()
@@ -240,7 +251,7 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         .p(px(28.0))
         .bg(rgba(0x05070fd9))
         .occlude()
-        .child(arrive(card, format!("tutorial-{}", step), motion))
+        .child(card)
         .into_any_element()
 }
 
