@@ -14,6 +14,13 @@ const NARROW_W: f32 = 620.0;
 const THREAD_RAIL_W: f32 = 168.0;
 
 pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    // A clean install opens on the chat welcome. Once a saved or new thread
+    // exists, the familiar thread rail and full conversation controls return.
+    if app.live.chat.threads.is_empty() && app.live.chat.thread.is_none() && !app.live.chat.sending
+    {
+        return welcome(app, window, cx);
+    }
+
     let viewport_h = f32::from(window.viewport_size().height);
     // The surrounding shell uses 96 px for its page head and about 42 px for
     // content spacing. This keeps the composer on screen in a 640 px window.
@@ -42,6 +49,85 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
             .child(threads.w(px(THREAD_RAIL_W)).h_full().flex_none())
             .child(conversation.flex_1().h_full().min_w(px(0.0)).min_h(px(0.0)))
     }
+}
+
+fn welcome(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let viewport_h = f32::from(window.viewport_size().height);
+    let height = (viewport_h - 200.0).clamp(420.0, 760.0);
+    let composer = composer(app, window, cx);
+    let mut suggestions = div().flex().flex_wrap().justify_center().gap(px(8.0));
+    for (i, text) in CHAT_EXAMPLES.iter().enumerate() {
+        let fill = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+            this.chat_input.set_value(text.to_string());
+            cx.notify();
+        });
+        suggestions = suggestions.child(
+            div()
+                .id(("chat-welcome-suggestion", i))
+                .max_w(px(260.0))
+                .px(px(14.0))
+                .py(px(10.0))
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .rounded(px(10.0))
+                .cursor_pointer()
+                .bg(rgb(SURFACE_1))
+                .border_1()
+                .border_color(rgba(HAIRLINE))
+                .hover(|s| s.bg(rgba(GLASS_3)).border_color(rgba(BORDER_CONTROL)))
+                .font_family(SANS)
+                .text_size(px(13.0))
+                .text_color(rgb(INK_2))
+                .child(icon("message", 14.0).text_color(rgb(BRAND_BRIGHT)))
+                .child(text.to_string())
+                .on_click(fill),
+        );
+    }
+
+    div()
+        .w_full()
+        .h(px(height))
+        .flex()
+        .items_center()
+        .justify_center()
+        .px(px(12.0))
+        .child(
+            div()
+                .w_full()
+                .max_w(px(820.0))
+                .flex()
+                .flex_col()
+                .items_center()
+                .gap(px(20.0))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .items_center()
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .font_family(DISPLAY)
+                                .font_weight(FontWeight::BOLD)
+                                .text_size(px(38.0))
+                                .line_height(px(40.0))
+                                .text_color(rgb(INK))
+                                .text_align(gpui::TextAlign::Center)
+                                .child("ASK KRIKO"),
+                        )
+                        .child(
+                            div()
+                                .font_family(SANS)
+                                .text_size(px(14.0))
+                                .text_color(rgb(MUTED))
+                                .text_align(gpui::TextAlign::Center)
+                                .child("Ask about products or saved research."),
+                        ),
+                )
+                .child(suggestions)
+                .child(composer),
+        )
 }
 
 fn thread_list(app: &Kriko, compact: bool, cx: &mut Context<Kriko>) -> Div {
@@ -312,9 +398,7 @@ fn examples(cx: &mut Context<Kriko>) -> Div {
                 .text_color(rgb(INK))
                 .child("What would you like to know?"),
         )
-        .child(row_desc(
-            "Ask about products, search the web, or explore saved research.",
-        ));
+        .child(row_desc("Product checks · saved research · web search"));
     for (i, text) in CHAT_EXAMPLES.iter().enumerate() {
         let fill = cx.listener(move |this, _: &ClickEvent, _w, cx| {
             this.chat_input.set_value(text.to_string());
