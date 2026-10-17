@@ -139,8 +139,7 @@ def test_check_still_refuses_a_site_that_is_not_a_hostname():
 
 
 def test_the_brief_teaches_the_vocabulary_the_engine_reads():
-    text = sites.BRIEF.format(site="example.com", url="https://example.com/",
-                              keys="product: make, model")
+    text = sites.brief("example.com", "https://example.com/", "product: make, model")
     assert '"identity"' in text
     # Named only to forbid it — the old brief asked for it as a field.
     assert '"title_patterns"' not in text

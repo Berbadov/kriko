@@ -1,24 +1,16 @@
 //! Settings: where a preference lives, and the fact that it lives anywhere.
-//! Five cards in two columns: General, Runs, Shortcuts | Keys, Danger zone — the
-//! shape of the reference screen. The app's own preferences are saved in the
-//! engine's settings; the keys are the engine's own key file.
+//! Seven cards in two columns: General, Appearance, Runs, Local runtime and
+//! Shortcuts | Keys and Danger zone — the shape of the reference screen. The
+//! app's preferences are saved in the engine's settings; the keys are the
+//! engine's own key file.
 
-use gpui::{div, prelude::*, px, rgb, Context, Div, FontWeight, Stateful, Styled, Window};
+use gpui::{div, prelude::*, px, Context, Div, Stateful, Styled, Window};
 
-use crate::app::{Field, Kriko};
+use crate::app::{Field, Kriko, ThemeChoice};
 use crate::live::knowledge::RUNS_MAX;
 use crate::screens::{empty_note, mono, plate_s, row_desc, row_title, segmented};
 use crate::startup::Mode as StartupMode;
 use crate::theme::*;
-
-fn section_title(label: &str) -> Div {
-    div()
-        .font_family(SANS)
-        .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(18.0))
-        .text_color(rgb(BRAND_BRIGHT))
-        .child(label.to_string())
-}
 
 /// One row of a card: title + description left, a control right.
 fn row(title: &str, desc: &str, control: gpui::AnyElement) -> Div {
@@ -34,23 +26,23 @@ fn row(title: &str, desc: &str, control: gpui::AnyElement) -> Div {
                 .min_w(px(0.0))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(row_title(title))
-                .when(!desc.is_empty(), |d| d.child(row_desc(desc))),
+                .child(row_desc(desc)),
         )
         .child(control)
 }
 
 /// A shortcut row: label left, keycaps right.
 fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
-    let mut caps = div().flex().items_center().gap(px(6.0));
+    let mut caps = div().flex().items_center().gap(px(SPACE_S));
     for (i, k) in keys.iter().enumerate() {
         if i > 0 {
             caps = caps.child(
                 div()
                     .font_family(MONO)
                     .text_size(px(12.0))
-                    .text_color(rgb(DIM))
+                    .text_color(paint(DIM))
                     .child("+"),
             );
         }
@@ -66,7 +58,7 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
             div()
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(row_title(label))
                 .when(note.is_some(), |d| d.children(note.map(row_desc))),
         )
@@ -75,41 +67,24 @@ fn shortcut_row(label: &str, note: Option<&str>, keys: &[&str]) -> Div {
 
 pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
     let motion = app.motion;
-    let key_input = app.input_field(
-        Field::KeyValue,
-        "key-value",
-        "Paste the key, then Save",
-        None,
-        window,
-        cx,
-    );
-    let runtime = ghost("settings-local-models", "Local model settings")
-        .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-            this.tab = crate::app::Tab::Local;
-            this.live.local.advanced_open = true;
-            this.refresh_local(cx);
-            cx.notify();
-        }));
+    let key_input = app.input_field(Field::KeyValue, "key-value", "Paste the key, then Save", None, window, cx);
+    let runtime = crate::screens::local::runtime_settings(app, cx);
     let k = &app.live.knowledge;
 
     // ---- general ----
-    let mut login = div().flex().flex_wrap().items_center().gap(px(6.0));
+    let mut login = div().flex().flex_wrap().items_center().gap(px(SPACE_S));
     for (id, label, mode) in [
         ("startup-off", "Off", StartupMode::Off),
         ("startup-window", "Window", StartupMode::Window),
         ("startup-tray", "Tray", StartupMode::Tray),
     ] {
-        let button = if k.startup_mode == mode {
-            key(id, label)
-        } else {
-            ghost(id, label)
-        };
+        let button = if k.startup_mode == mode { key(id, label) } else { ghost(id, label) };
         let set_mode = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.set_startup_mode(mode, cx);
         });
         login = login.child(
             button
-                .px(px(12.0))
+                .px(px(SPACE_L))
                 .h(px(40.0))
                 .opacity(if k.startup_busy { 0.55 } else { 1.0 })
                 .when(!k.startup_busy, |b| b.on_click(set_mode)),
@@ -129,29 +104,92 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     } else {
         app.live.health.store.clone()
     };
-    let general = card()
+    let mut theme_picker = div().flex().flex_wrap().items_center().gap(px(SPACE_S));
+    for (id, label, choice) in [
+        ("theme-system", "System", ThemeChoice::System),
+        ("theme-light", "Light", ThemeChoice::Light),
+        ("theme-dark", "Dark", ThemeChoice::Dark),
+    ] {
+        let button = if app.theme == choice { key(id, label) } else { ghost(id, label) };
+        let set = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.set_theme(choice, cx);
+        });
+        theme_picker = theme_picker.child(
+            button
+                .h(px(40.0))
+                .px(px(SPACE_L))
+                .text_size(px(13.0))
+                .on_click(set),
+        );
+    }
+    let mut motion_picker = div().flex().flex_wrap().items_center().gap(px(SPACE_S));
+    for (id, label, profile) in [
+        ("motion-calm", "Calm", MotionProfile::Calm),
+        ("motion-standard", "Standard", MotionProfile::Standard),
+        ("motion-vivid", "Vivid", MotionProfile::Vivid),
+    ] {
+        let button = if app.motion_profile == profile { key(id, label) } else { ghost(id, label) };
+        let set = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.set_motion_profile(profile, cx);
+        });
+        motion_picker = motion_picker.child(
+            button
+                .h(px(40.0))
+                .px(px(SPACE_L))
+                .text_size(px(13.0))
+                .on_click(set),
+        );
+    }
+    let appearance = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(4.0)).child(section_title("General")))
+        .child(card_head("palette", "Appearance", motion))
         .child(hairline())
         .child(row(
-            "Launch at login",
-            "Choose how Kriko opens when you sign in",
-            login.into_any_element(),
+            "Theme",
+            "Follow Windows, or pick one",
+            theme_picker.into_any_element(),
+        ))
+        .child(hairline())
+        .child(row(
+            "Motion",
+            "How far and fast things move",
+            motion_picker.into_any_element(),
         ))
         .child(hairline())
         .child(row(
             "Reduce motion",
-            "Disable animated effects",
+            "Turns off loops, ripples and flicker",
             reduce.into_any_element(),
+        ));
+
+    let general = card()
+        .flex()
+        .flex_col()
+        .child(card_head("sliders", "General", motion))
+        .child(hairline())
+        .child(row(
+            "Launch at login",
+            "Open on startup, or keep Kriko in the tray",
+            login.into_any_element(),
         ))
         .child(hairline())
         .child(row(
             "Take the tour",
-            "The first-run walkthrough of checking a product with Kriko",
+            "Walk through checking a product",
             plate_s("tour-show", "Show the tour")
                 .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
                     this.start_tour(cx);
+                }))
+                .into_any_element(),
+        ))
+        .child(hairline())
+        .child(row(
+            "Set up Kriko again",
+            "Repeat the first-run steps: agent, catalogs, extension",
+            plate_s("setup-show", "Start setup")
+                .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+                    this.reopen_onboarding(cx);
                 }))
                 .into_any_element(),
         ))
@@ -163,6 +201,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 .flex_col()
                 .gap(px(4.0))
                 .child(row_title("Data location"))
+                .child(row_desc("Everything stays on this machine"))
                 .child(mono(&store, MUTED)),
         );
 
@@ -181,29 +220,34 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             cx.notify();
         },
     );
+    let runs_note = if app.run_concurrency <= 1 {
+        "One at a time; the rest queue in Activity.".to_string()
+    } else {
+        format!(
+            "Up to {} together. Each spends on its own agent or key.",
+            app.run_concurrency
+        )
+    };
     let runs = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(4.0)).child(section_title("Runs")))
+        .child(card_head("play", "Runs", motion))
         .child(hairline())
         .child(row(
             "Agent runs at once",
-            "Same-pack runs take turns",
+            "Research, authoring and checks that may run together. Two on one pack take turns.",
             runs_picker.into_any_element(),
-        ));
+        ))
+        .child(div().pb(px(8.0)).child(row_desc(&runs_note)));
 
     // ---- keys ----
     let mut keys = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(4.0)).child(section_title("Keys")))
+        .child(card_head("key", "Keys", motion))
         .child(hairline());
     if !k.keys_loaded {
-        keys = keys.child(
-            div()
-                .pt(px(12.0))
-                .child(empty_note("Waiting for Kriko's engine.")),
-        );
+        keys = keys.child(div().pt(px(12.0)).child(empty_note("Waiting for the engine.")));
     }
     for (i, p) in k.keys.iter().enumerate() {
         let picked = k.key_provider.as_deref() == Some(p.id.as_str());
@@ -221,12 +265,8 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             this.remove_key(rid.clone(), cx);
         });
         let state = if p.present {
-            let from = if p.source.is_empty() {
-                String::new()
-            } else {
-                format!(" from {}", p.source)
-            };
-            format!("Ends {}{}", p.hint, from)
+            let from = if p.source.is_empty() { String::new() } else { format!(" from {}", p.source) };
+            format!("set, ends {}{}", p.hint, from)
         } else {
             "not set".to_string()
         };
@@ -238,35 +278,18 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     .flex()
                     .items_center()
                     .gap(px(8.0))
-                    .child(
-                        ghost(("key-pick", i), if picked { "Typing" } else { "Set" })
-                            .on_click(pick),
-                    )
-                    .when(p.present, |d| {
-                        d.child(ghost(("key-test", i), "Test").on_click(test))
-                    })
-                    .when(p.present, |d| {
-                        d.child(ghost(("key-remove", i), "Remove").on_click(remove))
-                    })
+                    .child(ghost(("key-pick", i), if picked { "Typing" } else { "Set" }).on_click(pick))
+                    .when(p.present, |d| d.child(ghost(("key-test", i), "Test").on_click(test)))
+                    .when(p.present, |d| d.child(ghost(("key-remove", i), "Remove").on_click(remove)))
                     .into_any_element(),
             ))
             .when_some(tested.filter(|_| p.present), |d, t| {
-                let ink = if t.busy {
-                    MUTED
-                } else if t.ok {
-                    ICE
-                } else {
-                    DANGER
-                };
-                d.child(div().pb(px(10.0)).child(mono(&t.said, ink)))
+                let ink = if t.busy { MUTED } else if t.ok { ICE } else { DANGER };
+                d.child(div().pb(px(SPACE_S)).child(mono(&t.said, ink)))
             })
             .child(hairline());
     }
-    if let Some(target) = k
-        .key_provider
-        .as_ref()
-        .and_then(|id| k.keys.iter().find(|p| &p.id == id))
-    {
+    if let Some(target) = k.key_provider.as_ref().and_then(|id| k.keys.iter().find(|p| &p.id == id)) {
         let id = target.id.clone();
         let save = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             let value = this.key_value.value.trim().to_string();
@@ -279,9 +302,9 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 .pt(px(12.0))
                 .flex()
                 .flex_col()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(row_desc(&format!(
-                    "{} key · saved in the engine key file",
+                    "A key for {}. Stored in the engine's key file only.",
                     target.label
                 )))
                 .child(
@@ -293,11 +316,7 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 ),
         );
     } else if k.keys_loaded {
-        keys = keys.child(
-            div()
-                .pt(px(12.0))
-                .child(row_desc("Choose a provider to add a key.")),
-        );
+        keys = keys.child(div().pt(px(12.0)).child(row_desc("Pick Set on a provider to type a key.")));
     }
     if !k.keys_path.is_empty() {
         keys = keys.child(div().pt(px(8.0)).child(mono(&k.keys_path, DIM)));
@@ -307,13 +326,9 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let shortcuts = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(4.0)).child(section_title("Shortcuts")))
+        .child(card_head("clock", "Shortcuts", motion))
         .child(hairline())
-        .child(shortcut_row(
-            "New check",
-            Some("Anywhere in Kriko"),
-            &["ctrl", "N"],
-        ))
+        .child(shortcut_row("New check", Some("Anywhere in Kriko"), &["ctrl", "N"]))
         .child(hairline())
         .child(shortcut_row("Search knowledge", None, &["ctrl", "K"]))
         .child(hairline())
@@ -348,36 +363,37 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .flex()
         .flex_col()
         .child(
-            div().mb(px(4.0)).child(
-                div()
-                    .font_family(DISPLAY)
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .text_size(px(18.0))
-                    .text_color(rgb(DANGER))
-                    .child("DANGER ZONE"),
-            ),
+            div()
+                .mb(px(4.0))
+                .flex()
+                .items_center()
+                .gap(px(8.0))
+                .child(icon_alive("warning", 14.0, "danger", 0, motion))
+                .child(
+                    div()
+                        .font_family(MONO)
+                        .text_size(px(12.0))
+                        .text_color(paint(DANGER))
+                        .child("DANGER ZONE"),
+                ),
         )
         .child(hairline())
         .child(row(
             "Remove every pack",
             if confirm {
-                "Removes installed packs and drafts, including claims and evidence. Keeps history."
+                "Removes every installed pack and pack draft, with their claims and evidence. Your history is kept. Packs come back only when you install them again."
             } else {
-                "Removes installed packs and drafts. Keeps history."
+                "Removes all packs and drafts. Keeps your history."
             },
             div()
                 .flex()
                 .items_center()
                 .gap(px(8.0))
-                .when(confirm && !busy, |d| {
-                    d.child(ghost("erase-cancel", "Cancel").on_click(cancel))
-                })
+                .when(confirm && !busy, |d| d.child(ghost("erase-cancel", "Cancel").on_click(cancel)))
                 .child(danger("erase", label).on_click(erase))
                 .into_any_element(),
         ))
-        .when_some(k.settings_notice.clone(), |c, n| {
-            c.child(div().pt(px(8.0)).child(mono(&n, MUTED)))
-        });
+        .when_some(k.settings_notice.clone(), |c, n| c.child(div().pt(px(8.0)).child(mono(&n, MUTED))));
 
     // Two columns when the page has the room for both (920 px); narrower, the
     // cards stack in one column at the page's full width, so none of them is
@@ -389,18 +405,37 @@ pub fn settings(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .flex()
         .flex_col()
         .gap(px(SPACE_CARD))
-        .child(general)
-        .child(runs)
-        .child(runtime)
-        .child(shortcuts);
+        .child(enter(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(SPACE_CARD))
+                .child(general)
+                .child(appearance)
+                .child(runs)
+                .child(runtime)
+                .child(shortcuts),
+            "settings-0",
+            0,
+            motion,
+        ));
     let right = div()
         .flex_1()
         .min_w(px(0.0))
         .flex()
         .flex_col()
         .gap(px(SPACE_CARD))
-        .child(keys)
-        .child(danger_zone);
+        .child(enter(
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(SPACE_CARD))
+                .child(keys)
+                .child(danger_zone),
+            "settings-1",
+            1,
+            motion,
+        ));
     if two_columns {
         div()
             .id("settings-screen")

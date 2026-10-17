@@ -75,7 +75,49 @@ pub fn post_bytes(path: &str, bytes: &[u8], filename: &str) -> Reply {
     send("POST", path, bytes, Some("application/octet-stream"), Some(filename))
 }
 
+/// The one-click extension install: the engine stages the folder and opens a
+/// browser that already carries the extension (`POST /api/extension/launch`).
+/// A browser it cannot start comes back as `launched: false` with a reason,
+/// never as an error status, so the answer is read, not caught.
+pub fn extension_launch() -> Reply {
+    post("/api/extension/launch", serde_json::json!({}))
+}
+
 fn send(method: &str, path: &str, payload: &[u8], content_type: Option<&str>, filename: Option<&str>) -> Reply {
+    let raw = roundtrip(method, path, payload, content_type, filename)?;
+    parse(&raw)
+}
+
+/// A `DELETE` that names the thing in the body, for the one door that works
+/// that way: a local model server deletes a model by name, not by path.
+pub fn delete_json(path: &str, body: Value) -> Reply {
+    let payload = body.to_string();
+    send("DELETE", path, payload.as_bytes(), Some("application/json"), None)
+}
+
+/// The raw body of a `GET`, for the doors that answer bytes instead of JSON:
+/// a site icon is an image, and the JSON path would flatten it to a string.
+pub fn get_bytes(path: &str) -> Result<Vec<u8>, ApiError> {
+    let raw = roundtrip("GET", path, &[], None, None)?;
+    let (status, body) = split(&raw)?;
+    if (200..300).contains(&status) {
+        Ok(body.to_vec())
+    } else {
+        let value: Value = serde_json::from_slice(body)
+            .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(body).into()));
+        Err(err(status, explain(status, &value)))
+    }
+}
+
+/// One request and its answer, whole. The blocking socket lives here and only
+/// here, so the JSON door and the byte door cannot drift apart.
+fn roundtrip(
+    method: &str,
+    path: &str,
+    payload: &[u8],
+    content_type: Option<&str>,
+    filename: Option<&str>,
+) -> Result<Vec<u8>, ApiError> {
     let base = engine::base().ok_or_else(|| err(0, "Kriko's engine is not running yet."))?;
     let (host, port) = engine::host_port(&base).map_err(|e| err(0, e))?;
     let addr = format!("{host}:{port}")
@@ -105,22 +147,27 @@ fn send(method: &str, path: &str, payload: &[u8], content_type: Option<&str>, fi
     stream
         .read_to_end(&mut raw)
         .map_err(|e| err(0, format!("Kriko's engine stopped answering: {e}")))?;
-    parse(&raw)
+    Ok(raw)
 }
 
-fn parse(raw: &[u8]) -> Reply {
-    let split = raw
+/// `(status, body)` from a whole answer.
+fn split(raw: &[u8]) -> Result<(u16, &[u8]), ApiError> {
+    let at = raw
         .windows(4)
         .position(|w| w == b"\r\n\r\n")
         .ok_or_else(|| err(0, "Kriko's engine sent a broken answer."))?;
-    let head = String::from_utf8_lossy(&raw[..split]);
-    let body = &raw[split + 4..];
+    let head = String::from_utf8_lossy(&raw[..at]);
     let status = head
         .lines()
         .next()
         .and_then(|l| l.split_whitespace().nth(1))
         .and_then(|s| s.parse::<u16>().ok())
         .unwrap_or(0);
+    Ok((status, &raw[at + 4..]))
+}
+
+fn parse(raw: &[u8]) -> Reply {
+    let (status, body) = split(raw)?;
     let value: Value = if body.is_empty() {
         Value::Null
     } else {

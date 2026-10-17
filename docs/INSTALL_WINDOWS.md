@@ -1,133 +1,142 @@
-# Installing Kriko on Windows
+# Install Kriko on Windows
 
-Double-click the MSI, open Kriko, load the extension. Top to bottom; if a step
-fails, **stop** and read the box under it.
+This guide installs the app, prepares the browser extension, and reports a
+problem.
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart LR
-    M["Install the MSI<br/>per-user, no admin prompt"]:::brand --> A["Open Kriko<br/>the engine starts with it"]:::plain
-    A --> E["Load the unpacked extension"]:::plain --> V["Verify: the panel,<br/>and /api/health"]:::ice
-    P["No installer?<br/>pip into a venv"]:::plain -.-> A
-    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
-```
-
-| You have | Use |
+| You have | Go to |
 |---|---|
 | `kriko-<version>-x86_64.msi` | Path A, steps 1 to 3 |
-| `kriko-<version>-win64-portable.zip` | Path A, step 1 (unzip), then step 2 |
-| Neither, but Python | Path B, steps 4 to 6 |
+| `kriko-<version>-win64-portable.zip` | Path A, step 1 (the portable ZIP), then step 2 |
+| Python 3.13 or newer, and no installer | Path B, steps 4 to 6 |
 
-Path A needs nothing else: the app carries its own Python, and a lookup needs
-no network.
+Path A needs nothing more. The app contains its own Python. A catalog lookup
+needs no network.
 
 ## Path A: the desktop app
 
-### 1. Install it
+### 1. Install the app
 
-Double-click `kriko-<version>-x86_64.msi`. It is a per-user install: no
-administrator prompt, nothing under Program Files, and it lands in
-`%LOCALAPPDATA%\Programs\Kriko`. Two programs go there, with three shortcuts.
+Double-click `kriko-<version>-x86_64.msi`.
 
-The install shows its progress bar and then one last screen with a checkbox,
-**Open Kriko**, ticked by default. Leave it ticked and press **Finish** and the
-app you just installed opens; untick it to start it later yourself. A silent
-install (`msiexec /qn`) never launches anything.
+The install puts the app in `%LOCALAPPDATA%\Programs\Kriko`. It does not ask
+for administrator rights. Two programs go there.
 
-| Shortcut | Opens |
+| Program | Function |
 |---|---|
-| **Kriko** (Start menu, desktop) | `kriko.exe`, the app. It starts the engine, `kriko-sidecar.exe`, and stops it again |
-| **Kriko Console** (Start menu) | The operator console, in a terminal window on purpose |
+| `kriko.exe` | The app. It starts the engine and stops the engine. |
+| `kriko-sidecar.exe` | The engine. The app starts it, and the app stops it. |
+
+The last screen of the install has the checkbox **Open Kriko**. Keep the
+checkbox on and press **Finish**. The app opens. A silent install
+(`msiexec /qn`) opens nothing.
 
 A newer MSI replaces an older one and stops a running Kriko first. An older MSI
 refuses to install over a newer one.
 
-**Portable:** unzip `kriko-<version>-win64-portable.zip` anywhere. It holds
-`kriko.exe` and `kriko-sidecar.exe`; keep them side by side and run
-`kriko.exe`.
+> **The message "A newer version of Kriko is already installed."**
+> You started an older MSI. Keep the newer version, or uninstall the newer
+> version first (step 3).
 
-> **"A newer version of Kriko is already installed."** You ran an older MSI.
-> Keep the newer one, or uninstall it first (step 3).
+**The portable ZIP.** Extract `kriko-<version>-win64-portable.zip`. Keep
+`kriko.exe` and `kriko-sidecar.exe` in the same folder. Run `kriko.exe`.
 
-### 2. Open it
+### 2. Open the app
 
-Start **Kriko**. The window says it is starting, then shows the app. A first
-launch walks you through the places a check needs — a catalog, an agent, the
-browser extension — and offers the first check; **Skip tour** ends it, and
-Settings has it back under **General → Take the tour**. Your data
-lives in `$HOME\.kriko`: the store `knowledge.sqlite` and your history
-`app.sqlite`.
+Open **Kriko**. The window shows the start, then the app.
 
-Closing the window hides it; the engine keeps serving, because the browser
-extension needs it. Use the tray icon (**Open**, **Quit**) to end it.
+The first start shows a setup with four steps. The setup selects an agent,
+installs a catalog, and prepares the browser extension. To show the setup
+again, open **Settings** and press **Take the tour**.
 
-> **The window shows a failure screen instead of the app.** It prints the
-> engine's own error. A common cause is another program holding port 8787, the
-> one port the extension talks to. Stop that program and open Kriko again.
+Kriko keeps your data in `%USERPROFILE%\.kriko`.
 
-> **An update fails because Kriko is still running.** Quit it from the tray.
-> The installer also stops it; a stray `kriko-sidecar.exe` in Task Manager can
-> be ended by hand.
+If you close the window, the app hides. The engine continues, because the
+browser extension needs it. To stop Kriko, use the tray icon and select
+**Quit**.
 
-Check the engine from a browser: **http://127.0.0.1:8787/api/health** answers
-`{"ok":true,...}`.
+> **The window shows a failure screen.**
+> The screen shows the error from the engine. A usual cause is a program that
+> holds port 8787. Stop that program and open Kriko again.
 
-### 3. Uninstall
+> **An update fails.**
+> Kriko still runs. Select **Quit** in the tray menu, then start the installer
+> again.
 
-**Settings, Apps, Installed apps, Kriko, Uninstall.** The installer stops
-Kriko first. `$HOME\.kriko` (the store and your history) survives. Delete it
-too for a full wipe.
+Examine the engine from a browser. Open `http://127.0.0.1:8787/api/health`. The
+answer contains `{"ok":true,...}`.
 
-## Install the browser extension
+### 3. Remove the app
 
-Not on a web store: load it from disk.
+Open **Settings**, then **Apps**, then **Installed apps**. Select **Kriko** and
+press **Uninstall**.
 
-1. In the app, **Check**, then **Browser extension**, then **Stage** (or
-   **Refresh** if already staged). **Show folder** opens `~/.kriko/extension/`.
-2. `chrome://extensions`, **Developer mode** on, **Load unpacked**, and pick
-   that folder (the one *containing* `manifest.json`). Pin the extension.
+The uninstall keeps `%USERPROFILE%\.kriko`. To remove your catalogs and your
+history, delete that folder.
 
-> After an app update the card says the staged files are older, and **Refresh**
-> followed by the browser's Reload (the circular arrow on the
-> extension's card) is the whole repair. The card also compares a content
-> digest, so an extension older than this build is caught even when the version
-> numbers agree.
+## Prepare the browser extension
 
-### Then allow it the sites
+Kriko does not come from a browser store. Load the extension from a folder.
 
-Registering a site in the app is never enough: the browser grants a site
-permission only from inside the extension.
+1. Open **Browser extension** in Kriko and press **Stage**. If Kriko prepared
+   the files before, the key says **Refresh**.
+2. Press **Show folder**. Kriko opens `%USERPROFILE%\.kriko\extension\`.
+3. Open the extensions page of your browser.
+4. Turn on **Developer mode**.
+5. Press **Load unpacked** and select the folder that holds `manifest.json`.
+6. Pin Kriko in the toolbar.
 
-1. Open the extension's **Options** (right-click its toolbar button), press
-   **Allow the pending sites**, and confirm. It works from the next page load.
-2. The panel is still missing? **System**, then **Sites** says which of the two
-   it is: the site needs a permission, or no adapter reads it yet.
+| Browser | Extensions page |
+|---|---|
+| Chrome | `chrome://extensions` |
+| Edge | `edge://extensions` |
+| Brave | `brave://extensions` |
 
-For Firefox, see [the Firefox add-on](FIREFOX_ADDON.md).
+Kriko must run before you open a listing. The extension asks the engine for
+every answer.
 
-## Local models
+> **After an update of the app**, the extension can be older than the app. Press
+> **Refresh** on the **Browser extension** screen. Then press the reload key on
+> the card of the extension in the browser.
 
-A local model is optional. To set one up, see [Local models](USAGE.md#local-models)
-in the usage guide.
+### Give the extension the sites
 
-## Path B: from Python, without the app
+A site in Kriko is not sufficient. Only the browser gives a site permission.
 
-For a terminal and a browser tab. Needs Python 3.13 or newer.
+1. Right-click the extension button and select **Options**.
+2. Press **Allow the pending sites** and agree.
+3. Open the page again.
 
-### 4. Check your Python
+> **The panel is missing on a page.**
+> Open **Sites**. The screen says if the site needs a permission, or if no
+> adapter reads the site.
+
+### Firefox
+
+Kriko also has a Firefox add-on.
+
+1. Open **Browser extension** and press **Prepare Firefox**.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Press **Load Temporary Add-on** and select the `manifest.json` file that the
+   screen shows.
+
+Firefox removes a temporary add-on at the next start. A permanent installation
+needs an add-on file that Mozilla signed.
+
+## Path B: from Python
+
+Use Path B for a terminal and a browser tab. Python 3.13 or newer is required.
+
+### 4. Examine your Python
 
 ```powershell
 py -3.13 --version
 ```
 
-Want 3.13 or newer, which is the floor `pyproject.toml` sets and the
-interpreter the test suite is verified on.
+> **The message "py is not recognised".**
+> Install Python from [python.org/downloads](https://www.python.org/downloads/),
+> and select **Add python.exe to PATH**.
 
-> **`py` is not recognised.** Install from [python.org/downloads](https://www.python.org/downloads/) with **Add python.exe to PATH** ticked.
-
-### 5. Install into its own place
+### 5. Install Kriko in its own folder
 
 ```powershell
 py -3.13 -m venv $HOME\kriko-env
@@ -135,54 +144,62 @@ $HOME\kriko-env\Scripts\pip install --upgrade pip
 $HOME\kriko-env\Scripts\pip install kriko
 ```
 
-From a checkout, point the last line at the directory instead:
+From a source checkout, use the folder in the last command:
 `$HOME\kriko-env\Scripts\pip install C:\path\to\kriko`.
 
-Check it worked:
+Examine the installation:
 
 ```powershell
 $HOME\kriko-env\Scripts\kriko --version
 ```
 
-No data, no catalogs and no network are needed. A version number means a sound
-install.
+A version number shows a good installation. No data, no catalog, and no
+network are necessary.
 
-> ### `ModuleNotFoundError: No module named 'kriko'`
+> **The message "ModuleNotFoundError: No module named 'kriko'".**
 > ```powershell
 > $HOME\kriko-env\Scripts\pip show -f kriko
 > $HOME\kriko-env\Scripts\python -c "import kriko, app; print('both import')"
 > where.exe kriko
 > ```
-> * No `kriko\` files in `pip show -f`: the artifact is bad. Report it.
-> * Both import but `kriko.exe` fails: an earlier install is earlier on `PATH`.
-> * `pip show` finds nothing: the wrong interpreter. Redo step 5 with full paths.
+> * The command `pip show -f` lists no `kriko\` file. The installation file is
+>   bad. Report the problem.
+> * Both imports work, but `kriko` fails. An older installation is before this
+>   one in `PATH`.
+> * The command `pip show` finds nothing. You used the wrong interpreter. Do
+>   step 5 again with full paths.
 
-### 6. Start it
+### 6. Start the engine
 
 ```powershell
 $HOME\kriko-env\Scripts\python -m app.web
 ```
 
-Keep that window open. The interactive API is at **http://127.0.0.1:8787/api/docs**,
-and the status at **http://127.0.0.1:8787/api/health**. The address
-`http://127.0.0.1:8787/` returns the service's JSON description, not a page. For
-a terminal interface instead, `$HOME\kriko-env\Scripts\kriko tui`. Then load the
-extension as above.
+Keep that window open. Then prepare the browser extension as above.
 
-Uninstall:
+| Address | Contents |
+|---|---|
+| `http://127.0.0.1:8787/api/docs` | The interactive API |
+| `http://127.0.0.1:8787/api/health` | The status |
+
+For a terminal interface, use `$HOME\kriko-env\Scripts\kriko tui`.
+
+Remove the installation:
 
 ```powershell
 Remove-Item -Recurse $HOME\kriko-env
 ```
 
-`$HOME\.kriko` survives, as in step 3.
+`%USERPROFILE%\.kriko` stays, as in step 3.
 
-## Reporting a problem
+## Report a problem
+
+Give these data:
 
 ```powershell
 $HOME\kriko-env\Scripts\kriko --version
 $HOME\kriko-env\Scripts\pip show -f kriko
 ```
 
-Plus **http://127.0.0.1:8787/api/health**, if the app started. On Path A, say
-whether you used the MSI or the zip.
+Also give `http://127.0.0.1:8787/api/health` if the app started. On Path A, say
+if you used the MSI or the portable ZIP.

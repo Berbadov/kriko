@@ -148,6 +148,16 @@ class FakeOllama(BaseHTTPRequestHandler):
         except OSError:
             pass  # the reader hung up: that is how a cancel arrives
 
+    def do_DELETE(self):
+        length = int(self.headers.get("content-length") or 0)
+        type(self).seen.append((self.path, json.loads(self.rfile.read(length))))
+        self.send_response(type(self).status)
+        self.send_header("content-type", "application/json")
+        self.end_headers()
+        # a refusal is the script's one line; a delete that works says nothing
+        said = type(self).script[0] if type(self).script else {"status": "success"}
+        self.wfile.write(json.dumps(said).encode())
+
     def log_message(self, *a):
         pass
 
@@ -271,6 +281,46 @@ def test_without_ollama_running_the_job_says_so(settings, monkeypatch):
     monkeypatch.setattr(modelpull, "ollama_base", lambda path=None: "")
     with pytest.raises(RuntimeError, match="Ollama is not running"):
         tasks.model_pull(settings, {"model": "x"}, Recorder())
+
+
+# ---- removing a model ----
+
+def test_a_valid_name_on_a_live_server_removes_it(client, monkeypatch, ollama):
+    monkeypatch.setattr(modelpull, "ollama_base", lambda path=None: ollama)
+    removed = client.post("/api/local-models/remove", json={"runtime": "ollama", "model": "tiny:1b"})
+    assert removed.status_code == 200
+    assert removed.json() == {"model": "tiny:1b", "removed": True}
+    # the name travels in the body: Ollama deletes by name, not by path
+    assert FakeOllama.seen == [("/api/delete", {"model": "tiny:1b"})]
+    # the desktop window names the model in a DELETE body (`api::delete_json`),
+    # so the same door answers that verb too
+    again = client.request(
+        "DELETE", "/api/local-models/remove",
+        json={"runtime": "ollama", "model": "tiny:1b"})
+    assert again.status_code == 200 and again.json()["removed"] is True
+
+
+def test_removing_without_a_server_says_so_in_one_sentence(client, monkeypatch):
+    monkeypatch.setattr(modelpull, "ollama_base", lambda path=None: "")
+    refused = client.post("/api/local-models/remove", json={"runtime": "ollama", "model": "tiny:1b"})
+    assert refused.status_code == 409
+    assert refused.json()["detail"] == "Ollama is not running. Start it, then remove the model."
+
+
+def test_a_refused_delete_surfaces_the_servers_words(client, monkeypatch, ollama):
+    monkeypatch.setattr(modelpull, "ollama_base", lambda path=None: ollama)
+    FakeOllama.status, FakeOllama.script = 404, [{"error": "model 'gone:1b' not found"}]
+    with pytest.raises(RuntimeError, match="model 'gone:1b' not found"):
+        modelpull.remove(ollama, "gone:1b")
+    refused = client.post("/api/local-models/remove", json={"runtime": "ollama", "model": "gone:1b"})
+    assert refused.status_code == 409
+    assert "model 'gone:1b' not found" in refused.json()["detail"]
+
+
+def test_only_ollama_can_be_removed_through(client):
+    refused = client.post("/api/local-models/remove", json={"runtime": "lmstudio", "model": "m"})
+    assert refused.status_code == 400
+    assert "LM Studio" in refused.json()["detail"]
 
 
 # ---- what Ollama holds ----

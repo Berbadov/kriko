@@ -13,7 +13,7 @@ origin = "https://github.com/kriko/kriko"
 languages = ["en"]
 
 # Every quote in this pack is synthetic and every URL points at the reserved
-# example.invalid domain. See README.md — this exists to falsify the pack
+# example.invalid domain. See research/principle.md — this exists to falsify the pack
 # format, not to inform anyone about drills.
 synthetic = true
 
