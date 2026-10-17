@@ -32,6 +32,14 @@ function loadPanel({
   firefox = false,
 } = {}) {
   const dom = new JSDOM("<!DOCTYPE html><html><head></head><body></body></html>", { url, pretendToBeVisual: true });
+  // jsdom does not implement matchMedia. The default answers "no" to both
+  // media queries — dark, and motion allowed — which is what the panel saw
+  // before either existed. A test replaces it to ask for light or stillness.
+  dom.window.matchMedia = (query) => ({
+    matches: false, media: query,
+    addListener() {}, removeListener() {},
+    addEventListener() {}, removeEventListener() {},
+  });
 
   const runtimeListeners = [];
   const storageListeners = [];
@@ -40,11 +48,18 @@ function loadPanel({
   const sent = [];
   const timers = [];
   const frames = [];
+  // The one durable bag the panel and the options page share: the reader's
+  // light/dark choice, under `kriko.theme`. A test reads it back off the
+  // returned `local` to prove the choice was written down.
+  const localBag = {};
   const sandbox = {
     document: dom.window.document,
     window: dom.window,
     location: dom.window.location,
     console,
+    /* jsdom has no matchMedia. The default is "no light, no reduced motion",
+     * which is exactly what the panel saw before there was a theme at all; a
+     * test that wants either replaces it on `p.dom.window`. */
     /* Timers are queued, not run, and not dropped either.
      *
      * They used to be a no-op, which kept mount's animation timers from
@@ -74,6 +89,21 @@ function loadPanel({
       },
       storage: {
         onChanged: { addListener: (fn) => storageListeners.push(fn) },
+        // The durable half: the reader's theme choice. Synchronous here so a
+        // test can assert the write and the read in the same tick.
+        local: {
+          get(keys, callback) {
+            const out = {};
+            for (const key of Array.isArray(keys) ? keys : [keys]) {
+              if (key in localBag) out[key] = localBag[key];
+            }
+            if (typeof callback === "function") callback(out);
+          },
+          set(items, callback) {
+            Object.assign(localBag, items || {});
+            if (typeof callback === "function") callback();
+          },
+        },
       },
     },
   };
@@ -112,6 +142,15 @@ function loadPanel({
 
   function deliverFirefoxUpdate(update) {
     for (const fn of runtimeListeners) fn({ type: "KRIKO_SESSION_UPDATE", url: dom.window.location.href, ...update });
+  }
+
+  // Mirror of the options page writing a durable setting (`kriko.motion`) to
+  // chrome.storage.local and the change event every surface listening on that
+  // area receives. Synchronous, like the bag above, so a test can assert the
+  // write and the panel's reaction in the same tick.
+  function setLocal(key, value) {
+    localBag[key] = value;
+    for (const fn of storageListeners) fn({ [key]: { newValue: value } }, "local");
   }
 
   function shadow() {
@@ -203,7 +242,7 @@ function loadPanel({
 
   return { dom, openPanel, deliverEntry, deliverStage, deliverFirefoxUpdate, footer, listing, claims,
            click, type, shadow, sent, errorText, pipeline, flushTimers, flushFrames,
-           statusText, liveRows };
+           statusText, liveRows, setLocal, local: localBag };
 }
 
 module.exports = { loadPanel };

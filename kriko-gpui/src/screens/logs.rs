@@ -1,5 +1,5 @@
 //! A persistent log control shared by durable tasks.
-use gpui::{div, prelude::*, px, rgb, Context, Div, ScrollHandle};
+use gpui::{div, prelude::*, px, Context, Div, ScrollHandle};
 use crate::app::Kriko;
 use crate::live::history::{now_secs, parse_utc};
 use crate::live::run::{kind_word, Job};
@@ -35,16 +35,27 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
     let elapsed = parse_utc(&job.created_at).map(|start| {
         (parse_utc(&job.finished_at).unwrap_or_else(now_secs) - start).max(0)
     });
-    let result = div().flex().flex_col().gap(px(6.0))
-        .child(div().flex().flex_wrap().items_center().gap(px(6.0))
-            .child(tag(format!("task-state-{id}"), if !job.done && job.state == "running" { TagState::Live }
-                else if matches!(job.state.as_str(), "failed" | "interrupted") { TagState::Block }
-                else if job.done { TagState::Done } else { TagState::Queue }, &job.state, app.motion))
-            .child(plate_s(gpui::ElementId::named_usize(format!("task-logs-{id}"), 0), if open { "Hide logs" } else { "Show logs" }).on_click(toggle)))
-        .child(row_desc(&format!("{} · {} · {} · {} · {}",
-            kind_word(&job.kind), if job.harness.is_empty() { job.backend.as_str() } else { job.harness.as_str() },
-            if job.model.is_empty() { "Model not reported" } else { &job.model },
-            job.message, elapsed.map(|n| format!("{n} s")).unwrap_or_else(|| "Time unavailable".into()))));
+    let result = div().flex().flex_col().gap(px(SPACE_S))
+        .child(enter(
+            div().flex().flex_wrap().items_center().gap(px(SPACE_S))
+                .child(icon_alive("file", 12.0, &format!("logs-{id}"), 0, app.motion))
+                .child(tag(format!("task-state-{id}"), if !job.done && job.state == "running" { TagState::Live }
+                    else if matches!(job.state.as_str(), "failed" | "interrupted") { TagState::Block }
+                    else if job.done { TagState::Done } else { TagState::Queue }, &job.state, app.motion))
+                .child(plate_s(gpui::ElementId::named_usize(format!("task-logs-{id}"), 0), if open { "Hide logs" } else { "Show logs" }).on_click(toggle)),
+            &format!("logs-{id}-0"),
+            0,
+            app.motion,
+        ))
+        .child(enter(
+            row_desc(&format!("{} · {} · {} · {} · {}",
+                kind_word(&job.kind), if job.harness.is_empty() { job.backend.as_str() } else { job.harness.as_str() },
+                if job.model.is_empty() { "model not reported" } else { &job.model },
+                job.message, elapsed.map(|n| format!("{n} s")).unwrap_or_else(|| "time unavailable".into()))),
+            &format!("logs-{id}-1"),
+            1,
+            app.motion,
+        ));
     let kinds = ["", "search", "source", "finding", "problem"];
     let labels = ["All", "Search", "Sources", "Findings", "Problems"];
     let selected = level.min(4);
@@ -58,12 +69,17 @@ pub fn job_logs(app: &mut Kriko, job: &Job, cx: &mut Context<Kriko>) -> Div {
             this.log_views.entry(pick_id.clone()).or_default().level = i; cx.notify();
         });
         controls = controls.child(plate_s(gpui::ElementId::named_usize(format!("log-filter-{id}"), i), label)
-            .when(selected == i, |b| b.border_color(rgb(ICE))).on_click(pick));
+            .when(selected == i, |b| b.border_color(paint(ICE))).on_click(pick));
     }
     let controls = controls.child(plate_s(gpui::ElementId::named_usize(format!("log-copy-{id}"), 0), "Copy log").on_click(copy));
     let mut body = div().id(gpui::ElementId::named_usize(format!("log-scroll-{id}"), 0)).track_scroll(&scroll).overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
-        .h(px(280.0)).flex_none().min_h(px(40.0)).p(px(12.0)).bg(rgb(WELL)).flex().flex_col().gap(px(5.0));
+        .h(px(280.0)).flex_none().min_h(px(40.0)).p(px(12.0)).bg(paint(WELL)).flex().flex_col().gap(px(SPACE_XS));
     if lines.is_empty() { body = body.child(empty_note(if job.done { "No log entries for this filter." } else { "Waiting for log entries." })); }
     for line in lines { body = body.child(mono(&line.text, INK_2).font_family(CODE).flex_none()); }
-    result.child(reveal(div().flex().flex_col().gap(px(6.0)).child(controls).child(body), format!("log-disclosure-{id}"), open, 350.0, app.motion))
+    result.child(enter(
+        reveal(div().flex().flex_col().gap(px(SPACE_S)).child(controls).child(body), format!("log-disclosure-{id}"), open, 350.0, app.motion),
+        &format!("logs-{id}-2"),
+        2,
+        app.motion,
+    ))
 }

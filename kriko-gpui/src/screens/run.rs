@@ -6,17 +6,23 @@
 //! Everything here is read from `live::run`; while that has not arrived, or
 //! the engine has no job, a quiet note stands in.
 
-use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, Styled, Window};
+use gpui::{
+    AnimationExt,
+    div, linear_color_stop, linear_gradient, prelude::*, px,
+    Context, Div, FontWeight, Stateful, Styled, Window,
+};
 
-use crate::api::{self, Value};
 use crate::app::{Field, Kriko, Tab};
+use crate::api::{self, Value};
 use crate::live::run::{ago, mark_for, Job, Stage};
-use crate::marks::{agent_tile, mark_tile, phase_beat};
+use crate::marks::{mark_tile, phase_beat};
 use crate::screens::{empty_note, guidance, mono, plate_s, row_desc, row_title};
+use crate::sources::{host_of, source_row, Source};
+use crate::textfx::{cylinder_status, words_reveal};
 use crate::theme::*;
 
 /// The run's phases, in order, as the LEDs name them.
-const PHASES: [&str; 5] = ["QUEUED", "READING", "GROUNDING", "WRITING", "STORED"];
+const PHASES: [&str; 4] = ["QUEUED", "READING", "GROUNDING", "STORED"];
 
 fn web_discovery_prompt(query: &str) -> String {
     let query = query.trim();
@@ -37,15 +43,11 @@ pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> 
 /// A chip for a label that may be longer than the room it is given (words
 /// from the engine): the text wraps inside the chip and the chip grows to
 /// fit, instead of running out past its border.
-pub fn option_chip_wrapping(
-    id: impl Into<gpui::ElementId>,
-    text: &str,
-    chosen: bool,
-) -> Stateful<Div> {
+pub fn option_chip_wrapping(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> Stateful<Div> {
     chip_skin(chip_base(id), chosen)
         .h_auto()
-        .min_h(px(30.0))
-        .py(px(7.0))
+        .min_h(px(26.0))
+        .py(px(SPACE_S))
         .child(
             div()
                 .flex_1()
@@ -58,7 +60,7 @@ pub fn option_chip_wrapping(
 fn chip_base(id: impl Into<gpui::ElementId>) -> Stateful<Div> {
     div()
         .id(id)
-        .h(px(30.0))
+        .h(px(26.0))
         .flex_none()
         .px(px(12.0))
         .flex()
@@ -72,46 +74,51 @@ fn chip_base(id: impl Into<gpui::ElementId>) -> Stateful<Div> {
 
 fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
     if chosen {
-        base.text_color(rgb(0xffffff))
+        base.text_color(paint(0xffffff))
             .border_1()
-            .border_color(rgba(0xffffff40))
-            .bg(rgb(BRAND))
-            .hover(|s| s.bg(rgb(BRAND_HOVER)))
+            .border_color(paint_a(0xffffff40))
+            .bg(paint(BRAND))
+            .hover(|s| s.bg(paint(BRAND_HOVER)))
     } else {
-        base.text_color(rgb(INK_2))
+        base.text_color(paint(INK_2))
             .border_1()
-            .border_color(rgba(BORDER_CONTROL))
-            .bg(rgba(GLASS_1))
-            .hover(|s| s.bg(rgba(GLASS_2)))
+            .border_color(paint_a(BORDER_CONTROL))
+            .bg(paint_a(GLASS_1))
+            .hover(|s| s.bg(paint_a(GLASS_2)))
     }
 }
 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
-    let mut page = div().flex().flex_col().gap(px(SPACE_SECTION));
+    let mut page = div().flex().flex_col().gap(px(SPACE_CARD));
+    let mut index = 0usize;
 
     let job = app.live.run.current().cloned();
     match (&job, app.live.run.jobs_loaded) {
         (Some(job), _) => {
-            page = page.child(subject_card(app, job, motion, cx));
+            page = page.child(enter(subject_card(app, job, motion, cx), "run-subject", index, motion));
+            index += 1;
             if let Some(next) = terminal_next_step(app, job, motion, cx) {
-                page = page.child(next);
+                page = page.child(enter(next, "run-next-step", index, motion));
+                index += 1;
             }
             if job.kind == "quick_look" && job.done {
-                if let Some(evidence) =
-                    quick_look_result_card(&job.result, &job.product, &job.state)
-                {
-                    page = page.child(evidence);
+                if let Some(evidence) = quick_look_result_card(&job.result, &job.product, &job.state, motion) {
+                    page = page.child(enter(evidence, "run-quick-look", index, motion));
+                    index += 1;
                 }
             }
-            if let Some(answer) = answer_card(job) {
-                page = page.child(answer);
+            if let Some(answer) = answer_card(job, motion) {
+                page = page.child(enter(answer, "run-answer", index, motion));
+                index += 1;
             }
             if job.kind == "quick_look" && job.done {
-                page = page.child(follow_up_card(app, job.id.clone(), window, cx));
+                page = page.child(enter(follow_up_card(app, job.id.clone(), window, cx), "run-follow-up", index, motion));
+                index += 1;
             }
             if job.attention.is_some() {
-                page = page.child(questions_card(app, job, motion, cx));
+                page = page.child(enter(questions_card(app, job, motion, cx), "run-questions", index, motion));
+                index += 1;
             }
         }
         (None, loaded) => {
@@ -126,25 +133,36 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
                 guidance::next_step(
                     "run-job-list-waiting",
                     "Waiting for the engine",
-                    "The job list has not arrived yet. Check again to retry while the product search stays below.",
+                    "The job list has not arrived. Check again while the product search stays below.",
                     ghost("run-jobs-retry", "Check again").on_click(retry).into_any_element(),
                     motion,
                 )
             };
-            page = page.child(
+            page = page.child(enter(
                 card()
                     .flex()
                     .flex_col()
                     .gap(px(8.0))
-                    .child(eyebrow("Run"))
+                    .child(card_head("play", "Run", motion))
                     .child(empty),
-            );
+                "run-start",
+                index,
+                motion,
+            ));
+            index += 1;
         }
     }
-    page = page.child(start_card(app, window, cx));
+    page = page.child(enter(start_card(app, window, cx), "run-start-form", index, motion));
     if let Some(job) = &job {
-        page = page.child(lane_card(app, job, motion));
-        page = page.child(card().child(crate::screens::logs::job_logs(app, job, cx)));
+        index += 1;
+        page = page.child(enter(lane_card(app, job, motion), "run-lane", index, motion));
+        index += 1;
+        page = page.child(enter(
+            card().child(crate::screens::logs::job_logs(app, job, cx)),
+            "run-logs",
+            index,
+            motion,
+        ));
     }
     page
 }
@@ -166,13 +184,15 @@ fn next_for_job(done: bool, stage: Stage, needs_answers: bool) -> Option<RunNext
     }
 }
 
-fn live_codex_answer<'a>(harness: &str, done: bool, message: &'a str) -> Option<&'a str> {
+fn live_codex_answer<'a>(
+    harness: &str,
+    done: bool,
+    message: &'a str,
+) -> Option<&'a str> {
     if harness != "codex" || done {
         return None;
     }
-    message
-        .strip_prefix("Writing: ")
-        .filter(|text| !text.trim().is_empty())
+    message.strip_prefix("Writing: ").filter(|text| !text.trim().is_empty())
 }
 
 fn terminal_next_step(
@@ -182,70 +202,39 @@ fn terminal_next_step(
     cx: &mut Context<Kriko>,
 ) -> Option<gpui::AnyElement> {
     let next = next_for_job(job.done, job.stage(), job.attention.is_some())?;
-    let id = format!(
-        "run-next-{}-{}",
-        job.id,
-        match next {
-            RunNext::Retry => "retry",
-            RunNext::Activity => "activity",
-        }
-    );
+    let id = format!("run-next-{}-{}", job.id, match next { RunNext::Retry => "retry", RunNext::Activity => "activity" });
     let job_id = job.id.clone();
     let retrying = next == RunNext::Retry
-        && (crate::live::run::retry_pending(
-            &app.live.run.retry_pending,
-            &job.id,
-            std::time::Instant::now(),
-        ) || app
-            .live
-            .run
-            .jobs
-            .iter()
-            .any(|j| j.retry_of == job.id && !j.done));
+        && (crate::live::run::retry_pending(&app.live.run.retry_pending, &job.id, std::time::Instant::now())
+            || app.live.run.jobs.iter().any(|j| j.retry_of == job.id && !j.done));
     let (title, detail, label) = match next {
         RunNext::Retry => (
             "Run this request again",
-            "This attempt remains below with its message and log. Retrying creates a new run with the same request.",
+            "This attempt stays below with its message and log. Retrying starts a new run with the same request.",
             "Retry run",
         ),
         RunNext::Activity => (
             "Review the finished work",
-            "The run has ended. Activity keeps its job updates, and the run details remain below.",
+            "The run has ended. Activity keeps its updates; the run details stay below.",
             "Open Activity",
         ),
     };
     let action = match next {
-        RunNext::Retry => key(
-            "run-retry",
-            if retrying {
-                "Retry submitted…"
-            } else {
-                label
-            },
-        )
-        .opacity(if retrying { 0.55 } else { 1.0 })
-        .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-            let now = std::time::Instant::now();
-            if crate::live::run::retry_pending(&this.live.run.retry_pending, &job_id, now) {
-                return;
-            }
-            if this
-                .live
-                .run
-                .jobs
-                .iter()
-                .any(|j| j.retry_of == job_id && !j.done)
-            {
-                return;
-            }
-            this.live.run.retry_pending.insert(job_id.clone(), now);
-            cx.notify();
-            let path = format!("/api/jobs/{}/retry", api::seg(&job_id));
-            let retry_parent = job_id.clone();
-            this.fetch(
-                cx,
-                move || api::post(&path, serde_json::json!({})),
-                move |this, reply, cx| {
+        RunNext::Retry => key("run-retry", if retrying { "Retry submitted…" } else { label })
+            .opacity(if retrying { 0.55 } else { 1.0 })
+            .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                let now = std::time::Instant::now();
+                if crate::live::run::retry_pending(&this.live.run.retry_pending, &job_id, now) {
+                    return;
+                }
+                if this.live.run.jobs.iter().any(|j| j.retry_of == job_id && !j.done) {
+                    return;
+                }
+                this.live.run.retry_pending.insert(job_id.clone(), now);
+                cx.notify();
+                let path = format!("/api/jobs/{}/retry", api::seg(&job_id));
+                let retry_parent = job_id.clone();
+                this.fetch(cx, move || api::post(&path, serde_json::json!({})), move |this, reply, cx| {
                     this.note(&reply);
                     let mut submitted = false;
                     if let Ok(v) = reply {
@@ -260,10 +249,9 @@ fn terminal_next_step(
                         this.live.run.retry_pending.remove(&retry_parent);
                     }
                     this.refresh_jobs(cx);
-                },
-            )
-        }))
-        .into_any_element(),
+                })
+            }))
+            .into_any_element(),
         RunNext::Activity => ghost("run-open-activity", label)
             .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
                 this.tab = Tab::Activity;
@@ -277,15 +265,15 @@ fn terminal_next_step(
 
 fn attention_detail(done: bool) -> &'static str {
     if done {
-        "Choose an answer, then start a new run to use it."
+        "This run has finished with its own answers. Choose yours, then run it again to carry them into a new attempt."
     } else {
-        "This run keeps its current answers. Start another run to apply yours."
+        "This run keeps going with its own answers. Choose yours now; when it finishes, run it again to carry them into a new attempt."
     }
 }
 
 /// A finished agent run must show its answer, even when the engine returned
 /// no answer text. The job feed is a record of work, not the answer itself.
-fn answer_card(job: &Job) -> Option<Div> {
+fn answer_card(job: &Job, motion: bool) -> Option<Div> {
     if job.state != "succeeded"
         || !matches!(job.kind.as_str(), "research" | "agenda_run" | "compare_ask")
     {
@@ -296,8 +284,8 @@ fn answer_card(job: &Job) -> Option<Div> {
     let mut result = card()
         .flex()
         .flex_col()
-        .gap(px(6.0))
-        .child(eyebrow("Agent answer"));
+        .gap(px(SPACE_S))
+        .child(card_head("quote", "Agent answer", motion));
     if answer.is_empty() {
         result = result.child(row_title("The agent returned no answer"));
         result = result.child(row_desc(if reason.is_empty() {
@@ -306,7 +294,7 @@ fn answer_card(job: &Job) -> Option<Div> {
             reason
         }));
     } else {
-        result = result.child(row_desc(answer));
+        result = result.child(words_reveal(answer, &format!("run-answer-{}", job.id), motion));
     }
     Some(result)
 }
@@ -325,7 +313,7 @@ fn run_line(result: &Value) -> String {
         .unwrap_or_default()
 }
 
-pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str) -> Option<Div> {
+pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str, motion: bool) -> Option<Div> {
     if result.is_null() {
         return None;
     }
@@ -333,28 +321,16 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
     let risks = api::arr(result, "risks");
     let specs = api::arr(result, "specs");
     let dropped = api::n(result, "dropped").unwrap_or(0.0) as usize;
-    let coverage = result
-        .get("coverage")
-        .or_else(|| {
-            result
-                .get("telemetry")
-                .and_then(|value| value.get("coverage"))
-        })
+    let coverage = result.get("coverage")
+        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")))
         .filter(|value| value.is_object());
     let listing = result.get("listing").filter(|value| value.is_object());
-    let mut card = card()
-        .flex()
-        .flex_col()
-        .gap(px(6.0))
-        .child(eyebrow("Quick Look · saved evidence"));
+    let mut card = card().flex().flex_col().gap(px(SPACE_S))
+        .child(card_head("spark", "Quick Look · saved evidence", motion));
     let saved_product = api::s(result, "product");
-    let label = if !saved_product.is_empty() {
-        saved_product
-    } else if !product.is_empty() {
-        product.to_string()
-    } else {
-        String::new()
-    };
+    let label = if !saved_product.is_empty() { saved_product }
+        else if !product.is_empty() { product.to_string() }
+        else { String::new() };
     if !label.is_empty() {
         card = card.child(row_title(&label));
     }
@@ -378,29 +354,18 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
         card = card.child(row_desc(&diagnostic_message));
     }
     if let Some(coverage) = coverage {
-        let count = |key: &str| {
-            api::n(coverage, key)
-                .map(|value| format!("{value:.0}"))
-                .unwrap_or_else(|| "not reported".into())
-        };
-        card = card.child(mono(
-            &format!(
-                "READ {} · PRODUCT MATCHES {} · CHECKED {} · PUBLISHERS {} · CITED {}",
-                count("pages_read"),
-                count("pages_relevant"),
-                count("pages_extracted"),
-                count("publishers_read"),
-                count("sources_cited")
-            ),
-            MUTED,
-        ));
+        let count = |key: &str| api::n(coverage, key)
+            .map(|value| format!("{value:.0}"))
+            .unwrap_or_else(|| "not reported".into());
+        card = card.child(mono(&format!(
+            "READ {} · PRODUCT MATCHES {} · CHECKED {} · PUBLISHERS {} · CITED {}",
+            count("pages_read"), count("pages_relevant"),
+            count("pages_extracted"), count("publishers_read"), count("sources_cited")), MUTED));
         let coverage_status = api::s(coverage, "status");
         let status = match coverage_status.as_str() {
             "supported_findings" => "Evidence checks kept one or more findings",
             "partial" => "Some research or evidence stages were incomplete",
-            "no_matching_product_evidence" => {
-                "No read page established a match to this exact product"
-            }
+            "no_matching_product_evidence" => "No read page established a match to this exact product",
             "evidence_rejected" => "Candidate findings did not pass the evidence checks",
             "no_supported_findings" => "No sourced risks were kept from the pages read",
             _ if risks.is_empty() => "No sourced risks were kept in the saved result",
@@ -409,23 +374,15 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
         if !risks.is_empty() {
             card = card.child(row_desc(status));
         }
-        card = card.child(mono(
-            &format!(
-                "Pages checked: {} · candidates rejected: {}",
-                count("pages_extracted"),
-                count("rejected_candidates")
-            ),
-            DIM,
-        ));
+        card = card.child(mono(&format!("Pages checked: {} · candidates rejected: {}",
+            count("pages_extracted"), count("rejected_candidates")), DIM));
     } else if risks.is_empty() && diagnostic_message.is_empty() {
-        card = card.child(row_desc(
-            "No sourced risks were kept in the saved result. Coverage details were not reported.",
-        ));
+        card = card.child(row_desc("No sourced risks were kept in the saved result. Coverage details were not reported."));
     }
 
     let evidence_pages = api::arr(result, "evidence_pages");
     if !evidence_pages.is_empty() {
-        card = card.child(hairline()).child(eyebrow("Pages checked"));
+        card = card.child(hairline()).child(card_head("globe", "Pages checked", motion));
         for (page_index, page) in evidence_pages.iter().enumerate() {
             let url = api::s(page, "url");
             let domain = api::s(page, "domain");
@@ -442,6 +399,7 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
                     gpui::ElementId::named_usize("quicklook-page-source", page_index),
                     if domain.is_empty() { "Page" } else { &domain },
                     &url,
+                    motion,
                 ));
             }
         }
@@ -452,20 +410,14 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
         let listing_url = api::s(listing, "url");
         let facts = listing.get("facts").unwrap_or(&Value::Null);
         if !description.is_empty() || !listing_url.is_empty() || !facts.is_null() {
-            card = card.child(hairline()).child(eyebrow("Product listing"));
+            card = card.child(hairline()).child(card_head("file", "Product listing", motion));
             if !description.is_empty() {
                 card = card.child(row_desc(&description));
             }
             if !listing_url.is_empty() {
-                card = card.child(source_link(
-                    "quicklook-listing-source",
-                    "Listing",
-                    &listing_url,
-                ));
+                card = card.child(source_link("quicklook-listing-source", "Listing", &listing_url, motion));
             }
-            for (fact_index, (name, value, quote, url)) in
-                quick_look_listing_facts(facts).into_iter().enumerate()
-            {
+            for (fact_index, (name, value, quote, url)) in quick_look_listing_facts(facts).into_iter().enumerate() {
                 card = card.child(row_title(&format!("{name} · {value}")));
                 if !quote.is_empty() {
                     card = card.child(row_desc(&format!("“{quote}”")));
@@ -475,6 +427,7 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
                         gpui::ElementId::named_usize("quicklook-listing-fact-source", fact_index),
                         "Listing fact",
                         &url,
+                        motion,
                     ));
                 }
             }
@@ -487,34 +440,15 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
     if let Some(identity) = result.get("identity").filter(|value| value.is_object()) {
         let name = api::s(identity, "canonical_name");
         let variant = api::s(identity, "variant");
-        let identifiers = api::arr(identity, "identifiers")
-            .iter()
-            .filter_map(Value::as_str)
-            .collect::<Vec<_>>()
-            .join(", ");
-        let unknowns = api::arr(identity, "unknowns")
-            .iter()
-            .filter_map(Value::as_str)
-            .collect::<Vec<_>>()
-            .join(", ");
-        let resolved = identity
-            .get("resolved")
-            .and_then(Value::as_bool)
-            .unwrap_or(false);
-        let identity_line = format!(
-            "Identity · {} · {} · {}",
-            if name.is_empty() {
-                "product name not reported"
-            } else {
-                &name
-            },
-            if variant.is_empty() {
-                "exact variant unresolved"
-            } else {
-                &variant
-            },
-            if resolved { "resolved" } else { "unresolved" }
-        );
+        let identifiers = api::arr(identity, "identifiers").iter()
+            .filter_map(Value::as_str).collect::<Vec<_>>().join(", ");
+        let unknowns = api::arr(identity, "unknowns").iter()
+            .filter_map(Value::as_str).collect::<Vec<_>>().join(", ");
+        let resolved = identity.get("resolved").and_then(Value::as_bool).unwrap_or(false);
+        let identity_line = format!("Identity · {} · {} · {}",
+            if name.is_empty() { "product name not reported" } else { &name },
+            if variant.is_empty() { "exact variant unresolved" } else { &variant },
+            if resolved { "resolved" } else { "unresolved" });
         card = card.child(mono(&identity_line, INK_2));
         if !identifiers.is_empty() {
             card = card.child(mono(&format!("Identifiers · {identifiers}"), MUTED));
@@ -528,26 +462,17 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
             card = card.child(mono(&format!("Catalog identity · {fact}"), MUTED));
         }
     }
-    let runtime = result
-        .get("runtime")
+    let runtime = result.get("runtime")
         .filter(|runtime| {
             !api::s(runtime, "requested_device").is_empty()
                 || !matches!(api::s(runtime, "device").as_str(), "" | "unknown")
         })
-        .or_else(|| {
-            result
-                .get("telemetry")
-                .and_then(|telemetry| telemetry.get("runtime"))
-        })
+        .or_else(|| result.get("telemetry").and_then(|telemetry| telemetry.get("runtime")))
         .filter(|runtime| runtime.is_object());
     if let Some(runtime) = runtime {
         let requested = api::s(runtime, "requested_device");
         let actual = api::s(runtime, "device");
-        let actual = if actual.is_empty() || actual == "unknown" {
-            String::new()
-        } else {
-            actual
-        };
+        let actual = if actual.is_empty() || actual == "unknown" { String::new() } else { actual };
         let device = match (requested.is_empty(), actual.is_empty()) {
             (false, false) => format!("Device · requested {requested}, runtime reported {actual}"),
             (false, true) => format!("Device · requested {requested}, actual use not reported"),
@@ -568,68 +493,39 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
         } else if unsupported.is_empty() {
             card.child(mono("Self-check: no unsupported risks reported", MUTED))
         } else {
-            card.child(mono(
-                &format!("Self-check flagged {} risk(s):", unsupported.len()),
-                DANGER,
-            ))
+            card.child(mono(&format!("Self-check flagged {} risk(s):", unsupported.len()), DANGER))
         };
         for item in unsupported {
-            card = card.child(row_desc(&format!(
-                "{} — {}",
-                api::s(item, "title"),
-                api::s(item, "reason")
-            )));
+            card = card.child(row_desc(&format!("{} — {}", api::s(item, "title"), api::s(item, "reason"))));
         }
         let note = api::s(verification, "note");
         if !note.is_empty() {
             card = card.child(row_desc(&note));
         }
-    } else if let Some(check) = result
-        .get("telemetry")
-        .and_then(|telemetry| telemetry.get("self_verify"))
-    {
-        card = card.child(row_desc(
-            "Model self-check opinions; source quotes remain the evidence gate.",
-        ));
+    } else if let Some(check) = result.get("telemetry").and_then(|telemetry| telemetry.get("self_verify")) {
+        card = card.child(row_desc("Model self-check opinions; source quotes remain the evidence gate."));
         if let Some(verdicts) = check.get("verdicts").and_then(Value::as_array) {
             for verdict in verdicts {
                 let index = api::n(verdict, "index").unwrap_or(0.0) as usize;
-                let title = risks
-                    .get(index)
-                    .map(|risk| api::s(risk, "title"))
-                    .unwrap_or_default();
-                let supported = verdict
-                    .get("supported")
-                    .and_then(Value::as_bool)
-                    .unwrap_or(false);
-                card = card.child(row_desc(&format!(
-                    "{} · {} · {}",
-                    title,
-                    if supported { "supported" } else { "flagged" },
-                    api::s(verdict, "reason")
-                )));
+                let title = risks.get(index).map(|risk| api::s(risk, "title")).unwrap_or_default();
+                let supported = verdict.get("supported").and_then(Value::as_bool).unwrap_or(false);
+                card = card.child(row_desc(&format!("{} · {} · {}", title,
+                    if supported { "supported" } else { "flagged" }, api::s(verdict, "reason"))));
             }
         } else {
-            card = card.child(row_desc(&format!(
-                "Self-check unavailable: {} {}",
-                api::s(check, "status"),
-                api::s(check, "message")
-            )));
+            card = card.child(row_desc(&format!("Self-check unavailable: {} {}", api::s(check, "status"), api::s(check, "message"))));
         }
     } else {
         card = card.child(mono("Self-check verdict not recorded for this run", DIM));
     }
 
     if !risks.is_empty() {
-        card = card.child(hairline()).child(eyebrow("Sourced risks"));
+        card = card.child(hairline()).child(card_head("warning", "Sourced risks", motion));
         for (risk_index, risk) in risks.iter().enumerate() {
             let title = api::s(risk, "title");
             let severity = api::s(risk, "severity");
-            card = card.child(row_title(&if severity.is_empty() {
-                title.clone()
-            } else {
-                format!("{title} · {severity}")
-            }));
+            card = card.child(row_title(&if severity.is_empty() { title.clone() }
+                else { format!("{title} · {severity}") }));
             let body = api::s(risk, "body");
             if !body.is_empty() {
                 card = card.child(row_desc(&body));
@@ -647,21 +543,17 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
                 }
                 if !url.is_empty() {
                     card = card.child(source_link(
-                        gpui::ElementId::named_usize(
-                            format!("quicklook-risk-source-{risk_index}"),
-                            source_index,
-                        ),
+                        gpui::ElementId::named_usize(format!("quicklook-risk-source-{risk_index}"), source_index),
                         if domain.is_empty() { "Source" } else { &domain },
                         &url,
+                        motion,
                     ));
                 }
             }
         }
     }
     if !specs.is_empty() {
-        card = card
-            .child(hairline())
-            .child(eyebrow("Sourced product facts"));
+        card = card.child(hairline()).child(card_head("check-circle", "Sourced product facts", motion));
         for (spec_index, spec) in specs.iter().enumerate() {
             let name = api::s(spec, "name");
             let value = api::s(spec, "value");
@@ -674,16 +566,13 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
             if !url.is_empty() {
                 let domain = {
                     let domain = api::s(spec, "domain");
-                    if domain.is_empty() {
-                        "Source".to_string()
-                    } else {
-                        domain
-                    }
+                    if domain.is_empty() { "Source".to_string() } else { domain }
                 };
                 card = card.child(source_link(
                     gpui::ElementId::named_usize("quicklook-spec-source", spec_index),
                     &domain,
                     &url,
+                    motion,
                 ));
             }
         }
@@ -695,73 +584,60 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
 /// pack-identity map into short, visible product facts.
 fn quick_look_facts(value: &Value) -> Vec<String> {
     match value {
-        Value::Array(items) => items
-            .iter()
-            .filter_map(|item| {
-                let name = api::s(item, "name");
-                let value = api::s(item, "value");
-                if name.is_empty() || value.is_empty() {
-                    None
-                } else {
-                    Some(format!("{name} · {value}"))
-                }
-            })
-            .collect(),
-        Value::Object(items) => items
-            .iter()
-            .map(|(name, value)| {
-                let value = value
-                    .as_str()
-                    .map(str::to_string)
-                    .unwrap_or_else(|| value.to_string());
-                format!("{name} · {value}")
-            })
-            .collect(),
+        Value::Array(items) => items.iter().filter_map(|item| {
+            let name = api::s(item, "name");
+            let value = api::s(item, "value");
+            if name.is_empty() || value.is_empty() { None } else { Some(format!("{name} · {value}")) }
+        }).collect(),
+        Value::Object(items) => items.iter().map(|(name, value)| {
+            let value = value.as_str().map(str::to_string).unwrap_or_else(|| value.to_string());
+            format!("{name} · {value}")
+        }).collect(),
         _ => Vec::new(),
     }
 }
 
 fn quick_look_listing_facts(value: &Value) -> Vec<(String, String, String, String)> {
     match value {
-        Value::Array(items) => items
-            .iter()
-            .filter_map(|item| {
-                let name = api::s(item, "name");
-                let value = api::s(item, "value");
-                if name.is_empty() || value.is_empty() {
-                    None
-                } else {
-                    Some((name, value, api::s(item, "quote"), api::s(item, "url")))
-                }
-            })
-            .collect(),
-        Value::Object(items) => items
-            .iter()
-            .map(|(name, value)| {
-                let value = value
-                    .as_str()
-                    .map(str::to_string)
-                    .unwrap_or_else(|| value.to_string());
-                (name.clone(), value, String::new(), String::new())
-            })
-            .collect(),
+        Value::Array(items) => items.iter().filter_map(|item| {
+            let name = api::s(item, "name");
+            let value = api::s(item, "value");
+            if name.is_empty() || value.is_empty() {
+                None
+            } else {
+                Some((name, value, api::s(item, "quote"), api::s(item, "url")))
+            }
+        }).collect(),
+        Value::Object(items) => items.iter().map(|(name, value)| {
+            let value = value.as_str().map(str::to_string).unwrap_or_else(|| value.to_string());
+            (name.clone(), value, String::new(), String::new())
+        }).collect(),
         _ => Vec::new(),
     }
 }
 
-fn source_link(id: impl Into<gpui::ElementId>, label: &str, url: &str) -> Stateful<Div> {
-    let full_label = format!("{label} · {url}");
-    let label = if full_label.chars().count() > 92 {
-        format!("{}…", full_label.chars().take(91).collect::<String>())
-    } else {
-        full_label
+/// One listed source as a row: the host its URL points at, the short label the
+/// place gave it, and a click that opens the page. Built on the shared
+/// `sources` row, so every source in the app looks and opens the same way.
+fn source_link(
+    id: impl Into<gpui::ElementId>,
+    label: &str,
+    url: &str,
+    motion: bool,
+) -> gpui::AnyElement {
+    let host = host_of(url);
+    let title = if label.eq_ignore_ascii_case(&host) { String::new() } else { label.to_string() };
+    let source = Source {
+        host: if host.is_empty() { label.to_string() } else { host },
+        title,
+        url: url.to_string(),
+        backed: None,
     };
-    let link = url.to_string();
     div()
         .id(id)
-        .cursor_pointer()
-        .child(mono(&label, ICE))
-        .on_click(move |_, _, cx| cx.open_url(&link))
+        .flex_none()
+        .child(source_row(&source, motion))
+        .into_any_element()
 }
 
 fn short_text(text: &str, limit: usize) -> String {
@@ -769,12 +645,7 @@ fn short_text(text: &str, limit: usize) -> String {
     if flat.chars().count() <= limit {
         return flat;
     }
-    format!(
-        "{}…",
-        flat.chars()
-            .take(limit.saturating_sub(1))
-            .collect::<String>()
-    )
+    format!("{}…", flat.chars().take(limit.saturating_sub(1)).collect::<String>())
 }
 
 fn quick_look_empty_message(result: &Value, state: &str) -> String {
@@ -783,28 +654,17 @@ fn quick_look_empty_message(result: &Value, state: &str) -> String {
     }
     let diagnostic = result.get("diagnostic").unwrap_or(&Value::Null);
     let message = api::s(diagnostic, "message");
-    let coverage = result
-        .get("coverage")
-        .or_else(|| {
-            result
-                .get("telemetry")
-                .and_then(|value| value.get("coverage"))
-        })
+    let coverage = result.get("coverage")
+        .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")))
         .unwrap_or(&Value::Null);
     let summary = if !message.is_empty() {
         message
     } else {
         match api::s(coverage, "status").as_str() {
-            "no_matching_product_evidence" => {
-                "No read page established a match to this exact product.".into()
-            }
-            "evidence_rejected" => {
-                "Candidate risks did not pass the evidence checks on the pages read.".into()
-            }
+            "no_matching_product_evidence" => "No read page established a match to this exact product.".into(),
+            "evidence_rejected" => "Candidate risks did not pass the evidence checks on the pages read.".into(),
             "no_supported_findings" => "No sourced risks were kept from the pages read.".into(),
-            "partial" => {
-                "Some research stages were incomplete, and no sourced risks were kept.".into()
-            }
+            "partial" => "Some research stages were incomplete, and no sourced risks were kept.".into(),
             _ => "No sourced risks were kept in the saved result.".into(),
         }
     };
@@ -863,14 +723,8 @@ fn follow_up_card(
     window: &mut Window,
     cx: &mut Context<Kriko>,
 ) -> Div {
-    let ask = app.input_field(
-        Field::QuickAsk,
-        "quick-ask-input",
-        "Ask about this quick look",
-        Some("search"),
-        window,
-        cx,
-    );
+    let motion = app.motion;
+    let ask = app.input_field(Field::QuickAsk, "quick-ask-input", "Ask about this quick look", Some("search"), window, cx);
     let go = cx.listener({
         let job_id = job_id.clone();
         move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -883,16 +737,12 @@ fn follow_up_card(
             cx.notify();
         }
     });
-    let mut c = card().flex().flex_col().gap(px(6.0)).child(eyebrow("Ask a follow-up"))
-        .child(row_desc("Follow-ups search the web using this product's saved listing details and Quick Look evidence."));
+    let mut c = card().flex().flex_col().gap(px(SPACE_S)).child(card_head("question", "Ask a follow-up", motion))
+        .child(row_desc("Follow-ups search the web with this product's listing details and Quick Look evidence."));
     for (ask_index, a) in app.live.run.quick_asks.iter().enumerate() {
         c = c.child(row_title(&a.question));
         if a.done {
-            c = c.child(row_desc(if a.answer.is_empty() {
-                "No answer."
-            } else {
-                &a.answer
-            }));
+            c = c.child(row_desc(if a.answer.is_empty() { "No answer." } else { &a.answer }));
             if !a.sources.is_empty() {
                 c = c.child(mono("Sources read", DIM));
                 for (source_index, (domain, url)) in a.sources.iter().enumerate() {
@@ -903,6 +753,7 @@ fn follow_up_card(
                         ),
                         if domain.is_empty() { "Source" } else { domain },
                         url,
+                        motion,
                     ));
                 }
             } else {
@@ -923,243 +774,200 @@ fn follow_up_card(
         c = c.child(row_desc(&note));
     }
     c.child(
-        div().flex().items_center().gap(px(8.0)).child(ask).child(
-            key(
-                "quick-ask-go",
-                if app.live.run.quick_asking {
-                    "Asking"
-                } else {
-                    "Ask"
-                },
-            )
-            .on_click(go),
-        ),
+        div().flex().items_center().gap(px(8.0))
+            .child(ask)
+            .child(
+                key("quick-ask-go", if app.live.run.quick_asking { "Asking" } else { "Ask" })
+                    .on_click(go)
+                    .gap(px(SPACE_S))
+                    .child(icon("message", 14.0).text_color(fixed(0xffffff))),
+            ),
     )
 }
 
 fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> Div {
     let stage = job.stage();
     let terminal = matches!(stage, Stage::Stored | Stage::Failed | Stage::Cancelled);
-    let at = match stage {
-        Stage::Queued => 0,
-        Stage::Reading => 1,
-        Stage::Grounding if job.lane_phase() == crate::marks::Phase::Writing => 3,
-        Stage::Grounding => 2,
-        Stage::Stored | Stage::Failed | Stage::Cancelled => 4,
-    };
+    let at = stage.index();
 
-    // Keep the phase guide compact while making the current state explicit.
-    let status = match stage {
-        Stage::Queued => "Queued",
-        Stage::Reading => "Reading",
-        Stage::Grounding => "Grounding",
-        Stage::Stored => "Stored",
-        Stage::Failed => "Failed",
-        Stage::Cancelled => "Stopped",
-    };
-    let phase = match stage {
-        Stage::Failed => "Failed",
-        Stage::Cancelled => "Cancelled",
-        _ => PHASES[at],
-    };
-    let progress = if stage == Stage::Stored {
-        1.0
-    } else {
-        app.live
-            .run
-            .bar_value(&job.id, job.progress, motion)
-            .clamp(0.0, 1.0)
-    };
-
+    // ---- the stepper: QUEUED - READING - GROUNDING - STORED ----
     let mut stepper = div().flex().items_center().gap(px(8.0));
     for (i, name) in PHASES.iter().enumerate() {
-        let ended_badly = matches!(stage, Stage::Failed | Stage::Cancelled) && i == 4;
+        let ended_badly = matches!(stage, Stage::Failed | Stage::Cancelled) && i == 3;
         let name = if ended_badly {
-            if stage == Stage::Failed {
-                "FAILED"
-            } else {
-                "CANCELLED"
-            }
+            if stage == Stage::Failed { "FAILED" } else { "CANCELLED" }
         } else {
             name
         };
-        let done = stage == Stage::Stored || (!terminal && at > i);
+        let done = if terminal {
+            stage == Stage::Stored && i <= 3
+        } else {
+            at > i
+        };
         let live = !terminal && at == i;
-        stepper = stepper.child(
-            div()
-                .flex_1()
-                .min_w(px(0.0))
-                .flex()
-                .flex_col()
-                .gap(px(5.0))
-                .child(
-                    div()
-                        .h(px(4.0))
-                        .w_full()
-                        .rounded_full()
-                        .bg(rgb(if ended_badly {
-                            DANGER
-                        } else if live || done {
-                            BRAND_BRIGHT
-                        } else {
-                            LED_OFF
-                        })),
-                )
-                .child(
-                    div()
-                        .font_family(MONO)
-                        .text_size(px(10.0))
-                        .text_color(rgb(if ended_badly {
-                            DANGER
-                        } else if live {
-                            INK
-                        } else if done {
-                            MUTED
-                        } else {
-                            DIM
-                        }))
-                        .child(name),
-                ),
-        );
+        let lit = live || ended_badly;
+        let mut seg = well()
+            .h(px(36.0))
+            .flex()
+            .items_center()
+            .px(px(SPACE_L))
+            .gap(px(SPACE_S))
+            .when(live, |s| {
+                s.bg(linear_gradient(
+                    180.0,
+                    linear_color_stop(paint(BRAND_HOVER), 0.0),
+                    linear_color_stop(paint(BRAND_LOW), 1.0),
+                ))
+                .border_color(paint_a(0xffffff40))
+                .shadow(vec![shadow(0x0f2a9c99, 0.0, 2.0, 8.0, 0.0)])
+            });
+        let tint = if live {
+            0xffffff
+        } else if lit {
+            WARN
+        } else if done {
+            INK_2
+        } else {
+            MUTED
+        };
+        // Each stage carries a small glyph of its own, so the rail reads by
+        // shape before the words: waiting, reading the web, grounding, stored.
+        let stage_icon = if ended_badly {
+            "warning"
+        } else {
+            ["clock", "globe", "shield", "database"][i]
+        };
+        let glyph = if live {
+            led_ripple(&format!("run-phase-{i}"), motion)
+        } else if ended_badly {
+            led_matrix(&BANG5, WARN, 3.0, 1.0)
+        } else if done {
+            led_matrix(&CHECK5, INK_2, 3.0, 1.0)
+        } else {
+            led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0)
+        };
+        seg = seg
+            .child(icon(stage_icon, 13.0).text_color(paint(tint)))
+            .child(glyph)
+            .child(
+                div()
+                    .font_family(MONO)
+                    .text_size(px(11.0))
+                    .text_color(paint(tint))
+                    .child(name),
+            );
+        // the live stage slides in with the segmented thumb's ease, keyed by
+        // the stage it names, so a new stage replays it
+        let seg: gpui::AnyElement = if live && motion {
+            seg.with_animation(
+                gpui::ElementId::NamedInteger(gpui::SharedString::from("run-stage"), at as u64),
+                gpui::Animation::new(std::time::Duration::from_millis(260)),
+                |el, t| el.relative().left(px(-12.0 * (1.0 - ease_mech(t)))),
+            )
+            .into_any_element()
+        } else {
+            seg.into_any_element()
+        };
+        stepper = stepper.child(seg);
     }
-    let stop = if !job.done {
+    stepper = stepper.child(div().flex_1());
+    if !job.done {
         let id = job.id.clone();
-        let listener = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+        let stop = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.stop_job(id.clone(), cx);
             cx.notify();
         });
-        plate_s("run-stop", "Stop")
-            .on_click(listener)
-            .into_any_element()
-    } else {
-        div().into_any_element()
-    };
+        stepper = stepper.child(plate_s("run-stop", "Stop").on_click(stop));
+    }
 
     let when = if job.done {
         format!("finished {}", ago(&job.finished_at))
     } else {
         format!("started {}", ago(&job.created_at))
     };
-    let heading = if job.done { "Last run" } else { "Running now" };
+    let heading = if job.done { "Last run · finished" } else { "Running now" };
     let mut meta = vec![when];
     if !job.harness.is_empty() {
-        meta.push(job.harness.clone());
+        meta.push(format!("with {}", job.harness));
     }
+    if !job.model.is_empty() {
+        meta.push(format!("model {}", job.model));
+    }
+    let duration = job.duration_word();
+    if !duration.is_empty() && job.done {
+        meta.push(duration);
+    }
+    // The stage line: the engine's own words while it runs, else the phase the
+    // stepper names. It sits in a cylinder window, so a change slides the old
+    // line up and the new one in, with the meta line below as its context.
+    let stage_word = match stage {
+        Stage::Queued => "Queued",
+        Stage::Reading => "Reading",
+        Stage::Grounding => "Grounding",
+        Stage::Stored => "Stored",
+        Stage::Failed => "Failed",
+        Stage::Cancelled => "Cancelled",
+    };
+    let status = if !job.done && !job.message.is_empty() {
+        job.message.clone()
+    } else {
+        stage_word.to_string()
+    };
 
     card()
         .flex()
         .flex_col()
-        .gap(px(7.0))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap(px(8.0))
-                .child(eyebrow(heading))
-                .child(stop),
-        )
+        .gap(px(8.0))
+        .child(card_head("play", heading, motion))
         .child(
             div()
                 .font_family(SANS)
-                .font_weight(FontWeight::SEMIBOLD)
+                .font_weight(FontWeight::BOLD)
                 .text_size(px(20.0))
-                .text_color(rgb(INK))
+                .text_color(paint(INK))
                 .child(app.live.run.task(job)),
         )
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(7.0))
-                .child(
-                    div()
-                        .font_family(DISPLAY)
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_size(px(15.0))
-                        .text_color(rgb(
-                            if stage == Stage::Failed || stage == Stage::Cancelled {
-                                DANGER
-                            } else {
-                                BRAND_BRIGHT
-                            },
-                        ))
-                        .child(status.to_uppercase()),
-                )
-                .child(
-                    div()
-                        .font_family(MONO)
-                        .text_size(px(11.0))
-                        .text_color(rgb(DIM))
-                        .child("·"),
-                )
-                .child(mono(&meta.join(" · "), MUTED)),
-        )
+        .child(cylinder_status(&format!("run-status-{}", job.id), &status, motion))
+        .child(mono(&meta.join(" · "), DIM))
         .child(if job.done {
-            div()
-                .when(!job.message.is_empty(), |c| c.child(row_desc(&job.message)))
-                .into_any_element()
+            div().when(!job.message.is_empty(), |c| c.child(row_desc(&job.message))).into_any_element()
         } else {
             let trail = crate::screens::action_trail::action_trail(job, motion);
-            let active =
-                if let Some(answer) = live_codex_answer(&job.harness, job.done, &job.message) {
-                    trail.child(
-                        div()
-                            .flex()
-                            .flex_col()
-                            .gap(px(4.0))
-                            .child(eyebrow("Codex · live text"))
-                            .child(row_desc(&short_text(answer, 800))),
-                    )
-                } else {
-                    trail
-                };
+            let active = if let Some(answer) =
+                live_codex_answer(&job.harness, job.done, &job.message)
+            {
+                trail.child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(eyebrow("Codex · live text"))
+                        .child(row_desc(&short_text(answer, 800))),
+                )
+            } else {
+                trail
+            };
             active.into_any_element()
         })
-        .child(
-            div()
-                .mt(px(3.0))
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .child(mono(phase, INK_2))
-                .child(
-                    div()
-                        .flex_1()
-                        .child(progress_bar("run-phase-progress", progress, motion)),
-                ),
-        )
-        .child(stepper)
+        .child(div().mt(px(8.0)).child(stepper))
 }
 
 /// The questions a run put to the reader, with their options; answering is
 /// a new run that carries them.
-fn questions_card(
-    app: &Kriko,
-    job: &Job,
-    motion: bool,
-    cx: &mut Context<Kriko>,
-) -> gpui::AnyElement {
-    let Some(att) = &job.attention else {
-        return div().into_any_element();
-    };
+fn questions_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -> gpui::AnyElement {
+    let Some(att) = &job.attention else { return div().into_any_element() };
     let mut c = card().flex().flex_col().gap(px(8.0));
     c = c
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap(px(8.0))
-                .child(eyebrow("Needs you"))
-                .child(tag(
-                    format!("run-needs-user-{}", job.id),
-                    TagState::Need,
-                    "Choose answers",
-                    motion,
-                )),
-        )
-        .when(!att.say.is_empty(), |d| d.child(row_desc(&att.say)))
+        .child(card_head_row(
+            "question",
+            "Needs you",
+            Some(
+                tag(format!("run-needs-user-{}", job.id), TagState::Need, "Choose answers", motion)
+                    .into_any_element(),
+            ),
+            motion,
+        ))
+        .child(row_desc(&att.say))
         .child(row_desc(attention_detail(job.done)));
     for (qi, q) in att.questions.iter().enumerate() {
         let chosen = app
@@ -1176,14 +984,15 @@ fn questions_card(
                 this.pick_answer(qid.clone(), o.clone());
                 cx.notify();
             });
-            options = options
-                .child(option_chip(("run-opt", qi * 16 + oi), opt, *opt == chosen).on_click(pick));
+            options = options.child(
+                option_chip(("run-opt", qi * 16 + oi), opt, *opt == chosen).on_click(pick),
+            );
         }
         c = c.child(
             div()
                 .flex()
                 .flex_col()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(row_title(&q.ask))
                 .when(!q.because.is_empty(), |d| d.child(row_desc(&q.because)))
                 .child(options),
@@ -1259,19 +1068,16 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         s.open = !s.open;
         cx.notify();
     });
-    let mut c = card().flex().flex_col().gap(px(SPACE_CARD)).child(
-        div()
-            .flex()
-            .items_center()
-            .child(eyebrow("Start a check"))
-            .child(div().flex_1())
-            .when(!first, |d| {
-                d.child(
-                    plate_s("run-start-toggle", if open { "Close" } else { "New" })
-                        .on_click(toggle),
-                )
-            }),
-    );
+    let start_control: Option<gpui::AnyElement> = (!first).then(|| {
+        plate_s("run-start-toggle", if open { "Close" } else { "New" })
+            .on_click(toggle)
+            .into_any_element()
+    });
+    let mut c = card()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_CARD))
+        .child(card_head_row("search", "Start a check", start_control, app.motion));
     if !open {
         return c;
     }
@@ -1287,25 +1093,13 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .on_click(check)
             .into_any_element();
         let can_quick_look = quick_look_available(
-            app.live
-                .run
-                .harnesses
-                .iter()
-                .any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
+            app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
             app.live.knowledge.ext.as_ref().is_some_and(|e| e.available),
         );
         let actions = if can_quick_look {
-            div()
-                .flex()
-                .items_center()
-                .gap(px(8.0))
+            div().flex().items_center().gap(px(8.0))
                 .child(primary)
-                .child(route_button(
-                    cx,
-                    "run-quick-look-pending-catalog",
-                    "Quick Look a product",
-                    Tab::Extension,
-                ))
+                .child(route_button(cx, "run-quick-look-pending-catalog", "Quick Look a product", Tab::Extension))
                 .into_any_element()
         } else {
             primary
@@ -1313,7 +1107,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         return c.child(guidance::next_step(
             "run-catalogs-waiting",
             "Catalog details have not loaded",
-            "Kriko has not confirmed which catalogs are available. Check again to retry; if an agent and extension are ready, Quick Look can start from a product listing meanwhile.",
+            "Kriko has not confirmed the catalogs yet. Check again; with an agent and extension ready, Quick Look can start from a listing.",
             actions,
             app.motion,
         ));
@@ -1327,35 +1121,19 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             };
             let primary = route_button(cx, "run-open-overview", "Open Overview", Tab::Overview);
             let can_quick_look = quick_look_available(
-                app.live
-                    .run
-                    .harnesses
-                    .iter()
-                    .any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
+                app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready)),
                 app.live.knowledge.ext.as_ref().is_some_and(|e| e.available),
             );
             let actions = if can_quick_look {
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(8.0))
+                div().flex().items_center().gap(px(8.0))
                     .child(primary)
-                    .child(route_button(
-                        cx,
-                        "run-quick-look-listing",
-                        "Quick Look a product",
-                        Tab::Extension,
-                    ))
+                    .child(route_button(cx, "run-quick-look-listing", "Quick Look a product", Tab::Extension))
                     .into_any_element()
             } else {
                 primary
             };
             return c.child(guidance::next_step(
-                if packs.is_empty() {
-                    "run-no-catalog"
-                } else {
-                    "run-catalogs-off"
-                },
+                if packs.is_empty() { "run-no-catalog" } else { "run-catalogs-off" },
                 title,
                 detail,
                 actions,
@@ -1364,14 +1142,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         }
     }
 
-    let search = app.input_field(
-        Field::RunSearch,
-        "run-search",
-        "Find a product...",
-        Some("search"),
-        window,
-        cx,
-    );
+    let search = app.input_field(Field::RunSearch, "run-search", "Find a product...", Some("search"), window, cx);
     let go = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
         this.search_subjects(cx);
         cx.notify();
@@ -1382,19 +1153,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .items_center()
             .gap(px(8.0))
             .child(search)
-            .child(
-                key(
-                    "run-search-go",
-                    if app.live.run.start.searching {
-                        "Looking"
-                    } else if app.live.run.start.note.is_empty() {
-                        "Search"
-                    } else {
-                        "Try again"
-                    },
-                )
-                .on_click(go),
-            ),
+            .child(key("run-search-go", if app.live.run.start.searching { "Looking" } else if app.live.run.start.note.is_empty() { "Search" } else { "Try again" }).on_click(go)),
     );
 
     let start = &app.live.run.start;
@@ -1404,7 +1163,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .p(px(12.0))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(row_title(&hit.label))
                 .child(mono(&hit.pack_id, DIM)),
         );
@@ -1420,8 +1179,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 this.live.run.start.harness = id.clone();
                 cx.notify();
             });
-            agents = agents
-                .child(option_chip(("run-agent", i), &h.label, h.id == chosen).on_click(pick));
+            agents = agents.child(option_chip(("run-agent", i), &h.label, h.id == chosen).on_click(pick));
         }
         let begin = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
             this.start_check(cx);
@@ -1431,18 +1189,12 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             this.live.run.start.picked = None;
             cx.notify();
         });
-        let ready = app
-            .live
-            .run
-            .harnesses
-            .iter()
-            .any(|h| matches!(h.state, crate::live::run::RunState::Ready));
+        let ready = app.live.run.harnesses.iter().any(|h| matches!(h.state, crate::live::run::RunState::Ready));
         c = c.child(mono("RUN WITH", DIM));
         if ready {
             c = c.child(agents);
             if let Some(agent) = app.live.run.harnesses.iter().find(|h| h.id == chosen) {
-                for label in pending_agent_choice_labels(agent.llms_pending, agent.efforts_pending)
-                {
+                for label in pending_agent_choice_labels(agent.llms_pending, agent.efforts_pending) {
                     c = c.child(row_desc(label));
                 }
             }
@@ -1450,7 +1202,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             c = c.child(guidance::next_step(
                 "run-no-ready-agent",
                 "Set up an agent",
-                "No agent is ready to run this check. Connect or install one in Agents, then come back.",
+                "No agent is ready. Connect one in Agents, then come back.",
                 route_button(cx, "run-open-agents", "Open Agents", Tab::Agents),
                 app.motion,
             ));
@@ -1458,13 +1210,8 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             c = c.child(empty_note("Checking which agents can run a check."));
         }
         c = c.child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .when(ready, |d| {
-                    d.child(key("run-begin", "Start").on_click(begin))
-                })
+            div().flex().items_center().gap(px(8.0))
+                .when(ready, |d| d.child(key("run-begin", "Start").on_click(begin)))
                 .child(ghost("run-back", "Back").on_click(back)),
         );
     } else if start.searched && start.hits.is_empty() && start.note.is_empty() {
@@ -1478,22 +1225,14 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .flex()
             .items_center()
             .gap(px(8.0))
-            .child(route_button(
-                cx,
-                "run-browse-products",
-                "Browse catalogs",
-                Tab::Browse,
-            ))
+            .child(route_button(cx, "run-browse-products", "Browse catalogs", Tab::Browse))
             .child(plate_s("run-search-web", "Find on the web").on_click(find_on_web))
             .into_any_element();
-        c = c
-            .child(empty_note(
-                "Nothing in the installed catalogs matches that.",
-            ))
+        c = c.child(empty_note("Nothing in the installed catalogs matches that."))
             .child(guidance::next_step(
                 "run-search-no-match",
                 "Try product discovery",
-                "Browse catalogs or open Chat with this request ready for web search.",
+                "Browse catalogs, or open Chat with this request ready for web discovery.",
                 actions,
                 app.motion,
             ));
@@ -1510,9 +1249,9 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     .p(px(12.0))
                     .flex()
                     .flex_col()
-                    .gap(px(2.0))
+                    .gap(px(SPACE_XS))
                     .cursor_pointer()
-                    .hover(|s| s.bg(rgba(GLASS_1)))
+                    .hover(|s| s.bg(paint_a(GLASS_1)))
                     .on_click(pick)
                     .child(row_title(&hit.label))
                     .child(mono(
@@ -1530,11 +1269,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 
 /// The agent doing the job: its mark, what it is doing, how far.
 fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
-    let agent = if job.harness.is_empty() {
-        "agent"
-    } else {
-        job.harness.as_str()
-    };
+    let agent = if job.harness.is_empty() { "agent" } else { job.harness.as_str() };
     let label = app
         .live
         .run
@@ -1542,13 +1277,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         .iter()
         .find(|h| h.id == job.harness)
         .map(|h| h.label.clone())
-        .unwrap_or_else(|| {
-            if job.harness.is_empty() {
-                "Agent".to_string()
-            } else {
-                job.harness.clone()
-            }
-        });
+        .unwrap_or_else(|| if job.harness.is_empty() { "Agent".to_string() } else { job.harness.clone() });
     let phase = job.lane_phase();
     let progress = if job.stage() == Stage::Stored {
         100.0
@@ -1559,26 +1288,20 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(eyebrow("Agent"))
+        .child(card_head("agents", "Agent", motion))
         .child(
             div()
                 .flex()
                 .items_center()
                 .gap(px(SPACE_CARD))
-                .child(mark_tile(
-                    "run-lane-tile",
-                    mark_for(agent),
-                    phase,
-                    48.0,
-                    motion,
-                ))
+                .child(mark_tile("run-lane-tile", mark_for(agent), phase, 48.0, motion))
                 .child(
                     div()
                         .flex_1()
                         .min_w(px(0.0))
                         .flex()
                         .flex_col()
-                        .gap(px(2.0))
+                        .gap(px(SPACE_XS))
                         .child(
                             div()
                                 .flex()
@@ -1603,9 +1326,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
                     led_ripple("run-lane", motion)
                 }),
         )
-        .when(!job.done, |c| {
-            c.child(crate::screens::action_trail::compact_line(job, motion))
-        })
+        .when(!job.done, |c| c.child(crate::screens::action_trail::compact_line(job, motion)))
 }
 
 #[cfg(test)]
@@ -1620,24 +1341,15 @@ mod guidance_tests {
     fn active_jobs_and_question_runs_keep_their_own_next_action() {
         assert_eq!(next_for_job(false, Stage::Reading, false), None);
         assert_eq!(next_for_job(true, Stage::Stored, true), None);
-        assert!(attention_detail(false).contains("Start another run"));
-        assert!(attention_detail(true).contains("Choose an answer"));
+        assert!(attention_detail(false).contains("when it finishes"));
+        assert!(attention_detail(true).contains("run it again"));
     }
 
     #[test]
     fn failed_or_stopped_runs_can_be_retried_and_completed_runs_lead_to_activity() {
-        assert_eq!(
-            next_for_job(true, Stage::Failed, false),
-            Some(RunNext::Retry)
-        );
-        assert_eq!(
-            next_for_job(true, Stage::Cancelled, false),
-            Some(RunNext::Retry)
-        );
-        assert_eq!(
-            next_for_job(true, Stage::Stored, false),
-            Some(RunNext::Activity)
-        );
+        assert_eq!(next_for_job(true, Stage::Failed, false), Some(RunNext::Retry));
+        assert_eq!(next_for_job(true, Stage::Cancelled, false), Some(RunNext::Retry));
+        assert_eq!(next_for_job(true, Stage::Stored, false), Some(RunNext::Activity));
     }
 
     #[test]
@@ -1649,22 +1361,12 @@ mod guidance_tests {
 
     #[test]
     fn run_picker_only_shows_model_and_effort_messages_while_they_are_pending() {
-        assert_eq!(
-            pending_agent_choice_labels(false, false),
-            Vec::<&str>::new()
-        );
-        assert_eq!(
-            pending_agent_choice_labels(true, false),
-            vec!["Checking available models…"]
-        );
-        assert_eq!(
-            pending_agent_choice_labels(false, true),
-            vec!["Checking effort choices…"]
-        );
-        assert_eq!(
-            pending_agent_choice_labels(true, true),
-            vec!["Checking available models…", "Checking effort choices…"]
-        );
+        assert_eq!(pending_agent_choice_labels(false, false), Vec::<&str>::new());
+        assert_eq!(pending_agent_choice_labels(true, false), vec!["Checking available models…"]);
+        assert_eq!(pending_agent_choice_labels(false, true), vec!["Checking effort choices…"]);
+        assert_eq!(pending_agent_choice_labels(true, true), vec![
+            "Checking available models…", "Checking effort choices…"
+        ]);
     }
 
     #[test]
@@ -1686,17 +1388,8 @@ mod guidance_tests {
 
     #[test]
     fn web_discovery_handoff_keeps_find_language_without_duplicating_it() {
-        assert_eq!(
-            super::web_discovery_prompt("air purifier"),
-            "Find air purifier"
-        );
-        assert_eq!(
-            super::web_discovery_prompt("  Find a quiet purifier  "),
-            "Find a quiet purifier"
-        );
-        assert_eq!(
-            super::web_discovery_prompt("Search for a quiet purifier"),
-            "Search for a quiet purifier"
-        );
+        assert_eq!(super::web_discovery_prompt("air purifier"), "Find air purifier");
+        assert_eq!(super::web_discovery_prompt("  Find a quiet purifier  "), "Find a quiet purifier");
+        assert_eq!(super::web_discovery_prompt("Search for a quiet purifier"), "Search for a quiet purifier");
     }
 }

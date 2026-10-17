@@ -962,7 +962,7 @@ test("the primary button researches a product nothing installed knows; it does n
   });
   p.openPanel();
   assert.equal(p.shadow().querySelector(".lite-cta-label").textContent, "Research this product");
-  assert.match(p.statusText(), /Research it to find out/);
+  assert.match(p.statusText(), /Research it to see what is known/);
 
   const asks = p.sent.filter((m) => m.type === "ANALYZE").length;
   p.click(".lite-cta");

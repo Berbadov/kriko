@@ -30,10 +30,19 @@
    * ever mounts on a page an adapter matched, so naming *which* site was never
    * information the reader needed; it was only a sentence that would be wrong
    * on the second site and unnoticed on the third. */
-  const IDLE_HINT = "Search this product's claims and sources.";
+  const IDLE_HINT = "See what is known about this product.";
   // A product nothing installed knows: the button researches it, so the hint
   // says what it will do rather than promising a search that cannot find it.
-  const UNKNOWN_HINT = "No installed pack covers this product. Research it to find out what is known.";
+  const UNKNOWN_HINT = "New product. Research it to see what is known.";
+
+  /* The reader's light/dark choice, shared with the options page. Absent when
+   * they have never chosen, in which case the system preference decides — the
+   * stylesheet already paints that, so the first frame is right either way. */
+  const THEME_KEY = "kriko.theme";
+  /* The reader's motion profile, shared with the options page and with the
+   * desktop app's own setting. Standard is the default. */
+  const MOTION_KEY = "kriko.motion";
+  const MOTION_PROFILES = ["calm", "standard", "vivid"];
 
   /* The engine's verdict, as a word the panel shows. Three of the four are
    * worth a banner; `recognised` is the ordinary case and gets none. */
@@ -151,6 +160,15 @@
      * and nothing is running — a real answer, and a different one. */
     live: null,
     liveTimer: null,
+    /* The reader's light/dark choice: "" until storage has answered, so an
+     * unset value keeps following the system. */
+    theme: "",
+    /* The motion profile, `""` until storage has answered, in which case
+     * Standard is what the stylesheet already holds. */
+    motion: "",
+    /* A run that kept nothing has a card of its own. null means none; the
+     * object is `{ title, note, coverage, evidence_pages, outcome }`. */
+    researchEmpty: null,
   };
 
   // ─── Element refs (populated in mount) ────────────────────────────────
@@ -174,6 +192,9 @@
   // data changes — toggles flip data-attributes in place so the CSS
   // animations can play.
   let lastDetailsListingMeta = null;
+
+  // The severity counts last painted, so a number that changed can bump once.
+  let lastCountNumbers = null;
 
   // ─── No font is fetched, and that is the feature ──────────────────────
   //
@@ -204,7 +225,6 @@
     ["Kriko Sans", "DMSans-400.ttf", "400"],
     ["Kriko Sans", "DMSans-600.ttf", "600"],
     ["Kriko Mono", "JetBrainsMono-400.ttf", "400"],
-    ["Kriko Mono", "JetBrainsMono-600.ttf", "600"],
   ];
   let facesLoaded = false;
   function loadFaces() {
@@ -267,6 +287,107 @@
 
   function reduceMotion() {
     return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  /* ─── Light and dark ───────────────────────────────────────────────────
+   *
+   * The choice lives in chrome.storage.local under one key, shared with the
+   * options page, so either surface opens the way the other was left. Until
+   * storage answers — and when the reader has never chosen — the system
+   * preference decides, which is also what the stylesheet paints before this
+   * file runs. The host element carries `data-theme`, because the panel lives
+   * in a shadow root and the attribute has to live on the element the sheet's
+   * `:host([data-theme="light"])` can see. */
+  function prefersLight() {
+    return Boolean(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+  }
+
+  function currentTheme() {
+    return state.theme || (prefersLight() ? "light" : "dark");
+  }
+
+  function paintTheme() {
+    const theme = currentTheme();
+    if (hostEl) hostEl.dataset.theme = theme;
+    const button = panel?.querySelector(".lite-btn-theme");
+    if (!button) return;
+    // The icon is the way out of the theme the panel is in, so it names the
+    // action rather than the state.
+    const label = theme === "light" ? "Switch to dark theme" : "Switch to light theme";
+    button.innerHTML = iconSvg(theme === "light" ? "moon" : "sun", { size: 16, strokeWidth: 2 });
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
+  }
+
+  function readTheme() {
+    try {
+      chrome.storage?.local?.get?.([THEME_KEY], (bag) => {
+        void chrome.runtime.lastError;
+        const saved = bag?.[THEME_KEY];
+        if (saved === "light" || saved === "dark") state.theme = saved;
+        paintTheme();
+      });
+    } catch (_) {
+      // A storage that will not answer leaves the system preference in place.
+      paintTheme();
+    }
+  }
+
+  function toggleTheme() {
+    state.theme = currentTheme() === "light" ? "dark" : "light";
+    paintTheme();
+    try {
+      chrome.storage?.local?.set?.({ [THEME_KEY]: state.theme }, () => {
+        void chrome.runtime.lastError;
+      });
+    } catch (_) {
+      // Kept for this panel only; the choice still holds while it is open.
+    }
+  }
+
+  /* ─── Motion profile ───────────────────────────────────────────────────
+   *
+   * Calm / Standard / Vivid, the same three the desktop app offers, stored
+   * under one key. The stylesheet does the work: the host's `data-motion`
+   * selects a whole set of duration and distance tokens, so this file only
+   * has to put the attribute in the right place. Reduced motion is separate
+   * and still wins — the stylesheet's media block is unconditional. */
+  function currentMotion() {
+    return MOTION_PROFILES.includes(state.motion) ? state.motion : "standard";
+  }
+
+  function paintMotion() {
+    if (hostEl) hostEl.dataset.motion = currentMotion();
+  }
+
+  function readMotion() {
+    try {
+      chrome.storage?.local?.get?.([MOTION_KEY], (bag) => {
+        void chrome.runtime.lastError;
+        const saved = bag?.[MOTION_KEY];
+        if (MOTION_PROFILES.includes(saved)) state.motion = saved;
+        paintMotion();
+      });
+    } catch (_) {
+      // A storage that will not answer leaves Standard in place.
+      paintMotion();
+    }
+  }
+
+  /* A ripple under the pointer, drawn once and removed by its own animation.
+   * Appended to the panel so it is clipped by the panel's rounded corners and
+   * never lands on the host page. Off entirely for reduced motion. */
+  function rippleAt(event) {
+    if (reduceMotion() || !panel) return;
+    if (typeof event.clientX !== "number") return;
+    const rect = panel.getBoundingClientRect();
+    const dot = document.createElement("span");
+    dot.className = "lite-ripple";
+    dot.style.left = (event.clientX - rect.left) + "px";
+    dot.style.top = (event.clientY - rect.top) + "px";
+    panel.appendChild(dot);
+    dot.addEventListener("animationend", () => dot.remove());
   }
 
   /* What a job has said so far. `job` is a job row (its `result` holds the
@@ -799,13 +920,13 @@
     if (plane.backend === "api" || plane.cost_basis === "per_token") {
       const cap = Number(plane.budget_usd || 0);
       return cap > 0
-        ? `Costs money; this run is capped at $${cap.toFixed(2)} of your API keys.`
-        : "Costs money; spent through your configured API keys.";
+        ? `Capped at $${cap.toFixed(2)} of your API keys.`
+        : "Billed to your API keys.";
     }
     if (plane.backend === "local") {
-      return "Costs nothing. Runs on the model on this computer.";
+      return "Free; runs on this computer.";
     }
-    return "Costs nothing; runs through your coding agent.";
+    return "Free; runs through your coding agent.";
   }
 
   // Nothing known about a subject the packs *do* recognise. That is the one
@@ -831,6 +952,7 @@
     state.researchContext = "";
     state.researchOpen = true;
     state.researchJob = null;
+    state.researchEmpty = null;
     state.researchState = "";
     state.researchMessage = "";
     requestResearchPlane();
@@ -854,6 +976,7 @@
     const cap = Number(state.researchPlane.budget_usd);
     state.researching = subject_id || q;
     state.researchState = "starting";
+    state.researchEmpty = null;
     state.researchMessage = "Looking it up…";
     state.researchAnswers = {};
     state.researchTold = {};
@@ -893,7 +1016,11 @@
       return;
     }
     state.researchSavedAt = job.finished_at || job.created_at || "";
+    state.researchEmpty = null;
     state.researchQuick = {
+      // The saved row's id, so the empty card's follow-up can ask about it
+      // even while the deeper run has taken `researchJob` for itself.
+      job_id: job.job_id || state.researchJob?.job_id || "",
       product: result.product || state.researchName,
       assumed: result.assumed || "",
       specs: Array.isArray(result.specs) ? result.specs : [],
@@ -906,10 +1033,9 @@
     };
     const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
     const found = state.researchQuick.risks.length;
-    const said = job.state === "succeeded"
-      ? (found ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look. Saved in Kriko.`
-        : (result.diagnostic?.message || "No sourced issues were found in this quick look.") + " Saved in Kriko.")
-      : "The quick look did not finish.";
+    const said = found
+      ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look. Saved in Kriko.`
+      : (result.diagnostic?.message || "Nothing sourced was kept.") + " Saved in Kriko.";
     if (!deepen) {
       // A quick look is not a pack: it is saved as it is, and joins a pack
       // only when the reader presses "Add to a pack".
@@ -999,6 +1125,65 @@
     });
   }
 
+  /* ─── The no-issue card ────────────────────────────────────────────────
+   *
+   * Both a quick look that kept nothing and a deep run that kept nothing show
+   * the same card. It states the coverage figures the run reported, links the
+   * pages it actually read (the panel's own source list, filled after the slot
+   * is painted), and — when a saved quick look exists — offers the quick
+   * look's follow-up input right there, so the reader can ask the agent about
+   * the product instead of leaving for the app. */
+  function coverageWords(coverage) {
+    if (!coverage) return "";
+    return [
+      `${coverage.pages_read || 0} pages read`,
+      `${coverage.pages_relevant || 0} matched`,
+      `${coverage.pages_extracted || 0} evidence checks`,
+      `${coverage.publishers_read || 0} publishers`,
+      `${coverage.sources_cited || 0} cited`,
+    ].join(" · ");
+  }
+
+  function noIssueCardMarkup(empty) {
+    const stats = coverageWords(empty.coverage);
+    const statChips = stats
+      ? `<ul class="lite-noissue-stats">${stats.split(" · ").map((part) => {
+        const [n, ...rest] = part.split(" ");
+        return `<li><b>${escapeHtml(n)}</b> ${escapeHtml(rest.join(" "))}</li>`;
+      }).join("")}</ul>`
+      : "";
+    const asks = (state.researchAsks || []).map((a) => `<div class="lite-follow-a">
+        <p class="lite-follow-q">${escapeHtml(a.q)}</p>
+        <div class="lite-follow-answer lite-answer" data-answer="${escapeHtml(a.job_id || "")}"></div>
+      </div>`).join("");
+    return `<section class="lite-noissue" data-empty="${escapeHtml(empty.kind || "quick")}">
+      <div class="lite-noissue-head">
+        <span class="lite-noissue-icon">${iconSvg("searchOff", { size: 18 })}</span>
+        <div>
+          <h3 class="lite-noissue-title">${escapeHtml(empty.title || "No sourced issues found")}</h3>
+          <p class="lite-noissue-note">${escapeHtml(empty.note
+            || "Absence of evidence in the pages read; not proof that there is no issue.")}</p>
+        </div>
+      </div>
+      ${statChips}
+      <div class="lite-quick-specs"></div>
+      <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
+        <summary>Pages read</summary>
+        <div class="lite-quick-source-list"></div>
+      </details>
+      ${empty.jobId ? `<div class="lite-follow">
+        ${asks}
+        <div class="lite-follow-row">
+          <input class="lite-follow-input" maxlength="500" placeholder="Ask about this product"
+            aria-label="Ask about this product" title="Your agent can search the web"
+            ${state.researchAsking ? "disabled" : ""} />
+          <button type="button" class="lite-follow-ask" title="Your agent can search the web"
+            aria-label="Ask about this product" ${state.researchAsking ? "disabled" : ""}>${state.researchAsking ? "Asking…" : "Ask"}</button>
+        </div>
+      </div>` : ""}
+    </section>`;
+  }
+
   function renderResearch() {
     const slot = bodyEl?.querySelector(".lite-research-slot");
     if (!slot) return;
@@ -1025,35 +1210,38 @@
         .map(([reason, count]) => `${reason.replaceAll("_", " ")} (${count})`)
         .join(", ")
       : "";
-    const quickEmptyExplanation = quickIsEmpty && quickCoverage
-      ? ({
-        no_matching_product_evidence: "No pages matched this exact product.",
-        evidence_rejected: "Relevant pages were checked, but candidate findings did not pass the evidence checks.",
-        no_supported_findings: "Relevant pages were checked, but none supported a finding.",
-        partial: "Some research stages were incomplete.",
-      }[quickCoverage.status] || "No supported findings were kept.")
-      : "";
+    // A quick look that kept nothing and a deep run that kept nothing show the
+    // same card. `jobId` is what lets the quick-look follow-up appear in it.
+    const emptyCard = quickIsEmpty
+      ? {
+        kind: "quick",
+        title: "No sourced issues kept",
+        note: "Absence of evidence in the pages read; not proof that there is no issue.",
+        coverage: quickCoverage,
+        jobId: state.researchQuickJob || state.researchQuick?.job_id || "",
+        outcome: state.researchQuick?.diagnostic?.message || "",
+      }
+      : state.researchEmpty;
     const markup = `
       <section class="lite-research">
         <div class="lite-research-head">
-          <strong>Research this product</strong>
-          <span class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking research costs…")}</span>
+          <strong>Research</strong>
+          <span class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking costs…")}</span>
         </div>
         ${target ? `<p class="lite-research-target">${escapeHtml(target.label || target.subject_id)}</p>` : `
           <input class="lite-research-name" maxlength="350" placeholder="Product name" aria-label="Product name" ${busy ? "disabled" : ""} />
           <div class="lite-fold"><div class="lite-fold-in">
-            <textarea class="lite-research-context" maxlength="140" placeholder="Context, if it helps" aria-label="Context" ${busy ? "disabled" : ""}></textarea>
+            <textarea class="lite-research-context" maxlength="140" placeholder="Context (optional)" aria-label="Context" ${busy ? "disabled" : ""}></textarea>
           </div></div>
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
-        ${state.researchSavedAt ? `<p class="lite-saved-result">Saved result · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
-        ${quickCoverage ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
-          `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched product · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} pages cited`
-          + (quickEmptyExplanation ? ` · ${quickEmptyExplanation}` : "")
-          + (quickIsEmpty ? " This describes the pages checked; it does not prove the product has no problems." : "")
-          + (rejectionSummary ? ` Reasons: ${rejectionSummary}.` : ""))}</p>` : ""}
+        ${state.researchSavedAt ? `<p class="lite-saved-result">Saved · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
+        ${quickCoverage && !quickIsEmpty ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
+          `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} cited`
+          + (rejectionSummary ? ` · reasons: ${rejectionSummary}` : ""))}</p>` : ""}
         <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
-        ${state.researchQuick ? `<div class="lite-quick">
+        ${emptyCard ? noIssueCardMarkup(emptyCard) : ""}
+        ${state.researchQuick && !quickIsEmpty ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
           <div class="lite-quick-cards"></div>
           <div class="lite-quick-specs"></div>
@@ -1061,21 +1249,23 @@
             <summary>Sources</summary><div class="lite-quick-source-list"></div>
           </details>
         </div>` : ""}
-        ${state.researchQuick && state.researchQuickJob ? `<div class="lite-follow">
-          <p class="lite-follow-lede">Ask a follow-up. Your agent can use the saved product facts and search the web.</p>
+        ${state.researchQuick && state.researchQuickJob && !quickIsEmpty ? `<div class="lite-follow">
           ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
             <p class="lite-follow-q">${escapeHtml(a.q)}</p>
             <div class="lite-follow-answer lite-answer" data-answer="${escapeHtml(a.job_id || "")}"></div>
           </div>`).join("")}
           <div class="lite-follow-row">
-            <input class="lite-follow-input" maxlength="500" placeholder="Ask about this quick look" ${state.researchAsking ? "disabled" : ""} />
-            <button type="button" class="lite-follow-ask" ${state.researchAsking ? "disabled" : ""}>${state.researchAsking ? "Asking\u2026" : "Ask"}</button>
+            <input class="lite-follow-input" maxlength="500" placeholder="Ask about this product"
+              aria-label="Ask about this product" title="Your agent can search the web"
+              ${state.researchAsking ? "disabled" : ""} />
+            <button type="button" class="lite-follow-ask" title="Your agent can search the web"
+              aria-label="Ask about this product" ${state.researchAsking ? "disabled" : ""}>${state.researchAsking ? "Asking\u2026" : "Ask"}</button>
           </div>
         </div>` : ""}
         ${asked.length ? `<div class="lite-asked" aria-live="polite">
           <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
-            ? "Your agent has a question. Pick an answer and it hears it now."
-            : "Your agent had a question and went with its guess. Pick an answer to run it again."}</p>
+            ? "Your agent has a question. Pick an answer."
+            : "Pick an answer to run it again."}</p>
           ${asked.map((q, qi) => `<fieldset class="lite-asked-q"><legend>${renderRichText(q.ask)}</legend>
             ${(q.options || []).length ? `<div class="lite-chips">${q.options.map((o, oi) => `
               <button type="button" class="lite-chip" data-q="${qi}" data-o="${oi}"
@@ -1100,7 +1290,8 @@
       </section>`;
     // Progress-only polls should update the sentence, never re-create the
     // quick-look cards or the question the reader is typing an answer to.
-    const signature = markup + JSON.stringify(state.researchQuick);
+    const signature = markup + JSON.stringify(state.researchQuick)
+      + JSON.stringify(state.researchEmpty);
     if (slot._researchMarkup === signature) {
       renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
@@ -1186,6 +1377,11 @@
     for (const page of state.researchQuick?.evidence_pages || []) {
       if (/^https?:\/\//i.test(page.url || "")) sources.set(page.url, page);
     }
+    // A deep run that kept nothing carries its pages on the empty state, not
+    // on a quick look.
+    for (const page of state.researchEmpty?.evidence_pages || []) {
+      if (/^https?:\/\//i.test(page.url || "")) sources.set(page.url, page);
+    }
     if (/^https?:\/\//i.test(listing.url || "") && !sources.has(listing.url)) {
       sources.set(listing.url, { url: listing.url, domain: "Product listing" });
     }
@@ -1203,6 +1399,11 @@
       const passage = src.quote || src.excerpt || "";
       item.append(link, document.createTextNode(passage ? ` · ${passage}` : ""));
       sourceList?.appendChild(item);
+    }
+    // A run whose pages produced no citable address says nothing about
+    // sources rather than opening an empty drawer.
+    if (sourceList && !sourceList.children.length) {
+      sourceList.closest(".lite-quick-sources")?.remove();
     }
     slot.querySelector(".lite-quick-sources")?.addEventListener("toggle", event => {
       state.quickSourcesOpen = event.target.open;
@@ -1396,7 +1597,7 @@
   }
 
   function askQuick(question) {
-    const jobId = state.researchQuickJob;
+    const jobId = state.researchQuickJob || state.researchQuick?.job_id;
     if (!question || !jobId || state.researchAsking) return;
     state.researchAsking = true;
     // The question shows at once, with the dots, before the engine has
@@ -1447,11 +1648,17 @@
    * evidence supports. No data showing an issue is not the same as no issue,
    * so the sentence says that too. A brief the reader can open is never
    * called "no data": it may hold the findings. */
+  /* True for a finished run that kept nothing and has no brief to open. */
+  function keptNothing(result) {
+    return Boolean(result) && Array.isArray(result.accepted)
+      && !result.accepted.length && !result.brief;
+  }
+
   function noKeptData(result) {
     const plain = "Research completed. Open the research job for findings.";
-    if (!result || !Array.isArray(result.accepted) || result.accepted.length || result.brief) return plain;
+    if (!keptNothing(result)) return plain;
     const what = result.outcome || "nothing kept";
-    return `No data found that shows an issue (${what}). This is absence of evidence in the sources read, not proof that there is no issue.`;
+    return `No data found that shows an issue (${what}); not proof that there is no issue.`;
   }
 
   function pollResearchJob(jobId) {
@@ -1459,7 +1666,7 @@
     chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
       if (state.researchJob?.job_id !== jobId || !state.researching) return;
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
-        state.researchMessage = "Cannot check progress. The job may still be running; open its exact output below or cancel.";
+        state.researchMessage = "Cannot check progress. Open its output below or cancel.";
         renderResearch();
         setTimeout(() => pollResearchJob(jobId), 3000);
         return;
@@ -1483,13 +1690,28 @@
       }
       state.researching = null;
       state.cancelling = false;
+      // The same card the quick look shows when it kept nothing: the run read
+      // sources and kept no finding, and that absence is the finding.
+      const emptied = job.state === "succeeded"
+        && state.researchJob.kind !== "pack_author"
+        && keptNothing(job.result);
+      state.researchEmpty = emptied ? {
+        kind: "deep",
+        title: "No sourced issues kept",
+        note: "Absence of evidence in the sources read; not proof that there is no issue.",
+        coverage: job.result?.coverage || job.result?.telemetry?.coverage || null,
+        evidence_pages: Array.isArray(job.result?.evidence_pages)
+          ? job.result.evidence_pages
+          : (Array.isArray(job.result?.sources) ? job.result.sources : []),
+        outcome: job.result?.outcome || "",
+      } : null;
       state.researchMessage = job.state === "cancelled" ? "Research cancelled."
         : job.state === "succeeded" ? (state.researchJob.kind === "pack_author"
           ? (job.result?.installed
-            ? "Deeper research done and installed. Refreshing this listing…"
-            : `${state.researchQuick ? "Deeper research done. " : ""}A draft pack is ready in Kriko; it could not install itself; open it there.`)
+            ? "Deeper research installed. Refreshing…"
+            : `${state.researchQuick ? "Deeper research done. " : ""}Draft pack ready in Kriko; it could not install itself. Open it there.`)
           : job.result?.brief && !job.result?.documents
-            ? "Brief ready. Open the research job to continue with your agent."
+            ? "Brief ready. Open the research job."
             : noKeptData(job.result))
         : job.state === "interrupted" ? "Research interrupted by an app restart."
         : `Research failed. ${job.error || job.message || "Open the job for details."}`;
@@ -1606,6 +1828,17 @@
   const STORAGE_KEY = "kriko_result_" + window.location.href;
   const STAGE_KEY = "kriko_stage_" + window.location.href;
   chrome.storage.onChanged.addListener((changes, area) => {
+    // The motion profile is a `local` setting shared with the options page:
+    // changing it there while this panel is open has to reach the panel too,
+    // or the two surfaces drift until the next reload.
+    if (area === "local") {
+      if (MOTION_KEY in changes) {
+        const saved = changes[MOTION_KEY].newValue;
+        state.motion = MOTION_PROFILES.includes(saved) ? saved : "";
+        paintMotion();
+      }
+      return;
+    }
     if (area !== "session") return;
     // The stage first: it is written before the result it narrates, and a
     // change event carrying both should not paint the answer and then the
@@ -1643,6 +1876,11 @@
     panel.className = "lite-panel";
     panel.dataset.side = state.side;
     panel.dataset.mounting = "1";
+    // The theme on the host before the first paint, so a stored light choice
+    // never shows a dark frame. `state.theme` is empty until storage answers;
+    // until then the system preference is what the stylesheet is already using.
+    hostEl.dataset.theme = currentTheme();
+    hostEl.dataset.motion = currentMotion();
 
     // Default position: dock to chosen side, full viewport height.
     const initialPos = state.pos || initialPosition();
@@ -1667,7 +1905,9 @@
     closeBtn    = panel.querySelector(".lite-btn-close");
     footerEl    = panel.querySelector(".lite-footer");
 
-    // Wire panel-level handlers
+    // Wire panel-level handlers. The ripple rides the same pointerdown the
+    // drag does, and adds nothing when reduced motion is on.
+    panel.addEventListener("pointerdown", rippleAt);
     panel.addEventListener("pointerdown", onPointerDown);
     panel.addEventListener("pointermove", onPointerMove);
     panel.addEventListener("pointerup", onPointerUp);
@@ -1685,6 +1925,10 @@
     searchBtn.addEventListener("click", () =>
       (state.searchOpen ? closeSearch() : openSearch()));
     closeBtn.addEventListener("click", closePanel);
+    panel.querySelector(".lite-btn-theme").addEventListener("click", toggleTheme);
+    paintTheme();
+    readTheme();
+    readMotion();
     panel.querySelector(".lite-find-product").addEventListener("click", () => {
       const product = (state.result?.subjects || []).find((one) => one.kind === "product");
       openSearch(product?.label || "");
@@ -1881,6 +2125,11 @@
           ${wordmark}
           <div class="lite-subtitle">local product knowledge</div>
         </div>
+        <button type="button" class="lite-iconbtn lite-btn-theme"
+                title="Switch to light theme" aria-label="Switch to light theme"
+                aria-pressed="false">
+          ${iconSvg("sun", { size: 16, strokeWidth: 2 })}
+        </button>
         <button type="button" class="lite-iconbtn lite-btn-density"
                 title="Search again" aria-label="Search again">
           ${iconSvg("refresh", { size: 16, strokeWidth: 2 })}
@@ -1913,7 +2162,7 @@
         <div class="lite-queue-slot"></div>
         <div class="lite-product-actions">
           <button type="button" class="lite-find-product">Find in installed packs</button>
-          <button type="button" class="lite-research-product">Research this product</button>
+          <button type="button" class="lite-research-product" title="Research this product with your agent">Research</button>
         </div>
         <div class="lite-live-slot"></div>
         <div class="lite-search-slot"></div>
@@ -1936,6 +2185,9 @@
       return;
     }
     const c = counts();
+    // A zero count row is three zeroes saying nothing; the empty card below
+    // already says what happened.
+    if (!c.total) { countsEl.innerHTML = ""; lastCountNumbers = null; return; }
     countsEl.innerHTML = `
       <div class="lite-counts">
         <span class="lite-count" data-sev="high">
@@ -1966,6 +2218,17 @@
              literal, which is how it broke the first time.) -->
       </div>
     `;
+    // A number that moved bumps once, so a live answer says what changed
+    // without a second sentence doing it.
+    const now = { high: c.high, medium: c.medium, low: c.low };
+    countsEl.querySelectorAll(".lite-count").forEach((chip) => {
+      const sev = chip.dataset.sev;
+      if (lastCountNumbers && lastCountNumbers[sev] !== now[sev]) {
+        chip.dataset.bump = "1";
+        chip.addEventListener("animationend", () => { delete chip.dataset.bump; }, { once: true });
+      }
+    });
+    lastCountNumbers = now;
   }
 
   function sameWords(a, b) {
@@ -1991,7 +2254,7 @@
             // The title already says it when the engine read the page the way
             // the page reads; a second line repeating it is noise (B152.5).
             ? (sameWords(lm.identity_line, lm.title) ? "" : `<div class="lite-listing-engine">${escapeHtml(lm.identity_line)}</div>`)
-            : `<div class="lite-listing-engine" data-unresolved="1">Not recognised; no pack matched this page</div>`}
+            : `<div class="lite-listing-engine" data-unresolved="1">Not recognised by any installed pack</div>`}
       </div>
     `;
   }
@@ -2038,11 +2301,10 @@
       </div>
       <div id="lite-queue-guide" class="lite-queue-guide" ${state.queueHelpOpen ? "" : "hidden"}>
         <strong>Research a shortlist</strong>
-        <p>Add to queue saves this product and its listing in Kriko. Add other products
-          from their listings, then open <b>Compare → Research queue</b> in Kriko,
-          choose an agent and press <b>Start queue</b>.</p>
-        <p>The agent researches each product in turn so you can compare the results.
-          Adding a product does not start research. The queue is kept on this computer.</p>
+        <p>Add products from their listings, then open <b>Compare → Research queue</b>
+          in Kriko, choose an agent and press <b>Start queue</b>.</p>
+        <p>The agent researches each in turn. Adding does not start research;
+          the queue stays on this computer.</p>
       </div>`;
   }
 
@@ -2306,7 +2568,7 @@
     }
     slot.innerHTML = `
       <div class="lite-live">
-        <div class="lite-live-head">Also running now</div>
+        <div class="lite-live-head">Also running</div>
         <ul class="lite-live-list"></ul>
       </div>
     `;
@@ -2609,9 +2871,8 @@
     }
     if (state.searchResults === null) {
       box.innerHTML =
-        `<p class="lite-search-note">Type at least ${SEARCH_MIN} characters. ` +
-        `Every word has to land somewhere: a name, an alias, or one of the ` +
-        `values the thing is made of.</p>`;
+        `<p class="lite-search-note">At least ${SEARCH_MIN} characters. ` +
+        `Names, aliases or values.</p>`;
       return;
     }
     if (!state.searchResults.length) {
@@ -2671,14 +2932,15 @@
           <span class="lite-verdict-word">New to Kriko</span>
         </div>
         <p class="lite-verdict-say">Kriko doesn't know
-          <strong class="lite-unknown-name"></strong> yet. A quick look answers
-          here in a minute or two, and a deeper run keeps going after.</p>
+          <strong class="lite-unknown-name"></strong> yet. Research it.</p>
       `;
       card.querySelector(".lite-unknown-name").textContent = state.unknownProduct;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "lite-verdict-btn lite-unknown-research";
-      button.textContent = "Research this product";
+      button.textContent = "Research";
+      button.title = "A quick look answers here; a deeper run follows.";
+      button.setAttribute("aria-label", "Research this product");
       button.addEventListener("click", () =>
         researchSubject({ label: state.unknownProduct }));
       card.appendChild(button);
@@ -2699,9 +2961,8 @@
           <div class="lite-verdict-head">
             <span class="lite-verdict-word">Not a listing</span>
           </div>
-          <p class="lite-verdict-say">Kriko reads listings on this site, but
-            this page isn't one. Open a specific car's listing and analyze
-            that.</p>
+          <p class="lite-verdict-say">Kriko reads this site's listings. This
+            page isn't one.</p>
         `;
         slot.appendChild(card);
         return;
@@ -2711,13 +2972,14 @@
           <span class="lite-verdict-word">Not read here</span>
         </div>
         <p class="lite-verdict-say">Nothing installed knows how to read this
-          site yet. Teaching Kriko a site is a few minutes in the app, and an
-          agent can write most of it.</p>
+          site yet.</p>
       `;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "lite-verdict-btn";
       button.textContent = "Add this site";
+      button.title = "In Kriko, an agent can write most of it.";
+      button.setAttribute("aria-label", "Add this site; an agent can write most of the adapter");
       button.addEventListener("click", () =>
         openInApp("sites", appUrlFor("sites")));
       card.appendChild(button);
@@ -2748,17 +3010,37 @@
     `;
     card.appendChild(head);
 
+    const action = step && step.action && step.action !== "none" ? step.action : "";
+    // A recognised product the packs hold nothing on is the one `recognised`
+    // case worth a banner. The engine's sentence is the warrant, not the
+    // headline: the card states the gap in a phrase and keeps the full
+    // sentence as the card's title, so nothing is hidden and nothing is read
+    // twice. `several` is the other long engine sentence the reader meets by
+    // default; it gets the same treatment. `probably` stays word for word —
+    // the engine's own question is the point of that card.
+    const recognisedGap = verdict === "recognised" && action === "research";
+    const shortSay = recognisedGap ? "Recognised. Nothing installed covers it yet."
+      : verdict === "several" ? "One of several. Pick the one on the listing."
+        : "";
     if (step && step.say) {
-      const say = document.createElement("p");
-      say.className = "lite-verdict-say";
-      say.textContent = step.say;
-      card.appendChild(say);
+      if (shortSay) {
+        card.title = step.say;
+        const say = document.createElement("p");
+        say.className = "lite-verdict-say";
+        say.textContent = shortSay;
+        say.title = step.say;
+        card.appendChild(say);
+      } else {
+        const say = document.createElement("p");
+        say.className = "lite-verdict-say";
+        say.textContent = step.say;
+        card.appendChild(say);
+      }
     }
 
     const weighed = renderConsidered();
     if (weighed) card.appendChild(weighed);
 
-    const action = step && step.action && step.action !== "none" ? step.action : "";
     // `choose`: the page fits several products, and the reader can say which.
     // Each opens that product in the app, where all of what is known shows.
     if (action === "choose" && Array.isArray(step.choices) && step.choices.length) {
@@ -2775,12 +3057,13 @@
       }
       card.appendChild(list);
     }
-    const label = actionLabel(action, step);
+    const label = recognisedGap ? "Research" : actionLabel(action, step);
     if (label) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "lite-verdict-btn";
       button.textContent = label;
+      if (recognisedGap) button.title = step.say;
       button.addEventListener("click", () => takeNextStep(action, step, button));
       card.appendChild(button);
     }
@@ -2853,6 +3136,9 @@
       return;
     }
     const total = state.result.claims.length;
+    // Nothing to expand, collapse or count: the row would be three zeroes and
+    // two controls that do nothing.
+    if (!total) { claimsHeadEl.innerHTML = ""; return; }
     const allOpen  = state.openIds.size === total && total > 0;
     const allClose = state.openIds.size === 0;
 
@@ -2959,7 +3245,7 @@
           // the header above already names the product.
           empty.textContent = state.result.coverage === "MATCHED_NO_DATA"
             ? "Recognised, but the installed packs hold nothing about it yet."
-            : "Nothing matched this listing. No installed pack recognises it.";
+            : "Nothing matched this listing. No pack recognises it.";
           claimsListEl.appendChild(empty);
         }
       }
@@ -3158,15 +3444,16 @@
     for (const subject of gaps) {
       const card = document.createElement("div");
       card.className = "lite-gap";
+      // The explanation is the card's tooltip; the card itself is a phrase.
+      card.title = "In the catalogue, but nothing researched for it yet.";
       card.innerHTML = `
         <div class="lite-gap-body">
-          <div class="lite-gap-title">Couldn't find the knowledge on
-            ${escapeHtml(subject.label)} · research it with your agent?</div>
-          <div class="lite-gap-note">This is in the catalogue, but no claim has been
-            researched for it yet.</div>
+          <div class="lite-gap-title">No knowledge on
+            ${escapeHtml(subject.label)} yet</div>
           ${cost ? `<div class="lite-gap-cost">${escapeHtml(cost)}</div>` : ""}
         </div>
-        <button type="button" class="lite-gap-btn">Research it</button>
+        <button type="button" class="lite-gap-btn" title="Research this product with your agent"
+          aria-label="Research this product">Research</button>
       `;
       const button = card.querySelector(".lite-gap-btn");
       button.addEventListener("click", () => researchSubject(subject, button));
@@ -3242,7 +3529,13 @@
   }
 
   function followupHere() {
-    const id = (state.researchOpen && state.researchQuickJob)
+    // A quick look that kept nothing shows its own follow-up inside the
+    // no-issue card, with the same pipe. The generic block would be the same
+    // control twice, so in that one case it stands down.
+    const emptyQuick = state.researchOpen && state.researchQuick
+      && (state.researchQuickJob || state.researchQuick.job_id)
+      && !state.researchQuick.risks?.length && !state.researchQuick.specs?.length;
+    const id = (state.researchOpen && state.researchQuickJob && !emptyQuick)
       || (state.pipeline === "result" && state.result?.lookup_id);
     if (!id) return null;
     if (!state.followups.has(id)) state.followups.set(id, {
@@ -3261,15 +3554,15 @@
       slot.dataset.lookupId = row.id;
       slot.innerHTML = `
         <section class="lite-followup">
-          <strong>Ask a follow-up</strong>
-          <p class="lite-followup-note">Ask your agent about this listing's risks and evidence.
-            Uses your configured agent or local model. Paid agents are capped at $0.20 per question.</p>
           <div class="lite-followup-history" aria-live="polite"></div>
           <form class="lite-followup-form">
-            <label for="lite-followup-input">Your question</label>
             <textarea id="lite-followup-input" class="lite-followup-input" maxlength="2000"
-              placeholder="What should I check before deciding?" rows="2"></textarea>
-            <button type="submit" class="lite-followup-send">Ask your agent</button>
+              placeholder="Ask about this product" aria-label="Ask about this product"
+              title="Your agent answers from this listing's risks and evidence. Paid agents are capped at $0.20 per question."
+              rows="1"></textarea>
+            <button type="submit" class="lite-followup-send"
+              title="Paid agents are capped at $0.20 per question."
+              aria-label="Ask about this product">Ask</button>
           </form>
           <p class="lite-followup-status" role="status"></p>
         </section>`;
@@ -3284,7 +3577,7 @@
     const pending = row.starting || row.jobs.some(job => !job.done);
     const send = slot.querySelector(".lite-followup-send");
     send.disabled = pending;
-    send.textContent = pending ? "Asking…" : "Ask your agent";
+    send.textContent = pending ? "Asking…" : "Ask";
     const status = slot.querySelector(".lite-followup-status");
     status.textContent = row.status;
     if (row.paused.size) {
@@ -3374,7 +3667,7 @@
     row.polling.add(jobId);
     chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, response => {
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
-        row.status = "Cannot check the answer. It may still be running; retry progress below.";
+        row.status = "Cannot check the answer. Retry below.";
         row.polling.delete(jobId);
         row.paused.add(jobId);
         if (followupHere() === row) renderFollowups();

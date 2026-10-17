@@ -121,6 +121,33 @@ def pull(base: str, model: str, progress, *, opener=urllib.request.urlopen) -> d
     return {"model": model, "runtime": "ollama", "bytes": int(size)}
 
 
+def remove(base: str, model: str, *, opener=urllib.request.urlopen) -> dict:
+    """Delete `model` from the Ollama at `base`.
+
+    Ollama takes the name in the body of `DELETE /api/delete`, not in the
+    path, so a model name is never part of a URL. Raises `RuntimeError` with
+    Ollama's own words when it refuses.
+    """
+    if not valid_name(model):
+        raise RuntimeError("That is not a model name Ollama would accept.")
+    request = urllib.request.Request(
+        base.rstrip("/") + "/api/delete",
+        data=json.dumps({"model": model}).encode("utf-8"),
+        headers={"content-type": "application/json"},
+        method="DELETE",
+    )
+    try:
+        response = opener(request, timeout=STREAM_TIMEOUT)
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(_error_text(exc.read()) or f"Ollama answered HTTP {exc.code}") from exc
+    except OSError as exc:
+        raise RuntimeError(f"Ollama did not answer at {base}: {exc}") from exc
+    close = getattr(response, "close", None)
+    if close:
+        close()
+    return {"model": model, "removed": True}
+
+
 def installed(base: str, *, opener=urllib.request.urlopen) -> list[dict]:
     """What the Ollama at `base` holds, with the sizes it reports.
 

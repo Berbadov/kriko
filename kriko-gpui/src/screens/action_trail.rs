@@ -9,7 +9,7 @@ use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
 use gpui::{
-    div, prelude::*, px, rgb, Animation, AnimationExt, AnyElement, Div, ElementId, FontWeight,
+    div, prelude::*, px, Animation, AnimationExt, AnyElement, Div, ElementId, FontWeight,
     SharedString, Styled,
 };
 
@@ -18,8 +18,7 @@ use crate::live::run::Job;
 use crate::screens::mono;
 use crate::theme::*;
 
-/// The failed dot and text, the same warm tone the stepper uses for a stop.
-const WARN: u32 = DANGER;
+// The failed dot and text use the shared caution tone (`theme::WARN`).
 
 /// A key for an element that must replay its animation when its state
 /// changes: the same words in the same place keep one key.
@@ -52,7 +51,7 @@ fn dot(id: &str, text: &str, state: Dot, motion: bool) -> AnyElement {
         Dot::Running => ICE,
         Dot::Failed => WARN,
     };
-    let core = div().size(px(6.0)).rounded_full().bg(rgb(color));
+    let core = div().size(px(6.0)).rounded_full().bg(paint(color));
     let holder = div()
         .size(px(12.0))
         .flex_none()
@@ -94,26 +93,16 @@ pub fn action_trail(job: &Job, motion: bool) -> Div {
         .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
         .text_size(px(15.0))
-        .text_color(rgb(line_colour(current.dot)))
+        .text_color(paint(line_colour(current.dot)))
         .truncate()
         .child(text.clone());
-    let line = fade_in(
-        line,
-        &format!("trail-{}", job.id),
-        key_of(&text, job.feed.len() as u64),
-        motion,
-    );
+    let line = fade_in(line, &format!("trail-{}", job.id), key_of(&text, job.feed.len() as u64), motion);
     let headline = div()
         .flex()
         .items_center()
-        .gap(px(6.0))
+        .gap(px(SPACE_S))
         .min_w(px(0.0))
-        .child(dot(
-            &format!("trail-{}-now", job.id),
-            &text,
-            current.dot,
-            motion,
-        ))
+        .child(dot(&format!("trail-{}-now", job.id), &text, current.dot, motion))
         .child(line);
 
     let step = action::step_word(job);
@@ -132,18 +121,18 @@ pub fn action_trail(job: &Job, motion: bool) -> Div {
     } else {
         chip.into_any_element()
     };
-    let clock = action::elapsed_now(job)
-        .map(action::clock)
-        .unwrap_or_default();
+    let clock = action::elapsed_now(job).map(action::clock).unwrap_or_default();
     let meta = div()
         .flex()
         .items_center()
-        .gap(px(6.0))
+        .gap(px(SPACE_S))
+        .child(icon("activity", 12.0).text_color(paint(MUTED)))
         .child(chip)
         .child(div().flex_1())
+        .child(icon("clock", 12.0).text_color(paint(MUTED)))
         .child(mono(&clock, INK_2));
 
-    let mut trail = div().flex().flex_col().gap(px(5.0));
+    let mut trail = div().flex().flex_col().gap(px(SPACE_XS));
     for (i, item) in action::trail(job).iter().enumerate() {
         trail = trail.child(trail_row(&job.id, i, item, motion));
     }
@@ -152,9 +141,9 @@ pub fn action_trail(job: &Job, motion: bool) -> Div {
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(headline)
-        .child(meta)
-        .child(trail)
+        .child(enter(headline, &format!("action-trail-{}-0", job.id), 0, motion))
+        .child(enter(meta, &format!("action-trail-{}-1", job.id), 1, motion))
+        .child(enter(trail, &format!("action-trail-{}-2", job.id), 2, motion))
 }
 
 fn trail_row(job_id: &str, i: usize, item: &Action, motion: bool) -> Div {
@@ -171,8 +160,8 @@ fn trail_row(job_id: &str, i: usize, item: &Action, motion: bool) -> Div {
                 .min_w(px(0.0))
                 .flex_1()
                 .font_family(SANS)
-                .text_size(px(12.0))
-                .text_color(rgb(line_colour(item.dot)))
+                .text_size(px(13.0))
+                .text_color(paint(line_colour(item.dot)))
                 .truncate()
                 .child(text),
         )
@@ -187,19 +176,12 @@ pub fn compact_line(job: &Job, motion: bool) -> Div {
         .min_w(px(0.0))
         .flex_1()
         .font_family(SANS)
-        .text_size(px(12.0))
-        .text_color(rgb(line_colour(current.dot)))
+        .text_size(px(13.0))
+        .text_color(paint(line_colour(current.dot)))
         .truncate()
         .child(text.clone());
-    let line = fade_in(
-        line,
-        &format!("compact-{}", job.id),
-        key_of(&text, job.feed.len() as u64),
-        motion,
-    );
-    let clock = action::elapsed_now(job)
-        .map(action::clock)
-        .unwrap_or_default();
+    let line = fade_in(line, &format!("compact-{}", job.id), key_of(&text, job.feed.len() as u64), motion);
+    let clock = action::elapsed_now(job).map(action::clock).unwrap_or_default();
     div()
         .flex()
         .items_center()
