@@ -3,7 +3,7 @@
 //! carry (with whether the extension has reported on each) and the sites that
 //! were asked for and have no adapter yet.
 
-use gpui::{div, prelude::*, px, rgb, rgba, ClickEvent, Context, Div, Styled, Window};
+use gpui::{div, prelude::*, px, ClickEvent, Context, Div, Styled, Window};
 
 use crate::app::{Field, Kriko};
 use crate::live::knowledge::ago;
@@ -33,7 +33,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     let add_field = app.input_field(
         Field::SitesAdd,
         "sites-add",
-        "Teach Kriko a site, e.g. reviews.example",
+        "Add a site, e.g. reviews.example",
         None,
         window,
         cx,
@@ -71,7 +71,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .flex()
                 .flex_wrap()
                 .items_center()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(tag("site-registration", state, label, motion))
                 .child(row_desc(&format!("{host}: {said}")))
                 .when(!job.done, |d| d.child(spinner("site-registration-spinner", 16.0, motion))),
@@ -86,9 +86,14 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             .flex()
             .flex_col()
             .gap(px(8.0))
-            .child(add_row)
-            .child(status)
-            .child(empty_note("Waiting for Kriko's engine. The sites it can read appear here."));
+            .child(enter(add_row, "sites-0", 0, motion))
+            .child(enter(status, "sites-1", 1, motion))
+            .child(enter(
+                empty_note("Waiting for the engine. Sites it can read appear here."),
+                "sites-2",
+                2,
+                motion,
+            ));
     }
 
     // ---- the adapters ----
@@ -98,24 +103,25 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     let narrow = app.content_w < 900.0;
     let (pack_w, source_w, ext_w, act_w) = if narrow { (130.0, 90.0, 120.0, 80.0) } else { (220.0, 100.0, 150.0, 90.0) };
     let mut table = card().flex().flex_col();
+    table = table.child(card_head("globe", "Site adapters", motion));
     if stacked {
-        table = table.child(eyebrow("Site adapters"));
+        table = table.child(hairline());
     } else {
         table = table.child(
             div()
                 .flex()
                 .items_center()
-                .pb(px(10.0))
+                .pb(px(SPACE_S))
                 .child(div().flex_1().min_w(px(120.0)).child(th("Site")))
                 .child(div().w(px(pack_w)).child(th("Pack")))
                 .child(div().w(px(source_w)).child(th("Source")))
-                .child(div().w(px(ext_w)).child(th("Extension")))
+                .child(div().w(px(ext_w)).child(th("Status")))
                 .child(div().w(px(act_w))),
         ).child(hairline());
     }
     if k.registered.is_empty() {
         table = table.child(div().pt(px(12.0)).child(empty_note(
-            "No site has an adapter yet. Add one above and an agent works out how to read it.",
+            "No adapter yet. Add a site above and an agent learns to read it.",
         )));
     }
     for (i, r) in k.registered.iter().enumerate() {
@@ -131,7 +137,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .flex_col()
                 .gap(px(8.0))
                 .py(px(12.0))
-                .hover(|s| s.bg(rgba(GLASS_1)))
+                .hover(|s| s.bg(paint_a(GLASS_1)))
                 .child(
                     div()
                         .flex()
@@ -145,7 +151,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                                 .flex()
                                 .items_center()
                                 .gap(px(8.0))
-                                .child(icon("sites", 16.0).text_color(rgb(MUTED)))
+                                .child(icon("sites", 16.0).text_color(paint(MUTED)))
                                 .child(mono(&r.host, INK)),
                         )
                         .when(r.local, |d| {
@@ -167,7 +173,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
             .flex()
             .items_center()
             .py(px(4.0))
-            .hover(|s| s.bg(rgba(GLASS_1)))
+            .hover(|s| s.bg(paint_a(GLASS_1)))
             .child(
                 div()
                     .flex_1()
@@ -175,12 +181,12 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                     .flex()
                     .items_center()
                     .gap(px(8.0))
-                    .child(icon("sites", 16.0).text_color(rgb(MUTED)))
+                    .child(icon("sites", 16.0).text_color(paint(MUTED)))
                     .child(
                         div()
                             .font_family(MONO)
                             .text_size(px(13.0))
-                            .text_color(rgb(INK))
+                            .text_color(paint(INK))
                             .child(r.host.clone()),
                     ),
             )
@@ -193,7 +199,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         };
         table = table.child(row);
         if !r.detail.is_empty() {
-            table = table.child(div().pb(px(8.0)).pl(px(28.0)).child(mono(&r.detail, DIM)));
+            table = table.child(div().pb(px(SPACE_S)).pl(px(SPACE_XL)).child(mono(&r.detail, DIM)));
         }
         if i + 1 < k.registered.len() {
             table = table.child(hairline());
@@ -202,14 +208,15 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     // ---- the asks with no adapter ----
     let mut asked = card().flex().flex_col();
+    asked = asked.child(card_head("question", "Requested sites", motion));
     if stacked {
-        asked = asked.child(eyebrow("Requested sites"));
+        asked = asked.child(hairline());
     } else {
         asked = asked.child(
             div()
                 .flex()
                 .items_center()
-                .pb(px(10.0))
+                .pb(px(SPACE_S))
                 .child(div().flex_1().min_w(px(120.0)).child(th("Asked for")))
                 .child(div().w(px(80.0)).child(th("Asks")))
                 .child(div().w(px(130.0)).child(th("Last")))
@@ -219,7 +226,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
     }
     if k.requested.is_empty() {
         asked = asked.child(div().pt(px(12.0)).child(empty_note(
-            "Nobody has asked for a site Kriko cannot read yet.",
+            "No requested sites yet.",
         )));
     }
     for (i, r) in k.requested.iter().enumerate() {
@@ -235,7 +242,7 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .flex_col()
                 .gap(px(8.0))
                 .py(px(12.0))
-                .hover(|s| s.bg(rgba(GLASS_1)))
+                .hover(|s| s.bg(paint_a(GLASS_1)))
                 .child(
                     div()
                         .flex()
@@ -261,19 +268,19 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
                 .flex()
                 .items_center()
                 .py(px(4.0))
-                .hover(|s| s.bg(rgba(GLASS_1)))
+                .hover(|s| s.bg(paint_a(GLASS_1)))
                 .child(
                     div()
                         .flex_1()
                         .min_w(px(0.0))
                         .flex()
                         .flex_col()
-                        .gap(px(2.0))
+                        .gap(px(SPACE_XS))
                         .child(
                             div()
                                 .font_family(MONO)
                                 .text_size(px(13.0))
-                                .text_color(rgb(INK))
+                                .text_color(paint(INK))
                                 .child(r.host.clone()),
                         )
                         .when(!r.detail.is_empty(), |d| d.child(row_desc(&r.detail))),
@@ -295,12 +302,17 @@ pub fn sites(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> D
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(add_row)
-        .child(status)
-        .child(table)
-        .child(asked)
-        .child(mono(
-            "Adapters from a pack update with the pack. One taught here lives on this install only, and Forget removes just that.",
-            DIM,
+        .child(enter(add_row, "sites-0", 0, motion))
+        .child(enter(status, "sites-1", 1, motion))
+        .child(enter(table, "sites-2", 2, motion))
+        .child(enter(asked, "sites-3", 3, motion))
+        .child(enter(
+            mono(
+                "Pack adapters update with the pack. Taught ones stay on this install; Forget removes them.",
+                DIM,
+            ),
+            "sites-4",
+            4,
+            motion,
         ))
 }

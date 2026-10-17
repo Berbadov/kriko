@@ -14,14 +14,17 @@ mod contrast;
 mod data;
 mod dock;
 mod engine;
+mod favicons;
 mod live;
 mod marks;
 mod motion;
 mod screens;
 mod shell;
+mod sources;
 mod startup;
-mod theme;
 mod text_input;
+mod textfx;
+mod theme;
 
 use std::borrow::Cow;
 
@@ -105,6 +108,39 @@ const ASSETS: &[(&str, &[u8])] = &[
     ("icons/restore.svg", include_bytes!("../assets/icons/restore.svg")),
     ("icons/sites.svg", include_bytes!("../assets/icons/sites.svg")),
     ("icons/x.svg", include_bytes!("../assets/icons/x.svg")),
+    ("icons/arrow-up-right.svg", include_bytes!("../assets/icons/arrow-up-right.svg")),
+    ("icons/book.svg", include_bytes!("../assets/icons/book.svg")),
+    ("icons/chart.svg", include_bytes!("../assets/icons/chart.svg")),
+    ("icons/check-circle.svg", include_bytes!("../assets/icons/check-circle.svg")),
+    ("icons/chevron-right.svg", include_bytes!("../assets/icons/chevron-right.svg")),
+    ("icons/clock.svg", include_bytes!("../assets/icons/clock.svg")),
+    ("icons/copy.svg", include_bytes!("../assets/icons/copy.svg")),
+    ("icons/cpu.svg", include_bytes!("../assets/icons/cpu.svg")),
+    ("icons/download.svg", include_bytes!("../assets/icons/download.svg")),
+    ("icons/external.svg", include_bytes!("../assets/icons/external.svg")),
+    ("icons/file.svg", include_bytes!("../assets/icons/file.svg")),
+    ("icons/filter.svg", include_bytes!("../assets/icons/filter.svg")),
+    ("icons/globe.svg", include_bytes!("../assets/icons/globe.svg")),
+    ("icons/grid.svg", include_bytes!("../assets/icons/grid.svg")),
+    ("icons/info.svg", include_bytes!("../assets/icons/info.svg")),
+    ("icons/link.svg", include_bytes!("../assets/icons/link.svg")),
+    ("icons/list.svg", include_bytes!("../assets/icons/list.svg")),
+    ("icons/memory.svg", include_bytes!("../assets/icons/memory.svg")),
+    ("icons/message.svg", include_bytes!("../assets/icons/message.svg")),
+    ("icons/moon.svg", include_bytes!("../assets/icons/moon.svg")),
+    ("icons/palette.svg", include_bytes!("../assets/icons/palette.svg")),
+    ("icons/play.svg", include_bytes!("../assets/icons/play.svg")),
+    ("icons/question.svg", include_bytes!("../assets/icons/question.svg")),
+    ("icons/quote.svg", include_bytes!("../assets/icons/quote.svg")),
+    ("icons/refresh.svg", include_bytes!("../assets/icons/refresh.svg")),
+    ("icons/search-off.svg", include_bytes!("../assets/icons/search-off.svg")),
+    ("icons/shield.svg", include_bytes!("../assets/icons/shield.svg")),
+    ("icons/sliders.svg", include_bytes!("../assets/icons/sliders.svg")),
+    ("icons/sort.svg", include_bytes!("../assets/icons/sort.svg")),
+    ("icons/spark.svg", include_bytes!("../assets/icons/spark.svg")),
+    ("icons/sun.svg", include_bytes!("../assets/icons/sun.svg")),
+    ("icons/trash.svg", include_bytes!("../assets/icons/trash.svg")),
+    ("icons/warning.svg", include_bytes!("../assets/icons/warning.svg")),
     ("kriko-mark-white.svg", include_bytes!("../assets/kriko-mark-white.svg")),
     ("kriko-wordmark-white.svg", include_bytes!("../assets/kriko-wordmark-white.svg")),
     ("sky-dim.png", include_bytes!("../assets/sky-dim.png")),
@@ -148,6 +184,11 @@ fn main() {
     let review = std::env::var("KRIKO_VERIFY").is_ok_and(|page| !page.trim().is_empty());
     // a second launch raises the first and leaves: one engine per machine
     if !review && shell::raise_running_instance(!background) {
+        // Say it, so a reader who sees no window knows why. A launch that
+        // exits here is not a failure: the running Kriko was just raised.
+        // `KRIKO_VERIFY=<page>` skips this guard, which is also the way to
+        // open a second window for a look.
+        log::warn!("Kriko is already running. Its window was raised. This launch exits.");
         return;
     }
     engine::start();

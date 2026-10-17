@@ -12,8 +12,6 @@
 @font-face { font-family: "Kriko Mono"; font-weight: 400; font-display: swap; src: url("../assets/fonts/JetBrainsMono-400.ttf"); }
 
 :root {
-  color-scheme: dark;
-
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
@@ -25,12 +23,11 @@
   --border:      #232941;
   --border-soft: #1e2334;
 
-  /* Text */
-  --fg:          #e7eaf4;
-  --fg-body:     #c2c7d8;
-  --fg-muted:    #9199b3;
-  --fg-subtle:   #858da8;
-  --fg-faint:    #4d5573;
+  /* Text — three levels, each at least 4.5:1 on its surface.
+     Mild, subtle and faint are one value now, not three. */
+  --fg:          #eef1f8;
+  --fg-body:     #cbd2e2;
+  --fg-muted:    #9aa3bd;
 
   /* Severity — surface and edge derived from the ink, so a
      fourth one costs a single value rather than three. */
@@ -64,13 +61,341 @@
 
   /* Accent, resolved from the panel's alias */
   --accent:      #a5c3ff;
+
+  /* Faces and edges the rules below share, so a light theme is a
+     value rather than a second skin. */
+  --hover-face:  #262a32;
+  --hover-edge:  #3a414c;
+  --row-face:    #15171c;
+  --scroll-track: #0f1115;
+  --skeleton-a:  #1b1e24;
+  --skeleton-b:  #252930;
+  --alert-ink:   #d6c2c3;
+  --ok-ink:      #6ee7a8;
+  --ok-surface:  rgba(46, 160, 95, 0.13);
+  --ok-border:   rgba(46, 160, 95, 0.35);
+  --warn-ink:    #d8b46a;
+  --warn-surface: rgba(180, 140, 60, 0.12);
+  --warn-border: rgba(180, 140, 60, 0.32);
+  --key-edge:    #0f2a9c;
+  --sky-base:    #1a3fd0;
+  --sunken-face: rgba(0, 0, 0, 0.22);
+  --shadow-panel: 0 28px 70px rgba(0,0,0,0.6);
+  --shadow-card:  0 6px 20px rgba(0,0,0,0.3);
+  --well-shadow:  inset 0 2px 6px rgba(0,0,0,0.6);
+
+  /* Light palette. Applied by the media query and the explicit override
+     after this rule; every key here has a dark twin above. */
+  --light-bg-base:     #f4f6fb;
+  --light-bg-panel:    #ffffff;
+  --light-bg-header:   #ffffff;
+  --light-bg-surface:  #f7f8fc;
+  --light-bg-item:     #eef1f8;
+  --light-border:      #d5dae8;
+  --light-border-soft: #e3e7f1;
+
+  --light-fg:          #11162a;
+  --light-fg-body:     #2b3247;
+  --light-fg-muted:    #4c5570;
+
+  --light-high-surface: rgba(179,38,30,0.08);
+  --light-high-border:  rgba(179,38,30,0.30);
+  --light-high-ink:     #b3261e;
+  --light-med-surface:  rgba(138,90,0,0.10);
+  --light-med-border:   rgba(138,90,0,0.30);
+  --light-med-ink:      #8a5a00;
+  --light-low-surface:  rgba(15,122,82,0.10);
+  --light-low-border:   rgba(15,122,82,0.30);
+  --light-low-ink:      #0f7a52;
+
+  --light-brand:        #2c53e0;
+  --light-brand-hover:  #3f63f0;
+  --light-brand-low:    #1c3bad;
+  --light-brand-bright: #1f45c9;
+  --light-on-brand:     #ffffff;
+  --light-ice:          #1f45c9;
+  --light-led-off:      #c8cede;
+  --light-led-dim:      #8c94ad;
+  --light-bezel-hi:     #ffffff;
+  --light-bezel-lo:     #eef1f8;
+  --light-bezel-edge:   #d5dae8;
+  --light-glass-1:      rgba(16, 20, 40, 0.03);
+  --light-glass-2:      rgba(16, 20, 40, 0.06);
+  --light-glass-3:      rgba(16, 20, 40, 0.10);
+  --light-well:         #f2f4fa;
+  --light-border-control: #c4cbdd;
+  --light-accent:       #1f45c9;
+
+  --light-hover-face:  #e6ebf6;
+  --light-hover-edge:  #b9c2d8;
+  --light-row-face:    #eef1f8;
+  --light-scroll-track: #eef1f8;
+  --light-skeleton-a:  #e9edf5;
+  --light-skeleton-b:  #f7f9fd;
+  --light-alert-ink:   #6e2a2c;
+  --light-ok-ink:      #0f6b45;
+  --light-ok-surface:  rgba(15, 107, 69, 0.10);
+  --light-ok-border:   rgba(15, 107, 69, 0.28);
+  --light-warn-ink:    #7a5000;
+  --light-warn-surface: rgba(122, 80, 0, 0.10);
+  --light-warn-border: rgba(122, 80, 0, 0.28);
+  --light-key-edge:    #9db0ee;
+  --light-sky-base:    #2c53e0;
+  --light-sunken-face: rgba(16, 20, 40, 0.04);
+  --light-shadow-panel: 0 24px 60px rgba(20,28,60,0.18);
+  --light-shadow-card:  0 6px 18px rgba(20,28,60,0.10);
+  --light-well-shadow:  inset 0 1px 2px rgba(20,28,60,0.08);
+
+  /* Motion profile — Calm · Standard · Vivid. These are the Standard
+     values; the [data-motion] selectors after this rule remap them, so one
+     attribute scales every distance and tempo in the sheet. */
+  --dur-xfast: 90ms;
+  --dur-fast:  120ms;
+  --dur-quick: 160ms;
+  --dur-med:   220ms;
+  --dur-slow:  320ms;
+  --dur-ripple: 560ms;
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in:   cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --spring-lift: 1px;
+  --press-scale: 0.955;
+  --bump-scale:  1.15;
+  --nudge-rotate: -8deg;
+  --nudge-scale:  1.12;
+  --ripple-size:  26px;
+  --enter-shift:  6px;
+  --enter-scale:  0.97;
+  --exit-shift:   4px;
+  --exit-scale:   0.96;
+  --card-shift:   8px;
+  --fade-shift:   3px;
+  --pop-scale:    0.94;
+
+  /* Calm: 0.8x tempo, 0.75x distance. */
+  --motion-calm-dur-xfast: 72ms;
+  --motion-calm-dur-fast: 96ms;
+  --motion-calm-dur-quick: 128ms;
+  --motion-calm-dur-med: 176ms;
+  --motion-calm-dur-slow: 256ms;
+  --motion-calm-dur-ripple: 448ms;
+  --motion-calm-ease-spring: cubic-bezier(0.33, 1.2, 0.64, 1);
+  --motion-calm-spring-lift: 0.75px;
+  --motion-calm-press-scale: 0.966;
+  --motion-calm-bump-scale: 1.11;
+  --motion-calm-nudge-rotate: -6deg;
+  --motion-calm-nudge-scale: 1.09;
+  --motion-calm-ripple-size: 20px;
+  --motion-calm-enter-shift: 4.5px;
+  --motion-calm-enter-scale: 0.978;
+  --motion-calm-exit-shift: 3px;
+  --motion-calm-exit-scale: 0.97;
+  --motion-calm-card-shift: 6px;
+  --motion-calm-fade-shift: 2px;
+  --motion-calm-pop-scale: 0.955;
+
+  /* Vivid: 1.25x tempo, 1.5x distance. */
+  --motion-vivid-dur-xfast: 113ms;
+  --motion-vivid-dur-fast: 150ms;
+  --motion-vivid-dur-quick: 200ms;
+  --motion-vivid-dur-med: 275ms;
+  --motion-vivid-dur-slow: 400ms;
+  --motion-vivid-dur-ripple: 700ms;
+  --motion-vivid-ease-spring: cubic-bezier(0.34, 1.9, 0.64, 1);
+  --motion-vivid-spring-lift: 1.5px;
+  --motion-vivid-press-scale: 0.932;
+  --motion-vivid-bump-scale: 1.23;
+  --motion-vivid-nudge-rotate: -12deg;
+  --motion-vivid-nudge-scale: 1.18;
+  --motion-vivid-ripple-size: 39px;
+  --motion-vivid-enter-shift: 9px;
+  --motion-vivid-enter-scale: 0.955;
+  --motion-vivid-exit-shift: 6px;
+  --motion-vivid-exit-scale: 0.94;
+  --motion-vivid-card-shift: 12px;
+  --motion-vivid-fade-shift: 4.5px;
+  --motion-vivid-pop-scale: 0.91;
+
   /* END shared palette tokens */
+
+  color-scheme: dark;
 
   --font-display: "Kriko Display", "Arial Narrow", system-ui, sans-serif;
   --font-body: "Kriko Sans", system-ui, "Segoe UI", sans-serif;
   --font-mono: "Kriko Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --key: linear-gradient(180deg, var(--brand-hover) 0%, var(--brand) 55%, var(--brand-low) 100%);
   --plate: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
+}
+
+/* The light palette, applied twice on purpose: once for the system
+   preference — before the stored choice has been read — and once for the
+   page's own toggle. The guard keeps the dark map when the system prefers
+   light but the reader chose dark. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-base: var(--light-bg-base);
+    --bg-panel: var(--light-bg-panel);
+    --bg-header: var(--light-bg-header);
+    --bg-surface: var(--light-bg-surface);
+    --bg-item: var(--light-bg-item);
+    --border: var(--light-border);
+    --border-soft: var(--light-border-soft);
+    --fg: var(--light-fg);
+    --fg-body: var(--light-fg-body);
+    --fg-muted: var(--light-fg-muted);
+    --high-surface: var(--light-high-surface);
+    --high-border: var(--light-high-border);
+    --high-ink: var(--light-high-ink);
+    --med-surface: var(--light-med-surface);
+    --med-border: var(--light-med-border);
+    --med-ink: var(--light-med-ink);
+    --low-surface: var(--light-low-surface);
+    --low-border: var(--light-low-border);
+    --low-ink: var(--light-low-ink);
+    --brand: var(--light-brand);
+    --brand-hover: var(--light-brand-hover);
+    --brand-low: var(--light-brand-low);
+    --brand-bright: var(--light-brand-bright);
+    --on-brand: var(--light-on-brand);
+    --ice: var(--light-ice);
+    --led-off: var(--light-led-off);
+    --led-dim: var(--light-led-dim);
+    --bezel-hi: var(--light-bezel-hi);
+    --bezel-lo: var(--light-bezel-lo);
+    --bezel-edge: var(--light-bezel-edge);
+    --glass-1: var(--light-glass-1);
+    --glass-2: var(--light-glass-2);
+    --glass-3: var(--light-glass-3);
+    --well: var(--light-well);
+    --border-control: var(--light-border-control);
+    --accent: var(--light-accent);
+    --hover-face: var(--light-hover-face);
+    --hover-edge: var(--light-hover-edge);
+    --row-face: var(--light-row-face);
+    --scroll-track: var(--light-scroll-track);
+    --skeleton-a: var(--light-skeleton-a);
+    --skeleton-b: var(--light-skeleton-b);
+    --alert-ink: var(--light-alert-ink);
+    --ok-ink: var(--light-ok-ink);
+    --ok-surface: var(--light-ok-surface);
+    --ok-border: var(--light-ok-border);
+    --warn-ink: var(--light-warn-ink);
+    --warn-surface: var(--light-warn-surface);
+    --warn-border: var(--light-warn-border);
+    --key-edge: var(--light-key-edge);
+    --sky-base: var(--light-sky-base);
+    --sunken-face: var(--light-sunken-face);
+    --shadow-panel: var(--light-shadow-panel);
+    --shadow-card: var(--light-shadow-card);
+    --well-shadow: var(--light-well-shadow);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg-base: var(--light-bg-base);
+  --bg-panel: var(--light-bg-panel);
+  --bg-header: var(--light-bg-header);
+  --bg-surface: var(--light-bg-surface);
+  --bg-item: var(--light-bg-item);
+  --border: var(--light-border);
+  --border-soft: var(--light-border-soft);
+  --fg: var(--light-fg);
+  --fg-body: var(--light-fg-body);
+  --fg-muted: var(--light-fg-muted);
+  --high-surface: var(--light-high-surface);
+  --high-border: var(--light-high-border);
+  --high-ink: var(--light-high-ink);
+  --med-surface: var(--light-med-surface);
+  --med-border: var(--light-med-border);
+  --med-ink: var(--light-med-ink);
+  --low-surface: var(--light-low-surface);
+  --low-border: var(--light-low-border);
+  --low-ink: var(--light-low-ink);
+  --brand: var(--light-brand);
+  --brand-hover: var(--light-brand-hover);
+  --brand-low: var(--light-brand-low);
+  --brand-bright: var(--light-brand-bright);
+  --on-brand: var(--light-on-brand);
+  --ice: var(--light-ice);
+  --led-off: var(--light-led-off);
+  --led-dim: var(--light-led-dim);
+  --bezel-hi: var(--light-bezel-hi);
+  --bezel-lo: var(--light-bezel-lo);
+  --bezel-edge: var(--light-bezel-edge);
+  --glass-1: var(--light-glass-1);
+  --glass-2: var(--light-glass-2);
+  --glass-3: var(--light-glass-3);
+  --well: var(--light-well);
+  --border-control: var(--light-border-control);
+  --accent: var(--light-accent);
+  --hover-face: var(--light-hover-face);
+  --hover-edge: var(--light-hover-edge);
+  --row-face: var(--light-row-face);
+  --scroll-track: var(--light-scroll-track);
+  --skeleton-a: var(--light-skeleton-a);
+  --skeleton-b: var(--light-skeleton-b);
+  --alert-ink: var(--light-alert-ink);
+  --ok-ink: var(--light-ok-ink);
+  --ok-surface: var(--light-ok-surface);
+  --ok-border: var(--light-ok-border);
+  --warn-ink: var(--light-warn-ink);
+  --warn-surface: var(--light-warn-surface);
+  --warn-border: var(--light-warn-border);
+  --key-edge: var(--light-key-edge);
+  --sky-base: var(--light-sky-base);
+  --sunken-face: var(--light-sunken-face);
+  --shadow-panel: var(--light-shadow-panel);
+  --shadow-card: var(--light-shadow-card);
+  --well-shadow: var(--light-well-shadow);
+  color-scheme: light;
+}
+
+/* Motion profiles. Standard is what the tokens above already hold; Calm and
+   Vivid remap the same keys, so the whole page answers to one attribute.
+   The reduced-motion block at the end of this sheet still kills all of it. */
+:root[data-motion="calm"] {
+  --dur-xfast: var(--motion-calm-dur-xfast);
+  --dur-fast: var(--motion-calm-dur-fast);
+  --dur-quick: var(--motion-calm-dur-quick);
+  --dur-med: var(--motion-calm-dur-med);
+  --dur-slow: var(--motion-calm-dur-slow);
+  --dur-ripple: var(--motion-calm-dur-ripple);
+  --ease-spring: var(--motion-calm-ease-spring);
+  --spring-lift: var(--motion-calm-spring-lift);
+  --press-scale: var(--motion-calm-press-scale);
+  --bump-scale: var(--motion-calm-bump-scale);
+  --nudge-rotate: var(--motion-calm-nudge-rotate);
+  --nudge-scale: var(--motion-calm-nudge-scale);
+  --ripple-size: var(--motion-calm-ripple-size);
+  --enter-shift: var(--motion-calm-enter-shift);
+  --enter-scale: var(--motion-calm-enter-scale);
+  --exit-shift: var(--motion-calm-exit-shift);
+  --exit-scale: var(--motion-calm-exit-scale);
+  --card-shift: var(--motion-calm-card-shift);
+  --fade-shift: var(--motion-calm-fade-shift);
+  --pop-scale: var(--motion-calm-pop-scale);
+}
+:root[data-motion="vivid"] {
+  --dur-xfast: var(--motion-vivid-dur-xfast);
+  --dur-fast: var(--motion-vivid-dur-fast);
+  --dur-quick: var(--motion-vivid-dur-quick);
+  --dur-med: var(--motion-vivid-dur-med);
+  --dur-slow: var(--motion-vivid-dur-slow);
+  --dur-ripple: var(--motion-vivid-dur-ripple);
+  --ease-spring: var(--motion-vivid-ease-spring);
+  --spring-lift: var(--motion-vivid-spring-lift);
+  --press-scale: var(--motion-vivid-press-scale);
+  --bump-scale: var(--motion-vivid-bump-scale);
+  --nudge-rotate: var(--motion-vivid-nudge-rotate);
+  --nudge-scale: var(--motion-vivid-nudge-scale);
+  --ripple-size: var(--motion-vivid-ripple-size);
+  --enter-shift: var(--motion-vivid-enter-shift);
+  --enter-scale: var(--motion-vivid-enter-scale);
+  --exit-shift: var(--motion-vivid-exit-shift);
+  --exit-scale: var(--motion-vivid-exit-scale);
+  --card-shift: var(--motion-vivid-card-shift);
+  --fade-shift: var(--motion-vivid-fade-shift);
+  --pop-scale: var(--motion-vivid-pop-scale);
 }
 
 body {
@@ -120,7 +445,7 @@ h2 {
   font: 400 11px/1.4 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--fg-subtle);
+  color: var(--fg-muted);
 }
 .lede { margin: 0 0 1.75rem; color: var(--fg-muted); }
 
@@ -142,7 +467,7 @@ label {
   font: 400 11px/1.4 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--fg-subtle);
+  color: var(--fg-muted);
 }
 input {
   width: 100%;
@@ -152,11 +477,11 @@ input {
   border: 1px solid var(--border-control);
   border-radius: 12px;
   background: var(--well);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--well-shadow);
   color: var(--fg);
   font: 13px var(--font-mono);
 }
-input::placeholder { color: var(--fg-faint); }
+input::placeholder { color: var(--fg-muted); }
 input:focus-visible { outline: none; border-color: var(--ice); }
 .hint { margin: 0.6rem 0 1rem; color: var(--fg-muted); font-size: 13px; }
 code {
@@ -177,7 +502,7 @@ button {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     inset 0 -2px 0 rgba(0, 0, 0, 0.3),
-    0 3px 0 #0f2a9c,
+    0 3px 0 var(--key-edge),
     0 10px 20px rgba(0, 0, 0, 0.5);
   color: var(--on-brand);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
@@ -185,7 +510,7 @@ button {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: transform 90ms, box-shadow 90ms, filter 160ms;
+  transition: transform var(--dur-xfast), box-shadow var(--dur-xfast), filter var(--dur-quick);
 }
 button:hover { filter: brightness(1.08); }
 button:active { transform: translateY(2px); box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.45); }
@@ -236,7 +561,7 @@ form + .status { margin: -0.5rem 0 1.25rem; padding: 0 0.25rem; }
   padding: 4px 14px;
   border-radius: 12px;
   background: var(--well);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6);
+  box-shadow: var(--well-shadow);
 }
 .sites-list:empty { display: none; }
 .sites-list li {
@@ -268,8 +593,98 @@ form + .status { margin: -0.5rem 0 1.25rem; padding: 0 0.25rem; }
 .sites-list li[data-state="active"] .site-state { color: var(--ice); }
 .sites-list li[data-state="active"] .site-state::before { background: var(--ice); box-shadow: 0 0 6px var(--ice); }
 .sites-list li[data-state="pending"] .site-state { color: var(--fg); }
-.sites-list li[data-state="pending"] .site-state::before { background: #fff; box-shadow: 0 0 6px #fff; }
+.sites-list li[data-state="pending"] .site-state::before { background: var(--fg); box-shadow: 0 0 6px var(--fg); }
 .sites-list li[data-state="refused"] .site-state { color: var(--high-ink); }
 .sites-list li[data-state="refused"] .site-state::before { background: var(--high-ink); box-shadow: 0 0 6px var(--high-ink); }
 .site-detail { grid-column: 1 / -1; font-size: 12.5px; color: var(--fg-muted); }
 [hidden] { display: none !important; }
+
+/* ── the motion profile and theme toggle, in the brand block ───────────── */
+.brand-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.motion {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+.motion-btn {
+  all: unset;
+  box-sizing: border-box;
+  height: 26px;
+  padding: 0 9px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 7px;
+  color: rgba(240, 243, 255, 0.82);
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.motion-btn:hover { color: var(--on-brand); }
+.motion-btn[aria-pressed="true"] { background: rgba(255, 255, 255, 0.22); color: var(--on-brand); }
+.motion-btn:focus-visible { outline: 2px solid var(--on-brand); outline-offset: 2px; }
+
+/* ── the theme toggle, in the brand block with the wordmark ────────────── */
+.theme {
+  all: unset;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: var(--on-brand);
+  cursor: pointer;
+  transition: background var(--dur-quick), transform var(--dur-fast) var(--ease-spring);
+}
+.theme:hover { background: rgba(255, 255, 255, 0.22); }
+.theme:focus-visible { outline: 2px solid var(--on-brand); outline-offset: 3px; }
+.theme svg { display: block; transition: transform var(--dur-quick) var(--ease-spring); }
+.theme:hover svg { transform: rotate(var(--nudge-rotate)) scale(var(--nudge-scale)); }
+
+/* ── motion: one press, one ripple ─────────────────────────────────────── */
+@keyframes pagePress {
+  0%   { transform: translateY(0) scale(1); }
+  45%  { transform: translateY(var(--spring-lift)) scale(var(--press-scale)); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes pageRipple {
+  0%   { transform: scale(0.25); opacity: 0.30; }
+  100% { transform: scale(1); opacity: 0; }
+}
+button:not(:disabled):active { animation: pagePress var(--dur-med) var(--ease-spring); }
+.page-ripple {
+  position: fixed;
+  width: var(--ripple-size);
+  height: var(--ripple-size);
+  margin: calc(var(--ripple-size) / -2) 0 0 calc(var(--ripple-size) / -2);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9;
+  background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+  animation: pageRipple var(--dur-ripple) var(--ease-out) forwards;
+}
+
+/* The same last word as the panel: no motion when the reader asked for none. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  html { scroll-behavior: auto; }
+}

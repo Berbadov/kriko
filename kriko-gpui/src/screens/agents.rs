@@ -4,10 +4,11 @@
 //! wired to Kriko's MCP server (`GET /api/agent-targets`). The detail card
 //! acts on the picked one: use it for runs, connect it, refresh its skill.
 
-use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, Styled, Window};
+use gpui::{div, prelude::*, px, Context, Div, FontWeight, Stateful, Styled, Window};
 
 use crate::app::{Field, Kriko};
-use crate::live::run::{mark_for, AgentEntry, Harness, RunState, Target};
+use crate::live::local::Held;
+use crate::live::run::{mark_for, AgentEntry, Harness, ModelOffer, RunState, Target};
 use crate::marks::{mark_tile, phase_beat, Phase};
 use crate::screens::run::{option_chip, option_chip_wrapping};
 use crate::screens::{empty_note, mono, row_desc, row_title, th};
@@ -90,11 +91,11 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         let mut empty = div()
             .flex()
             .flex_col()
-            .gap(px(6.0))
+            .gap(px(SPACE_S))
             .child(empty_note(if loaded {
-                "No agent was found on this machine."
+                "No agent found on this machine."
             } else {
-                "Waiting for the engine to list the agents."
+                "Waiting for the engine to list agents."
             }));
         if loaded {
             let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -111,14 +112,20 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         let selected = app.live.run.selected_agent().map(|e| e.id).unwrap_or_default();
         let picked = entries.iter().find(|e| e.id == selected).cloned();
 
-        let mut table = card().flex().flex_col();
+        let mut table = card().flex().flex_col()
+            .child(card_head_row(
+                "agents",
+                "Agents on this machine",
+                Some(mono(&format!("{} found", entries.len()), DIM).into_any_element()),
+                motion,
+            ));
         if !compact {
             table = table
                 .child(
                     div()
                         .flex()
                         .items_center()
-                        .pb(px(10.0))
+                        .pb(px(SPACE_S))
                         .child(div().flex_1().min_w(px(180.0)).child(th("Agent")))
                         .child(div().w(px(200.0)).flex_none().child(th("Runs checks")))
                         .child(div().w(px(140.0)).flex_none().child(th("MCP")))
@@ -170,11 +177,11 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             let name = div()
                 .flex_1()
                 .min_w(px(0.0))
-                .pr(px(10.0))
+                .pr(px(SPACE_M))
                 .font_family(SANS)
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(15.0))
-                .text_color(rgb(if is_selected { ICE } else { INK }))
+                .text_color(paint(if is_selected { ICE } else { INK }))
                 // clipped by characters: GPUI's ellipsis shrank the whole
                 // table card to its content at narrow widths
                 .child(crate::screens::history::clip(&e.label, 40));
@@ -184,10 +191,10 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 Some(job) => div()
                     .flex_1()
                     .min_w(px(0.0))
-                    .pr(px(10.0))
+                    .pr(px(SPACE_M))
                     .flex()
                     .flex_col()
-                    .gap(px(3.0))
+                    .gap(px(SPACE_XS))
                     .child(name)
                     .child(crate::screens::action_trail::compact_line(job, motion)),
                 None => name,
@@ -205,20 +212,20 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .flex()
                 .py(px(12.0))
                 .cursor_pointer()
-                .hover(|s| s.bg(rgba(GLASS_1)))
-                .when(is_selected, |s| s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE)))
+                .hover(|s| s.bg(paint_a(GLASS_1)))
+                .when(is_selected, |s| s.bg(paint(WELL)).border_1().border_color(paint_a(HAIRLINE)))
                 .on_click(click);
             let row = if compact {
                 row.flex_col()
-                    .gap(px(6.0))
+                    .gap(px(SPACE_S))
                     .child(div().flex().items_center().gap(px(8.0)).child(mark).child(name).child(order))
                     .child(
                         div()
-                            .pl(px(52.0))
+                            .pl(px(48.0))
                             .flex()
                             .flex_wrap()
                             .items_center()
-                            .gap(px(6.0))
+                            .gap(px(SPACE_S))
                             // No column headers in this layout, so each value
                             // carries its own word; a bare "-" or "0" said nothing.
                             .child(runs_cell)
@@ -245,7 +252,12 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 
         let detail = match picked {
             Some(e) => detail_card(app, &e, motion, window, cx),
-            None => card(),
+            None => card()
+                .flex()
+                .flex_col()
+                .gap(px(SPACE_S))
+                .child(card_head("agents", "Agent", motion))
+                .child(empty_note("Pick an agent to see its controls.")),
         };
         if beside {
             div()
@@ -275,8 +287,10 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex()
         .flex_col()
         .gap(px(SPACE_SECTION))
-        .child(body)
-        .when(app.live.run.prefs_loaded, |d| d.child(research_card(app, cx)))
+        .child(enter(body, "agents-0", 0, motion))
+        .when(app.live.run.prefs_loaded, |d| {
+            d.child(enter(research_card(app, cx), "agents-1", 1, motion))
+        })
 }
 
 /// The source options every agent run reads: which kinds of source to go to
@@ -284,7 +298,7 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 /// started from the app, the extension or Compare reads the same choice.
 fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     let run = &app.live.run;
-    let mut kinds = div().flex().flex_wrap().gap(px(6.0));
+    let mut kinds = div().flex().flex_wrap().gap(px(SPACE_S));
     for (i, (id, words)) in run.source_kinds.iter().enumerate() {
         let on = run.research_kinds.contains(id);
         let kind = id.clone();
@@ -294,7 +308,7 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
         });
         kinds = kinds.child(div().w(px(270.0)).min_w(px(0.0)).child(option_chip_wrapping(("source-kind", i), words, on).w_full().on_click(toggle)));
     }
-    let mut counts = div().flex().flex_wrap().gap(px(6.0));
+    let mut counts = div().flex().flex_wrap().gap(px(SPACE_S));
     for (i, n) in [0u32, 3, 5, 10, 20, 40].into_iter().enumerate() {
         let label = if n == 0 { "Run decides".to_string() } else { n.to_string() };
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -308,10 +322,10 @@ fn research_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     card()
         .flex()
         .flex_col()
-        .gap(px(6.0))
-        .child(eyebrow("Research sources"))
+        .gap(px(SPACE_S))
+        .child(card_head("globe", "Research sources", app.motion))
         .child(row_desc(
-            "Choose source types to read first. No types selected lets the agent choose. The limit caps pages read, not the number of findings included in the answer.",
+            "Pick source types to read first. None selected lets the agent choose. The limit caps pages read, not findings.",
         ))
         .child(kinds)
         .child(eyebrow("Sources per run"))
@@ -361,7 +375,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
     let mut c = card()
         .flex()
         .flex_col()
-        .gap(px(6.0))
+        .gap(px(SPACE_S))
         .child(
             div()
                 .flex()
@@ -396,7 +410,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                 div()
                     .flex()
                     .items_center()
-                    .gap(px(6.0))
+                    .gap(px(SPACE_S))
                     .child(tag("agents-detail-run", state, word, motion))
                     .when(chosen, |d| d.child(chip("used for runs"))),
             );
@@ -464,7 +478,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
             };
             c = c.child(row_desc(skill));
         }
-        let mut keys = div().flex().items_center().gap(px(6.0)).child(ghost("agent-connect", label).on_click(connect));
+        let mut keys = div().flex().items_center().gap(px(SPACE_S)).child(ghost("agent-connect", label).on_click(connect));
         if t.skill_supported {
             let id = e.id.clone();
             let refresh = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -490,7 +504,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
         div()
             .flex()
             .items_center()
-            .gap(px(6.0))
+            .gap(px(SPACE_S))
             .child(
                 ghost(
                     "agent-verify",
@@ -510,13 +524,13 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
             div()
                 .flex()
                 .items_center()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(led_ripple("agent-verify-progress", motion))
-                .child(row_desc("Checking the configured command and available tools…")),
+                .child(row_desc("Checking the command and tools…")),
         );
     }
     if let Some(v) = &app.live.run.verify {
-        let mut steps = div().flex().flex_col().gap(px(6.0));
+        let mut steps = div().flex().flex_col().gap(px(SPACE_S));
         for (i, (step, state)) in v.steps.iter().enumerate() {
             let (ts, word) = match state.as_str() {
                 "ok" => (TagState::Done, "ok"),
@@ -527,7 +541,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                 div()
                     .flex()
                     .items_center()
-                    .gap(px(6.0))
+                    .gap(px(SPACE_S))
                     .child(tag(format!("agents-verify-{i}"), ts, word, motion))
                     .child(mono(step, INK_2)),
             );
@@ -552,7 +566,7 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
                     .p(px(12.0))
                     .font_family(CODE)
                     .text_size(px(12.0))
-                    .text_color(rgb(INK_2))
+                    .text_color(paint(INK_2))
                     .child(v.log.clone()),
             "agent-check-log-reveal", app.live.run.verify_log_open, 245.0, motion));
         }
@@ -563,23 +577,304 @@ fn detail_card(app: &Kriko, e: &AgentEntry, motion: bool, window: &mut Window, c
     c
 }
 
+/// A context window said short: 32768 -> "32k ctx", 200000 -> "200k ctx".
+fn context_word(tokens: u64) -> String {
+    if tokens >= 1_000_000 {
+        let millions = (tokens as f64 / 1_000_000.0 * 10.0).round() / 10.0;
+        if (millions - millions.round()).abs() < 0.05 {
+            format!("{millions:.0}M ctx")
+        } else {
+            format!("{millions:.1}M ctx")
+        }
+    } else if tokens >= 1_000 {
+        format!("{}k ctx", (tokens as f64 / 1_000.0).round() as u64)
+    } else {
+        format!("{tokens} ctx")
+    }
+}
+
+/// A price per million tokens, without trailing zeroes for whole dollars.
+fn money(value: f64) -> String {
+    if (value - value.round()).abs() < 0.005 {
+        format!("${value:.0}")
+    } else {
+        format!("${value:.2}")
+    }
+}
+
+/// Provider, window, price and speed on one line; whatever is unknown is left
+/// out rather than printed as a zero.
+fn offer_meta(offer: &ModelOffer) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if !offer.provider.is_empty() {
+        parts.push(offer.provider.clone());
+    }
+    if let Some(tokens) = offer.context {
+        parts.push(context_word(tokens));
+    }
+    if offer.known {
+        match (offer.usd_in, offer.usd_out) {
+            (Some(input), Some(output)) => {
+                parts.push(format!("{} in / {} out per M", money(input), money(output)))
+            }
+            (Some(input), None) => parts.push(format!("{} in per M", money(input))),
+            (None, Some(output)) => parts.push(format!("{} out per M", money(output))),
+            (None, None) => {}
+        }
+    }
+    if !offer.speed.is_empty() {
+        parts.push(offer.speed.clone());
+    }
+    parts.join(" · ")
+}
+
+fn provider_word(offer: &ModelOffer) -> &str {
+    if offer.provider.is_empty() {
+        "Other"
+    } else {
+        &offer.provider
+    }
+}
+
+/// One model as a card-like row: its name, a compact meta line, and the
+/// selection marker. A model that cannot run keeps its reason beside a
+/// warning tag, so it is not silently dropped.
+fn model_row(
+    id: impl Into<gpui::ElementId>,
+    name: &str,
+    meta: &str,
+    selected: bool,
+    unusable: Option<&str>,
+    marker_id: String,
+    motion: bool,
+) -> Stateful<Div> {
+    let mut left = div()
+        .flex_1()
+        .min_w(px(0.0))
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_XS))
+        .child(
+            div()
+                .font_family(SANS)
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_size(px(13.0))
+                .text_color(paint(if selected { ICE } else { INK }))
+                .child(crate::screens::history::clip(name, 64)),
+        );
+    if !meta.is_empty() {
+        left = left.child(
+            div()
+                .font_family(MONO)
+                .text_size(px(11.0))
+                .line_height(px(15.0))
+                .text_color(paint(DIM))
+                .child(meta.to_string()),
+        );
+    }
+    if let Some(reason) = unusable {
+        left = left.child(
+            div()
+                .flex()
+                .items_start()
+                .gap(px(SPACE_S))
+                .pt(px(SPACE_XS))
+                .child(
+                    div()
+                        .h(px(18.0))
+                        .px(px(SPACE_S))
+                        .flex()
+                        .items_center()
+                        .gap(px(4.0))
+                        .rounded(px(5.0))
+                        .bg(paint_a(DANGER_WASH))
+                        .border_1()
+                        .border_color(paint_a(DANGER_EDGE))
+                        .child(icon("warning", 11.0).text_color(paint(DANGER)))
+                        .child(
+                            div()
+                                .font_family(MONO)
+                                .text_size(px(10.0))
+                                .text_color(paint(DANGER))
+                                .child("UNUSABLE"),
+                        ),
+                )
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .font_family(SANS)
+                        .text_size(px(11.0))
+                        .line_height(px(15.0))
+                        .text_color(paint(DANGER))
+                        .child(reason.to_string()),
+                ),
+        );
+    }
+    div()
+        .id(id)
+        .flex()
+        .items_start()
+        .gap(px(8.0))
+        .p(px(8.0))
+        .rounded(px(8.0))
+        .cursor_pointer()
+        .bg(paint_a(GLASS_1))
+        .border_1()
+        .border_color(paint_a(HAIRLINE))
+        .when(selected, |d| d.bg(paint_a(BRAND_WASH)).border_color(paint(ICE)))
+        .hover(|s| s.bg(paint_a(GLASS_2)))
+        .child(left)
+        .child(
+            div().flex_none().pt(px(4.0)).child(reveal(
+                div().size(px(5.0)).rounded(px(2.0)).bg(paint(ICE)),
+                marker_id,
+                selected,
+                6.0,
+                motion,
+            )),
+        )
+}
+
+/// The engine's cloud catalogue as rows, grouped by provider when more than
+/// one provider is offered. The engine's order (usable first, then cheapest,
+/// then name) is kept inside each group.
+fn offer_rows(
+    app: &Kriko,
+    h: &Harness,
+    query: &str,
+    motion: bool,
+    cx: &mut Context<Kriko>,
+) -> Div {
+    let shown: Vec<&ModelOffer> = app
+        .live
+        .run
+        .offers
+        .iter()
+        .filter(|offer| {
+            query.is_empty()
+                || offer.id.to_lowercase().contains(query)
+                || offer.label.to_lowercase().contains(query)
+                || offer.provider.to_lowercase().contains(query)
+        })
+        .collect();
+    if shown.is_empty() {
+        return div().child(empty_note("No match. Use the typed model above."));
+    }
+    let mut providers: Vec<&str> = Vec::new();
+    for offer in &shown {
+        let provider = provider_word(offer);
+        if !providers.contains(&provider) {
+            providers.push(provider);
+        }
+    }
+    let grouped = providers.len() > 1;
+    let mut out = div().flex().flex_col().gap(px(SPACE_S));
+    let mut index = 0usize;
+    for provider in providers {
+        if grouped {
+            out = out.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(SPACE_S))
+                    .pt(px(4.0))
+                    .child(icon("layers", 12.0).text_color(paint(MUTED)))
+                    .child(mono(&provider.to_uppercase(), DIM)),
+            );
+        }
+        for offer in shown.iter().filter(|offer| provider_word(offer) == provider) {
+            let (id, model) = (h.id.clone(), offer.id.clone());
+            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                this.pick_agent_model(id.clone(), model.clone(), cx);
+                cx.notify();
+            });
+            let selected = model_is_selected(h, &offer.id) || model_is_selected(h, &offer.label);
+            out = out.child(
+                model_row(
+                    ("agent-model", index),
+                    &offer.label,
+                    &offer_meta(offer),
+                    selected,
+                    offer.unusable.as_deref(),
+                    format!("model-choice-light-{index}"),
+                    motion,
+                )
+                .on_click(pick),
+            );
+            index += 1;
+        }
+    }
+    out
+}
+
+/// The installed local models, as the same rows the cloud catalogue uses.
+fn local_model_rows(
+    app: &Kriko,
+    h: &Harness,
+    query: &str,
+    motion: bool,
+    cx: &mut Context<Kriko>,
+) -> Div {
+    let held: Vec<Held> = app.live.local.held.clone().unwrap_or_default();
+    let shown: Vec<Held> = held
+        .into_iter()
+        .filter(|m| query.is_empty() || m.name.to_lowercase().contains(query))
+        .collect();
+    if shown.is_empty() {
+        return div().child(empty_note(if query.is_empty() {
+            "No local model installed. Get one on Local LLM."
+        } else {
+            "No match. Use the typed model above."
+        }));
+    }
+    let mut out = div().flex().flex_col().gap(px(SPACE_S));
+    for (i, m) in shown.iter().enumerate() {
+        let (id, model) = (h.id.clone(), m.name.clone());
+        let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+            this.pick_agent_model(id.clone(), model.clone(), cx);
+            cx.notify();
+        });
+        let mut meta: Vec<String> = [m.params.clone(), m.quant.clone()]
+            .into_iter()
+            .flatten()
+            .filter(|part| !part.is_empty())
+            .collect();
+        if let Some(bytes) = m.size_bytes {
+            meta.push(format!("{:.1} GB on disk", bytes / 1e9));
+        }
+        out = out.child(
+            model_row(
+                ("agent-model", i),
+                &m.name,
+                &meta.join(" · "),
+                model_is_selected(h, &m.name),
+                None,
+                format!("model-choice-light-{i}"),
+                motion,
+            )
+            .on_click(pick),
+        );
+    }
+    out
+}
+
 /// The two dials a ready agent runs with: which model, and how hard it
 /// thinks. Each lists what the engine found for this machine (the provider's
 /// own model list, the CLI's own `--help` effort levels); "Default" leaves
 /// the choice to the agent. A dial the agent does not have is not drawn.
 fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
-    let mut out = div().flex().flex_col().gap(px(6.0));
+    let motion = app.motion;
+    let mut out = div().flex().flex_col().gap(px(SPACE_S));
     if h.llm_selectable {
-        let mut names = model_choices(h);
+        out = out.child(card_head("layers", "Model", motion));
         out = out.child(app.input_field(Field::ModelSearch, "agent-model-search", "Search models or type an ID", Some("search"), window, cx));
         if !app.model_search.value.trim().is_empty() {
             let id = h.id.clone(); let typed = app.model_search.value.trim().to_string();
             out = out.child(ghost("agent-model-typed", "Use typed model").on_click(cx.listener(move |this,_,_,cx| this.pick_agent_model(id.clone(),typed.clone(),cx))));
         }
         let query = app.model_search.value.trim().to_lowercase();
-        names.retain(|name| query.is_empty() || name.to_lowercase().contains(&query));
-        let selected_model = |name: &String| model_is_selected(h, name);
-        let mut row = div().id("agent-model-list").h(px(220.0)).min_h(px(0.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation()).flex().flex_col().gap(px(6.0));
+        let mut row = div().id("agent-model-list").h(px(260.0)).min_h(px(0.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation()).flex().flex_col().gap(px(SPACE_S));
         // The local model has no "default" of its own: the server runs one.
         if h.id != "local" {
             let id = h.id.clone();
@@ -589,19 +884,27 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
             });
             row = row.child(option_chip("agent-model-default", "Default", h.llm.is_empty()).on_click(pick));
         }
-        for (i, name) in names.iter().enumerate() {
-            let (id, model) = (h.id.clone(), name.clone());
-            let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                this.pick_agent_model(id.clone(), model.clone(), cx);
-                cx.notify();
-            });
-            row = row.child(option_chip(("agent-model", i), name, selected_model(name))
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("model-choice-light-{i}"), selected_model(name), 6.0, app.motion)).on_click(pick));
+        if h.id == "local" {
+            row = row.child(local_model_rows(app, h, &query, motion, cx));
+        } else if !app.live.run.offers.is_empty() {
+            row = row.child(offer_rows(app, h, &query, motion, cx));
+        } else {
+            let mut names = model_choices(h);
+            names.retain(|name| query.is_empty() || name.to_lowercase().contains(&query));
+            for (i, name) in names.iter().enumerate() {
+                let (id, model) = (h.id.clone(), name.clone());
+                let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+                    this.pick_agent_model(id.clone(), model.clone(), cx);
+                    cx.notify();
+                });
+                row = row.child(option_chip(("agent-model", i), name, model_is_selected(h, name))
+                    .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(paint(ICE)), format!("model-choice-light-{i}"), model_is_selected(h, name), 6.0, motion)).on_click(pick));
+            }
+            if names.is_empty() && !query.is_empty() {
+                row = row.child(empty_note("No match. Use the typed model above."));
+            }
         }
-        if names.is_empty() && !query.is_empty() {
-            row = row.child(empty_note("No listed model matches. Use the typed model action above."));
-        }
-        out = out.child(hairline()).child(eyebrow("Model"));
+        out = out.child(hairline());
         if h.llms_pending {
             out = out.child(row_desc("Checking available models…"));
         }
@@ -611,7 +914,7 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
         }
     }
     if !h.efforts.is_empty() || h.efforts_pending || !h.efforts_note.is_empty() {
-        let mut row = div().flex().flex_wrap().gap(px(6.0));
+        let mut row = div().flex().flex_wrap().gap(px(SPACE_S));
         if !h.efforts.is_empty() {
             let id = h.id.clone();
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -627,9 +930,9 @@ fn dials(app: &Kriko, h: &Harness, window: &mut Window, cx: &mut Context<Kriko>)
                 cx.notify();
             });
             row = row.child(option_chip(("agent-effort", i), level, *level == h.effort)
-                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(rgb(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, app.motion)).on_click(pick));
+                .child(reveal(div().size(px(5.0)).ml(px(8.0)).rounded(px(2.0)).bg(paint(ICE)), format!("effort-choice-light-{i}"), *level == h.effort, 6.0, motion)).on_click(pick));
         }
-        out = out.child(hairline()).child(eyebrow("Effort"));
+        out = out.child(hairline()).child(card_head("sliders", "Effort", motion));
         if h.efforts_pending {
             out = out.child(row_desc("Checking effort choices…"));
         }
