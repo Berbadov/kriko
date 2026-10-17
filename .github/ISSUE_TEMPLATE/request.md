@@ -1,17 +1,17 @@
 ---
 name: Request
-about: Something the reader asked for. Written down before any code (docs/DOCTRINE.md §1).
+about: Something the reader asked for. Write it down before any code.
 title: ''
 labels: enhancement
 ---
 
-<!-- Mirror this issue to the Linear team and link each to the other.
-     No "Done when" means not understood yet: ask, never guess. -->
+<!-- Write the words of the reader. If you cannot answer "Done when", the
+     request is not clear. Ask the reader. Do not guess. -->
 
-**Asked:** "<the reader's words, verbatim, never a paraphrase>" (date)
+**Asked:** "<the words of the reader, exactly>" (date)
 
-**Where:** <the exact screen(s) the reader will look at>
+**Where:** <the screen that the reader looks at>
 
-**Done when:** <a reader-visible outcome a check can decide>
+**Done when:** <an outcome that the reader sees, and that a check can decide>
 
-**Not this:** <the likeliest misreading>
+**Not this:** <the most likely wrong meaning>
