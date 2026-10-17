@@ -1,7 +1,7 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-1.8.0-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
-[![platform](https://img.shields.io/badge/platform-Windows_x64_%2B_macOS_arm64%2FIntel-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.1.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko shows what can go wrong with a product. It puts this knowledge next to
 the listing that you read.
@@ -31,18 +31,14 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | File | Use |
 |---|---|
-| `kriko-1.8.0-x86_64.msi` | Install Kriko on Windows. You do not need administrator rights. |
-| `kriko-1.8.0-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
-| `kriko-1.8.0-macos-arm64.dmg` | Install Kriko on an Apple Silicon Mac. |
-| `kriko-1.8.0-macos-x86_64.dmg` | Install Kriko on an Intel Mac. |
-| `kriko-1.8.0-macos-arm64-portable.zip` | Move Kriko on an Apple Silicon Mac. |
-| `kriko-1.8.0-macos-x86_64-portable.zip` | Move Kriko on an Intel Mac. |
+| `kriko-0.1.1-x86_64.msi` | Install Kriko on Windows. You do not need administrator rights. |
+| `kriko-0.1.1-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
 
 The app contains everything that it needs to start. It contains no catalog.
 Install a catalog after the first start.
 
-The macOS files are unsigned. On the first start, macOS can refuse to open the
-app. Control-click `Kriko.app`, select **Open**, and agree.
+The build is unsigned. Windows may show a SmartScreen warning on the first
+start. Select **More info**, then **Run anyway**.
 
 ## Start
 
