@@ -456,7 +456,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .child(
                     div()
                         .font_family(MONO)
-                        .text_size(px(10.0))
+                        .text_size(px(12.0))
                         .text_color(rgb(MUTED))
                         .child(label.clone()),
                 ),
@@ -984,7 +984,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         .child(
                             div()
                                 .font_family(MONO)
-                                .text_size(px(11.0))
+                                .text_size(px(12.0))
                                 .text_color(rgb(MUTED))
                                 .child(format!(
                                     "{} claims · from {} · stored to {}",
