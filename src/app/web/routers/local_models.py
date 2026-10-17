@@ -71,6 +71,35 @@ def pull_model(body: PullRequest, runner=Depends(get_jobs)) -> dict:
     return {"job_id": job_id, "kind": "model_pull"}
 
 
+@router.post("/local-models/remove")
+@router.delete("/local-models/remove")
+def remove_model(body: PullRequest, request: Request) -> dict:
+    """Remove one installed model, by the name the server holds it under.
+
+    The desktop window sends the name in a `DELETE` body (`api::delete_json`),
+    because that is how Ollama itself takes a deletion; the same door answers
+    `POST` for a caller that only speaks forms and JSON.
+    """
+    runtime = body.runtime.strip().lower()
+    if runtime != "ollama":
+        name = _OTHER.get(runtime, runtime or "that runtime")
+        raise HTTPException(
+            400, f"Kriko downloads models through Ollama only. Get the model in {name}.")
+    model = body.model.strip()
+    if not modelpull.valid_name(model):
+        raise HTTPException(422, "That is not a model name Ollama would accept.")
+    base = modelpull.ollama_base(request.app.state.settings.app_state_path)
+    if not base:
+        raise HTTPException(
+            409, "Ollama is not running. Start it, then remove the model.")
+    try:
+        return modelpull.remove(base, model)
+    except RuntimeError as error:
+        # the server's own words, so the reader knows whether it was a name it
+        # never held or a file it could not delete
+        raise HTTPException(409, str(error)) from error
+
+
 @router.post("/local-models/start")
 def start_ollama(runner=Depends(get_jobs)) -> dict:
     job_id = runner.submit("ollama_start", {})

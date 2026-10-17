@@ -410,6 +410,22 @@ pub struct Harness {
     pub efforts_note: String,
 }
 
+/// One model the engine offers for a harness, with what it costs and what it
+/// can read. `known` says whether the catalogue has a row for it; an unknown
+/// model is still usable but has no price or window to report.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ModelOffer {
+    pub id: String,
+    pub label: String,
+    pub provider: String,
+    pub context: Option<u64>,
+    pub usd_in: Option<f64>,
+    pub usd_out: Option<f64>,
+    pub speed: String,
+    pub unusable: Option<String>,
+    pub known: bool,
+}
+
 #[derive(Clone, Debug)]
 pub struct Target {
     pub id: String,
@@ -446,8 +462,6 @@ pub struct Verify {
     pub ms: i64,
 }
 
-/// The agent mark for a harness or target id; the engine's own mark when
-/// the id is not one the app draws.
 #[derive(Clone, Debug, Default)]
 pub struct QuickAsk {
     pub question: String,
@@ -457,6 +471,8 @@ pub struct QuickAsk {
     pub message: String,
 }
 
+/// The agent mark for a harness or target id; the engine's own mark when
+/// the id is not one the app draws.
 pub fn mark_for(id: &str) -> &'static Mark {
     match id {
         "claude-code" => &marks::CLAUDE,
@@ -527,6 +543,9 @@ pub struct State {
     search_generation: u64,
     // agents
     pub harnesses: Vec<Harness>,
+    /// Every model this installation could be asked to use, in the engine's
+    /// own order (usable first, then cheapest, then by name).
+    pub offers: Vec<ModelOffer>,
     pub preferred: String,
     pub prefs_loaded: bool,
     pub targets: Vec<Target>,
@@ -764,7 +783,9 @@ impl State {
         // the reader's arrangement wins: the named ones first in that order,
         // anything unnamed after, where the engine listed it
         let place = |id: &str| self.agent_order.iter().position(|o| o == id);
-        out.retain(|e| matches!(e.id.as_str(), "local" | "claude-code" | "codex" | "antigravity-cli" | "mistral-vibe"));
+        // No allow-list here: every agent the engine reports is an agent the
+        // reader can pick, and each has a mark (mark_for). A hard list quietly
+        // hid opencode, copilot, cursor and the desktop/API agents.
         out.sort_by_key(|e| (place(&e.id).unwrap_or(usize::MAX), e.label.clone()));
         out
     }
@@ -897,6 +918,47 @@ fn targets_from(v: &Value) -> Vec<Target> {
             }
         })
         .collect()
+}
+
+fn offers_from(models: &Value) -> Vec<ModelOffer> {
+    api::arr(models, "offered")
+        .iter()
+        .filter_map(|m| {
+            let id = api::s(m, "id");
+            if id.is_empty() {
+                return None;
+            }
+            let label = {
+                let label = api::s(m, "label");
+                if label.is_empty() { id.clone() } else { label }
+            };
+            Some(ModelOffer {
+                id,
+                label,
+                provider: api::s(m, "provider"),
+                context: api::n(m, "context").map(|n| n.max(0.0).round() as u64),
+                usd_in: api::n(m, "usd_in"),
+                usd_out: api::n(m, "usd_out"),
+                speed: api::s(m, "speed"),
+                unusable: opt_text(m, "unusable"),
+                known: api::b(m, "known"),
+            })
+        })
+        .collect()
+}
+
+/// The offers an `/api/prefs` answer carries: `models.offered`, or nothing
+/// when the engine has no catalogue to offer. Kept pure so the parse can be
+/// tested without a window.
+pub(crate) fn offers_from_prefs(v: &Value) -> Vec<ModelOffer> {
+    v.get("models").map(offers_from).unwrap_or_default()
+}
+
+fn opt_text(v: &Value, key: &str) -> Option<String> {
+    match v.get(key) {
+        Some(Value::String(s)) if !s.is_empty() => Some(s.clone()),
+        _ => None,
+    }
 }
 
 fn hits_from(v: &Value) -> Vec<Hit> {
@@ -1183,6 +1245,7 @@ impl Kriko {
     fn apply_prefs(&mut self, v: &Value) {
         let run = &mut self.live.run;
         run.harnesses = harnesses_from(v);
+        run.offers = offers_from_prefs(v);
         run.preferred = v
             .get("chosen")
             .map(|c| api::s(c, "preferred_harness"))
@@ -1825,6 +1888,51 @@ mod tests {
         s.agent_order = vec!["codex".into(), "mistral-vibe".into()];
         let ids: Vec<String> = s.agent_entries().into_iter().map(|e| e.id).collect();
         assert_eq!(ids, ["codex", "mistral-vibe", "claude-code"]);
+    }
+
+    #[test]
+    fn apply_prefs_reads_the_offered_models_with_prices_and_reasons() {
+        let v = json!({
+            "chosen": {"preferred_harness": "claude-code"},
+            "models": {"offered": [
+                {"id": "claude-opus-5", "label": "Claude Opus 5", "provider": "anthropic",
+                 "context": 200000, "usd_in": 15.0, "usd_out": 75.0, "speed": "slow",
+                 "known": true},
+                {"id": "fresh-model", "label": "fresher", "provider": "openrouter",
+                 "context": 32768, "usd_in": null, "usd_out": null, "speed": "",
+                 "known": false},
+                {"id": "blocked-model", "label": "Blocked", "provider": "openai",
+                 "context": 128000, "usd_in": 1.0, "usd_out": 2.0, "speed": "fast",
+                 "unusable": "no openai key — add one on Settings", "known": true}
+            ]}
+        });
+        let offers = offers_from_prefs(&v);
+        assert_eq!(offers.len(), 3);
+        assert_eq!(offers[0].id, "claude-opus-5");
+        assert_eq!(offers[0].context, Some(200_000));
+        assert_eq!(offers[0].usd_in, Some(15.0));
+        assert_eq!(offers[0].usd_out, Some(75.0));
+        assert_eq!(offers[0].unusable, None);
+        assert!(offers[0].known);
+
+        // no price is not zero: it stays unknown
+        assert_eq!(offers[1].usd_in, None);
+        assert_eq!(offers[1].usd_out, None);
+        assert_eq!(offers[1].context, Some(32_768));
+        assert!(!offers[1].known);
+
+        // an unusable model is still listed, with the engine's reason
+        assert_eq!(
+            offers[2].unusable.as_deref(),
+            Some("no openai key — add one on Settings")
+        );
+        assert_eq!(offers[2].usd_out, Some(2.0));
+    }
+
+    #[test]
+    fn prefs_without_offered_models_clear_the_list() {
+        assert!(offers_from_prefs(&json!({})).is_empty());
+        assert!(offers_from_prefs(&json!({"models": {}})).is_empty());
     }
 
 }
