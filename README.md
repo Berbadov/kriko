@@ -93,13 +93,20 @@ Kriko saves catalogs, preferences, research, and history under `%USERPROFILE%\.k
 
 ### 0.1.0
 
-The version reset: Kriko starts over at 0.1.0 with a rebuilt desktop.
+The version reset: Kriko starts over at 0.1.0.
 
-- **A real icon set.** Every navigation icon and control glyph is now a professional, consistent set (Lucide); agent tiles show the actual brand marks (Claude, Codex, Copilot, Gemini, Ollama) instead of dot matrices.
-- **Darker, harmonic theme.** The ground is darker, the brand blue retuned to sit with it, and the smallest text sizes lifted to a 12px readability floor.
-- **Room to breathe.** Page gutters, card spacing and card padding widened; the Local model drawer shows quantisation, an estimated download size, and whether each size fits this machine's VRAM.
+- **A real icon set.** Every navigation icon and control glyph is a professional, consistent set; agent tiles show the actual brand marks (Claude, Codex, Copilot, Gemini, Ollama) instead of generic glyphs.
+- **Room to breathe.** The Local model drawer names each size's quantisation (default q4_K_M), an estimated download weight, and whether it fits this machine's VRAM.
 - **Sites teach with the flow explained.** The Sites screen says what the agent does and what the extension still needs, before it is needed.
-- **Queue visibility.** The Compare sidebar carries a badge with the count of products waiting in the research queue.
+- **Queue visibility.** The Compare nav row carries a badge with the count of products waiting in the research queue.
+- **A bundled code face.** Logs and code render in JetBrains Mono everywhere, no system fallback.
+
+### 2.0.0
+
+- **A redesigned desktop.** Chat, Compare, and Agents & settings use a quieter dark-blue workspace with open sections, outline icons, readable type, and consistent spacing. Compact section tabs replace the sky banners. Home focuses on saved work; optional history charts and research settings stay out of the way. Live opens without animating the page's column widths or constructing its hidden contents, and idle Ready badges no longer spin.
+- **Local models have their own workspace.** Search downloaded models or discover models in the Ollama library, inspect one model at a time, select its size, and download or use it. Connection and runtime settings open when needed. The extension setup includes direct links to agent selection and local models; using a local model for the extension saves that agent preference.
+- **Research follows the gaps.** Agent briefs include bounded fast or deep research plans, prior findings, useful searches, and dead ends. Submitting findings returns missing coverage and actionable refusals so an agent can continue within its budget. An already-known claim can gain another source without creating a duplicate.
+- **Keep the evidence in view.** Saved checks, product details, comparisons, and conversations retain their existing sources and controls. Sidebar product links open the selected product. Research diagnostics are available through `kriko loopscore`; they describe the research process, not product quality.
 
 ### 1.8.0
 
@@ -117,44 +124,6 @@ The version reset: Kriko starts over at 0.1.0 with a rebuilt desktop.
 - **Concurrent runs stay independent.** Queue entries are claimed atomically, switching conversations cannot attach an answer to another thread, and cancellation checks no longer hold the shared agent-slot lock.
 - **Quick Look starts showing useful work sooner.** Search and reading overlap, completed pages appear progressively, and initial gathering has a 15-second budget. Slow fallback readers stop when cancelled or out of time. Deep research retains its longer gathering path.
 - Four live Chat checks completed in 6.2–11.4 seconds with the saved low-effort model setting, including two simultaneous conversations and two web requests. These are small samples, not a completion guarantee; model speed and source availability still matter. See the [measurement report](docs/benchmarks/interactive-workflows.md).
-
-### 1.6.4
-
-- **Codex works again on long answers.** Kriko stopped a Codex turn after 256 streamed events, so any structured answer of a few hundred tokens failed; in the author's own history 14 of 16 accepted turns died that way. The event limit, a reader queue limit and a line-size limit are gone or raised, a failed attempt now records why it failed, and a timed-out version probe is no longer remembered as "Codex has no persistent mode". Claude Code and Mistral Vibe get the same relief for long streamed answers. Codex also shows its first streamed answer text sooner in Chat and in the Run card, and a request that needs web tools goes to the process path before it is sent instead of failing after delivery.
-- **Concurrent research runs concurrently.** The number of agent processes was capped at two by the resource profile whatever **Settings → Runs** said. The setting now raises that cap, for Codex too, and quick looks follow it. Jobs waiting for a slot say so. On the quiet resource profile the setting now wins over the profile. Unknown products that need a new catalog still take turns, because catalog drafts share one claim.
-- **A new catalog is built from pages Kriko reads.** Codex, Antigravity and Mistral Vibe cannot search in persistent mode, so authoring a catalog used to send them to browse with no tools and ended in an installed catalog with no claims. They are now handed the pages, like a Quick Look, and a catalog with no claims says so and goes back to "needs an agent" instead of counting as filed.
-- **Queue and Compare.** The engine resolves a queued listing to a product (the seller's title rarely matches a catalog word for word, so known products were researched again and "passed over"), a finished research job saves a check so the product appears in Compare, queue states only move in valid steps, and an interrupted run returns to waiting after a restart. A skipped row now says why.
-- **Chat is shorter and built around the question.** One header and hint, a conversation with the input at its foot and the agent picker beside it, and product answers as compact rows. About a fifth of the words it had.
-- **The Local agent can be picked in Chat and Compare**, and when it is found but not ready, both screens say why instead of hiding it. A Compare follow-up with the Local agent and no search service answers from the saved checks, without web search, and says so.
-- **Browse** lines up: the filter card no longer overlaps the controls, every table row has the same height, long names truncate, and the grid and paging row follow the list.
-- **Claude Code runs show what reuse did**, for example "reused worker · started in 0.1 s · 9,800 of 10,400 input tokens cached", in the Quick Look card and the job log. Reusing a worker saves about 1.4 s a request; most of a run is the model's own turns and page fetches. Tool search is off for Claude Code runs, which removes a first step that Sonnet sometimes spent on it.
-- Known limits: the Windows desktop screens above were compiled and tested but not yet observed in a window for this release, and nothing was checked on macOS. Mistral Vibe authoring and the Claude Code changes were exercised against fakes, not a paid run. A catalog already installed with no claims is not rechecked; add the product to it again.
-
-### 1.6.3
-
-- **Chat** (Check group): pick an agent and hold a threaded conversation. The agent is told only the names and one-line descriptions of what the app has gathered, and reads a source only when it asks; each ask shows as a step, then the answer with its sources. "I need X, with constraints a, b, c" becomes a ranked shortlist that says, per candidate, what is met, unknown or contradicted. Keys and settings cannot be reached from chat. Numeric limits are word-matched, so "under 2 kg" is met by "2 kg" whatever the direction.
-- Agent progress moves steadily: bars ease and creep instead of freezing and leaping, and every running agent shows what it is doing in words, its stage, a ticking clock and a short trail of recent actions. Reduce motion keeps them still.
-- The desktop is denser: smaller cards, rows, gaps and totals, related cards side by side where they fit, and shorter page headings. More fits on each screen, including at the 940 px minimum.
-- **Compare → Start queue** researches several products at once, as many as Settings → Runs allows (default 1). Runs on the same catalog still take turns.
-- **Persistent agents.** Claude Code and Mistral Vibe now keep one worker alive across requests, as Codex already did, so a request skips process start-up. Every request still gets a fresh conversation: Claude Code is reset with `/clear` and Vibe opens a new ACP session. Workers get no tools beyond what the process path granted, are released when idle or when another agent needs the slot, and a request that may have been delivered is never sent twice. Antigravity has no persistent mode, so it keeps starting a process. `Settings → agent_transport` (or `KRIKO_AGENT_TRANSPORT`) accepts `auto` (default), `persistent` or `exec`; the older `codex_transport` and `KRIKO_CODEX_TRANSPORT` names still work. A run the reader can answer mid-run keeps its own process. Details: [docs/AGENT_RUNTIME.md](docs/AGENT_RUNTIME.md).
-- Research requests are recorded durably (inputs, attempts, delivery state, results and usage), a lost response no longer submits the same research twice, and a run's manifest, log tail and event stream can be inspected through the API.
-- Quick Looks obey the settings in the app (effort per agent, number and kinds of sources, search and output language) and answer in the listing's language. `kriko agent-bench` runs the real Quick Look path against a fixed fake web and reports how often each agent is right and how consistent it is; it spends your subscription only with `--yes`.
-- Codex, Antigravity and Mistral Vibe search for the product itself, not for the catalog's `{make} {model}` templates.
-- Busy local-model discovery no longer fails the app's screens. It reports that discovery is busy and can be checked again, rather than saying a server is down before it was probed.
-- `tools/gate.sh` runs the Python tests in parallel and its stages concurrently: about 3 minutes instead of 13.
-- Known limits: the Chat screen and the parallel queue were compiled and unit-tested but not driven in a real window; nothing here was checked on macOS. Resident Claude Code workers pick up a new login only after they idle out or Kriko restarts. Vibe's persistent worker was checked up to a prompt against the real `vibe-acp` (no Mistral key here); Claude Code was checked end to end.
-
-### 1.6.2
-
-- Codex, Antigravity and Mistral Vibe Quick Looks now show each search and each page read as it happens. Before, the run sat on a blank screen for up to two minutes while Kriko searched, which looked like a hang.
-- Search asks Google, DuckDuckGo and Bing. The old list included Ecosia, which blocks the search helper, so every query waited for an engine that could not answer and often returned one page or none. In our checks, queries that took 17 s or more and found 0 to 1 results now take about 7 s and find 17 to 22. A real run on a fresh product found 29 pages where the same kind of run found 2.
-- An engine the search helper reports as failed is skipped for ten minutes and then tried again, so a block that appears later does not slow every search. Google's click-through links, which carry no readable address, are no longer offered as results.
-- After two searches in a row fail, Kriko skips the third instead of waiting out its timeout. If every search fails, Kriko says so, and the agent searches the web with its own tools, opening only a few pages. Its quotes are still checked against the pages, and any claim without a source is dropped.
-- **Local** says what to do when a model runs on the processor of a computer that has a graphics card: Ollama looks for the card only when it starts, so quit it from the tray and open it again.
-- Known limits: a first search after Kriko starts still takes 35 to 75 seconds while the search browser opens, and the search engines can block it again at any time. A run with no pages read is not evidence that a product has no problems.
-- For contributors: `tools/bump.py` also updates the macOS download filenames in this README, which it left at the old version before.
-
-Earlier releases are in the [changelog](CHANGELOG.md).
 
 ## Model benchmarks
 

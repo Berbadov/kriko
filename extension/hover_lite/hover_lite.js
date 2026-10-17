@@ -30,10 +30,10 @@
    * ever mounts on a page an adapter matched, so naming *which* site was never
    * information the reader needed; it was only a sentence that would be wrong
    * on the second site and unnoticed on the third. */
-  const IDLE_HINT = "Quick search: see what is known about this product.";
+  const IDLE_HINT = "Search this product's claims and sources.";
   // A product nothing installed knows: the button researches it, so the hint
   // says what it will do rather than promising a search that cannot find it.
-  const UNKNOWN_HINT = "Nothing installed knows this product yet. Research it to find out what is known.";
+  const UNKNOWN_HINT = "No installed pack covers this product. Research it to find out what is known.";
 
   /* The engine's verdict, as a word the panel shows. Three of the four are
    * worth a banner; `recognised` is the ordinary case and gets none. */
@@ -204,6 +204,7 @@
     ["Kriko Sans", "DMSans-400.ttf", "400"],
     ["Kriko Sans", "DMSans-600.ttf", "600"],
     ["Kriko Mono", "JetBrainsMono-400.ttf", "400"],
+    ["Kriko Mono", "JetBrainsMono-600.ttf", "600"],
   ];
   let facesLoaded = false;
   function loadFaces() {
