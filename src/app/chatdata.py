@@ -42,6 +42,10 @@ from urllib.parse import urlsplit
 
 #: Rows one source may return to the agent.
 ROWS_CAP = 12
+#: Products one deep check reads in full. A shortlist is three names, not the
+#: whole catalogue: the fourth-cheapest match is not what the reader asked for
+#: and reading it would cost the turn its speed.
+DEEP_CHECKS = 3
 #: Characters one text field may carry to the agent.
 TEXT_CAP = 400
 #: Characters a note may carry.
@@ -574,11 +578,108 @@ def _quick_looks(ctx: Context, text: str = "") -> dict:
         if not _matches([product, result.get("category", ""),
                          *(r.get("title", "") for r in risks)], text):
             continue
+        offer = result.get("price") if isinstance(result.get("price"), dict) else {}
         rows.append({"job_id": job["job_id"], "product": product,
                      "category": result.get("category", ""), "risks": len(risks),
                      "risk_titles": [str(r.get("title", "")) for r in risks[:6]],
+                     "price": offer.get("amount"), "currency": offer.get("currency", ""),
+                     "seller": offer.get("seller", ""),
                      "created_at": job["created_at"]})
     return _result(rows, "" if rows else "no quick look matches those words")
+
+
+def _saved_offer(ctx: Context, label: str) -> dict:
+    """The most recent quick look's own offer for a product, or `{}`.
+
+    A quick look already read the listing and reported its price and seller
+    (`app/quicklook.py`). Asking the web for the same figure again is the slow
+    way to answer a question the app has already answered, so the deep check
+    reads it here first.
+    """
+    from app.web import state
+
+    records = ctx.app
+    wanted = _content(label)
+    if records is None or not wanted:
+        return {}
+    for job in state.list_jobs(records, limit=120):
+        if job["kind"] != "quick_look" or job["state"] != state.SUCCEEDED:
+            continue
+        result = job.get("result") or {}
+        offer = result.get("price")
+        if not isinstance(offer, dict) or offer.get("amount") is None:
+            continue
+        product = str((job.get("params") or {}).get("product", ""))
+        if product and _coverage(wanted, product) < MET_AT:
+            continue
+        return {
+            "amount": offer.get("amount"), "text": offer.get("text", ""),
+            "currency": offer.get("currency", ""), "seller": offer.get("seller", ""),
+            "availability": offer.get("availability", ""),
+            "url": offer.get("url", ""), "quote": offer.get("quote", ""),
+            "source": offer.get("source", "quick look"),
+            "as_of": job.get("finished_at") or job.get("created_at") or "",
+        }
+    return {}
+
+
+def _product_deep_check(ctx: Context, query: str = "", subject_id: str = "") -> dict:
+    """A product finder's deep check: recorded risks, coverage, price and seller.
+
+    One named product, or the top few for a query, read the way the lookup
+    reads them (`expand`, conditions, evidence) rather than as a search hit the
+    answer has to interpret. Price and seller come from the reader's own saved
+    quick look when there is one, never from a guess or from a similar product.
+    """
+    store = ctx.store
+    if store is None:
+        return _empty(_NO_PACKS)
+    hits: list[dict]
+    searches = 0
+    named = subject_id.strip()
+    if named:
+        row = store.execute(
+            "SELECT subject_id, pack_id, kind, label FROM subjects WHERE subject_id = ?",
+            (named,)).fetchone()
+        if row is None:
+            return _empty(f"no product with id {named}")
+        hits = [dict(row)]
+    else:
+        if not _words_to_search(query):
+            return _empty("name the product to check")
+        hits, searches = _gather(store, query, None, "")
+    rows = []
+    for hit in hits[:DEEP_CHECKS]:
+        sid, pid = hit["subject_id"], hit["pack_id"]
+        risks = _risks(store, sid, pid)
+        facts = _facts(store, sid, pid)
+        coverage = _risk_coverage(risks)
+        serious = [risk for risk in risks if risk["severity"] == "high"
+                   and risk.get("applicability") in {"applicable", "conditional"}]
+        offer = _saved_offer(ctx, str(hit.get("label") or ""))
+        gaps = []
+        if not risks:
+            gaps.append("no recorded risk: an empty record is not evidence of safety")
+        if coverage["unsourced"]:
+            gaps.append(f"{coverage['unsourced']} recorded risk(s) cite no source")
+        if not offer:
+            gaps.append("no price on record: a quick look on this listing would get one")
+        rows.append({
+            "subject_id": sid, "pack_id": pid, "label": hit.get("label", ""),
+            "kind": hit.get("kind", ""),
+            "identity": {fact["key"]: fact["value"] for fact in facts if fact["identity"]},
+            "claims": len(risks),
+            "risk_coverage": coverage,
+            "serious": len(serious),
+            "risks": [{"title": risk["title"], "severity": risk["severity"],
+                       "applicability": risk["applicability"], "source": risk["source"]}
+                      for risk in risks[:6]],
+            "price": offer,
+            "gaps": gaps,
+        })
+    note = (f"{len(rows)} product(s) checked in depth" if rows
+            else f"no product matched from {searches} search(es)")
+    return _result(rows, note, truncated=len(hits) > DEEP_CHECKS)
 
 
 def _compare_drafts(ctx: Context, text: str = "") -> dict:
@@ -916,6 +1017,14 @@ SOURCES: dict[str, Source] = {s.name: s for s in (
         "Finds products in the installed catalogues by their names and identity values.",
         {"query": "words the product's name or identity contains", "kind": "optional kind"},
         "products", lambda a: f"searching the catalogue for {_quoted(a)}", _catalogue_search),
+    Source(
+        "product_deep_check",
+        "Checks a few products in depth: recorded risks with their sources and "
+        "applicability, risk coverage, and the price and seller the reader's own "
+        "quick look saved. An empty risk record is not evidence of safety.",
+        {"query": "the product, in words",
+         "subject_id": "one product id from a search, instead of a query"},
+        "products", lambda a: f"checking {_quoted(a)} in depth", _product_deep_check),
     Source(
         "subject_detail",
         "One product's attributes, relations and recorded risks, each with its source page.",

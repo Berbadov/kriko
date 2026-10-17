@@ -227,10 +227,24 @@ async function reportUnreadableSite(tab) {
   const url = tab && tab.url;
   if (!url || !/^https?:/i.test(url)) return false;
   try {
+    // Read the page once, through the content script this click just injected.
+    // This is the snapshot an agent needs in order to write an adapter without
+    // fetching the page: the browser is already past whatever bot check the
+    // site runs, and it can see label/value shapes a plain fetch never renders.
+    // Best-effort — a page that refuses to be read still becomes an ask.
+    const scraped = await _requestScrape(tab.id, [], null, true).catch(() => null);
+    const page = (scraped && scraped.payload) || null;
+    const body = { url, title: (tab && tab.title) || "" };
+    if (page && typeof page === "object") {
+      body.fields = page.fields || {};
+      body.description = String(page.description || "").slice(0, 5000);
+      body.product = page.product || {};
+      body.page_title = String(page.title || "").slice(0, 500);
+    }
     const response = await _fetchApp(`${await apiBase()}/api/sites/seen`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url, title: (tab && tab.title) || "" }),
+      body: JSON.stringify(body),
     });
     const answer = response && response.ok ? await response.json() : null;
     // A site the app *can* read, with no panel on it, is a different bug —
@@ -1244,13 +1258,15 @@ async function _updateBadgeForResult(result, tabId) {
 
 // ── scraping ────────────────────────────────────────────────────────────
 
-async function _requestScrape(tabId, labels, panel) {
+async function _requestScrape(tabId, labels, panel, explore = false) {
   // `panel` is the adapter's `local_panel` block: the words, selectors and
   // rules the content script needs to read the damage and equipment blocks.
   // It travels per-request rather than being cached in the content script,
   // because the adapter list is refreshed here and a scrape reading last
   // week's rules would be invisible.
-  const ask = { type: "GET_SCRAPE", labels, panel };
+  // `explore` asks for the page's own label/value shapes as well, which is
+  // what a site nothing can read yet has to offer.
+  const ask = { type: "GET_SCRAPE", labels, panel, explore };
   try {
     const reply = await extensionApi.tabs.sendMessage(tabId, ask);
     if (reply && reply.ok) return reply;
