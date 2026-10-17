@@ -6,60 +6,60 @@
 //! plus a hairline ring, and "frost" is a translucent fill over the hero.
 
 use gpui::{
-    div, img, linear_color_stop, linear_gradient, percentage, point, px, rgb, rgba, relative, svg,
-    prelude::*, Animation, AnimationExt, BoxShadow, Div, FontWeight, Hsla, ObjectFit, SharedString,
-    Stateful, Styled, Svg, TextAlign, Transformation,
+    div, img, linear_color_stop, linear_gradient, percentage, point, prelude::*, px, relative, rgb,
+    rgba, svg, Animation, AnimationExt, BoxShadow, Div, FontWeight, Hsla, ObjectFit, SharedString,
+    Stateful, Styled, StyledImage, Svg, Transformation,
 };
 
-// ---- colour tokens (match tokens.json / the screenshots) ----
-pub const GROUND: u32 = 0x030308;
-pub const SURFACE_1: u32 = 0x070a14;
-pub const BRAND: u32 = 0x2f6bff;
+// ---- colour tokens (match new-design-16oct/tokens.json) ----
+pub const GROUND: u32 = 0x03060f;
+pub const SURFACE_1: u32 = 0x060b1a;
+pub const SURFACE_2: u32 = 0x0a1226;
+pub const BRAND: u32 = 0x2862ff;
 pub const BRAND_HOVER: u32 = 0x4a80ff;
-pub const BRAND_LOW: u32 = 0x1c48d6;
-pub const BRAND_BRIGHT: u32 = 0x8fb4ff;
-pub const ICE: u32 = 0xbfe4ff;
-pub const INK: u32 = 0xf2f5ff;
-pub const INK_2: u32 = 0xc9d1ea;
-pub const MUTED: u32 = 0x9aa5c4;
-pub const DIM: u32 = 0x74809e;
-pub const DANGER: u32 = 0xff6b5e;
-pub const WELL: u32 = 0x05070d;
-pub const LED_OFF: u32 = 0x131a30;
-pub const LED_DIM: u32 = 0x6b7799;
-pub const BEZEL_HI: u32 = 0x2c3244;
-pub const BEZEL_LO: u32 = 0x12162a;
-pub const BEZEL_EDGE: u32 = 0x05070d;
+pub const BRAND_LOW: u32 = 0x1a48d8;
+pub const BRAND_DEEP: u32 = 0x0a1c74;
+pub const BRAND_BRIGHT: u32 = 0x9bb8ff;
+pub const ICE: u32 = 0xcfe4ff;
+pub const INK: u32 = 0xf4f7ff;
+pub const INK_2: u32 = 0xd3dcf5;
+pub const MUTED: u32 = 0xb3c0e2;
+pub const DIM: u32 = 0x9aabd6;
+pub const DANGER: u32 = 0xff6f63;
+pub const WELL: u32 = 0x050a18;
+pub const LED_OFF: u32 = 0x15203f;
+pub const LED_DIM: u32 = 0x7086b8;
+pub const BEZEL_HI: u32 = 0x27345c;
+pub const BEZEL_LO: u32 = 0x111a33;
+pub const BEZEL_EDGE: u32 = 0x050916;
 // translucent: 0xRRGGBBAA
-pub const GLASS_1: u32 = 0xffffff0d;
-pub const GLASS_2: u32 = 0xffffff14;
+pub const GLASS_1: u32 = 0x5b8cff14;
+pub const GLASS_2: u32 = 0x5b8cff20;
+pub const GLASS_3: u32 = 0x5b8cff30;
 /// The live dock's panel: the ground colour at 94% so the page behind it
 /// reads as a faint shape, never as text competing with the dock's own.
-pub const DOCK_GLASS: u32 = 0x070a14f0;
+pub const DOCK_GLASS: u32 = 0x060b1af5;
 /// The live dock's width. The page reserves this much room while it is open,
 /// so controls and text do not disappear beneath the floating panel.
 pub const DOCK_WIDTH: f32 = 320.0;
-pub const HAIRLINE: u32 = 0xffffff1a;
-pub const BORDER_CONTROL: u32 = 0xffffff59;
-pub const BRAND_WASH: u32 = 0x1f4fff29;
-pub const DANGER_WASH: u32 = 0xff6b5e24;
-pub const DANGER_EDGE: u32 = 0xff6b5e59;
+pub const HAIRLINE: u32 = 0x6f95ff24;
+pub const BORDER_CONTROL: u32 = 0x7f9cff66;
+pub const BRAND_WASH: u32 = 0x2862ff2e;
+pub const DANGER_WASH: u32 = 0xff6f6326;
+pub const DANGER_EDGE: u32 = 0xff6f6359;
 pub const FROST: u32 = 0xecf1ffeb;
 
-
 // ---- font families (registered at startup from the embedded .ttf files) ----
+// These are the family names inside the bundled fonts. The upstream names
+// resolve to a system fallback on Windows because these files were renamed.
 pub const DISPLAY: &str = "Kriko Display";
 pub const SANS: &str = "Kriko Sans";
-/// What used to be set in a fixed-width face (eyebrows, crumbs, counts, paths)
-/// wears the body face: the reader did not like the mono, "appears on
-/// technical places". The name stays so a call site says what the text *is*
-/// (a label, a figure) and the face stays one decision, here.
-pub const MONO: &str = SANS;
+/// Fixed-width text is reserved for paths, counts, and identifiers.
+pub const MONO: &str = "JetBrains Mono";
 /// The one place a fixed-width face is still right: text that is code, such
-/// as a run's log, where the columns line up. Bundled, so every machine the
-/// app reaches shows the same face and nothing falls back to a system mono
-/// the reader did not choose.
-pub const CODE: &str = "JetBrains Mono";
+/// as a run's log, where the columns line up. The machine's own, so nothing
+/// is shipped for it.
+pub const CODE: &str = "Consolas";
 
 pub fn register_fonts(cx: &mut gpui::App, fonts: Vec<std::borrow::Cow<'static, [u8]>>) {
     cx.text_system().add_fonts(fonts).expect("fonts");
@@ -151,34 +151,26 @@ pub enum LedAnim {
 
 /// The page column's side gutter, below the hero. The page head uses it too,
 /// so the title and the content share one left edge.
-pub const PAGE_PAD: f32 = 28.0;
+pub const PAGE_PAD: f32 = 20.0;
 /// Between two sections of one page.
-pub const SPACE_SECTION: f32 = 14.0;
+pub const SPACE_SECTION: f32 = 24.0;
 /// Between cards that sit side by side or stacked within a section.
-pub const SPACE_CARD: f32 = 10.0;
+pub const SPACE_CARD: f32 = 16.0;
 /// Between a section's title and what it holds.
-pub const SPACE_TITLE: f32 = 6.0;
+pub const SPACE_TITLE: f32 = 12.0;
 /// Inside a card.
-pub const PAD_CARD: f32 = 16.0;
+pub const PAD_CARD: f32 = 10.0;
 /// Inside a dense card: a list of rows, a table, a settings group.
-pub const PAD_CARD_TIGHT: f32 = 12.0;
+pub const PAD_CARD_TIGHT: f32 = 6.0;
 
 // ---- surfaces ----
 
-/// Flat glass card from the current design reference.
+/// Open content section. Controls may have an edge; content is not boxed.
 pub fn card() -> Div {
     div()
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(rgba(0xffffff1b), 0.0),
-            linear_color_stop(rgba(GLASS_1), 1.0),
-        ))
-        .border_1()
-        .border_color(rgba(0xffffff26))
-        .rounded(px(10.0))
-        .px(px(PAD_CARD + 2.0))
-        .py(px(PAD_CARD))
-        .shadow(vec![shadow(0x00000045, 0.0, 6.0, 16.0, 0.0)])
+        .border_b_1()
+        .border_color(rgba(HAIRLINE))
+        .py(px(20.0))
 }
 
 /// A titled section: the eyebrow title over its body, at one distance on
@@ -228,37 +220,29 @@ pub fn well() -> Div {
         .bg(rgb(WELL))
         .border_1()
         .border_color(rgba(HAIRLINE))
-        .rounded(px(10.0))
+        .rounded(px(12.0))
 }
 
 /// Pale frosted card that floats over a hero image (the one light surface).
 #[allow(dead_code)] // a design-system surface, kept for the next hero that needs it
 pub fn frost() -> Div {
     div()
-        .bg(rgba(FROST))
-        .rounded(px(20.0))
-        .p(px(16.0))
-        .shadow(vec![shadow(0x02061773, 0.0, 24.0, 60.0, 0.0)])
+        .py(px(16.0))
+        .border_b_1()
+        .border_color(rgba(HAIRLINE))
 }
 
 /// Brand-wash callout panel, full width: tag and lines left, a key right.
 pub fn callout() -> Div {
     div()
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(rgba(0x527bff34), 0.0),
-            linear_color_stop(rgba(BRAND_WASH), 1.0),
-        ))
-        .border_1()
-        .border_color(rgba(0x86a3ff48))
-        .rounded(px(10.0))
-        .py(px(12.0))
-        .px(px(12.0))
+        .border_b_1()
+        .border_color(rgba(HAIRLINE))
+        .py(px(20.0))
         .flex()
         .flex_wrap()
         .items_center()
         .justify_between()
-        .gap(px(12.0))
+        .gap(px(24.0))
 }
 
 /// One horizontal hairline separator.
@@ -278,13 +262,15 @@ pub fn horizontal_wheel<T: Styled + gpui::InteractiveElement>(mut element: T) ->
     })
 }
 
-/// Mono eyebrow label: 11px capitals in DIM.
+/// Section label from the latest design draft: readable sans, sentence case.
 pub fn eyebrow(label: &str) -> Div {
     div()
-        .font_family(MONO)
-        .text_size(px(12.0))
-        .text_color(rgb(DIM))
-        .child(label.to_uppercase())
+        .font_family(SANS)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(14.0))
+        .line_height(px(20.0))
+        .text_color(rgb(MUTED))
+        .child(label.to_string())
 }
 
 // ---- the sky ----
@@ -365,7 +351,7 @@ impl Sky {
 /// window — the titlebar floats on it. Add children (the page head) after
 /// calling.
 pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
-    let (top, bottom) = sky.base();
+    let _ = motion;
     div()
         .relative()
         .w_full()
@@ -373,47 +359,12 @@ pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
         .overflow_hidden()
         .bg(rgb(GROUND))
         .child(
-            div().absolute().top_0().left_0().size_full().bg(linear_gradient(
-                180.0,
-                linear_color_stop(hsla(top), 0.0),
-                linear_color_stop(hsla(bottom), 1.0),
-            )),
-        )
-        .child(
-            img(embedded(sky.image().into()))
-                .absolute()
-                .top_0()
-                .left_0()
-                .size_full()
-                .object_fit(ObjectFit::Cover)
-                .opacity(0.62),
-        )
-        .child(
-            div()
+            img(embedded(SharedString::from(sky.image())))
                 .absolute()
                 .bottom_0()
                 .left_0()
                 .w_full()
-                .h(relative(0.55))
-                .bg(linear_gradient(
-                    180.0,
-                    linear_color_stop(Hsla { a: 0.0, ..hsla(ICE) }, 0.0),
-                    linear_color_stop(Hsla { a: sky.glow(), ..hsla(ICE) }, 1.0),
-                )),
-        )
-        .child(sky_veil(motion))
-        .child(
-            div()
-                .absolute()
-                .bottom_0()
-                .left_0()
-                .w_full()
-                .h(px((height * 0.5).min(150.0)))
-                .bg(linear_gradient(
-                    180.0,
-                    linear_color_stop(Hsla { a: 0.0, ..hsla(GROUND) }, 0.0),
-                    linear_color_stop(hsla(GROUND), 1.0),
-                )),
+                .object_fit(ObjectFit::Cover),
         )
 }
 
@@ -421,25 +372,30 @@ pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
 /// which redrew the whole window every frame on every screen for a movement
 /// nobody could see (#184); the wash now holds the breath's middle.
 fn sky_veil(_motion: bool) -> gpui::AnyElement {
-    div().absolute().top_0().left_0().size_full().bg(linear_gradient(
-        90.0,
-        linear_color_stop(
-            Hsla {
-                a: 0.00,
-                ..hsla(BRAND)
-            },
-            0.0,
-        ),
-        linear_color_stop(
-            Hsla {
-                a: 0.10,
-                ..hsla(BRAND)
-            },
-            1.0,
-        ),
-    ))
-    .opacity(0.6)
-    .into_any_element()
+    div()
+        .absolute()
+        .top_0()
+        .left_0()
+        .size_full()
+        .bg(linear_gradient(
+            90.0,
+            linear_color_stop(
+                Hsla {
+                    a: 0.00,
+                    ..hsla(BRAND)
+                },
+                0.0,
+            ),
+            linear_color_stop(
+                Hsla {
+                    a: 0.10,
+                    ..hsla(BRAND)
+                },
+                1.0,
+            ),
+        ))
+        .opacity(0.6)
+        .into_any_element()
 }
 
 /// The img source that reads from the embedded AssetSource. A bare string
@@ -457,85 +413,68 @@ pub fn embedded(path: SharedString) -> gpui::ImageSource {
 /// of the band and is gone by its middle, so the sky on the right is
 /// untouched. The title names the page rather than filling it (the reader:
 /// "page titles takes too much space, but i dont wanna lose the sky").
-pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str, motion: bool) -> Div {
-    let plan = sky.ink();
-    let shade = |a: f32| Hsla { a, ..hsla(plan.shade) };
-    let accent = if plan.accent_reads { BRAND_BRIGHT } else { plan.ink };
-    div()
-        .absolute()
-        .top_0()
-        .left_0()
-        .w_full()
-        .h_full()
-        .when(plan.shade_alpha > 0.0, |d| {
-            d.child(
+pub fn page_head(
+    _sky: Sky,
+    crumb: &str,
+    title: &str,
+    lead: &str,
+    page_pad: f32,
+    motion: bool,
+) -> Div {
+    div().absolute().top_0().left_0().w_full().h_full().child(
+        div()
+            .relative()
+            .px(px(page_pad))
+            .pt(px(58.0))
+            .flex()
+            .flex_col()
+            .gap(px(6.0))
+            .child(
                 div()
-                    .absolute()
-                    .top_0()
-                    .left_0()
-                    .size_full()
-                    .bg(linear_gradient(
-                        90.0,
-                        linear_color_stop(shade(plan.shade_alpha), 0.38),
-                        linear_color_stop(shade(0.0), 0.72),
-                    )),
+                    .font_family(MONO)
+                    .text_size(px(12.0))
+                    .text_color(rgb(INK_2))
+                    .child(crumb.to_string()),
             )
-        })
-        .child(
-            div()
-                .relative()
-                .px(px(PAGE_PAD))
-                .pt(px(42.0))
-                .flex()
-                .flex_col()
-                .child(
-                    // One line over the title: where you are, and what the
-                    // page is for, cut off rather than wrapped.
+            .child(title_wipe(&title.to_uppercase(), INK, motion))
+            .when(!lead.is_empty(), |d| {
+                d.child(
                     div()
-                        .flex()
-                        .items_center()
-                        .gap(px(8.0))
-                        .font_family(MONO)
-                        .text_size(px(12.0))
-                        .child(div().flex_none().text_color(rgb(accent)).child("kriko /"))
-                        .child(div().flex_none().text_color(rgb(plan.ink)).opacity(0.8).child(crumb.to_uppercase()))
-                        .when(!lead.is_empty(), |d| {
-                            d.child(
-                                div()
-                                    .flex_1()
-                                    .min_w(px(0.0))
-                                    .overflow_hidden()
-                                    .whitespace_nowrap()
-                                    .text_ellipsis()
-                                    .text_color(rgb(plan.ink))
-                                    .opacity(0.62)
-                                    .child(format!("\u{00b7}  {lead}")),
-                            )
-                        }),
+                        .font_family(SANS)
+                        .text_size(px(15.0))
+                        .text_color(rgb(INK_2))
+                        .child(lead.to_string()),
                 )
-                .child(
-                    title_wipe(title, plan.ink, motion),
-                ),
-        )
+            }),
+    )
 }
 
 fn title_wipe(title: &str, ink: u32, motion: bool) -> gpui::AnyElement {
-    let text = div().font_family(DISPLAY).font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(26.0)).line_height(px(30.0)).text_color(rgb(ink))
-        .whitespace_nowrap().child(title.to_uppercase());
-    let clip = div().mt(px(4.0)).h(px(30.0)).w_full().overflow_hidden().child(text);
+    let text = div()
+        .font_family(DISPLAY)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(52.0))
+        .line_height(px(56.0))
+        .text_color(rgb(ink))
+        .whitespace_nowrap()
+        .child(title.to_string());
+    let clip = div().h(px(56.0)).w_full().overflow_hidden().child(text);
     if motion {
-        clip.with_animation(gpui::ElementId::Name(format!("title-{title}").into()),
+        clip.with_animation(
+            gpui::ElementId::Name(format!("title-{title}").into()),
             Animation::new(std::time::Duration::from_millis(420)),
             |d, t| d.w(relative((t * 14.0).floor() / 14.0)),
-        ).into_any_element()
-    } else { clip.into_any_element() }
+        )
+        .into_any_element()
+    } else {
+        clip.into_any_element()
+    }
 }
 
 // ---- the merged window top bar ----
 
 /// The sidebar's width. The titlebar floats over everything to its right.
-pub const SIDEBAR_W: f32 = 248.0;
+pub const SIDEBAR_W: f32 = 264.0;
 
 /// One window-control button for the merged titlebar. `close` hovers red.
 /// Resting state is a visible well; it is a control, not a ghost.
@@ -561,15 +500,13 @@ pub fn titlebar_button(
             s.bg(if close {
                 rgba(DANGER_WASH)
             } else {
-                rgba(GLASS_2)
+                rgba(GLASS_3)
             })
             .text_color(rgb(if close { DANGER } else { INK }))
         })
 }
 
-/// The floating top bar: crumb and window controls over the sky, spanning the
-/// content column. It paints nothing — the hero runs behind it, so the sky
-/// is the bar.
+/// Quiet window controls above the section tabs.
 pub fn titlebar() -> Stateful<Div> {
     div()
         .id("kriko-titlebar")
@@ -578,6 +515,9 @@ pub fn titlebar() -> Stateful<Div> {
         .left_0()
         .right_0()
         .h(px(40.0))
+        .bg(rgb(GROUND))
+        .border_b_1()
+        .border_color(rgba(HAIRLINE))
         .flex()
         .items_center()
         .px(px(12.0))
@@ -591,27 +531,21 @@ pub fn key(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
         .flex_none()
-        .h(px(44.0))
-        .px(px(20.0))
+        .h(px(42.0))
+        .px(px(18.0))
         .flex()
         .items_center()
         .justify_center()
-        .rounded(px(12.0))
-        .font_family(DISPLAY)
+        .rounded(px(21.0))
+        .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
         .text_color(rgb(0xffffff))
         .text_size(px(15.0))
         .cursor_pointer()
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(hsla(BRAND_HOVER), 0.0),
-            linear_color_stop(hsla(BRAND), 1.0),
-        ))
-        .border_1()
-        .border_color(rgba(0xffffff59))
-        .shadow(vec![shadow(0x102b9c80, 0.0, 3.0, 12.0, 0.0)])
-        .hover(|s| s.bg(rgb(BRAND_HOVER)).border_color(rgba(0xffffff90)))
+        .bg(rgb(BRAND))
+        .hover(|s| s.bg(rgb(BRAND_HOVER)))
         .active(|s| s.bg(rgb(BRAND_LOW)))
+        .map(fit_control)
         .child(label.to_string())
 }
 
@@ -625,22 +559,18 @@ pub fn ghost(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .flex()
         .items_center()
         .justify_center()
-        .rounded(px(12.0))
+        .rounded(px(20.0))
         .font_family(SANS)
         .font_weight(FontWeight::MEDIUM)
         .text_color(rgb(INK_2))
-        .text_size(px(14.0))
+        .text_size(px(15.0))
         .cursor_pointer()
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(rgba(GLASS_2), 0.0),
-            linear_color_stop(rgba(GLASS_1), 1.0),
-        ))
+        .bg(rgba(GLASS_1))
         .border_1()
-        .border_color(rgba(BORDER_CONTROL))
-        .shadow(vec![shadow(0x00000035, 0.0, 2.0, 8.0, 0.0)])
-        .hover(|s| s.bg(rgba(0xffffff20)).border_color(rgba(0xffffff8a)))
-        .active(|s| s.bg(rgba(0xffffff0a)))
+        .border_color(rgba(HAIRLINE))
+        .hover(|s| s.bg(rgb(BEZEL_HI)))
+        .active(|s| s.bg(rgb(WELL)))
+        .map(fit_control)
         .child(label.to_string())
 }
 
@@ -664,7 +594,7 @@ pub fn danger_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .bg(rgba(DANGER_WASH))
         .border_1()
         .border_color(rgba(DANGER_EDGE))
-        .hover(|s| s.bg(rgba(0xff6b5e3d)))
+        .hover(|s| s.bg(rgba(DANGER_WASH)))
         .active(|s| s.opacity(0.85))
         .child(label.to_string())
 }
@@ -685,55 +615,17 @@ pub fn danger(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
         .text_color(rgb(0xffd0ca))
         .text_size(px(15.0))
         .cursor_pointer()
-        .bg(linear_gradient(
-            180.0,
-            linear_color_stop(rgba(0xff6b5e35), 0.0),
-            linear_color_stop(rgba(DANGER_WASH), 1.0),
-        ))
+        .bg(rgba(DANGER_WASH))
         .border_1()
         .border_color(rgba(DANGER_EDGE))
-        .hover(|s| s.bg(rgba(0xff6b5e3d)))
+        .hover(|s| s.bg(rgba(DANGER_WASH)))
         .active(|s| s.opacity(0.85))
-        .child(label.to_string())
+        .child(label.to_uppercase())
 }
 
 /// Wide benchmark run plate: 72px, leading play glyph, big label.
 pub fn plate_wide(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
-    div()
-        .id(id)
-        .min_w(px(340.0))
-        .h(px(72.0))
-        .flex()
-        .items_center()
-        .gap(px(20.0))
-        .px(px(9.0))
-        .pr(px(28.0))
-        .rounded(px(12.0))
-        .font_family(DISPLAY)
-        .font_weight(FontWeight::SEMIBOLD)
-        .text_color(rgb(INK_2))
-        .cursor_pointer()
-        .border_1()
-        .border_color(rgb(BEZEL_EDGE))
-        .bg(rgb(BEZEL_LO))
-        .hover(|s| s.bg(rgb(BEZEL_HI)).text_color(rgb(INK)))
-        .active(|s| s.bg(rgb(WELL)))
-        .child(
-            well()
-                .size(px(54.0))
-                .rounded(px(10.0))
-                .flex()
-                .items_center()
-                .justify_center()
-                .child(led_matrix(&PLAY5, BRAND_BRIGHT, 4.0, 2.0)),
-        )
-        .child(
-            div()
-                .flex_1()
-                .text_align(TextAlign::Center)
-                .text_size(px(22.0))
-                .child(label.to_uppercase()),
-        )
+    key(id, label).child(icon("run", 18.0).text_color(rgb(0xffffff)))
 }
 
 /// Small well chip with mono text: paths, counts, codes.
@@ -744,7 +636,7 @@ pub fn chip(text: &str) -> Div {
         .flex()
         .items_center()
         .font_family(MONO)
-        .text_size(px(12.0))
+        .text_size(px(11.0))
         .text_color(rgb(INK_2))
         .child(text.to_string())
 }
@@ -792,6 +684,26 @@ pub fn led_matrix_anim(
     anim: LedAnim,
     motion: bool,
 ) -> gpui::AnyElement {
+    // The new identity uses the SVG icon set for status. Keep the pixel
+    // matrices only for the few controls that are deliberately machine-like.
+    let status = if rows == CHECK5.as_slice() {
+        Some(("check", ICE))
+    } else if rows == BANG5.as_slice() {
+        Some(("alert", DANGER))
+    } else if rows == X5.as_slice() {
+        Some(("x", DANGER))
+    } else if rows == QUEUE5.as_slice() {
+        Some(("clock", MUTED))
+    } else if rows == PLAY5.as_slice() {
+        Some(("run", BRAND_BRIGHT))
+    } else {
+        None
+    };
+    if let Some((name, tint)) = status {
+        return icon(name, (dot * 3.0 + gap * 2.0).max(14.0))
+            .text_color(rgb(tint))
+            .into_any_element();
+    }
     let lit_dots = rows
         .iter()
         .flat_map(|r| r.chars())
@@ -800,10 +712,21 @@ pub fn led_matrix_anim(
     let columns = rows.iter().map(|r| r.len()).max().unwrap_or(0);
     let width = columns as f32 * dot + columns.saturating_sub(1) as f32 * gap;
     let height = rows.len() as f32 * dot + rows.len().saturating_sub(1) as f32 * gap;
-    let mut grid = div().w(px(width)).h(px(height)).flex_none().flex().flex_col().gap(px(gap));
+    let mut grid = div()
+        .w(px(width))
+        .h(px(height))
+        .flex_none()
+        .flex()
+        .flex_col()
+        .gap(px(gap));
     let mut index = 0usize;
     for r in rows {
-        let mut line = div().w(px(width)).h(px(dot)).flex_none().flex().gap(px(gap));
+        let mut line = div()
+            .w(px(width))
+            .h(px(dot))
+            .flex_none()
+            .flex()
+            .gap(px(gap));
         for ch in r.chars() {
             let lit = ch == '#';
             let d = div().size(px(dot)).flex_none().rounded(px(1.5));
@@ -866,23 +789,15 @@ pub enum TagState {
 /// How many marquee rounds a needs-you tag runs before it rests lit.
 const BLINKS: u32 = 3;
 
-/// State tag: LED glyph plus a word, always both. The LED animates the way
-/// the CSS does: NEEDS YOU blinks a few rounds, LIVE boots once on mount. `motion ==
-/// false` (Reduce motion) keeps it static. `id` names the tag's animation:
-/// unique per tag on the screen, or two tags half-light each other.
+/// State tag: an outline icon and a readable word. Only live work spins.
 pub fn tag(id: impl Into<SharedString>, state: TagState, label: &str, motion: bool) -> Div {
     let id: SharedString = id.into();
-    let (glyph, led, fg): (&[&str], u32, u32) = match state {
-        TagState::Live => (&PLAY5, ICE, ICE),
-        TagState::Need => (&BANG5, 0xffffff, 0xffffff),
-        TagState::Queue => (&QUEUE5, LED_DIM, MUTED),
-        TagState::Done => (&CHECK5, INK_2, INK_2),
-        TagState::Block => (&X5, DANGER, DANGER),
-    };
-    let anim = match state {
-        TagState::Live => LedAnim::Boot,
-        TagState::Need => LedAnim::Blink,
-        _ => LedAnim::None,
+    let (glyph, fg): (&str, u32) = match state {
+        TagState::Live => ("loader", ICE),
+        TagState::Need => ("alert", 0xffffff),
+        TagState::Queue => ("clock", MUTED),
+        TagState::Done => ("check", INK_2),
+        TagState::Block => ("x", DANGER),
     };
     let base = div()
         .h(px(28.0))
@@ -891,24 +806,30 @@ pub fn tag(id: impl Into<SharedString>, state: TagState, label: &str, motion: bo
         .items_center()
         .gap(px(8.0))
         .rounded(px(8.0))
-        .font_family(MONO)
-        .text_size(px(12.0))
+        .font_family(SANS)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(13.0))
         .text_color(rgb(fg))
         .border_1()
         .border_color(rgba(HAIRLINE));
     let base = match state {
-        TagState::Need => base
-            .bg(linear_gradient(
-                180.0,
-                linear_color_stop(hsla(BRAND_HOVER), 0.0),
-                linear_color_stop(hsla(BRAND), 1.0),
-            ))
-            .border_color(rgba(0xffffff40)),
+        TagState::Need => base.bg(rgb(BRAND)).border_color(rgba(BRAND)),
         TagState::Block => base.bg(rgba(DANGER_WASH)),
         _ => base.bg(rgb(WELL)),
     };
-    base.child(led_matrix_anim(&id, glyph, led, 3.0, 1.0, anim, motion))
-        .child(label.to_uppercase())
+    let resting = matches!(label.to_ascii_lowercase().as_str(), "ready" | "connected" | "in use" | "available");
+    let state_icon = if matches!(state, TagState::Live) && !resting {
+        spinner(id, 15.0, motion)
+    } else {
+        icon(if resting { "check" } else { glyph }, 15.0).text_color(rgb(fg)).into_any_element()
+    };
+    fit_control(base.flex_none().child(state_icon).child(label.to_uppercase()))
+}
+
+/// Content columns stretch sections, while controls keep their natural width.
+fn fit_control<T: Styled>(mut element: T) -> T {
+    element.style().align_self = Some(gpui::AlignSelf::FlexStart);
+    element
 }
 
 /// Segment meter, `segments` squares, `value` 0..=100. When `live`, the
@@ -968,14 +889,23 @@ pub fn progress_bar(id: &str, share: f32, motion: bool) -> Div {
 pub fn led_ripple(id: &str, motion: bool) -> gpui::AnyElement {
     fn lit(el: Div, level: f32) -> Div {
         let alpha = (36.0 + 219.0 * level) as u32;
-        el.bg(rgba((ICE << 8) | alpha.min(255))).shadow(vec![BoxShadow {
-            color: gpui::Hsla { a: 0.55 * level, ..hsla(ICE) },
-            offset: point(px(0.0), px(0.0)),
-            blur_radius: px(2.0 + 6.0 * level),
-            spread_radius: px(0.0),
-        }])
+        el.bg(rgba((ICE << 8) | alpha.min(255)))
+            .shadow(vec![BoxShadow {
+                color: gpui::Hsla {
+                    a: 0.55 * level,
+                    ..hsla(ICE)
+                },
+                offset: point(px(0.0), px(0.0)),
+                blur_radius: px(2.0 + 6.0 * level),
+                spread_radius: px(0.0),
+            }])
     }
-    let mut row = div().flex().items_center().gap(px(4.0)).flex_none().px(px(2.0));
+    let mut row = div()
+        .flex()
+        .items_center()
+        .gap(px(4.0))
+        .flex_none()
+        .px(px(2.0));
     for i in 0..3u32 {
         let base = div().size(px(6.0)).rounded_full();
         let dot: gpui::AnyElement = if motion {
@@ -1004,63 +934,21 @@ pub fn led_ripple(id: &str, motion: bool) -> gpui::AnyElement {
 /// Segment meter, `segments` squares, `value` 0..=100. When `live`, the
 /// leading lit segment blinks; `id` names that blink, unique per meter.
 pub fn meter_live(
-    id: impl Into<SharedString>,
-    value: f32,
-    segments: usize,
-    live: bool,
-    motion: bool,
+    id: impl Into<SharedString>, value: f32, _segments: usize, live: bool, motion: bool,
 ) -> Div {
-    let head_id = gpui::SharedString::from(format!("{}-head", id.into()));
-    let lit = ((segments as f32) * value.clamp(0.0, 100.0) / 100.0).round() as usize;
-    let mut track = well().p(px(6.0)).flex().gap(px(3.0));
-    for i in 0..segments {
-        let seg = div().flex_1().h(px(14.0)).rounded(px(1.5));
-        let head = motion && live && i == lit.saturating_sub(1);
-        let seg: gpui::AnyElement = if i < lit {
-            let cell = seg.bg(rgb(ICE)).shadow(vec![BoxShadow {
-                color: hsla(ICE),
-                offset: point(px(0.0), px(0.0)),
-                blur_radius: px(6.0),
-                spread_radius: px(0.0),
-            }]);
-            if head {
-                cell.with_animation(
-                    gpui::ElementId::Name(head_id.clone()),
-                    Animation::new(std::time::Duration::from_millis(1600))
-                        .repeat()
-                        .with_easing(|t| t),
-                    |el, t| el.opacity(if t < 0.5 { 1.0 } else { 0.2 }),
-                )
-                .into_any_element()
-            } else {
-                cell.into_any_element()
-            }
-        } else {
-            seg.bg(rgb(LED_OFF)).into_any_element()
-        };
-        track = track.child(seg);
-    }
-    track
+    if live { progress_bar(&id.into(), value / 100.0, motion) }
+    else { flat_meter(value) }
 }
 
-/// Slim confidence meter for table rows.
-pub fn meter_slim(value: f32, segments: usize) -> Div {
-    let lit = ((segments as f32) * value.clamp(0.0, 100.0) / 100.0).round() as usize;
-    let mut track = well().p(px(4.0)).flex().gap(px(2.0)).min_w(px(96.0));
-    for i in 0..segments {
-        let seg = div().flex_1().h(px(8.0)).rounded(px(1.0));
-        track = track.child(if i < lit {
-            seg.bg(rgb(ICE)).shadow(vec![BoxShadow {
-                color: hsla(ICE),
-                offset: point(px(0.0), px(0.0)),
-                blur_radius: px(5.0),
-                spread_radius: px(0.0),
-            }])
-        } else {
-            seg.bg(rgb(LED_OFF))
-        });
-    }
-    track
+fn flat_meter(value: f32) -> Div {
+    let share = if value.is_finite() { value.clamp(0.0, 100.0) / 100.0 } else { 0.0 };
+    div().h(px(4.0)).w_full().rounded(px(2.0)).overflow_hidden().bg(rgba(GLASS_2))
+        .child(div().h_full().w(relative(share)).rounded(px(2.0)).bg(rgb(BRAND_BRIGHT)))
+}
+
+/// A quiet continuous meter for coverage rows.
+pub fn meter_slim(value: f32, _segments: usize) -> Div {
+    flat_meter(value).min_w(px(96.0))
 }
 
 /// Hardware switch. The knob is a bezel gradient that slides through the
@@ -1160,9 +1048,7 @@ pub fn segmented_thumb(id_key: u64, from: usize, to: usize, motion: bool) -> gpu
             )
             .into_any_element()
     } else {
-        thumb
-            .left(px(4.0 + 58.0 * to as f32))
-            .into_any_element()
+        thumb.left(px(4.0 + 58.0 * to as f32)).into_any_element()
     }
 }
 
@@ -1177,12 +1063,30 @@ pub fn segmented_track() -> Div {
         .rounded(px(14.0))
 }
 
-/// One k-seg cell: the 56x40 radio with its LED glyph.
+/// One segment: use the same outline icons as navigation and plain numerals.
 pub fn segmented_cell(
     id: impl Into<gpui::ElementId>,
     glyph: [&str; 5],
     picked: bool,
 ) -> Stateful<Div> {
+    let tint = if picked { ICE } else { MUTED };
+    let mark = if glyph == LIST5 {
+        icon("list", 20.0).text_color(rgb(tint)).into_any_element()
+    } else if glyph == GRID5 {
+        icon("grid", 20.0).text_color(rgb(tint)).into_any_element()
+    } else if glyph == COLS5 {
+        icon("compare", 20.0).text_color(rgb(tint)).into_any_element()
+    } else if let Some(index) = [ONE5, TWO5, THREE5, FOUR5].iter().position(|g| *g == glyph) {
+        div()
+            .font_family(SANS)
+            .font_weight(FontWeight::SEMIBOLD)
+            .text_size(px(16.0))
+            .text_color(rgb(tint))
+            .child((index + 1).to_string())
+            .into_any_element()
+    } else {
+        led_matrix(&glyph, tint, 4.0, 2.0)
+    };
     div()
         .id(id)
         .relative()
@@ -1193,12 +1097,7 @@ pub fn segmented_cell(
         .items_center()
         .justify_center()
         .cursor_pointer()
-        .child(led_matrix(
-            &glyph,
-            if picked { ICE } else { LED_DIM },
-            4.0,
-            2.0,
-        ))
+        .child(mark)
 }
 
 /// Sidebar / control icon from the embedded set, tinted with text_color.
@@ -1209,7 +1108,7 @@ pub fn icon(name: &str, size: f32) -> Svg {
         .flex_none()
 }
 
-/// A bundled brand logo, at the asset root's `logos/` directory.
+/// A bundled brand logo, from the assets' `logos/` directory.
 pub fn logo(name: &str, size: f32) -> Svg {
     svg()
         .path(SharedString::from(format!("logos/{name}.svg")))
@@ -1246,17 +1145,18 @@ pub fn nav_item(
 ) -> Stateful<Div> {
     let base = div()
         .id(id)
-        .h(px(42.0))
-        .px(px(12.0))
+        .h(px(50.0))
+        .px(px(14.0))
         .flex()
         .items_center()
         .gap(px(12.0))
-        .rounded(px(12.0))
+        .rounded(px(14.0))
         .font_family(SANS)
-        .text_size(px(14.0))
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(16.0))
         .cursor_pointer()
         .when(current, |s| {
-            s.bg(rgb(WELL))
+            s.bg(rgba(BRAND_WASH))
                 .border_1()
                 .border_color(rgba(HAIRLINE))
                 .text_color(rgb(ICE))
@@ -1267,12 +1167,17 @@ pub fn nav_item(
                 .hover(|h| h.bg(rgba(GLASS_1)).text_color(rgb(INK)))
         })
         .child(
-            icon(icon_name, 18.0)
+            icon(icon_name, 22.0)
                 .flex_none()
                 .text_color(rgb(if current { ICE } else { MUTED })),
         )
-        .when(label.is_empty(), |d| d.px(px(0.0)).gap(px(0.0)).justify_center())
-        .when(!label.is_empty(), |d| d.child(div().child(label.to_string())).child(div().flex_1()));
+        .when(label.is_empty(), |d| {
+            d.px(px(0.0)).gap(px(0.0)).justify_center()
+        })
+        .when(!label.is_empty(), |d| {
+            d.child(div().child(label.to_string()))
+                .child(div().flex_1())
+        });
     let base = match count {
         Some(c) => base.child(
             div()
@@ -1296,7 +1201,7 @@ pub fn nav_item(
                 .bg(rgb(BRAND))
                 .shadow(vec![shadow(0x0f2a9c99, 0.0, 2.0, 0.0, 0.0)])
                 .font_family(MONO)
-                .text_size(px(12.0))
+                .text_size(px(11.0))
                 .text_color(rgb(0xffffff))
                 .child(b.to_string()),
         ),
@@ -1305,26 +1210,46 @@ pub fn nav_item(
 }
 
 /// The brand block on top of the sidebar: flat brand rectangle, white wordmark.
-pub fn reveal(child: impl IntoElement, id: impl Into<SharedString>, open: bool, height: f32, motion: bool) -> gpui::AnyElement {
-    Reveal { id: gpui::ElementId::Name(id.into()), child: Some(child.into_any_element()), open, height, motion }.into_any_element()
+pub fn reveal(
+    child: impl IntoElement,
+    id: impl Into<SharedString>,
+    open: bool,
+    height: f32,
+    motion: bool,
+) -> gpui::AnyElement {
+    Reveal {
+        id: gpui::ElementId::Name(id.into()),
+        child: Some(child.into_any_element()),
+        open,
+        height,
+        motion,
+    }
+    .into_any_element()
 }
 
-/// Page arrival keeps the natural layout while fading and rising twelve pixels.
+/// A brief opacity transition keeps navigation calm without moving content.
 /// Unlike a drawer, it never clips a long page through a changing max-height.
-pub fn arrive(child: impl IntoElement, id: impl Into<SharedString>, motion: bool) -> gpui::AnyElement {
+pub fn arrive(
+    child: impl IntoElement,
+    id: impl Into<SharedString>,
+    motion: bool,
+) -> gpui::AnyElement {
     // w_full: the page is as wide as its column. Without it a screen was sized
     // by its widest child's natural width, so a table could narrow the page.
     let base = div().relative().flex_none().w_full().child(child);
     if motion {
         base.with_animation(
             gpui::ElementId::Name(id.into()),
-            Animation::new(std::time::Duration::from_millis(260)),
+            Animation::new(std::time::Duration::from_millis(140)),
             |d, t| {
                 let t = t * t * (3.0 - 2.0 * t);
-                d.opacity(t).top(px(12.0 * (1.0 - t)))
+                d.opacity(0.85 + 0.15 * t)
             },
-        ).into_any_element()
-    } else { base.into_any_element() }
+        )
+        .into_any_element()
+    } else {
+        base.into_any_element()
+    }
 }
 
 struct Reveal {
@@ -1343,18 +1268,34 @@ struct RevealState {
 
 impl gpui::IntoElement for Reveal {
     type Element = Self;
-    fn into_element(self) -> Self { self }
+    fn into_element(self) -> Self {
+        self
+    }
 }
 
 impl gpui::Element for Reveal {
     type RequestLayoutState = gpui::AnyElement;
     type PrepaintState = ();
-    fn id(&self) -> Option<gpui::ElementId> { Some(self.id.clone()) }
-    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> { None }
-    fn request_layout(&mut self, id: Option<&gpui::GlobalElementId>, _: Option<&gpui::InspectorElementId>, window: &mut gpui::Window, cx: &mut gpui::App) -> (gpui::LayoutId, Self::RequestLayoutState) {
+    fn id(&self) -> Option<gpui::ElementId> {
+        Some(self.id.clone())
+    }
+    fn source_location(&self) -> Option<&'static std::panic::Location<'static>> {
+        None
+    }
+    fn request_layout(
+        &mut self,
+        id: Option<&gpui::GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        window: &mut gpui::Window,
+        cx: &mut gpui::App,
+    ) -> (gpui::LayoutId, Self::RequestLayoutState) {
         window.with_element_state(id.unwrap(), |state: Option<RevealState>, window| {
             let target = if self.open { 1.0 } else { 0.0 };
-            let mut state = state.unwrap_or(RevealState { from: 0.0, target, start: std::time::Instant::now() });
+            let mut state = state.unwrap_or(RevealState {
+                from: 0.0,
+                target,
+                start: std::time::Instant::now(),
+            });
             let progress = (state.start.elapsed().as_secs_f32() / 0.26).min(1.0);
             let eased = progress * progress * (3.0 - 2.0 * progress);
             let current = state.from + (state.target - state.from) * eased;
@@ -1364,42 +1305,89 @@ impl gpui::Element for Reveal {
                 state.start = std::time::Instant::now();
             }
             let value = if self.motion { current } else { target };
-            if self.motion && (value - target).abs() > 0.001 { window.request_animation_frame(); }
-            let mut child = div().flex().flex_col().flex_none().min_h(px(0.0)).overflow_hidden()
-                .max_h(px(self.height * value)).opacity(value)
+            if self.motion && (value - target).abs() > 0.001 {
+                window.request_animation_frame();
+            }
+            let mut child = div()
+                .flex()
+                .flex_col()
+                .flex_none()
+                .min_h(px(0.0))
+                .overflow_hidden()
+                .max_h(px(self.height * value))
+                .opacity(value)
                 // Clip a naturally sized child during the transition. Squeezing
                 // its SVGs to zero makes GPUI reject their render requests.
-                .child(div().flex_none().child(self.child.take().unwrap())).into_any_element();
+                .child(div().flex_none().child(self.child.take().unwrap()))
+                .into_any_element();
             ((child.request_layout(window, cx), child), state)
         })
     }
-    fn prepaint(&mut self, _: Option<&gpui::GlobalElementId>, _: Option<&gpui::InspectorElementId>, _: gpui::Bounds<gpui::Pixels>, child: &mut Self::RequestLayoutState, window: &mut gpui::Window, cx: &mut gpui::App) { child.prepaint(window, cx); }
-    fn paint(&mut self, _: Option<&gpui::GlobalElementId>, _: Option<&gpui::InspectorElementId>, _: gpui::Bounds<gpui::Pixels>, child: &mut Self::RequestLayoutState, _: &mut (), window: &mut gpui::Window, cx: &mut gpui::App) { child.paint(window, cx); }
+    fn prepaint(
+        &mut self,
+        _: Option<&gpui::GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        _: gpui::Bounds<gpui::Pixels>,
+        child: &mut Self::RequestLayoutState,
+        window: &mut gpui::Window,
+        cx: &mut gpui::App,
+    ) {
+        child.prepaint(window, cx);
+    }
+    fn paint(
+        &mut self,
+        _: Option<&gpui::GlobalElementId>,
+        _: Option<&gpui::InspectorElementId>,
+        _: gpui::Bounds<gpui::Pixels>,
+        child: &mut Self::RequestLayoutState,
+        _: &mut (),
+        window: &mut gpui::Window,
+        cx: &mut gpui::App,
+    ) {
+        child.paint(window, cx);
+    }
 }
 
-pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
+pub fn brand_block(wordmark: &'static str, _tagline: &str) -> Div {
     div()
-        .bg(rgb(BRAND))
-        .px(px(20.0))
-        .pt(px(16.0))
-        .pb(px(16.0))
+        .px(px(10.0))
+        .pt(px(8.0))
+        .pb(px(20.0))
         .flex()
         .flex_col()
-        .gap(px(8.0))
+        .gap(px(10.0))
         .child(
-            div().flex().items_center().gap(px(10.0)).child(svg()
-                .path(SharedString::from(wordmark))
-                .w(px(66.4))
-                .h(px(22.0))
-                .flex_none()
-                .text_color(rgb(0xffffff))).child(div().flex_none().font_family(MONO).text_size(px(12.0)).text_color(rgb(ICE)).px(px(6.0)).py(px(3.0)).border_1().border_color(rgba(0xffffff59)).rounded(px(4.0)).child("BETA")),
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(
+                    svg()
+                        .path(SharedString::from(wordmark))
+                        .w(px(80.0))
+                        .h(px(24.0))
+                        .flex_none()
+                        .text_color(rgb(0xffffff)),
+                )
+                .child(
+                    div()
+                        .px(px(7.0))
+                        .py(px(2.0))
+                        .rounded(px(6.0))
+                        .border_1()
+                        .border_color(rgba(0x9bb8ff80))
+                        .font_family(MONO)
+                        .text_size(px(10.0))
+                        .text_color(rgb(BRAND_BRIGHT))
+                        .child("BETA"),
+                ),
         )
         .child(
             div()
-                .font_family(MONO)
-                .text_size(px(12.0))
-                .text_color(rgb(0xffffffd9))
-                .child(tagline.to_string()),
+                .font_family(SANS)
+                .text_size(px(13.0))
+                .text_color(rgb(MUTED))
+                .child("local product knowledge"),
         )
 }
 
@@ -1415,7 +1403,7 @@ mod grid_tests {
 
     #[test]
     fn the_smallest_window_keeps_two_columns_where_cards_are_wide_enough() {
-        // 940x640 is the minimum window; its content is 624 px wide
+        // 940x640 is the minimum window; its content is 644 px wide
         let w = content_at(940.0);
         assert_eq!(column_count(w, 300.0, 3), 2);
         assert_eq!(column_count(w, 200.0, 4), 3);
@@ -1423,7 +1411,7 @@ mod grid_tests {
 
     #[test]
     fn the_common_window_fits_three_cards_of_three_hundred() {
-        // 1280x800: 964 px of content
+        // 1280x800: 984 px of content
         let w = content_at(1280.0);
         assert_eq!(column_count(w, 300.0, 3), 3);
         assert_eq!(column_count(w, 300.0, 2), 2, "the cap wins over the width");

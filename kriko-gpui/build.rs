@@ -7,7 +7,11 @@
 mod contrast;
 
 /// The skies, in `theme::Sky`'s order: Bright, Dim, Wide.
-const SKIES: [&str; 3] = ["assets/sky-hero.png", "assets/sky-dim.png", "assets/sky-wide.png"];
+const SKIES: [&str; 3] = [
+    "assets/sky-hero.png",
+    "assets/sky-dim.png",
+    "assets/sky-wide.png",
+];
 /// Where the page head's words sit on the band, as fractions of the image:
 /// the left half, from below the titlebar to the end of the lead line.
 const TEXT_BOX: (f32, f32, f32, f32) = (0.0, 0.18, 0.55, 0.75);
@@ -21,9 +25,9 @@ const CAP: f32 = 0.85;
 // theme.rs's INK, GROUND and BRAND_BRIGHT: the build script cannot import
 // the crate it is building, so the three are repeated and a test in
 // theme.rs asserts they agree.
-const INK: u32 = 0xf2f5ff;
-const GROUND: u32 = 0x05070f;
-const ACCENT: u32 = 0x86a3ff;
+const INK: u32 = 0xf4f7ff;
+const GROUND: u32 = 0x03060f;
+const ACCENT: u32 = 0x9bb8ff;
 
 fn main() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
@@ -81,7 +85,9 @@ fn brightest_likely(path: &str) -> f32 {
             } else {
                 (buf[i], buf[i], buf[i])
             };
-            lum.push(contrast::luminance(((r as u32) << 16) | ((g as u32) << 8) | b as u32));
+            lum.push(contrast::luminance(
+                ((r as u32) << 16) | ((g as u32) << 8) | b as u32,
+            ));
         }
     }
     lum.sort_by(|a, b| a.partial_cmp(b).unwrap());

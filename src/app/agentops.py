@@ -27,11 +27,79 @@ from app.findings import accept_findings, log_submission
 from kriko.research import get_researcher, plan_task
 
 
-def brief(conn, subject_id: str, pack_id: str) -> dict:
-    """What to research about this subject, in this pack's own terms."""
-    task = plan_task(conn, subject_id, pack_id)
+def prior_runs(app_state_path, subject_id: str, pack_id: str,
+               limit: int = 20) -> list:
+    """One subject's earlier submissions, oldest first. `[]` when there is none.
+
+    The memory half of the loop: `brief` renders these, so a run starts from
+    what earlier runs learned instead of re-running their dead ends. Read
+    from the interface's own log (`submissions`), which every door writes
+    through `log_submission` — so a run's memory does not depend on which
+    door the runs before it came in through.
+
+    A missing or unreadable log is `[]`, never an error: a researcher with
+    no history is the ordinary first-run case, and the brief simply renders
+    no memory section.
+    """
+    if not app_state_path:
+        return []
+    try:
+        from app.web import state
+
+        conn = state.connect(Path(app_state_path))
+    except Exception:  # noqa: BLE001 — see the docstring
+        return []
+    try:
+        return state.submissions_for(conn, subject_id, pack_id, limit)
+    except Exception:  # noqa: BLE001
+        return []
+    finally:
+        conn.close()
+
+
+def _digest(runs: Sequence) -> list:
+    """Raw submissions as the brief remembers them: counts, queries, refusal heads.
+
+    The reasons are grouped on their first clause exactly as the author's
+    own refusal tally groups them (`state.refusal_reasons`), so the same
+    sentence the author tunes against is the one a next run writes past.
+    """
+    out = []
+    for row in runs:
+        verdicts = (row or {}).get("verdicts") or {}
+        heads: dict[str, int] = {}
+        for one in verdicts.get("rejected") or []:
+            reason = str(one.get("reason") or "unstated")
+            head = reason.split("—")[0].split(";")[0].strip() or reason
+            heads[head] = heads.get(head, 0) + 1
+        out.append({
+            "kept": len(verdicts.get("accepted") or []),
+            "refused": len(verdicts.get("rejected") or []),
+            "queries": [str(q) for q in row.get("queries") or []],
+            "refusal_heads": [
+                head for head, _ in
+                sorted(heads.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+            ],
+        })
+    return out
+
+
+def brief(conn, subject_id: str, pack_id: str, *, effort: str = "fast",
+          app_state_path=None) -> dict:
+    """What to research about this subject, in this pack's own terms.
+
+    `effort` is how much run the caller is buying — `fast` or `deep`; the
+    brief states its budget either way. `app_state_path` is where the
+    submission log lives: with it, the brief remembers what earlier runs on
+    this subject did; without it, it remembers nothing and is still a brief.
+    """
+    task = plan_task(
+        conn, subject_id, pack_id, effort=effort,
+        prior_runs=tuple(_digest(prior_runs(app_state_path, subject_id, pack_id))),
+    )
     return {
         "subject": task.subject_label,
+        "mode": task.effort,
         "queries": list(task.rendered_queries()),
         "brief": get_researcher().brief(task),
     }

@@ -85,6 +85,7 @@ impl Kriko {
         self.refresh_health(cx);
         self.refresh_history(cx);
         self.refresh_compare(cx);
+        self.refresh_chat(cx);
         self.refresh_run(cx);
         self.refresh_knowledge(cx);
         self.refresh_local(cx);
@@ -94,12 +95,16 @@ impl Kriko {
     }
 
     pub fn refresh_health(&mut self, cx: &mut Context<Self>) {
-        self.fetch(cx, || api::get("/api/health"), |this, reply, _| {
-            this.note(&reply);
-            if let Ok(v) = reply {
-                this.live.health = health_from(&v);
-            }
-        });
+        self.fetch(
+            cx,
+            || api::get("/api/health"),
+            |this, reply, _| {
+                this.note(&reply);
+                if let Ok(v) = reply {
+                    this.live.health = health_from(&v);
+                }
+            },
+        );
     }
 }
 

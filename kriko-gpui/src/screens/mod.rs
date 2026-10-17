@@ -21,10 +21,10 @@ pub(crate) mod compare;
 pub(crate) mod extension;
 pub(crate) mod guidance;
 pub(crate) mod history;
-pub(crate) mod logs;
 pub(crate) mod home;
 pub(crate) mod knowledge;
 pub(crate) mod local;
+pub(crate) mod logs;
 pub(crate) mod run;
 pub(crate) mod settings;
 pub(crate) mod sites;
@@ -79,7 +79,8 @@ pub fn row_title(text: &str) -> Div {
     div()
         .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(14.0))
+        .text_size(px(16.0))
+        .line_height(px(22.0))
         .text_color(rgb(INK))
         .child(text.to_string())
 }
@@ -88,7 +89,8 @@ pub fn row_title(text: &str) -> Div {
 pub fn row_desc(text: &str) -> Div {
     div()
         .font_family(SANS)
-        .text_size(px(13.0))
+        .text_size(px(15.0))
+        .line_height(px(22.0))
         .text_color(rgb(MUTED))
         .child(text.to_string())
 }
@@ -96,11 +98,10 @@ pub fn row_desc(text: &str) -> Div {
 /// What a card shows while its slice of the engine has not arrived, or when
 /// the engine holds nothing for it: one quiet well, never sample numbers.
 pub fn empty_note(text: &str) -> Div {
-    well()
-        .px(px(16.0))
-        .py(px(4.0))
+    div()
+        .py(px(12.0))
         .font_family(SANS)
-        .text_size(px(13.0))
+        .text_size(px(14.0))
         .text_color(rgb(DIM))
         .child(text.to_string())
 }
@@ -112,6 +113,16 @@ pub fn mono(text: &str, color: u32) -> Div {
         .text_size(px(12.5))
         .text_color(rgb(color))
         .child(text.to_string())
+}
+
+/// A stored citation opens only an ordinary web URL.
+pub fn source_link(id: impl Into<gpui::ElementId>, label: &str, url: &str) -> Stateful<Div> {
+    let target = url.to_string();
+    let enabled = target.starts_with("https://") || target.starts_with("http://");
+    div().id(id).font_family(SANS).text_size(px(13.0)).text_color(rgb(BRAND_BRIGHT))
+        .when(enabled, |d| d.cursor_pointer().hover(|s| s.text_color(rgb(ICE)))
+            .on_click(move |_, _, cx| cx.open_url(&target)))
+        .child(label.to_string())
 }
 
 /// A table header cell: mono capitals in DIM.
@@ -150,9 +161,7 @@ pub fn segmented(
         let listener = cx.listener(move |this, _: &ClickEvent, _w, cx| {
             on_pick(this, i, cx);
         });
-        track = track.child(
-            segmented_cell((id, i), *glyph, i == current).on_click(listener),
-        );
+        track = track.child(segmented_cell((id, i), *glyph, i == current).on_click(listener));
     }
     track
 }
@@ -183,7 +192,12 @@ pub fn plate_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
 
 /// A control in a filter bar: flat glass with a control ring that lights when
 /// the panel it opens is showing. `chevron` marks the ones that open a panel.
-pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevron: bool) -> Stateful<Div> {
+pub fn filter_btn(
+    id: impl Into<gpui::ElementId>,
+    label: &str,
+    open: bool,
+    chevron: bool,
+) -> Stateful<Div> {
     div()
         .id(id)
         .h(px(40.0))
@@ -203,10 +217,12 @@ pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevr
         .border_1()
         .border_color(rgba(BORDER_CONTROL))
         .when(open, |s| s.border_color(rgb(ICE)))
-        .hover(|s| s.bg(rgba(GLASS_2)).text_color(rgb(INK)))
+        .hover(|s| s.bg(rgba(GLASS_3)).text_color(rgb(INK)))
         .child(label.to_string())
         .when(chevron, |s| {
-            s.child(icon(if open { "collapse" } else { "chevron-down" }, 12.0).text_color(rgb(MUTED)))
+            s.child(
+                icon(if open { "collapse" } else { "chevron-down" }, 12.0).text_color(rgb(MUTED)),
+            )
         })
 }
 
@@ -216,9 +232,13 @@ pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevr
 /// NO EVIDENCE (queue), or nothing when nothing is recorded.
 pub fn trust_icon(backed: Option<bool>) -> gpui::AnyElement {
     match backed {
-        Some(true) => led_matrix(&CHECK5, ICE, 3.0, 1.0),
-        Some(false) => led_matrix(&BANG5, 0xffb86b, 3.0, 1.0),
-        None => led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0),
+        Some(true) => icon("check", 16.0).text_color(rgb(ICE)).into_any_element(),
+        Some(false) => icon("alert", 16.0)
+            .text_color(rgb(DANGER))
+            .into_any_element(),
+        None => icon("clock", 16.0)
+            .text_color(rgb(MUTED))
+            .into_any_element(),
     }
 }
 
@@ -302,4 +322,3 @@ pub fn stepper(
                 .on_click(plus),
         )
 }
-
