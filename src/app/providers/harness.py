@@ -3095,15 +3095,28 @@ class HarnessResearcher(AgentResearcher):
         if not question:
             match = re.search(r"(?im)^The reader asks a follow-up question:\s*(.+)$", prompt)
             question = match.group(1).strip() if match else prompt[:240].strip()
+        # A seller question is searched for by the seller's name, not by the
+        # product's: "Acme X 300 is the seller legit" finds product reviews,
+        # while the seller's own name finds the reviews and records that answer
+        # the question. The name is the one the listing itself printed.
+        seller = ""
+        match = re.search(r"(?im)^Seller:\s*(.+)$", prompt)
+        if match:
+            seller = match.group(1).strip()[:120]
         subjects = [part.strip() for part in re.split(r"\s*[,;]\s*", product) if part.strip()]
         multi_product = len(subjects) > 1
         if multi_product:
             queries = [f'"{subject}" {question}' for subject in subjects]
+            if seller:
+                queries.append(f'"{seller}" reviews complaints')
         else:
             seed = " ".join(part for part in (product, question) if part).strip()
             queries = [seed] if seed else [prompt[:240].strip()]
             if product and question:
                 queries.append(f"{product} {question} discussion")
+            if seller:
+                queries.insert(0, f'"{seller}" {question}')
+                queries.append(f'"{seller}" reviews complaints')
         queries = list(dict.fromkeys(query[:240] for query in queries if query.strip()))[:6]
         prompt += getattr(self, "source_instructions", "")
         # Follow-ups can need evidence about a related item: an oil's car
