@@ -1036,14 +1036,25 @@ impl Kriko {
             .gap(px(6.0))
             .px(px(0.0))
             .pt(px(10.0));
+        // The research queue is the Compare screen's; its waiting count rides
+        // the nav row so a queued product is never out of sight.
+        let queued = self
+            .live
+            .compare
+            .queue
+            .iter()
+            .filter(|q| matches!(q.state, crate::live::compare::QState::Waiting))
+            .count();
+        let queue_badge = (queued > 0).then(|| queued.to_string());
         for (index, (tab, glyph, label)) in primary.iter().copied().enumerate() {
+            let badge = if tab == Tab::Compare { queue_badge.clone() } else { None };
             let row = nav_item(
                 gpui::ElementId::Name(format!("primary-tab-{index}").into()),
                 glyph,
                 if self.sidebar_collapsed { "" } else { label },
                 group == index,
                 None,
-                None,
+                badge.as_deref(),
             )
             .h(px(50.0))
             .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {

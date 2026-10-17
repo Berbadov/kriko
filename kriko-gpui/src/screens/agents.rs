@@ -3,8 +3,8 @@
 use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, Styled, Window};
 
 use crate::app::{Field, Kriko};
-use crate::live::run::{AgentEntry, Harness, RunState, Target};
-use crate::marks::{phase_beat, Phase};
+use crate::live::run::{mark_for, AgentEntry, Harness, RunState, Target};
+use crate::marks::{agent_tile, phase_beat, Phase};
 use crate::screens::run::{option_chip, option_chip_wrapping};
 use crate::screens::{empty_note, mono, row_desc, th};
 use crate::theme::*;
@@ -207,9 +207,14 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 None => div().child(mono("-", DIM)),
             };
             let runs_n = mono(&app.live.run.runs_of(&e.id).to_string(), INK_2);
-            let mark = div().size(px(36.0)).flex_none().flex().items_center().justify_center()
-                .child(icon(if e.id == "local" { "cpu" } else if e.id == "builtin" { "cloud" } else { "term" }, 22.0)
-                    .text_color(rgb(MUTED)));
+            let mark = agent_tile(
+                &format!("agents-row-tile-{i}"),
+                &e.id,
+                mark_for(&e.id),
+                entry_phase(app, e),
+                36.0,
+                motion,
+            );
             let name = div()
                 .flex_1()
                 .min_w(px(0.0))
@@ -482,8 +487,14 @@ fn detail_card(
             .flex()
             .items_center()
             .gap(px(8.0))
-            .child(icon(if e.id == "local" { "cpu" } else if e.id == "builtin" { "cloud" } else { "term" }, 32.0)
-                .text_color(rgb(BRAND_BRIGHT)))
+            .child(agent_tile(
+                &format!("agents-detail-tile-{}", e.id),
+                &e.id,
+                mark_for(&e.id),
+                phase,
+                48.0,
+                motion,
+            ))
             .child(
                 div()
                     .flex()

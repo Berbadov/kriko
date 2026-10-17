@@ -249,7 +249,7 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         .items_center()
         .justify_center()
         .p(px(28.0))
-        .bg(rgba(0x05070fd9))
+        .bg(rgba(0x030308d9))
         .occlude()
         .child(card)
         .into_any_element()

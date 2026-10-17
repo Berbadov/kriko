@@ -15,7 +15,7 @@ use crate::app::{Field, Kriko, Tab};
 use crate::live::compare::{
     self as live, Check, Level, Loaded, Note, QState, QuestionRun, QueueOutcome, MAX_SLOTS,
 };
-use crate::marks::{self, mark_tile, phase_beat, Phase};
+use crate::marks::{self, agent_tile, mark_tile, phase_beat, Phase};
 use crate::screens::{empty_note, mono, plate_s, row_desc, th, trust_icon};
 use crate::theme::*;
 
@@ -102,7 +102,7 @@ fn mini_action(id: impl Into<gpui::ElementId>, label: &str) -> gpui::Stateful<Di
         .rounded(px(7.0))
         .cursor_pointer()
         .font_family(MONO)
-        .text_size(px(10.0))
+        .text_size(px(12.0))
         .text_color(rgb(ICE))
         .bg(rgba(GLASS_1))
         .border_1()
@@ -482,7 +482,7 @@ fn preferred_chip() -> Div {
         .rounded(px(6.0))
         .bg(rgba(BRAND_WASH))
         .font_family(MONO)
-        .text_size(px(9.0))
+        .text_size(px(12.0))
         .text_color(rgb(BRAND_BRIGHT))
         .child("PINNED")
 }
@@ -962,8 +962,9 @@ fn agent_key(
                 .border_color(rgba(BORDER_CONTROL))
         })
         .when(!picked, |s| s.hover(|h| h.bg(rgba(GLASS_1))))
-        .child(mark_tile(
+        .child(agent_tile(
             tile_id,
+            agent_id,
             mark_for(agent_id),
             if picked && working {
                 Phase::Thinking
@@ -976,7 +977,7 @@ fn agent_key(
         .child(
             div()
                 .font_family(MONO)
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(rgb(if picked { ICE } else { MUTED }))
                 .child(label.to_string()),
         )
@@ -1106,8 +1107,9 @@ fn queue_card(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
                 .items_center()
                 .gap(px(SPACE_CARD))
                 .child(mono(&format!("{:02}", qi + 1), DIM))
-                .child(mark_tile(
+                .child(agent_tile(
                     &format!("queue-row-tile-{qi}"),
+                    &working_id,
                     mark_for(&working_id),
                     phase,
                     34.0,
@@ -1600,7 +1602,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .rounded(px(8.0))
                 .cursor_pointer()
                 .font_family(MONO)
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .when(current, |s| {
                     s.bg(rgb(WELL))
                         .border_1()
@@ -2072,7 +2074,7 @@ pub fn compare(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .border_color(rgba(HAIRLINE))
                 .hover(|s| s.border_color(rgba(BORDER_CONTROL)))
                 .font_family(MONO)
-                .text_size(px(11.0))
+                .text_size(px(12.0))
                 .text_color(rgb(INK_2))
                 .child(text.to_string())
                 .on_click(fill),

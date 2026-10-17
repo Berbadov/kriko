@@ -11,7 +11,7 @@ use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Stateful, S
 use crate::api::{self, Value};
 use crate::app::{Field, Kriko, Tab};
 use crate::live::run::{ago, mark_for, Job, Stage};
-use crate::marks::{mark_tile, phase_beat};
+use crate::marks::{agent_tile, mark_tile, phase_beat};
 use crate::screens::{empty_note, guidance, mono, plate_s, row_desc, row_title};
 use crate::theme::*;
 

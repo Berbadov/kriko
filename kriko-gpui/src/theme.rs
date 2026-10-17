@@ -1108,6 +1108,14 @@ pub fn icon(name: &str, size: f32) -> Svg {
         .flex_none()
 }
 
+/// A bundled brand logo, from the assets' `logos/` directory.
+pub fn logo(name: &str, size: f32) -> Svg {
+    svg()
+        .path(SharedString::from(format!("logos/{name}.svg")))
+        .size(px(size))
+        .flex_none()
+}
+
 /// A loading mark: the loader arc turning while the engine answers. It stays
 /// still under reduced motion, so the wait is still shown without movement.
 pub fn spinner(id: impl Into<SharedString>, size: f32, motion: bool) -> gpui::AnyElement {

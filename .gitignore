@@ -72,3 +72,5 @@ _crop.png
 # their literal bytes so no `git add -A` can pick one up again. Keep this the
 # last line, and edit this file with a byte-safe tool.
 0¤d
+release/
+dl/
