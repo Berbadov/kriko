@@ -191,7 +191,7 @@ def test_every_brief_a_cli_is_handed_says_it_once(tmp_path):
     briefs = [
         packauthor.amend_brief({"name": "things"}),
         disambiguate.brief("A thing"),
-        sites.BRIEF.format(site="shop.example", url="https://shop.example/p/1", keys="model"),
+        sites.brief("shop.example", "https://shop.example/p/1", "model"),
         quicklook.brief("A thing"),
         "a brief nobody has written yet",
     ]
