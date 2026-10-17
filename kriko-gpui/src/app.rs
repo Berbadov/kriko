@@ -4,16 +4,18 @@
 //! method over one state struct.
 
 use gpui::{
-    div, prelude::*, px, rgb, rgba, App, ClickEvent, Context, Div, FocusHandle,
-    IntoElement, KeyDownEvent, ParentElement, Render, ScrollDelta, ScrollWheelEvent, Stateful,
-    Styled, Window, WindowControlArea,
+    AnimationExt, div, linear_color_stop, linear_gradient, prelude::*, px, App, ClickEvent, Context,
+    Div, FocusHandle, IntoElement, KeyDownEvent, ParentElement, Render,
+    ScrollDelta, ScrollWheelEvent, SharedString, Stateful, Styled, Window, WindowAppearance, WindowControlArea,
 };
 
+use crate::data;
 use crate::dock;
 use crate::engine;
+use crate::favicons;
 use crate::live::Live;
-use crate::screens;
 use crate::shell;
+use crate::screens;
 use crate::theme::*;
 
 // ---- keyboard actions (bound in main.rs) ----
@@ -54,17 +56,6 @@ pub enum Tab {
     Settings,
     About,
 }
-
-const CHAT_PAGES: &[Tab] = &[Tab::Chat, Tab::Home, Tab::Run, Tab::History];
-const COMPARE_PAGES: &[Tab] = &[Tab::Compare, Tab::Overview, Tab::Browse, Tab::Sites];
-const AGENT_PAGES: &[Tab] = &[
-    Tab::Agents,
-    Tab::Local,
-    Tab::Activity,
-    Tab::Benchmark,
-    Tab::Extension,
-    Tab::Settings,
-];
 
 impl Tab {
     pub fn key(self) -> &'static str {
@@ -113,11 +104,7 @@ impl Tab {
     /// its first segment decides; a word it does not know
     /// opens Home, never whatever happened to be on screen.
     pub fn from_route(route: &str) -> Tab {
-        let head = route
-            .trim_start_matches(['#', '/'])
-            .split('/')
-            .next()
-            .unwrap_or("");
+        let head = route.trim_start_matches(['#', '/']).split('/').next().unwrap_or("");
         match head {
             "packs" | "knowledge" => Tab::Overview,
             "subject" => Tab::Browse,
@@ -151,57 +138,30 @@ impl Tab {
 
     fn title(self) -> &'static str {
         match self {
-            Tab::Home => "Home",
-            Tab::Run => "New check",
-            Tab::History => "History",
-            Tab::Compare => "Compare",
-            Tab::Chat => "New chat",
             Tab::Extension => "Browser extension",
-            Tab::Overview => "Overview",
-            Tab::Browse => "Browse",
-            Tab::Sites => "Sites",
-            Tab::Activity => "Activity",
-            Tab::Agents => "Agents",
-            Tab::Benchmark => "Benchmarks",
-            Tab::Local => "Local models",
-            Tab::Settings => "Settings",
-            Tab::About => "About",
+            Tab::Local => "Local LLM",
+            Tab::Chat => "Chat",
+            _ => self.key(),
         }
     }
 
     fn lead(self) -> &'static str {
         match self {
-            Tab::Home => "Recent work and saved research.",
-            Tab::Run => "Follow a check from question to evidence.",
-            Tab::History => "Completed and active research.",
-            Tab::Compare => "Compare products and their evidence.",
-            Tab::Chat => "",
-            Tab::Extension => "Send pages from your browser to Kriko.",
-            Tab::Overview => "Catalog coverage and updates.",
-            Tab::Browse => "Stored subjects, claims, and evidence.",
-            Tab::Sites => "Sources and their trust settings.",
-            Tab::Activity => "Recent jobs and database updates.",
-            Tab::Agents => "Research agents on this machine.",
-            Tab::Benchmark => "Agent results on a fixed test set.",
-            Tab::Local => "Local models and their sources.",
-            Tab::Settings => "Kriko's behavior on this machine.",
-            Tab::About => "Kriko · local product knowledge.",
-        }
-    }
-
-    fn group(self) -> usize {
-        match self {
-            Tab::Chat | Tab::Home | Tab::Run | Tab::History => 0,
-            Tab::Compare | Tab::Overview | Tab::Browse | Tab::Sites => 1,
-            _ => 2,
-        }
-    }
-
-    fn group_pages(self) -> &'static [Tab] {
-        match self.group() {
-            0 => CHAT_PAGES,
-            1 => COMPARE_PAGES,
-            _ => AGENT_PAGES,
+            Tab::Home => "Recent work, saved drafts, and where the knowledge stands.",
+            Tab::Run => "One check, from question to stored claims, every step in the open.",
+            Tab::History => "Every check you have run, with the evidence it was based on.",
+            Tab::Compare => "Compare products, specifications, and the evidence behind them.",
+            Tab::Chat => "Ask questions, discover products online, and explore your research.",
+            Tab::Extension => "Send pages from your browser straight into Kriko's knowledge.",
+            Tab::Overview => "What the packs know, and where they run thin.",
+            Tab::Browse => "Every subject, attribute and claim in the local store.",
+            Tab::Sites => "The sites Kriko reads, and how far each one is trusted.",
+            Tab::Activity => "What Kriko did today, and what is waiting for you.",
+            Tab::Agents => "The coding agents on this machine that can reach Kriko.",
+            Tab::Benchmark => "How the agents and planes do on a fixed test set, here.",
+            Tab::Local => "Choose a model on this machine and see where its answers come from.",
+            Tab::Settings => "Control how Kriko starts, reads and stores things.",
+            Tab::About => "Kriko. Local product knowledge.",
         }
     }
 
@@ -217,14 +177,88 @@ impl Tab {
     /// content starts right under. Home and About keep a little more of it.
     fn hero_height(self) -> f32 {
         match self {
-            Tab::Chat => 184.0,
-            Tab::Home => 256.0,
-            Tab::About => 220.0,
-            Tab::Local => 204.0,
-            _ => 184.0,
+            Tab::Home | Tab::About => 100.0,
+            _ => 96.0,
         }
     }
 }
+
+/// Where a tab sits in the rail, top to bottom. A switch slides the page in
+/// from the side of the rail the reader moved toward, so this is read, not the
+/// `Tab` enum's declaration order (which is not the rail's order).
+fn tab_rank(tab: Tab) -> usize {
+    let mut rank = 0;
+    for group in data::NAV {
+        for item in group.items {
+            if Tab::from_key(item.key) == tab {
+                return rank;
+            }
+            rank += 1;
+        }
+    }
+    rank
+}
+
+// ---- appearance ----
+
+/// What the reader asked the app to look like. `System` follows the window and
+/// is the first-run answer; the other two are explicit overrides.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ThemeChoice {
+    System,
+    Light,
+    Dark,
+}
+
+impl ThemeChoice {
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::System => "system",
+            Self::Light => "light",
+            Self::Dark => "dark",
+        }
+    }
+
+    pub fn from_key(key: &str) -> Self {
+        match key.trim().to_ascii_lowercase().as_str() {
+            "light" => Self::Light,
+            "dark" => Self::Dark,
+            _ => Self::System,
+        }
+    }
+
+    /// The palette this choice resolves to in that window.
+    pub fn is_light(self, window: &Window) -> bool {
+        match self {
+            Self::Light => true,
+            Self::Dark => false,
+            Self::System => matches!(
+                window.appearance(),
+                WindowAppearance::Light | WindowAppearance::VibrantLight
+            ),
+        }
+    }
+}
+
+/// The first-run setup, held while the flow is open. `None` means the reader
+/// is in the app; `onboarded` remembers that they got there.
+#[derive(Clone)]
+pub struct Onboarding {
+    pub step: usize,
+    /// The agent picked on the agent step, by id.
+    pub agent: Option<String>,
+    /// The model picked for that agent; empty is its own default.
+    pub model: String,
+}
+
+impl Default for Onboarding {
+    fn default() -> Self {
+        Self { step: 0, agent: None, model: String::new() }
+    }
+}
+
+/// The steps of the first-run flow, in the order the reader walks them.
+pub const ONBOARD_STEPS: usize = 4;
 
 // ---- text fields ----
 
@@ -307,11 +341,7 @@ impl InputState {
     }
 
     pub fn move_cursor(&mut self, at: usize, extend_selection: bool) {
-        self.anchor = if extend_selection {
-            Some(self.anchor.unwrap_or(self.position()))
-        } else {
-            None
-        };
+        self.anchor = if extend_selection { Some(self.anchor.unwrap_or(self.position())) } else { None };
         self.cursor = Some(at);
     }
 }
@@ -346,6 +376,7 @@ impl SpanFilter {
             SpanFilter::Half => 180,
         }
     }
+
 }
 
 /// One line in the dock's own feed.
@@ -364,12 +395,24 @@ impl DockFeedEntry {
 
 pub struct Kriko {
     pub tab: Tab,
+    /// The tab the previous frame drew. `render` compares it to `tab` to slide
+    /// a page change in from the side the reader moved toward.
+    prev_tab: Tab,
     /// Where the engine is: starting, answering, or failed with its words.
     pub engine: engine::Status,
     /// What the engine said, per area, for the screens to draw.
     pub live: Live,
     // settings
     pub reduce_motion: bool,
+    /// What the reader chose; `light` is what this frame resolved to.
+    pub theme: ThemeChoice,
+    pub light: bool,
+    /// How much motion the reader asked for: calm, standard or vivid.
+    pub motion_profile: MotionProfile,
+    /// The first-run setup. `Some` draws it instead of the shell.
+    pub onboarding: Option<Onboarding>,
+    /// The reader finished or skipped the first-run setup.
+    pub onboarded: bool,
     /// Whether this frame may move: the reader allows motion *and* the window
     /// is the one in front. Set once per frame in `render`. A looping GPUI
     /// animation asks for the next frame forever and every frame redraws the
@@ -417,10 +460,6 @@ pub struct Kriko {
     pub dock_logs_open: bool,
     pub dock_feed: Vec<DockFeedEntry>,
     pub dock_open: bool,
-    pub extension_advanced_open: bool,
-    pub extension_firefox_open: bool,
-    pub agents_options_open: bool,
-    pub history_insights_open: bool,
     // compare: the engine's own rows live in `live.compare`
     pub compare_note_input: InputState,
     pub compare_question_input: InputState,
@@ -455,15 +494,43 @@ pub struct Kriko {
     pub scroll_tick: std::time::Instant,
 }
 
+/// The collapsed rail's hover title. GPUI tooltips are views rather than
+/// elements, so this tiny one lets a lone icon well still say what it opens.
+struct NavTip {
+    label: SharedString,
+}
+
+impl Render for NavTip {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .px(px(9.0))
+            .py(px(4.0))
+            .rounded(px(6.0))
+            .bg(paint(SURFACE_1))
+            .border_1()
+            .border_color(paint_a(HAIRLINE))
+            .font_family(SANS)
+            .text_size(px(12.0))
+            .text_color(paint(INK_2))
+            .child(self.label.clone())
+    }
+}
+
 impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let mut extension_port_input = InputState::new(cx);
         extension_port_input.set_value(engine::configured_extension_port().to_string());
         let mut app = Self {
             tab: Tab::Chat,
+            prev_tab: Tab::Chat,
             engine: engine::status(),
             live: Live::default(),
             reduce_motion: false,
+            theme: ThemeChoice::System,
+            light: false,
+            motion_profile: MotionProfile::Standard,
+            onboarding: Some(Onboarding::default()),
+            onboarded: false,
             motion: false,
             run_concurrency: 1,
             run_concurrency_prev: 0,
@@ -495,10 +562,6 @@ impl Kriko {
             dock_feed: Vec::new(),
             // Every launch starts with the live dock closed.
             dock_open: false,
-            extension_advanced_open: false,
-            extension_firefox_open: false,
-            agents_options_open: false,
-            history_insights_open: false,
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
             chat_input: InputState::new(cx),
@@ -540,6 +603,9 @@ impl Kriko {
             }
             // The tour itself, captured for review: no screen changes.
             Ok("tutorial") => {}
+            // The first-run flow, without completing it: the whole flow is
+            // open at the first step, so it can be looked at or captured.
+            Ok("onboarding") | Ok("setup") => {}
             // Any other screen by the name the extension uses for it; a route
             // with an id is opened once the engine answers.
             Ok(other) => {
@@ -551,9 +617,26 @@ impl Kriko {
         // The tour: on a first run, or asked for by name in review. A review
         // launch is otherwise exactly the page asked for (above), so its
         // screenshots never carry an unasked-for overlay.
+        // A review launch is exactly the page asked for: no first-run flow,
+        // unless the flow itself is the page asked for.
+        if let Ok(page) = std::env::var("KRIKO_VERIFY") {
+            let page = page.trim();
+            if !page.is_empty() && page != "onboarding" && page != "setup" {
+                app.onboarding = None;
+                app.onboarded = true;
+            }
+        }
+        // Review overrides: a page is looked at in one theme and one motion
+        // profile without touching the reader's saved settings.
+        if let Ok(theme) = std::env::var("KRIKO_THEME") {
+            app.theme = ThemeChoice::from_key(&theme);
+        }
+        if let Ok(profile) = std::env::var("KRIKO_MOTION") {
+            app.motion_profile = MotionProfile::from_key(&profile);
+        }
         if matches!(std::env::var("KRIKO_VERIFY").as_deref(), Ok("tutorial")) {
             app.tutorial = Some(0);
-        } else if screens::tutorial::due_for_tour() {
+        } else if app.onboarding.is_none() && screens::tutorial::due_for_tour() {
             app.tutorial = Some(0);
         }
         shell::set_tray_status(
@@ -578,6 +661,10 @@ impl Kriko {
         // read of everything happens here instead of never.
         if matches!(app.engine, engine::Status::Ready { .. }) {
             app.refresh_all(cx);
+            // The window opens on Chat, which no click has "opened" yet, so ask
+            // for its own slice too: `refresh_all` covers the areas the old
+            // first tab (Home) needed, not Chat's conversation.
+            app.on_open_tab(cx);
         }
         app
     }
@@ -642,10 +729,33 @@ impl Kriko {
             self.engine = now;
             if became_ready {
                 self.refresh_all(cx);
+                // The screen the window opened on was never "opened" by a
+                // click, so its own slice is asked for here as well.
+                self.on_open_tab(cx);
             }
             cx.notify();
         }
         self.tick_history(cx);
+        // Site icons arrive one at a time, through the engine, because a
+        // screen cannot fetch and the pulse is where work already drains. The
+        // fetch goes to the background executor: it can wait on the network,
+        // and this pulse runs on the UI thread. `next_host` answers at once
+        // while the queue is empty, so an idle window asks for no frame.
+        if let Some(host) = favicons::next_host() {
+            let store_host = host.clone();
+            self.fetch(
+                cx,
+                move || {
+                    let path = format!("/api/favicon?host={}", crate::api::seg(&host));
+                    crate::api::get_bytes(&path).ok()
+                },
+                move |_, bytes, _cx| {
+                    if let Some(bytes) = bytes {
+                        favicons::store(&store_host, bytes);
+                    }
+                },
+            );
+        }
     }
 
     /// Quit Kriko: the engine first (its exit frees the store's lock), then
@@ -781,12 +891,7 @@ impl Kriko {
         }
     }
 
-    pub(crate) fn handle_key(
-        this: &mut Kriko,
-        field: Field,
-        event: &KeyDownEvent,
-        cx: &mut Context<Kriko>,
-    ) {
+    pub(crate) fn handle_key(this: &mut Kriko, field: Field, event: &KeyDownEvent, cx: &mut Context<Kriko>) {
         let ks = &event.keystroke;
         if ks.modifiers.control || ks.modifiers.platform {
             let selected = this.input(field).selection();
@@ -798,20 +903,13 @@ impl Kriko {
                     input.cursor = Some(len);
                 }
                 "c" | "x" if !selected.is_empty() => {
-                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(
-                        this.input(field).value[selected].to_string(),
-                    ));
-                    if ks.key == "x" {
-                        this.input_mut(field).replace_selection("");
-                    }
+                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(this.input(field).value[selected].to_string()));
+                    if ks.key == "x" { this.input_mut(field).replace_selection(""); }
                 }
                 "v" => {
                     if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
-                        let text = if field == Field::ChatAsk {
-                            text.replace("\r\n", "\n").replace('\r', "\n")
-                        } else {
-                            text.replace(['\r', '\n'], " ")
-                        };
+                        let text = if field == Field::ChatAsk { text.replace("\r\n", "\n").replace('\r', "\n") }
+                            else { text.replace(['\r', '\n'], " ") };
                         this.input_mut(field).replace_selection(&text);
                     }
                 }
@@ -820,9 +918,7 @@ impl Kriko {
             this.input_changed(field, cx);
             return;
         }
-        if ks.modifiers.alt {
-            return;
-        }
+        if ks.modifiers.alt { return; }
         // Enter in the dock reply says it to the running job.
         if ks.key.as_str() == "enter" && field == Field::DockReply {
             this.send_reply(cx);
@@ -878,11 +974,8 @@ impl Kriko {
         }
         // Enter in the chat composer sends the message.
         if ks.key.as_str() == "enter" && field == Field::ChatAsk {
-            if ks.modifiers.shift {
-                this.chat_input.replace_selection("\n");
-            } else {
-                this.send_chat_message(cx);
-            }
+            if ks.modifiers.shift { this.chat_input.replace_selection("\n"); }
+            else { this.send_chat_message(cx); }
             cx.notify();
             return;
         }
@@ -893,56 +986,32 @@ impl Kriko {
             return;
         }
         let at = input.position();
-        let previous = input.value[..at]
-            .char_indices()
-            .last()
-            .map(|(i, _)| i)
-            .unwrap_or(0);
-        let next = input.value[at..]
-            .chars()
-            .next()
-            .map(|c| at + c.len_utf8())
-            .unwrap_or(at);
+        let previous = input.value[..at].char_indices().last().map(|(i, _)| i).unwrap_or(0);
+        let next = input.value[at..].chars().next().map(|c| at + c.len_utf8()).unwrap_or(at);
         match ks.key.as_str() {
             "left" => {
-                let to = if !ks.modifiers.shift && !input.selection().is_empty() {
-                    input.selection().start
-                } else {
-                    previous
-                };
+                let to = if !ks.modifiers.shift && !input.selection().is_empty() { input.selection().start } else { previous };
                 input.move_cursor(to, ks.modifiers.shift);
             }
             "right" => {
-                let to = if !ks.modifiers.shift && !input.selection().is_empty() {
-                    input.selection().end
-                } else {
-                    next
-                };
+                let to = if !ks.modifiers.shift && !input.selection().is_empty() { input.selection().end } else { next };
                 input.move_cursor(to, ks.modifiers.shift);
             }
             "home" => input.move_cursor(0, ks.modifiers.shift),
             "end" => input.move_cursor(input.value.len(), ks.modifiers.shift),
             "backspace" => {
-                if input.selection().is_empty() {
-                    input.anchor = Some(previous);
-                }
+                if input.selection().is_empty() { input.anchor = Some(previous); }
                 input.replace_selection("");
             }
             "delete" => {
-                if input.selection().is_empty() {
-                    input.anchor = Some(next);
-                }
+                if input.selection().is_empty() { input.anchor = Some(next); }
                 input.replace_selection("");
             }
             "escape" => {}
             "space" => input.replace_selection(" "),
             _ => {
                 let text = ks.key_char.as_deref().unwrap_or(ks.key.as_str());
-                let max_chars = if matches!(field, Field::ChatAsk | Field::CompareAsk) {
-                    2000
-                } else {
-                    200
-                };
+                let max_chars = if matches!(field, Field::ChatAsk | Field::CompareAsk) { 2000 } else { 200 };
                 if text.chars().count() == 1 && input.value.chars().count() < max_chars {
                     input.replace_selection(text);
                 }
@@ -952,12 +1021,8 @@ impl Kriko {
     }
 
     pub(crate) fn input_changed(&mut self, field: Field, cx: &mut Context<Self>) {
-        if field == Field::HistorySearch {
-            self.page = 0;
-        }
-        if field == Field::BrowseSearch {
-            self.browse_search_typed(cx);
-        }
+        if field == Field::HistorySearch { self.page = 0; }
+        if field == Field::BrowseSearch { self.browse_search_typed(cx); }
         cx.notify();
     }
 
@@ -1017,248 +1082,112 @@ impl Kriko {
         } else {
             window.request_animation_frame();
         }
-        self.main_scroll
-            .set_offset(gpui::point(px(0.0), px(self.scroll_shown)));
+        self.main_scroll.set_offset(gpui::point(px(0.0), px(self.scroll_shown)));
     }
 
     // ---- sidebar ----
 
-    fn sidebar(&self, height: f32, cx: &mut Context<Self>) -> Div {
-        let group = self.tab.group();
-        let primary = [
-            (Tab::Chat, "chat", "Chat"),
-            (Tab::Compare, "compare", "Compare"),
-            (Tab::Agents, "agents", "Agents & settings"),
-        ];
-        let mut main_nav = div()
+    fn sidebar(&self, cx: &mut Context<Self>) -> Div {
+        let mut nav = div()
+            .id("nav-scroll")
             .flex()
             .flex_col()
-            .gap(px(6.0))
-            .px(px(0.0))
-            .pt(px(10.0));
-        // The research queue is the Compare screen's; its waiting count rides
-        // the nav row so a queued product is never out of sight.
-        let queued = self
-            .live
-            .compare
-            .queue
-            .iter()
-            .filter(|q| matches!(q.state, crate::live::compare::QState::Waiting))
-            .count();
-        let queue_badge = (queued > 0).then(|| queued.to_string());
-        for (index, (tab, glyph, label)) in primary.iter().copied().enumerate() {
-            let badge = if tab == Tab::Compare { queue_badge.clone() } else { None };
-            let row = nav_item(
-                gpui::ElementId::Name(format!("primary-tab-{index}").into()),
-                glyph,
-                if self.sidebar_collapsed { "" } else { label },
-                group == index,
-                None,
-                badge.as_deref(),
-            )
-            .h(px(50.0))
-            .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                this.tab = tab;
-                this.on_open_tab(cx);
-                cx.notify();
-            }));
-            main_nav = main_nav.child(row);
-        }
-
-        let new_research = div()
-            .id("sidebar-new-research")
-            .h(px(46.0))
-            .mx(px(0.0))
-            .mt(px(12.0))
             .px(px(12.0))
-            .flex()
-            .items_center()
-            .justify_center()
-            .gap(px(8.0))
-            .rounded(px(12.0))
-            .bg(rgb(BRAND))
-            .text_color(rgb(0xffffff))
-            .font_family(SANS)
-            .font_weight(gpui::FontWeight::SEMIBOLD)
-            .text_size(px(16.0))
-            .cursor_pointer()
-            .hover(|s| s.bg(rgb(BRAND_HOVER)))
-            .active(|s| s.bg(rgb(BRAND_LOW)))
-            .when(self.sidebar_collapsed, |d| d.px(px(0.0)))
-            .child(icon("plus", 18.0).text_color(rgb(0xffffff)))
-            .when(!self.sidebar_collapsed, |d| d.child("New research"))
-            .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
-                this.tab = Tab::Run;
-                this.on_open_tab(cx);
-                cx.notify();
-            }));
-
-        let mut support = div()
-            .id("sidebar-support")
-            .flex()
-            .flex_col()
+            .pt(px(4.0))
+            .pb(px(20.0))
             .gap(px(2.0))
-            .px(px(12.0))
-            .pt(px(24.0))
             .flex_1()
             .min_h(px(0.0))
-            .overflow_y_scroll()
-            .occlude();
-
-        if !self.sidebar_collapsed {
-            let subject_count = self.live.knowledge.totals.subjects.max(0);
-            support = support.child(
+            .overflow_y_scroll().occlude();
+        // Counts from the engine, not from the mock-up: products in the
+        // store beside Browse, jobs still running beside Activity.
+        let subjects = self.live.knowledge.totals.subjects;
+        let browse_count = (subjects > 0).then(|| subjects.to_string());
+        let running = self.live.run.jobs.iter().filter(|j| !j.done).count();
+        let activity_badge = (running > 0).then(|| running.to_string());
+        for (gi, group) in data::NAV.iter().enumerate() {
+            // A group label rides a hairline, so the rail reads as sections
+            // rather than as one long list.
+            nav = nav.child(
                 div()
+                    .mt(px(if gi == 0 { 8.0 } else { 18.0 }))
+                    .mb(px(6.0))
+                    .px(px(if self.sidebar_collapsed { 10.0 } else { 12.0 }))
+                    .flex_none()
                     .flex()
                     .items_center()
-                    .justify_between()
-                    .pb(px(7.0))
-                    .child(eyebrow("Products"))
-                    .child(screens::mono(&subject_count.to_string(), DIM)),
+                    .gap(px(8.0))
+                    .when(!self.sidebar_collapsed, |d| {
+                        d.child(eyebrow(group.label)).child(hairline().flex_1())
+                    })
+                    .when(self.sidebar_collapsed, |d| d.child(hairline())),
             );
-            if self.live.history.subjects.is_empty() {
-                support = support.child(
-                    nav_item(
-                        "sidebar-files",
-                        "file",
-                        "Open product files",
-                        false,
-                        None,
-                        None,
-                    )
-                    .h(px(40.0))
-                    .text_size(px(15.0))
-                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
-                        this.tab = Tab::Browse;
+            for item in group.items {
+                let key = item.key;
+                let current = self.tab.key() == key;
+                let (count, badge) = match key {
+                    "browse" => (browse_count.as_deref(), None),
+                    "activity" => (None, activity_badge.as_deref()),
+                    _ => (item.count, item.badge),
+                };
+                let row = nav_item(key, item.icon, if self.sidebar_collapsed { "" } else { item.label }, current, if self.sidebar_collapsed { None } else { count }, if self.sidebar_collapsed { None } else { badge })
+                    .flex_none()
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                        this.tab = Tab::from_key(key);
                         this.on_open_tab(cx);
                         cx.notify();
-                    })),
-                );
-            } else {
-                for subject in self.live.history.subjects.iter().take(4) {
-                    let id = subject.id.clone();
-                    let mut label: String = subject.label.chars().take(25).collect();
-                    if subject.label.chars().count() > 25 {
-                        label.push('…');
-                    }
-                    support = support.child(
-                        div()
-                            .id(gpui::ElementId::Name(
-                                format!("sidebar-subject-{id}").into(),
-                            ))
-                            .h(px(40.0))
-                            .px(px(8.0))
-                            .flex()
-                            .items_center()
-                            .gap(px(8.0))
-                            .rounded(px(8.0))
-                            .text_color(rgb(INK_2))
-                            .font_family(SANS)
-                            .text_size(px(15.0))
-                            .cursor_pointer()
-                            .hover(|s| s.bg(rgba(GLASS_3)))
-                            .child(icon("file", 14.0).text_color(rgb(MUTED)))
-                            .child(div().flex_1().overflow_hidden().child(label))
-                            .child(screens::mono(&subject.claims.to_string(), DIM))
-                            .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                                this.tab = Tab::Browse;
-                                this.on_open_tab(cx);
-                                this.select_subject(id.clone(), cx);
-                                cx.notify();
-                            })),
-                    );
-                }
+                    }));
+                // Collapsed, the row is only its well, so a hover title names
+                // the screen it opens.
+                let row = if self.sidebar_collapsed {
+                    let label: SharedString = SharedString::from(item.label);
+                    row.tooltip(move |_window, cx| {
+                        let view: gpui::AnyView = cx.new(|_| NavTip { label: label.clone() }).into();
+                        view
+                    })
+                } else {
+                    row
+                };
+                // The picked tab's icon pops once, so a switch is felt even
+                // before the page has arrived. Bounded, and off under Reduce.
+                let row: gpui::AnyElement = if current && self.motion {
+                    row.with_animation(
+                        gpui::ElementId::Name(format!("nav-pop-{key}").into()),
+                        gpui::Animation::new(std::time::Duration::from_millis(tempo_ms(380)))
+                            .with_easing(|t| t),
+                        |d, t| {
+                            let e = ease_mech(t);
+                            d.relative()
+                                .top(px((1.0 - e) * amp(6.0)))
+                                .opacity(0.55 + 0.45 * e)
+                        },
+                    )
+                    .into_any_element()
+                } else {
+                    row.into_any_element()
+                };
+                nav = nav.child(row);
             }
-
-            let active: Vec<_> = self.live.run.jobs.iter().filter(|job| !job.done).collect();
-            if !active.is_empty() {
-            support = support.child(
-                div()
-                    .mt(px(20.0))
-                    .pb(px(7.0))
-                    .flex()
-                    .items_center()
-                    .justify_between()
-                    .child(eyebrow("Live now"))
-                    .child(screens::mono(&active.len().to_string(), DIM)),
-            );
-                for job in active.iter().take(2) {
-                    let task: String = if job.product.is_empty() {
-                        job.kind.chars().take(26).collect()
-                    } else {
-                        job.product.chars().take(26).collect()
-                    };
-                    let label = if job.attention.is_some() {
-                        "NEEDS YOU"
-                    } else {
-                        "LIVE"
-                    };
-                    support = support.child(
-                        div()
-                            .flex()
-                            .items_center()
-                            .gap(px(8.0))
-                            .py(px(5.0))
-                            .child(icon("term", 16.0).text_color(rgb(BRAND_BRIGHT)))
-                            .child(
-                                div()
-                                    .flex()
-                                    .flex_col()
-                                    .min_w(px(0.0))
-                                    .child(
-                                        div()
-                                            .font_family(SANS)
-                                            .text_size(px(12.0))
-                                            .text_color(rgb(INK_2))
-                                            .child(task),
-                                    )
-                                    .child(tag(
-                                        format!("sidebar-job-{}", job.id),
-                                        if job.attention.is_some() {
-                                            TagState::Need
-                                        } else {
-                                            TagState::Live
-                                        },
-                                        label,
-                                        self.motion,
-                                    )),
-                            ),
-                    );
-                }
-            }
-
-
         }
-
-        let footer = div()
-            .px(px(12.0))
-            .pt(px(10.0))
+        div()
+            .w(px(if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W }))
+            .overflow_hidden()
+            .flex_none()
+            .bg(paint(SURFACE_1))
+            .border_r_1()
+            .border_color(paint_a(HAIRLINE))
             .flex()
-            .items_center()
-            .justify_between()
-            .border_t_1()
-            .border_color(rgba(HAIRLINE))
-            .when(!self.sidebar_collapsed, |d| {
-                d.child(
-                    div()
-                        .id("footer-about")
-                        .font_family(MONO)
-                        .text_size(px(12.0))
-                        .text_color(rgb(DIM))
-                        .cursor_pointer()
-                        .hover(|d| d.text_color(rgb(INK)))
-                        .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
-                            this.tab = Tab::About;
-                            this.on_open_tab(cx);
-                            cx.notify();
-                        }))
-                        .child(format!("v{} · no account", env!("CARGO_PKG_VERSION"))),
-                )
-            })
-            .child(
-                titlebar_button("sidebar-minimise", "sidebar", false).on_click(cx.listener(
-                    |this, _: &ClickEvent, _w, cx| {
+            .flex_col()
+            .when(!self.sidebar_collapsed, |d| d.child(brand_block("kriko-wordmark-white.svg", "local product knowledge")))
+            // An icon, not a labelled key: the panel icon says "this side
+            // panel", and it sits in the same well as the window controls.
+            .child(div().px(px(12.0)).py(px(8.0)).flex().when(self.sidebar_collapsed, |d| d.justify_center())
+                .child(titlebar_button("sidebar-minimise", "sidebar", false)
+                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
                         if this.sidebar_folded_for_live {
+                            // The user asked to expand the rail while it was
+                            // temporarily folded. Close Live to honor that
+                            // action, then retain the expanded preference.
                             this.dock_open = false;
                             this.sidebar_choice = Some(false);
                             this.sidebar_collapsed = false;
@@ -1268,246 +1197,8 @@ impl Kriko {
                             this.sidebar_collapsed = !this.sidebar_collapsed;
                         }
                         cx.notify();
-                    },
-                )),
-            );
-
-        div()
-            .w(px(if self.sidebar_collapsed {
-                76.0
-            } else {
-                SIDEBAR_W
-            }))
-            .h(px((height - 24.0).max(0.0)))
-            .mt(px(12.0))
-            .mb(px(12.0))
-            .ml(px(12.0))
-            .mr(px(8.0))
-            .px(px(12.0))
-            .pt(px(20.0))
-            .pb(px(14.0))
-            .overflow_hidden()
-            .flex_none()
-            .bg(rgb(SURFACE_1))
-            .border_1()
-            .border_color(rgba(HAIRLINE))
-            .rounded(px(24.0))
-            .flex()
-            .flex_col()
-            .when(!self.sidebar_collapsed, |d| {
-                d.child(brand_block(
-                    "kriko-wordmark-white.svg",
-                    "local product knowledge",
-                ))
-            })
-            .child(main_nav)
-            .child(new_research)
-            .child(support)
-            .child(footer)
-    }
-
-    fn page_subnav(&self, cx: &mut Context<Self>) -> Div {
-        let mut row = div()
-            .flex()
-            .flex_wrap()
-            .items_center()
-            .gap(px(6.0))
-            .pb(px(10.0))
-            .border_b_1()
-            .border_color(rgba(HAIRLINE));
-        for tab in self.tab.group_pages() {
-            let current = self.tab == *tab;
-            let name = if *tab == Tab::Chat {
-                "Chat"
-            } else {
-                tab.title()
-            };
-            let target = *tab;
-            let item = div()
-                .id(gpui::ElementId::Name(
-                    format!("page-subnav-{}", target.key()).into(),
-                ))
-                .h(px(40.0))
-                .px(px(14.0))
-                .flex()
-                .items_center()
-                .justify_center()
-                .rounded(px(12.0))
-                .font_family(SANS)
-                .font_weight(gpui::FontWeight::SEMIBOLD)
-                .text_size(px(15.0))
-                .text_color(rgb(if current { ICE } else { MUTED }))
-                .bg(rgba(if current { BRAND_WASH } else { 0x00000000 }))
-                .cursor_pointer()
-                .hover(|s| s.bg(rgba(GLASS_3)).text_color(rgb(INK)))
-                .child(name.to_string())
-                .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                    this.tab = target;
-                    this.on_open_tab(cx);
-                    cx.notify();
-                }));
-            row = row.child(item);
-        }
-        row
-    }
-
-    fn working_rail(&self, cx: &mut Context<Self>) -> Div {
-        let jobs: Vec<_> = self.live.run.jobs.iter().filter(|job| !job.done).collect();
-        let mut rail = div()
-            .w(px(340.0))
-            .h_full()
-            .px(px(16.0))
-            .pt(px(64.0))
-            .pb(px(18.0))
-            .flex_none()
-            .flex()
-            .flex_col()
-            .gap(px(12.0))
-            .bg(rgb(SURFACE_1))
-            .border_l_1()
-            .border_color(rgba(HAIRLINE));
-        rail = rail.child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .pb(px(4.0))
-                .child(eyebrow("WORKING AGENTS"))
-                .child(
-                    div()
-                        .min_w(px(28.0))
-                        .h(px(28.0))
-                        .px(px(8.0))
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .rounded(px(8.0))
-                        .bg(rgb(WELL))
-                        .border_1()
-                        .border_color(rgba(HAIRLINE))
-                        .font_family(MONO)
-                        .text_size(px(12.0))
-                        .text_color(rgb(ICE))
-                        .child(jobs.len().to_string()),
-                ),
-        );
-        if jobs.is_empty() {
-            rail = rail.child(
-                card()
-                    .flex()
-                    .flex_col()
-                    .gap(px(10.0))
-                    .child(icon("term", 20.0).text_color(rgb(BRAND_BRIGHT)))
-                    .child(
-                        div()
-                            .font_family(SANS)
-                            .font_weight(gpui::FontWeight::SEMIBOLD)
-                            .text_size(px(14.0))
-                            .text_color(rgb(INK_2))
-                            .child("No active work"),
-                    )
-                    .child(
-                        div()
-                            .font_family(SANS)
-                            .text_size(px(12.0))
-                            .text_color(rgb(MUTED))
-                            .child("New research appears here while it runs."),
-                    ),
-            );
-        } else {
-            for job in jobs.iter().take(5) {
-                let label = if job.attention.is_some() {
-                    "NEEDS YOU"
-                } else if job.state == "queued" {
-                    "QUEUED"
-                } else {
-                    "LIVE"
-                };
-                let state = if job.attention.is_some() {
-                    TagState::Need
-                } else if job.state == "queued" {
-                    TagState::Queue
-                } else {
-                    TagState::Live
-                };
-                let name = if !job.model.is_empty() {
-                    job.model.clone()
-                } else if !job.harness.is_empty() {
-                    job.harness.clone()
-                } else {
-                    "Research agent".to_string()
-                };
-                let task = if !job.product.is_empty() {
-                    job.product.clone()
-                } else if !job.message.is_empty() {
-                    job.message.clone()
-                } else {
-                    job.kind.clone()
-                };
-                let job_id = job.id.clone();
-                let progress = job.progress.clamp(0.0, 1.0) * 100.0;
-                let action = cx.listener(move |this, _: &ClickEvent, _w, cx| {
-                    this.tab = Tab::Run;
-                    this.on_open_tab(cx);
-                    cx.notify();
-                });
-                rail = rail.child(
-                    card()
-                        .flex()
-                        .flex_col()
-                        .gap(px(10.0))
-                        .child(
-                            div()
-                                .flex()
-                                .items_center()
-                                .gap(px(10.0))
-                                .child(
-                                    well()
-                                        .size(px(40.0))
-                                        .flex()
-                                        .items_center()
-                                        .justify_center()
-                                        .child(icon("term", 18.0).text_color(rgb(BRAND_BRIGHT))),
-                                )
-                                .child(
-                                    div()
-                                        .flex()
-                                        .flex_col()
-                                        .min_w(px(0.0))
-                                        .child(
-                                            div()
-                                                .font_family(SANS)
-                                                .font_weight(gpui::FontWeight::SEMIBOLD)
-                                                .text_size(px(14.0))
-                                                .text_color(rgb(INK_2))
-                                                .child(name),
-                                        )
-                                        .child(
-                                            div()
-                                                .font_family(MONO)
-                                                .text_size(px(11.0))
-                                                .text_color(rgb(MUTED))
-                                                .child(task),
-                                        ),
-                                ),
-                        )
-                        .child(tag(format!("rail-job-{job_id}"), state, label, self.motion))
-                        .child(progress_bar(
-                            &format!("rail-meter-{job_id}"),
-                            progress / 100.0,
-                            self.motion,
-                        ))
-                        .child(ghost("rail-open-run", "Open run").on_click(action)),
-                );
-            }
-        }
-        rail.child(div().flex_1()).child(
-            div()
-                .font_family(MONO)
-                .text_size(px(10.0))
-                .text_color(rgb(DIM))
-                .child("Research saved on this machine"),
-        )
+                    }))))
+            .child(nav)
     }
 }
 
@@ -1534,10 +1225,10 @@ impl Kriko {
                     div()
                         .font_family(DISPLAY)
                         .text_size(px(30.0))
-                        .text_color(rgb(DANGER))
+                        .text_color(paint(DANGER))
                         .child(title),
                 )
-                .child(div().text_size(px(15.0)).text_color(rgb(MUTED)).child(
+                .child(div().text_size(px(15.0)).text_color(paint(MUTED)).child(
                     "This is what the engine said. Try again, or quit and start Kriko from the Start menu.",
                 ))
                 .child(
@@ -1548,7 +1239,7 @@ impl Kriko {
                         .p(px(16.0))
                         .font_family(MONO)
                         .text_size(px(12.0))
-                        .text_color(rgb(INK))
+                        .text_color(paint(INK))
                         .child(detail),
                 )
                 .child(
@@ -1576,14 +1267,14 @@ impl Kriko {
                     div()
                         .font_family(DISPLAY)
                         .text_size(px(30.0))
-                        .text_color(rgb(INK))
+                        .text_color(paint(INK))
                         .child("Starting Kriko"),
                 )
                 .child(
                     div()
                         .font_family(MONO)
                         .text_size(px(12.0))
-                        .text_color(rgb(DIM))
+                        .text_color(paint(DIM))
                         .child(said),
                 ),
         };
@@ -1592,8 +1283,8 @@ impl Kriko {
             .relative()
             .flex()
             .flex_col()
-            .bg(rgb(GROUND))
-            .text_color(rgb(INK))
+            .bg(paint(GROUND))
+            .text_color(paint(INK))
             .font_family(SANS)
             .child(
                 div()
@@ -1643,24 +1334,25 @@ impl Kriko {
                             .gap(px(8.0))
                             .rounded(px(8.0))
                             .cursor_pointer()
-                            .bg(rgba(GLASS_1))
+                            .bg(paint_a(GLASS_1))
                             .border_1()
-                            .border_color(rgba(HAIRLINE))
-                            .when(self.dock_open, |d| {
-                                d.bg(rgba(GLASS_2)).border_color(rgba(BRAND_BRIGHT))
-                            })
+                            .border_color(paint_a(HAIRLINE))
+                            .when(self.dock_open, |d| d.bg(paint_a(GLASS_2)).border_color(paint_a(BRAND_BRIGHT)))
                             .on_click(toggle_dock)
-                            .child(icon("activity", 18.0).text_color(rgb(if self.dock_open {
+                            .child(icon("agents", 14.0).text_color(paint(if self.dock_open {
                                 ICE
                             } else {
                                 MUTED
                             })))
                             .child(
                                 div()
-                                    .font_family(SANS)
-                                    .font_weight(gpui::FontWeight::SEMIBOLD)
-                                    .text_size(px(13.0))
-                                    .text_color(rgb(if self.dock_open { ICE } else { MUTED }))
+                                    .font_family(MONO)
+                                    .text_size(px(11.0))
+                                    .text_color(paint(if self.dock_open {
+                                        ICE
+                                    } else {
+                                        MUTED
+                                    }))
                                     .child("Live"),
                             ),
                     )
@@ -1688,9 +1380,57 @@ impl Kriko {
     }
 }
 
+impl Kriko {
+    /// Move the first-run flow one step on.
+    pub fn onboarding_next(&mut self, cx: &mut Context<Self>) {
+        if let Some(step) = self.onboarding.as_mut() {
+            step.step = (step.step + 1).min(ONBOARD_STEPS);
+        }
+        cx.notify();
+    }
+
+    /// Move it one step back; at the first step it stays there.
+    pub fn onboarding_back(&mut self, cx: &mut Context<Self>) {
+        if let Some(step) = self.onboarding.as_mut() {
+            step.step = step.step.saturating_sub(1);
+        }
+        cx.notify();
+    }
+
+    pub fn onboarding_goto(&mut self, at: usize, cx: &mut Context<Self>) {
+        if let Some(step) = self.onboarding.as_mut() {
+            step.step = at.min(ONBOARD_STEPS);
+        }
+        cx.notify();
+    }
+
+    /// Run it again from Settings or About: the flow, from the first step.
+    pub fn reopen_onboarding(&mut self, cx: &mut Context<Self>) {
+        self.onboarding = Some(Onboarding::default());
+        cx.notify();
+    }
+
+    /// Finished or skipped. Remembered in the engine's settings, so the next
+    /// launch opens the app the reader left.
+    pub fn finish_onboarding(&mut self, cx: &mut Context<Self>) {
+        self.onboarding = None;
+        self.onboarded = true;
+        self.save_setting("app.onboarded", crate::api::Value::Bool(true), cx);
+        // The first-run flow has just walked the same ground as the tour; the
+        // tour would repeat it, so it waits for the next launch.
+        cx.notify();
+    }
+}
+
 impl Render for Kriko {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // The palette is one decision per frame, before anything draws. The
+        // boot screen and the tour read the same answer as the screens.
+        self.light = self.theme.is_light(window);
+        crate::theme::set_light(self.light);
+        crate::theme::set_profile(self.motion_profile);
         self.motion = !self.reduce_motion && window.is_window_active();
+        crate::theme::set_motion(self.motion);
         // A job's bar eases a frame at a time. Ask for the next frame while
         // one still moves (a job is running, in front, motion on), and nowhere
         // else: the idle guard in test_the_idle_window_does_not_draw.py.
@@ -1701,72 +1441,71 @@ impl Render for Kriko {
             let maximized = window.is_maximized();
             return self.boot_screen(maximized, cx).into_any_element();
         }
+        // First run: the flow owns the window until it is finished or skipped.
+        // Waited for the settings so a reader who finished it last launch is
+        // not shown it again for a frame.
+        if self.onboarding.is_some() && self.live.knowledge.settings_loaded {
+            let maximized = window.is_maximized();
+            let titlebar = self.titlebar(maximized, cx);
+            let body = screens::onboarding::onboarding(self, window, cx);
+            return div()
+                .id("onboarding-root")
+                .size_full()
+                .relative()
+                .flex()
+                .flex_col()
+                .bg(paint(GROUND))
+                .text_color(paint(INK))
+                .font_family(SANS)
+                .child(body)
+                .child(titlebar)
+                .into_any_element();
+        }
         let tab = self.tab;
+        // How the page should arrive: a tab reached by moving down the rail
+        // slides in from the left, one reached by moving up slides in from the
+        // right. Equal (a redraw, not a switch) takes the right.
+        let from_left = tab_rank(tab) < tab_rank(self.prev_tab);
+        self.prev_tab = tab;
         self.step_scroll(window);
         // The page uses compact side padding in a narrow window. While Live
         // is open, reserve its width plus a gutter from the content column so
         // buttons and text stay clear of the floating panel.
         let viewport_w = f32::from(window.viewport_size().width);
-        let viewport_h = f32::from(window.viewport_size().height);
         // Narrow windows give the page the room: the sidebar folds to its
         // icons below this width unless the reader opened it themselves.
         let open = self.dock_open;
-        let preferred_sidebar_collapsed = self
-            .sidebar_choice
-            .unwrap_or(viewport_w < SIDEBAR_FOLD_BELOW);
-        let page_pad = if viewport_w < SIDEBAR_FOLD_BELOW {
-            20.0
-        } else {
-            40.0
-        };
+        let preferred_sidebar_collapsed = self.sidebar_choice.unwrap_or(viewport_w < SIDEBAR_FOLD_BELOW);
+        let page_pad = if viewport_w < SIDEBAR_FOLD_BELOW { 28.0 } else { PAGE_PAD };
         let dock_inset = if open { DOCK_W + 24.0 } else { 0.0 };
-        // Live work is available on demand; an idle rail need not occupy the page.
-        let rail_w = 0.0;
-        let rail_inset = if rail_w > 0.0 { rail_w + 8.0 } else { 0.0 };
-        let expanded_content_w =
-            viewport_w - SIDEBAR_W - 20.0 - 2.0 * page_pad - dock_inset - rail_inset;
-        self.sidebar_folded_for_live =
-            open && !preferred_sidebar_collapsed && expanded_content_w < MIN_COMFORTABLE_CONTENT_W;
+        let expanded_content_w = viewport_w - SIDEBAR_W - 2.0 * page_pad - dock_inset;
+        self.sidebar_folded_for_live = open
+            && !preferred_sidebar_collapsed
+            && expanded_content_w < MIN_COMFORTABLE_CONTENT_W;
         self.sidebar_collapsed = preferred_sidebar_collapsed || self.sidebar_folded_for_live;
-        let sidebar_w = if self.sidebar_collapsed {
-            76.0
-        } else {
-            SIDEBAR_W
-        };
-        self.content_w =
-            (viewport_w - sidebar_w - 20.0 - 2.0 * page_pad - dock_inset - rail_inset).max(0.0);
+        let sidebar_w = if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W };
+        self.content_w = (viewport_w - sidebar_w - 2.0 * page_pad - dock_inset).max(0.0);
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
-        let sidebar = self.sidebar(viewport_h, cx);
-        let rail = if rail_w > 0.0 {
-            Some(self.working_rail(cx))
-        } else {
-            None
-        };
+        let sidebar = self.sidebar(cx);
+        let collapsed = self.sidebar_collapsed;
+        let sidebar = if self.motion {
+            sidebar.with_animation(gpui::ElementId::named_usize("sidebar-slide", collapsed as usize),
+                gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
+                    let t = t * t * (3.0 - 2.0 * t);
+                    d.w(px(if collapsed { SIDEBAR_W + (76.0 - SIDEBAR_W) * t } else { 76.0 + (SIDEBAR_W - 76.0) * t }))
+                }).into_any_element()
+        } else { sidebar.into_any_element() };
         let content = screens::screen(self, window, cx);
-        // A closed panel has no element tree. Opening it lays out the page
-        // once instead of animating the widths of two entire columns.
-        let dock_wrap = if open {
-            Some(div()
-                .absolute()
-                .top(px(TITLEBAR_H + 8.0))
-                .bottom(px(12.0))
-                .right(px(12.0))
-                .w(px(DOCK_W))
-                .overflow_hidden()
-                .child(dock::dock(self, window, cx)))
-        } else {
-            None
-        };
+        let dock = dock::dock(self, window, cx);
         // The tour paints over everything, so it is built last.
-        let tour = self
-            .tutorial
-            .is_some()
-            .then(|| screens::tutorial::overlay(self, cx));
-        let mut page_content = div().flex().flex_col().flex_none().w_full().gap(px(24.0));
-        if tab != Tab::About {
-            page_content = page_content.child(self.page_subnav(cx));
-        }
+        let tour = self.tutorial.is_some().then(|| screens::tutorial::overlay(self, cx));
+        let mut page_content = div()
+            .flex()
+            .flex_col()
+            .flex_none()
+            .w_full()
+            .gap(px(16.0));
         if let Some(problem) = self.live.problem.clone() {
             let retry = cx.listener(|this, _: &ClickEvent, _w, cx| {
                 this.retry_current_screen(cx);
@@ -1775,51 +1514,81 @@ impl Render for Kriko {
                 this.live.problem = None;
                 cx.notify();
             });
-            page_content =
-                page_content.child(
-                    card()
-                        .bg(rgba(DANGER_WASH))
-                        .border_color(rgba(DANGER_EDGE))
-                        .flex()
-                        .flex_col()
-                        .gap(px(10.0))
-                        .child(
-                            div()
-                                .flex()
-                                .flex_wrap()
-                                .items_center()
-                                .justify_between()
-                                .gap(px(12.0))
-                                .child(tag(
-                                    "engine-request-failed",
-                                    TagState::Block,
-                                    "Engine request failed",
-                                    self.motion,
-                                ))
-                                .child(ghost("engine-error-dismiss", "Dismiss").on_click(dismiss)),
-                        )
-                        .child(screens::row_desc(&problem))
-                        .child(div().flex().flex_wrap().gap(px(8.0)).child(
-                            key("engine-error-retry", "Refresh this screen").on_click(retry),
-                        )),
-                );
+            page_content = page_content.child(
+                card()
+                    .bg(linear_gradient(
+                        180.0,
+                        linear_color_stop(paint_a(0xff6b5e29), 0.0),
+                        linear_color_stop(paint_a(DANGER_WASH), 1.0),
+                    ))
+                    .border_color(paint_a(DANGER_EDGE))
+                    .flex()
+                    .flex_col()
+                    .gap(px(10.0))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_wrap()
+                            .items_center()
+                            .justify_between()
+                            .gap(px(12.0))
+                            .child(tag(
+                                "engine-request-failed",
+                                TagState::Block,
+                                "Engine request failed",
+                                self.motion,
+                            ))
+                            .child(ghost("engine-error-dismiss", "Dismiss").on_click(dismiss)),
+                    )
+                    .child(screens::row_desc(&problem))
+                    .child(
+                        div()
+                            .flex()
+                            .flex_wrap()
+                            .gap(px(8.0))
+                            .child(key("engine-error-retry", "Refresh this screen").on_click(retry)),
+                    ),
+            );
         }
+        // Keep the whole-page arrival, then slide its result: a switch both
+        // rises and travels in from the side the rail moved toward.
         let content = if tab == Tab::Chat {
             content
         } else {
             arrive(content, format!("page-{}", tab.key()), self.motion)
         };
-        page_content = page_content.child(content);
-        if tab == Tab::Chat {
-            page_content = page_content.flex_1().min_h(px(0.0));
-        }
-        let root = div()
+        page_content = page_content.child(slide_page(content, tab.key(), from_left, self.motion));
+        // A glass panel floating under the titlebar, inset from the window's
+        // edges. The page reserves its width only while it is open.
+        let dock_wrap = div()
+            .absolute()
+            .top(px(TITLEBAR_H + 8.0))
+            .bottom(px(12.0))
+            .right(px(12.0))
+            .overflow_hidden()
+            .w(px(if open { DOCK_W } else { 0.0 }))
+            .child(dock);
+        let dock_wrap = if self.motion {
+            dock_wrap.with_animation(gpui::ElementId::named_usize("live-slide", open as usize),
+                gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
+                    let t = t * t * (3.0 - 2.0 * t); d.w(px(DOCK_W * if open { t } else { 1.0 - t }))
+                }).into_any_element()
+        } else { dock_wrap.into_any_element() };
+        let hero = hero_scrolled(
+            tab.hero_sky(),
+            tab.hero_height(),
+            self.motion,
+            self.scroll_shown,
+            tab.key(),
+        )
+        .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), self.motion));
+        div()
             .id("kriko-root")
             .size_full()
             .relative()
             .flex()
-            .bg(rgb(GROUND))
-            .text_color(rgb(INK))
+            .bg(paint(GROUND))
+            .text_color(paint(INK))
             .font_family(SANS)
             .on_action(cx.listener(|this, _: &NewCheck, _w, cx| {
                 this.tab = Tab::Run;
@@ -1858,27 +1627,24 @@ impl Render for Kriko {
                             .overflow_x_hidden()
                             .track_scroll(&self.main_scroll)
                             .on_scroll_wheel(cx.listener(Self::wheel))
-                            // Reserve only the native window controls; page
-                            // navigation replaces the old sky and title banner.
-                            .child(div().h(px(TITLEBAR_H)).flex_none())
-                            .child(
-                                page_content
-                                    .pl(px(page_pad))
-                                    .pr(px(page_pad + dock_inset))
-                                    .pt(px(16.0))
-                                    .pb(px(32.0)),
-                            ),
+                            // flex_none keeps the hero and the content
+                            // at their natural heights, so the column
+                            // overflows and scrolls instead of every
+                            // child being squeezed to fit.
+                            .child(hero.flex_none())
+                                    .child(
+                                        page_content
+                                            .pl(px(page_pad))
+                                            .pr(px(page_pad + dock_inset))
+                                            .pt(px(SPACE_SECTION))
+                                            .pb(px(32.0)),
+                                    ),
                     )
                     // The bar floats on the sky, after the page so it
                     // paints on top of the hero it blends into.
                     .child(titlebar),
-            );
-        let root = if let Some(rail) = rail {
-            root.child(rail)
-        } else {
-            root
-        };
-        root.children(dock_wrap)
+            )
+            .child(dock_wrap)
             // The tour's scrim, above the dock and the titlebar.
             .children(tour)
             .into_any_element()
@@ -1887,9 +1653,7 @@ impl Render for Kriko {
 
 fn text_boundary(value: &str, requested: usize) -> usize {
     let mut at = requested.min(value.len());
-    while !value.is_char_boundary(at) {
-        at -= 1;
-    }
+    while !value.is_char_boundary(at) { at -= 1; }
     at
 }
 

@@ -9,7 +9,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use gpui::Context;
 
 use crate::api::{self, Value};
-use crate::app::{Kriko, Tab};
+use crate::app::{Kriko, Tab, ThemeChoice};
+use crate::theme::MotionProfile;
 use crate::engine;
 use crate::startup::{self, Mode as StartupMode};
 
@@ -129,6 +130,19 @@ pub struct ExtStatus {
     pub compat_detail: String,
 }
 
+/// What the one click answered (`POST /api/extension/launch`). Success here is
+/// only that a browser started: the extension reaching this engine is what the
+/// status card reports, not this.
+#[derive(Clone, Default)]
+pub struct ExtLaunch {
+    pub launched: bool,
+    /// Empty when the landing page opened in the browser Kriko already lives
+    /// in; otherwise the separate profile the window had to get.
+    pub profile: String,
+    /// The engine's own words when no window could be opened.
+    pub error: String,
+}
+
 #[derive(Clone)]
 pub struct KeyRow {
     pub id: String,
@@ -199,6 +213,9 @@ pub struct State {
     // Extension
     pub ext: Option<ExtStatus>,
     pub ext_notice: Option<String>,
+    /// The answer to the last "Add to browser" press, until the next one.
+    pub ext_launch: Option<ExtLaunch>,
+    pub ext_launch_busy: bool,
     /// Last extension status read failure. Existing status remains available
     /// as a last-known snapshot, but the screen labels it stale until retry.
     pub ext_error: Option<String>,
@@ -824,7 +841,37 @@ impl Kriko {
         });
     }
 
-    /// One of the three extension actions: `stage`, `reveal` or `launch`.
+    /// The one click, "Add to browser": the engine stages the folder and opens
+    /// a browser that already carries the extension, in one request. The status
+    /// is re-read either way, because a window opening does not prove the
+    /// extension loaded — its check-in does.
+    pub fn extension_launch(&mut self, cx: &mut Context<Self>) {
+        if self.live.knowledge.ext_launch_busy {
+            return;
+        }
+        self.live.knowledge.ext_launch_busy = true;
+        self.live.knowledge.ext_launch = None;
+        self.live.knowledge.ext_notice = None;
+        self.fetch(cx, || api::extension_launch(), |this, reply, cx| {
+            this.note(&reply);
+            this.live.knowledge.ext_launch_busy = false;
+            this.live.knowledge.ext_launch = Some(match reply {
+                Ok(v) => ExtLaunch {
+                    launched: api::b(&v, "launched"),
+                    profile: api::s(&v, "profile"),
+                    error: api::s(&v, "error"),
+                },
+                Err(e) => ExtLaunch { error: e.message, ..Default::default() },
+            });
+            this.refresh_extension(cx);
+        });
+        // The press shows as "Adding…" before the engine answers.
+        cx.notify();
+    }
+
+    /// One of the extension file actions: `stage`, `reveal` or `firefox/stage`
+    /// / `firefox/reveal`. Opening a browser is [`Self::extension_launch`], the
+    /// one click, and it is a call of its own.
     pub fn extension_action(&mut self, action: &'static str, cx: &mut Context<Self>) {
         self.live.knowledge.ext_notice = Some(match action {
             "stage" | "firefox/stage" => "Preparing the extension.",
@@ -942,6 +989,16 @@ impl Kriko {
                 if let Some(on) = v.get("app.reduce_motion").and_then(|x| x.as_bool()) {
                     this.reduce_motion = on;
                 }
+                if let Some(theme) = v.get("app.theme").and_then(|x| x.as_str()) {
+                    this.theme = ThemeChoice::from_key(theme);
+                }
+                if let Some(profile) = v.get("app.motion.profile").and_then(|x| x.as_str()) {
+                    this.motion_profile = MotionProfile::from_key(profile);
+                }
+                if v.get("app.onboarded").and_then(|x| x.as_bool()) == Some(true) {
+                    this.onboarded = true;
+                    this.onboarding = None;
+                }
                 // A number from this screen, a string from `/api/prefs`.
                 let runs = v.get("run_concurrency").and_then(|x| {
                     x.as_u64().or_else(|| x.as_str().and_then(|s| s.trim().parse().ok()))
@@ -984,6 +1041,24 @@ impl Kriko {
     pub fn set_reduce_motion(&mut self, on: bool, cx: &mut Context<Self>) {
         self.reduce_motion = on;
         self.save_setting("app.reduce_motion", Value::Bool(on), cx);
+    }
+
+    /// System, Light or Dark. The frame that follows re-resolves `light`, so
+    /// the change is seen before the save is answered.
+    pub fn set_theme(&mut self, choice: ThemeChoice, cx: &mut Context<Self>) {
+        self.theme = choice;
+        self.save_setting("app.theme", Value::String(choice.key().to_string()), cx);
+    }
+
+    /// Calm, Standard or Vivid. The profile scales every animation's distance
+    /// and tempo from one place.
+    pub fn set_motion_profile(&mut self, profile: MotionProfile, cx: &mut Context<Self>) {
+        self.motion_profile = profile;
+        self.save_setting(
+            "app.motion.profile",
+            Value::String(profile.key().to_string()),
+            cx,
+        );
     }
 
     /// Writes or removes the Run value, then reads it back so the switch

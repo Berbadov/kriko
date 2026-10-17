@@ -5,19 +5,20 @@
 //! a line to the running job.
 
 use gpui::{
-    div, prelude::*, px, rgb, rgba, Animation, AnimationExt, Context, Div, FontWeight, Styled,
+    div, prelude::*, px, Animation, AnimationExt, Context, Div, FontWeight, Styled,
     Window,
 };
 
 use crate::app::{Field, Kriko};
 use crate::live::run::mark_for;
-use crate::marks::{agent_tile, mark_glyph, mark_tile, Phase};
+use crate::marks::{mark_glyph, mark_tile, Phase};
 use crate::screens::run::option_chip;
 use crate::screens::{empty_note, mono, row_desc};
 use crate::theme::*;
 
 pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gpui::Stateful<Div> {
-    // The shell constructs this panel only while it is visible.
+    // Closed, the dock is still laid out at zero width for its slide, and its
+    // waiting marks would loop unseen at full frame rate (#184).
     let motion = app.motion && app.dock_open;
 
     let send = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -47,9 +48,8 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                     .flex()
                     .items_center()
                     .gap(px(10.0))
-                    .child(agent_tile(
+                    .child(mark_tile(
                         &format!("dock-req-{i}"),
-                        &job.harness,
                         mark_for(&job.harness),
                         Phase::Waiting,
                         40.0,
@@ -67,7 +67,7 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                     .font_family(SANS)
                                     .font_weight(FontWeight::SEMIBOLD)
                                     .text_size(px(13.0))
-                                    .text_color(rgb(INK))
+                                    .text_color(paint(INK))
                                     .child(app.live.run.task(job)),
                             )
                             .child(mono(&format!("{} question(s)", att.questions.len()), MUTED)),
@@ -102,8 +102,9 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                     .child(
                         div()
                             .font_family(SANS)
-                            .text_size(px(12.0))
-                            .text_color(rgb(INK_2))
+                            .text_size(px(13.0))
+                            .line_height(px(18.0))
+                            .text_color(paint(INK_2))
                             .child(q.ask.clone()),
                     )
                     .child(options),
@@ -174,13 +175,22 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                         .min_w(px(0.0))
                                         .child(
                                             div()
+                                                .flex()
+                                                .items_center()
+                                                .gap(px(6.0))
                                                 .flex_1()
                                                 .min_w(px(0.0))
-                                                .font_family(SANS)
-                                                .font_weight(FontWeight::SEMIBOLD)
-                                                .text_size(px(13.0))
-                                                .text_color(rgb(INK))
-                                                .child(crate::screens::history::clip(&app.live.run.task(job), 56)),
+                                                .child(icon("play", 12.0).text_color(paint(ICE)))
+                                                .child(
+                                                    div()
+                                                        .flex_1()
+                                                        .min_w(px(0.0))
+                                                        .font_family(SANS)
+                                                        .font_weight(FontWeight::SEMIBOLD)
+                                                        .text_size(px(13.0))
+                                                        .text_color(paint(INK))
+                                                        .child(crate::screens::history::clip(&app.live.run.task(job), 56)),
+                                                ),
                                         )
                                         .child(stop),
                                 )
@@ -223,8 +233,9 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .flex_1()
                         .min_w(px(0.0))
                         .font_family(SANS)
-                        .text_size(px(12.0))
-                        .text_color(rgb(INK_2))
+                        .text_size(px(13.0))
+                        .line_height(px(18.0))
+                        .text_color(paint(INK_2))
                         .child(text),
                 ),
         );
@@ -256,8 +267,8 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .max_h(px(180.0))
                         .overflow_y_scroll().occlude().on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                         .font_family(MONO)
-                        .text_size(px(12.0))
-                        .text_color(rgb(INK_2))
+                        .text_size(px(11.0))
+                        .text_color(paint(INK_2))
                         .child(if log.is_empty() {
                             "Waiting for agent output.".to_string()
                         } else {
@@ -362,8 +373,8 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                                 .justify_center()
                                 .rounded(px(6.0))
                                 .cursor_pointer()
-                                .child(icon("collapse", 12.0).text_color(rgb(DIM)))
-                                .hover(|s| s.bg(rgba(GLASS_1)))
+                                .child(icon("collapse", 12.0).text_color(paint(DIM)))
+                                .hover(|s| s.bg(paint_a(GLASS_1)))
                                 .on_click(collapse),
                         ),
                 )
@@ -380,7 +391,12 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
                         .items_center()
                         .justify_between()
                         .gap(px(8.0))
-                        .child(key("dock-send", "Send").on_click(send))
+                        .child(
+                            key("dock-send", "Send")
+                                .on_click(send)
+                                .gap(px(6.0))
+                                .child(icon("message", 13.0).text_color(fixed(0xffffff))),
+                        )
                         .child(row_desc("or press Enter")),
                 );
             let block: gpui::AnyElement = if motion {
@@ -422,9 +438,13 @@ pub fn dock(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> gp
         .w(px(DOCK_WIDTH))
         .flex_none()
         .rounded(px(18.0))
-        .bg(rgb(SURFACE_1))
+        .bg(gpui::linear_gradient(
+            180.0,
+            gpui::linear_color_stop(paint_a(0xffffff1a), 0.0),
+            gpui::linear_color_stop(paint_a(DOCK_GLASS), 1.0),
+        ))
         .border_1()
-        .border_color(rgba(HAIRLINE))
+        .border_color(paint_a(0xffffff3d))
         .shadow(vec![shadow(0x000000a8, 0.0, 18.0, 44.0, 0.0)])
         .flex()
         .flex_col()
