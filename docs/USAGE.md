@@ -1,261 +1,224 @@
-# Kriko, usage
+# Use Kriko
 
-Run it, load the extension, connect an agent, grow the knowledge. The mechanism
-is in [INTERNALS.md](INTERNALS.md).
+This guide starts the app, connects an agent, checks a listing, and grows a
+catalog. [How Kriko works](HOW_IT_WORKS.md) explains the mechanism.
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart LR
-    R["Research<br/>an agent, or a local model"]:::plain --> B["Build<br/>a catalog into a .kpack"]:::plain
-    B --> I["Install<br/>~/.kriko/knowledge.sqlite"]:::brand
-    I --> L["Check<br/>the extension, or POST /api/analyze"]:::ice
-    classDef brand fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef plain fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    classDef ice   fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
-```
-
-## Prerequisites
+## Before you start
 
 | For | You need |
 |---|---|
-| **Desktop app** | Nothing. It carries its own Python; no Docker, no Postgres. Store `~/.kriko/knowledge.sqlite`, history `~/.kriko/app.sqlite` |
-| **Checkout work** (pipeline, CLI, tests) | The interpreter floor in `pyproject.toml`, which is 3.13 |
-| **Research keys** | Only the hosted planes, and only the one you choose. Set them in the environment or on the app's Settings screen, which stores them under `~/.kriko/env`. Serving a lookup needs no key at all |
+| The desktop app | Nothing. The app contains its own Python, and a lookup needs no network. |
+| Source work (the command line, the pipeline, the tests) | Python 3.13 or newer. |
+| Research | An agent, a model on your computer, or a key for a paid API. A lookup needs no key. |
 
-## 1. Run it
+## 1. Start the app
 
-Install `kriko-<version>-x86_64.msi` (a per-user install with no admin prompt)
-and launch it — the installer's last screen offers to do that for you. A first
-launch walks the places a check needs (a catalog, an agent, the extension);
-Settings → General → **Take the tour** shows it again. `kriko-gpui/package.ps1` builds it; the `desktop` workflow runs
-the same recipe. See `kriko-gpui/README.md`, and
-[INSTALL_WINDOWS.md](INSTALL_WINDOWS.md) for the steps. From a checkout:
+Install the app and open it. [The install guide](INSTALL_WINDOWS.md) gives the
+steps. From a source checkout:
 
 ```bash
 .venv/bin/python -m app.web            # http://127.0.0.1:8787
-curl http://127.0.0.1:8787/api/health  # {"ok":true,"store":...,"app_state":...}
+curl http://127.0.0.1:8787/api/health  # {"ok":true,...}
 ```
 
-On Windows, closing the window leaves Kriko in the system tray so the browser
-extension can keep using the engine. Open it again from the tray or the desktop
-shortcut. Choose **Quit Kriko** in the tray to stop the engine too. The tray
-tooltip says whether the engine is ready, still starting, or stopped.
+If you close the window, the app hides and the engine continues, because the
+browser extension needs it. The tray menu holds **Open Kriko** and **Quit
+Kriko**. The tray tooltip says if the engine is ready, if it starts, or if it
+stopped.
 
-> Port 8787 taken? In the desktop app's **Browser extension** screen, enter a
-> free port and choose **Save port and restart engine**. Then open the browser
-> extension's settings and set its address to the one shown in the app, such
-> as `http://127.0.0.1:8790`. The choice survives desktop restarts. A port
-> conflict leaves the app open and marks the extension listener unavailable.
+> **Port 8787 is not free.**
+> Open **Browser extension**. Enter a free port and press **Save port and
+> restart engine**. Then set the same address in the options of the extension,
+> for example `http://127.0.0.1:8790`. Kriko keeps this choice.
 
-## 2. The browser extension
+## 2. The screens
 
-**From the app:** Check, then Browser extension, then stage the files. They
-land under `~/.kriko/extension/`, and the page turns green when the extension
-first reaches the app.
+| Screen | Group | Contents |
+|---|---|---|
+| Home | Check | The totals, the work that waits, the latest checks, and the app update |
+| Run | Check | The steps of the selected check, the agent lanes, the decision card, and the log |
+| History | Check | The past checks, with a search box, filters, and paging |
+| Compare | Check | Up to four saved checks side by side, with the differences |
+| Chat | Check | A conversation with your agent, with the sources beside each answer |
+| Browser extension | Check | The steps to prepare the extension, the port, and the switches |
+| Overview | Knowledge | The catalogs to install, the installed catalogs, the gaps, and **File quick looks** |
+| Browse | Knowledge | The products, the problems, and the sources of a catalog |
+| Sites | System | The sites that Kriko can read, and the trust grade of each |
+| Activity | System | The live work: what needs you, and what runs now |
+| Agents | System | The installed agents, their state, their model, and their permissions |
+| Benchmark | System | The measurements of your models on fixed cases |
+| Local LLM | This install | The model server, the models, and their settings |
+| Settings | This install | General, shortcuts, keys, privacy, the tour, and the erase |
+| About | This install | The version, the update, and the licences |
 
-**From a checkout:** `chrome://extensions`, Developer mode, Load unpacked,
-select `extension/`. Open a page an adapter can read; the panel appears after
-about 1.5 seconds.
+## 3. Connect an agent
 
-The small toolbar icon is coloured when the app answers and muted when it
-cannot be reached. Chrome refreshes that state about once a minute. Any number
-or question mark on the icon describes the current page, not the connection.
-Click the icon to open the panel on the page.
-
-> After an app update, or any change under `extension/`: stage again, then the
-> browser's Reload (the circular arrow on the extension's card at
-> `chrome://extensions`).
-
-> The panel is missing on a page it used to read? System, then Sites
-> says which of the two it is: the site needs a permission the browser has not
-> granted, or no adapter reads it yet.
-
-## 3. Connect a coding agent
-
-The default plane costs nothing extra, because the reading is done by an agent
-you already pay for. Open System, then Agents, and use the one action on that
-agent's row to connect it.
+An agent is a program that reads the web for you. Open **Agents** and select an
+agent. Then press **Check connection**. Kriko runs a real test and shows each
+step of it.
 
 | State | Meaning |
 |---|---|
-| Not connected | No `kriko` server in the agent's config. |
-| Connected | Names this window's store. |
-| Points elsewhere | Names a different `knowledge.sqlite`; findings land where this window never reads. |
-| Config unreadable | Will not parse; nothing written. |
+| Ready | The agent can run a check. |
+| Needs sign-in | The agent is installed, but you must sign in to it. |
+| Not installed | Kriko found no agent program on this computer. |
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart TD
-    S["Agent's row on<br/>System, then Agents"]:::brand --> Q{"What does it say?"}
-    Q -->|Not connected| C["Use the row's action"]:::ice
-    Q -->|Points elsewhere| C
-    Q -->|Config unreadable| X["Nothing written:<br/>fix the config file"]:::danger
-    Q -->|Connected| V["Verify, then restart the agent"]:::ice
-    C --> V
-    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
-    classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
-```
+Kriko gives the agent a research skill and a set of tools. The skill is
+assembled from the installed catalogs and served at `GET /api/agent-skill`. The
+tool list is in `src/app/mcp_server.py`. Kriko refuses a finding with a
+quotation that is not in the page that the agent names.
 
-*Verify* runs a real MCP handshake and tool listing, and shows each step's
-result. Restart the agent afterwards. The research skill is assembled from the
-installed catalogs and served at `GET /api/agent-skill`; it names no screen, no
-product, no harness and no model, and `src/app/agentskill.py` writes a content
-digest so the app can tell when the copy on disk has fallen behind. One binary
-serves both roles:
+## 4. Use a model on your computer
+
+A local model answers on your own computer and costs nothing extra. Open
+**Local LLM** and press the setup key on the server card. Kriko installs the
+model app, downloads the recommended model, and selects it. The download shows
+its byte count.
+
+The model table shows the parameters, the context window, and the fit in your
+graphics memory. **Browse downloadable models** adds another model. A download
+can be cancelled from its progress card.
+
+A local model cannot search the web alone. Kriko uses a hosted keyless search
+until a local search service is available. A small model can miss a detailed
+specification. The **Benchmark** screen measures your models on fixed cases.
+These measurements are not a guarantee.
+
+## 5. Check a listing
+
+1. Open a listing in your browser.
+2. Open the Kriko panel. The panel appears after about two seconds.
+3. Read the known problems. Open a problem to read its sources and its
+   quotations.
+
+The panel needs a catalog for the product. A new install has no catalog.
+
+If no catalog covers the product, press **Quick look** in the panel. Kriko asks
+your agent to search and read. The result keeps its sources, and you can ask
+more questions in the panel. Kriko saves each quick look in your history.
+
+To make a quick look part of a catalog, open **Overview** and press **File
+quick looks**.
+
+> **The panel is missing on a page.**
+> Open **Sites**. The screen says if the site needs a permission, or if no
+> adapter reads the site.
+
+## 6. Research in the app
+
+**Run** starts a deeper check for one product. Select the product and the
+agent, then press **Start check**. The screen shows the phases, the lanes of
+the agents, and the decision. You can stop a run and start it again.
+
+**Chat** answers a question in a conversation. The answer keeps its sources.
+Each conversation keeps its own draft. Press Stop, Retry, or Copy near the
+answer.
+
+**Compare** puts up to four saved checks side by side. It shows the
+specifications and the known problems, cell by cell, with a mark for each
+difference. You can ask a follow-up question and keep reading.
+
+## 7. Manage the catalogs
+
+**Overview** lists the catalogs of the release. Press **Install** to add one.
+A switch turns a catalog off without removing it.
+
+Kriko keeps the installed catalogs current each week. You can also install a
+file by hand:
 
 ```bash
-kriko-sidecar --mcp --store ~/.kriko/knowledge.sqlite   # installed
-python -m app.sidecar --mcp                             # checkout
+kriko install <file.kpack>
 ```
 
-The tool list lives in `src/app/mcp_server.py`. Findings enter as drafts
-through `app/findings.py`, which refuses a quote that is not in the document
-the agent says it read.
+**Browse** shows the products of a catalog, their problems, and their sources.
 
-**A local model instead.** This install, then Local LLM, sets the address of a
-model server running on this machine and which model to use. [Setting one up](#local-models)
-is below. The plane reports
-whether it is ready, and a run started without naming a plane uses it first.
-The one thing it cannot do alone is search: it uses a hosted keyless search
-until a local search service is available.
+**Settings** holds your keys, your preferences, and the tour. The erase key
+removes your data after a second confirmation.
 
-### Local models
+## 8. The command line
 
-A local model answers on your own computer. Ollama is the app that runs its
-downloaded model files. Research can still search the web. Open **Local LLM**
-in the app.
+A command that reads only the store needs no server. The other commands attach
+to a running app or start an engine for one command. The options `--url` and
+`--no-start` control this.
 
-Press **Set up Ollama and the recommended model** to install Ollama, download
-`gemma4:e2b` (the model Kriko recommends) and select it. Ollama comes from its
-own site, the installer's signature is checked before it runs, and the download
-shows its byte count. If you already run Ollama, Kriko uses `gemma4:e2b`
-whenever it is downloaded and you have not chosen another model; the **Local
-LLM** list marks it *Recommended*. If an earlier install was interrupted and
-left Ollama unable to run models, setup notices and reinstalls it, and
-downloaded models are kept. Allow about 8 GB of free space for the app and the
-model. Larger models need more disk space and memory.
-
-If automatic setup fails, press **Download Ollama manually**, run its installer,
-return to Kriko and press **Check again**. If Ollama is installed but stopped,
-**Start Ollama** starts it without downloading a model. **Browse downloadable
-models** downloads another model with progress, then select it. A model
-download can be cancelled from its progress card.
-
-Small models can miss detailed configurations. The Benchmark screen's
-configuration suite measures missed facts, unsupported claims, wrong
-specifications, correct abstention, time and token usage on fixed development
-cases. It is not a real-world accuracy guarantee.
-
-## 4. Terminal
-
-Store-only commands need no server; the rest attach to a running app or start
-an engine for one command (`--no-start` fails instead, `--url` or `KRIKO_URL`
-picks one).
-
-| Command | Does |
+| Command | Function |
 |---|---|
-| `kriko packs`, `install`, `uninstall`, `enable` | Manage installed catalogs |
-| `kriko build packs/<name>` | Build a catalog directory into a `.kpack` |
-| `kriko lookup` | Ask the installed catalogs about a product |
-| `kriko agenda`, `brief`, `submit` | What to research next, one subject's brief, file findings |
-| `kriko prefs`, `costs` | Chosen providers (`--model NAME`), measured spend and the next estimate |
-| `kriko sites [register HOST\|forget HOST]` | What this installation can read, and teaching it a site |
-| `kriko verify [--list] [--pack ID] [--subject ID]` | Re-read a claim's sources |
-| `kriko drafts [show\|amend\|build\|install\|discard SLUG]` | Agent-written catalog drafts |
-| `kriko operations`, `bench --cases 5` | The live work feed; measure the research planes |
-| `kriko tui` | Operator console |
+| `kriko packs`, `install`, `uninstall`, `enable` | Manage the installed catalogs |
+| `kriko build packs/<name>` | Build a catalog folder into a `.kpack` file |
+| `kriko lookup key=value` | Ask the installed catalogs about a product |
+| `kriko agenda`, `brief`, `submit` | What to research next, the brief of one product, and the filing of findings |
+| `kriko prefs`, `costs` | The selected provider, the measured spend, and the next estimate |
+| `kriko sites [register HOST \| forget HOST]` | The sites that this installation can read, and the teaching of a new site |
+| `kriko verify [--list]` | Read the sources of the installed problems again |
+| `kriko drafts [list \| show \| amend \| build \| install \| discard]` | The catalog drafts of your agents |
+| `kriko operations`, `bench`, `agent-bench` | The live feed of agent work, and measurements of the models |
+| `kriko tui` | The operator console |
 
-## 5. Add a product to a catalog
+## 9. Add a product to a catalog
 
-The default path costs nothing extra: hand the agent the product and let it
-work.
+The usual path costs nothing extra. Give the product to a connected agent:
 
-```
+```text
 use the kriko-research skill to research <product>
 ```
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-sequenceDiagram
-    participant A as Agent
-    participant K as Kriko server
-    participant D as Draft on disk
-    A->>K: look up the variants
-    K-->>A: what is covered, what is not
-    A->>K: submit findings, each with a quote
-    alt quote is in the document the agent read
-        K->>D: write a draft, data only
-    else refused
-        K-->>A: refusal that names the fix
-    end
-    Note over D: kriko build, then install
-```
+1. The agent looks up the variants. Kriko answers with what the catalog
+   covers and what it does not.
+2. The agent submits the findings, each with a quotation and a source.
+3. Kriko proves each quotation. A good finding becomes part of a draft on
+   disk.
+4. You read the draft and install it.
 
-The agent looks up the variants first, because naming is cheap and research is
-what is expensive, and Kriko writes down the products the agent did not cover
-rather than losing them. What comes back is a draft on disk: data only, nothing
-executable.
+Do not send a refused finding again with different words. A refusal names the
+correction. Kriko refuses:
 
-The server refuses what a prompt could only ask for, so do not retry a refusal
-reworded: a quote that is not in the submitted document text, a figure with no
-source, a value nobody can derive, a lineup that does not match the category,
-and rows the pack's own bar excludes. A refusal names the fix.
+- a quotation that is not in the page that the agent read
+- a figure with no source
+- a value that nobody can derive
+- a line-up that does not agree with the category
+- a row that the bar of the catalog excludes
 
-**Manual fallback**, which is what the agent drives. The ledger stages are the
-same for every pack; anything a pack adds on top (catalog discovery, its own
-validators, its agent files) is that pack's business and is listed in its
-`README.md` with its own arguments.
+**The manual path** is what the agent drives. The stages are the same for every
+catalog.
 
 ```bash
-# 1. Evidence per component, then the ledger stages
 python -m app.pipeline.ledger_run acquire --part <code>
 python -m app.pipeline.ledger_run all
-# 2. Build and install
 kriko build packs/<name>
 kriko packs
 ```
 
-| Command | Use |
+| Command | Function |
 |---|---|
-| `ledger_run` subcommands | `acquire backfill extract resolve cluster verdict export report remediate all` |
-| `python -m app.pipeline.ledger_run remediate --dry-run` | Unattended gap-filling from the coverage report; `--max-usd` caps spend, one line per pass in `logs/remediation.jsonl` |
-| `python -m app.pipeline.panel` | Spend, cost to finish, coverage, recent runs. Check it before any paid run |
-| `python -m app.pipeline.process --help` | End-to-end driver for one product, in whatever identity keys that pack declares; `--skip-extraction` replays cached candidates for free |
+| `python -m app.pipeline.ledger_run` | The stages: acquire, backfill, extract, resolve, cluster, verdict, export, report, remediate, all |
+| `python -m app.pipeline.ledger_run remediate --dry-run` | Fill the gaps that the coverage report names. `--max-usd` limits the spend. |
+| `python -m app.pipeline.panel` | The spend, the cost to finish, the coverage, and the recent runs |
+| `python -m app.pipeline.process --help` | One product from end to end, in the identity keys of that catalog |
 
-Processing writes YAML. Nothing serves until the catalog is rebuilt and
-installed. Statuses are pipeline-owned, so never hand-edit `status`.
+The stages write YAML. Kriko serves nothing until you build the catalog and
+install it. The pipeline owns the status of a row. Do not edit a status by
+hand.
 
-## What a reader sees
+## 10. What the reader sees
 
 | Shown as | When |
 |---|---|
-| Confirmed | At least one source is from a confirming trust tier, `authoritative` or `manufacturer`. The card shows a relevance number. |
-| Reported | Every other claim. The card shows its sources and no number. |
+| **Confirmed** | At least one source is from a confirming trust tier. The card shows a relevance number. |
+| **Reported** | Every other problem. The card shows its sources and no number. |
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart LR
-    C["A claim the pack holds"]:::plain --> S{"A source from a<br/>confirming tier?"}
-    S -- yes --> V["Confirmed"]:::mark
-    S -- no --> R["Reported,<br/>with its sources"]:::ice
-    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
-    classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
-    classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
-```
+The pipeline keeps a problem only with quotations that it proved in the page
+that it read. The engine serves the problems of the catalog and does not read
+the quotations again. The panel shows the strength from the trust tier of the
+sources.
 
-The pipeline keeps a claim only with quotes it has grounded in the document it
-read. The engine serves the claims a pack holds for the product and does not
-check their quotes again. The strength shown on a card comes from the trust tier
-of its sources (`extension/background.js`, `_strengthOf`).
+## 11. Examine the store
 
-## Check the store
+If you have the `sqlite3` command:
 
 ```bash
 sqlite3 ~/.kriko/knowledge.sqlite "SELECT pack_id, version, built_at FROM packs;"
 sqlite3 ~/.kriko/knowledge.sqlite "SELECT subject_id, kind FROM subjects LIMIT 20;"
 ```
 
-`/api/health` reports both file paths. Full payloads of past checks are in
-`logs/analyses.jsonl`.
+The route `/api/health` reports both database files. The full payload of each
+past check is in `logs/analyses.jsonl`.
