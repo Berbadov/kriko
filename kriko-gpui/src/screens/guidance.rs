@@ -5,7 +5,7 @@
 use gpui::{div, prelude::*, px, AnyElement, SharedString};
 
 use crate::screens::{row_desc, row_title};
-use crate::theme::{arrive, callout, eyebrow};
+use crate::theme::{arrive, callout};
 
 /// Render one next step with its real screen action. The caller owns the
 /// action's route or API call, so a callout cannot promise an unavailable fix.
@@ -24,7 +24,6 @@ pub fn next_step(
                 .flex()
                 .flex_col()
                 .gap(px(4.0))
-                .child(eyebrow("Next step"))
                 .child(row_title(title))
                 .child(row_desc(detail)),
         )
