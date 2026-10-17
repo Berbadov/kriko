@@ -46,6 +46,7 @@ WORK_INDICATORS = {
     ("theme.rs", "meter_live"),
     ("theme.rs", "spinner"),
     ("marks.rs", "mark_dots"),
+    ("marks.rs", "logo_tile"),
 }
 
 
