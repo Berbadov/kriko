@@ -8,7 +8,7 @@
 
 use gpui::{
     AnimationExt,
-    div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba,
+    div, linear_color_stop, linear_gradient, prelude::*, px,
     Context, Div, FontWeight, Stateful, Styled, Window,
 };
 
@@ -17,6 +17,8 @@ use crate::api::{self, Value};
 use crate::live::run::{ago, mark_for, Job, Stage};
 use crate::marks::{mark_tile, phase_beat};
 use crate::screens::{empty_note, guidance, mono, plate_s, row_desc, row_title};
+use crate::sources::{host_of, source_row, Source};
+use crate::textfx::{cylinder_status, words_reveal};
 use crate::theme::*;
 
 /// The run's phases, in order, as the LEDs name them.
@@ -44,8 +46,8 @@ pub fn option_chip(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> 
 pub fn option_chip_wrapping(id: impl Into<gpui::ElementId>, text: &str, chosen: bool) -> Stateful<Div> {
     chip_skin(chip_base(id), chosen)
         .h_auto()
-        .min_h(px(30.0))
-        .py(px(7.0))
+        .min_h(px(26.0))
+        .py(px(SPACE_S))
         .child(
             div()
                 .flex_1()
@@ -58,7 +60,7 @@ pub fn option_chip_wrapping(id: impl Into<gpui::ElementId>, text: &str, chosen: 
 fn chip_base(id: impl Into<gpui::ElementId>) -> Stateful<Div> {
     div()
         .id(id)
-        .h(px(30.0))
+        .h(px(26.0))
         .flex_none()
         .px(px(12.0))
         .flex()
@@ -72,44 +74,51 @@ fn chip_base(id: impl Into<gpui::ElementId>) -> Stateful<Div> {
 
 fn chip_skin(base: Stateful<Div>, chosen: bool) -> Stateful<Div> {
     if chosen {
-        base.text_color(rgb(0xffffff))
+        base.text_color(paint(0xffffff))
             .border_1()
-            .border_color(rgba(0xffffff40))
-            .bg(rgb(BRAND))
-            .hover(|s| s.bg(rgb(BRAND_HOVER)))
+            .border_color(paint_a(0xffffff40))
+            .bg(paint(BRAND))
+            .hover(|s| s.bg(paint(BRAND_HOVER)))
     } else {
-        base.text_color(rgb(INK_2))
+        base.text_color(paint(INK_2))
             .border_1()
-            .border_color(rgba(BORDER_CONTROL))
-            .bg(rgba(GLASS_1))
-            .hover(|s| s.bg(rgba(GLASS_2)))
+            .border_color(paint_a(BORDER_CONTROL))
+            .bg(paint_a(GLASS_1))
+            .hover(|s| s.bg(paint_a(GLASS_2)))
     }
 }
 
 pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
     let mut page = div().flex().flex_col().gap(px(SPACE_CARD));
+    let mut index = 0usize;
 
     let job = app.live.run.current().cloned();
     match (&job, app.live.run.jobs_loaded) {
         (Some(job), _) => {
-            page = page.child(subject_card(app, job, motion, cx));
+            page = page.child(enter(subject_card(app, job, motion, cx), "run-subject", index, motion));
+            index += 1;
             if let Some(next) = terminal_next_step(app, job, motion, cx) {
-                page = page.child(next);
+                page = page.child(enter(next, "run-next-step", index, motion));
+                index += 1;
             }
             if job.kind == "quick_look" && job.done {
-                if let Some(evidence) = quick_look_result_card(&job.result, &job.product, &job.state) {
-                    page = page.child(evidence);
+                if let Some(evidence) = quick_look_result_card(&job.result, &job.product, &job.state, motion) {
+                    page = page.child(enter(evidence, "run-quick-look", index, motion));
+                    index += 1;
                 }
             }
-            if let Some(answer) = answer_card(job) {
-                page = page.child(answer);
+            if let Some(answer) = answer_card(job, motion) {
+                page = page.child(enter(answer, "run-answer", index, motion));
+                index += 1;
             }
             if job.kind == "quick_look" && job.done {
-                page = page.child(follow_up_card(app, job.id.clone(), window, cx));
+                page = page.child(enter(follow_up_card(app, job.id.clone(), window, cx), "run-follow-up", index, motion));
+                index += 1;
             }
             if job.attention.is_some() {
-                page = page.child(questions_card(app, job, motion, cx));
+                page = page.child(enter(questions_card(app, job, motion, cx), "run-questions", index, motion));
+                index += 1;
             }
         }
         (None, loaded) => {
@@ -124,25 +133,36 @@ pub fn run(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div
                 guidance::next_step(
                     "run-job-list-waiting",
                     "Waiting for the engine",
-                    "The job list has not arrived yet. Check again to retry while the product search stays below.",
+                    "The job list has not arrived. Check again while the product search stays below.",
                     ghost("run-jobs-retry", "Check again").on_click(retry).into_any_element(),
                     motion,
                 )
             };
-            page = page.child(
+            page = page.child(enter(
                 card()
                     .flex()
                     .flex_col()
                     .gap(px(8.0))
-                    .child(eyebrow("Run"))
+                    .child(card_head("play", "Run", motion))
                     .child(empty),
-            );
+                "run-start",
+                index,
+                motion,
+            ));
+            index += 1;
         }
     }
-    page = page.child(start_card(app, window, cx));
+    page = page.child(enter(start_card(app, window, cx), "run-start-form", index, motion));
     if let Some(job) = &job {
-        page = page.child(lane_card(app, job, motion));
-        page = page.child(card().child(crate::screens::logs::job_logs(app, job, cx)));
+        index += 1;
+        page = page.child(enter(lane_card(app, job, motion), "run-lane", index, motion));
+        index += 1;
+        page = page.child(enter(
+            card().child(crate::screens::logs::job_logs(app, job, cx)),
+            "run-logs",
+            index,
+            motion,
+        ));
     }
     page
 }
@@ -190,12 +210,12 @@ fn terminal_next_step(
     let (title, detail, label) = match next {
         RunNext::Retry => (
             "Run this request again",
-            "This attempt remains below with its message and log. Retrying creates a new run with the same request.",
+            "This attempt stays below with its message and log. Retrying starts a new run with the same request.",
             "Retry run",
         ),
         RunNext::Activity => (
             "Review the finished work",
-            "The run has ended. Activity keeps its job updates, and the run details remain below.",
+            "The run has ended. Activity keeps its updates; the run details stay below.",
             "Open Activity",
         ),
     };
@@ -253,7 +273,7 @@ fn attention_detail(done: bool) -> &'static str {
 
 /// A finished agent run must show its answer, even when the engine returned
 /// no answer text. The job feed is a record of work, not the answer itself.
-fn answer_card(job: &Job) -> Option<Div> {
+fn answer_card(job: &Job, motion: bool) -> Option<Div> {
     if job.state != "succeeded"
         || !matches!(job.kind.as_str(), "research" | "agenda_run" | "compare_ask")
     {
@@ -261,7 +281,11 @@ fn answer_card(job: &Job) -> Option<Div> {
     }
     let answer = job.answer.trim();
     let reason = job.no_answer_why.trim();
-    let mut result = card().flex().flex_col().gap(px(6.0)).child(eyebrow("Agent answer"));
+    let mut result = card()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_S))
+        .child(card_head("quote", "Agent answer", motion));
     if answer.is_empty() {
         result = result.child(row_title("The agent returned no answer"));
         result = result.child(row_desc(if reason.is_empty() {
@@ -270,7 +294,7 @@ fn answer_card(job: &Job) -> Option<Div> {
             reason
         }));
     } else {
-        result = result.child(row_desc(answer));
+        result = result.child(words_reveal(answer, &format!("run-answer-{}", job.id), motion));
     }
     Some(result)
 }
@@ -289,7 +313,7 @@ fn run_line(result: &Value) -> String {
         .unwrap_or_default()
 }
 
-pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str) -> Option<Div> {
+pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str, motion: bool) -> Option<Div> {
     if result.is_null() {
         return None;
     }
@@ -301,8 +325,8 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
         .or_else(|| result.get("telemetry").and_then(|value| value.get("coverage")))
         .filter(|value| value.is_object());
     let listing = result.get("listing").filter(|value| value.is_object());
-    let mut card = card().flex().flex_col().gap(px(6.0))
-        .child(eyebrow("Quick Look · saved evidence"));
+    let mut card = card().flex().flex_col().gap(px(SPACE_S))
+        .child(card_head("spark", "Quick Look · saved evidence", motion));
     let saved_product = api::s(result, "product");
     let label = if !saved_product.is_empty() { saved_product }
         else if !product.is_empty() { product.to_string() }
@@ -358,7 +382,7 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
 
     let evidence_pages = api::arr(result, "evidence_pages");
     if !evidence_pages.is_empty() {
-        card = card.child(hairline()).child(eyebrow("Pages checked"));
+        card = card.child(hairline()).child(card_head("globe", "Pages checked", motion));
         for (page_index, page) in evidence_pages.iter().enumerate() {
             let url = api::s(page, "url");
             let domain = api::s(page, "domain");
@@ -375,6 +399,7 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
                     gpui::ElementId::named_usize("quicklook-page-source", page_index),
                     if domain.is_empty() { "Page" } else { &domain },
                     &url,
+                    motion,
                 ));
             }
         }
@@ -385,12 +410,12 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
         let listing_url = api::s(listing, "url");
         let facts = listing.get("facts").unwrap_or(&Value::Null);
         if !description.is_empty() || !listing_url.is_empty() || !facts.is_null() {
-            card = card.child(hairline()).child(eyebrow("Product listing"));
+            card = card.child(hairline()).child(card_head("file", "Product listing", motion));
             if !description.is_empty() {
                 card = card.child(row_desc(&description));
             }
             if !listing_url.is_empty() {
-                card = card.child(source_link("quicklook-listing-source", "Listing", &listing_url));
+                card = card.child(source_link("quicklook-listing-source", "Listing", &listing_url, motion));
             }
             for (fact_index, (name, value, quote, url)) in quick_look_listing_facts(facts).into_iter().enumerate() {
                 card = card.child(row_title(&format!("{name} · {value}")));
@@ -402,6 +427,7 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
                         gpui::ElementId::named_usize("quicklook-listing-fact-source", fact_index),
                         "Listing fact",
                         &url,
+                        motion,
                     ));
                 }
             }
@@ -494,7 +520,7 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
     }
 
     if !risks.is_empty() {
-        card = card.child(hairline()).child(eyebrow("Sourced risks"));
+        card = card.child(hairline()).child(card_head("warning", "Sourced risks", motion));
         for (risk_index, risk) in risks.iter().enumerate() {
             let title = api::s(risk, "title");
             let severity = api::s(risk, "severity");
@@ -520,13 +546,14 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
                         gpui::ElementId::named_usize(format!("quicklook-risk-source-{risk_index}"), source_index),
                         if domain.is_empty() { "Source" } else { &domain },
                         &url,
+                        motion,
                     ));
                 }
             }
         }
     }
     if !specs.is_empty() {
-        card = card.child(hairline()).child(eyebrow("Sourced product facts"));
+        card = card.child(hairline()).child(card_head("check-circle", "Sourced product facts", motion));
         for (spec_index, spec) in specs.iter().enumerate() {
             let name = api::s(spec, "name");
             let value = api::s(spec, "value");
@@ -545,6 +572,7 @@ pub(crate) fn quick_look_result_card(result: &Value, product: &str, state: &str)
                     gpui::ElementId::named_usize("quicklook-spec-source", spec_index),
                     &domain,
                     &url,
+                    motion,
                 ));
             }
         }
@@ -588,19 +616,28 @@ fn quick_look_listing_facts(value: &Value) -> Vec<(String, String, String, Strin
     }
 }
 
-fn source_link(id: impl Into<gpui::ElementId>, label: &str, url: &str) -> Stateful<Div> {
-    let full_label = format!("{label} · {url}");
-    let label = if full_label.chars().count() > 92 {
-        format!("{}…", full_label.chars().take(91).collect::<String>())
-    } else {
-        full_label
+/// One listed source as a row: the host its URL points at, the short label the
+/// place gave it, and a click that opens the page. Built on the shared
+/// `sources` row, so every source in the app looks and opens the same way.
+fn source_link(
+    id: impl Into<gpui::ElementId>,
+    label: &str,
+    url: &str,
+    motion: bool,
+) -> gpui::AnyElement {
+    let host = host_of(url);
+    let title = if label.eq_ignore_ascii_case(&host) { String::new() } else { label.to_string() };
+    let source = Source {
+        host: if host.is_empty() { label.to_string() } else { host },
+        title,
+        url: url.to_string(),
+        backed: None,
     };
-    let link = url.to_string();
     div()
         .id(id)
-        .cursor_pointer()
-        .child(mono(&label, ICE))
-        .on_click(move |_, _, cx| cx.open_url(&link))
+        .flex_none()
+        .child(source_row(&source, motion))
+        .into_any_element()
 }
 
 fn short_text(text: &str, limit: usize) -> String {
@@ -686,6 +723,7 @@ fn follow_up_card(
     window: &mut Window,
     cx: &mut Context<Kriko>,
 ) -> Div {
+    let motion = app.motion;
     let ask = app.input_field(Field::QuickAsk, "quick-ask-input", "Ask about this quick look", Some("search"), window, cx);
     let go = cx.listener({
         let job_id = job_id.clone();
@@ -699,8 +737,8 @@ fn follow_up_card(
             cx.notify();
         }
     });
-    let mut c = card().flex().flex_col().gap(px(6.0)).child(eyebrow("Ask a follow-up"))
-        .child(row_desc("Follow-ups search the web using this product's saved listing details and Quick Look evidence."));
+    let mut c = card().flex().flex_col().gap(px(SPACE_S)).child(card_head("question", "Ask a follow-up", motion))
+        .child(row_desc("Follow-ups search the web with this product's listing details and Quick Look evidence."));
     for (ask_index, a) in app.live.run.quick_asks.iter().enumerate() {
         c = c.child(row_title(&a.question));
         if a.done {
@@ -715,6 +753,7 @@ fn follow_up_card(
                         ),
                         if domain.is_empty() { "Source" } else { domain },
                         url,
+                        motion,
                     ));
                 }
             } else {
@@ -737,7 +776,12 @@ fn follow_up_card(
     c.child(
         div().flex().items_center().gap(px(8.0))
             .child(ask)
-            .child(key("quick-ask-go", if app.live.run.quick_asking { "Asking" } else { "Ask" }).on_click(go)),
+            .child(
+                key("quick-ask-go", if app.live.run.quick_asking { "Asking" } else { "Ask" })
+                    .on_click(go)
+                    .gap(px(SPACE_S))
+                    .child(icon("message", 14.0).text_color(fixed(0xffffff))),
+            ),
     )
 }
 
@@ -766,41 +810,52 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
             .h(px(36.0))
             .flex()
             .items_center()
-            .px(px(14.0))
-            .gap(px(6.0))
+            .px(px(SPACE_L))
+            .gap(px(SPACE_S))
             .when(live, |s| {
                 s.bg(linear_gradient(
                     180.0,
-                    linear_color_stop(hsla(BRAND_HOVER), 0.0),
-                    linear_color_stop(hsla(BRAND_LOW), 1.0),
+                    linear_color_stop(paint(BRAND_HOVER), 0.0),
+                    linear_color_stop(paint(BRAND_LOW), 1.0),
                 ))
-                .border_color(rgba(0xffffff40))
+                .border_color(paint_a(0xffffff40))
                 .shadow(vec![shadow(0x0f2a9c99, 0.0, 2.0, 8.0, 0.0)])
             });
+        let tint = if live {
+            0xffffff
+        } else if lit {
+            WARN
+        } else if done {
+            INK_2
+        } else {
+            MUTED
+        };
+        // Each stage carries a small glyph of its own, so the rail reads by
+        // shape before the words: waiting, reading the web, grounding, stored.
+        let stage_icon = if ended_badly {
+            "warning"
+        } else {
+            ["clock", "globe", "shield", "database"][i]
+        };
         let glyph = if live {
             led_ripple(&format!("run-phase-{i}"), motion)
         } else if ended_badly {
-            led_matrix(&BANG5, 0xffb86b, 3.0, 1.0)
+            led_matrix(&BANG5, WARN, 3.0, 1.0)
         } else if done {
             led_matrix(&CHECK5, INK_2, 3.0, 1.0)
         } else {
             led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0)
         };
-        seg = seg.child(glyph).child(
-            div()
-                .font_family(MONO)
-                .text_size(px(11.0))
-                .text_color(rgb(if live {
-                    0xffffff
-                } else if lit {
-                    0xffb86b
-                } else if done {
-                    INK_2
-                } else {
-                    MUTED
-                }))
-                .child(name),
-        );
+        seg = seg
+            .child(icon(stage_icon, 13.0).text_color(paint(tint)))
+            .child(glyph)
+            .child(
+                div()
+                    .font_family(MONO)
+                    .text_size(px(11.0))
+                    .text_color(paint(tint))
+                    .child(name),
+            );
         // the live stage slides in with the segmented thumb's ease, keyed by
         // the stage it names, so a new stage replays it
         let seg: gpui::AnyElement = if live && motion {
@@ -842,20 +897,37 @@ fn subject_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>) -
     if !duration.is_empty() && job.done {
         meta.push(duration);
     }
+    // The stage line: the engine's own words while it runs, else the phase the
+    // stepper names. It sits in a cylinder window, so a change slides the old
+    // line up and the new one in, with the meta line below as its context.
+    let stage_word = match stage {
+        Stage::Queued => "Queued",
+        Stage::Reading => "Reading",
+        Stage::Grounding => "Grounding",
+        Stage::Stored => "Stored",
+        Stage::Failed => "Failed",
+        Stage::Cancelled => "Cancelled",
+    };
+    let status = if !job.done && !job.message.is_empty() {
+        job.message.clone()
+    } else {
+        stage_word.to_string()
+    };
 
     card()
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(eyebrow(heading))
+        .child(card_head("play", heading, motion))
         .child(
             div()
                 .font_family(SANS)
                 .font_weight(FontWeight::BOLD)
                 .text_size(px(20.0))
-                .text_color(rgb(INK))
+                .text_color(paint(INK))
                 .child(app.live.run.task(job)),
         )
+        .child(cylinder_status(&format!("run-status-{}", job.id), &status, motion))
         .child(mono(&meta.join(" · "), DIM))
         .child(if job.done {
             div().when(!job.message.is_empty(), |c| c.child(row_desc(&job.message))).into_any_element()
@@ -886,11 +958,15 @@ fn questions_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>)
     let Some(att) = &job.attention else { return div().into_any_element() };
     let mut c = card().flex().flex_col().gap(px(8.0));
     c = c
-        .child(
-            div().flex().items_center().justify_between().gap(px(8.0))
-                .child(eyebrow("Needs you"))
-                .child(tag(format!("run-needs-user-{}", job.id), TagState::Need, "Choose answers", motion)),
-        )
+        .child(card_head_row(
+            "question",
+            "Needs you",
+            Some(
+                tag(format!("run-needs-user-{}", job.id), TagState::Need, "Choose answers", motion)
+                    .into_any_element(),
+            ),
+            motion,
+        ))
         .child(row_desc(&att.say))
         .child(row_desc(attention_detail(job.done)));
     for (qi, q) in att.questions.iter().enumerate() {
@@ -916,7 +992,7 @@ fn questions_card(app: &Kriko, job: &Job, motion: bool, cx: &mut Context<Kriko>)
             div()
                 .flex()
                 .flex_col()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(row_title(&q.ask))
                 .when(!q.because.is_empty(), |d| d.child(row_desc(&q.because)))
                 .child(options),
@@ -992,14 +1068,16 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         s.open = !s.open;
         cx.notify();
     });
-    let mut c = card().flex().flex_col().gap(px(SPACE_CARD)).child(
-        div()
-            .flex()
-            .items_center()
-            .child(eyebrow("Start a check"))
-            .child(div().flex_1())
-            .when(!first, |d| d.child(plate_s("run-start-toggle", if open { "Close" } else { "New" }).on_click(toggle))),
-    );
+    let start_control: Option<gpui::AnyElement> = (!first).then(|| {
+        plate_s("run-start-toggle", if open { "Close" } else { "New" })
+            .on_click(toggle)
+            .into_any_element()
+    });
+    let mut c = card()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_CARD))
+        .child(card_head_row("search", "Start a check", start_control, app.motion));
     if !open {
         return c;
     }
@@ -1029,7 +1107,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         return c.child(guidance::next_step(
             "run-catalogs-waiting",
             "Catalog details have not loaded",
-            "Kriko has not confirmed which catalogs are available. Check again to retry; if an agent and extension are ready, Quick Look can start from a product listing meanwhile.",
+            "Kriko has not confirmed the catalogs yet. Check again; with an agent and extension ready, Quick Look can start from a listing.",
             actions,
             app.motion,
         ));
@@ -1085,7 +1163,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .p(px(12.0))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(row_title(&hit.label))
                 .child(mono(&hit.pack_id, DIM)),
         );
@@ -1124,7 +1202,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             c = c.child(guidance::next_step(
                 "run-no-ready-agent",
                 "Set up an agent",
-                "No agent is ready to run this check. Connect or install one in Agents, then come back.",
+                "No agent is ready. Connect one in Agents, then come back.",
                 route_button(cx, "run-open-agents", "Open Agents", Tab::Agents),
                 app.motion,
             ));
@@ -1154,7 +1232,7 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .child(guidance::next_step(
                 "run-search-no-match",
                 "Try product discovery",
-                "Browse installed catalogs, or open Chat with this product request ready for web discovery.",
+                "Browse catalogs, or open Chat with this request ready for web discovery.",
                 actions,
                 app.motion,
             ));
@@ -1171,9 +1249,9 @@ fn start_card(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     .p(px(12.0))
                     .flex()
                     .flex_col()
-                    .gap(px(2.0))
+                    .gap(px(SPACE_XS))
                     .cursor_pointer()
-                    .hover(|s| s.bg(rgba(GLASS_1)))
+                    .hover(|s| s.bg(paint_a(GLASS_1)))
                     .on_click(pick)
                     .child(row_title(&hit.label))
                     .child(mono(
@@ -1210,7 +1288,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(eyebrow("Agent"))
+        .child(card_head("agents", "Agent", motion))
         .child(
             div()
                 .flex()
@@ -1223,7 +1301,7 @@ fn lane_card(app: &Kriko, job: &Job, motion: bool) -> Div {
                         .min_w(px(0.0))
                         .flex()
                         .flex_col()
-                        .gap(px(2.0))
+                        .gap(px(SPACE_XS))
                         .child(
                             div()
                                 .flex()

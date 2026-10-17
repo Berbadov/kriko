@@ -323,10 +323,14 @@ function extractDamageInfo(panel) {
   for (const state of states) found[state.key] = new Set();
   const limit = spec.max_item_length || 60;
 
-  for (const block of document.querySelectorAll(spec.block_selector || "")) {
+  // An empty selector is a SyntaxError to querySelectorAll, and a pack that
+  // declares states but no block_selector is a pack to skip, not to crash on.
+  const blockSelector = (spec.block_selector || "").trim();
+  const itemSelector = (spec.item_selector || "").trim();
+  for (const block of blockSelector ? document.querySelectorAll(blockSelector) : []) {
     const stateKey = _stateOfHeader(_headerTextOf(block, spec.header_selector), states);
-    if (!stateKey) continue;
-    block.querySelectorAll(spec.item_selector || "").forEach((node) => {
+    if (!stateKey || !itemSelector) continue;
+    block.querySelectorAll(itemSelector).forEach((node) => {
       const name = cleanText(node.textContent);
       if (name && name.length < limit) found[stateKey].add(name);
     });

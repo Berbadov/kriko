@@ -19,11 +19,11 @@ pub const NAV: &[NavGroupDef] = &[
     NavGroupDef {
         label: "Check",
         items: &[
+            NavDef { key: "chat", label: "Chat", icon: "agents", count: None, badge: None },
             NavDef { key: "home", label: "Home", icon: "home", count: None, badge: None },
             NavDef { key: "run", label: "Run", icon: "run", count: None, badge: None },
             NavDef { key: "history", label: "History", icon: "history", count: None, badge: None },
             NavDef { key: "compare", label: "Compare", icon: "compare", count: None, badge: None },
-            NavDef { key: "chat", label: "Chat", icon: "agents", count: None, badge: None },
             NavDef { key: "extension", label: "Browser extension", icon: "extension", count: None, badge: None },
         ],
     },

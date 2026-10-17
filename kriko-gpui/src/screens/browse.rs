@@ -4,13 +4,14 @@
 //! (`/api/subjects`, `/api/subjects/filters`); the drawer reads
 //! `/api/subjects/{id}` and `/api/health/subject/{id}`.
 
-use gpui::{div, prelude::*, px, rgb, rgba, ClickEvent, Context, Div, FontWeight, Styled, Window};
+use gpui::{div, prelude::*, px, ClickEvent, Context, Div, FontWeight, Styled, Window};
 
 use crate::app::{Field, Kriko};
 use crate::live::history::{Evidence, State, Subject};
 use crate::screens::history::{clip, severity_word_chip};
 use crate::screens::run::option_chip;
-use crate::screens::{empty_note, filter_btn, mono, plate_s, segmented, th};
+use crate::screens::{empty_note, filter_btn, mono, plate_s, row_desc, segmented, th};
+use crate::sources::{source_row, Source};
 use crate::theme::*;
 
 /// The evidence drawer's width, one column beside the table.
@@ -29,32 +30,42 @@ fn pack_name(h: &State, id: &str) -> String {
 
 /// The evidence on one side of the drawer: up to four quotes with their
 /// domains, or the line saying the side is empty.
-fn side(title: &str, rows: &[&Evidence]) -> Div {
-    let mut col = div().flex().flex_col().gap(px(6.0)).child(eyebrow(title));
-    if rows.is_empty() {
-        return col.child(
+fn side(title: &str, rows: &[&Evidence], glyph: &str, motion: bool) -> Div {
+    let mut col = div()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_S))
+        .child(
             div()
-                .font_family(SANS)
-                .text_size(px(14.0))
-                .text_color(rgb(INK_2))
-                .child("Nothing stored on this side yet."),
+                .flex()
+                .items_center()
+                .gap(px(SPACE_S))
+                .child(icon_alive(glyph, 12.0, title, 0, motion))
+                .child(eyebrow(title)),
         );
+    if rows.is_empty() {
+        return col.child(row_desc("Nothing on this side yet."));
     }
     for e in rows.iter().take(4) {
+        let source = Source {
+            host: e.domain.clone(),
+            title: clip(&e.claim, 60),
+            url: format!("https://{}/", e.domain),
+            backed: Some(!e.refutes),
+        };
         col = col.child(
             div()
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
-                .child(mono(&e.domain, ICE))
+                .gap(px(4.0))
+                .child(source_row(&source, motion))
                 .child(
                     div()
                         .font_family(SANS)
                         .text_size(px(13.0))
-                        .text_color(rgb(INK_2))
+                        .text_color(paint(INK_2))
                         .child(format!("“{}”", clip(&e.quote, 180))),
-                )
-                .child(mono(&clip(&e.claim, 60), DIM)),
+                ),
         );
     }
     if rows.len() > 4 {
@@ -64,7 +75,6 @@ fn side(title: &str, rows: &[&Evidence]) -> Div {
 }
 
 fn drawer(app: &Kriko, motion: bool) -> Div {
-    let _ = motion;
     let h = &app.live.history;
     let pick = |note: &str| {
         card()
@@ -77,22 +87,22 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
             .child(mono(note, MUTED))
     };
     let Some(sel) = h.subject_sel.as_deref() else {
-        return pick("Pick a row to read its evidence.");
+        return pick("Pick a row for its evidence.");
     };
     let Some(detail) = h.subject_detail.as_ref().filter(|d| d.id == sel) else {
-        return pick("Reading this subject from the store.");
+        return pick("Reading this subject.");
     };
     let mut d = card()
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(eyebrow("Evidence"))
+        .child(card_head("quote", "Evidence", motion))
         .child(
             div()
                 .font_family(SANS)
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(16.0))
-                .text_color(rgb(INK))
+                .text_color(paint(INK))
                 .child(detail.label.clone()),
         )
         .child(mono(&detail.kind, MUTED));
@@ -109,7 +119,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
                         div()
                             .font_family(SANS)
                             .text_size(px(13.0))
-                            .text_color(rgb(MUTED))
+                            .text_color(paint(MUTED))
                             .child(a.label.clone()),
                     )
                     .child(
@@ -117,7 +127,7 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
                             .min_w(px(0.0))
                             .font_family(MONO)
                             .text_size(px(12.0))
-                            .text_color(rgb(ICE))
+                            .text_color(paint(ICE))
                             .child(clip(&a.value, 40)),
                     ),
             );
@@ -125,29 +135,35 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
     }
     d = d.child(hairline()).child(eyebrow("Claims"));
     if detail.claims.is_empty() {
-        d = d.child(mono("No claim is stored for this subject.", MUTED));
+        d = d.child(mono("No claim for this subject.", MUTED));
     }
     for c in detail.claims.iter().take(6) {
+        let source = Source {
+            host: c.domain.clone(),
+            title: if c.via.is_empty() { String::new() } else { format!("through {}", clip(&c.via, 48)) },
+            url: format!("https://{}/", c.domain),
+            backed: None,
+        };
         d = d.child(
             div()
                 .flex()
                 .items_start()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(
                     div()
                         .flex_1()
                         .min_w(px(0.0))
                         .flex()
                         .flex_col()
-                        .gap(px(2.0))
+                        .gap(px(SPACE_XS))
                         .child(
                             div()
                                 .font_family(SANS)
                                 .text_size(px(13.0))
-                                .text_color(rgb(INK_2))
+                                .text_color(paint(INK_2))
                                 .child(clip(&c.title, 110)),
                         )
-                        .child(mono(&if c.via.is_empty() { c.domain.clone() } else { format!("{} · through {}", c.domain, clip(&c.via, 48)) }, DIM)),
+                        .when(!c.domain.is_empty(), |x| x.child(source_row(&source, motion))),
                 )
                 .child(severity_word_chip(&c.severity)),
         );
@@ -160,12 +176,13 @@ fn drawer(app: &Kriko, motion: bool) -> Div {
         Some(all) => {
             let for_: Vec<&Evidence> = all.iter().filter(|e| !e.refutes).collect();
             let against: Vec<&Evidence> = all.iter().filter(|e| e.refutes).collect();
-            d = d.child(side("For", &for_)).child(side("Against", &against));
+            d = d.child(side("For", &for_, "check-circle", motion))
+                .child(side("Against", &against, "warning", motion));
         }
         None => d = d.child(mono("Reading the sources.", MUTED)),
     }
     d.child(hairline())
-        .child(mono("Settled runs keep the evidence with the claim, not the source page.", DIM))
+        .child(mono("Evidence stays with the claim, not the source page.", DIM))
 }
 
 pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
@@ -203,14 +220,12 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .child(eyebrow("Browse filters"))
-                .child(filter_btn("browse-filter-close", "Close", false, false).on_click(close_filters)),
-        );
+        .child(card_head_row(
+            "filter",
+            "Browse filters",
+            Some(filter_btn("browse-filter-close", "Close", false, false).on_click(close_filters).into_any_element()),
+            motion,
+        ));
     for (i, filter) in filters.iter().enumerate() {
         let selected = picks.get(i).copied().unwrap_or(0);
         let mut choices = vec![(0, "All".to_string())];
@@ -277,8 +292,13 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .flex()
             .flex_col()
             .gap(px(SPACE_SECTION))
-            .child(head)
-            .child(empty_note("Reading the subjects from the store."));
+            .child(enter(head, "browse-0", 0, motion))
+            .child(enter(
+                empty_note("Reading subjects."),
+                "browse-1",
+                1,
+                motion,
+            ));
     }
 
     let h = &app.live.history;
@@ -297,11 +317,12 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     // ---- the table: one row per subject ----
     let mut table = card().flex().flex_col();
     table = table
+        .child(card_head("list", "Subjects", motion))
         .child(
             div()
                 .flex()
                 .items_center()
-                .pb(px(10.0))
+                .pb(px(SPACE_S))
                 .child(div().flex_1().child(th("Subject")))
                 .child(div().w(px(130.0)).child(th("Kind")))
                 .child(div().w(px(100.0)).child(th("Claims"))),
@@ -311,7 +332,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     if rows.is_empty() {
         table = table.child(
             div()
-                .py(px(48.0))
+                .py(px(SPACE_2XL))
                 .flex()
                 .flex_col()
                 .items_center()
@@ -319,9 +340,9 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                 .child(led_matrix(&QUEUE5, LED_DIM, 4.0, 2.0))
                 .child(mono(
                     if !app.browse_search.value.trim().is_empty() || active_filters > 0 {
-                        "Nothing matches this search."
+                        "Nothing matches."
                     } else if app.live.knowledge.totals.subjects == 0 {
-                        "No products yet. Install a catalog on Overview."
+                        "No products yet. Install a catalog in Overview."
                     } else {
                         "Nothing to show here yet."
                     },
@@ -340,10 +361,10 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
             .items_center()
             .py(px(12.0))
             .cursor_pointer()
-            .hover(|s| s.bg(rgba(GLASS_1)))
+            .hover(|s| s.bg(paint_a(GLASS_1)))
             .border_1()
-            .border_color(rgba(if sel { HAIRLINE } else { 0x00000000 }))
-            .when(sel, |s| s.bg(rgb(WELL)))
+            .border_color(paint_a(if sel { HAIRLINE } else { 0x00000000 }))
+            .when(sel, |s| s.bg(paint(WELL)))
             .on_click(click_for!(cx, row))
             .child(
                 div()
@@ -351,13 +372,13 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                     .min_w(px(0.0))
                     .flex()
                     .flex_col()
-                    .gap(px(2.0))
+                    .gap(px(SPACE_XS))
                     .child(
                         div()
                             .font_family(SANS)
                             .font_weight(FontWeight::SEMIBOLD)
                             .text_size(px(15.0))
-                            .text_color(rgb(if sel { ICE } else { INK }))
+                            .text_color(paint(if sel { ICE } else { INK }))
                             .truncate()
                             .child(row.label.clone()),
                     )
@@ -382,6 +403,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         1 => {
             // list: one line per subject, dense
             let mut list = card().flex().flex_col();
+            list = list.child(card_head("list", "Subjects", motion));
             for (ri, row) in rows.iter().enumerate() {
                 let sel = is_sel(row);
                 list = list.child(
@@ -397,8 +419,8 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                         .mx(px(-(PAD_CARD + 2.0)))
                         .rounded(px(10.0))
                         .cursor_pointer()
-                        .hover(|s| s.bg(rgba(GLASS_1)))
-                        .when(sel, |s| s.bg(rgb(WELL)))
+                        .hover(|s| s.bg(paint_a(GLASS_1)))
+                        .when(sel, |s| s.bg(paint(WELL)))
                         .on_click(click_for!(cx, row))
                         .child(mono(&clip(&row.label, 40), if sel { ICE } else { INK }).min_w(px(0.0)).truncate())
                         .child(div().w(px(8.0)))
@@ -421,21 +443,21 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                         .id(("browse-grid-tile", ri))
                         .flex_1()
                         .cursor_pointer()
-                        .when(sel, |s| s.bg(rgb(WELL)).border_1().border_color(rgba(HAIRLINE)))
-                        .when(!sel, |s| s.bg(rgba(GLASS_1)).border_1().border_color(rgba(HAIRLINE)))
-                        .hover(|s| s.bg(rgb(WELL)))
+                        .when(sel, |s| s.bg(paint(WELL)).border_1().border_color(paint_a(HAIRLINE)))
+                        .when(!sel, |s| s.bg(paint_a(GLASS_1)).border_1().border_color(paint_a(HAIRLINE)))
+                        .hover(|s| s.bg(paint(WELL)))
                         .rounded(px(12.0))
                         .p(px(16.0))
                         .flex()
                         .flex_col()
-                        .gap(px(6.0))
+                        .gap(px(SPACE_S))
                         .on_click(click_for!(cx, row))
                         .child(
                             div()
                                 .font_family(SANS)
                                 .font_weight(FontWeight::SEMIBOLD)
                                 .text_size(px(15.0))
-                                .text_color(rgb(if sel { ICE } else { INK }))
+                                .text_color(paint(if sel { ICE } else { INK }))
                                 .child(row.label.clone()),
                         )
                         .child(mono(&row.kind, MUTED))
@@ -443,7 +465,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
                             div()
                                 .font_family(MONO)
                                 .text_size(px(13.0))
-                                .text_color(rgb(ICE))
+                                .text_color(paint(ICE))
                                 .child(format!("{} claims", row.claims)),
                         ),
                 ));
@@ -477,7 +499,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
     let next = cx.listener(move |this, _: &ClickEvent, _w, cx| {
         this.browse_page_changed(this.browse_page + 1, this.browse_page_size, cx);
     });
-    let mut page_sizes = div().flex().items_center().gap(px(6.0));
+    let mut page_sizes = div().flex().items_center().gap(px(SPACE_S));
     page_sizes = page_sizes.child(mono("ROWS", MUTED));
     for size in [10usize, 25, 50, 100] {
         let pick_size = cx.listener(move |this, _: &ClickEvent, _w, cx| {
@@ -485,7 +507,7 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         });
         let button = plate_s(gpui::ElementId::named_usize("browse-page-size", size), &size.to_string())
             .when(size == page_size, |button| {
-                button.bg(rgb(WELL)).text_color(rgb(ICE)).border_color(rgb(ICE))
+                button.bg(paint(WELL)).text_color(paint(ICE)).border_color(paint(ICE))
             })
             .on_click(pick_size);
         page_sizes = page_sizes.child(button);
@@ -549,16 +571,21 @@ pub fn browse(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex()
         .flex_col()
         .gap(px(SPACE_SECTION))
-        .child(head)
+        .child(enter(head, "browse-0", 0, motion))
         // always mounted so it can slide. A closed panel is zero-high but still
         // sits between two page gaps, so the negative top margin takes one back;
         // open, its top padding is that same gap.
-        .child(div().mt(px(-SPACE_SECTION)).child(reveal(
-            div().pt(px(SPACE_SECTION)).child(if filters_open { filter_drawer.into_any_element() } else { div().into_any_element() }),
-            "browse-filters-reveal",
-            filters_open,
-            900.0,
+        .child(enter(
+            div().mt(px(-SPACE_SECTION)).child(reveal(
+                div().pt(px(SPACE_SECTION)).child(if filters_open { filter_drawer.into_any_element() } else { div().into_any_element() }),
+                "browse-filters-reveal",
+                filters_open,
+                900.0,
+                motion,
+            )),
+            "browse-1",
+            1,
             motion,
-        )))
-        .child(picked)
+        ))
+        .child(enter(picked, "browse-2", 2, motion))
 }

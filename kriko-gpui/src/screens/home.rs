@@ -5,14 +5,14 @@
 //! `/api/status` and `/api/packs`.
 
 use gpui::{
-    div, prelude::*, px, rgb, rgba, relative, ClickEvent, Context, Div, FontWeight, Stateful,
+    div, prelude::*, px, relative, ClickEvent, Context, Div, FontWeight, Stateful,
     Styled, Window,
 };
 
 use crate::app::{Kriko, SpanFilter, Tab};
 use crate::live::history::{ago, month_buckets, now_secs, Item};
 use crate::screens::history::clip;
-use crate::screens::{empty_note, mono, plate_s};
+use crate::screens::{empty_note, mono, plate_s, row_desc};
 use crate::screens::guidance;
 use crate::theme::*;
 
@@ -51,12 +51,12 @@ impl HomeStep {
 
     fn detail(self) -> &'static str {
         match self {
-            Self::InstallCatalog => "Choose a catalog in Overview to search its known products. Once an agent and browser extension are available, Quick Look can also start from a listing without a catalog.",
-            Self::EnableCatalog => "All installed catalogs are off. Switch one on in Overview to search known products. Once an agent and browser extension are available, Quick Look can also start from a listing.",
+            Self::InstallCatalog => "Install a catalog in Overview to search its known products. With an agent and extension ready, Quick Look can also start from a listing.",
+            Self::EnableCatalog => "Every installed catalog is off. Switch one on in Overview to search known products. With an agent and extension ready, Quick Look can start from a listing.",
             Self::ConnectAgent => "No agent can run a check yet. Agents shows what is available and what needs setup.",
-            Self::FirstCheck => "Search a product title in Run, or open a product URL in your browser and use Quick Look on the listing. Then choose an available agent.",
-            Self::ConnectExtension => "Set up the browser extension to check pages as you read them. You can also run checks here.",
-            Self::AnotherCheck => "Search another product title in Run, or open its URL in your browser and use Quick Look from the listing.",
+            Self::FirstCheck => "Search a product title in Run, or open a listing and use Quick Look. Then pick an agent.",
+            Self::ConnectExtension => "Set up the extension to check pages as you read. You can also run checks here.",
+            Self::AnotherCheck => "Search another product in Run, or use Quick Look from its listing.",
         }
     }
 
@@ -138,7 +138,7 @@ fn next_step_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<gpui::AnyEleme
         return Some(guidance::next_step(
             "home-setup-loading",
             "Checking your setup",
-            "Some setup details are still loading or a request failed. Check again to retry catalogs, agents, and recent checks.",
+            "Setup details are still loading or a request failed. Retry catalogs, agents, and recent checks.",
             ghost("home-setup-refresh", "Check again").on_click(refresh).into_any_element(),
             app.motion,
         ));
@@ -161,7 +161,9 @@ fn next_step_card(app: &Kriko, cx: &mut Context<Kriko>) -> Option<gpui::AnyEleme
     let extension_available = app.live.knowledge.ext.as_ref().is_some_and(|e| e.available);
     let controls = if quick_look_available(step, agents_ready, extension_available) {
         let quick_look = cx.listener(|this, _: &ClickEvent, _w, cx| {
-            this.tab = Tab::Extension;
+            // A quick look is a short run, not an extension install. The old
+            // target opened the setup screen and left the reader there.
+            this.tab = Tab::Run;
             this.on_open_tab(cx);
             cx.notify();
         });
@@ -208,21 +210,28 @@ fn recent_row(cx: &mut Context<Kriko>, ri: usize, check: &Item, now: i64) -> Sta
         .mr(px(-8.0))
         .rounded(px(10.0))
         .cursor_pointer()
-        .hover(|s| s.bg(rgba(GLASS_1)))
+        .hover(|s| s.bg(paint_a(GLASS_1)))
         .on_click(open_history)
+        .child(
+            icon(
+                if check.source == "quick_look" { "spark" } else { "check-circle" },
+                15.0,
+            )
+            .text_color(paint(DIM)),
+        )
         .child(
             div()
                 .flex_1()
                 .min_w(px(0.0))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(
                     div()
                         .font_family(SANS)
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_size(px(15.0))
-                        .text_color(rgb(INK))
+                        .text_color(paint(INK))
                         .child(check.label.clone()),
                 )
                 .child(mono(&clip(&check.pack_line(), 48), MUTED)),
@@ -257,7 +266,7 @@ fn draft_row(cx: &mut Context<Kriko>, i: usize, id: &str, name: &str, subjects: 
         .mr(px(-8.0))
         .rounded(px(10.0))
         .cursor_pointer()
-        .hover(|s| s.bg(rgba(GLASS_1)))
+        .hover(|s| s.bg(paint_a(GLASS_1)))
         .on_click(open_draft)
         .child(
             div()
@@ -271,24 +280,18 @@ fn draft_row(cx: &mut Context<Kriko>, i: usize, id: &str, name: &str, subjects: 
                         .font_family(SANS)
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_size(px(15.0))
-                        .text_color(rgb(INK))
+                        .text_color(paint(INK))
                         .child(name.to_string()),
                 )
-                .child(
-                    div()
-                        .font_family(SANS)
-                        .text_size(px(13.0))
-                        .text_color(rgb(MUTED))
-                        .child(subjects.to_string()),
-                ),
+                .child(row_desc(subjects)),
         )
-        .child(icon("compare", 16.0).text_color(rgb(DIM)))
+        .child(icon("compare", 16.0).text_color(paint(DIM)))
 }
 
 /// The activity graph: one column per month, the bar as tall as the count.
 fn checks_graph(months: &[(String, u32)]) -> Div {
     let max = months.iter().map(|(_, v)| *v).max().unwrap_or(1).max(1) as f32;
-    let mut cols = div().flex().items_end().gap(px(6.0));
+    let mut cols = div().flex().items_end().gap(px(SPACE_S));
     for (label, value) in months {
         let height = 10.0 + 110.0 * (*value as f32) / max;
         cols = cols.child(
@@ -311,7 +314,7 @@ fn checks_graph(months: &[(String, u32)]) -> Div {
                                 .w_full()
                                 .h(px(if *value == 0 { 3.0 } else { height }))
                                 .rounded(px(3.0))
-                                .bg(rgb(ICE))
+                                .bg(paint(ICE))
                                 .opacity(if *value == 0 {
                                     0.15
                                 } else {
@@ -324,7 +327,7 @@ fn checks_graph(months: &[(String, u32)]) -> Div {
                     div()
                         .font_family(MONO)
                         .text_size(px(10.0))
-                        .text_color(rgb(DIM))
+                        .text_color(paint(DIM))
                         .child(label.clone()),
                 ),
         );
@@ -336,19 +339,19 @@ fn checks_graph(months: &[(String, u32)]) -> Div {
 /// the biggest value, and the figures at the right.
 fn bar_rows(rows: &[(String, f32, String)]) -> Div {
     let max = rows.iter().map(|r| r.1).fold(0.0f32, f32::max).max(1.0);
-    let mut graph = div().flex().flex_col().gap(px(6.0));
+    let mut graph = div().flex().flex_col().gap(px(SPACE_S));
     for (label, value, figure) in rows {
         graph = graph.child(
             div()
                 .flex()
                 .items_center()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(
                     div()
                         .w(px(130.0))
                         .font_family(MONO)
                         .text_size(px(11.0))
-                        .text_color(rgb(MUTED))
+                        .text_color(paint(MUTED))
                         .child(label.clone()),
                 )
                 .child(
@@ -356,15 +359,15 @@ fn bar_rows(rows: &[(String, f32, String)]) -> Div {
                         .flex_1()
                         .h(px(10.0))
                         .rounded(px(2.0))
-                        .bg(rgb(WELL))
+                        .bg(paint(WELL))
                         .border_1()
-                        .border_color(rgba(HAIRLINE))
+                        .border_color(paint_a(HAIRLINE))
                         .child(
                             div()
                                 .h_full()
                                 .w(relative(value / max))
                                 .rounded(px(2.0))
-                                .bg(rgb(ICE))
+                                .bg(paint(ICE))
                                 .opacity(0.8),
                         ),
                 )
@@ -375,7 +378,7 @@ fn bar_rows(rows: &[(String, f32, String)]) -> Div {
                         .justify_end()
                         .font_family(MONO)
                         .text_size(px(10.0))
-                        .text_color(rgb(DIM))
+                        .text_color(paint(DIM))
                         .child(figure.clone()),
                 ),
         );
@@ -436,7 +439,12 @@ fn update_card(app: &Kriko, _cx: &mut Context<Kriko>) -> Option<Div> {
     if let Some(action) = action {
         row = row.child(action);
     }
-    let mut notice = card().flex().flex_col().gap(px(6.0)).child(eyebrow("Updates")).child(row);
+    let mut notice = card()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_S))
+        .child(card_head("download", "Updates", app.motion))
+        .child(row);
     if let Some(note) = &k.app_update_note {
         notice = notice.child(mono(note, DIM));
     }
@@ -444,6 +452,7 @@ fn update_card(app: &Kriko, _cx: &mut Context<Kriko>) -> Option<Div> {
 }
 
 pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let motion = app.motion;
     let open_history = cx.listener(|this, _: &ClickEvent, _w, cx| {
         this.tab = Tab::History;
         this.page = 0;
@@ -454,11 +463,11 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     // ---- recent work: the four newest checks ----
     let mut recent = card().flex().flex_col();
-    recent = recent.child(div().mb(px(SPACE_TITLE)).child(eyebrow("Recent work")));
+    recent = recent.child(card_head("clock", "Recent work", motion));
     if !h.loaded {
-        recent = recent.child(empty_note("Reading your history from the engine."));
+        recent = recent.child(empty_note("Reading your history."));
     } else if h.items.is_empty() {
-        recent = recent.child(empty_note("No checks yet. The next one you run shows up here."));
+        recent = recent.child(empty_note("No checks yet. The next one shows here."));
     } else {
         let shown = h.items.len().min(4);
         for (ri, check) in h.items.iter().take(shown).enumerate() {
@@ -478,11 +487,11 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
 
     // ---- drafts: the saved comparisons ----
     let mut drafts = card().flex().flex_col();
-    drafts = drafts.child(div().mb(px(SPACE_TITLE)).child(eyebrow("Drafts")));
+    drafts = drafts.child(card_head("layers", "Drafts", motion));
     if !h.drafts_loaded {
         let retry = cx.listener(|this, _: &ClickEvent, _w, cx| this.refresh_history(cx));
         drafts = drafts
-            .child(empty_note("Drafts have not loaded yet. Check again if the request failed."))
+            .child(empty_note("Drafts have not loaded. Check again if the request failed."))
             .child(ghost("home-refresh-drafts", "Check again").on_click(retry));
     } else if h.drafts.is_empty() {
         let (destination, label, said) = if h.items.is_empty() {
@@ -537,13 +546,13 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
     } else if h.loaded {
         empty_note("No checks to count yet.").into_any_element()
     } else {
-        empty_note("Check counts have not loaded yet. Use Check again in the next step above.").into_any_element()
+        empty_note("Check counts have not loaded. Use Check again above.").into_any_element()
     };
     let checks_card = card()
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(eyebrow("Checks per month"))
+        .child(card_head("chart", "Checks per month", motion))
         .child(checks_body);
 
     let claims_body: gpui::AnyElement = match &h.counts {
@@ -553,13 +562,13 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
             ("sources behind them".to_string(), c.evidence as f32, c.evidence.to_string()),
         ])
         .into_any_element(),
-        None => empty_note("Evidence counts have not loaded yet. Use Check again in the next step above.").into_any_element(),
+        None => empty_note("Evidence counts have not loaded. Use Check again above.").into_any_element(),
     };
     let claims_card = card()
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(eyebrow("Evidence in the store"))
+        .child(card_head("database", "Evidence in the store", motion))
         .child(claims_body);
 
     let packs_body: gpui::AnyElement = match &h.packs {
@@ -597,27 +606,40 @@ pub fn home(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> D
                 bar_rows(&rows).into_any_element()
             }
         }
-        None => empty_note("Catalog details have not loaded yet. Use Check again in the next step above.").into_any_element(),
+        None => empty_note("Catalog details have not loaded. Use Check again above.").into_any_element(),
     };
     let packs_card = card()
         .flex()
         .flex_col()
         .gap(px(8.0))
-        .child(eyebrow("Claims per catalog"))
+        .child(card_head("book", "Claims per catalog", motion))
         .child(packs_body);
 
     // Recent work and drafts side by side from 300 px each; the three graphs
     // side by side from 240 px each. Each row shares one height.
     let mut column = div().flex().flex_col().gap(px(SPACE_SECTION));
+    let mut index = 0usize;
     if let Some(notice) = update_card(app, cx) {
-        column = column.child(notice);
+        column = column.child(enter(notice, "home-update", index, motion));
+        index += 1;
     }
     if let Some(next) = next_step_card(app, cx) {
-        column = column.child(next);
+        column = column.child(enter(next, "home-next-step", index, motion));
+        index += 1;
     }
-    column
-        .child(grid(app.content_w, 300.0, vec![recent, drafts]))
-        .child(grid(app.content_w, 240.0, vec![checks_card, claims_card, packs_card]))
+    column = column.child(enter(
+        grid(app.content_w, 300.0, vec![recent, drafts]),
+        "home-recent-and-drafts",
+        index,
+        motion,
+    ));
+    index += 1;
+    column.child(enter(
+        grid(app.content_w, 240.0, vec![checks_card, claims_card, packs_card]),
+        "home-graphs",
+        index,
+        motion,
+    ))
 }
 
 #[cfg(test)]

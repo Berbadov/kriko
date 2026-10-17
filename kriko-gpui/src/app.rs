@@ -4,15 +4,15 @@
 //! method over one state struct.
 
 use gpui::{
-    AnimationExt, div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba, App, ClickEvent,
-    Context, Div, FocusHandle, IntoElement,
-    KeyDownEvent, ParentElement, Render, ScrollDelta, ScrollWheelEvent, Stateful, Styled, Window,
-    WindowControlArea,
+    AnimationExt, div, linear_color_stop, linear_gradient, prelude::*, px, App, ClickEvent, Context,
+    Div, FocusHandle, IntoElement, KeyDownEvent, ParentElement, Render,
+    ScrollDelta, ScrollWheelEvent, SharedString, Stateful, Styled, Window, WindowAppearance, WindowControlArea,
 };
 
 use crate::data;
 use crate::dock;
 use crate::engine;
+use crate::favicons;
 use crate::live::Live;
 use crate::shell;
 use crate::screens;
@@ -183,6 +183,83 @@ impl Tab {
     }
 }
 
+/// Where a tab sits in the rail, top to bottom. A switch slides the page in
+/// from the side of the rail the reader moved toward, so this is read, not the
+/// `Tab` enum's declaration order (which is not the rail's order).
+fn tab_rank(tab: Tab) -> usize {
+    let mut rank = 0;
+    for group in data::NAV {
+        for item in group.items {
+            if Tab::from_key(item.key) == tab {
+                return rank;
+            }
+            rank += 1;
+        }
+    }
+    rank
+}
+
+// ---- appearance ----
+
+/// What the reader asked the app to look like. `System` follows the window and
+/// is the first-run answer; the other two are explicit overrides.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ThemeChoice {
+    System,
+    Light,
+    Dark,
+}
+
+impl ThemeChoice {
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::System => "system",
+            Self::Light => "light",
+            Self::Dark => "dark",
+        }
+    }
+
+    pub fn from_key(key: &str) -> Self {
+        match key.trim().to_ascii_lowercase().as_str() {
+            "light" => Self::Light,
+            "dark" => Self::Dark,
+            _ => Self::System,
+        }
+    }
+
+    /// The palette this choice resolves to in that window.
+    pub fn is_light(self, window: &Window) -> bool {
+        match self {
+            Self::Light => true,
+            Self::Dark => false,
+            Self::System => matches!(
+                window.appearance(),
+                WindowAppearance::Light | WindowAppearance::VibrantLight
+            ),
+        }
+    }
+}
+
+/// The first-run setup, held while the flow is open. `None` means the reader
+/// is in the app; `onboarded` remembers that they got there.
+#[derive(Clone)]
+pub struct Onboarding {
+    pub step: usize,
+    /// The agent picked on the agent step, by id.
+    pub agent: Option<String>,
+    /// The model picked for that agent; empty is its own default.
+    pub model: String,
+}
+
+impl Default for Onboarding {
+    fn default() -> Self {
+        Self { step: 0, agent: None, model: String::new() }
+    }
+}
+
+/// The steps of the first-run flow, in the order the reader walks them.
+pub const ONBOARD_STEPS: usize = 4;
+
 // ---- text fields ----
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -318,12 +395,24 @@ impl DockFeedEntry {
 
 pub struct Kriko {
     pub tab: Tab,
+    /// The tab the previous frame drew. `render` compares it to `tab` to slide
+    /// a page change in from the side the reader moved toward.
+    prev_tab: Tab,
     /// Where the engine is: starting, answering, or failed with its words.
     pub engine: engine::Status,
     /// What the engine said, per area, for the screens to draw.
     pub live: Live,
     // settings
     pub reduce_motion: bool,
+    /// What the reader chose; `light` is what this frame resolved to.
+    pub theme: ThemeChoice,
+    pub light: bool,
+    /// How much motion the reader asked for: calm, standard or vivid.
+    pub motion_profile: MotionProfile,
+    /// The first-run setup. `Some` draws it instead of the shell.
+    pub onboarding: Option<Onboarding>,
+    /// The reader finished or skipped the first-run setup.
+    pub onboarded: bool,
     /// Whether this frame may move: the reader allows motion *and* the window
     /// is the one in front. Set once per frame in `render`. A looping GPUI
     /// animation asks for the next frame forever and every frame redraws the
@@ -405,16 +494,43 @@ pub struct Kriko {
     pub scroll_tick: std::time::Instant,
 }
 
+/// The collapsed rail's hover title. GPUI tooltips are views rather than
+/// elements, so this tiny one lets a lone icon well still say what it opens.
+struct NavTip {
+    label: SharedString,
+}
+
+impl Render for NavTip {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .px(px(9.0))
+            .py(px(4.0))
+            .rounded(px(6.0))
+            .bg(paint(SURFACE_1))
+            .border_1()
+            .border_color(paint_a(HAIRLINE))
+            .font_family(SANS)
+            .text_size(px(12.0))
+            .text_color(paint(INK_2))
+            .child(self.label.clone())
+    }
+}
 
 impl Kriko {
     pub fn new(cx: &mut Context<Self>) -> Self {
         let mut extension_port_input = InputState::new(cx);
         extension_port_input.set_value(engine::configured_extension_port().to_string());
         let mut app = Self {
-            tab: Tab::Home,
+            tab: Tab::Chat,
+            prev_tab: Tab::Chat,
             engine: engine::status(),
             live: Live::default(),
             reduce_motion: false,
+            theme: ThemeChoice::System,
+            light: false,
+            motion_profile: MotionProfile::Standard,
+            onboarding: Some(Onboarding::default()),
+            onboarded: false,
             motion: false,
             run_concurrency: 1,
             run_concurrency_prev: 0,
@@ -487,6 +603,9 @@ impl Kriko {
             }
             // The tour itself, captured for review: no screen changes.
             Ok("tutorial") => {}
+            // The first-run flow, without completing it: the whole flow is
+            // open at the first step, so it can be looked at or captured.
+            Ok("onboarding") | Ok("setup") => {}
             // Any other screen by the name the extension uses for it; a route
             // with an id is opened once the engine answers.
             Ok(other) => {
@@ -498,9 +617,26 @@ impl Kriko {
         // The tour: on a first run, or asked for by name in review. A review
         // launch is otherwise exactly the page asked for (above), so its
         // screenshots never carry an unasked-for overlay.
+        // A review launch is exactly the page asked for: no first-run flow,
+        // unless the flow itself is the page asked for.
+        if let Ok(page) = std::env::var("KRIKO_VERIFY") {
+            let page = page.trim();
+            if !page.is_empty() && page != "onboarding" && page != "setup" {
+                app.onboarding = None;
+                app.onboarded = true;
+            }
+        }
+        // Review overrides: a page is looked at in one theme and one motion
+        // profile without touching the reader's saved settings.
+        if let Ok(theme) = std::env::var("KRIKO_THEME") {
+            app.theme = ThemeChoice::from_key(&theme);
+        }
+        if let Ok(profile) = std::env::var("KRIKO_MOTION") {
+            app.motion_profile = MotionProfile::from_key(&profile);
+        }
         if matches!(std::env::var("KRIKO_VERIFY").as_deref(), Ok("tutorial")) {
             app.tutorial = Some(0);
-        } else if screens::tutorial::due_for_tour() {
+        } else if app.onboarding.is_none() && screens::tutorial::due_for_tour() {
             app.tutorial = Some(0);
         }
         shell::set_tray_status(
@@ -525,6 +661,10 @@ impl Kriko {
         // read of everything happens here instead of never.
         if matches!(app.engine, engine::Status::Ready { .. }) {
             app.refresh_all(cx);
+            // The window opens on Chat, which no click has "opened" yet, so ask
+            // for its own slice too: `refresh_all` covers the areas the old
+            // first tab (Home) needed, not Chat's conversation.
+            app.on_open_tab(cx);
         }
         app
     }
@@ -589,10 +729,33 @@ impl Kriko {
             self.engine = now;
             if became_ready {
                 self.refresh_all(cx);
+                // The screen the window opened on was never "opened" by a
+                // click, so its own slice is asked for here as well.
+                self.on_open_tab(cx);
             }
             cx.notify();
         }
         self.tick_history(cx);
+        // Site icons arrive one at a time, through the engine, because a
+        // screen cannot fetch and the pulse is where work already drains. The
+        // fetch goes to the background executor: it can wait on the network,
+        // and this pulse runs on the UI thread. `next_host` answers at once
+        // while the queue is empty, so an idle window asks for no frame.
+        if let Some(host) = favicons::next_host() {
+            let store_host = host.clone();
+            self.fetch(
+                cx,
+                move || {
+                    let path = format!("/api/favicon?host={}", crate::api::seg(&host));
+                    crate::api::get_bytes(&path).ok()
+                },
+                move |_, bytes, _cx| {
+                    if let Some(bytes) = bytes {
+                        favicons::store(&store_host, bytes);
+                    }
+                },
+            );
+        }
     }
 
     /// Quit Kriko: the engine first (its exit frees the store's lock), then
@@ -943,13 +1106,21 @@ impl Kriko {
         let running = self.live.run.jobs.iter().filter(|j| !j.done).count();
         let activity_badge = (running > 0).then(|| running.to_string());
         for (gi, group) in data::NAV.iter().enumerate() {
+            // A group label rides a hairline, so the rail reads as sections
+            // rather than as one long list.
             nav = nav.child(
                 div()
                     .mt(px(if gi == 0 { 8.0 } else { 18.0 }))
-                    .mb(px(4.0))
-                    .px(px(12.0))
+                    .mb(px(6.0))
+                    .px(px(if self.sidebar_collapsed { 10.0 } else { 12.0 }))
                     .flex_none()
-                    .when(!self.sidebar_collapsed, |d| d.child(eyebrow(group.label))),
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .when(!self.sidebar_collapsed, |d| {
+                        d.child(eyebrow(group.label)).child(hairline().flex_1())
+                    })
+                    .when(self.sidebar_collapsed, |d| d.child(hairline())),
             );
             for item in group.items {
                 let key = item.key;
@@ -966,6 +1137,35 @@ impl Kriko {
                         this.on_open_tab(cx);
                         cx.notify();
                     }));
+                // Collapsed, the row is only its well, so a hover title names
+                // the screen it opens.
+                let row = if self.sidebar_collapsed {
+                    let label: SharedString = SharedString::from(item.label);
+                    row.tooltip(move |_window, cx| {
+                        let view: gpui::AnyView = cx.new(|_| NavTip { label: label.clone() }).into();
+                        view
+                    })
+                } else {
+                    row
+                };
+                // The picked tab's icon pops once, so a switch is felt even
+                // before the page has arrived. Bounded, and off under Reduce.
+                let row: gpui::AnyElement = if current && self.motion {
+                    row.with_animation(
+                        gpui::ElementId::Name(format!("nav-pop-{key}").into()),
+                        gpui::Animation::new(std::time::Duration::from_millis(tempo_ms(380)))
+                            .with_easing(|t| t),
+                        |d, t| {
+                            let e = ease_mech(t);
+                            d.relative()
+                                .top(px((1.0 - e) * amp(6.0)))
+                                .opacity(0.55 + 0.45 * e)
+                        },
+                    )
+                    .into_any_element()
+                } else {
+                    row.into_any_element()
+                };
                 nav = nav.child(row);
             }
         }
@@ -973,9 +1173,9 @@ impl Kriko {
             .w(px(if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W }))
             .overflow_hidden()
             .flex_none()
-            .bg(rgb(SURFACE_1))
+            .bg(paint(SURFACE_1))
             .border_r_1()
-            .border_color(rgba(HAIRLINE))
+            .border_color(paint_a(HAIRLINE))
             .flex()
             .flex_col()
             .when(!self.sidebar_collapsed, |d| d.child(brand_block("kriko-wordmark-white.svg", "local product knowledge")))
@@ -1025,10 +1225,10 @@ impl Kriko {
                     div()
                         .font_family(DISPLAY)
                         .text_size(px(30.0))
-                        .text_color(rgb(DANGER))
+                        .text_color(paint(DANGER))
                         .child(title),
                 )
-                .child(div().text_size(px(15.0)).text_color(rgb(MUTED)).child(
+                .child(div().text_size(px(15.0)).text_color(paint(MUTED)).child(
                     "This is what the engine said. Try again, or quit and start Kriko from the Start menu.",
                 ))
                 .child(
@@ -1039,7 +1239,7 @@ impl Kriko {
                         .p(px(16.0))
                         .font_family(MONO)
                         .text_size(px(12.0))
-                        .text_color(rgb(INK))
+                        .text_color(paint(INK))
                         .child(detail),
                 )
                 .child(
@@ -1067,14 +1267,14 @@ impl Kriko {
                     div()
                         .font_family(DISPLAY)
                         .text_size(px(30.0))
-                        .text_color(rgb(INK))
+                        .text_color(paint(INK))
                         .child("Starting Kriko"),
                 )
                 .child(
                     div()
                         .font_family(MONO)
                         .text_size(px(12.0))
-                        .text_color(rgb(DIM))
+                        .text_color(paint(DIM))
                         .child(said),
                 ),
         };
@@ -1083,8 +1283,8 @@ impl Kriko {
             .relative()
             .flex()
             .flex_col()
-            .bg(rgb(GROUND))
-            .text_color(rgb(INK))
+            .bg(paint(GROUND))
+            .text_color(paint(INK))
             .font_family(SANS)
             .child(
                 div()
@@ -1134,12 +1334,12 @@ impl Kriko {
                             .gap(px(8.0))
                             .rounded(px(8.0))
                             .cursor_pointer()
-                            .bg(rgba(GLASS_1))
+                            .bg(paint_a(GLASS_1))
                             .border_1()
-                            .border_color(rgba(HAIRLINE))
-                            .when(self.dock_open, |d| d.bg(rgba(GLASS_2)).border_color(rgba(BRAND_BRIGHT)))
+                            .border_color(paint_a(HAIRLINE))
+                            .when(self.dock_open, |d| d.bg(paint_a(GLASS_2)).border_color(paint_a(BRAND_BRIGHT)))
                             .on_click(toggle_dock)
-                            .child(icon("agents", 14.0).text_color(rgb(if self.dock_open {
+                            .child(icon("agents", 14.0).text_color(paint(if self.dock_open {
                                 ICE
                             } else {
                                 MUTED
@@ -1148,7 +1348,7 @@ impl Kriko {
                                 div()
                                     .font_family(MONO)
                                     .text_size(px(11.0))
-                                    .text_color(rgb(if self.dock_open {
+                                    .text_color(paint(if self.dock_open {
                                         ICE
                                     } else {
                                         MUTED
@@ -1180,9 +1380,57 @@ impl Kriko {
     }
 }
 
+impl Kriko {
+    /// Move the first-run flow one step on.
+    pub fn onboarding_next(&mut self, cx: &mut Context<Self>) {
+        if let Some(step) = self.onboarding.as_mut() {
+            step.step = (step.step + 1).min(ONBOARD_STEPS);
+        }
+        cx.notify();
+    }
+
+    /// Move it one step back; at the first step it stays there.
+    pub fn onboarding_back(&mut self, cx: &mut Context<Self>) {
+        if let Some(step) = self.onboarding.as_mut() {
+            step.step = step.step.saturating_sub(1);
+        }
+        cx.notify();
+    }
+
+    pub fn onboarding_goto(&mut self, at: usize, cx: &mut Context<Self>) {
+        if let Some(step) = self.onboarding.as_mut() {
+            step.step = at.min(ONBOARD_STEPS);
+        }
+        cx.notify();
+    }
+
+    /// Run it again from Settings or About: the flow, from the first step.
+    pub fn reopen_onboarding(&mut self, cx: &mut Context<Self>) {
+        self.onboarding = Some(Onboarding::default());
+        cx.notify();
+    }
+
+    /// Finished or skipped. Remembered in the engine's settings, so the next
+    /// launch opens the app the reader left.
+    pub fn finish_onboarding(&mut self, cx: &mut Context<Self>) {
+        self.onboarding = None;
+        self.onboarded = true;
+        self.save_setting("app.onboarded", crate::api::Value::Bool(true), cx);
+        // The first-run flow has just walked the same ground as the tour; the
+        // tour would repeat it, so it waits for the next launch.
+        cx.notify();
+    }
+}
+
 impl Render for Kriko {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        // The palette is one decision per frame, before anything draws. The
+        // boot screen and the tour read the same answer as the screens.
+        self.light = self.theme.is_light(window);
+        crate::theme::set_light(self.light);
+        crate::theme::set_profile(self.motion_profile);
         self.motion = !self.reduce_motion && window.is_window_active();
+        crate::theme::set_motion(self.motion);
         // A job's bar eases a frame at a time. Ask for the next frame while
         // one still moves (a job is running, in front, motion on), and nowhere
         // else: the idle guard in test_the_idle_window_does_not_draw.py.
@@ -1193,7 +1441,32 @@ impl Render for Kriko {
             let maximized = window.is_maximized();
             return self.boot_screen(maximized, cx).into_any_element();
         }
+        // First run: the flow owns the window until it is finished or skipped.
+        // Waited for the settings so a reader who finished it last launch is
+        // not shown it again for a frame.
+        if self.onboarding.is_some() && self.live.knowledge.settings_loaded {
+            let maximized = window.is_maximized();
+            let titlebar = self.titlebar(maximized, cx);
+            let body = screens::onboarding::onboarding(self, window, cx);
+            return div()
+                .id("onboarding-root")
+                .size_full()
+                .relative()
+                .flex()
+                .flex_col()
+                .bg(paint(GROUND))
+                .text_color(paint(INK))
+                .font_family(SANS)
+                .child(body)
+                .child(titlebar)
+                .into_any_element();
+        }
         let tab = self.tab;
+        // How the page should arrive: a tab reached by moving down the rail
+        // slides in from the left, one reached by moving up slides in from the
+        // right. Equal (a redraw, not a switch) takes the right.
+        let from_left = tab_rank(tab) < tab_rank(self.prev_tab);
+        self.prev_tab = tab;
         self.step_scroll(window);
         // The page uses compact side padding in a narrow window. While Live
         // is open, reserve its width plus a gutter from the content column so
@@ -1245,10 +1518,10 @@ impl Render for Kriko {
                 card()
                     .bg(linear_gradient(
                         180.0,
-                        linear_color_stop(rgba(0xff6b5e29), 0.0),
-                        linear_color_stop(rgba(DANGER_WASH), 1.0),
+                        linear_color_stop(paint_a(0xff6b5e29), 0.0),
+                        linear_color_stop(paint_a(DANGER_WASH), 1.0),
                     ))
-                    .border_color(rgba(DANGER_EDGE))
+                    .border_color(paint_a(DANGER_EDGE))
                     .flex()
                     .flex_col()
                     .gap(px(10.0))
@@ -1277,12 +1550,14 @@ impl Render for Kriko {
                     ),
             );
         }
+        // Keep the whole-page arrival, then slide its result: a switch both
+        // rises and travels in from the side the rail moved toward.
         let content = if tab == Tab::Chat {
             content
         } else {
             arrive(content, format!("page-{}", tab.key()), self.motion)
         };
-        page_content = page_content.child(content);
+        page_content = page_content.child(slide_page(content, tab.key(), from_left, self.motion));
         // A glass panel floating under the titlebar, inset from the window's
         // edges. The page reserves its width only while it is open.
         let dock_wrap = div()
@@ -1299,15 +1574,21 @@ impl Render for Kriko {
                     let t = t * t * (3.0 - 2.0 * t); d.w(px(DOCK_W * if open { t } else { 1.0 - t }))
                 }).into_any_element()
         } else { dock_wrap.into_any_element() };
-        let hero = hero(tab.hero_sky(), tab.hero_height(), self.motion)
-            .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), self.motion));
+        let hero = hero_scrolled(
+            tab.hero_sky(),
+            tab.hero_height(),
+            self.motion,
+            self.scroll_shown,
+            tab.key(),
+        )
+        .child(page_head(tab.hero_sky(), tab.crumb(), tab.title(), tab.lead(), self.motion));
         div()
             .id("kriko-root")
             .size_full()
             .relative()
             .flex()
-            .bg(rgb(GROUND))
-            .text_color(rgb(INK))
+            .bg(paint(GROUND))
+            .text_color(paint(INK))
             .font_family(SANS)
             .on_action(cx.listener(|this, _: &NewCheck, _w, cx| {
                 this.tab = Tab::Run;

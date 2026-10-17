@@ -5,7 +5,7 @@
 //! row the engine measured (`GET /api/bench`); a number it did not measure
 //! reads "n/a", never zero.
 
-use gpui::{div, point, prelude::*, px, rgb, rgba, Context, Div, FontWeight, Styled, Window};
+use gpui::{div, point, prelude::*, px, Context, Div, FontWeight, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
 use crate::live::local::{batches, change, BenchPhase, BenchRun, Batch, Machine};
@@ -17,10 +17,10 @@ use crate::theme::*;
 fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let b = &app.live.local.bench;
     let locked = matches!(b.phase, BenchPhase::Running { .. } | BenchPhase::Estimating);
-    let mut result = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Run setup"))
-        .child(row_desc("Configuration accuracy uses the same fictional documents on each plane, with exact codes, years, revisions, markets and missing information. Live web research uses changing search results. These development cases measure behavior; they do not establish real-world coverage."));
+    let mut result = card().flex().flex_col().gap(px(8.0)).child(card_head("sliders", "Run setup", app.motion))
+        .child(row_desc("Configuration accuracy runs the same fictional documents on every plane, with exact codes, years, revisions and missing information. Live web research uses changing search results. These cases measure behaviour, not real-world coverage."));
     if locked {
-        result = result.child(tag("bench-setup-locked", TagState::Live, "Setup is locked while pricing or running. Stop the benchmark to change it.", app.motion));
+        result = result.child(tag("bench-setup-locked", TagState::Live, "Locked while pricing or running.", app.motion));
     }
     let mut suites = div().flex().flex_wrap().gap(px(8.0));
     for (id, label) in [("precision", "Configuration accuracy"), ("web", "Live web research")] {
@@ -32,7 +32,7 @@ fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         ("First cases (or choose below)", "cases", vec![1, 3, 5, 10], b.case_count),
         ("Pages per case", "documents", vec![1, 3, 5, 10, 20], b.documents),
         ("Repetitions", "repeats", vec![1, 2, 3, 5, 10], b.repeats),
-        ("Timeout seconds per inference / agent call", "timeout", vec![60, 120, 240, 600, 1200], b.timeout),
+        ("Timeout seconds", "timeout", vec![60, 120, 240, 600, 1200], b.timeout),
         ("Local reply tokens", "tokens", vec![512, 1024, 2048, 4096], b.max_tokens),
     ] {
         let mut row = div().flex().flex_wrap().items_center().gap(px(8.0)).child(row_desc(name));
@@ -56,7 +56,14 @@ fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         });
         temp = temp.child(pill(("bench-temperature", i), &value.to_string(), b.temperature == value).on_click(pick));
     }
-    result = result.child(temp).child(hairline()).child(eyebrow("Agents and served models"));
+    result = result.child(temp).child(hairline()).child(
+        div()
+            .flex()
+            .items_center()
+            .gap(px(SPACE_S))
+            .child(icon_alive("agents", 12.0, "bench-served-models", 0, app.motion))
+            .child(eyebrow("Agents and served models")),
+    );
     result = result.child(app.input_field(Field::BenchModelSearch, "bench-model-search", "Search this agent's models", Some("search"), window, cx));
     for (i, entry) in app.live.run.agent_entries().iter().enumerate() {
         let Some(h) = &entry.harness else { continue };
@@ -76,7 +83,7 @@ fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         if b.harness != entry.id { continue; }
         let query = app.bench_model_search.value.trim().to_lowercase();
         let mut row = div().id("bench-model-options").h(px(180.0)).overflow_y_scroll().occlude().on_scroll_wheel(|_,_,cx| cx.stop_propagation())
-            .flex().flex_col().gap(px(6.0));
+            .flex().flex_col().gap(px(SPACE_S));
         for (n, model) in h.llms.iter().enumerate().filter(|(_,m)| query.is_empty() || m.to_lowercase().contains(&query)) {
             let chosen = model.clone(); let agent = entry.id.clone();
             let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -91,7 +98,14 @@ fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
         }
         result = result.child(row);
     }
-    result = result.child(hairline()).child(eyebrow("Test cases and expected answers"));
+    result = result.child(hairline()).child(
+        div()
+            .flex()
+            .items_center()
+            .gap(px(SPACE_S))
+            .child(icon_alive("list", 12.0, "bench-test-cases", 0, app.motion))
+            .child(eyebrow("Test cases and expected answers")),
+    );
     for (i, case) in b.cases.iter().enumerate() {
         let id = crate::api::s(case, "id"); let selected = b.case_ids.contains(&id) || (b.case_ids.is_empty() && i < b.case_count);
         let pick = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -106,12 +120,12 @@ fn setup(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
             .child(row_desc(&format!("Expected: {} · forbidden: {}",
                 case_words(case, "must_find"), case_words(case, "must_not_find")))));
     }
-    result.child(row_desc("Correctness: expected findings matched / expected findings. Unsupported rate: unsupported findings / produced findings. Source coverage and accuracy are not independently measured by this test set. Task token rate includes input and output over total task time; it is not inference speed. n/a means not measured."))
+    result.child(row_desc("Correctness: expected findings matched / expected. Unsupported rate: unsupported / produced findings. Source coverage and accuracy are not independently measured. Task token rate includes input and output over task time; it is not inference speed. n/a means not measured."))
 }
 
 fn glow(color: u32, blur: f32) -> Vec<gpui::BoxShadow> {
     vec![gpui::BoxShadow {
-        color: hsla(color),
+        color: paint(color).into(),
         offset: point(px(0.0), px(0.0)),
         blur_radius: px(blur),
         spread_radius: px(0.0),
@@ -125,9 +139,9 @@ fn led_bar(value: f32, segments: usize, color: u32) -> Div {
     for i in 0..segments {
         let d = div().w(px(8.0)).h(px(14.0)).rounded(px(1.5));
         bar = bar.child(if i < lit {
-            d.bg(rgb(color)).shadow(glow(color, 5.0))
+            d.bg(paint(color)).shadow(glow(color, 5.0))
         } else {
-            d.bg(rgb(LED_OFF))
+            d.bg(paint(LED_OFF))
         });
     }
     bar
@@ -164,14 +178,14 @@ fn delta(pct: Option<i8>, higher_better: bool) -> Div {
     div()
         .flex()
         .items_center()
-        .gap(px(6.0))
+        .gap(px(SPACE_S))
         .child(led_matrix(arrow, color, 2.0, 1.0))
         .child(mono(&format!("{}{}%", if pct > 0 { "+" } else { "" }, pct), color))
 }
 
 /// One headline number: label, the figure in display type, its unit, the
 /// change, and a strip of the benchmarks before it.
-fn headline(label: &str, value: &str, unit: &str, pct: Option<i8>, higher_better: bool, series: &[Option<f64>]) -> Div {
+fn headline(label: &str, value: &str, unit: &str, pct: Option<i8>, higher_better: bool, series: &[Option<f64>], glyph: &str, motion: bool) -> Div {
     let mut spark = div().flex().items_end().gap(px(2.0)).h(px(22.0));
     let known: Vec<f64> = series.iter().flatten().copied().collect();
     let lo = known.iter().copied().fold(f64::MAX, f64::min);
@@ -187,7 +201,7 @@ fn headline(label: &str, value: &str, unit: &str, pct: Option<i8>, higher_better
                 .w(px(5.0))
                 .h(px(h.round() as f32))
                 .rounded(px(1.0))
-                .bg(rgb(if v.is_none() { LED_OFF } else if last { ICE } else { LED_DIM }))
+                .bg(paint(if v.is_none() { LED_OFF } else if last { ICE } else { LED_DIM }))
                 .when(last && v.is_some(), |d| d.shadow(glow(ICE, 5.0))),
         );
     }
@@ -196,8 +210,8 @@ fn headline(label: &str, value: &str, unit: &str, pct: Option<i8>, higher_better
         .min_w(px(180.0))
         .flex()
         .flex_col()
-        .gap(px(6.0))
-        .child(mono(&label.to_uppercase(), DIM))
+        .gap(px(SPACE_S))
+        .child(card_head(glyph, label, motion))
         .child(
             div()
                 .flex()
@@ -209,7 +223,7 @@ fn headline(label: &str, value: &str, unit: &str, pct: Option<i8>, higher_better
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_size(px(40.0))
                         .line_height(px(40.0))
-                        .text_color(rgb(INK))
+                        .text_color(paint(INK))
                         .child(value.to_string()),
                 )
                 .child(div().pb(px(4.0)).child(mono(unit, MUTED))),
@@ -280,7 +294,12 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let bench = app.live.local.bench.clone();
     let b = &bench;
     if !b.loaded {
-        return div().child(empty_note("Asking Kriko's engine for its benchmark results."));
+        return div().child(enter(
+            empty_note("Asking Kriko's engine for its benchmark results."),
+            "benchmark-0",
+            0,
+            motion,
+        ));
     }
     let server = app
         .live
@@ -300,7 +319,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         _ => None,
     };
     let setup_panel = setup(app, window, cx);
-    let mut progress_panel = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Live progress"));
+    let mut progress_panel = card().flex().flex_col().gap(px(8.0)).child(card_head("activity", "Live progress", motion));
     let jobs: Vec<_> = app.live.run.jobs.iter().filter(|j| j.kind == "bench").take(5).cloned().collect();
     if jobs.is_empty() { progress_panel = progress_panel.child(empty_note("No benchmark task yet.")); }
     for job in &jobs { progress_panel = progress_panel.child(crate::screens::logs::job_logs(app, job, cx)); }
@@ -311,11 +330,16 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         this.tab = Tab::Settings; this.refresh_local(cx); cx.notify();
     });
     let runtime = app.live.local.plane.as_ref().map(|p| p.runtime.clone()).unwrap_or(crate::api::Value::Null);
-    progress_panel = progress_panel.child(row_desc(&format!("Local runtime: {} · model {} · active device {} · {}",
-        crate::api::s(&runtime, "runtime"), crate::api::s(&runtime, "model"),
-        crate::api::s(&runtime, "device"), crate::api::s(&runtime, "reason"))));
-    progress_panel = progress_panel.child(div().flex().flex_wrap().gap(px(6.0))
-        .child(plate_s("bench-export", "Copy detailed results JSON").on_click(copy))
+    let runtime_line = if runtime.is_null() {
+        "Local runtime not reported.".to_string()
+    } else {
+        format!("Local runtime: {} · model {} · active device {} · {}",
+            crate::api::s(&runtime, "runtime"), crate::api::s(&runtime, "model"),
+            crate::api::s(&runtime, "device"), crate::api::s(&runtime, "reason"))
+    };
+    progress_panel = progress_panel.child(row_desc(&runtime_line));
+    progress_panel = progress_panel.child(div().flex().flex_wrap().gap(px(SPACE_S))
+        .child(plate_s("bench-export", "Copy results JSON").on_click(copy))
         .child(plate_s("bench-source", "Open benchmark source").on_click(source))
         .child(plate_s("bench-runtime-settings", "Local runtime settings").on_click(runtime_settings)));
 
@@ -325,10 +349,10 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         machine = machine.child(
             well()
                 .px(px(12.0))
-                .py(px(3.0))
+                .py(px(SPACE_XS))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(mono(&label.to_uppercase(), DIM))
                 .child(mono(&value, INK_2)),
         );
@@ -365,7 +389,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         ),
         BenchPhase::Failed(why) => (tag("bench-failed", TagState::Block, why, motion), "Run benchmark"),
     };
-    let mut planes = div().flex().items_center().gap(px(6.0)).flex_wrap();
+    let mut planes = div().flex().items_center().gap(px(SPACE_S)).flex_wrap();
     for (i, (plane, _meaning)) in b.planes.iter().enumerate() {
         let name = plane.clone();
         let toggle = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -377,10 +401,10 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     }
     let run_button = plate_wide("bench-run", key_label)
         .when(running, |d| {
-            d.bg(rgba(DANGER_WASH))
-                .border_color(rgba(DANGER_EDGE))
-                .text_color(rgb(0xffd0ca))
-                .hover(|s| s.bg(rgba(0xff6b5e3d)))
+            d.bg(paint_a(DANGER_WASH))
+                .border_color(paint_a(DANGER_EDGE))
+                .text_color(paint(0xffd0ca))
+                .hover(|s| s.bg(paint_a(0xff6b5e3d)))
         })
         .on_click(press);
     let mut run_status = div()
@@ -399,10 +423,10 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .min_w(px(0.0))
         .flex()
         .flex_col()
-        .gap(px(2.0))
+        .gap(px(SPACE_XS))
         .child(row_desc(
             "Runs the engine's fixed test set on the planes picked below and records time, tokens, \
-             cost and how many claims were accepted. The first press prices it; a second spends.",
+             cost and accepted claims. The first press prices; a second spends.",
         ))
         .child(mono(
             &format!(
@@ -424,10 +448,19 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .flex()
         .flex_col()
         .gap(px(8.0))
+        .child(card_head("benchmark", "Benchmark", motion))
         .child(start_intro)
         .child(run_status)
         .children(b.last.clone().map(|l| mono(&l, MUTED)))
-        .child(div().pt(px(4.0)).child(eyebrow("Measured on")))
+        .child(
+            div()
+                .pt(px(4.0))
+                .flex()
+                .items_center()
+                .gap(px(SPACE_S))
+                .child(icon_alive("cpu", 12.0, "bench-measured-on", 0, motion))
+                .child(eyebrow("Measured on")),
+        )
         .child(machine);
 
     if b.runs.is_empty() {
@@ -435,11 +468,16 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             .flex()
             .flex_col()
             .gap(px(SPACE_SECTION))
-            .child(start_panel)
-            .child(setup_panel)
-            .child(accuracy(&app.live.local.bench))
-            .child(progress_panel)
-            .child(empty_note("Nothing has been benchmarked here yet. Run one to see how an agent does."));
+            .child(enter(start_panel, "benchmark-0", 0, motion))
+            .child(enter(setup_panel, "benchmark-1", 1, motion))
+            .child(enter(accuracy(&app.live.local.bench, motion), "benchmark-2", 2, motion))
+            .child(enter(progress_panel, "benchmark-3", 3, motion))
+            .child(enter(
+                empty_note("Nothing benchmarked here yet. Run one to see how an agent does."),
+                "benchmark-4",
+                4,
+                motion,
+            ));
     }
 
     // ---- the headline numbers: the latest benchmark against the one before ----
@@ -465,6 +503,8 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             change(latest.median_ms, before.as_ref().and_then(ms)),
             false,
             &take(|x| x.median_ms),
+            "clock",
+            motion,
         ))
         .child(headline(
             "Tokens per run",
@@ -473,6 +513,8 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             change(latest.median_tokens, before.as_ref().and_then(tokens)),
             false,
             &take(|x| x.median_tokens),
+            "layers",
+            motion,
         ))
         .child(headline(
             "Cost per run",
@@ -481,6 +523,8 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             change(latest.median_usd, before.as_ref().and_then(usd)),
             false,
             &take(|x| x.median_usd),
+            "chart",
+            motion,
         ))
         .child(headline(
             "Evidence kept",
@@ -489,6 +533,8 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             change(latest.acceptance, before.as_ref().and_then(accept)),
             true,
             &take(|x| x.acceptance),
+            "shield",
+            motion,
         ));
 
     let mine: Vec<&BenchRun> = b.runs.iter().filter(|r| r.batch_id == latest.id).collect();
@@ -496,12 +542,12 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let mut agents = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(12.0)).child(eyebrow("All recorded runs by agent")))
+        .child(card_head("agents", "All recorded runs by agent", motion))
         .child(
             div()
                 .flex()
                 .items_center()
-                .pb(px(10.0))
+                .pb(px(SPACE_S))
                 .child(div().flex_1().min_w(px(170.0)).child(th("Agent")))
                 .child(div().w(px(84.0)).child(th("Answer")))
                 .child(div().w(px(180.0)).child(th("Task tokens / s")))
@@ -556,7 +602,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                                         .font_family(SANS)
                                         .font_weight(FontWeight::SEMIBOLD)
                                         .text_size(px(14.0))
-                                        .text_color(rgb(INK))
+                                        .text_color(paint(INK))
                                         .child(name),
                                 )
                                 .child(mono(&format!("{} · {} · {:.0} runs", row.plane, row.protocol, row.runs), DIM)),
@@ -564,11 +610,11 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 )
                 .child(div().w(px(84.0)).child(mono(&seconds(row.ms), INK_2)))
                 .child(
-                    div().w(px(180.0)).flex().items_center().gap(px(6.0)).child(match tps {
+                    div().w(px(180.0)).flex().items_center().gap(px(SPACE_S)).child(match tps {
                         Some(t) => div()
                             .flex()
                             .items_center()
-                            .gap(px(6.0))
+                            .gap(px(SPACE_S))
                             .child(led_bar(
                                 if fastest > 0.0 { (t / fastest * 100.0) as f32 } else { 0.0 },
                                 10,
@@ -604,7 +650,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     let lo = vals.iter().copied().fold(f64::MAX, f64::min);
     let hi = vals.iter().copied().fold(f64::MIN, f64::max);
     let rows = 10usize;
-    let mut columns = div().flex().items_end().justify_between().gap(px(6.0));
+    let mut columns = div().flex().items_end().justify_between().gap(px(SPACE_S));
     for (k, x) in series.iter().enumerate() {
         let v = x.median_ms.unwrap_or(0.0);
         let lit = (2.0 + (v - lo) / (hi - lo).max(1.0) * (rows as f64 - 2.0)).round() as usize;
@@ -615,9 +661,9 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         for r in 0..rows {
             let d = div().w(px(18.0)).h(px(6.0)).rounded(px(1.5));
             col = col.child(if rows - r <= lit {
-                d.bg(rgb(color)).opacity(if last { 1.0 } else { 0.7 }).when(last, |d| d.shadow(glow(ICE, 5.0)))
+                d.bg(paint(color)).opacity(if last { 1.0 } else { 0.7 }).when(last, |d| d.shadow(glow(ICE, 5.0)))
             } else {
-                d.bg(rgb(LED_OFF))
+                d.bg(paint(LED_OFF))
             });
         }
         columns = columns.child(
@@ -625,7 +671,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 .flex()
                 .flex_col()
                 .items_center()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(mono(&clock(v / 1000.0), if last { ICE } else if best { INK_2 } else { DIM }))
                 .child(col),
         );
@@ -636,15 +682,15 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .flex_col()
         .gap(px(8.0))
         .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .child(eyebrow("Typical answer, benchmark by benchmark"))
-                .child(delta(
+            card_head_row(
+                "chart",
+                "Typical answer by benchmark",
+                Some(delta(
                     change(series.last().and_then(|x| x.median_ms), series.first().and_then(|x| x.median_ms)),
                     false,
-                )),
+                ).into_any_element()),
+                motion,
+            ),
         )
         .child(row_desc(&match (series.first(), series.last()) {
             (Some(a), Some(z)) if series.len() > 1 => format!(
@@ -654,7 +700,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 date(a),
                 date(z)
             ),
-            _ => "Shorter is faster. One benchmark is on record; the next one draws the line.".to_string(),
+            _ => "Shorter is faster. One benchmark on record; the next draws the line.".to_string(),
         }))
         .child(columns)
         .children(match (series.first(), series.last()) {
@@ -666,8 +712,8 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
 
     // ---- the latest benchmark, run by run ----
 
-    let mut variation = card().flex().flex_col().gap(px(8.0)).child(eyebrow("Repeated case variation"))
-        .child(row_desc("Elapsed range includes the entire task. Compare repeated samples of the same case and agent; these are not inference-speed measurements."));
+    let mut variation = card().flex().flex_col().gap(px(8.0)).child(card_head("clock", "Repeated case variation", motion))
+        .child(row_desc("Elapsed range covers the whole task. Compare repeated samples of the same case and agent; these are not inference-speed measurements."));
     let mut groups = std::collections::BTreeMap::<(String, String, String), Vec<&BenchRun>>::new();
     for run in &mine { groups.entry((run.plane.clone(), run.llm.clone(), run.subject.clone())).or_default().push(run); }
     for ((plane, llm, subject), runs) in groups {
@@ -679,10 +725,10 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         };
         variation = variation.child(row_desc(&format!("{subject} · {plane} / {llm} · n={} · failures {failed}/{} · {range}", runs.len(), runs.len())));
     }
-    variation = variation.child(row_desc("Expected findings = the known issues this case should report. Traps = deliberately forbidden or known-absent claims. Rejected = candidates the evidence gate removed, not proven hallucinations. A finished run can still find none of the expected issues."));
+    variation = variation.child(row_desc("Expected findings = known issues this case should report. Traps = forbidden or known-absent claims. Rejected = candidates the evidence gate removed, not proven hallucinations. A finished run can still find none."));
     let slowest = mine.iter().filter_map(|r| r.ms).fold(1.0f64, f64::max);
     let mut bars = card().flex().flex_col();
-    bars = bars.child(div().mb(px(12.0)).child(eyebrow("Latest benchmark, run by run")));
+    bars = bars.child(card_head("list", "Latest benchmark, run by run", motion));
     for (i, r) in mine.iter().enumerate() {
         let detail = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
             this.live.local.bench.detail = if this.live.local.bench.detail == Some(i) { None } else { Some(i) }; cx.notify();
@@ -704,7 +750,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                                 .flex_1()
                                 .font_family(SANS)
                                 .text_size(px(14.0))
-                                .text_color(rgb(INK_2))
+                                .text_color(paint(INK_2))
                                 .child(format!(
                                     "{} · {}",
                                     r.subject,
@@ -717,7 +763,7 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                         ))
                         .child(div().w(px(72.0)).flex().justify_end().child(mono(&seconds(r.ms), INK))),
                 )
-                .child(mono("Elapsed time relative to the slowest case in this batch", DIM))
+                .child(mono("Elapsed vs the slowest case in this batch", DIM))
                 .child(led_bar(
                     r.ms.map(|m| (m / slowest * 100.0) as f32).unwrap_or(0.0),
                     28,
@@ -735,14 +781,14 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .flex()
         .flex_col()
         .gap(px(SPACE_SECTION))
-        .child(start_panel)
-        .child(setup_panel)
-        .child(accuracy(&app.live.local.bench))
-        .child(progress_panel)
-        .child(row_title("Results"))
-        .child(latest_score(&mine))
-        .child(heads)
-        .child(
+        .child(enter(start_panel, "benchmark-0", 0, motion))
+        .child(enter(setup_panel, "benchmark-1", 1, motion))
+        .child(enter(accuracy(&app.live.local.bench, motion), "benchmark-2", 2, motion))
+        .child(enter(progress_panel, "benchmark-3", 3, motion))
+        .child(enter(row_title("Results"), "benchmark-4", 4, motion))
+        .child(enter(latest_score(&mine, motion), "benchmark-5", 5, motion))
+        .child(enter(heads, "benchmark-6", 6, motion))
+        .child(enter(
             div()
                 .flex()
                 .flex_wrap()
@@ -750,17 +796,23 @@ pub fn benchmark(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 .items_start()
                 .child(div().id("bench-agent-table-scroll").flex_1().min_w(px(560.0)).overflow_x_scroll().map(horizontal_wheel).child(agents.min_w(px(880.0))))
                 .child(div().flex_1().min_w(px(360.0)).child(history)),
-        )
-        .child(bars)
-        .child(variation)
-        .child(
+            "benchmark-7",
+            7,
+            motion,
+        ))
+        .child(enter(bars, "benchmark-8", 8, motion))
+        .child(enter(variation, "benchmark-9", 9, motion))
+        .child(enter(
             div()
                 .flex()
                 .items_center()
                 .gap(px(8.0))
-                .child(div().size(px(6.0)).rounded(px(1.5)).bg(rgba(0xbfe4ff99)))
-                .child(mono("Ice is better than the benchmark before, red is worse. n/a means the engine did not measure it.", DIM)),
-        )
+                .child(div().size(px(6.0)).rounded(px(1.5)).bg(paint_a(0xbfe4ff99)))
+                .child(mono("Ice is better than the previous benchmark, red worse. n/a means the engine did not measure it.", DIM)),
+            "benchmark-10",
+            10,
+            motion,
+        ))
 }
 
 fn case_words(case: &crate::api::Value, key: &str) -> String {
@@ -808,7 +860,7 @@ mod score_tests {
     }
 }
 
-fn latest_score(runs: &[&BenchRun]) -> Div {
+fn latest_score(runs: &[&BenchRun], motion: bool) -> Div {
     let completed = runs.iter().filter(|r| r.error.is_empty()).count();
     let mut passed=0;
     let mut found=0; let mut wanted=0; let mut traps=0; let mut attempted=0; let mut attempted_scored=0; let mut scored=0;
@@ -821,20 +873,20 @@ fn latest_score(runs: &[&BenchRun]) -> Div {
         if let Some(g)=run.raw.get("attempted_gold").filter(|g| !g.is_null()) { attempted_scored+=1; attempted+=crate::api::arr(g,"hallucinated").len(); }
         if let Some(t)=run.tokens { tokens+=t; measured+=1; }
     }
-    card().flex().flex_col().gap(px(6.0)).child(eyebrow("Benchmark score explained"))
+    card().flex().flex_col().gap(px(SPACE_S)).child(card_head("info", "Benchmark score explained", motion))
         .child(row_desc(&format!("Completed {completed}/{} runs. {}", runs.len(), if wanted>0 { format!("Found {found}/{wanted} expected issues ({:.0}%).", found as f64/wanted as f64*100.0) } else { "Expected-answer success rate was not measured.".into() })))
-        .child(row_desc(&format!("Passed all expected-answer checks: {passed}/{scored} scored runs. Configuration checks include issues, specifications, applicability and abstention; older records score issues only.")))
+        .child(row_desc(&format!("Passed all expected-answer checks: {passed}/{scored} scored runs. Configuration checks cover issues, specifications, applicability and abstention; older records score issues only.")))
         .child(row_desc(&format!("Forbidden claims in scored answers: {traps} ({scored} scored runs). {}", if attempted_scored>0 { format!("Final candidates contained {attempted} forbidden claims before filtering, across {attempted_scored} measured runs.") } else { "Attempts before filtering were not recorded in these older runs.".into() })))
         .child(row_desc(&format!("Tokens burned: {}. Counts include input and output; missing usage is not zero.", if measured>0 { format!("{tokens:.0} across {measured}/{} measured runs",runs.len()) } else { "not reported by this agent".into() })))
-        .child(row_desc("Evidence kept measures quote checks. It does not mean the answer is complete or correct. Trap scoring compares wording against the versioned case list; it is not an independent accuracy audit."))
+        .child(row_desc("Evidence kept measures quote checks, not whether the answer is complete or correct. Trap scoring compares wording against the versioned case list; it is not an independent accuracy audit."))
 }
 
-fn accuracy(b: &crate::live::local::Bench) -> Div {
+fn accuracy(b: &crate::live::local::Bench, motion: bool) -> Div {
     let mut panel = card().flex().flex_col().gap(px(8.0))
-        .child(eyebrow("Configuration accuracy and usage"))
-        .child(row_desc("Scores inspect proposed claims before source filtering. Empty answers still lose recall. Timings include failed attempts; missing token usage and prices remain unmeasured. Results stay separate by test set, model and protocol."));
+        .child(card_head("check-circle", "Configuration accuracy and usage", motion))
+        .child(row_desc("Scores inspect proposed claims before source filtering. Empty answers still lose recall. Timings include failed attempts; missing token usage and prices stay unmeasured. Results stay separate by test set, model and protocol."));
     let rows = crate::api::arr(&b.snapshot, "readout");
-    if rows.is_empty() { return panel.child(empty_note("Run the configuration suite to measure unsupported claims, specifications, abstention, time and tokens.")); }
+    if rows.is_empty() { return panel.child(empty_note("Run the configuration suite to measure claims, specifications, abstention, time and tokens.")); }
     for r in rows {
         let mut record = well().p(px(12.0)).flex().flex_col().gap(px(8.0))
             .child(row_title(&format!("{} · {}", crate::api::s(r, "plane"), crate::api::s(r, "llm"))))
@@ -842,7 +894,7 @@ fn accuracy(b: &crate::live::local::Bench) -> Div {
         let mut scores = div().flex().flex_wrap().gap(px(8.0));
         for (label, key) in [("Unsupported claims", "hallucination_rate"), ("Expected facts found", "recall"), ("Specifications found", "spec_recall"), ("Correct abstention", "abstention_accuracy")] {
             let value = crate::api::n(r, key).map(|v| format!("{:.1}%", v * 100.0)).unwrap_or_else(|| "unmeasured".into());
-            scores = scores.child(div().flex().flex_col().gap(px(3.0)).child(row_desc(label)).child(mono(&value, INK)));
+            scores = scores.child(div().flex().flex_col().gap(px(SPACE_XS)).child(row_desc(label)).child(mono(&value, INK)));
         }
         record = record.child(scores)
             .child(mono(&format!("Time p50 {} · p95 {}", seconds(crate::api::n(r, "latency_p50_ms")), seconds(crate::api::n(r, "latency_p95_ms"))), MUTED));
@@ -868,7 +920,7 @@ fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Statefu
         }
     }
     let risks=crate::api::arr(&answer,"risks");
-    if risks.is_empty() && r.error.is_empty() { d=d.child(row_desc("No risk passed the evidence checks. This is not proof that the product has no problems.")); }
+    if risks.is_empty() && r.error.is_empty() { d=d.child(row_desc("No risk passed the evidence checks. This is not proof the product has no problems.")); }
     for (risk_index, risk) in risks.iter().enumerate() {
         d=d.child(hairline()).child(row_title(&crate::api::s(risk,"title")).flex_none()).child(row_desc(&crate::api::s(risk,"body")).flex_none());
         for source in crate::api::arr(risk,"sources") {
@@ -879,5 +931,5 @@ fn run_detail(r: &BenchRun, i: usize, _cx: &mut Context<Kriko>) -> gpui::Statefu
     }
     d=d.child(hairline()).child(row_desc(&format!("Settings used: {}", detail.get("settings").map(|s| format!("{} pages · {} reply tokens · {} s timeout · agent {}",crate::api::n(s,"max_documents").map(|v|v.to_string()).unwrap_or_else(||"run default".into()),crate::api::n(s,"max_tokens").map(|v|v.to_string()).unwrap_or_else(||"default".into()),crate::api::n(s,"timeout_seconds").map(|v|v.to_string()).unwrap_or_else(||"default".into()),crate::api::s(s,"harness"))).unwrap_or_else(||"not recorded".into()))).flex_none());
     let copy=r.raw.to_string();
-    d.child(plate_s(("bench-copy-record",i),"Copy full technical record").on_click(move |_,_,cx|cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy.clone()))).flex_none())
+    d.child(plate_s(("bench-copy-record",i),"Copy technical record").on_click(move |_,_,cx|cx.write_to_clipboard(gpui::ClipboardItem::new_string(copy.clone()))).flex_none())
 }

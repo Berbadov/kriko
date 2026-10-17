@@ -15,9 +15,10 @@
 
 use std::path::Path;
 
-use gpui::{div, prelude::*, px, rgb, rgba, ClickEvent, Context, FontWeight, Styled};
+use gpui::{div, prelude::*, px, ClickEvent, Context, FontWeight, Styled};
 
 use crate::app::{Kriko, Tab};
+use crate::screens::row_desc;
 use crate::theme::*;
 
 struct Step {
@@ -36,10 +37,10 @@ const STEPS: &[Step] = &[
     Step {
         icon: "check",
         title: "Welcome to Kriko",
-        body: "Kriko brings known product problems, their sources, and useful \
-checks next to the listing you are reading. Your catalogs and history are \
-stored on this computer. Online research sends your question and relevant \
-context to the providers you choose.",
+        body: "Kriko puts known product problems, their sources, and useful \
+checks beside the listing you are reading. Catalogs and history stay on this \
+computer. Online research sends your question and context to the providers \
+you choose.",
         dest: None,
         go: None,
         key: "Begin",
@@ -47,10 +48,9 @@ context to the providers you choose.",
     Step {
         icon: "overview",
         title: "Install a catalog",
-        body: "A catalog is one product category as data. Overview, under \
-Knowledge, lists the catalogs this release publishes, each with an Install \
-button, and keeps installed ones current. Looking a product up in an \
-installed catalog works offline and needs no key.",
+        body: "A catalog is one product category as data. Overview lists the \
+ones this release publishes; install them there and keep them current. An \
+installed catalog works offline, with no key.",
         dest: Some(Tab::Overview),
         go: Some("Open Overview"),
         key: "Next",
@@ -58,9 +58,9 @@ installed catalog works offline and needs no key.",
     Step {
         icon: "agents",
         title: "Set up an agent",
-        body: "Online research asks an agent to search and read. Agents shows what is \
-available on this machine — an installed coding agent, a local model, or a \
-paid API with your own key — and what each one still needs.",
+        body: "Online research asks an agent to search and read. Agents shows \
+what this machine has — a coding agent, a local model, or a paid API with \
+your key — and what each still needs.",
         dest: Some(Tab::Agents),
         go: Some("Open Agents"),
         key: "Next",
@@ -69,8 +69,8 @@ paid API with your own key — and what each one still needs.",
         icon: "extension",
         title: "Read beside a listing",
         body: "The browser extension reads the page you are on and shows \
-Kriko's findings beside it. The Browser extension screen stages it and walks \
-you through loading it in your browser.",
+Kriko's findings beside it. Browser extension stages it and steps you \
+through loading it.",
         dest: Some(Tab::Extension),
         go: Some("Set up extension"),
         key: "Next",
@@ -78,9 +78,8 @@ you through loading it in your browser.",
     Step {
         icon: "run",
         title: "Start your first check",
-        body: "Search a product title in Run, or use Quick Look from a listing \
-once the extension is in. Kriko asks your chosen agent, quote-checks what the \
-sources really said, and files what holds.",
+        body: "Search a product title in Run, or use Quick Look from a listing. \
+Kriko asks your agent, quote-checks the sources, and files what holds.",
         dest: Some(Tab::Run),
         go: None,
         key: "Start a check",
@@ -167,14 +166,14 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         }
     });
 
-    let mut dots = div().flex().items_center().gap(px(6.0));
+    let mut dots = div().flex().items_center().gap(px(SPACE_S));
     for i in 0..STEPS.len() {
         dots = dots.child(
             div()
                 .w(px(6.0))
                 .h(px(6.0))
                 .rounded(px(3.0))
-                .bg(rgb(if i == step { BRAND_BRIGHT } else { 0x3a4156 })),
+                .bg(paint(if i == step { BRAND_BRIGHT } else { DIM })),
         );
     }
 
@@ -186,26 +185,29 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         // default flex shrink squeezed the body to one line-height even when
         // its text wrapped, which let the footer paint over the last lines.
         .flex_none()
-        .gap(px(10.0))
+        .gap(px(SPACE_M))
         .max_w(px(520.0))
         .w_full()
-        .bg(rgb(SURFACE_1))
+        .bg(paint(SURFACE_1))
         .border_1()
-        .border_color(rgba(HAIRLINE))
+        .border_color(paint_a(HAIRLINE))
         .rounded(px(16.0))
         .p(px(24.0))
         .shadow(card_shadow())
-        .child(
+        .child(enter(
             div()
                 .flex()
                 .flex_none()
                 .w_full()
                 .items_center()
-                .gap(px(10.0))
-                .child(icon(page.icon, 20.0).text_color(rgb(BRAND_BRIGHT)))
+                .gap(px(SPACE_M))
+                .child(icon_alive(page.icon, 16.0, "tutorial-step", step, app.motion))
                 .child(eyebrow(&format!("First run — {} of {}", step + 1, STEPS.len()))),
-        )
-        .child(
+            "tutorial-0",
+            0,
+            app.motion,
+        ))
+        .child(enter(
             div()
                 .flex_none()
                 .w_full()
@@ -213,33 +215,35 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(24.0))
                 .line_height(px(28.0))
-                .text_color(rgb(INK))
+                .text_color(paint(INK))
                 .child(page.title),
-        )
-        .child(
+            "tutorial-1",
+            1,
+            app.motion,
+        ))
+        .child(enter(
+            row_desc(page.body).flex_none().w_full(),
+            "tutorial-2",
+            2,
+            app.motion,
+        ))
+        .child(enter(
             div()
                 .flex_none()
                 .w_full()
-                .font_family(SANS)
-                .text_size(px(14.0))
-                .line_height(px(21.0))
-                .text_color(rgb(MUTED))
-                .child(page.body),
-        )
-        .child(
-            div()
-                .flex_none()
-                .w_full()
-                .mt(px(6.0))
+                .mt(px(SPACE_S))
                 .flex()
                 .items_center()
-                .gap(px(10.0))
+                .gap(px(SPACE_M))
                 .child(dots)
                 .child(div().flex_1())
                 .child(ghost("tutorial-skip", "Skip tour").on_click(skip))
                 .children(go)
                 .child(key("tutorial-next", page.key).on_click(next)),
-        );
+            "tutorial-3",
+            3,
+            app.motion,
+        ));
 
     div()
         .id("tutorial-scrim")
@@ -248,8 +252,8 @@ pub fn overlay(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::AnyElement {
         .flex()
         .items_center()
         .justify_center()
-        .p(px(28.0))
-        .bg(rgba(0x05070fd9))
+        .p(px(SPACE_XL))
+        .bg(fixed_a(0x05070fd9))
         .occlude()
         .child(card)
         .into_any_element()

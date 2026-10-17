@@ -7,7 +7,7 @@
 //! (`/api/history`, `/api/lookup/{id}`).
 
 use gpui::{
-    div, prelude::*, px, rgb, rgba, Animation, AnimationExt,
+    div, prelude::*, px, Animation, AnimationExt,
     ClickEvent, Context, Div, FontWeight, Styled, Window,
 };
 
@@ -34,7 +34,7 @@ pub(crate) fn clip(text: &str, n: usize) -> String {
 pub(crate) fn severity_word_chip(word: &str) -> Div {
     let (glyph, fg, bg): (&[&str], u32, u32) = match word {
         "critical" => (&X5, DANGER, DANGER_WASH),
-        "high" | "serious" => (&BANG5, 0xffb86b, 0xffb86b1f),
+        "high" | "serious" => (&BANG5, WARN, WARN_WASH),
         _ => (&QUEUE5, MUTED, WELL),
     };
     div()
@@ -43,14 +43,16 @@ pub(crate) fn severity_word_chip(word: &str) -> Div {
         .flex()
         .flex_none()
         .items_center()
-        .gap(px(7.0))
+        .gap(px(SPACE_S))
         .rounded(px(7.0))
-        .bg(rgb(bg))
+        // The wash's low byte is alpha: paint() would drop it and leave a
+        // solid red/amber chip under the same-coloured word.
+        .bg(paint_a(bg))
         .border_1()
-        .border_color(rgba(HAIRLINE))
+        .border_color(paint_a(HAIRLINE))
         .font_family(MONO)
         .text_size(px(10.0))
-        .text_color(rgb(fg))
+        .text_color(paint(fg))
         .child(led_matrix(glyph, fg, 3.0, 1.0))
         .child(if word.is_empty() {
             "NOTED".to_string()
@@ -62,19 +64,19 @@ pub(crate) fn severity_word_chip(word: &str) -> Div {
 /// One claim of an opened check: its severity and title, then the sources
 /// behind it, each with its domain, its stance and the quote it was read from.
 fn claim_block(claim: &ClaimView) -> Div {
-    let mut block = div().flex().flex_col().gap(px(6.0)).child(
+    let mut block = div().flex().flex_col().gap(px(SPACE_S)).child(
         div()
             .flex()
             .items_start()
             .gap(px(8.0))
-            .child(div().pt(px(2.0)).child(led_matrix(&CHECK5, INK_2, 3.0, 1.0)))
+            .child(div().pt(px(SPACE_XS)).child(led_matrix(&CHECK5, INK_2, 3.0, 1.0)))
             .child(
                 div()
                     .flex_1()
                     .min_w(px(0.0))
                     .font_family(SANS)
                     .text_size(px(13.0))
-                    .text_color(rgb(INK_2))
+                    .text_color(paint(INK_2))
                     .child(claim.title.clone()),
             )
             .child(severity_word_chip(&claim.severity)),
@@ -93,29 +95,23 @@ fn claim_block(claim: &ClaimView) -> Div {
                 .pl(px(24.0))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(6.0))
+                        .gap(px(SPACE_S))
                         .child(mono(
                             if src.domain.is_empty() { &src.url } else { &src.domain },
                             ICE,
                         ))
                         .child(mono(
                             if against { "AGAINST" } else { "FOR" },
-                            if against { 0xffb86b } else { MUTED },
+                            if against { WARN } else { MUTED },
                         )),
                 )
                 .when(!src.quote.is_empty(), |d| {
-                    d.child(
-                        div()
-                            .font_family(SANS)
-                            .text_size(px(12.0))
-                            .text_color(rgb(MUTED))
-                            .child(format!("“{}”", clip(&src.quote, 260))),
-                    )
+                    d.child(row_desc(&format!("“{}”", clip(&src.quote, 260))))
                 }),
         );
     }
@@ -125,7 +121,12 @@ fn claim_block(claim: &ClaimView) -> Div {
 pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let motion = app.motion;
     if !app.live.history.loaded {
-        return div().child(empty_note("Reading your history from the engine."));
+        return div().child(enter(
+            empty_note("Reading your history from the engine."),
+            "history-loading",
+            0,
+            motion,
+        ));
     }
 
     // ---- the controls row: search + the catalog and date-span filters ----
@@ -139,7 +140,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     );
 
     let mut controls = div().flex().flex_col().mb(px(24.0));
-    let mut bar = div().flex().flex_wrap().items_center().gap(px(6.0)).pb(px(12.0))
+    let mut bar = div().flex().flex_wrap().items_center().gap(px(SPACE_S)).pb(px(12.0))
         .child(div().flex_1().min_w(px(220.0)).child(search));
     let open_field = app.live.history.filter_open.clone();
     let filters = [
@@ -184,11 +185,12 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         }
         let title = match field.as_str() { "pack" => "pack", "time" => "date", "kind" => "kind", _ => "status" };
         let close = cx.listener(|this, _: &ClickEvent, _w, cx| { this.live.history.filter_open = None; cx.notify(); });
-        let drawer = card().flex().flex_col().gap(px(SPACE_CARD)).child(
-            div().flex().items_center().justify_between()
-                .child(eyebrow(&format!("Filter by {title}")))
-                .child(filter_btn("history-filter-close", "Close", false, false).on_click(close)),
-        );
+        let drawer = card().flex().flex_col().gap(px(SPACE_CARD)).child(card_head_row(
+            "filter",
+            &format!("Filter by {title}"),
+            Some(filter_btn("history-filter-close", "Close", false, false).on_click(close).into_any_element()),
+            motion,
+        ));
         let mut options = div().flex().flex_wrap().gap(px(8.0));
         for (i, (value, label)) in choices.iter().enumerate() {
             let picked = *value == current;
@@ -245,7 +247,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         app.live.history.pack.as_deref().unwrap_or("all"),
         span.word()
     );
-    let mut bars = div().flex().items_end().gap(px(6.0)).h(px(96.0));
+    let mut bars = div().flex().items_end().gap(px(SPACE_S)).h(px(96.0));
     for (bi, (label, value)) in months.iter().enumerate() {
         let value = *value;
         let height = if value == 0 {
@@ -262,7 +264,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .w_full()
             .h(px(height))
             .rounded(px(3.0))
-            .bg(rgb(ICE))
+            .bg(paint(ICE))
             .opacity(opacity)
             .shadow(vec![shadow(0xbfe4ff40, 0.0, 0.0, 8.0, 0.0)]);
         // each bar rises a beat after the one before it, from the baseline
@@ -286,7 +288,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 .flex()
                 .flex_col()
                 .items_center()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(
                     div()
                         .w_full()
@@ -301,7 +303,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     div()
                         .font_family(MONO)
                         .text_size(px(10.0))
-                        .text_color(rgb(MUTED))
+                        .text_color(paint(MUTED))
                         .child(label.clone()),
                 ),
         );
@@ -324,6 +326,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     let claims_all: usize = items.iter().map(|c| c.claims).sum::<usize>().max(1);
 
     let stat = |label: &str,
+                icon_name: &str,
                 value: String,
                 meter_id: &'static str,
                 pct: f32,
@@ -334,12 +337,19 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .flex()
             .flex_col()
             .gap(px(8.0))
-            .child(eyebrow(label))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(8.0))
+                    .child(icon_alive(icon_name, 14.0, label, 0, motion))
+                    .child(eyebrow(label)),
+            )
             .child(
                 div()
                     .font_family(MONO)
                     .text_size(px(22.0))
-                    .text_color(rgb(INK))
+                    .text_color(paint(INK))
                     .child(value),
             )
             .child(meter_live(meter_id, pct, 12, false, motion));
@@ -361,42 +371,42 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
 
     let stats = card()
         .flex()
-        .flex_wrap()
-        .gap(px(28.0))
+        .flex_col()
+        .gap(px(8.0))
         .mb(px(24.0))
+        .child(card_head("chart", "Records per month", motion))
         .child(
             div()
-                .flex_1()
-                .min_w(px(240.0))
                 .flex()
-                .flex_col()
-                .gap(px(6.0))
-                .child(eyebrow("Records per month"))
-                .child(bars),
-        )
-        .child(stat(
-            "Packs touched",
-            packs_touched.to_string(),
-            "hist-stats-packs",
-            packs_touched as f32 / packs_all as f32 * 100.0,
-            550.0,
-        ))
-        .child(stat(
-            "Claims grounded",
-            claims_grounded.to_string(),
-            "hist-stats-claims",
-            claims_grounded as f32 / claims_all as f32 * 100.0,
-            700.0,
-        ));
+                .flex_wrap()
+                .gap(px(SPACE_XL))
+                .child(div().flex_1().min_w(px(240.0)).child(bars))
+                .child(stat(
+                    "Packs touched",
+                    "database",
+                    packs_touched.to_string(),
+                    "hist-stats-packs",
+                    packs_touched as f32 / packs_all as f32 * 100.0,
+                    550.0,
+                ))
+                .child(stat(
+                    "Claims grounded",
+                    "quote",
+                    claims_grounded.to_string(),
+                    "hist-stats-claims",
+                    claims_grounded as f32 / claims_all as f32 * 100.0,
+                    700.0,
+                )),
+        );
 
     // ---- the table card ----
-    let mut table = card().flex().flex_col();
+    let mut table = card().flex().flex_col().child(card_head("list", "Records", motion));
     table = table
         .child(
             div()
                 .flex()
                 .items_center()
-                .pb(px(10.0))
+                .pb(px(SPACE_S))
                 .child(div().w(px(28.0)))
                 .child(div().flex_1().child(th("Record")))
                 .child(div().w(px(120.0)).child(th("Findings")))
@@ -407,7 +417,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     if rows.is_empty() {
         table = table.child(
             div()
-                .py(px(48.0))
+                .py(px(SPACE_2XL))
                 .flex()
                 .flex_col()
                 .items_center()
@@ -461,11 +471,11 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             .items_center()
             .py(px(4.0))
             .cursor_pointer()
-            .hover(|s| s.bg(rgba(GLASS_1)))
+            .hover(|s| s.bg(paint_a(GLASS_1)))
             .on_click(toggle)
             .child(
                 div().w(px(28.0)).flex_none().child(
-                    icon(if open { "collapse" } else { "expand" }, 14.0).text_color(rgb(MUTED)),
+                    icon(if open { "collapse" } else { "expand" }, 14.0).text_color(paint(MUTED)),
                 ),
             )
             .child(
@@ -474,13 +484,13 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     .min_w(px(0.0))
                     .flex()
                     .flex_col()
-                    .gap(px(2.0))
+                    .gap(px(SPACE_XS))
                     .child(
                         div()
                             .font_family(SANS)
                             .font_weight(FontWeight::SEMIBOLD)
                             .text_size(px(15.0))
-                            .text_color(rgb(INK))
+                            .text_color(paint(INK))
                             .child(check.label.clone()),
                     )
                     .child(mono(&format!("{} · {} · {} {}", kind_label, check.status, clip(&check.pack_line(), 60), check.agent), MUTED)),
@@ -492,17 +502,17 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
         if open {
             // A Quick Look has a separate, explicit catalog-assignment flow.
             let mut panel = well()
-                .mt(px(2.0))
-                .mb(px(6.0))
+                .mt(px(SPACE_XS))
+                .mb(px(SPACE_S))
                 .p(px(16.0))
                 .flex()
                 .flex_col()
-                .gap(px(6.0));
+                .gap(px(SPACE_S));
             if check.source == "quick_look" {
                 match &app.live.history.quick_look_detail {
                     Some(detail) if detail.id == check.id => {
                         if let Some(result) = quick_look_result_card(
-                            &detail.result, &detail.product, &detail.state,
+                            &detail.result, &detail.product, &detail.state, motion,
                         ) {
                             panel = panel.child(result);
                         } else {
@@ -517,7 +527,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     }
                     _ => panel = panel.child(mono("Reading the saved Quick Look result.", MUTED)),
                 }
-                panel = panel.child(eyebrow("Catalog assignment"));
+                panel = panel.child(card_head("layers", "Catalog assignment", motion));
                 let assignment = check.categorization.as_ref();
                 let assigned = assignment.is_some_and(|one| one.status == "assigned");
                 let busy = app.live.history.categorizing.as_deref() == Some(check.id.as_str());
@@ -533,10 +543,10 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     .filter(|name| !name.is_empty())
                     .unwrap_or_else(|| check.category.as_str());
                 let mut status = callout()
-                    .child(div().flex().flex_col().gap(px(5.0))
+                    .child(div().flex().flex_col().gap(px(SPACE_XS))
                         .child(eyebrow(if assigned { "Assigned" } else { "Needs a catalog" }))
                         .child(div().font_family(SANS).font_weight(FontWeight::SEMIBOLD)
-                            .text_size(px(14.0)).text_color(rgb(INK))
+                            .text_size(px(14.0)).text_color(paint(INK))
                             .child(if assigned && !catalog_name.is_empty() {
                                 catalog_name.to_string()
                             } else if !assigned {
@@ -567,7 +577,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         this.categorize_saved_look(quick_id.clone(), cx);
                     });
                     panel = panel.child(
-                        div().flex().flex_wrap().items_center().gap(px(6.0))
+                        div().flex().flex_wrap().items_center().gap(px(SPACE_S))
                             .child(key(
                                 gpui::ElementId::named_usize("hist-categorize", gi),
                                 if busy { "Categorising…" } else { "Categorise with agent" },
@@ -600,7 +610,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                     if app.live.history.categorization_catalogs.is_empty() {
                         panel = panel.child(mono("No installed catalogs are available yet.", MUTED));
                     } else {
-                        panel = panel.child(eyebrow("Installed catalogs"));
+                        panel = panel.child(card_head("database", "Installed catalogs", motion));
                         for (ci, catalog) in app.live.history.categorization_catalogs.iter().enumerate() {
                             let id = catalog.pack_id.clone();
                             let label = catalog.name.clone();
@@ -614,9 +624,9 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             panel = panel.child(
                                 div().flex().flex_wrap().items_center().justify_between().gap(px(8.0))
                                     .py(px(4.0))
-                                    .child(div().flex().flex_col().gap(px(2.0))
+                                    .child(div().flex().flex_col().gap(px(SPACE_XS))
                                         .child(div().font_family(SANS).text_size(px(13.0))
-                                            .text_color(rgb(INK_2)).child(label.clone()))
+                                            .text_color(paint(INK_2)).child(label.clone()))
                                         .child(mono(&format!("{} · {}", if enabled { "enabled" } else { "disabled" },
                                             if editable { "harvest target" } else { "read-only catalog" }), MUTED)))
                                     .child(ghost(
@@ -632,7 +642,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                 }
             } else {
                 // the drawer: the claims with their sources, then the page read.
-                panel = panel.child(eyebrow("Evidence"));
+                panel = panel.child(card_head("quote", "Evidence", motion));
                 match &app.live.history.detail {
                     Some(detail) if detail.id == check.id => {
                         if detail.claims.is_empty() {
@@ -661,19 +671,19 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                         if !detail.url.is_empty() {
                             panel = panel
                                 .child(hairline())
-                                .child(eyebrow("Read from"))
+                                .child(card_head("link", "Read from", motion))
                                 .child(
                                     div()
                                         .flex()
                                         .items_center()
-                                        .gap(px(6.0))
-                                        .child(icon("arrow-right", 12.0).text_color(rgb(MUTED)))
+                                        .gap(px(SPACE_S))
+                                        .child(icon("arrow-right", 12.0).text_color(paint(MUTED)))
                                         .child(
                                             div()
                                                 .min_w(px(0.0))
                                                 .font_family(MONO)
                                                 .text_size(px(12.0))
-                                                .text_color(rgb(ICE))
+                                                .text_color(paint(ICE))
                                                 .child(clip(&detail.url, 90)),
                                         ),
                                 );
@@ -698,7 +708,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
                             div()
                                 .font_family(MONO)
                                 .text_size(px(11.0))
-                                .text_color(rgb(MUTED))
+                                .text_color(paint(MUTED))
                                 .child(format!(
                                     "{} claims · from {} · stored to {}",
                                     check.claims,
@@ -793,7 +803,7 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
             div()
                 .font_family(MONO)
                 .text_size(px(12.0))
-                .text_color(rgb(MUTED))
+                .text_color(paint(MUTED))
                 .child(count_text),
         )
         .child(
@@ -818,12 +828,15 @@ pub fn history(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) ->
     div()
         .flex()
         .flex_col()
-        .child(controls)
-        .child(stats)
-        .child(
+        .child(enter(controls, "history-controls", 0, motion))
+        .child(enter(stats, "history-stats", 1, motion))
+        .child(enter(
             div()
                 .id("hist-table-scroll")
                 .overflow_x_scroll().map(horizontal_wheel)
                 .child(table.min_w(px(640.0))),
-        )
+            "history-table",
+            2,
+            motion,
+        ))
 }

@@ -1,10 +1,11 @@
 //! Activity: what Kriko did, and what is waiting for you.
 //! A needs-you callout on top (only while a job has put a question to you),
-//! a filter under it, the feed in a glass card — the shape of the reference
-//! screen. The feed is `/api/operations`, refreshed every five seconds while
-//! this tab is open; the callout reads `attention` off `/api/jobs`.
+//! the filter under it, then the agent runs and the feed in glass cards — the
+//! shape of the reference screen. The feed is `/api/operations`, refreshed
+//! every five seconds while this tab is open; the callout reads `attention`
+//! off `/api/jobs`.
 
-use gpui::{div, prelude::*, px, rgb, rgba, Context, Div, Styled, Window};
+use gpui::{div, prelude::*, px, Context, Div, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
 use crate::live::history::{ago, feed_kind, now_secs};
@@ -55,13 +56,13 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                 div()
                     .flex()
                     .flex_col()
-                    .gap(px(6.0))
+                    .gap(px(SPACE_S))
                     .child(tag("activity-need", TagState::Need, "Needs you", motion))
                     .child(
                         div()
                             .font_family(SANS)
                             .text_size(px(16.0))
-                            .text_color(rgb(INK))
+                            .text_color(paint(INK))
                             .child(say),
                     ),
             )
@@ -99,30 +100,24 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .collect();
 
     let mut feed = card();
-    feed = feed.child(div().mb(px(14.0)).child(eyebrow("Recent")));
+    feed = feed.child(card_head("activity", "Recent", motion));
 
     if !h.ops_loaded {
-        feed = feed.child(empty_note("Reading the activity from the engine."));
+        feed = feed.child(empty_note("Reading activity from the engine."));
     } else if entries.is_empty() {
         feed = feed.child(
             div()
-                .py(px(40.0))
+                .py(px(SPACE_2XL))
                 .flex()
                 .flex_col()
                 .items_center()
                 .gap(px(8.0))
                 .child(led_matrix(&QUEUE5, LED_DIM, 4.0, 2.0))
-                .child(
-                    div()
-                        .font_family(SANS)
-                        .text_size(px(13.0))
-                        .text_color(rgb(MUTED))
-                        .child(if h.ops.is_empty() {
-                            "Nothing has happened yet."
-                        } else {
-                            "Nothing in the feed matches."
-                        }),
-                ),
+                .child(row_desc(if h.ops.is_empty() {
+                    "Nothing has happened yet."
+                } else {
+                    "Nothing in the feed matches."
+                })),
         );
     }
 
@@ -133,7 +128,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             .items_center()
             .gap(px(8.0))
             .py(px(4.0))
-            .hover(|s| s.bg(rgba(GLASS_1)))
+            .hover(|s| s.bg(paint_a(GLASS_1)))
             .child(
                 div()
                     .w(px(90.0))
@@ -147,7 +142,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
                     .min_w(px(0.0))
                     .font_family(SANS)
                     .text_size(px(15.0))
-                    .text_color(rgb(INK))
+                    .text_color(paint(INK))
                     .child(text),
             )
             .child(tag(format!("activity-feed-{ri}"), state, kind, motion));
@@ -165,13 +160,13 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             job.state, app.live.run.task(job)).to_lowercase().contains(&query))
         .take(20).cloned()
         .collect();
-    let mut runs = card().flex().flex_col().gap(px(6.0))
-        .child(div().mb(px(4.0)).child(eyebrow("Agent runs")));
+    let mut runs = card().flex().flex_col().gap(px(SPACE_S))
+        .child(card_head("agents", "Agent runs", motion));
     if recent_jobs.is_empty() {
         runs = runs.child(empty_note(if app.live.run.jobs_loaded {
             "No agent runs yet."
         } else {
-            "Reading completed and running agent jobs."
+            "Reading agent jobs."
         }));
     }
     for (i, job) in recent_jobs.iter().enumerate() {
@@ -191,7 +186,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         let line = format!("{} · {} · {} · {}", kind_word(&job.kind), agent, model, job.state);
         runs = runs.child(
             div().flex().items_center().gap(px(8.0))
-                .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(3.0))
+                .child(div().flex_1().min_w(px(0.0)).flex().flex_col().gap(px(SPACE_XS))
                     .child(row_title(&app.live.run.task(job)))
                     .child(row_desc(&line))
                     .when(!job.done, |d| d.child(crate::screens::action_trail::compact_line(job, motion)))
@@ -209,7 +204,7 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
             } else if job.done {
                 let reason = if job.state == "failed" { job.message.as_str() } else if !job.no_answer_why.is_empty() {
                     job.no_answer_why.as_str()
-                } else { "The agent returned no answer text. Open the saved run for its findings and evidence." };
+                } else { "No answer text. Open the saved run." };
                 runs = runs.child(row_desc(&format!("No answer: {reason}")));
             }
 
@@ -220,8 +215,8 @@ pub fn activity(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .flex()
         .flex_col()
         .gap(px(SPACE_SECTION))
-        .children(callout)
-        .child(runs)
-        .child(div().flex().child(filter))
-        .child(feed)
+        .children(callout.map(|c| enter(c, "activity-0", 0, motion)))
+        .child(enter(div().flex().child(filter), "activity-2", 1, motion))
+        .child(enter(runs, "activity-1", 2, motion))
+        .child(enter(feed, "activity-3", 3, motion))
 }

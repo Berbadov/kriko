@@ -4,8 +4,9 @@
 
 use gpui::{div, prelude::*, px, AnyElement, SharedString};
 
-use crate::screens::{row_desc, row_title};
-use crate::theme::{arrive, callout, eyebrow};
+use crate::screens::row_title;
+use crate::textfx::words_reveal;
+use crate::theme::{arrive, callout, enter, eyebrow, icon_alive};
 
 /// Render one next step with its real screen action. The caller owns the
 /// action's route or API call, so a callout cannot promise an unavailable fix.
@@ -16,6 +17,7 @@ pub fn next_step(
     action: AnyElement,
     motion: bool,
 ) -> AnyElement {
+    let key: SharedString = id.into();
     let body = callout()
         .child(
             div()
@@ -24,10 +26,17 @@ pub fn next_step(
                 .flex()
                 .flex_col()
                 .gap(px(4.0))
-                .child(eyebrow("Next step"))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(8.0))
+                        .child(icon_alive("spark", 12.0, key.as_str(), 0, motion))
+                        .child(eyebrow("Next step")),
+                )
                 .child(row_title(title))
-                .child(row_desc(detail)),
+                .child(words_reveal(detail, key.as_str(), motion)),
         )
         .child(div().flex_none().child(action));
-    arrive(body, id, motion)
+    enter(arrive(body, key.clone(), motion), key.as_str(), 0, motion)
 }

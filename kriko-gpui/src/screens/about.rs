@@ -1,10 +1,10 @@
 //! About: Kriko, local product knowledge. The wordmark over the hero, and
 //! the key-value rows that say what this install is.
 
-use gpui::{div, prelude::*, px, rgb, svg, Context, Div, SharedString, Styled, Window};
+use gpui::{div, prelude::*, px, svg, Context, Div, SharedString, Styled, Window};
 
 use crate::app::Kriko;
-use crate::screens::mono;
+use crate::screens::{mono, row_desc};
 use crate::theme::*;
 
 fn kv(k: &str, v: &str) -> Div {
@@ -35,7 +35,7 @@ fn update_available_message(version: &str) -> String {
 
 #[cfg(not(windows))]
 fn update_available_message(version: &str) -> String {
-    format!("Version {version} is available. Download it from Releases and follow the manual install steps.")
+    format!("Version {version} is available. Download it from Releases and install manually.")
 }
 
 fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
@@ -84,7 +84,7 @@ fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
     if let Some(button) = action {
         row = row.child(button);
     }
-    let mut panel = card().flex().flex_col().gap(px(6.0)).child(eyebrow("Updates")).child(row);
+    let mut panel = card().flex().flex_col().gap(px(SPACE_S)).child(card_head("refresh", "Updates", app.motion)).child(row);
     if let Some(note) = &k.app_update_note {
         panel = panel.child(mono(note, DIM));
     }
@@ -92,6 +92,7 @@ fn updates_card(app: &Kriko, cx: &mut Context<Kriko>) -> Div {
 }
 
 pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> Div {
+    let motion = app.motion;
     let updates = updates_card(app, cx);
     let h = &app.live.health;
     let said = |v: &str| {
@@ -105,7 +106,7 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
     let mut facts = card()
         .flex()
         .flex_col()
-        .child(div().mb(px(4.0)).child(eyebrow("This install")))
+        .child(card_head("database", "This install", app.motion))
         .child(hairline())
         .child(kv("Version", &said(&h.version)))
         .child(hairline())
@@ -126,59 +127,59 @@ pub fn about(app: &mut Kriko, _window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex()
         .items_center()
         .gap(px(SPACE_SECTION))
+        .bg(paint(BRAND))
         .child(
             svg()
                 .path(SharedString::from("kriko-mark-white.svg"))
                 .size(px(64.0))
-                .text_color(rgb(0xffffff)),
+                .text_color(fixed(0xffffff)),
         )
         .child(
             div()
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(
                     svg()
                         .path(SharedString::from("kriko-wordmark-white.svg"))
                         .w(px(160.0))
                         .h(px(52.0))
-                        .text_color(rgb(0xffffff)),
+                        .text_color(fixed(0xffffff)),
                 )
-                .child(mono("local product knowledge", DIM)),
+                .child(
+                    div()
+                        .font_family(MONO)
+                        .text_size(px(12.0))
+                        .text_color(fixed_a(0xffffffcc))
+                        .child("local product knowledge"),
+                ),
         );
 
     let blurb = card()
         .flex()
         .flex_col()
-        .gap(px(6.0))
-        .child(eyebrow("What it is"))
+        .gap(px(SPACE_S))
+        .child(card_head("info", "What it is", app.motion))
         .child(
             div()
                 .font_family(SANS)
                 .text_size(px(16.0))
                 .line_height(px(24.0))
-                .text_color(rgb(INK_2))
+                .text_color(paint(INK_2))
                 .child(
-                    "Kriko reads what the web says about a product, keeps every claim next to its source, and tells you what is actually known. Installed lookups, saved checks, and saved conversations stay on your machine.",
+                    "Kriko reads what the web says about a product, keeps every claim beside its source, and says what is actually known. Lookups, checks and conversations stay on your machine.",
                 ),
         )
-        .child(
-            div()
-                .font_family(SANS)
-                .text_size(px(13.0))
-                .line_height(px(20.0))
-                .text_color(rgb(MUTED))
-                .child(
-                    "A web-backed run sends its question and reading context to the providers used for that run. A local model keeps inference on your machine, but web search still contacts its search provider to gather sources.",
-                ),
-        );
+        .child(row_desc(
+            "A web-backed run sends its question and reading context to the providers it uses. A local model keeps inference here; web search still contacts its search provider.",
+        ));
 
     div()
         .flex()
         .flex_col()
         .gap(px(SPACE_SECTION))
-        .child(brand)
-        .child(updates)
-        .child(blurb)
-        .child(facts)
+        .child(enter(brand, "about-0", 0, motion))
+        .child(enter(updates, "about-1", 1, motion))
+        .child(enter(blurb, "about-2", 2, motion))
+        .child(enter(facts, "about-3", 3, motion))
 }

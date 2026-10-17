@@ -1,11 +1,11 @@
-//! Browser extension: put it on disk, show where, open a browser, and say
-//! plainly whether the extension has been seen. There is no pairing: the
-//! engine trusts the extension's own origin.
+//! Browser extension: one click adds it to a browser Kriko opens for the
+//! reader, and the screen says plainly whether the extension has been seen
+//! since. There is no pairing: the engine trusts the extension's own origin.
 
-use gpui::{div, prelude::*, px, rgb, ClickEvent, Context, Div, Styled, Window};
+use gpui::{div, prelude::*, px, ClickEvent, Context, Div, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
-use crate::live::knowledge::{ago_seconds, ExtStatus};
+use crate::live::knowledge::{ago_seconds, ExtLaunch, ExtStatus};
 use crate::screens::{guidance, mono, row_desc, row_title};
 use crate::theme::*;
 
@@ -63,7 +63,7 @@ fn step(n: usize, title: &str, desc: &str, control: Option<gpui::AnyElement>) ->
                 .justify_center()
                 .font_family(MONO)
                 .text_size(px(13.0))
-                .text_color(rgb(ICE))
+                .text_color(paint(ICE))
                 .child(format!("{n}")),
         )
         .child(
@@ -72,7 +72,7 @@ fn step(n: usize, title: &str, desc: &str, control: Option<gpui::AnyElement>) ->
                 .min_w(px(0.0))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .gap(px(SPACE_XS))
                 .child(row_title(title))
                 .child(row_desc(desc))
                 .children(control),
@@ -96,6 +96,23 @@ fn seen_line(e: &ExtStatus) -> (TagState, &'static str, String) {
         )
     } else {
         (TagState::Queue, "Never seen", "No extension has reached this engine yet.".into())
+    }
+}
+
+/// The plain outcome of the one click, in one line: where a window opened —
+/// a separate profile is the thing readers notice — or the engine's own words
+/// when none could be.
+fn launch_line(o: &ExtLaunch) -> String {
+    if o.launched {
+        if o.profile.is_empty() {
+            "Opened in the browser Kriko already lives in.".to_string()
+        } else {
+            "Opened in a new window with its own profile: your bookmarks and logins are not there.".to_string()
+        }
+    } else if o.error.is_empty() {
+        "No browser was opened.".to_string()
+    } else {
+        o.error.clone()
     }
 }
 
@@ -139,7 +156,9 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
     };
     let check = cx.listener(|this, _: &ClickEvent, _w, cx| this.refresh_extension(cx));
     let stale_check = cx.listener(|this, _: &ClickEvent, _w, cx| this.refresh_extension(cx));
+    let add = cx.listener(|this, _: &ClickEvent, _w, cx| this.extension_launch(cx));
     let save_port = cx.listener(|this, _: &ClickEvent, _w, cx| this.save_extension_port(cx));
+
     let stale_notice = if extension_read_state(true, k.ext_checking, k.ext_error.is_some()) == ExtensionReadState::Stale {
         let error = k.ext_error.as_deref().unwrap_or("The status request failed.");
         Some(guidance::next_step(
@@ -150,12 +169,17 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
             motion,
         ))
     } else { None };
-    let next = next_for_extension(e);
-    let next_step = match next {
-        ExtensionNext::UseRunScreen => Some(guidance::next_step(
+
+    let unavailable = next_for_extension(e) == ExtensionNext::UseRunScreen;
+    // The one click was pressed and no window opened: a Firefox reader, most
+    // often. That is when the manual install is the install, and not before.
+    let show_manual = e.available && k.ext_launch.as_ref().is_some_and(|o| !o.launched);
+
+    let next_step = unavailable.then(|| {
+        guidance::next_step(
             "extension-unavailable",
-            "Check a product in Kriko",
-            "This build does not carry the browser extension. You can still run checks from Run; browser checks need a build that includes the extension.",
+            "This build has no browser extension",
+            "Browser checks need a build that carries the extension. Every other check runs from Run.",
             key("ext-unavailable-run", "Open Run")
                 .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
                     this.tab = Tab::Run;
@@ -165,79 +189,62 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
                 }))
                 .into_any_element(),
             motion,
-        )),
-        ExtensionNext::OpenBrowser => Some(guidance::next_step(
-            "extension-open-browser",
-            "Open a readable listing",
-            "This action stages the extension and opens a page Kriko can read. The status turns Connected only after the extension reaches this engine; if it stays unseen, use the steps below.",
-            key("ext-open-with-extension", "Open browser with extension")
-                .on_click(act("launch"))
-                .into_any_element(),
-            motion,
-        )),
-        ExtensionNext::None => None,
-    };
+        )
+    });
 
-    // ---- steps ----
-    let staged_line = if !e.available {
-        "This build does not carry the extension.".to_string()
-    } else if e.staged {
-        format!("Version {} is on disk at {}.", e.staged_version, e.path)
-    } else {
-        format!("Version {} is ready to put in {}.", e.version, e.path)
-    };
-    let mut steps_card = card().flex().flex_col();
-    steps_card = steps_card.child(div().mb(px(12.0)).child(eyebrow("Three steps")));
-    steps_card = steps_card
-        .child(step(
-            1,
-            "Put it on disk",
-            &staged_line,
-            e.available.then(|| {
-                key("ext-stage", if e.staged { "Refresh" } else { "Stage" })
-                    .on_click(act("stage"))
-                    .into_any_element()
-            }),
-        ))
-        .child(hairline())
-        .child(step(
-            2,
-            "Show the folder",
-            "Opens it in the file manager, so the browser can be pointed at it.",
-            e.staged.then(|| ghost("ext-reveal", "Show folder").on_click(act("reveal")).into_any_element()),
-        ))
-        .child(hairline())
-        .child(step(
-            3,
-            "Load it in a browser",
-            "Use Open browser with extension above, or in Chrome open chrome://extensions, turn on Developer mode, choose Load unpacked, and choose the folder shown here.",
-            e.available.then(|| ghost("ext-launch", "Open browser with extension").on_click(act("launch")).into_any_element()),
-        ));
-    if !e.browsers.is_empty() {
-        let mut list = div().mt(px(8.0)).flex().flex_col().gap(px(4.0));
-        for b in e.browsers.iter().filter(|b| b.name != "Firefox") {
-            list = list.child(mono(&format!("{}: {}", b.name, b.url), DIM));
-        }
-        steps_card = steps_card.child(list);
+    // ---- the one click ----
+    let mut install = card()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_CARD))
+        .child(row_title("Add Kriko to your browser"))
+        .child(row_desc("Reads listings in a browser window Kriko opens for you."));
+    if e.available {
+        let label = if k.ext_launch_busy { "Adding…" } else { "Add to browser" };
+        install = install.child(key("ext-add", label).on_click(add));
+    }
+    if let Some(o) = &k.ext_launch {
+        install = install.child(row_desc(&launch_line(o)));
+    }
+    if e.staged && !show_manual {
+        install = install.child(mono(&format!("Version {} is in {}", e.staged_version, e.path), DIM));
+        install = install.child(ghost("ext-reveal", "Show folder").on_click(act("reveal")));
     }
     if let Some(n) = &k.ext_notice {
-        steps_card = steps_card.child(div().mt(px(12.0)).child(mono(n, MUTED)));
+        install = install.child(mono(n, MUTED));
     }
 
-    let firefox_path = e.firefox_path.clone();
-    let firefox = card().flex().flex_col().gap(px(6.0))
-        .child(eyebrow("Firefox"))
-        .child(row_desc("Firefox 140 or newer. Prepare the add-on, then open about:debugging#/runtime/this-firefox and choose Load Temporary Add-on. Choose manifest.json below."))
-        .child(mono(&e.firefox_path, MUTED))
-        .child(div().flex().flex_wrap().gap(px(8.0))
-            .when(e.available, |d| d.child(key("firefox-stage", "Prepare Firefox").on_click(act("firefox/stage"))))
-            .when(e.firefox_staged, |d| d
-                .child(ghost("firefox-reveal", "Show files").on_click(act("firefox/reveal")))
-                .child(ghost("firefox-copy", "Copy path").on_click(cx.listener(move |_this, _: &ClickEvent, _w, cx| {
-                    cx.write_to_clipboard(gpui::ClipboardItem::new_string(firefox_path.clone()));
-                })))))
-        .child(row_desc("Temporary add-ons are removed when Firefox restarts. Permanent installation needs a Mozilla-signed XPI. Preparing also creates an unsigned XPI beside the folder."))
-        .child(row_desc("The add-on sends page URLs and product details to Kriko on this computer. Research uses the provider you configure in Kriko."));
+    // ---- the manual install, only when the one click could not run ----
+    let manual = show_manual.then(|| {
+        let mut m = card()
+            .flex()
+            .flex_col()
+            .child(card_head("list", "Install it yourself", motion));
+        m = m.child(step(
+            1,
+            "Chrome, Edge or Brave",
+            &format!(
+                "Open the extensions page, turn on Developer mode, choose Load unpacked, and pick {}.",
+                e.path
+            ),
+            Some(ghost("ext-reveal-manual", "Show folder").on_click(act("reveal")).into_any_element()),
+        ));
+        let firefox_control = if e.firefox_staged {
+            ghost("firefox-reveal", "Show files").on_click(act("firefox/reveal"))
+        } else {
+            ghost("firefox-stage", "Prepare Firefox").on_click(act("firefox/stage"))
+        };
+        m = m.child(hairline()).child(step(
+            2,
+            "Firefox",
+            &format!(
+                "Open about:debugging#/runtime/this-firefox, choose Load Temporary Add-on, and pick {}.",
+                e.firefox_path
+            ),
+            Some(firefox_control.into_any_element()),
+        ));
+        m
+    });
 
     // ---- what the engine has seen ----
     let (state, label, said) = if k.ext_error.is_some() {
@@ -250,44 +257,29 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .flex()
         .flex_col()
         .gap(px(SPACE_CARD))
-        .child(eyebrow("Has it been seen"))
+        .child(card_head("check-circle", "Has it been seen", motion))
         .child(tag("extension-seen", state, label, motion))
         .child(row_desc(&said));
-    if !e.compat_state.is_empty() {
+    // A browser running older files is worth one line; a current one is not.
+    if matches!(e.compat_state.as_str(), "behind" | "too_old" | "stale_files") {
         let line = if e.compat_detail.is_empty() {
             format!("Extension version: {}", e.compat_state)
         } else {
-            format!("Extension version: {}. {}", e.compat_state, e.compat_detail)
+            e.compat_detail.clone()
         };
         status = status.child(row_desc(&line));
     }
-    status = status
-        .child(hairline())
-        .child(mono(
-            &format!(
-                "engine port {}{}",
-                e.port,
-                if e.port_is_ours { "" } else { ", not this engine's own" }
-            ),
-            DIM,
-        ))
-        .child(hairline())
-        .child(eyebrow("Connection port"))
-        .child(row_desc("Choose a free local port, then use the same address in the browser extension's settings."))
-        .child(port_input)
-        .child(ghost("ext-save-port", "Save port and restart engine").on_click(save_port))
-        .child(mono(&format!("Extension address: http://127.0.0.1:{}", e.port), DIM))
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-        .child(ghost("ext-check", if k.ext_checking { "Checking…" } else { "Check again" }).flex_none().on_click(check))
-                // flex_1 and min_w(0) so the sentence wraps inside the card.
-                .child(div().flex_1().min_w(px(0.0)).child(row_desc(
-                    "The extension is trusted by its own origin; there is nothing to pair.",
-                ))),
-        );
+    status = status.child(ghost("ext-check", if k.ext_checking { "Checking…" } else { "Check again" }).on_click(check));
+    if !e.port_is_ours {
+        status = status
+            .child(hairline())
+            .child(mono(&format!("engine port {} — not this engine's own", e.port), DIM))
+            .child(row_desc("Something else holds this port, so the extension cannot reach Kriko. Choose a free port, then restart the engine."))
+            .child(port_input)
+            .child(ghost("ext-save-port", "Save port and restart engine").on_click(save_port));
+    }
+
+    let columns: Vec<Div> = if unavailable { vec![status] } else { vec![install, status] };
 
     div()
         .flex()
@@ -295,10 +287,8 @@ pub fn extension(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) 
         .gap(px(8.0))
         .children(stale_notice)
         .children(next_step)
-        // The steps most browsers take come first; Firefox's own path, which
-        // is a temporary add-on, follows them.
-        .child(grid(app.content_w, 320.0, vec![steps_card, status]))
-        .child(firefox)
+        .child(grid(app.content_w, 320.0, columns))
+        .children(manual)
 }
 
 #[cfg(test)]
