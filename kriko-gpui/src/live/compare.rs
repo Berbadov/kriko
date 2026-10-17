@@ -1,10 +1,10 @@
-//! Compare: drafts, slots, board, questions and the research queue, as the
-//! engine says it.
+//! Compare: drafts, slots, questions and the research queue, as the engine
+//! says it.
 //!
 //! A slot holds a saved check (a `lookup_id`). The check itself is read from
 //! `/api/lookup/{id}` and, for the product it matched, `/api/subjects/{id}`;
 //! the table is those two answers lined up and nothing else. Drafts, the
-//! board, the questions and the queue are the engine's own rows.
+//! questions and the queue are the engine's own rows.
 //!
 //! What follows the pattern of [`crate::live`]: every call goes through
 //! `Kriko::fetch`, so a screen draws from this state and never waits on the
@@ -28,6 +28,19 @@ pub fn slot_available(slots: &[Option<String>], index: usize, lookup_id: &str) -
     !slots.iter().enumerate().any(|(other, slot)| {
         other != index && slot.as_deref() == Some(lookup_id)
     })
+}
+
+/// Moves one filled slot to another place among the filled ones, dropping the
+/// empty tail, so the board reorders without a drag. Pure, so it reads and
+/// tests on its own.
+pub fn reorder_slots(slots: &mut Vec<Option<String>>, from: usize, to: usize) {
+    let mut ids: Vec<String> = slots.iter().flatten().cloned().collect();
+    if from >= ids.len() || to >= ids.len() {
+        return;
+    }
+    let id = ids.remove(from);
+    ids.insert(to, id);
+    *slots = ids.into_iter().map(Some).collect();
 }
 
 // ---- what the engine holds ----
@@ -94,13 +107,32 @@ pub struct Spec {
     pub source: String,
 }
 
+/// One page behind a claim, as the engine recorded it: where it was read,
+/// what it said and which side of the claim it took.
+#[derive(Clone)]
+pub struct Evidence {
+    /// The site the page is on, ready to show as its mark.
+    pub host: String,
+    pub url: String,
+    pub quote: String,
+    /// The engine's own word; "refutes" is the one that reads against.
+    pub stance: String,
+}
+
+impl Evidence {
+    /// Whether the page stands behind the claim rather than against it.
+    pub fn backed(&self) -> bool {
+        self.stance.trim().to_lowercase() != "refutes"
+    }
+}
+
 #[derive(Clone)]
 pub struct Risk {
     pub title: String,
     pub body: String,
     pub level: Level,
     pub disputed: bool,
-    pub sources: Vec<String>,
+    pub sources: Vec<Evidence>,
 }
 
 impl Risk {
@@ -139,13 +171,6 @@ pub enum Loaded {
     Loading,
     Ready(Check),
     Missing(String),
-}
-
-#[derive(Clone)]
-pub struct Note {
-    pub x: f32,
-    pub y: f32,
-    pub text: String,
 }
 
 #[derive(Clone)]
@@ -291,19 +316,9 @@ pub struct State {
 
     pub slots: Vec<Option<String>>,
     pub picker: Option<usize>,
-    pub section: usize,
-    pub detail: Option<(usize, usize)>,
+    /// The table hides the rows every column agrees on.
+    pub differences_only: bool,
     pub checks: HashMap<String, Loaded>,
-
-    pub board_open: bool,
-    pub board_tool: usize,
-    pub strokes: Vec<Vec<(f32, f32)>>,
-    pub stroke_current: Vec<(f32, f32)>,
-    pub drawing: bool,
-    pub notes: Vec<Note>,
-    pub note_open: Option<usize>,
-    /// Bumped by every change to the board; a save waits to see it settle.
-    pub board_gen: u64,
 
     /// Rows pinned as preferred, by draft ("" while there is no draft yet).
     pub marks: HashMap<String, Vec<String>>,
@@ -432,9 +447,23 @@ fn risk_from(c: &Value) -> Risk {
         disputed: api::b(c, "disputed"),
         sources: api::arr(c, "sources")
             .iter()
-            .map(|s| {
-                let domain = api::s(s, "domain");
-                if domain.is_empty() { api::s(s, "url") } else { domain }
+            .filter_map(|s| {
+                let url = api::s(s, "url");
+                let stated = api::s(s, "domain");
+                let host = if stated.is_empty() {
+                    crate::sources::host_of(&url)
+                } else {
+                    stated
+                };
+                if url.is_empty() && host.is_empty() {
+                    return None;
+                }
+                Some(Evidence {
+                    host,
+                    url,
+                    quote: api::s(s, "quote"),
+                    stance: api::s(s, "stance"),
+                })
             })
             .collect(),
     }
@@ -527,10 +556,12 @@ pub struct SpecRow {
 pub struct RiskRow {
     pub title: String,
     pub cells: Vec<Option<Risk>>,
+    /// Whether the columns do not all carry it, or do not agree on it.
+    pub differs: bool,
 }
 
 /// One row per label any column states, first-seen order; DIFFERS when the
-/// columns that state it do not agree.
+/// columns state it differently, or only some of them state it at all.
 pub fn spec_rows(columns: &[Option<&Check>]) -> Vec<SpecRow> {
     let mut labels: Vec<String> = Vec::new();
     for c in columns.iter().flatten() {
@@ -548,7 +579,10 @@ pub fn spec_rows(columns: &[Option<&Check>]) -> Vec<SpecRow> {
                 .map(|c| c.and_then(|c| c.specs.iter().find(|s| s.label == label).cloned()))
                 .collect();
             let values: Vec<&str> = cells.iter().flatten().map(|c| c.value.as_str()).collect();
-            let differs = values.windows(2).any(|w| w[0] != w[1]);
+            let present = values.len();
+            // stated differently, or stated by only some of the columns
+            let differs = (present > 0 && present != cells.len())
+                || values.windows(2).any(|w| w[0] != w[1]);
             SpecRow { label, cells, differs }
         })
         .collect()
@@ -568,11 +602,23 @@ pub fn risk_rows(columns: &[Option<&Check>]) -> Vec<RiskRow> {
     titles
         .into_iter()
         .map(|title| {
-            let cells = columns
+            let cells: Vec<Option<Risk>> = columns
                 .iter()
                 .map(|c| c.and_then(|c| c.risks.iter().find(|r| r.title == title).cloned()))
                 .collect();
-            RiskRow { title, cells }
+            // present in some columns only, or carried at different levels or
+            // with a different dispute flag, is a difference
+            let present = cells.iter().filter(|c| c.is_some()).count();
+            let mut differs = present > 0 && present != cells.len();
+            let levels: Vec<Level> = cells.iter().flatten().map(|r| r.level).collect();
+            if levels.windows(2).any(|w| w[0] != w[1]) {
+                differs = true;
+            }
+            let disputed: Vec<bool> = cells.iter().flatten().map(|r| r.disputed).collect();
+            if disputed.windows(2).any(|w| w[0] != w[1]) {
+                differs = true;
+            }
+            RiskRow { title, cells, differs }
         })
         .collect()
 }
@@ -859,8 +905,8 @@ impl Kriko {
         });
     }
 
-    /// Opens a saved draft: its checks fill the slots, and its board,
-    /// questions and pinned rows load. The one entry other screens use.
+    /// Opens a saved draft: its checks fill the slots, and its questions and
+    /// pinned rows load. The one entry other screens use.
     pub fn select_draft(&mut self, draft_id: &str, cx: &mut Context<Self>) {
         if self.live.compare.draft.as_deref() == Some(draft_id) {
             return;
@@ -881,16 +927,11 @@ impl Kriko {
         let c = &mut self.live.compare;
         c.draft = Some(draft.draft_id.clone());
         c.slots = draft.lookup_ids.iter().take(MAX_SLOTS).cloned().map(Some).collect();
-        c.detail = None;
         c.picker = None;
-        c.strokes.clear();
-        c.notes.clear();
-        c.note_open = None;
         c.questions.clear();
         c.failed.clear();
         c.say = None;
         self.ensure_checks(cx);
-        self.load_board(draft.draft_id.clone(), cx);
         self.load_questions(draft.draft_id, cx);
     }
 
@@ -938,7 +979,6 @@ impl Kriko {
         }
         c.slots[i] = Some(lookup_id);
         c.picker = None;
-        c.detail = None;
         c.say = None;
         self.ensure_checks(cx);
     }
@@ -948,7 +988,19 @@ impl Kriko {
         if i < c.slots.len() {
             c.slots[i] = None;
         }
-        c.detail = None;
+        // the board reads filled slots from the front, and the arrows move by
+        // that order, so a cleared slot leaves no hole
+        c.slots = c.slots.iter().flatten().cloned().map(Some).collect();
+        c.picker = None;
+        c.say = None;
+    }
+
+    /// Moves a filled slot to another place among the filled ones, so the
+    /// board reorders the products without a drag. Trailing empties are
+    /// dropped; the slots compact to the front.
+    pub fn move_slot(&mut self, from: usize, to: usize) {
+        let c = &mut self.live.compare;
+        reorder_slots(&mut c.slots, from, to);
         c.picker = None;
         c.say = None;
     }
@@ -979,7 +1031,6 @@ impl Kriko {
             let c = &mut self.live.compare;
             c.slots.clear();
             c.picker = None;
-            c.detail = None;
             c.say = None;
         }
     }
@@ -1125,8 +1176,6 @@ impl Kriko {
                     c.drafts.retain(|d| d.draft_id != id);
                     c.draft = None;
                     c.marks.remove(&id);
-                    c.strokes.clear();
-                    c.notes.clear();
                     c.questions.clear();
                     c.slots.clear();
                     if let Some(first) = c.drafts.first().map(|d| d.draft_id.clone()) {
@@ -1172,112 +1221,11 @@ impl Kriko {
 
     // ---- the board ----
 
-    fn load_board(&mut self, draft_id: String, cx: &mut Context<Self>) {
-        let id = draft_id.clone();
-        self.fetch(
-            cx,
-            move || api::get(&format!("/api/compare-drafts/{}/board", api::seg(&id))),
-            move |this, reply, _| {
-                this.note(&reply);
-                let c = &mut this.live.compare;
-                if c.draft.as_deref() != Some(draft_id.as_str()) {
-                    return;
-                }
-                if let Ok(v) = reply {
-                    c.strokes = api::arr(&v, "strokes")
-                        .iter()
-                        .map(|s| {
-                            s.as_array()
-                                .map(|pts| {
-                                    pts.iter()
-                                        .map(|p| {
-                                            (
-                                                api::n(p, "x").unwrap_or(0.0) as f32,
-                                                api::n(p, "y").unwrap_or(0.0) as f32,
-                                            )
-                                        })
-                                        .collect()
-                                })
-                                .unwrap_or_default()
-                        })
-                        .collect();
-                    c.notes = api::arr(&v, "notes")
-                        .iter()
-                        .map(|n| Note {
-                            x: api::n(n, "x").unwrap_or(0.0) as f32,
-                            y: api::n(n, "y").unwrap_or(0.0) as f32,
-                            text: api::s(n, "text"),
-                        })
-                        .collect();
-                    c.note_open = None;
-                }
-            },
-        );
-    }
-
-    /// Saves the board once it has settled for a moment: after each stroke,
-    /// note, undo or clear, and never once per mouse move.
-    pub fn save_board_soon(&mut self, cx: &mut Context<Self>) {
-        self.live.compare.board_gen += 1;
-        let gen = self.live.compare.board_gen;
-        cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(Duration::from_millis(600)).await;
-            let _ = this.update(cx, |this, cx| {
-                if this.live.compare.board_gen == gen {
-                    this.save_board_now(cx);
-                }
-            });
-        })
-        .detach();
-    }
-
-    /// Writes the board to the open draft, saving the slots as a draft first
-    /// when there is none.
-    pub fn save_board_now(&mut self, cx: &mut Context<Self>) {
-        self.with_draft(cx, |this, id, cx| {
-            let c = &this.live.compare;
-            let strokes: Vec<Value> = c
-                .strokes
-                .iter()
-                .map(|s| {
-                    Value::Array(
-                        s.iter()
-                            .map(|(x, y)| json!({"x": round4(*x), "y": round4(*y)}))
-                            .collect(),
-                    )
-                })
-                .collect();
-            let notes: Vec<Value> = c
-                .notes
-                .iter()
-                .filter(|n| !n.text.trim().is_empty())
-                .map(|n| json!({"x": round4(n.x), "y": round4(n.y), "text": n.text}))
-                .collect();
-            this.fetch(
-                cx,
-                move || {
-                    api::put(
-                        &format!("/api/compare-drafts/{}/board", api::seg(&id)),
-                        json!({"strokes": strokes, "notes": notes}),
-                    )
-                },
-                |this, reply, _| say_error(this, &reply),
-            );
-        });
-    }
-
-    /// Enter on a note's field: the note keeps its text, and the board saves.
-    pub fn commit_board_note(&mut self, cx: &mut Context<Self>) {
-        let text = self.compare_note_input.value.trim().to_string();
-        let c = &mut self.live.compare;
-        if let Some(open) = c.note_open {
-            if open < c.notes.len() {
-                c.notes[open].text = text;
-            }
-            c.note_open = None;
-        }
+    /// Enter on the board's note field: the field is cleared. The freehand
+    /// board that held the notes is gone; the binding stays so the key the
+    /// shell routes still lands somewhere sensible.
+    pub fn commit_board_note(&mut self, _cx: &mut Context<Self>) {
         self.compare_note_input.set_value(String::new());
-        self.save_board_soon(cx);
     }
 
     // ---- questions ----
@@ -1803,8 +1751,6 @@ impl Kriko {
                         // the slots still fill; only the saving was refused
                         c.draft = None;
                         c.slots = slots.into_iter().map(Some).collect();
-                        c.strokes.clear();
-                        c.notes.clear();
                         c.questions.clear();
                         c.say = Some(format!("{} The products are in the slots, not saved as a draft.", e.message));
                         this.ensure_checks(cx);
@@ -1859,10 +1805,6 @@ fn queue_outcome(why: &str) -> QueueOutcome {
     } else {
         QueueOutcome::Failed
     }
-}
-
-fn round4(v: f32) -> f64 {
-    ((v as f64) * 10000.0).round() / 10000.0
 }
 
 #[cfg(test)]
@@ -1966,6 +1908,35 @@ mod tests {
         assert_eq!(rows.len(), 2);
         assert!(rows[0].cells[0].is_some() && rows[0].cells[1].is_some());
         assert!(rows[1].cells[1].is_none());
+        assert!(rows[0].differs, "same title, different level and dispute is a difference");
+        assert!(rows[1].differs, "held by one column only is a difference");
+    }
+
+    #[test]
+    fn a_risk_every_column_carries_the_same_way_is_not_a_difference() {
+        let a = check("A", &[], &[("Battery", Level::Low, false)]);
+        let b = check("B", &[], &[("Battery", Level::Low, false)]);
+        let rows = risk_rows(&[Some(&a), Some(&b)]);
+        assert!(!rows[0].differs);
+    }
+
+    #[test]
+    fn a_spec_stated_by_only_one_column_is_a_difference() {
+        let a = check("A", &[("Weight", "171 g"), ("Display", "6.1")], &[]);
+        let b = check("B", &[("Display", "6.1")], &[]);
+        let rows = spec_rows(&[Some(&a), Some(&b)]);
+        assert!(rows[0].differs, "only one column states the weight");
+        assert!(!rows[1].differs);
+    }
+
+    #[test]
+    fn reordering_keeps_every_product_and_compacts_the_tail() {
+        let mut slots = vec![Some("a".into()), None, Some("b".into()), Some("c".into())];
+        reorder_slots(&mut slots, 0, 2);
+        assert_eq!(slots, vec![Some("b".into()), Some("c".into()), Some("a".into())]);
+        let mut one = vec![Some("a".into())];
+        reorder_slots(&mut one, 0, 3);
+        assert_eq!(one, vec![Some("a".into())], "an out-of-range move changes nothing");
     }
 
     #[test]

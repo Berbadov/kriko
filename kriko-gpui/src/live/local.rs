@@ -178,13 +178,274 @@ pub struct Bench {
     pub snapshot: Value,
 }
 
-/// One downloadable model as the provider's library lists it: its name, the
-/// parameter sizes it comes in and a line about it, all read by the engine.
+/// One model the store draws: a name the provider's library lists, an
+/// installed model the local server holds, or both at once. `sizes` are the
+/// parameter badges the provider offers for it (`4b`, `8x7b`), `est_gb` the q4
+/// download the first badge implies, and `bytes` what the server reports on
+/// disk for the model it holds. `installed_name` is the server's own name for
+/// that model (`llama3:8b`), which is what "Use" selects. A side that reports
+/// nothing leaves its fields `None`.
 #[derive(Default, Clone)]
 pub struct LibraryModel {
     pub name: String,
+    /// The provider lists this name, so "Open in library" has a page for it.
+    pub listed: bool,
     pub sizes: Vec<String>,
     pub about: String,
+    pub est_gb: Option<f64>,
+    pub installed: bool,
+    /// The server's own name for the model it holds.
+    pub installed_name: Option<String>,
+    pub bytes: Option<f64>,
+    /// Parameter count in billions: the size badge's, or the server's details.
+    pub params_b: Option<f64>,
+    /// Quantisation the server reports, e.g. `Q4_K_M`.
+    pub quant: Option<String>,
+}
+
+/// The provider's own page for a model, so a listed row can open it. The tag
+/// is dropped: the library names a model, not one of its sizes.
+pub fn library_url(name: &str) -> String {
+    let slug = name.trim().split(':').next().unwrap_or("").to_ascii_lowercase();
+    format!("https://ollama.com/library/{slug}")
+}
+
+/// The installed model a library name stands for: the same name, or a sized
+/// tag of it (`llama3` names `llama3:8b`). A different model that merely
+/// begins with the name (`llama3.2`) is not one.
+fn sized_tag_of(held_name: &str, library_name: &str) -> bool {
+    let held = held_name.trim().to_ascii_lowercase();
+    let library = library_name.trim().to_ascii_lowercase();
+    if library.is_empty() {
+        return false;
+    }
+    let prefix = format!("{library}:");
+    held.strip_prefix(prefix.as_str())
+        .is_some_and(|tag| !tag.is_empty() && !tag.contains(':'))
+}
+
+/// The parameter count in billions for an installed model: the server's own
+/// details string (`8.0B`), else the size tag in the name (`llama3:8b`).
+pub fn held_params_b(held: &Held) -> Option<f64> {
+    held.params
+        .as_deref()
+        .and_then(params_b)
+        .or_else(|| held.name.split([':', '-', '_']).rev().find_map(params_b))
+}
+
+/// A parameter count written the way a model card does: `7B`, `1.5B`, `270M`.
+pub fn params_label(billions: f64) -> String {
+    if billions >= 1.0 {
+        if (billions - billions.round()).abs() < 0.05 {
+            format!("{billions:.0}B")
+        } else {
+            format!("{billions:.1}B")
+        }
+    } else {
+        format!("{:.0}M", billions * 1000.0)
+    }
+}
+
+/// The disk weight the store shows for a row: what the server reports, else
+/// the size badge's estimate.
+pub fn row_gb(row: &LibraryModel) -> Option<f64> {
+    row.bytes.map(|bytes| bytes / 1e9).or(row.est_gb)
+}
+
+/// Machine memory a model may claim on this machine: VRAM when the GPU reports
+/// any, else RAM, with 20% left for everything else on it.
+pub fn fits_limit_gb(machine: &Machine) -> Option<f64> {
+    machine
+        .vram_total_mb
+        .filter(|mb| *mb > 0.0)
+        .or(machine.ram_mb.filter(|mb| *mb > 0.0))
+        .map(|mb| mb / 1024.0 * 0.8)
+}
+
+/// Whether a row's model fits that limit. `None` when either side is unknown,
+/// so an unmeasured machine makes no claim.
+pub fn row_fits(row: &LibraryModel, limit_gb: Option<f64>) -> Option<bool> {
+    match (row_gb(row), limit_gb) {
+        (Some(gb), Some(limit)) => Some(gb <= limit),
+        _ => None,
+    }
+}
+
+/// The size badge a row is set to: the reader's pick when it is one of the
+/// row's sizes, else the first the provider lists.
+pub fn chosen_size<'a>(row: &'a LibraryModel, picked: Option<&str>) -> Option<&'a str> {
+    if let Some(pick) = picked {
+        if let Some(size) = row.sizes.iter().find(|size| size.as_str() == pick) {
+            return Some(size.as_str());
+        }
+    }
+    row.sizes.first().map(String::as_str)
+}
+
+/// Every row the store draws: the provider's library, then any installed model
+/// the library does not list, so a model downloaded outside Kriko is never
+/// invisible.
+pub fn store_rows(library: &[LibraryModel], held: &[Held]) -> Vec<LibraryModel> {
+    let mut rows = library.to_vec();
+    for model in held {
+        if rows
+            .iter()
+            .any(|row| row.installed_name.as_deref() == Some(model.name.as_str()))
+        {
+            continue;
+        }
+        rows.push(LibraryModel {
+            name: model.name.clone(),
+            installed: true,
+            installed_name: Some(model.name.clone()),
+            bytes: model.size_bytes,
+            params_b: held_params_b(model),
+            quant: model.quant.clone(),
+            ..Default::default()
+        });
+    }
+    rows
+}
+
+/// Name first, or the lightest model first; unknown sizes sort last either
+/// way.
+pub fn sort_rows(rows: &mut [LibraryModel], sort: LibrarySort) {
+    rows.sort_by(|a, b| {
+        let by_name = a.name.to_lowercase().cmp(&b.name.to_lowercase());
+        match sort {
+            LibrarySort::Name => by_name,
+            LibrarySort::Size => match (row_gb(a), row_gb(b)) {
+                (Some(x), Some(y)) => x.total_cmp(&y).then(by_name),
+                (Some(_), None) => std::cmp::Ordering::Less,
+                (None, Some(_)) => std::cmp::Ordering::Greater,
+                (None, None) => by_name,
+            },
+        }
+    });
+}
+
+/// The store's rows under one search, filter and sort. `limit_gb` is this
+/// machine's memory (`fits_limit_gb`); with none, the Fits filter keeps
+/// nothing, so a machine that measures nothing never claims a model fits.
+pub fn store_view(
+    library: &[LibraryModel],
+    held: &[Held],
+    filter: LibraryFilter,
+    query: &str,
+    limit_gb: Option<f64>,
+    sort: LibrarySort,
+) -> Vec<LibraryModel> {
+    let query = query.trim().to_lowercase();
+    let mut rows = store_rows(library, held);
+    rows.retain(|row| {
+        let named = query.is_empty()
+            || row.name.to_lowercase().contains(&query)
+            || row.about.to_lowercase().contains(&query);
+        named
+            && match filter {
+                LibraryFilter::All => true,
+                LibraryFilter::Installed => row.installed,
+                LibraryFilter::Fits => row_fits(row, limit_gb).unwrap_or(false),
+                LibraryFilter::Small => row_gb(row).is_some_and(|gb| gb <= 5.0),
+            }
+    });
+    sort_rows(&mut rows, sort);
+    rows
+}
+
+/// How the model store narrows its list.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum LibraryFilter {
+    #[default]
+    All,
+    Installed,
+    /// Fits the machine's memory with the usual 20% headroom.
+    Fits,
+    /// Five gigabytes or less, whatever this machine holds.
+    Small,
+}
+
+/// What the model store sorts by.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+pub enum LibrarySort {
+    #[default]
+    Name,
+    Size,
+}
+
+/// A size badge's parameter count in billions: `7b` -> 7.0, `8x7b` -> 56.0,
+/// `270m` -> 0.27, `e2b` -> 2.0 (the effective count Ollama prints for Gemma).
+pub fn params_b(size: &str) -> Option<f64> {
+    let badge = size.trim().to_ascii_lowercase();
+    if badge.is_empty() {
+        return None;
+    }
+    let (experts, rest) = match badge.split_once('x') {
+        Some((count, rest)) => (count.trim().parse::<f64>().ok()?, rest),
+        None => (1.0, badge.as_str()),
+    };
+    // `e2b` names an effective parameter count; the `e` is not a number.
+    let rest = rest.trim_start_matches('e');
+    let (digits, scale) = if let Some(n) = rest.strip_suffix('b') {
+        (n, 1.0)
+    } else if let Some(n) = rest.strip_suffix('m') {
+        (n, 0.001)
+    } else {
+        return None;
+    };
+    let count: f64 = digits.trim().parse().ok()?;
+    let total = experts * count * scale;
+    (total.is_finite() && total > 0.0).then_some(total)
+}
+
+/// The download a size badge implies at q4: parameter billions * 0.62 GB,
+/// rounded to one decimal (a `7b` badge is about 4.3 GB).
+pub fn size_gb(size: &str) -> Option<f64> {
+    params_b(size).map(|params| (params * 0.62 * 10.0).round() / 10.0)
+}
+
+/// A model name without the default tag, so `llama3` and `llama3:latest`
+/// name the same download.
+pub(crate) fn bare_model(name: &str) -> String {
+    let name = name.trim().to_ascii_lowercase();
+    name.strip_suffix(":latest").unwrap_or(&name).to_string()
+}
+
+/// Marks the library entries the server already holds, and gives them the
+/// size, parameter count and quantisation it reports. Matching is by the name
+/// without `:latest` first, then by a sized tag of the same model, so the
+/// store's `llama3` row knows about an installed `llama3:8b` as well as an
+/// installed `llama3:latest`.
+pub fn mark_installed(library: &mut [LibraryModel], held: &[Held]) {
+    for model in library.iter_mut() {
+        let named = bare_model(&model.name);
+        let mut found = held.iter().find(|h| bare_model(&h.name) == named);
+        if found.is_none() {
+            // a sized tag of the same model: `llama3` offers `llama3:8b`. When
+            // several are installed, prefer the one whose parameter count the
+            // row itself offers, then the first.
+            let tags: Vec<&Held> = held.iter().filter(|h| sized_tag_of(&h.name, &named)).collect();
+            found = tags
+                .iter()
+                .find(|h| {
+                    held_params_b(*h).is_some_and(|params| {
+                        model
+                            .sizes
+                            .iter()
+                            .any(|size| params_b(size).is_some_and(|badge| (badge - params).abs() < 0.05))
+                    })
+                })
+                .copied()
+                .or_else(|| tags.first().copied());
+        }
+        model.installed = found.is_some();
+        model.installed_name = found.map(|h| h.name.clone());
+        model.bytes = found.and_then(|h| h.size_bytes);
+        model.quant = found.and_then(|h| h.quant.clone());
+        if let Some(h) = found {
+            model.params_b = held_params_b(h).or(model.params_b);
+        }
+    }
 }
 
 /// A runtime or language choice the reader just made, shown at once while the
@@ -219,6 +480,19 @@ pub fn pick_confirmed(pending: &mut std::collections::HashMap<String, PendingPic
     pending.retain(|_, pick| pick.writes > 0);
 }
 
+/// A Remove press: the first arms the tile, a second press on that same tile
+/// removes. A press on another tile only moves the arm, so a misclick can
+/// never delete a different model than the one whose name it was under.
+pub fn remove_pressed(armed: &mut Option<String>, model: &str) -> bool {
+    if armed.as_deref() == Some(model) {
+        *armed = None;
+        true
+    } else {
+        *armed = Some(model.to_string());
+        false
+    }
+}
+
 /// Whether a plane answer should replace the reader's server/model form.
 /// Retry refreshes pass `fill = false`, so the address and model survive a
 /// failed request and the subsequent retry.
@@ -244,14 +518,21 @@ pub struct State {
     pub held: Option<Vec<Held>>,
     /// Downloadable names from the provider's library.
     pub offered: Vec<String>,
-    /// The same models with their sizes; what the library drawer draws.
+    /// The same models with their sizes; what the model store draws.
     pub library: Vec<LibraryModel>,
     /// The size picked for each library model, by model name.
     pub library_size: std::collections::HashMap<String, String>,
+    /// Which slice of the library the store shows, and how it orders it.
+    pub library_filter: LibraryFilter,
+    pub library_sort: LibrarySort,
+    /// True once the store has been opened at all; the library is read on
+    /// demand, not on every visit to the screen.
     pub catalogue_open: bool,
     pub catalogue_loading: bool,
+    /// A successful read has happened, so an empty list is a real empty store
+    /// and not a list still to arrive.
+    pub catalogue_loaded: bool,
     pub catalogue_error: String,
-    pub models_open: bool,
     /// The model the picker shows, which Save stores.
     pub model_pick: Option<String>,
     pub timeout: u32,
@@ -259,6 +540,13 @@ pub struct State {
     pub note: Option<String>,
     pub checking: bool,
     pub pull: Option<Pull>,
+    /// The installed model a Remove is in flight for, so its tile can show
+    /// the wait and presses elsewhere do not start a second removal.
+    pub removing: Option<String>,
+    /// The last Remove refusal, in the engine's own words.
+    pub remove_error: String,
+    /// The tile whose Remove was pressed once and now asks to confirm.
+    pub remove_confirm: Option<String>,
     pub runtime_starting: bool,
     pub bench: Bench,
 }
@@ -551,22 +839,36 @@ impl Kriko {
                     this.live.local.offered = strings(&value, "available");
                     this.live.local.library = api::arr(&value, "library")
                         .iter()
-                        .map(|row| LibraryModel {
-                            name: api::s(row, "name"),
-                            sizes: strings(row, "sizes"),
-                            about: api::s(row, "about"),
+                        .map(|row| {
+                            let sizes = strings(row, "sizes");
+                            LibraryModel {
+                                name: api::s(row, "name"),
+                                listed: true,
+                                est_gb: sizes.first().and_then(|size| size_gb(size)),
+                                params_b: sizes.first().and_then(|size| params_b(size)),
+                                sizes,
+                                about: api::s(row, "about"),
+                                ..Default::default()
+                            }
                         })
                         .filter(|m| !m.name.is_empty())
                         .collect();
-                    // an engine that sends only names still fills the drawer
+                    // an engine that sends only names still fills the store
                     if this.live.local.library.is_empty() {
                         this.live.local.library = this.live.local.offered.iter()
-                            .map(|n| LibraryModel { name: n.clone(), ..Default::default() })
+                            .map(|n| LibraryModel { name: n.clone(), listed: true, ..Default::default() })
                             .collect();
                     }
+                    // the server's own list may have arrived first, or since
+                    let held = this.live.local.held.clone().unwrap_or_default();
+                    mark_installed(&mut this.live.local.library, &held);
                     this.live.local.catalogue_error = api::s(&value, "catalogue_error");
+                    this.live.local.catalogue_loaded = this.live.local.catalogue_error.is_empty();
                 }
-                Err(error) => { this.live.local.catalogue_error = error.to_string(); }
+                Err(error) => {
+                    this.live.local.catalogue_error = error.to_string();
+                    this.live.local.catalogue_loaded = false;
+                }
             }
             cx.notify();
         });
@@ -649,7 +951,9 @@ impl Kriko {
         self.fetch(cx, || api::get("/api/local-models"), |this, reply, _| {
             this.note(&reply);
             if let Ok(v) = reply {
-                this.live.local.held = Some(held_from(&v));
+                let held = held_from(&v);
+                mark_installed(&mut this.live.local.library, &held);
+                this.live.local.held = Some(held);
             }
         });
     }
@@ -795,6 +1099,41 @@ impl Kriko {
             cx,
             move || api::post(&format!("/api/jobs/{}/cancel", api::seg(&id)), serde_json::json!({})),
             |this, reply, _| this.note(&reply),
+        );
+    }
+
+    /// Deletes an installed model, then reads the server's list again so the
+    /// tile stops saying Installed. A refusal stays beside the store rather
+    /// than in the shell notice, because it is about one row.
+    pub fn remove_local_model(&mut self, model: String, cx: &mut Context<Self>) {
+        if self.live.local.removing.is_some() {
+            return;
+        }
+        self.live.local.remove_confirm = None;
+        self.live.local.remove_error.clear();
+        self.live.local.removing = Some(model.clone());
+        cx.notify();
+        self.fetch(
+            cx,
+            move || {
+                api::delete_json(
+                    "/api/local-models/remove",
+                    serde_json::json!({"runtime": "ollama", "model": model}),
+                )
+            },
+            |this, reply, cx| {
+                this.live.local.removing = None;
+                match reply {
+                    Ok(_) => {
+                        this.live.local.remove_error.clear();
+                        this.refresh_held(cx);
+                    }
+                    Err(error) => {
+                        this.live.local.remove_error = error.message.clone();
+                        this.note(&Err::<Value, _>(error));
+                    }
+                }
+            },
         );
     }
 
@@ -1118,5 +1457,167 @@ mod tests {
         let m = machine_from(&v);
         assert!(m.gpu.is_none() && m.vram_total_mb.is_none());
         assert_eq!(m.ram_mb, Some(16000.0));
+    }
+
+    #[test]
+    fn a_size_badge_becomes_a_q4_download_estimate() {
+        assert_eq!(size_gb("7b"), Some(4.3));
+        assert_eq!(size_gb("8x7b"), Some(34.7));
+        assert_eq!(size_gb("270m"), Some(0.2));
+        assert_eq!(size_gb("e2b"), Some(1.2));
+        assert_eq!(size_gb("1.5b"), Some(0.9));
+        assert_eq!(size_gb("latest"), None);
+        assert_eq!(size_gb(""), None);
+    }
+
+    #[test]
+    fn the_size_badge_parses_experts_millions_and_effective_counts() {
+        assert_eq!(params_b("7b"), Some(7.0));
+        assert_eq!(params_b("8x7b"), Some(56.0));
+        assert_eq!(params_b("270m"), Some(0.27));
+        assert_eq!(params_b("e2b"), Some(2.0));
+    }
+
+    #[test]
+    fn a_library_name_matches_the_installed_default_tag() {
+        assert_eq!(bare_model("Llama3"), bare_model("llama3:latest"));
+        assert_eq!(bare_model(" llama3:latest "), "llama3");
+        assert_ne!(bare_model("llama3:8b"), bare_model("llama3"));
+    }
+
+    #[test]
+    fn the_library_marks_what_the_server_holds_and_its_size() {
+        let mut library = vec![
+            LibraryModel { name: "llama3".into(), ..Default::default() },
+            LibraryModel { name: "qwen3".into(), ..Default::default() },
+        ];
+        let held = vec![
+            Held { name: "llama3:latest".into(), size_bytes: Some(4_700_000_000.0), ..Default::default() },
+        ];
+        mark_installed(&mut library, &held);
+        assert!(library[0].installed);
+        assert_eq!(library[0].bytes, Some(4_700_000_000.0));
+        assert!(!library[1].installed);
+        assert_eq!(library[1].bytes, None);
+    }
+
+    #[test]
+    fn a_sized_tag_of_a_library_model_marks_it_installed() {
+        let mut library = vec![
+            LibraryModel { name: "llama3".into(), sizes: vec!["8b".into()], ..Default::default() },
+            LibraryModel { name: "llama3.2".into(), ..Default::default() },
+        ];
+        let held = vec![Held {
+            name: "llama3:8b".into(),
+            params: Some("8.0B".into()),
+            quant: Some("Q4_K_M".into()),
+            size_bytes: Some(4_700_000_000.0),
+            ..Default::default()
+        }];
+        mark_installed(&mut library, &held);
+        assert!(library[0].installed);
+        assert_eq!(library[0].installed_name.as_deref(), Some("llama3:8b"));
+        assert_eq!(library[0].params_b, Some(8.0));
+        assert_eq!(library[0].quant.as_deref(), Some("Q4_K_M"));
+        assert!(!library[1].installed, "llama3.2 is a different model");
+    }
+
+    #[test]
+    fn an_installed_model_the_library_does_not_list_is_still_a_row() {
+        let library = vec![LibraryModel { name: "llama3".into(), listed: true, ..Default::default() }];
+        let held = vec![
+            Held { name: "llama3:latest".into(), ..Default::default() },
+            Held { name: "custom:7b".into(), params: Some("7.0B".into()), ..Default::default() },
+        ];
+        let mut marked = library.clone();
+        mark_installed(&mut marked, &held);
+        let rows = store_rows(&marked, &held);
+        assert_eq!(rows.len(), 2);
+        assert!(rows.iter().any(|r| r.name == "custom:7b" && r.installed && r.params_b == Some(7.0)));
+    }
+
+    #[test]
+    fn the_store_keeps_only_the_rows_the_filter_names() {
+        let library = vec![
+            LibraryModel { name: "big".into(), listed: true, est_gb: Some(40.0), ..Default::default() },
+            LibraryModel { name: "small".into(), listed: true, est_gb: Some(2.0), ..Default::default() },
+            LibraryModel { name: "mid".into(), listed: true, est_gb: Some(9.0), ..Default::default() },
+        ];
+        let held = vec![Held {
+            name: "mid:latest".into(),
+            size_bytes: Some(9_000_000_000.0),
+            ..Default::default()
+        }];
+        let mut marked = library.clone();
+        mark_installed(&mut marked, &held);
+        let names = |rows: Vec<LibraryModel>| rows.into_iter().map(|r| r.name).collect::<Vec<_>>();
+        assert_eq!(
+            names(store_view(&marked, &held, LibraryFilter::All, "", Some(10.0), LibrarySort::Size)),
+            vec!["small", "mid", "big"].into_iter().map(String::from).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            names(store_view(&marked, &held, LibraryFilter::Installed, "", Some(10.0), LibrarySort::Name)),
+            vec!["mid"].into_iter().map(String::from).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            names(store_view(&marked, &held, LibraryFilter::Small, "", Some(10.0), LibrarySort::Name)),
+            vec!["small"].into_iter().map(String::from).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            names(store_view(&marked, &held, LibraryFilter::Fits, "", Some(10.0), LibrarySort::Name)),
+            vec!["mid", "small"].into_iter().map(String::from).collect::<Vec<_>>()
+        );
+        assert!(
+            store_view(&marked, &held, LibraryFilter::Fits, "", None, LibrarySort::Name).is_empty(),
+            "a machine that measures nothing claims nothing fits"
+        );
+    }
+
+    #[test]
+    fn the_machines_memory_sets_the_fit_limit() {
+        let gpu = Machine { vram_total_mb: Some(8192.0), ram_mb: Some(32768.0), ..Default::default() };
+        assert_eq!(fits_limit_gb(&gpu).map(|g| (g * 10.0).round() / 10.0), Some(6.4));
+        let cpu_only = Machine { ram_mb: Some(16384.0), ..Default::default() };
+        assert_eq!(fits_limit_gb(&cpu_only).map(|g| (g * 10.0).round() / 10.0), Some(12.8));
+        assert_eq!(fits_limit_gb(&Machine::default()), None);
+    }
+
+    #[test]
+    fn a_parameter_count_reads_as_a_model_card_writes_it() {
+        assert_eq!(params_label(7.0), "7B");
+        assert_eq!(params_label(1.5), "1.5B");
+        assert_eq!(params_label(0.27), "270M");
+        assert_eq!(held_params_b(&Held { params: Some("8.0B".into()), ..Default::default() }), Some(8.0));
+        assert_eq!(held_params_b(&Held { name: "llama3:e2b".into(), ..Default::default() }), Some(2.0));
+    }
+
+    #[test]
+    fn a_rows_size_is_the_readers_pick_or_the_first_badge() {
+        let row = LibraryModel {
+            name: "m".into(),
+            sizes: vec!["4b".into(), "8b".into()],
+            ..Default::default()
+        };
+        assert_eq!(chosen_size(&row, None), Some("4b"));
+        assert_eq!(chosen_size(&row, Some("8b")), Some("8b"));
+        assert_eq!(chosen_size(&row, Some("70b")), Some("4b"), "a pick that is not a badge falls back");
+    }
+
+    #[test]
+    fn a_library_row_links_to_its_page_without_its_tag() {
+        assert_eq!(library_url("Llama3:8b"), "https://ollama.com/library/llama3");
+    }
+
+    #[test]
+    fn removing_takes_two_presses_on_the_same_tile() {
+        let mut armed = None;
+        assert!(!remove_pressed(&mut armed, "llama3:8b"));
+        assert_eq!(armed.as_deref(), Some("llama3:8b"));
+        // a press on another tile arms that one instead, so one click can
+        // never delete a model the reader did not point at twice
+        assert!(!remove_pressed(&mut armed, "qwen3:4b"));
+        assert_eq!(armed.as_deref(), Some("qwen3:4b"));
+        assert!(remove_pressed(&mut armed, "qwen3:4b"));
+        assert_eq!(armed, None);
     }
 }

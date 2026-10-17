@@ -1,24 +1,3 @@
-"""Deterministic matching for catalog codes, so no socket has to be trusted.
-
-A code is whatever string a pack uses to name one configuration of a subject
-("EA288", "DHP484", a chassis mark, a revision suffix). Codes from the wild —
-a scraped page, a socket's reply, a person typing — arrive noisy, and the
-expensive failure is not a miss but a *false merge*: `860` folded into `861`
-looks like a typo fix and quietly attaches evidence to the wrong thing.
-
-The rule that prevents it, taken from the entity-drift literature: the digit
-core of a code must match *exactly* before anything else is judged. Digits are
-how catalogs say "different part"; no similarity threshold is allowed to
-smooth across them. The alphabetic remainder may then be judged loosely —
-spelling varies, punctuation is a storage detail.
-
-The matcher never invents. Its whole output is either an exact hit against
-codes the pack already knows, or a ranked shortlist of candidates for a
-caller to choose from. Anything else — including "close enough" — is
-`NO_MATCH`, on purpose: an uncertain code is a question for the caller, not a
-decision the matcher makes silently.
-"""
-
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -32,12 +11,36 @@ _ALNUM = re.compile(r"[^a-z0-9]+")
 
 #: Unicode digits a keyboard or a copy-paste can substitute for ASCII.
 _DIGIT_FOLD = {
-    "\u0660": "0", "\u0661": "1", "\u0662": "2", "\u0663": "3", "\u0664": "4",
-    "\u0665": "5", "\u0666": "6", "\u0667": "7", "\u0668": "8", "\u0669": "9",
-    "\u06f0": "0", "\u06f1": "1", "\u06f2": "2", "\u06f3": "3", "\u06f4": "4",
-    "\u06f5": "5", "\u06f6": "6", "\u06f7": "7", "\u06f8": "8", "\u06f9": "9",
-    "\uff10": "0", "\uff11": "1", "\uff12": "2", "\uff13": "3", "\uff14": "4",
-    "\uff15": "5", "\uff16": "6", "\uff17": "7", "\uff18": "8", "\uff19": "9",
+    "\u0660": "0",
+    "\u0661": "1",
+    "\u0662": "2",
+    "\u0663": "3",
+    "\u0664": "4",
+    "\u0665": "5",
+    "\u0666": "6",
+    "\u0667": "7",
+    "\u0668": "8",
+    "\u0669": "9",
+    "\u06f0": "0",
+    "\u06f1": "1",
+    "\u06f2": "2",
+    "\u06f3": "3",
+    "\u06f4": "4",
+    "\u06f5": "5",
+    "\u06f6": "6",
+    "\u06f7": "7",
+    "\u06f8": "8",
+    "\u06f9": "9",
+    "\uff10": "0",
+    "\uff11": "1",
+    "\uff12": "2",
+    "\uff13": "3",
+    "\uff14": "4",
+    "\uff15": "5",
+    "\uff16": "6",
+    "\uff17": "7",
+    "\uff18": "8",
+    "\uff19": "9",
 }
 
 #: Match outcomes. `EXACT` is the only one a caller may act on without
@@ -87,6 +90,7 @@ class Resolution:
     page happened to type. `candidates` carries `(similarity, code)` pairs,
     best first, and is empty unless the outcome is CANDIDATES.
     """
+
     outcome: str
     code: str = ""
     candidates: tuple[tuple[float, str], ...] = ()
@@ -96,7 +100,9 @@ class Resolution:
         return self.outcome == EXACT
 
 
-def resolve(raw: str, known: tuple[str, ...] = (), *, normalized_known=None) -> Resolution:
+def resolve(
+    raw: str, known: tuple[str, ...] = (), *, normalized_known=None
+) -> Resolution:
     """Match one wild code against the codes a pack already knows.
 
     `known` is the catalog's spelling; pass `normalized_known` when the same
@@ -125,8 +131,9 @@ def resolve(raw: str, known: tuple[str, ...] = (), *, normalized_known=None) -> 
         if raw_digits and digit_core(other):
             if digit_core(other) != raw_digits:
                 continue
-            score = 1.0 if other == folded else SequenceMatcher(
-                None, folded, other).ratio()
+            score = (
+                1.0 if other == folded else SequenceMatcher(None, folded, other).ratio()
+            )
         else:
             score = SequenceMatcher(None, folded, other).ratio()
             if score < _MIN_SIMILARITY:
@@ -163,8 +170,7 @@ def extract_codes(text: str, known: tuple[str, ...] = ()) -> tuple[str, ...]:
         if spelling is None:
             if not re.search(r"\d", folded) or not catalog:
                 continue
-            if not any(digit_core(folded) == digit_core(other)
-                       for other in catalog):
+            if not any(digit_core(folded) == digit_core(other) for other in catalog):
                 continue
             spelling = token
         if spelling not in taken:
