@@ -9,56 +9,74 @@
     <main>
       <header class="brand">
         <svg viewBox="0 0 302 100" role="img" aria-label="Kriko"><defs><clipPath id="kriko-cap"><rect x="-30" y="0" width="362" height="100"/></clipPath></defs><g transform="translate(18 0)"><g clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 17.0V83.0M8 50L54 -16M8 50L54 116"/></g><path d="M-12 50H44" stroke="currentColor" stroke-width="5" fill="none"/><rect x="-18" y="36" width="6" height="28" fill="currentColor"/><rect x="42" y="44" width="12" height="12" fill="currentColor"/></g><g transform="translate(84 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 102V8H36L48 20V38L36 50H8M28 50L52 108"/></g><g transform="translate(152 0)" fill="currentColor"><rect x="0" y="0" width="16" height="100"/></g><g transform="translate(180 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 -2V102M8 50L54 -16M8 50L54 116"/></g><g transform="translate(246 0)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M20 8H36L48 20V80L36 92H20L8 80V20Z"/></g></svg>
-        <span class="brand-meta"><span class="beta">BETA</span><span class="brand-tag">local product knowledge</span></span>
+        <span class="brand-tag">local product knowledge</span>
+        <div class="brand-controls">
+          <div class="motion" id="motion" role="group" aria-label="Motion profile">
+            <button type="button" class="motion-btn" data-motion="calm"
+                    aria-pressed="false" title="Calm motion">Calm</button>
+            <button type="button" class="motion-btn" data-motion="standard"
+                    aria-pressed="true" title="Standard motion">Standard</button>
+            <button type="button" class="motion-btn" data-motion="vivid"
+                    aria-pressed="false" title="Vivid motion">Vivid</button>
+          </div>
+          <button type="button" class="theme" id="theme" aria-label="Switch to light theme"
+                  aria-pressed="false" title="Switch to light theme"></button>
+        </div>
       </header>
-      <section class="hero" aria-labelledby="page-title">
-        <p class="crumb">KRIKO <span>/</span> BROWSER EXTENSION</p>
-        <h1 id="page-title">Browser extension</h1>
-        <p class="lede">Connect this browser to local Kriko.</p>
+      <h1>Kriko extension</h1>
+      <p class="lede">Where the Kriko app is listening.</p>
+
+      <form id="form" novalidate>
+        <label for="base">The app's address and port</label>
+        <input
+          id="base"
+          name="base"
+          type="text"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="http://127.0.0.1:8787"
+        />
+        <p class="hint">
+          Empty uses <code id="default">http://127.0.0.1:8787</code>. Nothing
+          leaves this computer. Changed the port in Kriko? Enter
+          <code>http://127.0.0.1:</code> and it.
+        </p>
+        <div class="row">
+          <button type="submit" id="save">Save and test</button>
+          <button type="button" id="reset" class="quiet">
+            Back to the default
+          </button>
+        </div>
+      </form>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <section class="sites">
+        <h2>Sites Kriko reads</h2>
+        <p class="hint">
+          The packs decide what to read; this page asks permission.
+        </p>
+        <ul id="sites" class="sites-list"></ul>
+        <div class="row">
+          <button type="button" id="grant">Allow the pending sites</button>
+          <button type="button" id="recheck" class="quiet">Check again</button>
+        </div>
+        <p id="sites-status" class="status" role="status" aria-live="polite"></p>
       </section>
 
-      <div class="settings-grid">
-        <form id="form" class="connection card" novalidate>
-          <div class="section-head">
-            <span class="step">01</span>
-            <div><h2>Local connection</h2><p class="section-note">Where Kriko listens.</p></div>
-          </div>
-          <label for="base">App address</label>
-          <input
-            id="base"
-            name="base"
-            type="text"
-            spellcheck="false"
-            autocomplete="off"
-            placeholder="http://127.0.0.1:8787"
-          />
-          <p class="hint">Leave empty for <code id="default">http://127.0.0.1:8787</code>.</p>
-          <div class="row">
-            <button type="submit" id="save">Save &amp; test</button>
-            <button type="button" id="reset" class="quiet">Reset</button>
-          </div>
-          <p id="status" class="status" role="status" aria-live="polite"></p>
-        </form>
+      <section class="version">
+        <h2>Versions</h2>
+        <p class="hint">Only matters when the two drift apart.</p>
+        <p id="compat" class="status" role="status" aria-live="polite"></p>
+      </section>
 
-        <section class="sites card">
-          <div class="section-head">
-            <span class="step">02</span>
-            <div><h2>Site access</h2><p class="section-note">Requested by installed packs.</p></div>
-          </div>
-          <ul id="sites" class="sites-list"></ul>
-          <div class="row">
-            <button type="button" id="grant">Allow pending</button>
-            <button type="button" id="recheck" class="quiet">Refresh</button>
-          </div>
-          <p id="sites-status" class="status" role="status" aria-live="polite"></p>
-        </section>
-
-        <section class="version card">
-          <h2>Compatibility</h2>
-          <p id="compat" class="status" role="status" aria-live="polite"></p>
-        </section>
-      </div>
-
+      <section class="about">
+        <h2>If nothing answers</h2>
+        <p>
+          The address is remembered either way. Start Kriko, then press
+          <strong>Save and test</strong>.
+        </p>
+      </section>
     </main>
     <script src="options.js"></script>
   </body>

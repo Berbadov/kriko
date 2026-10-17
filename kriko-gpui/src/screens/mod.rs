@@ -3,8 +3,8 @@
 //! app re-renders from one place.
 
 use gpui::{
-    div, linear_color_stop, linear_gradient, prelude::*, px, rgb, rgba, ClickEvent, Context, Div,
-    FontWeight, Stateful, Styled, Window,
+    div, linear_color_stop, linear_gradient, prelude::*, px, Animation, AnimationExt, ClickEvent,
+    Context, Div, FontWeight, Stateful, Styled, Window,
 };
 
 use crate::app::Kriko;
@@ -21,10 +21,11 @@ pub(crate) mod compare;
 pub(crate) mod extension;
 pub(crate) mod guidance;
 pub(crate) mod history;
+pub(crate) mod logs;
 pub(crate) mod home;
 pub(crate) mod knowledge;
 pub(crate) mod local;
-pub(crate) mod logs;
+pub(crate) mod onboarding;
 pub(crate) mod run;
 pub(crate) mod settings;
 pub(crate) mod sites;
@@ -55,22 +56,41 @@ pub fn screen(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
 // ---- shared building blocks ----
 
 /// A total tile: eyebrow, the figure at heading size, one note line. Totals
-/// sit in a row of tiles, so the figure reads as a number, not a poster.
+/// sit in a row of tiles, so the figure reads as a number, not a poster. The
+/// label, the figure and the note sit one SPACE_S apart: one rhythm, not a
+/// different gap per pair.
 pub fn total_card(label: &str, value: &str, note: &str) -> Div {
+    let figure = div()
+        .font_family(DISPLAY)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(28.0))
+        .line_height(px(SPACE_2XL))
+        .text_color(paint(INK))
+        .child(value.to_string());
+    // The value is part of the element id, so a figure that changes replays a
+    // one-shot rise: the number is seen to become the new number. Nothing
+    // loops; nothing moves while the value holds.
+    let figure: gpui::AnyElement = if motion_on() {
+        figure
+            .with_animation(
+                gpui::ElementId::Name(format!("total-{label}-{value}").into()),
+                Animation::new(std::time::Duration::from_millis(tempo_ms(340)))
+                    .with_easing(|t| t),
+                |d, t| {
+                    let e = ease_mech(t);
+                    d.opacity(0.35 + 0.65 * e).relative().top(px((1.0 - e) * amp(6.0)))
+                },
+            )
+            .into_any_element()
+    } else {
+        figure.into_any_element()
+    };
     card()
         .flex()
         .flex_col()
-        .gap(px(4.0))
+        .gap(px(SPACE_S))
         .child(eyebrow(label))
-        .child(
-            div()
-                .font_family(DISPLAY)
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_size(px(28.0))
-                .line_height(px(30.0))
-                .text_color(rgb(INK))
-                .child(value.to_string()),
-        )
+        .child(figure)
         .child(mono(note, MUTED))
 }
 
@@ -79,9 +99,9 @@ pub fn row_title(text: &str) -> Div {
     div()
         .font_family(SANS)
         .font_weight(FontWeight::SEMIBOLD)
-        .text_size(px(16.0))
-        .line_height(px(22.0))
-        .text_color(rgb(INK))
+        .text_size(px(14.0))
+        .line_height(px(LINE_14))
+        .text_color(paint(INK))
         .child(text.to_string())
 }
 
@@ -89,20 +109,22 @@ pub fn row_title(text: &str) -> Div {
 pub fn row_desc(text: &str) -> Div {
     div()
         .font_family(SANS)
-        .text_size(px(15.0))
-        .line_height(px(22.0))
-        .text_color(rgb(MUTED))
+        .text_size(px(14.0))
+        .line_height(px(LINE_14))
+        .text_color(paint(MUTED))
         .child(text.to_string())
 }
 
 /// What a card shows while its slice of the engine has not arrived, or when
 /// the engine holds nothing for it: one quiet well, never sample numbers.
 pub fn empty_note(text: &str) -> Div {
-    div()
-        .py(px(12.0))
+    well()
+        .px(px(SPACE_L))
+        .py(px(SPACE_S))
         .font_family(SANS)
         .text_size(px(14.0))
-        .text_color(rgb(DIM))
+        .line_height(px(LINE_14))
+        .text_color(paint(DIM))
         .child(text.to_string())
 }
 
@@ -110,28 +132,16 @@ pub fn empty_note(text: &str) -> Div {
 pub fn mono(text: &str, color: u32) -> Div {
     div()
         .font_family(MONO)
-        .text_size(px(12.5))
-        .text_color(rgb(color))
+        .text_size(px(12.0))
+        .line_height(px(LINE_12))
+        .text_color(paint(color))
         .child(text.to_string())
 }
 
-/// A stored citation opens only an ordinary web URL.
-pub fn source_link(id: impl Into<gpui::ElementId>, label: &str, url: &str) -> Stateful<Div> {
-    let target = url.to_string();
-    let enabled = target.starts_with("https://") || target.starts_with("http://");
-    div().id(id).font_family(SANS).text_size(px(13.0)).text_color(rgb(BRAND_BRIGHT))
-        .when(enabled, |d| d.cursor_pointer().hover(|s| s.text_color(rgb(ICE)))
-            .on_click(move |_, _, cx| cx.open_url(&target)))
-        .child(label.to_string())
-}
-
-/// A table header cell: mono capitals in DIM.
+/// A table header cell: mono capitals in DIM, tracked 0.7px so the capitals
+/// read as a header row rather than as a sentence.
 pub fn th(label: &str) -> Div {
-    div()
-        .font_family(MONO)
-        .text_size(px(12.0))
-        .text_color(rgb(DIM))
-        .child(label.to_uppercase())
+    tracked(&label.to_uppercase(), 11.0, 0.7, DIM, FontWeight::NORMAL)
 }
 
 /// The Segmented control (k-seg): LED-glyph cells in a well, the bezel thumb
@@ -161,7 +171,9 @@ pub fn segmented(
         let listener = cx.listener(move |this, _: &ClickEvent, _w, cx| {
             on_pick(this, i, cx);
         });
-        track = track.child(segmented_cell((id, i), *glyph, i == current).on_click(listener));
+        track = track.child(
+            segmented_cell((id, i), *glyph, i == current).on_click(listener),
+        );
     }
     track
 }
@@ -170,59 +182,54 @@ pub fn segmented(
 pub fn plate_s(id: impl Into<gpui::ElementId>, label: &str) -> Stateful<Div> {
     div()
         .id(id)
-        .h(px(40.0))
-        .px(px(16.0))
+        .h(px(CONTROL_H))
+        .px(px(SPACE_L))
         .flex()
         .items_center()
         .justify_center()
-        .gap(px(8.0))
+        .gap(px(SPACE_S))
         .rounded(px(10.0))
         .font_family(SANS)
         .font_weight(FontWeight::MEDIUM)
         .text_size(px(13.0))
-        .text_color(rgb(INK_2))
+        .line_height(px(LINE_13))
+        .text_color(paint(INK_2))
         .cursor_pointer()
         .border_1()
-        .border_color(rgb(BEZEL_EDGE))
-        .bg(rgb(BEZEL_LO))
-        .hover(|s| s.bg(rgb(BEZEL_HI)).text_color(rgb(INK)))
-        .active(|s| s.bg(rgb(WELL)))
+        .border_color(paint(BEZEL_EDGE))
+        .bg(paint(BEZEL_LO))
+        .hover(|s| s.bg(paint(BEZEL_HI)).text_color(paint(INK)).relative().top(px(-1.0)))
+        .active(|s| s.bg(paint(WELL)))
         .child(label.to_string())
 }
 
 /// A control in a filter bar: flat glass with a control ring that lights when
 /// the panel it opens is showing. `chevron` marks the ones that open a panel.
-pub fn filter_btn(
-    id: impl Into<gpui::ElementId>,
-    label: &str,
-    open: bool,
-    chevron: bool,
-) -> Stateful<Div> {
+pub fn filter_btn(id: impl Into<gpui::ElementId>, label: &str, open: bool, chevron: bool) -> Stateful<Div> {
     div()
         .id(id)
-        .h(px(40.0))
-        .px(px(14.0))
+        .h(px(CONTROL_H))
+        .px(px(SPACE_L))
         .flex()
         .flex_none()
         .items_center()
         .justify_center()
-        .gap(px(8.0))
+        .gap(px(SPACE_S))
         .rounded(px(10.0))
         .font_family(SANS)
         .font_weight(FontWeight::MEDIUM)
         .text_size(px(13.0))
+        .line_height(px(LINE_13))
         .cursor_pointer()
-        .text_color(rgb(if open { ICE } else { INK_2 }))
-        .bg(rgba(GLASS_1))
+        .text_color(paint(if open { ICE } else { INK_2 }))
+        .bg(paint_a(GLASS_1))
         .border_1()
-        .border_color(rgba(BORDER_CONTROL))
-        .when(open, |s| s.border_color(rgb(ICE)))
-        .hover(|s| s.bg(rgba(GLASS_3)).text_color(rgb(INK)))
+        .border_color(paint_a(BORDER_CONTROL))
+        .when(open, |s| s.border_color(paint(ICE)))
+        .hover(|s| s.bg(paint_a(GLASS_2)).text_color(paint(INK)).relative().top(px(-1.0)))
         .child(label.to_string())
         .when(chevron, |s| {
-            s.child(
-                icon(if open { "collapse" } else { "chevron-down" }, 12.0).text_color(rgb(MUTED)),
-            )
+            s.child(icon(if open { "collapse" } else { "chevron-down" }, 12.0).text_color(paint(MUTED)))
         })
 }
 
@@ -232,15 +239,15 @@ pub fn filter_btn(
 /// NO EVIDENCE (queue), or nothing when nothing is recorded.
 pub fn trust_icon(backed: Option<bool>) -> gpui::AnyElement {
     match backed {
-        Some(true) => icon("check", 16.0).text_color(rgb(ICE)).into_any_element(),
-        Some(false) => icon("alert", 16.0)
-            .text_color(rgb(DANGER))
-            .into_any_element(),
-        None => icon("clock", 16.0)
-            .text_color(rgb(MUTED))
-            .into_any_element(),
+        Some(true) => led_matrix(&CHECK5, ICE, 3.0, 1.0),
+        Some(false) => led_matrix(&BANG5, WARN, 3.0, 1.0),
+        None => led_matrix(&QUEUE5, LED_DIM, 3.0, 1.0),
     }
 }
+
+/// A stepper is a compact control: 28 is the one height its two keys and its
+/// value share, one step above a pill and below a button.
+const STEPPER_H: f32 = 28.0;
 
 /// The - / + stepper around a mono value: how a number parameter is set.
 /// `value` is already formatted.
@@ -256,69 +263,73 @@ pub fn stepper(
     div()
         .flex()
         .items_center()
-        .gap(px(8.0))
+        .gap(px(SPACE_S))
         .child(
             div()
                 .id((id, 0usize))
-                .w(px(28.0))
-                .h(px(28.0))
+                .w(px(STEPPER_H))
+                .h(px(STEPPER_H))
                 .flex()
                 .items_center()
                 .justify_center()
                 .rounded(px(8.0))
                 .font_family(MONO)
                 .text_size(px(13.0))
-                .text_color(rgb(INK_2))
+                .line_height(px(LINE_13))
+                .text_color(paint(INK_2))
                 .cursor_pointer()
                 .border_1()
-                .border_color(rgb(BEZEL_EDGE))
+                .border_color(paint(BEZEL_EDGE))
                 .bg(linear_gradient(
                     180.0,
-                    linear_color_stop(hsla(BEZEL_HI), 0.0),
-                    linear_color_stop(hsla(BEZEL_LO), 1.0),
+                    linear_color_stop(paint(BEZEL_HI), 0.0),
+                    linear_color_stop(paint(BEZEL_LO), 1.0),
                 ))
-                .hover(|s| s.text_color(rgb(INK)))
+                .hover(|s| s.text_color(paint(INK)))
                 .child("−")
                 .on_click(minus),
         )
         .child(
             div()
                 .min_w(px(84.0))
-                .h(px(28.0))
+                .h(px(STEPPER_H))
                 .flex()
                 .items_center()
                 .justify_center()
                 .rounded(px(8.0))
-                .bg(rgb(WELL))
+                .bg(paint(WELL))
                 .border_1()
-                .border_color(rgba(HAIRLINE))
+                .border_color(paint_a(HAIRLINE))
                 .font_family(MONO)
                 .text_size(px(12.0))
-                .text_color(rgb(INK_2))
+                .line_height(px(LINE_12))
+                .text_color(paint(INK_2))
                 .child(value),
         )
         .child(
             div()
                 .id((id, 1usize))
-                .w(px(28.0))
-                .h(px(28.0))
+                .w(px(STEPPER_H))
+                .h(px(STEPPER_H))
                 .flex()
                 .items_center()
                 .justify_center()
                 .rounded(px(8.0))
                 .font_family(MONO)
                 .text_size(px(13.0))
-                .text_color(rgb(INK_2))
+                .line_height(px(LINE_13))
+                .text_color(paint(INK_2))
                 .cursor_pointer()
                 .border_1()
-                .border_color(rgb(BEZEL_EDGE))
+                .border_color(paint(BEZEL_EDGE))
                 .bg(linear_gradient(
                     180.0,
-                    linear_color_stop(hsla(BEZEL_HI), 0.0),
-                    linear_color_stop(hsla(BEZEL_LO), 1.0),
+                    linear_color_stop(paint(BEZEL_HI), 0.0),
+                    linear_color_stop(paint(BEZEL_LO), 1.0),
                 ))
-                .hover(|s| s.text_color(rgb(INK)))
+                .hover(|s| s.text_color(paint(INK)))
                 .child("+")
                 .on_click(plus),
         )
 }
+

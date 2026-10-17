@@ -59,9 +59,15 @@ async function save(value) {
   // actually kept, and it keeps nothing when the reader asked for the default.
   input.value = reply.stored ?? "";
   if (reply.reachable) {
-    say(`Connected to Kriko ${reply.version || ""} at ${reply.base}.`.replace(/\s+/g, " "), "ok");
+    say(
+      `Saved. Kriko ${reply.version || ""} answered at ${reply.base}.`.replace(
+        /\s+/g, " "),
+      "ok");
   } else {
-    say(`Saved ${reply.base}; Kriko is not reachable yet. ${reply.detail || ""}`.trim(), "warn");
+    say(
+      `Saved ${reply.base}, but nothing answered there yet. ${reply.detail || ""}`
+        .trim(),
+      "warn");
   }
 }
 
@@ -131,7 +137,7 @@ function renderSites(status) {
     // Not an error: the packaged extension already reads the sites the packs
     // shipped with, and this list is only the ones it had to learn.
     li.textContent = status && status.error
-      ? "Kriko has not been reachable, so there is nothing new to report yet."
+      ? "Kriko has not been reachable; nothing new to report."
       : "Nothing beyond the sites this extension already covers.";
     sitesList.appendChild(li);
   }
@@ -158,7 +164,8 @@ function renderSites(status) {
   if (status && status.error) {
     saySites(
       status.code === "APP_NOT_RUNNING"
-        ? "Kriko is offline. Start it, then refresh."
+        ? "Kriko is not running; this list may be stale. "
+          + "Start it, then Check again."
         : status.error,
       "warn");
   } else if (status) {
@@ -215,19 +222,20 @@ function renderCompat(compat) {
     // Never having reached the app is not a version problem, and saying
     // "up to date" would be a claim we have no evidence for.
     compatEl.textContent =
-      `Extension ${chrome.runtime.getManifest().version} · waiting for Kriko.`;
+      `Extension ${chrome.runtime.getManifest().version}. `
+      + "The app has not answered, so there is nothing to compare.";
     delete compatEl.dataset.state;
     return;
   }
   if (compat.stale) {
     compatEl.textContent =
-      `Extension ${compat.running} is older than required ${compat.minimum}. `
-      + "Load the copy from Kriko → Browser extension.";
+      `Extension ${compat.running} is older than the ${compat.minimum} this `
+      + "app needs. Load the copy Kriko wrote: yours is out of date, not broken.";
     compatEl.dataset.state = "error";
     return;
   }
   compatEl.textContent =
-    `Extension ${compat.running} · compatible with ${compat.minimum} or newer.`;
+    `Extension ${compat.running}; the app accepts ${compat.minimum} or newer.`;
   compatEl.dataset.state = "ok";
 }
 
@@ -242,3 +250,126 @@ async function loadCompat() {
 }
 
 void loadCompat();
+
+// ── the theme, remembered beside the address ────────────────────────────
+//
+// One key, `kriko.theme`, shared with the panel: choosing light or dark in
+// either place is the choice the other one opens with. Absent, the system
+// preference decides — and the stylesheet already paints that before this
+// file has read anything.
+
+const THEME_KEY = "kriko.theme";
+const themeButton = document.getElementById("theme");
+
+const SUN_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.9 4.9 6.3 6.3" /><path d="M17.7 17.7l1.4 1.4" /><path d="M2 12h2" /><path d="M20 12h2" /><path d="M4.9 19.1 6.3 17.7" /><path d="M17.7 6.3l1.4-1.4" /></svg>';
+const MOON_ICON = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" /></svg>';
+
+function prefersLight() {
+  return Boolean(window.matchMedia
+    && window.matchMedia("(prefers-color-scheme: light)").matches);
+}
+
+function applyTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  const light = theme === "light";
+  // The icon is the way out of the theme the page is in, so it names the
+  // action rather than the state.
+  const label = light ? "Switch to dark theme" : "Switch to light theme";
+  themeButton.innerHTML = light ? MOON_ICON : SUN_ICON;
+  themeButton.setAttribute("aria-label", label);
+  themeButton.title = label;
+  themeButton.setAttribute("aria-pressed", light ? "true" : "false");
+}
+
+function toggleTheme() {
+  const now = document.documentElement.dataset.theme || (prefersLight() ? "light" : "dark");
+  const next = now === "light" ? "dark" : "light";
+  applyTheme(next);
+  try {
+    chrome.storage?.local?.set?.({ [THEME_KEY]: next }, () => { void chrome.runtime.lastError; });
+  } catch (_) {
+    // A browser without local storage keeps the choice for this tab only.
+  }
+}
+
+applyTheme(prefersLight() ? "light" : "dark");
+themeButton.addEventListener("click", toggleTheme);
+try {
+  chrome.storage?.local?.get?.([THEME_KEY], (bag) => {
+    const saved = bag?.[THEME_KEY];
+    if (saved === "light" || saved === "dark") applyTheme(saved);
+  });
+} catch (_) { /* follow the system, as above */ }
+
+// ── the motion profile, remembered beside the theme ─────────────────────
+//
+// One key, `kriko.motion`, shared with the panel: Calm / Standard / Vivid in
+// either place is the profile the other opens with. Standard is the default,
+// and the stylesheet already paints it before this file has read anything.
+// The profile is only a `data-motion` attribute on the root — one mechanism,
+// not a rule per transition — so the whole page answers to it at once.
+
+const MOTION_KEY = "kriko.motion";
+const MOTION_PROFILES = ["calm", "standard", "vivid"];
+const motionGroup = document.getElementById("motion");
+
+function applyMotion(profile) {
+  const chosen = MOTION_PROFILES.includes(profile) ? profile : "standard";
+  document.documentElement.dataset.motion = chosen;
+  if (!motionGroup) return;
+  for (const button of motionGroup.querySelectorAll(".motion-btn")) {
+    button.setAttribute("aria-pressed", button.dataset.motion === chosen ? "true" : "false");
+  }
+}
+
+function chooseMotion(profile) {
+  applyMotion(profile);
+  try {
+    chrome.storage?.local?.set?.({ [MOTION_KEY]: profile }, () => { void chrome.runtime.lastError; });
+  } catch (_) {
+    // A browser without local storage keeps the choice for this tab only.
+  }
+}
+
+applyMotion("standard");
+if (motionGroup) {
+  motionGroup.addEventListener("click", (event) => {
+    const button = event.target.closest ? event.target.closest(".motion-btn") : null;
+    if (button) chooseMotion(button.dataset.motion);
+  });
+}
+try {
+  chrome.storage?.local?.get?.([MOTION_KEY], (bag) => {
+    if (MOTION_PROFILES.includes(bag?.[MOTION_KEY])) applyMotion(bag[MOTION_KEY]);
+  });
+} catch (_) { /* standard, as above */ }
+
+// The panel may change the profile while this page is open; follow it so the
+// two surfaces stay in step without a reload.
+try {
+  chrome.storage?.onChanged?.addListener?.((changes, area) => {
+    if (area !== "local" || !(MOTION_KEY in changes)) return;
+    const saved = changes[MOTION_KEY].newValue;
+    applyMotion(MOTION_PROFILES.includes(saved) ? saved : "standard");
+  });
+} catch (_) { /* no change feed; the stored value still lands on load */ }
+
+// ── a ripple under the pointer ──────────────────────────────────────────
+//
+// A CSS :active is a state, not a press: it cannot start where the pointer
+// is or fade from it. One listener appends a dot; the animation removes it.
+
+function reducedMotion() {
+  return Boolean(window.matchMedia
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+document.addEventListener("pointerdown", (event) => {
+  if (reducedMotion() || typeof event.clientX !== "number") return;
+  const dot = document.createElement("span");
+  dot.className = "page-ripple";
+  dot.style.left = event.clientX + "px";
+  dot.style.top = event.clientY + "px";
+  document.body.appendChild(dot);
+  dot.addEventListener("animationend", () => dot.remove());
+});

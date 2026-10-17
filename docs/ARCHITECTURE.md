@@ -1,131 +1,120 @@
-# Architecture, a reading map
+# The architecture
 
-Find the file that answers your question. Kriko is a local-first knowledge
-engine for manufactured products: it answers *what is known to go wrong with
-this specific one* from installed catalogs. One invariant explains the layout:
-**`kriko/` knows no category.** A new category is a data change (a directory
-under `packs/`), never an engine change. The invariant is a test, not a
-convention: `src/kriko/tests/test_core_is_domain_free.py` walks `kriko/`'s AST
-and fails on category-shaped vocabulary.
+Kriko is a local-first knowledge engine for manufactured products. One rule
+explains the layout: **the engine knows no product category.** A new category is
+data, in a folder under `packs/`. A new category is never a change to the
+engine.
+
+The rule is a test, not a habit. `src/kriko/tests/test_core_is_domain_free.py`
+reads the engine and fails on a category word.
 
 ## Which package may import which?
 
-Dependencies point down and in, never up or sideways. Where this and the
-layering principle in `CLAUDE.md` disagree, `CLAUDE.md` wins.
+Dependencies point down. They never point up or across.
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart TD
-    GPUI["kriko-gpui/<br/>desktop app, supervises the sidecar"] --> APP
-    APP["app/<br/>CLI, web, MCP, TUI"] --> K
-    PACKS["packs/<br/>one dir per category"] --> K
-    APP --> PL["app/pipeline/<br/>ledger drivers"]
-    PL --> PP["packs/#lt;name#gt;/pipeline/<br/>evidence ledger"]
-    K["kriko/<br/>engine, imports none of the others"]
-    K -. "any import upward is the red line" .-> BAD["forbidden"]
+| Package | Function |
+|---|---|
+| `kriko-gpui/` | The desktop app (Rust, GPUI). It supervises the sidecar and draws the interface. It holds no engine logic. |
+| `src/app/` | The interfaces: the command line, the local HTTP API, the MCP server, and the operator console. |
+| `src/app/pipeline/` | The drivers that run the evidence ledger of a category and repair its gaps. |
+| `src/kriko/` | The engine: the store, the lookup, the ranking, and the gates. It imports none of the others. |
+| `packs/` | One folder per category: the data, the vocabulary, the trust tiers, and the builder. |
+| `packs/<name>/pipeline/` | The evidence ledger and the grounded extraction of one category. |
+| `extension/` | It reads a listing page and draws the panel. |
 
-    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
-    class K brand
-    class GPUI,APP,PACKS,PL,PP plain
-    class BAD danger
-```
+Three rules keep the layout true:
 
-## What does each package own, and where do I start?
+1. `src/kriko/` must not import a package above it. This rule carries the
+   design. An engine that knows one category ends the data-only category.
+2. Kriko reads a catalog through the store. It never imports a catalog.
+3. An upward import inside a function body is a defect. It hides the same
+   mistake.
+   `src/app/pipeline/tests/test_repo_invariants.py` enforces the rules.
 
-| Package | Owns | Read first |
-|---|---|---|
-| `kriko-gpui/` | The desktop app (Rust, GPUI): supervises the sidecar, draws the interface over HTTP, no engine logic | `kriko-gpui/README.md`, then `kriko-gpui/src/engine.rs` |
-| `src/app/` | Interfaces: CLI, local FastAPI API, MCP server, operator TUI; the frozen sidecar entry | `src/app/cli.py`, `src/app/sidecar.py` |
-| `src/app/pipeline/` | Drivers that orchestrate a category's ledger and remediate its gaps | `src/app/pipeline/ledger_run.py` |
-| `src/kriko/` | Engine: pack store, generic lookup and ranking, gates, research interface | `src/kriko/store/packstore.py` |
-| `packs/` | One directory per category: data, vocabulary, trust tiers, builder | `packs/drill/README.md`, the smallest complete example |
-| `packs/<name>/pipeline/` | Evidence ledger and grounded extraction for one category | that pack's `pipeline/ledger/acquire.py` |
-| `extension/` | Reads a listing page; a background worker calls the web API and renders the risk cards | `extension/content.js` |
+## Where do I read for a question?
 
-### `kriko-gpui/` and `src/app/web/`
+| Your question | Read first |
+|---|---|
+| A listing becomes a panel | `extension/content.js`, then `src/app/web/routers/analyze.py`, then `src/kriko/lookup/match.py` |
+| A problem did or did not appear | `src/kriko/lookup/rank.py`, `src/kriko/lookup/conditions.py`, `src/kriko/gates.py` |
+| What a catalog contains | `packs/drill/` (the smallest complete example), then `src/kriko/pack/manifest.py` |
+| Build and install a catalog | `src/kriko/pack/build.py`, then `src/kriko/store/packstore.py` |
+| Evidence and quotations | `packs/<name>/pipeline/ledger/`, then `src/kriko/ledger/`, then `src/app/pipeline/ledger_run.py` |
+| A refusal | `src/app/mcp_server.py`, `src/kriko/gates.py`, and the vocabulary of the catalog |
+| The engine supervisor | `kriko-gpui/src/engine.rs`, then `src/app/sidecar.py` |
 
-The native GPUI desktop app owns the window and supervises the Python sidecar.
-The sidecar exposes the local API at `/api/*`; `/` identifies the running
-service and links to `/api/health` and `/api/docs`. There is no bundled browser
-local API: the browser extension and desktop app are the user interfaces.
+Start with these files:
 
-## Chasing a question? Read these
-
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart LR
-    Q1["A listing becomes a card"] --> F1["extension/content.js<br/>routers/analyze.py<br/>lookup/match.py"]
-    Q2["A claim did or did not show"] --> F2["lookup/rank.py<br/>lookup/conditions.py<br/>gates.py"]
-    Q3["What a catalog contains"] --> F3["PACK_CONTRACT.md<br/>packs/drill/<br/>pack/manifest.py"]
-    Q4["Build and install"] --> F4["pack/build.py<br/>store/packstore.py"]
-    Q5["Evidence"] --> F5["pipeline/ledger/acquire.py<br/>ledger/db.py<br/>app/pipeline/ledger_run.py"]
-    Q6["Refusals"] --> F6["app/mcp_server.py<br/>gates.py<br/>the pack's vocabulary"]
-
-    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
-    class Q1,Q2,Q3,Q4,Q5,Q6 ice
-    class F1,F2,F3,F4,F5,F6 plain
-```
-
-The paths in the diagram are shortened; the full ones follow.
-
-**A listing becomes a card.** `extension/content.js` scrapes and messages the
-background worker, which `POST`s to `/api/analyze`
-(`src/app/web/routers/analyze.py`). That turns the scrape into a `Query`
-through `kriko.adapters.adapt()`, resolves subjects in
-`src/kriko/lookup/match.py`, and reads ranked claims from
-`src/kriko/lookup/__init__.py`.
-
-**Why a claim did or did not show.** `src/kriko/lookup/rank.py`
-(`relevance()`, `explain()`), `src/kriko/lookup/conditions.py` (`evaluate()`),
-`src/kriko/gates.py` (`structural_reasons()`, `is_specific()`), and
-`lookup/tree.py` for the support read, which carries no score. A claim ranked
-low goes to `tree.py`, then to `src/app/web/routers/health.py`.
-
-**What a catalog contains.** `docs/PACK_CONTRACT.md`, then `packs/drill/`,
-then `src/kriko/pack/manifest.py` (`load()`).
-
-**Build and install.** `src/kriko/pack/build.py` (`build()` and its `_emit_*`
-stages) turns a directory into a `.kpack`; `src/kriko/store/packstore.py`
-(`install()`, `activate()`) puts it in the store. A pack with its own legacy
-data shapes may carry a parallel builder, which is a migration rather than the
-general path.
-
-**Evidence.** A category's `pipeline/ledger/acquire.py` fetches, and
-`ingest.py` is a thin adapter over the engine's `src/kriko/ledger/db.py`.
-`extraction.py` and `chunking.py` hold the shared grounded-extraction
-machinery, and `src/app/pipeline/ledger_run.py` drives the stages.
-
-**Refusals.** `src/app/mcp_server.py` (`submit_findings()`, which grounds
-every quote first), `src/kriko/gates.py` (`gate_reason()`,
-`structural_reasons()`), and the pack's own routine vocabulary, which is data
-rather than Python.
+| Package | Read first |
+|---|---|
+| `kriko-gpui/` | `kriko-gpui/README.md`, then `kriko-gpui/src/engine.rs` |
+| `src/app/` | `src/app/cli.py`, then `src/app/sidecar.py` |
+| `src/app/pipeline/` | `src/app/pipeline/ledger_run.py` |
+| `src/kriko/` | `src/kriko/store/packstore.py` |
+| `packs/` | `packs/drill/` |
+| `extension/` | `extension/content.js` |
 
 ## Which command starts what?
 
-| Command | What it does |
+| Command | Function |
 |---|---|
-| `kriko` (`python -m app.cli`) | CLI: catalog install, build, list, lookup |
-| `kriko tui` / `kriko-sidecar --tui` | Operator console (see `docs/INTERNALS.md`) |
-| `python -m app.mcp_server` | MCP server, for an agent that does its own reading |
-| `python -m app.pipeline.ledger_run` | Ledger stages: acquire, extract, cluster, verdict, remediate, report |
-| `python -m app.pipeline.panel` | Ledger review and inspection panel |
-| `python -m app.pipeline.process` | End-to-end onboarding driver for one product |
-| `python -m app.web` | Local API on `http://127.0.0.1:8787`; interactive API docs at `/api/docs` (no browser UI) |
-| `python -m packs.<name>.build` | Builds one catalog (also `kriko build packs/<name>`) |
-| `python -m packs.<name>.coverage` | That catalog's coverage report |
-| `packs/<name>/pipeline/catalog/*.py` | Catalog discovery, health, variant and stub generation |
-| `packs/<name>/pipeline/fitment/`, `parts/` | Validate a pack's own fitment and part data |
-| `packs/<name>/pipeline/ledger/{eval_verdict,parity}.py`, `sources/curated.py`, `scaffold.py`, `agent/render.py` | One-off ledger, scaffold and render tools; each has `--help` |
+| `kriko` | The command line: install, build, list, and look up a catalog |
+| `kriko tui` | The operator console |
+| `python -m app.mcp_server` | The MCP server, for an agent that reads by itself |
+| `python -m app.pipeline.ledger_run` | The ledger stages |
+| `python -m app.pipeline.panel` | The spend, the coverage, and the recent runs |
+| `python -m app.pipeline.process` | One product from end to end |
+| `python -m app.web` | The local API on `http://127.0.0.1:8787`. The interactive API is at `/api/docs`. |
+| `python -m packs.<name>.build` | The build of one catalog |
+| `python -m packs.<name>.coverage` | The coverage report of one catalog |
 
-## How do I run things?
+The sidecar is the engine as a child process. It selects a free port and prints
+`KRIKO_PORT <n>` as its first line. `kriko-gpui/` polls `/api/health` until the
+engine answers.
 
-- Repo venv, not bare `python`: `.venv/bin/python` on POSIX,
-  `.venv\Scripts\python.exe` on Windows.
-- Full suite, no arguments: `python -m pytest` (`pytest.ini` pins
-  `testpaths`; see `docs/DOCTRINE.md`).
-- A catalog: `kriko build packs/<name>`, then `kriko packs`. The full
-  walkthrough is `docs/USAGE.md`.
+Kriko uses two databases on purpose. The engine store is
+`~/.kriko/knowledge.sqlite`, and the history and the settings are
+`~/.kriko/app.sqlite`. The removal of a catalog must not remove your history,
+and your history must not change the digest of a catalog.
+
+## Run the tests
+
+Set up a working tree once:
+
+```bash
+tools/setup.sh
+```
+
+Then run the gate before each push and each merge:
+
+```bash
+tools/gate.sh          # everything
+tools/gate.sh py       # the Python suite only
+tools/gate.sh node     # the JavaScript suite only
+tools/gate.sh gpui     # the desktop app only
+tools/gate.sh wheel    # the shipped wheel only
+```
+
+On Windows, use `.venv\Scripts\python.exe` in place of `.venv/bin/python`. The
+gate holds these stages: the version strings, ruff, mypy three times, pytest,
+the shipped wheel, the JavaScript suite, and the Rust check and tests of the
+desktop app. `pytest.ini` fixes the test folders.
+
+To run the Python suite alone:
+
+```bash
+.venv/bin/python -m pytest
+```
+
+## Build and install a catalog
+
+```bash
+kriko build packs/<name>     # a folder becomes a .kpack file
+kriko packs                  # the installed catalogs
+kriko install <file.kpack>   # add one
+```
+
+## Build the desktop app
+
+The installer recipe, the macOS build, and the artifacts are in
+[kriko-gpui/README.md](../kriko-gpui/README.md).
