@@ -2096,7 +2096,8 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     progress.check()
     # The API agent keeps what its search returned per url; a CLI keeps
     # nothing, and `None` tells the parser there is nothing to check against.
-    found = quicklook.parse(reply, getattr(researcher, "sources", None))
+    found = quicklook.parse(reply, getattr(researcher, "sources", None),
+                            page=params.get("page") if isinstance(params.get("page"), dict) else None)
     kept = len(found["risks"])
     # A source containing the quotation can still fail to support the claim.
     verification = getattr(researcher, "verification", None)
@@ -3247,12 +3248,32 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
     conn = connect(settings.store_path)
     try:
         keys = identity_keys_text(conn)
+        from kriko.adapters import identity_vocabulary
+
+        vocabulary = identity_vocabulary(conn)
         installed, enabled = conn.execute(
             "SELECT COUNT(*), COALESCE(SUM(CASE WHEN enabled = 1 THEN 1 ELSE 0 END), 0)"
             " FROM packs"
         ).fetchone()
     finally:
         conn.close()
+
+    # What the reader's browser read on the page they pressed the button on.
+    # This is the whole reason a site can be learned without fetching it: the
+    # page is already rendered and already past the site's bot check, and a
+    # fetch of the same URL is the version that gets refused.
+    app_conn = state.connect(settings.app_state_path)
+    try:
+        offered = params.get("sample") if isinstance(params.get("sample"), dict) else {}
+        sample = (sites.sample(
+            url=str(offered.get("url") or url),
+            title=str(offered.get("title") or offered.get("page_title") or ""),
+            fields=offered.get("fields") or {},
+            description=str(offered.get("description") or ""),
+            product=offered.get("product") or {})
+            if offered else state.site_sample(app_conn, host))
+    finally:
+        app_conn.close()
 
     # Before the agent, not after it: with no identity key to map into, every
     # adapter it could write is refused ("no `identity` rules"), and that
@@ -3296,8 +3317,11 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
     researcher.replies = progress.replies
     progress.set(0.1, f"reading {host}")
     progress.log(f"site: {host} — {url}")
+    if sample.get("facts"):
+        progress.log(f"the browser read {len(sample['facts'])} labelled fact(s) "
+                     f"on the sample page")
 
-    reply = researcher.ask(sites.BRIEF.format(site=host, url=url, keys=keys))
+    reply = researcher.ask(sites.brief(host, url, keys, sample))
     progress.check()
     progress.set(0.7, "checking the adapter")
     progress.log(reply.strip()[:4000] or "(the agent printed nothing)")
@@ -3320,6 +3344,23 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
         except sites.SiteRefused as exc:
             state.set_site_request(app_conn, host, state="refused", detail=str(exc))
             raise ValueError(f"the adapter was refused: {exc}") from exc
+        # Read the adapter's own rules back against the page the browser saw.
+        # An adapter that resolves nothing on the sample it was written from
+        # reads nothing on every page of the site, and storing it would show
+        # the reader a working site that answers with an empty identity. That
+        # is the failure this check exists to end.
+        read = sites.reading(
+            checked, sample.get("facts") or {},
+            url=str(sample.get("url") or url), title=str(sample.get("title") or ""),
+            description=str(sample.get("description") or ""), vocabulary=vocabulary)
+        if sample.get("facts") and not read["identity"]:
+            detail = (
+                f"the adapter reads none of the {len(sample['facts'])} labelled "
+                f"fact(s) the browser saw on {host}, so no identity key resolves. "
+                "Nothing was stored."
+            )
+            state.set_site_request(app_conn, host, state="refused", detail=detail)
+            raise ValueError(detail)
         state.save_local_adapter(
             app_conn, host=host, spec=checked, source="agent",
             pack_id=str(params.get("pack_id") or checked.get("pack_id") or ""),
@@ -3327,7 +3368,9 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
         state.set_site_request(
             app_conn, host, state="done",
             detail=f"{len(checked.get('identity') or {})} identity key(s), "
-                   f"{len(checked.get('context') or {})} context")
+                   f"{len(checked.get('context') or {})} context"
+                   + (f"; the sample page confirms {len(read['identity'])} of them"
+                      if sample.get("facts") else ""))
     finally:
         app_conn.close()
 
@@ -3336,7 +3379,7 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
         f"{host} can be read now — {len(checked.get('identity') or {})} "
         f"identity key(s). Open a listing there and press the extension button."
     )
-    return {"host": host, "adapter": checked, "url": url}
+    return {"host": host, "adapter": checked, "url": url, "reading": read}
 
 
 #: What `identity_keys_text` says when no enabled pack declares an identity key.
@@ -3742,7 +3785,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
             history.append(f"Question: {earlier['question'][:500]}")
             history.append(f"Agent reply: {earlier['answer'][:1000]}")
         context += "\n\n" + "\n".join(history)[:4000]
-    brief = followup.web_brief(question, product=products, context=context)
+    brief = followup.web_brief(question, product=products, context=context,
+                               kind=followup.classify(question))
     progress.log(f"comparison brief: {len(brief)} characters from {len(answers)} saved checks")
 
     def report_agent(identity: dict) -> None:
@@ -3752,7 +3796,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
         settings, {**params, "max_tokens": followup.MAX_TOKENS}, progress, brief,
         on_agent=report_agent, timeout=COMPARE_ASK_TIMEOUT_SECONDS,
         effort="low", follow_up=True, product=products, question=question,
-        fallback_brief=followup.saved_brief(question, product=products, context=context))
+        fallback_brief=followup.saved_brief(question, product=products, context=context,
+                                            kind=followup.classify(question)))
     if not answer:
         raise ValueError("The agent returned no answer. Try asking again.")
     progress.log(answer[:4000])
@@ -3819,7 +3864,8 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
         progress.partial({"agent": identity})
 
     brief = followup.web_brief(question, product=str(stored.get("label") or ""),
-                               context="\n".join(lines))
+                               context="\n".join(lines),
+                               kind=followup.classify(question))
     reply, sources = _ask_about_checks(settings, params, progress, brief,
                                        on_agent=report_agent, follow_up=True,
                                        product=str(stored.get("label") or ""),
