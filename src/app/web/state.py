@@ -637,6 +637,12 @@ CREATE TABLE IF NOT EXISTS site_requests (
     asks       INTEGER NOT NULL DEFAULT 0,
     sample_url TEXT NOT NULL DEFAULT '',
     title      TEXT NOT NULL DEFAULT '',
+    -- What the browser read on that page, as JSON: its own labelled facts, the
+    -- seller's description and the product it named. This is what lets an
+    -- agent write an adapter without fetching the page — the page is already
+    -- rendered and already past whatever bot check the site runs. One sample
+    -- per host, replaced, and never browsing history.
+    sample_json TEXT NOT NULL DEFAULT '',
     -- open | working | done | refused. `done` when an adapter exists for it.
     state      TEXT NOT NULL DEFAULT 'open',
     detail     TEXT NOT NULL DEFAULT '',
@@ -1821,29 +1827,61 @@ def save_compare_board(
     return compare_board(conn, draft_id)
 
 
+#: One page sample, bounded. A prompt is not a database dump: 120 labelled
+#: facts of 200 characters is already more than any adapter needs.
+SITE_SAMPLE_MAX_CHARS = 40_000
+
+
 def record_site_request(
-    conn: sqlite3.Connection, *, host: str, url: str = "", title: str = ""
+    conn: sqlite3.Connection, *, host: str, url: str = "", title: str = "",
+    sample: dict | None = None,
 ) -> dict:
     """One more ask for a site nothing can read yet. Accumulated, not appended.
 
     A count and a sample, because the question it answers is "which site should
     Kriko learn next" and that is about distinct hosts, not about how much
     somebody browsed.
+
+    `sample` is what the browser read on the page, kept so the later
+    registration run does not have to fetch a page that may refuse an agent and
+    will never render its label/value shapes. A later ask with no sample keeps
+    the one already stored rather than clearing it.
     """
     now = _now()
+    kept = json.dumps(sample, ensure_ascii=False, default=str)[:SITE_SAMPLE_MAX_CHARS] if sample else ""
     conn.execute(
-        "INSERT INTO site_requests (host, asks, sample_url, title, first_at, last_at)"
-        " VALUES (?,1,?,?,?,?)"
+        "INSERT INTO site_requests (host, asks, sample_url, title, sample_json,"
+        " first_at, last_at) VALUES (?,1,?,?,?,?,?)"
         " ON CONFLICT (host) DO UPDATE SET asks = asks + 1,"
         " sample_url = CASE WHEN excluded.sample_url <> '' THEN excluded.sample_url"
         "                   ELSE site_requests.sample_url END,"
         " title = CASE WHEN excluded.title <> '' THEN excluded.title"
         "              ELSE site_requests.title END,"
+        " sample_json = CASE WHEN excluded.sample_json <> '' THEN excluded.sample_json"
+        "                    ELSE site_requests.sample_json END,"
         " last_at = excluded.last_at",
-        (host, url, title, now, now),
+        (host, url, title, kept, now, now),
     )
     conn.commit()
     return site_requests(conn, host=host)[0]
+
+
+def site_sample(conn: sqlite3.Connection, host: str) -> dict:
+    """What the browser read on this host's last page, or `{}`.
+
+    Read on the registration path only, so a run that has a fresher sample in
+    its own params never pays for this query.
+    """
+    row = conn.execute(
+        "SELECT sample_json FROM site_requests WHERE host = ?", (host,)
+    ).fetchone()
+    if row is None or not row["sample_json"]:
+        return {}
+    try:
+        found = json.loads(row["sample_json"])
+    except ValueError:
+        return {}       # a truncated or hand-edited row must not stop a run
+    return found if isinstance(found, dict) else {}
 
 
 def set_site_request(conn: sqlite3.Connection, host: str, *, state: str,

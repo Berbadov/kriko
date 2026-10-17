@@ -180,6 +180,70 @@ function extractInfoList(knownLabels) {
   return details;
 }
 
+// The page's own label/value shapes, for a site with no adapter yet.
+//
+// A known site asks for the labels its pack declared, so the scan above can
+// stop at those. Learning a site has no such list: the whole job is to find
+// out what this page calls its fields. So this reads the three shapes almost
+// every shop uses — a definition list, a two-cell table row, a list item with
+// a bold label — plus two-child blocks whose class says they are a spec or
+// detail row, and reports label -> value without deciding what either means.
+// The agent maps them; nothing here interprets one.
+//
+// Bounded twice on purpose. A page with a thousand rows is not more learnable
+// for sending a thousand of them, and a prompt is not a database dump.
+const EXPLORE_LABELS_MAX = 120;
+
+function extractOwnLabels(knownLabels) {
+  const found = {};
+  const known = new Set((knownLabels || []).map(foldLabel));
+
+  const keep = (rawLabel, rawValue) => {
+    const label = cleanText(rawLabel);
+    const value = cleanText(rawValue);
+    if (!label || !value) return false;
+    if (label.length < 2 || label.length > 60 || value.length > 200) return false;
+    if (!/\p{L}/u.test(label)) return false;
+    const folded = foldLabel(label);
+    if (!folded || known.has(folded) || found[label]) return false;
+    // The same wrong-shape traps the declared-label scan already refuses: a
+    // container caught whole, or the label read back as its own value.
+    if (foldLabel(value).includes(folded)) return false;
+    found[label] = value;
+    return Object.keys(found).length >= EXPLORE_LABELS_MAX;
+  };
+
+  for (const dt of document.querySelectorAll("dl dt")) {
+    const dd = dt.nextElementSibling;
+    if (dd && dd.tagName === "DD" && keep(dt.textContent, dd.textContent)) return found;
+  }
+
+  for (const row of document.querySelectorAll("table tr")) {
+    const cells = [...row.children].filter(
+      (cell) => cell.tagName === "TH" || cell.tagName === "TD");
+    if (cells.length === 2 && keep(cells[0].textContent, cells[1].textContent)) return found;
+  }
+
+  for (const item of document.querySelectorAll("li")) {
+    const strong = [...item.children].find((node) =>
+      ["STRONG", "B", "LABEL"].includes(node.tagName)
+      || (node.classList && node.classList.contains("label")));
+    if (!strong) continue;
+    const rest = cleanText(item.textContent.replace(strong.textContent, ""));
+    if (keep(strong.textContent, rest)) return found;
+  }
+
+  for (const block of document.querySelectorAll(
+    "[class*='spec'], [class*='Spec'], [class*='propert'], [class*='Propert'],"
+    + "[class*='detail'], [class*='Detail'], [class*='attribute'], [class*='Attribute'],"
+    + "[class*='info'], [class*='Info']")) {
+    const children = [...block.children].filter((node) => cleanText(node.textContent));
+    if (children.length === 2
+        && keep(children[0].textContent, children[1].textContent)) return found;
+  }
+  return found;
+}
+
 function extractTechnicalDetails() {
   const root = document.querySelector("#technical-details, .classifiedTechDetails");
   if (!root) return {};
@@ -323,10 +387,14 @@ function extractDamageInfo(panel) {
   for (const state of states) found[state.key] = new Set();
   const limit = spec.max_item_length || 60;
 
-  for (const block of document.querySelectorAll(spec.block_selector || "")) {
+  // An empty selector is a SyntaxError to querySelectorAll, and a pack that
+  // declares states but no block_selector is a pack to skip, not to crash on.
+  const blockSelector = (spec.block_selector || "").trim();
+  const itemSelector = (spec.item_selector || "").trim();
+  for (const block of blockSelector ? document.querySelectorAll(blockSelector) : []) {
     const stateKey = _stateOfHeader(_headerTextOf(block, spec.header_selector), states);
-    if (!stateKey) continue;
-    block.querySelectorAll(spec.item_selector || "").forEach((node) => {
+    if (!stateKey || !itemSelector) continue;
+    block.querySelectorAll(itemSelector).forEach((node) => {
       const name = cleanText(node.textContent);
       if (name && name.length < limit) found[stateKey].add(name);
     });
@@ -664,6 +732,48 @@ function readStructuredProduct() {
     if (names.length) fields["ld:breadcrumb"] = names.join(" > ").slice(0, 300);
   }
 
+  // What it costs and who is selling it. `offers` and `aggregateRating` are
+  // skipped by `_ldFlatten` because each is a nested object with its own
+  // vocabulary; they are read here instead, as the handful of properties every
+  // shop publishes. The price is the page's own figure — never a guess, and
+  // never converted into another currency.
+  const setField = (key, value) => {
+    const text = _ldText(value);
+    if (text && text.length <= 200 && !fields[key]) fields[key] = text;
+  };
+  const offerNodes = chosen.flatMap((node) =>
+    (Array.isArray(node.offers) ? node.offers : [node.offers])
+      .map(resolve).filter(Boolean));
+  const offer = offerNodes.find((one) => _ldText(one.price) || _ldText(one.lowPrice))
+    || offerNodes[0];
+  if (offer) {
+    setField("ld:price", offer.price ?? offer.lowPrice ?? offer.highPrice);
+    setField("ld:priceCurrency", offer.priceCurrency);
+    setField("ld:offerCount", offer.offerCount);
+    setField("ld:lowPrice", offer.lowPrice);
+    setField("ld:highPrice", offer.highPrice);
+    const seller = resolve(offer.seller);
+    setField("ld:seller", seller ? (seller.name ?? seller) : offer.seller);
+    // `InStock` rather than the whole `https://schema.org/InStock`: the URL is
+    // the standard's shape, and the word is the fact.
+    const availability = _ldText(offer.availability).replace(/^.*[/#:]/, "");
+    if (availability) setField("ld:availability", availability);
+  }
+  const rating = chosen.map((node) => resolve(node.aggregateRating)).find(Boolean);
+  if (rating) {
+    setField("ld:ratingValue", rating.ratingValue);
+    setField("ld:reviewCount", rating.reviewCount ?? rating.ratingCount);
+    setField("ld:bestRating", rating.bestRating);
+  }
+  // Open Graph's product price, for a shop that publishes no JSON-LD offer.
+  // Only where the structured data said nothing, so the two cannot disagree.
+  for (const [key, meta] of [
+    ["ld:price", "product:price:amount"], ["ld:price", "og:price:amount"],
+    ["ld:priceCurrency", "product:price:currency"], ["ld:priceCurrency", "og:price:currency"],
+  ]) {
+    if (!fields[key]) setField(key, _metaContent(meta));
+  }
+
   const ogTitle = _metaContent("og:title");
   // A vehicle's own name before the listing's: AutoScout24's outer `Product`
   // is named "Mercedes-Benz for € 18,000". The heading before the share title,
@@ -697,7 +807,12 @@ const DESCRIPTION_SELECTORS = [
 // no interpretation. `listing` is what stays here — the panel renders the
 // damage and equipment panels locally, and the engine has no rule for them,
 // so there is no reason to send them anywhere.
-function buildScrape(knownLabels, panel) {
+//
+// `explore` is for a page nothing can read yet: the caller has no declared
+// labels to ask for, so the page's own label/value shapes are collected too.
+// Every ordinary scrape leaves it off, which is what keeps a known site's
+// payload exactly as it was.
+function buildScrape(knownLabels, panel, explore) {
   const infoList = extractInfoList(knownLabels);
   const technical = extractTechnicalDetails();
 
@@ -708,6 +823,11 @@ function buildScrape(knownLabels, panel) {
   // label the pack declared is the better evidence where both speak (B149).
   const structured = readStructuredProduct();
   const fields = { ...structured.fields, ...technical, ...infoList };
+  if (explore) {
+    for (const [label, value] of Object.entries(extractOwnLabels(knownLabels))) {
+      if (!fields[label]) fields[label] = value;
+    }
+  }
 
   let description = null;
   for (const selector of DESCRIPTION_SELECTORS) {
@@ -770,7 +890,8 @@ function presentationOf(panel) {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "GET_SCRAPE") {
-    sendResponse({ ok: true, payload: buildScrape(request.labels, request.panel) });
+    sendResponse({ ok: true,
+      payload: buildScrape(request.labels, request.panel, request.explore === true) });
     return;
   }
 

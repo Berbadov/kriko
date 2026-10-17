@@ -25,10 +25,21 @@ class SeenRequest(BaseModel):
     `url` is kept for one reason: an agent asked to write the adapter needs a
     real page to read, and "somewhere on that site" is not one. It is a single
     sample per host, replaced — not browsing history.
+
+    `fields`, `description` and `product` are what the extension read on that
+    page. They are the page already rendered and already past the site's bot
+    check, which is the one thing an agent fetching the URL cannot have; they
+    travel with the ask so the learning run can use them instead.
     """
 
     url: str = Field(min_length=4, max_length=2000)
     title: str = Field("", max_length=500)
+    #: The page's own label -> value pairs, as the scraper read them.
+    fields: dict[str, str] = Field(default_factory=dict)
+    description: str = Field("", max_length=5000)
+    #: The product the page named, when it published structured data.
+    product: dict = Field(default_factory=dict)
+    page_title: str = Field("", max_length=500)
 
 
 class ActivationRow(BaseModel):
@@ -106,7 +117,12 @@ def site_seen(
     found = sites.adapter_for(store, conn, body.url)
     if found is not None:
         return {"host": host, "readable": True, "adapter": found.get("id", "")}
-    row = state.record_site_request(conn, host=host, url=body.url, title=body.title)
+    row = state.record_site_request(
+        conn, host=host, url=body.url, title=body.title,
+        sample=sites.sample(
+            url=body.url, title=body.page_title or body.title,
+            fields=body.fields, description=body.description, product=body.product),
+    )
     return {"host": host, "readable": False, "request": row}
 
 
