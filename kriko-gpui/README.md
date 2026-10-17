@@ -1,10 +1,8 @@
-# Kriko for GPUI
+# The Kriko desktop app
 
-The desktop app: Rust and GPUI 0.2.2 on the Kriko design system. It supervises
-the engine (the sidecar) and draws every screen from the engine's HTTP API; it
-holds no engine logic. The browser extension stays TypeScript and is untouched
-by this crate. Palette tokens live in `src/theme.rs`, and the diagrams in these
-documents wear them (see `docs/STYLE.md`).
+This folder holds the desktop app. It uses Rust and GPUI. The app supervises
+the engine and draws every screen from the local HTTP API. It holds no engine
+logic. The browser extension is a separate part of the tree, in `extension/`.
 
 Run it from a source checkout:
 
@@ -12,311 +10,135 @@ Run it from a source checkout:
 cargo run --release
 ```
 
-Everything it draws — the three fonts, the nav icons, the dithered sky images,
-the wordmark — is embedded in the binary with `include_bytes!`, so the exe
-runs from any working directory with no asset paths to install.
+Every asset is inside the binary: the fonts, the nav icons, the sky images, and
+the wordmark. The program runs from any folder, and it needs no asset path.
 
-## Layout
+## The files
 
-- `src/theme.rs` — the whole look: colour tokens, shadows, and the small
-  builders (key, plate, well, LED matrix, tag, verdict, meter, switch, agent
-  tile, hero, frost, input, keycap, badge, titlebar, section, grid). Every gap
-  and inset a screen uses is a token there too (`PAGE_PAD`, `SPACE_SECTION`,
-  `SPACE_CARD`, `PAD_CARD`), so a screen's density is changed in one place. Written against only
-  the primitives GPUI has: fills, gradients, 1px borders, outer shadows,
-  images, SVG alpha masks. No backdrop blur, no inset shadows, no text-shadow.
-- `src/dock.rs` — the live actions bar: the needs-you requests with their
-  answering keys, the working-now lanes, the feed, and the reply field.
-- `src/app.rs` — the shell: the sidebar (brand block, nav groups, the
-  needs-you badge on Activity), the hero with the page head, keyboard
-  actions, and the text fields.
-- `src/data.rs` — the screens' fixed words: the navigation, the history page
-  size and the compare suggestions. Every number a screen shows comes from
-  `src/live/`, which holds what the engine says, one file per area.
-- `src/engine.rs` — the engine supervisor (below).
-- `src/shell.rs` — the tray, close-means-hide, and one Kriko per machine.
-- `src/api.rs` — the engine's HTTP API from the window's side: loopback only,
-  one blocking request at a time, called through `Kriko::fetch`.
-- `src/screens/*` — one file per tab, each a function over the shared
-  `Kriko` state; every change goes through `cx.listener`, so the app
-  re-renders from one place.
+| File | Function |
+|---|---|
+| `src/theme.rs` | The look: the colour tokens, the shadows, and the small builders (card, well, switch, tag, meter, and others). Every gap and inset is a token here. |
+| `src/app.rs` | The shell: the sidebar, the nav groups, the page head, the keys, and the text fields. |
+| `src/data.rs` | The fixed words of the screens: the rail, the page size of the history, and the compare suggestions. |
+| `src/dock.rs` | The live actions bar: the requests that need you, the working lanes, the feed, and the reply field. |
+| `src/engine.rs` | The engine supervisor. |
+| `src/shell.rs` | The tray, the hide-on-close behaviour, and one Kriko for each machine. |
+| `src/api.rs` | The HTTP API of the engine from the side of the window. It uses the loopback address and one request at a time. |
+| `src/screens/` | One file for each tab. Each file is a function over the shared state. |
 
-## The engine: how the app starts it and ends it
+## The engine supervisor
 
-The app is a supervisor, not a second engine. `src/engine.rs` finds the
-engine, waits until it answers, and ends it with the app.
+The app is a supervisor. It is not a second engine. `src/engine.rs` finds the
+engine, waits until the engine answers, and stops the engine with the app.
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
 sequenceDiagram
-    participant App as kriko or kriko.exe
-    participant Side as kriko-sidecar or kriko-sidecar.exe
-    participant Win as Window
-    App->>Side: spawn with --exit-with-parent --supervised, stdin kept open
-    Side-->>App: KRIKO_PORT n (first stdout line)
-    loop every 200 ms, up to 45 s
-        App->>Side: GET /api/health
-    end
-    Side-->>App: ok, with its version
-    App->>Win: Ready, draw the screens over HTTP
-    Note over App,Win: On failure the window shows the stderr tail, never a blank screen
+    participant App as kriko.exe
+    participant Engine as kriko-sidecar.exe
+    participant Win as The window
+    App->>Engine: Start it with --exit-with-parent
+    Engine-->>App: KRIKO_PORT n (the first line)
+    App->>Engine: GET /api/health
+    Engine-->>App: ok, with its version
+    App->>Win: Draw the screens from the API
+    Note over App,Win: A failure shows the error of the engine, never a blank window
 ```
 
-Where the engine comes from, first match wins:
+The engine comes from the first of these that is available:
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart TD
-    A{"KRIKO_URL set?"}:::plain -->|yes| B["Attach to it, start nothing"]:::ice
-    A -->|no| C{"kriko-sidecar[.exe]<br/>beside kriko[.exe]?"}:::plain
-    C -->|yes| D["Start it (installed layout)"]:::brand
-    C -->|no| E{"Engine already answering<br/>on the selected extension port?"}:::plain
-    E -->|yes| F["Attach to it"]:::ice
-    E -->|no| G["python -m app.sidecar<br/>(KRIKO_PYTHON picks the interpreter)"]:::plain
-    D --> H["Poll /api/health"]:::plain
-    G --> H
-    B --> H
-    F --> H
-    H -->|"no answer in 45 s, or exit"| X["Failure screen with stderr"]:::danger
-    H -->|ok| R["Ready"]:::mark
+1. `KRIKO_URL`, if you set it. The app attaches and starts nothing.
+2. `kriko-sidecar` beside `kriko.exe`. The app starts it.
+3. An engine that already answers on the selected port. The app attaches to it.
+4. `python -m app.sidecar`. The variable `KRIKO_PYTHON` selects the
+   interpreter.
 
-    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    classDef ice    fill:#BFE4FF,stroke:#1F4FFF,color:#05070F
-    classDef danger fill:#FF6B5E,stroke:#05070F,color:#05070F
-    classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
-```
-
-| Moment | What happens |
+| Moment | Result |
 |---|---|
-| Handshake | The first stdout line holding `KRIKO_PORT` names a port the engine already holds. |
-| Crash belt | `--exit-with-parent` makes the engine watch its stdin. The app keeps the write end for the whole run, so if the app dies in any way, the pipe closes and the engine follows. |
-| Failure | The engine could not start, never answered, or stopped: the window shows its stderr tail (24 KiB kept). If it said nothing, the exit code. |
-| Close the window | Hides it. The engine keeps serving, because the extension needs it. Without a tray, closing quits instead. |
-| Quit (tray: Open, Quit) | Ends the engine, then the app. On Windows the kill is a tree kill (`taskkill /F /T`), because a one-file bundle re-executes: the pid spawned is the bootloader. |
-| Attached engine | Left alone on exit. It was not ours to end. |
-| Second launch | Windows raises the first window and exits before starting a second engine; app-bundle launches on macOS go through Launch Services. |
-
-## The window and the dock
-
-The system titlebar is gone (`appears_transparent`); the app draws its own
-merged strip: the mark, the app name and the current crumb drag the window,
-and minimize / restore / close sit on the right as Kriko-style wells. The
-restore icon flips to the maximize icon with the window state.
-
-The live actions dock is the right-hand bar, on every tab (the LIVE ON/OFF
-toggle in the titlebar collapses it): needs-you requests each carry their
-answer key (Sign in, Allow, Approve), the working lanes show live meters,
-and the reply field at the bottom posts straight into the feed.
+| Handshake | The first line with `KRIKO_PORT` names a port that the engine already holds. |
+| Crash belt | `--exit-with-parent` makes the engine watch its input. If the app stops in any way, the engine stops too. |
+| Failure | The engine did not start, did not answer, or stopped. The window shows the last 24 KiB of its error output. |
+| Close the window | The window hides. The engine continues, because the browser extension needs it. |
+| **Quit** in the tray | The app stops the engine, then itself. On Windows the stop is a tree kill, because a one-file bundle starts a second process. |
+| An attached engine | The app leaves it. It was not the engine of this app. |
+| A second start | On Windows, the first window comes to the front and the second app stops. |
 
 ## The screens
 
-The rail has four groups, in this order: **Check** (Home, Run, History,
-Compare, Browser extension), **Knowledge** (Overview, Browse), **System** (Sites,
-Activity, Agents, Benchmark) and **This install** (Local LLM, Settings, About).
-Overview, under Knowledge, lists the installable catalogs and holds the **File
-quick looks** button. The screens below are described in detail:
+The rail has four groups:
 
-| Screen | What is on it |
-| --- | --- |
-| Activity | the needs-you callout (tag, two lines, "Open agents" key), the filter input, the TODAY feed (time, text, kind tag per row) |
-| History | search input with the verdict/pack filter plates, the checks table (check, verdict chip, confidence meter, agent tiles, took, when), pagination with Previous/Next |
-| Settings | 2x2 glass cards: General and Shortcuts left, Privacy and Danger zone right; switches, `~/.kriko` chip, ctrl+N/K/B keycaps, the two-step erase |
+- **Check**: Home, Run, History, Compare, Chat, Browser extension
+- **Knowledge**: Overview, Browse
+- **System**: Sites, Activity, Agents, Benchmark
+- **This install**: Local LLM, Settings, About
 
-The rest of the rail follows the same system: Home (totals, waiting callout,
-latest checks, frost start box on the hero), Run (phase stepper, agent lanes,
-decision card, feed), Browser extension (steps, pairing code, switches),
-Overview (totals, packs with switches, support, gaps), Browse (table plus the
-evidence drawer), Sites (add field, trust grades), Benchmark (wide run plate,
-LED bars), About.
+| Screen | Contents |
+|---|---|
+| Home | The totals, the work that waits, the latest checks, and the app update |
+| Run | The steps of the selected check, the lanes of the agents, the decision card, and the log |
+| Chat | The conversation and the sources beside each answer |
+| Compare | Up to four saved checks, cell by cell, and a drawing board over the shortlist |
+| Overview | The catalogs to install, the installed catalogs, the gaps, and **File quick looks** |
+| Browse | The table of products and the drawer of evidence |
+| Agents | The table of agents, the model, the MCP port, and the permissions |
+| Local LLM | The server card, the models, the tuning, and the memory of the graphics card |
+| Settings | General, shortcuts, privacy, and the danger zone |
 
-Compare and Local LLM are the workbenches, and carry the most:
+Two variables help a review session:
 
-- **Compare** — named drafts (new / save / delete), four pick-a-check slots,
-  the answer slab said from the lined-up columns, the specifications and the
-  known risks cell by cell (DIFFERS chips, BACKED/DISPUTED trust icons,
-  MINOR/SERIOUS/CRITICAL severity chips, one detail row open at a time), a
-  drawing board over the shortlist (pen strokes and pinned notes stored as
-  fractions, so a mark stays on its column through a resize; undo, clear,
-  close), and follow-up questions: type one or press a suggestion, and the
-  agent answers while you keep reading.
-- **Local LLM** — the server card (address, search service, the LLM picker,
-  the wait timeout), the model table with parameters, quantization, context
-  window, VRAM fit status and tok/s meters, the tuning card (temperature,
-  max tokens, GPU layers, auto unload, CPU fallback), the GPU memory card,
-  and the one-tap model test that runs a grounding pass and reports what it
-  proved.
-- **Agents** — the table carries last-seen and run counts; the detail card
-  carries the MCP port chip, latency, the allowed-in-run switch, per-tool
-  permissions (read pages, take part in Run, answer questions) and a
-  reconnect key.
-
-Setting `KRIKO_VERIFY` starts a separate review window that never hands off to a
-running Kriko. Any route opens its screen (`settings`, `sites`, `subject/<id>`,
-…); `compare`, `risks`, `local`, `agents`, `dock` and `benchmark` also seed that
-page's state (board with strokes and a note, open sections, finished test), so
-it can be captured without driving the mouse. `KRIKO_WINDOW_SIZE=WxH` opens the
-window at that size, for example the 940x640 minimum.
-
-## Motion
-
-The design system's four animations all run, and Reduce motion (Settings)
-freezes every one of them:
-
-- **Boot** — live tags' LED dots wake with the staggered k-boot flicker.
-- **Blink** — needs-you tags blink three rounds when they appear, then rest
-  lit; a live meter's leading segment pulses while a run is in flight.
-- **The switch knob** slides through the --ease-mech overshoot; flipping it
-  remounts the knob and the slide replays from the other side.
-- **The segmented thumb** slides the same way when a view is picked.
-
-GPUI has no keyframes, so each animation rides `with_animation` on an element
-whose id carries the state it depends on — change the state, the element
-remounts, the animation replays. The overshoot is applied inside the
-animator (an easing function must stay within 0.0..=1.0 or the dev build's
-assert fires).
-
-**Only the window in front moves, and only work loops** (#184). A `.repeat()`
-animation is never done, so GPUI asks for the next frame forever and redraws
-the whole window each time: one loop on screen costs a CPU core. `render`
-decides `motion` once per frame as *Reduce motion is off and
-`window.is_window_active()`*, and every screen reads `app.motion`, so a
-window behind others, minimized or in the tray is still; GPUI redraws on
-every activation change, so the loops resume on focus. Loops are kept for
-work in flight (spinner, ripple, live meter, progress sheen, a working
-agent's mark). Waiting is not work: a waiting mark breathes three times and
-rests, the closed Live dock does not move, and the page head no longer
-breathes. `src/app/tests/test_the_idle_window_does_not_draw.py` holds the
-list of functions allowed to loop.
+- `KRIKO_VERIFY=1` opens one separate window. A route such as `settings` or
+  `compare` opens that screen, and the window never attaches to a running
+  Kriko.
+- `KRIKO_WINDOW_SIZE=WxH` opens the window at that size, for example the
+  minimum `940x640`.
 
 ## Build the installer
 
-The Windows installer and portable zip are built on Windows:
+Build the Windows installer and the portable ZIP on Windows:
 
 ```
-powershell -ExecutionPolicy Bypass -File package.ps1
+powershell -ExecutionPolicy Bypass -File kriko-gpui/package.ps1
 ```
 
-The macOS app is built on the machine it targets, because GPUI, PyInstaller,
-and OpenSERP must all have the same architecture. On Apple Silicon:
+The MSI step needs the WiX 3 toolset (`candle` and `light`) and the command
+`cargo install cargo-wix`. If WiX is not in `PATH`, give its folder:
+`.\kriko-gpui\package.ps1 -WixBin C:\path\to\wix314`.
+
+Build the macOS app on the machine that it targets:
 
 ```sh
-kriko-gpui/package-macos.sh arm64
+kriko-gpui/package-macos.sh arm64      # Apple Silicon
+kriko-gpui/package-macos.sh x86_64     # Intel
 ```
 
-On an Intel Mac, use `kriko-gpui/package-macos.sh x86_64`. The script checks
-the host and each bundled executable's architecture, verifies the pinned
-OpenSERP release archive, then builds and smoke-checks the `.app` before
-creating these files in `kriko-gpui/builds/`:
+The script examines the host and each bundled program, checks the pinned
+release archive of the search service, and smoke-tests the app. The build
+writes these files to `kriko-gpui/builds/`:
 
-| File | What it is |
+| File | Contents |
 |---|---|
-| `kriko-<version>-macos-<arch>.dmg` | Drag-and-drop disk image containing `Kriko.app` and an Applications link. |
-| `kriko-<version>-macos-<arch>-portable.zip` | The complete app bundle, including the GPUI app, frozen engine sidecar, OpenSERP, and its license. |
-| `SHA256SUMS-<arch>.txt` | SHA-256 hashes of the disk image and portable archive. |
+| `kriko-<version>-x86_64.msi` | The per-user installer for Windows. It needs no administrator rights and it writes to `%LOCALAPPDATA%\Programs\Kriko`. |
+| `kriko-<version>-win64-portable.zip` | `kriko.exe` and `kriko-sidecar.exe`, without an install. |
+| `kriko-<version>-macos-<arch>.dmg` | The disk image with `Kriko.app` and a link to Applications. |
+| `kriko-<version>-macos-<arch>-portable.zip` | The complete app bundle for macOS. |
+| `SHA256SUMS-<arch>.txt` | The hashes of the macOS files. |
 
-Without signing configuration these packages are unsigned. To sign, set
-`KRIKO_MACOS_SIGN_IDENTITY` to an installed Apple-issued Developer ID
-Application identity. PyInstaller uses it while freezing the sidecar, so the
-embedded Python runtime and extensions share the identity required by hardened
-runtime library validation; the package script then signs the app bundle and
-disk image with that identity.
-To notarize as well, first configure an `xcrun notarytool` keychain profile and
-set `KRIKO_MACOS_NOTARY_PROFILE` to its name. The script signs the app, submits
-and staples the app and disk image, then hashes the final artifacts. The
-hand-run desktop workflow builds unsigned artifacts for both native
-architectures; this Linux checkout cannot execute or visually verify a macOS
-app.
+Both programs ship in every Windows package, because the app starts the engine
+from its own folder. The installer stops a running Kriko first, because a live
+engine holds its own program file.
 
-On macOS, Settings → General → Launch at login writes a per-user LaunchAgent
-under `~/Library/LaunchAgents`. **Window** opens the app at the next login;
-**Tray** starts it hidden with the menu-bar item available. The change is for
-the next login and does not start another copy in the current session.
+The Windows installer is unsigned, and so are the macOS packages, unless the
+release says differently. Windows can show a SmartScreen warning. On macOS, set
+`KRIKO_MACOS_SIGN_IDENTITY` to sign, and `KRIKO_MACOS_NOTARY_PROFILE` to
+notarize.
 
-```mermaid
-%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-monospace, SFMono-Regular, Consolas, monospace","primaryColor":"#090E1B","primaryTextColor":"#F2F5FF","primaryBorderColor":"#1F4FFF","lineColor":"#86A3FF","secondaryColor":"#1739C2","tertiaryColor":"#080B16","noteBkgColor":"#BFE4FF","noteTextColor":"#05070F","actorBkg":"#090E1B","actorTextColor":"#F2F5FF","actorBorder":"#1F4FFF","signalColor":"#86A3FF","signalTextColor":"#86A3FF"}}}%%
-flowchart LR
-    A["Preflight<br/>tools, versions agree"]:::plain --> B["Python side<br/>pip install -r requirements.lock"]:::plain
-    B --> D["Freeze the sidecar<br/>PyInstaller"]:::plain
-    D --> E["Sidecar answers?<br/>smoke_sidecar.py"]:::brand
-    E --> F["cargo build --release"]:::plain
-    F --> G["Place the sidecar<br/>beside kriko.exe"]:::plain
-    G --> H["MSI<br/>cargo wix + WiX 3"]:::plain
-    H --> I["App opens?<br/>smoke_app.py"]:::brand
-    I --> J["Portable zip"]:::plain
-    J --> K["builds/"]:::mark
+## Motion
 
-    classDef brand  fill:#1F4FFF,stroke:#86A3FF,color:#F2F5FF
-    classDef plain  fill:#090E1B,stroke:#3A4156,color:#C9D1EA
-    classDef mark   fill:#E8C04B,stroke:#05070F,color:#05070F
-```
+Four animations run: the boot flicker of a live tag, the blink of a tag that
+needs you, the slide of a switch, and the slide of a segmented control.
+**Reduce motion** in Settings stops each one.
 
-Under `builds/` it leaves:
-
-| File | What it is |
-|---|---|
-| `kriko-<version>-x86_64.msi` | The per-user installer: no administrator prompt, installs under `%LOCALAPPDATA%\Programs\Kriko`. Start-menu shortcuts "Kriko" and "Kriko Console", a desktop shortcut, the Kriko icon. No PATH entry. Upgrade-aware: a newer MSI replaces an older one, and an older one refuses. |
-| `kriko-<version>-win64-portable.zip` | `kriko.exe` and `kriko-sidecar.exe`, no install. Everything the app draws is embedded, so it runs from anywhere. |
-
-`<version>` is the tree's (`tools/bump.py --show`); `-Version` is a check, not a
-stamp. Both programs ship in each, because the app starts the engine from the
-folder it sits in. The installer stops a running Kriko first (the app, then
-the engine; both tree kills), because a live sidecar maps its own image and
-fails the copy. `kriko-gpui/wix/main.wxs` holds why.
-
-The MSI step needs the WiX 3 toolset (`candle`/`light`) and `cargo install
-cargo-wix`. If WiX is not on PATH or in `WIX`, pass its folder:
-`.\package.ps1 -WixBin C:\path\to\wix314`. The exe carries the brand icon via
-`build.rs` (winresource), so the taskbar and shortcuts show the mark without
-any extra files. The installer is unsigned: SmartScreen warns on first run.
-
-Where the build writes. The release tree, about 2 GB, goes to
-`%LOCALAPPDATA%\Kriko\cargo-target`: one copy per machine, shared by every
-checkout and worktree, not `kriko-gpui\target` inside each one. `CARGO_TARGET_DIR`
-moves it. PyInstaller's scratch goes to temp and is removed after the freeze.
-`dist\` (the sidecar and the packs) and `builds\` stay in the checkout, because
-they are what the build hands over.
-
-A plain `cargo build` or `cargo run` still writes `kriko-gpui\target`. If
-`CARGO_TARGET_DIR` points elsewhere for those too, `cargo run` stops finding the
-checkout's `.venv` (`checkout_python` in `src/engine.rs` walks up from the exe)
-and falls back to `python` on PATH.
-
-The icon (`assets/kriko.ico`) is the white K mark on the flat brand blue
-`#1f4fff`, on a smooth rounded square, no sharp corners, at every size
-from 16 to 256 px. It is the one file the exe and the installer both read,
-so replacing it and re-running `package.ps1` updates the taskbar, the
-shortcuts and Add/Remove Programs in one go.
-
-## Interactions
-
-- Every nav item switches tabs; Home's "Start check" goes to Run, Activity's
-  "Open agents" to Agents, the callouts lead where they promise.
-- The text fields take focus on click, type, backspace, and blink a caret;
-  Reduce motion (Settings) stops the blink.
-- History's search and filters narrow the rows live; the plates cycle
-  verdict and pack; pagination pages through the matches.
-- The switches toggle real state (packs, models, agents, privacy).
-- Ctrl+N / Ctrl+K / Ctrl+B are bound app-wide, matching the Shortcuts card.
-- The danger zone asks twice, then shows what was removed and links to
-  Browse to rebuild.
-
-## Fonts and images
-
-`assets/fonts` holds Barlow Condensed 600/700 and DM Sans 400/600 — the two
-faces of the design — registered at startup by `theme::register_fonts` under
-app-scoped family names (`Kriko Display`, `Kriko Sans`). Labels, crumbs and
-figures wear DM Sans (`theme::MONO` is `SANS`, on purpose: the reader did not
-like the fixed-width face); only a run's log is set in the machine's own
-fixed-width face (`theme::CODE`), so nothing is embedded for it. The scoped
-names matter: a machine
-with, say, a system "Barlow" installed would otherwise shadow the embedded
-face. The hero sky is the dithered band (`sky-dim`, `sky-hero`, `sky-wide`,
-loaded through `Resource::Embedded`, never through a path or URI) over a
-matching gradient in `theme::hero`, so the fades into the titlebar above
-and the content below stay smooth; nav icons are 24x24 stroke SVGs tinted
-by `text_color` at 18px.
-
-A stderr logger is installed at startup because GPUI reports asset and font
-failures through the `log` crate; without a logger those failures are silent
-(and they were: two shipped that way and were only found by logging).
+Only the window in front moves, and only work in flight repeats. An animation
+that repeats without end costs a processor core, because GPUI draws the window
+again for each frame. The file `src/app/tests/test_the_idle_window_does_not_draw.py`
+holds the list of functions that can repeat.
