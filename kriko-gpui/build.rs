@@ -25,9 +25,9 @@ const CAP: f32 = 0.85;
 // theme.rs's INK, GROUND and BRAND_BRIGHT: the build script cannot import
 // the crate it is building, so the three are repeated and a test in
 // theme.rs asserts they agree.
-const INK: u32 = 0xf4f7ff;
-const GROUND: u32 = 0x03060f;
-const ACCENT: u32 = 0x9bb8ff;
+const INK: u32 = 0xf2f5ff;
+const GROUND: u32 = 0x05070f;
+const ACCENT: u32 = 0x86a3ff;
 
 fn main() {
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
