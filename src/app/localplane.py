@@ -206,7 +206,7 @@ def resolve(
             "address in Settings, Local machine."
             if want_url
             else f"No local model server is running (looked for {looked}). Start "
-            "Ollama, LM Studio or llama-server, then check again."
+            "Ollama, LM Studio, llama-server or vLLM, then check again."
         )
     elif not chosen["models"]:
         out["reason"] = (

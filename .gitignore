@@ -28,10 +28,19 @@ build/
 build.log
 # The desktop app. package.ps1 builds its release tree outside the checkout
 # (%LOCALAPPDATA%\Kriko\cargo-target), so this glob is for a plain `cargo build`
-# run from a checkout, which still writes kriko-gpui/target (about 2 GB per
-# worktree or agent, hence the glob). Installers come from kriko-gpui/package.ps1.
-kriko-gpui/target*/
-kriko-gpui/builds/
+# or `tauri dev` run from a checkout, which still writes kriko-ui/src-tauri/target
+# (about 2 GB per worktree or agent, hence the glob). Installers come from
+# kriko-ui/package.ps1.
+kriko-ui/src-tauri/target*/
+kriko-ui/src-tauri/binaries/
+kriko-ui/node_modules/
+kriko-ui/dist/
+kriko-ui/builds/
+
+# --- Build tools kept beside the checkout ----------------------------------
+# The WiX 3 toolset the MSI recipe used. Nothing needs it since the NSIS installer;
+# a copy left in a checkout stays ignored.
+tools/wix314/
 
 # --- Runtime data the engine and pipelines write ---------------------------
 # Evidence ledger (src/kriko/ledger/db.py) and the per-pack pipeline caches.
@@ -64,11 +73,6 @@ logs/
 .worktrees/
 
 # --- Build tools kept beside the checkout ----------------------------------
-# The WiX 3 toolset (candle.exe / light.exe) that kriko-gpui/package.ps1 needs
-# for the MSI. A build tool, not source: it is a download from
-# https://github.com/wixtoolset/wix3/releases, about 40 MB, and the recipe
-# accepts its folder with -WixBin.
-tools/wix314/
 
 # --- Scratch ---------------------------------------------------------------
 # A review session's own working files: a captured PNG, an engine log, a seed

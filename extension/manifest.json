@@ -38,7 +38,7 @@
     },
     "web_accessible_resources": [
         {
-            "resources": ["hover_lite/hover_lite.css", "assets/fonts/*.ttf", "assets/sky/*.png"],
+            "resources": ["hover_lite/hover_lite.css", "assets/fonts/*.woff2", "assets/sky/*.png"],
             "matches": ["https://*/*"],
             "use_dynamic_url": true
         }

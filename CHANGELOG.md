@@ -3,6 +3,29 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.2.0
+
+- **The desktop app is new.** It is built on Tauri now, with a blue look, a
+  dither sky, and a dark and a light theme. Motion has three levels: Calm,
+  Standard and Vivid.
+- **Chat keeps your chats.** Press New chat to start one. Recent chats are in
+  the sidebar. Deleting a chat asks first.
+- **A tour on the first start.** It shows the box where you ask, the agent
+  pick, where Kriko looks, and the places in the sidebar. Take it again from
+  Settings.
+- **The extension panel has the same look and its own tour.** It shows once,
+  on the first product page. The options page can show it again.
+- **Local models.** The Local model panel shows your graphics memory and the
+  models Ollama holds. You can browse Hugging Face for GGUF models with
+  filters for size, licence and sort order. A filter can keep only the models
+  that fit your graphics card. A download starts only when you press Get.
+- **vLLM on CUDA 13.** Kriko reads the CUDA version of your driver and shows
+  the steps for the right build. It does not install anything. On Windows the
+  steps use WSL 2. Kriko finds the server when it runs.
+- **Catalogs and Sites panels.** Remove asks before it removes.
+- **The sidebar, Compare and Queue** use the new layout. The installer is
+  built from `kriko-ui/package.ps1`.
+
 ### 0.1.2
 
 - **Chat answers are formatted.** An answer from an agent is markdown. A bold

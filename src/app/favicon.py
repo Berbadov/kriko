@@ -1,7 +1,7 @@
 """A site's own icon, fetched once and kept as a decodable raster.
 
 The desktop app draws a source row with a generated monogram because a screen
-cannot fetch. The engine can, and GPUI can decode PNG, JPEG, WebP, GIF and SVG
+cannot fetch. The engine can, and the window can decode PNG, JPEG, WebP, GIF and SVG
 bytes but has no ICO decoder — so this module's job is to hand back only bytes
 the window can draw. It asks the site itself: the page's own `<link rel="icon">`
 first, then the two names every site has had for twenty years.

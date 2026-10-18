@@ -7,6 +7,8 @@ reader's sentence, filler and all. The agent now asks with one `SEARCH:` line,
 and a web turn searches the words the agent wrote.
 """
 
+# ruff: noqa: F811 — `ctx` is a fixture imported from test_chat_turn, so each test redefines it by name.
+
 import pytest
 
 from app import chat

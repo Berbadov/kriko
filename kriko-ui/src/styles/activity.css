@@ -1,0 +1,232 @@
+/* The live record of a run. */
+
+.timeline {
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.tl-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.tl-label {
+  font-weight: 620;
+}
+
+.tl-time {
+  margin-left: auto;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.tl-chev {
+  display: grid;
+  color: var(--ink-3);
+  transition: transform calc(240ms * var(--tm)) var(--ease-out);
+}
+
+.tl-chev[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+.fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows calc(340ms * var(--tm)) var(--ease-out),
+    opacity calc(260ms * var(--tm));
+}
+
+.fold[data-open='true'] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.fold-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 14px 12px;
+}
+
+.row-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  text-align: left;
+}
+
+.row-head .tl-chev {
+  margin-left: 2px;
+}
+
+.thought-text {
+  max-width: 62ch;
+  margin: 0 0 8px 24px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.word {
+  display: inline-block;
+  white-space: pre;
+  animation: word-in calc(420ms * var(--tm)) var(--ease-out) both;
+  transition: filter calc(320ms * var(--tm)) var(--ease-out);
+}
+
+.word[data-tail='1'] {
+  filter: blur(2.4px);
+  opacity: 0.55;
+}
+
+.word[data-tail='2'] {
+  filter: blur(1.5px);
+  opacity: 0.72;
+}
+
+.word[data-tail='3'] {
+  filter: blur(0.9px);
+  opacity: 0.86;
+}
+
+.word[data-tail='4'] {
+  filter: blur(0.4px);
+  opacity: 0.95;
+}
+
+@keyframes word-in {
+  from {
+    opacity: 0;
+    filter: blur(5px);
+    transform: translateY(calc(3px * var(--dm)));
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    100deg,
+    var(--ink-3) 0%,
+    var(--ink-3) 36%,
+    var(--ink) 50%,
+    var(--accent-hi) 58%,
+    var(--ink-3) 72%,
+    var(--ink-3) 100%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer calc(2.4s * var(--tm)) linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 125% 0;
+  }
+  to {
+    background-position: -125% 0;
+  }
+}
+
+.tool {
+  display: grid;
+  grid-template-columns: 18px auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.tool-dot {
+  display: grid;
+  place-items: center;
+  color: var(--ok);
+}
+
+.tool-name {
+  font-weight: 560;
+}
+
+.tool-detail {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-time {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.plan ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+
+.plan li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0 4px 24px;
+  color: var(--ink-3);
+  font-size: 13px;
+  transition: color calc(220ms * var(--tm));
+}
+
+.plan li[data-state='active'] {
+  color: var(--ink);
+}
+
+.plan li[data-state='done'] {
+  color: var(--ink-2);
+}
+
+.plan-mark {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--edge-strong);
+  border-radius: 50%;
+  color: #04130b;
+  transition:
+    background-color calc(220ms * var(--tm)),
+    border-color calc(220ms * var(--tm));
+}
+
+.plan li[data-state='active'] .plan-mark {
+  border-color: transparent;
+}
+
+.plan li[data-state='done'] .plan-mark {
+  background: var(--ok);
+  border-color: transparent;
+}
+
+.tool-dot[data-failed='true'] {
+  color: var(--risk);
+}

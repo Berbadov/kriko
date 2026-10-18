@@ -212,31 +212,33 @@
   //   * It mutated the host document's `<head>`, from a content script, on a
   //     page we do not own.
   //
-  // The three Kriko faces now ship *inside* the extension (assets/fonts, all
-  // SIL OFL, licences beside them) and are registered from there: the URL is
-  // the extension's own, so nothing leaves the machine and they load offline.
-  // `@font-face` inside a shadow root is ignored by the browser, so the faces
-  // go to `document.fonts` through the FontFace API, which adds no element
-  // to the page's `<head>`. The family names are Kriko's own, so a page that
-  // happens to load DM Sans is never restyled by ours, nor ours by it.
-  // Guarded by a test that fails on a remote URL anywhere in the extension.
+  // The Kriko face is Geist, one variable file per script, and it ships
+  // *inside* the extension (assets/fonts, SIL OFL, licence beside it). It is
+  // registered from there: the URL is the extension's own, so nothing leaves
+  // the machine and it loads offline. `@font-face` inside a shadow root is
+  // ignored by the browser, so the faces go to `document.fonts` through the
+  // FontFace API, which adds no element to the page's `<head>`. The family
+  // name is Kriko's own, so a page that happens to load Geist is never
+  // restyled by ours, nor ours by it. The Turkish letters sit in the second
+  // file. Guarded by a test that fails on a remote URL anywhere in the
+  // extension.
   const FACES = [
-    ["Kriko Display", "BarlowCondensed-600.ttf", "600"],
-    ["Kriko Sans", "DMSans-400.ttf", "400"],
-    ["Kriko Sans", "DMSans-600.ttf", "600"],
-    ["Kriko Mono", "JetBrainsMono-400.ttf", "400"],
+    ["Kriko Sans", "Geist-latin.woff2",
+      "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"],
+    ["Kriko Sans", "Geist-latin-ext.woff2",
+      "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"],
   ];
   let facesLoaded = false;
   function loadFaces() {
     if (facesLoaded) return;
     facesLoaded = true;
     if (typeof FontFace !== "function" || !document.fonts) return;
-    for (const [family, file, weight] of FACES) {
+    for (const [family, file, unicodeRange] of FACES) {
       try {
         const face = new FontFace(
           family,
           `url(${chrome.runtime.getURL("assets/fonts/" + file)})`,
-          { weight, display: "swap" },
+          { weight: "100 900", display: "swap", unicodeRange },
         );
         face.load().then((loaded) => document.fonts.add(loaded)).catch(() => {});
       } catch (_) {
@@ -1971,6 +1973,7 @@
     paintTheme();
     readTheme();
     readMotion();
+    scheduleTour();
     panel.querySelector(".lite-find-product").addEventListener("click", () => {
       const product = (state.result?.subjects || []).find((one) => one.kind === "product");
       openSearch(product?.label || "");
@@ -2009,7 +2012,113 @@
     setTimeout(() => { if (panel) delete panel.dataset.mounting; }, 280);
   }
 
+  /* A short walk through the panel, once. The key is shared by every page the
+   * panel mounts on, so a reader sees it on the first product page and never
+   * again. The options page clears the key to show it again. Skip, Done and
+   * Escape all count as seen; closing the panel half way does not, so the
+   * walk comes back until the reader has made a choice about it. */
+  const TOUR_KEY = "kriko.panelTour";
+  const TOUR_STEPS = [
+    { target: ".lite-header", title: "Kriko is on this page",
+      text: "This panel shows what is known about the product here. Drag the top bar to move it." },
+    // The big button is gone once there is a result, and the two small ones
+    // take its place, so the step points at whichever the panel is showing.
+    { target: ".lite-cta, .lite-product-actions", title: "Look the product up",
+      text: "Search finds the product in your catalogs. If none knows it, research it with your agent." },
+    { target: ".lite-btn-search", title: "Search",
+      text: "Look up any product in your catalogs. You do not need to be on its page." },
+    { target: ".lite-btn-theme", title: "Light or dark",
+      text: "Pick the look you want. The app and this panel share it." },
+    { target: ".lite-btn-close", title: "Close and open",
+      text: "Close the panel here. Open it again from the Kriko button in the toolbar." },
+  ];
+  let tourEl = null;
+
+  /** The first thing in `selectors` (a comma list) that the panel is showing. */
+  function tourTarget(selectors) {
+    for (const selector of selectors.split(",")) {
+      const el = panel.querySelector(selector.trim());
+      // The panel hides a control by `hidden` or by an inline `display: none`
+      // on it or on the block around it.
+      let shown = Boolean(el);
+      for (let node = el; shown && node && node !== panel; node = node.parentElement) {
+        if (node.hidden || node.style.display === "none") shown = false;
+      }
+      if (shown) return el;
+    }
+    return null;
+  }
+
+  function scheduleTour() {
+    try {
+      chrome.storage?.local?.get?.([TOUR_KEY], (bag) => {
+        void chrome.runtime.lastError;
+        if (bag?.[TOUR_KEY] === "done") return;
+        setTimeout(() => { if (state.mounted && panel && !tourEl) openTour(); }, 1400);
+      });
+    } catch (_) {
+      // A storage that will not answer means no tour. It is a nicety.
+    }
+  }
+
+  function endTour(seen) {
+    if (tourEl) { tourEl.remove(); tourEl = null; }
+    if (!seen) return;
+    try { chrome.storage?.local?.set?.({ [TOUR_KEY]: "done" }, () => void chrome.runtime.lastError); } catch (_) {}
+  }
+
+  function openTour() {
+    let at = 0;
+    tourEl = document.createElement("div");
+    tourEl.className = "lite-tour";
+    tourEl.setAttribute("role", "dialog");
+    tourEl.setAttribute("aria-label", "Tour of the Kriko panel");
+    panel.appendChild(tourEl);
+    // The panel is a drag handle and the page behind it is not the reader's
+    // business during the tour, so the overlay keeps both events to itself.
+    tourEl.addEventListener("pointerdown", (event) => event.stopPropagation());
+    tourEl.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.stopPropagation(); endTour(true); }
+      else if (event.key === "ArrowRight") { event.stopPropagation(); show(Math.min(at + 1, TOUR_STEPS.length - 1)); }
+      else if (event.key === "ArrowLeft") { event.stopPropagation(); show(Math.max(at - 1, 0)); }
+    });
+
+    function show(index) {
+      at = index;
+      const step = TOUR_STEPS[at];
+      const last = at === TOUR_STEPS.length - 1;
+      const target = tourTarget(step.target);
+      const frame = panel.getBoundingClientRect();
+      const box = target ? target.getBoundingClientRect() : null;
+      const pad = 6;
+      const spot = box
+        ? { top: box.top - frame.top - pad, left: box.left - frame.left - pad, width: box.width + pad * 2, height: box.height + pad * 2 }
+        : null;
+      // Below the thing when it sits in the top half, above it otherwise.
+      const below = !spot || spot.top + spot.height / 2 < frame.height / 2;
+      tourEl.innerHTML = `
+        <div class="lite-tour-spot"${spot ? ` style="top:${spot.top}px;left:${spot.left}px;width:${spot.width}px;height:${spot.height}px"` : " hidden"}></div>
+        <div class="lite-tour-card" style="${below ? `top:${spot ? spot.top + spot.height + 12 : 80}px` : `bottom:${spot ? frame.height - spot.top + 12 : 80}px`}">
+          <small class="lite-tour-count">${at + 1} of ${TOUR_STEPS.length}</small>
+          <h2>${escapeHtml(step.title)}</h2>
+          <p>${escapeHtml(step.text)}</p>
+          <div class="lite-tour-actions">
+            ${last ? "" : `<button type="button" class="lite-tour-skip">Skip</button>`}
+            ${at > 0 ? `<button type="button" class="lite-tour-back">Back</button>` : ""}
+            <button type="button" class="lite-tour-next">${last ? "Done" : "Next"}</button>
+          </div>
+        </div>`;
+      tourEl.querySelector(".lite-tour-skip")?.addEventListener("click", () => endTour(true));
+      tourEl.querySelector(".lite-tour-back")?.addEventListener("click", () => show(at - 1));
+      const next = tourEl.querySelector(".lite-tour-next");
+      next.addEventListener("click", () => (last ? endTour(true) : show(at + 1)));
+      next.focus();
+    }
+    show(0);
+  }
+
   function unmount() {
+    tourEl = null;
     if (!hostEl) return;
     stopLive();
     try { hostEl.remove(); } catch (_) {}

@@ -43,6 +43,6 @@ def test_the_spec_freezes_no_pack_artifacts():
 
 def test_no_build_step_makes_packs_for_the_installer():
     assert not (REPO / "packaging" / "build_packs.py").exists()
-    for step in (REPO / "kriko-gpui" / "package.ps1",
+    for step in (REPO / "kriko-ui" / "package.ps1",
                  REPO / ".github" / "workflows" / "desktop.yml"):
         assert "build_packs" not in step.read_text(encoding="utf-8"), step.name

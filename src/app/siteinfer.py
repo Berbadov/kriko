@@ -290,7 +290,7 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
         log.info("nothing was inferred on %s: %s", host, chosen.get("reason", ""))
         return None
 
-    def gave_up(outcome: str, detail: str) -> None:
+    def gave_up(outcome: str, detail: str) -> dict | None:
         """Record why, and answer "nothing was inferred"."""
         log.info("nothing was inferred on %s: %s", host, detail)
         state.save_site_inference(
