@@ -1447,6 +1447,40 @@ async function _pageFacts(url) {
   }
 }
 
+// What makes a page on an unread site worth offering to learn: the page says it
+// is a product (schema.org, or a product heading with a price beside it), or it
+// prints several label/value pairs, which is what a listing's specification is.
+const LEARNABLE_MIN_FIELDS = 4;
+
+function _looksLearnable(scrape) {
+  if (!scrape || typeof scrape !== "object") return false;
+  const product = scrape.product || {};
+  if (product.name && product.typed) return true;
+  const labels = Object.keys(scrape.fields || {}).filter((key) => !key.startsWith("ld:"));
+  return Boolean(product.name) && labels.length >= LEARNABLE_MIN_FIELDS;
+}
+
+// Bring the panel up on a page the reader has not been told about, once per
+// site per browser session. Asked for nothing and spending nothing: the panel
+// opens on a Learn button, and an agent runs only when that is pressed.
+const NUDGED_KEY = "kriko_learn_nudged";
+
+async function _nudgeToLearn(tabId, url) {
+  const host = _hostOf(url);
+  if (!tabId || !host) return;
+  try {
+    const got = await extensionApi.storage.session.get(NUDGED_KEY);
+    const seen = new Set((got && got[NUDGED_KEY]) || []);
+    if (seen.has(host)) return;
+    seen.add(host);
+    await extensionApi.storage.session.set({ [NUDGED_KEY]: [...seen].slice(-200) });
+    await extensionApi.tabs.sendMessage(tabId, { type: "KRIKO_LEARN_NUDGE" });
+  } catch (_) {
+    // No panel script on this tab, or no session storage: the toolbar button
+    // still opens the same card.
+  }
+}
+
 async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto = false } = {}) {
   const timings = {};
   const totalStartedAt = _now();
@@ -1469,6 +1503,10 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       const quiet = new Error("No installed pack can read this page.");
       quiet.code = "NO_ADAPTER";
       quiet.hostKnown = hostHasAnyAdapter(url, adapters);
+      // A page worth offering to learn: on a site nothing reads, and either
+      // publishing a product of its own or showing enough label/value pairs
+      // to be one. Most of the web is neither, and is left alone.
+      quiet.learnable = !quiet.hostKnown && _looksLearnable(scrape);
       return quiet;
     };
 
@@ -1531,6 +1569,9 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
         const unknown = new Error("Kriko doesn't know this product yet.");
         unknown.code = "UNKNOWN_PRODUCT";
         unknown.productName = (raw.product && raw.product.name) || "";
+        // A product the packs do not hold, on a site nothing reads: learning
+        // the site is what lets the next page of it be read at all.
+        unknown.learnable = !adapter && !hostHasAnyAdapter(url, adapters);
         throw unknown;
       }
       if (!adapter) throw noAdapter();
@@ -1576,6 +1617,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     await _stage(url, "failed", error.message || "");
     if (error.code) errEntry.code = error.code;
     if (error.hostKnown) errEntry.hostKnown = true;
+    if (error.learnable) errEntry.learnable = true;
     if (error.productName) errEntry.productName = error.productName;
     if (scrape) errEntry.listing = { ...(scrape.listing || {}), title: scrape.title || "" };
     await extensionApi.storage.session.set({ [storageKey]: errEntry });
@@ -1585,11 +1627,13 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     // this extension was never going to have an opinion on gets no badge.
     if (error.code === "NO_ADAPTER") {
       await extensionApi.action.setBadgeText({ text: "", tabId });
+      if (auto && error.learnable) await _nudgeToLearn(tabId, url);
     } else if (error.code === "UNKNOWN_PRODUCT") {
       // Not a failure either: a product nothing installed covers yet, one
       // click from being researched. A question, not an alarm.
       await extensionApi.action.setBadgeText({ text: "?", tabId });
       await extensionApi.action.setBadgeBackgroundColor({ color: "#5b6472", tabId });
+      if (auto && error.learnable) await _nudgeToLearn(tabId, url);
     } else {
       await extensionApi.action.setBadgeText({ text: "!", tabId });
       await extensionApi.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
@@ -1925,6 +1969,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({
         ok: false, code: error.code, hostKnown: Boolean(error.hostKnown),
+        learnable: Boolean(error.learnable),
         productName: error.productName || "", error: error.message }));
 
     return true; // async

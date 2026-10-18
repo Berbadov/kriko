@@ -2120,6 +2120,10 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     # nothing, and `None` tells the parser there is nothing to check against.
     found = quicklook.parse(reply, getattr(researcher, "sources", None),
                             page=params.get("page") if isinstance(params.get("page"), dict) else None)
+    found = quicklook.without_listing_echo(found, str(params.get("page_url") or ""))
+    if found.get("echoed"):
+        progress.log(f"left out {found['echoed']} specification(s) that only repeat "
+                     "the listing's own page")
     kept = len(found["risks"])
     # A source containing the quotation can still fail to support the claim.
     verification = getattr(researcher, "verification", None)

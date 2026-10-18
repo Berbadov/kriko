@@ -108,6 +108,12 @@ def claims(kind: str, params: dict) -> frozenset[str]:
     if kind == "pack_build":
         root = str(params.get("root") or "").replace("\\", "/").rstrip("/")
         return _named("pack", root.rsplit("/", 1)[-1])
+    if kind == "pack_author" and str(params.get("product") or "").strip():
+        # One product into a catalog (the research queue's, the listing's):
+        # most of its minutes are an agent reading and searching, which share
+        # nothing. What it writes goes through `packdraft.LOCK`, so several
+        # products research at once and join one draft one at a time.
+        return frozenset()
     if kind in ("pack_author", "pack_amend", "pack_harvest"):
         return frozenset({"drafts"})
     if kind == "compare_ask":

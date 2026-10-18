@@ -159,25 +159,55 @@ function Thread({
   onEdit: (text: string) => void
 }) {
   const { motion: m } = usePrefs()
-  const end = useRef<HTMLDivElement>(null)
+  const scroller = useRef<HTMLDivElement>(null)
+  const inner = useRef<HTMLDivElement>(null)
+  const stuck = useRef(true)
   const done = run.status === 'done'
   const idle = run.status === 'idle'
   const [away, setAway] = useState(false)
 
-  // Follow the newest line, unless the reader scrolled up to read.
+  // Follow the newest line, unless the reader scrolled up to read. The reader's
+  // position is remembered at scroll time: judging it after the content grew
+  // loses to any block taller than the slack (a long answer, a product card).
   useEffect(() => {
-    const el = end.current?.closest<HTMLElement>('.thread-scroll')
+    const el = scroller.current
     if (!el) return
-    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 140
-    if (near) el.scrollTo({ top: el.scrollHeight, behavior: m.on ? 'smooth' : 'auto' })
-  }, [turns.length, run.rows.length, run.answer.length, done, m.on])
+    const onScroll = () => {
+      stuck.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // The thread grows by streaming text, steps and cards that animate in, so it
+  // is the size that is watched, not a list of the things that can change it.
+  useEffect(() => {
+    const el = scroller.current
+    const body = inner.current
+    if (!el || !body) return
+    const follow = () => {
+      if (stuck.current) el.scrollTop = el.scrollHeight
+    }
+    follow()
+    const watch = new ResizeObserver(follow)
+    watch.observe(body)
+    return () => watch.disconnect()
+  }, [])
+
+  // A new question is the reader's own act: take them to it.
+  useEffect(() => {
+    const el = scroller.current
+    if (!el) return
+    stuck.current = true
+    el.scrollTo({ top: el.scrollHeight, behavior: m.on ? 'smooth' : 'auto' })
+  }, [turns.length, m.on])
 
   const watch = (event: UIEvent<HTMLDivElement>) => {
     const el = event.currentTarget
     setAway(el.scrollHeight - el.scrollTop - el.clientHeight > 260)
   }
   const latest = () => {
-    const el = end.current?.closest<HTMLElement>('.thread-scroll')
+    const el = scroller.current
     el?.scrollTo({ top: el.scrollHeight, behavior: m.on ? 'smooth' : 'auto' })
   }
 
@@ -185,8 +215,8 @@ function Thread({
   const newest = idle ? turns[turns.length - 1] : undefined
 
   return (
-    <div className="thread-scroll" onScroll={watch}>
-      <div className="thread-inner">
+    <div className="thread-scroll" ref={scroller} onScroll={watch}>
+      <div className="thread-inner" ref={inner}>
         {turns.map((turn) => (
           <div key={turn.id} className="turn">
             <div className="you-row">
@@ -245,7 +275,6 @@ function Thread({
         <AnimatePresence>
           {done && run.products.map((product) => <ProductCard key={product.id} product={product} onOpen={onOpen} />)}
         </AnimatePresence>
-        <div ref={end} />
       </div>
       {away && (
         <button className="jump" onClick={latest} aria-label="Jump to the latest">
