@@ -8,6 +8,7 @@ import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { Composer } from '../ui/Composer'
 import { PixelBar, Switch } from '../ui/controls'
+import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
@@ -218,9 +219,7 @@ function Detail({ title, risk, onClose }: { title: string; risk: Risk; onClose: 
           {risk.sources.map((s, i) => (
             <li key={i} data-stance={s.stance.toLowerCase() === 'refutes' ? 'against' : 'for'}>
               {s.url ? (
-                <a href={s.url} target="_blank" rel="noopener noreferrer">
-                  {s.host || s.url}
-                </a>
+                <ExternalLink href={s.url}>{s.host || s.url}</ExternalLink>
               ) : (
                 <span>{s.host}</span>
               )}
@@ -278,6 +277,7 @@ function Picker({ onClose }: { onClose: () => void }) {
   const [rows, setRows] = useState<{ id: string; name: string; note: string }[] | null>(null)
 
   useEffect(() => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setRows([
         { id: 'demo:Gamma Unit 400', name: 'Gamma Unit 400', note: 'Demo' },

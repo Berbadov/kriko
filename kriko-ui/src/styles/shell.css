@@ -636,9 +636,16 @@
   transform: scale(0.985);
 }
 
+/* The label is invisible when the rail is folded but still takes room, so
+   centring the row pushes its icon left. Each icon is placed on the rail's own
+   centre instead: the content box is 42px, so the centre is 21px in, which is
+   the icon's half width back from the left padding (the button has a 1px edge). */
+.rail[data-collapsed='true'] .rail-item {
+  padding-left: 12px;
+}
+
 .rail[data-collapsed='true'] .rail-new {
-  justify-content: center;
-  padding: 0;
+  padding-left: 11px;
 }
 
 .rail-nav {
@@ -654,7 +661,7 @@
 }
 
 .rail-chats h2 {
-  margin: 0 0 6px;
+  margin: 10px 0 6px;
   padding: 0 10px;
   color: var(--ink-3);
   font-size: 12px;
@@ -662,11 +669,8 @@
 }
 
 .rail-chats ul {
-  flex: 1;
-  min-height: 0;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
   list-style: none;
 }
 
@@ -689,7 +693,10 @@
 }
 
 .rail-chat-main {
+  display: flex;
   flex: 1;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   padding: 8px 10px;
   overflow: hidden;
@@ -742,4 +749,179 @@
 
 .rail-chat-ask button:hover {
   background: var(--panel);
+}
+
+/* ---- find, pin, rename ---- */
+
+.rail-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 4px 0 9px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  color: var(--ink-3);
+}
+
+.rail-search:focus-within {
+  border-color: var(--edge-strong);
+  color: var(--ink-2);
+}
+
+.rail-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.rail-chats-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.rail-chats-scroll h2:first-child {
+  margin-top: 8px;
+}
+
+.rail-chat-main > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rail-chat-main .icon {
+  color: var(--accent-hi);
+}
+
+.rail-chat-acts {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+}
+
+.icon-btn[data-on='true'] {
+  color: var(--accent-hi);
+}
+
+.rail-chat-name {
+  flex: 1;
+  min-width: 0;
+  margin: 3px 4px;
+  padding: 5px 8px;
+  background: var(--ground);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  outline: 0;
+  color: var(--ink);
+  font-size: 13.5px;
+}
+
+.rail-chats-empty {
+  margin: 12px 10px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.menu button {
+  gap: 9px;
+}
+
+.menu-label {
+  flex: 1;
+}
+
+/* ---- while the engine starts ---- */
+
+.starting {
+  display: grid;
+  height: 100%;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  color: var(--ink);
+}
+
+.starting-mark svg {
+  width: auto;
+  height: 56px;
+}
+
+.starting p {
+  max-width: 320px;
+  margin: 6px 0 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  text-align: center;
+}
+
+.starting-bar {
+  position: relative;
+  width: 120px;
+  height: 2px;
+  overflow: hidden;
+  background: var(--edge);
+  border-radius: 2px;
+}
+
+.starting-bar::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: var(--accent);
+  border-radius: 2px;
+  content: '';
+  animation: starting-slide calc(1400ms * var(--tm)) var(--ease-io) infinite;
+}
+
+@keyframes starting-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+/* ---- a new version ---- */
+
+.update-notice {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 40;
+  display: grid;
+  gap: 8px;
+  width: 320px;
+  padding: 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  box-shadow: var(--shadow-2);
+  color: var(--ink);
+}
+
+.update-notice p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.update-notice .starting-bar {
+  width: 100%;
+}
+
+.update-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }

@@ -112,6 +112,7 @@ export function useLocal() {
   }, [])
 
   const readModels = useCallback(async () => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setRuntime({ runtime: 'ollama', url: 'http://127.0.0.1:11434' })
       setModels(DEMO_MODELS)
@@ -141,6 +142,7 @@ export function useLocal() {
   }, [mode])
 
   useEffect(() => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setMachine(DEMO_MACHINE)
     } else {

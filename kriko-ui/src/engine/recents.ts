@@ -7,7 +7,7 @@ import { ago, HISTORY_CHANGED } from './history'
 /** The latest checks, for the welcome page. Demo data when no engine answers. */
 export function useRecents(): Recent[] {
   const { mode } = useEngine()
-  const [items, setItems] = useState<Recent[]>(RECENTS)
+  const [items, setItems] = useState<Recent[]>([])
   const [round, setRound] = useState(0)
 
   // A check deleted in History must leave this list too.
@@ -18,6 +18,7 @@ export function useRecents(): Recent[] {
   }, [again])
 
   useEffect(() => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setItems(RECENTS)
       return

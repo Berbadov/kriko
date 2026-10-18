@@ -3,8 +3,25 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
-### Unreleased
+### 0.2.3
 
+- **Kriko opens in a few seconds, not fifteen.** The engine was one file that
+  unpacked itself into a temporary folder on every start, and on Windows that
+  alone took 10 to 13 seconds. It is now a program with its files beside it,
+  unpacked once by the installer. The shell also no longer waits for the search
+  service before it starts the engine.
+- **The window says it is starting.** Until the engine answers, the window shows
+  the Kriko mark and "Starting Kriko…", not an empty page.
+- **Kriko updates itself.** A few seconds after it opens, and every six hours
+  after that, Kriko looks for a newer release. When there is one, a note offers
+  Update now or Later. Update now downloads the installer, checks it against the
+  checksums published with the release, closes Kriko, installs and opens it
+  again. Your chats and catalogs stay where they are. Settings, About, shows the
+  state and has a Check now button. A copy that was not set up by the installer
+  (the portable zip) is pointed to the download page instead.
+
+  This starts with 0.2.3: to get from 0.2.2 or earlier to this version, run the
+  installer once by hand.
 - **Chat finds the exact product and checks the seller.** A request such as
   "can you find these for me?" now searches the web. Before this change, a
   request in that form received an answer from memory, with no source. The
@@ -18,6 +35,30 @@ immutable; a correction is a newer version.
   - A page that calls itself official makes a claim. The answer reports it as
     the claim of the page.
   - The answer uses the language of your question.
+
+### 0.2.2
+
+- **Each answer shows which agent wrote it.** Claude Code, Codex, Antigravity,
+  Mistral and the local model each have a mark of their own, above the answer
+  and in the agent pick. An answer from an earlier version has no mark; Kriko
+  never recorded who wrote it.
+- **Copy, Retry, Edit.** Under an answer: Copy takes its words, and on the
+  newest answer Retry asks the same question again. The newest question has an
+  Edit button that puts it back in the box. Up in an empty box brings back what
+  you asked before. A Latest button shows when you have scrolled away from the
+  bottom of a long answer.
+- **Rename, pin, search and copy a chat.** Each chat in the list has a
+  "…" button. Rename (or double-click the name), Pin to keep it at the top, Copy
+  as Markdown, Delete. The box above the list finds a chat by its name or by
+  anything said in it.
+- **Links in an answer open in your browser.** In the desktop window a link did
+  nothing. Only web addresses (http and https) are opened.
+- **No sample chats while Kriko starts.** For the seconds the app looks for its
+  engine, the home screen and the lists showed demo rows, then swapped them for
+  yours. They now wait.
+- **The folded sidebar lines up.** The + for a new chat sat to the left of the
+  other icons; the logo, the fold button, the + and the four pages share one
+  centre line.
 
 ### 0.2.1
 

@@ -1,5 +1,6 @@
 mod engine;
 mod shell;
+mod update;
 
 use std::time::Duration;
 
@@ -27,6 +28,26 @@ fn engine_status() -> EngineState {
 #[tauri::command]
 fn engine_restart() {
   engine::restart();
+}
+
+/// Whether this copy can be replaced by the installer it was made with.
+#[tauri::command]
+fn app_update_supported() -> bool {
+  update::installed()
+}
+
+/// Run a downloaded, checked installer, and leave so that it can replace this app.
+#[tauri::command]
+fn app_install_update(app: tauri::AppHandle, path: String) -> Result<(), String> {
+  if !update::installed() {
+    return Err("This copy of Kriko was not installed by its installer, so it cannot update itself.".into());
+  }
+  let installer = update::vetted(std::path::Path::new(&path), &std::env::temp_dir())?;
+  update::launch(&installer)?;
+  // The installer ends every Kriko it finds. Going first lets the engine close its own way.
+  engine::stop();
+  app.exit(0);
+  Ok(())
 }
 
 #[derive(Serialize)]
@@ -79,6 +100,8 @@ pub fn run() {
     builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| shell::show_window(app)));
   }
   builder
+    // Opens a link from an answer in the reader's own browser; the window cannot.
+    .plugin(tauri_plugin_opener::init())
     .on_window_event(|window, event| {
       if let tauri::WindowEvent::CloseRequested { api, .. } = event {
         if shell::can_hide() {
@@ -91,7 +114,7 @@ pub fn run() {
         }
       }
     })
-    .invoke_handler(tauri::generate_handler![engine_status, engine_restart, engine_request])
+    .invoke_handler(tauri::generate_handler![engine_status, engine_restart, engine_request, app_update_supported, app_install_update])
     .setup(|app| {
       if cfg!(debug_assertions) {
         // A log folder that cannot be made must not stop the app.
