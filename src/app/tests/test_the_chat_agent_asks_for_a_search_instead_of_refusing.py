@@ -179,3 +179,14 @@ def test_no_turn_spends_more_than_its_calls_on_searching(ctx):
 
     assert out["agent_calls"] <= chat.MAX_AGENT_CALLS
 
+
+
+def test_a_long_search_request_is_shortened_and_never_shown_as_the_answer():
+    # The reader's chat ended on this line, as the answer: nineteen words, and the
+    # request was refused for being long.
+    reply = ("SEARCH: Renault Megane 4 1.5 Blue dCi Renault Mais Elf yağ ve filtre seti "
+             "motor yağı filtre kodları model yılı")
+    words = chat.search_request(reply)
+    assert words.startswith("Renault Megane 4 1.5 Blue dCi")
+    assert len(words.split()) <= chat.QUERY_WORDS
+    assert words.split().count("Renault") == 1

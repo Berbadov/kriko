@@ -522,8 +522,11 @@ def relevant_source(
     # Discussions often omit the brand or insert punctuation into the name.
     # An exact distinctive model code plus another supplied name token is
     # enough to read the page; each finding still needs its applicability check.
+    # Three characters is a model code (`A54`, `S23`): a page about that phone
+    # does not repeat the storage size and the colour a listing's title adds,
+    # and requiring the whole title turned every such page away.
     model_tokens = [token for token in _TOKEN.findall(identity.canonical_name)
-                    if len(token) >= 5 and _distinctive_identifier(token)]
+                    if len(token) >= 3 and _distinctive_identifier(token)]
     other_tokens = _meaningful_tokens(identity.canonical_name) - {
         _normalize(token) for token in model_tokens}
     code_match = any(_literal(token, text) for token in model_tokens)
