@@ -319,6 +319,24 @@ def cmd_agent_bench(args, store) -> int:
     return run(args)
 
 
+def cmd_model_bench(args, store) -> int:
+    """Measure models on the controlled corpus (`app/modelbench`).
+
+    Delegated rather than re-implemented: `python -m app.modelbench` is the
+    complete command — `list`, `plan`, `run`, with the report files — and a
+    second copy of those flags here would drift from it. The pass-through keeps
+    one command with two spellings, which is what a person pasting a result into
+    a chat actually needs.
+    """
+    from app.modelbench.__main__ import main as model_bench_main
+
+    rest = [one for one in getattr(args, "rest", [])]
+    if not rest:
+        model_bench_main(["--help"])
+        return 0
+    return model_bench_main(rest)
+
+
 def cmd_bench(args, store) -> int:
     """Measure the planes against the same cases (B111).
 
@@ -776,6 +794,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     add_agent_bench_arguments(p)
     p.set_defaults(fn=cmd_agent_bench, needs_store=False)
+
+    p = sub.add_parser(
+        "model-bench",
+        help="measure models on a fixed corpus: how many tokens, and how often "
+             "they invent something (writes JSON, CSV and a report)")
+    p.add_argument("rest", nargs=argparse.REMAINDER,
+                   help="one of: list | plan | run — for example "
+                        "`kriko model-bench run --candidates local:qwen3.5:4b`")
+    p.set_defaults(fn=cmd_model_bench, needs_store=False)
 
     # ── the research door for agents: JSON in, JSON out, same acceptance
     # path as the MCP tools of the same names (`app/agentops.py`).
