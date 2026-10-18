@@ -148,4 +148,6 @@ export interface ApiMessage extends ApiTurn {
   message_id: string
   role: 'reader' | 'agent'
   text: string
+  /** The agent that wrote the answer. Empty for a message from before it was kept. */
+  agent?: { id?: string; label?: string; model?: string }
 }
