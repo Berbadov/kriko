@@ -22,5 +22,6 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.12.4", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2"
+tauri-plugin-opener = "2"
 tauri-plugin-log = "2"
 ureq = { version = "3", default-features = false }

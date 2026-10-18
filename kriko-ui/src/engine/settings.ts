@@ -99,6 +99,7 @@ export function usePrefsDoc() {
   const load = useCallback(
     async (fresh = false) => {
       setProblem('')
+      if (mode === 'checking') return
       if (mode !== 'live') {
         setDoc(structuredClone(demo.current))
         return
@@ -157,6 +158,7 @@ export function useKeys() {
   const demo = useRef<KeysDoc>(structuredClone(DEMO_KEYS))
 
   useEffect(() => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setDoc(structuredClone(demo.current))
       return
