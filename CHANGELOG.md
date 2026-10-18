@@ -3,6 +3,30 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.2.2
+
+- **Each answer shows which agent wrote it.** Claude Code, Codex, Antigravity,
+  Mistral and the local model each have a mark of their own, above the answer
+  and in the agent pick. An answer from an earlier version has no mark; Kriko
+  never recorded who wrote it.
+- **Copy, Retry, Edit.** Under an answer: Copy takes its words, and on the
+  newest answer Retry asks the same question again. The newest question has an
+  Edit button that puts it back in the box. Up in an empty box brings back what
+  you asked before. A Latest button shows when you have scrolled away from the
+  bottom of a long answer.
+- **Rename, pin, search and copy a chat.** Each chat in the list has a
+  "…" button. Rename (or double-click the name), Pin to keep it at the top, Copy
+  as Markdown, Delete. The box above the list finds a chat by its name or by
+  anything said in it.
+- **Links in an answer open in your browser.** In the desktop window a link did
+  nothing. Only web addresses (http and https) are opened.
+- **No sample chats while Kriko starts.** For the seconds the app looks for its
+  engine, the home screen and the lists showed demo rows, then swapped them for
+  yours. They now wait.
+- **The folded sidebar lines up.** The + for a new chat sat to the left of the
+  other icons; the logo, the fold button, the + and the four pages share one
+  centre line.
+
 ### 0.2.1
 
 - **Learn this page.** The research card in the extension panel has a button
