@@ -284,8 +284,10 @@ def test_the_chat_job_wires_web_search_and_saves_fetched_urls(paths, monkeypatch
 
     assert searched == [("a quiet air purifier for a small bedroom", 5)]
     assert fetched == ["https://maker.example/purifier"]
-    assert "CADR 300 m³/h" in completer.prompts[0]
-    assert result["agent_calls"] == 1
+    # One short call writes the search words; the last call answers from the page.
+    assert "Write the web search" in completer.prompts[0]
+    assert "CADR 300 m³/h" in completer.prompts[-1]
+    assert result["agent_calls"] == 2
     assert result["sources"] == ["web_search", "https://maker.example/purifier"]
     assert stored["sources"] == result["sources"]
 
