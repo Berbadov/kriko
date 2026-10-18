@@ -92,6 +92,8 @@
     // results page). Same NO_ADAPTER code either way — the reader's next
     // step is completely different, so the panel needs to tell them apart.
     hostKnown: false,
+    // The page is on a site nothing reads and is worth learning (the worker's say).
+    learnable: false,
     // claim_id -> verdict, for cards the reader has judged. Panel-local and
     // deliberately not persisted here: the app owns the marks, this is only
     // what to paint until the next analysis re-reads them.
@@ -743,6 +745,7 @@
       // knows to show. Both paths now read the same code.
       state.errorCode = entry.code || null;
       state.unknownProduct = "";
+      state.learnable = Boolean(entry.learnable);
       if (entry.code === "UNKNOWN_PRODUCT") {
         state.noAdapter = false;
         state.unknownProduct = entry.productName || document.title || "";
@@ -942,6 +945,7 @@
       state.agentChosen = String(response.chosen || "");
       if (state.agentPick && !state.agents.some((one) => one.id === state.agentPick)) state.agentPick = "";
       renderResearch();
+      renderVerdict();
     });
     try {
       chrome.storage?.local?.get?.([AGENT_KEY], (bag) => {
@@ -1006,11 +1010,25 @@
     </div>`;
   }
 
+  // Every learn card on screen: the research card has one and so does the
+  // card a site nothing reads gets, and either may be the one being watched.
   function paintLearn(slot) {
-    const line = slot.querySelector(".lite-learn-status");
-    if (!line) return;
-    line.textContent = state.learning ? state.learnMessage : lessonWords(state.lesson);
-    line.dataset.ok = state.lesson?.learned && !state.learning ? "1" : "0";
+    for (const line of slot.querySelectorAll(".lite-learn-status")) {
+      line.textContent = state.learning ? state.learnMessage : lessonWords(state.lesson);
+      line.dataset.ok = state.lesson?.learned && !state.learning ? "1" : "0";
+    }
+  }
+
+  /* The learn button and the agent picker of one card. Wired where the card is
+   * built, because both cards are rebuilt whenever the panel is painted. */
+  function wireLearn(root) {
+    root.querySelector(".lite-learn-btn")?.addEventListener("click", learnPage);
+    root.querySelector(".lite-agent-select")?.addEventListener("change", (event) => {
+      state.agentPick = event.target.value;
+      try { chrome.storage?.local?.set?.({ [AGENT_KEY]: state.agentPick }, () => void chrome.runtime.lastError); } catch (_) {}
+      renderResearch();
+      renderVerdict();
+    });
   }
 
   /* Learn this page. The app's local model answers at once; another agent is a
@@ -1022,7 +1040,9 @@
     state.lesson = null;
     state.learnMessage = "Reading this page…";
     state.learnStartedAt = Date.now();
+    requestAgents();
     renderResearch();
+    renderVerdict();
     chrome.runtime.sendMessage({ type: "LEARN_PAGE", payload: { agent: currentAgent() } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok) {
         finishLearn({ learned: false, reason: response?.error || "Could not reach Kriko. Open the app and try again." });
@@ -1032,6 +1052,7 @@
       if (lesson.mode === "agent" && lesson.job_id) {
         state.learnMessage = "Your agent is reading the page…";
         renderResearch();
+        renderVerdict();
         pollLearnJob(lesson);
         return;
       }
@@ -1045,6 +1066,7 @@
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
         state.learnMessage = "Cannot check progress. Open the app to follow it.";
         renderResearch();
+        renderVerdict();
         setTimeout(() => pollLearnJob(lesson), 3000);
         return;
       }
@@ -1082,8 +1104,22 @@
       state.researchName = name;
     }
     renderResearch();
+    renderVerdict();
+    if (!lesson.learned) return;
     // A page that is readable now may have a product Kriko knows.
-    if (lesson.learned) knowledgeMoved();
+    if ((state.noAdapter || state.unknownProduct) && state.pipeline !== "result") {
+      // The page was one nothing read, and now something does. The worker
+      // takes the new reading in before the page is asked about again, or it
+      // would be told "no adapter" from the list it already holds.
+      chrome.runtime.sendMessage({ type: "KRIKO_SYNC_SITES" }, () => {
+        void chrome.runtime.lastError;
+        state.noAdapter = false;
+        state.learnable = false;
+        triggerAnalyze(true);
+      });
+      return;
+    }
+    knowledgeMoved();
   }
 
   /* Write the cap onto a follow-up slot that is already on screen. */
@@ -1533,12 +1569,7 @@
       foldToggle.addEventListener("click", () => setFold(fold.dataset.open !== "1", true));
     }
     paintLearn(slot);
-    slot.querySelector(".lite-learn-btn")?.addEventListener("click", learnPage);
-    slot.querySelector(".lite-agent-select")?.addEventListener("change", (event) => {
-      state.agentPick = event.target.value;
-      try { chrome.storage?.local?.set?.({ [AGENT_KEY]: state.agentPick }, () => void chrome.runtime.lastError); } catch (_) {}
-      renderResearch();
-    });
+    wireLearn(slot);
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
@@ -1965,6 +1996,7 @@
         }
         if (response && !response.ok) {
           state.unknownProduct = "";
+          state.learnable = Boolean(response.learnable);
           if (response.code === "UNKNOWN_PRODUCT") {
             // A product, read — just not one any installed pack knows. The
             // answer is the research button with its name already in it.
@@ -2025,6 +2057,13 @@
     }
     if (request && request.type === "TOGGLE_HOVER_LITE") {
       togglePanel();
+    }
+    // A page the worker found worth learning, on a site nothing reads: the
+    // panel comes up with the Learn card, once, instead of waiting for a
+    // toolbar press the reader has no reason to make on a page they have not
+    // been told anything about. Never closes a panel that is already open.
+    if (request && request.type === "KRIKO_LEARN_NUDGE" && !state.mounted) {
+      openPanel();
     }
   });
 
@@ -3304,7 +3343,7 @@
   }
 
   function renderVerdict() {
-    const slot = bodyEl.querySelector(".lite-verdict-slot");
+    const slot = bodyEl?.querySelector(".lite-verdict-slot");
     if (!slot) return;
     slot.innerHTML = "";
 
@@ -3329,6 +3368,16 @@
       button.addEventListener("click", () =>
         researchSubject({ label: state.unknownProduct }));
       card.appendChild(button);
+      // On a site nothing reads, the product is half of it: the other half is
+      // teaching Kriko the page, so the next one of its listings reads too.
+      if (state.learnable && !state.researchOpen) {
+        requestAgents();
+        const learn = document.createElement("div");
+        learn.innerHTML = `${agentRowMarkup(false)}${learnMarkup()}`;
+        wireLearn(learn);
+        paintLearn(learn);
+        card.appendChild(learn);
+      }
       slot.appendChild(card);
       return;
     }
@@ -3352,16 +3401,25 @@
         slot.appendChild(card);
         return;
       }
+      // The way out of "nothing reads this site" is on the card itself: the
+      // page is already open, so the reader presses Learn this page and an
+      // agent goes through it, rather than being sent to another window to
+      // ask for the same thing.
+      requestAgents();
       card.innerHTML = `
         <div class="lite-verdict-head">
           <span class="lite-verdict-word">Not read here</span>
         </div>
         <p class="lite-verdict-say">Nothing installed knows how to read this
-          site yet.</p>
+          site yet. Kriko can learn it from this page.</p>
+        ${agentRowMarkup(false)}
+        ${learnMarkup()}
       `;
+      wireLearn(card);
+      paintLearn(card);
       const button = document.createElement("button");
       button.type = "button";
-      button.className = "lite-verdict-btn";
+      button.className = "lite-verdict-btn lite-site-add";
       button.textContent = "Add this site";
       button.title = "In Kriko, an agent can write most of it.";
       button.setAttribute("aria-label", "Add this site; an agent can write most of the adapter");
