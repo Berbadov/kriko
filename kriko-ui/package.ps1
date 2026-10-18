@@ -258,18 +258,29 @@ try {
     # the placement step and the spec read.
     Step "Freeze the sidecar"
     $work = Join-Path ([IO.Path]::GetTempPath()) "kriko-pyinstaller-$PID"
-    & $Python -m PyInstaller --noconfirm --workpath $work packaging/kriko-sidecar.spec
-    Assert-LastExitCode "pyinstaller"
+    $env:KRIKO_FREEZE = "folder"
+    try {
+        & $Python -m PyInstaller --noconfirm --workpath $work packaging/kriko-sidecar.spec
+        Assert-LastExitCode "pyinstaller"
+    } finally {
+        Remove-Item Env:\KRIKO_FREEZE -ErrorAction SilentlyContinue
+    }
     Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue
 
     # A frozen binary that cannot print its port is a blank window, so the
     # handshake is checked before it is bundled into anything.
     Step "The frozen sidecar answers"
-    & $Python packaging/smoke_sidecar.py "dist/kriko-sidecar.exe"
+    & $Python packaging/smoke_sidecar.py "dist/kriko-engine/kriko-sidecar.exe"
     Assert-LastExitCode "smoke_sidecar.py"
 
+    # The program goes beside kriko.exe as an external binary, and the folder
+    # it unpacked into travels as a resource, so `_internal` lands beside it.
     Step "Place the sidecar"
-    Copy-Item (Join-Path $repo "dist\kriko-sidecar.exe") (Join-Path $staged "kriko-sidecar-$triple.exe") -Force
+    $engine = Join-Path $repo "dist\kriko-engine"
+    Copy-Item (Join-Path $engine "kriko-sidecar.exe") (Join-Path $staged "kriko-sidecar-$triple.exe") -Force
+    & robocopy (Join-Path $engine "_internal") (Join-Path $staged "_internal") /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "robocopy of the engine's folder failed with exit code $LASTEXITCODE" }
+    $global:LASTEXITCODE = 0
     Write-Host (Join-Path $staged "kriko-sidecar-$triple.exe")
 
     Step "Install the web interface's packages"
@@ -343,6 +354,7 @@ try {
     $zip = Join-Path $builds "kriko-$ver-win64-portable.zip"
     if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
     Compress-Archive -Path (Join-Path $bin "kriko.exe"), (Join-Path $bin "kriko-sidecar.exe"), `
+        (Join-Path $staged "_internal"), `
         (Join-Path $bin "OpenSERP.exe"), (Join-Path $crate "third-party\OpenSERP-LICENSE.txt") `
         -DestinationPath $zip -Force
 
