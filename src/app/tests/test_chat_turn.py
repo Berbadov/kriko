@@ -406,7 +406,10 @@ def test_a_megane_oil_purchase_uses_bounded_web_results_and_cites_fetched_pages(
     out = chat.run_turn("Which oil should i buy to my Megane 4 2020 1.5dci?",
                         ask=agent, ask_stream=ask_stream, ctx=ctx, hooks=hooks)
 
-    assert searched == [("Which oil should i buy to my Megane 4 2020 1.5dci?", 5)]
+    # A buying question looks wider (8 hits) and, with no trusted shop among
+    # them, adds one query limited to popular shops.
+    assert searched[0] == ("Which oil should i buy to my Megane 4 2020 1.5dci?", 8)
+    assert len(searched) == 2 and "site:" in searched[1][0]
     assert len(read) == chatdata.WEB_PAGES_CAP
     assert "https://maker.example/oil-0" in agent.prompts[0]
     assert "fetched page excerpts" in agent.prompts[0]
