@@ -114,7 +114,8 @@ test("another agent is a job the panel follows until it ends", () => {
       polls += 1;
       return polls < 2
         ? { ok: true, job: { state: "running", done: false, message: "Reading the page" } }
-        : { ok: true, job: { state: "succeeded", done: true } };
+        : { ok: true, job: { state: "succeeded", done: true,
+          result: { reading: { identity: { brand: "kingston", series: "a400" }, context: {} } } } };
     },
   }));
   const select = p.shadow().querySelector(".lite-agent-select");
@@ -127,7 +128,9 @@ test("another agent is a job the panel follows until it ends", () => {
   assert.equal(p.shadow().querySelector(".lite-learn-btn").disabled, true, "pressed twice would start two runs");
 
   p.flushTimers();
-  assert.match(status(p), /^Learned shop\.example\./);
+  assert.match(status(p), /^Learned shop\.example\. It takes 2 things/);
+  assert.deepEqual([...p.shadow().querySelectorAll(".lite-learn-grabs li")].map((li) => li.textContent),
+    ["brandkingston", "seriesa400"]);
   assert.equal(p.shadow().querySelector(".lite-learn-btn").disabled, false);
 });
 
