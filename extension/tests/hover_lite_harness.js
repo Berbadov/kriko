@@ -140,6 +140,11 @@ function loadPanel({
     for (const fn of storageListeners) fn({ [key]: { newValue: entry } }, "session");
   }
 
+  // A message from the service worker to this tab, as Chrome would hand it.
+  function deliverMessage(message) {
+    for (const fn of runtimeListeners) fn(message);
+  }
+
   function deliverFirefoxUpdate(update) {
     for (const fn of runtimeListeners) fn({ type: "KRIKO_SESSION_UPDATE", url: dom.window.location.href, ...update });
   }
@@ -256,7 +261,7 @@ function loadPanel({
     return el;
   }
 
-  return { dom, openPanel, deliverEntry, deliverStage, deliverFirefoxUpdate, footer, listing, claims,
+  return { dom, openPanel, deliverMessage, deliverEntry, deliverStage, deliverFirefoxUpdate, footer, listing, claims,
            click, type, press, shadow, sent, errorText, pipeline, flushTimers, flushFrames,
            statusText, liveRows, setLocal, local: localBag };
 }

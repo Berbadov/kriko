@@ -171,3 +171,34 @@ def test_every_brief_asks_for_the_listings_language_and_untranslated_quotes():
         assert quicklook.LANGUAGE_RULE in text
     assert "Turk" not in quicklook.LANGUAGE_RULE
     assert "never translate a quote" in quicklook.LANGUAGE_RULE
+
+
+def test_both_briefs_say_a_shop_is_the_seller_speaking_and_its_customers_are_not():
+    for compact in (False, True):
+        text = quicklook.brief("Widget 5000", compact=compact)
+        assert quicklook.SHOP_RULE in text
+    assert "customers wrote" in quicklook.SHOP_RULE
+    assert "\"original\"" in quicklook.SHOP_RULE
+
+
+def _found(*urls):
+    return {"specs": [{"name": "Brand", "value": "Acme", "url": url, "domain": "x", "quote": "q"}
+                      for url in urls], "risks": [], "dropped": 0}
+
+
+def test_a_spec_that_only_repeats_the_listing_page_is_left_out():
+    listing = "https://www.shop.example/p/acme-widget-5000?utm=1#reviews"
+    found = _found("https://shop.example/p/acme-widget-5000/", "https://review.example/widget")
+    kept = quicklook.without_listing_echo(found, listing)
+    assert [one["url"] for one in kept["specs"]] == ["https://review.example/widget"]
+    assert kept["echoed"] == 1
+
+
+def test_a_spec_from_another_page_of_the_same_shop_is_kept():
+    found = _found("https://shop.example/p/another-widget")
+    assert quicklook.without_listing_echo(found, "https://shop.example/p/acme-widget-5000") is found
+
+
+def test_with_no_listing_address_nothing_is_left_out():
+    found = _found("https://shop.example/p/acme-widget-5000")
+    assert quicklook.without_listing_echo(found, "") is found

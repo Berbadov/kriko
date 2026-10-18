@@ -36,6 +36,28 @@ immutable; a correction is a newer version.
     the claim of the page.
   - The answer uses the language of your question.
 
+- **The chat follows new text.** While an answer streams, the thread stays at
+  the bottom. If you scroll up to read, it leaves you where you are.
+- **Researches in the queue run side by side.** Every research waited on one
+  shared draft claim, so the queue ran one at a time whatever the setting said.
+  Several now run at once. Two researches on the same catalog still take turns,
+  on purpose.
+- **Learn this page works, and offers itself.** The panel offers Learn on a page
+  of a shop Kriko does not know, including a real product page on an unknown
+  shop. Once for each site, the browser extension suggests it when a page looks
+  learnable.
+- **Compare leads with the problems.** Each product shows its risks first, and
+  its specifications in a table you can open.
+- **A quick look is not its own source.** Specifications that only repeat the
+  listing you gave are dropped, and the agent is told to check other shops.
+- **"Original" in a title is not a check.** When you ask whether a seller or a
+  part is genuine, the agent looks at the seller and at the maker's authorised
+  dealers, and no longer counts the word in the product's title.
+
+Also in this release, outside the installer: the website has been redesigned
+around how Kriko finds the concern before you buy, and `kriko-mobile/` holds the
+Kriko reader as an Expo app (run it in Expo Go).
+
 ### 0.2.2
 
 - **Each answer shows which agent wrote it.** Claude Code, Codex, Antigravity,
