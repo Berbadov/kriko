@@ -1248,6 +1248,8 @@ function _scrapeSignature(scrape, adapters) {
   return _stableHash({
     // Invalidate answers cached before sold-product/host scope was enforced.
     productScope: 1,
+    // Do not keep answers from before complete field reads and label priority.
+    readingRevision: 2,
     product: scrape?.product || {},
     title: scrape?.title || "",
     fields: scrape?.fields || {},
@@ -2211,13 +2213,16 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
    * for a thousand rows is a client that will one day be asked to render
    * them.
    */
-  if (request.type === "SEARCH") {
+  if (request.type === "SEARCH" || request.type === "WEB_SEARCH") {
     const query = String(request.payload?.q || "").trim();
     if (!query) {
       sendResponse({ ok: true, items: [] });
       return false;
     }
-    _getApp(`/api/search?q=${encodeURIComponent(query)}&limit=${SEARCH_LIMIT}`)
+    const path = request.type === "WEB_SEARCH"
+      ? `/api/extension/web-search?q=${encodeURIComponent(query)}`
+      : `/api/search?q=${encodeURIComponent(query)}&limit=${SEARCH_LIMIT}`;
+    _getApp(path)
       .then((body) => sendResponse({
         ok: true, items: Array.isArray(body?.items) ? body.items : [] }))
       .catch((error) => sendResponse({

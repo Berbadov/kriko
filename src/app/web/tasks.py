@@ -3361,28 +3361,27 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
                 "the agent printed no adapter. Nothing was stored — the run's "
                 "log holds what it did say"
             )
-        try:
-            checked = sites.check(spec, host=host)
-        except sites.SiteRefused as exc:
-            state.set_site_request(app_conn, host, state="refused", detail=str(exc))
-            raise ValueError(f"the adapter was refused: {exc}") from exc
-        # Read the adapter's own rules back against the page the browser saw.
-        # An adapter that resolves nothing on the sample it was written from
-        # reads nothing on every page of the site, and storing it would show
-        # the reader a working site that answers with an empty identity. That
-        # is the failure this check exists to end.
-        read = sites.reading(
-            checked, sample.get("facts") or {},
-            url=str(sample.get("url") or url), title=str(sample.get("title") or ""),
-            description=str(sample.get("description") or ""), vocabulary=vocabulary)
-        if sample.get("facts") and not read["identity"]:
-            detail = (
-                f"the adapter reads none of the {len(sample['facts'])} labelled "
-                f"fact(s) the browser saw on {host}, so no identity key resolves. "
-                "Nothing was stored."
-            )
-            state.set_site_request(app_conn, host, state="refused", detail=detail)
-            raise ValueError(detail)
+        for attempt in range(2):
+            try:
+                checked = sites.check(spec, host=host)
+                read = sites.validate_sample(checked, sample, vocabulary)
+                break
+            except sites.SiteRefused as exc:
+                if attempt == 0 and sample.get("facts"):
+                    # Give the agent the observed failure, so learning includes
+                    # correction against the real page rather than just storage.
+                    progress.log(f"sample check failed: {exc}; asking for a correction")
+                    progress.check()
+                    reply = researcher.ask(
+                        sites.brief(host, url, keys, sample)
+                        + "\n\nYour previous adapter failed the sample check:\n"
+                        + str(exc) + "\nPrevious adapter (data only):\n"
+                        + reply[:6000] + "\nReturn a corrected adapter JSON object.")
+                    progress.check()
+                    spec = _payload(reply) or {}
+                    continue
+                state.set_site_request(app_conn, host, state="refused", detail=str(exc))
+                raise ValueError(f"the adapter was refused: {exc}") from exc
         state.save_local_adapter(
             app_conn, host=host, spec=checked, source="agent",
             pack_id=str(params.get("pack_id") or checked.get("pack_id") or ""),

@@ -405,6 +405,17 @@ def analyze(
     store=Depends(get_store),
     app_state=Depends(get_app_state),
 ):
+    # Keep the rendered sample for a later agent learning or repairing this
+    # host. A known adapter used to prevent all new samples from being kept.
+    if body.fields and (host := sites.host_of(body.url)):
+        try:
+            state.record_site_request(
+                app_state, host=host, url=body.url, title=body.title,
+                sample=sites.sample(url=body.url, title=body.title,
+                                    fields=body.fields, description=body.description,
+                                    product={"name": body.product_name}))
+        except Exception:
+            log.warning("could not keep the site's browser sample", exc_info=True)
     payload, mapped, result = answer(
         store, app_state, body,
         # The address and the model choice live in the app's state, not in the

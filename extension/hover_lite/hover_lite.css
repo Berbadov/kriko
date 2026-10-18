@@ -1779,6 +1779,18 @@
   background: var(--bg-surface);
 }
 .lite-search-bar:focus-within { border-color: var(--accent); }
+.lite-search-modes { display: flex; gap: 6px; margin-top: 8px; }
+.lite-search-modes button {
+  cursor: pointer;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 12px;
+}
+.lite-search-modes button[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); }
 .lite-search-icon { display: flex; color: var(--fg-muted); flex: none; }
 .lite-search-field {
   all: unset;
