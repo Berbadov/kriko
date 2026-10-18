@@ -806,7 +806,8 @@ CREATE TABLE IF NOT EXISTS chat_threads (
   thread_id  TEXT PRIMARY KEY,
   title      TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT '',
-  updated_at TEXT NOT NULL DEFAULT '');
+  updated_at TEXT NOT NULL DEFAULT '',
+  pinned     INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS chat_messages (
   message_id   TEXT PRIMARY KEY,
   thread_id    TEXT NOT NULL DEFAULT '',
@@ -819,7 +820,10 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   -- saw when a turn ran are the products they see when they open it again.
   products_json TEXT NOT NULL DEFAULT '[]',
   job_id       TEXT NOT NULL DEFAULT '',
-  created_at   TEXT NOT NULL DEFAULT '');
+  created_at   TEXT NOT NULL DEFAULT '',
+  -- Which agent wrote the answer: {"id", "label", "model"}. A message from
+  -- before this column reads as `{}`, which is honest: it was never recorded.
+  agent_json   TEXT NOT NULL DEFAULT '{}');
 CREATE INDEX IF NOT EXISTS chat_messages_thread ON chat_messages (thread_id);
 
 """
@@ -3194,7 +3198,8 @@ CHAT_MESSAGE_CHARS = 20000
 
 def _thread(row: sqlite3.Row) -> dict:
     return {"thread_id": row["thread_id"], "title": row["title"],
-            "created_at": row["created_at"], "updated_at": row["updated_at"]}
+            "created_at": row["created_at"], "updated_at": row["updated_at"],
+            "pinned": bool(row["pinned"]) if "pinned" in row.keys() else False}
 
 
 def _chat_message(row: sqlite3.Row) -> dict:
@@ -3210,15 +3215,31 @@ def _chat_message(row: sqlite3.Row) -> dict:
         "products": json.loads((row["products_json"] if "products_json" in row.keys() else "") or "[]"),
         "job_id": row["job_id"],
         "created_at": row["created_at"],
+        "agent": json.loads((row["agent_json"] if "agent_json" in row.keys() else "") or "{}"),
     }
 
 
-def chat_threads(conn: sqlite3.Connection) -> list[dict]:
-    """Newest conversation first: the one the reader last wrote in leads."""
-    return [
-        _thread(row) for row in conn.execute(
-            "SELECT * FROM chat_threads ORDER BY updated_at DESC, rowid DESC")
-    ]
+def _like(text: str) -> str:
+    """`text` as a LIKE pattern that means those characters and no others."""
+    return "%" + text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+
+
+def chat_threads(conn: sqlite3.Connection, query: str = "") -> list[dict]:
+    """Newest conversation first: the one the reader last wrote in leads.
+
+    With `query`, only the conversations whose name or any message holds those
+    words, in any case.
+    """
+    words = " ".join(str(query or "").split())[:100]
+    if not words:
+        rows = conn.execute("SELECT * FROM chat_threads ORDER BY updated_at DESC, rowid DESC")
+    else:
+        pattern = _like(words)
+        rows = conn.execute(
+            "SELECT * FROM chat_threads WHERE title LIKE ? ESCAPE '\\' OR thread_id IN"
+            " (SELECT thread_id FROM chat_messages WHERE text LIKE ? ESCAPE '\\')"
+            " ORDER BY updated_at DESC, rowid DESC", (pattern, pattern))
+    return [_thread(row) for row in rows]
 
 
 def get_chat_thread(conn: sqlite3.Connection, thread_id: str) -> dict | None:
@@ -3274,7 +3295,7 @@ def chat_history(conn: sqlite3.Connection, thread_id: str, *,
 def add_chat_message(
     conn: sqlite3.Connection, thread_id: str, *, role: str, text: str,
     steps: list | None = None, sources: list | None = None,
-    products: list | None = None, job_id: str = "",
+    products: list | None = None, job_id: str = "", agent: dict | None = None,
 ) -> dict:
     """Store one message and move its thread to the top of the list."""
     if role not in ("reader", "agent"):
@@ -3284,16 +3305,40 @@ def add_chat_message(
     now = _now()
     conn.execute(
         "INSERT INTO chat_messages (message_id, thread_id, role, text, steps_json,"
-        " sources_json, products_json, job_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        " sources_json, products_json, job_id, created_at, agent_json)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?)",
         (message_id, thread_id, role, text, json.dumps(steps or [], default=str),
          json.dumps(sources or [], default=str),
-         json.dumps(products or [], default=str), job_id, now))
+         json.dumps(products or [], default=str), job_id, now,
+         json.dumps({k: str(v) for k, v in (agent or {}).items()
+                     if k in ("id", "label", "model")})))
     conn.execute("UPDATE chat_threads SET updated_at = ? WHERE thread_id = ?",
                  (now, thread_id))
     conn.commit()
     row = conn.execute(
         "SELECT * FROM chat_messages WHERE message_id = ?", (message_id,)).fetchone()
     return _chat_message(row)
+
+
+def rename_chat_thread(conn: sqlite3.Connection, thread_id: str, title: str) -> bool:
+    """Give a conversation the name the reader chose. An empty name is refused:
+    a thread with no name is how the list knows it has no question yet."""
+    words = " ".join(str(title or "").split())[:CHAT_TITLE_CHARS]
+    if not words:
+        raise ValueError("a chat needs a name")
+    cur = conn.execute("UPDATE chat_threads SET title = ? WHERE thread_id = ?",
+                       (words, thread_id))
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def pin_chat_thread(conn: sqlite3.Connection, thread_id: str, pinned: bool) -> bool:
+    """Keep a conversation at the top of the list. Pinning does not reorder it
+    by time: `updated_at` is left as it was."""
+    cur = conn.execute("UPDATE chat_threads SET pinned = ? WHERE thread_id = ?",
+                       (1 if pinned else 0, thread_id))
+    conn.commit()
+    return cur.rowcount > 0
 
 
 def title_chat_thread(conn: sqlite3.Connection, thread_id: str, text: str) -> None:
