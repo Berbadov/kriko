@@ -68,7 +68,10 @@ def test_budget_need_actually_reads_sources_before_answering():
     ctx = chatdata.Context(web_search=search, web_read=reader)
     out = chat.run_turn("I need a laptop under 1000 euros", ctx=ctx, ask=ask)
 
-    assert searched == ["I need a laptop under 1000 euros"]
+    # The first search found no trusted shop, so one query limited to popular
+    # shops follows it. Both stubs return the same page, which is read once.
+    assert searched[0] == "I need a laptop under 1000 euros"
+    assert len(searched) == 2 and "site:" in searched[1]
     assert read == ["https://maker.example/spec"]
     assert "The documented price is 800 euros" in prompts[0]
     assert out["sources"] == ["web_search", "https://maker.example/spec"]

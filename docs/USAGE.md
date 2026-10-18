@@ -114,6 +114,25 @@ the agents, and the decision. You can stop a run and start it again.
 Each conversation keeps its own draft. Press Stop, Retry, or Copy near the
 answer.
 
+**Find something to buy.** Ask Chat for a product, a part, or a seller. Name the
+product exactly. Give the model, the year, and the engine or variant. The answer
+then follows four rules:
+
+1. Kriko reads popular sites first. A site that Kriko does not know is marked
+   *unrecognised*.
+2. A code is *confirmed* when two trusted sites print it. A code on one site is
+   a *single source*.
+3. A seller on a marketplace is judged by the seller. The answer shows the name
+   and the score from the page. If the page shows neither, the answer says the
+   seller is unknown.
+4. A claim such as "official dealer" is shown as the claim of the page. It is
+   not proof.
+
+To add or change a site, create the file `~/.kriko/sellers.json`. Use the same
+shape as the file `src/app/sellers.json`, and list only your own sites. Your
+entry replaces the tier of the same domain. Restart Kriko after the edit.
+Always read the page of the seller before you pay.
+
 **Compare** puts up to four saved checks side by side. It shows the
 specifications and the known problems, cell by cell, with a mark for each
 difference. You can ask a follow-up question and keep reading.
