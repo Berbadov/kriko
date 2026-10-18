@@ -636,9 +636,16 @@
   transform: scale(0.985);
 }
 
+/* The label is invisible when the rail is folded but still takes room, so
+   centring the row pushes its icon left. Each icon is placed on the rail's own
+   centre instead: the content box is 42px, so the centre is 21px in, which is
+   the icon's half width back from the left padding (the button has a 1px edge). */
+.rail[data-collapsed='true'] .rail-item {
+  padding-left: 12px;
+}
+
 .rail[data-collapsed='true'] .rail-new {
-  justify-content: center;
-  padding: 0;
+  padding-left: 11px;
 }
 
 .rail-nav {

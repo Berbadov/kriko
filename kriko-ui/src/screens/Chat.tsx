@@ -60,7 +60,7 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
         </motion.div>
 
         <AnimatePresence mode="popLayout" initial={false}>
-          {!thread && (
+          {!thread && recents.length > 0 && (
             <motion.div key="recents" className="recents" exit={{ opacity: 0, y: m.d(10) }} transition={m.tx.quick}>
               <h2>Recent checks</h2>
               <ul>
