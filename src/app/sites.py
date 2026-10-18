@@ -495,6 +495,46 @@ def reading(spec: dict, fields: dict, *, url: str = "", title: str = "",
             "unmapped": list(mapped.unmapped)}
 
 
+def validate_sample(spec: dict, sample_data: dict, vocabulary: dict) -> dict:
+    """Check learned rules against the browser snapshot before keeping them.
+
+    A title fallback must not hide an invented or broken label mapping.
+    Unknown values are allowed: learning a site is useful before its products
+    have been researched. The identity *keys* still belong to installed packs.
+    """
+    from kriko.adapters import _key
+
+    facts = sample_data.get("facts") or {}
+    read = reading(spec, facts, url=str(sample_data.get("url") or ""),
+                   title=str(sample_data.get("title") or ""),
+                   description=str(sample_data.get("description") or ""),
+                   vocabulary=vocabulary)
+    if not facts:
+        return read
+    unknown = set(spec.get("identity") or {}) - set(vocabulary)
+    if unknown:
+        raise SiteRefused("identity keys are not declared by an installed pack: "
+                          + ", ".join(sorted(unknown)))
+    labels = {_key(label) for label in facts}
+    for group in ("identity", "context"):
+        for key, rule in (spec.get(group) or {}).items():
+            declared = rule.get("labels") or []
+            if declared and not any(_key(label) in labels for label in declared):
+                raise SiteRefused(f"{group}.{key} names labels absent from the browser snapshot")
+            if group == "identity" and declared:
+                # Test the labels without allowing the title to rescue them.
+                direct = {**rule}
+                direct.pop("from", None)
+                checked = reading({**spec, "identity": {key: direct}}, facts,
+                                  vocabulary=vocabulary)
+                if key not in checked["identity"]:
+                    raise SiteRefused(f"identity.{key} cannot read its labelled value")
+    if not read["identity"]:
+        raise SiteRefused(f"the adapter reads none of the {len(facts)} labelled "
+                          "fact(s) the browser saw, so no identity key resolves")
+    return read
+
+
 #: What an agent is told when it is asked to teach this installation a site.
 #: The adapter contract, in the words of the thing being written — and the
 #: reason it is here rather than in a prompt file is that it has to stay next
@@ -552,6 +592,12 @@ every few months and its labels rarely do.
   it, do not write it.
 * Every `identity` key must come from the key list above. A snapshot fact whose
   label you cannot map goes in `context` or nowhere — never in `identity`.
+* Read all relevant labelled facts, including version, specifications, price
+  and condition. Keep facts that do not identify the product in `context`.
+  Prefer these facts over promotional words in the seller's title. Never
+  copy a sample value into a rule or infer a missing specification.
+* Test every declared mapping against the snapshot. A title fallback must
+  not conceal a label that does not exist or a numeric rule that rejects it.
 * **Nothing but this site.** `site` is a bare hostname and `match` may only
   cover it; it becomes a permission in somebody's browser.
 
