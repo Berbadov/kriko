@@ -1,0 +1,116 @@
+/* The first-start tour: a spotlight, and a card beside it. */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.tour-wash {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  backdrop-filter: blur(3px);
+}
+
+.tour-spot {
+  position: fixed;
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 100vmax var(--scrim),
+    0 0 0 2px var(--accent-hi);
+  pointer-events: none;
+}
+
+.tour-card {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px 18px 14px;
+  background: var(--panel);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  box-shadow: var(--shadow-2);
+}
+
+.tour-card[data-centered='true'] {
+  top: 50%;
+  left: 50%;
+  width: min(400px, calc(100vw - 32px));
+  translate: -50% -50%;
+}
+
+.tour-count {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.tour-card h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.tour-card p {
+  margin: 0;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 5px;
+  margin: 6px 0 2px;
+}
+
+.tour-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--edge-strong);
+  transition: background-color calc(160ms * var(--tm)), width calc(160ms * var(--tm));
+}
+
+.tour-dots i[data-on='true'] {
+  width: 18px;
+  border-radius: 6px;
+  background: var(--accent);
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.tour-actions button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  color: var(--ink-2);
+}
+
+.tour-actions button:hover {
+  background: var(--panel-2);
+  color: var(--ink);
+}
+
+.tour-actions .tour-skip {
+  margin-right: auto;
+  padding-left: 4px;
+  color: var(--ink-3);
+}
+
+.tour-actions .tour-next {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 540;
+}
+
+.tour-actions .tour-next:hover {
+  background: var(--accent);
+  filter: brightness(1.1);
+  color: var(--accent-ink);
+}

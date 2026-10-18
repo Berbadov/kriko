@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kriko"
-version = "0.1.2"
+version = "0.2.1"
 description = "A local-first, open knowledge engine for manufactured products"
 readme = "README.md"
 license = "MIT"
@@ -140,7 +140,7 @@ select = [
 # `check_untyped_defs` — still real type checking, just not reaching into
 # unannotated function bodies — with a short, named list of per-module
 # overrides for the specific patterns that are false positives here, each
-# with its reason below. `kriko-gpui/` is Rust, and every `tests/` package is
+# with its reason below. `kriko-ui/src-tauri/` is Rust, and every `tests/` package is
 # out of scope: a test suite proving a false-positive-shaped pattern on purpose
 # (mocks, duck-typed doubles) is not the code this gate is for.
 [tool.mypy]

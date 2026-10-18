@@ -132,11 +132,12 @@ def next_step(resolution, coverage: str, url: str = "", subjects=None) -> dict:
         }
 
     # Unrecognised, and the whole point is that this is where the dead end was.
-    if not resolution.considered:
+    if not any(one.score > 0 for one in resolution.considered):
         return {
             "action": "install",
-            "say": "No installed pack covers this kind of product at all. "
-                   "Install one that does, or write one.",
+            "say": "No product in the installed packs matches the page's "
+                   "identity. Search the web or research this product to "
+                   "learn about it.",
         }
     best = resolution.considered[0]
     disagreed = [one for one in best.per_key if one.how == "conflict"]

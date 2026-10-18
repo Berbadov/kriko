@@ -1,11 +1,11 @@
-"""Set the version, in the four places it lives.
+"""Set the version, in the five places it lives.
 
     python tools/bump.py 0.8.1
     python tools/bump.py --show
 
-**Why a script for a `sed`.** The app version is in three build files:
-`pyproject.toml`, `kriko-gpui/Cargo.toml` and the `kriko-gpui` entry of
-`kriko-gpui/Cargo.lock`. `test_the_version_strings_agree` fails if they
+**Why a script for a `sed`.** The app version is in four build files:
+`pyproject.toml`, `kriko-ui/src-tauri/Cargo.toml`, `kriko-ui/package.json` and
+the `kriko` entry of `kriko-ui/src-tauri/Cargo.lock`. `test_the_version_strings_agree` fails if they
 disagree. README's badge and download filenames are updated alongside them.
 That test is the reason bumping by hand mostly works and is exactly
 the wrong shape: it tells you afterwards, once, that you missed one.
@@ -38,7 +38,10 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sentence about what happened in 0.8.0.
 PLACES = (
     (Path("pyproject.toml"), re.compile(r'^(version = ")([^"]+)(")', re.M)),
-    (Path("kriko-gpui/Cargo.toml"), re.compile(r'^(version = ")([^"]+)(")', re.M)),
+    (Path("kriko-ui/src-tauri/Cargo.toml"), re.compile(r'^(version = ")([^"]+)(")', re.M)),
+    # The window's own package file. `tauri.conf.json` carries no version of its
+    # own: Tauri reads the crate's.
+    (Path("kriko-ui/package.json"), re.compile(r'^(  "version": ")([^"]+)(")', re.M)),
     # The lock, and it is not bookkeeping. `package.ps1` and `desktop.yml` run
     # `cargo metadata --locked`, so a lock that has fallen behind Cargo.toml is
     # a red build rather than a silent rewrite, which means a stale entry here
@@ -46,15 +49,15 @@ PLACES = (
     #
     # Anchored on the crate's own entry: a lock is thousands of lines of
     # dependency versions and every one of them must be left alone.
-    (Path("kriko-gpui/Cargo.lock"),
-     re.compile(r'(name = "kriko-gpui"\r?\nversion = ")([^"]+)(")')),
+    (Path("kriko-ui/src-tauri/Cargo.lock"),
+     re.compile(r'(name = "kriko"\r?\nversion = ")([^"]+)(")')),
 )
 
 SEMVER = re.compile(r"^\d+\.\d+\.\d+$")
 README_VERSION = re.compile(r"(badge/version-)(\d+\.\d+\.\d+)(-)")
 README_DOWNLOAD = re.compile(
     r"(kriko-)(\d+\.\d+\.\d+)"
-    r"(-(?:x86_64\.msi|win64-portable\.zip|macos-(?:arm64|x86_64)(?:-portable\.zip|\.dmg)))")
+    r"(-(?:x86_64-setup\.exe|win64-portable\.zip|macos-(?:arm64|x86_64)(?:-portable\.zip|\.dmg)))")
 
 
 def current() -> dict[Path, str]:
@@ -110,7 +113,7 @@ def show(strict: bool = False) -> int:
     # a fresh clone has not installed anything yet, and that is not a lie.
     #
     # Only under `--strict`, and the reason is a build that failed on this in
-    # the field: `kriko-gpui/package.ps1` runs the plain check as a
+    # the field: `kriko-ui/package.ps1` runs the plain check as a
     # pre-flight, *before* its own `pip install -e .`, so failing here would
     # refuse the build over a state that same build repairs a step later -- a
     # guard blocking the thing that fixes what it is complaining about. The

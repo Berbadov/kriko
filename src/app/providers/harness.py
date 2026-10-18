@@ -1003,6 +1003,9 @@ def chosen(preferred: str = "") -> Harness | None:
 #: question whose answer cannot change mid-run is waste.
 _DECLARED: dict[str, frozenset[str]] = {}
 _HELP: dict[str, str] = {}
+_HELP_FAILED: dict[str, float] = {}
+#: How long a `--help` that said nothing is left alone before it is asked again.
+HELP_RETRY_SECONDS = 15.0
 
 _OPTION = re.compile(r"--[A-Za-z][A-Za-z0-9-]*")
 
@@ -1098,7 +1101,19 @@ def helptext(executable: str) -> str:
     with lock:
         if executable in _HELP:
             return _HELP[executable]
+        failed = _HELP_FAILED.get(executable)
+        if failed is not None and time.monotonic() - failed < HELP_RETRY_SECONDS:
+            return ""
         text = _ask(executable, "--help")
+        if not text:
+            # Said nothing: a slow first start, or a probe that queued behind
+            # others and gave up. That is not what this CLI declares, and
+            # remembering it as such refused every model and flag for as long
+            # as the app ran ("does not declare per-run model selection" for a
+            # CLI whose `--help` lists `--model`). Asked again after a pause.
+            _HELP_FAILED[executable] = time.monotonic()
+            return ""
+        _HELP_FAILED.pop(executable, None)
         _HELP[executable] = text
         _DECLARED[executable] = frozenset(_OPTION.findall(text))
         return text

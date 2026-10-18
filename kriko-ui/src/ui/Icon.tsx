@@ -1,0 +1,37 @@
+const PATHS = {
+  chat: 'M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.1A8 8 0 1 1 20 12Z',
+  compare: 'M4 5h6v14H4zM14 5h6v14h-6z',
+  queue: 'M4 6h16M4 12h10M4 18h6',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  collapse: 'M15 6l-6 6 6 6',
+  expand: 'M9 6l6 6-6 6',
+  send: 'M12 19V5M5 12l7-7 7 7',
+  stop: 'M7 7h10v10H7z',
+  attach: 'M20 11.5 12 19.5a5 5 0 0 1-7-7l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4L14 7.8',
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+  chevron: 'M6 9l6 6 6-6',
+  x: 'M6 6l12 12M18 6 6 18',
+  pause: 'M9 6v12M15 6v12',
+  play: 'M8 5.5v13l10-6.5z',
+  plus: 'M12 5v14M5 12h14',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM20 20l-4-4',
+  cpu: 'M8 8h8v8H8zM4 10h2M4 14h2M18 10h2M18 14h2M10 4v2M14 4v2M10 18v2M14 18v2',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2',
+  globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18',
+  gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19 12l2 1-1.5 2.6-2.2-.4a7 7 0 0 1-1.6.9L15 18.5h-3l-.7-2.4a7 7 0 0 1-1.6-.9l-2.2.4L6 13l2-1a7 7 0 0 1 0-1.9L6 9l1.5-2.6 2.2.4a7 7 0 0 1 1.6-.9L12 4h3l.7 2.4a7 7 0 0 1 1.6.9l2.2-.4L21 9l-2 1.1a7 7 0 0 1 0 1.9Z',
+  book: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3ZM5 17a3 3 0 0 1 3-3h11',
+  spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8ZM19 17l.7 1.8 1.8.7-1.8.7L19 22l-.7-1.8-1.8-.7 1.8-.7Z',
+  sun: 'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4',
+  moon: 'M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z',
+  external: 'M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4',
+} as const
+
+export type IconName = keyof typeof PATHS
+
+export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+  return (
+    <svg className="icon" viewBox="0 0 24 24" width={size} height={size} aria-hidden="true">
+      <path d={PATHS[name]} />
+    </svg>
+  )
+}
