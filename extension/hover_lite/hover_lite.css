@@ -2912,3 +2912,36 @@
   .lite-tour-spot { transition: none; }
   .lite-tour-card { animation: none; }
 }
+
+/* ---- the agent picked here, and "Learn this page" ---- */
+
+.lite-agent-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; font-size: 12px; color: var(--fg-muted); }
+.lite-agent-select {
+  min-width: 0;
+  max-width: 70%;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--glass-1);
+  color: var(--fg-body);
+  font: 12.5px var(--font-body);
+  cursor: pointer;
+}
+.lite-agent-select:hover:not(:disabled) { border-color: var(--border-control); }
+.lite-agent-select:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+
+.lite-learn { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 14px; }
+.lite-learn-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.lite-learn-row small { font-size: 11px; line-height: 1.4; color: var(--fg-muted); }
+.lite-learn-status { margin: 0; font-size: 12px; line-height: 1.45; color: var(--fg-body); }
+.lite-learn-status:empty { display: none; }
+.lite-learn-status[data-ok="0"] { color: var(--fg-muted); }
+.lite-learn-grabs { display: grid; gap: 4px; margin: 2px 0 0; padding: 0; list-style: none; }
+.lite-learn-grabs li { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.4; }
+.lite-learn-grabs span { color: var(--fg-muted); }
+.lite-learn-grabs strong { min-width: 0; font-weight: 560; color: var(--fg); overflow-wrap: anywhere; text-align: right; }
+
+.lite-research label.lite-agent-row { display: flex; flex-direction: row; align-items: center; margin: 0 0 8px; }
+.lite-research .lite-agent-select { width: auto; min-width: 150px; }
+.lite-learn-row small:empty { display: none; }

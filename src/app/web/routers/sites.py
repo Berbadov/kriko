@@ -151,6 +151,67 @@ def site_seen(
     return {"host": host, "readable": False, "request": row}
 
 
+class LearnRequest(SeenRequest):
+    """The reader pressing "Learn this page" in the panel.
+
+    `agent` is the one the panel has picked: empty or `local` is this machine's
+    model, answered at once; anything else is that agent, which takes minutes
+    and so comes back as a job to follow.
+    """
+
+    agent: str = Field("", max_length=64)
+
+
+@router.post("/sites/learn")
+def learn_page(
+    body: LearnRequest, request: Request,
+    store=Depends(get_store), conn=Depends(get_app_state),
+) -> dict:
+    """Go through this page and learn what to take from it.
+
+    The extension's explore snapshot is the page: its labels and values, and the
+    structured data it publishes. The agent maps them onto what installed packs
+    know (`sites.check` and `sites.validate_sample` still decide whether to
+    keep it). The answer says what was taken and under which name, so the
+    reader sees what "learned" means instead of taking it on trust.
+    """
+    from app import pagetitle, prefs
+
+    host = sites.host_of(body.url)
+    if not host:
+        raise HTTPException(422, f"{body.url!r} has no hostname in it")
+    named = pagetitle.product_name(
+        str((body.product or {}).get("name") or "") or body.page_title or body.title, body.url)
+    agent = body.agent.strip()
+    if agent and agent != prefs.LOCAL_PICK:
+        sample = sites.sample(
+            url=body.url, title=body.page_title or body.title, fields=body.fields,
+            description=body.description, product=body.product)
+        state.record_site_request(conn, host=host, url=body.url, title=body.title, sample=sample)
+        job_id = request.app.state.jobs.submit(
+            "site_register",
+            {"host": host, "url": body.url, "harness": agent, "pack_id": "", "sample": sample})
+        state.set_site_request(conn, host, state="working", detail="")
+        return {"host": host, "mode": "agent", "agent": agent, "name": named,
+                "job_id": job_id, "kind": "site_register"}
+    lesson = siteinfer.learn(
+        store, conn, app_state_path=request.app.state.settings.app_state_path,
+        url=body.url, fields=body.fields, title=body.page_title or body.title,
+        description=body.description, product_name=str((body.product or {}).get("name") or ""),
+        timeout=siteinfer.PRESS_TIMEOUT)
+    read = lesson.get("read") or {}
+    return {
+        "host": host, "mode": "local", "name": named,
+        "learned": bool(lesson["learned"]), "reason": lesson["reason"],
+        "model": lesson.get("model", ""),
+        "adapter": (lesson.get("spec") or {}).get("id", ""),
+        # What the page gave and what it was taken as: the lesson, in the open.
+        "grabs": [{"as": str(key), "value": str(value)[:120], "kind": group}
+                  for group in ("identity", "context")
+                  for key, value in (read.get(group) or {}).items()],
+    }
+
+
 @router.post("/sites/{host}/register")
 def register_site(
     host: str, body: RegisterRequest, request: Request, conn=Depends(get_app_state)

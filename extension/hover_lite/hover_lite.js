@@ -111,6 +111,16 @@
     researchPlane: null,
     researchPlaneRequested: false,
     researchPlaneError: "",
+    // The agents this panel can use (`AGENTS`), the app's own pick, the one
+    // picked here ("" until the reader changes it), and "Learn this page":
+    // whether it is running, what it said while it ran, and what it taught.
+    agents: null,
+    agentsRequested: false,
+    agentChosen: "",
+    agentPick: "",
+    learning: false,
+    learnMessage: "",
+    lesson: null,
     researchOpen: false,
     researchTarget: null,
     researchName: "",
@@ -917,6 +927,161 @@
     });
   }
 
+  /* The agents the reader may use from here. The list is the app's (ready and
+   * runnable ones only); the pick is this panel's own and is remembered, so the
+   * reader can use one agent for lookups in the browser and another in the app
+   * without touching Settings. */
+  const AGENT_KEY = "kriko.panelAgent";
+
+  function requestAgents() {
+    if (state.agentsRequested) return;
+    state.agentsRequested = true;
+    const ask = () => chrome.runtime.sendMessage({ type: "AGENTS" }, (response) => {
+      if (chrome.runtime.lastError || !response || !response.ok) return;
+      state.agents = Array.isArray(response.agents) ? response.agents : [];
+      state.agentChosen = String(response.chosen || "");
+      if (state.agentPick && !state.agents.some((one) => one.id === state.agentPick)) state.agentPick = "";
+      renderResearch();
+    });
+    try {
+      chrome.storage?.local?.get?.([AGENT_KEY], (bag) => {
+        void chrome.runtime.lastError;
+        state.agentPick = typeof bag?.[AGENT_KEY] === "string" ? bag[AGENT_KEY] : "";
+        ask();
+      });
+    } catch (_) {
+      ask();
+    }
+  }
+
+  /* The agent a press would use: the one picked here, else the app's own. */
+  function currentAgent() {
+    const list = state.agents || [];
+    if (list.some((one) => one.id === state.agentPick)) return state.agentPick;
+    return list.some((one) => one.id === state.agentChosen) ? state.agentChosen : "";
+  }
+
+  function pickedAgent() {
+    return (state.agents || []).find((one) => one.id === currentAgent()) || null;
+  }
+
+  function agentRowMarkup(busy) {
+    const list = state.agents || [];
+    if (list.length < 2) return "";   // nothing to choose between
+    const now = currentAgent();
+    return `<label class="lite-agent-row"><span>Agent</span>
+      <select class="lite-agent-select" aria-label="Agent for this panel" ${busy || state.learning ? "disabled" : ""}>
+        ${list.map((one) => `<option value="${escapeHtml(one.id)}"${one.id === now ? " selected" : ""}>${escapeHtml(one.label)}</option>`).join("")}
+      </select></label>`;
+  }
+
+  /* What the card's head does not already say: the cost is there, the wait is not. */
+  function learnWaitWords() {
+    return pickedAgent()?.kind === "cli" ? "Takes a few minutes." : "";
+  }
+
+  function lessonWords(lesson) {
+    if (!lesson) return "";
+    if (!lesson.learned) return lesson.reason || "Nothing was learned from this page.";
+    const count = Array.isArray(lesson.grabs) ? lesson.grabs.length : 0;
+    const site = lesson.host || "this site";
+    return count
+      ? `Learned ${site}. It takes ${count} thing${count === 1 ? "" : "s"} from this page:`
+      : `Learned ${site}.`;
+  }
+
+  function learnMarkup() {
+    const lesson = state.lesson;
+    const grabs = lesson?.learned && Array.isArray(lesson.grabs) ? lesson.grabs : [];
+    return `<div class="lite-learn">
+      <div class="lite-learn-row">
+        <button type="button" class="lite-learn-btn" ${state.learning ? "disabled" : ""}
+          title="An agent goes through this page and learns what to take from it">${
+          state.learning ? "Learning…" : lesson?.learned ? "Learn again" : "Learn this page"}</button>
+        <small>${escapeHtml(learnWaitWords())}</small>
+      </div>
+      <p class="lite-learn-status" role="status"></p>
+      ${grabs.length ? `<ul class="lite-learn-grabs">${grabs.map((one) =>
+        `<li><span>${escapeHtml(one.as)}</span><strong>${escapeHtml(one.value)}</strong></li>`).join("")}</ul>` : ""}
+    </div>`;
+  }
+
+  function paintLearn(slot) {
+    const line = slot.querySelector(".lite-learn-status");
+    if (!line) return;
+    line.textContent = state.learning ? state.learnMessage : lessonWords(state.lesson);
+    line.dataset.ok = state.lesson?.learned && !state.learning ? "1" : "0";
+  }
+
+  /* Learn this page. The app's local model answers at once; another agent is a
+   * job, followed here like a research run. Either way the page itself is read
+   * in this tab, because it is already rendered and past the site's bot check. */
+  function learnPage() {
+    if (state.learning) return;
+    state.learning = true;
+    state.lesson = null;
+    state.learnMessage = "Reading this page…";
+    state.learnStartedAt = Date.now();
+    renderResearch();
+    chrome.runtime.sendMessage({ type: "LEARN_PAGE", payload: { agent: currentAgent() } }, (response) => {
+      if (chrome.runtime.lastError || !response?.ok) {
+        finishLearn({ learned: false, reason: response?.error || "Could not reach Kriko. Open the app and try again." });
+        return;
+      }
+      const lesson = response.lesson || {};
+      if (lesson.mode === "agent" && lesson.job_id) {
+        state.learnMessage = "Your agent is reading the page…";
+        renderResearch();
+        pollLearnJob(lesson);
+        return;
+      }
+      finishLearn(lesson);
+    });
+  }
+
+  function pollLearnJob(lesson) {
+    chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: lesson.job_id } }, (response) => {
+      if (!state.learning) return;
+      if (chrome.runtime.lastError || !response?.ok || !response.job) {
+        state.learnMessage = "Cannot check progress. Open the app to follow it.";
+        renderResearch();
+        setTimeout(() => pollLearnJob(lesson), 3000);
+        return;
+      }
+      const job = response.job;
+      const done = job.done || ["succeeded", "cancelled", "failed", "interrupted"].includes(job.state);
+      if (!done) {
+        state.learnMessage = `${job.message || "Reading the page"} · ${elapsedWords(state.learnStartedAt)}`;
+        paintLearn(bodyEl);
+        setTimeout(() => pollLearnJob(lesson), 1500);
+        return;
+      }
+      const learned = job.state === "succeeded";
+      finishLearn({
+        ...lesson, learned, grabs: [],
+        reason: learned ? "" : (job.error || job.message || `Learning ${job.state}.`),
+      });
+    });
+  }
+
+  function finishLearn(lesson) {
+    state.learning = false;
+    state.lesson = lesson;
+    // The title the page gave is a search page's title; the name the lesson
+    // found is the product. Swapped in only while the name box still holds the
+    // title, never over something the reader typed.
+    const name = String(lesson.name || "").trim();
+    const held = String(state.researchName || "").trim().toLowerCase();
+    if (name && !state.researching && !state.researchTarget
+        && (!held || held === String(document.title || "").trim().toLowerCase()
+          || held.startsWith(name.toLowerCase()))) {
+      state.researchName = name;
+    }
+    renderResearch();
+    // A page that is readable now may have a product Kriko knows.
+    if (lesson.learned) knowledgeMoved();
+  }
+
   /* Write the cap onto a follow-up slot that is already on screen. */
   function refreshFollowupCap() {
     const slot = bodyEl?.querySelector(".lite-followup-slot");
@@ -936,6 +1101,13 @@
   function costLine() {
     const plane = state.researchPlane;
     if (!plane) return "";
+    const picked = pickedAgent();
+    if (picked?.kind === "local") return "Free; runs on this computer.";
+    if (picked?.kind === "cli") return "Free; runs through your coding agent.";
+    if (picked?.kind === "api") {
+      const cap = Number(plane.budget_usd || 0);
+      return cap > 0 ? `Capped at $${cap.toFixed(2)} of your API keys.` : "Billed to your API keys.";
+    }
     if (plane.backend === "api" || plane.cost_basis === "per_token") {
       const cap = Number(plane.budget_usd || 0);
       return cap > 0
@@ -958,8 +1130,10 @@
       return;
     }
     state.researchTarget = subject?.subject_id ? subject : null;
+    // A page's `<title>` is a search results page's: the shop rides along. The
+    // part before the first bar is the product; the engine takes off the rest.
     const nextName = subject?.label || state.searchQuery || state.listingMeta?.identity_line
-      || state.listingMeta?.title || document.title || "";
+      || state.listingMeta?.title || String(document.title || "").split(" | ")[0] || "";
     if (nextName !== state.researchName) {
       state.researchQuick = null;
       state.researchQuickJob = null;
@@ -976,6 +1150,7 @@
     state.researchState = "";
     state.researchMessage = "";
     requestResearchPlane();
+    requestAgents();
     renderResearch();
   }
 
@@ -1007,6 +1182,7 @@
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
       ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
+      ...(state.agentPick && currentAgent() === state.agentPick ? { harness: state.agentPick } : {}),
       ...(cap > 0 ? { cap } : {}),
     } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
@@ -1248,6 +1424,7 @@
           <strong>Research</strong>
           <span class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking costs…")}</span>
         </div>
+        ${agentRowMarkup(busy)}
         ${target ? `<p class="lite-research-target">${escapeHtml(target.label || target.subject_id)}</p>` : `
           <input class="lite-research-name" maxlength="350" placeholder="Product name" aria-label="Product name" ${busy ? "disabled" : ""} />
           <div class="lite-fold"><div class="lite-fold-in">
@@ -1299,6 +1476,7 @@
             ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
           </fieldset>`).join("")}
         </div>` : ""}
+        ${learnMarkup()}
         <div class="lite-research-actions">
           ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Refresh Quick Look" : "Research this product"}</button>` : ""}
           ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
@@ -1313,6 +1491,7 @@
     const signature = markup + JSON.stringify(state.researchQuick)
       + JSON.stringify(state.researchEmpty);
     if (slot._researchMarkup === signature) {
+      paintLearn(slot);
       renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
       slot.querySelector(".lite-research-status").textContent = state.researchMessage;
@@ -1349,6 +1528,13 @@
       setFold(Boolean(state.researchContext) || Boolean(state.researchContextOpen), false);
       foldToggle.addEventListener("click", () => setFold(fold.dataset.open !== "1", true));
     }
+    paintLearn(slot);
+    slot.querySelector(".lite-learn-btn")?.addEventListener("click", learnPage);
+    slot.querySelector(".lite-agent-select")?.addEventListener("change", (event) => {
+      state.agentPick = event.target.value;
+      try { chrome.storage?.local?.set?.({ [AGENT_KEY]: state.agentPick }, () => void chrome.runtime.lastError); } catch (_) {}
+      renderResearch();
+    });
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;

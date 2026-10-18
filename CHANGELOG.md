@@ -3,6 +3,21 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.2.1
+
+- **Learn this page.** The research card in the extension panel has a button
+  that goes through the page you are on and learns what to take from it. It
+  shows what it took and what each thing was taken as. The model on this
+  computer answers at once. Another agent runs as a job the panel follows.
+- **Pick the agent in the panel.** The research card lists the agents that
+  are ready, starts on the one the app uses, and remembers your pick. It
+  names the cost before you press anything.
+- **A research search starts from the product, not the page title.** A title
+  such as "Samsung Galaxy A54 256 GB Beyaz Fiyatları, Özellikleri ve
+  Yorumları | En Ucuzu Akakçe" was searched whole, so the searches found the
+  shop and its ranking words instead of the phone. The shop name and the
+  words a shop adds to rank are taken off before any search is made.
+
 ### 0.2.0
 
 - **The desktop app is new.** It is built on Tauri now, with a blue look, a
