@@ -84,6 +84,36 @@ until a local search service is available. A small model can miss a detailed
 specification. The **Benchmark** screen measures your models on fixed cases.
 These measurements are not a guarantee.
 
+### Use vLLM on Windows
+
+Kriko discovers vLLM at `http://127.0.0.1:8000` and uses its OpenAI-compatible
+`/v1/chat/completions` API. Set the endpoint in **Local LLM**, select a model
+from the server's model list, and save. Kriko does not control vLLM's loader or
+report its GPU use; choose GPU settings and context when starting vLLM. vLLM's
+official installation guide says Windows is not supported natively, so run it
+in WSL 2. WSL localhost forwarding usually makes the default endpoint available
+to Kriko at `127.0.0.1:8000`.
+
+In the WSL Linux shell, install vLLM in a fresh environment as described by its
+[official GPU installation guide](https://docs.vllm.ai/en/stable/getting_started/installation/gpu/):
+
+```bash
+uv venv --python 3.12 --seed --managed-python
+source .venv/bin/activate
+uv pip install vllm --torch-backend=cu130
+vllm serve Qwen/Qwen3-8B --host 127.0.0.1 --port 8000
+```
+
+Replace the example with a supported model that fits your GPU; the official
+guide currently lists NVIDIA GPUs with compute capability 7.5 or newer. vLLM's
+current guide also documents `--torch-backend=auto` and release-specific CUDA 13.0
+wheels. CUDA 13 requires an NVIDIA driver from the R580 family or newer; check
+the [CUDA 13 release notes](https://docs.nvidia.com/cuda/archive/13.0.0/cuda-toolkit-release-notes/)
+and install the current Windows NVIDIA driver for WSL. The CUDA version shown
+by `nvidia-smi` is the maximum supported by the driver, not the toolkit version
+that must be separately installed in WSL. Keep the server bound to loopback;
+Kriko does not currently send a vLLM API key.
+
 ## 5. Check a listing
 
 1. Open a listing in your browser.

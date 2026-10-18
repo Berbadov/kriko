@@ -1,0 +1,160 @@
+import { useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { usePrefs } from '../prefs'
+import { Icon } from '../ui/Icon'
+import { PixelGlyph } from '../ui/PixelGlyph'
+import { Elapsed, Fold, Shimmer, WordStream, formatSeconds } from '../ui/text'
+import type { Row, Run } from './run'
+
+/** The live record of one run. It opens while work runs and folds when the run
+ *  ends. The reader can open or fold any part. A choice the reader makes stays. */
+
+function useOpen(auto: boolean) {
+  const [chosen, setChosen] = useState<boolean | null>(null)
+  return [chosen ?? auto, () => setChosen(!(chosen ?? auto))] as const
+}
+
+export function Timeline({ run }: { run: Run }) {
+  const running = run.status === 'running'
+  const [open, toggle] = useOpen(running)
+  const label = running ? 'Research' : run.status === 'done' ? 'Done' : run.status === 'failed' ? 'Failed' : 'Stopped'
+  const total = (run.endedAt ?? run.startedAt) - run.startedAt
+
+  return (
+    <section className="timeline" aria-label="Research activity">
+      <button className="tl-head" onClick={toggle} aria-expanded={open}>
+        <PixelGlyph size={16} active={running} />
+        <span className="tl-label">
+          <Shimmer active={running}>{label}</Shimmer>
+        </span>
+        <span className="tl-time">
+          <Elapsed since={run.startedAt} running={running} final={total} />
+        </span>
+        <span className="tl-chev" data-open={open}>
+          <Icon name="chevron" size={16} />
+        </span>
+      </button>
+      <Fold open={open}>
+        <div className="tl-body">
+          <AnimatePresence initial={false}>
+            {run.rows.map((row) => (
+              <RowView key={row.id} row={row} />
+            ))}
+          </AnimatePresence>
+        </div>
+      </Fold>
+    </section>
+  )
+}
+
+function RowView({ row }: { row: Row }) {
+  const { motion: m } = usePrefs()
+  return (
+    <motion.div
+      className="tl-row"
+      initial={{ opacity: 0, y: m.d(8) }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={m.tx.soft}
+    >
+      {row.kind === 'thought' && <Thought row={row} />}
+      {row.kind === 'tool' && <Tool row={row} />}
+      {row.kind === 'plan' && <Plan row={row} />}
+    </motion.div>
+  )
+}
+
+function Thought({ row }: { row: Extract<Row, { kind: 'thought' }> }) {
+  const [open, toggle] = useOpen(!row.done)
+  return (
+    <div className="thought">
+      <button className="row-head" onClick={toggle} aria-expanded={open}>
+        <Icon name="spark" size={15} />
+        <span>Thoughts</span>
+        <span className="tl-chev" data-open={open}>
+          <Icon name="chevron" size={14} />
+        </span>
+      </button>
+      <Fold open={open}>
+        <p className="thought-text">
+          <WordStream text={row.text} live={!row.done} />
+        </p>
+      </Fold>
+    </div>
+  )
+}
+
+function Tool({ row }: { row: Extract<Row, { kind: 'tool' }> }) {
+  const running = row.ms === undefined
+  return (
+    <div className="tool">
+      <span className="tool-dot" data-running={running} data-failed={row.failed}>
+        {running ? <PixelGlyph size={14} /> : <Icon name={row.failed ? 'x' : 'check'} size={14} />}
+      </span>
+      <span className="tool-name">{row.name}</span>
+      <span className="tool-detail">{row.detail}</span>
+      <span className="tool-time mono">
+        {running ? <Elapsed since={row.startedAt} running /> : formatSeconds((row.ms ?? 0) / 1000)}
+      </span>
+    </div>
+  )
+}
+
+function Plan({ row }: { row: Extract<Row, { kind: 'plan' }> }) {
+  const { motion: m } = usePrefs()
+  return (
+    <div className="plan">
+      <div className="row-head static">
+        <Icon name="queue" size={15} />
+        <span>Plan · {row.steps.length} steps</span>
+      </div>
+      <ul>
+        {row.steps.map((step) => (
+          <li key={step.label} data-state={step.state}>
+            <span className="plan-mark">
+              <AnimatePresence initial={false}>
+                {step.state === 'done' && (
+                  <motion.span
+                    key="check"
+                    initial={{ scale: m.on ? 0.4 : 1, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={m.tx.spring}
+                  >
+                    <Icon name="check" size={12} />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              {step.state === 'active' && <PixelGlyph size={12} />}
+            </span>
+            <span>{step.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** The floating pill that names the step in progress. */
+export function StepPill({ run }: { run: Run }) {
+  const { motion: m } = usePrefs()
+  const plan = run.rows.find((r) => r.kind === 'plan')
+  const total = plan?.kind === 'plan' ? plan.steps.length : 0
+  const show = run.status === 'running' && total > 0
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          className="step-pill"
+          initial={{ opacity: 0, y: m.d(10), scale: m.on ? 0.96 : 1 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: m.d(6) }}
+          transition={m.tx.spring}
+        >
+          <PixelGlyph size={14} />
+          <span>
+            Step {run.step + 1} of {total}
+          </span>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}

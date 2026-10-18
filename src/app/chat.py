@@ -555,7 +555,8 @@ def products_from(trail: Sequence[dict], sources: Sequence[str] = ()) -> list[di
                 subject_id = str(row.get("subject_id") or "").strip()
                 if not subject_id or subject_id in found:
                     continue
-                identity = row.get("identity") if isinstance(row.get("identity"), dict) else {}
+                found_identity = row.get("identity")
+                identity: dict = found_identity if isinstance(found_identity, dict) else {}
                 found[subject_id] = {
                     "subject_id": subject_id,
                     "pack_id": str(row.get("pack_id") or ""),
@@ -680,7 +681,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         # none behaves exactly as it did.
         catalogue: dict | None = None
         if _packs_installed(ctx.store):
-            catalogue_call = {"source": "product_match", "args": {"query": query}}
+            catalogue_call: dict = {"source": "product_match", "args": {"query": query}}
             catalogue_step = _step(len(steps) + 1, catalogue_call)
             steps.append(catalogue_step)
             hooks.set(0.55, "checking the catalogue")

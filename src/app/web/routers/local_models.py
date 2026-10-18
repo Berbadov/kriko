@@ -9,7 +9,7 @@ refusal that says where to get a model instead of a button that cannot work.
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
-from app import modelpull
+from app import hfstore, modelpull
 from app.web.deps import get_jobs
 
 router = APIRouter(prefix="/api", tags=["local-models"])
@@ -104,3 +104,33 @@ def remove_model(body: PullRequest, request: Request) -> dict:
 def start_ollama(runner=Depends(get_jobs)) -> dict:
     job_id = runner.submit("ollama_start", {})
     return {"job_id": job_id, "kind": "ollama_start"}
+
+
+@router.get("/hf-models")
+def hf_models(
+    q: str = "",
+    sort: str = "downloads",
+    min_b: float | None = None,
+    max_b: float | None = None,
+    licence: str = "",
+    limit: int = 24,
+) -> dict:
+    """Hugging Face repositories that Ollama can pull, found with the reader's filters.
+
+    Read from the web only when the reader asks. Nothing is downloaded here.
+    """
+    try:
+        return {"items": hfstore.search(q, sort=sort, min_b=min_b, max_b=max_b, licence=licence, limit=limit)}
+    except RuntimeError as error:
+        raise HTTPException(502, str(error)) from error
+
+
+@router.get("/hf-models/files")
+def hf_model_files(repo: str) -> dict:
+    """The quantisations of one repository and their sizes, to choose one to pull."""
+    if not hfstore.valid_repo(repo):
+        raise HTTPException(422, "That is not a Hugging Face repository name.")
+    try:
+        return {"repo": repo, "items": hfstore.files(repo)}
+    except RuntimeError as error:
+        raise HTTPException(502, str(error)) from error

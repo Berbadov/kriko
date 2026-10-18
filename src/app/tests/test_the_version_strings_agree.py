@@ -1,8 +1,8 @@
 """One release, one number, in the places nothing links together.
 
-The version lives in `pyproject.toml`, `kriko-gpui/Cargo.toml` and the
-`kriko-gpui` entry of `kriko-gpui/Cargo.lock`, and `python tools/bump.py
-<version>` sets all three. Cargo and setuptools each read their own file, so
+The version lives in `pyproject.toml`, `kriko-ui/src-tauri/Cargo.toml`, the
+`kriko` entry of `kriko-ui/src-tauri/Cargo.lock` and `kriko-ui/package.json`,
+and `python tools/bump.py <version>` sets all four. Cargo and setuptools each read their own file, so
 nothing in the toolchain notices a disagreement: it surfaces as an installer
 whose name is one version and whose contents are another. The fourth place is
 the installed distribution `/api/health` reports, checked last.
@@ -12,18 +12,19 @@ itself its own update forever; it makes the About page and the installer name
 lie, which is the same defect with a quieter symptom.
 """
 
+import json
 import re
 import tomllib
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
-CRATE = REPO / "kriko-gpui"
+CRATE = REPO / "kriko-ui" / "src-tauri"
 
 
 def _locked_version() -> str:
     text = (CRATE / "Cargo.lock").read_text(encoding="utf-8")
-    found = re.search(r'name = "kriko-gpui"\r?\nversion = "([^"]+)"', text)
-    assert found, "Cargo.lock has no kriko-gpui entry"
+    found = re.search(r'name = "kriko"\r?\nversion = "([^"]+)"', text)
+    assert found, "Cargo.lock has no kriko entry"
     return found.group(1)
 
 
@@ -32,10 +33,13 @@ def test_the_version_strings_agree():
         "pyproject.toml": tomllib.loads(
             (REPO / "pyproject.toml").read_text(encoding="utf-8")
         )["project"]["version"],
-        "kriko-gpui/Cargo.toml": tomllib.loads(
+        "kriko-ui/src-tauri/Cargo.toml": tomllib.loads(
             (CRATE / "Cargo.toml").read_text(encoding="utf-8")
         )["package"]["version"],
-        "kriko-gpui/Cargo.lock": _locked_version(),
+        "kriko-ui/src-tauri/Cargo.lock": _locked_version(),
+        "kriko-ui/package.json": json.loads(
+            (REPO / "kriko-ui" / "package.json").read_text(encoding="utf-8")
+        )["version"],
     }
     assert len(set(declared.values())) == 1, (
         f"the version differs between files: {declared}. "
@@ -54,8 +58,9 @@ def test_the_bump_tool_covers_exactly_these_files():
 
     assert {str(p).replace("\\", "/") for p, _ in bump.PLACES} == {
         "pyproject.toml",
-        "kriko-gpui/Cargo.toml",
-        "kriko-gpui/Cargo.lock",
+        "kriko-ui/src-tauri/Cargo.toml",
+        "kriko-ui/package.json",
+        "kriko-ui/src-tauri/Cargo.lock",
     }
     for path, pattern in bump.PLACES:
         assert pattern.search((REPO / path).read_text(encoding="utf-8")), path

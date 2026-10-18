@@ -9,7 +9,11 @@ import json
 from pathlib import Path
 
 SET_ID = "kriko-configuration"
-SET_VERSION = "2026.10.10"
+#: Bumped whenever a case changes, because a measurement is only comparable with
+#: another one taken on the same version. 2026.10.18: `car-market` gained the
+#: "timing belt" alias for its `timing drive` specification — found by the model
+#: benchmark, which recorded a correct answer as a wrong specification without it.
+SET_VERSION = "2026.10.18"
 
 
 def generate() -> dict:
@@ -64,6 +68,14 @@ def generate() -> dict:
         "does not apply to EU. " + quote,
         [("pump-leak", quote, [["pump"], ["leak", "seep"]])],
         [("timing drive", "belt")], dimension="market")
+    # "timing belt" is the same answer as "belt" under a different name, and
+    # scoring it wrong measures a model's wording instead of its reading — the
+    # failure an alias exists to prevent, and the reason the case above it
+    # carries one too. The model benchmark found this: GLM-5.3 returned
+    # "timing belt" on both repetitions and was recorded as a wrong
+    # specification for it, which understated the model and overstated the
+    # key's authority.
+    cases[-1]["expected_specs"][0]["aliases"] = ["timing belt"]
 
     add("car-year-outside", "Fictional Meridian car 2021 gearbox GX-07A",
         "Synthetic service notice. GX-07A cooler seal leakage affects build "
