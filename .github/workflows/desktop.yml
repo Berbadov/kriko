@@ -13,12 +13,14 @@ name: desktop
 # ever report a false failure trains everyone to ignore a red desktop build,
 # which is the state you least want to be in on the day one is real.
 #
-# The Windows bundle job and `kriko-gpui/package.ps1` are the same recipe, step
+# The Windows bundle job and `kriko-ui/package.ps1` are the same recipe, step
 # for step: one is run by a runner, the other by hand on Windows, and
-# `test_the_installer_can_be_built_by_hand.py` holds them to it. The separate
-# macOS jobs call `kriko-gpui/package-macos.sh`, the native per-architecture
-# recipe used by hand as well. The smoke steps are the checks that would have
-# caught v0.2.4: CLAUDE.md's app-first rule 3.
+# `test_the_installer_can_be_built_by_hand.py` holds them to it. The smoke steps
+# are the checks that would have caught v0.2.4: CLAUDE.md's app-first rule 3.
+#
+# There is no macOS job. The desktop app is Tauri now, which can build a macOS
+# bundle, but that recipe is not written or run yet, and a job that nobody has
+# seen go green is not a release step.
 on:
     workflow_dispatch:
 
@@ -54,6 +56,12 @@ jobs:
                   # the one the suite actually ran on.
                   python-version: "3.13"
 
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+                  cache: npm
+                  cache-dependency-path: kriko-ui/package-lock.json
+
             - uses: dtolnay/rust-toolchain@stable
 
             # The lock is the pin, and this is what makes it one. Cargo already
@@ -65,9 +73,9 @@ jobs:
             - name: The app's crate graph is the one that was committed
               shell: bash
               run: cargo metadata --locked --format-version 1 > /dev/null
-              working-directory: kriko-gpui
+              working-directory: kriko-ui/src-tauri
 
-            # The three committed version strings agree, and the tag (when
+            # The four committed version strings agree, and the tag (when
             # there is one) is the tree. The installer's name and contents both
             # come from the tree, so a tag that is not the tree is a lie.
             - name: The version is the tree's
@@ -89,11 +97,13 @@ jobs:
                   # rather than part of the closure, so it is not locked.
                   pip install -r requirements.lock -e "." pyinstaller
 
+            # Tauri takes the two other programs as external binaries, named
+            # with the target triple. They land beside kriko.exe.
             - name: Fetch the pinned OpenSERP release
               shell: pwsh
               run: |
-                  ./packaging/fetch_openserp.ps1 -Destination kriko-gpui/target/release/OpenSERP.exe
-                  Copy-Item kriko-gpui/third-party/OpenSERP-LICENSE.txt kriko-gpui/target/release/OpenSERP-LICENSE.txt -Force
+                  New-Item -ItemType Directory -Force kriko-ui/src-tauri/binaries | Out-Null
+                  ./packaging/fetch_openserp.ps1 -Destination kriko-ui/src-tauri/binaries/OpenSERP-x86_64-pc-windows-msvc.exe
 
             - name: Freeze the sidecar
               run: pyinstaller --noconfirm packaging/kriko-sidecar.spec
@@ -103,24 +113,22 @@ jobs:
             - name: The frozen sidecar answers
               run: python packaging/smoke_sidecar.py "dist/kriko-sidecar.exe"
 
-            - name: Build the app
-              run: cargo build --release --locked
-              working-directory: kriko-gpui
-
-            # Beside kriko.exe: where the app looks for its engine, and where
-            # main.wxs picks both programs up.
             - name: Place the sidecar
-              run: cp dist/kriko-sidecar.exe kriko-gpui/target/release/kriko-sidecar.exe
+              run: cp dist/kriko-sidecar.exe kriko-ui/src-tauri/binaries/kriko-sidecar-x86_64-pc-windows-msvc.exe
 
-            # The per-user MSI. WiX 3 is on the runner image (the WIX
-            # environment variable points at it); cargo-wix drives it.
-            - name: The MSI
-              working-directory: kriko-gpui
+            - name: Install the web interface's packages
+              run: npm ci
+              working-directory: kriko-ui
+
+            # The web build, `cargo build --release --locked` and the per-user
+            # NSIS installer, in one command. The bundle config is separate
+            # because it names files that only exist after the steps above.
+            - name: Build the app and the installer
+              working-directory: kriko-ui
               run: |
-                  cargo install cargo-wix --locked
+                  npx --no-install tauri build --config src-tauri/tauri.bundle.conf.json -- --locked
                   mkdir -p builds
-                  out="$(pwd -W)/builds/kriko-$VERSION-x86_64.msi"
-                  cargo wix --no-build --nocapture --bin-path "$WIX/bin" --output "$out"
+                  cp "src-tauri/target/release/bundle/nsis/Kriko_${VERSION}_x64-setup.exe" "builds/kriko-$VERSION-x86_64-setup.exe"
                   ls -l builds
 
             # The installer building is not the app starting. v0.2.4 built
@@ -128,44 +136,35 @@ jobs:
             # nowhere to be seen but a stderr no double-click has. So the app
             # is launched here, held, and asked whether it is still up.
             - name: The app opens
-              run: python packaging/smoke_app.py kriko-gpui/target/release/kriko.exe
+              run: python packaging/smoke_app.py kriko-ui/src-tauri/target/release/kriko.exe
 
-            # What a reader on Windows gets: the MSI installed without a
-            # prompt, every screen of the installed app drawn by real DirectX
-            # and photographed at the default size and at the 940x640
-            # minimum, then the MSI removed again.
-            - name: The installed app, looked at
-              run: python packaging/windows_look.py "kriko-gpui/builds/kriko-$VERSION-x86_64.msi" windows-look
-
-            - uses: actions/upload-artifact@v4
-              if: always()
-              with:
-                  name: kriko-windows-look
-                  path: windows-look/
-                  if-no-files-found: warn
+            # What a reader on Windows gets: the installer run without a
+            # prompt, the folder it wrote looked at, then the uninstaller run.
+            - name: The installer installs and removes
+              run: python packaging/smoke_installer.py "kriko-ui/builds/kriko-$VERSION-x86_64-setup.exe"
 
             - name: The portable zip
               shell: pwsh
               run: |
-                  $bin = "kriko-gpui/target/release"
+                  $bin = "kriko-ui/src-tauri/target/release"
                   Compress-Archive -Path "$bin/kriko.exe", "$bin/kriko-sidecar.exe", `
-                      "$bin/OpenSERP.exe", "$bin/OpenSERP-LICENSE.txt" `
-                      -DestinationPath "kriko-gpui/builds/kriko-$env:VERSION-win64-portable.zip" -Force
-                  $files = @("kriko-gpui/builds/kriko-$env:VERSION-x86_64.msi", "kriko-gpui/builds/kriko-$env:VERSION-win64-portable.zip")
+                      "$bin/OpenSERP.exe", "kriko-ui/src-tauri/third-party/OpenSERP-LICENSE.txt" `
+                      -DestinationPath "kriko-ui/builds/kriko-$env:VERSION-win64-portable.zip" -Force
+                  $files = @("kriko-ui/builds/kriko-$env:VERSION-x86_64-setup.exe", "kriko-ui/builds/kriko-$env:VERSION-win64-portable.zip")
                   $lines = foreach ($file in $files) {
                       $item = Get-Item -LiteralPath $file
                       $digest = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
                       "$digest  $($item.Name)"
                   }
-                  $lines | Set-Content -LiteralPath "kriko-gpui/builds/SHA256SUMS.txt" -Encoding Ascii
+                  $lines | Set-Content -LiteralPath "kriko-ui/builds/SHA256SUMS.txt" -Encoding Ascii
 
             - uses: actions/upload-artifact@v4
               with:
                   name: kriko-windows
                   path: |
-                      kriko-gpui/builds/*.msi
-                      kriko-gpui/builds/*.zip
-                      kriko-gpui/builds/SHA256SUMS.txt
+                      kriko-ui/builds/*-setup.exe
+                      kriko-ui/builds/*.zip
+                      kriko-ui/builds/SHA256SUMS.txt
                   if-no-files-found: error
 
     # The knowledge, built once and published beside the installers. Packs are
@@ -211,49 +210,13 @@ jobs:
                   path: release/*
                   if-no-files-found: error
 
-    # GPUI, PyInstaller and OpenSERP are each built for the runner's native
-    # architecture. Keeping these jobs separate prevents a Rosetta process or
-    # a stale sidecar from producing a mixed-architecture application bundle.
-    # The package script is also the documented hand-build recipe.
-    macos:
-        name: macos-${{ matrix.arch }}
-        strategy:
-            fail-fast: false
-            matrix:
-                include:
-                    - runner: macos-15
-                      arch: arm64
-                    - runner: macos-15-intel
-                      arch: x86_64
-        runs-on: ${{ matrix.runner }}
-        steps:
-            - uses: actions/checkout@v4
-
-            - uses: actions/setup-python@v5
-              with:
-                  python-version: "3.13"
-
-            - uses: dtolnay/rust-toolchain@stable
-
-            - name: Build and smoke-check the native app bundle
-              run: kriko-gpui/package-macos.sh "${{ matrix.arch }}"
-
-            - uses: actions/upload-artifact@v4
-              with:
-                  name: kriko-macos-${{ matrix.arch }}
-                  path: |
-                      kriko-gpui/builds/*.dmg
-                      kriko-gpui/builds/*-macos-${{ matrix.arch }}-portable.zip
-                      kriko-gpui/builds/SHA256SUMS-${{ matrix.arch }}.txt
-                  if-no-files-found: error
-
     # A run's artifacts expire and need a GitHub login to fetch. A release is a
     # permanent URL anyone with the repo can click, which is the difference
     # between "CI produced a binary" and "the app is downloadable". Tags only:
     # a release per pull request would be noise.
     release:
         name: release
-        needs: [bundle, packs, macos]
+        needs: [bundle, packs]
         if: startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
         permissions:
@@ -277,33 +240,24 @@ jobs:
                   path: artifacts
 
             # Keep the Windows checksum file at the release root: the in-app
-            # updater uses it to verify the MSI. Per-architecture manifests
-            # cover the Mac artifacts, and a separate aggregate covers every
-            # asset without shadowing the updater's manifest.
+            # updater uses it to verify the installer. A separate aggregate covers
+            # every asset without shadowing the updater's manifest.
             - name: Collect and verify every release artifact
               run: |
                   mkdir -p release
-                  cp "artifacts/kriko-windows/kriko-$VERSION-x86_64.msi" release/
+                  cp "artifacts/kriko-windows/kriko-$VERSION-x86_64-setup.exe" release/
                   cp "artifacts/kriko-windows/kriko-$VERSION-win64-portable.zip" release/
                   cp artifacts/kriko-windows/SHA256SUMS.txt release/
-                  for arch in arm64 x86_64; do
-                      cp "artifacts/kriko-macos-$arch/kriko-$VERSION-macos-$arch.dmg" release/
-                      cp "artifacts/kriko-macos-$arch/kriko-$VERSION-macos-$arch-portable.zip" release/
-                      cp "artifacts/kriko-macos-$arch/SHA256SUMS-$arch.txt" release/
-                  done
                   cp artifacts/kriko-packs/packs.json release/
                   find artifacts/kriko-packs -maxdepth 1 -type f -name '*.kpack' -exec cp {} release/ \;
 
-                  test -s "release/kriko-$VERSION-x86_64.msi"
+                  test -s "release/kriko-$VERSION-x86_64-setup.exe"
                   test -s "release/kriko-$VERSION-win64-portable.zip"
                   test -s release/packs.json
                   test -n "$(find release -maxdepth 1 -type f -name '*.kpack' -print -quit)"
                   (
                       cd release
                       sha256sum --check SHA256SUMS.txt
-                      for arch in arm64 x86_64; do
-                          shasum --check "SHA256SUMS-$arch.txt"
-                      done
                   )
                   python - "$VERSION" "$GITHUB_REPOSITORY" "$GITHUB_REF_NAME" <<'PY'
                   import json
@@ -325,7 +279,7 @@ jobs:
                   print(f"Verified {len(packs)} packs for Kriko {version} ({tag})")
                   PY
                   # This aggregate supplements (and must not replace) the
-                  # root SHA256SUMS.txt used by the Windows MSI updater.
+                  # root SHA256SUMS.txt used by the Windows installer updater.
                   (
                       cd release
                       find . -maxdepth 1 -type f ! -name 'SHA256SUMS-ALL.txt' -printf '%f\0' \
@@ -365,20 +319,10 @@ jobs:
                       Built from source commit `${{ github.sha }}`.
 
                       These desktop builds are unsigned and not notarized.
-                      Windows SmartScreen may warn before running the MSI. On
-                      macOS, Control-click Kriko.app and choose Open if Gatekeeper
-                      blocks the first launch.
+                      Windows SmartScreen may warn before running the installer.
 
-                      macOS disk images and portable app bundles are built for
-                      both Apple Silicon (arm64) and Intel (x86_64). The two
-                      architectures are built natively and carry separate
-                      SHA256SUMS files.
-
-                      The MSI installs for the current user under
-                      %LOCALAPPDATA%\Programs\Kriko and needs no administrator
-                      prompt. Kriko's in-app desktop updater currently installs
-                      Windows MSI releases; on macOS, download the new DMG and
-                      replace Kriko.app in Applications. Installed packs still
+                      The installer is for Windows and installs for the current
+                      user. It needs no administrator prompt. Installed packs
                       update themselves weekly.
 
                       Kriko keeps everything in `~/.kriko`: `knowledge.sqlite`

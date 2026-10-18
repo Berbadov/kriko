@@ -43,10 +43,10 @@ def end(process: subprocess.Popen, *, timeout: float = 15) -> None:
 
     because the *previous* run's smoke test had left one behind. The desktop
     shell has tree-killed since v0.2.x for exactly this reason (today
-    `kriko-gpui/src/engine.rs`);
+    `kriko-ui/src-tauri/src/engine.rs`);
     these smoke tests did not, and on a CI runner that is deleted afterwards
     nobody ever noticed. The moment the build ran twice on one machine -- which
-    is the whole point of `kriko-gpui/package.ps1` -- it mattered.
+    is the whole point of `kriko-ui/package.ps1` -- it mattered.
 
     By pid rather than by image name: `taskkill /IM kriko-sidecar.exe` would
     also kill an installed Kriko the person at the keyboard is using.

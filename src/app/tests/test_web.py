@@ -161,7 +161,7 @@ def client(tmp_path):
 
 def test_root_identifies_the_service(client):
     assert client.get("/").status_code == 200
-    assert client.get("/").json()["desktop"] == "GPUI"
+    assert client.get("/").json()["desktop"] == "Tauri"
     assert client.get("/api/docs").status_code == 200
 
 

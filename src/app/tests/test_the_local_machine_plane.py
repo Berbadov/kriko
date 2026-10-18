@@ -204,6 +204,27 @@ def test_the_configured_address_is_probed_first_and_the_defaults_follow(machine,
     assert {row["name"] for row in rows[1:]} == {n for n, _ in local_discovery.CANDIDATES}
 
 
+def test_vllm_default_endpoint_is_discovered_as_a_first_class_runtime(machine, monkeypatch, stub):
+    """vLLM's default port is discovered through its OpenAI model-list API."""
+    assert ("vLLM", "http://127.0.0.1:8000") in local_discovery.CANDIDATES
+    stub.models = ["Qwen/Qwen3-8B"]
+    monkeypatch.setattr(local_discovery, "CANDIDATES", (("vLLM", stub.url),))
+    local_discovery.forget_discovery()
+    rows = local_discovery.discover()
+    assert rows == [{"name": "vLLM", "url": stub.url, "up": True,
+                     "models": ["Qwen/Qwen3-8B"]}]
+    from app.localruntime import inspect
+    runtime = inspect(stub.url, "vLLM", "Qwen/Qwen3-8B", {})
+    assert runtime["runtime"] == "vLLM"
+    assert runtime["device"] == "unknown"
+    assert not runtime["supported"]
+    assert "vLLM" in runtime["settings_help"]
+    plan = localplane.resolve(url="", with_search=False)
+    assert plan["ready"] is True
+    assert plan["name"] == "vLLM"
+    assert plan["model"] == "Qwen/Qwen3-8B"
+
+
 # ── readiness ──────────────────────────────────────────────────────────────
 
 
