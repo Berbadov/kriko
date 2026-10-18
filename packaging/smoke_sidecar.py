@@ -320,8 +320,8 @@ def main(argv: list[str]) -> int:
             f"http://127.0.0.1:{port}/", timeout=5
         ) as response:
             root = json.loads(response.read().decode("utf-8", "replace"))
-        if root.get("desktop") != "GPUI" or root.get("health") != "/api/health":
-            print("the sidecar root does not identify the GPUI/API service")
+        if root.get("desktop") != "Tauri" or root.get("health") != "/api/health":
+            print("the sidecar root does not identify the Tauri/API service")
             return 1
         print("API root ok")
 
