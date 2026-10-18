@@ -64,6 +64,7 @@ export function useHistory() {
   const [problem, setProblem] = useState('')
 
   useEffect(() => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setItems(DEMO)
       return

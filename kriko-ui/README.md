@@ -50,7 +50,7 @@ engine, waits until the engine answers, and stops the engine with the app. The
 engine comes from the first of these that is available:
 
 1. `KRIKO_URL`, if you set it. The app attaches and starts nothing.
-2. `kriko-sidecar` beside `kriko.exe`. The app starts it.
+2. `kriko-sidecar` beside `kriko.exe`, with its `_internal` folder next to it. The app starts it.
 3. An engine that already answers on port 8787. The app attaches to it.
 4. `python -m app.sidecar` from a checkout (`.venv`).
 
@@ -91,7 +91,7 @@ to `kriko-ui/builds/`:
 | File | Contents |
 |---|---|
 | `kriko-<version>-x86_64-setup.exe` | The per-user installer for Windows. It needs no administrator rights. |
-| `kriko-<version>-win64-portable.zip` | `kriko.exe`, `kriko-sidecar.exe` and `OpenSERP.exe`, without an install. |
+| `kriko-<version>-win64-portable.zip` | `kriko.exe`, `kriko-sidecar.exe` (with `_internal\`) and `OpenSERP.exe`, without an install. |
 | `SHA256SUMS.txt` | The hashes of both files. |
 
 Both programs ship in every Windows package, because the app starts the engine

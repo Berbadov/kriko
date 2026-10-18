@@ -4100,7 +4100,8 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         stored = state.add_chat_message(
             app_state, thread_id, role="agent", text=result["answer"],
             steps=result["steps"], sources=result["sources"],
-            products=result.get("products") or [], job_id=progress.job_id)
+            products=result.get("products") or [], job_id=progress.job_id,
+            agent=dict(agent))
     finally:
         app_state.close()
     progress.partial({"thread_id": thread_id, "message_id": message_id,
