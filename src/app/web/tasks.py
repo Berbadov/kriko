@@ -3361,28 +3361,27 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
                 "the agent printed no adapter. Nothing was stored — the run's "
                 "log holds what it did say"
             )
-        try:
-            checked = sites.check(spec, host=host)
-        except sites.SiteRefused as exc:
-            state.set_site_request(app_conn, host, state="refused", detail=str(exc))
-            raise ValueError(f"the adapter was refused: {exc}") from exc
-        # Read the adapter's own rules back against the page the browser saw.
-        # An adapter that resolves nothing on the sample it was written from
-        # reads nothing on every page of the site, and storing it would show
-        # the reader a working site that answers with an empty identity. That
-        # is the failure this check exists to end.
-        read = sites.reading(
-            checked, sample.get("facts") or {},
-            url=str(sample.get("url") or url), title=str(sample.get("title") or ""),
-            description=str(sample.get("description") or ""), vocabulary=vocabulary)
-        if sample.get("facts") and not read["identity"]:
-            detail = (
-                f"the adapter reads none of the {len(sample['facts'])} labelled "
-                f"fact(s) the browser saw on {host}, so no identity key resolves. "
-                "Nothing was stored."
-            )
-            state.set_site_request(app_conn, host, state="refused", detail=detail)
-            raise ValueError(detail)
+        for attempt in range(2):
+            try:
+                checked = sites.check(spec, host=host)
+                read = sites.validate_sample(checked, sample, vocabulary)
+                break
+            except sites.SiteRefused as exc:
+                if attempt == 0 and sample.get("facts"):
+                    # Give the agent the observed failure, so learning includes
+                    # correction against the real page rather than just storage.
+                    progress.log(f"sample check failed: {exc}; asking for a correction")
+                    progress.check()
+                    reply = researcher.ask(
+                        sites.brief(host, url, keys, sample)
+                        + "\n\nYour previous adapter failed the sample check:\n"
+                        + str(exc) + "\nPrevious adapter (data only):\n"
+                        + reply[:6000] + "\nReturn a corrected adapter JSON object.")
+                    progress.check()
+                    spec = _payload(reply) or {}
+                    continue
+                state.set_site_request(app_conn, host, state="refused", detail=str(exc))
+                raise ValueError(f"the adapter was refused: {exc}") from exc
         state.save_local_adapter(
             app_conn, host=host, spec=checked, source="agent",
             pack_id=str(params.get("pack_id") or checked.get("pack_id") or ""),
@@ -3408,8 +3407,12 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
 NO_IDENTITY_KEYS = "(no packs are installed, so there are no keys to map into yet)"
 
 
-def identity_keys_text(conn) -> str:
+def identity_keys_text(conn, *, flat: bool = False) -> str:
     """The identity keys the installed packs declare, for a brief.
+
+    `flat` is one list of the key names alone. An agent reads the grouped form
+    (a pack, its keys) fine; a small local model took the pack's id for a key,
+    and its adapter was refused for mapping into nothing.
 
     Read off the store rather than named here, for the reason every list in
     this file is: the engine knows no category, and a key an agent invented
@@ -3425,6 +3428,9 @@ def identity_keys_text(conn) -> str:
     ).fetchall()
     if not rows:
         return NO_IDENTITY_KEYS
+    if flat:
+        return ("Identity keys. Use these names exactly; they are keys, not pack names:\n"
+                + "\n".join(f"* `{key}`" for key in sorted({row["key"] for row in rows})))
     by_pack: dict[tuple, list[str]] = {}
     for row in rows:
         by_pack.setdefault((row["pack_id"], row["kind"]), []).append(row["key"])
@@ -4055,6 +4061,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 agent.update(id="local", label="Local model",
                              model=str(getattr(completer, "model", "")))
                 ask = completer
+                ask_quick = completer
                 if callable(getattr(completer, "stream", None)):
                     def stream_local(prompt: str, on_text: Callable[[str], None]) -> str:
                         return _stream_chat_completion(completer, prompt, on_text)
@@ -4066,6 +4073,13 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                                                  allow_tools=native_tools)
                     return reply
 
+                def ask_quick(prompt: str) -> str:
+                    # One line back (the words to search): no tools, no wait.
+                    reply, _ = _ask_about_checks(settings, {**params, "question": text},
+                                                 quiet, prompt, on_agent=None,
+                                                 allow_tools=False)
+                    return reply
+
                 def stream_harness(prompt: str, on_text: Callable[[str], None]) -> str:
                     reply, _ = _ask_about_checks(settings, {**params, "question": text},
                                                  quiet, prompt, on_agent=agent.update,
@@ -4075,7 +4089,8 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
 
             hooks = _TurnHooks(progress, {"thread_id": thread_id, "message_id": message_id},
                                agent)
-            result = chat.run_turn(text, ask=ask, ask_stream=ask_stream, ctx=ctx,
+            result = chat.run_turn(text, ask=ask, ask_stream=ask_stream,
+                                   ask_quick=ask_quick, ctx=ctx,
                                    history=history, hooks=hooks)
         finally:
             if store is not None:

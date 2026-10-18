@@ -19,6 +19,59 @@ immutable; a correction is a newer version.
     the claim of the page.
   - The answer uses the language of your question.
 
+### 0.2.1
+
+- **Learn this page.** The research card in the extension panel has a button
+  that goes through the page you are on and learns what to take from it. It
+  shows what it took and what each thing was taken as. The model on this
+  computer answers at once. Another agent runs as a job the panel follows.
+- **Pick the agent in the panel.** The research card lists the agents that
+  are ready, starts on the one the app uses, and remembers your pick. It
+  names the cost before you press anything.
+- **A research search starts from the product, not the page title.** A title
+  such as "Samsung Galaxy A54 256 GB Beyaz Fiyatları, Özellikleri ve
+  Yorumları | En Ucuzu Akakçe" was searched whole, so the searches found the
+  shop and its ranking words instead of the phone. The shop name and the
+  words a shop adds to rank are taken off before any search is made.
+- **A page about your phone is read, even if it never names the colour.** A
+  review of the Galaxy A54 was thrown away because it did not repeat the 256 GB
+  and the colour a listing's title adds. A model code such as A54 with another
+  word of the name is enough to read the page. Each finding still has to show
+  it applies.
+- **The model on this computer maps a page correctly.** It took a pack's name
+  for a key, and what it wrote was refused. It is given the key names alone.
+- **Agents no longer fail with "does not declare per-run model selection".**
+  Kriko asks each agent's program which flags it has. One slow first answer
+  was remembered until you closed the app, so Claude Code and Antigravity were
+  refused for flags they have. An empty answer is now asked again after a short
+  pause.
+- **Chat no longer ends on "SEARCH: …".** When an agent asked for a search in
+  more than 14 words, the request was shown as the answer and nothing was
+  searched. It is shortened and the search runs.
+
+### 0.2.0
+
+- **The desktop app is new.** It is built on Tauri now, with a blue look, a
+  dither sky, and a dark and a light theme. Motion has three levels: Calm,
+  Standard and Vivid.
+- **Chat keeps your chats.** Press New chat to start one. Recent chats are in
+  the sidebar. Deleting a chat asks first.
+- **A tour on the first start.** It shows the box where you ask, the agent
+  pick, where Kriko looks, and the places in the sidebar. Take it again from
+  Settings.
+- **The extension panel has the same look and its own tour.** It shows once,
+  on the first product page. The options page can show it again.
+- **Local models.** The Local model panel shows your graphics memory and the
+  models Ollama holds. You can browse Hugging Face for GGUF models with
+  filters for size, licence and sort order. A filter can keep only the models
+  that fit your graphics card. A download starts only when you press Get.
+- **vLLM on CUDA 13.** Kriko reads the CUDA version of your driver and shows
+  the steps for the right build. It does not install anything. On Windows the
+  steps use WSL 2. Kriko finds the server when it runs.
+- **Catalogs and Sites panels.** Remove asks before it removes.
+- **The sidebar, Compare and Queue** use the new layout. The installer is
+  built from `kriko-ui/package.ps1`.
+
 ### 0.1.2
 
 - **Chat answers are formatted.** An answer from an agent is markdown. A bold

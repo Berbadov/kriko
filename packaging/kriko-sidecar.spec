@@ -146,9 +146,10 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
-# The name carries no target triple: `kriko-gpui` looks for exactly
-# `kriko-sidecar` beside its own executable, so this spec stays the same file
-# on every runner.
+# The name carries no target triple: the app looks for exactly
+# `kriko-sidecar` beside its own executable. `kriko-ui/package.ps1` adds the
+# target triple when it stages the file for Tauri, so this spec stays the same
+# file on every runner.
 exe = EXE(
     pyz,
     a.scripts,

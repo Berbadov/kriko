@@ -8,7 +8,7 @@ got a web page that looks like it.
 The fix cannot be a link, because a page has no way to raise a native window.
 So the extension **posts a route**, and the shell does the raising:
 
-* The **shell** (`kriko-gpui/src/engine.rs`) is already reading the
+* The **shell** (`kriko-ui/src-tauri/src/engine.rs`) is already reading the
   sidecar's stdout for the port handshake, so it costs nothing to have the
   sidecar print one more line. `KRIKO_FOCUS` on stdout makes the shell call
   `show_window` — raise and focus. That is the only thing Rust does here, and
@@ -32,7 +32,7 @@ from pydantic import BaseModel, Field
 router = APIRouter(prefix="/api", tags=["focus"])
 
 #: The shell greps stdout for this. Must match `FOCUS_LINE` in
-#: `kriko-gpui/src/engine.rs`; `test_focus.py` fails the suite if the two
+#: `kriko-ui/src-tauri/src/engine.rs`; `test_focus.py` fails the suite if the two
 #: drift, because a renamed constant here would silently stop raising the
 #: window and look like a dead button.
 #:

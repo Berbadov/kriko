@@ -423,7 +423,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """Identify the native desktop/API sidecar without a browser UI."""
         return {
             "app": "Kriko",
-            "desktop": "GPUI",
+            "desktop": "Tauri",
             "service": "local API",
             "health": "/api/health",
             "docs": "/api/docs",

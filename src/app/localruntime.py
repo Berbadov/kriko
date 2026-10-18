@@ -77,7 +77,9 @@ def inspect(url: str, runtime: str, model: str, mine: dict) -> dict:
                "reported device after a run. Memory allocation is managed by Ollama."
                if runtime == "Ollama" else
                "Set GPU offload and context in your runtime's model loader, then "
-               "reload the model. This server does not expose these controls to Kriko.")}
+               "reload the model. vLLM and other OpenAI-compatible servers do not "
+               "report device use or expose loader controls to Kriko, so GPU use "
+               "remains unknown here.")}
     if runtime != "Ollama" or not url or not model:
         return out
     try:

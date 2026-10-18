@@ -17,7 +17,7 @@ from pathlib import Path
 from render_icon import ico_images
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / "kriko-gpui" / "assets" / "kriko.ico"
+SOURCE = ROOT / "kriko-ui" / "src-tauri" / "icons" / "icon.ico"
 ICONSET = (
     ("icon_16x16.png", 16),
     ("icon_16x16@2x.png", 32),

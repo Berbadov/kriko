@@ -10,7 +10,7 @@ from app import appupdate
 
 def _release(version="1.2.0", *, sums=True):
     base = "https://example.test/dl"
-    assets = [{"name": f"kriko-{version}-x86_64.msi", "browser_download_url": f"{base}/kriko-{version}-x86_64.msi"},
+    assets = [{"name": f"kriko-{version}-x86_64-setup.exe", "browser_download_url": f"{base}/kriko-{version}-x86_64-setup.exe"},
               {"name": "cars.kpack", "browser_download_url": f"{base}/cars.kpack"}]
     if sums:
         assets.append({"name": "SHA256SUMS.txt", "browser_download_url": f"{base}/SHA256SUMS.txt"})
@@ -28,7 +28,7 @@ def test_versions_compare_as_numbers_not_text():
 def test_a_release_without_an_installer_offers_nothing():
     assert appupdate.parse_release({"assets": [{"name": "cars.kpack", "browser_download_url": "https://x/y"}]}) == {}
     got = appupdate.parse_release(_release())
-    assert got["version"] == "1.2.0" and got["name"] == "kriko-1.2.0-x86_64.msi"
+    assert got["version"] == "1.2.0" and got["name"] == "kriko-1.2.0-x86_64-setup.exe"
 
 
 def test_a_failed_check_is_a_plain_sentence_not_a_crash(monkeypatch):

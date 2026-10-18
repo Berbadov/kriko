@@ -14,7 +14,7 @@ Dependencies point down. They never point up or across.
 
 | Package | Function |
 |---|---|
-| `kriko-gpui/` | The desktop app (Rust, GPUI). It supervises the sidecar and draws the interface. It holds no engine logic. |
+| `kriko-ui/` | The desktop app (Tauri: a Rust shell and a React interface). The shell supervises the sidecar, and the interface draws every screen from the local API. It holds no engine logic. |
 | `src/app/` | The interfaces: the command line, the local HTTP API, the MCP server, and the operator console. |
 | `src/app/pipeline/` | The drivers that run the evidence ledger of a category and repair its gaps. |
 | `src/kriko/` | The engine: the store, the lookup, the ranking, and the gates. It imports none of the others. |
@@ -41,13 +41,14 @@ Three rules keep the layout true:
 | Build and install a catalog | `src/kriko/pack/build.py`, then `src/kriko/store/packstore.py` |
 | Evidence and quotations | `packs/<name>/pipeline/ledger/`, then `src/kriko/ledger/`, then `src/app/pipeline/ledger_run.py` |
 | A refusal | `src/app/mcp_server.py`, `src/kriko/gates.py`, and the vocabulary of the catalog |
-| The engine supervisor | `kriko-gpui/src/engine.rs`, then `src/app/sidecar.py` |
+| The engine supervisor | `kriko-ui/src-tauri/src/engine.rs`, then `src/app/sidecar.py` |
+| Which model should answer, and what it costs | [MODEL_BENCHMARK.md](MODEL_BENCHMARK.md), then `src/app/modelbench/` |
 
 Start with these files:
 
 | Package | Read first |
 |---|---|
-| `kriko-gpui/` | `kriko-gpui/README.md`, then `kriko-gpui/src/engine.rs` |
+| `kriko-ui/` | `kriko-ui/README.md`, then `kriko-ui/src-tauri/src/engine.rs` |
 | `src/app/` | `src/app/cli.py`, then `src/app/sidecar.py` |
 | `src/app/pipeline/` | `src/app/pipeline/ledger_run.py` |
 | `src/kriko/` | `src/kriko/store/packstore.py` |
@@ -60,6 +61,8 @@ Start with these files:
 |---|---|
 | `kriko` | The command line: install, build, list, and look up a catalog |
 | `kriko tui` | The operator console |
+| `kriko model-bench` | Measure models on a fixed corpus: tokens, fabrication, abstention. Writes a JSON, two CSVs and a report. See [MODEL_BENCHMARK.md](MODEL_BENCHMARK.md) |
+| `python -m app.modelbench` | The same benchmark without the `kriko` command. `list`, `plan`, `run` |
 | `python -m app.mcp_server` | The MCP server, for an agent that reads by itself |
 | `python -m app.pipeline.ledger_run` | The ledger stages |
 | `python -m app.pipeline.panel` | The spend, the coverage, and the recent runs |
@@ -69,7 +72,7 @@ Start with these files:
 | `python -m packs.<name>.coverage` | The coverage report of one catalog |
 
 The sidecar is the engine as a child process. It selects a free port and prints
-`KRIKO_PORT <n>` as its first line. `kriko-gpui/` polls `/api/health` until the
+`KRIKO_PORT <n>` as its first line. The Tauri shell polls `/api/health` until the
 engine answers.
 
 Kriko uses two databases on purpose. The engine store is
@@ -91,7 +94,7 @@ Then run the gate before each push and each merge:
 tools/gate.sh          # everything
 tools/gate.sh py       # the Python suite only
 tools/gate.sh node     # the JavaScript suite only
-tools/gate.sh gpui     # the desktop app only
+tools/gate.sh tauri    # the desktop shell only
 tools/gate.sh wheel    # the shipped wheel only
 ```
 
@@ -117,4 +120,4 @@ kriko install <file.kpack>   # add one
 ## Build the desktop app
 
 The installer recipe, the macOS build, and the artifacts are in
-[kriko-gpui/README.md](../kriko-gpui/README.md).
+[kriko-ui/README.md](../kriko-ui/README.md).

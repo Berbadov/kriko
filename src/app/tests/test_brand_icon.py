@@ -112,16 +112,18 @@ def test_the_manifest_asks_for_no_size_the_render_does_not_make():
 
 
 def test_the_desktop_icon_is_a_whole_ico():
-    """`kriko-gpui/assets/kriko.ico` is the one file the exe and the MSI both read.
+    """`kriko-ui/src-tauri/icons/icon.ico` is the one file the exe and the installer read.
 
-    `build.rs` embeds it in kriko.exe (the taskbar, the tray's resource 1) and
-    `wix/main.wxs` hands it to the shortcuts and Add/Remove Programs. It is a
-    hand-drawn tile, not rendered from the mark, so nothing derives it and
-    nothing would notice it going missing or turning into a one-size file --
-    both of which draw a blurred or blank icon on a machine nobody tests.
+    Tauri embeds it in kriko.exe (the taskbar, the tray) and the installer hands
+    it to the shortcuts and Add/Remove Programs. It is a hand-drawn tile, not
+    rendered from the mark, so nothing derives it and nothing would notice it
+    going missing or turning into a one-size file -- both of which draw a
+    blurred or blank icon on a machine nobody tests.
     """
+    import json
+
     root = Path(__file__).resolve().parents[3]
-    ico = root / "kriko-gpui" / "assets" / "kriko.ico"
+    ico = root / "kriko-ui" / "src-tauri" / "icons" / "icon.ico"
     data = ico.read_bytes()
     reserved, kind, count = struct.unpack("<HHH", data[:6])
     assert (reserved, kind) == (0, 1), "not an ICO"
@@ -134,14 +136,13 @@ def test_the_desktop_icon_is_a_whole_ico():
         assert offset + length <= len(data)
         sides.add(side or 256)
     assert {16, 32, 48, 256} <= sides, f"sizes {sorted(sides)} leave a size to scale"
-    for where, needle in (
-        ("kriko-gpui/build.rs", "assets/kriko.ico"),
-        ("kriko-gpui/wix/main.wxs", "assets/kriko.ico"),
-    ):
-        assert needle in (root / where).read_text(encoding="utf-8"), (
-            f"{where} does not read {needle}, so the installed app is not "
-            f"wearing the icon this test checks"
-        )
+    config = json.loads(
+        (root / "kriko-ui" / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8")
+    )
+    assert "icons/icon.ico" in config["bundle"]["icon"], (
+        "tauri.conf.json does not bundle icons/icon.ico, so the installed app "
+        "is not wearing the icon this test checks"
+    )
 
 
 def test_the_master_is_large_enough():

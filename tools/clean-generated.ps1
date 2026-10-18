@@ -15,8 +15,8 @@ function Add-Cache([string]$checkout, [string]$relative) {
     }
 }
 
-foreach ($relative in @('build','dist','.build-review','kriko-gpui/target','kriko-gpui/target-check','kriko-gpui/review-target','kriko-gpui/builds',
-                        'kriko-gpui/build','kriko-gpui/dist',
+foreach ($relative in @('build','dist','.build-review','kriko-ui/src-tauri/target','kriko-ui/src-tauri/target-check','kriko-ui/src-tauri/review-target','kriko-ui/builds',
+                        'kriko-ui/dist','kriko-ui/src-tauri/binaries',
                         '.pytest_cache','.mypy_cache','.check-mypy','.ruff_cache','.npm-cache')) {
     Add-Cache $cleanupRoot $relative
 }
@@ -31,18 +31,18 @@ if ($AgentCaches) {
         foreach ($checkout in (Get-ChildItem -LiteralPath $parent -Directory -Force)) {
             if ($checkout.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
             foreach ($relative in @('node_modules',
-                                    'build','dist','kriko-gpui/build','kriko-gpui/dist','kriko-gpui/builds','target',
+                                    'build','dist','kriko-ui/dist','kriko-ui/src-tauri/binaries','kriko-ui/builds','target',
                                     '.pytest_cache','.mypy_cache','.ruff_cache')) {
                 Add-Cache $checkout.FullName $relative
             }
             Get-ChildItem -LiteralPath $checkout.FullName -Directory -Force |
                 Where-Object { $_.Name -like '.venv*' } |
                 ForEach-Object { Add-Cache $checkout.FullName $_.Name }
-            $rust = Join-Path $checkout.FullName 'kriko-gpui'
+            $rust = Join-Path $checkout.FullName 'kriko-ui/src-tauri'
             if (Test-Path -LiteralPath $rust -PathType Container) {
                 Get-ChildItem -LiteralPath $rust -Directory -Force |
                     Where-Object { $_.Name -like 'target*' } |
-                    ForEach-Object { Add-Cache $checkout.FullName ('kriko-gpui/' + $_.Name) }
+                    ForEach-Object { Add-Cache $checkout.FullName ('kriko-ui/src-tauri/' + $_.Name) }
             }
         }
     }

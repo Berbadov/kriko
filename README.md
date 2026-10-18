@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.1.2-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.2.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko shows what can go wrong with a product. It puts this knowledge next to
@@ -53,8 +53,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | File | Use |
 |---|---|
-| `kriko-0.1.2-x86_64.msi` | Install Kriko on Windows. You do not need administrator rights. |
-| `kriko-0.1.2-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
+| `kriko-0.2.1-x86_64-setup.exe` | Install Kriko on Windows. You do not need administrator rights. |
+| `kriko-0.2.1-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
 
 The app contains everything that it needs to start. It contains no catalog.
 Install a catalog after the first start.
@@ -141,7 +141,7 @@ prepare the browser extension again and reload it in the browser.
 
 The engine, the command line, and the local API run from source on Windows,
 macOS, and Linux. [The architecture guide](docs/ARCHITECTURE.md) gives the
-commands and the tests. [The desktop app guide](kriko-gpui/README.md) gives the
+commands and the tests. [The desktop app guide](kriko-ui/README.md) gives the
 installer recipe and the macOS build.
 
 Source work needs Python 3.13 or newer.

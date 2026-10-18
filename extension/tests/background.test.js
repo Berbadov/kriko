@@ -983,3 +983,56 @@ test("an answer the app kept as it was leaves the entry alone", async () => {
   assert.equal(got.result, null);
   assert.equal(h.state.session["kriko_result_" + url], before);
 });
+
+// ── learn this page, and the agents the panel can pick ────────────────────
+
+test("LEARN_PAGE sends the tab's own snapshot and the picked agent to the app", async () => {
+  const h = loadBackground({
+    routes: { "/api/sites/learn": { host: "shop.example", mode: "local", learned: true, grabs: [] } },
+    tabResponses: {
+      GET_SCRAPE: { ok: true, payload: {
+        url: "https://shop.example/p/1", title: "Acme Roadster | Shop",
+        description: "d", fields: { Marka: "Acme" }, product: { name: "Acme Roadster", typed: true },
+      } },
+    },
+  });
+  const reply = await send(h, { type: "LEARN_PAGE", payload: { agent: "claude" } });
+  assert.equal(reply.ok, true);
+  assert.equal(reply.lesson.learned, true);
+  const ask = h.state.tabMessages.find((m) => m.message.type === "GET_SCRAPE");
+  assert.equal(ask.message.explore, true, "the page's own labels are what an agent learns from");
+  const request = h.state.requests[0];
+  assert.equal(request.url, "http://127.0.0.1:8787/api/sites/learn");
+  assert.equal(request.body.agent, "claude");
+  assert.deepEqual(request.body.fields, { Marka: "Acme" });
+  assert.equal(request.body.product.name, "Acme Roadster");
+});
+
+test("LEARN_PAGE says so when the page cannot be read, and asks the app nothing", async () => {
+  const h = loadBackground({ tabResponses: { GET_SCRAPE: { ok: false } } });
+  const reply = await send(h, { type: "LEARN_PAGE", payload: {} });
+  assert.equal(reply.ok, false);
+  assert.match(reply.error, /could not read this page/);
+  assert.equal(h.state.requests.length, 0);
+});
+
+test("AGENTS offers only what the app can run now", async () => {
+  const h = loadBackground({ routes: { "/api/agent-market": {
+    chosen: "local",
+    agents: [
+      { id: "local", label: "Local agent", kind: "local", state: "ready", action: "use", local: true },
+      { id: "claude", label: "Claude Code", kind: "cli", state: "ready", action: "use" },
+      { id: "codex", label: "Codex", kind: "cli", state: "not_installed", action: "install" },
+      { id: "cursor", label: "Cursor", kind: "cli", state: "ready", action: "connect" },
+    ],
+  } } });
+  const reply = await send(h, { type: "AGENTS" });
+  assert.equal(reply.chosen, "local");
+  assert.deepEqual(reply.agents.map((one) => one.id), ["local", "claude"]);
+});
+
+test("RESEARCH_PRODUCT carries the agent picked in the panel, and nothing else about it", async () => {
+  const h = loadBackground({ routes: { "/api/extension/research-plane": { job_id: "j" } } });
+  await send(h, { type: "RESEARCH_PRODUCT", payload: { q: "Acme", allow_draft: true, harness: "claude" } });
+  assert.equal(h.state.requests[0].body.harness, "claude");
+});

@@ -119,7 +119,7 @@ def _ready(monkeypatch, model: _Model, *, model_name: str = "test-model") -> _Mo
     Everything after this — the prompt, the parse, the two gates, the cache,
     the storage — is the real code path.
     """
-    def plane(app_state_path, *, timeout=siteinfer.CALL_TIMEOUT):
+    def plane(app_state_path, *, timeout=siteinfer.CALL_TIMEOUT, pressed=False):
         return {"ready": True, "complete": model, "model": model_name, "reason": ""}
 
     monkeypatch.setattr(siteinfer, "plane", plane)
@@ -264,6 +264,46 @@ def test_an_identity_key_no_pack_declares_is_refused(client, installed, monkeypa
 
     assert _analyze(client)["reason"] == "no_adapter"
     assert state.local_adapters(_conn(installed)) == []
+
+
+def test_a_partial_inference_cannot_hide_a_broken_mapping_in_the_title(installed, monkeypatch):
+    _ready(monkeypatch, _Model(_adapter({}, extra={"identity": {
+        "brand": {"labels": ["Marka"]},
+        "model": {"labels": ["Invented"], "from": "title", "vocabulary": "model"},
+    }})))
+    with connect(installed.store_path) as store, state.connect(installed.app_state_path) as conn:
+        assert siteinfer.infer(store, conn, app_state_path=installed.app_state_path,
+                               url=PAGE_URL, fields=PAGE, title="Acme Roadster") is None
+        assert state.local_adapters(conn) == []
+        assert "absent" in state.site_inferences(conn)[0]["detail"]
+
+
+def test_known_sites_keep_new_browser_facts_for_the_next_learning_run(client, installed, monkeypatch):
+    _ready(monkeypatch, _Model(READS_THE_PAGE))
+    _analyze(client)
+    _analyze(client, fields={**PAGE, "New specification": "R2"})
+    with state.connect(installed.app_state_path) as conn:
+        assert state.site_sample(conn, SITE)["facts"]["New specification"] == "R2"
+
+
+def test_an_agent_corrects_its_mapping_from_the_sample_failure(installed, monkeypatch):
+    from types import SimpleNamespace
+    from app.providers import harness
+    from app.web import tasks
+
+    model = _Model(_adapter({"brand": "Invented"}), READS_THE_PAGE)
+    agent = SimpleNamespace(ask=model)
+    monkeypatch.setattr(harness, "available", lambda: [object()])
+    monkeypatch.setattr("app.providers.harness_researcher", lambda **kw: agent)
+    with state.connect(installed.app_state_path) as conn:
+        state.record_site_request(conn, host=SITE, url=PAGE_URL,
+                                  sample=sites.sample(url=PAGE_URL, fields=PAGE))
+    progress = SimpleNamespace(set=lambda *a: None, log=lambda *a: None,
+                               check=lambda: None, replies=lambda: [])
+    result = tasks.site_register(installed, {"host": SITE}, progress)
+    assert model.calls == 2
+    assert "absent from the browser snapshot" in model.prompts[1]
+    assert result["reading"]["identity"] == {"brand": "Acme", "model": "Roadster"}
 
 
 def test_a_page_with_nothing_labelled_on_it_costs_no_model_call(

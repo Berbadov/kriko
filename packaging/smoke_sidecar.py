@@ -43,10 +43,10 @@ def end(process: subprocess.Popen, *, timeout: float = 15) -> None:
 
     because the *previous* run's smoke test had left one behind. The desktop
     shell has tree-killed since v0.2.x for exactly this reason (today
-    `kriko-gpui/src/engine.rs`);
+    `kriko-ui/src-tauri/src/engine.rs`);
     these smoke tests did not, and on a CI runner that is deleted afterwards
     nobody ever noticed. The moment the build ran twice on one machine -- which
-    is the whole point of `kriko-gpui/package.ps1` -- it mattered.
+    is the whole point of `kriko-ui/package.ps1` -- it mattered.
 
     By pid rather than by image name: `taskkill /IM kriko-sidecar.exe` would
     also kill an installed Kriko the person at the keyboard is using.
@@ -320,8 +320,8 @@ def main(argv: list[str]) -> int:
             f"http://127.0.0.1:{port}/", timeout=5
         ) as response:
             root = json.loads(response.read().decode("utf-8", "replace"))
-        if root.get("desktop") != "GPUI" or root.get("health") != "/api/health":
-            print("the sidecar root does not identify the GPUI/API service")
+        if root.get("desktop") != "Tauri" or root.get("health") != "/api/health":
+            print("the sidecar root does not identify the Tauri/API service")
             return 1
         print("API root ok")
 

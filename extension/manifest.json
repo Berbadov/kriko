@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Kriko",
     "description": "Shows what is known to go wrong with the product on the page you are reading.",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "minimum_chrome_version": "102",
     "permissions": ["activeTab", "storage", "scripting", "alarms"],
     "optional_host_permissions": ["https://*/*"],
@@ -38,7 +38,7 @@
     },
     "web_accessible_resources": [
         {
-            "resources": ["hover_lite/hover_lite.css", "assets/fonts/*.ttf", "assets/sky/*.png"],
+            "resources": ["hover_lite/hover_lite.css", "assets/fonts/*.woff2", "assets/sky/*.png"],
             "matches": ["https://*/*"],
             "use_dynamic_url": true
         }

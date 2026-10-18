@@ -7,7 +7,7 @@ with no runner assigned, which is what a spending cap looks like from the
 inside. A tag that produces nothing is not a release, and "ship to the reader,
 not to the branch" is rule 4 of the phase this repository is still in.
 
-So the same steps live in `kriko-gpui/package.ps1`, runnable on the Windows box
+So the same steps live in `kriko-ui/package.ps1`, runnable on the Windows box
 that has to freeze the sidecar anyway (PyInstaller cannot cross-compile: the
 workflow was never doing anything a local run could not). That script is the
 one recipe; `packaging/build_desktop.ps1`, which was the same thing for the
@@ -37,16 +37,16 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = ROOT / ".github" / "workflows" / "desktop.yml"
-SCRIPT = ROOT / "kriko-gpui" / "package.ps1"
+SCRIPT = ROOT / "kriko-ui" / "package.ps1"
 
 #: Repository files a build step invokes: the spec PyInstaller reads, the lock
 #: pip installs, the smoke tests.
 ARTIFACT = re.compile(r"\b((?:packaging|tools)/[\w.-]+\.(?:py|spec)|requirements\.lock)\b")
 
-#: The cargo commands the bundle depends on. Building the app and wrapping it
-#: in an MSI are separate steps, and a script can plausibly have one without
-#: the other.
-CARGO_STEP = re.compile(r"\bcargo (build --release|wix)\b")
+#: The command that builds the app and makes the installer, in one step. It
+#: runs the web build, `cargo build --release` (kept to the committed graph by
+#: `--locked`) and the NSIS bundle, so a script that lacks it has no installer.
+BUILD_STEP = re.compile(r"\btauri build\b")
 
 
 def _bundle_job(text: str) -> str:
@@ -99,7 +99,7 @@ def script() -> str:
 def test_the_script_exists_and_is_a_build(script):
     """A missing or stub script would satisfy every subset check below it."""
     assert len(script.splitlines()) > 60
-    assert "cargo build --release" in script
+    assert "tauri build" in script
 
 
 def test_the_workflow_still_parses_into_steps(workflow_build):
@@ -110,7 +110,7 @@ def test_the_workflow_still_parses_into_steps(workflow_build):
     the rest of the file green by accident.
     """
     assert ARTIFACT.findall(workflow_build), "no build artifacts found in the workflow"
-    assert CARGO_STEP.findall(workflow_build), "no cargo steps found in the workflow"
+    assert BUILD_STEP.findall(workflow_build), "no build step found in the workflow"
 
 
 def test_every_artifact_the_release_build_names_is_named_by_the_script(
@@ -132,33 +132,34 @@ def test_every_artifact_the_release_build_names_is_named_by_the_script(
     )
 
 
-@pytest.mark.parametrize("step", ["build --release", "wix"])
-def test_the_script_runs_both_cargo_steps(workflow_build, script, step):
+def test_the_script_runs_the_same_build_as_the_workflow(workflow_build, script):
     """Derived from the workflow, then asserted on the script.
 
-    Parametrized rather than looped so a script that builds the app without
-    making the MSI names which half is missing.
+    Both run `tauri build` with the bundle config, and both pass `--locked` on
+    to cargo, so neither builds a crate graph that was not committed.
     """
-    if f"cargo {step}" not in workflow_build:
-        pytest.skip(f"the workflow no longer runs `cargo {step}`")
-    if step == "wix":
-        assert '"wix"' in script, "the script never runs `cargo wix`"
-    else:
-        assert f"cargo {step}" in script
+    for name, text in (("the workflow", workflow_build), (SCRIPT.name, script)):
+        build = [line for line in text.splitlines() if "tauri build" in line]
+        assert build, f"{name} never runs `tauri build`"
+        assert any("tauri.bundle.conf.json" in line for line in build), (
+            f"{name} builds without the bundle config, so the installer would "
+            "carry neither the engine nor OpenSERP"
+        )
+        assert any("--locked" in line for line in build), f"{name} builds without --locked"
 
 
 def test_the_script_freezes_before_it_packs(script):
     """Order is part of the build, not a detail.
 
-    The MSI carries whatever sits beside `kriko.exe` when WiX runs. A script
-    that packed first and froze after would produce an installer carrying the
-    *previous* run's sidecar: green, silent, and wrong. Same reasoning as
+    The installer carries whatever is staged in `src-tauri/binaries` when
+    Tauri bundles. A script that packed first and froze after would produce an
+    installer carrying the *previous* run's sidecar: green, silent, and wrong. Same reasoning as
     `test_the_release_workflow_verifies_the_lock_before_it_builds`.
     """
     lines = script.splitlines()
     freeze = min(i for i, line in enumerate(lines) if "PyInstaller" in line)
     place = min(i for i, line in enumerate(lines) if "Place the sidecar" in line)
-    pack = min(i for i, line in enumerate(lines) if '"wix"' in line)
+    pack = min(i for i, line in enumerate(lines) if "tauri build --config" in line)
     assert freeze < place < pack, (freeze, place, pack)
 
 
@@ -172,7 +173,7 @@ def test_the_script_smoke_tests_what_it_produced(script):
     """
     lines = script.splitlines()
     sidecar = min(i for i, line in enumerate(lines) if "smoke_sidecar.py" in line)
-    pack = min(i for i, line in enumerate(lines) if '"wix"' in line)
+    pack = min(i for i, line in enumerate(lines) if "tauri build --config" in line)
     app = min(i for i, line in enumerate(lines) if "smoke_app.py" in line)
     assert sidecar < pack < app, (sidecar, pack, app)
 
@@ -369,23 +370,23 @@ def test_the_script_reports_only_what_this_run_produced(script):
     out of that list. CI never sees this because a runner is destroyed after
     the job: it surfaces only when the build runs twice on one machine.
 
-    The MSI and the zip are therefore deleted before they are made, and the
-    script refuses to report one it did not just produce.
+    The installer and the zip are therefore deleted before they are made, and
+    the script refuses to report one it did not just produce.
     """
-    for artifact in ("$msi", "$zip"):
+    for artifact in ("$setup", "$zip", "$made"):
         removal = re.search(
             rf"Test-Path -LiteralPath {re.escape(artifact)}\)\s*\{{\s*Remove-Item -LiteralPath {re.escape(artifact)}",
             script,
         )
         assert removal, f"{artifact} is not removed before it is rebuilt"
-    assert "made no MSI" in script, "an MSI that was never produced is not refused"
+    assert "made no installer" in script, "an installer that was never produced is not refused"
     assert "Get-ChildItem -Recurse" not in script, (
         "a recursive listing reports whatever an earlier build left behind"
     )
 
 
 def test_the_release_build_stays_out_of_the_checkout(script):
-    """The release tree is about 2 GB, and it used to sit in `kriko-gpui\\target`.
+    """The release tree is about 2 GB, and it used to sit in the project folder.
 
     Every checkout and worktree that packaged kept its own copy inside the
     project folder. The tree now goes to one per-machine cache, and
@@ -415,18 +416,18 @@ def test_freeze_sh_keeps_pyinstaller_scratch_out_of_the_checkout():
     assert "mktemp" in text, "freeze.sh no longer keeps its scratch out of the tree"
 
 
-def test_the_packed_files_are_checked_before_wix_runs(script):
+def test_the_packed_files_are_checked_before_the_zip_reads_them(script):
     """The release folder is shared by every checkout on this machine.
 
-    Another build can replace kriko.exe while this one is still packing, and the
-    MSI would carry code nobody smoke-tested. The digests are taken once the
-    sidecar is placed and compared before WiX reads them.
+    Another build can replace kriko.exe while this one is still packing, and
+    the zip would carry code nobody smoke-tested. The digests are taken once
+    the build is done and compared before the zip reads the folder.
     """
     lines = script.splitlines()
-    placed = min(i for i, line in enumerate(lines) if "Place the sidecar" in line)
+    built = min(i for i, line in enumerate(lines) if "tauri build --config" in line)
     checked = [i for i, line in enumerate(lines) if "changed while" in line]
-    wix = min(i for i, line in enumerate(lines) if '"wix"' in line)
-    assert checked and placed < checked[0] < wix, (placed, checked, wix)
+    zipped = min(i for i, line in enumerate(lines) if "Compress-Archive" in line)
+    assert checked and built < checked[0] < zipped, (built, checked, zipped)
 
 
 def test_the_script_checks_a_requested_version_against_the_tree(script):
@@ -547,8 +548,9 @@ def test_the_script_refuses_to_build_from_a_tree_whose_own_files_disagree():
     """The gap the two checks above leave open.
 
     `-Version` vs pyproject, and the installed distribution vs pyproject, are
-    both checked, but neither looks at `kriko-gpui/Cargo.toml`, which is the
-    file the MSI is versioned from (cargo-wix reads it). A tree where
+    both checked, but neither looks at `kriko-ui/src-tauri/Cargo.toml`, which
+    is the file the app is versioned from (Tauri reads it, and names the
+    installer from it). A tree where
     `pyproject.toml` was bumped by hand and the crate was not would pass both
     and come out as an installer whose filename is one version and whose
     compiled code is another. `tools/bump.py --show` already makes exactly this
