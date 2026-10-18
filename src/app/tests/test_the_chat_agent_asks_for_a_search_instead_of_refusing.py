@@ -101,7 +101,9 @@ def test_a_web_turn_searches_the_words_the_agent_wrote(ctx):
     out = chat.run_turn("Hey, could you please tell me which oil I should buy for my Megane 4?",
                         ask=agent, ask_quick=quick, ctx=ctx)
 
-    assert searched == ["megane 4 1.5 dci 2020 engine oil spec"]
+    # A buying question is searched twice: the agent's words, then the same words scoped to trusted shops.
+    assert searched[0] == "megane 4 1.5 dci 2020 engine oil spec"
+    assert all(q.startswith("megane 4 1.5 dci 2020 engine oil spec") for q in searched)
     assert out["agent_calls"] == 2
     assert "READER'S MESSAGE: Hey, could you please" in quick.prompts[0]
 
@@ -117,7 +119,8 @@ def test_a_follow_up_is_written_with_the_conversation_in_front_of_the_agent(ctx)
                   ctx=ctx, history=history)
 
     assert "Megane 4" in quick.prompts[0]
-    assert searched == ["megane 4 5w-30 oil price"]
+    assert searched[0] == "megane 4 5w-30 oil price"
+    assert all(q.startswith("megane 4 5w-30 oil price") for q in searched)
 
 
 @pytest.mark.parametrize("broken", [
