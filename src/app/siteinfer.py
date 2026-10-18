@@ -416,5 +416,5 @@ def _keys_brief(store) -> str:
     """
     from app.web.tasks import NO_IDENTITY_KEYS, identity_keys_text
 
-    text = identity_keys_text(store)
+    text = identity_keys_text(store, flat=True)
     return "" if text == NO_IDENTITY_KEYS else text

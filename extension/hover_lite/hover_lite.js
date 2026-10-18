@@ -1057,8 +1057,12 @@
         return;
       }
       const learned = job.state === "succeeded";
+      // What the agent's adapter reads off this page, as the app checked it.
+      const reading = job.result?.reading || {};
+      const grabs = ["identity", "context"].flatMap((kind) => Object.entries(reading[kind] || {})
+        .map(([as, value]) => ({ as, value: String(value), kind })));
       finishLearn({
-        ...lesson, learned, grabs: [],
+        ...lesson, learned, grabs,
         reason: learned ? "" : (job.error || job.message || `Learning ${job.state}.`),
       });
     });

@@ -178,3 +178,23 @@ def test_another_agent_is_a_job_to_follow_and_never_a_blocking_call(
     assert submitted["params"]["harness"] == "claude"
     assert submitted["params"]["sample"]["facts"]["Marka"] == "Acme"
     assert model.calls == 0
+
+
+def test_a_small_model_is_given_key_names_and_not_pack_names(installed):
+    """It took the pack's id for a key and was refused for mapping into nothing.
+
+    The agents read the grouped list well; the local model's single turn gets the
+    keys alone, each once, said to be keys and not packs.
+    """
+    from app.web.tasks import identity_keys_text
+    from kriko.store.db import connect
+
+    conn = connect(installed.store_path)
+    try:
+        flat = identity_keys_text(conn, flat=True)
+        grouped = identity_keys_text(conn)
+    finally:
+        conn.close()
+    assert "`brand`" in flat and "`model`" in flat
+    assert "machines" not in flat, "a pack's id is what the model mistook for a key"
+    assert "machines" in grouped, "the agents' own list is unchanged"

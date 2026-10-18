@@ -17,6 +17,13 @@ immutable; a correction is a newer version.
   Yorumları | En Ucuzu Akakçe" was searched whole, so the searches found the
   shop and its ranking words instead of the phone. The shop name and the
   words a shop adds to rank are taken off before any search is made.
+- **A page about your phone is read, even if it never names the colour.** A
+  review of the Galaxy A54 was thrown away because it did not repeat the 256 GB
+  and the colour a listing's title adds. A model code such as A54 with another
+  word of the name is enough to read the page. Each finding still has to show
+  it applies.
+- **The model on this computer maps a page correctly.** It took a pack's name
+  for a key, and what it wrote was refused. It is given the key names alone.
 
 ### 0.2.0
 
