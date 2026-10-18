@@ -84,6 +84,7 @@ export function useCatalogs() {
   }, [])
 
   const load = useCallback(async () => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setCatalogs((now) => now ?? DEMO)
       setDrafts((now) => (now.length ? now : DEMO_DRAFTS))

@@ -7,6 +7,7 @@ import { EngineError, get, post, seg, type ApiJob } from '../engine/api'
 import { followJob } from '../engine/jobs'
 import { usePrefs } from '../prefs'
 import { Composer } from '../ui/Composer'
+import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
@@ -170,9 +171,9 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
                   {risk.sources.length > 0 && (
                     <span className="srcs">
                       {risk.sources.slice(0, 3).map((s, i) => (
-                        <a key={i} href={s.url || undefined} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink key={i} href={s.url || undefined}>
                           {s.host || s.url}
-                        </a>
+                        </ExternalLink>
                       ))}
                     </span>
                   )}

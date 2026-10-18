@@ -79,6 +79,8 @@ pub fn run() {
     builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| shell::show_window(app)));
   }
   builder
+    // Opens a link from an answer in the reader's own browser; the window cannot.
+    .plugin(tauri_plugin_opener::init())
     .on_window_event(|window, event| {
       if let tauri::WindowEvent::CloseRequested { api, .. } = event {
         if shell::can_hide() {

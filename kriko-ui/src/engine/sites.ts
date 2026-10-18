@@ -86,6 +86,7 @@ export function useSites() {
   }, [])
 
   const load = useCallback(async () => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setSites((now) => now ?? DEMO_SITES)
       setWanted((now) => (now.length ? now : DEMO_WANTED))
