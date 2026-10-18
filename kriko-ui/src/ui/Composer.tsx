@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEngine, type Agent } from '../engine/Engine'
 import { usePrefs } from '../prefs'
+import { AgentMark } from './AgentMark'
 import { Icon } from './Icon'
 import { PixelGlyph } from './PixelGlyph'
 
@@ -13,6 +14,8 @@ export function Composer({
   placeholder = 'Ask about a product',
   autoFocus = false,
   agents: pickAgent = true,
+  draft = null,
+  recall = [],
 }: {
   onSubmit: (text: string, agent: Agent) => void
   running: boolean
@@ -21,6 +24,10 @@ export function Composer({
   autoFocus?: boolean
   /** Show the agent pick. Off where the engine chooses the agent itself. */
   agents?: boolean
+  /** Words to put in the box, such as a question taken back to be changed. A new `at` puts them again. */
+  draft?: { text: string; at: number } | null
+  /** What was asked before, oldest first. The up arrow in an empty box walks back through it. */
+  recall?: string[]
 }) {
   const { motion: m } = usePrefs()
   const { agents, preferred } = useEngine()
@@ -31,21 +38,44 @@ export function Composer({
   const [menu, setMenu] = useState(false)
   const field = useRef<HTMLTextAreaElement>(null)
 
+  /** How far back the up arrow has gone: 0 is the box as the reader left it. */
+  const back = useRef(0)
+
   useEffect(() => {
     if (autoFocus) field.current?.focus()
   }, [autoFocus])
+
+  useEffect(() => {
+    if (!draft) return
+    setText(draft.text)
+    back.current = 0
+    field.current?.focus()
+  }, [draft])
 
   const send = () => {
     const value = text.trim()
     if (!value || running) return
     onSubmit(value, agent)
     setText('')
+    back.current = 0
   }
 
   const onKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       send()
+      return
+    }
+    // Up in an empty box (or one already showing an old question) brings the last question back.
+    const walking = back.current > 0
+    if (event.key === 'ArrowUp' && recall.length && (!text || walking)) {
+      event.preventDefault()
+      back.current = Math.min(back.current + 1, recall.length)
+      setText(recall[recall.length - back.current])
+    } else if (event.key === 'ArrowDown' && walking) {
+      event.preventDefault()
+      back.current -= 1
+      setText(back.current ? recall[recall.length - back.current] : '')
     }
   }
 
@@ -57,7 +87,10 @@ export function Composer({
         value={text}
         placeholder={placeholder}
         rows={1}
-        onChange={(event) => setText(event.target.value)}
+        onChange={(event) => {
+          setText(event.target.value)
+          back.current = 0
+        }}
         onKeyDown={onKey}
         aria-label="Message"
       />
@@ -68,7 +101,7 @@ export function Composer({
         {pickAgent && (
         <div className="agent-pick" data-tour="agent-pick">
           <button className="pill" onClick={() => setMenu((v) => !v)} aria-haspopup="listbox" aria-expanded={menu}>
-            <Icon name="spark" size={14} />
+            <AgentMark id={agent.id} size={20} />
             {agent.label}
             <Icon name="chevron" size={13} />
           </button>
@@ -92,7 +125,8 @@ export function Composer({
                         setMenu(false)
                       }}
                     >
-                      {item.label}
+                      <AgentMark id={item.id} size={20} />
+                      <span className="menu-label">{item.label}</span>
                       {item.id === agent.id && <Icon name="check" size={14} />}
                     </button>
                   </li>
