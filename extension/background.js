@@ -2015,6 +2015,55 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // async
   }
 
+  /* The agents that can answer from this panel, and the one the app uses.
+   * Only a row the app calls ready *and* runnable ("use") is offered: a row
+   * that needs a login or an install is Settings' business, not a choice. */
+  if (request.type === "AGENTS") {
+    _getApp("/api/agent-market")
+      .then((market) => sendResponse({
+        ok: true,
+        chosen: String(market.chosen || ""),
+        agents: (market.agents || [])
+          .filter((one) => one && one.id && one.state === "ready" && one.action === "use")
+          .map((one) => ({ id: String(one.id), label: String(one.label || one.id), kind: String(one.kind || ""),
+            local: Boolean(one.local) })),
+      }))
+      .catch((error) => sendResponse({ ok: false, code: error.code, error: error.message }));
+    return true;
+  }
+
+  /* "Learn this page": read the page the way an agent would have to, then hand
+   * the app what it printed. The snapshot is taken here, from the tab that
+   * pressed the button, because the page is already rendered and past whatever
+   * bot check the site runs; the app never fetches it. */
+  if (request.type === "LEARN_PAGE") {
+    const agent = String(request.payload?.agent || "").slice(0, 64);
+    const run = async () => {
+      let tabId = sender.tab?.id;
+      if (!tabId) {
+        const tabs = await extensionApi.tabs.query({ active: true, currentWindow: true });
+        tabId = tabs[0]?.id;
+      }
+      if (!tabId) throw new Error("No active tab found.");
+      const reply = await _requestScrape(tabId, [], {}, true);
+      if (!reply || !reply.ok || !reply.payload) throw new Error("Kriko could not read this page.");
+      const scrape = reply.payload;
+      return _postApp("/api/sites/learn", {
+        url: scrape.url,
+        title: String(scrape.title || "").slice(0, 500),
+        page_title: String(scrape.title || "").slice(0, 500),
+        fields: scrape.fields || {},
+        description: String(scrape.description || "").slice(0, 5000),
+        product: scrape.product || {},
+        agent,
+      });
+    };
+    run()
+      .then((lesson) => sendResponse({ ok: true, lesson }))
+      .catch((error) => sendResponse({ ok: false, code: error.code, error: error.message }));
+    return true;
+  }
+
   if (request.type === "RESEARCH_PRODUCT") {
     const input = request.payload || {};
     const subject_id = String(input.subject_id || "").trim();
@@ -2027,6 +2076,8 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // B148: the listing's own address, so the quick look is held to the bar
     // of the pack whose site this is.
     if (!subject_id && typeof input.url === "string" && input.url) body.url = input.url.slice(0, 2000);
+    // The agent the reader picked in the panel, for this run only.
+    if (typeof input.harness === "string" && input.harness) body.harness = input.harness.slice(0, 64);
     if (Number.isFinite(input.cap) && input.cap > 0) body.cap = input.cap;
     _postIdempotent("/api/extension/research-plane", body, async (prepared) => {
       if (!prepared.url) return;
