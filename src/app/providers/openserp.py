@@ -307,6 +307,8 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
                     check_cancelled()
                 if not answered and failures and not pending:
                     raise LocalSearchError(str(failures[-1])) from failures[-1]
+                if pending and not answered:
+                    raise LocalSearchError("search engines did not answer within the time budget")
                 return []
             finally:
                 stop.set()
@@ -393,11 +395,17 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
                         continue
                     raise last_error
             had_response = True
-            # Mega searches retain main's click-through resolver. In `any`
-            # mode a click-through is filtered below, allowing the loop to
-            # ask the next engine within the shared deadline.
-            candidates = (results if per_engine else _unwrapped(
-                results, check_cancelled, resolve))
+            # Fast searches need the same destination resolution as research.
+            # Google often returns only /goto links; dropping them made a
+            # working engine look as though it found nothing.
+            resolver = resolve
+            if per_engine and resolver is None:
+                def resolver(address, *, check=None):
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return ""
+                    return unwrap_goto(address, check=check, timeout=min(2.0, remaining))
+            candidates = _unwrapped(results, check_cancelled, resolver)
             out = []
             for hit in candidates:
                 if not isinstance(hit, dict):
@@ -405,12 +413,22 @@ def searcher(base_url: str = "", engine: str = "", *, language: str = "en",
                 url = str(hit.get("url", "")).strip()
                 if not url or _is_ad_or_search_redirect(url, hit.get("type")):
                     continue
+                try:
+                    parsed = urllib.parse.urlsplit(url)
+                except ValueError:
+                    continue
+                if parsed.scheme not in ("http", "https") or not parsed.hostname:
+                    continue
                 site = str(hit.get("domain", "")).strip()
                 if not site:
                     netloc = urllib.parse.urlsplit(url).netloc
                     site = netloc.split("@")[-1].split(":")[0]
-                out.append({"url": url, "title": str(hit.get("title", "")).strip(),
-                            "site": site})
+                item = {"url": url, "title": str(hit.get("title", "")).strip(), "site": site}
+                if hit.get("snippet"):
+                    item["snippet"] = str(hit["snippet"])[:1000]
+                out.append(item)
+                if len(out) >= max(1, int(limit)):
+                    break
             with stats_lock:
                 stats["hits"] += len(out)
             if out or not per_engine:

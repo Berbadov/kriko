@@ -127,10 +127,6 @@ function extractInfoList(knownLabels) {
     }
   }
 
-  if (Object.keys(details).length > 0) {
-    return details;
-  }
-
   const trItems = document.querySelectorAll(
     "table.classifiedInfo tr, table.classified-info tr, table[class*='InfoList'] tr, .classified-properties tr"
   );
@@ -788,7 +784,9 @@ function readStructuredProduct() {
 
   const ogProduct = /^(?:og:)?product(?::item)?$/i.test(_metaContent("og:type"));
   const typed = chosen.length > 0 || (!products.length && !nonProductPage && !listed && ogProduct);
-  return { fields, name: name.slice(0, 240), typed,
+  const description = chosen.map((node) => _ldText(node.description)).find(Boolean)
+    || (typed ? _metaContent("description") || _metaContent("og:description") : "");
+  return { fields, name: name.slice(0, 240), typed, description,
     recognition: { status: chosen.length ? "product" : products.length && !nonProductPage ? "ambiguous" : typed ? "product" : "untyped",
       source: chosen.length ? "structured-data" : ogProduct ? "open-graph" : "heading",
       signals: chosen.length ? first.signals : [], candidates: products.length } };
@@ -808,10 +806,9 @@ const DESCRIPTION_SELECTORS = [
 // damage and equipment panels locally, and the engine has no rule for them,
 // so there is no reason to send them anywhere.
 //
-// `explore` is for a page nothing can read yet: the caller has no declared
-// labels to ask for, so the page's own label/value shapes are collected too.
-// Every ordinary scrape leaves it off, which is what keeps a known site's
-// payload exactly as it was.
+// The page's own label/value shapes are collected on known sites too, so
+// agents receive new facts when a site changes. `explore` remains accepted
+// for older workers that still send it.
 function buildScrape(knownLabels, panel, explore) {
   const infoList = extractInfoList(knownLabels);
   const technical = extractTechnicalDetails();
@@ -823,10 +820,10 @@ function buildScrape(knownLabels, panel, explore) {
   // label the pack declared is the better evidence where both speak (B149).
   const structured = readStructuredProduct();
   const fields = { ...structured.fields, ...technical, ...infoList };
-  if (explore) {
-    for (const [label, value] of Object.entries(extractOwnLabels(knownLabels))) {
-      if (!fields[label]) fields[label] = value;
-    }
+  // Keep newly introduced labels on known sites too. Otherwise an agent
+  // never sees the facts its previous adapter did not know to request.
+  for (const [label, value] of Object.entries(extractOwnLabels(knownLabels))) {
+    if (!fields[label]) fields[label] = value;
   }
 
   let description = null;
@@ -834,10 +831,12 @@ function buildScrape(knownLabels, panel, explore) {
     description = textBySelector(selector);
     if (description) break;
   }
+  description = description || structured.description || null;
 
   return {
     url: window.location.href,
-    title: textBySelector("h1.classifiedTitle") || textBySelector("h1"),
+    title: textBySelector("h1.classifiedTitle") || textBySelector("h1")
+      || structured.name || cleanText(document.title),
     description,
     fields,
     // What the page says it sells, for the panel to name a product no pack
