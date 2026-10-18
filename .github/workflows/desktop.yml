@@ -105,16 +105,22 @@ jobs:
                   New-Item -ItemType Directory -Force kriko-ui/src-tauri/binaries | Out-Null
                   ./packaging/fetch_openserp.ps1 -Destination kriko-ui/src-tauri/binaries/OpenSERP-x86_64-pc-windows-msvc.exe
 
+            # A folder, not one file: a one-file engine unpacks itself on every
+            # start, and that was most of the wait before the window had data.
             - name: Freeze the sidecar
+              env:
+                  KRIKO_FREEZE: folder
               run: pyinstaller --noconfirm packaging/kriko-sidecar.spec
 
             # A frozen binary that cannot print its port is a blank window, so
             # the handshake is checked here, before it is bundled into anything.
             - name: The frozen sidecar answers
-              run: python packaging/smoke_sidecar.py "dist/kriko-sidecar.exe"
+              run: python packaging/smoke_sidecar.py "dist/kriko-engine/kriko-sidecar.exe"
 
             - name: Place the sidecar
-              run: cp dist/kriko-sidecar.exe kriko-ui/src-tauri/binaries/kriko-sidecar-x86_64-pc-windows-msvc.exe
+              run: |
+                  cp dist/kriko-engine/kriko-sidecar.exe kriko-ui/src-tauri/binaries/kriko-sidecar-x86_64-pc-windows-msvc.exe
+                  cp -r dist/kriko-engine/_internal kriko-ui/src-tauri/binaries/_internal
 
             - name: Install the web interface's packages
               run: npm ci
@@ -148,7 +154,8 @@ jobs:
               run: |
                   $bin = "kriko-ui/src-tauri/target/release"
                   Compress-Archive -Path "$bin/kriko.exe", "$bin/kriko-sidecar.exe", `
-                      "$bin/OpenSERP.exe", "kriko-ui/src-tauri/third-party/OpenSERP-LICENSE.txt" `
+                      "$bin/OpenSERP.exe", "kriko-ui/src-tauri/binaries/_internal", `
+                      "kriko-ui/src-tauri/third-party/OpenSERP-LICENSE.txt" `
                       -DestinationPath "kriko-ui/builds/kriko-$env:VERSION-win64-portable.zip" -Force
                   $files = @("kriko-ui/builds/kriko-$env:VERSION-x86_64-setup.exe", "kriko-ui/builds/kriko-$env:VERSION-win64-portable.zip")
                   $lines = foreach ($file in $files) {
