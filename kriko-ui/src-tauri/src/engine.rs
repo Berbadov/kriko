@@ -5,7 +5,8 @@
 //! Where the engine comes from, first match wins:
 //!
 //! 1. `KRIKO_URL` set: attach to that address, start nothing.
-//! 2. `kriko-sidecar[.exe]` beside this app executable (the installed layout): start it.
+//! 2. `kriko-sidecar[.exe]` beside this app executable (the installed layout,
+//!    with its `_internal` folder next to it): start it.
 //! 3. An engine already answering on the extension port: attach to it.
 //! 4. A source checkout: `python -m app.sidecar` (`KRIKO_PYTHON` picks the
 //!    interpreter).
@@ -14,8 +15,8 @@
 //! [`PORT_LINE`] names a port it already holds. `--exit-with-parent` makes it
 //! watch its stdin, so the write end is kept here for the whole run: if this
 //! process dies in any way at all, the pipe closes and the engine follows.
-//! On Windows a one-file bundle re-executes, so the pid spawned is only a
-//! bootloader; [`stop`] ends the whole tree.
+//! [`stop`] ends the whole process tree, because a bootloader (and the one-file
+//! builds of the other platforms) spawns a second process that holds the image.
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
@@ -214,10 +215,11 @@ fn supervise(generation: u64) {
         attach(&url, generation);
         return;
     }
-    ensure_openserp(generation);
-    // Search is an optional sidecar from the engine's point of view, but it
-    // must recover if our owned process exits after the initial health check.
-    // The generation guard makes this watcher end with stop/restart.
+    // Search is an optional sidecar from the engine's point of view. It starts
+    // beside the engine, never before it: waiting here for search to answer put
+    // up to twelve seconds in front of the engine's own start. The watcher also
+    // brings it back if our owned process exits. The generation guard makes it
+    // end with stop/restart.
     std::thread::Builder::new()
         .name("openserp-supervisor".into())
         .spawn(move || supervise_openserp(generation))
