@@ -22,6 +22,19 @@ immutable; a correction is a newer version.
 
   This starts with 0.2.3: to get from 0.2.2 or earlier to this version, run the
   installer once by hand.
+- **Chat finds the exact product and checks the seller.** A request such as
+  "can you find these for me?" now searches the web. Before this change, a
+  request in that form received an answer from memory, with no source. The
+  answer now follows these rules:
+  - Kriko reads the pages of popular and credible sites first. The list is the
+    file `sellers.json`. Add your own sites in `~/.kriko/sellers.json`.
+  - A code (a part number, a model number, an oil grade) is *confirmed* only when
+    two trusted sites print it. The answer says so when it is not.
+  - A marketplace is only as good as its seller. The answer names the seller and
+    the score that the page shows, or it says the seller is unknown.
+  - A page that calls itself official makes a claim. The answer reports it as
+    the claim of the page.
+  - The answer uses the language of your question.
 
 ### 0.2.2
 
