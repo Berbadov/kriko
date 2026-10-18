@@ -62,6 +62,11 @@ log = logging.getLogger(__name__)
 #: once per page.
 CALL_TIMEOUT = 12.0
 
+#: The same clock, for a reader who pressed "Learn this page" and is watching a
+#: spinner for it. Nothing is waiting on a page load, so the model gets longer,
+#: and it still leaves the extension's 30-second request clock its margin.
+PRESS_TIMEOUT = 24.0
+
 #: How long a *failed* inference keeps a page shape out of the model's queue.
 #:
 #: A failure is not a judgement about the page — the model was still loading,
@@ -123,7 +128,7 @@ def shape_of(fields: dict) -> str:
     return hashlib.sha256("\n".join([kind, *labels]).encode("utf-8")).hexdigest()[:32]
 
 
-def plane(app_state_path, *, timeout: float = CALL_TIMEOUT) -> dict:
+def plane(app_state_path, *, timeout: float = CALL_TIMEOUT, pressed: bool = False) -> dict:
     """The one plane an inference call may use, and why not when there is none.
 
     Returns `{"ready", "complete", "model", "reason"}`. `complete` is a
@@ -147,7 +152,7 @@ def plane(app_state_path, *, timeout: float = CALL_TIMEOUT) -> dict:
         found = localplane.resolve(app_state_path, with_search=False)
     except Exception:  # noqa: BLE001 — a probe that raises is a plane that is not ready
         return _no_plane("the local model could not be checked")
-    if localplane.reader_chose_an_agent(app_state_path):
+    if localplane.reader_chose_an_agent(app_state_path) and not pressed:
         return _no_plane("the reader picked another agent, so nothing is inferred")
     if not found.get("ready"):
         return _no_plane(str(found.get("reason") or "no local model is ready"))
@@ -246,28 +251,63 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
     reason a reader browsing a shop Kriko cannot read does not pay for the same
     model call on every listing.
     """
+    return _attempt(store, app_conn, app_state_path=app_state_path, url=url,
+                    fields=fields, title=title, description=description,
+                    product_name=product_name, timeout=timeout)["spec"]
+
+
+def learn(store, app_conn, *, app_state_path=None, url: str, fields: dict,
+          title: str = "", description: str = "", product_name: str = "",
+          timeout: float = CALL_TIMEOUT) -> dict:
+    """What the reader's own press of "Learn this page" taught this installation.
+
+    The same inference as `infer`, with the three things a press changes. The
+    reader asked, so a page shape that was tried before is tried again (a
+    refusal is a judgement about a model's answer, and they are asking for a
+    new one). The reader asked, so a site they had switched off is switched
+    back on. And the reader asked *this machine's model*, so their pick of
+    another agent does not stop it: that pick governs research runs, and this is
+    one call to a free local model that they pressed a button for. The paid plane
+    is still never reached.
+
+    Always answers `{"learned", "reason", "spec", "read"}`: a press that teaches
+    nothing says why, in words the panel can print, instead of saying nothing.
+    """
+    return _attempt(store, app_conn, app_state_path=app_state_path, url=url,
+                    fields=fields, title=title, description=description,
+                    product_name=product_name, timeout=timeout, pressed=True)
+
+
+def _attempt(store, app_conn, *, app_state_path, url: str, fields: dict,
+             title: str, description: str, product_name: str, timeout: float,
+             pressed: bool = False) -> dict:
+    def nothing(reason: str, **more) -> dict:
+        return {"learned": False, "reason": reason, "spec": None, "read": None, **more}
+
     if app_conn is None or not store:
-        return None
+        return nothing("This installation has no store to read a page into.")
     host = sites.host_of(url)
     if not host:
-        return None
+        return nothing("This page has no site address to learn.")
     digest = shape_of(fields)
     for row in state.local_adapters(app_conn, enabled_only=False):
         if row["host"] == host and not row.get("enabled", 1):
-            # The reader turned this site off (`POST /api/sites/{host}/inferred`).
-            # Every page here asks the same consent question, and a switch a
-            # later page shape could quietly flip back by inferring a new
-            # adapter is not a switch. Not recorded: the shape cache is about
-            # what a model was asked, and nothing was.
-            return None
-    if any(_brake(row) for row in
-           state.site_inferences(app_conn, host=host, shape=digest)):
+            if not pressed:
+                # The reader turned this site off (`POST /api/sites/{host}/inferred`).
+                # Every page here asks the same consent question, and a switch a
+                # later page shape could quietly flip back by inferring a new
+                # adapter is not a switch. Not recorded: the shape cache is about
+                # what a model was asked, and nothing was.
+                return nothing("This site was switched off.")
+            state.set_local_adapter_enabled(app_conn, host, True)
+    if not pressed and any(_brake(row) for row in
+                           state.site_inferences(app_conn, host=host, shape=digest)):
         # This exact page shape has been to a model already, and the record of
         # what came of it still stands. An `ok` row means the adapter is in
         # `local_adapters` and the reader has since turned it off, or the page
         # changed under it; a `refused` row is a judgement about this shape.
         # `_brake` is the one that expires, and why is there.
-        return None
+        return nothing("This page shape was already tried.")
 
     sample = sites.sample(url=url, title=title, fields=fields,
                           description=description, product={"name": product_name})
@@ -275,41 +315,41 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
         # Nothing labelled on the page to infer from: a call here would be one
         # per page and could not answer. Not recorded, so the first page that
         # does carry labels is inferred the moment it arrives.
-        return None
+        return nothing("This page prints no labelled facts to learn from.")
 
     keys = _keys_brief(store)
     if not keys:
         # No enabled pack declares an identity key, so every adapter a model
         # could write would be refused by `check` for mapping into nothing.
-        return None
+        return nothing("No installed pack names anything to read yet, so there "
+                       "is nothing to map this page into.")
 
-    chosen = plane(app_state_path, timeout=timeout)
+    chosen = (plane(app_state_path, timeout=timeout, pressed=True) if pressed
+              else plane(app_state_path, timeout=timeout))
     if not chosen.get("ready"):
         # Nothing recorded: a reader who starts their model server later must
         # have their pages inferred, not be told these shapes were tried.
         log.info("nothing was inferred on %s: %s", host, chosen.get("reason", ""))
-        return None
+        return nothing(str(chosen.get("reason") or "No local model is ready."))
 
-    def gave_up(outcome: str, detail: str) -> dict | None:
+    def gave_up(outcome: str, detail: str) -> dict:
         """Record why, and answer "nothing was inferred"."""
         log.info("nothing was inferred on %s: %s", host, detail)
         state.save_site_inference(
             app_conn, host=host, shape=digest, state=outcome,
             detail=detail[:400], model=chosen["model"])
-        return None
+        return nothing(detail[:400], model=chosen["model"])
 
     reply, why = _bounded(chosen["complete"],
                           prompt_for(host, url, keys, sample), timeout)
     if why:
-        gave_up("failed", why)
-        return None
+        return gave_up("failed", why)
 
     from app.packauthor import _payload  # the same fence reader every door uses
 
     spec = _payload(reply)
     if not spec:
-        gave_up("refused", "the model printed no adapter")
-        return None
+        return gave_up("refused", "the model printed no adapter")
     # The host is a fact from the reader's browser, never the model's to choose.
     # `check` validates `match` against `site`, so a model that wrote another
     # site's pattern here is refused rather than handed a permission on a host
@@ -318,8 +358,7 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
     try:
         checked = sites.check(offered, host=host)
     except sites.SiteRefused as exc:
-        gave_up("refused", f"the adapter was refused: {exc}")
-        return None
+        return gave_up("refused", f"the adapter was refused: {exc}")
 
     vocabulary = identity_vocabulary(store)
     if not set(checked.get("identity") or {}) & set(vocabulary):
@@ -328,13 +367,11 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
         # every page to nothing). A hand-written adapter is allowed to be
         # wrong about this and show it; an automatic one is not, because
         # nobody is watching the page it mis-reads.
-        gave_up("refused", "the adapter's identity keys are not any installed pack's")
-        return None
+        return gave_up("refused", "the adapter's identity keys are not any installed pack's")
     try:
         read = sites.validate_sample(checked, sample, vocabulary)
     except sites.SiteRefused as exc:
-        gave_up("refused", f"the adapter was refused: {exc}")
-        return None
+        return gave_up("refused", f"the adapter was refused: {exc}")
 
     state.save_local_adapter(app_conn, host=host, spec=checked,
                              source="inference", pack_id="")
@@ -346,7 +383,8 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
     log.info("%s can be read now: an inferred adapter from %s", host, chosen["model"])
     # `learned_by` rides the spec so the caller can say *how* the page was read
     # without a second lookup of the row it was just written from.
-    return {**checked, "learned_by": "inference"}
+    return {"learned": True, "reason": "", "model": chosen["model"],
+            "spec": {**checked, "learned_by": "inference"}, "read": read}
 
 
 def _brake(row: dict) -> bool:

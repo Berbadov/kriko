@@ -144,6 +144,21 @@
           // looked at without an app.
           const research = params.get("research");
           if (research && message.type === "RESEARCH_PLANE") return callback({ ok: true, plane: { backend: "local" } });
+          // The agent picker and "Learn this page". ?learn=none is a page that
+          // taught nothing; otherwise the local model answers with a lesson.
+          if (research && message.type === "AGENTS") return callback({ ok: true, chosen: "local", agents: [
+            { id: "local", label: "Local agent", kind: "local" },
+            { id: "claude", label: "Claude Code", kind: "cli" },
+          ] });
+          if (research && message.type === "LEARN_PAGE") {
+            const none = params.get("learn") === "none";
+            return setTimeout(() => callback({ ok: true, lesson: none
+              ? { mode: "local", learned: false, reason: "This page prints no labelled facts to learn from.", grabs: [] }
+              : { mode: "local", learned: true, host: "shop.example", name: "Volkswagen Golf 1.6 TDI Highline", grabs: [
+                { as: "make", value: "Volkswagen", kind: "identity" }, { as: "model", value: "Golf", kind: "identity" },
+                { as: "fuel", value: "Dizel", kind: "identity" }, { as: "usage_km", value: "190.000 km", kind: "context" },
+              ] } }), 700);
+          }
           if (research && message.type === "RESEARCH_PRODUCT") return callback({ ok: true, job: previewJob() });
           if (research && message.type === "JOB_STATUS" && message.payload.job_id === "preview-research") {
             return callback({ ok: true, job: previewJob() });
