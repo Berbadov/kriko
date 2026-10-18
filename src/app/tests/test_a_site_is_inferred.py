@@ -119,7 +119,7 @@ def _ready(monkeypatch, model: _Model, *, model_name: str = "test-model") -> _Mo
     Everything after this — the prompt, the parse, the two gates, the cache,
     the storage — is the real code path.
     """
-    def plane(app_state_path, *, timeout=siteinfer.CALL_TIMEOUT):
+    def plane(app_state_path, *, timeout=siteinfer.CALL_TIMEOUT, pressed=False):
         return {"ready": True, "complete": model, "model": model_name, "reason": ""}
 
     monkeypatch.setattr(siteinfer, "plane", plane)

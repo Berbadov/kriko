@@ -3,6 +3,36 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.2.1
+
+- **Learn this page.** The research card in the extension panel has a button
+  that goes through the page you are on and learns what to take from it. It
+  shows what it took and what each thing was taken as. The model on this
+  computer answers at once. Another agent runs as a job the panel follows.
+- **Pick the agent in the panel.** The research card lists the agents that
+  are ready, starts on the one the app uses, and remembers your pick. It
+  names the cost before you press anything.
+- **A research search starts from the product, not the page title.** A title
+  such as "Samsung Galaxy A54 256 GB Beyaz Fiyatları, Özellikleri ve
+  Yorumları | En Ucuzu Akakçe" was searched whole, so the searches found the
+  shop and its ranking words instead of the phone. The shop name and the
+  words a shop adds to rank are taken off before any search is made.
+- **A page about your phone is read, even if it never names the colour.** A
+  review of the Galaxy A54 was thrown away because it did not repeat the 256 GB
+  and the colour a listing's title adds. A model code such as A54 with another
+  word of the name is enough to read the page. Each finding still has to show
+  it applies.
+- **The model on this computer maps a page correctly.** It took a pack's name
+  for a key, and what it wrote was refused. It is given the key names alone.
+- **Agents no longer fail with "does not declare per-run model selection".**
+  Kriko asks each agent's program which flags it has. One slow first answer
+  was remembered until you closed the app, so Claude Code and Antigravity were
+  refused for flags they have. An empty answer is now asked again after a short
+  pause.
+- **Chat no longer ends on "SEARCH: …".** When an agent asked for a search in
+  more than 14 words, the request was shown as the answer and nothing was
+  searched. It is shortened and the search runs.
+
 ### 0.2.0
 
 - **The desktop app is new.** It is built on Tauri now, with a blue look, a
