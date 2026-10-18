@@ -1,7 +1,7 @@
 """Every path a client calls must be a route the engine serves.
 
 Three parties speak HTTP to the one local engine: the browser extension
-(JavaScript), the desktop window (Rust, `kriko-gpui/src`) and the terminal
+(JavaScript), the desktop window (TypeScript, `kriko-ui/src`) and the terminal
 interface (Python, `src/app/tui`). Nothing used to check that what they call
 exists on the server, so a renamed or dropped route was found by a reader
 pressing a button. This test derives both sides from source and fails on the
@@ -528,8 +528,8 @@ def _client_calls() -> dict[str, list[Call]]:
     js = [p for p in (REPO / "extension").rglob("*.js")
           if not {"tests", "assets", "node_modules"} & set(p.parts)]
     clients["the browser extension"] = [c for p in sorted(js) for c in _js_calls("the browser extension", p)]
-    rust = sorted((REPO / "kriko-gpui" / "src").rglob("*.rs"))
-    clients["the desktop app"] = [c for p in rust for c in _rust_calls("the desktop app", p)]
+    web = sorted(p for suffix in ("*.ts", "*.tsx") for p in (REPO / "kriko-ui" / "src").rglob(suffix))
+    clients["the desktop app"] = [c for p in web for c in _js_calls("the desktop app", p)]
     py = [p for p in (REPO / "src" / "app" / "tui").rglob("*.py")
           if "tests" not in p.parts and "__pycache__" not in p.parts]
     clients["the terminal interface"] = [c for p in sorted(py) for c in _python_calls("the terminal interface", p)]

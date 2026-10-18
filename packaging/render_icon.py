@@ -28,7 +28,7 @@ carry the risk.
 
 Writes `packaging/icon-master.png`, the 1024px master, and the two copies the
     extension toolbar icons out of the desktop icon. The desktop app's own
-`kriko-gpui/assets/kriko.ico` is a separate, hand-drawn tile (the white K on
+`kriko-ui/src-tauri/icons/icon.ico` is a separate, hand-drawn tile (the white K on
 the brand blue, rounded) that the exe and the installer both read; it is not
 derived here, and `test_the_desktop_icon_is_a_whole_ico` holds its shape.
 """
@@ -219,13 +219,13 @@ def smooth_png(shapes, side: int, size: int) -> bytes:
 
 #: The extension's toolbar icons are the desktop app's own icon, not a render.
 #: Since 1.0.1 the product has one mark, the white K on the brand plate that
-#: `kriko-gpui/assets/kriko.ico` carries for the exe, the taskbar and the
+#: `kriko-ui/src-tauri/icons/icon.ico` carries for the exe, the taskbar and the
 #: installer. That file already holds a PNG at every size the manifest asks
 #: for, so the toolbar copies those bytes out rather than drawing a second
 #: version of the letter that could drift from the first.
 EXTENSION_ICONS = (16, 32, 48, 128)
 EXTENSION_DIR = REPO / "extension" / "assets" / "icons"
-DESKTOP_ICO = REPO / "kriko-gpui" / "assets" / "kriko.ico"
+DESKTOP_ICO = REPO / "kriko-ui" / "src-tauri" / "icons" / "icon.ico"
 
 
 PNG_SIGNATURE = bytes([0x89]) + b"PNG" + bytes([13, 10, 26, 10])

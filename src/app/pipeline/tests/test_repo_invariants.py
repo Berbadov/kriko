@@ -246,13 +246,14 @@ def test_every_pack_in_the_repo_builds_and_is_not_empty(tmp_path):
 
 
 # ── the desktop shell ─────────────────────────────────────────────────────
-# kriko-gpui/ is the desktop app: a native GPUI window that supervises the
-# sidecar and draws every screen itself. It is optional for the wheel and for
-# this suite (no Rust toolchain is needed here), but a few things about it are
-# load-bearing and break invisibly: a window that never opens, or an engine
-# reimplemented in Rust. They are pinned in Python, where the gate already runs.
+# kriko-ui/ is the desktop app: a Tauri shell (kriko-ui/src-tauri) that
+# supervises the sidecar, and a web interface it shows. It is optional for the
+# wheel and for this suite (no Rust toolchain is needed here), but a few things
+# about it are load-bearing and break invisibly: a window that never opens, or
+# an engine reimplemented in Rust. They are pinned in Python, where the gate
+# already runs.
 
-GPUI = REPO / "kriko-gpui"
+SHELL = REPO / "kriko-ui" / "src-tauri"
 
 
 def _rust_code(path: Path) -> str:
@@ -289,7 +290,7 @@ def test_the_shell_and_the_sidecar_agree_on_the_handshake():
     """
     from app.sidecar import PORT_LINE
 
-    engine = _rust_code(GPUI / "src" / "engine.rs")
+    engine = _rust_code(SHELL / "src" / "engine.rs")
     declared = re.search(r'const PORT_LINE: &str = "([^"]+)"', engine)
     assert declared, "engine.rs no longer declares PORT_LINE"
     assert declared.group(1) == PORT_LINE, (
@@ -308,7 +309,7 @@ def test_the_shell_holds_no_engine_logic():
     ban vocabulary. It bans the things only an engine does: SQL, a database
     crate, and opening the store files.
     """
-    rust = [p for p in (GPUI / "src").rglob("*.rs")]
+    rust = [p for p in (SHELL / "src").rglob("*.rs")]
     assert rust, "no Rust sources found: fix this path, not the test"
 
     for path in rust:
@@ -317,7 +318,7 @@ def test_the_shell_holds_no_engine_logic():
                 f"{_rel(path)}:{number} puts engine logic in the shell: "
                 f"{line.strip()!r}. Rust owns the sidecar's lifetime and "
                 f"draws what the engine says over HTTP; it never reads the "
-                f"store. See kriko-gpui/README.md."
+                f"store. See kriko-ui/README.md."
             )
 
 
@@ -354,8 +355,8 @@ def test_the_engine_pattern_tells_sql_from_english():
     for line in prose:
         assert not _FORBIDDEN.search(line), f"prose the gate must not flag: {line!r}"
 
-    manifest = (GPUI / "Cargo.toml").read_text(encoding="utf-8")
-    lock = (GPUI / "Cargo.lock").read_text(encoding="utf-8")
+    manifest = (SHELL / "Cargo.toml").read_text(encoding="utf-8")
+    lock = (SHELL / "Cargo.lock").read_text(encoding="utf-8")
     for crate in ("rusqlite", "sqlx", "libsqlite3-sys", "diesel"):
         assert crate not in manifest and f'name = "{crate}"' not in lock, (
             f"{crate} is in the desktop app's graph: the store is the "
@@ -367,11 +368,11 @@ def test_the_boot_screen_can_render_a_failure():
     """A sidecar that dies must produce an explanation, not a blank window.
 
     Every way the engine can fail to come up has to land in `Status::Failed`
-    with the engine's own stderr, and the window has to draw that status. The
+    with the engine's own stderr, and the page has to show that status. The
     window is created whatever the engine does, so the failure has somewhere
     to be seen.
     """
-    engine = _rust_code(GPUI / "src" / "engine.rs")
+    engine = _rust_code(SHELL / "src" / "engine.rs")
     spawn = _fn_body(engine, "spawn")
     attach = _fn_body(engine, "attach")
     assert "Status::Failed" in attach, "an engine that never answers is not reported"
@@ -382,12 +383,14 @@ def test_the_boot_screen_can_render_a_failure():
         "an engine that exits after starting does not reach the failure screen "
         "with what it said on stderr"
     )
-    app = _rust_code(GPUI / "src" / "app.rs")
-    boot = _fn_body(app, "boot_screen")
-    assert "Status::Failed" in boot and "detail" in boot, (
-        "the window never draws the failure"
+    lib = _rust_code(SHELL / "src" / "lib.rs")
+    assert "Failed" in _fn_body(lib, "engine_status") and "engine::restart" in lib, (
+        "the shell does not tell the page about a failure, or cannot retry"
     )
-    assert "engine::restart" in boot, "the failure screen offers no retry"
+    page = (REPO / "kriko-ui" / "src" / "engine" / "Engine.tsx").read_text(encoding="utf-8")
+    assert "engine_status" in page and "setProblem" in page, "the page never reads the failure"
+    drawer = (REPO / "kriko-ui" / "src" / "ui" / "Drawer.tsx").read_text(encoding="utf-8")
+    assert "engine.problem" in drawer, "the page never draws the failure"
     assert "kill_tree" in _fn_body(engine, "stop"), (
         "nothing kills the sidecar's tree: an orphaned engine holds the "
         "store's WAL lock and breaks the next launch"
@@ -428,7 +431,7 @@ def test_the_shell_tells_the_sidecar_to_die_with_it():
     silent: argparse would reject it and the engine would never start.
     """
     flag = "--exit-with-parent"
-    engine = _rust_code(GPUI / "src" / "engine.rs")
+    engine = _rust_code(SHELL / "src" / "engine.rs")
     sidecar = (REPO / "src" / "app" / "sidecar.py").read_text(encoding="utf-8")
     assert flag in engine, f"the shell does not pass {flag}: an orphan survives a crash"
     assert flag in sidecar, f"the sidecar does not accept {flag}: it would fail to start"
@@ -441,7 +444,7 @@ def test_the_shell_stops_the_whole_tree_on_windows():
     """A one-file PyInstaller bundle re-executes, so the pid spawned is only a
     bootloader and the child holds the image mapped. Killing the pid alone
     leaves the engine alive; `taskkill /T` is what ends it."""
-    engine = _rust_code(GPUI / "src" / "engine.rs")
+    engine = _rust_code(SHELL / "src" / "engine.rs")
     kill = _fn_body(engine, "kill_tree")
     assert '"/T"' in kill and '"/F"' in kill and "taskkill" in kill
 
@@ -449,7 +452,7 @@ def test_the_shell_stops_the_whole_tree_on_windows():
 def test_the_engine_port_is_the_same_on_both_sides_of_the_pipe():
     from app.web.settings import EXTENSION_PORT
 
-    engine = _rust_code(GPUI / "src" / "engine.rs")
+    engine = _rust_code(SHELL / "src" / "engine.rs")
     declared = re.search(r"const EXTENSION_PORT: u16 = (\d+);", engine)
     assert declared, "engine.rs no longer declares EXTENSION_PORT"
     assert int(declared.group(1)) == EXTENSION_PORT, (
@@ -530,7 +533,7 @@ def test_the_frozen_spec_bundles_every_data_file_it_reads_from_disk():
     # Each of these must appear as a distinctive fragment inside `datas=[...]` —
     # either the EXTENSION variable the spec builds from ROOT, or the literal
     # filename for a path built inline (as models.toml's fix does). There is no
-    # built frontend to ship: the desktop app is the GPUI shell (B202).
+    # built frontend to ship: the desktop app is the Tauri shell (B202).
     required = {
         "schema.sql": "the store's DDL",
         "models.toml": "the shipped model catalogue",

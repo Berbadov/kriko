@@ -1871,7 +1871,7 @@ async function openInApp(route, fallbackUrl) {
   // the other end, so a fallback tab would only open onto a dead local port
   // (ERR_CONNECTION_REFUSED) with nothing for the reader to do about it. For
   // "no_shell" the engine answered but no window is connected, which is said
-  // as a named error: no browser tab, since the GPUI app is the interface.
+  // as a named error: no browser tab, since the desktop app is the interface.
   if (delivery === "unreachable") {
     return {
       ok: false,

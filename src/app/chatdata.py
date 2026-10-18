@@ -578,7 +578,8 @@ def _quick_looks(ctx: Context, text: str = "") -> dict:
         if not _matches([product, result.get("category", ""),
                          *(r.get("title", "") for r in risks)], text):
             continue
-        offer = result.get("price") if isinstance(result.get("price"), dict) else {}
+        price = result.get("price")
+        offer: dict = price if isinstance(price, dict) else {}
         rows.append({"job_id": job["job_id"], "product": product,
                      "category": result.get("category", ""), "risks": len(risks),
                      "risk_titles": [str(r.get("title", "")) for r in risks[:6]],

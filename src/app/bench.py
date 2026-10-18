@@ -1,5 +1,20 @@
 """The benchmark: the same case, every plane, measured.
 
+**Superseded for model quality by `app/modelbench/`.** This module keys every
+measurement by *plane* — harness, agent, api, local — which answers "how does
+the pipeline do" and left the question a phone's model choice actually turns on
+spread across rows that could not be compared. `app/modelbench/` re-keys the
+same controlled corpus by **candidate** (one model, reached one way), holds the
+brief byte-identical across candidates, and reports tokens per correct answer
+beside a fabrication rate. Its command is `python -m app.modelbench` (or
+`kriko model-bench`) and its design is `docs/MODEL_BENCHMARK.md`.
+
+What stays here is the genuinely different question: measuring the research
+pipeline over the reader's *installed packs* (`specific`, `bulk`, `validation`),
+which no controlled corpus can do. `run_case` still serves the fixed suite so
+nothing that already calls it breaks — but for a decision about a model, read
+`modelbench`'s report rather than this module's table.
+
 *"Some very specific cases and cost measurements to understand how different
 agents perform."* — B111, and it is the row everything else in
 `docs/AGENT_OPERATIONS.md` waits on. Choosing how an operation should spend a
