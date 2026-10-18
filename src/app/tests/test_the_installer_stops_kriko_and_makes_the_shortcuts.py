@@ -106,7 +106,9 @@ def test_the_names_it_stops_are_the_names_it_ships(hooks):
 def test_the_installer_carries_the_licence_of_what_it_ships():
     bundle = _config("tauri.bundle.conf.json")["bundle"]
     assert bundle["resources"] == {
-        "third-party/OpenSERP-LICENSE.txt": "OpenSERP-LICENSE.txt"
+        "third-party/OpenSERP-LICENSE.txt": "OpenSERP-LICENSE.txt",
+        # the engine's folder, beside the program that needs it
+        "binaries/_internal": "_internal",
     }
     assert (CRATE / "third-party" / "OpenSERP-LICENSE.txt").stat().st_size > 0
 
@@ -161,3 +163,18 @@ def test_the_hooks_are_the_file_tauri_is_told_to_read():
     nsis = _config("tauri.conf.json")["bundle"]["windows"]["nsis"]
     assert nsis["installerHooks"] == "windows/hooks.nsh"
     assert (CRATE / nsis["installerHooks"]).is_file()
+
+
+def test_the_desktop_engine_is_a_folder_so_it_starts_without_unpacking_itself():
+    """A one-file engine unpacks all of itself into temp on every start, which
+    took 10 to 13 s on Windows before it could say a word, and that wait was the
+    blank window. The desktop app's engine is a program with a `_internal`
+    folder beside it, in every recipe that builds the installer."""
+    spec = (ROOT / "packaging" / "kriko-sidecar.spec").read_text(encoding="utf-8")
+    assert 'KRIKO_FREEZE") == "folder"' in spec and "COLLECT(" in spec
+    resources = _config("tauri.bundle.conf.json")["bundle"]["resources"]
+    assert resources["binaries/_internal"] == "_internal"
+    for recipe in (CRATE.parent / "package.ps1", ROOT / ".github" / "workflows" / "desktop.yml"):
+        text = recipe.read_text(encoding="utf-8")
+        assert re.search(r"KRIKO_FREEZE\W+\s*=?\s*\"?folder", text), f"{recipe.name} freezes one file"
+        assert "kriko-engine" in text and "_internal" in text, recipe.name
