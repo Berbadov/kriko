@@ -57,8 +57,28 @@ def sources() -> dict:
 
 
 @router.get("/threads")
-def list_threads(conn=Depends(get_app_state)) -> dict:
-    return {"items": state.chat_threads(conn)}
+def list_threads(q: str = "", conn=Depends(get_app_state)) -> dict:
+    return {"items": state.chat_threads(conn, q)}
+
+
+class ThreadPatch(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+    pinned: bool | None = None
+
+
+@router.patch("/threads/{thread_id}")
+def change_thread(thread_id: str, body: ThreadPatch, conn=Depends(get_app_state)) -> dict:
+    """Rename a conversation, pin it, or both."""
+    if state.get_chat_thread(conn, thread_id) is None:
+        raise HTTPException(404, f"no conversation {thread_id}")
+    if body.title is not None:
+        try:
+            state.rename_chat_thread(conn, thread_id, body.title)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+    if body.pinned is not None:
+        state.pin_chat_thread(conn, thread_id, body.pinned)
+    return state.get_chat_thread(conn, thread_id) or {}
 
 
 @router.post("/threads")
