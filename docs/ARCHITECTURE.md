@@ -60,6 +60,8 @@ Start with these files:
 |---|---|
 | `kriko` | The command line: install, build, list, and look up a catalog |
 | `kriko tui` | The operator console |
+| `kriko model-bench` | Measure models on a fixed corpus: tokens, fabrication, abstention. Writes a JSON, two CSVs and a report. See [MODEL_BENCHMARK.md](MODEL_BENCHMARK.md) |
+| `python -m app.modelbench` | The same benchmark without the `kriko` command. `list`, `plan`, `run` |
 | `python -m app.mcp_server` | The MCP server, for an agent that reads by itself |
 | `python -m app.pipeline.ledger_run` | The ledger stages |
 | `python -m app.pipeline.panel` | The spend, the coverage, and the recent runs |
