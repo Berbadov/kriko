@@ -9,7 +9,7 @@ rather than a page of instructions.
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from app import extension, followup, keys, sites
@@ -20,6 +20,30 @@ from kriko.research.agent import AgentResearcher
 from kriko.research.api import ApiResearcher
 
 router = APIRouter(prefix="/api/extension", tags=["extension"])
+
+
+@router.get("/web-search")
+def web_search(q: str = Query(min_length=2, max_length=500),
+               conn=Depends(get_app_state)) -> dict:
+    """Search public pages through the configured local service, without a model."""
+    from app import prefs
+    from app.providers import openserp
+    from kriko.research.politeness import LocalSearchError
+
+    if len(q.strip()) < 2:
+        raise HTTPException(422, "Enter at least two characters to search.")
+    chosen = prefs.read(conn)
+    search = openserp.searcher(
+        chosen.get(prefs.LOCAL_SEARCH_URL, ""), engine=openserp.LOCAL_ENGINES,
+        language=chosen.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en",
+        timeout=10.0, mode="any")
+    try:
+        items = search(q.strip(), 8)
+    except LocalSearchError as exc:
+        raise HTTPException(503, "Web search could not reach a working engine. "
+                            "Check the search service in Settings → Local machine. "
+                            + str(exc)[:200]) from exc
+    return {"items": items, "query": q.strip()}
 
 #: The extension door's own spending cap (2026-09-09-knowledge-building-design.md
 #: §3). Nothing in this codebase yet computes a per-subject cost estimate for
