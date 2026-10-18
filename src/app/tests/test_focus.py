@@ -8,7 +8,6 @@ answer, and the two constants on either side of a pipe with no compiler to
 check them against each other.
 """
 
-import re
 from pathlib import Path
 
 import pytest
@@ -86,22 +85,18 @@ def test_the_shell_and_the_engine_agree_on_the_stdout_line():
     still succeeds, the app still has its route, and the window just never
     comes to the front, which reads as the same dead button this replaced.
     """
-    engine = (REPO / "kriko-gpui" / "src" / "engine.rs").read_text(encoding="utf-8")
+    shell = REPO / "kriko-ui" / "src-tauri" / "src"
+    engine = (shell / "engine.rs").read_text(encoding="utf-8")
     assert f'const FOCUS_LINE: &str = "{focus.FOCUS_LINE}";' in engine
-    # And it must actually be acted on, not merely declared: the line becomes
-    # an event, and the window raises on it.
-    assert "line.contains(FOCUS_LINE)" in engine and "ShellEvent::Focus" in engine
-    app = (REPO / "kriko-gpui" / "src" / "app.rs").read_text(encoding="utf-8")
-    handler = re.search(r"ShellEvent::Focus\((\w+)\)\s*=>(.*?)let now = engine::status\(\)", app, re.S)
-    assert handler, "the app does not handle the focus event"
-    route, body = handler.groups()
-    assert "shell::show_window(cx)" in body, (
-        "the app receives the focus event and does not raise the window")
-    # And the route picks the screen, rather than raising whatever was open.
-    assert route != "_" and ("Tab::from_route" in body or "open_route" in body)
-    if "open_route" in body:
-        opener = re.search(r"pub fn open_route\(.*?\n    }\n", app, re.S)
-        assert opener and "Tab::from_route" in opener.group(0)
+    # And it must actually be acted on, not merely declared: the line raises
+    # the window and becomes an event the page listens for.
+    assert "line.contains(FOCUS_LINE)" in engine and "focus(route)" in engine
+    handler = engine[engine.index("fn focus(") :].split("\n}\n", 1)[0]
+    assert "show_window" in handler, "the shell receives the focus line and does not raise the window"
+    assert 'emit("focus-route"' in handler, "the route never reaches the page"
+    # The page listens for that event and lets the route pick the screen.
+    page = (REPO / "kriko-ui" / "src" / "handoff.ts").read_text(encoding="utf-8")
+    assert "'focus-route'" in page and "parseRoute" in page
 
 
 def test_the_focus_line_cannot_be_mistaken_for_the_port_handshake():
@@ -169,7 +164,7 @@ def test_the_shell_declares_its_supervision_when_it_spawns_the_sidecar():
     and the extension opens a browser tab beside the running app, which is
     exactly the bug this whole path exists to fix, and nothing else would fail.
     """
-    engine = (REPO / "kriko-gpui" / "src" / "engine.rs").read_text(encoding="utf-8")
+    engine = (REPO / "kriko-ui" / "src-tauri" / "src" / "engine.rs").read_text(encoding="utf-8")
     assert '.args(["--exit-with-parent", "--supervised"])' in engine
 
 

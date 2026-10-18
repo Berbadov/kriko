@@ -88,7 +88,7 @@ Three words have more than one meaning. Use the full form:
 
 ## Diagrams
 
-A diagram wears the colours of the desktop app (`kriko-gpui/src/theme.rs`).
+A diagram wears the colours of the desktop app (`kriko-ui/src/styles/tokens.css`).
 Start each diagram with this line, without a change:
 
 ```text

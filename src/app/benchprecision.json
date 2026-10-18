@@ -1,6 +1,6 @@
 {
   "id": "kriko-configuration",
-  "version": "2026.10.10",
+  "version": "2026.10.18",
   "about": "Controlled fictional configuration cases. Documents are authoritative only within this synthetic experiment. This is not a benchmark of real product knowledge.",
   "cases": [
     {
@@ -189,7 +189,10 @@
         {
           "name": "timing drive",
           "value": "belt",
-          "url": "https://fixtures.example/car-market"
+          "url": "https://fixtures.example/car-market",
+          "aliases": [
+            "timing belt"
+          ]
         }
       ],
       "requested_specs": [

@@ -1,0 +1,11 @@
+{
+  "bundle": {
+    "externalBin": [
+      "binaries/kriko-sidecar",
+      "binaries/OpenSERP"
+    ],
+    "resources": {
+      "third-party/OpenSERP-LICENSE.txt": "OpenSERP-LICENSE.txt"
+    }
+  }
+}

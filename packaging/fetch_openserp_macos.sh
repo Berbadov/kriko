@@ -5,7 +5,7 @@
 #     packaging/fetch_openserp_macos.sh x86_64 /path/to/openserp
 #
 # The release asset digests below come from OpenSERP's v0.8.12 GitHub release
-# metadata. PyInstaller and GPUI are also built on the matching native runner;
+# metadata. PyInstaller and Tauri are also built on the matching native runner;
 # no cross-architecture bundle is assembled.
 set -euo pipefail
 

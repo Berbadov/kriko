@@ -6,7 +6,7 @@ which models downloaded, is a fact about their machine, so it is asked of the
 machine and never typed into this file. `GET <base>/v1/models` is the question
 every one of them answers, and the answer is the model list, verbatim.
 
-The three conventional loopback addresses below are engineering defaults of
+The conventional loopback addresses below are engineering defaults of
 those programs, a small closed vocabulary like the fuel types of the catalog:
 they say where to *look*, not what exists. A reader whose server is elsewhere
 gives its address in Settings and that address is probed first.
@@ -32,6 +32,7 @@ CANDIDATES = (
     ("Ollama", "http://127.0.0.1:11434"),
     ("LM Studio", "http://127.0.0.1:1234"),
     ("llama-server", "http://127.0.0.1:8080"),
+    ("vLLM", "http://127.0.0.1:8000"),
 )
 
 PROBE_TIMEOUT = 1.0
@@ -45,7 +46,7 @@ PROBE_TIMEOUT = 1.0
 #: for `discover()`, paid by `tasks.default_plane` before *every* run on every
 #: plane, and again by the readiness check and the run's own plan. A fifth of a
 #: second is a hundred times what an accepted loopback connection needs, so
-#: nothing that is really there is missed, and a scan of three addresses costs
+#: nothing that is really there is missed, and a scan costs
 #: the slowest dead one instead of the deadline.
 CONNECT_TIMEOUT = 0.2
 
