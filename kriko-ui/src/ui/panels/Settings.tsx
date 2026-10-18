@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAppUpdate } from '../../engine/appupdate'
 import { useAbout, useKeys, usePrefsDoc, useSpent, type KeyRow } from '../../engine/settings'
 import { usePrefs, type Profile, type ThemePref } from '../../prefs'
 import { startTour } from '../../tour/Tour'
@@ -32,6 +33,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
   const { doc, problem, save } = usePrefsDoc()
   const spent = useSpent()
   const about = useAbout()
+  const update = useAppUpdate()
 
   return (
     <div className="panel-body">
@@ -153,6 +155,28 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <div className="setting">
             <span>Engine</span>
             <span className="value">{about.version || '—'}</span>
+          </div>
+          <div className="setting">
+            <span>
+              Updates
+              <small>
+                {update.phase === 'downloading'
+                  ? 'Downloading…'
+                  : update.phase === 'installing'
+                    ? 'Installing. Kriko opens again by itself.'
+                    : update.problem ||
+                      (update.release ? `Kriko ${update.release.version} is available.` : update.checked ? 'This is the newest version.' : 'Looked for on its own while Kriko is open.')}
+              </small>
+            </span>
+            {update.release && update.canInstall ? (
+              <button className="btn primary" onClick={() => void update.install()} disabled={update.phase !== 'idle'}>
+                Update now
+              </button>
+            ) : (
+              <button className="btn ghost" onClick={() => void update.check()} disabled={update.phase !== 'idle'}>
+                {update.phase === 'checking' ? 'Checking…' : 'Check now'}
+              </button>
+            )}
           </div>
           <div className="setting stack">
             <span>Your data</span>
