@@ -285,6 +285,16 @@ def start_research_plane(
     store=Depends(get_store), runner=Depends(get_jobs),
     conn=Depends(get_app_state),
 ) -> dict:
+    if body.q.strip():
+        # The panel fills the name from the page's title, which is written for a
+        # search results page: the shop and its ranking words ride along. Taken
+        # off here too, because the name is what every search below is made of.
+        from app import pagetitle
+
+        # The panel joins the name and the reader's context with " · ".
+        name, joiner, context = body.q.partition(" · ")
+        body.q = pagetitle.product_name(name, body.url) + joiner + context
+
     def submit(kind: str, params: dict) -> str:
         if not body.client_request_id:
             return runner.submit(kind, params)

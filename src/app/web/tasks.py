@@ -3407,8 +3407,12 @@ def site_register(settings, params: dict, progress: Progress) -> dict:
 NO_IDENTITY_KEYS = "(no packs are installed, so there are no keys to map into yet)"
 
 
-def identity_keys_text(conn) -> str:
+def identity_keys_text(conn, *, flat: bool = False) -> str:
     """The identity keys the installed packs declare, for a brief.
+
+    `flat` is one list of the key names alone. An agent reads the grouped form
+    (a pack, its keys) fine; a small local model took the pack's id for a key,
+    and its adapter was refused for mapping into nothing.
 
     Read off the store rather than named here, for the reason every list in
     this file is: the engine knows no category, and a key an agent invented
@@ -3424,6 +3428,9 @@ def identity_keys_text(conn) -> str:
     ).fetchall()
     if not rows:
         return NO_IDENTITY_KEYS
+    if flat:
+        return ("Identity keys. Use these names exactly; they are keys, not pack names:\n"
+                + "\n".join(f"* `{key}`" for key in sorted({row["key"] for row in rows})))
     by_pack: dict[tuple, list[str]] = {}
     for row in rows:
         by_pack.setdefault((row["pack_id"], row["kind"]), []).append(row["key"])
