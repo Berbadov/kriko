@@ -24,6 +24,14 @@ immutable; a correction is a newer version.
   it applies.
 - **The model on this computer maps a page correctly.** It took a pack's name
   for a key, and what it wrote was refused. It is given the key names alone.
+- **Agents no longer fail with "does not declare per-run model selection".**
+  Kriko asks each agent's program which flags it has. One slow first answer
+  was remembered until you closed the app, so Claude Code and Antigravity were
+  refused for flags they have. An empty answer is now asked again after a short
+  pause.
+- **Chat no longer ends on "SEARCH: …".** When an agent asked for a search in
+  more than 14 words, the request was shown as the answer and nothing was
+  searched. It is shortened and the search runs.
 
 ### 0.2.0
 
