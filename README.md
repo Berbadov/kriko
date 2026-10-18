@@ -53,7 +53,7 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | File | Use |
 |---|---|
-| `kriko-0.2.0-x86_64.msi` | Install Kriko on Windows. You do not need administrator rights. |
+| `kriko-0.2.0-x86_64-setup.exe` | Install Kriko on Windows. You do not need administrator rights. |
 | `kriko-0.2.0-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
 
 The app contains everything that it needs to start. It contains no catalog.
