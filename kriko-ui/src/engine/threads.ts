@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Turn } from '../activity/run'
-import { del, get, seg } from './api'
+import { del, get, patch, seg } from './api'
 import { useEngine } from './Engine'
 import { ago } from './history'
 
@@ -12,12 +12,14 @@ export interface ChatThread {
   title: string
   at: number
   when: string
+  pinned: boolean
 }
 
 interface ApiThread {
   thread_id: string
   title: string
   updated_at: string
+  pinned?: boolean
 }
 
 /** The event that tells the lists a chat was made, changed or deleted. */
@@ -29,6 +31,7 @@ interface DemoThread {
   title: string
   at: number
   turns: Turn[]
+  pinned?: boolean
 }
 
 const HOUR = 3600000
@@ -79,30 +82,49 @@ export const demoThreads = {
     const at = demo.findIndex((row) => row.id === id)
     if (at >= 0) demo.splice(at, 1)
   },
+  rename(id: string, title: string) {
+    const found = demo.find((row) => row.id === id)
+    if (found && title.trim()) found.title = title.trim()
+  },
+  pin(id: string, pinned: boolean) {
+    const found = demo.find((row) => row.id === id)
+    if (found) found.pinned = pinned
+  },
+  /** The chats whose name, or any question or answer, holds the words. */
+  find(words: string) {
+    const needle = words.trim().toLowerCase()
+    if (!needle) return this.list()
+    return this.list().filter(
+      (row) =>
+        row.title.toLowerCase().includes(needle) ||
+        row.turns.some((turn) => turn.prompt.toLowerCase().includes(needle) || turn.answer.toLowerCase().includes(needle)),
+    )
+  },
 }
 
-export function useThreads() {
+export function useThreads(query = '') {
   const { mode } = useEngine()
   const [threads, setThreads] = useState<ChatThread[]>([])
   const [problem, setProblem] = useState('')
 
   const load = useCallback(async () => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
-      setThreads(demoThreads.list().map((row) => ({ id: row.id, title: row.title, at: row.at, when: ago(row.at) })))
+      setThreads(demoThreads.find(query).map((row) => ({ id: row.id, title: row.title, at: row.at, when: ago(row.at), pinned: !!row.pinned })))
       return
     }
     try {
-      const data = await get<{ items: ApiThread[] }>('/api/chat/threads')
+      const data = await get<{ items: ApiThread[] }>(query.trim() ? `/api/chat/threads?q=${encodeURIComponent(query.trim())}` : '/api/chat/threads')
       // A chat with no name has no question in it yet.
       setThreads(
         data.items
           .filter((row) => row.title.trim())
-          .map((row) => ({ id: row.thread_id, title: row.title, at: new Date(row.updated_at).getTime(), when: ago(row.updated_at) })),
+          .map((row) => ({ id: row.thread_id, title: row.title, at: new Date(row.updated_at).getTime(), when: ago(row.updated_at), pinned: !!row.pinned })),
       )
     } catch {
       /* the list stays as it was; the rail is not the place for an error */
     }
-  }, [mode])
+  }, [mode, query])
 
   useEffect(() => {
     void load()
@@ -124,5 +146,37 @@ export function useThreads() {
     [mode, load],
   )
 
-  return { threads, problem, remove }
+  /** Give a chat the name the reader chose. */
+  const rename = useCallback(
+    async (id: string, title: string) => {
+      setProblem('')
+      const name = title.trim()
+      if (!name) return
+      try {
+        if (mode === 'live') await patch(`/api/chat/threads/${seg(id)}`, { title: name })
+        else demoThreads.rename(id, name)
+        await load()
+      } catch (error) {
+        setProblem(error instanceof Error ? error.message : 'Could not rename the chat.')
+      }
+    },
+    [mode, load],
+  )
+
+  /** Keep a chat at the top of the list, or let it go back. */
+  const pin = useCallback(
+    async (id: string, pinned: boolean) => {
+      setProblem('')
+      try {
+        if (mode === 'live') await patch(`/api/chat/threads/${seg(id)}`, { pinned })
+        else demoThreads.pin(id, pinned)
+        await load()
+      } catch (error) {
+        setProblem(error instanceof Error ? error.message : 'Could not pin the chat.')
+      }
+    },
+    [mode, load],
+  )
+
+  return { threads, problem, remove, rename, pin, live: mode === 'live' }
 }

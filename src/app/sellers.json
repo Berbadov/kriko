@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "about": "Which sites a buying answer may lean on. A tier is a judgement about the kind of site, never about one listing: a marketplace is only as good as the seller on the page. Edit this file to add a site; no code changes.",
+  "tiers": {
+    "brand_site": {
+      "trust": 0.85,
+      "label": "domain is named after a brand in the question",
+      "note": "Confirm it is the maker's own site before treating it as official."
+    },
+    "retailer": {
+      "trust": 0.8,
+      "label": "major retailer"
+    },
+    "reference": {
+      "trust": 0.75,
+      "label": "reference or public body"
+    },
+    "marketplace": {
+      "trust": 0.7,
+      "label": "major marketplace",
+      "note": "Third-party sellers share this site. Check the seller on the page, not the site."
+    },
+    "specialist": {
+      "trust": 0.7,
+      "label": "established specialist retailer"
+    },
+    "comparison": {
+      "trust": 0.6,
+      "label": "price-comparison site",
+      "note": "It lists other shops. Open the shop it links to and judge that shop."
+    },
+    "community": {
+      "trust": 0.4,
+      "label": "community discussion",
+      "note": "Owners' reports. Useful for fit and fault, not proof of a part number or a price."
+    },
+    "classified": {
+      "trust": 0.3,
+      "label": "classified ads",
+      "note": "Private sellers and no buyer checks. Treat every listing as unverified."
+    },
+    "unknown": {
+      "trust": 0.3,
+      "label": "unrecognised site",
+      "note": "Not a site Kriko knows. Do not call its seller reliable without evidence."
+    }
+  },
+  "sites": [
+    {
+      "tier": "marketplace",
+      "label": "amazon",
+      "tlds": ["com", "co.uk", "de", "fr", "it", "es", "nl", "pl", "se", "ca", "com.au", "com.tr", "com.mx", "com.br", "co.jp", "in", "ae", "sa", "sg", "eg", "be", "ie"]
+    },
+    {
+      "tier": "marketplace",
+      "label": "ebay",
+      "tlds": ["com", "co.uk", "de", "fr", "it", "es", "nl", "pl", "ca", "com.au", "at", "ch", "ie"]
+    },
+    {
+      "tier": "marketplace",
+      "domains": ["trendyol.com", "hepsiburada.com", "n11.com", "ciceksepeti.com", "aliexpress.com", "etsy.com", "allegro.pl", "mercadolibre.com", "bol.com", "rakuten.com", "walmart.com"]
+    },
+    {
+      "tier": "retailer",
+      "domains": ["bestbuy.com", "target.com", "costco.com", "homedepot.com", "lowes.com", "argos.co.uk", "currys.co.uk", "johnlewis.com", "mediamarkt.com.tr", "mediamarkt.de", "mediamarkt.nl", "saturn.de", "fnac.com", "darty.com", "otto.de", "cdiscount.com", "teknosa.com", "vatanbilgisayar.com", "koctas.com.tr", "decathlon.com", "decathlon.com.tr", "ikea.com", "boyner.com.tr", "migros.com.tr", "carrefoursa.com", "a101.com.tr", "bim.com.tr", "sokmarket.com.tr"]
+    },
+    {
+      "tier": "specialist",
+      "domains": ["autodoc.co.uk", "autodoc.de", "autodoc.fr", "autodoc.es", "autodoc.it", "oscaro.com", "mister-auto.com", "rockauto.com", "autozone.com", "advanceautoparts.com", "eurocarparts.com", "halfords.com", "carparts.com", "partsgeek.com", "tirerack.com", "thomann.de", "sweetwater.com", "digikey.com", "mouser.com", "rs-online.com", "farnell.com", "conrad.com", "reichelt.de", "newegg.com", "bhphotovideo.com", "adorama.com", "ldlc.com", "alternate.de", "caseking.de"]
+    },
+    {
+      "tier": "comparison",
+      "domains": ["akakce.com", "cimri.com", "epey.com", "idealo.de", "idealo.co.uk", "idealo.fr", "pricerunner.com", "pricerunner.co.uk", "geizhals.de", "geizhals.eu", "kelkoo.com", "pricespy.co.uk", "camelcamelcamel.com"]
+    },
+    {
+      "tier": "reference",
+      "domains": ["wikipedia.org", "wikimedia.org", "europa.eu", "nhtsa.gov", "iso.org", "consumerreports.org", "which.co.uk", "rtings.com", "gsmarena.com", "notebookcheck.net"]
+    },
+    {
+      "tier": "community",
+      "domains": ["reddit.com", "quora.com", "stackexchange.com", "stackoverflow.com", "donanimhaber.com", "technopat.net", "sikayetvar.com", "eksisozluk.com", "youtube.com", "x.com", "twitter.com", "instagram.com", "tiktok.com", "pinterest.com", "trustpilot.com"]
+    },
+    {
+      "tier": "classified",
+      "domains": ["sahibinden.com", "letgo.com", "olx.com.tr", "olx.pl", "olx.in", "dolap.com", "craigslist.org", "kleinanzeigen.de", "gumtree.com", "marktplaats.nl", "leboncoin.fr", "offerup.com", "vinted.com", "facebook.com"]
+    }
+  ],
+  "suffixes": {
+    "reference": [".gov", ".edu", ".mil", ".int", ".gov.tr", ".edu.tr", ".gov.uk", ".ac.uk", ".europa.eu"]
+  },
+  "regions": {
+    "tr": ["trendyol.com", "hepsiburada.com", "n11.com", "amazon.com.tr"],
+    "global": ["amazon.com", "ebay.com", "walmart.com", "bestbuy.com"]
+  }
+}

@@ -99,6 +99,8 @@ export function useLiveRun(): RunApi {
               rows: rowsFrom(finished.steps ?? [], seen.current),
               answer: last?.text ?? finished.answer ?? '',
               products: productsFrom(finished.products),
+              // What actually answered. A reader who left the agent on the default is told which one it was.
+              ...(last?.agent?.id ? { agent: { id: last.agent.id, label: last.agent.label || last.agent.id } } : {}),
             },
           })
           dispatch({ type: 'end', status: 'done', now: Date.now() })
@@ -131,6 +133,7 @@ export function useLiveRun(): RunApi {
       const last = turnOf(latest.current)
       if (last) setTurns((now) => [...now, last])
       dispatch({ type: 'start', prompt, now: Date.now() })
+      dispatch({ type: 'replace', patch: { agent: { id: agent.id, label: agent.label ?? agent.id } } })
       void (async () => {
         try {
           if (!thread.current) {
@@ -193,6 +196,7 @@ export function useLiveRun(): RunApi {
             const turn = found[found.length - 1]
             turn.answer = message.text
             turn.products = productsFrom(message.products)
+            if (message.agent?.id) turn.agent = { id: message.agent.id, label: message.agent.label || message.agent.id }
           }
         }
         const waiting = data.job_id && found.length && !found[found.length - 1].answer ? found.pop() : undefined

@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.2.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.2.3-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko shows what can go wrong with a product. It puts this knowledge next to
@@ -53,8 +53,8 @@ Choose a file from the [latest release](https://github.com/Berbadov/kriko/releas
 
 | File | Use |
 |---|---|
-| `kriko-0.2.1-x86_64-setup.exe` | Install Kriko on Windows. You do not need administrator rights. |
-| `kriko-0.2.1-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
+| `kriko-0.2.3-x86_64-setup.exe` | Install Kriko on Windows. You do not need administrator rights. |
+| `kriko-0.2.3-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
 
 The app contains everything that it needs to start. It contains no catalog.
 Install a catalog after the first start.

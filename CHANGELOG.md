@@ -3,6 +3,85 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.2.3
+
+- **Kriko opens in a few seconds, not fifteen.** The engine was one file that
+  unpacked itself into a temporary folder on every start, and on Windows that
+  alone took 10 to 13 seconds. It is now a program with its files beside it,
+  unpacked once by the installer. The shell also no longer waits for the search
+  service before it starts the engine.
+- **The window says it is starting.** Until the engine answers, the window shows
+  the Kriko mark and "Starting Kriko…", not an empty page.
+- **Kriko updates itself.** A few seconds after it opens, and every six hours
+  after that, Kriko looks for a newer release. When there is one, a note offers
+  Update now or Later. Update now downloads the installer, checks it against the
+  checksums published with the release, closes Kriko, installs and opens it
+  again. Your chats and catalogs stay where they are. Settings, About, shows the
+  state and has a Check now button. A copy that was not set up by the installer
+  (the portable zip) is pointed to the download page instead.
+
+  This starts with 0.2.3: to get from 0.2.2 or earlier to this version, run the
+  installer once by hand.
+- **Chat finds the exact product and checks the seller.** A request such as
+  "can you find these for me?" now searches the web. Before this change, a
+  request in that form received an answer from memory, with no source. The
+  answer now follows these rules:
+  - Kriko reads the pages of popular and credible sites first. The list is the
+    file `sellers.json`. Add your own sites in `~/.kriko/sellers.json`.
+  - A code (a part number, a model number, an oil grade) is *confirmed* only when
+    two trusted sites print it. The answer says so when it is not.
+  - A marketplace is only as good as its seller. The answer names the seller and
+    the score that the page shows, or it says the seller is unknown.
+  - A page that calls itself official makes a claim. The answer reports it as
+    the claim of the page.
+  - The answer uses the language of your question.
+
+- **The chat follows new text.** While an answer streams, the thread stays at
+  the bottom. If you scroll up to read, it leaves you where you are.
+- **Researches in the queue run side by side.** Every research waited on one
+  shared draft claim, so the queue ran one at a time whatever the setting said.
+  Several now run at once. Two researches on the same catalog still take turns,
+  on purpose.
+- **Learn this page works, and offers itself.** The panel offers Learn on a page
+  of a shop Kriko does not know, including a real product page on an unknown
+  shop. Once for each site, the browser extension suggests it when a page looks
+  learnable.
+- **Compare leads with the problems.** Each product shows its risks first, and
+  its specifications in a table you can open.
+- **A quick look is not its own source.** Specifications that only repeat the
+  listing you gave are dropped, and the agent is told to check other shops.
+- **"Original" in a title is not a check.** When you ask whether a seller or a
+  part is genuine, the agent looks at the seller and at the maker's authorised
+  dealers, and no longer counts the word in the product's title.
+
+Also in this release, outside the installer: the website has been redesigned
+around how Kriko finds the concern before you buy, and `kriko-mobile/` holds the
+Kriko reader as an Expo app (run it in Expo Go).
+
+### 0.2.2
+
+- **Each answer shows which agent wrote it.** Claude Code, Codex, Antigravity,
+  Mistral and the local model each have a mark of their own, above the answer
+  and in the agent pick. An answer from an earlier version has no mark; Kriko
+  never recorded who wrote it.
+- **Copy, Retry, Edit.** Under an answer: Copy takes its words, and on the
+  newest answer Retry asks the same question again. The newest question has an
+  Edit button that puts it back in the box. Up in an empty box brings back what
+  you asked before. A Latest button shows when you have scrolled away from the
+  bottom of a long answer.
+- **Rename, pin, search and copy a chat.** Each chat in the list has a
+  "…" button. Rename (or double-click the name), Pin to keep it at the top, Copy
+  as Markdown, Delete. The box above the list finds a chat by its name or by
+  anything said in it.
+- **Links in an answer open in your browser.** In the desktop window a link did
+  nothing. Only web addresses (http and https) are opened.
+- **No sample chats while Kriko starts.** For the seconds the app looks for its
+  engine, the home screen and the lists showed demo rows, then swapped them for
+  yours. They now wait.
+- **The folded sidebar lines up.** The + for a new chat sat to the left of the
+  other icons; the logo, the fold button, the + and the four pages share one
+  centre line.
+
 ### 0.2.1
 
 - **Learn this page.** The research card in the extension panel has a button
