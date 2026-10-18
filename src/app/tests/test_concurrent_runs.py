@@ -259,3 +259,57 @@ def test_the_readers_choice_is_handed_to_the_agent_child_budget(settings, conn):
     gate.release.set()
     wait_all_done(conn, ids)
     jobs.shutdown()
+
+
+@pytest.mark.parametrize("width", [2, 3, 4])
+def test_products_queued_for_checking_run_at_once_whatever_catalog_they_join(settings, conn, width):
+    """The research queue's products are `pack_author` jobs with a `product`.
+
+    They shared one `drafts` claim, so three monitors ran for ten minutes one
+    after another with the setting at four. What they write is locked now, so
+    the runs overlap.
+    """
+    state.put_settings(conn, {prefs.RUN_CONCURRENCY: width})
+    gate = Gate()
+    jobs = runner(settings, gate)
+    ids = [jobs.submit("pack_author", {"category": "monitors", "product": f"m{i}", "name": f"a{i}"})
+           for i in range(width)]
+    wait_until(lambda: len(gate.running) == width)
+    gate.release.set()
+    wait_all_done(conn, ids)
+    assert gate.peak == width
+    jobs.shutdown()
+
+
+def test_authoring_a_whole_category_still_runs_alone_among_authors(settings, conn):
+    state.put_settings(conn, {prefs.RUN_CONCURRENCY: 4})
+    gate = Gate()
+    jobs = runner(settings, gate)
+    ids = [jobs.submit("pack_author", {"category": f"c{i}", "name": f"a{i}"}) for i in range(2)]
+    wait_until(lambda: len(gate.running) == 1)
+    time.sleep(0.2)
+    assert len(gate.running) == 1
+    gate.release.set()
+    wait_all_done(conn, ids)
+    assert gate.peak == 1
+    jobs.shutdown()
+
+
+def test_draft_writers_take_turns_so_no_write_is_lost():
+    """Two products joining one draft: each reads it, adds its own, saves."""
+    from app import packdraft
+
+    shared = {"subjects": []}
+
+    @packdraft.exclusive
+    def join(name):
+        before = list(shared["subjects"])
+        time.sleep(0.02)
+        shared["subjects"] = before + [name]
+
+    threads = [threading.Thread(target=join, args=(f"p{i}",)) for i in range(6)]
+    for one in threads:
+        one.start()
+    for one in threads:
+        one.join()
+    assert sorted(shared["subjects"]) == [f"p{i}" for i in range(6)]
