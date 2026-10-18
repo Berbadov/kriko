@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ComponentPropsWithoutRef } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { ExternalLink } from './ExternalLink'
 
 /** An answer is markdown. A bold term is bold, a list is a list, a table is a
  *  table, and a link opens the page it names. Raw HTML in an answer is not
@@ -79,9 +80,7 @@ export function Markdown({ text, live = false }: { text: string; live?: boolean 
 
   const components: Components = {
     a: ({ href, children }) => (
-      <a href={href} target="_blank" rel="noopener noreferrer">
-        {children}
-      </a>
+      <ExternalLink href={href}>{children}</ExternalLink>
     ),
     span: (props: ComponentPropsWithoutRef<'span'>) => {
       const { children, className } = props

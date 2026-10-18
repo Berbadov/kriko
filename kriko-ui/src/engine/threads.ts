@@ -87,6 +87,7 @@ export function useThreads() {
   const [problem, setProblem] = useState('')
 
   const load = useCallback(async () => {
+    if (mode === 'checking') return
     if (mode !== 'live') {
       setThreads(demoThreads.list().map((row) => ({ id: row.id, title: row.title, at: row.at, when: ago(row.at) })))
       return
