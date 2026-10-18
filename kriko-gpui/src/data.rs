@@ -19,7 +19,7 @@ pub const NAV: &[NavGroupDef] = &[
     NavGroupDef {
         label: "Check",
         items: &[
-            NavDef { key: "chat", label: "Chat", icon: "agents", count: None, badge: None },
+            NavDef { key: "chat", label: "Chat", icon: "chat", count: None, badge: None },
             NavDef { key: "home", label: "Home", icon: "home", count: None, badge: None },
             NavDef { key: "run", label: "Run", icon: "run", count: None, badge: None },
             NavDef { key: "history", label: "History", icon: "history", count: None, badge: None },
@@ -46,7 +46,6 @@ pub const NAV: &[NavGroupDef] = &[
     NavGroupDef {
         label: "This install",
         items: &[
-            NavDef { key: "local", label: "Local LLM", icon: "local", count: None, badge: None },
             NavDef { key: "settings", label: "Settings", icon: "settings", count: None, badge: None },
             NavDef { key: "about", label: "About", icon: "about", count: None, badge: None },
         ],

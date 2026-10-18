@@ -39,7 +39,9 @@ def refresh_lookup(
             payload, _ = query.answer(store, query.LookupRequest(**saved))
         elif row["source"] in ("analyze", "extension"):
             body = analyze.ScrapeRequest(**saved)
-            payload, mapped, _ = analyze.answer(store, app_state, body)
+            payload, mapped, _ = analyze.answer(
+                store, app_state, body,
+                app_state_path=request.app.state.settings.app_state_path)
             if mapped is None:
                 # The page read before and cannot now (a pack was removed):
                 # the saved answer stays what it was rather than becoming a

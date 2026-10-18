@@ -207,6 +207,22 @@ function loadPanel({
     return el;
   }
 
+  /** Press a key on something in the shadow tree.
+   *
+   * On the element rather than on the document, because that is where a
+   * browser raises it: on whatever holds focus. The panel's own handlers sit
+   * inside the shadow root and are reached by bubbling, so a test that
+   * dispatched at the document would pass for a panel whose Escape came from
+   * a listener on the page — which is the thing the panel must not do. */
+  function press(selector, key) {
+    const el = shadow() && shadow().querySelector(selector);
+    if (!el) throw new Error(`nothing matching ${selector} to press ${key} on`);
+    const event = new dom.window.KeyboardEvent("keydown",
+      { key, bubbles: true, cancelable: true });
+    el.dispatchEvent(event);
+    return event;
+  }
+
   /* Runs what is queued *now*, not what running it queues.
    *
    * The distinction is the difference between a helper and a hang: a timer
@@ -241,7 +257,7 @@ function loadPanel({
   }
 
   return { dom, openPanel, deliverEntry, deliverStage, deliverFirefoxUpdate, footer, listing, claims,
-           click, type, shadow, sent, errorText, pipeline, flushTimers, flushFrames,
+           click, type, press, shadow, sent, errorText, pipeline, flushTimers, flushFrames,
            statusText, liveRows, setLocal, local: localBag };
 }
 

@@ -145,6 +145,12 @@ pub fn source_row(source: &Source, motion: bool) -> gpui::AnyElement {
     let has_title = !title.is_empty();
     let backed = source.backed;
     let url = source.url.clone();
+    // A source that is a tool's own name rather than a page — `web_search`,
+    // `product_match` — has nothing to open. It used to be drawn as a link
+    // anyway: the pointer changed, the row lifted on hover, and the press
+    // called `open_url("")` and did nothing at all. A row that promises a page
+    // and delivers silence is worse than one that says it is a name.
+    let opens = !url.is_empty();
     div()
         .id(gpui::ElementId::NamedInteger(gpui::SharedString::from("source-row"), key))
         .flex()
@@ -154,9 +160,11 @@ pub fn source_row(source: &Source, motion: bool) -> gpui::AnyElement {
         .px(px(6.0))
         .mx(px(-6.0))
         .rounded(px(8.0))
-        .cursor_pointer()
-        .hover(|s| s.bg(paint_a(GLASS_1)).relative().top(px(-1.0)))
-        .on_click(move |_, _, cx| cx.open_url(&url))
+        .when(opens, |d| {
+            d.cursor_pointer()
+                .hover(|s| s.bg(paint_a(GLASS_1)).relative().top(px(-1.0)))
+                .on_click(move |_, _, cx| cx.open_url(&url))
+        })
         .child(site_mark(&source.host, 18.0))
         .child(
             div()
@@ -169,7 +177,7 @@ pub fn source_row(source: &Source, motion: bool) -> gpui::AnyElement {
                     div()
                         .font_family(MONO)
                         .text_size(px(11.0))
-                        .text_color(paint(ICE))
+                        .text_color(paint(if opens { ICE } else { MUTED }))
                         .truncate()
                         .child(host),
                 )

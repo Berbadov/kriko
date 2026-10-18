@@ -12,7 +12,7 @@ that aren't registered, so basically it opens on one site only."*
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import sites
+from app import sites, siteinfer
 from app.web import state
 from app.web.deps import get_app_state, get_store
 
@@ -67,6 +67,12 @@ class RegisterRequest(BaseModel):
     pack_id: str = Field("", max_length=200)
 
 
+class InferredRequest(BaseModel):
+    """Whether an adapter this installation inferred may be used."""
+
+    enabled: bool = True
+
+
 @router.get("/sites")
 def list_sites(store=Depends(get_store), conn=Depends(get_app_state)) -> dict:
     """Everything readable here, plus the sites somebody asked for and cannot be.
@@ -102,7 +108,8 @@ def report_activation(body: ActivationReport, conn=Depends(get_app_state)) -> di
 
 @router.post("/sites/seen")
 def site_seen(
-    body: SeenRequest, store=Depends(get_store), conn=Depends(get_app_state)
+    body: SeenRequest, request: Request,
+    store=Depends(get_store), conn=Depends(get_app_state),
 ) -> dict:
     """The extension reporting a page nothing here can read.
 
@@ -110,6 +117,12 @@ def site_seen(
     this at exactly the moment the reader pressed the button and the honest
     answers are different: "this site works, the panel should be there" is a
     bug report, and "nothing here reads this site" is an offer.
+
+    The press is also where the browser's richest snapshot of a page arrives —
+    the explore scrape, which is the page's own label/value shapes and the
+    structured data it publishes — so it is put to this machine's model before
+    the site is filed as one to ask an agent about (`app/siteinfer.py`). When
+    no model is ready the offer below is exactly what it was.
     """
     host = sites.host_of(body.url)
     if not host:
@@ -117,6 +130,18 @@ def site_seen(
     found = sites.adapter_for(store, conn, body.url)
     if found is not None:
         return {"host": host, "readable": True, "adapter": found.get("id", "")}
+    inferred = siteinfer.infer(
+        store, conn, app_state_path=request.app.state.settings.app_state_path,
+        url=body.url, fields=body.fields, title=body.page_title or body.title,
+        description=body.description,
+        product_name=str((body.product or {}).get("name") or ""),
+    )
+    if inferred is not None:
+        # Readable now, and by something nobody wrote. `inferred` rides the
+        # answer so the panel can say where the site came from instead of
+        # reporting a site that appeared by itself.
+        return {"host": host, "readable": True, "inferred": True,
+                "adapter": inferred.get("id", "")}
     row = state.record_site_request(
         conn, host=host, url=body.url, title=body.title,
         sample=sites.sample(
@@ -151,6 +176,39 @@ def register_site(
     )
     state.set_site_request(conn, wanted, state="working", detail="")
     return {"job_id": job_id, "kind": "site_register", "host": wanted}
+
+
+@router.post("/sites/{host}/inferred")
+def set_inferred(
+    host: str, body: InferredRequest, conn=Depends(get_app_state)
+) -> dict:
+    """Turn an adapter this installation inferred off — or back on.
+
+    The reader's control over the one piece of site knowledge nobody wrote. An
+    inferred adapter is a model's guess about the shape of a page; it earns a
+    host permission and an injection target exactly like a pack's, and "I did
+    not ask for this on this site" has to be answerable without deleting a pack
+    or editing a file. Off is not forgotten: the row and its inference stay, so
+    the switch works both ways and the same page shape is not put to the model
+    again.
+
+    Only an inferred adapter can be turned off here. An agent's or a reader's
+    own is theirs, and a route that quietly disabled one would be this screen
+    overriding a decision somebody made on purpose — that is what the DELETE
+    beside it is for.
+    """
+    wanted = sites.host_of(host)
+    if not wanted:
+        raise HTTPException(422, f"{host!r} is not a hostname")
+    inferred = [row for row in sites.local_rows(conn, enabled_only=False)
+                if row["host"] == wanted and row.get("source") == "inference"]
+    if not inferred:
+        raise HTTPException(404, f"nothing on {wanted} was inferred here")
+    return {
+        "host": wanted,
+        "enabled": body.enabled,
+        "changed": state.set_local_adapter_enabled(conn, wanted, body.enabled),
+    }
 
 
 @router.delete("/sites/{host}")

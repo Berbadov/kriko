@@ -170,3 +170,41 @@ test("a quick look's question shows dots, then types its answer as it is written
   assert.match(reply().textContent, /120000 km/);
   assert.doesNotMatch(p.shadow().textContent, /Answering…/);
 });
+
+/* The cap on a paid follow-up is the engine's number, not the panel's. A
+ * literal in the tooltip is a claim about the engine that nothing keeps true:
+ * the panel said "$0.20 per question" for as long as it took the engine's own
+ * budget to change, and a stale number on the one prompt whose job is to say
+ * the cost before the click is worse than no number. */
+test("the paid cap in the follow-up tooltips is the engine's own number", () => {
+  const p = loadPanel({ workerResponse: m => {
+    if (m.type === "RESEARCH_PLANE") {
+      return { ok: true, plane: { backend: "api", budget_usd: 0.35 } };
+    }
+    return PLANE;
+  } });
+  p.openPanel();
+  p.deliverEntry(answer([claim("old")]));
+
+  const input = p.shadow().querySelector(".lite-followup-input");
+  const send = p.shadow().querySelector(".lite-followup-send");
+  assert.match(input.getAttribute("title"), /\$0\.35 per question/);
+  assert.match(send.getAttribute("title"), /\$0\.35 per question/);
+  assert.doesNotMatch(input.getAttribute("title"), /\$0\.20/);
+});
+
+test("a follow-up that costs nothing per question claims no cap", () => {
+  const p = loadPanel({ workerResponse: m => {
+    if (m.type === "RESEARCH_PLANE") {
+      return { ok: true, plane: { backend: "local", budget_usd: 0 } };
+    }
+    return PLANE;
+  } });
+  p.openPanel();
+  p.deliverEntry(answer([claim("old")]));
+
+  const input = p.shadow().querySelector(".lite-followup-input");
+  const send = p.shadow().querySelector(".lite-followup-send");
+  assert.doesNotMatch(input.getAttribute("title"), /capped at/);
+  assert.equal(send.getAttribute("title") ?? "", "");
+});

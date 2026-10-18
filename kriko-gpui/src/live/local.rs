@@ -809,6 +809,15 @@ impl Kriko {
 
     }
 
+    /// The two reads the Agents screen's Local model panel shows: whether the
+    /// server answers and which models it holds. Not `refresh_local`, which
+    /// also probes the machine and reads the benchmark — this panel asks for
+    /// neither, and a screen pays only for what it draws.
+    pub fn refresh_local_panel(&mut self, cx: &mut Context<Self>) {
+        self.refresh_plane(false, cx);
+        self.refresh_held(cx);
+    }
+
     pub fn local_start_ollama(&mut self, cx: &mut Context<Self>) {
         if self.live.local.runtime_starting { return; }
         self.live.local.runtime_starting = true;

@@ -21,9 +21,9 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app import agenda as agenda_mod
-from app import agentconfig, agentskill
+from app import agentconfig, agentskill, prefs
 from app.web import state
-from app.web.deps import get_store
+from app.web.deps import get_app_state, get_store
 
 log = logging.getLogger(__name__)
 
@@ -120,6 +120,121 @@ def agent_targets(request: Request):
             for target in agentconfig.targets()
         ],
     }
+
+
+def _kind(row: dict) -> str:
+    """What an agent row *is*, from the engine's own flags.
+
+    `local` and `cost_basis` are how `prefs` already tells the three apart: the
+    row for the model on this machine carries `local`, an agent billed per
+    token carries `per_token`, and a coding-agent CLI carries neither. The
+    screen owns the reader's words for these; this is the fact under them.
+    """
+    if row.get("local"):
+        return "local"
+    return "api" if row.get("cost_basis") == "per_token" else "cli"
+
+
+def _market_action(state: str, *, wiring: dict | None, runnable: bool,
+                   installable: bool) -> str:
+    """The one thing to press, from the state the engine found.
+
+    `use` only where Kriko itself runs the agent, which is the choice the
+    reader is making between two rows. Writing a harness config is Connect's
+    business, so an agent that answers somewhere else — an app, an editor —
+    still offers Connect and never Use, however connected its config is. A
+    harness with no config Kriko can write, and no install of its own, has
+    nothing to press but the reason it is not ready.
+    """
+    if state == "not_installed":
+        return "install" if installable else "setup"
+    if not runnable:
+        return "connect" if wiring is not None else "setup"
+    if state == "ready":
+        return "use" if wiring is None or wiring["state"] == "connected" else "connect"
+    return "connect" if wiring is not None else "setup"
+
+
+def _market_row(row: dict, state: str, *, runnable: bool, wiring: dict | None,
+                chosen: bool) -> dict:
+    """One agent as the marketplace lists it: what it is, whether this machine
+    can run it now, how that was found, and the one action left to take."""
+    return {
+        "id": row["id"],
+        "label": row["label"],
+        "kind": _kind(row),
+        "state": state,
+        # The engine's own sentence for why it is not ready, or what a run with
+        # it bills. Empty where the engine said nothing, rather than a line
+        # written here that would drift from what it knows.
+        "detail": (wiring or {}).get("detail") or row.get("why")
+        or row.get("install_hint") or row.get("needs_account") or "",
+        # How this installation knows: the binary it located, the model
+        # server's address, or the command it looked for and did not find.
+        "where": row.get("path") or row.get("command") or (wiring or {}).get("path") or "",
+        "wiring": (wiring or {}).get("state", ""),
+        "action": _market_action(
+            state,
+            wiring=wiring,
+            runnable=runnable,
+            installable=bool(row.get("can_install")),
+        ),
+        "can_install": bool(row.get("can_install")),
+        "url": row.get("download_url") or "",
+        "chosen": chosen,
+        "local": bool(row.get("local")),
+    }
+
+
+@router.get("/agent-market")
+def agent_market(request: Request, conn=Depends(get_app_state)) -> dict:
+    """Every way of answering a question this install can run, one row each.
+
+    A market is not a second discovery. `prefs.choices` already finds the CLIs
+    on this machine, the model server and the saved keys, so this asks it once
+    and adds only what a *market* needs and a preference screen does not:
+    which kind of thing each row is, and whether this window's store has been
+    written into its config (`agentconfig.status_of`). The ids are the same
+    ones `/api/prefs` uses, so the model dials and the reader's own arrangement
+    stay joined to these rows.
+    """
+    settings = request.app.state.settings
+    choices = prefs.choices(conn)
+    api_ready, api_missing = prefs.api_agent_rows(conn)
+    wiring = {
+        target.id: agentconfig.status_of(
+            target, server_name=SERVER_NAME, store_path=Path(settings.store_path)
+        )
+        for target in agentconfig.targets()
+    }
+    chosen = str(choices["chosen"].get(prefs.HARNESS) or "")
+    groups = [
+        ((row, "ready", True) for row in choices["harnesses"]),
+        ((row, "ready", True) for row in api_ready),
+        # A harness config Kriko can write is a row even where the CLI behind
+        # it cannot run a check here: connecting it is how that agent reaches
+        # this store, and it is the only action the row has.
+        ((
+            {"id": target.id, "label": target.label},
+            "ready" if wiring[target.id]["state"] == "connected" else "needs_setup",
+            False,
+        ) for target in agentconfig.targets()),
+        ((row, "needs_setup", False) for row in choices["unusable"]),
+        ((row, "not_installed", False) for row in choices["missing"]),
+        ((row, "not_installed", False) for row in api_missing),
+    ]
+    agents: list[dict] = []
+    for group in groups:
+        for row, standing, runnable in group:
+            if any(one["id"] == row["id"] for one in agents):
+                continue
+            agents.append(_market_row(
+                row, standing,
+                runnable=runnable,
+                wiring=wiring.get(row["id"]),
+                chosen=row["id"] == chosen,
+            ))
+    return {"agents": agents, "chosen": chosen}
 
 
 @router.post("/agent-targets/{target_id}/skill")

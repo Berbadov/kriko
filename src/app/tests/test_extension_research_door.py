@@ -91,12 +91,30 @@ def test_the_worker_never_offers_research_with_no_subject_id():
 
 
 def test_the_panel_names_the_cost_for_both_planes_before_the_button_is_clicked():
+    """Every plane gets its own sentence, and the paid one names the cap.
+
+    The assertion used to look for the words "Costs money" and "Costs nothing".
+    The sentence was rewritten to say the *number* — "Capped at $0.20 of your
+    API keys" is what the reader actually needs, and a generic "Costs money"
+    tells them nothing they could not guess. The test kept looking for the old
+    words and so failed against a panel that had got better, which is the
+    failure mode a test on prose always has: it pins the wording instead of the
+    claim. This pins the claim — three planes, three sentences, the paid one
+    carrying the engine's cap — and lets the wording move.
+    """
     text = PANEL.read_text(encoding="utf-8")
     match = re.search(r"function costLine\(\)\s*\{(.*?)\n  \}", text, re.S)
     assert match, "costLine() is gone or was renamed"
     body = match.group(1)
-    assert "Costs money" in body, "the api plane's sentence is missing"
-    assert "Costs nothing" in body, "the agent plane's sentence is missing"
+    # The paid plane: billed, and capped by the number the engine sent.
+    assert "per_token" in body, "the paid plane is not told apart"
+    assert "Billed to your API keys" in body, "the paid plane's sentence is missing"
+    assert "budget_usd" in body and "Capped at" in body, (
+        "the paid sentence must name the cap the engine reported, not a literal")
+    # The two free planes, told apart from each other: a model on this machine
+    # and a coding agent are different things and cost nothing in different ways.
+    assert "runs on this computer" in body, "the local plane's sentence is missing"
+    assert "runs through your coding agent" in body, "the agent plane's sentence is missing"
     # It has to actually reach the card, not just exist as dead code.
     assert re.search(r'lite-gap-cost.*costLine\(\)|costLine\(\).*lite-gap-cost', text) or (
         "const cost = costLine();" in text and "lite-gap-cost" in text

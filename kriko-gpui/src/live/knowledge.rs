@@ -300,6 +300,14 @@ impl Kriko {
                 self.refresh_local(cx);
                 self.refresh_jobs(cx);
             }
+            // The Agents screen draws the marketplace and the local model
+            // panel, so opening it reads both: the agents' own answers, and
+            // whether the model server on this machine answers right now.
+            Tab::Agents => {
+                self.refresh_agents(cx);
+                self.refresh_market(cx);
+                self.refresh_local_panel(cx);
+            }
             Tab::Sites => self.refresh_sites(cx),
             Tab::Chat => self.refresh_chat(cx),
             Tab::Extension => self.refresh_extension(cx),

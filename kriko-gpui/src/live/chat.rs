@@ -121,6 +121,82 @@ impl Thread {
     }
 }
 
+/// One product a turn found in the reader's own catalogs.
+///
+/// The agent was always given these rows; the reader saw only prose. A card
+/// is the same row said plainly: what the catalog calls the product, the
+/// identity it is known by, how many risks are recorded, and the id that
+/// asks for more.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Product {
+    pub subject_id: String,
+    pub pack_id: String,
+    pub label: String,
+    pub kind: String,
+    /// The identity keys the catalog recorded, in its own order.
+    pub identity: Vec<(String, String)>,
+    pub claims: u64,
+    /// Risks whose evidence a source backs, when the engine graded them.
+    pub backed: u64,
+    pub rank: u64,
+    pub found_by: String,
+}
+
+impl Product {
+    fn from_value(v: &Value) -> Option<Product> {
+        let subject_id = api::s(v, "subject_id");
+        if subject_id.is_empty() {
+            return None;
+        }
+        let mut identity: Vec<(String, String)> = api::obj(v, "identity")
+            .map(|map| {
+                map.iter()
+                    .filter_map(|(k, val)| {
+                        let text = val.as_str().unwrap_or("").trim().to_string();
+                        (!text.is_empty()).then(|| (k.clone(), text))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        identity.sort_by(|a, b| a.0.cmp(&b.0));
+        let coverage = v.get("coverage").unwrap_or(&Value::Null);
+        Some(Product {
+            subject_id,
+            pack_id: api::s(v, "pack_id"),
+            label: api::s(v, "label"),
+            kind: api::s(v, "kind"),
+            identity,
+            claims: api::n(v, "claims").unwrap_or(0.0).max(0.0) as u64,
+            backed: api::n(coverage, "cited").unwrap_or(0.0).max(0.0) as u64,
+            rank: api::n(v, "rank").unwrap_or(0.0).max(0.0) as u64,
+            found_by: api::s(v, "found_by"),
+        })
+    }
+
+    /// What the card calls the product: the catalog's own name, and failing
+    /// that the identity it is known by.
+    pub fn title(&self) -> String {
+        if !self.label.trim().is_empty() {
+            return self.label.clone();
+        }
+        if self.identity.is_empty() {
+            return self.subject_id.clone();
+        }
+        self.identity
+            .iter()
+            .map(|(_, value)| value.as_str())
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+}
+
+fn products(v: &Value, key: &str) -> Vec<Product> {
+    api::arr(v, key)
+        .iter()
+        .filter_map(Product::from_value)
+        .collect()
+}
+
 #[derive(Clone)]
 pub struct Message {
     pub message_id: String,
@@ -128,6 +204,7 @@ pub struct Message {
     pub text: String,
     pub steps: Vec<Step>,
     pub sources: Vec<String>,
+    pub products: Vec<Product>,
 }
 
 /// The turn in flight, as the job's result holds it so far.
@@ -136,6 +213,7 @@ pub struct Partial {
     pub steps: Vec<Step>,
     pub answer: String,
     pub sources: Vec<String>,
+    pub products: Vec<Product>,
     pub agent: String,
 }
 
@@ -149,6 +227,7 @@ impl Partial {
                 .collect(),
             answer: api::s(result, "answer"),
             sources: names(result, "sources"),
+            products: products(result, "products"),
             agent: api::s(result.get("agent").unwrap_or(&Value::Null), "label"),
         }
     }
@@ -168,6 +247,7 @@ fn message_from(v: &Value) -> Message {
         text: api::s(v, "text"),
         steps: api::arr(v, "steps").iter().map(Step::from_value).collect(),
         sources: names(v, "sources"),
+        products: products(v, "products"),
     }
 }
 
@@ -238,6 +318,12 @@ pub struct State {
     pub details: HashSet<String>,
     pub scroll: gpui::ScrollHandle,
     pub rendered_chars: usize,
+    /// The product whose saved check is being refreshed right now, by id.
+    pub product_busy: Option<String>,
+    /// The product just put in the compare queue, by id: the card says so once.
+    pub product_queued: Option<String>,
+    /// Why a product action failed, and for which product.
+    pub product_note: Option<(String, String)>,
 }
 
 impl State {
@@ -660,6 +746,102 @@ impl Kriko {
             self.chat_input.set_value(message.text.clone());
             self.send_chat_message(cx);
         }
+    }
+
+    /// Read one product again, now: the engine looks it up by the identity its
+    /// catalog records and answers with what is known about it today.
+    ///
+    /// A chat answer is a reading of the catalog at the moment it was written.
+    /// This is the reader saying "and now": the same product, read again, with
+    /// the result saved so Browse and Compare see it too.
+    pub fn chat_research_product(&mut self, subject_id: String, cx: &mut Context<Self>) {
+        if self.live.chat.product_busy.is_some() {
+            return;
+        }
+        self.live.chat.product_busy = Some(subject_id.clone());
+        self.live.chat.product_note = None;
+        let asked = subject_id.clone();
+        self.fetch(
+            cx,
+            move || api::product_check(&subject_id),
+            move |this, reply, cx| {
+                this.live.chat.product_busy = None;
+                match reply {
+                    Ok(v) => {
+                        let risks = api::arr(&v, "claims").len();
+                        let label = api::s(&v, "label");
+                        this.live.chat.product_queued = None;
+                        this.live.chat.product_note = Some((
+                            asked.clone(),
+                            if risks == 0 {
+                                format!("{label}: nothing recorded against it.")
+                            } else {
+                                format!("{label}: {risks} recorded.")
+                            },
+                        ));
+                        // The screen that reads saved checks has new data.
+                        this.refresh_history(cx);
+                    }
+                    Err(e) => {
+                        this.live.chat.product_note = Some((asked.clone(), e.message));
+                    }
+                }
+                cx.notify();
+            },
+        );
+    }
+
+    /// Put one product in the compare queue, which is what the Compare screen
+    /// reads.
+    ///
+    /// The saved check comes first, in the same call, and that is the whole
+    /// point rather than tidiness: Compare reads *saved checks*, and the queue
+    /// resolves a row to a product through the answer it was queued with. A
+    /// product queued with neither resolves by its name, which is the guess
+    /// `productchecks` exists to avoid — and a product the catalog names but
+    /// nothing has read yet has no answer at all. So this makes the check and
+    /// then queues it, and a failure to make the check is a failure to queue:
+    /// an empty row in Compare is worse than a sentence saying why.
+    pub fn chat_compare_product(
+        &mut self,
+        subject_id: String,
+        name: String,
+        cx: &mut Context<Self>,
+    ) {
+        self.live.chat.product_note = None;
+        let asked = subject_id.clone();
+        self.fetch(
+            cx,
+            move || {
+                let checked = api::product_check(&subject_id)?;
+                let queued = api::product_to_compare(&subject_id, &name)?;
+                Ok::<_, api::ApiError>((checked, queued))
+            },
+            move |this, reply, cx| {
+                match reply {
+                    Ok((_, v)) => {
+                        let added = api::b(&v, "added");
+                        let requeued = api::b(&v, "requeued");
+                        this.live.chat.product_queued = Some(asked.clone());
+                        this.live.chat.product_note = Some((
+                            asked.clone(),
+                            if added {
+                                "Added to Compare.".to_string()
+                            } else if requeued {
+                                "Back in the Compare queue.".to_string()
+                            } else {
+                                "Already in Compare.".to_string()
+                            },
+                        ));
+                        this.refresh_compare(cx);
+                    }
+                    Err(e) => {
+                        this.live.chat.product_note = Some((asked.clone(), e.message));
+                    }
+                }
+                cx.notify();
+            },
+        );
     }
 
     /// Follows one turn's job until it ends: the steps as they are read, then

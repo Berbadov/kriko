@@ -350,8 +350,12 @@ test("the packaged manifest names no site of its own", () => {
   // about with no pack behind it — the one place site vocabulary could creep
   // back in without any adapter test noticing.
   assert.deepEqual(MANIFEST.content_scripts || [], []);
+  // The two names loopback answers to, and nothing else. `localhost` is not a
+  // site either, and it is the spelling a reader is more likely to type into
+  // the options page — which accepts it, while an unpermitted host is a fetch
+  // the browser refuses with nothing on screen to say why.
   for (const pattern of MANIFEST.host_permissions || []) {
-    assert.match(pattern, /^http:\/\/127\.0\.0\.1\//,
+    assert.match(pattern, /^http:\/\/(127\.0\.0\.1|localhost)\//,
       `host permission for a site: ${pattern}`);
   }
 });

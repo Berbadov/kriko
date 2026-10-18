@@ -26,10 +26,14 @@ const BACKGROUND_JS = path.join(__dirname, "..", "background.js");
 // worker — skip a host the package already injects on — is only reachable
 // with a manifest that has one; a test passes it rather than the shipped
 // file growing a site for the suite's sake.
+// `alarms` seeds Chrome's own alarm table, which outlives any one worker: a
+// test loading the worker twice against the same table is the restart this
+// suite cannot otherwise stage, and `alarmCreates` is what it did to the
+// table each time.
 function loadBackground({
   routes = {}, tabResponses = {}, offline = false, hung = false, statuses = {},
   grantedOrigins = [], responseHeaders = {}, loadedDigest = "", manifest = null, firefox = false,
-  localState = {},
+  localState = {}, alarms = {},
 } = {}) {
   const state = {
     session: {},
@@ -48,7 +52,12 @@ function loadBackground({
     // remembering.
     granted: new Set(grantedOrigins),
     registered: [],
-    alarms: {},
+    alarms: { ...alarms },
+    // Every `alarms.create` the worker issued, per name. Creating an alarm
+    // that already exists replaces it, and a replacement restarts its clock,
+    // so the count is the difference between an alarm that comes due and one
+    // that is pushed back for as long as the worker keeps waking.
+    alarmCreates: [],
     permissionRequests: [],
     // Tabs the worker opened as a fallback, in order. A tab opened when the
     // app was raised is the original bug; a tab *not* opened when it was not
@@ -171,7 +180,18 @@ function loadBackground({
         onRemoved: { addListener() {} },
       },
       alarms: {
-        create(name, info) { state.alarms[name] = info; },
+        create(name, info) {
+          state.alarms[name] = info;
+          state.alarmCreates.push(name);
+        },
+        // Chrome's shape: the answer arrives in the callback. The promise is
+        // what Firefox's `browser.*` returns, and the worker handles both, so
+        // the fake answers both.
+        get(name, callback) {
+          const found = state.alarms[name] || null;
+          if (callback) callback(found);
+          return Promise.resolve(found);
+        },
         onAlarm: { addListener: (fn) => alarmListeners.push(fn) },
       },
       action: {

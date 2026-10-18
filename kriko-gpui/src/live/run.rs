@@ -450,6 +450,35 @@ pub struct AgentEntry {
     pub target: Option<Target>,
 }
 
+/// One agent as the marketplace lists it (`GET /api/agent-market`): what kind
+/// of thing it is, whether this machine can run it now, how the engine found
+/// that out, and the one action left to take. The engine composes these from
+/// the same discovery `/api/prefs` serves, so `id` is what the model dials,
+/// the reader's arrangement and `prefer_agent` are all keyed on.
+#[derive(Clone, Debug, Default)]
+pub struct MarketRow {
+    pub id: String,
+    pub label: String,
+    /// `cli`, `local` or `api`: what answers a question here.
+    pub kind: String,
+    /// `ready`, `needs_setup` or `not_installed`.
+    pub state: String,
+    /// `use`, `connect`, `install` or `setup`.
+    pub action: String,
+    /// The engine's own sentence: why it is not ready, or what it bills.
+    pub detail: String,
+    /// How the engine found it: the binary's path, the model server's
+    /// address, or the command it looked for and did not find.
+    pub found: String,
+    /// The harness config's state (`connected`, `stale`, `absent`,
+    /// `unreadable`), or empty for an agent that has no config to write.
+    pub wiring: String,
+    /// Where a `setup` row sends the reader, when the engine has a page.
+    pub url: String,
+    pub chosen: bool,
+    pub local: bool,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct Verify {
     pub ok: bool,
@@ -550,6 +579,10 @@ pub struct State {
     pub prefs_loaded: bool,
     pub targets: Vec<Target>,
     pub targets_loaded: bool,
+    /// The marketplace's rows, as `GET /api/agent-market` answers them.
+    pub market: Vec<MarketRow>,
+    pub market_loaded: bool,
+    market_inflight: bool,
     pub agent_selected: String,
     pub agent_note: String,
     /// The reader's own arrangement of the agents, as the engine stored it.
@@ -798,6 +831,18 @@ impl State {
             .or_else(|| all.into_iter().next())
     }
 
+    /// The marketplace's rows in the order the reader arranged them: the ones
+    /// they named first, in that order, then whatever the engine listed, where
+    /// it listed it. A stable sort is what keeps the engine's own order — ready
+    /// before installable — inside the unnamed tail.
+    pub fn ordered_market(&self) -> Vec<MarketRow> {
+        let mut rows = self.market.clone();
+        rows.sort_by_key(|row| {
+            self.agent_order.iter().position(|id| *id == row.id).unwrap_or(usize::MAX)
+        });
+        rows
+    }
+
     /// The agent a new check runs with.
     pub fn start_harness(&self) -> String {
         if !self.start.harness.is_empty() {
@@ -899,6 +944,37 @@ fn harnesses_from(v: &Value) -> Vec<Harness> {
         })
     }));
     out
+}
+
+/// The marketplace's rows, as `GET /api/agent-market` answers them. Kept pure
+/// so the parse is testable without a window.
+pub(crate) fn market_from(v: &Value) -> Vec<MarketRow> {
+    api::arr(v, "agents")
+        .iter()
+        .filter_map(|row| {
+            let id = api::s(row, "id");
+            if id.is_empty() {
+                return None;
+            }
+            let label = {
+                let label = api::s(row, "label");
+                if label.is_empty() { id.clone() } else { label }
+            };
+            Some(MarketRow {
+                id,
+                label,
+                kind: api::s(row, "kind"),
+                state: api::s(row, "state"),
+                action: api::s(row, "action"),
+                detail: api::s(row, "detail"),
+                found: api::s(row, "where"),
+                wiring: api::s(row, "wiring"),
+                url: api::s(row, "url"),
+                chosen: api::b(row, "chosen"),
+                local: api::b(row, "local"),
+            })
+        })
+        .collect()
 }
 
 fn targets_from(v: &Value) -> Vec<Target> {
@@ -1202,6 +1278,49 @@ impl Kriko {
         }
     }
 
+    /// The marketplace's own read. Separate from `refresh_agents` because only
+    /// the Agents screen draws these rows: Home, Run and the onboarding flow
+    /// need the harnesses and their dials, not what each one costs to reach.
+    pub fn refresh_market(&mut self, cx: &mut Context<Self>) {
+        if self.live.run.market_inflight {
+            return;
+        }
+        self.live.run.market_inflight = true;
+        self.fetch(cx, || api::get("/api/agent-market"), |this, reply, _| {
+            this.live.run.market_inflight = false;
+            this.note(&reply);
+            if let Ok(v) = reply {
+                this.live.run.market = market_from(&v);
+                this.live.run.market_loaded = true;
+            }
+        });
+    }
+
+    /// The one action a marketplace row offers. The engine decided *which*
+    /// action from what it knows; this only takes it, so no screen has to
+    /// re-derive whether an agent is installable, connected or keyed.
+    pub fn market_action(&mut self, row: &MarketRow, cx: &mut Context<Self>) {
+        match row.action.as_str() {
+            "use" => self.prefer_agent(row.id.clone(), cx),
+            "connect" => self.connect_target(row.id.clone(), cx),
+            "install" => self.install_agent(row.id.clone(), cx),
+            // "Set up" is the reader's own work: the page the engine named, or
+            // the model store for the model on this machine. Selecting the row
+            // is the last resort, and shows the engine's reason in the detail
+            // card rather than a button that cannot do anything.
+            _ if !row.url.is_empty() => cx.open_url(&row.url),
+            _ if row.local => {
+                self.tab = Tab::Local;
+                self.live.local.catalogue_open = true;
+                self.refresh_local(cx);
+                self.refresh_local_catalogue(cx);
+            }
+            _ => self.select_agent(row.id.clone()),
+        }
+        self.refresh_market(cx);
+        cx.notify();
+    }
+
     pub fn refresh_agents(&mut self, cx: &mut Context<Self>) {
         self.live.run.last_agents = Some(Instant::now());
         if !self.live.run.prefs_inflight {
@@ -1496,7 +1615,14 @@ impl Kriko {
 
     /// Move one agent up or down in the reader's arrangement, and keep it.
     pub fn order_agent(&mut self, id: String, step: i64, cx: &mut Context<Self>) {
-        let ids: Vec<String> = self.live.run.agent_entries().iter().map(|e| e.id.clone()).collect();
+        // The marketplace is the list the reader is looking at when they press
+        // these, so with it loaded that is the order being rearranged — an API
+        // agent is a row there and is not a harness entry.
+        let ids: Vec<String> = if self.live.run.market.is_empty() {
+            self.live.run.agent_entries().iter().map(|e| e.id.clone()).collect()
+        } else {
+            self.live.run.ordered_market().iter().map(|row| row.id.clone()).collect()
+        };
         let mut order: Vec<String> = self
             .live
             .run
@@ -1935,4 +2061,52 @@ mod tests {
         assert!(offers_from_prefs(&json!({"models": {}})).is_empty());
     }
 
+    #[test]
+    fn the_market_keeps_what_the_engine_said_about_each_agent() {
+        // Flattening the engine's own words, ids and flags is all this does:
+        // the kind, the state and the action are the engine's answers, never
+        // re-derived here (the failure that looks like success is a row that
+        // says "Use" for an agent whose server is down).
+        let rows = market_from(&json!({"agents": [
+            {"id": "claude-code", "label": "Claude Code", "kind": "cli",
+             "state": "ready", "action": "connect", "where": "C:/bin/claude.exe",
+             "wiring": "absent", "url": "", "chosen": false},
+            {"id": "local", "label": "Local model", "kind": "local",
+             "state": "not_installed", "action": "install",
+             "detail": "No local model server is running",
+             "where": "ollama", "url": "https://ollama.com/download",
+             "local": true},
+            {"label": "no id at all"}
+        ]}));
+
+        assert_eq!(rows.len(), 2, "a row the engine did not name is not an agent");
+        assert_eq!(rows[0].id, "claude-code");
+        assert_eq!(rows[0].action, "connect");
+        assert_eq!(rows[0].wiring, "absent");
+        assert_eq!(rows[0].found, "C:/bin/claude.exe");
+        assert!(!rows[0].local);
+        assert_eq!(rows[1].kind, "local");
+        assert_eq!(rows[1].detail, "No local model server is running");
+        assert!(rows[1].local);
+        assert_eq!(rows[1].url, "https://ollama.com/download");
+    }
+
+    #[test]
+    fn the_market_follows_the_readers_arrangement_and_keeps_the_engine_s() {
+        let mut s = State::default();
+        s.market = market_from(&json!({"agents": [
+            {"id": "codex", "label": "Codex", "action": "install"},
+            {"id": "claude-code", "label": "Claude Code", "action": "use"},
+            {"id": "local", "label": "Local model", "action": "use"}
+        ]}));
+
+        // Nothing named yet: the engine's own order stands (this is its
+        // state grouping, ready before installable, so a market does not open
+        // on what cannot run).
+        let ids = |rows: Vec<MarketRow>| rows.into_iter().map(|r| r.id).collect::<Vec<_>>();
+        assert_eq!(ids(s.ordered_market()), ["codex", "claude-code", "local"]);
+
+        s.agent_order = vec!["local".into(), "codex".into()];
+        assert_eq!(ids(s.ordered_market()), ["local", "codex", "claude-code"]);
+    }
 }

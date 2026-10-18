@@ -240,4 +240,10 @@ BACK_THEN = {
     # ones a later question path would want to add in place.
     "compare_questions.draft_id", "compare_questions.question_id",
     "compare_questions.question",
+    # 2026-10-17, inferred site structures, and the excuse holds: the table
+    # arrived whole, so a reader whose file predates it gets both key columns
+    # from `CREATE TABLE IF NOT EXISTS` and no `ALTER` is ever asked for. The
+    # four that carry a default are the ones a later inference would want to
+    # write in place on a row that already exists.
+    "site_inference.host", "site_inference.shape",
 }
