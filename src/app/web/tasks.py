@@ -1991,6 +1991,33 @@ QUICK_LOOK_TIMEOUT_SECONDS = 240
 CATEGORIZATION_BUDGET_USD = 0.05
 
 
+def _catalogue_block(product: str, page, profiles: list[dict], *,
+                     pinned: str = "") -> tuple[str, str]:
+    """The installed catalogs a Quick Look is shown, and what was left out.
+
+    Not the whole installed set: the agent's `pack` is a hint for the filling
+    step, and `categorizer.deterministic` decides from the whole set anyway
+    (see `categorizer.shortlist`). The block is shrunk rather than dropped when
+    a catalogue's own definition is too wide for one prompt, because a smaller
+    honest list beats a sentence saying there is no list.
+    """
+    from app import categorizer
+
+    kept = categorizer.shortlist(product, page, profiles, pinned=pinned)
+    while kept:
+        try:
+            return categorizer.choice_block(kept), ""
+        except categorizer.CatalogSetTooLarge:
+            kept = kept[: len(kept) // 2]
+    if not profiles:
+        return "", ""
+    return "", (
+        f"The installed catalog definitions are too large for one prompt, so this "
+        f"look was shown none of them. Choose one of the {len(profiles)} installed "
+        "catalogs by hand."
+    )
+
+
 def quick_look(settings, params: dict, progress: Progress) -> dict:
     """A chat-speed answer for a product no pack knows yet. (B148)
 
@@ -2060,13 +2087,8 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     catalog_context_error = ""
     try:
         profiles = categorizer.installed_catalogs(settings.store_path)
-        packs = categorizer.choice_block(profiles)
-    except categorizer.CatalogSetTooLarge as error:
-        # Keep every profile for the deterministic pass, and state plainly
-        # why full catalog context was not sent to this first Quick Look.
-        profiles = categorizer.installed_catalogs(settings.store_path)
-        catalog_context_error = str(error)
-        packs = f"[Installed catalog context not shortened: {error}]"
+        packs, catalog_context_error = _catalogue_block(
+            product, params.get("page"), profiles, pinned=pack_id)
     except Exception:  # noqa: BLE001 - a list of packs is never why a look fails
         profiles = []
         packs = ""
@@ -3846,17 +3868,14 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
         raise ValueError(f"no such lookup: {lookup_id}")
     if not question:
         raise ValueError("Write a question first.")
-    lines = [
-        "What the saved check recorded about this product (a starting point, not the limit):",
-        *_recorded_lines(stored),
-    ]
-    replies = [job for job in previous if job["state"] == state.SUCCEEDED
-               and (job.get("result") or {}).get("answer")][-6:]
-    if replies:
-        lines.append("Previous follow-ups for this listing (agent replies, not new evidence):")
-        for job in replies:
-            lines.append(f"Question: {job['params'].get('question', '')[:2000]}")
-            lines.append(f"Agent reply: {job['result']['answer'][:4000]}")
+    # The saved check's own record comes first, then the last few questions in
+    # this conversation. `state.lookup_questions` returns every job for this
+    # listing, so only the ones that finished with an answer are conversation.
+    answered = [job for job in previous if job.get("state") == state.SUCCEEDED
+                and (job.get("result") or {}).get("answer")]
+    context = (
+        "What the saved check recorded about this product (a starting point, not the limit):\n"
+        + _follow_up_context(stored, question, answered))
     agent: dict = {}
 
     def report_agent(identity: dict) -> None:
@@ -3864,7 +3883,7 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
         progress.partial({"agent": identity})
 
     brief = followup.web_brief(question, product=str(stored.get("label") or ""),
-                               context="\n".join(lines),
+                               context=context,
                                kind=followup.classify(question))
     reply, sources = _ask_about_checks(settings, params, progress, brief,
                                        on_agent=report_agent, follow_up=True,
@@ -4065,17 +4084,20 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             raise ValueError("The agent returned no answer. Try asking again.")
         stored = state.add_chat_message(
             app_state, thread_id, role="agent", text=result["answer"],
-            steps=result["steps"], sources=result["sources"], job_id=progress.job_id)
+            steps=result["steps"], sources=result["sources"],
+            products=result.get("products") or [], job_id=progress.job_id)
     finally:
         app_state.close()
     progress.partial({"thread_id": thread_id, "message_id": message_id,
                       "agent": dict(agent), "steps": result["steps"],
-                      "answer": result["answer"], "sources": result["sources"]})
+                      "answer": result["answer"], "sources": result["sources"],
+                      "products": result.get("products") or []})
     progress.set(1.0, "answered")
     return {
         "thread_id": thread_id, "message_id": stored["message_id"],
         "reader_message_id": message_id, "answer": result["answer"],
-        "steps": result["steps"], "sources": result["sources"], "agent": agent,
+        "steps": result["steps"], "sources": result["sources"],
+        "products": result.get("products") or [], "agent": agent,
         "agent_calls": result["agent_calls"], "search_rounds": result["search_rounds"],
         "fallback": result["fallback"],
     }
@@ -4346,6 +4368,185 @@ def _recorded_lines(stored: dict) -> list[str]:
             lines.append(f"Page read: {page['url']}" + (f" — {excerpt}" if excerpt else ""))
     lines.append("")
     return lines
+
+
+#: What one product's own follow-up is handed, in characters: its identity, the
+#: risks recorded for it with the pages they came from, and the question.
+#:
+#: One question on one listing used to be handed the entire stored check — every
+#: claim with every quote, the specification list, the coverage counts, the
+#: research diagnostic, and up to six earlier questions with their whole answers
+#: at 4,000 characters each. Measured on a check of eight risks: **37,229
+#: characters** of prompt for an answer capped at seventy words. The agent reads
+#: the question at the top of all that, and a local model's window is the first
+#: thing to go. These bounds are per item and per count rather than one
+#: truncation, so a short brief is still a complete one within its bounds and
+#: says what it left out.
+FOLLOW_UP_CLAIMS = 12
+FOLLOW_UP_SOURCES_PER_CLAIM = 4
+FOLLOW_UP_QUOTE_CHARS = 400
+FOLLOW_UP_FACT_CHARS = 300
+FOLLOW_UP_HISTORY = 3
+FOLLOW_UP_HISTORY_CHARS = 700
+
+
+def _relevant_first(claims: list, question: str) -> list:
+    """The claims this question is most likely about, in their own order.
+
+    A stable sort on question-word overlap, so a claim the question names comes
+    first and the rest stay in the lookup's ranking. No claim is dropped here —
+    the count bound below is what drops, and it then drops the ones the question
+    mentions last.
+    """
+    import re
+
+    words = {word for word in re.findall(r"\w{3,}", str(question or "").casefold())
+             if word not in {"which", "what", "this", "that", "with", "from",
+                             "these", "about", "does", "have", "there"}}
+    if not words:
+        return list(claims)
+
+    def overlap(claim) -> int:
+        text = " ".join(str(claim.get(key) or "") for key in ("title", "body", "advice")
+                        ).casefold()
+        return len(words & set(re.findall(r"\w{3,}", text)))
+
+    return sorted(claims, key=lambda claim: -overlap(claim))
+
+
+def _follow_up_lines(stored: dict, question: str) -> list[str]:
+    """One saved check, cut to what a follow-up question's answer needs.
+
+    The identity of the product comes first because a search has to be asked
+    about the right thing, and the risks come next with the page each was read
+    from because that is the only evidence the answer may rest on. How far the
+    product has been used comes with them: two machines of the same model and
+    different mileage get different answers to the same question. The listing's
+    own words are kept where the question names them or where they are a
+    quantity a wear answer rests on, and not as a description the agent does not
+    answer from.
+    """
+    response = stored["response"]
+    lines: list[str] = []
+    import re
+
+    category = str(response.get("category") or "").strip()
+    assumed = str(response.get("assumed") or "").strip()
+    if category:
+        lines.append(f"Product category: {category}")
+    if assumed:
+        lines.append(f"Variant assumption: {assumed}")
+    identity = response.get("identity")
+    if isinstance(identity, dict) and identity:
+        lines.append("Product identity recorded:")
+        lines.extend(f"- {key}: {value}" for key, value in list(identity.items())[:10])
+    listing = response.get("listing")
+    if isinstance(listing, dict):
+        url = str(listing.get("url") or "").strip()
+        if url:
+            lines.append(f"Listing page: {url}")
+        raw_facts = listing.get("facts")
+        facts: dict = raw_facts if isinstance(raw_facts, dict) else {}
+        # Which of the listing's own facts travel with the question.
+        #
+        # The first cut of this kept the commerce keys only — seller, price,
+        # currency — on the reasoning that a question about a seller needs
+        # them and the rest is description. That was too narrow, and the test
+        # that caught it was right to: "What should I check?" is a maintenance
+        # question, and the two facts that answer it are how far the thing has
+        # been used and how old it is. A brief that carries the price and drops
+        # the mileage is not a shorter brief, it is a brief for a different
+        # question.
+        #
+        # So a fact travels when the question names it, or when its key names
+        # one of the quantities a wear or service answer rests on, or when it
+        # is one of the commerce keys a seller question needs. Order is that
+        # order: the question's own words first, then usage, then commerce.
+        wanted = {word for word in re.findall(r"[a-z0-9]+", question.casefold()) if len(word) > 2}
+        usage = ("hour", "km", "mileage", "kilometre", "kilometer", "mile", "year",
+                 "age", "usage", "odometer", "service", "condition", "warranty")
+        commerce = ("seller", "satici", "satıcı", "shop", "store", "mağaza",
+                    "price", "fiyat", "currency")
+
+        def rank(item: tuple[str, object]) -> tuple[int, int]:
+            key, _value = item
+            folded = str(key).casefold()
+            asked = 0 if any(word in folded for word in wanted) else 1
+            kind = 0 if any(word in folded for word in usage) else (
+                1 if any(word in folded for word in commerce) else 2)
+            return (asked, kind)
+
+        named = sorted(facts.items(), key=rank)[:6]
+        for key, value in named:
+            lines.append(f"- listing {str(key)[:60]}: {str(value)[:FOLLOW_UP_FACT_CHARS]}")
+    # How far the product has been used, in its own units.
+    #
+    # The identity of a product is not its condition: a car with 200,000 km and
+    # a car with 20,000 km get different answers to the same question, and the
+    # usage is recorded here rather than in the identity or the claims. This
+    # block was dropped when the brief was first cut down, and the loss is
+    # silent — the answer still reads plausibly, it is just about the wrong
+    # machine.
+    context = response.get("context")
+    if isinstance(context, dict) and context:
+        units = _context_units_of(response)
+        lines.append("How far it has been used, as the listing recorded it:")
+        for key, value in sorted(context.items())[:8]:
+            unit = units.get(key, "")
+            lines.append(f"- {key}: {str(value)[:FOLLOW_UP_FACT_CHARS]}"
+                         + (f" {unit}" if unit else ""))
+    claims = [claim for claim in (response.get("claims") or []) if isinstance(claim, dict)
+              and str(claim.get("title") or "").strip()]
+    ranked = _relevant_first(claims, question)
+    kept = ranked[:FOLLOW_UP_CLAIMS]
+    if kept:
+        lines.append("Known risks:")
+        for claim in kept:
+            line = f"- [{str(claim.get('severity') or '')}] {str(claim['title'])[:200]}"
+            if claim.get("body"):
+                line += f": {str(claim['body'])[:FOLLOW_UP_FACT_CHARS]}"
+            if claim.get("advice"):
+                line += f" (advice: {str(claim['advice'])[:FOLLOW_UP_FACT_CHARS]})"
+            lines.append(line)
+            for source in _source_lines(claim)[:FOLLOW_UP_SOURCES_PER_CLAIM * 2]:
+                # A quote is what makes a source checkable, and a page can return
+                # a very long one. Its opening is enough to recognise the page by
+                # and stops one source from filling the brief; grounding is
+                # checked against the page itself, never against this line.
+                lines.append(source[:FOLLOW_UP_QUOTE_CHARS + 400])
+        if len(ranked) > len(kept):
+            lines.append(f"({len(ranked) - len(kept)} further recorded risk(s) are in the "
+                         "saved check and are not listed here.)")
+    else:
+        lines.append("Known risks: none recorded.")
+    if isinstance(response.get("coverage"), dict) and response["coverage"]:
+        status = str(response["coverage"].get("status") or "")
+        if status:
+            # One word, and the only part of the coverage record an answer needs:
+            # a claim about what was not looked at is as wrong as an invented risk.
+            lines.append(f"Research coverage: {status}.")
+    return lines
+
+
+def _follow_up_context(stored: dict, question: str, previous: list[dict]) -> str:
+    """`_follow_up_lines` plus the last few questions in this same conversation.
+
+    Earlier follow-ups are conversation, not evidence: they can answer "what did
+    you say about X", and an answer resting on one is no better than the answer
+    it rests on. So they are clipped hard and capped in number — the question
+    being asked now is what the brief is for.
+    """
+    lines = _follow_up_lines(stored, question)
+    recent = [job for job in previous if (job.get("result") or {}).get("answer")][-FOLLOW_UP_HISTORY:]
+    if recent:
+        lines.append("")
+        lines.append("Earlier questions about this product (agent replies, not new evidence):")
+        for job in recent:
+            asked = str(job.get("params", {}).get("question", ""))[:200]
+            said = str(job["result"]["answer"])[:FOLLOW_UP_HISTORY_CHARS]
+            lines.append(f"Question: {asked}")
+            lines.append(f"Agent reply: {said}")
+    return "\n".join(lines)
 
 
 def _compact_compare_brief(lines: list[str], question: str,

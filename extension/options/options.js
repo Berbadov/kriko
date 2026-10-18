@@ -228,9 +228,15 @@ function renderCompat(compat) {
     return;
   }
   if (compat.stale) {
+    // The way out of an old extension is an update, and the reader is one
+    // browser menu away from it. Naming that action is the whole difference
+    // between a sentence they can act on and one that only says what is
+    // wrong: the copy this page must not point at is the app's own staged
+    // one, which is the install path this release turned off.
     compatEl.textContent =
       `Extension ${compat.running} is older than the ${compat.minimum} this `
-      + "app needs. Load the copy Kriko wrote: yours is out of date, not broken.";
+      + "app needs. Update Kriko from the Chrome Web Store: yours is out of "
+      + "date, not broken.";
     compatEl.dataset.state = "error";
     return;
   }

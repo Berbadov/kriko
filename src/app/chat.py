@@ -522,6 +522,56 @@ def _finish(step: dict, out: dict, ms: int) -> None:
     step.update(rows=rows, ms=ms)
 
 
+#: The tools whose rows are products. `product_match` ranks candidates for a
+#: need, `catalogue_search` finds them by name, and `product_deep_check` reads
+#: the few in depth. All three answer with the same shape of row, so the screen
+#: can draw one card for each without knowing which tool produced it.
+PRODUCT_SOURCES = ("product_match", "product_deep_check", "catalogue_search")
+
+
+def products_from(trail: Sequence[dict], sources: Sequence[str] = ()) -> list[dict]:
+    """The products a turn found, as the screen's cards.
+
+    The agent sees these rows in its prompt; the reader saw only prose. A card
+    needs the identity, the risk count and the id to ask for more, and nothing
+    the model was told that the reader may not be — so this is a deliberate
+    subset of the row, not the row.
+
+    One card per product, in the order the trail found them: the first search
+    that named a product is the one the reader asked for.
+    """
+    wanted = set(sources) if sources else set(PRODUCT_SOURCES)
+    found: dict[str, dict] = {}
+    for round_ in trail:
+        for call, out in zip(round_.get("calls") or (), round_.get("results") or ()):
+            name = str((call or {}).get("source") or "")
+            if name not in PRODUCT_SOURCES or name not in wanted:
+                continue
+            if not isinstance(out, dict):
+                continue
+            for row in out.get("rows") or ():
+                if not isinstance(row, dict):
+                    continue
+                subject_id = str(row.get("subject_id") or "").strip()
+                if not subject_id or subject_id in found:
+                    continue
+                identity = row.get("identity") if isinstance(row.get("identity"), dict) else {}
+                found[subject_id] = {
+                    "subject_id": subject_id,
+                    "pack_id": str(row.get("pack_id") or ""),
+                    "label": str(row.get("label") or ""),
+                    "kind": str(row.get("kind") or ""),
+                    # Identity values are the ones the catalogue recorded, so
+                    # the card can show make and model without a second read.
+                    "identity": {str(k): str(v) for k, v in list(identity.items())[:6]},
+                    "claims": int(row.get("claims") or 0),
+                    "coverage": row.get("risk_coverage") or {},
+                    "rank": int(row.get("rank") or 0),
+                    "found_by": name,
+                }
+    return list(found.values())
+
+
 def _web_query(message: str, history: Sequence[dict]) -> str:
     """Resolve short web follow-ups against the recent conversation."""
     if not _has_web_sources(_last_sources(history)) or not _FOLLOW_UP.search(message):
@@ -565,10 +615,14 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
     trail: list[dict] = []
 
     live_sources: list[str] = []
+    # The product cards, as the trail grows: a reader sees the products a turn
+    # found while it is still reading them, not only when the answer lands.
+    live_products: list[dict] = []
 
     def snapshot(answer: str = "", sources: Sequence[str] | None = None) -> dict:
         return {"steps": [dict(one) for one in steps], "answer": answer,
-                "sources": list(live_sources if sources is None else sources)}
+                "sources": list(live_sources if sources is None else sources),
+                "products": [dict(one) for one in live_products]}
 
     hooks.set(0.1, "reading the question")
     last_streamed_answer = ""
@@ -596,7 +650,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         hooks.partial(snapshot(answer))
         hooks.set(1.0, "answered" if answer else "the agent printed nothing")
         return {
-            "answer": answer, "sources": [], "steps": [],
+            "answer": answer, "sources": [], "steps": [], "products": [],
             "agent_calls": spent["calls"], "search_rounds": 0,
             "fallback": False, "need": {},
         }
@@ -640,6 +694,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
                       + (f": {catalogue_step['detail']}" if catalogue_step["detail"] else ""))
             hooks.partial(snapshot())
             trail.append({"calls": [catalogue_call], "results": [catalogue]})
+            live_products = products_from(trail)
         hooks.set(0.85, "writing the answer")
         text = agent(web_answer_brief(message, history, out["rows"], out["note"],
                                       catalogue=catalogue),
@@ -654,6 +709,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         hooks.set(1.0, "answered" if answer else "the agent printed nothing")
         return {
             "answer": answer, "sources": sources, "steps": steps,
+            "products": products_from(trail),
             "agent_calls": spent["calls"], "search_rounds": 1,
             "fallback": False, "need": {},
         }
@@ -691,6 +747,8 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             hooks.partial(snapshot())
             results.append(out)
         trail.append({"calls": plan["calls"], "results": results})
+        live_products = products_from(trail)
+        hooks.partial(snapshot())
         if plan["ready"] or rounds >= MAX_SEARCH_ROUNDS or spent["calls"] >= MAX_AGENT_CALLS - 1:
             break
         nxt = parse_plan(agent(refine_brief(message, history, trail)))
@@ -712,6 +770,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         "answer": answer,
         "sources": sources,
         "steps": steps,
+        "products": products_from(trail, sources),
         "agent_calls": spent["calls"],
         "search_rounds": rounds,
         "fallback": fallback,

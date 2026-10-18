@@ -198,6 +198,21 @@ test("a product page on a site nobody reads is asked about by its name", async (
   assert.equal(post.body.fields["ld:brand"], "Makita");
   const ask = h.state.tabMessages.find((m) => m.message.type === "GET_SCRAPE");
   assert.deepEqual(ask.message.labels, [], "no site adapter, no site labels");
+  // ...and the page's own label/value shapes ride along, which is the whole
+  // of what a model is given to work out this site's reading structure from
+  // (`app/siteinfer.py`). Nothing else on that request carries them.
+  assert.equal(ask.message.explore, true,
+    "a page nothing claims must be scraped for its own labels");
+});
+
+test("a page an adapter claims keeps the scrape it always had", async () => {
+  const { state } = await analyse();
+  const ask = state.tabMessages.find((m) => m.message.type === "GET_SCRAPE");
+  // The declared labels are already the pack's words. Exploring as well would
+  // put every other short string on the page on the wire for nothing, and it
+  // would change the payload of every page that already worked.
+  assert.equal(ask.message.explore, false);
+  assert.deepEqual(ask.message.labels, ADAPTERS[0].labels);
 });
 
 test("a product nothing installed knows comes back with its own name to research", async () => {
@@ -423,6 +438,32 @@ test("the toolbar icon becomes muted when the app stops answering", async () => 
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(h.state.toolbarIcon[16], "assets/icons/icon-offline-16.png");
   assert.match(h.state.toolbarTitle, /app is not running/i);
+});
+
+// An alarm is registered once and then lives in Chrome, not in the worker. So
+// the second worker start below is the ordinary case this test exists for:
+// MV3 stops a worker after about thirty seconds idle, and every start runs the
+// top-level block again. `alarms.create` replaces an alarm of the same name
+// and a replacement restarts its clock, so a worker that recreated its alarms
+// on every start would push the 30-minute site sync back every few seconds and
+// it would never come due. The distinction is invisible in one worker's
+// lifetime, which is exactly why it needs a second one.
+test("a restarted worker leaves a live alarm's clock alone", async () => {
+  const first = loadBackground({});
+  assert.deepEqual(first.state.alarmCreates.slice().sort(),
+    ["kriko-connection", "kriko-site-sync"]);
+
+  const second = loadBackground({ alarms: first.state.alarms });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(second.state.alarmCreates, [],
+    "the restarted worker recreated an alarm that was already running");
+  assert.equal(second.state.alarms["kriko-site-sync"].periodInMinutes, 30);
+
+  // An alarm Chrome no longer holds is the one case that has to be recreated,
+  // or a worker restarted after a browser update would go on syncing never.
+  const third = loadBackground({ alarms: { "kriko-connection": { periodInMinutes: 1 } } });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(third.state.alarmCreates, ["kriko-site-sync"]);
 });
 
 test("the manifest declares the command the worker listens for", () => {
@@ -746,8 +787,34 @@ test("a second Refresh reuses the cache, but a fresh one re-asks the engine", as
   );
 });
 
-test("a pack update changes the cache signature even when the scrape has not", async () => {
-  // The signature used to hash only the scrape, so a pack shipping a new
+// The answer cache is the one part of a run that survives the browser
+// session: the result itself lives in session storage, which Chrome clears,
+// and the cache lives in storage.local, which it does not. That makes the
+// cache's key a record of the reader's browsing whenever the key is the
+// address, and the reader's browsing is the thing this product exists to keep
+// to themselves.
+test("the durable cache is keyed by a digest, not by the page's address", async () => {
+  const h = loadBackground({ routes: routes(), tabResponses: withTab() });
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+
+  const cached = Object.keys(h.state.local)
+    .filter((key) => key.startsWith("kriko_cached_result_"));
+  assert.equal(cached.length, 1,
+    `expected one cache entry, found ${JSON.stringify(Object.keys(h.state.local))}`);
+  assert.ok(!cached[0].includes(SCRAPE.url),
+    "the cache key still spells out the page the reader visited");
+  assert.ok(!cached[0].includes(new URL(SCRAPE.url).hostname),
+    "the cache key still names the site");
+
+  // And the digest still finds the entry: the second run is served from it,
+  // which is the property the address key had.
+  const posts = h.state.requests.filter((request) => request.method === "POST").length;
+  await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
+  assert.equal(h.state.requests.filter((request) => request.method === "POST").length,
+    posts, "the digest key missed an entry the address key used to find");
+});
+
+test("a pack update changes the cache signature even when the scrape has not", async () => {  // The signature used to hash only the scrape, so a pack shipping a new
   // claim for the same listing could not reach it: the cache would keep
   // serving the pre-update answer for up to 6 hours. `_scrapeSignature` now
   // takes the adapters list too, so a version bump on the same scrape must

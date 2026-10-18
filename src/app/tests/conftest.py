@@ -194,6 +194,7 @@ def no_test_finds_the_readers_local_model_server(monkeypatch):
     """
     from app.providers import local_discovery
 
+    local_discovery.forget_discovery()
     monkeypatch.setattr(
         local_discovery, "discover",
         lambda configured="", timeout=1.0: [

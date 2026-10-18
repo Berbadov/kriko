@@ -105,7 +105,10 @@ extensionApi.runtime.onInstalled.addListener(_ensureSessionAccessLevel);
 
 // Firefox keeps session storage private to extension pages and has no
 // setAccessLevel API. Deliver only this tab's result/stage through messaging.
-// Page data stays in session memory rather than persistent local storage.
+// This is the delivery path, not a storage policy: the live result and the
+// stage stay in session memory, while the six-hour answer cache below is
+// storage.local on every browser and is keyed by a digest of the address
+// rather than by the address itself.
 if (IS_FIREFOX) {
   extensionApi.storage.onChanged.addListener((changes, area) => {
     if (area !== "session") return;
@@ -1015,12 +1018,61 @@ if (extensionApi.runtime.onStartup) {
     void refreshConnectionIcon();
   });
 }
+/* An alarm is Chrome's, and this block runs again on every worker start.
+ *
+ * That combination was a bug with no symptom of its own. `alarms.create` with
+ * the name of an existing alarm *replaces* it, and a replacement starts its
+ * clock again — so an alarm recreated at every top-level run is an alarm whose
+ * countdown restarts every time the worker wakes. An MV3 worker is stopped
+ * after about thirty seconds idle and started again by the next message, the
+ * next storage change, the next alarm; on any browser in ordinary use that
+ * happens more often than once in thirty minutes, so the 30-minute site sync
+ * never came due and a reader whose sync had failed waited for a retry that
+ * never arrived. The connection icon, on a one-minute period, was one restart
+ * away from the same fate.
+ *
+ * So: create only what is missing and leave a live alarm's clock alone. The
+ * question is asked of Chrome rather than of a variable here, because a
+ * variable is exactly what a restart loses. */
+function _ensureAlarm(name, info) {
+  const alarms = extensionApi.alarms;
+  if (!alarms || !alarms.create) return;
+  let made = false;
+  const make = () => {
+    if (made) return;
+    made = true;
+    try {
+      alarms.create(name, info);
+    } catch (_) {
+      // Nothing to do: the next worker start asks again.
+    }
+  };
+  if (!alarms.get) {
+    // No way to ask, so creating is the only move. Old enough to be rare.
+    make();
+    return;
+  }
+  try {
+    const asked = alarms.get(name, (existing) => {
+      void extensionApi.runtime.lastError;
+      if (!existing) make();
+    });
+    // Firefox answers the promise and may ignore the callback; `made` keeps
+    // the two paths from creating the alarm twice.
+    if (asked && typeof asked.then === "function") {
+      asked.then((existing) => { if (!existing) make(); }).catch(() => {});
+    }
+  } catch (_) {
+    make();
+  }
+}
+
 if (extensionApi.alarms) {
-  extensionApi.alarms.create(SITE_SYNC_ALARM, {
+  _ensureAlarm(SITE_SYNC_ALARM, {
     periodInMinutes: SITE_SYNC_PERIOD_MINUTES,
     delayInMinutes: 1,
   });
-  extensionApi.alarms.create(CONNECTION_ALARM, {
+  _ensureAlarm(CONNECTION_ALARM, {
     periodInMinutes: CONNECTION_PERIOD_MINUTES,
     delayInMinutes: 1,
   });
@@ -1203,8 +1255,22 @@ function _scrapeSignature(scrape, adapters) {
   });
 }
 
-function _localCacheKey(url) {
-  return LOCAL_CACHE_KEY_PREFIX + url;
+/* The local cache is keyed by a digest of the page's address, not by the
+ * address.
+ *
+ * A storage key is a durable record of the reader's browsing like any other,
+ * and this one used to be the listing's full URL in plain text: every page
+ * Kriko had been asked about, spelled out, sitting in the extension's own
+ * storage until something happened to read it again. Kriko's premise is that
+ * what somebody is shopping for is nobody else's business, and that has to
+ * hold for the file it writes on their machine as much as for the wire. The
+ * digest matches an entry to its page exactly as the address did; it just
+ * cannot be read off the disk as a history.
+ *
+ * `_digest` is the same one the research intents are keyed by, so the two
+ * cannot drift into two ideas of what a stable key is. */
+async function _localCacheKey(url) {
+  return LOCAL_CACHE_KEY_PREFIX + await _digest(String(url));
 }
 
 function _isFreshCachedEntry(entry, signature) {
@@ -1215,7 +1281,7 @@ function _isFreshCachedEntry(entry, signature) {
 }
 
 async function _readCachedAnalysis(url, signature) {
-  const cacheKey = _localCacheKey(url);
+  const cacheKey = await _localCacheKey(url);
   const data = await extensionApi.storage.local.get(cacheKey);
   const entry = data[cacheKey];
   if (_isFreshCachedEntry(entry, signature)) return entry;
@@ -1232,7 +1298,7 @@ async function _readCachedAnalysis(url, signature) {
 async function _writeCachedAnalysis(url, entry) {
   if (!entry || entry.ok !== true) return;
   try {
-    await extensionApi.storage.local.set({ [_localCacheKey(url)]: entry });
+    await extensionApi.storage.local.set({ [await _localCacheKey(url)]: entry });
   } catch (error) {
     console.warn("[kriko] local result cache write failed", error?.message || error);
   }
@@ -1411,8 +1477,17 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     const scrapeStartedAt = _now();
     // No site adapter is no longer the end (B149): every page is read for
     // the product it publishes, and the app decides whether a pack knows it.
+    //
+    // `explore` rides along exactly when nothing installed claims this page.
+    // That is the one case where the page's own label/value shapes are the
+    // whole evidence: a model is asked to work out which of them mean what
+    // (`app/siteinfer.py`), and it can only map what it is shown. A page an
+    // adapter claims keeps the scrape it always had — its labels are the
+    // pack's, already asked for, and the explore scan would put every other
+    // short string on the page on the wire for nothing.
     const reply = await _requestScrape(
-      tabId, (adapter && adapter.labels) || [], (adapter && adapter.local_panel) || {}
+      tabId, (adapter && adapter.labels) || [], (adapter && adapter.local_panel) || {},
+      !adapter
     );
     timings.scrape_ms = _elapsed(scrapeStartedAt);
     if (!reply || !reply.ok) {
@@ -1588,9 +1663,12 @@ const _intentInFlight = new Map();
 let _researchIntentLock = Promise.resolve();
 let _researchIdCounter = 0;
 
-async function _intentKey(path, body) {
-  // Persist a digest rather than the user's query a second time as an index.
-  const value = `${path}\n${JSON.stringify(body)}`;
+/* A stable, unreadable key for a string. SHA-256 where the runtime has it —
+ * every MV3 service worker does — and a deterministic FNV pair where it does
+ * not, because a cache key that changes between two runs is worse than a weak
+ * one. The output is the same on every call for the same input, which is the
+ * only property either caller needs. */
+async function _digest(value) {
   try {
     if (typeof crypto !== "undefined" && crypto.subtle && typeof TextEncoder !== "undefined") {
       const bytes = new TextEncoder().encode(value);
@@ -1606,6 +1684,11 @@ async function _intentKey(path, body) {
     b = Math.imul(b ^ code, 3266489917) >>> 0;
   }
   return `${a.toString(16)}${b.toString(16)}-${value.length.toString(16)}`;
+}
+
+async function _intentKey(path, body) {
+  // Persist a digest rather than the user's query a second time as an index.
+  return _digest(`${path}\n${JSON.stringify(body)}`);
 }
 
 function _newClientRequestId() {

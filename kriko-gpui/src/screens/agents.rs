@@ -1,18 +1,28 @@
-//! Agents: the coding agents on this machine, as the engine finds them. Two
-//! facts per agent, each from its own endpoint: whether it can run a check
-//! (`GET /api/prefs`: usable, needs sign-in, not installed) and whether it is
-//! wired to Kriko's MCP server (`GET /api/agent-targets`). The detail card
-//! acts on the picked one: use it for runs, connect it, refresh its skill.
+//! Agents: the marketplace of every way of answering a question here, as the
+//! engine finds it. Each row is one agent — a coding-agent CLI, the model on
+//! this machine, or an API the reader holds a key for — with what this
+//! installation knows about it and the one action left to take
+//! (`GET /api/agent-market`). The detail card acts on the picked one: its
+//! model and effort dials, its MCP connection, and the check that the command
+//! it names really answers. The Local model panel under the market carries the
+//! local plane's server, what it holds, and the way to the page that lists
+//! models.
 
 use gpui::{div, prelude::*, px, Context, Div, FontWeight, Stateful, Styled, Window};
 
-use crate::app::{Field, Kriko};
+use crate::app::{Field, Kriko, Tab};
 use crate::live::local::Held;
-use crate::live::run::{mark_for, AgentEntry, Harness, ModelOffer, RunState, Target};
+use crate::live::run::{
+    mark_for, AgentEntry, Harness, MarketRow, ModelOffer, RunState, Target,
+};
 use crate::marks::{mark_tile, phase_beat, Phase};
 use crate::screens::run::{option_chip, option_chip_wrapping};
-use crate::screens::{empty_note, mono, row_desc, row_title, th};
+use crate::screens::{empty_note, mono, row_desc, row_title};
 use crate::theme::*;
+
+/// The one-click setup's own words for the local agent, in both places it is
+/// offered: the market row and the detail card must not name one action twice.
+const LOCAL_SETUP: &str = "Set up the local model";
 
 /// How an agent stands as a runner of checks: the tag state and its word.
 fn run_word(h: &RunState) -> (TagState, &'static str) {
@@ -30,6 +40,51 @@ fn mcp_word(t: &Target) -> (TagState, &'static str) {
         "stale" => (TagState::Need, "Stale"),
         "unreadable" => (TagState::Block, "Unreadable"),
         _ => (TagState::Queue, "Not connected"),
+    }
+}
+
+/// What an agent *is*, in the reader's words. The engine answers `cli`,
+/// `local` or `api` (`agent_market`), and the sentence belongs here.
+fn kind_word(kind: &str) -> &'static str {
+    match kind {
+        "local" => "A model on this machine",
+        "api" => "An API you hold a key for",
+        _ => "A coding agent on this machine",
+    }
+}
+
+/// How an agent stands in the market: whether this installation can run it
+/// now, needs something first, or has not found it at all.
+fn market_word(state: &str) -> (TagState, &'static str) {
+    match state {
+        "ready" => (TagState::Live, "Ready"),
+        "needs_setup" => (TagState::Need, "Needs setup"),
+        _ => (TagState::Queue, "Not installed"),
+    }
+}
+
+/// How the harness's own config stands, or nothing for an agent that has no
+/// config Kriko can write (the model on this machine, a keyed API agent).
+fn wiring_word(wiring: &str) -> Option<&'static str> {
+    match wiring {
+        "connected" => Some("connected to Kriko"),
+        "stale" => Some("its config names another store"),
+        "unreadable" => Some("its config cannot be read"),
+        "absent" => Some("not connected to Kriko"),
+        _ => None,
+    }
+}
+
+/// The market row's one action, in the reader's words. `local` is Kriko's own
+/// install of a runtime and a model, which is a whole setup rather than one
+/// package, so it says so.
+fn action_word(row: &MarketRow) -> &'static str {
+    match row.action.as_str() {
+        "use" => "Use",
+        "connect" => "Connect",
+        "install" if row.local => LOCAL_SETUP,
+        "install" => "Install",
+        _ => "Set up",
     }
 }
 
@@ -80,206 +135,48 @@ fn entry_phase(app: &Kriko, e: &AgentEntry) -> Phase {
 pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Stateful<Div> {
     let motion = app.motion;
     let entries = app.live.run.agent_entries();
-    let loaded = app.live.run.prefs_loaded || app.live.run.targets_loaded;
-    // The table's columns want 840 px of their own. Narrower than that, each
-    // agent becomes a two-line row, so every control stays on the page.
+    // The market's rows want 840 px of their own before the detail card can sit
+    // beside them (840 + 24 + 320). Narrower than that, each row stacks.
     let compact = app.content_w < 840.0;
-    // The detail card sits beside the table only when both fit (840 + 24 + 320).
     let beside = app.content_w >= 1184.0;
 
-    let body: Div = if entries.is_empty() {
-        let mut empty = div()
+    let selected = app.live.run.selected_agent().map(|e| e.id).unwrap_or_default();
+    let picked = entries.iter().find(|e| e.id == selected).cloned();
+    let market = marketplace(app, compact, motion, cx);
+
+    let detail = match picked {
+        Some(e) => detail_card(app, &e, motion, window, cx),
+        None => card()
             .flex()
             .flex_col()
             .gap(px(SPACE_S))
-            .child(empty_note(if loaded {
-                "No agent found on this machine."
+            .child(card_head("agents", "Agent", motion))
+            .child(empty_note(if app.live.run.market_loaded {
+                "Pick an agent to see its controls."
             } else {
-                "Waiting for the engine to list agents."
-            }));
-        if loaded {
-            let open_local = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
-                this.tab = crate::app::Tab::Local;
-                this.refresh_local(cx);
-                cx.notify();
-            });
-            empty = empty
-                .child(row_desc("Set up a local model, or connect an agent from Settings."))
-                .child(ghost("agents-open-local", "Open Local LLM").on_click(open_local));
-        }
-        empty
+                "Reading the agents on this machine."
+            })),
+    };
+    let body: Div = if beside {
+        div()
+            .flex()
+            .gap(px(SPACE_SECTION))
+            .items_start()
+            .w_full()
+            .child(div().flex_1().min_w(px(840.0)).child(market))
+            .child(div().w(px(320.0)).flex_none().child(detail))
     } else {
-        let selected = app.live.run.selected_agent().map(|e| e.id).unwrap_or_default();
-        let picked = entries.iter().find(|e| e.id == selected).cloned();
-
-        let mut table = card().flex().flex_col()
-            .child(card_head_row(
-                "agents",
-                "Agents on this machine",
-                Some(mono(&format!("{} found", entries.len()), DIM).into_any_element()),
-                motion,
-            ));
-        if !compact {
-            table = table
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .pb(px(SPACE_S))
-                        .child(div().flex_1().min_w(px(180.0)).child(th("Agent")))
-                        .child(div().w(px(200.0)).flex_none().child(th("Runs checks")))
-                        .child(div().w(px(140.0)).flex_none().child(th("MCP")))
-                        .child(div().w(px(100.0)).flex_none().child(th("Recent runs")))
-                        .child(div().w(px(168.0)).flex_none().child(th("Order"))),
-                )
-                .child(hairline());
-        }
-
-        for (i, e) in entries.iter().enumerate() {
-            let up_id = e.id.clone();
-            let down_id = e.id.clone();
-            let up = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.order_agent(up_id.clone(), -1, cx));
-            let down = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.order_agent(down_id.clone(), 1, cx));
-            let is_selected = e.id == selected;
-            let id = e.id.clone();
-            let click = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
-                this.select_agent(id.clone());
-                cx.notify();
-            });
-            let chosen = app.live.run.preferred == e.id;
-            let runs_cell = match &e.harness {
-                Some(h) => {
-                    let (state, word) = run_word(&h.state);
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap(px(8.0))
-                        .child(tag(format!("agents-row-{i}"), state, word, motion))
-                        .when(chosen, |d| d.child(chip("chosen")))
-                }
-                None => div().child(mono("-", DIM)),
-            };
-            let mcp_cell = match &e.target {
-                Some(t) => {
-                    let (state, word) = mcp_word(t);
-                    div().flex().child(tag(format!("agents-mcp-{i}"), state, word, motion))
-                }
-                None => div().child(mono("-", DIM)),
-            };
-            let runs_n = mono(&app.live.run.runs_of(&e.id).to_string(), INK_2);
-            let mark = mark_tile(
-                &format!("agents-row-tile-{i}"),
-                mark_for(&e.id),
-                entry_phase(app, e),
-                40.0,
-                motion,
-            );
-            let name = div()
-                .flex_1()
-                .min_w(px(0.0))
-                .pr(px(SPACE_M))
-                .font_family(SANS)
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_size(px(15.0))
-                .text_color(paint(if is_selected { ICE } else { INK }))
-                // clipped by characters: GPUI's ellipsis shrank the whole
-                // table card to its content at narrow widths
-                .child(crate::screens::history::clip(&e.label, 40));
-            // while this agent runs a job, its tile says what it is doing
-            let doing = app.live.run.running().find(|j| j.harness == e.id);
-            let name = match doing {
-                Some(job) => div()
-                    .flex_1()
-                    .min_w(px(0.0))
-                    .pr(px(SPACE_M))
-                    .flex()
-                    .flex_col()
-                    .gap(px(SPACE_XS))
-                    .child(name)
-                    .child(crate::screens::action_trail::compact_line(job, motion)),
-                None => name,
-            };
-            let order = div()
-                .w(px(168.0))
-                .flex_none()
-                .flex()
-                .justify_end()
-                .gap(px(4.0))
-                .when(i > 0, |d| d.child(ghost(("agent-up", i), "Up").on_click(move |ev, w, cx| { cx.stop_propagation(); up(ev, w, cx); })))
-                .when(i + 1 < entries.len(), |d| d.child(ghost(("agent-down", i), "Down").on_click(move |ev, w, cx| { cx.stop_propagation(); down(ev, w, cx); })));
-            let row = div()
-                .id(("agent-row", i))
-                .flex()
-                .py(px(12.0))
-                .cursor_pointer()
-                .hover(|s| s.bg(paint_a(GLASS_1)))
-                .when(is_selected, |s| s.bg(paint(WELL)).border_1().border_color(paint_a(HAIRLINE)))
-                .on_click(click);
-            let row = if compact {
-                row.flex_col()
-                    .gap(px(SPACE_S))
-                    .child(div().flex().items_center().gap(px(8.0)).child(mark).child(name).child(order))
-                    .child(
-                        div()
-                            .pl(px(48.0))
-                            .flex()
-                            .flex_wrap()
-                            .items_center()
-                            .gap(px(SPACE_S))
-                            // No column headers in this layout, so each value
-                            // carries its own word; a bare "-" or "0" said nothing.
-                            .child(runs_cell)
-                            .when(e.target.is_some(), |d| d.child(mcp_cell))
-                            .child(mono(&match app.live.run.runs_of(&e.id) {
-                                0 => "no runs yet".to_string(),
-                                1 => "1 run".to_string(),
-                                n => format!("{n} runs"),
-                            }, DIM)),
-                    )
-            } else {
-                row.items_center()
-                    .child(div().flex_1().min_w(px(180.0)).flex().items_center().gap(px(8.0)).child(mark).child(name))
-                    .child(div().w(px(200.0)).flex_none().child(runs_cell))
-                    .child(div().w(px(140.0)).flex_none().child(mcp_cell))
-                    .child(div().w(px(100.0)).flex_none().child(runs_n))
-                    .child(order)
-            };
-            table = table.child(row);
-            if i + 1 < entries.len() {
-                table = table.child(hairline());
-            }
-        }
-
-        let detail = match picked {
-            Some(e) => detail_card(app, &e, motion, window, cx),
-            None => card()
-                .flex()
-                .flex_col()
-                .gap(px(SPACE_S))
-                .child(card_head("agents", "Agent", motion))
-                .child(empty_note("Pick an agent to see its controls.")),
-        };
-        if beside {
-            div()
-                .flex()
-                .gap(px(SPACE_SECTION))
-                .items_start()
-                .w_full()
-                .child(div().flex_1().min_w(px(840.0)).child(table))
-                .child(div().w(px(320.0)).flex_none().child(detail))
-        } else {
-            // Not room for both beside each other: the detail card takes the
-            // page's width under the table, rather than a 320 px column that
-            // floats at the left edge.
-            div()
-                .flex()
-                .flex_col()
-                .gap(px(8.0))
-                // no w_full: a percentage resolved against the page's
-                // indefinite width and left this column at its content's size
-                .child(table)
-                .child(detail)
-        }
+        // Not room for both beside each other: the detail card takes the
+        // page's width under the market, rather than a 320 px column that
+        // floats at the left edge.
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(8.0))
+            // no w_full: a percentage resolved against the page's
+            // indefinite width and left this column at its content's size
+            .child(market)
+            .child(detail)
     };
 
     div()
@@ -288,9 +185,336 @@ pub fn agents(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> 
         .flex_col()
         .gap(px(SPACE_SECTION))
         .child(enter(body, "agents-0", 0, motion))
+        .child(enter(local_panel(app, motion, cx), "agents-1", 1, motion))
         .when(app.live.run.prefs_loaded, |d| {
-            d.child(enter(research_card(app, cx), "agents-1", 1, motion))
+            d.child(enter(research_card(app, cx), "agents-2", 2, motion))
         })
+}
+
+/// The market: every way of answering a question this installation can run,
+/// one card each, in the order the reader arranged them. Each card carries the
+/// agent's own mark, what kind of thing it is, what this installation found
+/// about it, and the one action left to take — all of it the engine's answers
+/// (`GET /api/agent-market`), never a guess made here.
+fn marketplace(app: &Kriko, compact: bool, motion: bool, cx: &mut Context<Kriko>) -> Div {
+    let rows = app.live.run.ordered_market();
+    let selected = app.live.run.agent_selected.clone();
+    let mut market = card()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_S))
+        .child(card_head_row(
+            "agents",
+            "Agents on this machine",
+            Some(mono(&format!("{} found", rows.len()), DIM).into_any_element()),
+            motion,
+        ));
+    if rows.is_empty() {
+        return market.child(empty_note(if app.live.run.market_loaded {
+            "No agent found on this machine."
+        } else {
+            "Waiting for the engine to list agents."
+        }));
+    }
+    let total = rows.len();
+    for (i, row) in rows.iter().enumerate() {
+        market = market.child(market_row(app, row, i, total, &selected, compact, motion, cx));
+    }
+    market
+}
+
+/// A market row's mark: what a running job of this agent is doing; otherwise
+/// still when it is ready here, a held breath when it needs the reader, dark
+/// when it is not on this machine at all.
+fn market_phase(app: &Kriko, row: &MarketRow) -> Phase {
+    if let Some(job) = app.live.run.running().find(|j| j.harness == row.id) {
+        return job.lane_phase();
+    }
+    match row.state.as_str() {
+        "ready" => Phase::Idle,
+        "needs_setup" => Phase::Waiting,
+        _ => Phase::Off,
+    }
+}
+
+fn market_row(
+    app: &Kriko,
+    row: &MarketRow,
+    i: usize,
+    total: usize,
+    selected: &str,
+    compact: bool,
+    motion: bool,
+    cx: &mut Context<Kriko>,
+) -> Stateful<Div> {
+    let is_selected = row.id == selected;
+    let mark = mark_tile(
+        &format!("agents-row-tile-{i}"),
+        mark_for(&row.id),
+        market_phase(app, row),
+        40.0,
+        motion,
+    );
+    let name = div()
+        .font_family(SANS)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(15.0))
+        .text_color(paint(if is_selected { ICE } else { INK }))
+        // clipped by characters: GPUI's ellipsis shrank the whole card to its
+        // content at narrow widths
+        .child(crate::screens::history::clip(&row.label, 40));
+    let mut kind_line = div()
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap(px(SPACE_S))
+        .child(mono(kind_word(&row.kind), MUTED));
+    if let Some(connection) = wiring_word(&row.wiring) {
+        kind_line = kind_line.child(chip(connection));
+    }
+    // How this installation knows: where the binary is, or the command it
+    // looked for, then the engine's own sentence about what is missing.
+    let mut facts: Vec<String> = Vec::new();
+    if !row.found.is_empty() {
+        facts.push(if row.state == "not_installed" {
+            format!("looked for {}", row.found)
+        } else {
+            format!("found at {}", row.found)
+        });
+    }
+    if !row.detail.is_empty() {
+        facts.push(row.detail.clone());
+    }
+    let mut lines = div()
+        .flex_1()
+        .min_w(px(0.0))
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_XS))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(SPACE_S))
+                .child(name)
+                .when(row.chosen, |d| d.child(chip("used for runs"))),
+        )
+        .child(kind_line);
+    if !facts.is_empty() {
+        lines = lines.child(
+            div()
+                .font_family(SANS)
+                .text_size(px(11.0))
+                .line_height(px(15.0))
+                .text_color(paint(DIM))
+                .child(crate::screens::history::clip(&facts.join(" · "), 140)),
+        );
+    }
+    // while this agent runs a job, its row says what it is doing
+    if let Some(job) = app.live.run.running().find(|j| j.harness == row.id) {
+        lines = lines.child(crate::screens::action_trail::compact_line(job, motion));
+    }
+
+    let (state, word) = market_word(&row.state);
+    let action_row = row.clone();
+    let press = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+        this.market_action(&action_row, cx);
+    });
+    let (up_id, down_id) = (row.id.clone(), row.id.clone());
+    let up = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.order_agent(up_id.clone(), -1, cx));
+    let down = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| this.order_agent(down_id.clone(), 1, cx));
+    let order = div()
+        .flex()
+        .gap(px(4.0))
+        .when(i > 0, |d| {
+            d.child(ghost(("agent-up", i), "Up").on_click(move |ev, w, cx| {
+                cx.stop_propagation();
+                up(ev, w, cx);
+            }))
+        })
+        .when(i + 1 < total, |d| {
+            d.child(ghost(("agent-down", i), "Down").on_click(move |ev, w, cx| {
+                cx.stop_propagation();
+                down(ev, w, cx);
+            }))
+        });
+    let tail = div()
+        .flex_none()
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap(px(SPACE_S))
+        .child(tag(format!("agents-row-{i}"), state, word, motion))
+        .child({
+            // One action, two weights: Kriko does an install itself, so that
+            // is the filled key. Use and Connect are one click followed by the
+            // reader's own tool, and a market of twelve blue keys reads as a
+            // warning rather than a shelf.
+            let id = ("agent-market", i);
+            let label = action_word(row);
+            let button = if row.action == "install" { key(id, label) } else { ghost(id, label) };
+            button
+                // The row's own click picks the agent for the detail card; the
+                // action must not do both at once.
+                .on_click(move |ev, w, cx| {
+                    cx.stop_propagation();
+                    press(ev, w, cx);
+                })
+        })
+        .child(order);
+
+    // A row the dials do not know — a keyed API agent has no harness entry —
+    // has no detail card to open, so its one action is the button.
+    let pick = row.id.clone();
+    let click = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
+        if this.live.run.agent_entries().iter().any(|e| e.id == pick) {
+            this.select_agent(pick.clone());
+        }
+        cx.notify();
+    });
+    let row = div()
+        .id(("agent-row", i))
+        .flex()
+        .items_center()
+        .gap(px(SPACE_M))
+        .p(px(SPACE_S))
+        .rounded(px(10.0))
+        .bg(paint(WELL))
+        .border_1()
+        // An edge between two surfaces, not a rule inside one: the hairline
+        // this replaced disappeared on a bright screen and left the market
+        // without shape.
+        .border_color(paint_a(if is_selected { ICE } else { EDGE }))
+        .cursor_pointer()
+        // Under the pointer the row is a control, so its edge strengthens to
+        // the control edge; at rest it is one surface among many, and keeps
+        // the quieter edge between them.
+        .hover(|s| s.bg(paint_a(GLASS_1)).border_color(paint_a(EDGE_STRONG)))
+        .on_click(click)
+        .child(div().flex_1().min_w(px(0.0)).flex().items_center().gap(px(SPACE_M)).child(mark).child(lines));
+    if compact {
+        row.flex_col().items_start().child(tail)
+    } else {
+        row.child(tail)
+    }
+}
+
+/// The local model plane as the Agents screen shows it: the model the server
+/// answers with, whether it answers, the control that starts it, and the way to
+/// the page that lists models. The plane's own page still holds the model
+/// store; this is the link to it, so the reader never has to know which tab it
+/// moved to.
+fn local_panel(app: &Kriko, motion: bool, cx: &mut Context<Kriko>) -> Div {
+    let panel = card()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_S))
+        // One step above the ground: the local plane's own surface on a screen
+        // that is otherwise a list of agents.
+        .bg(paint(SURFACE_2))
+        .border_color(paint_a(EDGE));
+    let Some(plane) = &app.live.local.plane else {
+        return panel
+            .child(card_head("local", "Local model", motion))
+            .child(empty_note(if app.live.local.checking {
+                "Reading what runs on this machine."
+            } else {
+                "The local model plane has not answered yet."
+            }));
+    };
+    let (state, word) = if plane.ready {
+        (TagState::Live, "Answering")
+    } else {
+        (TagState::Need, "Not answering")
+    };
+    let held = app.live.local.held.clone().unwrap_or_default();
+    let start = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_start_ollama(cx));
+    let check = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_check_again(cx));
+    let open_store = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
+        this.tab = Tab::Local;
+        this.live.local.catalogue_open = true;
+        this.on_open_tab(cx);
+        if !this.live.local.catalogue_loaded {
+            this.refresh_local_catalogue(cx);
+        }
+        cx.notify();
+    });
+    let mut panel = panel
+        .child(card_head_row(
+            "local",
+            "Local model",
+            Some(tag("agents-local-state", state, word, motion).into_any_element()),
+            motion,
+        ))
+        .child(row_desc(if plane.ready { &plane.line } else { &plane.reason }))
+        .child(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_end()
+                .gap(px(SPACE_XL))
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(SPACE_XS))
+                        .child(mono("MODEL", DIM))
+                        .child(row_title(if plane.model.is_empty() {
+                            "No model chosen"
+                        } else {
+                            plane.model.as_str()
+                        })),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(SPACE_XS))
+                        .child(mono("SERVER", DIM))
+                        .child(mono(if plane.url.is_empty() {
+                            "not found on this machine"
+                        } else {
+                            plane.url.as_str()
+                        }, INK_2)),
+                )
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap(px(SPACE_XS))
+                        .child(mono("MODELS HERE", DIM))
+                        .child(mono(&match held.len() {
+                            0 => "none the server reports".to_string(),
+                            n => format!("{n} the server holds"),
+                        }, INK_2)),
+                ),
+        )
+        .child(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .gap(px(SPACE_S))
+                .child(
+                    key(
+                        "agents-local-start",
+                        if app.live.local.runtime_starting { "Starting" } else { "Start the model server" },
+                    )
+                    .on_click(start),
+                )
+                .child(ghost("agents-local-store", "Open the model store").on_click(open_store))
+                .child(
+                    ghost(
+                        "agents-local-recheck",
+                        if app.live.local.checking { "Checking" } else { "Check again" },
+                    )
+                    .on_click(check),
+                ),
+        );
+    if let Some(note) = app.live.local.note.clone() {
+        panel = panel.child(row_desc(&note));
+    }
+    panel
 }
 
 /// The source options every agent run reads: which kinds of source to go to
@@ -339,7 +563,7 @@ fn install_block(app: &Kriko, e: &AgentEntry, offered: bool, cx: &mut Context<Kr
     let busy = job.as_ref().is_some_and(|v| !v.done);
     let succeeded = job.as_ref().is_some_and(|v| v.done && v.state == "succeeded");
     let id = e.id.clone();
-    let label = if e.id == "local" { "Set up the small local model" } else { "Install" };
+    let label = if e.id == "local" { LOCAL_SETUP } else { "Install" };
     let mut block = div().flex().flex_col().gap(px(8.0));
     if offered && !busy && !succeeded {
         block = block.child(div().child(
