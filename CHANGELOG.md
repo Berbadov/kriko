@@ -3,6 +3,26 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.2.3
+
+- **Kriko opens in a few seconds, not fifteen.** The engine was one file that
+  unpacked itself into a temporary folder on every start, and on Windows that
+  alone took 10 to 13 seconds. It is now a program with its files beside it,
+  unpacked once by the installer. The shell also no longer waits for the search
+  service before it starts the engine.
+- **The window says it is starting.** Until the engine answers, the window shows
+  the Kriko mark and "Starting Kriko…", not an empty page.
+- **Kriko updates itself.** A few seconds after it opens, and every six hours
+  after that, Kriko looks for a newer release. When there is one, a note offers
+  Update now or Later. Update now downloads the installer, checks it against the
+  checksums published with the release, closes Kriko, installs and opens it
+  again. Your chats and catalogs stay where they are. Settings, About, shows the
+  state and has a Check now button. A copy that was not set up by the installer
+  (the portable zip) is pointed to the download page instead.
+
+  This starts with 0.2.3: to get from 0.2.2 or earlier to this version, run the
+  installer once by hand.
+
 ### 0.2.2
 
 - **Each answer shows which agent wrote it.** Claude Code, Codex, Antigravity,
