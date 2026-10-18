@@ -661,7 +661,7 @@
 }
 
 .rail-chats h2 {
-  margin: 0 0 6px;
+  margin: 10px 0 6px;
   padding: 0 10px;
   color: var(--ink-3);
   font-size: 12px;
@@ -669,11 +669,8 @@
 }
 
 .rail-chats ul {
-  flex: 1;
-  min-height: 0;
   margin: 0;
   padding: 0;
-  overflow-y: auto;
   list-style: none;
 }
 
@@ -696,7 +693,10 @@
 }
 
 .rail-chat-main {
+  display: flex;
   flex: 1;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   padding: 8px 10px;
   overflow: hidden;
@@ -749,4 +749,92 @@
 
 .rail-chat-ask button:hover {
   background: var(--panel);
+}
+
+/* ---- find, pin, rename ---- */
+
+.rail-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 4px 0 9px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  color: var(--ink-3);
+}
+
+.rail-search:focus-within {
+  border-color: var(--edge-strong);
+  color: var(--ink-2);
+}
+
+.rail-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.rail-chats-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.rail-chats-scroll h2:first-child {
+  margin-top: 8px;
+}
+
+.rail-chat-main > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rail-chat-main .icon {
+  color: var(--accent-hi);
+}
+
+.rail-chat-acts {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+}
+
+.icon-btn[data-on='true'] {
+  color: var(--accent-hi);
+}
+
+.rail-chat-name {
+  flex: 1;
+  min-width: 0;
+  margin: 3px 4px;
+  padding: 5px 8px;
+  background: var(--ground);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  outline: 0;
+  color: var(--ink);
+  font-size: 13.5px;
+}
+
+.rail-chats-empty {
+  margin: 12px 10px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.menu button {
+  gap: 9px;
+}
+
+.menu-label {
+  flex: 1;
 }
