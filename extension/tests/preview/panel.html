@@ -167,7 +167,19 @@
         },
         getURL: (p) => "../../" + p,
       },
-      storage: { onChanged: { addListener: (fn) => storageListeners.push(fn) } },
+      storage: {
+        onChanged: { addListener: (fn) => storageListeners.push(fn) },
+        // The durable bag, kept for as long as the tab is open. `?seen` marks the
+        // panel tour as already shown, to look at the panel without it.
+        local: (() => {
+          const bag = new URLSearchParams(location.search).has("seen") ? { "kriko.panelTour": "done" } : {};
+          return {
+            get(keys, done) { const out = {}; for (const k of [].concat(keys)) if (k in bag) out[k] = bag[k]; done && done(out); },
+            set(items, done) { Object.assign(bag, items); done && done(); },
+            remove(keys, done) { for (const k of [].concat(keys)) delete bag[k]; done && done(); },
+          };
+        })(),
+      },
     };
     function deliver(kind, value) {
       const key = "kriko_" + kind + "_" + location.href;

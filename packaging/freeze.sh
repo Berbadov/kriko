@@ -6,7 +6,7 @@
 #
 #   packaging/freeze.sh            # build + smoke
 # Needs no Rust toolchain, and stops one step short of an installer. For the
-# whole bundle on a Windows box, see `kriko-gpui/package.ps1`.
+# whole bundle on a Windows box, see `kriko-ui/package.ps1`.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

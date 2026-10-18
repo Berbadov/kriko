@@ -5,10 +5,13 @@ is missing, so it needs the machine's own numbers. Every field is asked of the
 machine and left `None` where the machine does not say: a guessed VRAM figure
 would size a download wrongly, which is worse than showing a dash.
 
-No model, runtime version or size lives here. The three runtimes are the same
-small closed vocabulary `providers/local_discovery.py` already names (programs
-this app can talk to), and where each one lives is a fact about the install,
-looked up and never assumed.
+No model or runtime version lives here. Native runtime install checks are
+limited to the entries in `_RUNTIMES`; a vLLM server in WSL is discovered from
+its HTTP endpoint instead of a Windows process scan. GPU name and memory come
+from `nvidia-smi`. The newest CUDA the driver can run is read from the header
+of the plain `nvidia-smi` output, as text and nothing more: `app.vllmplan`
+turns it into the torch build to install, and nothing here decides anything
+from it.
 
 The answer is cached for a minute. Asking costs a subprocess (`nvidia-smi`) and
 a few stat calls, the screen asks on every visit, and none of it changes at
@@ -68,6 +71,25 @@ def _smi(run=subprocess.run) -> dict:
         "vram_used_mb": mib(parts[1]) if len(parts) > 1 else None,
         "count": len(rows),
     }
+
+
+def _cuda_driver(run=subprocess.run) -> str | None:
+    """The newest CUDA version the installed driver can run, as `13.4`, or `None`."""
+    exe = shutil.which("nvidia-smi")
+    if not exe:
+        return None
+    try:
+        done = run(
+            [exe], capture_output=True, text=True, timeout=SMI_TIMEOUT,
+            startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if done.returncode != 0:
+        return None
+    from app import vllmplan
+
+    return vllmplan.header_version(done.stdout or "")
 
 
 def _ram_total_mb() -> int | None:
@@ -155,15 +177,20 @@ def runtimes() -> list[dict]:
 
 
 def inspect() -> dict:
+    from app import vllmplan
+
     gpu = _smi()
-    return {
+    answer = {
         "gpu": {key: gpu[key] for key in ("name", "vram_total_mb", "vram_used_mb")},
         "gpu_count": gpu["count"],
+        "cuda": {"driver": _cuda_driver() if gpu["name"] else None},
         "ram_total_mb": _ram_total_mb(),
         "cpu": {"name": _cpu_name(), "cores": os.cpu_count()},
         "os": platform.system() or None,
         "runtimes": runtimes(),
     }
+    answer["vllm"] = vllmplan.plan(answer)
+    return answer
 
 
 def read(*, fresh: bool = False, now=time.monotonic) -> dict:

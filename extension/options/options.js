@@ -379,3 +379,19 @@ document.addEventListener("pointerdown", (event) => {
   document.body.appendChild(dot);
   dot.addEventListener("animationend", () => dot.remove());
 });
+
+// ── the panel tour, shown again on the next product page ────────────────
+// The panel remembers that it showed the tour under `kriko.panelTour`.
+// Clearing the key is all it takes: the next panel that opens checks it.
+document.getElementById("tour").addEventListener("click", () => {
+  const note = document.getElementById("tour-status");
+  try {
+    chrome.storage.local.remove("kriko.panelTour", () => {
+      note.textContent = chrome.runtime.lastError
+        ? "Could not reset the tour."
+        : "Done. Open the panel on a product page to see it.";
+    });
+  } catch (_) {
+    note.textContent = "Could not reset the tour.";
+  }
+});

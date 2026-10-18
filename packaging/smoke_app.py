@@ -1,6 +1,6 @@
 """Does the desktop app actually start?
 
-    python packaging/smoke_app.py kriko-gpui/target/release/kriko.exe
+    python packaging/smoke_app.py kriko-ui/src-tauri/target/release/kriko.exe
 
 CI proved the sidecar answers (`smoke_sidecar.py`) and proved the installer
 builds. Nothing proved the *app* starts, and v0.2.4 is what that gap looks
@@ -18,8 +18,8 @@ for reasons unrelated to the build ends up disabled. What the app does with
 the engine is *reported* (was `kriko-sidecar` started as its child) and never
 asserted; `smoke_sidecar.py` covers the engine itself.
 
-The isolated review mode bypasses the normal single-instance redirect, so an
-already installed Kriko cannot accidentally be the executable being tested.
+`KRIKO_VERIFY` makes the app skip the single-instance redirect, so an already
+installed Kriko cannot accidentally be the executable being tested.
 """
 
 import os
