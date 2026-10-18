@@ -16,9 +16,9 @@
 #     tools/gate.sh py       # just the Python suite
 #     tools/gate.sh wheel    # just: does the artifact we ship actually import
 #     tools/gate.sh node     # just the JavaScript suites
-#     tools/gate.sh gpui     # just the desktop app: cargo check and cargo test, offline
+#     tools/gate.sh tauri    # just the desktop shell: cargo check and cargo test, offline
 #
-# With no argument the stages are independent — python, wheel, node and gpui —
+# With no argument the stages are independent — python, wheel, node and tauri —
 # so they run concurrently. Each writes to its own log, and a log is printed as
 # one block when its stage finishes, so output never interleaves. A failed stage
 # does not stop the others: the gate then exits non-zero and names every stage
@@ -74,8 +74,8 @@ export PYTHON
 
 only="${1:-all}"
 case "$only" in
-    all|py|wheel|node|gpui) ;;
-    *) echo "unknown gate: $only (expected: all, py, node, gpui, wheel)" >&2; exit 2 ;;
+    all|py|wheel|node|tauri) ;;
+    *) echo "unknown gate: $only (expected: all, py, node, tauri, wheel)" >&2; exit 2 ;;
 esac
 
 # pytest workers: `auto` is every core. GATE_JOBS=1 makes the whole gate serial.
@@ -212,8 +212,8 @@ gate_node() {
     fi
 }
 
-gate_gpui() {
-    CRATE="kriko-gpui"
+gate_tauri() {
+    CRATE="kriko-ui/src-tauri"
     CARGO="$(command -v cargo || true)"
     if [ -z "$CARGO" ]; then
         CARGO_BIN="${CARGO_HOME:-$HOME/.cargo}/bin/cargo"
@@ -221,7 +221,7 @@ gate_gpui() {
     fi
 
     if [ -z "$CARGO" ]; then
-        step "cargo check (kriko-gpui)"
+        step "cargo check (kriko-ui/src-tauri)"
         echo "no cargo on this machine — skipping. pytest's test_the_shell_is_valid_rust.py still reads the shell's sources above; a real compile needs a Rust toolchain (rustup.rs) or the Windows host that builds the installer."
     else
         export PATH="$(dirname "$CARGO"):$PATH"
@@ -237,7 +237,7 @@ gate_gpui() {
         # Offline on purpose: a gate that fetches is a gate that fails for the
         # network. A cold registry cache is a skip with its remedy, never a
         # red tick that was not a test result.
-        _gpui_cargo() {
+        _shell_cargo() {
             local desc="$1"; shift
             local out status
             out=$(cd "$CRATE" && cargo "$@" --locked --offline 2>&1)
@@ -251,15 +251,15 @@ gate_gpui() {
             return 1
         }
 
-        step "cargo check (kriko-gpui)"
+        step "cargo check (kriko-ui/src-tauri)"
         result=0
-        _gpui_cargo "the cargo check" check "${cargo_profile_args[@]}" || result=$?
+        _shell_cargo "the cargo check" check "${cargo_profile_args[@]}" || result=$?
         [ "$result" = 1 ] && exit 1
 
         if [ "$result" = 0 ]; then
-            step "cargo test (kriko-gpui)"
+            step "cargo test (kriko-ui/src-tauri)"
             result=0
-            _gpui_cargo "the cargo tests" test "${cargo_profile_args[@]}" || result=$?
+            _shell_cargo "the cargo tests" test "${cargo_profile_args[@]}" || result=$?
             [ "$result" = 1 ] && exit 1
         fi
 
@@ -269,10 +269,10 @@ gate_gpui() {
         # the target is installed; otherwise the gate says it was not.
         case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) win_host=1 ;; *) win_host=0 ;; esac
         if [ "$result" = 0 ] && [ "$win_host" = 0 ]; then
-            step "cargo check --target x86_64-pc-windows-gnu (kriko-gpui)"
+            step "cargo check --target x86_64-pc-windows-gnu (kriko-ui/src-tauri)"
             if command -v rustup >/dev/null 2>&1 && rustup target list --installed 2>/dev/null | grep -qx x86_64-pc-windows-gnu; then
                 result=0
-                _gpui_cargo "the Windows cargo check" check --target x86_64-pc-windows-gnu "${cargo_profile_args[@]}" || result=$?
+                _shell_cargo "the Windows cargo check" check --target x86_64-pc-windows-gnu "${cargo_profile_args[@]}" || result=$?
                 [ "$result" = 1 ] && exit 1
             else
                 echo "not checked for Windows: the x86_64-pc-windows-gnu target is not installed (\`rustup target add x86_64-pc-windows-gnu\` adds it)"
@@ -285,7 +285,7 @@ summary() {
     local wall="$1" n
     local -a failed=()
     printf '\n\033[1m── gate summary\033[0m\n'
-    for n in py wheel node gpui; do
+    for n in py wheel node tauri; do
         [ -n "${verdict_of[$n]:-}" ] || continue
         printf '  %-7s %-16s %s\n' "$n" "${verdict_of[$n]}" "$(fmt_ms "${took_ms[$n]}")"
         if [ "${exit_of[$n]}" != 0 ]; then failed+=("$n"); fi
@@ -301,7 +301,7 @@ summary() {
 # All four stages at once. Each runs in a background subshell with its own log;
 # whichever finishes first is printed first, as one block.
 run_all_concurrently() {
-    local -a stages=(py wheel node gpui)
+    local -a stages=(py wheel node tauri)
     local -A name_of=() started=()
     local n rc done_pid remaining t0 verdict
     t0=$(now_ms)
@@ -334,7 +334,7 @@ run_all_concurrently() {
 run_all_in_order() {
     local n t0 s
     t0=$(now_ms)
-    for n in py wheel node gpui; do
+    for n in py wheel node tauri; do
         current_stage=$n
         s=$(now_ms)
         "gate_$n"

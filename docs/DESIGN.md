@@ -34,8 +34,8 @@ The interface uses one palette of names. Each screen paints through the theme.
 The theme maps each name at paint time. Raw colour is not permitted in a
 screen.
 
-The light theme swaps the values of the palette. The ground becomes white. The
-ink becomes dark. The brand stays blue.
+The light theme swaps the values of the palette. The ground becomes a cool
+light grey, panels stay white, and the ink becomes dark. The brand stays blue.
 
 The theme follows the system setting. The reader can select System, Light, or
 Dark in Settings.
@@ -93,7 +93,9 @@ compile, the unit tests and every gate stayed green while every answer painted
 nothing.
 
 The answer holds a maximum width. A line that runs the whole window is hard to
-follow back to its start.
+follow back to its start. The transcript fills the space between its header and
+composer and scrolls independently. Chat uses the remaining window height
+without a maximum-height cap.
 
 The composer is multi-line. The Send button lights when the field has text. A
 Stop button replaces it while a turn runs. The model picker sits in the
@@ -120,7 +122,12 @@ prose of the answer.
 Chat is the first item in the rail. Chat is also the screen that opens at
 start.
 
-The rail has four groups: Check, Knowledge, System, and This install.
+The rail has four groups: Check, Knowledge, System, and This install. Its expanded
+width is 216px; the icon rail remains 68px with 44px navigation targets.
+
+Working page heads share a 104px sky band. The breadcrumb sits above a compact
+title and a single-line description, below the window controls. A short fade at
+the bottom preserves readable sky ink in both themes.
 
 The active row has a brand wash and a lit left edge. The glyph sits in its own
 well and lights with the row. The count and the badge are pills. A row lifts by

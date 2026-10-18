@@ -11,88 +11,89 @@
   /* BEGIN shared palette tokens */
 
   /* Dark palette */
-  --bg-base:     #06070b;
-  --bg-panel:    #10131c;
-  --bg-header:   #0d0f16;
-  --bg-surface:  #151926;
-  --bg-item:     #181c2a;
-  --border:      #232941;
-  --border-soft: #1e2334;
+  --bg-base:     #090b11;
+  --bg-panel:    #0f121a;
+  --bg-header:   #0f121a;
+  --bg-surface:  #141825;
+  --bg-item:     #1a1f2f;
+  --border:      rgba(255,255,255,0.09);
+  --border-soft: rgba(255,255,255,0.06);
 
   /* Text — three levels, each at least 4.5:1 on its surface.
      Mild, subtle and faint are one value now, not three. */
-  --fg:          #eef1f8;
-  --fg-body:     #cbd2e2;
-  --fg-muted:    #9aa3bd;
+  --fg:          #eef1f9;
+  --fg-body:     #cdd3e4;
+  --fg-muted:    #9aa3bb;
 
   /* Severity — surface and edge derived from the ink, so a
      fourth one costs a single value rather than three. */
-  --high-surface: rgba(255,107,112,0.10);
-  --high-border: rgba(255,107,112,0.30);
-  --high-ink:    #ff6b70;
-  --med-surface: rgba(240,180,91,0.10);
-  --med-border:  rgba(240,180,91,0.30);
-  --med-ink:     #f0b45b;
-  --low-surface: rgba(70,208,160,0.10);
-  --low-border:  rgba(70,208,160,0.30);
-  --low-ink:     #46d0a0;
+  --high-surface: rgba(255,107,122,0.10);
+  --high-border: rgba(255,107,122,0.30);
+  --high-ink:    #ff6b7a;
+  --med-surface: rgba(245,184,75,0.10);
+  --med-border:  rgba(245,184,75,0.30);
+  --med-ink:     #f5b84b;
+  --low-surface: rgba(61,220,151,0.10);
+  --low-border:  rgba(61,220,151,0.30);
+  --low-ink:     #3ddc97;
 
   /* Design system: brand, ice, LED, bezel, glass, well */
-  --brand:       #2c53e0;
-  --brand-hover: #3f63f0;
-  --brand-low:   #1c3bad;
-  --brand-bright: #8ea3ff;
-  --on-brand:    #f0f3ff;
-  --ice:         #a5c3ff;
-  --led-off:     #232941;
-  --led-dim:     #4d5573;
-  --bezel-hi:    #262c42;
-  --bezel-lo:    #10131c;
-  --bezel-edge:  #2e3654;
+  --brand:       #3d6bff;
+  --brand-hover: #5a82ff;
+  --brand-low:   #2c53e0;
+  --brand-bright: #7b98ff;
+  --on-brand:    #ffffff;
+  --ice:         #9db6ff;
+  --led-off:     #2a3045;
+  --led-dim:     #5a6279;
+  --bezel-hi:    #1a1f2f;
+  --bezel-lo:    #141825;
+  --bezel-edge:  rgba(255,255,255,0.12);
   --glass-1:     rgba(255, 255, 255, 0.03);
   --glass-2:     rgba(255, 255, 255, 0.06);
   --glass-3:     rgba(255, 255, 255, 0.1);
-  --well:        #151926;
-  --border-control: #2e3654;
+  --well:        #0f121a;
+  --border-control: rgba(255,255,255,0.16);
 
   /* Accent, resolved from the panel's alias */
-  --accent:      #a5c3ff;
+  --accent:      #7b98ff;
 
   /* Faces and edges the rules below share, so a light theme is a
      value rather than a second skin. */
-  --hover-face:  #262a32;
-  --hover-edge:  #3a414c;
-  --row-face:    #15171c;
-  --scroll-track: #0f1115;
-  --skeleton-a:  #1b1e24;
-  --skeleton-b:  #252930;
+  --hover-face:  #1f2538;
+  --hover-edge:  rgba(255,255,255,0.18);
+  --row-face:    #141825;
+  --scroll-track: #0f121a;
+  --skeleton-a:  #141825;
+  --skeleton-b:  #1c2133;
   --alert-ink:   #d6c2c3;
-  --ok-ink:      #6ee7a8;
-  --ok-surface:  rgba(46, 160, 95, 0.13);
-  --ok-border:   rgba(46, 160, 95, 0.35);
-  --warn-ink:    #d8b46a;
-  --warn-surface: rgba(180, 140, 60, 0.12);
-  --warn-border: rgba(180, 140, 60, 0.32);
-  --key-edge:    #0f2a9c;
+  --ok-ink:      #3ddc97;
+  --ok-surface:  rgba(61,220,151,0.12);
+  --ok-border:   rgba(61,220,151,0.32);
+  --warn-ink:    #f5b84b;
+  --warn-surface: rgba(245,184,75,0.12);
+  --warn-border: rgba(245,184,75,0.32);
+  --key-edge:    #2c53e0;
   --sky-base:    #1a3fd0;
   --sunken-face: rgba(0, 0, 0, 0.22);
-  --shadow-panel: 0 28px 70px rgba(0,0,0,0.6);
-  --shadow-card:  0 6px 20px rgba(0,0,0,0.3);
-  --well-shadow:  inset 0 2px 6px rgba(0,0,0,0.6);
+  --shadow-panel: 0 18px 50px -12px rgba(0,0,0,0.6), 0 2px 6px rgba(0,0,0,0.35);
+  --tour-scrim: rgba(4, 6, 12, 0.66);
+  --shadow-card:  0 1px 2px rgba(0,0,0,0.4);
+  --well-shadow:  inset 0 1px 2px rgba(0,0,0,0.35);
 
   /* Light palette. Applied by the media query and the explicit override
      after this rule; every key here has a dark twin above. */
-  --light-bg-base:     #f4f6fb;
+  --light-bg-base:     #f2f3f7;
   --light-bg-panel:    #ffffff;
   --light-bg-header:   #ffffff;
-  --light-bg-surface:  #f7f8fc;
-  --light-bg-item:     #eef1f8;
-  --light-border:      #d5dae8;
-  --light-border-soft: #e3e7f1;
+  --light-bg-surface:  #f6f7fa;
+  --light-bg-item:     #eef0f5;
+  --light-border:      rgba(12,18,40,0.10);
+  --light-border-soft: rgba(12,18,40,0.06);
 
-  --light-fg:          #11162a;
-  --light-fg-body:     #2b3247;
-  --light-fg-muted:    #4c5570;
+  --light-fg:          #0d1220;
+  --light-fg-body:     #2a3147;
+  --light-fg-muted:    #515a72;
 
   --light-high-surface: rgba(179,38,30,0.08);
   --light-high-border:  rgba(179,38,30,0.30);
@@ -104,28 +105,28 @@
   --light-low-border:   rgba(15,122,82,0.30);
   --light-low-ink:      #0f7a52;
 
-  --light-brand:        #2c53e0;
-  --light-brand-hover:  #3f63f0;
-  --light-brand-low:    #1c3bad;
-  --light-brand-bright: #1f45c9;
+  --light-brand:        #2f5bff;
+  --light-brand-hover:  #4670ff;
+  --light-brand-low:    #2448d6;
+  --light-brand-bright: #2448d6;
   --light-on-brand:     #ffffff;
-  --light-ice:          #1f45c9;
-  --light-led-off:      #c8cede;
+  --light-ice:          #2448d6;
+  --light-led-off:      #d3d8e6;
   --light-led-dim:      #8c94ad;
   --light-bezel-hi:     #ffffff;
-  --light-bezel-lo:     #eef1f8;
-  --light-bezel-edge:   #d5dae8;
+  --light-bezel-lo:     #f6f7fa;
+  --light-bezel-edge:   rgba(12,18,40,0.10);
   --light-glass-1:      rgba(16, 20, 40, 0.03);
   --light-glass-2:      rgba(16, 20, 40, 0.06);
   --light-glass-3:      rgba(16, 20, 40, 0.10);
-  --light-well:         #f2f4fa;
-  --light-border-control: #c4cbdd;
-  --light-accent:       #1f45c9;
+  --light-well:         #f2f3f7;
+  --light-border-control: rgba(12,18,40,0.17);
+  --light-accent:       #2448d6;
 
-  --light-hover-face:  #e6ebf6;
-  --light-hover-edge:  #b9c2d8;
-  --light-row-face:    #eef1f8;
-  --light-scroll-track: #eef1f8;
+  --light-hover-face:  #e9ecf4;
+  --light-hover-edge:  rgba(12,18,40,0.17);
+  --light-row-face:    #f3f4f8;
+  --light-scroll-track: #eef0f5;
   --light-skeleton-a:  #e9edf5;
   --light-skeleton-b:  #f7f9fd;
   --light-alert-ink:   #6e2a2c;
@@ -138,9 +139,10 @@
   --light-key-edge:    #9db0ee;
   --light-sky-base:    #2c53e0;
   --light-sunken-face: rgba(16, 20, 40, 0.04);
-  --light-shadow-panel: 0 24px 60px rgba(20,28,60,0.18);
-  --light-shadow-card:  0 6px 18px rgba(20,28,60,0.10);
-  --light-well-shadow:  inset 0 1px 2px rgba(20,28,60,0.08);
+  --light-shadow-panel: 0 18px 50px -16px rgba(30,45,90,0.28), 0 2px 6px rgba(30,45,90,0.08);
+  --light-tour-scrim: rgba(12, 18, 40, 0.5);
+  --light-shadow-card:  0 1px 2px rgba(20,30,60,0.08);
+  --light-well-shadow:  inset 0 1px 2px rgba(20,28,60,0.06);
 
   /* Motion profile — Calm · Standard · Vivid. These are the Standard
      values; the [data-motion] selectors after this rule remap them, so one
@@ -215,13 +217,13 @@
   /* END shared palette tokens */
 
   /* Type */
-  /* The three Kriko faces, bundled in assets/fonts and registered by
+  /* The Kriko face, Geist, bundled in assets/fonts and registered by
    * hover_lite.js from the extension's own files: never fetched from
    * anywhere, so nothing tells a third party what the reader is shopping
    * for, and they are there offline. The names are Kriko's own, so a host
    * page's fonts and ours never meet. The fallbacks are what the panel wore
    * before, for the moment before a face has loaded. */
-  --font-display: 'Kriko Display', 'Arial Narrow', system-ui, sans-serif;
+  --font-display: 'Kriko Sans', system-ui, 'Segoe UI', sans-serif;
   --font-body: 'Kriko Sans', system-ui, 'Segoe UI', sans-serif;
   /* Labels and figures wear the body face; only text that is code (a log)
    * keeps a fixed-width one, from the machine itself. */
@@ -296,6 +298,7 @@
     --sky-base: var(--light-sky-base);
     --sunken-face: var(--light-sunken-face);
     --shadow-panel: var(--light-shadow-panel);
+    --tour-scrim: var(--light-tour-scrim);
     --shadow-card: var(--light-shadow-card);
     --well-shadow: var(--light-well-shadow);
     color-scheme: light;
@@ -355,6 +358,7 @@
   --sky-base: var(--light-sky-base);
   --sunken-face: var(--light-sunken-face);
   --shadow-panel: var(--light-shadow-panel);
+  --tour-scrim: var(--light-tour-scrim);
   --shadow-card: var(--light-shadow-card);
   --well-shadow: var(--light-well-shadow);
   color-scheme: light;
@@ -946,8 +950,6 @@
 }
 .lite-live-head {
   font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--fg-muted);
   margin-bottom: 3px;
 }
@@ -1226,7 +1228,6 @@
   font-size: 9px;
   color: var(--fg-muted);
   letter-spacing: 0.5px;
-  text-transform: uppercase;
   margin-bottom: 3px;
 }
 
@@ -1251,7 +1252,6 @@
   font-size: 10px;
   color: var(--fg-muted);
   letter-spacing: 0.5px;
-  text-transform: uppercase;
   font-weight: 600;
 }
 .lite-details-head:focus-visible { outline: 2px solid var(--low-ink); outline-offset: 2px; }
@@ -1287,7 +1287,6 @@
   font-size: 9px;
   color: var(--fg-muted);
   letter-spacing: 0.5px;
-  text-transform: uppercase;
 }
 .lite-detrow-head .count { opacity: 0.7; }
 .lite-detrow-head .toggle-glyph { display: inline-flex; }
@@ -1570,7 +1569,6 @@
   font-family: var(--font-body);
   font-size: 11px;
   letter-spacing: 1px;
-  text-transform: uppercase;
   color: var(--fg-muted);
 }
 .lite-verdict[data-verdict="probably"] .lite-verdict-word { color: var(--accent); }
@@ -1781,6 +1779,18 @@
   background: var(--bg-surface);
 }
 .lite-search-bar:focus-within { border-color: var(--accent); }
+.lite-search-modes { display: flex; gap: 6px; margin-top: 8px; }
+.lite-search-modes button {
+  cursor: pointer;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 12px;
+}
+.lite-search-modes button[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); }
 .lite-search-icon { display: flex; color: var(--fg-muted); flex: none; }
 .lite-search-field {
   all: unset;
@@ -1887,7 +1897,7 @@
     radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%),
     var(--bg-base);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 22px;
   box-shadow:
     var(--shadow-panel),
     0 0 0 1px var(--glass-1) inset;
@@ -1924,38 +1934,31 @@
 /* severity counts: a well each, an LED dot, the number in the display face */
 .lite-count {
   gap: 7px;
-  padding: 5px 10px 5px 8px;
-  border-radius: 8px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  padding: 5px 12px 5px 9px;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 12.5px;
 }
 .lite-count[data-sev="high"],
 .lite-count[data-sev="medium"],
 .lite-count[data-sev="low"] {
-  background: var(--well);
+  background: var(--bg-surface);
   border-color: var(--border);
-  box-shadow: var(--well-shadow);
+  box-shadow: none;
 }
-.lite-count .dot { width: 6px; height: 6px; flex-basis: 6px; border-radius: 1.5px; }
-.lite-count[data-sev="high"]   .dot { box-shadow: 0 0 6px var(--high-ink); }
-.lite-count[data-sev="medium"] .dot { box-shadow: 0 0 6px var(--med-ink); }
-.lite-count[data-sev="low"]    .dot { box-shadow: 0 0 6px var(--low-ink); }
-.lite-count .num { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: 0; }
+.lite-count .dot { width: 7px; height: 7px; flex-basis: 7px; border-radius: 50%; box-shadow: none; }
+.lite-count .num { font-family: var(--font-display); font-size: 14px; font-weight: 600; }
 .lite-count .lbl { color: var(--fg-muted); }
 
 /* the product: the page title's face, the way the app titles a page */
 .lite-listing { border-top-color: var(--border-soft); }
 .lite-listing-title {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 19px;
   font-weight: 600;
-  line-height: 1.05;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
+  line-height: 1.25;
 }
-.lite-listing-meta { font-family: var(--font-mono); font-size: 11px; }
+.lite-listing-meta { font-family: var(--font-body); font-size: 12.5px; }
 
 /* actions: the brand key for analysing, bezel plates for the rest */
 .lite-cta,
@@ -1965,19 +1968,13 @@
 .lite-gap-btn,
 .lite-verdict-btn {
   border: 0;
-  border-radius: 10px;
+  border-radius: 999px;
   font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 540;
+  font-size: 13px;
   color: var(--fg-body);
-  background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
-  box-shadow:
-    0 0 0 1px var(--bezel-edge),
-    inset 0 1px 0 rgba(255,255,255,0.12),
-    inset 0 -1px 0 rgba(0,0,0,0.55),
-    0 4px 12px rgba(0,0,0,0.45);
+  background: var(--bg-item);
+  box-shadow: 0 0 0 1px var(--bezel-edge);
   transition: transform var(--dur-xfast) var(--ease-out), box-shadow var(--dur-xfast) var(--ease-out), color var(--dur-quick);
 }
 .lite-product-actions button:hover,
@@ -1986,51 +1983,42 @@
 .lite-gap-btn:hover,
 .lite-verdict-btn:hover {
   color: var(--fg);
-  background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
+  background: var(--bg-item);
 }
 .lite-cta {
   color: var(--on-brand);
-  text-shadow: 0 1px 0 rgba(0,0,0,0.35);
-  background: linear-gradient(180deg, var(--brand-hover) 0%, var(--brand) 55%, var(--brand-low) 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.35),
-    inset 0 -2px 0 rgba(0,0,0,0.3),
-    0 3px 0 var(--key-edge),
-    0 10px 20px rgba(0,0,0,0.5);
+  background: var(--brand);
+  box-shadow: none;
 }
 .lite-cta:hover {
   border: 0;
-  background: linear-gradient(180deg, var(--brand-hover) 0%, var(--brand-hover) 55%, var(--brand) 100%);
+  background: var(--brand-hover);
 }
 .lite-cta:active,
 .lite-product-actions button:active,
 .lite-gap-btn:active,
 .lite-verdict-btn:active {
   transform: translateY(1px);
-  box-shadow: inset 0 2px 5px rgba(0,0,0,0.45);
+  box-shadow: 0 0 0 1px var(--bezel-edge);
 }
 .lite-cta:focus-visible,
 .lite-product-actions button:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
-.lite-status { font-family: var(--font-mono); font-size: 10.5px; }
+.lite-status { font-family: var(--font-body); font-size: 12px; }
 
 /* the risks heading: a mono eyebrow, small plates for expand and collapse */
 .lite-claims-label {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
+  font-family: var(--font-body);
+  font-size: 12.5px;
   color: var(--fg-muted);
 }
 .lite-chip {
   border: 0;
-  border-radius: 8px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 12px;
   color: var(--fg-muted);
-  background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
-  box-shadow: 0 0 0 1px var(--bezel-edge), inset 0 1px 0 rgba(255,255,255,0.1);
+  background: var(--bg-item);
+  box-shadow: 0 0 0 1px var(--bezel-edge);
 }
 .lite-chip:hover,
 .lite-chip[data-on="1"] { color: var(--fg); }
@@ -2040,32 +2028,27 @@
 .lite-domain-groups { gap: 10px; }
 .lite-domain-group {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--glass-1);
+  overflow: hidden;
 }
 .lite-domain-head {
-  padding: 9px 12px;
+  padding: 10px 14px;
   background: transparent;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 540;
   color: var(--fg-muted);
 }
 .lite-domain-head:hover { background: var(--glass-2); color: var(--fg); }
 .lite-domain-icon { color: var(--ice); }
 .lite-domain-count {
-  border-radius: 6px;
+  border-radius: 999px;
   background: var(--well);
-  box-shadow: var(--well-shadow);
-  font-family: var(--font-mono);
-  letter-spacing: 0;
+  box-shadow: none;
+  font-family: var(--font-body);
 }
-.lite-domain-sev-dot { width: 5px; height: 5px; border-radius: 1px; }
-.lite-domain-sev-dot[data-sev="high"] { box-shadow: 0 0 5px var(--high-ink); }
-.lite-domain-sev-dot[data-sev="med"]  { box-shadow: 0 0 5px var(--med-ink); }
-.lite-domain-sev-dot[data-sev="low"]  { box-shadow: 0 0 5px var(--low-ink); }
+.lite-domain-sev-dot { width: 6px; height: 6px; border-radius: 50%; box-shadow: none; }
 .lite-domain-body { border-top-color: var(--border-soft); }
 
 /* a risk: a row inside the card, its severity in a recessed well */
@@ -2091,13 +2074,10 @@
   width: 38px;
   height: 38px;
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 12px;
   background: var(--well);
-  box-shadow: var(--well-shadow), inset 0 -1px 0 var(--glass-1);
+  box-shadow: none;
 }
-.lite-rc[data-sev="high"]   .lite-rc-domain svg { filter: drop-shadow(0 0 4px var(--high-ink)); }
-.lite-rc[data-sev="medium"] .lite-rc-domain svg { filter: drop-shadow(0 0 4px var(--med-ink)); }
-.lite-rc[data-sev="low"]    .lite-rc-domain svg { filter: drop-shadow(0 0 4px var(--low-ink)); }
 .lite-rc-titlebox { padding: 0 8px 0 10px; }
 /* the whole title, on two lines if it needs them: a risk cut off mid-word
    is a risk the reader has to open to read */
@@ -2115,9 +2095,8 @@
 .lite-rc[data-open="1"] .lite-rc-title { -webkit-line-clamp: unset; display: block; }
 .lite-rc-meta {
   margin-top: 6px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
+  font-family: var(--font-body);
+  font-size: 12px;
   color: var(--fg-muted);
 }
 .lite-rc-strength,
@@ -2127,22 +2106,19 @@
   align-items: center;
   gap: 5px;
   padding: 2px 7px 2px 6px;
-  border-radius: 6px;
+  border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--well);
-  font-family: var(--font-mono);
-  font-size: 9.5px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
   font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 .lite-rc-strength::before {
   content: "";
-  width: 5px;
-  height: 5px;
-  border-radius: 1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: currentColor;
-  box-shadow: 0 0 5px currentColor;
 }
 .lite-rc-strength[data-strength="confirmed"] { color: var(--ice); }
 .lite-rc-strength[data-strength="reported"]  { color: var(--fg-muted); }
@@ -2153,13 +2129,13 @@
   align-self: center;
   margin-right: 10px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 16px;
   color: var(--fg-muted);
-  background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
-  box-shadow: 0 0 0 1px var(--bezel-edge), inset 0 1px 0 rgba(255,255,255,0.1);
+  background: var(--bg-item);
+  box-shadow: 0 0 0 1px var(--bezel-edge);
 }
-.lite-rc-toggle:hover { color: var(--fg); background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo)); }
+.lite-rc-toggle:hover { color: var(--fg); background: var(--bg-item); }
 .lite-rc-toggle:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 .lite-rc-body { border-top-color: var(--border-soft); }
 .lite-rc-text { font-size: 13px; color: var(--fg-body); }
@@ -2169,54 +2145,50 @@
   padding: 10px 14px;
   border-top: 1px solid var(--border-soft);
   background: var(--sunken-face);
-  font-family: var(--font-mono);
-  font-size: 10px;
+  font-family: var(--font-body);
+  font-size: 11.5px;
   color: var(--fg-muted);
 }
 .lite-open-app {
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
   font-family: var(--font-display);
   font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 540;
   text-decoration: none;
   color: var(--on-brand);
-  background: linear-gradient(180deg, var(--brand-hover) 0%, var(--brand) 55%, var(--brand-low) 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 0 var(--key-edge), 0 6px 14px rgba(0,0,0,0.45);
+  background: var(--brand);
+  box-shadow: none;
 }
-.lite-open-app:hover { color: var(--on-brand); filter: brightness(1.08); }
+.lite-open-app:hover { color: var(--on-brand); background: var(--brand-hover); }
 .lite-open-app:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 
 /* errors and empties keep their words; the frame matches the cards */
 .lite-error,
 .lite-empty {
-  border-radius: 12px;
+  border-radius: 16px;
 }
 
 /* inside an opened risk: small plates for checking and marking it */
 .lite-rc-factbtn,
 .lite-rc-markbtn {
-  padding: 6px 10px;
+  padding: 6px 11px;
   border: 0;
-  border-radius: 7px;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 12px;
   color: var(--fg-muted);
-  background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
-  box-shadow: 0 0 0 1px var(--bezel-edge), inset 0 1px 0 rgba(255,255,255,0.1);
+  background: var(--bg-item);
+  box-shadow: 0 0 0 1px var(--bezel-edge);
 }
 .lite-rc-factbtn:hover:not(:disabled),
 .lite-rc-markbtn:hover {
   color: var(--fg);
-  background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
+  background: var(--bg-item);
 }
 .lite-rc-markbtn[aria-pressed="true"] { box-shadow: 0 0 0 1px currentColor, inset 0 2px 4px rgba(0,0,0,0.5); }
 .lite-rc-mark-label,
-.lite-rc-factverdict { font-family: var(--font-mono); font-size: 10px; }
+.lite-rc-factverdict { font-family: var(--font-body); font-size: 11.5px; }
 
 /* queue mode: the listing's product joins the app's research queue.
    A bezel plate, not the brand key: Analyze is this panel's one key. */
@@ -2234,30 +2206,28 @@
   align-items: center;
   gap: 8px;
   height: 30px;
-  padding: 0 12px;
-  border-radius: 9px;
+  padding: 0 13px;
+  border-radius: 999px;
   cursor: pointer;
-  font: 600 12px/1 var(--font-display);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font: 540 13px/1 var(--font-display);
   color: var(--fg-body);
-  background: linear-gradient(180deg, var(--bezel-hi), var(--bezel-lo));
-  box-shadow: 0 0 0 1px var(--bezel-edge), inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 10px rgba(0,0,0,0.4);
+  background: var(--bg-item);
+  box-shadow: 0 0 0 1px var(--bezel-edge);
 }
 .lite-queue::before {
   content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 1.5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   background: var(--led-off);
 }
 .lite-queue:hover:not(:disabled) { color: var(--fg); filter: brightness(1.1); }
 .lite-queue:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 .lite-queue:disabled { cursor: default; }
-.lite-queue-row[data-phase="busy"] .lite-queue::before { background: var(--fg); box-shadow: 0 0 6px var(--fg); }
-.lite-queue[aria-pressed="true"] { color: var(--ice); box-shadow: 0 0 0 1px var(--bezel-edge), inset 0 2px 4px rgba(0,0,0,0.5); }
-.lite-queue[aria-pressed="true"]::before { background: var(--ice); box-shadow: 0 0 6px var(--ice); }
-.lite-queue-note { font: 10.5px/1.4 var(--font-mono); color: var(--fg-muted); }
+.lite-queue-row[data-phase="busy"] .lite-queue::before { background: var(--fg); }
+.lite-queue[aria-pressed="true"] { color: var(--ice); box-shadow: 0 0 0 1px var(--ice); }
+.lite-queue[aria-pressed="true"]::before { background: var(--ice); }
+.lite-queue-note { font: 12px/1.4 var(--font-body); color: var(--fg-muted); }
 .lite-queue-help {
   all: unset;
   display: inline-flex;
@@ -2267,7 +2237,7 @@
   height: 24px;
   border: 1px solid var(--border);
   border-radius: 50%;
-  font: 12px var(--font-mono);
+  font: 12px var(--font-body);
   color: var(--fg-muted);
   cursor: pointer;
 }
@@ -2380,7 +2350,7 @@
   to   { opacity: 1; transform: none; }
 }
 
-/* the sky: header, the key, the open-app key. One drawing, one drift.
+/* the sky: the header's alone, the one place the dither shows. One drawing, one drift.
  *
  * One pass, not a loop. This is the same sky the desktop app draws, and there
  * the fields drift when the page arrives and then stop — the sheet's own rule
@@ -2389,10 +2359,7 @@
  * identical anywhere else: it repainted the header, every key and every
  * open-app row for as long as the panel was open, on a page somebody else
  * runs, whether or not the reader was doing anything. */
-.lite-header,
-.lite-cta,
-.lite-research-start,
-.lite-open-app {
+.lite-header {
   position: relative;
   overflow: hidden;
   isolation: isolate;
@@ -2406,21 +2373,12 @@
   background-position: 0 0, 0% 8%;
   animation: skyDrift 70s linear 1 both;
 }
-/* A soft band of light that crosses a key once, shortly after it is drawn.
-   One pass for the reason the drift above is one pass: this was the second
-   endless animation on the panel's busiest controls. */
-.lite-cta::after,
-.lite-research-start::after,
-.lite-open-app::after {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 34%;
-  z-index: -1;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.20), transparent);
-  transform: translateX(-130%);
-  animation: skySweep 5.5s var(--ease-out) 1.2s 1;
-  pointer-events: none;
+/* The keys are one solid blue, as in the app. */
+.lite-cta,
+.lite-research-start,
+.lite-open-app {
+  color: var(--on-brand);
+  background: var(--brand);
 }
 
 /* header: one slim row, the wordmark and its line side by side */
@@ -2435,8 +2393,7 @@
 .lite-subtitle {
   margin: 0;
   font-family: var(--font-body);
-  font-size: 10.5px;
-  letter-spacing: 0.01em;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2446,7 +2403,7 @@
 .lite-iconbtn.lite-btn-close {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: 50%;
   background: rgba(255,255,255,0.08);
   border: 1px solid transparent;
   color: var(--on-brand);
@@ -2467,46 +2424,41 @@
 .lite-listing { border-top: 0; padding-top: 0; }
 .lite-listing-title {
   font-size: 17px;
-  line-height: 1.12;
-  letter-spacing: 0.012em;
+  line-height: 1.25;
+  text-transform: capitalize;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   overflow: hidden;
 }
-.lite-listing-meta { margin-top: 6px; font-size: 11px; }
-.lite-listing-engine { margin-top: 5px; font-size: 11.5px; letter-spacing: 0.01em; }
+.lite-listing-meta { margin-top: 6px; font-size: 12.5px; }
+.lite-listing-engine { margin-top: 5px; font-size: 12.5px; }
 .lite-queue-row { margin-top: 8px; gap: 6px 8px; }
 
 /* keys: flat faces. The one key wears the sky; the rest are glass. */
 .lite-cta-wrap { gap: 4px; }
 .lite-cta {
-  height: 34px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 16px;
   border: 0;
-  border-radius: 8px;
-  font-size: 12.5px;
-  letter-spacing: 0.07em;
+  border-radius: 999px;
+  font-size: 13.5px;
   text-shadow: none;
   box-shadow: none;
-  transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-quick);
+  transition: transform var(--dur-fast) var(--ease-out), background var(--dur-quick);
 }
 .lite-cta,
-.lite-cta:hover,
 .lite-cta[disabled],
 .lite-cta[data-analyzing="1"] {
-  background-color: var(--sky-base);
-  background-image: linear-gradient(180deg, rgba(6,10,60,0) 0%, rgba(6,10,60,0.38) 100%), var(--sky-img);
-  background-repeat: no-repeat;
-  background-size: auto, auto 480px;
+  background: var(--brand);
   border: 0;
   color: var(--on-brand);
 }
-.lite-cta:hover { filter: brightness(1.14); animation-duration: 18s; }
+.lite-cta:hover { background: var(--brand-hover); }
 .lite-cta:active { transform: scale(0.985); box-shadow: none; }
 .lite-cta[disabled],
-.lite-cta[data-analyzing="1"] { opacity: 0.72; filter: saturate(0.7); animation-duration: 8s; cursor: progress; }
-.lite-status { font-size: 10.5px; line-height: 1.35; min-height: 0; color: var(--fg-muted); }
+.lite-cta[data-analyzing="1"] { opacity: 0.72; filter: saturate(0.7); cursor: progress; }
+.lite-status { font-size: 12px; line-height: 1.35; min-height: 0; color: var(--fg-muted); }
 
 .lite-product-actions { gap: 6px; }
 .lite-product-actions button { flex: 1 1 0; }
@@ -2522,7 +2474,7 @@
 .lite-rc-markbtn,
 .lite-followup-send {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--glass-1);
   box-shadow: none;
   color: var(--fg-body);
@@ -2535,13 +2487,12 @@
 .lite-research button:not(.lite-research-start):not(.lite-more),
 .lite-gap-btn,
 .lite-verdict-btn {
-  height: 30px;
-  padding: 0 10px;
-  font-size: 11.5px;
-  letter-spacing: 0.06em;
+  height: 32px;
+  padding: 0 14px;
+  font-size: 12.5px;
   line-height: 1;
 }
-.lite-queue { height: 26px; padding: 0 10px; font-size: 11px; gap: 7px; }
+.lite-queue { height: 28px; padding: 0 12px; font-size: 12.5px; gap: 7px; }
 .lite-product-actions button:hover,
 .lite-search-research:hover,
 .lite-research button:hover:not(:disabled):not(.lite-research-start):not(.lite-more),
@@ -2553,8 +2504,8 @@
 .lite-rc-factbtn:hover:not(:disabled),
 .lite-rc-markbtn:hover,
 .lite-followup-send:hover:not(:disabled) {
-  background: rgba(44,83,224,0.16);
-  border-color: rgba(142,163,255,0.55);
+  background: rgba(61,107,255,0.16);
+  border-color: rgba(123,152,255,0.5);
   color: var(--fg);
   filter: none;
 }
@@ -2569,34 +2520,34 @@
 .lite-rc-markbtn[aria-pressed="true"] { color: var(--ice); border-color: rgba(165,195,255,0.5); box-shadow: none; }
 .lite-queue-help { width: 22px; height: 22px; font-size: 11px; transition: color var(--dur-quick), border-color var(--dur-quick), transform var(--dur-fast); }
 .lite-queue-help:active { transform: scale(0.9); }
-.lite-queue-note { font-size: 10.5px; }
-.lite-queue-guide { animation: liteDrop var(--dur-med) var(--ease-out) both; border-radius: 8px; }
+.lite-queue-note { font-size: 12px; }
+.lite-queue-guide { animation: liteDrop var(--dur-med) var(--ease-out) both; border-radius: 14px; }
 
 /* the research form: one compact card, opens with a drop, context on demand */
 .lite-research {
   padding: 10px 12px 12px;
   margin-bottom: 0;
-  border-radius: 12px;
+  border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--glass-1);
   transform-origin: top center;
 }
 .lite-research[data-enter="1"] { animation: liteDrop var(--dur-slow) var(--ease-out) both; }
 .lite-research-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 10px; margin-bottom: 8px; }
-.lite-research-head strong { white-space: nowrap; font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-.lite-research .lite-gap-cost { margin: 0; font-size: 10.5px; font-weight: 400; color: var(--fg-muted); }
+.lite-research-head strong { white-space: nowrap; font-family: var(--font-display); font-size: 14px; font-weight: 600; }
+.lite-research .lite-gap-cost { margin: 0; font-size: 12px; font-weight: 400; color: var(--fg-muted); }
 .lite-research-target { margin: 0 0 6px; font-size: 12.5px; color: var(--fg-body); }
 .lite-research input,
 .lite-research textarea {
-  padding: 7px 9px;
-  border-radius: 8px;
+  padding: 8px 11px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--well);
   font-size: 12.5px;
   transition: border-color var(--dur-quick), box-shadow var(--dur-quick);
 }
 .lite-research input:focus,
-.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(44,83,224,0.25); }
+.lite-research textarea:focus { outline: 0; border-color: var(--brand-bright); box-shadow: 0 0 0 3px rgba(61,107,255,0.28); }
 .lite-research textarea { resize: none; min-height: 52px; display: block; }
 /* a fold: height eases between 0 and its content */
 .lite-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows var(--dur-med) var(--ease-out), opacity var(--dur-med) var(--ease-out), margin var(--dur-med) var(--ease-out); }
@@ -2627,24 +2578,21 @@
 }
 .lite-research-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .lite-research-actions button { margin: 0; flex: 0 1 auto; }
-.lite-research-actions .lite-research-start,
-.lite-research-actions .lite-research-start:hover:not(:disabled) {
+.lite-research-actions .lite-research-start {
   flex: 1 1 140px;
   border: 0;
+  border-radius: 999px;
   color: var(--on-brand);
-  background-color: var(--sky-base);
-  background-image: linear-gradient(180deg, rgba(6,10,60,0) 0%, rgba(6,10,60,0.38) 100%), var(--sky-img);
-  background-repeat: no-repeat;
-  background-size: auto, auto 480px;
+  background: var(--brand);
 }
-.lite-research-actions .lite-research-start:hover:not(:disabled) { filter: brightness(1.14); animation-duration: 18s; }
-.lite-research-actions .lite-research-start:disabled { opacity: 0.5; animation-duration: 90s; }
+.lite-research-actions .lite-research-start:hover:not(:disabled) { background: var(--brand-hover); }
+.lite-research-actions .lite-research-start:disabled { opacity: 0.5; }
 
 /* the task log: a status bar that opens onto the run, not a wall of text */
 .lite-task-log {
   margin-top: 10px;
   border: 1px solid var(--border-soft);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--sunken-face);
   overflow: hidden;
 }
@@ -2655,19 +2603,19 @@
   gap: 8px;
   padding: 7px 10px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--fg-muted);
   transition: background var(--dur-quick);
 }
 .lite-task-log > summary::-webkit-details-marker { display: none; }
 .lite-task-log > summary:hover { background: var(--glass-1); }
 .lite-task-log > summary::before { content: none !important; }
-.lite-tl-led { flex: none; width: 6px; height: 6px; border-radius: 2px; background: var(--led-dim); transition: background var(--dur-med), box-shadow var(--dur-med); }
-.lite-task-log[data-state="running"] .lite-tl-led { background: var(--low-ink); box-shadow: 0 0 6px var(--low-ink); animation: lite-asked-breathe 1.5s ease-in-out infinite; }
-.lite-task-log[data-state="failed"] .lite-tl-led { background: var(--high-ink); box-shadow: 0 0 6px var(--high-ink); }
+.lite-tl-led { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--led-dim); transition: background var(--dur-med), box-shadow var(--dur-med); }
+.lite-task-log[data-state="running"] .lite-tl-led { background: var(--low-ink); animation: lite-asked-breathe 1.5s ease-in-out infinite; }
+.lite-task-log[data-state="failed"] .lite-tl-led { background: var(--high-ink); }
 .lite-task-log[data-state="done"] .lite-tl-led,
 .lite-task-log[data-state="succeeded"] .lite-tl-led { background: var(--low-ink); }
-.lite-tl-title { font-weight: 600; color: var(--fg-body); letter-spacing: 0.02em; }
+.lite-tl-title { font-weight: 600; color: var(--fg-body); }
 .lite-tl-state { margin-left: auto; font-size: 10.5px; color: var(--fg-muted); }
 .lite-tl-chev { flex: none; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translate(-1px, -1px); transition: transform var(--dur-med) var(--ease-out); }
 .lite-task-log[open] .lite-tl-chev { transform: rotate(-135deg) translate(-1px, -1px); }
@@ -2691,7 +2639,7 @@
   transition: background var(--dur-quick), border-color var(--dur-quick), transform var(--dur-fast);
 }
 .lite-task-log-controls select:hover,
-.lite-task-log-controls button:hover { background: rgba(44,83,224,0.16); border-color: rgba(142,163,255,0.55); }
+.lite-task-log-controls button:hover { background: rgba(61,107,255,0.16); border-color: rgba(123,152,255,0.5); }
 .lite-task-log-controls button:active { transform: scale(0.96); }
 .lite-task-log-controls button { margin-left: auto; }
 .lite-task-log-text {
@@ -2710,12 +2658,11 @@
 
 /* a bar, not a block: the footer asks less room */
 .lite-footer { padding: 6px 14px; }
-.lite-open-app { padding: 4px 10px; border-radius: 7px; box-shadow: none; font-size: 12px; text-decoration: none; }
-.lite-open-app:hover { color: var(--on-brand); filter: brightness(1.14); }
+.lite-open-app { padding: 5px 12px; border-radius: 999px; box-shadow: none; font-size: 12.5px; text-decoration: none; }
+.lite-open-app:hover { color: var(--on-brand); background: var(--brand-hover); }
 
 @media (prefers-reduced-motion: reduce) {
-  .lite-header, .lite-cta, .lite-research-start, .lite-open-app { animation: none; }
-  .lite-cta::after, .lite-research-start::after, .lite-open-app::after { animation: none; display: none; }
+  .lite-header { animation: none; }
   .lite-body, .lite-task-log-text { scroll-behavior: auto; }
   .lite-body > *, .lite-research[data-enter="1"], .lite-tl-body, .lite-queue-guide { animation: none; }
   .lite-fold, .lite-tl-chev { transition: none; }
@@ -2734,7 +2681,7 @@
   margin: 10px 0;
   padding: 12px 12px 10px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--glass-1);
   animation: claimIn var(--dur-slow) var(--ease-out) both;
   animation-delay: 80ms;
@@ -2784,8 +2731,6 @@
 .lite-noissue .lite-quick-sources summary {
   cursor: pointer;
   font: 10.5px var(--font-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
   color: var(--fg-muted);
 }
 .lite-noissue .lite-quick-source-list { margin-top: 6px; }
@@ -2822,8 +2767,6 @@
   background: var(--glass-1);
   color: var(--fg-body);
   font: 600 11.5px/1 var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
   cursor: pointer;
 }
 .lite-followup-form { margin-top: 0; }
@@ -2886,3 +2829,119 @@
     transition: none !important;
   }
 }
+
+/* ---- the first-visit tour ---- */
+
+.lite-tour {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.lite-tour-spot {
+  position: absolute;
+  border-radius: 14px;
+  box-shadow: 0 0 0 2px var(--brand-bright), 0 0 0 9999px var(--tour-scrim);
+  transition: top var(--dur-med) var(--ease-out), left var(--dur-med) var(--ease-out), width var(--dur-med) var(--ease-out), height var(--dur-med) var(--ease-out);
+  pointer-events: none;
+}
+
+.lite-tour-card {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-control);
+  border-radius: 18px;
+  box-shadow: var(--shadow-panel);
+  animation: lite-tour-in var(--dur-med) var(--ease-out);
+}
+
+.lite-tour-card h2 {
+  margin: 0;
+  font: 600 16px/1.25 var(--font-display);
+  color: var(--fg);
+}
+
+.lite-tour-card p {
+  margin: 0;
+  font: 13.5px/1.45 var(--font-body);
+  color: var(--fg-body);
+}
+
+.lite-tour-count {
+  font: 540 12px var(--font-body);
+  color: var(--fg-muted);
+}
+
+.lite-tour-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.lite-tour-actions button {
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bg-item);
+  color: var(--fg-body);
+  font: 540 13px var(--font-body);
+  cursor: pointer;
+}
+
+.lite-tour-actions button:hover { background: var(--hover-face); }
+.lite-tour-actions .lite-tour-skip { margin-right: auto; background: transparent; color: var(--fg-muted); }
+.lite-tour-actions .lite-tour-next { background: var(--brand); color: var(--on-brand); }
+.lite-tour-actions .lite-tour-next:hover { background: var(--brand-hover); }
+.lite-tour-actions button:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+
+@keyframes lite-tour-in {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lite-tour-spot { transition: none; }
+  .lite-tour-card { animation: none; }
+}
+
+/* ---- the agent picked here, and "Learn this page" ---- */
+
+.lite-agent-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; font-size: 12px; color: var(--fg-muted); }
+.lite-agent-select {
+  min-width: 0;
+  max-width: 70%;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--glass-1);
+  color: var(--fg-body);
+  font: 12.5px var(--font-body);
+  cursor: pointer;
+}
+.lite-agent-select:hover:not(:disabled) { border-color: var(--border-control); }
+.lite-agent-select:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+
+.lite-learn { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 4px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 14px; }
+.lite-learn-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.lite-learn-row small { font-size: 11px; line-height: 1.4; color: var(--fg-muted); }
+.lite-learn-status { margin: 0; font-size: 12px; line-height: 1.45; color: var(--fg-body); }
+.lite-learn-status:empty { display: none; }
+.lite-learn-status[data-ok="0"] { color: var(--fg-muted); }
+.lite-learn-grabs { display: grid; gap: 4px; margin: 2px 0 0; padding: 0; list-style: none; }
+.lite-learn-grabs li { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.4; }
+.lite-learn-grabs span { color: var(--fg-muted); }
+.lite-learn-grabs strong { min-width: 0; font-weight: 560; color: var(--fg); overflow-wrap: anywhere; text-align: right; }
+
+.lite-research label.lite-agent-row { display: flex; flex-direction: row; align-items: center; margin: 0 0 8px; }
+.lite-research .lite-agent-select { width: auto; min-width: 150px; }
+.lite-learn-row small:empty { display: none; }

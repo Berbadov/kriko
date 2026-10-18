@@ -1,6 +1,6 @@
 """The desktop app's source parses as Rust, which no text-reading test checks.
 
-`kriko-gpui/` is guarded by pytest files that read `engine.rs`, `shell.rs` and
+`kriko-ui/src-tauri` is guarded by pytest files that read `engine.rs`, `shell.rs` and
 `main.rs` as *text*: the tray has a Quit, Quit stops the engine, the handshake
 string matches the Python side, no SQL in Rust. Every one of them asserts that
 some string is present, and a string is present in code that does not compile.
@@ -15,7 +15,7 @@ touched the tree, taken as settled rather than re-checked: twelve careful tests
 were written *around* an assumption instead of testing it.
 
 **Why `rustc` and not `cargo check`.** A full check wants the crate's
-dependencies (GPUI is hundreds of crates) and says nothing when they are not
+dependencies (Tauri is hundreds of crates) and says nothing when they are not
 in the registry cache. Parsing needs none of that. `rustc` reports syntax
 errors *before* it resolves a name, so compiling one file alone reports exactly
 the class of defect that shipped, plus a pile of unresolved-import noise that
@@ -25,8 +25,8 @@ is discarded by construction:
 * an unresolved name is an `error[E0432]` / `error[E0433]`.
 
 Two uncoded messages are also noise by construction: a macro this file cannot
-see (`cannot find macro`, from GPUI's `actions!` and friends) and the
-"aborting" summary. `tools/gate.sh gpui` runs the real `cargo check` and
+see (`cannot find macro`, from a macro-heavy dependency) and the
+"aborting" summary. `tools/gate.sh tauri` runs the real `cargo check` and
 `cargo test` where the registry is warm; this is the cheaper half, on every
 run, on a machine with no business building a Windows bundle.
 
@@ -42,7 +42,7 @@ from pathlib import Path
 
 import pytest
 
-CRATE = Path(__file__).resolve().parents[3] / "kriko-gpui"
+CRATE = Path(__file__).resolve().parents[3] / "kriko-ui" / "src-tauri"
 
 #: rustc's own way of saying "this has an error code": `error[E0433]: ...`.
 #: Anything else on an `error:` line got there without one, which for a single
@@ -120,6 +120,6 @@ def test_every_rust_source_parses(tmp_path):
     assert checked >= 1, f"only {checked} Rust source(s) found — is {CRATE} right?"
     assert not offenders, (
         "the desktop app's source does not parse as Rust, so the Windows "
-        "build cannot succeed no matter what the other kriko-gpui tests say "
+        "build cannot succeed no matter what the other shell tests say "
         "about its contents:\n  " + "\n  ".join(offenders)
     )

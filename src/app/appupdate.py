@@ -35,7 +35,7 @@ DOWNLOAD_TIMEOUT = 600
 MAX_INSTALLER_BYTES = 512 * 1024 * 1024
 USER_AGENT = "kriko-app-updater"
 
-_INSTALLER = re.compile(r"^kriko-(?P<version>[0-9][0-9A-Za-z.\-]*)-x86_64\.msi$")
+_INSTALLER = re.compile(r"^kriko-(?P<version>[0-9][0-9A-Za-z.\-]*)-x86_64-setup\.exe$")
 
 
 def _open(url: str, timeout: int):

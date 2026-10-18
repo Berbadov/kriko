@@ -2,12 +2,12 @@
 
 B53. A Rust app whose lockfile is not in the repository resolves whatever
 crates.io holds that minute, on every build. That is not a theoretical
-exposure: the last shell (Tauri) opened on one build and panicked before its
+exposure: an earlier Tauri shell opened on one build and panicked before its
 first window on another, four hours later, from an identical tree, because a
 plugin's tolerance for a missing config section changed underneath it. Nothing
 in the tree moved, and the artifact stopped working.
 
-`kriko-gpui/Cargo.lock` is the fix; this file is the half that keeps it true,
+`kriko-ui/src-tauri/Cargo.lock` is the fix; this file is the half that keeps it true,
 and it runs with no Rust toolchain installed, which is the point: the
 invariant has to hold on every machine that touches the tree.
 
@@ -24,7 +24,7 @@ do its job:
   a moving branch or to a directory that exists on one person's disk.
 
 And the fourth, which is the same rule `test_dependencies_are_locked.py`
-carries for Python: both build paths (`desktop.yml` and `kriko-gpui/package.ps1`)
+carries for Python: both build paths (`desktop.yml` and `kriko-ui/package.ps1`)
 have to *verify* the lock before they build. Cargo already uses a committed
 lock; what it also does, silently, is rewrite one that has fallen behind, and
 then the tagged release is not the graph anybody reviewed. `--locked` makes
@@ -39,7 +39,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
-CRATE = ROOT / "kriko-gpui"
+CRATE = ROOT / "kriko-ui" / "src-tauri"
 LOCK = CRATE / "Cargo.lock"
 MANIFEST = CRATE / "Cargo.toml"
 WORKFLOW = ROOT / ".github" / "workflows" / "desktop.yml"
@@ -96,7 +96,7 @@ def test_the_app_has_a_lockfile_at_all(locked):
     assert LOCK.is_file(), f"no committed lockfile at {LOCK}"
     assert len(locked) > 300, (
         f"{LOCK} holds {len(locked)} packages, which is too few to be the app's "
-        "graph — regenerate with `cargo generate-lockfile` in kriko-gpui/"
+        "graph — regenerate with `cargo generate-lockfile` in kriko-ui/src-tauri/"
     )
 
 

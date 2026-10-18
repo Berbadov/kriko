@@ -267,8 +267,10 @@ def _pick(rule: dict, fields: dict, extras: dict, blocked: frozenset = frozenset
         candidates = [(k, v) for k, v in candidates if k not in blocked]
 
         for match in (lambda w, k: w == k, lambda w, k: w in k):
-            for key, value in candidates:
-                if any(match(w, key) for w in wanted):
+            for wanted_label in wanted:
+                for key, value in candidates:
+                    if not match(wanted_label, key):
+                        continue
                     got = _apply(rule, value)
                     # `known`: the label's value counts only as a value the
                     # packs already hold (B149). An any-site page labels its

@@ -111,6 +111,16 @@
     researchPlane: null,
     researchPlaneRequested: false,
     researchPlaneError: "",
+    // The agents this panel can use (`AGENTS`), the app's own pick, the one
+    // picked here ("" until the reader changes it), and "Learn this page":
+    // whether it is running, what it said while it ran, and what it taught.
+    agents: null,
+    agentsRequested: false,
+    agentChosen: "",
+    agentPick: "",
+    learning: false,
+    learnMessage: "",
+    lesson: null,
     researchOpen: false,
     researchTarget: null,
     researchName: "",
@@ -212,31 +222,33 @@
   //   * It mutated the host document's `<head>`, from a content script, on a
   //     page we do not own.
   //
-  // The three Kriko faces now ship *inside* the extension (assets/fonts, all
-  // SIL OFL, licences beside them) and are registered from there: the URL is
-  // the extension's own, so nothing leaves the machine and they load offline.
-  // `@font-face` inside a shadow root is ignored by the browser, so the faces
-  // go to `document.fonts` through the FontFace API, which adds no element
-  // to the page's `<head>`. The family names are Kriko's own, so a page that
-  // happens to load DM Sans is never restyled by ours, nor ours by it.
-  // Guarded by a test that fails on a remote URL anywhere in the extension.
+  // The Kriko face is Geist, one variable file per script, and it ships
+  // *inside* the extension (assets/fonts, SIL OFL, licence beside it). It is
+  // registered from there: the URL is the extension's own, so nothing leaves
+  // the machine and it loads offline. `@font-face` inside a shadow root is
+  // ignored by the browser, so the faces go to `document.fonts` through the
+  // FontFace API, which adds no element to the page's `<head>`. The family
+  // name is Kriko's own, so a page that happens to load Geist is never
+  // restyled by ours, nor ours by it. The Turkish letters sit in the second
+  // file. Guarded by a test that fails on a remote URL anywhere in the
+  // extension.
   const FACES = [
-    ["Kriko Display", "BarlowCondensed-600.ttf", "600"],
-    ["Kriko Sans", "DMSans-400.ttf", "400"],
-    ["Kriko Sans", "DMSans-600.ttf", "600"],
-    ["Kriko Mono", "JetBrainsMono-400.ttf", "400"],
+    ["Kriko Sans", "Geist-latin.woff2",
+      "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD"],
+    ["Kriko Sans", "Geist-latin-ext.woff2",
+      "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF"],
   ];
   let facesLoaded = false;
   function loadFaces() {
     if (facesLoaded) return;
     facesLoaded = true;
     if (typeof FontFace !== "function" || !document.fonts) return;
-    for (const [family, file, weight] of FACES) {
+    for (const [family, file, unicodeRange] of FACES) {
       try {
         const face = new FontFace(
           family,
           `url(${chrome.runtime.getURL("assets/fonts/" + file)})`,
-          { weight, display: "swap" },
+          { weight: "100 900", display: "swap", unicodeRange },
         );
         face.load().then((loaded) => document.fonts.add(loaded)).catch(() => {});
       } catch (_) {
@@ -915,6 +927,165 @@
     });
   }
 
+  /* The agents the reader may use from here. The list is the app's (ready and
+   * runnable ones only); the pick is this panel's own and is remembered, so the
+   * reader can use one agent for lookups in the browser and another in the app
+   * without touching Settings. */
+  const AGENT_KEY = "kriko.panelAgent";
+
+  function requestAgents() {
+    if (state.agentsRequested) return;
+    state.agentsRequested = true;
+    const ask = () => chrome.runtime.sendMessage({ type: "AGENTS" }, (response) => {
+      if (chrome.runtime.lastError || !response || !response.ok) return;
+      state.agents = Array.isArray(response.agents) ? response.agents : [];
+      state.agentChosen = String(response.chosen || "");
+      if (state.agentPick && !state.agents.some((one) => one.id === state.agentPick)) state.agentPick = "";
+      renderResearch();
+    });
+    try {
+      chrome.storage?.local?.get?.([AGENT_KEY], (bag) => {
+        void chrome.runtime.lastError;
+        state.agentPick = typeof bag?.[AGENT_KEY] === "string" ? bag[AGENT_KEY] : "";
+        ask();
+      });
+    } catch (_) {
+      ask();
+    }
+  }
+
+  /* The agent a press would use: the one picked here, else the app's own. */
+  function currentAgent() {
+    const list = state.agents || [];
+    if (list.some((one) => one.id === state.agentPick)) return state.agentPick;
+    return list.some((one) => one.id === state.agentChosen) ? state.agentChosen : "";
+  }
+
+  function pickedAgent() {
+    return (state.agents || []).find((one) => one.id === currentAgent()) || null;
+  }
+
+  function agentRowMarkup(busy) {
+    const list = state.agents || [];
+    if (list.length < 2) return "";   // nothing to choose between
+    const now = currentAgent();
+    return `<label class="lite-agent-row"><span>Agent</span>
+      <select class="lite-agent-select" aria-label="Agent for this panel" ${busy || state.learning ? "disabled" : ""}>
+        ${list.map((one) => `<option value="${escapeHtml(one.id)}"${one.id === now ? " selected" : ""}>${escapeHtml(one.label)}</option>`).join("")}
+      </select></label>`;
+  }
+
+  /* What the card's head does not already say: the cost is there, the wait is not. */
+  function learnWaitWords() {
+    return pickedAgent()?.kind === "cli" ? "Takes a few minutes." : "";
+  }
+
+  function lessonWords(lesson) {
+    if (!lesson) return "";
+    if (!lesson.learned) return lesson.reason || "Nothing was learned from this page.";
+    const count = Array.isArray(lesson.grabs) ? lesson.grabs.length : 0;
+    const site = lesson.host || "this site";
+    return count
+      ? `Learned ${site}. It takes ${count} thing${count === 1 ? "" : "s"} from this page:`
+      : `Learned ${site}.`;
+  }
+
+  function learnMarkup() {
+    const lesson = state.lesson;
+    const grabs = lesson?.learned && Array.isArray(lesson.grabs) ? lesson.grabs : [];
+    return `<div class="lite-learn">
+      <div class="lite-learn-row">
+        <button type="button" class="lite-learn-btn" ${state.learning ? "disabled" : ""}
+          title="An agent goes through this page and learns what to take from it">${
+          state.learning ? "Learning…" : lesson?.learned ? "Learn again" : "Learn this page"}</button>
+        <small>${escapeHtml(learnWaitWords())}</small>
+      </div>
+      <p class="lite-learn-status" role="status"></p>
+      ${grabs.length ? `<ul class="lite-learn-grabs">${grabs.map((one) =>
+        `<li><span>${escapeHtml(one.as)}</span><strong>${escapeHtml(one.value)}</strong></li>`).join("")}</ul>` : ""}
+    </div>`;
+  }
+
+  function paintLearn(slot) {
+    const line = slot.querySelector(".lite-learn-status");
+    if (!line) return;
+    line.textContent = state.learning ? state.learnMessage : lessonWords(state.lesson);
+    line.dataset.ok = state.lesson?.learned && !state.learning ? "1" : "0";
+  }
+
+  /* Learn this page. The app's local model answers at once; another agent is a
+   * job, followed here like a research run. Either way the page itself is read
+   * in this tab, because it is already rendered and past the site's bot check. */
+  function learnPage() {
+    if (state.learning) return;
+    state.learning = true;
+    state.lesson = null;
+    state.learnMessage = "Reading this page…";
+    state.learnStartedAt = Date.now();
+    renderResearch();
+    chrome.runtime.sendMessage({ type: "LEARN_PAGE", payload: { agent: currentAgent() } }, (response) => {
+      if (chrome.runtime.lastError || !response?.ok) {
+        finishLearn({ learned: false, reason: response?.error || "Could not reach Kriko. Open the app and try again." });
+        return;
+      }
+      const lesson = response.lesson || {};
+      if (lesson.mode === "agent" && lesson.job_id) {
+        state.learnMessage = "Your agent is reading the page…";
+        renderResearch();
+        pollLearnJob(lesson);
+        return;
+      }
+      finishLearn(lesson);
+    });
+  }
+
+  function pollLearnJob(lesson) {
+    chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: lesson.job_id } }, (response) => {
+      if (!state.learning) return;
+      if (chrome.runtime.lastError || !response?.ok || !response.job) {
+        state.learnMessage = "Cannot check progress. Open the app to follow it.";
+        renderResearch();
+        setTimeout(() => pollLearnJob(lesson), 3000);
+        return;
+      }
+      const job = response.job;
+      const done = job.done || ["succeeded", "cancelled", "failed", "interrupted"].includes(job.state);
+      if (!done) {
+        state.learnMessage = `${job.message || "Reading the page"} · ${elapsedWords(state.learnStartedAt)}`;
+        paintLearn(bodyEl);
+        setTimeout(() => pollLearnJob(lesson), 1500);
+        return;
+      }
+      const learned = job.state === "succeeded";
+      // What the agent's adapter reads off this page, as the app checked it.
+      const reading = job.result?.reading || {};
+      const grabs = ["identity", "context"].flatMap((kind) => Object.entries(reading[kind] || {})
+        .map(([as, value]) => ({ as, value: String(value), kind })));
+      finishLearn({
+        ...lesson, learned, grabs,
+        reason: learned ? "" : (job.error || job.message || `Learning ${job.state}.`),
+      });
+    });
+  }
+
+  function finishLearn(lesson) {
+    state.learning = false;
+    state.lesson = lesson;
+    // The title the page gave is a search page's title; the name the lesson
+    // found is the product. Swapped in only while the name box still holds the
+    // title, never over something the reader typed.
+    const name = String(lesson.name || "").trim();
+    const held = String(state.researchName || "").trim().toLowerCase();
+    if (name && !state.researching && !state.researchTarget
+        && (!held || held === String(document.title || "").trim().toLowerCase()
+          || held.startsWith(name.toLowerCase()))) {
+      state.researchName = name;
+    }
+    renderResearch();
+    // A page that is readable now may have a product Kriko knows.
+    if (lesson.learned) knowledgeMoved();
+  }
+
   /* Write the cap onto a follow-up slot that is already on screen. */
   function refreshFollowupCap() {
     const slot = bodyEl?.querySelector(".lite-followup-slot");
@@ -934,6 +1105,13 @@
   function costLine() {
     const plane = state.researchPlane;
     if (!plane) return "";
+    const picked = pickedAgent();
+    if (picked?.kind === "local") return "Free; runs on this computer.";
+    if (picked?.kind === "cli") return "Free; runs through your coding agent.";
+    if (picked?.kind === "api") {
+      const cap = Number(plane.budget_usd || 0);
+      return cap > 0 ? `Capped at $${cap.toFixed(2)} of your API keys.` : "Billed to your API keys.";
+    }
     if (plane.backend === "api" || plane.cost_basis === "per_token") {
       const cap = Number(plane.budget_usd || 0);
       return cap > 0
@@ -956,7 +1134,10 @@
       return;
     }
     state.researchTarget = subject?.subject_id ? subject : null;
-    const nextName = subject?.label || state.searchQuery || state.listingMeta?.title || document.title || "";
+    // A page's `<title>` is a search results page's: the shop rides along. The
+    // part before the first bar is the product; the engine takes off the rest.
+    const nextName = subject?.label || state.searchQuery || state.listingMeta?.identity_line
+      || state.listingMeta?.title || String(document.title || "").split(" | ")[0] || "";
     if (nextName !== state.researchName) {
       state.researchQuick = null;
       state.researchQuickJob = null;
@@ -973,6 +1154,7 @@
     state.researchState = "";
     state.researchMessage = "";
     requestResearchPlane();
+    requestAgents();
     renderResearch();
   }
 
@@ -1004,6 +1186,7 @@
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
       ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
+      ...(state.agentPick && currentAgent() === state.agentPick ? { harness: state.agentPick } : {}),
       ...(cap > 0 ? { cap } : {}),
     } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
@@ -1245,6 +1428,7 @@
           <strong>Research</strong>
           <span class="lite-gap-cost">${escapeHtml(cost || state.researchPlaneError || "Checking costs…")}</span>
         </div>
+        ${agentRowMarkup(busy)}
         ${target ? `<p class="lite-research-target">${escapeHtml(target.label || target.subject_id)}</p>` : `
           <input class="lite-research-name" maxlength="350" placeholder="Product name" aria-label="Product name" ${busy ? "disabled" : ""} />
           <div class="lite-fold"><div class="lite-fold-in">
@@ -1296,6 +1480,7 @@
             ${state.researchTold[q.id] ? `<p class="lite-told">${escapeHtml(state.researchTold[q.id])}</p>` : ""}
           </fieldset>`).join("")}
         </div>` : ""}
+        ${learnMarkup()}
         <div class="lite-research-actions">
           ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Refresh Quick Look" : "Research this product"}</button>` : ""}
           ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
@@ -1310,6 +1495,7 @@
     const signature = markup + JSON.stringify(state.researchQuick)
       + JSON.stringify(state.researchEmpty);
     if (slot._researchMarkup === signature) {
+      paintLearn(slot);
       renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
       slot.querySelector(".lite-research-status").textContent = state.researchMessage;
@@ -1346,6 +1532,13 @@
       setFold(Boolean(state.researchContext) || Boolean(state.researchContextOpen), false);
       foldToggle.addEventListener("click", () => setFold(fold.dataset.open !== "1", true));
     }
+    paintLearn(slot);
+    slot.querySelector(".lite-learn-btn")?.addEventListener("click", learnPage);
+    slot.querySelector(".lite-agent-select")?.addEventListener("change", (event) => {
+      state.agentPick = event.target.value;
+      try { chrome.storage?.local?.set?.({ [AGENT_KEY]: state.agentPick }, () => void chrome.runtime.lastError); } catch (_) {}
+      renderResearch();
+    });
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
@@ -1970,6 +2163,7 @@
     paintTheme();
     readTheme();
     readMotion();
+    scheduleTour();
     panel.querySelector(".lite-find-product").addEventListener("click", () => {
       const product = (state.result?.subjects || []).find((one) => one.kind === "product");
       openSearch(product?.label || "");
@@ -2008,7 +2202,113 @@
     setTimeout(() => { if (panel) delete panel.dataset.mounting; }, 280);
   }
 
+  /* A short walk through the panel, once. The key is shared by every page the
+   * panel mounts on, so a reader sees it on the first product page and never
+   * again. The options page clears the key to show it again. Skip, Done and
+   * Escape all count as seen; closing the panel half way does not, so the
+   * walk comes back until the reader has made a choice about it. */
+  const TOUR_KEY = "kriko.panelTour";
+  const TOUR_STEPS = [
+    { target: ".lite-header", title: "Kriko is on this page",
+      text: "This panel shows what is known about the product here. Drag the top bar to move it." },
+    // The big button is gone once there is a result, and the two small ones
+    // take its place, so the step points at whichever the panel is showing.
+    { target: ".lite-cta, .lite-product-actions", title: "Look the product up",
+      text: "Search finds the product in your catalogs. If none knows it, research it with your agent." },
+    { target: ".lite-btn-search", title: "Search",
+      text: "Look up any product in your catalogs. You do not need to be on its page." },
+    { target: ".lite-btn-theme", title: "Light or dark",
+      text: "Pick the look you want. The app and this panel share it." },
+    { target: ".lite-btn-close", title: "Close and open",
+      text: "Close the panel here. Open it again from the Kriko button in the toolbar." },
+  ];
+  let tourEl = null;
+
+  /** The first thing in `selectors` (a comma list) that the panel is showing. */
+  function tourTarget(selectors) {
+    for (const selector of selectors.split(",")) {
+      const el = panel.querySelector(selector.trim());
+      // The panel hides a control by `hidden` or by an inline `display: none`
+      // on it or on the block around it.
+      let shown = Boolean(el);
+      for (let node = el; shown && node && node !== panel; node = node.parentElement) {
+        if (node.hidden || node.style.display === "none") shown = false;
+      }
+      if (shown) return el;
+    }
+    return null;
+  }
+
+  function scheduleTour() {
+    try {
+      chrome.storage?.local?.get?.([TOUR_KEY], (bag) => {
+        void chrome.runtime.lastError;
+        if (bag?.[TOUR_KEY] === "done") return;
+        setTimeout(() => { if (state.mounted && panel && !tourEl) openTour(); }, 1400);
+      });
+    } catch (_) {
+      // A storage that will not answer means no tour. It is a nicety.
+    }
+  }
+
+  function endTour(seen) {
+    if (tourEl) { tourEl.remove(); tourEl = null; }
+    if (!seen) return;
+    try { chrome.storage?.local?.set?.({ [TOUR_KEY]: "done" }, () => void chrome.runtime.lastError); } catch (_) {}
+  }
+
+  function openTour() {
+    let at = 0;
+    tourEl = document.createElement("div");
+    tourEl.className = "lite-tour";
+    tourEl.setAttribute("role", "dialog");
+    tourEl.setAttribute("aria-label", "Tour of the Kriko panel");
+    panel.appendChild(tourEl);
+    // The panel is a drag handle and the page behind it is not the reader's
+    // business during the tour, so the overlay keeps both events to itself.
+    tourEl.addEventListener("pointerdown", (event) => event.stopPropagation());
+    tourEl.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") { event.stopPropagation(); endTour(true); }
+      else if (event.key === "ArrowRight") { event.stopPropagation(); show(Math.min(at + 1, TOUR_STEPS.length - 1)); }
+      else if (event.key === "ArrowLeft") { event.stopPropagation(); show(Math.max(at - 1, 0)); }
+    });
+
+    function show(index) {
+      at = index;
+      const step = TOUR_STEPS[at];
+      const last = at === TOUR_STEPS.length - 1;
+      const target = tourTarget(step.target);
+      const frame = panel.getBoundingClientRect();
+      const box = target ? target.getBoundingClientRect() : null;
+      const pad = 6;
+      const spot = box
+        ? { top: box.top - frame.top - pad, left: box.left - frame.left - pad, width: box.width + pad * 2, height: box.height + pad * 2 }
+        : null;
+      // Below the thing when it sits in the top half, above it otherwise.
+      const below = !spot || spot.top + spot.height / 2 < frame.height / 2;
+      tourEl.innerHTML = `
+        <div class="lite-tour-spot"${spot ? ` style="top:${spot.top}px;left:${spot.left}px;width:${spot.width}px;height:${spot.height}px"` : " hidden"}></div>
+        <div class="lite-tour-card" style="${below ? `top:${spot ? spot.top + spot.height + 12 : 80}px` : `bottom:${spot ? frame.height - spot.top + 12 : 80}px`}">
+          <small class="lite-tour-count">${at + 1} of ${TOUR_STEPS.length}</small>
+          <h2>${escapeHtml(step.title)}</h2>
+          <p>${escapeHtml(step.text)}</p>
+          <div class="lite-tour-actions">
+            ${last ? "" : `<button type="button" class="lite-tour-skip">Skip</button>`}
+            ${at > 0 ? `<button type="button" class="lite-tour-back">Back</button>` : ""}
+            <button type="button" class="lite-tour-next">${last ? "Done" : "Next"}</button>
+          </div>
+        </div>`;
+      tourEl.querySelector(".lite-tour-skip")?.addEventListener("click", () => endTour(true));
+      tourEl.querySelector(".lite-tour-back")?.addEventListener("click", () => show(at - 1));
+      const next = tourEl.querySelector(".lite-tour-next");
+      next.addEventListener("click", () => (last ? endTour(true) : show(at + 1)));
+      next.focus();
+    }
+    show(0);
+  }
+
   function unmount() {
+    tourEl = null;
     if (!hostEl) return;
     stopLive();
     try { hostEl.remove(); } catch (_) {}
@@ -2807,6 +3107,7 @@
   const SEARCH_DEBOUNCE_MS = 220;
   let searchTimer = null;
   let searchRunId = 0;
+  let webSearch = false;
 
   function openSearch(query = "") {
     const initialQuery = String(query || "").trim();
@@ -2830,6 +3131,8 @@
     const query = String(text || "").trim();
     state.searchQuery = query;
     if (searchTimer) clearTimeout(searchTimer);
+    const runId = ++searchRunId;
+    state.searchError = null;
     if (query.length < SEARCH_MIN) {
       state.searchResults = null;
       state.searchBusy = false;
@@ -2838,11 +3141,10 @@
     // Debounced, and every reply carries the id of the keystroke that asked
     // for it: without that, a slow answer to "gol" lands after a fast one to
     // "golf" and the reader watches their own typing undo itself.
-    const runId = ++searchRunId;
     state.searchBusy = true;
     renderSearchResults();
     searchTimer = setTimeout(() => {
-      chrome.runtime.sendMessage({ type: "SEARCH", payload: { q: query } }, (reply) => {
+      chrome.runtime.sendMessage({ type: webSearch ? "WEB_SEARCH" : "SEARCH", payload: { q: query } }, (reply) => {
         if (runId !== searchRunId) return;
         state.searchBusy = false;
         if (chrome.runtime.lastError || !reply || !reply.ok) {
@@ -2856,7 +3158,7 @@
         }
         renderSearchResults();
       });
-    }, SEARCH_DEBOUNCE_MS);
+    }, webSearch ? 600 : SEARCH_DEBOUNCE_MS);
   }
 
   function renderSearch() {
@@ -2871,11 +3173,15 @@
           <span class="lite-search-icon">${iconSvg("search", { size: 15 })}</span>
           <input class="lite-search-field" type="text" autocomplete="off"
                  spellcheck="false" placeholder="Type a product name"
-                 aria-label="Search the installed packs" />
+                 aria-label="${webSearch ? "Search the web" : "Search the installed packs"}" />
           <button type="button" class="lite-search-close"
                   title="Close search" aria-label="Close search">
             ${iconSvg("x", { size: 14, strokeWidth: 2 })}
           </button>
+        </div>
+        <div class="lite-search-modes">
+          <button type="button" class="lite-search-local" aria-pressed="${!webSearch}">Installed packs</button>
+          <button type="button" class="lite-search-web" aria-pressed="${webSearch}">Search the web</button>
         </div>
         <div class="lite-search-results"></div>
       </div>
@@ -2888,10 +3194,20 @@
     });
     slot.querySelector(".lite-search-close")
       .addEventListener("click", () => closeSearch());
+    const chooseMode = (web) => {
+      webSearch = web;
+      slot.querySelector(".lite-search-local").setAttribute("aria-pressed", String(!web));
+      slot.querySelector(".lite-search-web").setAttribute("aria-pressed", String(web));
+      field.setAttribute("aria-label", web ? "Search the web" : "Search the installed packs");
+      runSearch(field.value);
+    };
+    slot.querySelector(".lite-search-local").addEventListener("click", () => chooseMode(false));
+    slot.querySelector(".lite-search-web").addEventListener("click", () => chooseMode(true));
     renderSearchResults();
   }
 
   function closeSearch() {
+    ++searchRunId;
     state.searchOpen = false;
     state.searchQuery = "";
     state.searchResults = null;
@@ -2908,6 +3224,7 @@
       busy: state.searchBusy,
       error: state.searchError,
       results: state.searchResults,
+      web: webSearch,
     });
     // Listing refreshes are independent from search. Keep matching cards
     // mounted so polling cannot reset their expansion, focus or scroll.
@@ -2931,12 +3248,26 @@
     }
     if (!state.searchResults.length) {
       box.innerHTML =
-        `<p class="lite-search-note">Nothing in the installed packs matches ` +
-        `that. Fewer words usually finds more.</p>`;
+        `<p class="lite-search-note">${webSearch ? "No web results found. Try fewer words."
+          : "Nothing in the installed packs matches that. Try Search the web."}</p>`;
       return;
     }
 
     for (const row of state.searchResults) {
+      if (webSearch) {
+        const url = String(row.url || "").trim();
+        if (!url || !/^https?:\/\//i.test(url)) continue;
+        const link = document.createElement("a");
+        link.className = "lite-search-hit";
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.innerHTML = `<span class="lite-search-label">${escapeHtml(row.title || row.url)}</span>
+          <span class="lite-search-identity">${escapeHtml(row.site || "")}</span>
+          <span>${escapeHtml(row.snippet || "")}</span>`;
+        box.appendChild(link);
+        continue;
+      }
       const item = document.createElement("button");
       item.type = "button";
       item.className = "lite-search-hit";
