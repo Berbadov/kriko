@@ -1,441 +1,192 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Kriko</title>
-<meta name="description" content="Kriko shows what is known to go wrong with the product on the page you are reading, with the page and quote behind every finding. Free, open source, and it runs on your computer.">
-<meta property="og:title" content="Kriko">
-<meta property="og:description" content="Know what to check before you buy.">
-<meta property="og:image" content="assets/icon-128.png">
-<link rel="icon" href="assets/icon-32.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,600&family=JetBrains+Mono:wght@400;600&display=swap">
-<style>
-/* One dark instrument surface, one loud blue. Sky hero, then a dark stage
-   for the finding, then plain sections in one 1120px column.
-   Tokens are the desktop app's (kriko-ui/src/styles/tokens.css). */
-:root {
-  --ground: #05070f;
-  --surface-1: #090e1b;
-  --surface-2: #0d1427;
-  --glass-1: rgba(255, 255, 255, 0.05);
-  --glass-2: rgba(255, 255, 255, 0.08);
-  --hairline: rgba(255, 255, 255, 0.10);
-  --border-control: rgba(255, 255, 255, 0.35);
-  --ink: #f2f5ff;
-  --ink-2: #c9d1ea;
-  --muted: #98a3c2;
-  --dim: #8893b2;
-  --brand: #1f4fff;
-  --brand-hover: #3a64ff;
-  --brand-low: #1739c2;
-  --brand-deep: #0a1a66;
-  --brand-bright: #86a3ff;
-  --ice: #bfe4ff;
-  --on-brand: #ffffff;
-  --bezel-hi: #3a4156;
-  --bezel-lo: #181c2a;
-  --bezel-edge: #06080f;
-  --well: #080b16;
-
-  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
-  --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-
-  --gutter: clamp(16px, 4vw, 48px);
-  --col: 1120px;
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 20px;
-  color-scheme: dark;
-}
-
-* { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
-body {
-  margin: 0;
-  background: var(--ground);
-  color: var(--ink);
-  font: 400 16px/1.55 var(--sans);
-}
-img { max-width: 100%; }
-[hidden] { display: none !important; }
-a { color: var(--brand-bright); }
-a:focus-visible, button:focus-visible { outline: 2px solid var(--ice); outline-offset: 3px; }
-h1, h2, h3 { margin: 0; text-wrap: balance; }
-p { margin: 0; }
-
-.wrap { max-width: var(--col); margin: 0 auto; padding-inline: var(--gutter); }
-
-.eyebrow {
-  font: 600 11px/14px var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-
-/* keys and plates */
-.key, .plate {
-  display: inline-flex; align-items: center; gap: 10px;
-  min-height: 48px; padding: 0 20px;
-  border-radius: var(--r-md);
-  font: 600 16px/1 var(--display);
-  letter-spacing: 0.06em; text-transform: uppercase;
-  text-decoration: none;
-  transition: background-color 90ms linear, border-color 90ms linear;
-}
-.key { background: var(--brand); color: var(--on-brand); border: 1px solid transparent; }
-.key:hover { background: var(--brand-hover); }
-.key:active { background: var(--brand-low); }
-.plate { background: var(--bezel-lo); color: var(--ink-2); border: 1px solid var(--bezel-edge); }
-.plate:hover { background: var(--bezel-hi); }
-.key svg, .plate svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-
-/* top bar */
-.top {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
-  background: rgba(5, 7, 15, 0.92);
-  border-bottom: 1px solid var(--hairline);
-}
-.top .wrap { display: flex; align-items: center; gap: 24px; min-height: 64px; }
-.top img { height: 20px; width: auto; display: block; }
-.top nav { display: flex; gap: 20px; margin-left: 8px; }
-.top nav a {
-  color: var(--muted); text-decoration: none;
-  font: 600 15px/1 var(--display); letter-spacing: 0.06em; text-transform: uppercase;
-}
-.top nav a:hover { color: var(--ink); }
-.top .sp { flex: 1; }
-.top .key { min-height: 40px; padding: 0 16px; font-size: 15px; }
-
-/* hero: the app's dithered sky, clouds right, text left on brand blue */
-.hero {
-  background: var(--brand) url("assets/sky-hero.png") right bottom / auto 100% no-repeat;
-  image-rendering: pixelated;
-  color: var(--on-brand);
-}
-.hero .wrap { padding-block: clamp(56px, 10vw, 120px) clamp(72px, 12vw, 150px); display: grid; gap: 24px; }
-.hero .eyebrow { color: var(--on-brand); opacity: 0.8; }
-.hero h1 {
-  font: 700 clamp(48px, 8vw, 96px)/0.92 var(--display);
-  letter-spacing: -0.01em; text-transform: uppercase;
-}
-.hero .lead { font-size: clamp(17px, 2vw, 19px); line-height: 1.5; max-width: 46ch; }
-.hero .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.hero .key { background: var(--on-brand); color: var(--brand-low); }
-.hero .key:hover { background: var(--ice); }
-.hero .plate { background: rgba(5, 7, 15, 0.28); color: var(--on-brand); border-color: rgba(255, 255, 255, 0.35); }
-.hero .plate:hover { background: rgba(5, 7, 15, 0.45); }
-.hero .note { font: 400 12px/16px var(--mono); opacity: 0.85; }
-
-/* sections */
-section.band { padding-block: clamp(56px, 8vw, 96px); border-top: 1px solid var(--hairline); }
-.head { display: grid; gap: 12px; margin-bottom: 40px; max-width: 62ch; }
-.head h2 {
-  font: 700 clamp(36px, 5vw, 56px)/1 var(--display);
-  text-transform: uppercase;
-}
-.head p { color: var(--muted); font-size: 17px; }
-
-/* the finding, as the extension panel shows it */
-.beside { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px; align-items: start; }
-.panel {
-  background: var(--surface-1);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-lg);
-  overflow: hidden;
-}
-.panel-bar {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 14px 20px; border-bottom: 1px solid var(--hairline);
-  font: 400 12px/16px var(--mono); color: var(--dim);
-}
-.panel-bar b { color: var(--ink-2); font-weight: 600; }
-.finding { padding: 24px 20px; display: grid; gap: 16px; }
-.tags { display: flex; flex-wrap: wrap; gap: 8px; }
-.tag {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 10px; border-radius: var(--r-sm);
-  background: var(--well);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.75), inset 0 -1px 0 rgba(255, 255, 255, 0.06);
-  font: 600 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--muted);
-}
-.tag.ok { color: var(--ice); }
-.finding h3 { font: 600 22px/1.3 var(--sans); color: var(--ink); }
-.finding .why { color: var(--ink-2); font-size: 15px; }
-.check {
-  background: var(--glass-1); border-radius: var(--r-md); padding: 14px 16px;
-  font-size: 15px; color: var(--ink-2);
-}
-.check .eyebrow { display: block; margin-bottom: 6px; color: var(--brand-bright); }
-.sources { list-style: none; margin: 0; padding: 0; display: grid; }
-.sources li { padding-block: 12px; border-top: 1px solid var(--hairline); display: grid; gap: 4px; }
-.sources q { color: var(--ink-2); font-size: 14px; }
-.sources a { font: 400 12px/16px var(--mono); text-decoration: none; }
-.sources a:hover { text-decoration: underline; }
-.caption { margin-top: 12px; font: 400 12px/16px var(--mono); color: var(--dim); }
-
-.points { list-style: none; margin: 0; padding: 0; display: grid; gap: 28px; }
-.points h3 { font: 600 24px/1.1 var(--display); text-transform: uppercase; letter-spacing: 0.02em; color: var(--ink); margin-bottom: 6px; }
-.points p { color: var(--muted); }
-
-/* steps: a real sequence, so numbered */
-.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; counter-reset: step; }
-.steps li {
-  counter-increment: step;
-  background: var(--glass-1); border: 1px solid var(--hairline); border-radius: var(--r-lg);
-  padding: 24px; display: grid; gap: 10px; align-content: start;
-}
-.steps li::before {
-  content: counter(step);
-  font: 700 40px/1 var(--display); color: var(--brand-bright);
-}
-.steps h3 { font: 600 20px/1.15 var(--display); text-transform: uppercase; letter-spacing: 0.03em; }
-.steps p { color: var(--muted); font-size: 15px; }
-.after { margin-top: 20px; color: var(--muted); max-width: 70ch; }
-.after strong { color: var(--ink-2); font-weight: 600; }
-
-/* catalogs */
-.cats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.cat { border-radius: var(--r-lg); padding: 28px; display: grid; gap: 14px; align-content: start; }
-.cat.filled { background: var(--glass-1); border: 1px solid var(--hairline); }
-.cat.open { border: 1px dashed var(--border-control); }
-.cat h3 { font: 700 32px/1 var(--display); text-transform: uppercase; }
-.cat p { color: var(--muted); }
-.facts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; }
-.facts div { display: grid; }
-.facts dt { font: 600 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
-.facts dd { margin: 0; font: 600 28px/1.1 var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
-
-/* rules */
-.rules { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
-.rules h3 { font: 600 24px/1.1 var(--display); text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 8px; }
-.rules p { color: var(--muted); }
-
-/* download */
-.dl { width: 100%; border-collapse: collapse; }
-.dl-scroll { overflow-x: auto; }
-.dl th, .dl td { text-align: left; padding: 16px 12px; border-top: 1px solid var(--hairline); vertical-align: top; }
-.dl th { font: 600 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); border-top: 0; padding-top: 0; }
-.dl td:first-child { font: 600 20px/1.2 var(--display); text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
-.dl td { color: var(--muted); }
-.dl code { font: 400 13px/1 var(--mono); color: var(--ink-2); }
-.dl .soon { font: 600 11px/14px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
-
-/* pay what you want: the one brand block below the hero */
-.support {
-  background: var(--brand-deep);
-  border-radius: var(--r-lg);
-  padding: clamp(28px, 5vw, 56px);
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px 48px; align-items: center;
-}
-.support h2 { font: 700 clamp(32px, 4.5vw, 48px)/1 var(--display); text-transform: uppercase; margin-bottom: 12px; }
-.support p { color: var(--ink-2); max-width: 52ch; }
-.support .pending { font: 400 12px/16px var(--mono); color: var(--brand-bright); }
-
-footer { border-top: 1px solid var(--hairline); padding-block: 40px; color: var(--dim); font-size: 14px; }
-footer .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; }
-footer img { height: 16px; width: auto; display: block; opacity: 0.8; }
-footer nav { display: flex; flex-wrap: wrap; gap: 20px; }
-footer a { color: var(--muted); text-decoration: none; }
-footer a:hover { color: var(--ink); }
-footer .sp { flex: 1; }
-
-@media (max-width: 900px) {
-  .beside { grid-template-columns: minmax(0, 1fr); }
-  .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .rules { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-  .support { grid-template-columns: minmax(0, 1fr); }
-}
-@media (max-width: 640px) {
-  .top nav { display: none; }
-  .hero { background-position: left bottom; }
-  .steps, .cats { grid-template-columns: minmax(0, 1fr); }
-  .dl td:first-child { white-space: normal; }
-}
-@media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; }
-}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d18">
+  <title>Kriko — Know what to check before you buy.</title>
+  <meta name="description" content="Find the issues you did not know to look for. Kriko investigates new and used products through owner reports, repair evidence and overlooked details, with sources beside the listing.">
+  <meta property="og:title" content="Kriko — The listing tells half the story.">
+  <meta property="og:description" content="Get the other half. Product research with sources you can check, right beside the listing.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="assets/icon-128.png">
+  <link rel="icon" href="assets/icon-32.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+  <noscript><style>.tour-tabs,.tour-playback,.demo-next,.menu-toggle,.motion-toggle{display:none}.tour-panels{display:block}.tour-panel[hidden]{display:block!important;visibility:visible}.tour-panel+.tour-panel{border-top:1px solid #ffffff24}.nav-wrap{flex-wrap:wrap;gap:12px}.main-nav{display:flex;position:static;flex-direction:row;flex-wrap:wrap;order:4;width:100%;padding:0 0 12px;margin:0;border:0;gap:20px}.main-nav a{font-size:11px;border:0}.mobile-source{display:none}</style></noscript>
+<noscript><style>.product-picker,.purchase-paths,.example-gallery-note:not(.no-script-note){display:none}</style></noscript>
 </head>
 <body>
-
-<header class="top">
-  <div class="wrap">
-    <a href="#top" aria-label="Kriko home"><img src="assets/kriko-wordmark-white.svg" alt="Kriko" width="60" height="20"></a>
-    <nav aria-label="Main">
-      <a href="#how">How it works</a>
-      <a href="#catalogs">Catalogs</a>
-      <a href="#download">Download</a>
-      <a href="https://github.com/Berbadov/kriko">GitHub</a>
-    </nav>
-    <span class="sp"></span>
-    <a class="key" href="#download">Download</a>
-  </div>
-</header>
-
-<main id="top">
-
-<section class="hero">
-  <div class="wrap">
-    <div class="eyebrow">kriko / local product knowledge</div>
-    <h1>Know what to check<br> before you buy.</h1>
-    <p class="lead">Kriko shows what is known to go wrong with the product on the page you're reading, and the page and quote each finding came from. It runs on your computer.</p>
-    <div class="cta">
-      <a class="key" href="https://github.com/Berbadov/kriko/releases/latest">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Download for Windows
-      </a>
-      <a class="plate" href="https://github.com/Berbadov/kriko">View the source</a>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="download-icon" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"/></symbol>
+    <symbol id="check-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="source-icon" viewBox="0 0 24 24"><path d="M14 3h7v7m0-7L10 14m-1-9H3v16h16v-6"/></symbol>
+    <symbol id="windows-icon" viewBox="0 0 24 24"><path d="m3 5 8-1v8H3Zm10-1 8-1v9h-8ZM3 14h8v8l-8-1Zm10 0h8v9l-8-1Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="play-icon" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="pause-icon" viewBox="0 0 24 24"><path d="M7 5v14M17 5v14" stroke-width="4"/></symbol>
+    <symbol id="book-icon" viewBox="0 0 24 24"><path d="M12 5C9 3 5 3 2 4v15c4-1 7-1 10 1m0-15c3-2 7-2 10-1v15c-4-1-7-1-10 1V5Z"/></symbol>
+    <symbol id="computer-icon" viewBox="0 0 24 24"><path d="M3 4h18v13H3Zm5 17h8m-4-4v4"/></symbol>
+    <symbol id="code-icon" viewBox="0 0 24 24"><path d="m7 6-6 6 6 6m10-12 6 6-6 6M14 3l-4 18"/></symbol>
+  </svg>
+  <header class="topbar">
+    <div class="wrap nav-wrap">
+      <a class="brand" href="#top" aria-label="Kriko home"><img src="assets/kriko-wordmark-white.svg" alt="Kriko" width="91" height="30"></a>
+      <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="main-nav"><span></span><span></span></button>
+      <nav class="main-nav" id="main-nav" aria-label="Main navigation">
+        <a href="#how">How it works</a><a href="#catalogs">What you can check</a><a href="#questions">Good to know</a><a class="mobile-source" href="https://github.com/Berbadov/kriko">GitHub ↗</a>
+      </nav>
+      <div class="nav-actions"><a class="source-link" href="https://github.com/Berbadov/kriko">Open source ↗</a><a class="button button-small" href="#download">Get Kriko <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div>
     </div>
-    <p class="note">v1.5.0 · Windows x64 · no account · macOS coming</p>
-  </div>
-</section>
-
-<section class="band" id="beside">
-  <div class="wrap beside">
-    <figure style="margin:0">
-      <div class="panel" aria-label="A finding as the browser extension shows it">
-        <div class="panel-bar"><span><b>Volkswagen Golf 7</b></span><span>cars catalog</span></div>
-        <div class="finding">
-          <div class="tags">
-            <span class="tag ok">Reported · 3 sources</span>
-            <span class="tag">Bodywork</span>
+    <div class="scroll-progress" aria-hidden="true"></div>
+  </header>
+  <main id="main">
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero-grid wrap">
+        <div class="hero-copy">
+          <p class="eyebrow hero-intro"><span class="status-dot" aria-hidden="true"></span> Find what you did not know to ask.</p>
+          <h1 id="hero-title">The listing tells<br><span>half the story.</span></h1>
+          <p class="hero-description">Brand-new or pre-owned, the important issue may be one you did not know to search for. Kriko digs into scattered reports, repair evidence and overlooked details—then shows what deserves a closer look, and why.</p>
+          <div class="hero-actions"><a class="button" href="#download"><svg class="icon" aria-hidden="true"><use href="#download-icon"/></svg> Get Kriko for free <svg class="icon end-arrow" aria-hidden="true"><use href="#arrow"/></svg></a><a class="watch-link" href="#how" data-start-tour><span class="play-circle"><svg class="icon" aria-hidden="true"><use href="#play-icon"/></svg></span> See how it works</a></div>
+          <p class="hero-footnote">Windows · No account · Yours to keep</p>
+          <div class="product-picker" role="group" aria-label="Choose a product example">
+            <span class="product-picker-label">New or used. Look beyond the obvious.</span>
+            <div class="product-options">
+              <button type="button" class="product-option" data-product="cars" aria-pressed="true">Cars</button>
+              <button type="button" class="product-option" data-product="laptop" aria-pressed="false">Laptops</button>
+              <button type="button" class="product-option" data-product="headphones" aria-pressed="false">Headphones</button>
+              <button type="button" class="product-option" data-product="coffee" aria-pressed="false">Coffee machines</button>
+            </div>
           </div>
-          <h3>Rear seals leak water into the boot</h3>
-          <p class="why">The seals around the rear lights and the rear air vents can deteriorate and let rainwater in. It collects in the spare wheel well.</p>
-          <div class="check"><span class="eyebrow">What to ask</span>Look for dampness, a musty smell or water stains in the spare wheel well and around the rear light casings.</div>
-          <ul class="sources">
-            <li><q>The seals on the rear air vents (hidden behind the back bumper) fail and allow sprayed up road water into the boot.</q><a href="https://www.deutsche-parts.co.uk/blog/post/golf-mk7-water-leaks.html">deutsche-parts.co.uk</a></li>
-            <li><q>These seals can deteriorate with time and if this happens they allow water into the boot area through the rear light apertures.</q><a href="https://www.telegraph.co.uk/cars/advice/should-volkswagen-pay-to-repair-my-leaking-golf/">telegraph.co.uk</a></li>
-          </ul>
+          <span class="sr-only" id="product-status" role="status" aria-live="polite"></span>
+        </div>
+        <div class="hero-visual" aria-label="Illustrative preview of Kriko beside a car listing">
+          <div class="visual-grid" aria-hidden="true"></div><div class="orbit orbit-one" aria-hidden="true"></div><div class="orbit orbit-two" aria-hidden="true"></div>
+          <span class="stage-coordinate" aria-hidden="true">A BETTER LOOK / 001</span>
+          <div class="listing-window">
+            <div class="browser-bar"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="address-bar"><svg class="icon" aria-hidden="true"><use href="#check-icon"/></svg><span class="address-text">your-next-car / golf-7</span></span></div>
+            <div class="listing-content">
+              <div class="listing-breadcrumb">Cars <span>/</span> Volkswagen <span>/</span> Golf</div>
+              <div class="car-scene"><span class="photo-count">01 / 06</span>
+                <svg class="car hero-product-art" data-art="cars" viewBox="0 0 560 260" role="img" aria-label="Illustration of a silver hatchback">
+                  <defs><linearGradient id="body" x1="0" x2=".3" y1="0" y2="1"><stop stop-color="#e8edf2"/><stop offset=".5" stop-color="#adb8c8"/><stop offset="1" stop-color="#78879d"/></linearGradient><linearGradient id="glass" x2="0" y2="1"><stop stop-color="#29364a"/><stop offset="1" stop-color="#50647b"/></linearGradient><radialGradient id="tire"><stop stop-color="#a6afbc"/><stop offset=".22" stop-color="#4b586a"/><stop offset=".3" stop-color="#c0c9d4"/><stop offset=".64" stop-color="#8694a7"/><stop offset=".68" stop-color="#202733"/><stop offset="1" stop-color="#101620"/></radialGradient></defs>
+                  <ellipse cx="286" cy="215" rx="217" ry="15" fill="#12223c" opacity=".22"/>
+                  <path d="m57 157 30-30 92-17 59-55q8-7 26-7h115q28 1 43 18l48 62 34 17 5 44-18 13H62l-12-15Z" fill="url(#body)" stroke="#7d8a9c" stroke-width="2"/>
+                  <path d="m190 110 55-49h48v49Zm114-49h73q18 0 28 14l26 35H304Z" fill="url(#glass)" stroke="#d1d8e0" stroke-width="3"/>
+                  <path d="M303 117v75m136-72 10 72M88 133l72-9m5 2 263-4M63 174h427" fill="none" stroke="#7f8da0" stroke-width="2"/>
+                  <path d="M181 125v64m12-52h18m107 0h18" fill="none" stroke="#67778c" stroke-width="3"/>
+                  <path d="m62 152 42-9-8 17-41 6m418-28 23 9 3 18-18-5Z" fill="#ecf5ff"/><path d="m474 139 23 8 2 10-19-4Z" fill="#a85354"/>
+                  <path d="M116 201a47 47 0 0 1 94 0m177 0a47 47 0 0 1 94 0" fill="#253145"/><circle cx="163" cy="198" r="37" fill="url(#tire)"/><circle cx="434" cy="198" r="37" fill="url(#tire)"/>
+                  <path d="m158 177 10 42m-26-26 42 10m-35 10 28-30m236 0 10 42m-26-26 42 10m-35 10 28-30" stroke="#cbd3de" stroke-width="3"/><path d="m282 108 15-9 15 3v12h-30Z" fill="#8a9aaf"/><path d="M229 54h151" stroke="#f1f4f7" stroke-width="3"/>
+                </svg>
+                <img class="hero-product-art" data-art="laptop" src="assets/laptop.svg" alt="Illustration of a silver laptop with a blue screen" width="560" height="260" hidden>
+                <img class="hero-product-art" data-art="headphones" src="assets/headphones.svg" alt="Illustration of cream over-ear headphones" width="560" height="260" hidden>
+                <img class="hero-product-art" data-art="coffee" src="assets/espresso.svg" alt="Illustration of a stainless steel espresso machine" width="560" height="260" hidden>
+              </div>
+              <div class="listing-heading"><div><span class="listing-label">Your next possibility</span><h2>Volkswagen Golf 7</h2></div><span class="listing-save" aria-hidden="true">♡</span></div>
+              <div class="listing-specs"><span>2015</span><span>Petrol</span><span>Manual</span><span>Hatchback</span></div>
+              <div class="seller-note"><span class="seller-avatar" aria-hidden="true">S</span><div><strong>“Looks great. Drives beautifully.”</strong><span>There's more to a car than the description.</span></div></div>
+            </div>
+          </div>
+          <div class="floating-finding"><div class="floating-heading"><span class="kriko-monogram" aria-hidden="true">k</span><span>Here's the other half.</span><svg class="icon" aria-hidden="true"><use href="#check-icon"/></svg></div><div class="finding-label"><span class="finding-indicator" aria-hidden="true"></span> Bodywork · Reported issue</div><h3>Water in the boot?</h3><p>Rear light and air vent seals can let water in. Check beneath the boot floor.</p><div class="floating-bottom"><span><svg class="icon" aria-hidden="true"><use href="#book-icon"/></svg> Sources included</span><a href="#how" aria-label="Explore this example finding"><svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div></div>
+          <div class="visual-caption"><span class="crosshair" aria-hidden="true">+</span> Less guesswork. More to go on.</div><span class="example-label">Illustrative listing · Real catalog finding</span>
         </div>
       </div>
-      <figcaption class="caption">A real finding from the Cars catalog, with two of its three quotes.</figcaption>
-    </figure>
-    <ul class="points">
-      <li><h3>Beside the listing</h3><p>The browser extension opens a panel next to the product you're reading and shows what is documented about that exact model.</p></li>
-      <li><h3>Every finding shows its source</h3><p>Open the page a finding came from and read the quote behind it. Kriko doesn't rate products or pick a winner.</p></li>
-      <li><h3>Ask about anything else</h3><p>When no catalog covers a product, Quick look sends the agent you chose to search and read, then shows its sources the same way.</p></li>
-    </ul>
-  </div>
-</section>
+      <div class="hero-bottom wrap"><span class="scroll-cue"><span aria-hidden="true">↓</span> A little research goes a long way.</span><button class="motion-toggle text-button" type="button" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#pause-icon"/></svg><span>Pause motion</span></button></div>
+    </section>
+    <div class="principles-bar"><div class="wrap principles"><span><svg class="icon" aria-hidden="true"><use href="#book-icon"/></svg> Original sources, always</span><span><svg class="icon" aria-hidden="true"><use href="#computer-icon"/></svg> Your research stays with you</span><span><svg class="icon" aria-hidden="true"><use href="#code-icon"/></svg> Free & open source</span></div></div>
 
-<section class="band" id="how">
-  <div class="wrap">
-    <div class="head">
-      <div class="eyebrow">How it works</div>
-      <h2>Set up once, then browse</h2>
-    </div>
-    <ol class="steps">
-      <li><h3>Install Kriko</h3><p>Run the Windows installer. No administrator rights, no Python or Node to install.</p></li>
-      <li><h3>Add the extension</h3><p>In Kriko, open Browser extension and follow the steps to add it to Chrome.</p></li>
-      <li><h3>Install a catalog</h3><p>Open Overview and press Install on the catalogs you want. They update every week.</p></li>
-      <li><h3>Open a listing</h3><p>Open the Kriko panel on a product page and read what is known about it.</p></li>
-    </ol>
-    <p class="after"><strong>Not covered yet?</strong> Quick look researches it with your agent. Save quick looks into a catalog and it grows from what you already found.</p>
-  </div>
-</section>
-
-<section class="band" id="catalogs">
-  <div class="wrap">
-    <div class="head">
-      <div class="eyebrow">Catalogs</div>
-      <h2>One category, one catalog</h2>
-      <p>The engine knows no category. Each catalog brings its own products, findings and sources, so a new category is new data, not a new app.</p>
-    </div>
-    <div class="cats">
-      <article class="cat filled">
-        <div class="eyebrow">Published · CC BY-SA 4.0</div>
-        <h3>Cars</h3>
-        <dl class="facts">
-          <div><dt>Findings</dt><dd>699</dd></div>
-          <div><dt>Languages</dt><dd>EN · TR</dd></div>
-        </dl>
-        <p>Engines, gearboxes, electrics and bodywork, each finding tied to the pages it came from. Install it from Overview in the app.</p>
-      </article>
-      <article class="cat open">
-        <div class="eyebrow">Any other product</div>
-        <h3>Yours next</h3>
-        <p>Quick look works on any product page. File what you find into a catalog, and share it as one file anyone can install.</p>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section class="band" id="rules">
-  <div class="wrap rules">
-    <div><h3>Runs on your computer</h3><p>Looking up an installed catalog works offline. Catalogs and your history stay on your machine. There is no account.</p></div>
-    <div><h3>Your agent, your bill</h3><p>Research uses the agent or model you choose: a coding agent you already have, a local model, or your own API key.</p></div>
-    <div><h3>Open source</h3><p>The app is MIT licensed. Read the code, build it yourself, or write a catalog for a category you know.</p></div>
-  </div>
-</section>
-
-<section class="band" id="download">
-  <div class="wrap">
-    <div class="head">
-      <div class="eyebrow">Download</div>
-      <h2>Get Kriko</h2>
-    </div>
-    <div class="dl-scroll">
-      <table class="dl">
-        <thead><tr><th scope="col">Platform</th><th scope="col">File</th><th scope="col">Notes</th></tr></thead>
-        <tbody>
-          <tr><td>Windows</td><td><a href="https://github.com/Berbadov/kriko/releases/latest"><code>kriko-0.2.3-x86_64-setup.exe</code></a></td><td>Start menu and desktop shortcuts. No administrator rights needed.</td></tr>
-          <tr><td>Windows portable</td><td><a href="https://github.com/Berbadov/kriko/releases/latest"><code>kriko-1.5.0-win64-portable.zip</code></a></td><td>Unzip, keep the files together, open <code>kriko.exe</code>.</td></tr>
-          <tr><td>macOS</td><td><span class="soon">Coming</span></td><td>In progress.</td></tr>
-          <tr><td>Chrome extension</td><td><a data-link="chrome" hidden>Chrome Web Store</a><span data-unless="chrome">From the app</span></td><td>Kriko must be running for the extension to answer.</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<section class="band" id="support">
-  <div class="wrap">
-    <div class="support">
-      <div>
-        <h2>Pay what you want</h2>
-        <p>Kriko is free and stays free. If it saved you from a bad buy, pay what it was worth to you. It goes straight into more catalogs and the macOS build.</p>
+    <section class="section walkthrough" id="how" aria-labelledby="how-title">
+      <div class="wrap">
+        <div class="section-heading reveal"><div><p class="eyebrow"><span class="section-number">01 /</span> A closer look</p><h2 id="how-title">Find the question<br><span class="muted-heading">you weren’t asking.</span></h2></div><p>A teardown detail. A recurring complaint. Two reports that disagree. Follow a research lead and see what it changes about your decision.</p></div>
+        <div class="walkthrough-layout reveal">
+          <div class="tour-controls">
+            <div class="tour-tabs" role="tablist" aria-label="Product walkthrough" aria-orientation="vertical">
+              <button class="tour-tab" type="button" role="tab" id="tour-tab-0" aria-selected="true" aria-controls="tour-panel-0" tabindex="0" data-step="0"><span class="step-number">01</span><span><strong>Find the overlooked</strong><span>Look beyond the product page.</span></span><svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></button>
+              <button class="tour-tab" type="button" role="tab" id="tour-tab-1" aria-selected="false" aria-controls="tour-panel-1" tabindex="-1" data-step="1"><span class="step-number">02</span><span><strong>Work out what matters</strong><span>Separate evidence from the open question.</span></span><svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></button>
+              <button class="tour-tab" type="button" role="tab" id="tour-tab-2" aria-selected="false" aria-controls="tour-panel-2" tabindex="-1" data-step="2"><span class="step-number">03</span><span><strong>Trace the evidence</strong><span>Read the source. Follow up on the gaps.</span></span><svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></button>
+            </div>
+            <div class="tour-playback"><button class="text-button" id="play-tour" type="button" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#play-icon"/></svg><span>Play walkthrough</span></button><span class="tour-counter" aria-live="polite">01 / 03</span></div>
+            <p class="tour-disclaimer">A real finding from the Cars catalog. This illustrative preview doesn't check a live listing.</p>
+          </div>
+          <div class="tour-stage">
+            <div class="tour-stage-bar"><span><span class="status-dot" aria-hidden="true"></span> THE KRIKO VIEW</span><span>Volkswagen Golf 7</span></div>
+            <div class="tour-panels">
+            <div class="tour-panel" id="tour-panel-0" role="tabpanel" aria-labelledby="tour-tab-0" tabindex="0">
+              <div class="demo-topline"><span class="demo-tag">Cars catalog</span><span class="demo-tag subtle">Product identified</span></div>
+              <span class="demo-kicker">The product you're looking at</span><h3>Volkswagen Golf 7</h3><p class="demo-lead">The listing shows the product. Kriko checks your installed catalogs for documented problems.</p>
+              <div class="match-row"><span class="match-symbol"><svg class="icon" aria-hidden="true"><use href="#check-icon"/></svg></span><div><strong>Knowledge beside the listing</strong><span>Model-specific findings, with their sources.</span></div><span class="match-check">Matched</span></div>
+              <div class="demo-note"><svg class="icon" aria-hidden="true"><use href="#book-icon"/></svg><p>No catalog for this product? <strong>Quick look</strong> asks your chosen agent to research it.</p></div>
+              <button class="demo-next text-button" type="button" data-next="1">Show me what to check <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></button>
+            </div>
+            <div class="tour-panel" id="tour-panel-1" role="tabpanel" aria-labelledby="tour-tab-1" tabindex="0" hidden>
+              <div class="demo-topline"><span class="demo-tag">Bodywork</span><span class="demo-tag subtle">Reported issue</span></div>
+              <span class="demo-kicker">A lead worth a closer look</span><h3>Rear seals can leak water into the boot.</h3><p class="demo-lead">Seals around the rear lights and rear air vents can deteriorate. Rainwater can collect in the spare wheel well.</p>
+              <div class="evidence-context" aria-label="Evidence and open questions">
+                <div><span>What the evidence says</span><p class="evidence-supported">Sources describe leak paths through rear vent and light seals.</p></div>
+                <div><span>Still an open question</span><p class="evidence-gap">Whether this particular vehicle is affected needs an inspection.</p></div>
+              </div>
+              <div class="inspection-note"><span class="inspection-icon" aria-hidden="true">?</span><div><span class="demo-kicker">What to investigate next</span><strong>“Can I look under the boot floor?”</strong><p>Check for dampness, water stains or a musty smell around the spare wheel and rear lights.</p></div></div>
+              <button class="demo-next text-button" type="button" data-next="2">Where did this come from? <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></button>
+            </div>
+            <div class="tour-panel" id="tour-panel-2" role="tabpanel" aria-labelledby="tour-tab-2" tabindex="0" hidden>
+              <div class="demo-topline"><span class="demo-tag">Follow the sources</span><span class="demo-tag subtle">2 of 3 shown</span></div><h3>Don't just take<br>our word for it.</h3><p class="demo-lead">Read the original pages. See what they support and what they leave unanswered.</p>
+              <a class="evidence-source" href="https://www.deutsche-parts.co.uk/blog/post/golf-mk7-water-leaks.html" target="_blank" rel="noopener noreferrer"><span class="source-initial" aria-hidden="true">D</span><span><strong>Deutsche Parts</strong><span>Golf Mk7 water leaks · Repair guidance</span></span><svg class="icon" aria-hidden="true"><use href="#source-icon"/></svg></a>
+              <a class="evidence-source" href="https://www.telegraph.co.uk/cars/advice/should-volkswagen-pay-to-repair-my-leaking-golf/" target="_blank" rel="noopener noreferrer"><span class="source-initial" aria-hidden="true">T</span><span><strong>The Telegraph</strong><span>Leaking Golf · Owner advice</span></span><svg class="icon" aria-hidden="true"><use href="#source-icon"/></svg></a>
+              <p class="evidence-footnote">A reported problem is something to investigate, not a prediction about every vehicle. Some sources may require a subscription.</p><button class="demo-next text-button" type="button" data-next="0">Back to the product <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></button>
+            </div>
+            </div>
+            <div class="tour-stage-bottom"><span>YOUR CALL. BETTER INFORMED.</span><span class="demo-dots" aria-hidden="true"><i class="active"></i><i></i><i></i></span></div>
+          </div>
+        </div>
       </div>
-      <div>
-        <a class="key" data-link="pay" hidden>Pay what you want</a>
-        <span class="pending" data-unless="pay">Payments open soon.</span>
+    </section>
+    <section class="section catalogs" id="catalogs" aria-labelledby="catalog-title"><div class="wrap">
+      <div class="section-heading reveal"><div><p class="eyebrow"><span class="section-number">02 /</span> Room for curiosity</p><h2 id="catalog-title">Big purchase?<br><span class="muted-heading">Small detail? Check it.</span></h2></div><p>New or used, look for what the listing leaves out: variant-specific surprises, scattered failure reports and questions that need more evidence.</p></div>
+      <div class="purchase-paths" aria-label="Explore new and used purchases">
+        <a class="purchase-path" data-product="laptop" data-open-tour href="#how"><span class="eyebrow">Buying new</span><h3>Look beyond the spec sheet.</h3><p>Look for hidden trade-offs, early owner reports and issues that surface after the launch reviews.</p><span class="inline-link">Explore a new-product example <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></span></a>
+        <a class="purchase-path" data-product="cars" data-open-tour href="#how"><span class="eyebrow">Buying used</span><h3>Know what deserves a closer look.</h3><p>Connect model-specific failure reports with this unit’s history. Find the questions that make an inspection count.</p><span class="inline-link">Explore a used-product example <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></span></a>
       </div>
-    </div>
-  </div>
-</section>
-
-</main>
-
-<footer>
-  <div class="wrap">
-    <img src="assets/kriko-wordmark-white.svg" alt="Kriko" width="48" height="16">
-    <span>MIT licence. Each catalog carries its own.</span>
-    <span class="sp"></span>
-    <nav aria-label="Footer">
-      <a href="https://github.com/Berbadov/kriko">Source</a>
-      <a href="https://github.com/Berbadov/kriko/releases">Releases</a>
-      <a href="https://github.com/Berbadov/kriko/issues">Report a problem</a>
-    </nav>
-  </div>
-</footer>
-
-<script>
-// Fill these in when they exist; until then the links stay hidden and the
-// fallback text shows. pay: the Lemon Squeezy checkout link. chrome: the
-// Chrome Web Store listing.
-const LINKS = { pay: "", chrome: "" };
-
-document.querySelectorAll("[data-link]").forEach((a) => {
-  const url = LINKS[a.dataset.link];
-  if (url) { a.href = url; a.hidden = false; }
-});
-document.querySelectorAll("[data-unless]").forEach((el) => {
-  if (LINKS[el.dataset.unless]) el.hidden = true;
-});
-</script>
+      <div class="example-gallery" aria-label="Explore product examples">
+        <a class="product-example is-selected" data-product="cars" href="#how"><div class="product-example-top"><span>Used · On the driveway</span><span aria-hidden="true">01</span></div><div class="product-example-art"><svg viewBox="0 0 500 220" role="img" aria-label="Outline of a hatchback"><g fill="none" stroke="currentColor" stroke-width="2"><path d="m35 144 44-24 91-12 54-45h119l52 54 66 17 10 40H33Z M176 109h211M229 70l-41 38h58V70m10 0v38h119l-36-38Z"/><circle cx="126" cy="173" r="26"/><circle cx="386" cy="173" r="26"/></g></svg></div><h3>Volkswagen Golf 7</h3><p>What’s hiding under the boot floor?</p><div class="product-example-bottom"><span>Cars catalog</span><svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></div></a>
+        <a class="product-example" data-product="laptop" href="https://www.ifixit.com/News/62674/m2-macbook-air-teardown-apple-forgot-the-heatsink"><div class="product-example-top"><span>New · On your desk</span><span aria-hidden="true">02</span></div><div class="product-example-art"><img src="assets/laptop.svg" alt="Silver laptop illustration" width="560" height="260" loading="lazy"></div><h3>MacBook Air M2</h3><p>Did the review test the version you are buying?</p><div class="product-example-bottom"><span>Quick look example</span><svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></div></a>
+        <a class="product-example" data-product="headphones" href="https://www.reddit.com/r/SonyHeadphones/comments/1fnr6i3/sony_wh1000xm5_hinge_breakage/"><div class="product-example-top"><span>New · On your commute</span><span aria-hidden="true">03</span></div><div class="product-example-art"><img src="assets/headphones.svg" alt="Cream over-ear headphones illustration" width="560" height="260" loading="lazy"></div><h3>Sony WH-1000XM5</h3><p>What do hinge reports reveal after the reviews?</p><div class="product-example-bottom"><span>Quick look example</span><svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></div></a>
+        <a class="product-example" data-product="coffee" href="https://www.reddit.com/r/espresso/comments/17z1e65/help_buzzing_noise_on_bbe_after_running_the_water/"><div class="product-example-top"><span>New · In your kitchen</span><span aria-hidden="true">04</span></div><div class="product-example-art"><img src="assets/espresso.svg" alt="Stainless steel espresso machine illustration" width="560" height="260" loading="lazy"></div><h3>Breville Barista Express</h3><p>Same symptom. Same problem—or something else?</p><div class="product-example-bottom"><span>Quick look example</span><svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></div></a>
+      </div>
+      <p class="example-gallery-note">Pick a product to explore the walkthrough. Cars is an installable catalog; the other examples follow research leads with Quick look.</p>
+      <noscript><p class="example-gallery-note no-script-note">The product cards link to the original sources. Enable JavaScript to switch the interactive preview.</p></noscript>
+      <div class="catalog-grid">
+        <article class="catalog-card cars-card reveal"><div class="catalog-card-top"><span class="demo-tag">Available catalog</span><span class="catalog-code" aria-hidden="true">C / 01</span></div><div class="car-blueprint" aria-hidden="true"><svg viewBox="0 0 500 180"><path d="m35 114 44-24 91-12 54-45h119l52 54 66 17 10 40H33Z M176 79h211M229 40l-41 38h58V40m10 0v38h119l-36-38Z M96 144a30 30 0 0 1 60 0m200 0a30 30 0 0 1 60 0"/><circle cx="126" cy="143" r="26"/><circle cx="386" cy="143" r="26"/><path d="M246 86v52m138-52v27M35 103h39l-8 18H35m395-20h25M197 96h19m51 0h19"/></svg><span class="blueprint-axis axis-x"></span><span class="blueprint-axis axis-y"></span></div><div class="catalog-copy"><h3>Know the model.<br>Before the test drive.</h3><p>Engines, gearboxes, electrics and bodywork. Explore documented model issues before choosing a car. Condition is one part of the decision.</p><a class="inline-link" href="#download">Start with the Cars catalog <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div><div class="catalog-card-bottom"><span>EN + TR</span><span>Install from Overview in the app</span></div></article>
+        <article class="catalog-card research-card reveal"><div class="catalog-card-top"><span class="demo-tag subtle">Your next discovery</span><span class="catalog-code" aria-hidden="true">Q / ∞</span></div><div class="research-visual" aria-hidden="true"><div class="research-query"><span class="query-symbol">↗</span><span>What should I check?</span><span class="query-caret"></span></div><span class="research-line line-one"></span><span class="research-line line-two"></span><span class="research-line line-three"></span><span class="research-chip chip-one">Read</span><span class="research-chip chip-two">Check</span><span class="research-chip chip-three">Keep</span></div><div class="catalog-copy"><h3>Not in a catalog?<br>Look a little deeper.</h3><p>Send your agent to investigate. Follow an unexpected lead, ask what else might matter and keep the sources. Each question can open the next line of research.</p><a class="inline-link" href="https://github.com/Berbadov/kriko/blob/main/docs/USAGE.md">Explore Quick look <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div><div class="catalog-card-bottom"><span>YOUR AGENT. YOUR CHOICE.</span><span>Internet needed for research</span></div></article>
+      </div>
+    </div></section>
+    <section class="section setup" id="setup" aria-labelledby="setup-title"><div class="wrap setup-layout">
+      <div class="setup-heading reveal"><p class="eyebrow"><span class="section-number">03 /</span> From download to discovery</p><h2 id="setup-title">Set up once.<br><span class="muted-heading">Then just browse.</span></h2><p>No new shopping habits to learn. Kriko comes along with the way you already browse.</p><a class="inline-link" href="https://github.com/Berbadov/kriko/blob/main/docs/INSTALL_WINDOWS.md">Read the full setup guide <svg class="icon" aria-hidden="true"><use href="#source-icon"/></svg></a></div>
+      <ol class="setup-steps">
+        <li class="reveal"><span class="setup-number">1</span><div><h3>Make yourself at home.</h3><p>Download Kriko for Windows and open the app. The first-start setup walks you through the essentials.</p><span class="step-detail">No administrator rights needed</span></div></li>
+        <li class="reveal"><span class="setup-number">2</span><div><h3>Bring in the knowledge.</h3><p>Open <strong>Overview</strong> and install the Cars catalog. Catalogs bring the products, findings and sources.</p><span class="step-detail">Catalog lookups work offline</span></div></li>
+        <li class="reveal"><span class="setup-number">3</span><div><h3>Add Kriko to your browser.</h3><p>Open <strong>Browser extension</strong>, press <strong>Stage</strong>, then follow the instructions to load the extension from its folder.</p><span class="step-detail">Chrome, Edge or Brave · Installed from the app</span></div></li>
+        <li class="reveal"><span class="setup-number">4</span><div><h3>Find something worth a look.</h3><p>Keep Kriko running, open a listing and open the Kriko panel. Read the findings. Follow the sources. Ask better questions.</p><a class="inline-link" href="#how">Try the preview again <svg class="icon" aria-hidden="true"><use href="#arrow"/></svg></a></div></li>
+      </ol>
+    </div></section>
+    <section class="section questions" id="questions" aria-labelledby="questions-title"><div class="wrap">
+      <div class="section-heading reveal"><div><p class="eyebrow"><span class="section-number">04 /</span> No mystery here</p><h2 id="questions-title">Good to know.</h2></div><a class="inline-link" href="https://github.com/Berbadov/kriko/issues">Still curious? Ask us <svg class="icon" aria-hidden="true"><use href="#source-icon"/></svg></a></div>
+      <div class="question-grid">
+        <article class="question reveal"><svg class="icon" aria-hidden="true"><use href="#computer-icon"/></svg><h3>Where does my research live?</h3><p>On your computer. Catalogs, history and settings stay with you. There’s no account to create. Online research sends your question and the pages read to the provider you choose.</p></article>
+        <article class="question reveal"><span class="question-glyph" aria-hidden="true">€</span><h3>What's the catch?</h3><p>Kriko is free and open source under the MIT license. Catalog lookups need no key. If you choose a paid AI provider for research, that provider bills your own account.</p></article>
+        <article class="question reveal"><svg class="icon" aria-hidden="true"><use href="#book-icon"/></svg><h3>Can I check new products too?</h3><p>Yes. New and used products both have issues that can be easy to miss. Investigate owner experiences, repair findings and variant-specific concerns. Quick look researches beyond your installed catalogs with your selected agent and an internet connection.</p></article>
+        <article class="question reveal"><span class="question-glyph" aria-hidden="true">↔</span><h3>What if a concern is not confirmed?</h3><p>A report can reveal something worth investigating without proving a defect. Follow the supporting pages, compare explanations and see what remains unanswered. You decide what the evidence means for your purchase.</p></article>
+      </div>
+    </div></section>
+    <section class="download-section" id="download" aria-labelledby="download-title"><div class="wrap download-layout">
+      <div class="download-copy reveal"><p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> A better-informed next purchase</p><h2 id="download-title">Go on.<br>Get the <span>other half.</span></h2><p>A little more knowledge. A lot more confidence.</p><div class="download-trust"><span><svg class="icon" aria-hidden="true"><use href="#check-icon"/></svg> Free to use</span><span><svg class="icon" aria-hidden="true"><use href="#check-icon"/></svg> No account</span><span><svg class="icon" aria-hidden="true"><use href="#check-icon"/></svg> Open source</span></div></div>
+      <div class="download-card reveal"><div class="download-card-heading"><svg class="icon platform-icon" aria-hidden="true"><use href="#windows-icon"/></svg><div><h3>Kriko for Windows</h3><span>64-bit Windows · Desktop app + browser extension</span></div></div><p>Start with the installer. It includes everything Kriko needs to run.</p><a class="button download-primary" href="https://github.com/Berbadov/kriko/releases/latest"><svg class="icon" aria-hidden="true"><use href="#download-icon"/></svg> Get the Windows installer <svg class="icon end-arrow" aria-hidden="true"><use href="#arrow"/></svg></a><span class="download-caption">Choose the Windows setup .exe file on the latest release page.</span><a class="portable-link" href="https://github.com/Berbadov/kriko/releases/latest">Prefer a portable version? Choose the Windows .zip <span aria-hidden="true">↗</span></a><div class="download-note"><strong>After installing</strong><span>Add a catalog, then prepare the browser extension in the app. <a href="#setup">See the steps ↑</a></span></div><div class="other-platforms"><span>On macOS or Linux?</span><a href="https://github.com/Berbadov/kriko#build-from-source">See source build options ↗</a></div></div>
+    </div><span class="download-watermark" aria-hidden="true">LOOK CLOSER.</span></section>
+  </main>
+  <footer><div class="wrap footer-main"><a class="brand" href="#top" aria-label="Back to Kriko home"><img src="assets/kriko-wordmark-white.svg" alt="Kriko" width="91" height="30"></a><p>A little research goes a long way.</p><nav aria-label="Footer"><a href="https://github.com/Berbadov/kriko">GitHub ↗</a><a href="https://github.com/Berbadov/kriko/releases">Releases ↗</a><a href="https://github.com/Berbadov/kriko/issues">Help & feedback ↗</a></nav></div><div class="wrap footer-bottom"><span>Free software. Independent decisions.</span><div><a href="#questions">Your data</a><a href="https://github.com/Berbadov/kriko/blob/main/LICENSE">MIT license</a><span>Catalogs carry their own licenses.</span></div></div></footer>
 </body>
 </html>
