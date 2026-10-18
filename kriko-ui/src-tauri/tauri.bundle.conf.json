@@ -5,7 +5,8 @@
       "binaries/OpenSERP"
     ],
     "resources": {
-      "third-party/OpenSERP-LICENSE.txt": "OpenSERP-LICENSE.txt"
+      "third-party/OpenSERP-LICENSE.txt": "OpenSERP-LICENSE.txt",
+      "binaries/_internal": "_internal"
     }
   }
 }

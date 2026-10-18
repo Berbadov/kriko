@@ -18,6 +18,12 @@ export interface Product {
   note: string
 }
 
+/** Which agent answered: the id picks its mark, the label is what the reader reads. */
+export interface AgentRef {
+  id: string
+  label: string
+}
+
 export interface Run {
   status: 'idle' | 'running' | 'done' | 'stopped' | 'failed'
   startedAt: number
@@ -28,6 +34,7 @@ export interface Run {
   products: Product[]
   /** Why the run failed, in the engine's words. */
   error?: string
+  agent?: AgentRef
   /** Index of the active plan step. */
   step: number
 }
@@ -40,6 +47,7 @@ export interface Turn {
   products: Product[]
   /** Why the turn failed, when it did. */
   error?: string
+  agent?: AgentRef
 }
 
 /** What the screens hold: the chat so far, the run now, and what the reader can do. */
@@ -49,7 +57,7 @@ export interface RunApi {
   turns: Turn[]
   /** The chat that the run belongs to. Empty before the first question. */
   threadId: string
-  start: (prompt: string, agent: { id: string; backend: 'harness' | 'local' }) => void
+  start: (prompt: string, agent: { id: string; label?: string; backend: 'harness' | 'local' }) => void
   stop: () => void
   /** Leave this chat and start a new, empty one. */
   newChat: () => void
@@ -61,7 +69,7 @@ export interface RunApi {
 export const turnOf = (run: Run): Turn | null =>
   run.status === 'idle' || run.status === 'running' || !run.prompt
     ? null
-    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, error: run.error }
+    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, error: run.error, agent: run.agent }
 
 export type Action =
   | { type: 'start'; prompt: string; now: number }
@@ -212,12 +220,13 @@ export function useDemoRun(): RunApi {
   }, [])
 
   const start = useCallback(
-    (prompt: string) => {
+    (prompt: string, agent?: { id: string; label?: string }) => {
       clear()
       const last = turnOf(run)
       if (last) setTurns((now) => [...now, last])
       if (!threadId) setThreadId(`demo-${Date.now()}`)
       dispatch({ type: 'start', prompt, now: Date.now() })
+      if (agent) dispatch({ type: 'replace', patch: { agent: { id: agent.id, label: agent.label ?? agent.id } } })
       const api: Api = { dispatch }
       for (const beat of script()) {
         timers.current.push(window.setTimeout(() => beat.do(api), beat.at))
