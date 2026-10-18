@@ -4055,6 +4055,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 agent.update(id="local", label="Local model",
                              model=str(getattr(completer, "model", "")))
                 ask = completer
+                ask_quick = completer
                 if callable(getattr(completer, "stream", None)):
                     def stream_local(prompt: str, on_text: Callable[[str], None]) -> str:
                         return _stream_chat_completion(completer, prompt, on_text)
@@ -4066,6 +4067,13 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                                                  allow_tools=native_tools)
                     return reply
 
+                def ask_quick(prompt: str) -> str:
+                    # One line back (the words to search): no tools, no wait.
+                    reply, _ = _ask_about_checks(settings, {**params, "question": text},
+                                                 quiet, prompt, on_agent=None,
+                                                 allow_tools=False)
+                    return reply
+
                 def stream_harness(prompt: str, on_text: Callable[[str], None]) -> str:
                     reply, _ = _ask_about_checks(settings, {**params, "question": text},
                                                  quiet, prompt, on_agent=agent.update,
@@ -4075,7 +4083,8 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
 
             hooks = _TurnHooks(progress, {"thread_id": thread_id, "message_id": message_id},
                                agent)
-            result = chat.run_turn(text, ask=ask, ask_stream=ask_stream, ctx=ctx,
+            result = chat.run_turn(text, ask=ask, ask_stream=ask_stream,
+                                   ask_quick=ask_quick, ctx=ctx,
                                    history=history, hooks=hooks)
         finally:
             if store is not None:
