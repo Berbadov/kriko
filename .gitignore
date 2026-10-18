@@ -58,7 +58,22 @@ logs/
 .walk/
 .superpowers/
 
+# --- Isolated work ---------------------------------------------------------
+# A git worktree made for isolated work. Not source: it holds its own checkout
+# of the same tree, so committing it would commit the tree twice.
+.worktrees/
+
+# --- Build tools kept beside the checkout ----------------------------------
+# The WiX 3 toolset (candle.exe / light.exe) that kriko-gpui/package.ps1 needs
+# for the MSI. A build tool, not source: it is a download from
+# https://github.com/wixtoolset/wix3/releases, about 40 MB, and the recipe
+# accepts its folder with -WixBin.
+tools/wix314/
+
 # --- Scratch ---------------------------------------------------------------
+# A review session's own working files: a captured PNG, an engine log, a seed
+# script. Regenerated on demand, never source.
+.tmp-*
 _c.png
 _crop.png
 
@@ -71,6 +86,6 @@ _crop.png
 # test_every_tracked_path_is_checkoutable_on_windows_and_macos). Ignored by
 # their literal bytes so no `git add -A` can pick one up again. Keep this the
 # last line, and edit this file with a byte-safe tool.
-0¤d
+0ï¿½d
 release/
 dl/

@@ -17,8 +17,10 @@ mod engine;
 mod favicons;
 mod live;
 mod marks;
+mod markdown;
 mod motion;
 mod screens;
+mod select;
 mod shell;
 mod sources;
 mod startup;
@@ -205,6 +207,7 @@ fn main() {
             KeyBinding::new("ctrl-n", NewCheck, None),
             KeyBinding::new("ctrl-k", SearchKnowledge, None),
             KeyBinding::new("ctrl-b", JumpBrowse, None),
+
         ]);
 
         // The display the window opens on, where the platform reports it; the

@@ -614,8 +614,11 @@ CREATE TABLE IF NOT EXISTS local_adapters (
     host       TEXT PRIMARY KEY,
     -- The adapter document, as JSON, in the same shape a pack ships.
     spec_json  TEXT NOT NULL DEFAULT '{}',
-    -- agent | reader. Who wrote it, because "an agent proposed this" and "I
-    -- wrote this myself" carry different weight when it reads a page wrong.
+    -- agent | reader | inference. Who wrote it, because "an agent proposed
+    -- this", "I wrote this myself" and "a model on this machine worked it out
+    -- from the page" carry different weight when it reads a page wrong — and
+    -- only the last of the three is invented without anybody asking for it,
+    -- so it is the one the reader is given a switch for.
     source     TEXT NOT NULL DEFAULT 'agent',
     -- Which pack's identity keys it maps into. An adapter that maps to keys no
     -- installed pack declares produces a lookup that resolves to nothing.
@@ -623,6 +626,37 @@ CREATE TABLE IF NOT EXISTS local_adapters (
     enabled    INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT '',
     updated_at TEXT NOT NULL DEFAULT ''
+);
+
+-- Page shapes this installation has already put to a model, and what came of
+-- it (`app/siteinfer.py`). A cache, not knowledge, and keyed on the *shape* of
+-- a page rather than on its URL for one reason: one site's listings are the
+-- same page with different values. Keyed by URL, reading a shop would be a
+-- model call per product; keyed by shape, it is one call for the whole listing
+-- template — and a redesigned site presents a shape nobody has seen, so it is
+-- inferred again without anybody noticing a redesign happened.
+--
+-- The failed and refused rows are the load-bearing half. A model that cannot
+-- write an adapter for a site would otherwise be asked again on every one of
+-- its pages, which is a storm the reader pays for in latency on every listing.
+-- A host keeps a handful of shapes; past that the row a listing needs is the
+-- newest, which is the one the site is currently presenting.
+CREATE TABLE IF NOT EXISTS site_inference (
+    host    TEXT NOT NULL,
+    -- The digest from `siteinfer.shape_of`: the page's sorted label set and the
+    -- structured-data types it publishes, folded the way the engine folds a
+    -- label so two spellings of one shape cannot become two calls.
+    shape   TEXT NOT NULL,
+    -- ok | refused | failed. `ok` means an adapter was stored for this host;
+    -- the other two mean this shape was tried and produced nothing usable.
+    state   TEXT NOT NULL DEFAULT '',
+    detail  TEXT NOT NULL DEFAULT '',
+    -- Which model answered, because "the local model could not read this site"
+    -- is a different fact about a different model and the next reader of this
+    -- table is the person deciding whether to try a larger one.
+    model   TEXT NOT NULL DEFAULT '',
+    at      TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (host, shape)
 );
 
 -- Sites the reader opened that nothing here can read yet.
@@ -780,6 +814,10 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   text         TEXT NOT NULL DEFAULT '',
   steps_json   TEXT NOT NULL DEFAULT '[]',
   sources_json TEXT NOT NULL DEFAULT '[]',
+  -- The products the turn found, as the screen's cards. A card is drawn from
+  -- this, never re-derived from the answer's prose, so the products a reader
+  -- saw when a turn ran are the products they see when they open it again.
+  products_json TEXT NOT NULL DEFAULT '[]',
   job_id       TEXT NOT NULL DEFAULT '',
   created_at   TEXT NOT NULL DEFAULT '');
 CREATE INDEX IF NOT EXISTS chat_messages_thread ON chat_messages (thread_id);
@@ -1370,10 +1408,83 @@ def save_local_adapter(
     return {"host": host, "source": source, "pack_id": pack_id}
 
 
-def forget_local_adapter(conn: sqlite3.Connection, host: str) -> bool:
-    done = conn.execute("DELETE FROM local_adapters WHERE host = ?", (host,))
+def set_local_adapter_enabled(conn: sqlite3.Connection, host: str, enabled: bool) -> bool:
+    """Use this learned adapter again, or stop using it. False with no such row.
+
+    Not a delete, which is `forget_local_adapter` below: an adapter this
+    installation inferred is a guess the reader may want back after the site
+    changes, or after a model is swapped for a better one, and throwing the row
+    away would also throw away the fact that the shape was already tried.
+    """
+    done = conn.execute(
+        "UPDATE local_adapters SET enabled = ?, updated_at = ? WHERE host = ?",
+        (1 if enabled else 0, _now(), host),
+    )
     conn.commit()
     return bool(done.rowcount)
+
+
+def forget_local_adapter(conn: sqlite3.Connection, host: str) -> bool:
+    done = conn.execute("DELETE FROM local_adapters WHERE host = ?", (host,))
+    # The inference rows go with it. They are the brake that stops a page shape
+    # being put to a model twice, so forgetting an adapter and keeping them
+    # would make "forget this site" mean "and it can never be learned again" —
+    # the opposite of what pressing it says.
+    conn.execute("DELETE FROM site_inference WHERE host = ?", (host,))
+    conn.commit()
+    return bool(done.rowcount)
+
+
+#: How many page shapes one host may remember. Enough for the listing
+#: templates a shop actually has (a car listing, a parts listing, a page whose
+#: optional rows were present), few enough that a site which varies per page
+#: cannot grow this table without bound.
+INFERENCE_SHAPES_PER_HOST = 8
+
+
+def site_inferences(conn: sqlite3.Connection, *, host: str = "",
+                    shape: str = "") -> list[dict]:
+    """Page shapes already put to a model here, newest first."""
+    where, args = [], []
+    if host:
+        where.append("host = ?")
+        args.append(host)
+    if shape:
+        where.append("shape = ?")
+        args.append(shape)
+    sql = "SELECT * FROM site_inference"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    return [dict(row) for row in conn.execute(sql + " ORDER BY at DESC, host, shape",
+                                              args)]
+
+
+def save_site_inference(
+    conn: sqlite3.Connection, *, host: str, shape: str, state: str,
+    detail: str = "", model: str = "",
+) -> dict:
+    """Record one inference attempt, whatever came of it.
+
+    Written for failures as much as for successes: the second page of a shape
+    that produced no adapter is answered from this row rather than from another
+    model call (`app/siteinfer.py`).
+    """
+    at = _now()
+    conn.execute(
+        "INSERT INTO site_inference (host, shape, state, detail, model, at)"
+        " VALUES (?,?,?,?,?,?)"
+        " ON CONFLICT (host, shape) DO UPDATE SET state = excluded.state,"
+        " detail = excluded.detail, model = excluded.model, at = excluded.at",
+        (host, shape, state, detail, model, at),
+    )
+    conn.execute(
+        "DELETE FROM site_inference WHERE host = ? AND shape NOT IN ("
+        " SELECT shape FROM site_inference WHERE host = ?"
+        " ORDER BY at DESC, rowid DESC LIMIT ?)",
+        (host, host, INFERENCE_SHAPES_PER_HOST),
+    )
+    conn.commit()
+    return {"host": host, "shape": shape, "state": state, "model": model, "at": at}
 
 
 #: The most checks one comparison holds, and the most drafts one installation
@@ -3094,6 +3205,9 @@ def _chat_message(row: sqlite3.Row) -> dict:
         "text": row["text"],
         "steps": json.loads(row["steps_json"] or "[]"),
         "sources": json.loads(row["sources_json"] or "[]"),
+        # A message stored before this column existed reads as no products,
+        # which is what it has: the card list was never recorded for it.
+        "products": json.loads((row["products_json"] if "products_json" in row.keys() else "") or "[]"),
         "job_id": row["job_id"],
         "created_at": row["created_at"],
     }
@@ -3159,7 +3273,8 @@ def chat_history(conn: sqlite3.Connection, thread_id: str, *,
 
 def add_chat_message(
     conn: sqlite3.Connection, thread_id: str, *, role: str, text: str,
-    steps: list | None = None, sources: list | None = None, job_id: str = "",
+    steps: list | None = None, sources: list | None = None,
+    products: list | None = None, job_id: str = "",
 ) -> dict:
     """Store one message and move its thread to the top of the list."""
     if role not in ("reader", "agent"):
@@ -3169,9 +3284,10 @@ def add_chat_message(
     now = _now()
     conn.execute(
         "INSERT INTO chat_messages (message_id, thread_id, role, text, steps_json,"
-        " sources_json, job_id, created_at) VALUES (?,?,?,?,?,?,?,?)",
+        " sources_json, products_json, job_id, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
         (message_id, thread_id, role, text, json.dumps(steps or [], default=str),
-         json.dumps(sources or [], default=str), job_id, now))
+         json.dumps(sources or [], default=str),
+         json.dumps(products or [], default=str), job_id, now))
     conn.execute("UPDATE chat_threads SET updated_at = ? WHERE thread_id = ?",
                  (now, thread_id))
     conn.commit()

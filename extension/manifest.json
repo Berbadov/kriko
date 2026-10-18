@@ -2,10 +2,11 @@
     "manifest_version": 3,
     "name": "Kriko",
     "description": "Shows what is known to go wrong with the product on the page you are reading.",
-    "version": "0.4.1",
+    "version": "0.4.2",
+    "minimum_chrome_version": "102",
     "permissions": ["activeTab", "storage", "scripting", "alarms"],
     "optional_host_permissions": ["https://*/*"],
-    "host_permissions": ["http://127.0.0.1/*"],
+    "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
     "background": {
         "service_worker": "background.js"
     },

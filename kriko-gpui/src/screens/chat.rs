@@ -2,15 +2,17 @@
 //! install knows, with its mark alive while it works and every cited page one
 //! press away.
 
-use gpui::{div, prelude::*, px, ClickEvent, Context, Div, FontWeight, Styled, Window};
+use gpui::{div, prelude::*, px, ClickEvent, Context, Div, FontWeight, SharedString, Styled, Window};
 
 use crate::app::{Field, Kriko};
 use crate::data::CHAT_EXAMPLES;
-use crate::live::chat::{self as live, Message, Partial, Role, Step, StepState};
+use crate::live::chat::{self as live, Message, Partial, Product, Role, Step, StepState};
+use crate::markdown;
 use crate::marks::{self, mark_tile, phase_beat, Mark, Phase};
 use crate::screens::{mono, row_desc};
+use crate::select::Selection;
 use crate::sources::{source_row, Source};
-use crate::textfx::{cylinder_status, words_reveal};
+use crate::textfx::cylinder_status;
 use crate::theme::*;
 
 /// Reserve enough width for the conversation rail and a readable transcript.
@@ -20,6 +22,9 @@ const THREAD_RAIL_W: f32 = 168.0;
 const TURN_MARK: f32 = 30.0;
 /// The empty state's mark.
 const EMPTY_MARK: f32 = 44.0;
+/// How wide an answer is allowed to run. Past this a line is hard to follow
+/// back to its start, and the eye loses its place between two lines.
+const ANSWER_MAX_W: f32 = 760.0;
 
 pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     let viewport_h = f32::from(window.viewport_size().height);
@@ -27,6 +32,12 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
     // content spacing. This keeps the composer on screen in a 640 px window.
     let height = (viewport_h - 200.0).clamp(300.0, 700.0);
     let narrow = app.content_w < NARROW_W;
+    // One selection for the whole transcript, made once per frame: every
+    // answer block in it shares the range, so a drag that starts in a bullet
+    // and ends in the paragraph under it is one selection.
+    if app.chat_selection.is_none() {
+        app.chat_selection = Some(cx.new(|_| Selection::default()));
+    }
     let threads = thread_list(app, narrow, cx);
     let conversation = conversation(app, window, cx);
 
@@ -35,7 +46,7 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
             .h(px(height))
             .flex()
             .flex_col()
-            .gap(px(8.0))
+            .gap(px(SPACE_S))
             .child(threads.h(px(68.0)).flex_none())
             .child(
                 conversation
@@ -46,7 +57,7 @@ pub fn chat(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Di
         div()
             .h(px(height))
             .flex()
-            .gap(px(12.0))
+            .gap(px(SPACE_M))
             .child(threads.w(px(THREAD_RAIL_W)).h_full().flex_none())
             .child(conversation.flex_1().h_full().min_w(px(0.0)).min_h(px(0.0)))
     }
@@ -95,9 +106,18 @@ fn thread_list(app: &Kriko, compact: bool, cx: &mut Context<Kriko>) -> Div {
                 .when(compact, |d| d.w(px(190.0)))
                 .when(!compact, |d| d.w_full())
                 .when(picked, |d| {
-                    d.bg(paint_a(GLASS_1)).border_1().border_color(paint_a(HAIRLINE))
+                    // The picked conversation is the brand's, and its edge is
+                    // the brand's: a glass wash with a hairline read as "this
+                    // row is slightly different" rather than "this is the one
+                    // you are reading".
+                    d.bg(paint_a(BRAND_WASH))
+                        .border_1()
+                        .border_color(paint_a(0x86a3ff5c))
+                        .font_weight(FontWeight::MEDIUM)
                 })
-                .when(!picked, |d| d.hover(|h| h.bg(paint_a(GLASS_1))))
+                .when(!picked, |d| {
+                    d.hover(|h| h.bg(paint_a(GLASS_1)).text_color(paint(INK)))
+                })
                 .child(
                     div()
                         .flex_1()
@@ -125,12 +145,13 @@ fn thread_list(app: &Kriko, compact: bool, cx: &mut Context<Kriko>) -> Div {
         .items_center()
         .justify_between()
         .gap(px(4.0))
+        .px(px(SPACE_S))
         .child(
             div()
                 .font_family(SANS)
-                .font_weight(FontWeight::MEDIUM)
+                .font_weight(FontWeight::SEMIBOLD)
                 .text_size(px(12.0))
-                .text_color(paint(MUTED))
+                .text_color(paint(INK_2))
                 .child("Chats"),
         )
         .child(text_action("chat-new", "New").on_click(new_one));
@@ -145,19 +166,30 @@ fn thread_list(app: &Kriko, compact: bool, cx: &mut Context<Kriko>) -> Div {
                 .child(list),
         )
     } else {
+        // The rail is its own surface beside the conversation panel: two
+        // panels on the page, told apart by an edge rather than by a gap the
+        // reader has to interpret.
         div()
             .flex()
             .flex_col()
-            .gap(px(8.0))
+            .gap(px(SPACE_S))
             .h_full()
             .min_h(px(0.0))
+            .rounded(px(14.0))
+            .bg(paint(SURFACE_1))
+            .border_1()
+            .border_color(paint_a(EDGE))
+            .py(px(SPACE_M))
             .child(heading)
             .child(
                 div()
                     .id("chat-thread-list")
                     .flex_1()
                     .min_h(px(0.0))
+                    .px(px(SPACE_XS))
                     .overflow_y_scroll()
+                    .occlude()
+                    .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
                     .child(list),
             )
     }
@@ -183,9 +215,13 @@ fn conversation(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
         .items_center()
         .justify_between()
         .gap(px(8.0))
-        .pb(px(8.0))
+        .px(px(SPACE_L))
+        .py(px(SPACE_M))
         .border_b_1()
-        .border_color(paint_a(HAIRLINE))
+        // The header is the boundary between two surfaces inside the panel,
+        // so it is an `EDGE`: a hairline there left the title floating with
+        // nothing under it.
+        .border_color(paint_a(EDGE))
         .child(
             div()
                 .flex()
@@ -220,16 +256,34 @@ fn conversation(app: &mut Kriko, window: &mut Window, cx: &mut Context<Kriko>) -
     let say = chat.say.clone();
     let messages = messages_view(app, cx);
     let composer = composer(app, window, cx);
+    // The conversation is one panel: a surface with an edge, not three strips
+    // of text stacked on the page. Without it the transcript, the header and
+    // the composer ran into the page ground and into each other, and the
+    // screen had no shape a reader could see.
     let mut column = div()
         .flex()
         .flex_col()
-        .gap(px(SPACE_M))
         .h_full()
         .min_h(px(0.0))
+        .w_full()
+        .min_w(px(0.0))
+        .rounded(px(14.0))
+        .bg(paint(SURFACE_1))
+        .border_1()
+        .border_color(paint_a(EDGE))
+        .overflow_hidden()
         .child(header)
-        .child(messages.flex_1().min_h(px(0.0)));
+        .child(
+            div()
+                .flex_1()
+                .min_h(px(0.0))
+                .min_w(px(0.0))
+                .px(px(SPACE_L))
+                .py(px(SPACE_L))
+                .child(messages),
+        );
     if let Some(text) = say {
-        column = column.child(danger_line(&text));
+        column = column.child(div().px(px(SPACE_L)).pb(px(SPACE_S)).child(danger_line(&text)));
     }
     column.child(composer.flex_none())
 }
@@ -258,10 +312,14 @@ fn messages_view(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::Stateful<Div
         }
     }
 
+    let selection = app
+        .chat_selection
+        .clone()
+        .expect("chat() makes the selection before the transcript");
     let chat = &app.live.chat;
     let agent = selected_agent(chat);
     let mark = mark_for(&chat.harness);
-    let mut transcript = div().flex().flex_col().gap(px(16.0));
+    let mut transcript = div().flex().flex_col().gap(px(20.0));
 
     let idle = chat.messages.is_empty() && chat.in_flight.is_none();
     if idle {
@@ -276,6 +334,8 @@ fn messages_view(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::Stateful<Div
                 mark,
                 motion,
                 chat.details.contains(&message.message_id),
+                &selection,
+                app,
                 cx,
             ),
         });
@@ -292,6 +352,9 @@ fn messages_view(app: &mut Kriko, cx: &mut Context<Kriko>) -> gpui::Stateful<Div
             &agent,
             mark,
             motion,
+            &selection,
+            app,
+            cx,
         ));
     }
     if let Some(why) = chat.failed.as_ref() {
@@ -396,14 +459,17 @@ fn reader_line(message: &Message) -> Div {
         )
 }
 
-/// The agent's turn: its mark, then the answer, with the pages it cited under
-/// it. Research steps stay behind a plain toggle.
+/// The agent's turn: its mark, then the answer, with the products it found and
+/// the pages it cited under it. Research steps stay behind a plain toggle.
+#[allow(clippy::too_many_arguments)]
 fn agent_block(
     message: &Message,
     agent: &str,
     mark: &Mark,
     motion: bool,
     expanded: bool,
+    selection: &gpui::Entity<Selection>,
+    app: &Kriko,
     cx: &mut Context<Kriko>,
 ) -> Div {
     let copied = message.text.clone();
@@ -437,7 +503,9 @@ fn agent_block(
     let mut body = div()
         .flex()
         .flex_col()
-        .gap(px(8.0))
+        .gap(px(SPACE_M))
+        .w_full()
+        .min_w(px(0.0))
         .child(
             div()
                 .flex()
@@ -454,9 +522,18 @@ fn agent_block(
                 )
                 .child(actions),
         )
-        .child(words_reveal(message.text.as_str(), words_id.as_str(), motion));
+        .child(answer(message.text.as_str(), words_id.as_str(), motion, selection, cx));
     if expanded {
         body = body.child(steps_view(&message.steps));
+    }
+    if !message.products.is_empty() {
+        body = body.child(products_view(
+            &message.products,
+            &message.message_id,
+            motion,
+            app,
+            cx,
+        ));
     }
     if !message.sources.is_empty() {
         body = body.child(sources_view(&message.sources, motion));
@@ -464,14 +541,40 @@ fn agent_block(
     body
 }
 
-/// A running turn: the mark moving for its phase, the engine's own line for
-/// what it is doing, and any answer text already received.
+/// The answer itself: markdown, selectable, with its links live.
+///
+/// The prose is held to `ANSWER_MAX_W`. A transcript that spans the whole
+/// window is hard to read: the eye loses the line it was on when it returns
+/// from the right edge.
+fn answer(
+    text: &str,
+    id: &str,
+    motion: bool,
+    selection: &gpui::Entity<Selection>,
+    cx: &mut Context<Kriko>,
+) -> Div {
+    div()
+        .w_full()
+        .min_w(px(0.0))
+        .max_w(px(ANSWER_MAX_W))
+        .child(markdown::view(text, id, motion, selection, cx))
+}
+
+/// A running turn: the mark moving for its phase, one line saying what the
+/// engine is doing, and any answer text already received.
+///
+/// One status line, not three. The phase badge and the cylinder both used to
+/// say what was happening, in different words, side by side; a reader watching
+/// two spinners cannot tell which one to believe.
 fn pending_block(
     partial: &Partial,
     job_message: &str,
     agent: &str,
     mark: &Mark,
     motion: bool,
+    selection: &gpui::Entity<Selection>,
+    app: &Kriko,
+    cx: &mut Context<Kriko>,
 ) -> Div {
     let who = if partial.agent.is_empty() {
         agent.to_string()
@@ -480,28 +583,49 @@ fn pending_block(
     };
     let phase = step_phase(partial);
     let line = turn_status(Some(partial), job_message);
-    let mut body = div().flex().flex_col().gap(px(8.0)).child(
-        div()
-            .flex()
-            .items_center()
-            .justify_between()
-            .gap(px(8.0))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .gap(px(8.0))
-                    .child(mark_tile("chat-turn-pending", mark, phase, TURN_MARK, motion))
-                    .child(speaker(&who))
-                    .child(phase_beat("chat-pending-beat", phase, motion)),
-            )
-            .child(cylinder_status("chat-pending-status", line.as_str(), motion)),
-    );
+    let mut body = div()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_M))
+        .w_full()
+        .min_w(px(0.0))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(SPACE_S))
+                .w_full()
+                .min_w(px(0.0))
+                .child(mark_tile("chat-turn-pending", mark, phase, TURN_MARK, motion))
+                .child(speaker(&who))
+                .child(phase_beat("chat-pending-beat", phase, motion))
+                .child(
+                    div()
+                        .flex_1()
+                        .min_w(px(0.0))
+                        .child(cylinder_status("chat-pending-status", line.as_str(), motion)),
+                ),
+        );
     if !partial.steps.is_empty() {
         body = body.child(steps_view(&partial.steps));
     }
     if !partial.answer.is_empty() {
-        body = body.child(words_reveal(partial.answer.as_str(), "chat-words-pending", motion));
+        body = body.child(answer(
+            partial.answer.as_str(),
+            "chat-words-pending",
+            motion,
+            selection,
+            cx,
+        ));
+    }
+    if !partial.products.is_empty() {
+        body = body.child(products_view(
+            &partial.products,
+            "chat-pending",
+            motion,
+            app,
+            cx,
+        ));
     }
     if !partial.sources.is_empty() {
         body = body.child(sources_view(&partial.sources, motion));
@@ -589,7 +713,220 @@ fn steps_view(steps: &[Step]) -> Div {
     rows
 }
 
-/// The pages behind an answer, each one a source row that opens it.
+/// The products an answer found in the reader's own catalogs.
+///
+/// The agent was always given these rows; the reader saw only the prose. A
+/// card is the row said plainly, and each card carries the two things a reader
+/// wants next: read this product again, and keep it beside the others.
+fn products_view(
+    products: &[Product],
+    key: &str,
+    motion: bool,
+    app: &Kriko,
+    cx: &mut Context<Kriko>,
+) -> Div {
+    let chat = &app.live.chat;
+    let mut column = div()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_S))
+        .w_full()
+        .min_w(px(0.0))
+        .max_w(px(ANSWER_MAX_W))
+        .pt(px(SPACE_XS))
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(SPACE_S))
+                .child(
+                    div()
+                        .font_family(SANS)
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_size(px(12.0))
+                        .text_color(paint(MUTED))
+                        .child(if products.len() == 1 {
+                            "Product".to_string()
+                        } else {
+                            format!("{} products", products.len())
+                        }),
+                )
+                .child(hairline().flex_1()),
+        );
+    for (index, product) in products.iter().enumerate() {
+        column = column.child(product_card(
+            product,
+            &format!("{key}-p{index}"),
+            motion,
+            chat.product_busy.as_deref() == Some(product.subject_id.as_str()),
+            chat.product_queued.as_deref() == Some(product.subject_id.as_str()),
+            chat.product_note
+                .as_ref()
+                .filter(|(id, _)| id == &product.subject_id)
+                .map(|(_, note)| note.as_str()),
+            cx,
+        ));
+    }
+    column
+}
+
+#[allow(clippy::too_many_arguments)]
+fn product_card(
+    product: &Product,
+    turn: &str,
+    motion: bool,
+    busy: bool,
+    queued: bool,
+    note: Option<&str>,
+    cx: &mut Context<Kriko>,
+) -> Div {
+    let subject_id = product.subject_id.clone();
+    let name = product.title();
+    let open_id = subject_id.clone();
+    let research_id = subject_id.clone();
+    let compare_id = subject_id.clone();
+    let compare_name = name.clone();
+
+    let mut facts = div().flex().flex_wrap().items_center().gap(px(SPACE_S));
+    for (index, (field, value)) in product.identity.iter().enumerate() {
+        if index >= 4 {
+            break;
+        }
+        facts = facts.child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(4.0))
+                .child(
+                    div()
+                        .font_family(SANS)
+                        .text_size(px(11.0))
+                        .text_color(paint(DIM))
+                        .child(format!("{field}:")),
+                )
+                .child(
+                    div()
+                        .font_family(SANS)
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_size(px(12.0))
+                        .text_color(paint(INK_2))
+                        .child(value.clone()),
+                ),
+        );
+    }
+
+    let mut head = div()
+        .flex()
+        .items_center()
+        .gap(px(SPACE_S))
+        .w_full()
+        .min_w(px(0.0))
+        .child(
+            div()
+                .flex_1()
+                .min_w(px(0.0))
+                .overflow_hidden()
+                .whitespace_nowrap()
+                .text_ellipsis()
+                .font_family(SANS)
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_size(px(14.0))
+                .text_color(paint(INK))
+                .child(name),
+        );
+    if !product.kind.is_empty() {
+        head = head.child(chip(&product.kind));
+    }
+    if product.claims == 0 {
+        head = head.child(tag(
+            SharedString::from(format!("chat-product-clean-{turn}")),
+            TagState::Live,
+            "No risk recorded",
+            motion,
+        ));
+    } else {
+        head = head.child(tag(
+            SharedString::from(format!("chat-product-risks-{turn}")),
+            TagState::Need,
+            &format!("{} recorded", product.claims),
+            motion,
+        ));
+    }
+
+    let mut card = div()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_S))
+        .w_full()
+        .min_w(px(0.0))
+        .rounded(px(12.0))
+        .bg(paint_a(GLASS_1))
+        .border_1()
+        .border_color(paint_a(HAIRLINE))
+        .p(px(SPACE_M))
+        .child(head);
+    if !product.identity.is_empty() {
+        card = card.child(facts);
+    }
+    card = card.child(
+        div()
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .gap(px(SPACE_S))
+            .child(
+                div()
+                    .font_family(SANS)
+                    .text_size(px(12.0))
+                    .text_color(paint(MUTED))
+                    .child(if product.backed > 0 {
+                        format!("{} with cited evidence", product.backed)
+                    } else {
+                        format!("from {}", product.pack_id)
+                    }),
+            )
+            .child(div().flex_1())
+            .child(
+                ghost(gpui::ElementId::Name(SharedString::from(format!("chat-product-open-{turn}"))), "Open")
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                        this.select_subject(open_id.clone(), cx);
+                        this.tab = crate::app::Tab::Browse;
+                        cx.notify();
+                    })),
+            )
+            .child(if queued {
+                tag(SharedString::from(format!("chat-product-in-{turn}")), TagState::Done, "In Compare", motion)
+                    .into_any_element()
+            } else {
+                ghost(gpui::ElementId::Name(SharedString::from(format!("chat-product-compare-{turn}"))), "Add to Compare")
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                        this.chat_compare_product(compare_id.clone(), compare_name.clone(), cx);
+                        cx.notify();
+                    }))
+                    .into_any_element()
+            })
+            .child(
+                key(gpui::ElementId::Name(SharedString::from(format!("chat-product-research-{turn}"))), if busy { "Reading…" } else { "Read again" })
+                    .on_click(cx.listener(move |this, _: &ClickEvent, _w, cx| {
+                        this.chat_research_product(research_id.clone(), cx);
+                        cx.notify();
+                    })),
+            ),
+    );
+    if let Some(note) = note {
+        card = card.child(
+            div()
+                .font_family(SANS)
+                .text_size(px(12.0))
+                .line_height(px(18.0))
+                .text_color(paint(ICE))
+                .child(note.to_string()),
+        );
+    }
+    card
+}
+
+
 fn sources_view(names: &[String], motion: bool) -> Div {
     let mut rows = div()
         .flex()
@@ -815,12 +1152,15 @@ fn composer(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
     div()
         .flex()
         .flex_col()
-        .gap(px(8.0))
+        .gap(px(SPACE_S))
+        .px(px(SPACE_L))
         .pt(px(SPACE_M))
+        .pb(px(SPACE_M))
         .border_t_1()
-        .border_color(paint_a(HAIRLINE))
-        .child(picker)
-        .children(note)
+        // The composer sits on the conversation panel, so its own rule is the
+        // boundary between two surfaces: `EDGE`, not a hairline.
+        .border_color(paint_a(EDGE))
+        .bg(paint(SURFACE_2))
         .child(
             div()
                 .flex()
@@ -829,18 +1169,31 @@ fn composer(app: &Kriko, window: &mut Window, cx: &mut Context<Kriko>) -> Div {
                 .child(div().flex_1().min_w(px(0.0)).child(input))
                 .child(control),
         )
+        // One footer row under the field: the model on the left, the hint and
+        // the count on the right. The picker used to sit on a line of its own
+        // above the field, which pushed the field down and left the bottom of
+        // the panel looking like three stacked strips.
         .child(
             div()
                 .flex()
+                .flex_wrap()
                 .items_center()
                 .justify_between()
-                .gap(px(8.0))
-                .child(row_desc("Enter sends · Shift+Enter adds a line"))
-                .child(row_desc(&format!(
-                    "{} / 2000",
-                    app.chat_input.value.chars().count()
-                ))),
+                .gap(px(SPACE_S))
+                .child(picker)
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(SPACE_M))
+                        .child(row_desc("Enter sends · Shift+Enter adds a line"))
+                        .child(row_desc(&format!(
+                            "{} / 2000",
+                            app.chat_input.value.chars().count()
+                        ))),
+                ),
         )
+        .children(note)
 }
 
 /// The small picker that names the agent answering, so the reader can change
@@ -850,7 +1203,7 @@ fn model_picker(chat: &live::State, cx: &mut Context<Kriko>) -> Div {
         .flex()
         .flex_wrap()
         .items_center()
-        .gap(px(SPACE_S))
+        .gap(px(SPACE_XS))
         .child(
             div()
                 .mr(px(SPACE_XS))
@@ -877,11 +1230,12 @@ fn model_picker(chat: &live::State, cx: &mut Context<Kriko>) -> Div {
                 .cursor_pointer()
                 .font_family(SANS)
                 .text_size(px(12.0))
-                .text_color(paint(if selected { ICE } else { MUTED }))
+                .text_color(paint(if selected { INK } else { MUTED }))
                 .when(selected, |d| {
-                    d.bg(paint_a(GLASS_1))
+                    d.bg(paint_a(BRAND_WASH))
+                        .font_weight(FontWeight::MEDIUM)
                         .border_1()
-                        .border_color(paint_a(BORDER_CONTROL))
+                        .border_color(paint_a(0x86a3ff5c))
                 })
                 .when(!selected, |d| {
                     d.hover(|s| s.bg(paint_a(GLASS_1)).text_color(paint(INK)))

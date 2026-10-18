@@ -147,20 +147,25 @@ def normalise(spec: dict) -> dict:
     return out
 
 
-def local_rows(app_conn) -> list[dict]:
+def local_rows(app_conn, *, enabled_only: bool = True) -> list[dict]:
     """This installation's learned adapters, every one of them normalised.
 
     One read path on purpose. Three call sites used to read `local_adapters`
     straight off the table — the lookup, the Sites screen and the extension's
     own `/api/adapters` — and a fold applied in two of them would have been a
     site that works in the browser and not in the app, or the reverse.
+
+    `enabled_only` is the difference between *using* one and *showing* one. A
+    reader who turns an inferred adapter off must still find it on the Sites
+    screen with the switch to turn it back on, and must not have the extension
+    injecting on its host meanwhile.
     """
     if app_conn is None:
         return []
     from app.web import state
 
     out = []
-    for row in state.local_adapters(app_conn):
+    for row in state.local_adapters(app_conn, enabled_only=enabled_only):
         one = dict(row)
         one["spec"] = normalise(one.get("spec") or {})
         out.append(one)
@@ -244,7 +249,11 @@ def adapter_for(store, app_conn, url: str):
     for row in local_rows(app_conn):
         if row["host"] != host:
             continue
-        return {**row["spec"], "pack_id": row.get("pack_id") or "", "local": True}
+        return {**row["spec"], "pack_id": row.get("pack_id") or "", "local": True,
+                # Carried on the spec so whoever reads the page can say how it
+                # was read — a pack's adapter, an agent's, the reader's own, or
+                # a model's guess — without a second lookup of this table.
+                "learned_by": row.get("source") or "agent"}
     return None
 
 
@@ -278,8 +287,7 @@ def requested(store, app_conn) -> list[dict]:
         return []
     from app.web import state
 
-    readable = {one["site"] for one in registered(store, app_conn)
-                if not one.get("superseded")}
+    readable = readable_hosts(store, app_conn)
     return [row for row in state.site_requests(app_conn)
             if row["host"] not in readable]
 
@@ -305,7 +313,11 @@ def activation(store, app_conn, host: str) -> dict:
     from app.web import state
 
     wanted = host_of(host) or str(host or "").strip().lower()
-    known = {one["site"] for one in registered(store, app_conn)}
+    # An adapter the reader turned off is `no_adapter` here, deliberately: the
+    # question this answers is "will the panel appear", and the extension is no
+    # longer told about a disabled site, so a screen that said otherwise would
+    # be promising a panel that cannot come.
+    known = readable_hosts(store, app_conn)
     if wanted not in known:
         return {"host": wanted, "state": "no_adapter",
                 "detail": "nothing installed here reads this site"}
@@ -338,6 +350,14 @@ def registered(store, app_conn) -> list[dict]:
     on this page" and the answer has one shape. `source` is the difference that
     matters afterwards: a pack's adapter updates when the pack does; a local one
     is this installation's own and nothing else will ever fix it.
+
+    `learned_by` is the finer half of that, for local ones only, and it is what
+    the Sites screen needs to say *how* a site was learned: an agent wrote it,
+    the reader wrote it, or a model on this machine worked it out from a page.
+    The last is the one nobody asked for, so it is also the one that carries
+    `enabled` — a reader who turns an inferred adapter off must still find the
+    row here, with the switch to turn it back on, which is why this reads the
+    disabled ones too (`local_rows(enabled_only=False)`).
     """
     out = [
         {
@@ -346,23 +366,28 @@ def registered(store, app_conn) -> list[dict]:
             "pack_id": one.get("pack_id", ""),
             "match": one.get("match", []),
             "source": "pack",
+            "learned_by": "",
+            "enabled": True,
         }
         for one in load_adapters(store)
     ]
     known = {one["site"] for one in out}
     if app_conn is None:
         return out
-    for row in local_rows(app_conn):
+    for row in local_rows(app_conn, enabled_only=False):
+        spec = row.get("spec") or {}
+        learned = row.get("source") or "agent"
+        enabled = bool(row.get("enabled", 1))
         if row["host"] in known:
             # A pack now ships one for this host: the local copy is redundant
             # rather than wrong, and saying so is more use than hiding it.
             out.append({
-                "site": row["host"], "id": (row.get("spec") or {}).get("id", ""),
+                "site": row["host"], "id": spec.get("id", ""),
                 "pack_id": row.get("pack_id", ""), "match": [],
                 "source": "local", "superseded": True,
+                "learned_by": learned, "enabled": enabled,
             })
             continue
-        spec = row.get("spec") or {}
         out.append({
             "site": row["host"],
             "id": spec.get("id", ""),
@@ -370,8 +395,22 @@ def registered(store, app_conn) -> list[dict]:
             "match": spec.get("match", []),
             "source": "local",
             "superseded": False,
+            "learned_by": learned,
+            "enabled": enabled,
         })
     return out
+
+
+def readable_hosts(store, app_conn) -> set[str]:
+    """The hosts the extension would actually be told about.
+
+    A local adapter the reader turned off is not one of them: it is still on the
+    Sites screen and it is no longer something Kriko will read a page with, and
+    every question downstream of that ("is this site readable", "does this ask
+    still stand", "will the panel appear") has to give the second answer.
+    """
+    return {one["site"] for one in registered(store, app_conn)
+            if not one.get("superseded") and one.get("enabled", True)}
 
 
 #: One page sample: how many labelled facts it may carry, and how long a label

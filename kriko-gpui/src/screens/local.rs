@@ -4,7 +4,7 @@
 //! hold, and where each thing runs, all as the engine reports it
 //! (`live::local`).
 
-use gpui::{div, prelude::*, px, Context, Div, Styled, Window};
+use gpui::{div, prelude::*, px, Context, Div, FontWeight, Stateful, Styled, Window};
 
 use crate::app::{Field, Kriko, Tab};
 use crate::live::local::{
@@ -13,8 +13,7 @@ use crate::live::local::{
 };
 use crate::live::run;
 use crate::marks::{self, mark_tile, Mark, Phase};
-use crate::screens::run::option_chip;
-use crate::screens::{empty_note, guidance, mono, row_desc, row_title, stepper};
+use crate::screens::{empty_note, filter_btn, guidance, mono, row_desc, row_title, stepper};
 use crate::theme::*;
 
 pub fn runtime_settings(app: &mut Kriko, cx: &mut Context<Kriko>) -> Div {
@@ -387,7 +386,7 @@ fn setup(
 
 // ---- the model store ----
 
-/// One small card for a store state the list cannot show: an icon, a line
+/// One small panel for a store state the list cannot show: an icon, a line
 /// saying what happened, and the one action that moves past it.
 fn state_card(
     icon_name: &str,
@@ -396,18 +395,22 @@ fn state_card(
     action: gpui::AnyElement,
     motion: bool,
 ) -> Div {
-    card()
+    // A well, not a card: this panel sits inside the store's own card, and a
+    // card inside a card draws two surfaces where the reader should see one.
+    well()
+        .p(px(SPACE_L))
         .flex()
         .flex_col()
-        .gap(px(6.0))
+        .gap(px(SPACE_S))
         .child(card_head(icon_name, title, motion))
         .child(row_desc(body))
-        .child(div().pt(px(2.0)).child(action))
+        .child(action)
 }
 
 /// The model store: one toolbar (search, filters, sort) over what this
-/// machine holds and what the provider lists, then one card per model. The
-/// library is read on demand, so a visit that never opens it costs nothing.
+/// machine holds and what the provider lists, then one full-width row per
+/// model. The library is read on demand, so a visit that never opens it costs
+/// nothing.
 fn model_store(
     app: &mut Kriko,
     plane: &Plane,
@@ -444,15 +447,25 @@ fn model_store(
     };
 
     let retry = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.refresh_local_catalogue(cx));
+    // The head holds the count and the two quieter ways to change what the list
+    // shows. Only the toggle carries a fill: the one filled control on this
+    // card is the one that changes what is listed, so the head never competes
+    // with a row's own action.
     let head = div()
         .flex()
         .flex_wrap()
         .items_center()
         .justify_end()
-        .gap(px(8.0))
+        .gap(px(SPACE_S))
         .child(mono(&count_line, DIM))
-        .child(ghost("local-store-refresh", if loading { "Reading" } else { "Refresh library" }).on_click(retry))
-        .child(ghost("local-store-library", "Open Ollama's library").on_click(|_, _, cx| cx.open_url("https://ollama.com/library")))
+        .child(
+            text_action("local-store-refresh", if loading { "Reading" } else { "Refresh library" }, false)
+                .on_click(retry),
+        )
+        .child(
+            text_action("local-store-library", "Open Ollama's library", false)
+                .on_click(|_, _, cx| cx.open_url("https://ollama.com/library")),
+        )
         .child(
             ghost("local-store-toggle", if open { "Hide downloadable" } else { "Downloadable models" })
                 .on_click(cx.listener(|this, _: &gpui::ClickEvent, _w, cx| {
@@ -473,7 +486,7 @@ fn model_store(
         window,
         cx,
     );
-    let mut filters = div().flex().flex_wrap().items_center().gap(px(6.0));
+    let mut filters = div().flex().flex_wrap().items_center().gap(px(SPACE_S));
     for (i, (label, value)) in [
         ("Installed", LibraryFilter::Installed),
         ("Fits this machine", LibraryFilter::Fits),
@@ -493,26 +506,40 @@ fn model_store(
             cx.notify();
         });
         filters = filters.child(
-            option_chip(("local-store-filter", i), label, filter == value).on_click(pick),
+            // the shared filter control brings its own hover; the press is felt
+            // here because a filter is pressed far more often than it is read
+            filter_btn(("local-store-filter", i), label, filter == value, false)
+                .active(|s| s.bg(paint_a(GLASS_1)).text_color(paint(ICE)))
+                .on_click(pick),
         );
     }
     let sort_next = match sort {
         LibrarySort::Name => LibrarySort::Size,
         LibrarySort::Size => LibrarySort::Name,
     };
+    // The sort is a control of the same height and weight as a filter: it sits
+    // in the same bar, so a shorter box beside them read as a different kind of
+    // thing.
     let sort_control = div()
         .id("local-store-sort")
-        .h(px(30.0))
-        .px(px(10.0))
+        .flex_none()
+        .h(px(CONTROL_H))
+        .px(px(SPACE_L))
         .flex()
         .items_center()
-        .gap(px(6.0))
-        .rounded(px(8.0))
+        .gap(px(SPACE_S))
+        .rounded(px(10.0))
+        .font_family(SANS)
+        .font_weight(FontWeight::MEDIUM)
+        .text_size(px(13.0))
+        .line_height(px(LINE_13))
+        .text_color(paint(INK_2))
         .cursor_pointer()
         .bg(paint_a(GLASS_1))
         .border_1()
         .border_color(paint_a(BORDER_CONTROL))
-        .hover(|s| s.bg(paint_a(GLASS_2)))
+        .hover(|s| s.bg(paint_a(GLASS_2)).text_color(paint(INK)))
+        .active(|s| s.bg(paint_a(GLASS_1)).text_color(paint(ICE)))
         .child(icon("sort", 13.0).text_color(paint(MUTED)))
         .child(mono(
             match sort {
@@ -526,42 +553,56 @@ fn model_store(
             cx.notify();
         }));
 
+    // The toolbar is one row that wraps: the search grows from the left, then
+    // the filters, then the sort. The search keeps a floor of its own, so four
+    // controls beside it can never crush it to an unusable width.
+    let toolbar = div()
+        .flex()
+        .flex_wrap()
+        .items_center()
+        .gap(px(SPACE_S))
+        .child(div().flex_1().min_w(px(240.0)).child(search))
+        .child(filters)
+        .child(sort_control);
+
     let mut body = card()
         .flex()
         .flex_col()
-        .gap(px(8.0))
+        .gap(px(SPACE_M))
         .child(card_head_row("layers", "Model store", Some(head.into_any_element()), motion))
         .child(hairline())
-        .child(div().flex().items_center().gap(px(8.0)).child(search).child(sort_control))
-        .child(filters);
+        .child(toolbar);
 
     // ---- a download in flight: the store's own work indicator ----
     if let Some(pull) = app.live.local.pull.clone() {
         let cancel = cx.listener(|this, _: &gpui::ClickEvent, _w, cx| this.local_pull_cancel(cx));
+        // Its own well: the download is the store doing something, and it must
+        // not read as one more row of models.
+        let panel = well().p(px(SPACE_M)).flex().flex_col().gap(px(SPACE_S));
         body = body.child(match pull.phase {
             PullPhase::Running => {
                 let share = app.live.run.bar_value(&pull.job_id, pull.progress / 100.0, motion);
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(6.0))
+                panel
                     .child(
                         div()
                             .flex()
                             .items_center()
-                            .gap(px(8.0))
+                            .justify_between()
+                            .gap(px(SPACE_S))
                             .child(row_title(&pull.model))
                             .child(ghost("local-store-stop", "Stop").on_click(cancel)),
                     )
                     .child(progress_bar("local-store-pull", share, motion))
                     .child(mono(&format!("{:.0}% · {}", pull.progress.min(100.0), pull.message), INK_2))
             }
-            PullPhase::Done => div()
-                .flex()
-                .items_center()
-                .gap(px(8.0))
-                .child(tag("local-store-downloaded", TagState::Done, "Downloaded", motion))
-                .child(row_desc(&format!("{} is on this machine.", pull.model))),
+            PullPhase::Done => panel.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(SPACE_S))
+                    .child(tag("local-store-downloaded", TagState::Done, "Downloaded", motion))
+                    .child(row_desc(&format!("{} is on this machine.", pull.model))),
+            ),
             PullPhase::Failed(why) => {
                 let target = pull.model.clone();
                 let again = cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
@@ -569,19 +610,17 @@ fn model_store(
                     this.local_get.set_value(target.clone());
                     this.local_pull(cx);
                 });
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap(px(6.0))
+                panel
                     .child(tag("local-store-failed", TagState::Block, "Not downloaded", motion))
                     .child(
                         div()
                             .font_family(SANS)
                             .text_size(px(13.0))
+                            .line_height(px(LINE_13))
                             .text_color(paint(DANGER))
                             .child(why),
                     )
-                    .child(ghost("local-store-retry", "Try again").on_click(again))
+                    .child(text_action("local-store-retry", "Try again", false).on_click(again))
             }
         });
     }
@@ -589,15 +628,18 @@ fn model_store(
     // ---- a removal the server refused: its words, beside the store ----
     if !app.live.local.remove_error.is_empty() {
         body = body.child(
-            div()
+            well()
+                .p(px(SPACE_M))
+                .border_color(paint_a(DANGER_EDGE))
                 .flex()
                 .flex_col()
-                .gap(px(6.0))
+                .gap(px(SPACE_S))
                 .child(tag("local-store-remove-failed", TagState::Block, "Not removed", motion))
                 .child(
                     div()
                         .font_family(SANS)
                         .text_size(px(13.0))
+                        .line_height(px(LINE_13))
                         .text_color(paint(DANGER))
                         .child(app.live.local.remove_error.clone()),
                 ),
@@ -614,7 +656,7 @@ fn model_store(
             div()
                 .flex()
                 .items_center()
-                .gap(px(8.0))
+                .gap(px(SPACE_S))
                 .child(app.input_field(
                     Field::LocalGet,
                     "local-store-get",
@@ -702,11 +744,6 @@ fn model_store(
         };
         body = body.child(state_card(icon_name, title, note, action, motion));
     } else {
-        let mut cards: Vec<Div> = Vec::with_capacity(rows.len());
-        for (i, row) in rows.iter().enumerate() {
-            cards.push(store_tile(app, plane, row, i, limit, running, motion, cx));
-        }
-        let width = (app.content_w - 32.0).max(0.0);
         let mut list = div()
             .id("local-store-list")
             .max_h(px(640.0))
@@ -715,16 +752,84 @@ fn model_store(
             .on_scroll_wheel(|_, _, cx| cx.stop_propagation())
             .flex()
             .flex_col();
-        list = list.child(grid(width, 340.0, cards));
+        for (i, row) in rows.iter().enumerate() {
+            // A rule, not a card: one column of names is read down the list,
+            // where a grid of boxes is read box by box.
+            if i > 0 {
+                list = list.child(row_rule());
+            }
+            list = list.child(store_tile(app, plane, row, i, limit, running, motion, cx));
+        }
         body = body.child(list);
     }
 
     body
 }
 
-/// One model's card: its name, parameter count and size, a chip row for the
-/// sizes it comes in and its quantisation, a fit badge, and the actions that
-/// apply to it.
+/// The rule between two store rows. `EDGE`, not `HAIRLINE`: this line is the
+/// only thing holding one row apart from the next, and a hairline disappears
+/// on the surface it has to divide.
+fn row_rule() -> Div {
+    div().w_full().h(px(1.0)).bg(paint_a(EDGE))
+}
+
+/// A quiet action: the words only, with a surface that arrives under the
+/// pointer and a press that lands. It never competes with the one filled key
+/// on the row it belongs to.
+fn text_action(id: impl Into<gpui::ElementId>, label: &str, danger: bool) -> Stateful<Div> {
+    div()
+        .id(id)
+        .flex_none()
+        .h(px(CONTROL_H))
+        .px(px(SPACE_M))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded(px(10.0))
+        .font_family(SANS)
+        .font_weight(FontWeight::MEDIUM)
+        .text_size(px(13.0))
+        .line_height(px(LINE_13))
+        .text_color(paint(if danger { DANGER } else { MUTED }))
+        .cursor_pointer()
+        .hover(|s| {
+            s.bg(paint_a(if danger { DANGER_WASH } else { GLASS_2 }))
+                .text_color(paint(if danger { DANGER } else { INK }))
+        })
+        .active(|s| s.bg(paint_a(if danger { DANGER_EDGE } else { GLASS_1 })))
+        .child(label.to_string())
+}
+
+/// One size a download can come in, as a quiet chip. The brand is spent on the
+/// row's single primary action, so a chosen size is a lit ring and ice ink
+/// rather than a second filled control beside the first.
+fn size_chip(id: impl Into<gpui::ElementId>, label: &str, chosen: bool) -> Stateful<Div> {
+    div()
+        .id(id)
+        .flex_none()
+        .h(px(PILL_H))
+        .px(px(SPACE_S))
+        .flex()
+        .items_center()
+        .rounded(px(8.0))
+        .font_family(SANS)
+        .font_weight(if chosen { FontWeight::MEDIUM } else { FontWeight::NORMAL })
+        .text_size(px(12.0))
+        .line_height(px(LINE_12))
+        .text_color(paint(if chosen { ICE } else { MUTED }))
+        .cursor_pointer()
+        .bg(paint_a(if chosen { GLASS_2 } else { GLASS_1 }))
+        .border_1()
+        .border_color(paint_a(if chosen { EDGE_STRONG } else { EDGE }))
+        .hover(|s| s.bg(paint_a(GLASS_2)).text_color(paint(INK)))
+        .active(|s| s.bg(paint_a(GLASS_1)))
+        .child(label.to_string())
+}
+
+/// One model in the store: its name and its facts at the left, its actions at
+/// the right, and one quiet line for the sizes a download can come in. The row
+/// draws no surface of its own, so a long list reads as one column of names
+/// rather than as a wall of small boxes.
 fn store_tile(
     app: &mut Kriko,
     plane: &Plane,
@@ -736,7 +841,14 @@ fn store_tile(
     cx: &mut Context<Kriko>,
 ) -> Div {
     let picked = app.live.local.library_size.get(&row.name).cloned().unwrap_or_default();
-    let chosen = chosen_size(row, (!picked.is_empty()).then_some(picked.as_str()));
+    // An installed row's facts are the server's, not those of a size the reader
+    // picked before the download finished, so a size is only read for a model
+    // that is not on this machine yet.
+    let chosen = if row.installed {
+        None
+    } else {
+        chosen_size(row, (!picked.is_empty()).then_some(picked.as_str()))
+    };
     let est = chosen.and_then(size_gb).or(row.est_gb);
     let params = chosen.and_then(params_b).or(row.params_b);
     let target = match chosen {
@@ -755,8 +867,13 @@ fn store_tile(
                 .to_ascii_lowercase()
                 .starts_with(&format!("{}-", plane.recommended_model.to_ascii_lowercase())));
 
+    // What is on disk beats what a download would weigh, and a model the server
+    // holds without a size is not a model still to fetch: the estimate is only
+    // ever the size of something that is not here yet.
     let size_line = if let Some(bytes) = row.bytes {
         format!("{} on disk", gb_bytes(bytes))
+    } else if row.installed {
+        "size not reported".to_string()
     } else if let Some(gb) = est {
         format!("≈ {gb:.1} GB download")
     } else {
@@ -766,12 +883,28 @@ fn store_tile(
         Some(b) => format!("{} · {}", params_label(b), size_line),
         None => size_line,
     };
+    // Quantisation is a fact about the file, so it rides on the quiet line: as a
+    // chip beside INSTALLED it was a third thing speaking in the same voice.
+    let quant = row
+        .quant
+        .clone()
+        .filter(|q| !q.is_empty())
+        .or_else(|| (!row.installed).then(|| "q4 (estimated)".to_string()));
+    let facts = match quant {
+        Some(q) => format!("{facts} · {q}"),
+        None => facts,
+    };
 
-    let mut chips = div().flex().flex_wrap().items_center().gap(px(4.0));
-    if !row.sizes.is_empty() {
+    // A row that offers several sizes shows them only while the model is not on
+    // the machine: this is the size Download fetches. An installed model's size
+    // is the server's own fact, and a second size would be a different download
+    // the row cannot start.
+    let has_sizes = !row.installed && row.sizes.len() > 1;
+    let mut sizes = div().flex().flex_wrap().items_center().gap(px(SPACE_XS));
+    if has_sizes {
         let default_name = row.name.clone();
-        chips = chips.child(
-            option_chip(
+        sizes = sizes.child(
+            size_chip(
                 gpui::ElementId::named_usize(format!("store-default-{i}"), 0),
                 "default",
                 picked.is_empty(),
@@ -791,8 +924,8 @@ fn store_tile(
                 Some(gb) => format!("{size} · ≈ {gb:.1} GB"),
                 None => size.clone(),
             };
-            chips = chips.child(
-                option_chip(
+            sizes = sizes.child(
+                size_chip(
                     gpui::ElementId::named_usize(format!("store-size-{i}"), si + 1),
                     &label,
                     picked == *size,
@@ -800,13 +933,57 @@ fn store_tile(
                 .on_click(pick),
             );
         }
-    } else if let Some(b) = row.params_b {
-        chips = chips.child(chip(&params_label(b)));
     }
-    let quant = row.quant.clone().unwrap_or_else(|| {
-        if row.installed { "quant not reported".to_string() } else { "q4 (estimated)".to_string() }
-    });
-    chips = chips.child(chip(&quant));
+
+    let mut chips: Vec<Div> = Vec::new();
+    if row.installed {
+        chips.push(tag(format!("store-installed-{i}"), TagState::Done, "Installed", motion));
+    }
+    if recommended && !row.installed {
+        chips.push(tag(format!("store-recommended-{i}"), TagState::Queue, "Recommended", motion));
+    }
+    match row_fits(row, limit) {
+        Some(true) => chips.push(tag(format!("store-fits-{i}"), TagState::Live, "Fits", motion)),
+        Some(false) => chips.push(tag(format!("store-toolarge-{i}"), TagState::Block, "Too large", motion)),
+        None => {}
+    }
+    // Two is the ceiling: a third chip turns the row back into a toolbar.
+    chips.truncate(2);
+
+    let name = div()
+        .font_family(SANS)
+        .font_weight(FontWeight::SEMIBOLD)
+        .text_size(px(15.5))
+        .line_height(px(LINE_14))
+        .text_color(paint(INK))
+        .overflow_hidden()
+        .whitespace_nowrap()
+        .text_ellipsis()
+        .child(row.name.clone());
+    let meta = div()
+        .font_family(SANS)
+        .text_size(px(12.5))
+        .line_height(px(LINE_12))
+        .text_color(paint(MUTED))
+        .overflow_hidden()
+        .whitespace_nowrap()
+        .text_ellipsis()
+        .child(facts);
+    let mut identity = div()
+        .flex()
+        .flex_col()
+        .gap(px(SPACE_XS))
+        .flex_1()
+        .min_w(px(0.0))
+        .child(name)
+        .child(meta);
+    if !chips.is_empty() || has_sizes {
+        let mut status = div().flex().flex_wrap().items_center().gap(px(SPACE_S)).children(chips);
+        if has_sizes {
+            status = status.child(sizes);
+        }
+        identity = identity.child(status);
+    }
 
     let primary: gpui::AnyElement = if pulling {
         tag(format!("store-pulling-{i}"), TagState::Live, "Downloading", motion).into_any_element()
@@ -820,7 +997,16 @@ fn store_tile(
                 .into_any_element()
         }
     } else if busy {
-        ghost(("store-busy", i), "Busy").into_any_element()
+        // another download holds the store: this row cannot start one, and a
+        // key that still looked pressable would promise work it will not do
+        div()
+            .id(("store-busy", i))
+            .h(px(CONTROL_H))
+            .px(px(SPACE_M))
+            .flex()
+            .items_center()
+            .child(mono("Busy", DIM))
+            .into_any_element()
     } else {
         let target = target.clone();
         key(("store-download", i), "Download")
@@ -831,23 +1017,8 @@ fn store_tile(
             }))
             .into_any_element()
     };
-    let secondary: gpui::AnyElement = {
-        let url = if row.listed {
-            library_url(&row.name)
-        } else {
-            "https://ollama.com/library".to_string()
-        };
-        ghost(("store-open", i), "Open in library")
-            .on_click(move |_, _, cx| cx.open_url(&url))
-            .into_any_element()
-    };
-    let fit_badge: gpui::AnyElement = match row_fits(row, limit) {
-        Some(true) => tag(format!("store-fits-{i}"), TagState::Live, "Fits", motion).into_any_element(),
-        Some(false) => tag(format!("store-toolarge-{i}"), TagState::Block, "Too large", motion).into_any_element(),
-        None => div().into_any_element(),
-    };
-    // an installed model can go: no dialog, the first press asks and the
-    // second deletes, so a stray click only changes the button's words
+    // an installed model can go: no dialogue, the first press arms the row and
+    // the second deletes, so a stray click only changes the button's words
     let remove: Option<gpui::AnyElement> = row.installed.then(|| {
         let name = installed_name.clone();
         let label = if removing {
@@ -857,7 +1028,7 @@ fn store_tile(
         } else {
             "Remove"
         };
-        ghost(("store-remove", i), label)
+        text_action(("store-remove", i), label, armed || removing)
             .opacity(if removing { 0.5 } else { 1.0 })
             .on_click(cx.listener(move |this, _: &gpui::ClickEvent, _w, cx| {
                 if this.live.local.removing.is_some() {
@@ -871,43 +1042,34 @@ fn store_tile(
             }))
             .into_any_element()
     });
+    let open_url = if row.listed {
+        library_url(&row.name)
+    } else {
+        "https://ollama.com/library".to_string()
+    };
 
-    well()
-        .p(px(10.0))
+    // No id on the row itself: it is a surface to hover, not a control, and a
+    // row that carried one would take the press meant for its own buttons.
+    div()
         .flex()
-        .flex_col()
-        .gap(px(6.0))
+        .items_center()
+        .gap(px(SPACE_M))
+        .py(px(SPACE_M))
+        .rounded(px(10.0))
+        .hover(|s| s.bg(paint_a(GLASS_1)))
+        .child(identity)
         .child(
             div()
                 .flex()
+                .flex_none()
                 .items_center()
-                .gap(px(6.0))
-                .flex_wrap()
-                .child(div().flex_1().min_w(px(0.0)).child(row_title(&row.name)))
-                .children(recommended.then(|| mono("RECOMMENDED", ICE)))
-                .when(row.installed, |d| {
-                    d.child(tag(format!("store-installed-{i}"), TagState::Done, "Installed", motion))
-                }),
-        )
-        .child(mono(&facts, MUTED))
-        .child(chips)
-        .child(hairline())
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap(px(8.0))
-                .child(div().flex_none().child(fit_badge))
+                .gap(px(SPACE_S))
                 .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap(px(6.0))
-                        .child(secondary)
-                        .child(primary)
-                        .children(remove),
-                ),
+                    text_action(("store-open", i), "Open in library", false)
+                        .on_click(move |_, _, cx| cx.open_url(&open_url)),
+                )
+                .children(remove)
+                .child(primary),
         )
 }
 

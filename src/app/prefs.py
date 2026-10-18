@@ -347,6 +347,10 @@ def api_agent_rows(conn) -> tuple[list[dict], list[dict]]:
             "id": one.id, "label": one.label, "command": "", "download_url": one.key_url,
             "install_hint": one.install_hint,
             "needs_account": "Bills " + bills(one),
+            # Carried by the ready row above and by this one too, so a screen
+            # that has only the *missing* list can still say what the agent is
+            # rather than reading a keyed agent as a CLI on PATH (the market).
+            "cost_basis": "per_token",
         }
         for one in apiagent.KNOWN
         if one not in ready
@@ -408,6 +412,13 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
     if fresh:
         # "Check again" after installing a CLI must see it at once.
         harness.forget_located()
+        # And so must the local model server: `local_discovery` remembers what
+        # it found for a couple of seconds so that one turn's three readiness
+        # questions cost one probe, and a reader who pressed Check again has
+        # said the machine changed.
+        from app.providers import local_discovery
+
+        local_discovery.forget_discovery()
     found = harness.available()
     lists = harness.models_for_each(found, fresh=fresh)
     efforts = harness.efforts_for_each(found, fresh=fresh)

@@ -56,6 +56,23 @@ pub const WARN: u32 = 0xffb86b;
 pub const WARN_WASH: u32 = 0xffb86b1f;
 pub const FROST: u32 = 0xecf1ffeb;
 
+// ---- the two edges a page needs to read as a page ----
+//
+// A hairline is right for a rule inside one surface: it separates without
+// shouting. It is wrong for the edge between two surfaces — the rail against
+// the page, a card against the ground — where it disappears entirely on a
+// bright screen and leaves a screen with no shape at all. So there are two
+// named edges, and a screen says which one it means.
+
+/// The edge between two surfaces: the rail, a card, a panel.
+pub const EDGE: u32 = 0xffffff33;
+/// The edge of a control the reader can press. Heavier than `EDGE` because a
+/// control's boundary is what says it is a control.
+pub const EDGE_STRONG: u32 = 0xffffff73;
+/// A surface one step above the ground, for a panel that must read as raised
+/// without a shadow. Dark themes need a lift, not a line.
+pub const SURFACE_2: u32 = 0x0d1424;
+
 // ---- light theme ----
 //
 // The app keeps one palette of names and swaps the values. Every builder and
@@ -84,6 +101,7 @@ pub(crate) fn light_colour(hex: u32) -> u32 {
     match hex {
         0x05070f => 0xfbfcff, // GROUND
         0x090e1b => 0xffffff, // SURFACE_1
+        0x0d1424 => 0xf4f7fd, // SURFACE_2
         0x1f4fff => 0x1f4fff, // BRAND
         0x3a64ff => 0x2b53e6, // BRAND_HOVER
         0x1739c2 => 0x1739c2, // BRAND_LOW
@@ -119,6 +137,8 @@ pub(crate) fn light_alpha(hex: u32) -> u32 {
         0xffffff0d => 0x0b10200a, // GLASS_1
         0xffffff14 => 0x0b102010, // GLASS_2
         0xffffff1a => 0x0b102016, // HAIRLINE
+        0xffffff33 => 0x0b10202e, // EDGE
+        0xffffff73 => 0x0b102060, // EDGE_STRONG
         0xffffff1b => 0x0b102009, // card's top glaze
         0xffffff20 => 0x0b10201a,
         0xffffff26 => 0x0b102018, // card edge
@@ -654,6 +674,22 @@ pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
     hero_scrolled(sky, height, motion, 0.0, "")
 }
 
+/// The two gradient stops behind the sky image, for the theme in force.
+///
+/// The sky image itself is the same picture in both themes — it is the
+/// product's identity, and it is deliberately not theme-mapped. Its *base*
+/// gradient was, though, and that was the light theme's worst defect: `GROUND`
+/// and `ICE` both map to near-white, so the band became a white-to-white
+/// gradient under a dark sky image at 62% opacity, which is a grey smear. The
+/// words on it are chosen by `Sky::ink` from the image's own measured
+/// luminance, so they stayed light — light words on a pale smear.
+///
+/// The band is a picture, not a surface. It keeps its own dark colours in both
+/// themes, and the page below it is what changes.
+fn sky_stops(sky: Sky) -> (u32, u32) {
+    sky.base()
+}
+
 /// The hero with the page's scroll offset: the sky drifts a fraction of the
 /// scroll, so the band reads as a window rather than as a sticker on the page.
 /// Scroll-linked, not looping: it only changes while `step_scroll` is asking
@@ -664,7 +700,7 @@ pub fn hero(sky: Sky, height: f32, motion: bool) -> Div {
 /// not. The page head is added as a child after this returns, so the text
 /// always paints above the moving light.
 pub fn hero_scrolled(sky: Sky, height: f32, motion: bool, scroll: f32, key: &str) -> Div {
-    let (top, bottom) = sky.base();
+    let (top, bottom) = sky_stops(sky);
     // `scroll` is zero at the top and negative further down; the sky lags it.
     let drift = if motion { -scroll * amp(0.22) } else { 0.0 };
     let mut hero = div()
@@ -672,7 +708,9 @@ pub fn hero_scrolled(sky: Sky, height: f32, motion: bool, scroll: f32, key: &str
         .w_full()
         .h(px(height))
         .overflow_hidden()
-        .bg(paint(GROUND))
+        // `fixed`, not `paint`: the sky is the one picture that does not
+        // follow the theme, and its own backdrop has to stay under it.
+        .bg(fixed(GROUND))
         .child(
             div().absolute().top_0().left_0().size_full().bg(linear_gradient(
                 180.0,
@@ -699,8 +737,8 @@ pub fn hero_scrolled(sky: Sky, height: f32, motion: bool, scroll: f32, key: &str
                 .h(relative(0.55))
                 .bg(linear_gradient(
                     180.0,
-                    linear_color_stop(Hsla { a: 0.0, ..Hsla::from(paint(ICE)) }, 0.0),
-                    linear_color_stop(Hsla { a: sky.glow(), ..Hsla::from(paint(ICE)) }, 1.0),
+                    linear_color_stop(Hsla { a: 0.0, ..Hsla::from(fixed(ICE)) }, 0.0),
+                    linear_color_stop(Hsla { a: sky.glow(), ..Hsla::from(fixed(ICE)) }, 1.0),
                 )),
         );
     // The sky's awakening, over the still image and under the page head.
@@ -827,6 +865,10 @@ pub fn embedded(path: SharedString) -> gpui::ImageSource {
 /// "page titles takes too much space, but i dont wanna lose the sky").
 pub fn page_head(sky: Sky, crumb: &str, title: &str, lead: &str, motion: bool) -> Div {
     let plan = sky.ink();
+    // Raw, not themed. `Sky::ink` is measured from the sky image at build time
+    // and the image does not follow the theme, so the words on it must not
+    // either: `paint(BRAND_BRIGHT)` mapped to a dark blue on the light ground
+    // and the crumb lost its accent against a sky that never changed.
     let shade = |a: f32| Hsla { a, ..hsla(plan.shade) };
     let accent = if plan.accent_reads { BRAND_BRIGHT } else { plan.ink };
     div()
@@ -907,6 +949,11 @@ fn title_wipe(title: &str, ink: u32, motion: bool) -> gpui::AnyElement {
 
 /// The sidebar's width. The titlebar floats over everything to its right.
 pub const SIDEBAR_W: f32 = 248.0;
+
+/// The sidebar as an icon rail. It was a bare 76 in three call sites, which is
+/// two pixels too narrow for a 44-high row plus its own 12px inset on each
+/// side: the glyph wells were clipped by their own rail.
+pub const SIDEBAR_RAIL_W: f32 = 68.0;
 
 /// One window-control button for the merged titlebar. `close` hovers red.
 /// Resting state is a visible well; it is a control, not a ghost.
@@ -1767,8 +1814,11 @@ pub fn nav_item(
     badge: Option<&str>,
 ) -> Stateful<Div> {
     let collapsed = label.is_empty();
-    // The glyph's own well lights when the row is the one on screen, so the
-    // rail reads by shape before it reads by word.
+    // The glyph well is quiet until the row means something. It used to wear a
+    // filled, bordered well in every state, so a rail of thirteen items read
+    // as thirteen boxes and the one the reader was on had nothing left to say
+    // it with. Now the well is bare at rest and lights only for the current
+    // row or the one under the pointer.
     let glyph = div()
         .flex_none()
         // One step under the row: the well centres in 44 with room above and
@@ -1778,10 +1828,12 @@ pub fn nav_item(
         .flex()
         .items_center()
         .justify_center()
-        .bg(paint_a(if current { 0x1f4fff3d } else { GLASS_1 }))
-        .border_1()
-        .border_color(paint_a(if current { 0x86a3ff48 } else { HAIRLINE }))
-        .child(icon(icon_name, 18.0).text_color(paint(if current { ICE } else { MUTED })));
+        .when(current, |d| {
+            d.bg(paint_a(0x1f4fff47))
+                .border_1()
+                .border_color(paint_a(0x86a3ff5c))
+        })
+        .child(icon(icon_name, 18.0).text_color(paint(if current { ICE } else { DIM })));
     let mut row = div()
         .id(id)
         .relative()
@@ -1834,7 +1886,7 @@ pub fn nav_item(
                 .justify_center()
                 .bg(paint_a(GLASS_1))
                 .border_1()
-                .border_color(paint_a(HAIRLINE))
+                .border_color(paint_a(EDGE))
                 .font_family(MONO)
                 .text_size(px(11.0))
                 .line_height(px(LINE_11))
@@ -2009,7 +2061,56 @@ impl gpui::Element for Reveal {
     fn paint(&mut self, _: Option<&gpui::GlobalElementId>, _: Option<&gpui::InspectorElementId>, _: gpui::Bounds<gpui::Pixels>, child: &mut Self::RequestLayoutState, _: &mut (), window: &mut gpui::Window, cx: &mut gpui::App) { child.paint(window, cx); }
 }
 
-pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
+/// The brand block on top of the sidebar: flat brand rectangle, white wordmark,
+/// and the rail's own fold control.
+///
+/// The fold control lives here rather than under the block. It was a bare
+/// panel glyph in its own 12px-padded row below the wordmark, which read as a
+/// stray button between the brand and the first group — nothing said what it
+/// folded. On the brand row, at the end of the wordmark's own line, it reads
+/// as what it is: this rail's control.
+pub fn brand_block(
+    wordmark: &'static str,
+    tagline: &str,
+    control: Option<Stateful<Div>>,
+) -> Div {
+    let mut head = div()
+        .flex()
+        .items_center()
+        .gap(px(SPACE_M))
+        .w_full()
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .gap(px(SPACE_M))
+                .flex_1()
+                .min_w(px(0.0))
+                .child(
+                    svg()
+                        .path(SharedString::from(wordmark))
+                        .w(px(66.4))
+                        .h(px(22.0))
+                        .flex_none()
+                        .text_color(fixed(0xffffff)),
+                )
+                .child(
+                    div()
+                        .flex_none()
+                        .font_family(MONO)
+                        .text_size(px(11.0))
+                        .text_color(fixed(ICE))
+                        .px(px(6.0))
+                        .py(px(3.0))
+                        .border_1()
+                        .border_color(fixed_a(0xffffff59))
+                        .rounded(px(4.0))
+                        .child("BETA"),
+                ),
+        );
+    if let Some(control) = control {
+        head = head.child(control);
+    }
     div()
         .bg(paint(BRAND))
         .px(px(SPACE_XL))
@@ -2018,14 +2119,7 @@ pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
         .flex()
         .flex_col()
         .gap(px(SPACE_S))
-        .child(
-            div().flex().items_center().gap(px(SPACE_M)).child(svg()
-                .path(SharedString::from(wordmark))
-                .w(px(66.4))
-                .h(px(22.0))
-                .flex_none()
-                .text_color(fixed(0xffffff))).child(div().flex_none().font_family(MONO).text_size(px(11.0)).text_color(fixed(ICE)).px(px(6.0)).py(px(3.0)).border_1().border_color(fixed_a(0xffffff59)).rounded(px(4.0)).child("BETA")),
-        )
+        .child(head)
         .child(
             div()
                 .font_family(MONO)
@@ -2033,6 +2127,23 @@ pub fn brand_block(wordmark: &'static str, tagline: &str) -> Div {
                 .text_color(fixed(0xffffffd9))
                 .child(tagline.to_string()),
         )
+}
+
+/// The fold control for the brand row: white on the brand blue, because a
+/// glass well on a saturated fill reads as a hole rather than a button.
+pub fn brand_control(id: impl Into<gpui::ElementId>, icon_name: &str) -> Stateful<Div> {
+    div()
+        .id(id)
+        .flex_none()
+        .size(px(28.0))
+        .flex()
+        .items_center()
+        .justify_center()
+        .rounded(px(8.0))
+        .cursor_pointer()
+        .hover(|s| s.bg(fixed_a(0xffffff2e)))
+        .active(|s| s.bg(fixed_a(0xffffff1f)))
+        .child(icon(icon_name, 15.0).text_color(fixed(0xffffff)))
 }
 
 #[cfg(test)]

@@ -901,6 +901,11 @@
       state.researchPlane = response.plane || null;
       state.researchPlaneError = "";
       renderResearch();
+      // The follow-up tooltips carry the cap too, and the slot may already be
+      // drawn: the answer that opened it can land before this answer does,
+      // because both are a round trip and neither waits for the other. This
+      // only rewrites the two titles, so it costs a comparison.
+      refreshFollowupCap();
       // Skip the redraw while a run is in flight: renderGaps rebuilds the gap
       // card from scratch, and rebuilding out from under an active poll would
       // orphan the button pollResearchJob is updating by direct reference.
@@ -908,6 +913,18 @@
       // nothing here worth losing progress text for.
       if (!state.researching) renderGaps();
     });
+  }
+
+  /* Write the cap onto a follow-up slot that is already on screen. */
+  function refreshFollowupCap() {
+    const slot = bodyEl?.querySelector(".lite-followup-slot");
+    const input = slot?.querySelector(".lite-followup-input");
+    if (!slot || !input) return;
+    const send = slot.querySelector(".lite-followup-send");
+    const cap = paidCapLine();
+    input.title = "Your agent answers from this listing's risks and evidence."
+      + (cap ? ` ${cap}` : "");
+    if (send) send.title = cap;
   }
 
   // The sentence a reader sees before the button does anything at all. Named
@@ -1876,6 +1893,12 @@
     panel.className = "lite-panel";
     panel.dataset.side = state.side;
     panel.dataset.mounting = "1";
+    // The panel is a region inside a page Kriko does not own, so it says what
+    // it is. Without a name a screen reader reads the panel's contents as
+    // loose text in the middle of somebody's listing, with nothing to say
+    // where the listing stopped.
+    panel.setAttribute("role", "complementary");
+    panel.setAttribute("aria-label", "Kriko product knowledge");
     // The theme on the host before the first paint, so a stored light choice
     // never shows a dark frame. `state.theme` is empty until storage answers;
     // until then the system preference is what the stylesheet is already using.
@@ -1912,6 +1935,24 @@
     panel.addEventListener("pointermove", onPointerMove);
     panel.addEventListener("pointerup", onPointerUp);
     panel.addEventListener("pointercancel", onPointerUp);
+
+    /* Escape closes the panel, and the listener is on the panel rather than on
+     * the document.
+     *
+     * A key handler on the document would take Escape away from the page: the
+     * site's own modal, its inline edit, its search box all answer Escape, and
+     * a panel the reader may not even be looking at has no business claiming
+     * the key first. Every key event raised inside a shadow root reaches the
+     * shadow's own tree, so this catches Escape whenever the reader's focus is
+     * in the panel — which is the only moment the key is unambiguous. The
+     * search field stops its own Escape on the way up, so the field closes
+     * first and the panel closes on the next press. */
+    panel.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.stopPropagation();
+      if (state.searchOpen) closeSearch();
+      else closePanel();
+    });
 
     // A press of either control is the reader asking again on purpose, so
     // both bypass the cache; the automatic run at page load calls
@@ -2119,6 +2160,12 @@
     const wordmark = `<svg class="lite-wordmark" viewBox="0 0 302 100" role="img" aria-label="Kriko"><defs><clipPath id="kriko-cap"><rect x="-30" y="0" width="362" height="100"/></clipPath></defs><g transform="translate(18 0)"><g clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 17.0V83.0M8 50L54 -16M8 50L54 116"/></g><path d="M-12 50H44" stroke="currentColor" stroke-width="5" fill="none"/><rect x="-18" y="36" width="6" height="28" fill="currentColor"/><rect x="42" y="44" width="12" height="12" fill="currentColor"/></g><g transform="translate(84 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 102V8H36L48 20V38L36 50H8M28 50L52 108"/></g><g transform="translate(152 0)" fill="currentColor"><rect x="0" y="0" width="16" height="100"/></g><g transform="translate(180 0)" clip-path="url(#kriko-cap)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M8 -2V102M8 50L54 -16M8 50L54 116"/></g><g transform="translate(246 0)" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="miter" stroke-miterlimit="6"><path d="M20 8H36L48 20V80L36 92H20L8 80V20Z"/></g></svg>`;
 
     // The header is the drag handle: the whole brand block moves the panel.
+    //
+    // `role="complementary"` with a name, so a screen reader announces that a
+    // Kriko panel arrived on somebody else's page instead of reading its
+    // contents as loose text. The status line is the one live region: the
+    // stage sentence changes while a run is in flight, and nothing else in
+    // the panel moves on its own.
     return `
       <header class="lite-header" title="Drag to move">
         <div class="lite-titlebox">
@@ -2157,7 +2204,7 @@
             <span class="lite-cta-icon">${iconSvg("scan", { size: 15 })}</span>
             <span class="lite-cta-label">Search this product</span>
           </button>
-          <p class="lite-status">${escapeHtml(IDLE_HINT)}</p>
+          <p class="lite-status" role="status">${escapeHtml(IDLE_HINT)}</p>
         </div>
         <div class="lite-queue-slot"></div>
         <div class="lite-product-actions">
@@ -2424,7 +2471,7 @@
       const rowHtml = rows.map((r) => {
         const rowOpen = state.openDetailRows.has(r.title);
         const chips = r.items.map(p =>
-          `<span class="lite-tag" data-tone="${r.tone}">${escapeHtml(p)}</span>`
+          `<span class="lite-tag" data-tone="${escapeHtml(r.tone)}">${escapeHtml(p)}</span>`
         ).join("");
         return `
           <div class="lite-detrow" data-row="${escapeHtml(r.title)}" data-open="${rowOpen ? "1" : "0"}">
@@ -2504,9 +2551,16 @@
         : (ctaIsResearch() ? "Research this product" : "Search this product"));
     const iconWrap = ctaBtn.querySelector(".lite-cta-icon");
     iconWrap.innerHTML = iconSvg(iconName, { size: 15 });
-    iconWrap.classList.toggle("spin", isAnalyzing);
     ctaBtn.querySelector(".lite-cta-label").textContent = label;
-    if (densityBtn) densityBtn.dataset.spinning = isAnalyzing ? "1" : "0";
+    /* One indicator while a run is in flight, and it is the skeleton list.
+     *
+     * Three things used to move at once here: this key's icon, the header's
+     * refresh icon, and the shimmering rows the answer will land in. Three
+     * indicators that always start and stop together are not three pieces of
+     * information, they are one fact drawn three times — and the stage
+     * sentence above them is the fourth statement of it. The skeleton is the
+     * one kept, because it is the only one that says where the answer goes.
+     */
     // B152.8: once there is an answer the header's refresh icon is the one
     // way to ask again; a second full-width "Refresh analysis" under it was
     // the same control twice, pushing the risks down the panel.
@@ -3545,6 +3599,19 @@
     return state.followups.get(id);
   }
 
+  /* The cap a paid follow-up runs under, in the reader's words, read from the
+   * engine rather than written here. A literal "$0.20" was true when it was
+   * typed and stops being true the moment the engine's budget changes — and a
+   * number that has silently stopped being true is worse than no number, on
+   * the one prompt whose whole job is to say the cost before the click. The
+   * engine enforces this cap itself (`EXTENSION_RESEARCH_BUDGET_USD`); this
+   * only repeats it. */
+  function paidCapLine() {
+    const cap = Number(state.researchPlane?.budget_usd);
+    if (!Number.isFinite(cap) || cap <= 0) return "";
+    return `Paid agents are capped at $${cap.toFixed(2)} per question.`;
+  }
+
   function renderFollowups() {
     const slot = bodyEl?.querySelector(".lite-followup-slot");
     if (!slot) return;
@@ -3552,20 +3619,27 @@
     if (!row) { slot.replaceChildren(); delete slot.dataset.lookupId; return; }
     if (slot.dataset.lookupId !== row.id) {
       slot.dataset.lookupId = row.id;
+      // The cap comes from the engine, and this slot is the other place a
+      // paid run starts. Asking here too costs one cached request: the answer
+      // is kept for the session, and the request is a no-op after the first.
+      requestResearchPlane();
       slot.innerHTML = `
         <section class="lite-followup">
           <div class="lite-followup-history" aria-live="polite"></div>
           <form class="lite-followup-form">
             <textarea id="lite-followup-input" class="lite-followup-input" maxlength="2000"
               placeholder="Ask about this product" aria-label="Ask about this product"
-              title="Your agent answers from this listing's risks and evidence. Paid agents are capped at $0.20 per question."
+              title="Your agent answers from this listing's risks and evidence."
               rows="1"></textarea>
             <button type="submit" class="lite-followup-send"
-              title="Paid agents are capped at $0.20 per question."
               aria-label="Ask about this product">Ask</button>
           </form>
           <p class="lite-followup-status" role="status"></p>
         </section>`;
+      // The cap is said only when there is one to say: an agent on this
+      // machine or a local model costs nothing per question, and the engine
+      // reports 0 for both.
+      refreshFollowupCap();
       const input = slot.querySelector(".lite-followup-input");
       input.value = row.query;
       input.addEventListener("input", () => { row.query = input.value; });

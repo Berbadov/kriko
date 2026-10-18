@@ -15,6 +15,9 @@ from kriko.store.db import connect
 
 MAX_CATALOG_CONTEXT_CHARS = 32_000
 
+#: How many installed catalogs one Quick Look is shown. See `shortlist`.
+SHORTLIST = 8
+
 OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -259,6 +262,13 @@ def catalogs(store_path) -> list[dict]:
     The profile is assembled from the store's own vocabulary and subjects.
     Draft ownership is discovery data for harvest, not a limit on which
     installed catalogs a Quick Look can be classified into.
+
+    Five queries for the whole installation, not one per pack and one per
+    subject. The per-pack loop this replaced issued **159 statements for twelve
+    catalogs** — measured — and a Quick Look asks for the profiles twice (once
+    to rank the brief, once to file the answer), so a check on a full install
+    spent 318 round trips through SQLite before the agent saw a word. The rows
+    are the same rows in the same order; only the asking is batched.
     """
     store = connect(store_path)
     try:
@@ -266,61 +276,77 @@ def catalogs(store_path) -> list[dict]:
             "SELECT pack_id, name, version, enabled, manifest_json"
             " FROM packs ORDER BY name, pack_id"
         ).fetchall()
+        # Each of the four lists below is ordered by the key the per-pack query
+        # ordered by, then grouped in Python. `ORDER BY` is what makes "the
+        # first eight subjects" and "the first four aliases" mean here what they
+        # meant when the store did the taking.
+        terms = _grouped(
+            store.execute(
+                "SELECT pack_id, term_id, role, label_json FROM terms"
+                " ORDER BY pack_id, role, term_id"),
+            "pack_id")
+        identity = _grouped(
+            store.execute(
+                "SELECT DISTINCT pack_id, key FROM attributes WHERE is_identity = 1"
+                " ORDER BY pack_id, key"),
+            "pack_id")
+        subjects = _grouped(
+            store.execute(
+                "SELECT pack_id, subject_id, kind, label FROM subjects"
+                " ORDER BY pack_id, kind, label"),
+            "pack_id")
+        aliases = _grouped(
+            store.execute(
+                "SELECT pack_id, subject_id, alias FROM subject_aliases"
+                " ORDER BY pack_id, subject_id, alias"),
+            "pack_id")
         result = []
         for pack in packs:
             pack_id = str(pack["pack_id"])
-            terms = store.execute(
-                "SELECT term_id, role, label_json FROM terms WHERE pack_id = ?"
-                " ORDER BY role, term_id", (pack_id,),
-            ).fetchall()
+            own_terms = terms.get(pack_id, [])
             kinds: list[dict[str, str]] = [
                 {"id": str(row["term_id"]), "label": _label(row["label_json"], row["term_id"])}
-                for row in terms if row["role"] == "subject_kind"
+                for row in own_terms if row["role"] == "subject_kind"
             ]
             attributes: list[dict[str, str]] = [
                 {"id": str(row["term_id"]), "label": _label(row["label_json"], row["term_id"])}
-                for row in terms if row["role"] == "attribute"
+                for row in own_terms if row["role"] == "attribute"
             ]
-            identity = {
-                str(row["key"])
-                for row in store.execute(
-                    "SELECT DISTINCT key FROM attributes WHERE pack_id = ? AND is_identity = 1"
-                    " ORDER BY key", (pack_id,))
-            }
+            own_keys = sorted(str(row["key"]) for row in identity.get(pack_id, []))
             try:
                 manifest = json.loads(pack["manifest_json"] or "{}")
             except (TypeError, ValueError):
                 manifest = {}
             declared = manifest.get("identity_keys") if isinstance(manifest, dict) else {}
             if isinstance(declared, dict):
-                identity.update(str(key) for keys in declared.values()
-                                for key in (keys if isinstance(keys, list) else []))
-            subjects = store.execute(
-                "SELECT subject_id, kind, label FROM subjects"
-                " WHERE pack_id = ? ORDER BY kind, label",
-                (pack_id,),
-            ).fetchall()
+                own_keys = sorted({*own_keys, *(
+                    str(key) for keys in declared.values()
+                    for key in (keys if isinstance(keys, list) else []))})
+            by_subject: dict[str, list[str]] = {}
+            for row in aliases.get(pack_id, []):
+                bucket = by_subject.setdefault(str(row["subject_id"]), [])
+                if len(bucket) < 4:
+                    # The query ordered by alias within the subject, so the
+                    # first four kept here are the four the store used to take.
+                    bucket.append(str(row["alias"]))
             examples: list[dict[str, Any]] = []
-            for row in subjects[:8]:
-                aliases = [one[0] for one in store.execute(
-                    "SELECT alias FROM subject_aliases WHERE pack_id = ? AND subject_id = ?"
-                    " ORDER BY alias LIMIT 4", (pack_id, row["subject_id"]))]
+            for row in subjects.get(pack_id, [])[:8]:
                 # Subject labels are examples only. Their product identity is
                 # deliberately not inferred from a name or alias here.
                 examples.append({"kind": str(row["kind"]), "label": str(row["label"]),
-                                 "aliases": aliases})
+                                 "aliases": by_subject.get(row["subject_id"], [])})
             # `subjects` has the same row shape across supported store schema
             # versions; keep a distinct, bounded list of kinds for the brief.
             definitions: dict[str, object] = {
                 "kinds": kinds,
-                "identity_keys": sorted(identity),
+                "identity_keys": own_keys,
                 "attributes": attributes,
                 "examples": examples,
             }
             terms_for_match = [str(pack["name"]), pack_id.replace(".", " ").replace("_", " ")]
             terms_for_match.extend(one["id"] for one in kinds)
             terms_for_match.extend(one["label"] for one in kinds)
-            terms_for_match.extend(sorted(identity))
+            terms_for_match.extend(own_keys)
             terms_for_match.extend(one["id"] for one in attributes)
             terms_for_match.extend(one["label"] for one in attributes)
             for example in examples:
@@ -341,6 +367,19 @@ def catalogs(store_path) -> list[dict]:
         return result
     finally:
         store.close()
+
+
+def _grouped(rows, key: str) -> dict[str, list]:
+    """Rows from one batched query, kept under `key` in the order they arrived.
+
+    The order is the query's, never the dictionary's, which is what preserves
+    "the first eight subjects, by kind then label" and "the first four aliases,
+    by alias" now that the store is not the one doing the taking.
+    """
+    out: dict[str, list] = {}
+    for row in rows:
+        out.setdefault(str(row[key]), []).append(row)
+    return out
 
 
 def _editable_slugs(store_path) -> dict[str, str]:
@@ -505,6 +544,55 @@ empty basis.
             "No catalogs were omitted; choose one from the installed-catalog list instead."
         )
     return prompt
+
+
+def shortlist(product: str, page: dict | None, profiles: list[dict], *,
+              limit: int = SHORTLIST, pinned: str = "") -> list[dict]:
+    """The installed catalogs a product could belong to, best first.
+
+    A catalogue row in a Quick Look prompt is a *hint* for the filling step:
+    `deterministic` decides which pack the check joins, from the product's own
+    words against the whole installed set, and the agent's `pack` is only a
+    tie-breaker. Showing the whole set therefore bought a hint at the price of
+    the whole set in every quick-look prompt — measured at +3,775 characters on
+    a twelve-catalog install, and a `MAX_CATALOG_CONTEXT_CHARS` ceiling that
+    stops a large install being shown at all.
+
+    Ranked by the same word overlap `brief` ranks by, so the rows kept are the
+    ones the product's own words already point at, and ties are broken by pack
+    id so the list is reproducible. `pinned` is a pack the reader named: it is
+    always shown, first, whatever the overlap says.
+    """
+    if not profiles:
+        return []
+    facts = look_facts(product, {"product": product, "specs": _page_specs(page)})
+    folded = set().union(*(_basis_words(one) for one in facts)) if facts else set()
+
+    def rank(profile: dict) -> float:
+        terms = set().union(*(_basis_words(one) for one in profile.get("terms") or []))
+        return len(folded & terms) / max(1, len(folded))
+
+    ordered = sorted(profiles, key=lambda one: (-rank(one), str(one.get("pack_id") or "")))
+    wanted = str(pinned or "").strip()
+    if wanted:
+        first = next((one for one in ordered if one.get("pack_id") == wanted), None)
+        if first is not None:
+            ordered = [first, *(one for one in ordered if one is not first)]
+    return ordered[:max(1, int(limit))]
+
+
+def _page_specs(page: dict | None) -> list[dict]:
+    """The listing's own facts, as the specification pairs `look_facts` reads.
+
+    Bounded and stringified here rather than at the caller: a listing fact is
+    model-and-page text of unknown width, and this is only ever used to rank
+    catalog names against it.
+    """
+    facts = (page or {}).get("facts")
+    if not isinstance(facts, dict):
+        return []
+    return [{"name": str(key)[:80], "value": str(value)[:200]}
+            for key, value in list(facts.items())[:24]]
 
 
 def choice_block(profiles: list[dict]) -> str:

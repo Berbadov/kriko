@@ -1,6 +1,6 @@
 # Kriko
 
-[![version](https://img.shields.io/badge/version-0.1.1-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
+[![version](https://img.shields.io/badge/version-0.1.2-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 [![platform](https://img.shields.io/badge/platform-Windows_x64-1F4FFF?style=flat-square&labelColor=05070F)](https://github.com/Berbadov/kriko/releases/latest)
 
 Kriko shows what can go wrong with a product. It puts this knowledge next to
@@ -25,14 +25,36 @@ A lookup in an installed catalog needs no network and no key. Research needs
 the internet and the agent or model that you select. A paid provider bills your
 own account.
 
+## What's new in 0.1.2
+
+- **Chat answers are formatted.** A bold term is bold. A bullet list is a list.
+  A table is a table. A link opens the page it names. You can drag over an
+  answer and press Ctrl+C to take the words out.
+- **A product card under an answer.** When a turn reads your catalogs, the
+  answer carries a card for each product it found, with **Open**, **Add to
+  Compare** and **Read again**.
+- **Agents** is now the home for every way of answering a question: the coding
+  agents on this machine, the local model, and the paid APIs you hold a key
+  for. **Local LLM** left the rail and keeps its own screen.
+- **The model store is a list**, one full-width row for each model with one
+  primary action.
+- **The light theme is correct.** The hero band keeps its own colours in both
+  themes, and a new edge token separates two surfaces.
+- **The agents are faster.** The plane decision fell from 1114 ms to 264 ms on
+  a cold start, and a request on the loopback address from 17.19 ms to 1.43 ms.
+- **Kriko can work out how to read a new site** with the local model, from the
+  page data the extension already collects.
+
+[The changelog](CHANGELOG.md) holds the full list and the known limits.
+
 ## Download
 
 Choose a file from the [latest release](https://github.com/Berbadov/kriko/releases/latest).
 
 | File | Use |
 |---|---|
-| `kriko-0.1.1-x86_64.msi` | Install Kriko on Windows. You do not need administrator rights. |
-| `kriko-0.1.1-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
+| `kriko-0.1.2-x86_64.msi` | Install Kriko on Windows. You do not need administrator rights. |
+| `kriko-0.1.2-win64-portable.zip` | Use Kriko on Windows without an installer. Extract the file and open `kriko.exe`. |
 
 The app contains everything that it needs to start. It contains no catalog.
 Install a catalog after the first start.

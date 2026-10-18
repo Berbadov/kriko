@@ -34,6 +34,7 @@ from app import modelpull
 from app.localplane import RECOMMENDED_MODEL
 from app.loginpath import child_env
 from app.providers import harness
+from app.providers.local_discovery import forget_discovery
 from app.providers.local_inference import forget_incomplete
 from app.winprocess import hidden_startup
 
@@ -373,7 +374,11 @@ def _set_up_local(settings, progress) -> dict:
         progress.set(0.95, "Checking that the downloaded model can answer")
         _verify_local(base, model, progress)
     # It answered, so a "not ready, incomplete install" noted earlier is stale.
+    # And so is anything remembered about what this machine serves: the install
+    # that just finished is exactly the event a remembered "nothing answers"
+    # would otherwise outlive by `DISCOVERY_TTL_S`.
     forget_incomplete(base)
+    forget_discovery()
     progress.set(1.0, f"{model} is ready")
     return {"id": LOCAL, "installed": True, "model": model}
 

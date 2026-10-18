@@ -24,7 +24,10 @@
         </div>
       </header>
       <h1>Kriko extension</h1>
-      <p class="lede">Where the Kriko app is listening.</p>
+      <p class="lede">
+        Shows what is known to go wrong with the product on the page you are
+        reading.
+      </p>
 
       <form id="form" novalidate>
         <label for="base">The app's address and port</label>
@@ -34,12 +37,14 @@
           type="text"
           spellcheck="false"
           autocomplete="off"
+          aria-describedby="base-hint"
           placeholder="http://127.0.0.1:8787"
         />
-        <p class="hint">
-          Empty uses <code id="default">http://127.0.0.1:8787</code>. Nothing
-          leaves this computer. Changed the port in Kriko? Enter
-          <code>http://127.0.0.1:</code> and it.
+        <p class="hint" id="base-hint">
+          Empty uses <code id="default">http://127.0.0.1:8787</code>. The
+          extension sends the page to that address and nowhere else, and the
+          app on this computer decides what to do with it. Changed the port in
+          Kriko? Enter the full address here, port included.
         </p>
         <div class="row">
           <button type="submit" id="save">Save and test</button>

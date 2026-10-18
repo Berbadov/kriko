@@ -83,6 +83,14 @@
   --shadow-panel: 0 28px 70px rgba(0,0,0,0.6);
   --shadow-card:  0 6px 20px rgba(0,0,0,0.3);
   --well-shadow:  inset 0 2px 6px rgba(0,0,0,0.6);
+  /* The two drop shadows the brand block and the keys cast on the page.
+     Tokens rather than literals because a shadow is colour: a black shadow
+     under a white card is a grey halo on the light ground, which is the same
+     mistake as a dark image on a light gradient. The blue the keys are
+     painted with does not change between themes, so their inset bevels stay
+     literal — only what they cast has to follow. */
+  --shadow-lift: 0 18px 40px rgba(0,0,0,0.45);
+  --shadow-key:  0 10px 20px rgba(0,0,0,0.5);
 
   /* Light palette. Applied by the media query and the explicit override
      after this rule; every key here has a dark twin above. */
@@ -145,6 +153,8 @@
   --light-shadow-panel: 0 24px 60px rgba(20,28,60,0.18);
   --light-shadow-card:  0 6px 18px rgba(20,28,60,0.10);
   --light-well-shadow:  inset 0 1px 2px rgba(20,28,60,0.08);
+  --light-shadow-lift: 0 18px 40px rgba(20,28,60,0.16);
+  --light-shadow-key:  0 10px 20px rgba(20,28,60,0.22);
 
   /* Motion profile — Calm · Standard · Vivid. These are the Standard
      values; the [data-motion] selectors after this rule remap them, so one
@@ -288,6 +298,8 @@
     --shadow-panel: var(--light-shadow-panel);
     --shadow-card: var(--light-shadow-card);
     --well-shadow: var(--light-well-shadow);
+    --shadow-lift: var(--light-shadow-lift);
+    --shadow-key: var(--light-shadow-key);
     color-scheme: light;
   }
 }
@@ -347,6 +359,8 @@
   --shadow-panel: var(--light-shadow-panel);
   --shadow-card: var(--light-shadow-card);
   --well-shadow: var(--light-well-shadow);
+  --shadow-lift: var(--light-shadow-lift);
+  --shadow-key: var(--light-shadow-key);
   color-scheme: light;
 }
 
@@ -423,7 +437,7 @@ main {
   margin-bottom: 1.75rem;
   border-radius: 16px;
   background: var(--key);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 18px 40px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), var(--shadow-lift);
   color: var(--on-brand);
 }
 .brand svg { display: block; height: 26px; width: auto; }
@@ -482,7 +496,15 @@ input {
   font: 13px var(--font-mono);
 }
 input::placeholder { color: var(--fg-muted); }
-input:focus-visible { outline: none; border-color: var(--ice); }
+/* A colour change on a hairline border is a state, not an indicator: at 1px
+   and this little contrast it is easy to miss on a bright screen, and a
+   keyboard user who cannot see where they are has lost the field. The ring
+   is the indicator; the border is the reassurance. */
+input:focus-visible {
+  outline: 2px solid var(--ice);
+  outline-offset: 2px;
+  border-color: var(--ice);
+}
 .hint { margin: 0.6rem 0 1rem; color: var(--fg-muted); font-size: 13px; }
 code {
   padding: 1px 6px;
@@ -503,7 +525,7 @@ button {
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     inset 0 -2px 0 rgba(0, 0, 0, 0.3),
     0 3px 0 var(--key-edge),
-    0 10px 20px rgba(0, 0, 0, 0.5);
+    var(--shadow-key);
   color: var(--on-brand);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
   font: 600 14px/1 var(--font-display);
@@ -520,7 +542,7 @@ button.quiet {
   box-shadow:
     0 0 0 1px var(--bezel-edge),
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 6px 14px rgba(0, 0, 0, 0.45);
+    var(--shadow-key);
   color: var(--fg-body);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
 }

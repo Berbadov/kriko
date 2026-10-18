@@ -83,6 +83,29 @@ pub fn extension_launch() -> Reply {
     post("/api/extension/launch", serde_json::json!({}))
 }
 
+/// Refresh one product's saved check: the engine reads the product's own
+/// identity from the catalog and answers with what is recorded about it.
+pub fn product_check(subject_id: &str) -> Reply {
+    post(&format!("/api/products/{}/check", seg(subject_id)), serde_json::json!({}))
+}
+
+/// Put one product in the research queue, which is what Compare reads.
+///
+/// A catalog product has no listing address, so the row is keyed by an address
+/// of this app's own that names the product. It is a real URL so the queue's
+/// own host column has something to say, and it is deliberately under
+/// `kriko.local`: nothing resolves it, and a reader who opens the row's
+/// address by mistake lands nowhere rather than on someone else's site.
+pub fn product_to_compare(subject_id: &str, name: &str) -> Reply {
+    post(
+        "/api/queue",
+        serde_json::json!({
+            "url": format!("https://kriko.local/product/{}", seg(subject_id)),
+            "name": name,
+        }),
+    )
+}
+
 fn send(method: &str, path: &str, payload: &[u8], content_type: Option<&str>, filename: Option<&str>) -> Reply {
     let raw = roundtrip(method, path, payload, content_type, filename)?;
     parse(&raw)
@@ -241,6 +264,11 @@ pub fn arr<'a>(v: &'a Value, key: &str) -> &'a [Value] {
         .and_then(|x| x.as_array())
         .map(|a| a.as_slice())
         .unwrap_or(&[])
+}
+
+/// An object field, or None when absent or not an object.
+pub fn obj<'a>(v: &'a Value, key: &str) -> Option<&'a serde_json::Map<String, Value>> {
+    v.get(key).and_then(|x| x.as_object())
 }
 
 #[cfg(test)]

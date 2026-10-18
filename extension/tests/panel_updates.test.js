@@ -480,6 +480,64 @@ test("reduced motion draws no ripple, and motion on draws one that removes itsel
   assert.equal(moving.shadow().querySelector(".lite-ripple"), null);
 });
 
+// ── dismissing the panel ────────────────────────────────────────────────
+//
+// The panel arrives on somebody else's page unasked, so it needs a way out
+// that costs the reader nothing. The close button is one, and it is reachable
+// only by pointer or by tabbing into a panel nobody tabbed into on purpose;
+// Escape is the other, and it is the one every reader already knows.
+
+test("Escape from inside the panel closes it, and the page's own Escape is left alone", () => {
+  const p = loadPanel();
+  p.openPanel();
+  assert.ok(p.shadow().querySelector(".lite-panel"), "the panel is open");
+
+  // A key raised on the page must not close a panel the reader is not in:
+  // the site's own modal, its inline edit and its search box all answer
+  // Escape, and the reader may not even know Kriko is on the page.
+  p.dom.window.document.dispatchEvent(
+    new p.dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.ok(p.shadow().querySelector(".lite-panel"), "the page's Escape closed the panel");
+
+  p.press(".lite-btn-close", "Escape");
+  assert.ok(p.shadow().querySelector(".lite-panel[data-closing='1']"),
+    "Escape from a focused control did not start the close");
+  p.flushTimers();
+  assert.equal(p.shadow(), null, "the panel stayed in the page after its exit animation");
+});
+
+test("Escape closes the search field before it closes the panel", () => {
+  const p = loadPanel();
+  p.openPanel();
+  p.click(".lite-btn-search");
+  const field = p.shadow().querySelector(".lite-search-field");
+  assert.ok(field, "the search field did not open");
+
+  // The field's own handler stops the event on the way up, so the press that
+  // dismisses the search does not also dismiss the panel under it.
+  p.press(".lite-search-field", "Escape");
+  assert.equal(p.shadow().querySelector(".lite-search-field"), null, "the search stayed open");
+  assert.ok(p.shadow().querySelector(".lite-panel:not([data-closing='1'])"),
+    "one Escape closed both the search and the panel");
+
+  p.press(".lite-btn-close", "Escape");
+  assert.ok(p.shadow().querySelector(".lite-panel[data-closing='1']"),
+    "a second Escape did not close the panel");
+});
+
+test("the panel names itself as a region and keeps one live status line", () => {
+  const p = loadPanel();
+  p.openPanel();
+  const panel = p.shadow().querySelector(".lite-panel");
+  // A screen reader reading somebody's listing needs to be told where the
+  // listing stopped and Kriko started; an unnamed region reads as loose text.
+  assert.equal(panel.getAttribute("role"), "complementary");
+  assert.equal(panel.getAttribute("aria-label"), "Kriko product knowledge");
+  // The stage sentence is the one thing in the panel that changes on its own
+  // while a run is in flight, so it is the one live region.
+  assert.equal(p.shadow().querySelector(".lite-status").getAttribute("role"), "status");
+});
+
 // ── the motion profile ──────────────────────────────────────────────────
 //
 // Calm / Standard / Vivid, the same three the desktop app offers, stored

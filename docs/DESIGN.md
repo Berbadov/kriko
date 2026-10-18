@@ -41,13 +41,79 @@ The theme follows the system setting. The reader can select System, Light, or
 Dark in Settings.
 
 Two colour groups do not follow the theme. These are the measured sky ink and
-the words on the brand blue. A separate fixed path paints them.
+the words on the brand blue. A separate fixed path paints them. The hero band
+is the third: it is a picture, and it keeps its own dark colours in both
+themes. Its base gradient used to follow the theme, and on the light ground it
+became a white-to-white smear under a dark image with light words on it.
 
-The caution tone has its own name. The light theme makes it darker. An
-unmapped amber was too bright on the white ground.
+### Two edges
 
-Body text holds a contrast of at least 4.5 to 1. The page title holds a
-contrast of at least 7 to 1 against the sky.
+A hairline is a rule inside one surface. It separates without shouting, and it
+is right for a table row or a list item.
+
+A surface boundary is a different thing. The rail against the page, a panel
+against the ground, a header against the body under it: these need `EDGE`. A
+hairline there disappears on a bright screen and leaves the window with no
+shape at all. `EDGE_STRONG` is for the boundary of a control, because a
+control's outline is what says it is a control.
+
+## Chat
+
+Chat is the main screen. It has three parts: the thread rail, the conversation,
+and the composer.
+
+The empty state shows the agent mark, one short greeting, and a row of prompt
+buttons. A prompt button fills the composer.
+
+A reader turn is on the right. An agent turn is on the left, with the agent
+mark and the agent name.
+
+The rail is one panel and the conversation is another. Each carries `EDGE`.
+The composer sits on the conversation panel, so its own rule is an `EDGE`.
+
+A live phase shows what the agent does: Thinking, Searching, Reading, Writing,
+or Citing. The phase mark moves with the phase. Waiting rests.
+
+One status line. The mark, the phase word, and the engine's own line used to
+say what was happening at the same time, in different words, side by side. A
+reader watching two spinners cannot tell which one to believe.
+
+The answer is markdown. A bold term is bold. A bullet list is a list. A table
+is a table. An asterisk in a part number stays an asterisk: the parser only
+recognises a construct it can close.
+
+An answer is selectable. A drag takes words out of it, across a bullet and
+into the paragraph under it, because the transcript holds one selection rather
+than one per block. A link inside an answer opens the page it names.
+
+A selectable run measures its own height. It draws on a canvas, so nothing else
+in the tree knows how tall it is, and asking the parent for the parent's height
+resolves to zero in a column with no fixed height. That defect shipped once: the
+compile, the unit tests and every gate stayed green while every answer painted
+nothing.
+
+The answer holds a maximum width. A line that runs the whole window is hard to
+follow back to its start.
+
+The composer is multi-line. The Send button lights when the field has text. A
+Stop button replaces it while a turn runs. The model picker sits in the
+composer's footer row.
+
+### Product cards
+
+A turn that read the reader's own catalogues found products. The agent was
+always given those rows; the reader saw only prose.
+
+A product card shows the catalogue's own name for the product, the identity it
+is recorded under, and how many risks are recorded against it.
+
+A card has three actions. Open reads the product in Browse. Add to Compare
+puts it beside the others. Read again looks the product up now, and saves the
+result, because a chat answer is a reading of the catalogue at the moment it
+was written.
+
+A card is drawn from the turn's own `products` list, never re-derived from the
+prose of the answer.
 
 ## Navigation and icons
 
@@ -138,14 +204,18 @@ The store is one card. The toolbar has a search field, four filters, and a
 sort control. The filters are Installed, Fits this machine, Small, and All. The
 sort orders are Name and Size.
 
-A model tile shows the name, the parameter count, the size on disk, and a
-quantisation chip. It shows an Installed badge and a Fits badge.
+A model is one full-width row, not a tile: a row per model, separated by a
+rule. The name is the largest thing in the row. Under it sits one quiet line:
+the parameter count, the size on disk, and the quantisation. A row carries at
+most two status chips, chosen in order of what the reader needs to know.
 
-A tile has a primary action and a secondary action. The primary action is
-Download, Use, or In use. The secondary action opens the library page.
+A row has one primary action at its right edge: Download, Use, or an In use
+tag. Open in library and Remove are quiet, because neither is what the reader
+came for. A download uses the shared progress bar and the row shows the current
+message and a stop control.
 
-A download uses the shared progress bar. The tile shows the current message and
-a stop control.
+A size picker appears only on a model that is not installed and offers more
+than one size, because it chooses what Download fetches.
 
 The store reads the library only when it needs the library. This rule keeps the
 screen fast and the network quiet.
@@ -154,47 +224,25 @@ An installed model has a Remove action. The action takes two presses. The first
 press asks for a confirmation. The second press removes the model. The engine
 deletes the model through the local model server.
 
-## Chat
-
-Chat is the main screen. It has three parts: the thread rail, the conversation,
-and the composer.
-
-The empty state shows the agent mark, one short greeting, and a row of prompt
-buttons. A prompt button fills the composer.
-
-A reader turn is on the right. An agent turn is on the left, with the agent
-mark and the agent name.
-
-A live phase shows what the agent does: Thinking, Searching, Reading, Writing,
-or Citing. The phase mark moves with the phase. Waiting rests.
-
-The answer uses word reveal. The current step uses cylinder status. A cited
-source is a clickable row.
-
-The composer is multi-line. The Send button lights when the field has text. A
-Stop button replaces it while a turn runs. A small picker selects the model.
-
 ## Browser extension
 
 The panel and the options page share the palette and the motion profile.
 
-The install path has one button: Add to browser. One action stages the files
-and opens a browser that already has the extension.
+The extension is distributed through the Chrome Web Store. The app's own screen
+stages the files and shows the two manual steps; it does not claim to have
+installed anything.
 
 The status turns Connected only after the extension reaches the engine. The
-button does not claim success.
-
-The manual steps appear only when the direct action cannot run. The reader
-does not see two install paths at the same time.
+screen does not claim success.
 
 The panel has a light theme and a dark theme. The options page follows the same
 selection.
 
 ## Text motion
 
-Word reveal gives each word its final place at once. The word then fades and
-rises in a short stagger. A long sentence still settles in less than one
-second.
+An answer arrives block by block. Each block takes its final place at once,
+then fades and rises in one short stagger. A long answer still settles in well
+under a second.
 
 Cylinder status shows one line in a fixed window. When the line changes, the
 old line moves up and out. The new line moves in from below. The same text does
@@ -213,6 +261,10 @@ The sky does not repeat. An idle window draws no sky frames.
 The code permits raw colour only in the theme module.
 
 The code permits a loop only in the five work indicators.
+
+The code permits a bare address in a link only for `http`, `https` and
+`mailto`. A markdown answer is model output, and a `javascript:` or `file:`
+target is not something a reader asked to open.
 
 The window makes one motion decision for each frame. The decision comes from
 the reader setting and the window state.

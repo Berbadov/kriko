@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
-from app import matching, operations, productscope, sites
+from app import matching, operations, productscope, siteinfer, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.history import label_for
@@ -103,6 +103,11 @@ def list_adapters(store=Depends(get_store), app_state=Depends(get_app_state)):
             "labels": declared_labels(row.get("spec") or {}),
             "local_panel": local_panel(row.get("spec") or {}),
             "local": True,
+            # agent | reader | inference. A site this installation learned is
+            # not one fact: a model worked one of these out from a page nobody
+            # asked it about, and a panel or a screen that shows a site without
+            # saying so would be showing a guess as a pack's knowledge.
+            "learned_by": row.get("source", ""),
         }
         for row in sites.local_rows(app_state)
     ]
@@ -197,7 +202,7 @@ def _record_analysis(request, app_state, body, mapped, result) -> None:
         pass
 
 
-def answer(store, app_state, body: ScrapeRequest):
+def answer(store, app_state, body: ScrapeRequest, app_state_path=None):
     """The analysis itself, recording nothing: `(payload, mapped, result)`.
 
     `mapped` and `result` are `None` when the page could not be read — the
@@ -205,15 +210,38 @@ def answer(store, app_state, body: ScrapeRequest):
     re-answered in place when the knowledge under it changes (B152.4,
     `routers/live.py`) without writing a second history row, operation or
     log line for an analysis the reader did not ask for again.
+
+    `app_state_path` is only what an inference needs to find the reader's model
+    (`app/siteinfer.py`): the connection is here, the *address and choice* are
+    the app's state, and a caller that does not pass it simply never infers.
     """
     # The packs' adapters first, then whatever this installation has learned
     # about a site nobody shipped one for (`app/sites.py`). The order is the
     # design: a published adapter always wins over a local guess.
     vocabulary = identity_vocabulary(store)
     spec, mapped = _read_site(store, app_state, body, vocabulary)
-    read_by = "site"
+    # How the page was read, which the panel says out loud. A site this
+    # installation inferred reads as one — a model worked out these rules from
+    # a page, and a reader told "site adapter" would be told the wrong thing
+    # about where their answer's confidence comes from.
+    read_by = "inferred" if (spec or {}).get("learned_by") == "inference" else "site"
+    # Whether the adapter reading this page was produced *by this request*, as
+    # opposed to found already stored. The two are the same page answered the
+    # same way, but only the second may be re-inferred when it reads nothing.
+    just_inferred = False
     if spec is None:
         spec, mapped, read_by = _read_any_site(store, body, vocabulary)
+    if spec is None:
+        # Nothing installed reads this page, and no pack recognises the product
+        # on it. Before answering that, ask this machine's own model to work
+        # out the reading structure from the labels the browser already scraped
+        # — the reader's ask, "site recognition needs an AI". Bounded, cached
+        # by page shape, and — the part that matters — it answers `None` and
+        # changes nothing when no model is ready.
+        inferred = _infer(store, app_state, body, app_state_path)
+        if inferred is not None:
+            spec, mapped, read_by = inferred, None, "inferred"
+            just_inferred = True
     if spec is None and read_by == "unknown":
         # The page named a product and nothing installed knows it (B149).
         # Its own name travels back so the panel can offer to research
@@ -254,6 +282,21 @@ def answer(store, app_state, body: ScrapeRequest):
             description=body.description,
             vocabulary=vocabulary,
         )
+
+    # An adapter this installation inferred, resolving nothing on this page.
+    # Pack knowledge does not heal a redesigned site and neither does a guess
+    # from last month; a *new* page shape under it is exactly the evidence that
+    # the site changed, so it is put to the model once more. The shape cache
+    # makes this free when the page is the shape that produced the adapter, and
+    # the reader's own adapter is never touched either way.
+    if (not just_inferred and not mapped.identity
+            and (spec or {}).get("learned_by") == "inference"):
+        again = _infer(store, app_state, body, app_state_path)
+        if again is not None:
+            spec = again
+            mapped = adapt(spec, body.fields, url=body.url, title=body.title,
+                           description=body.description, vocabulary=vocabulary)
+            read_by = "inferred"
 
     # An adapter matching the URL is not the same as the page having been
     # read: the extension sends fields scraped from the DOM, but a bare URL
@@ -362,7 +405,12 @@ def analyze(
     store=Depends(get_store),
     app_state=Depends(get_app_state),
 ):
-    payload, mapped, result = answer(store, app_state, body)
+    payload, mapped, result = answer(
+        store, app_state, body,
+        # The address and the model choice live in the app's state, not in the
+        # connection this handler already holds (`app/siteinfer.py`).
+        app_state_path=request.app.state.settings.app_state_path,
+    )
     if mapped is None:
         return payload
 
@@ -487,6 +535,20 @@ def _read_any_site(store, body: ScrapeRequest, vocabulary):
     if name and body.product_name:
         return None, None, "unknown"
     return None, None, ""
+
+
+def _infer(store, app_state, body: ScrapeRequest, app_state_path):
+    """The adapter a model on this machine worked out for this page, or `None`.
+
+    Thin on purpose: which plane may be used, how long it may take, what the
+    prompt says, whether the answer is usable and what gets cached all belong
+    to `app/siteinfer.py`, where they can be read in one place by whoever is
+    asking why a page was, or was not, inferred.
+    """
+    return siteinfer.infer(
+        store, app_state, app_state_path=app_state_path, url=body.url,
+        fields=body.fields, title=body.title, description=body.description,
+        product_name=body.product_name)
 
 
 #: The longest page title a saved check is named by.

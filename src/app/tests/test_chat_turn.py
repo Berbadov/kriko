@@ -143,6 +143,84 @@ def test_the_reader_and_the_steps_are_reported_as_they_happen(ctx):
     assert any("no rows from products" in line for line in hooks.lines)
 
 
+# ── the products a turn found, as the screen's cards ────────────────────
+
+
+def _product_row(**over):
+    row = {"subject_id": "sub-1", "pack_id": "cars", "label": "Megane 4 1.5 dCi",
+           "kind": "product", "identity": {"make": "Renault", "model": "Megane"},
+           "claims": 4, "risk_coverage": {"cited": 2}, "rank": 1}
+    row.update(over)
+    return row
+
+
+def test_a_turn_reports_the_products_it_found_so_the_screen_can_draw_cards(ctx, monkeypatch):
+    _stub(monkeypatch, "catalogue_search", [_product_row()])
+    agent = Script(plan(SEARCH, ready=True), "Megane 4 fits. Sources: catalogue_search")
+    out = chat.run_turn("find a megane in my catalogue", ask=agent, ctx=ctx)
+    assert out["products"] == [{
+        "subject_id": "sub-1", "pack_id": "cars", "label": "Megane 4 1.5 dCi",
+        "kind": "product", "identity": {"make": "Renault", "model": "Megane"},
+        "claims": 4, "coverage": {"cited": 2}, "rank": 1,
+        "found_by": "catalogue_search",
+    }]
+
+
+def test_a_card_carries_no_more_than_the_screen_draws(ctx, monkeypatch):
+    """The agent is given whole rows; a card is a subset of one.
+
+    A row can carry every attribute the catalogue records. A card needs the
+    name, the identity, the risk count and the id to ask for more, and nothing
+    the reader was not shown.
+    """
+    row = _product_row()
+    row["attributes"] = [{"key": "secret", "value": "not for a card"}]
+    row["risks"] = [{"title": "a long list the card never draws"}]
+    _stub(monkeypatch, "catalogue_search", [row])
+    agent = Script(plan(SEARCH, ready=True), "Done. Sources: catalogue_search")
+    out = chat.run_turn("find a megane in my catalogue", ask=agent, ctx=ctx)
+    card = out["products"][0]
+    assert "attributes" not in card and "risks" not in card
+    assert "not for a card" not in json.dumps(card)
+
+
+def test_the_same_product_found_twice_is_one_card(ctx, monkeypatch):
+    _stub(monkeypatch, "catalogue_search", [_product_row()])
+    _stub(monkeypatch, "product_match", [_product_row(rank=1), _product_row(rank=2)])
+    agent = Script(
+        plan([{"source": "catalogue_search", "args": {"query": "megane"}},
+              {"source": "product_match", "args": {"query": "megane"}}], ready=True),
+        "Done. Sources: catalogue_search")
+    out = chat.run_turn("find a megane in my catalogue", ask=agent, ctx=ctx)
+    assert len(out["products"]) == 1
+
+
+def test_a_turn_that_found_no_product_reports_an_empty_list(ctx, monkeypatch):
+    _stub(monkeypatch, "catalogue_search", [])
+    agent = Script(plan(SEARCH, ready=True), "Nothing. Sources: none")
+    out = chat.run_turn("find a megane in my catalogue", ask=agent, ctx=ctx)
+    assert out["products"] == []
+
+
+def test_a_product_with_no_subject_id_is_not_a_card(ctx, monkeypatch):
+    _stub(monkeypatch, "catalogue_search", [_product_row(subject_id="")])
+    agent = Script(plan(SEARCH, ready=True), "Done. Sources: catalogue_search")
+    out = chat.run_turn("find a megane in my catalogue", ask=agent, ctx=ctx)
+    assert out["products"] == []
+
+
+def test_the_cards_arrive_while_the_turn_still_runs(ctx, monkeypatch):
+    """A reader sees the products found before the answer lands."""
+    _stub(monkeypatch, "catalogue_search", [_product_row()])
+    hooks = Hooks()
+    agent = Script(plan(SEARCH, ready=True), "Done. Sources: catalogue_search")
+    chat.run_turn("find a megane in my catalogue", ask=agent, ctx=ctx, hooks=hooks)
+    live = [p for p in hooks.partials if p.get("products")]
+    assert live, "a partial carried the products"
+    assert live[0]["products"][0]["subject_id"] == "sub-1"
+    assert live[0]["answer"] == "", "and it arrived before the answer did"
+
+
 def test_streamed_answer_text_updates_the_live_partial_before_the_call_finishes(ctx):
     hooks = Hooks()
     agent = Script(plan(SEARCH, ready=True),

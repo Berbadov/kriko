@@ -130,7 +130,9 @@ impl Tab {
             Tab::Activity => "system / activity",
             Tab::Agents => "system / agents",
             Tab::Benchmark => "system / benchmark",
-            Tab::Local => "this install / local llm",
+            // Not a rail item any more: the local model plane is a section of
+            // the Agents screen, and this page is what its model store opens.
+            Tab::Local => "system / agents / local llm",
             Tab::Settings => "this install / settings",
             Tab::About => "this install / about",
         }
@@ -157,7 +159,7 @@ impl Tab {
             Tab::Browse => "Every subject, attribute and claim in the local store.",
             Tab::Sites => "The sites Kriko reads, and how far each one is trusted.",
             Tab::Activity => "What Kriko did today, and what is waiting for you.",
-            Tab::Agents => "The coding agents on this machine that can reach Kriko.",
+            Tab::Agents => "Every way of answering a question here: the agents on this machine, the model on it, and the store to add either.",
             Tab::Benchmark => "How the agents and planes do on a fixed test set, here.",
             Tab::Local => "Choose a model on this machine and see where its answers come from.",
             Tab::Settings => "Control how Kriko starts, reads and stores things.",
@@ -175,9 +177,12 @@ impl Tab {
 
     /// A bar, not a banner: the sky stays, the page head sits in it, and the
     /// content starts right under. Home and About keep a little more of it.
+    /// Chat keeps less: it is the one screen that fills the window and scrolls
+    /// on its own, so every pixel the sky holds is a pixel off the transcript.
     fn hero_height(self) -> f32 {
         match self {
             Tab::Home | Tab::About => 100.0,
+            Tab::Chat => 78.0,
             _ => 96.0,
         }
     }
@@ -464,6 +469,9 @@ pub struct Kriko {
     pub compare_note_input: InputState,
     pub compare_question_input: InputState,
     pub chat_input: InputState,
+    /// The Chat transcript's one text selection. Made on the first frame the
+    /// screen draws, and kept after, so a selection survives a redraw.
+    pub chat_selection: Option<gpui::Entity<crate::select::Selection>>,
     // local llm: the address, the search service and the model to get; the
     // rest of this area is `live::local`
     pub local_url: InputState,
@@ -565,6 +573,7 @@ impl Kriko {
             compare_note_input: InputState::new(cx),
             compare_question_input: InputState::new(cx),
             chat_input: InputState::new(cx),
+            chat_selection: None,
             local_url: InputState::new(cx),
             local_search: InputState::new(cx),
             local_get: InputState::new(cx),
@@ -822,7 +831,13 @@ impl Kriko {
             Tab::Browse => self.refresh_subjects(cx),
             Tab::Sites => self.refresh_sites(cx),
             Tab::Activity => self.refresh_activity(cx),
-            Tab::Agents => self.refresh_agents(cx),
+            Tab::Agents => {
+                self.refresh_agents(cx);
+                self.refresh_market(cx);
+                // The Local model panel is on this screen now, so the plane
+                // and the models the server holds are read with the agents.
+                self.refresh_local_panel(cx);
+            }
             Tab::Benchmark => {
                 self.refresh_bench(cx);
                 self.refresh_jobs(cx);
@@ -905,6 +920,20 @@ impl Kriko {
                 "c" | "x" if !selected.is_empty() => {
                     cx.write_to_clipboard(gpui::ClipboardItem::new_string(this.input(field).value[selected].to_string()));
                     if ks.key == "x" { this.input_mut(field).replace_selection(""); }
+                }
+                // Ctrl+C in a field with nothing selected in it is the reader
+                // asking for what they dragged over in the transcript. A field
+                // owns its own selection and an unfocused one owns nothing, so
+                // without this the key did nothing at all on the Chat screen —
+                // which is the one screen where taking words out matters.
+                "c" => {
+                    if let Some(text) = this.chat_selection.as_ref().map(|s| s.read(cx).text.clone()) {
+                        if !text.is_empty() {
+                            cx.write_to_clipboard(gpui::ClipboardItem::new_string(text));
+                            return;
+                        }
+                    }
+                    return;
                 }
                 "v" => {
                     if let Some(text) = cx.read_from_clipboard().and_then(|c| c.text()) {
@@ -1088,17 +1117,22 @@ impl Kriko {
     // ---- sidebar ----
 
     fn sidebar(&self, cx: &mut Context<Self>) -> Div {
+        // One rhythm for the rail: a row is 44 high with 4 between, and a group
+        // is 20 away from the group above it. The old numbers (2 between rows,
+        // 18 + 6 around a group header) left a rail that read as one long list
+        // with random holes in it, and no gap large enough to say "new group".
         let mut nav = div()
             .id("nav-scroll")
             .flex()
             .flex_col()
-            .px(px(12.0))
-            .pt(px(4.0))
-            .pb(px(20.0))
-            .gap(px(2.0))
+            .px(px(if self.sidebar_collapsed { 8.0 } else { 12.0 }))
+            .pt(px(SPACE_M))
+            .pb(px(SPACE_XL))
+            .gap(px(SPACE_XS))
             .flex_1()
             .min_h(px(0.0))
-            .overflow_y_scroll().occlude();
+            .overflow_y_scroll()
+            .occlude();
         // Counts from the engine, not from the mock-up: products in the
         // store beside Browse, jobs still running beside Activity.
         let subjects = self.live.knowledge.totals.subjects;
@@ -1110,13 +1144,13 @@ impl Kriko {
             // rather than as one long list.
             nav = nav.child(
                 div()
-                    .mt(px(if gi == 0 { 8.0 } else { 18.0 }))
-                    .mb(px(6.0))
-                    .px(px(if self.sidebar_collapsed { 10.0 } else { 12.0 }))
+                    .mt(px(if gi == 0 { SPACE_S } else { SPACE_XL }))
+                    .mb(px(SPACE_S))
+                    .px(px(if self.sidebar_collapsed { 4.0 } else { SPACE_S }))
                     .flex_none()
                     .flex()
                     .items_center()
-                    .gap(px(8.0))
+                    .gap(px(SPACE_S))
                     .when(!self.sidebar_collapsed, |d| {
                         d.child(eyebrow(group.label)).child(hairline().flex_1())
                     })
@@ -1169,35 +1203,63 @@ impl Kriko {
                 nav = nav.child(row);
             }
         }
+
+        // Two listeners from one body: only one of the two branches below is
+        // drawn, but both are built, and a listener is not `Copy`.
+        let fold = |this: &mut Self| {
+            if this.sidebar_folded_for_live {
+                // The user asked to expand the rail while it was
+                // temporarily folded. Close Live to honor that
+                // action, then retain the expanded preference.
+                this.dock_open = false;
+                this.sidebar_choice = Some(false);
+                this.sidebar_collapsed = false;
+                this.sidebar_folded_for_live = false;
+            } else {
+                this.sidebar_choice = Some(!this.sidebar_collapsed);
+                this.sidebar_collapsed = !this.sidebar_collapsed;
+            }
+        };
+        let fold_open = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+            fold(this);
+            cx.notify();
+        });
+        let fold_rail = cx.listener(move |this, _: &ClickEvent, _w, cx| {
+            fold(this);
+            cx.notify();
+        });
+
         div()
-            .w(px(if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W }))
+            .w(px(if self.sidebar_collapsed { SIDEBAR_RAIL_W } else { SIDEBAR_W }))
             .overflow_hidden()
             .flex_none()
             .bg(paint(SURFACE_1))
+            // The rail against the page is a surface boundary, not a rule
+            // inside one surface: a hairline vanished on a bright screen and
+            // left the window with no shape at all.
             .border_r_1()
-            .border_color(paint_a(HAIRLINE))
+            .border_color(paint_a(EDGE))
             .flex()
             .flex_col()
-            .when(!self.sidebar_collapsed, |d| d.child(brand_block("kriko-wordmark-white.svg", "local product knowledge")))
-            // An icon, not a labelled key: the panel icon says "this side
-            // panel", and it sits in the same well as the window controls.
-            .child(div().px(px(12.0)).py(px(8.0)).flex().when(self.sidebar_collapsed, |d| d.justify_center())
-                .child(titlebar_button("sidebar-minimise", "sidebar", false)
-                    .on_click(cx.listener(|this, _: &ClickEvent, _w, cx| {
-                        if this.sidebar_folded_for_live {
-                            // The user asked to expand the rail while it was
-                            // temporarily folded. Close Live to honor that
-                            // action, then retain the expanded preference.
-                            this.dock_open = false;
-                            this.sidebar_choice = Some(false);
-                            this.sidebar_collapsed = false;
-                            this.sidebar_folded_for_live = false;
-                        } else {
-                            this.sidebar_choice = Some(!this.sidebar_collapsed);
-                            this.sidebar_collapsed = !this.sidebar_collapsed;
-                        }
-                        cx.notify();
-                    }))))
+            .when(!self.sidebar_collapsed, |d| {
+                d.child(brand_block(
+                    "kriko-wordmark-white.svg",
+                    "local product knowledge",
+                    Some(brand_control("sidebar-minimise", "sidebar").on_click(fold_open)),
+                ))
+            })
+            .when(self.sidebar_collapsed, |d| {
+                d.child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .py(px(SPACE_M))
+                        .child(
+                            brand_control("sidebar-minimise", "expand").on_click(fold_rail),
+                        ),
+                )
+            })
             .child(nav)
     }
 }
@@ -1483,7 +1545,7 @@ impl Render for Kriko {
             && !preferred_sidebar_collapsed
             && expanded_content_w < MIN_COMFORTABLE_CONTENT_W;
         self.sidebar_collapsed = preferred_sidebar_collapsed || self.sidebar_folded_for_live;
-        let sidebar_w = if self.sidebar_collapsed { 76.0 } else { SIDEBAR_W };
+        let sidebar_w = if self.sidebar_collapsed { SIDEBAR_RAIL_W } else { SIDEBAR_W };
         self.content_w = (viewport_w - sidebar_w - 2.0 * page_pad - dock_inset).max(0.0);
         let maximized = window.is_maximized();
         let titlebar = self.titlebar(maximized, cx);
@@ -1493,7 +1555,7 @@ impl Render for Kriko {
             sidebar.with_animation(gpui::ElementId::named_usize("sidebar-slide", collapsed as usize),
                 gpui::Animation::new(std::time::Duration::from_millis(260)), move |d,t| {
                     let t = t * t * (3.0 - 2.0 * t);
-                    d.w(px(if collapsed { SIDEBAR_W + (76.0 - SIDEBAR_W) * t } else { 76.0 + (SIDEBAR_W - 76.0) * t }))
+                    d.w(px(if collapsed { SIDEBAR_W + (SIDEBAR_RAIL_W - SIDEBAR_W) * t } else { SIDEBAR_RAIL_W + (SIDEBAR_W - SIDEBAR_RAIL_W) * t }))
                 }).into_any_element()
         } else { sidebar.into_any_element() };
         let content = screens::screen(self, window, cx);
@@ -1679,6 +1741,22 @@ mod route_tests {
         assert!(Tab::from_route("compare/abc123") == Tab::Compare);
         assert!(Tab::from_route("#/history") == Tab::History);
         assert!(Tab::from_route("no-such-screen") == Tab::Home);
+    }
+
+    /// The reader's words: "Local agent must be in agents tab with its
+    /// marketplace." The local model plane left the rail for the Agents screen,
+    /// but the extension's routes and `KRIKO_VERIFY=local` still name the page
+    /// it lives on, so the key and the route must keep answering.
+    #[test]
+    fn the_local_model_plane_left_the_rail_without_losing_its_route() {
+        let rail: Vec<&str> = crate::data::NAV
+            .iter()
+            .flat_map(|group| group.items.iter().map(|item| item.key))
+            .collect();
+        assert!(!rail.contains(&"local"), "the model plane is a section of Agents now");
+        assert!(rail.contains(&"agents"), "and Agents is still the rail's own item");
+        assert!(Tab::from_key("local") == Tab::Local);
+        assert!(Tab::from_route("local") == Tab::Local);
     }
 }
 
