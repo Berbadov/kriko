@@ -35,6 +35,8 @@ but owns no policy about who may ask it to. This module is that policy, and it
 belongs to the interface that exposes the tools.
 """
 
+import functools
+import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -71,6 +73,23 @@ WRITABLE_DIRS = (
 #: One file, and one draft. Generous for prose, ruinous for nothing.
 MAX_BYTES = 512 * 1024
 MAX_FILES = 200
+
+
+#: One writer to the drafts at a time, per process. Authoring is a long agent
+#: run followed by a short read-modify-write of a draft's files; the run may
+#: overlap with other runs, the write may not, or two products joining one
+#: catalog would each read the draft, add their own and save, and the second
+#: save would drop the first. Reentrant, because a writer calls a writer.
+LOCK = threading.RLock()
+
+
+def exclusive(write):
+    """Make a draft writer take `LOCK` for its whole body."""
+    @functools.wraps(write)
+    def locked(*args, **kwargs):
+        with LOCK:
+            return write(*args, **kwargs)
+    return locked
 
 
 class DraftRefused(ValueError):

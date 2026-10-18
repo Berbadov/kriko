@@ -28,7 +28,6 @@ keeps an agent inside its own directory is the one already tested.
 """
 
 import re
-import threading
 from typing import Any
 import unicodedata
 from datetime import UTC, datetime
@@ -50,11 +49,11 @@ __all__ = [
     "absorb", "install_draft", "DraftBuildFailed", "next_version", "pick_subject",
 ]
 
-#: One writer at a time per process. The job runner already serialises the
-#: authoring lane, but the reader's own Install press arrives on a request
-#: thread, and two builds of one draft directory are how a half-written pack
-#: happens.
-LOCK = threading.RLock()
+#: The drafts' one writer, shared with `packauthor` so an author, an amend, a
+#: subject added and an install never interleave on a draft directory. The
+#: reader's own Install press arrives on a request thread, and two builds of one
+#: draft directory are how a half-written pack happens.
+LOCK = packdraft.LOCK
 
 #: Subject labels shown per pack in that list. Enough to tell two packs apart.
 _SAMPLE_LABELS = 5

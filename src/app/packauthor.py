@@ -857,6 +857,7 @@ def _flat(value) -> str:
     return re.sub(r"[^a-z0-9]+", " ", str(value or "").lower()).strip()
 
 
+@packdraft.exclusive
 def author(store_path, reply: str, *, category: str = "",
            payload: dict | None = None) -> dict:
     """Turn what the agent printed into a draft. Returns what was written.
@@ -1465,6 +1466,7 @@ def draft_state(store_path, slug: str) -> dict:
     }
 
 
+@packdraft.exclusive
 def amend(store_path, slug: str, reply: str, *, payload: dict | None = None,
           allow_nothing_new: bool = False) -> dict:
     """Merge an agent's additions into an existing draft. Adds, never replaces.

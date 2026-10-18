@@ -13,16 +13,19 @@ import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
 
 const LEVEL_WORD: Record<Level, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', unrated: 'Unrated' }
+const LEVEL_ORDER: Record<Level, number> = { critical: 0, high: 1, medium: 2, low: 3, unrated: 4 }
 
-/** Products are columns and risks are rows. A product still in research is a
- *  working column: one line and a bar. It becomes a column when the agent finishes. */
+/** Products are columns. Each column leads with what the agents found that can
+ *  go wrong with it, in words, because that is what the reader came for; the
+ *  specifications are a table under the columns, folded until they are wanted.
+ *  A product still in research is a working column: one line and a bar. */
 export function CompareScreen() {
   const { motion: m } = usePrefs()
   const { items } = useQueue()
   const { slots, checks, questions, remove, retry, ask } = useCompare()
   const [only, setOnly] = useState(false)
-  const [open, setOpen] = useState<{ lookupId: string; title: string } | null>(null)
   const [picker, setPicker] = useState(false)
+  const [specsOpen, setSpecsOpen] = useState(false)
 
   const working = items.filter((i) => i.state !== 'done')
   const ready = slots.flatMap((id) => {
@@ -31,12 +34,14 @@ export function CompareScreen() {
   })
   const risks = useMemo(() => riskRows(ready), [ready])
   const specs = useMemo(() => specRows(ready), [ready])
-  const shownRisks = only ? risks.filter((r) => r.differs) : risks
+  // How many of the columns carry each risk: "also in 2 of 3" is the one thing
+  // lining the columns up still has to say.
+  const shared = useMemo(() => new Map(risks.map((r) => [r.title, r.cells.filter(Boolean).length])), [risks])
+  const differing = useMemo(() => new Set(risks.filter((r) => r.differs).map((r) => r.title)), [risks])
   const shownSpecs = only ? specs.filter((r) => r.differs) : specs
   const empty = slots.length === 0 && working.length === 0
-
-  // The cell that was opened may leave with its column.
-  const detail = open ? ready.find((c) => c.lookupId === open.lookupId)?.risks.find((r) => r.title === open.title) : undefined
+  // With no problems to read, the specifications are all there is: show them.
+  const specsShown = specsOpen || (ready.length > 0 && risks.length === 0)
 
   return (
     <section className="compare">
@@ -59,100 +64,126 @@ export function CompareScreen() {
       <AnimatePresence>{picker && <Picker onClose={() => setPicker(false)} />}</AnimatePresence>
 
       <div className="compare-body">
-      {empty ? (
-        <div className="empty rise" style={{ '--i': 1 } as CSSProperties}>
-          <PixelGlyph size={34} active />
-          <p>Add two checks to compare them.</p>
-          <button className="btn" onClick={() => setPicker(true)}>
-            <Icon name="plus" size={14} /> Add a check
-          </button>
-        </div>
-      ) : (
-        <div className="matrix rise" style={{ '--i': 1 } as CSSProperties}>
-          <div className="mx-col mx-labels">
-            <div className="mx-head" />
-            {shownRisks.map((row) => (
-              <div key={row.title} className="mx-cell label" title={row.title}>
-                {row.title}
-              </div>
-            ))}
-            {shownSpecs.length > 0 && <div className="mx-cell label mx-divider">Specs</div>}
-            {shownSpecs.map((row) => (
-              <div key={row.label} className="mx-cell label" title={row.label}>
-                {row.label}
-              </div>
-            ))}
+        {empty ? (
+          <div className="empty rise" style={{ '--i': 1 } as CSSProperties}>
+            <PixelGlyph size={34} active />
+            <p>Add two checks to compare them.</p>
+            <button className="btn" onClick={() => setPicker(true)}>
+              <Icon name="plus" size={14} /> Add a check
+            </button>
           </div>
+        ) : (
+          <>
+            <div className="matrix rise" style={{ '--i': 1 } as CSSProperties}>
+              <AnimatePresence initial={false}>
+                {slots.map((id) => {
+                  const found = checks[id]
+                  if (found?.status === 'ready') {
+                    const list = found.check.risks
+                      .filter((r) => !only || differing.has(r.title))
+                      .sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])
+                    return (
+                      <Column key={id} check={found.check} onRemove={() => remove(id)} transition={m.tx.spring}>
+                        {list.length === 0 ? (
+                          <p className="mx-none">
+                            {found.check.risks.length === 0
+                              ? 'The agents found no sourced problems. That is not proof there are none.'
+                              : 'Nothing here differs from the others.'}
+                          </p>
+                        ) : (
+                          <ul className="mx-risks">
+                            {list.map((risk) => (
+                              <RiskCard key={risk.title} risk={risk} also={(shared.get(risk.title) ?? 1) - 1} of={ready.length} />
+                            ))}
+                          </ul>
+                        )}
+                      </Column>
+                    )
+                  }
+                  return (
+                    <motion.div key={id} layout className="mx-col is-working" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={m.tx.spring}>
+                      <div className="mx-head">
+                        {found?.status === 'error' ? (
+                          <>
+                            <strong>Not read</strong>
+                            <span className="muted">{found.message}</span>
+                            <div className="card-actions">
+                              <button className="btn" onClick={() => retry(id)}>
+                                Try again
+                              </button>
+                              <button className="btn ghost" onClick={() => remove(id)}>
+                                Remove
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <span className="work-line">
+                            <PixelGlyph size={13} active />
+                            Reads the check
+                          </span>
+                        )}
+                      </div>
+                    </motion.div>
+                  )
+                })}
+                {working.slice(0, 3).map((item) => (
+                  <motion.div key={item.id} layout className="mx-col is-working" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={m.tx.spring}>
+                    <div className="mx-head">
+                      <strong>{item.name}</strong>
+                      <span className="work-line">
+                        <PixelGlyph size={13} active={item.state === 'researching'} />
+                        {item.line}
+                      </span>
+                      <PixelBar value={item.progress} active={item.state === 'researching'} cells={18} />
+                    </div>
+                    <div className="mx-risks">
+                      {[0, 1, 2].map((n) => (
+                        <div key={n} className="mx-skeleton">
+                          <span className="skeleton" />
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
 
-          <AnimatePresence initial={false}>
-            {slots.map((id) => {
-              const found = checks[id]
-              if (found?.status === 'ready') {
-                const index = ready.indexOf(found.check)
-                return (
-                  <Column key={id} check={found.check} onRemove={() => remove(id)} transition={m.tx.spring}>
-                    {shownRisks.map((row) => (
-                      <RiskCell key={row.title} risk={row.cells[index]} active={open?.lookupId === id && open.title === row.title} onOpen={() => setOpen({ lookupId: id, title: row.title })} />
-                    ))}
-                    {shownSpecs.length > 0 && <div className="mx-cell mx-divider" />}
+            {ready.length > 0 && specs.length > 0 && (
+              <section className="specs rise" style={{ '--i': 2 } as CSSProperties}>
+                <button className="specs-toggle" onClick={() => setSpecsOpen((v) => !v)} aria-expanded={specsShown} disabled={risks.length === 0 && ready.length > 0}>
+                  <span>Specs</span>
+                  <span className="mono muted">{shownSpecs.length}</span>
+                  <Icon name="expand" size={12} />
+                </button>
+                {specsShown && (
+                  <div className="spec-table" style={{ '--cols': ready.length } as CSSProperties}>
+                    <div className="spec-row spec-head">
+                      <span />
+                      {ready.map((c) => (
+                        <strong key={c.lookupId} title={c.name}>
+                          {c.name}
+                        </strong>
+                      ))}
+                    </div>
                     {shownSpecs.map((row) => (
-                      <div key={row.label} className="mx-cell" data-differs={row.differs} title={row.cells[index]?.value}>
-                        <span className="spec">{row.cells[index]?.value ?? '—'}</span>
+                      <div key={row.label} className="spec-row" data-differs={row.differs}>
+                        <span className="spec-label">{row.label}</span>
+                        {row.cells.map((cell, i) => (
+                          <span key={ready[i].lookupId} className="spec-value">
+                            {cell?.value ?? '—'}
+                          </span>
+                        ))}
                       </div>
                     ))}
-                  </Column>
-                )
-              }
-              return (
-                <motion.div key={id} layout className="mx-col is-working" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={m.tx.spring}>
-                  <div className="mx-head">
-                    {found?.status === 'error' ? (
-                      <>
-                        <strong>Not read</strong>
-                        <span className="muted">{found.message}</span>
-                        <div className="card-actions">
-                          <button className="btn" onClick={() => retry(id)}>
-                            Try again
-                          </button>
-                          <button className="btn ghost" onClick={() => remove(id)}>
-                            Remove
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <span className="work-line">
-                        <PixelGlyph size={13} active />
-                        Reads the check
-                      </span>
-                    )}
+                    {shownSpecs.length === 0 && <p className="mx-none">The specifications do not differ.</p>}
                   </div>
-                </motion.div>
-              )
-            })}
-            {working.slice(0, 3).map((item) => (
-              <motion.div key={item.id} layout className="mx-col is-working" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={m.tx.spring}>
-                <div className="mx-head">
-                  <strong>{item.name}</strong>
-                  <span className="work-line">
-                    <PixelGlyph size={13} active={item.state === 'researching'} />
-                    {item.line}
-                  </span>
-                  <PixelBar value={item.progress} active={item.state === 'researching'} cells={18} />
-                </div>
-                {shownRisks.map((row) => (
-                  <div key={row.title} className="mx-cell">
-                    <span className="skeleton" />
-                  </div>
-                ))}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-      )}
+                )}
+              </section>
+            )}
+          </>
+        )}
 
-      <AnimatePresence>{detail && open && <Detail key={open.lookupId + open.title} title={open.title} risk={detail} onClose={() => setOpen(null)} />}</AnimatePresence>
-
-      <Talk questions={questions} />
+        <Talk questions={questions} />
       </div>
 
       <div className="compare-dock rise" style={{ '--i': 3 } as CSSProperties}>
@@ -180,40 +211,29 @@ function Column({ check, onRemove, children, transition }: { check: Check; onRem
   )
 }
 
-function RiskCell({ risk, active, onOpen }: { risk: Risk | null; active: boolean; onOpen: () => void }) {
-  if (!risk)
-    return (
-      <div className="mx-cell">
-        <span className="muted">—</span>
-      </div>
-    )
+/** One problem the agents found, in words. It opens to the sources and their quotes. */
+function RiskCard({ risk, also, of }: { risk: Risk; also: number; of: number }) {
+  const [open, setOpen] = useState(false)
+  const pages = risk.sources.length
   return (
-    <div className="mx-cell">
-      <button className="level" data-level={risk.level} data-active={active} onClick={onOpen} aria-label={`${risk.title}: ${LEVEL_WORD[risk.level]}${risk.disputed ? ', disputed' : ''}`}>
-        {LEVEL_WORD[risk.level]}
-        {risk.disputed && <i className="disputed" title="Its sources disagree" />}
-      </button>
-    </div>
-  )
-}
-
-/** The words and sources behind one cell. */
-function Detail({ title, risk, onClose }: { title: string; risk: Risk; onClose: () => void }) {
-  const { motion: m } = usePrefs()
-  return (
-    <motion.aside className="detail" initial={{ opacity: 0, y: m.d(12) }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: m.d(8) }} transition={m.tx.spring}>
-      <header>
-        <strong>{title}</strong>
-        <span className="level" data-level={risk.level}>
-          {LEVEL_WORD[risk.level]}
+    <li className="mx-risk" data-open={open}>
+      <button className="mx-risk-main" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <span className="mx-risk-top">
+          <span className="level" data-level={risk.level}>
+            {LEVEL_WORD[risk.level]}
+          </span>
+          {risk.disputed && <span className="mx-flag">Its sources disagree</span>}
+          {also > 0 && (
+            <span className="mx-flag">
+              Also in {also} of {of - 1} other{of - 1 === 1 ? '' : 's'}
+            </span>
+          )}
         </span>
-        {risk.disputed && <span className="muted">Its sources disagree.</span>}
-        <button className="icon-btn sm" onClick={onClose} aria-label="Close" style={{ marginLeft: 'auto' }}>
-          <Icon name="x" size={14} />
-        </button>
-      </header>
-      {risk.body && <p>{risk.body}</p>}
-      {risk.sources.length > 0 && (
+        <strong className="mx-risk-title">{risk.title}</strong>
+        {risk.body && <span className="mx-risk-body">{risk.body}</span>}
+        <span className="mono muted mx-risk-meta">{pages === 1 ? '1 source' : `${pages} sources`}</span>
+      </button>
+      {open && pages > 0 && (
         <ul className="sources">
           {risk.sources.map((s, i) => (
             <li key={i} data-stance={s.stance.toLowerCase() === 'refutes' ? 'against' : 'for'}>
@@ -229,7 +249,7 @@ function Detail({ title, risk, onClose }: { title: string; risk: Risk; onClose: 
           ))}
         </ul>
       )}
-    </motion.aside>
+    </li>
   )
 }
 

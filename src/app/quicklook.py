@@ -50,6 +50,22 @@ LANGUAGE_RULE = (
 )
 
 
+#: Shops, marketplaces and price-comparison pages sell the product, so what
+#: they say about it is the seller's voice. Their customers' words are another
+#: matter, and are the one thing on them worth reading for a quick look.
+SHOP_RULE = (
+    "A shop, marketplace or price-comparison page is the seller speaking, not a "
+    "source. Open one only to read what its customers wrote (reviews, questions "
+    "and answers, complaint or return notes) and quote the customer's own words. "
+    "Never take the listing's title, description, bullet points, star average or "
+    "\"original\", \"genuine\", \"new\" or \"warranted\" wording as evidence about "
+    "the product, and never cite the page the reader is on as a source for that "
+    "page's own contents. Two shops repeating one maker's text are one voice. "
+    "Evidence comes from owners, forums, repair and service records, recalls, "
+    "independent tests and the maker's own documents."
+)
+
+
 def language_rule(language: str = "auto") -> str:
     """The language instruction: the reader's own pick, else the listing's.
 
@@ -244,7 +260,7 @@ def brief(product: str, principle: str = "", page: dict | None = None,
             f"# Quick look: what is known to go wrong with this one?\n\n{product}\n"
             f"{listing}{offer}{bar}{belongs}{named}\n"
             "Use only the fetched pages below. Be specific to this variant. "
-            f"{rule} "
+            f"{SHOP_RULE} {rule} "
             f"Return one JSON object, with short fields and at most {MAX_RISKS} risks "
             f"and {MAX_SPECS} specifications. Every risk needs an exact URL and a "
             "verbatim quote from that page. Leave unsupported items out. "
@@ -280,6 +296,7 @@ friend would in a chat: fast, specific, sourced.
 * If the name leaves the variant open, state what is missing in `assumed`.
   Omit claims that depend on an unproven configuration. Do not guess a part
   code or assume that a nearby revision, year or market has the same fault.
+* {SHOP_RULE}
 * {rule}
 {bar}{belongs}
 ## Every risk needs its page
@@ -446,6 +463,33 @@ def parse(reply: str, sources: dict[str, str] | None = None,
         "risks": risks,
         "dropped": dropped,
     }
+
+
+def _plain_url(url: str) -> str:
+    """A page's address without its scheme, query, fragment or trailing slash."""
+    parts = urlparse(str(url or "").strip())
+    host = (parts.hostname or "").removeprefix("www.").lower()
+    return f"{host}{parts.path.rstrip('/')}" if host else ""
+
+
+def without_listing_echo(found: dict, listing_url: str) -> dict:
+    """Leave out specifications that only repeat the page the reader is on.
+
+    A shop's own product page is the seller speaking. A specification whose one
+    source is that very page ("brand: Mann Filter", "stock code") is the
+    listing read back as a finding: it adds nothing the reader cannot see, and
+    filed into a catalog it would pass the seller's wording off as evidence.
+    Risks are kept: a listing read critically ("sold as a display unit, no
+    serial number") is a finding about the offer, and says so in its quote.
+    Fails open: with no listing address nothing is removed.
+    """
+    own = _plain_url(listing_url)
+    if not own:
+        return found
+    kept = [spec for spec in found.get("specs", []) if _plain_url(spec.get("url", "")) != own]
+    if len(kept) == len(found.get("specs", [])):
+        return found
+    return {**found, "specs": kept, "echoed": len(found["specs"]) - len(kept)}
 
 
 def _offer(raw, sources: dict[str, str] | None, page: dict | None) -> dict:
