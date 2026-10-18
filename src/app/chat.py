@@ -614,7 +614,16 @@ def _clean_query(text: str) -> str:
     text = " ".join(str(text or "").split()).strip(" `\"'*")
     text = re.sub(r"^(?:search(?: query| words)?|query)\s*:\s*", "", text, flags=re.I)
     text = text.strip(" `\"'*")
-    if not 2 <= len(text) <= QUERY_CHARS or len(text.split()) > QUERY_WORDS:
+    # Too long is shortened, never refused: a refusal sent the request on as the
+    # answer, and the reader read "SEARCH: ..." where the answer should be. A word
+    # said twice ("Renault ... Renault") adds nothing to a search.
+    words = list(dict.fromkeys(text.split()))
+    if len(words) > QUERY_WORDS or len(" ".join(words)) > QUERY_CHARS:
+        words = words[:QUERY_WORDS]
+        while len(" ".join(words)) > QUERY_CHARS:
+            words.pop()
+    text = " ".join(words)
+    if len(text) < 2:
         return ""
     # Search words are not a sentence: a full stop after a word, or between two
     # sentences, means the agent explained instead of writing the search.
@@ -808,6 +817,11 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         hooks.set(0.9, "writing the answer")
         text = agent(chat_brief(message, history), on_text=stream_answer)
         wanted = search_request(text)
+        if not wanted and _SEARCH_LINE.match(text.strip().splitlines()[0] if text.strip() else ""):
+            # It asked for a search in words that cannot be one (a sentence of
+            # explanation). The request is still not an answer: search with the
+            # reader's own message.
+            wanted = search_words(_web_query(message, history))
         if wanted:
             # The agent asked for what it cannot know without the internet.
             return web_turn(wanted)
