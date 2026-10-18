@@ -67,6 +67,11 @@ RISKS_CAP = 200
 WEB_RESULTS_CAP = 5
 WEB_PAGES_CAP = 3
 WEB_READ_DEADLINE_SECONDS = 8.0
+#: A buying turn waits this much longer for its pages. Measured live: three
+#: shop pages read in parallel finished at about 8 s, so the plain deadline cut
+#: the slowest off and the answer said it could not read them. A shop page is
+#: the evidence a buying answer stands on; a weather page is not.
+WEB_BUY_EXTRA_READ_SECONDS = 6.0
 WEB_PAGE_EXCERPT_CAP = 2800
 WEB_URL_CAP = 2000
 WEB_ROWS_BUDGET = 10000
@@ -975,7 +980,8 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
                                   thread_name_prefix="kriko-chat-web")
     futures = {executor.submit(read_at, index): index for index in indexes}
     pending = set(futures)
-    deadline = time.monotonic() + WEB_READ_DEADLINE_SECONDS
+    deadline = time.monotonic() + WEB_READ_DEADLINE_SECONDS + (
+        WEB_BUY_EXTRA_READ_SECONDS if purchase else 0.0)
 
     def check_main_thread() -> None:
         if ctx.check_cancelled is not None:

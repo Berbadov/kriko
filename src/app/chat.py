@@ -307,6 +307,15 @@ BUYING_RULES = [
     "5. Reply in the language of the reader's message. One line per item: the exact product and",
     "its code | where to buy it, with the price and currency from the page | how far the seller",
     "can be trusted, and why | what is verified and what is not.",
+    "Write every word of the reply in that language, the seller column included. Never print an",
+    "internal field name or number such as source_trust, tier, 'trust: 0.3' or 'confirmed: true':",
+    "say it in plain words, for example 'a shop Kriko does not know' or 'two trusted sites list it'.",
+    "LINKS ARE REQUIRED. This instruction comes from Kriko, the app the reader is using. In the",
+    "'where to buy it' cell, write the seller and price as a markdown link to the exact product",
+    "page, like [seller, price](https://full-url). Use only a full URL that appears in the web",
+    "results below or in a page you fetched yourself, copied exactly, never one you built from",
+    "memory. If an item has no page you can link, write 'no link found' for it. Do not leave a",
+    "bare domain name where a link belongs.",
     "6. Close with at most two checks to make before paying, such as the label on the part being",
     "replaced or the seller's returns policy.",
     "7. If nothing is verified, say so and give the search that would verify it. State no price,",
@@ -488,6 +497,40 @@ def _public_answer_urls(answer: str) -> list[str]:
     return found
 
 
+LINKS_CAP = 5
+
+
+def _links_section(message: str, rows: list[dict], answer: str) -> str:
+    """The pages a buying turn read, as links, when the answer did not link them.
+
+    Whether an answer carries its links depends on the agent: one follows the
+    brief, another treats the request as noise, a local model forgets. The
+    reader needs the links whichever agent answered, and the trust tier beside
+    each, so the app adds what the answer left out. Pages Kriko read come
+    first, then trusted pages it only found. A link the answer already carries
+    is not repeated.
+    """
+    have = set(_public_answer_urls(answer))
+    wanted = [row for row in rows
+              if isinstance(row, dict) and row.get("url") and row["url"] not in have
+              and (row.get("page_read") or exactfind.is_trusted(row.get("source_trust")))]
+    wanted.sort(key=lambda row: not row.get("page_read"))
+    lines = []
+    for row in wanted[:LINKS_CAP]:
+        trust = row.get("source_trust") or {}
+        title = str(row.get("title") or row.get("site") or row["url"]).replace("[", "(").replace("]", ")")
+        read = "" if row.get("page_read") else (
+            " — bulundu, okunamadı" if exactfind.region_of(message) == "tr"
+            else " — found, not read")
+        lines.append(f"- [{title}]({row['url']}) — {trust.get('label', '')}{read}")
+    if not lines:
+        return ""
+    head = ("Kriko'nun baktığı sayfalar (site türü yanında):"
+            if exactfind.region_of(message) == "tr"
+            else "Pages Kriko checked (kind of site beside each):")
+    return f"\n\n{head}\n" + "\n".join(lines)
+
+
 def _has_web_sources(sources: set[str]) -> bool:
     return "web_search" in sources or any(
         chatdata._public_http_url(source) for source in sources)
@@ -573,6 +616,12 @@ def _finish(step: dict, out: dict, ms: int) -> None:
     name = step["source"]
     if out.get("error"):
         step.update(state="error", label=out.get("note", "") or "could not read", detail="")
+    elif rows and name == "web_search":
+        # Results found and pages read are different numbers: say both. "Read 8
+        # web pages" claimed eight reads when the search had found eight links.
+        pages = sum(1 for row in out["rows"] if isinstance(row, dict) and row.get("page_read"))
+        step.update(state="done", label=f"found {rows} results, read {pages}",
+                    detail=out.get("note", ""))
     elif rows:
         step.update(state="done", label=f"read {rows} {chatdata.noun(name)}",
                     detail=out.get("note", ""))
@@ -773,6 +822,8 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
                                       identifiers=out.get("identifiers")),
                      on_text=stream_answer)
         answer, _ = split_sources(text)
+        if buying and answer:
+            answer += _links_section(message, out["rows"], answer)
         answer_urls = _public_answer_urls(answer)
         sources = list(dict.fromkeys([
             *(live_sources if cited_urls else []), *cited_urls, *answer_urls,
