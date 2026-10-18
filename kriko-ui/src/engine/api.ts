@@ -66,7 +66,7 @@ async function call<T>(method: string, path: string, body?: unknown, timeoutMs =
 }
 
 export const get = <T>(path: string, timeoutMs?: number) => call<T>('GET', path, undefined, timeoutMs)
-export const post = <T>(path: string, body?: unknown) => call<T>('POST', path, body ?? {})
+export const post = <T>(path: string, body?: unknown, timeoutMs?: number) => call<T>('POST', path, body ?? {}, timeoutMs)
 export const put = <T>(path: string, body: unknown) => call<T>('PUT', path, body)
 export const patch = <T>(path: string, body: unknown) => call<T>('PATCH', path, body)
 export const del = <T>(path: string) => call<T>('DELETE', path)

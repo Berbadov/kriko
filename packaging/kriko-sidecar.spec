@@ -150,11 +150,21 @@ pyz = PYZ(a.pure)
 # `kriko-sidecar` beside its own executable. `kriko-ui/package.ps1` adds the
 # target triple when it stages the file for Tauri, so this spec stays the same
 # file on every runner.
+#
+# `KRIKO_FREEZE=folder` makes a program and a folder (`dist/kriko-engine/`:
+# the program, and `_internal/` beside it) in place of one file. A one-file
+# program unpacks all of itself into a temp folder on every start, which on
+# Windows, with each file scanned as it lands, took 10 to 13 s before the engine
+# said a word; the folder is unpacked once, by the installer, and starts in one
+# to three. The desktop app takes the folder. The default stays one file,
+# because a portable single program is what the other builds want.
+FOLDER = os.environ.get("KRIKO_FREEZE") == "folder"
+
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
+    *([] if FOLDER else [a.binaries, a.datas]),
+    exclude_binaries=FOLDER,
     name="kriko-sidecar" + (".exe" if sys.platform == "win32" else ""),
     debug=False,
     strip=False,
@@ -165,3 +175,6 @@ exe = EXE(
     console=sys.platform != "win32",
     codesign_identity=CODESIGN_IDENTITY,
 )
+
+if FOLDER:
+    coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="kriko-engine")
