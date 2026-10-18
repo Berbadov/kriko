@@ -956,7 +956,8 @@
       return;
     }
     state.researchTarget = subject?.subject_id ? subject : null;
-    const nextName = subject?.label || state.searchQuery || state.listingMeta?.title || document.title || "";
+    const nextName = subject?.label || state.searchQuery || state.listingMeta?.identity_line
+      || state.listingMeta?.title || document.title || "";
     if (nextName !== state.researchName) {
       state.researchQuick = null;
       state.researchQuickJob = null;
@@ -2807,6 +2808,7 @@
   const SEARCH_DEBOUNCE_MS = 220;
   let searchTimer = null;
   let searchRunId = 0;
+  let webSearch = false;
 
   function openSearch(query = "") {
     const initialQuery = String(query || "").trim();
@@ -2830,6 +2832,8 @@
     const query = String(text || "").trim();
     state.searchQuery = query;
     if (searchTimer) clearTimeout(searchTimer);
+    const runId = ++searchRunId;
+    state.searchError = null;
     if (query.length < SEARCH_MIN) {
       state.searchResults = null;
       state.searchBusy = false;
@@ -2838,11 +2842,10 @@
     // Debounced, and every reply carries the id of the keystroke that asked
     // for it: without that, a slow answer to "gol" lands after a fast one to
     // "golf" and the reader watches their own typing undo itself.
-    const runId = ++searchRunId;
     state.searchBusy = true;
     renderSearchResults();
     searchTimer = setTimeout(() => {
-      chrome.runtime.sendMessage({ type: "SEARCH", payload: { q: query } }, (reply) => {
+      chrome.runtime.sendMessage({ type: webSearch ? "WEB_SEARCH" : "SEARCH", payload: { q: query } }, (reply) => {
         if (runId !== searchRunId) return;
         state.searchBusy = false;
         if (chrome.runtime.lastError || !reply || !reply.ok) {
@@ -2856,7 +2859,7 @@
         }
         renderSearchResults();
       });
-    }, SEARCH_DEBOUNCE_MS);
+    }, webSearch ? 600 : SEARCH_DEBOUNCE_MS);
   }
 
   function renderSearch() {
@@ -2871,11 +2874,15 @@
           <span class="lite-search-icon">${iconSvg("search", { size: 15 })}</span>
           <input class="lite-search-field" type="text" autocomplete="off"
                  spellcheck="false" placeholder="Type a product name"
-                 aria-label="Search the installed packs" />
+                 aria-label="${webSearch ? "Search the web" : "Search the installed packs"}" />
           <button type="button" class="lite-search-close"
                   title="Close search" aria-label="Close search">
             ${iconSvg("x", { size: 14, strokeWidth: 2 })}
           </button>
+        </div>
+        <div class="lite-search-modes">
+          <button type="button" class="lite-search-local" aria-pressed="${!webSearch}">Installed packs</button>
+          <button type="button" class="lite-search-web" aria-pressed="${webSearch}">Search the web</button>
         </div>
         <div class="lite-search-results"></div>
       </div>
@@ -2888,10 +2895,20 @@
     });
     slot.querySelector(".lite-search-close")
       .addEventListener("click", () => closeSearch());
+    const chooseMode = (web) => {
+      webSearch = web;
+      slot.querySelector(".lite-search-local").setAttribute("aria-pressed", String(!web));
+      slot.querySelector(".lite-search-web").setAttribute("aria-pressed", String(web));
+      field.setAttribute("aria-label", web ? "Search the web" : "Search the installed packs");
+      runSearch(field.value);
+    };
+    slot.querySelector(".lite-search-local").addEventListener("click", () => chooseMode(false));
+    slot.querySelector(".lite-search-web").addEventListener("click", () => chooseMode(true));
     renderSearchResults();
   }
 
   function closeSearch() {
+    ++searchRunId;
     state.searchOpen = false;
     state.searchQuery = "";
     state.searchResults = null;
@@ -2908,6 +2925,7 @@
       busy: state.searchBusy,
       error: state.searchError,
       results: state.searchResults,
+      web: webSearch,
     });
     // Listing refreshes are independent from search. Keep matching cards
     // mounted so polling cannot reset their expansion, focus or scroll.
@@ -2931,12 +2949,26 @@
     }
     if (!state.searchResults.length) {
       box.innerHTML =
-        `<p class="lite-search-note">Nothing in the installed packs matches ` +
-        `that. Fewer words usually finds more.</p>`;
+        `<p class="lite-search-note">${webSearch ? "No web results found. Try fewer words."
+          : "Nothing in the installed packs matches that. Try Search the web."}</p>`;
       return;
     }
 
     for (const row of state.searchResults) {
+      if (webSearch) {
+        const url = String(row.url || "").trim();
+        if (!url || !/^https?:\/\//i.test(url)) continue;
+        const link = document.createElement("a");
+        link.className = "lite-search-hit";
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.innerHTML = `<span class="lite-search-label">${escapeHtml(row.title || row.url)}</span>
+          <span class="lite-search-identity">${escapeHtml(row.site || "")}</span>
+          <span>${escapeHtml(row.snippet || "")}</span>`;
+        box.appendChild(link);
+        continue;
+      }
       const item = document.createElement("button");
       item.type = "button";
       item.className = "lite-search-hit";

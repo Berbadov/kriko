@@ -301,13 +301,15 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
     reply, why = _bounded(chosen["complete"],
                           prompt_for(host, url, keys, sample), timeout)
     if why:
-        return gave_up("failed", why)
+        gave_up("failed", why)
+        return None
 
     from app.packauthor import _payload  # the same fence reader every door uses
 
     spec = _payload(reply)
     if not spec:
-        return gave_up("refused", "the model printed no adapter")
+        gave_up("refused", "the model printed no adapter")
+        return None
     # The host is a fact from the reader's browser, never the model's to choose.
     # `check` validates `match` against `site`, so a model that wrote another
     # site's pattern here is refused rather than handed a permission on a host
@@ -316,7 +318,8 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
     try:
         checked = sites.check(offered, host=host)
     except sites.SiteRefused as exc:
-        return gave_up("refused", f"the adapter was refused: {exc}")
+        gave_up("refused", f"the adapter was refused: {exc}")
+        return None
 
     vocabulary = identity_vocabulary(store)
     if not set(checked.get("identity") or {}) & set(vocabulary):
@@ -325,17 +328,13 @@ def infer(store, app_conn, *, app_state_path=None, url: str, fields: dict,
         # every page to nothing). A hand-written adapter is allowed to be
         # wrong about this and show it; an automatic one is not, because
         # nobody is watching the page it mis-reads.
-        return gave_up("refused", "the adapter's identity keys are not any "
-                                  "installed pack's")
-    read = sites.reading(
-        checked, sample["facts"], url=str(sample.get("url") or url),
-        title=str(sample.get("title") or ""),
-        description=str(sample.get("description") or ""), vocabulary=vocabulary)
-    if not read["identity"]:
-        return gave_up(
-            "refused",
-            f"the adapter reads none of the {len(sample['facts'])} labelled "
-            f"fact(s) the browser saw on {host}, so no identity key resolves")
+        gave_up("refused", "the adapter's identity keys are not any installed pack's")
+        return None
+    try:
+        read = sites.validate_sample(checked, sample, vocabulary)
+    except sites.SiteRefused as exc:
+        gave_up("refused", f"the adapter was refused: {exc}")
+        return None
 
     state.save_local_adapter(app_conn, host=host, spec=checked,
                              source="inference", pack_id="")
