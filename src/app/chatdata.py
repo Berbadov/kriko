@@ -40,6 +40,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from app import exactfind
+
 #: Rows one source may return to the agent.
 ROWS_CAP = 12
 #: Products one deep check reads in full. A shortlist is three names, not the
@@ -854,15 +856,44 @@ def _read_web_page(ctx: Context, url: str) -> tuple[str, str]:
     return _clip(text, 12000), _clip(published_at, 40)
 
 
-def _web_search(ctx: Context, query: str = "") -> dict:
+def _widen_for_buying(search, query: str, hits: list, cap: int) -> list:
+    """The hits, plus a second search limited to popular shops when too few came.
+
+    One more query only when the first result set holds fewer than
+    `ENOUGH_TRUSTED` trusted sites: a search engine ranks by what it likes, and
+    for a part number that is often a blog. A failed second search is not a
+    failed turn.
+    """
+    first = [hit for hit in hits if isinstance(hit, dict)]
+    if exactfind.trusted_count(
+            [{"source_trust": exactfind.classify(str(h.get("url") or ""), query)}
+             for h in first]) >= exactfind.ENOUGH_TRUSTED:
+        return hits
+    try:
+        more = search(exactfind.targeted_query(query, exactfind.region_of(query)), cap) or []
+    except Exception:  # noqa: BLE001 - the first search stands on its own
+        return hits
+    return [*first, *[hit for hit in more if isinstance(hit, dict)]]
+
+
+def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
     """Search the configured web plane and read up to three result pages.
 
     Search titles/snippets identify results only. A page excerpt is kept in a
     separate field so an answer can ground factual claims in text actually
     fetched from that page. All result content is untrusted data.
+
+    Every row carries `source_trust`: what kind of site it is, from
+    `sellers.json`. When `buying` is set the reader wants something to buy, and
+    the search changes in four ways. It looks wider. It adds a second query
+    limited to popular shops when the first found too few of them. The trusted,
+    different sites are the ones read. And the pages are read for the codes they
+    print and what they say about their seller (see `exactfind`).
     """
     if not query.strip():
         return _empty("add words to search the web")
+    purchase = str(buying).strip().casefold() in {"yes", "true", "1", "buying"}
+    cap = exactfind.BUY_RESULTS_CAP if purchase else WEB_RESULTS_CAP
     if ctx.check_cancelled is not None:
         ctx.check_cancelled()
     try:
@@ -884,7 +915,9 @@ def _web_search(ctx: Context, query: str = "") -> dict:
                 setattr(search, "check_cancelled", ctx.check_cancelled)
             except (AttributeError, TypeError):
                 pass
-            hits = search(query[:300], WEB_RESULTS_CAP) or []
+            hits = search(query[:300], cap) or []
+            if purchase:
+                hits = _widen_for_buying(search, query, hits, cap)
     except Exception as exc:  # noqa: BLE001 - report a failed search as a source row
         return {"rows": [], "truncated": False,
                 "note": f"web search failed: {type(exc).__name__}", "error": True}
@@ -905,15 +938,18 @@ def _web_search(ctx: Context, query: str = "") -> dict:
             "title": _clip(hit.get("title") or "Untitled result", 180),
             "site": _clip(hit.get("site") or parsed.hostname or "", 120),
             "url": url,
+            "source_trust": exactfind.classify(url, query),
             "search_snippet": _clip(hit.get("snippet") or hit.get("content") or "", 400),
             "page_excerpt": "",
             "published_at": _clip(hit.get("published_at") or "", 40),
             "page_read": False,
         })
-        if len(results) >= WEB_RESULTS_CAP:
+        if len(results) >= cap:
             break
     if not results:
         return _empty("web search returned no usable public pages")
+    if purchase:
+        results = exactfind.rank(results)
 
     indexes = list(range(min(WEB_PAGES_CAP, len(results))))
     reader_cancelled = threading.Event()
@@ -978,14 +1014,33 @@ def _web_search(ctx: Context, query: str = "") -> dict:
         executor.shutdown(wait=not pending, cancel_futures=True)
     check_main_thread()
 
+    codes: list[dict] = []
+    if purchase:
+        # Read from the whole fetched text, before the excerpt is shortened to
+        # the prompt budget: a seller's name sits far below the page's menus.
+        codes = exactfind.identifiers(results, query)
+        confirmed = {exactfind.normalise_code(one["code"]) for one in codes if one["confirmed"]}
+        for row in results:
+            if not row["page_read"]:
+                continue
+            signals = exactfind.seller_signals(row["page_excerpt"])
+            if signals:
+                row["seller_signals"] = signals
+            on_page = exactfind.codes_on(row, confirmed)
+            if on_page:
+                row["confirmed_codes"] = on_page
+
     results, context_truncated = _fit_web_results(results)
     read_count = sum(bool(row["page_read"]) for row in results)
     note = (f"{len(results)} web result(s); fetched {read_count} page(s). "
             "Search titles and snippets are leads, not verified page evidence.")
+    trusted = exactfind.trusted_count(results)
+    note += f" {trusted} trusted site(s) among them."
     if context_truncated:
         note += " Some leads or excerpts were shortened to fit the context limit."
+    extra = {"identifiers": codes} if purchase else {}
     return _result(results, note,
-                   truncated=len(hits) > WEB_RESULTS_CAP or context_truncated)
+                   truncated=len(hits) > cap or context_truncated, **extra)
 
 
 # ── the registry ─────────────────────────────────────────────────────────
@@ -999,7 +1054,8 @@ SOURCES: dict[str, Source] = {s.name: s for s in (
     Source(
         "web_search",
         "Searches the public web and reads up to three result pages. Page excerpts are fetched text; search titles and snippets are leads only.",
-        {"query": "words to search the public web for"},
+        {"query": "words to search the public web for",
+         "buying": "optional: yes when the reader wants something to buy; trusted shops are read first"},
         "web pages", lambda a: f"searching the web for {_quoted(a)}", _web_search),
     Source(
         "product_match",
@@ -1137,13 +1193,16 @@ def run(name: str, ctx: Context, args: dict | None = None) -> dict:
         note = f"{note}; ignored {', '.join(ignored)}".lstrip("; ")
     flags = [False]
     rows = _tidy(list(out.get("rows") or []), flags)
-    return {
+    result = {
         "source": name,
         "rows": rows,
         "truncated": bool(out.get("truncated")) or flags[0],
         "note": _clip(note, NOTE_CAP),
         "error": bool(out.get("error", False)),
     }
+    if out.get("identifiers"):
+        result["identifiers"] = _tidy(list(out["identifiers"]), flags)
+    return result
 
 
 def noun(name: str) -> str:
