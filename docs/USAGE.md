@@ -159,3 +159,12 @@ Use `tools/gate.sh` for the desktop checks and `tools/gate.sh mobile` for mobile
 changes. A skipped native check is incomplete. [Release acceptance](RELEASE_ACCEPTANCE.md)
 requires observing the packaged Windows journey with real providers before a
 stable publication. Scripted agents and a successful build do not establish that.
+
+To see what the searches really do, run an agent product search and a quick
+search at the same moment: `python -m app.livesearch "Brand Model" --agent
+claude-code`. Each runs in its own process on a throwaway copy of your settings.
+The report (`report.md` and `report.json`, under `~/.kriko/live-search/`) lists,
+per lane, the queries, the pages opened, the sites that makes and the claims,
+then the sites only one lane saw. It spends a real run and needs the web;
+`KRIKO_LIVE_SEARCH=1 pytest src/app/tests/test_live_search_side_by_side.py -k live`
+runs it as a test.
