@@ -47,6 +47,17 @@ immutable; a correction is a newer version.
 - **Results pages show what breaks your needs.** Once you have told Kriko what
   you need, products on a results page that mention what you avoid, or cost more
   than your budget, carry a small mark. It can be turned off on the options page.
+- **A relay for your phone, and for watching while the computer is off.**
+  `server/` holds a small server you run yourself (a few dollars a month). Under
+  More, For you, Phone and relay, connect to it and pair a phone with a code. Your
+  profile, purchases and watches are kept on it as copies sealed on your devices
+  with a key it never receives, so a phone and this computer agree. For a watch
+  you turn on in the cloud, the relay reads the page itself and pushes an alert to
+  your phone through ntfy when the price crosses your target. It has to be told
+  that page: hashing an address cannot hide it from whoever fetches it, so it is
+  per watch, kept encrypted at rest, and you can keep the product's name from it.
+  Nothing is sent to a relay you have not connected, and a watch you leave off
+  stays on this computer.
 - **See and forget what is kept.** For you lists everything Kriko remembers
   about you as a buyer, where it is, and a button to forget each part.
 - **The engine updates without the installer.** Update now used to run the whole

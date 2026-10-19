@@ -141,7 +141,7 @@ gate_py() {
     # wait behind a ~80s test run. Config (the curated rule set, and every
     # per-file ignore with its reason) lives in pyproject.toml, not here.
     step "ruff (src/kriko, src/app, packs)"
-    "$PYTHON" -m ruff check src packs
+    "$PYTHON" -m ruff check src packs server
     # Three invocations, not one `mypy src packs`: `kriko/ledger/extraction.py`
     # and `packs/cars/pipeline/ledger/extraction.py` share a module-path
     # suffix, and mypy's module resolution conflates them into one "Module
@@ -155,6 +155,8 @@ gate_py() {
     "$PYTHON" -m mypy src/app
     step "mypy (packs)"
     "$PYTHON" -m mypy packs
+    step "mypy (server)"
+    MYPYPATH=server "$PYTHON" -m mypy -p kriko_cloud
     # No arguments: pytest.ini pins testpaths. Naming directories by hand is how
     # the suite silently shrank to 576 of 761 tests once app/pipeline/ existed.
     # test_repo_invariants.py enforces the layering rules and the testpaths

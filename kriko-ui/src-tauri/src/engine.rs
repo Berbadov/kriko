@@ -346,13 +346,13 @@ fn spawn(mut command: Command, generation: u64) {
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(e) => {
-            if fall_back(generation, "could not be started") {
-                return;
-            }
             set_status(generation, Status::Failed {
                 title: "Kriko's engine could not be started".into(),
                 detail: format!("{:?}: {e}", command.get_program()),
             });
+            // A staged engine that cannot start is set aside and the one beside
+            // the app is tried; with none to fall back to, the failure above stays.
+            let _ = fall_back(generation, "could not be started");
             return;
         }
     };

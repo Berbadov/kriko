@@ -22,7 +22,7 @@ import os
 import threading
 from collections.abc import Callable
 
-from app import pricewatch
+from app import cloud, pricewatch
 from app.web import state
 
 log = logging.getLogger(__name__)
@@ -39,17 +39,23 @@ def interval_seconds() -> float:
 
 
 class Sweeper:
-    """Submits a sweep when a watched page is due and the last one has finished."""
+    """Syncs with the relay, and submits a sweep when a watched page is due and the last one has finished."""
 
-    def __init__(self, app_state_path, submit: Callable[[], str]):
+    def __init__(self, app_state_path, submit: Callable[[], str], *,
+                 sync: Callable = cloud.sync_quietly):
         self.path = app_state_path
         self.submit = submit
+        self.sync = sync
         self.job_id = ""
 
     def tick(self) -> str:
         """The id of the job submitted, or "" when nothing was due or one is still running."""
         conn = state.connect(self.path)
         try:
+            # A reader with a relay hears from it on the same clock: what it
+            # watched while this computer was off, and what was changed on the
+            # phone. A relay that does not answer is not a reason to skip the rest.
+            self.sync(conn)
             if self.job_id:
                 job = state.get_job(conn, self.job_id)
                 if job and not job["done"]:

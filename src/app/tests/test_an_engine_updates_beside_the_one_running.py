@@ -87,20 +87,20 @@ def test_staging_builds_a_whole_folder_and_marks_it_ready_last(monkeypatch, tmp_
     _serve(monkeypatch, _zip())
     older = tmp_path / "0.2.9"
     older.mkdir()
-    (older / "keep").write_text("untouched")
+    (older / "keep").write_text("untouched", encoding="utf-8")
     out = engineupdate.stage(_info(), root=tmp_path, shell="0.2.6")
     folder = tmp_path / "0.3.0"
     assert out["staged"] == "0.3.0" and (folder / SIDECAR).is_file()
     assert (folder / "_internal" / "kriko-0.3.0.dist-info" / "METADATA").is_file()
-    assert (folder / engineupdate.READY).read_text() == "0.3.0"
-    assert (older / "keep").read_text() == "untouched"
+    assert (folder / engineupdate.READY).read_text(encoding="utf-8") == "0.3.0"
+    assert (older / "keep").read_text(encoding="utf-8") == "untouched"
     assert sorted(p.name for p in tmp_path.iterdir()) == ["0.2.9", "0.3.0"], "no scratch left behind"
 
 
 def test_staging_twice_replaces_the_folder_instead_of_overlaying_it(monkeypatch, tmp_path):
     _serve(monkeypatch, _zip())
     engineupdate.stage(_info(), root=tmp_path, shell="0.2.6")
-    (tmp_path / "0.3.0" / "leftover").write_text("old")
+    (tmp_path / "0.3.0" / "leftover").write_text("old", encoding="utf-8")
     engineupdate.stage(_info(), root=tmp_path, shell="0.2.6")
     assert not (tmp_path / "0.3.0" / "leftover").exists()
 
@@ -133,9 +133,9 @@ def _folder(root, name, *, ready=True, bad=False):
     one = root / name
     one.mkdir()
     if ready:
-        (one / engineupdate.READY).write_text(name)
+        (one / engineupdate.READY).write_text(name, encoding="utf-8")
     if bad:
-        (one / engineupdate.BAD).write_text("did not start")
+        (one / engineupdate.BAD).write_text("did not start", encoding="utf-8")
     return one
 
 

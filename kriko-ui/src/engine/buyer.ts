@@ -58,6 +58,8 @@ export interface Watch {
   last_price: number | null
   last_checked: string
   last_error: string
+  /** 1 when the relay watches it too. */
+  cloud: number
 }
 
 export interface PriceAlert {
@@ -78,6 +80,7 @@ export interface Holdings {
   prices_since: string
   where: string
   note: string
+  leaves_this_computer: boolean
   labels: Record<string, string>
 }
 

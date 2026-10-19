@@ -212,3 +212,16 @@ test("regret on the card asks why, and not now just closes it", async () => {
   host.shadowRoot.querySelector('[data-act="due-dismiss"]').click();
   assert.equal(p.dom.window.document.querySelector("kriko-due-host"), null);
 });
+
+test("watching in the cloud is asked for with the watch, and only when a relay is connected", async () => {
+  const p = panel({ buyer: { ...BUYER, cloud: { connected: true } },
+    replies: { BUYER_WATCH: { ok: true, watch_id: "w1", target: 44, currency: "EUR", cloud: 1 } } });
+  p.openPanel();
+  await tick();
+  p.click('[data-act="watch-open"]');
+  const box = p.shadow().querySelector('input[name="cloud"]');
+  box.checked = true;
+  p.shadow().querySelector('form[data-act="watch-save"]')
+    .dispatchEvent(new p.dom.window.Event("submit", { bubbles: true, cancelable: true }));
+  assert.equal(p.sent.find((m) => m.type === "BUYER_WATCH").payload.cloud, true);
+});
