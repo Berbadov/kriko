@@ -4,6 +4,12 @@
 
 const BASE = (import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? ''
 
+export const AGENTS_CHANGED_EVENT = 'kriko:agents-changed'
+
+export function notifyAgentsChanged() {
+  window.dispatchEvent(new Event(AGENTS_CHANGED_EVENT))
+}
+
 export class EngineError extends Error {
   status: number
   constructor(status: number, message: string) {

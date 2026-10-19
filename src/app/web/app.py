@@ -210,7 +210,10 @@ async def lifespan(app: FastAPI):
             finally:
                 resident.shutdown()
         finally:
-            app.state.knowledge_clock.close()
+            try:
+                terminal.SESSION.close()
+            finally:
+                app.state.knowledge_clock.close()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -504,14 +507,6 @@ def main(argv=None) -> int:
     # port it was asked to serve on.
     selected_port = int(os.environ.get("KRIKO_EXTENSION_PORT", EXTENSION_PORT))
     os.environ["KRIKO_EXTENSION_BOUND"] = "1" if args.port == selected_port else "0"
-    # Each CLI's and each keyed provider's LLM list, asked once in the
-    # background: `agy models` takes seconds, and the Agents screen should not
-    # be the one that pays for it.
-    # Here rather than in the lifespan so a test client never spawns a CLI.
-    from app import modeldiscovery
-    from app.providers import harness
-    harness.warm_models()
-    modeldiscovery.cached()  # starts a background ask of each keyed provider
     uvicorn.run(
         create_app(Settings.from_env(**overrides)),
         host=args.host,

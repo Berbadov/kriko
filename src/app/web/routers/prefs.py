@@ -57,6 +57,38 @@ def read_prefs(fresh: bool = False, conn=Depends(get_app_state)) -> dict:
     return prefs.choices(conn, fresh=fresh)
 
 
+@router.get("/agent-availability")
+def agent_availability(conn=Depends(get_app_state)) -> dict:
+    """The small agent roster needed by the shell while the app starts.
+
+    The shell needs a default agent before the reader opens any settings. The
+    full preferences document also discovers model lists and can start CLI and
+    provider probes, so startup uses this filesystem/key-only view instead.
+    Detailed model and capability discovery stays behind `/api/prefs`, which
+    the reader opens from Settings.
+    """
+    from app.providers import apiagent, harness
+
+    chosen = prefs.read(conn)
+    rows = [
+        {"id": one.id, "label": one.label, "local": False}
+        for one in harness.available()
+    ]
+    rows.extend(
+        {"id": one.id, "label": one.label, "local": False}
+        for one in apiagent.available()
+    )
+    # Do not probe a local model server during startup. Keep a configured local
+    # agent in the roster, including the one the reader already selected.
+    if (chosen.get(prefs.HARNESS) == prefs.LOCAL_PICK
+            or chosen.get(prefs.LOCAL_URL) or chosen.get(prefs.LOCAL_MODEL)):
+        rows.append({"id": prefs.LOCAL_PICK, "label": "Local agent", "local": True})
+    return {
+        "harnesses": rows,
+        "chosen": {prefs.HARNESS: chosen.get(prefs.HARNESS, "")},
+    }
+
+
 @router.put("/prefs")
 def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
     """Store what the reader chose, and answer with what is now stored.
