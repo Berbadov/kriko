@@ -820,6 +820,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   -- this, never re-derived from the answer's prose, so the products a reader
   -- saw when a turn ran are the products they see when they open it again.
   products_json TEXT NOT NULL DEFAULT '[]',
+  followups_json TEXT NOT NULL DEFAULT '[]',
   job_id       TEXT NOT NULL DEFAULT '',
   created_at   TEXT NOT NULL DEFAULT '',
   -- Which agent wrote the answer: {"id", "label", "model"}. A message from
@@ -3233,6 +3234,7 @@ def _chat_message(row: sqlite3.Row) -> dict:
         # A message stored before this column existed reads as no products,
         # which is what it has: the card list was never recorded for it.
         "products": json.loads((row["products_json"] if "products_json" in row.keys() else "") or "[]"),
+        "followups": json.loads((row["followups_json"] if "followups_json" in row.keys() else "") or "[]"),
         "job_id": row["job_id"],
         "created_at": row["created_at"],
         "agent": json.loads((row["agent_json"] if "agent_json" in row.keys() else "") or "{}"),
@@ -3316,6 +3318,7 @@ def add_chat_message(
     conn: sqlite3.Connection, thread_id: str, *, role: str, text: str,
     steps: list | None = None, sources: list | None = None,
     products: list | None = None, activity: list | None = None, job_id: str = "", agent: dict | None = None,
+    followups: list[str] | None = None,
 ) -> dict:
     """Store one message and move its thread to the top of the list."""
     if role not in ("reader", "agent"):
@@ -3325,13 +3328,13 @@ def add_chat_message(
     now = _now()
     conn.execute(
         "INSERT INTO chat_messages (message_id, thread_id, role, text, steps_json,"
-        " sources_json, products_json, activity_json, job_id, created_at, agent_json)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        " sources_json, products_json, activity_json, job_id, created_at, agent_json, followups_json)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         (message_id, thread_id, role, text, json.dumps(steps or [], default=str),
          json.dumps(sources or [], default=str),
          json.dumps(products or [], default=str), json.dumps(activity or [], default=str), job_id, now,
          json.dumps({k: str(v) for k, v in (agent or {}).items()
-                     if k in ("id", "label", "model")})))
+                     if k in ("id", "label", "model")}), json.dumps(followups or [])))
     conn.execute("UPDATE chat_threads SET updated_at = ? WHERE thread_id = ?",
                  (now, thread_id))
     conn.commit()
@@ -3368,3 +3371,15 @@ def title_chat_thread(conn: sqlite3.Connection, thread_id: str, text: str) -> No
         "UPDATE chat_threads SET title = ? WHERE thread_id = ? AND title = ''",
         (words, thread_id))
     conn.commit()
+
+
+def name_chat_thread(conn: sqlite3.Connection, thread_id: str, title: str, *, fallback: str) -> bool:
+    """Replace the first-question fallback with a model title; preserve custom names."""
+    title = " ".join(str(title or "").split())[:CHAT_TITLE_CHARS]
+    if not title:
+        return False
+    cur = conn.execute(
+        "UPDATE chat_threads SET title = ? WHERE thread_id = ? AND title = ?",
+        (title, thread_id, " ".join(str(fallback or "").split())[:CHAT_TITLE_CHARS]))
+    conn.commit()
+    return cur.rowcount > 0

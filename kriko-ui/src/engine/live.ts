@@ -133,7 +133,7 @@ export function useLiveRun(): RunApi {
         if (ACTIVE.has(current.state)) {
           dispatch({
             type: 'replace',
-            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer: turn.answer ?? '', products: productsFrom(turn.products) },
+            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer: turn.answer ?? '', products: productsFrom(turn.products), followups: turn.followups ?? [] },
           })
           timer.current = window.setTimeout(() => void poll(jobId, threadId), POLL_MS)
           return
@@ -151,6 +151,7 @@ export function useLiveRun(): RunApi {
               products: productsFrom(finished.products),
               // What actually answered. A reader who left the agent on the default is told which one it was.
               ...(last?.agent?.id ? { agent: { id: last.agent.id, label: last.agent.label || last.agent.id } } : {}),
+              followups: finished.followups ?? [],
             },
           })
           dispatch({ type: 'end', status: 'done', now: Date.now() })
@@ -248,6 +249,7 @@ export function useLiveRun(): RunApi {
             turn.products = productsFrom(message.products)
             if (message.agent?.id) turn.agent = { id: message.agent.id, label: message.agent.label || message.agent.id }
             turn.rows = rowsFrom(message.steps ?? [], seen.current, message.activity, message.sources, message.feed)
+            turn.followups = message.followups ?? []
           }
         }
         const waiting = data.job_id && found.length && !found[found.length - 1].answer ? found.pop() : undefined
