@@ -29,6 +29,7 @@ export function QueueScreen() {
           </div>
         )}
       </header>
+      {!items.length && <p className="muted">The queue is clear. Add products from a listing to start a new research run. Completed checks are kept in History and Compare.</p>}
       <Reorder.Group as="ul" axis="y" values={items} onReorder={setItems} className="queue-list rise" style={{ '--i': 1 } as CSSProperties}>
         {items.map((item) => (
           <Reorder.Item as="li" key={item.id} value={item} className="queue-item" whileDrag={{ scale: 1.015 }}>
