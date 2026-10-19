@@ -30,6 +30,7 @@ export interface PrefsDoc {
   source_kinds: { id: string; label: string }[]
   research: { sources: number; kinds: string[] }
   search_providers: { id: string; label: string; ready: boolean }[]
+  classification_providers: { id: string; label: string; ready: boolean }[]
   market_regions: { id: string; label: string }[]
 }
 
@@ -82,6 +83,10 @@ const DEMO_PREFS: PrefsDoc = {
     { id: 'exa', label: 'Exa', ready: false },
     { id: 'tavily', label: 'Tavily', ready: true },
   ],
+  classification_providers: [
+    { id: 'agent', label: 'Configured agent', ready: true },
+    { id: 'typesafe', label: 'Jev (TypeSafe)', ready: false },
+  ],
   market_regions: [
     { id: 'auto', label: 'Automatic' },
     { id: 'US', label: 'United States' },
@@ -100,6 +105,7 @@ const DEMO_KEYS: KeysDoc = {
     { id: 'exa', label: 'Exa', purpose: 'Search words only. Never a page you visited.', present: false, hint: '', source: '' },
     { id: 'tavily', label: 'Tavily', purpose: 'Search words only. Never a page you visited.', present: true, hint: 'a1b2', source: 'file' },
     { id: 'openai', label: 'OpenAI', purpose: 'Reads the pages that research fetched.', present: false, hint: '', source: '' },
+    { id: 'typesafe', label: 'TypeSafe (Jev)', purpose: 'Used for product classification when selected.', present: false, hint: '', source: '' },
   ],
 }
 
