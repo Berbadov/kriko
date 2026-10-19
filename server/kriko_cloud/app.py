@@ -50,6 +50,63 @@ class WatchBody(BaseModel):
     currency: str = Field(default="", max_length=8)
 
 
+#: A request that is not a blob is a few hundred bytes of JSON.
+SMALL_BODY = 16 * 1024
+
+
+class BodyLimit:
+    """Refuse an oversized body before anything reads it, whoever sent it.
+
+    FastAPI reads and validates a request's body before it runs the owner check, so a
+    stranger's 300 MB `PUT` was buffered whole (a gigabyte of memory) and only then
+    answered. A blob may be as large as the operator allows; everything else is small.
+    """
+
+    def __init__(self, app, *, blob_bytes: int) -> None:  # type: ignore[no-untyped-def]
+        self.app, self.blob_bytes = app, blob_bytes
+
+    async def __call__(self, scope, receive, send) -> None:  # type: ignore[no-untyped-def]
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        limit = self.blob_bytes if scope["path"].startswith("/v1/blob/") else SMALL_BODY
+        declared = dict(scope["headers"]).get(b"content-length")
+        if declared is not None and declared.isdigit() and int(declared) > limit:
+            await self._refuse(send)
+            return
+        seen = 0
+        exceeded = False
+        answered = False
+
+        async def counted():  # type: ignore[no-untyped-def]
+            # Past the limit the app is handed an empty, finished body and nothing more.
+            nonlocal seen, exceeded
+            message = await receive()
+            if message["type"] == "http.request":
+                seen += len(message.get("body", b""))
+                if seen > limit:
+                    exceeded = True
+                    return {"type": "http.request", "body": b"", "more_body": False}
+            return message
+
+        async def replying(message) -> None:  # type: ignore[no-untyped-def]
+            # Whatever the app then says about a body it never got is replaced by the 413.
+            nonlocal answered
+            if not exceeded:
+                await send(message)
+            elif not answered:
+                answered = True
+                await self._refuse(send)
+
+        await self.app(scope, counted, replying)
+
+    @staticmethod
+    async def _refuse(send) -> None:  # type: ignore[no-untyped-def]
+        await send({"type": "http.response.start", "status": 413,
+                    "headers": [(b"content-type", b"application/json")]})
+        await send({"type": "http.response.body", "body": b'{"detail":"too large"}'})
+
+
 def create_app(settings: Settings | None = None, *, fetch=safefetch.markup, push=pusher.send,
                sweeper: bool = False) -> FastAPI:
     config = settings or Settings()
@@ -72,6 +129,7 @@ def create_app(settings: Settings | None = None, *, fetch=safefetch.markup, push
 
     app = FastAPI(title="Kriko relay", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.db, app.state.config = db, config
+    app.add_middleware(BodyLimit, blob_bytes=config.max_blob_bytes)
 
     def owner(authorization: str | None = Header(default=None)) -> None:
         try:
@@ -108,7 +166,7 @@ def create_app(settings: Settings | None = None, *, fetch=safefetch.markup, push
             raise HTTPException(403, "this relay already belongs to someone else")
         if not config.setup:
             raise HTTPException(403, "this relay has no setup word, so it cannot be claimed")
-        if not setup or not hmac.compare_digest(setup.encode(), config.setup.encode()):
+        if not setup or not hmac.compare_digest(setup.encode("latin-1", "replace"), config.setup.encode("utf-8")):
             time.sleep(0.5)  # a guess costs something
             raise HTTPException(403, "that is not this relay's setup word")
         try:

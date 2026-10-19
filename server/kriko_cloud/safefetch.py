@@ -17,12 +17,16 @@ from __future__ import annotations
 
 import ipaddress
 import socket
+import time
 import urllib.error
 import urllib.request
 from urllib.parse import urlsplit
 
 MAX_BYTES = 2_000_000
 TIMEOUT = 15.0
+#: The whole page, not one wait on the socket: a server that sends a byte a second
+#: never trips `TIMEOUT` and would hold the one sweeper thread for every watch.
+BUDGET = 30.0
 MAX_REDIRECTS = 4
 PORTS = (None, 80, 443)
 USER_AGENT = "Kriko-Cloud/1.0 (+https://github.com/Berbadov/kriko)"
@@ -56,9 +60,20 @@ def check(url: str) -> str:
     if not found:
         raise Refused("the host does not resolve")
     for address in found:
-        if not ipaddress.ip_address(address.split("%")[0]).is_global:
+        if not _public(address):
             raise Refused("the host is not on the public internet")
     return host.lower()
+
+
+_NAT64 = ipaddress.ip_network("64:ff9b::/96")
+
+
+def _public(address: str) -> bool:
+    ip = ipaddress.ip_address(address.split("%")[0])
+    if isinstance(ip, ipaddress.IPv6Address) and ip in _NAT64:
+        # 64:ff9b::a9fe:a9fe is 169.254.169.254 to a NAT64 gateway: judge the address inside.
+        return ipaddress.IPv4Address(int(ip) & 0xFFFFFFFF).is_global
+    return ip.is_global
 
 
 class _Redirects(urllib.request.HTTPRedirectHandler):
@@ -67,6 +82,20 @@ class _Redirects(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
         check(newurl)
         return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _read(response) -> bytes:  # type: ignore[no-untyped-def]
+    """At most `MAX_BYTES`, within `BUDGET` seconds in all; what arrived by then is kept."""
+    deadline = time.monotonic() + BUDGET
+    chunks: list[bytes] = []
+    size = 0
+    while size < MAX_BYTES and time.monotonic() < deadline:
+        chunk = response.read(min(65536, MAX_BYTES - size))
+        if not chunk:
+            break
+        chunks.append(chunk)
+        size += len(chunk)
+    return b"".join(chunks)
 
 
 def markup(url: str) -> str:
@@ -79,7 +108,7 @@ def markup(url: str) -> str:
             kind = (response.headers.get_content_type() or "").lower()
             if kind and not (kind.startswith("text/") or "html" in kind or "xml" in kind):
                 return ""
-            raw = response.read(MAX_BYTES)
+            raw = _read(response)
             charset = response.headers.get_content_charset() or "utf-8"
         return raw.decode(charset, "replace")
     except (Refused, urllib.error.URLError, TimeoutError, OSError, ValueError, LookupError):

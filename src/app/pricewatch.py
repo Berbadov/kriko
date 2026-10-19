@@ -616,6 +616,14 @@ def due(conn: sqlite3.Connection, now: datetime | None = None) -> list[dict]:
     return [_watch(row) for row in rows]
 
 
+def _read_or_nothing(markup: str) -> dict:
+    """`read_markup`, where whatever a page did to it is that page's failure and nobody else's."""
+    try:
+        return read_markup(markup) if markup else {}
+    except Exception:  # noqa: BLE001 - one bad page must not stop the rest
+        return {}
+
+
 def sweep(conn: sqlite3.Connection, fetch: Callable[[str], str], *,
           now: datetime | None = None, pause: Callable[[], None] | None = None) -> dict:
     """Re-read every watch that is due. `fetch(url)` returns the page's markup, or "".
@@ -635,7 +643,7 @@ def sweep(conn: sqlite3.Connection, fetch: Callable[[str], str], *,
             markup, why = "", f"could not be fetched ({type(error).__name__})"
         else:
             why = "could not be fetched" if not markup else ""
-        offer = read_markup(markup) if markup else {}
+        offer = _read_or_nothing(markup)
         if not offer and not why:
             why = "the page does not publish its price in a way Kriko can read without a browser"
         if why:
