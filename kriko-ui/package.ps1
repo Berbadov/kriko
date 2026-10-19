@@ -10,6 +10,7 @@
 
         builds\kriko-<version>-x86_64-setup.exe    per-user installer (NSIS)
         builds\kriko-<version>-win64-portable.zip  the programs, no install
+        builds\kriko-engine-<version>-win64.zip    the engine alone, for in-app updates
 
     In order: preflight (versions agree), the Python side, OpenSERP, the frozen
     sidecar and its handshake, the web interface, the app and the installer,
@@ -273,6 +274,14 @@ try {
     & $Python packaging/smoke_sidecar.py "dist/kriko-engine/kriko-sidecar.exe"
     Assert-LastExitCode "smoke_sidecar.py"
 
+    # The engine on its own, for an installed Kriko to update itself with: no
+    # installer, and the engine it replaces is never written to.
+    Step "Pack the engine for in-app updates"
+    $builds = Join-Path $ui "builds"
+    & $Python packaging/make_engine_zip.py --engine dist/kriko-engine --out $builds --version $ver
+    Assert-LastExitCode "make_engine_zip.py"
+    $engineZip = Join-Path $builds "kriko-engine-$ver-win64.zip"
+
     # The program goes beside kriko.exe as an external binary, and the folder
     # it unpacked into travels as a resource, so `_internal` lands beside it.
     Step "Place the sidecar"
@@ -359,14 +368,14 @@ try {
         -DestinationPath $zip -Force
 
     $checksums = Join-Path $builds "SHA256SUMS.txt"
-    @($setup, $zip) | ForEach-Object {
+    @($setup, $zip, $engineZip) | ForEach-Object {
         $file = Get-Item -LiteralPath $_
         $digest = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant()
         "$digest  $($file.Name)"
     } | Set-Content -LiteralPath $checksums -Encoding Ascii
 
     Step "Done"
-    foreach ($item in @($setup, $zip, $checksums)) {
+    foreach ($item in @($setup, $zip, $engineZip, $checksums)) {
         $f = Get-Item -LiteralPath $item
         Write-Host ("{0}  {1:N1} MB" -f $f.FullName, ($f.Length / 1MB)) -ForegroundColor Green
     }

@@ -67,7 +67,10 @@ def parse_release(payload: dict) -> dict:
     for name, url in assets.items():
         match = _INSTALLER.match(name)
         if match and url:
+            from app import engineupdate
+
             return {
+                "engine": engineupdate.parse_engine(payload),
                 "version": match.group("version"),
                 "tag": payload.get("tag_name", ""),
                 "name": name,
@@ -86,14 +89,23 @@ def latest(api_url: str) -> dict:
 
 
 def check(api_url: str, current: str) -> dict:
-    """What the settings screen shows: the running version, the newest, and whether to offer it."""
+    """What the settings screen shows: the running version, the newest, and whether to offer it.
+
+    `engine` is the lighter way in (`app/engineupdate.py`): present when this
+    release carries an engine the running desktop app can start. The installer
+    stays the answer for everything else, and is always in the reply.
+    """
+    from app import engineupdate
+
     try:
         found = latest(api_url)
     except Exception as cause:  # noqa: BLE001 — every failure is the same answer to the reader
         return {"current": current, "newer": False, "error": _plain(cause)}
     if not found:
         return {"current": current, "newer": False, "error": "the latest release has no Windows installer"}
-    return {"current": current, "newer": is_newer(found["version"], current), "error": "", **found}
+    newer = is_newer(found["version"], current)
+    engine = engineupdate.offer(found, current, engineupdate.shell_version()) if newer else {}
+    return {"current": current, "newer": newer, "error": "", **{**found, "engine": engine}}
 
 
 def _plain(cause: Exception) -> str:

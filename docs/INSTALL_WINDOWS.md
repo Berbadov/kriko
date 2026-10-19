@@ -59,8 +59,12 @@ browser extension needs it. To stop Kriko, use the tray icon and select
 > holds port 8787. Stop that program and open Kriko again.
 
 > **An update fails.**
-> Kriko still runs. Select **Quit** in the tray menu, then start the installer
-> again.
+> Kriko still runs. Most updates replace only the engine: Kriko unpacks it into
+> `%LOCALAPPDATA%\Kriko\engines`, restarts the engine and keeps the window open.
+> If the new engine cannot start, Kriko sets it aside and starts the engine that
+> came with the app. When a release changes the app itself, Update now runs the
+> installer instead. If that fails, select **Quit** in the tray menu and start the
+> installer again. You never need to uninstall first.
 
 Examine the engine from a browser. Open `http://127.0.0.1:8787/api/health`. The
 answer contains `{"ok":true,...}`.

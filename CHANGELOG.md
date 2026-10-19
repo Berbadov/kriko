@@ -3,6 +3,38 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### Unreleased
+
+- **The engine updates without the installer.** Update now used to run the whole
+  installer over a running Kriko, and when that went wrong the cure was an
+  uninstall and a fresh install. A release now also carries the engine alone.
+  Kriko unpacks it into a folder of its own, checks it against the release's
+  checksums, and restarts only the engine. The window stays open, nothing is laid
+  over anything, and the installer is not run. If the new engine cannot start,
+  Kriko sets it aside and starts the engine that came with the app, so a bad
+  update costs a restart, not a reinstall. A portable copy gets engine updates
+  too. A release that needs a newer app than yours still offers the installer.
+- **Uninstall removes the staged engines too.** They live in
+  `%LOCALAPPDATA%\Kriko\engines`. An install keeps one that is newer than the
+  engine it carries.
+- **The local model starts Ollama for you.** Asking the Local model a question
+  while Ollama is installed and closed no longer fails with "Nothing answers at
+  127.0.0.1:11434". Kriko starts Ollama, waits for it, and runs the question.
+  Nothing is started for a reader who did not pick the Local model, and a server
+  you pointed Kriko at yourself is left alone.
+- **Agents advise.** Chat, the web answer, follow-up questions and Compare now
+  tell the agent to name specific products or part numbers with a caution,
+  and never to answer with only search terms, "check the specifications" or "I
+  cannot recommend a product". A bare product phrase such as
+  "Megane 4 1.5 blue dci 2020 yag ve filtre seti" is a buying request and goes
+  to the web, where before it was answered from memory.
+- **Learn this page is offered where a page cannot be read.** A page that
+  Kriko could not read on a site it has an adapter for used to show "Unable to
+  read this page" and nothing else. One refused selector in an adapter could
+  stop the whole read; each reader now fails alone and the rest still answer. The
+  panel shows what went wrong and a Learn this page button under it, and
+  re-reads the page when it has learned it.
+
 ### 0.2.5
 
 - **An update now says what version it is.** After 0.2.4 was installed over

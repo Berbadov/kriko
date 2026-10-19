@@ -104,7 +104,15 @@ def test_the_engine_folder_is_replaced_whole_and_cleared_on_uninstall(hooks):
         assert body.index("KrikoStopEverything") < body.index("KrikoClearEngineFolder"), (
             f"{name} clears the folder before it stops the engine that maps it"
         )
-    assert "RMDir /r" not in hooks.replace(clear, ""), (
+    staged = _macro(hooks, "KrikoClearStagedEngines")
+    assert re.findall(r"RMDir /r (\S+)", staged) == ['"$LOCALAPPDATA\\Kriko\\engines"'], (
+        "the only other recursive removal is the folder in-app engine updates stage into"
+    )
+    assert "KrikoClearStagedEngines" in _macro(hooks, "NSIS_HOOK_PREUNINSTALL")
+    assert "KrikoClearStagedEngines" not in _macro(hooks, "NSIS_HOOK_PREINSTALL"), (
+        "an install must keep an engine newer than the one it carries: that is the reader's update"
+    )
+    assert "RMDir /r" not in hooks.replace(clear, "").replace(staged, ""), (
         "no other hook may remove anything recursively"
     )
     # The folder it clears is the one the bundle puts the engine in.
