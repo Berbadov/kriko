@@ -58,6 +58,7 @@ from pathlib import Path
 
 sys.path.insert(0, SPECPATH)
 from freeze_imports import CONSOLE_MODULES, FROZEN_EXCLUDES, kriko_submodules, mcp_submodules
+from PyInstaller.utils.hooks import copy_metadata
 
 ROOT = Path(SPECPATH).parent
 
@@ -118,6 +119,12 @@ a = Analysis(
         # all app JSON resources so a new suite cannot disappear when frozen.
         *((str(resource), "app") for resource in sorted((ROOT / "src" / "app").glob("*.json"))),
         (str(EXTENSION), "app/extension_src"),
+        # The version the engine reports is read from this distribution's
+        # metadata (app/version.py). PyInstaller only bundles it when it
+        # spots a literal `version("kriko")` call, and a reader written
+        # another way was frozen without it: 0.2.5 reported "unknown".
+        # Named here so no change to how the version is read can drop it.
+        *copy_metadata("kriko"),
     ],
     hiddenimports=[
         "uvicorn.logging",
