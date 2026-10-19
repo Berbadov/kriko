@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useCompare, MAX_SLOTS, type Question } from '../compare'
-import { riskRows, specRows, type Check, type Level, type Risk } from '../compare/checks'
+import { riskRows, specRows, riskKey, type Check, type Level, type Risk } from '../compare/checks'
 import { useEngine } from '../engine/Engine'
-import { get, type ApiHistoryItem } from '../engine/api'
+import { useHistory } from '../engine/history'
 import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { Composer } from '../ui/Composer'
@@ -12,6 +12,7 @@ import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
+import { CheckContext } from '../ui/CheckContext'
 
 const LEVEL_WORD: Record<Level, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', unrated: 'Unrated' }
 const LEVEL_ORDER: Record<Level, number> = { critical: 0, high: 1, medium: 2, low: 3, unrated: 4 }
@@ -23,7 +24,7 @@ const LEVEL_ORDER: Record<Level, number> = { critical: 0, high: 1, medium: 2, lo
 export function CompareScreen() {
   const { motion: m } = usePrefs()
   const { items } = useQueue()
-  const { slots, checks, questions, remove, retry, ask } = useCompare()
+  const { slots, checks, questions, remove, retry, ask, stop, problem, saveAgain } = useCompare()
   const [only, setOnly] = useState(false)
   const [picker, setPicker] = useState(false)
   const [specsOpen, setSpecsOpen] = useState(false)
@@ -37,8 +38,8 @@ export function CompareScreen() {
   const specs = useMemo(() => specRows(ready), [ready])
   // How many of the columns carry each risk: "also in 2 of 3" is the one thing
   // lining the columns up still has to say.
-  const shared = useMemo(() => new Map(risks.map((r) => [r.title, r.cells.filter(Boolean).length])), [risks])
-  const differing = useMemo(() => new Set(risks.filter((r) => r.differs).map((r) => r.title)), [risks])
+  const shared = useMemo(() => new Map(risks.map((r) => [r.key, r.cells.filter(Boolean).length])), [risks])
+  const differing = useMemo(() => new Set(risks.filter((r) => r.differs).map((r) => r.key)), [risks])
   const shownSpecs = only ? specs.filter((r) => r.differs) : specs
   const empty = slots.length === 0 && working.length === 0
   // With no problems to read, the specifications are all there is: show them.
@@ -65,6 +66,7 @@ export function CompareScreen() {
       <AnimatePresence>{picker && <Picker onClose={() => setPicker(false)} />}</AnimatePresence>
 
       <div className="compare-body">
+        {problem && <p className="error-note" role="alert">{problem} <button className="btn" onClick={saveAgain}>{problem.startsWith('Could not load') ? 'Retry loading' : 'Retry saving'}</button></p>}
         {empty ? (
           <div className="empty rise" style={{ '--i': 1 } as CSSProperties}>
             <PixelGlyph size={34} active />
@@ -81,7 +83,7 @@ export function CompareScreen() {
                   const found = checks[id]
                   if (found?.status === 'ready') {
                     const list = found.check.risks
-                      .filter((r) => !only || differing.has(r.title))
+                      .filter((r) => !only || differing.has(riskKey(r)))
                       .sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level])
                     return (
                       <Column key={id} check={found.check} onRemove={() => remove(id)} transition={m.tx.spring}>
@@ -94,7 +96,7 @@ export function CompareScreen() {
                         ) : (
                           <ul className="mx-risks">
                             {list.map((risk) => (
-                              <RiskCard key={risk.title} risk={risk} also={(shared.get(risk.title) ?? 1) - 1} of={ready.length} />
+                              <RiskCard key={riskKey(risk)} risk={risk} also={(shared.get(riskKey(risk)) ?? 1) - 1} of={ready.length} />
                             ))}
                           </ul>
                         )}
@@ -171,7 +173,9 @@ export function CompareScreen() {
                         <span className="spec-label">{row.label}</span>
                         {row.cells.map((cell, i) => (
                           <span key={ready[i].lookupId} className="spec-value">
-                            {cell?.value ?? '—'}
+                            {cell?.value ?? 'Unknown'}
+                            {cell?.source && <ExternalLink href={cell.source}> Source</ExternalLink>}
+                            {cell?.quote && <details><summary>Quote</summary><q>{cell.quote}</q></details>}
                           </span>
                         ))}
                       </div>
@@ -188,7 +192,7 @@ export function CompareScreen() {
       </div>
 
       <div className="compare-dock rise" style={{ '--i': 3 } as CSSProperties}>
-        <Composer onSubmit={(text, agent) => ask(text, agent)} running={false} onStop={() => {}} placeholder={slots.length ? 'Ask about these products' : 'Add a check to ask about it'} />
+        <Composer onSubmit={(text, agent) => ask(text, agent)} running={questions.some((q) => q.state === 'running')} onStop={stop} placeholder={slots.length ? 'Ask about these products' : 'Add a check to ask about it'} />
       </div>
     </section>
   )
@@ -207,6 +211,7 @@ function Column({ check, onRemove, children, transition }: { check: Check; onRem
         <span className="muted">{check.category || 'Quick look'}</span>
         <span className="mono muted">{check.risks.length === 1 ? '1 risk' : `${check.risks.length} risks`}</span>
       </div>
+      <CheckContext check={check} />
       {children}
     </motion.div>
   )
@@ -232,6 +237,8 @@ function RiskCard({ risk, also, of }: { risk: Risk; also: number; of: number }) 
         </span>
         <strong className="mx-risk-title">{risk.title}</strong>
         {risk.body && <span className="mx-risk-body">{risk.body}</span>}
+        {risk.applicability && <span>Applies: {risk.applicability}</span>}
+        {risk.advice && <span>{risk.advice}</span>}
         <span className="mono muted mx-risk-meta">{pages === 1 ? '1 source' : `${pages} sources`}</span>
       </button>
       {open && pages > 0 && (
@@ -295,6 +302,8 @@ function Picker({ onClose }: { onClose: () => void }) {
   const { motion: m } = usePrefs()
   const { slots, add } = useCompare()
   const [rows, setRows] = useState<{ id: string; name: string; note: string }[] | null>(null)
+  const [query, setQuery] = useState('')
+  const history = useHistory(query)
 
   useEffect(() => {
     if (mode === 'checking') return
@@ -305,27 +314,23 @@ function Picker({ onClose }: { onClose: () => void }) {
       ])
       return
     }
-    let live = true
-    get<{ items: ApiHistoryItem[] }>('/api/history?limit=30')
-      .then((reply) => live && setRows(reply.items.filter((r) => r.claim_count > 0 || r.label).map((r) => ({ id: r.lookup_id, name: r.label, note: r.category || 'Quick look' }))))
-      .catch(() => live && setRows([]))
-    return () => {
-      live = false
-    }
   }, [mode])
 
-  const choices = (rows ?? []).filter((r) => !slots.includes(r.id))
+  const choices = (mode === 'live' ? (history.items ?? []).map((r) => ({ id: r.id, name: r.name, note: r.category })) : rows ?? []).filter((r) => !slots.includes(r.id))
   return (
     <motion.div className="picker" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={m.tx.soft}>
       <div className="picker-inner">
-        {rows === null && <span className="muted">Reads your checks…</span>}
-        {rows !== null && choices.length === 0 && <span className="muted">No more checks to add.</span>}
+        <input type="search" aria-label="Search all saved checks" placeholder="Search all checks" value={query} onChange={(event) => setQuery(event.target.value)} />
+        {history.problem && <p className="error-note" role="alert">{history.problem}</p>}
+        {(mode === 'live' ? history.items === null : rows === null) && <span className="muted">Reads your checks…</span>}
+        {(mode === 'live' ? history.items !== null : rows !== null) && choices.length === 0 && <span className="muted">No matching checks to add.</span>}
         {choices.map((r) => (
           <button key={r.id} className="chip" onClick={() => add(r.id)} disabled={slots.length >= MAX_SLOTS} title={r.name}>
             <strong>{r.name}</strong>
             <span className="muted">{r.note}</span>
           </button>
         ))}
+        {history.hasMore && <button className="btn" onClick={history.loadMore}>Load more</button>}
         <button className="icon-btn sm" onClick={onClose} aria-label="Close the list" style={{ marginLeft: 'auto' }}>
           <Icon name="x" size={14} />
         </button>

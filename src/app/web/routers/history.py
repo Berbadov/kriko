@@ -32,6 +32,8 @@ def history(
     limit: int = Query(20, ge=1, le=200),
     app_state=Depends(get_app_state),
     store=Depends(get_store),
+    q: str = "",
+    offset: int = 0,
 ):
     """Recent checks, each with the category its pack names (B182).
 
@@ -40,7 +42,9 @@ def history(
     rather than frozen into a stored row. A check no pack answered has an
     empty category, and the screen names that group itself.
     """
-    items = state.recent(app_state, limit)
+    q = q.strip()[:200]
+    offset = max(0, offset)
+    items = state.recent(app_state, limit, query=q, offset=offset)
     names = {
         row["pack_id"]: row["name"]
         for row in store.execute("SELECT pack_id, name FROM packs")
@@ -62,7 +66,7 @@ def history(
             ]
         item["packs"] = [{"pack_id": i, "name": names[i]} for i in ids if i in names]
         item["category"] = item["packs"][0]["name"] if item["packs"] else ""
-    return {"items": items}
+    return {"items": items, "offset": offset, "has_more": len(items) == limit}
 
 
 @router.get("/history/records")

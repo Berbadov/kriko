@@ -1,6 +1,8 @@
 """What is installed, and what it covers."""
 
 import sqlite3
+import base64
+import binascii
 import tempfile
 from pathlib import Path
 
@@ -13,6 +15,24 @@ from app.web.settings import MAX_REQUEST_BYTES
 from kriko.store import packstore
 
 router = APIRouter(prefix="/api", tags=["packs"])
+
+
+class ArtifactUpload(BaseModel):
+    filename: str = Field(max_length=200)
+    data: str = Field(max_length=45_000_000)
+
+
+@router.post("/packs/import")
+def import_artifact(body: ArtifactUpload, store=Depends(get_store)):
+    """Import an artifact through the desktop's JSON-only native bridge."""
+    try:
+        raw = base64.b64decode(body.data, validate=True)
+    except (ValueError, binascii.Error) as error:
+        raise HTTPException(422, "The selected file is not a readable artifact.") from error
+    if len(raw) > 32 * 1024 * 1024:
+        raise HTTPException(413, "Choose a catalog up to 32 MB.")
+    return install_pack(body=raw, filename=body.filename, filename_header=None,
+                        allow_downgrade=False, store=store)
 
 
 @router.post("/packs/install")
