@@ -1,0 +1,125 @@
+{
+  "id": "kriko-compatibility",
+  "version": "1.0.0",
+  "description": "Fictional supplied-source cases. Expected fitment is derived from source-backed facts and comparison operators, never shown in the prompt.",
+  "cases": [
+    {
+      "id": "pc-am5-compatible",
+      "dimension": "pc-full-match",
+      "question": "Will the listed NovaForge N9 CPU, this Cedar B650M motherboard, and its memory kit work together?",
+      "documents": [
+        {"url": "https://compat.example/pc-am5/board", "title": "Cedar B650M board manual", "text": "Cedar B650M revision 2 manual. The processor socket is AM5. The board supports DDR5 memory. BIOS 2.0 is installed."},
+        {"url": "https://compat.example/pc-am5/cpu", "title": "NovaForge N9 processor specifications", "text": "NovaForge N9 processor specifications. Socket: AM5. Minimum motherboard BIOS: 1.8."},
+        {"url": "https://compat.example/pc-am5/ram", "title": "ClearPeak memory kit specifications", "text": "ClearPeak CP32 memory kit. Memory generation: DDR5."}
+      ],
+      "facts": [
+        {"id": "board.socket", "value": "AM5", "url": "https://compat.example/pc-am5/board", "quote": "The processor socket is AM5."},
+        {"id": "cpu.socket", "value": "AM5", "url": "https://compat.example/pc-am5/cpu", "quote": "Socket: AM5."},
+        {"id": "board.bios", "value": "2.0", "url": "https://compat.example/pc-am5/board", "quote": "BIOS 2.0 is installed."},
+        {"id": "cpu.min_bios", "value": "1.8", "url": "https://compat.example/pc-am5/cpu", "quote": "Minimum motherboard BIOS: 1.8."},
+        {"id": "board.memory", "value": "DDR5", "url": "https://compat.example/pc-am5/board", "quote": "The board supports DDR5 memory."},
+        {"id": "ram.memory", "value": "DDR5", "url": "https://compat.example/pc-am5/ram", "quote": "Memory generation: DDR5."}
+      ],
+      "comparisons": [
+        {"id": "socket", "left": "board.socket", "right": "cpu.socket", "operator": "equal"},
+        {"id": "bios", "left": "board.bios", "right": "cpu.min_bios", "operator": "at_least"},
+        {"id": "memory_generation", "left": "board.memory", "right": "ram.memory", "operator": "equal"}
+      ]
+    },
+    {
+      "id": "pc-same-socket-old-bios",
+      "dimension": "pc-bios-variant",
+      "question": "Will the NovaForge N9 CPU work on this Cedar B650M revision 1 board as configured?",
+      "documents": [
+        {"url": "https://compat.example/pc-bios/board", "title": "Cedar B650M revision 1 support page", "text": "Cedar B650M revision 1 support page. Processor socket: AM5. Installed BIOS version: 1.4. The page lists a different Cedar B650M revision separately."},
+        {"url": "https://compat.example/pc-bios/cpu", "title": "NovaForge N9 support requirements", "text": "NovaForge N9 support requirements. Processor socket: AM5. This CPU requires motherboard BIOS 1.6 or later."}
+      ],
+      "facts": [
+        {"id": "board.socket", "value": "AM5", "url": "https://compat.example/pc-bios/board", "quote": "Processor socket: AM5."},
+        {"id": "cpu.socket", "value": "AM5", "url": "https://compat.example/pc-bios/cpu", "quote": "Processor socket: AM5."},
+        {"id": "board.bios", "value": "1.4", "url": "https://compat.example/pc-bios/board", "quote": "Installed BIOS version: 1.4."},
+        {"id": "cpu.min_bios", "value": "1.6", "url": "https://compat.example/pc-bios/cpu", "quote": "This CPU requires motherboard BIOS 1.6 or later."}
+      ],
+      "comparisons": [
+        {"id": "socket", "left": "board.socket", "right": "cpu.socket", "operator": "equal"},
+        {"id": "bios", "left": "board.bios", "right": "cpu.min_bios", "operator": "at_least"}
+      ]
+    },
+    {
+      "id": "pc-same-family-ddr-variant",
+      "dimension": "pc-memory-variant",
+      "question": "Does this ClearPeak DDR5 kit fit the Cedar B650M-D4 revision 1 motherboard in the listing?",
+      "documents": [
+        {"url": "https://compat.example/pc-ram/board", "title": "Cedar B650M-D4 revision 1 manual", "text": "Cedar B650M-D4 revision 1 manual. This board uses DDR4 memory slots. It is distinct from the Cedar B650M-E5 model."},
+        {"url": "https://compat.example/pc-ram/kit", "title": "ClearPeak CP32 memory kit", "text": "ClearPeak CP32 memory kit. Memory type: DDR5. Seller listing says it fits Cedar B650M series boards."}
+      ],
+      "facts": [
+        {"id": "board.memory", "value": "DDR4", "url": "https://compat.example/pc-ram/board", "quote": "This board uses DDR4 memory slots."},
+        {"id": "ram.memory", "value": "DDR5", "url": "https://compat.example/pc-ram/kit", "quote": "Memory type: DDR5."}
+      ],
+      "comparisons": [
+        {"id": "memory_generation", "left": "board.memory", "right": "ram.memory", "operator": "equal"}
+      ]
+    },
+    {
+      "id": "car-missing-engine-vin-market",
+      "dimension": "vehicle-unknowns",
+      "question": "Will this replacement alternator fit my 2020 Vela hatchback?",
+      "unknown_facts": ["vehicle.engine", "part.engine", "vehicle.market", "part.market", "vehicle.vin", "part.vin"],
+      "documents": [
+        {"url": "https://compat.example/car-unknown/vehicle", "title": "Vela vehicle details", "text": "Vehicle registration details: model year 2020, Vela hatchback. The supplied vehicle details omit its VIN, engine code, and sales market."},
+        {"url": "https://compat.example/car-unknown/listing", "title": "Replacement alternator listing", "text": "Replacement alternator part VA-204. The seller says it fits Vela hatchbacks from 2019 through 2021. The listing does not identify a VIN break, engine code, or market."}
+      ],
+      "facts": [
+        {"id": "vehicle.year", "value": "2020", "url": "https://compat.example/car-unknown/vehicle", "quote": "model year 2020"},
+        {"id": "part.years", "value": "2019,2020,2021", "url": "https://compat.example/car-unknown/listing", "quote": "fits Vela hatchbacks from 2019 through 2021"}
+      ],
+      "comparisons": [
+        {"id": "model_year", "left": "vehicle.year", "right": "part.years", "operator": "member"},
+        {"id": "engine_code", "left": "vehicle.engine", "right": "part.engine", "operator": "equal"},
+        {"id": "market", "left": "vehicle.market", "right": "part.market", "operator": "equal"},
+        {"id": "vin_break", "left": "vehicle.vin", "right": "part.vin", "operator": "equal"}
+      ]
+    },
+    {
+      "id": "car-fitment-oem-forum-uncertain",
+      "dimension": "car-exact-fitment-and-credibility",
+      "question": "Does this listed OE water pump fit my 2021 Vela diesel, and is Northstar Parts selling a genuine part?",
+      "documents": [
+        {"url": "https://compat.example/car-oem/vehicle", "title": "Vehicle identification record", "text": "Vehicle identity: Vela hatchback, model year 2021, engine code K9K, transmission DW6, EU market."},
+        {"url": "https://compat.example/car-oem/catalog", "title": "Manufacturer parts catalog", "text": "Manufacturer catalog for OE number 77-3104. Application: Vela hatchback, model year 2021, engine K9K, transmission DW6, EU market. This catalog entry confirms application only; it does not authenticate an item sold by a third party."},
+        {"url": "https://compat.example/car-oem/listing", "title": "Northstar Parts water pump listing", "text": "Northstar Parts listing: water pump advertised as OE 77-3104 for Vela hatchback, 2021, K9K, DW6, EU. The seller describes the item as genuine OE."},
+        {"url": "https://compat.example/car-oem/forum", "title": "Owner forum discussion", "text": "In an owner forum, one buyer says a pump bought from Northstar Parts had packaging that looked right but a different engraving. The buyer says they cannot verify whether it was counterfeit. The post does not identify the listing or OE 77-3104."}
+      ],
+      "facts": [
+        {"id": "vehicle.model", "value": "Vela hatchback", "url": "https://compat.example/car-oem/vehicle", "quote": "Vela hatchback"},
+        {"id": "vehicle.year", "value": "2021", "url": "https://compat.example/car-oem/vehicle", "quote": "model year 2021"},
+        {"id": "vehicle.engine", "value": "K9K", "url": "https://compat.example/car-oem/vehicle", "quote": "engine code K9K"},
+        {"id": "vehicle.transmission", "value": "DW6", "url": "https://compat.example/car-oem/vehicle", "quote": "transmission DW6"},
+        {"id": "vehicle.market", "value": "EU", "url": "https://compat.example/car-oem/vehicle", "quote": "EU market"},
+        {"id": "part.model", "value": "Vela hatchback", "url": "https://compat.example/car-oem/catalog", "quote": "Application: Vela hatchback"},
+        {"id": "part.year", "value": "2021", "url": "https://compat.example/car-oem/catalog", "quote": "model year 2021"},
+        {"id": "part.engine", "value": "K9K", "url": "https://compat.example/car-oem/catalog", "quote": "engine K9K"},
+        {"id": "part.transmission", "value": "DW6", "url": "https://compat.example/car-oem/catalog", "quote": "transmission DW6"},
+        {"id": "part.market", "value": "EU", "url": "https://compat.example/car-oem/catalog", "quote": "EU market"},
+        {"id": "vehicle.oe", "value": "77-3104", "url": "https://compat.example/car-oem/listing", "quote": "water pump advertised as OE 77-3104"},
+        {"id": "part.oe", "value": "77-3104", "url": "https://compat.example/car-oem/catalog", "quote": "Manufacturer catalog for OE number 77-3104"}
+      ],
+      "comparisons": [
+        {"id": "model", "left": "vehicle.model", "right": "part.model", "operator": "equal"},
+        {"id": "model_year", "left": "vehicle.year", "right": "part.year", "operator": "equal"},
+        {"id": "engine_code", "left": "vehicle.engine", "right": "part.engine", "operator": "equal"},
+        {"id": "transmission", "left": "vehicle.transmission", "right": "part.transmission", "operator": "equal"},
+        {"id": "market", "left": "vehicle.market", "right": "part.market", "operator": "equal"},
+        {"id": "oe_number", "left": "vehicle.oe", "right": "part.oe", "operator": "equal"}
+      ],
+      "authenticity_evidence": [
+        {"status": "genuine", "source_class": "seller_listing", "exact_item": true, "verified": false, "url": "https://compat.example/car-oem/listing", "quote": "The seller describes the item as genuine OE."},
+        {"status": "counterfeit", "source_class": "forum", "exact_item": false, "verified": false, "url": "https://compat.example/car-oem/forum", "quote": "The buyer says they cannot verify whether it was counterfeit."}
+      ],
+      "seller_evidence": [
+        {"publisher": "compat.example forum", "identity_matches": true, "exact_item": false, "source_class": "forum", "finding": "negative", "verified": false, "url": "https://compat.example/car-oem/forum", "quote": "In an owner forum, one buyer says a pump bought from Northstar Parts had packaging that looked right but a different engraving."}
+      ]
+    }
+  ]
+}
