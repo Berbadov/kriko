@@ -83,11 +83,29 @@ def _list(value) -> list[str]:
     return out[:MAX_ITEMS]
 
 
+def _decimal(text: str) -> float:
+    """`15.000` and `15,000` are fifteen thousand; `12.5` and `12,5` are twelve and a half.
+
+    A lone separator followed by exactly three digits is a thousands group, as
+    `pricewatch.parse_amount` reads it, so a budget typed as a shop prints it
+    means the same here as it does there.
+    """
+    text = text.strip().replace(" ", "")
+    if "," in text and "." in text:
+        decimal = "," if text.rfind(",") > text.rfind(".") else "."
+        return float(text.replace("." if decimal == "," else ",", "").replace(decimal, "."))
+    for sign in ",.":
+        pieces = text.split(sign)
+        if len(pieces) > 1 and (len(pieces) > 2 or (len(pieces[-1]) == 3 and 0 < len(pieces[0]) <= 3)):
+            return float("".join(pieces))
+    return float(text.replace(",", "."))
+
+
 def _number(value) -> float | None:
     if value is None or isinstance(value, bool) or value == "":
         return None
     try:
-        number = float(str(value).replace(",", ".")) if isinstance(value, str) else float(value)
+        number = _decimal(value) if isinstance(value, str) else float(value)
     except ValueError:
         return None
     return number if 0 <= number < 1e12 else None
@@ -440,6 +458,14 @@ def forget(conn: sqlite3.Connection, what: str) -> int:
         return had
     if what not in tables:
         raise ValueError(f"what is one of {', '.join(HOLDINGS)}, everything")
+    # A paired device still holds these rows: say they were forgotten, or the next
+    # sync hands them back.
+    from app import cloud  # noqa: PLC0415 - cloud reads this module
+
+    if what == "purchases":
+        cloud.note_deleted_many(conn, "purchase", [row[0] for row in conn.execute("SELECT purchase_id FROM purchases")])
+    elif what == "watches":
+        cloud.note_deleted_many(conn, "watch", [row[0] for row in conn.execute("SELECT product_key FROM watches")])
     total = 0
     for table in tables[what]:
         total += conn.execute(f"DELETE FROM {table}").rowcount  # noqa: S608 - fixed names

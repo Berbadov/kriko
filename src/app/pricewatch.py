@@ -31,7 +31,7 @@ import sqlite3
 import statistics
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, unquote_plus, urlsplit
 
 #: A product page is remembered once per this long unless the price moved.
 SAME_PRICE_WINDOW = timedelta(hours=6)
@@ -96,10 +96,12 @@ def product_key(url: str) -> str:
 def strip_tracking(url: str) -> str:
     """The address without what a campaign or an ad click added to it."""
     parts = urlsplit(str(url or "").strip())
-    kept = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True)
-            if not _TRACKING.match(key)]
-    query = "&".join(f"{key}={value}" if value else key for key, value in kept)
-    return parts._replace(query=query, fragment="").geturl()
+    # The query is kept as written: decoding and rejoining turns `%26` into a
+    # second parameter, `%23` into a fragment and `+` into a space, and the stored
+    # address is the one a watch reads again.
+    kept = [piece for piece in parts.query.split("&")
+            if piece and not _TRACKING.match(unquote_plus(piece.partition("=")[0]))]
+    return parts._replace(query="&".join(kept), fragment="").geturl()
 
 
 def host_of(url: str) -> str:
@@ -115,8 +117,14 @@ def parse_amount(text) -> float | None:
         return None
     if isinstance(text, (int, float)):
         return float(text) if text > 0 else None
-    cleaned = re.sub(r"[^\d.,]", "", str(text))
-    cleaned = cleaned.strip(".,")
+    # One number, or nothing. Gluing the digits of "from 10 to 30" into 1030, or of
+    # "-50% 199,90 TL" into 50199.9, reports a price the page never showed; a
+    # percentage is a discount, not a price, and two amounts are a range.
+    shown = re.sub(r"\d[\d.,]*\s*%|%\s*\d[\d.,]*", " ", str(text))
+    numbers = re.findall(r"\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d{1,2})?(?!\d)|\d[\d.,]*", shown)
+    if len(numbers) != 1:
+        return None
+    cleaned = re.sub(r"[^\d.,]", "", numbers[0]).strip(".,")
     if not cleaned or not re.search(r"\d", cleaned):
         return None
     if "," in cleaned and "." in cleaned:
@@ -369,9 +377,13 @@ def judge(conn: sqlite3.Connection, url: str, offer: dict, *, now: datetime | No
     now = now or _now()
     key = product_key(url)
     rows = history(conn, key, currency=offer.get("currency") or "", now=now)
-    # The sighting just recorded is the page's current price, not its past.
+    # The sighting recorded a moment ago is the page's current price, not its past.
+    # An equal price from earlier is a past sighting: `record` skips a repeat inside
+    # a few hours, so the newest row is not always this visit.
     if rows and abs(rows[-1]["price"] - offer["price"]) < 0.005:
-        rows = rows[:-1]
+        taken = _parse_stamp(rows[-1]["seen_at"])
+        if taken and now - taken < timedelta(minutes=1):
+            rows = rows[:-1]
     result = assess(rows, offer["price"], was_price=offer.get("was_price"), now=now)
     result.update(price=offer["price"], was_price=offer.get("was_price"),
                   currency=offer.get("currency") or "", product_key=key)
@@ -412,6 +424,8 @@ def same_product(a: str, b: str) -> bool:
 def elsewhere(conn: sqlite3.Connection, name: str, url: str, currency: str, *,
               now: datetime | None = None, days: int = 30) -> list[dict]:
     """Other pages Kriko saw this product on, newest sighting each, cheapest first."""
+    if not currency:
+        return []  # a price with no currency cannot be set against one that has it
     key = product_key(url)
     own_host = host_of(url)
     since = _stamp((now or _now()) - timedelta(days=days))

@@ -116,7 +116,16 @@ def test_a_claimed_discount_with_no_history_says_it_cannot_check_yet():
 def test_judge_leaves_out_the_sighting_it_was_just_given(conn):
     for day, price in enumerate([100, 100, 100, 100]):
         seen(conn, price, day * 4)
-    got = pricewatch.judge(conn, URL, offer(100), now=T0 + timedelta(days=13))
+    got = pricewatch.judge(conn, URL, offer(100), now=T0 + timedelta(days=12))
+    assert got["count"] == 3 and got["verdict"] == "usual"
+
+
+def test_judge_keeps_an_equal_sighting_from_earlier_in_the_day(conn):
+    # `record` skips a repeat inside a few hours, so the newest row may be an older
+    # visit, not the one being judged. Losing it made a steady price read as "first".
+    for day in (0, 4, 8):
+        seen(conn, 100, day)
+    got = pricewatch.judge(conn, URL, offer(100), now=T0 + timedelta(days=8, hours=7))
     assert got["count"] == 3 and got["verdict"] == "usual"
 
 
