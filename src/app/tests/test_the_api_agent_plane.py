@@ -375,7 +375,7 @@ def test_the_agents_row_lists_it_once_keyed_and_links_the_key_page_until(machine
         assert missing[0]["download_url"].startswith("https://console.mistral.ai/")
         machine.keyed = [apiagent.MISTRAL]
         rows, missing = prefs.api_agent_rows(conn)
-        assert missing == []
+        assert {one["id"] for one in missing} == {"openai-api"}
         [row] = rows
         assert row["cost_basis"] == "per_token"
         assert "per token and per search" in row["needs_account"]

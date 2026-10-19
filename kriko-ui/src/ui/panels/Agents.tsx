@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { effortKey, modelKey, usePrefsDoc, type AgentRow } from '../../engine/settings'
 import { usePrefs } from '../../prefs'
@@ -117,15 +117,19 @@ function AgentItem({
             exit={{ height: 0, opacity: 0 }}
             transition={enter}
           >
-            <div className="setting">
-              <span>Model</span>
-              <Select
-                label={`${agent.label} model`}
-                value={agent.llm}
-                options={[{ value: '', label: 'Own default' }, ...models.map((id) => ({ value: id, label: id }))]}
-                onChange={(value) => onChange({ [modelKey(agent)]: value })}
-              />
-            </div>
+            {agent.model_freeform ? (
+              <FreeformModel agent={agent} onChange={onChange} />
+            ) : (
+              <div className="setting">
+                <span>Model</span>
+                <Select
+                  label={`${agent.label} model`}
+                  value={agent.llm}
+                  options={[{ value: '', label: 'Own default' }, ...models.map((id) => ({ value: id, label: id }))]}
+                  onChange={(value) => onChange({ [modelKey(agent)]: value })}
+                />
+              </div>
+            )}
             {efforts.length > 0 && (
               <div className="setting">
                 <span>Effort</span>
@@ -143,5 +147,34 @@ function AgentItem({
         )}
       </AnimatePresence>
     </li>
+  )
+}
+
+function FreeformModel({ agent, onChange }: { agent: AgentRow; onChange: (patch: Record<string, string>) => void }) {
+  const [draft, setDraft] = useState(agent.llm)
+  useEffect(() => setDraft(agent.llm), [agent.llm])
+  return (
+    <div className="setting">
+      <span>
+        Model
+        <small>{agent.llm_hint || 'Model name accepted by this endpoint.'}</small>
+      </span>
+      <input
+        type="text"
+        autoComplete="off"
+        spellCheck={false}
+        aria-label={`${agent.label} model`}
+        placeholder="gpt-4o-mini or provider model ID"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={() => {
+          const next = draft.trim()
+          if (next !== agent.llm) onChange({ [modelKey(agent)]: next })
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.currentTarget.blur()
+        }}
+      />
+    </div>
   )
 }
