@@ -110,3 +110,9 @@ def test_forgetting_without_a_relay_keeps_no_tombstones(conn):
     buyer.record_purchase(conn, "Dyson V8", url="https://shop.test/p/1", price=500)
     buyer.forget(conn, "purchases")
     assert not state.all_settings(conn).get(cloud.TOMBS)
+
+
+@pytest.mark.parametrize("typed", ["try", "TRY", "₺", "tl"])
+def test_a_watch_keeps_its_currency_as_an_iso_code_so_it_can_alert(conn, typed):
+    made = pricewatch.watch(conn, "https://shop.test/p/kettle", "Kettle", target=40, price=50, currency=typed)
+    assert made["currency"] == "TRY"
