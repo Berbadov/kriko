@@ -64,6 +64,7 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
                 onOpen={onOpen}
                 onRetry={(turn) => start(turn.prompt, agentOf(turn.agent))}
                 onEdit={(text) => setDraft({ text, at: Date.now() })}
+                onSuggest={(text) => setDraft({ text, at: Date.now() })}
               />
             </motion.div>
           )}
@@ -151,18 +152,21 @@ function Thread({
   onOpen,
   onRetry,
   onEdit,
+  onSuggest,
 }: {
   run: Run
   turns: Turn[]
   onOpen: (lookupId: string) => void
   onRetry: (turn: Turn) => void
   onEdit: (text: string) => void
+  onSuggest: (text: string) => void
 }) {
   const { motion: m } = usePrefs()
   const scroller = useRef<HTMLDivElement>(null)
   const inner = useRef<HTMLDivElement>(null)
   const stuck = useRef(true)
   const done = run.status === 'done'
+  const followups = done ? run.followups : run.status === 'idle' ? turns.at(-1)?.followups : []
   const idle = run.status === 'idle'
   const [away, setAway] = useState(false)
 
@@ -276,6 +280,12 @@ function Thread({
         <AnimatePresence>
           {done && run.products.map((product) => <ProductCard key={product.id} product={product} onOpen={onOpen} />)}
         </AnimatePresence>
+        {!!followups?.length && (
+          <div className="followup-prompts" aria-label="Related follow-up questions">
+            <p className="muted">Keep exploring</p>
+            {followups.map((question) => <button key={question} className="btn" onClick={() => onSuggest(question)}>{question}</button>)}
+          </div>
+        )}
       </div>
       {away && (
         <button className="jump" onClick={latest} aria-label="Jump to the latest">

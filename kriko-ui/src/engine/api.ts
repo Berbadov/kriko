@@ -157,6 +157,7 @@ export interface ApiTurn {
   sources?: string[]
   answer?: string
   products?: ApiProduct[]
+  followups?: string[]
 }
 
 export interface ApiJob {

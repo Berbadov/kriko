@@ -4056,7 +4056,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
     agent message, with the steps that produced it. Nothing is written to the
     knowledge store: a chat answer is the reader's, never a claim.
     """
-    from app import chat, chatdata, prefs, research_policy
+    from app import chat, chatdata, chatmeta, prefs, research_policy
 
     thread_id = str(params.get("thread_id") or "").strip()
     message_id = str(params.get("message_id") or "").strip()
@@ -4096,7 +4096,19 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 agent.update(id="local", label="Local model",
                              model=str(getattr(completer, "model", "")))
                 ask = completer
-                ask_quick = completer
+
+                def ask_quick(prompt: str) -> str:
+                    # Query decisions and labels need a small reply. Keep the
+                    # larger answer budget available for the actual report.
+                    bounded = hasattr(completer, "max_tokens")
+                    previous = getattr(completer, "max_tokens", None)
+                    if bounded:
+                        completer.max_tokens = min(previous, 384) if isinstance(previous, int) and previous > 0 else 384
+                    try:
+                        return completer(prompt)
+                    finally:
+                        if bounded:
+                            completer.max_tokens = previous
                 if callable(getattr(completer, "stream", None)):
                     def stream_local(prompt: str, on_text: Callable[[str], None]) -> str:
                         return _stream_chat_completion(completer, prompt, on_text)
@@ -4110,9 +4122,9 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
 
                 def ask_quick(prompt: str) -> str:
                     # One line back (the words to search): no tools, no wait.
-                    reply, _ = _ask_about_checks(settings, {**params, "question": text},
+                    reply, _ = _ask_about_checks(settings, {**params, "question": text, "max_tokens": 384},
                                                  quiet, prompt, on_agent=None,
-                                                 allow_tools=False)
+                                                 allow_tools=False, timeout=30.0, effort="low")
                     return reply
 
                 def stream_harness(prompt: str, on_text: Callable[[str], None]) -> str:
@@ -4147,17 +4159,38 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 store.close()
         if not result["answer"]:
             raise ValueError("The agent returned no answer. Try asking again.")
+        progress.check()
         stored = state.add_chat_message(
             app_state, thread_id, role="agent", text=result["answer"],
             steps=result["steps"], sources=result["sources"],
             products=result.get("products") or [], activity=result.get("activity") or [],
             job_id=progress.job_id, agent=dict(agent))
+        # One bounded, tool-free call names the topic and suggests relevant
+        # follow-ups. Optional labels must never discard a successful answer.
+        progress.set(0.98, "naming the conversation and suggesting follow-ups")
+        result["followups"] = []
+        try:
+            result["agent_calls"] += 1
+            metadata = chatmeta.generate(ask_quick, text, result["answer"],
+                                         first_turn=not history, language=language)
+            result["followups"] = metadata["followups"]
+            if not history:
+                state.name_chat_thread(app_state, thread_id, metadata["title"], fallback=text)
+        except Cancelled:
+            raise
+        except Exception:
+            progress.log("Conversation labels were unavailable; the answer is saved without suggestions.")
+        progress.check()
+        app_state.execute("UPDATE chat_messages SET followups_json = ? WHERE message_id = ?",
+                          (json.dumps(result["followups"], ensure_ascii=False), stored["message_id"]))
+        app_state.commit()
     finally:
         app_state.close()
     progress.partial({"thread_id": thread_id, "message_id": message_id,
                       "agent": dict(agent), "steps": result["steps"],
                       "answer": result["answer"], "sources": result["sources"],
                       "products": result.get("products") or [],
+                      "followups": result.get("followups") or [],
                       "activity": result.get("activity") or []})
     progress.set(1.0, "answered")
     return {
@@ -4166,6 +4199,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         "steps": result["steps"], "sources": result["sources"],
         "products": result.get("products") or [], "agent": agent,
         "activity": result.get("activity") or [],
+        "followups": result.get("followups") or [],
         "agent_calls": result["agent_calls"], "search_rounds": result["search_rounds"],
         "fallback": result["fallback"],
     }

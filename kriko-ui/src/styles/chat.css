@@ -518,3 +518,12 @@
   color: var(--ink);
   font-size: 13px;
 }
+.followup-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.followup-prompts > p { flex-basis: 100%; margin: 0; }
+.followup-prompts > button { white-space: normal; text-align: start; }

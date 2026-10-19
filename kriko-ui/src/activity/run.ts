@@ -53,6 +53,7 @@ export interface Run {
   rows: Row[]
   answer: string
   products: Product[]
+  followups?: string[]
   /** Why the run failed, in the engine's words. */
   error?: string
   agent?: AgentRef
@@ -67,6 +68,7 @@ export interface Turn {
   answer: string
   products: Product[]
   rows?: Row[]
+  followups?: string[]
   /** Why the turn failed, when it did. */
   error?: string
   agent?: AgentRef
@@ -91,7 +93,7 @@ export interface RunApi {
 export const turnOf = (run: Run): Turn | null =>
   run.status === 'idle' || run.status === 'running' || !run.prompt
     ? null
-    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, error: run.error, agent: run.agent }
+    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, error: run.error, agent: run.agent }
 
 export type Action =
   | { type: 'start'; prompt: string; now: number }
