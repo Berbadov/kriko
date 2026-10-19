@@ -47,7 +47,21 @@ candidates, so a later reader can see why it abstained. The MCP operations
 `list_catalogs` and `classify_product` expose the same installed catalog
 definitions and configured classification path to an agent.
 
-Jev from TypeSafe is an optional classifier in **Settings → Research**. The
+The default classifier is the agent selected in **Agents**: a coding agent,
+local model or API agent. When deterministic checks abstain, that agent reads
+the saved product facts and installed catalog definitions and proposes a
+category with exact evidence phrases. Kriko validates the installed catalog
+id, title scope, confidence and quoted phrases before accepting it. This path
+works for Quick Looks, recategorization and bulk filing without a TypeSafe key.
+Unavailable agents leave the product uncategorized for retry or manual choice.
+Already assigned products do not start another classification call during filing.
+
+An MCP agent can also classify directly. An uncertain `classify_product` result
+includes `agent_request` with the classification prompt and output schema. The
+calling agent evaluates it and calls `classify_product` again with `decision`;
+the same local evidence checks apply without starting a nested agent process.
+
+Jev from TypeSafe is an optional alternative in **Settings → Research**. The
 deterministic checks run first; Jev is called only when those checks abstain
 and the reader explicitly selects it. The call sends the product title, saved
 Quick Look facts, and the complete installed catalog roster to TypeSafe. It

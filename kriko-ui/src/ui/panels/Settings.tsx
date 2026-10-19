@@ -133,7 +133,7 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           <div className="setting">
             <span>
               Product classification
-              <small>Deterministic matches run first. Jev is used only when they abstain; it sends product facts to TypeSafe and may incur API charges.</small>
+              <small>After deterministic checks, use your selected local, coding or API agent by default. Jev is an optional alternative that uses a separate TypeSafe key.</small>
             </span>
             <Select
               label="Product classification"
