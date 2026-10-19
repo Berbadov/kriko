@@ -2762,6 +2762,9 @@
   function renderDecide() {
     const slot = bodyEl?.querySelector(".lite-decide-slot");
     if (!slot || !BUYER) return;
+    // Deciding is for a reader who has something to decide: a page that was
+    // read, or a shortlist started from this page. Not for an error or a nudge.
+    if (state.pipeline !== "result" && !state.pick && !queueHere()) { slot.innerHTML = ""; return; }
     const busy = state.buyerUi.deciding;
     slot.innerHTML = `<div class="lite-buy-actions"><button type="button" class="lite-buy-btn" data-act="decide"
       ${busy ? "disabled" : ""} title="Rank the products in your queue for what you told Kriko you need">

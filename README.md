@@ -18,6 +18,10 @@ you decide.
   questions in the same panel.
 - **Compare your options.** Put products together and compare what is known
   about each one.
+- **Get advice that is for you.** Tell Kriko what you need. It remembers the
+  prices it saw, tells you when a discount is not real, watches a price for you,
+  names one product from your shortlist, and asks later if what you bought held
+  up. All of it stays on your computer.
 - **Keep your knowledge.** Save research as a catalog. Catalogs and your
   history stay on your computer.
 

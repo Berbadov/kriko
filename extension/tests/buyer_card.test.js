@@ -150,3 +150,11 @@ test("the guard card names a stop or a check, and nothing for a go", () => {
   assert.match(stop.textContent, /Stop and check before paying/);
   assert.equal(stop.querySelectorAll("li").length, 1, "an ok finding is not worth interrupting for");
 });
+
+test("only a web address is ever made into a link", () => {
+  const card = html(B.renderPrice({ ...PRICE, elsewhere: [
+    { host: "evil.test", url: "javascript:alert(1)", price: 10, currency: "EUR" },
+    { host: "ok.test", url: "https://ok.test/p", price: 10, currency: "EUR" }] }));
+  const hrefs = [...card.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+  assert.deepEqual(hrefs, ["https://ok.test/p"]);
+});

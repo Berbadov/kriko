@@ -134,6 +134,41 @@ quick looks**.
 > Open **Sites**. The screen says if the site needs a permission, or if no
 > adapter reads the site.
 
+### Buying help
+
+Open **More**, then **For you**, and say what you need: how you use what you
+buy, your budget, what you must have, what you avoid and distrust, and what
+matters most to you. Kriko gives this to your agent with every question. You
+can leave any of it empty.
+
+On a product page the panel then shows **As a purchase**:
+
+- **The price** against what Kriko has seen on that page before, with the
+  line. A discount the history does not support is called out. With little
+  history, Kriko says so and does not guess.
+- **Watch this price** keeps an eye on the page. Choose the price you want to be
+  told at. Kriko reads the page again a few times a day. A drop shows as a mark
+  on the toolbar button and a card in the panel. To get a notification too, open
+  the extension's options and press **Tell me when a watched price drops**.
+- **How it fits you**, from what you said you need, and **Listing check**:
+  the seller, the rating once few ratings are discounted, and which big words
+  the page does not back up.
+- **I bought this** starts the ledger. A few weeks later the panel asks if it
+  held up, and your answer teaches Kriko what you regret.
+
+In **Compare**, **Decide for me** ranks the products for you and names one,
+with what it costs you and what would change the pick. The buttons under it ask
+your agent to say it well, to argue it from three sides, to work out the cost of
+owning each over three years, or to say if now is the time.
+
+On a cart or payment page Kriko says if the item is not the one you researched,
+if a shop it has seen sells it for less, if the page asks for a payment method
+scams use, or if it shows no return terms. Both this and the marks on results
+pages can be turned off on the extension's options page.
+
+Everything here is kept in a file on this computer. **For you** lists what is
+kept and has a button to forget each part.
+
 ## 6. Research in the app
 
 **Run** starts a deeper check for one product. Select the product and the

@@ -7,6 +7,7 @@ import { get, type ApiHistoryItem } from '../engine/api'
 import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { Composer } from '../ui/Composer'
+import { Decide } from '../ui/Decide'
 import { PixelBar, Switch } from '../ui/controls'
 import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
@@ -63,6 +64,8 @@ export function CompareScreen() {
       </header>
 
       <AnimatePresence>{picker && <Picker onClose={() => setPicker(false)} />}</AnimatePresence>
+
+      <Decide lookupIds={ready.map((one) => one.lookupId)} />
 
       <div className="compare-body">
         {empty ? (

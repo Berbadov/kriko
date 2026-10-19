@@ -5,6 +5,46 @@ immutable; a correction is a newer version.
 
 ### Unreleased
 
+- **Kriko knows what you need.** Under More, For you, say what you buy and
+  use things for, your budget, what you must have, what you avoid and distrust,
+  and how much price, quality, lasting and repairability matter to you. Kriko
+  gives that to your agent with every question, so the advice is for you and not
+  for everyone. Nothing is added to a question until you say something.
+- **Kriko learns what you regret.** Press I bought this on a product page, or
+  add it under For you. A few weeks later Kriko asks if it held up. Your answers
+  go to your agent as lessons, so a brand that let you down is not recommended
+  the same way twice.
+- **A price is judged against its own history.** Every product page you read
+  adds a price to a history kept on this computer. The panel says if this is the
+  lowest Kriko has seen, the usual price or a high one, draws the line, and says
+  when a discount does not hold up (an old price that was never charged, or a
+  sale at the normal price). It says it has too little history before it says
+  anything it cannot support.
+- **Watch a price.** Press Watch this price and choose the figure. Kriko reads
+  the page again a few times a day and tells you when it falls: a mark on the
+  toolbar button, a card in the panel and, if you allow notifications on the
+  extension's options page, a notification. A shop that draws its price with
+  script cannot be read in the background, and the watch says so.
+- **A listing is checked against itself.** The panel shows who sells it (a
+  marketplace listing with no named seller, a payment method scams use), how
+  the rating looks once few ratings are discounted, and which big words the page
+  does not back up (waterproof with no rating, original from a seller no one
+  vouches for, certified with no certificate).
+- **Kriko picks.** In Compare, Decide for me ranks your products for you from
+  their known risks, price history, seller, claims and what you told Kriko, and
+  names one, with what it costs you, what would change the pick and what to check
+  first. Your agent can then say it well, make a sceptic, a bargain hunter and a
+  durability fanatic argue it, work out the cost of owning each over three years,
+  or say if now is the time. The pick is the same whichever agent is connected.
+- **A look before you pay.** On a cart or payment page Kriko says if the item
+  is not the one you researched, the same product is cheaper at a shop it has
+  seen, the page asks for a payment method scams use, or shows no return terms.
+  It can be turned off on the extension's options page.
+- **Results pages show what breaks your needs.** Once you have told Kriko what
+  you need, products on a results page that mention what you avoid, or cost more
+  than your budget, carry a small mark. It can be turned off on the options page.
+- **See and forget what is kept.** For you lists everything Kriko remembers
+  about you as a buyer, where it is, and a button to forget each part.
 - **The engine updates without the installer.** Update now used to run the whole
   installer over a running Kriko, and when that went wrong the cure was an
   uninstall and a fresh install. A release now also carries the engine alone.

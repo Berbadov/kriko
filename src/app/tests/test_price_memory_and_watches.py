@@ -180,7 +180,7 @@ def test_the_sweep_rereads_only_what_is_due_and_says_why_a_page_will_not_read(co
             '"price":"59.00","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script>')
     pricewatch.watch(conn, URL, "Kettle", target=60, now=T0)
     pricewatch.watch(conn, "https://other.test/p/1", "Other", target=10, now=T0)
-    pages = {URL: page, "https://other.test/p/1": "<html>script-rendered</html>"}
+    pages = {pricewatch.strip_tracking(URL): page, "https://other.test/p/1": "<html>script-rendered</html>"}
     got = pricewatch.sweep(conn, lambda url: pages[url], now=T0 + timedelta(days=1))
     assert got == {"checked": 1, "failed": 1, "alerts": 1}
     bad = pricewatch.watch_for(conn, "https://other.test/p/1")
@@ -211,3 +211,21 @@ def test_a_list_price_in_the_offers_specification_is_the_struck_price():
     markup = ('<script type="application/ld+json">{"offers":{"price":"70","priceCurrency":"EUR",'
               '"priceSpecification":[{"priceType":"https://schema.org/ListPrice","price":"100"}]}}</script>')
     assert pricewatch.read_markup(markup)["was_price"] == 100
+
+
+def test_tracking_is_not_kept_in_the_address(conn):
+    url = "https://shop.test/p/kettle?id=7&utm_source=ad&gclid=abc&color=red#reviews"
+    assert pricewatch.strip_tracking(url) == "https://shop.test/p/kettle?id=7&color=red"
+    pricewatch.record(conn, url, "Kettle", offer(40), now=T0)
+    kept = conn.execute("SELECT url FROM price_points").fetchone()["url"]
+    assert "utm_" not in kept and "gclid" not in kept and "#" not in kept
+    held = pricewatch.watch(conn, url, "Kettle", target=30, now=T0)
+    assert "utm_" not in held["url"] and "id=7" in held["url"]
+
+
+def test_a_page_that_changes_its_price_on_every_load_cannot_fill_the_file(conn):
+    for step in range(pricewatch.MAX_POINTS_PER_PAGE + 40):
+        pricewatch.record(conn, URL, "Kettle", offer(40 + (step % 2)),
+                          now=T0 + timedelta(hours=7 * step))
+    count = conn.execute("SELECT COUNT(*) FROM price_points").fetchone()[0]
+    assert count == pricewatch.MAX_POINTS_PER_PAGE

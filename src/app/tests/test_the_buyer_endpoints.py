@@ -149,3 +149,22 @@ def test_a_page_with_no_price_has_no_price_block(client):
               "origin": "extension"}
     got = client.post("/api/buyer/page", json=scrape).json()
     assert got["price"] is None and got["fit"] is None and got["profile"] is False
+
+
+def test_the_reader_is_told_what_is_kept_and_can_forget_each_part(client):
+    client.put("/api/buyer/profile", json={"must": ["usb-c"]})
+    client.post("/api/buyer/purchases", json={"name": "Kettle"})
+    conn = rows(client)
+    pricewatch.record(conn, "https://s.test/p/1", "Kettle", {"price": 20, "currency": "EUR"})
+    pricewatch.watch(conn, "https://s.test/p/1", "Kettle", target=10)
+    conn.close()
+    kept = client.get("/api/buyer/privacy").json()
+    assert (kept["profile"], kept["purchases"], kept["prices"], kept["watches"]) == (1, 1, 1, 1)
+    assert kept["leaves_this_computer"] is False and kept["where"].endswith("app.sqlite")
+    assert client.delete("/api/buyer/privacy/prices").json()["rows"] == 1
+    assert client.get("/api/buyer/privacy").json()["prices"] == 0
+    assert client.get("/api/buyer/profile").json()["empty"] is False
+    assert client.delete("/api/buyer/privacy/everything").json()["rows"] >= 3
+    after = client.get("/api/buyer/privacy").json()
+    assert (after["profile"], after["purchases"], after["watches"]) == (0, 0, 0)
+    assert client.delete("/api/buyer/privacy/nonsense").status_code == 404

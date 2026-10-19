@@ -225,3 +225,22 @@ def page_as_a_purchase(body: PageRequest, conn=Depends(get_app_state)) -> dict:
             price=(offer or {}).get("price"), currency=(offer or {}).get("currency", ""),
             seller=listing["seller"]["signals"].get("seller_name", ""))
     return out
+
+
+@router.get("/privacy")
+def what_is_kept(request: Request, conn=Depends(get_app_state)) -> dict:
+    """What Kriko remembers about the reader as a buyer, where, and that none of it leaves this computer."""
+    return {**buyer.holdings(conn), "where": str(request.app.state.settings.app_state_path),
+            "leaves_this_computer": False,
+            "note": "Kept in a file on this computer. Nothing here is sent anywhere. Your agent "
+                    "sees your profile only when you ask it something, and only the part a "
+                    "question needs."}
+
+
+@router.delete("/privacy/{what}")
+def forget(what: str, conn=Depends(get_app_state)) -> dict:
+    """Forget one kind of it (`profile`, `purchases`, `prices`, `watches`, `picks`) or `everything`."""
+    try:
+        return {"forgotten": what, "rows": buyer.forget(conn, what)}
+    except ValueError as error:
+        raise HTTPException(404, str(error)) from error

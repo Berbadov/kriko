@@ -28,6 +28,8 @@ function panel({ buyer = BUYER, due = [], replies = {} } = {}) {
 
 // Messages cross the vm boundary, so compare their shape and not their prototype.
 const plain = (value) => JSON.parse(JSON.stringify(value));
+// A page the panel has read: the decide button waits for something to decide.
+const READ = { ok: true, listing: {}, result: { lookup_id: "a1", claims: [], identity: {}, context: {}, coverage: "NO_CLAIMS" } };
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const text = (p, selector) => p.shadow().querySelector(selector)?.textContent.replace(/\s+/g, " ").trim();
 
@@ -112,6 +114,7 @@ test("deciding between the shortlist shows the pick, and the agent's words arriv
     JOB_STATUS: () => { polls += 1; return { ok: true, job: { state: "succeeded", done: true, result: { answer: "**Buy: Kettle B** because." } } }; },
   } });
   p.openPanel();
+  p.deliverEntry(READ);
   await tick();
   p.click('[data-act="decide"]');
   await tick();
@@ -127,6 +130,7 @@ test("deciding between the shortlist shows the pick, and the agent's words arriv
 test("a shortlist the app cannot rank says why instead of drawing nothing", async () => {
   const p = panel({ replies: { BUYER_PICK: { ok: false, error: "Kriko refused that (no saved checks to rank)." } } });
   p.openPanel();
+  p.deliverEntry(READ);
   await tick();
   p.click('[data-act="decide"]');
   await tick();
@@ -140,6 +144,7 @@ test("a failed agent job is told, not left spinning", async () => {
     JOB_STATUS: { ok: true, job: { state: "failed", done: true, error: "The agent is not signed in." } },
   } });
   p.openPanel();
+  p.deliverEntry(READ);
   await tick();
   p.click('[data-act="decide"]');
   await tick();
@@ -165,4 +170,13 @@ test("a verdict of go interrupts nobody", () => {
   const p = panel();
   p.deliverMessage({ type: "SHOW_GUARD", result: { verdict: "go", findings: [] } });
   assert.equal(p.dom.window.document.querySelector("kriko-guard-host"), null);
+});
+
+test("the decide button waits for a page that was read, and is not drawn on an error", async () => {
+  const idle = panel();
+  idle.openPanel();
+  await tick();
+  assert.equal(idle.shadow().querySelector('[data-act="decide"]'), null);
+  idle.deliverEntry(READ);
+  assert.ok(idle.shadow().querySelector('[data-act="decide"]'));
 });
