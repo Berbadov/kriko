@@ -96,7 +96,13 @@ function Due({ ledger }: { ledger: ReturnType<typeof useLedger> }) {
 
 function Need({ profile }: { profile: ReturnType<typeof useBuyerProfile> }) {
   const [draft, setDraft] = useState<BuyerProfile>(profile.profile)
-  useEffect(() => setDraft(profile.profile), [profile.profile])
+  // What the reader has typed, as typed. The profile holds lists and a number; showing those back
+  // while they type removes the comma, the space and the decimal point the moment they press it.
+  const [typed, setTyped] = useState<Record<string, string>>({})
+  useEffect(() => {
+    setDraft(profile.profile)
+    setTyped({})
+  }, [profile.profile])
   const change = (patch: Partial<BuyerProfile>) => setDraft((now) => ({ ...now, ...patch }))
   const list = (key: 'must' | 'avoid' | 'prefer' | 'distrust', label: string, hint: string) => (
     <label className="need-field">
@@ -104,7 +110,14 @@ function Need({ profile }: { profile: ReturnType<typeof useBuyerProfile> }) {
         {label}
         <small>{hint}</small>
       </span>
-      <input value={lines(draft[key])} onChange={(event) => change({ [key]: split(event.target.value) })} aria-label={label} />
+      <input
+        value={typed[key] ?? lines(draft[key])}
+        onChange={(event) => {
+          setTyped((now) => ({ ...now, [key]: event.target.value }))
+          change({ [key]: split(event.target.value) })
+        }}
+        aria-label={label}
+      />
     </label>
   )
   return (
@@ -123,8 +136,16 @@ function Need({ profile }: { profile: ReturnType<typeof useBuyerProfile> }) {
           <span>Budget</span>
           <input
             inputMode="decimal"
-            value={draft.budget.max ?? ''}
-            onChange={(event) => change({ budget: { ...draft.budget, max: event.target.value === '' ? null : Number(event.target.value.replace(',', '.')) || null } })}
+            value={typed.budget ?? draft.budget.max ?? ''}
+            onChange={(event) => {
+              const text = event.target.value
+              const amount = Number(text.replace(',', '.'))
+              setTyped((now) => ({ ...now, budget: text }))
+              // "12." and "0." are on the way to a number: keep what was typed, change the budget
+              // only when it reads as one.
+              if (text.trim() === '') change({ budget: { ...draft.budget, max: null } })
+              else if (Number.isFinite(amount) && amount >= 0) change({ budget: { ...draft.budget, max: amount } })
+            }}
             aria-label="Budget"
           />
         </label>

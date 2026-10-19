@@ -26,6 +26,11 @@ export function Decide({ lookupIds }: { lookupIds: string[] }) {
   const [advice, setAdvice] = useState<{ mode: AdviceMode; text: string; waiting: string } | null>(null)
   const alive = useRef(true)
   const key = lookupIds.join(',')
+  // Which shortlist and which ask an answer belongs to. A reply that arrives after the shortlist
+  // changed, or after a newer ranking cleared the advice, is for something that is no longer shown.
+  const keyNow = useRef(key)
+  const rankTurn = useRef(0)
+  const adviceTurn = useRef(0)
 
   useEffect(() => {
     alive.current = true
@@ -36,6 +41,9 @@ export function Decide({ lookupIds }: { lookupIds: string[] }) {
 
   // A different shortlist is a different decision.
   useEffect(() => {
+    keyNow.current = key
+    rankTurn.current += 1
+    adviceTurn.current += 1
     setResult(null)
     setAdvice(null)
     setProblem('')
@@ -44,26 +52,31 @@ export function Decide({ lookupIds }: { lookupIds: string[] }) {
   if (engine !== 'live' || lookupIds.length < 2) return null
 
   const rank = async () => {
+    const mine = ++rankTurn.current
+    adviceTurn.current += 1
+    const current = () => alive.current && rankTurn.current === mine
     setBusy(true)
     setProblem('')
     setAdvice(null)
     try {
       const got = await decide(lookupIds)
-      if (alive.current) setResult(got)
+      if (current()) setResult(got)
     } catch (error) {
-      if (alive.current) setProblem(error instanceof EngineError ? error.message : 'Could not rank them.')
+      if (current()) setProblem(error instanceof EngineError ? error.message : 'Could not rank them.')
     } finally {
-      if (alive.current) setBusy(false)
+      if (current()) setBusy(false)
     }
   }
 
   const ask = async (mode: AdviceMode) => {
+    const mine = ++adviceTurn.current
+    const current = () => alive.current && adviceTurn.current === mine
     setAdvice({ mode, text: '', waiting: 'Starting your agent' })
     try {
-      const text = await advise(mode, lookupIds, (waiting) => alive.current && setAdvice({ mode, text: '', waiting }), () => alive.current)
-      if (alive.current) setAdvice({ mode, text, waiting: '' })
+      const text = await advise(mode, lookupIds, (waiting) => current() && setAdvice({ mode, text: '', waiting }), current)
+      if (current()) setAdvice({ mode, text, waiting: '' })
     } catch (error) {
-      if (alive.current) {
+      if (current()) {
         setAdvice(null)
         setProblem(error instanceof EngineError ? error.message : 'The agent did not finish.')
       }

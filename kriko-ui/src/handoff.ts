@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Screen } from './ui/Rail'
 
 /** The browser extension hands a product to this window. It names a route:
@@ -33,10 +33,18 @@ export function parseRoute(raw: string): Landing | null {
 }
 
 export function useHandoff(onLand: (landing: Landing) => void) {
+  // The newest `onLand`, read when a route arrives. Listing it as a dependency of the effect below
+  // ran the effect again whenever the board or the screen changed, and the address still held the
+  // route, so removing a product from Compare put it straight back.
+  const latest = useRef(onLand)
+  useEffect(() => {
+    latest.current = onLand
+  }, [onLand])
+
   useEffect(() => {
     const fromHash = () => {
       const landing = parseRoute(window.location.hash)
-      if (landing) onLand(landing)
+      if (landing) latest.current(landing)
     }
     fromHash()
     window.addEventListener('hashchange', fromHash)
@@ -48,7 +56,7 @@ export function useHandoff(onLand: (landing: Landing) => void) {
         .then(({ listen }) =>
           listen<string>('focus-route', (event) => {
             const landing = parseRoute(event.payload)
-            if (landing) onLand(landing)
+            if (landing) latest.current(landing)
           }),
         )
         .then((unlisten) => {
@@ -62,5 +70,5 @@ export function useHandoff(onLand: (landing: Landing) => void) {
       window.removeEventListener('hashchange', fromHash)
       stop?.()
     }
-  }, [onLand])
+  }, [])
 }
