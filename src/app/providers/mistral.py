@@ -74,6 +74,8 @@ class Reply:
     tool_calls: int = 0
     #: Why there is no answer, in words a reader can act on. `""` on success.
     error: str = ""
+    #: False when a completion response omitted either token count.
+    usage_complete: bool = True
 
 
 def _plain(text) -> str:
