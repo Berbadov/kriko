@@ -57,6 +57,16 @@ class QueueUpdate(BaseModel):
     note: str | None = Field(default=None, max_length=600)
 
 
+class QueueComplete(BaseModel):
+    queue_ids: list[str] = Field(default_factory=list, max_length=state.QUEUE_MAX)
+
+
+@router.post("/complete")
+def complete_batch(body: QueueComplete, conn=Depends(get_app_state)) -> dict:
+    """Reset completed rows; saved checks, history and unfinished rows remain."""
+    return {"removed": state.complete_queue(conn, body.queue_ids)}
+
+
 @router.patch("/{queue_id}")
 def update_queued(queue_id: str, body: QueueUpdate, conn=Depends(get_app_state)) -> dict:
     """The window moves a product along as its research runs and finishes."""

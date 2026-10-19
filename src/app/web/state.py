@@ -1753,6 +1753,24 @@ def unqueue_product(conn: sqlite3.Connection, queue_id: str) -> bool:
     return cur.rowcount > 0
 
 
+def complete_queue(conn: sqlite3.Connection, queue_ids: list[str]) -> list[str]:
+    """Reset completed batch members, retaining their results in history."""
+    removed = []
+    with conn:
+        for queue_id in dict.fromkeys(queue_ids):
+            # The first statement takes the SQLite write lock and copies only
+            # completed rows. Another window cannot requeue between archive
+            # and delete; the returned ids reflect rows actually removed.
+            conn.execute(
+                "INSERT OR REPLACE INTO queue_history SELECT * FROM research_queue"
+                " WHERE queue_id = ? AND state = 'done'", (queue_id,))
+            cur = conn.execute("DELETE FROM research_queue WHERE queue_id = ? AND state = 'done'",
+                               (queue_id,))
+            if cur.rowcount:
+                removed.append(queue_id)
+    return removed
+
+
 #: How many questions one comparison keeps. A conversation, not a transcript:
 #: an older question drops off when a new one is asked, but its job row and
 #: log stay in Activity until the operations feed trims them.
