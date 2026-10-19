@@ -33,6 +33,12 @@ class Measurement:
     kind: str = ""
     model: str = ""
     harness: str = ""
+    #: The model's own identity, when the plane can report one. A name is not
+    #: one: `qwen3.5:4b` is a mutable Ollama tag, so a re-pull is a different
+    #: model under the same candidate string and the sweep stops being
+    #: comparable. Empty where the plane cannot say — `report.caveats` names
+    #: those candidates in the document rather than leaving it to be assumed.
+    model_digest: str = ""
     case_id: str = ""
     dimension: str = ""
     set_id: str = ""
@@ -69,6 +75,7 @@ class Measurement:
             "candidate_label": self.candidate_label,
             "kind": self.kind,
             "model": self.model,
+            "model_digest": self.model_digest,
             "harness": self.harness,
             "case": self.case_id,
             "dimension": self.dimension,
@@ -112,6 +119,7 @@ def run_case(candidate, case: dict, *, rep: int = 1, app_state_path=None,
         candidate_label=candidate.label,
         kind=candidate.kind,
         model=candidate.model or candidate.harness,
+        model_digest=model_digest(candidate, app_state_path),
         harness=candidate.harness,
         case_id=str(case.get("id") or ""),
         dimension=str(case.get("dimension") or ""),
@@ -154,6 +162,31 @@ def run_case(candidate, case: dict, *, rep: int = 1, app_state_path=None,
         row.error = ""
     row.score = metrics.verdict(case, reply.text, corpus.documents(case))
     return row
+
+
+def model_digest(candidate, app_state_path=None) -> str:
+    """The model's own bytes, when the plane can name them, else "".
+
+    Only the local plane can: Ollama reports a digest per model and that is the
+    one identity a mutable tag cannot fake. A coding-agent CLI would need its
+    binary's version, which is a different kind of fact about a different kind
+    of thing, so it answers "" rather than a version string in a digest column.
+    """
+    if getattr(candidate, "kind", "") != "local":
+        return ""
+    from app import modelpull
+
+    base = modelpull.ollama_base(app_state_path)
+    if not base:
+        return ""
+    wanted = (candidate.model or "").strip()
+    if not wanted:
+        return ""
+    for row in modelpull.installed(base):
+        name = str(row.get("name") or "")
+        if name == wanted or name.split(":")[0] == wanted.split(":")[0]:
+            return str(row.get("digest") or "")
+    return ""
 
 
 def _salvage(socket, prompt: str) -> Reply:

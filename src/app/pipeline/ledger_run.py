@@ -48,6 +48,17 @@ def _cmd_extract(conn, args, budget) -> None:
         return
     added = extraction.extract_pending(conn, budget)
     print(f"extract: +{added} evidence rows")
+    # A run that lost claims used to report the same sentence as one that lost
+    # none, so "40 evidence rows" could mean forty of forty-three. The losses
+    # are durable now (`extraction_failures`) and named here, because this is
+    # the screen the run is read on.
+    lost = extraction.failures(conn)
+    if lost:
+        print(f"extract: {len(lost)} chunk(s) lost a claim and are recorded:")
+        for one in lost[:5]:
+            print(f"  chunk {one['chunk_index']} (attempt {one['attempts']}): {one['error']}")
+        if len(lost) > 5:
+            print(f"  ... and {len(lost) - 5} more")
 
 
 def _cmd_verdict(conn, args, budget) -> None:

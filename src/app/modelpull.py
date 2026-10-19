@@ -60,7 +60,14 @@ def pull(base: str, model: str, progress, *, opener=urllib.request.urlopen) -> d
     Raises `RuntimeError` with Ollama's own words when it refuses, and
     `Cancelled` (through `progress.check`) when the reader stops it; closing
     the stream is what tells Ollama to stop sending.
+
+    The name is validated exactly as `remove` validates it. `pull` used to skip
+    that, so the one path that *downloads gigabytes* took a name straight from a
+    UI field while the path that deletes a file checked it first — an
+    inconsistency with the wrong half careful.
     """
+    if not valid_name(model):
+        raise RuntimeError("That is not a model name Ollama would accept.")
     request = urllib.request.Request(
         base.rstrip("/") + "/api/pull",
         data=json.dumps({"model": model, "stream": True}).encode("utf-8"),
@@ -175,6 +182,11 @@ def installed(base: str, *, opener=urllib.request.urlopen) -> list[dict]:
             "params": details.get("parameter_size") or None,
             "quant": details.get("quantization_level") or None,
             "family": details.get("family") or None,
+            # The model's own identity, which a name is not: a tag can be
+            # re-pulled onto different bytes. The benchmark records this so its
+            # "everything except the model is held identical" claim is
+            # checkable; Ollama has always sent it and this dropped it.
+            "digest": str(row.get("digest") or ""),
         })
     return out
 

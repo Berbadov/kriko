@@ -25,6 +25,50 @@ from dataclasses import dataclass
 
 _NUMERIC = re.compile(r"^[+-]?[\d\s,.]*\d$")
 
+#: A grouped integer in either convention: 1,395 or 1.395 or 1.234.567.
+_THOUSANDS = re.compile(r"\d{1,3}(?:[.,]\d{3})+")
+
+
+def _unseparate(text: str) -> str:
+    """Rewrite a locale-formatted number into one `float()` can read.
+
+    Scraped values arrive in whichever convention the listing used, and the
+    ambiguity is not resolvable in general: `1.500` is fifteen hundred to a
+    Turkish or German listing and one and a half to an American one. Two rules
+    cover every case this app reads, and neither needs to know the page's
+    locale:
+
+      * with both separators present, the **rightmost** one is the decimal
+        point and the other is grouping — `1.234,56` and `1,234.56` both give
+        `1234.56`;
+      * a lone separator is a decimal point **unless** it groups (once with
+        exactly three digits after it, or more than once) — so `150,5` is
+        `150.5` while `150.000` is `150000` and `1,395` is `1395`.
+
+    A leading zero disables the grouping rule, because `0.125` is a decimal in
+    every convention and `0125` is a number nobody writes.
+
+    Before this, the second branch was a duplicate of the first: `150,5`
+    parsed as `1505.0` and quietly satisfied an `lte`/`gte` gate, which is the
+    worst kind of wrong answer here — a figure the reader never saw.
+    """
+    sign = ""
+    body = text
+    if body[:1] in ("+", "-"):
+        sign, body = body[0], body[1:]
+    if "," in body and "." in body:
+        decimal = "," if body.rfind(",") > body.rfind(".") else "."
+        grouping = "." if decimal == "," else ","
+        return sign + body.replace(grouping, "").replace(decimal, ".")
+    decimal = "," if "," in body else "."
+    if decimal not in body:
+        return sign + body
+    leading = body.split(decimal, 1)[0]
+    if body.count(decimal) > 1 or (
+            _THOUSANDS.fullmatch(body) and leading.lstrip("0") != ""):
+        return sign + body.replace(decimal, "")
+    return sign + body.replace(decimal, ".")
+
 
 @dataclass(frozen=True)
 class Condition:
@@ -71,14 +115,8 @@ def _number(value) -> float | None:
     text = str(value).strip()
     if not text or not _NUMERIC.match(text):
         return None
-    # Thousands separators vary by locale; strip both, keep a single decimal point.
-    cleaned = text.replace(" ", "")
-    if "," in cleaned and "." in cleaned:
-        cleaned = cleaned.replace(",", "")
-    else:
-        cleaned = cleaned.replace(",", "")
     try:
-        return float(cleaned)
+        return float(_unseparate(text.replace(" ", "").replace("\u00a0", "")))
     except ValueError:
         return None
 

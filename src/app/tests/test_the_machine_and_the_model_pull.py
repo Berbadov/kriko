@@ -327,7 +327,7 @@ def test_only_ollama_can_be_removed_through(client):
 
 def test_installed_models_carry_ollamas_own_sizes():
     body = {"models": [
-        {"name": "a:1b", "size": 1234,
+        {"name": "a:1b", "size": 1234, "digest": "sha256:abc",
          "details": {"parameter_size": "1.2B", "quantization_level": "Q4_K_M", "family": "x"}},
         {"name": "bare"},
         {"nothing": True},
@@ -346,9 +346,13 @@ def test_installed_models_carry_ollamas_own_sizes():
     seen = []
     rows = modelpull.installed("http://h:1/", opener=lambda url, timeout: seen.append(url) or Reply())
     assert seen == ["http://h:1/api/tags"]
+    # `digest` travels too: a name is not a model identity, and the benchmark
+    # needs the bytes to make its "everything except the model is held
+    # identical" claim checkable. Ollama has always sent it.
     assert rows[0] == {"name": "a:1b", "size_bytes": 1234, "params": "1.2B",
-                       "quant": "Q4_K_M", "family": "x"}
+                       "quant": "Q4_K_M", "family": "x", "digest": "sha256:abc"}
     assert rows[1]["size_bytes"] is None and rows[1]["params"] is None
+    assert rows[1]["digest"] == "", "a model Ollama gives no digest for says so"
     assert len(rows) == 2
 
 

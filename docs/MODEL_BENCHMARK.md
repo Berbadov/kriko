@@ -36,7 +36,8 @@ They are hand-drawn SVG, not matplotlib, for three reasons that each cost
 something real: the desktop build carries its dependencies and a plotting
 library is a large one to add for five pictures; a chart that cannot be
 regenerated from a saved run goes stale the moment a rate is corrected, and
-`rerender` already rebuilds the report from its JSON; and SVG is text, so it
+`python -m app.modelbench report --from <the saved JSON>` already rebuilds the
+report and its charts, spending nothing; and SVG is text, so it
 differs in a review, stays crisp on a HiDPI screen, and can carry a
 `prefers-color-scheme` rule that makes one file readable on a light and a dark
 page.

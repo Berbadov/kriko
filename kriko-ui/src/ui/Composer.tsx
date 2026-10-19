@@ -77,6 +77,23 @@ export function Composer({
       back.current -= 1
       setText(back.current ? recall[recall.length - back.current] : '')
     }
+    // Escape closes the agent menu, and it is the only key that does: a
+    // `role="listbox"` that can only be dismissed with a mouse is a menu a
+    // keyboard user cannot leave.
+    if (event.key === 'Escape' && menu) {
+      event.stopPropagation()
+      setMenu(false)
+    }
+  }
+
+  /** Arrow keys move through the agent list, as `role="listbox"` promises. */
+  const onMenuKey = (event: KeyboardEvent<HTMLUListElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    event.preventDefault()
+    const at = agents.findIndex((item) => item.id === chosen)
+    const step = event.key === 'ArrowDown' ? 1 : -1
+    const next = agents[(at + step + agents.length) % agents.length]
+    if (next) setChosen(next.id)
   }
 
   return (
@@ -95,9 +112,10 @@ export function Composer({
         aria-label="Message"
       />
       <div className="composer-foot">
-        <button className="icon-btn" aria-label="Add a file">
-          <Icon name="attach" />
-        </button>
+        {/* The attach button is gone. It carried `aria-label="Add a file"` and
+            no `onClick` at all: a screen reader announced a control that did
+            nothing, and a reader who pressed it got nothing. Nothing in the
+            engine accepts an attachment, so there is no control to wire. */}
         {pickAgent && (
         <div className="agent-pick" data-tour="agent-pick">
           <button className="pill" onClick={() => setMenu((v) => !v)} aria-haspopup="listbox" aria-expanded={menu}>
@@ -110,6 +128,8 @@ export function Composer({
               <motion.ul
                 className="menu"
                 role="listbox"
+                onKeyDown={onMenuKey}
+                tabIndex={-1}
                 initial={{ opacity: 0, y: m.d(6), scale: m.on ? 0.97 : 1 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: m.d(4) }}

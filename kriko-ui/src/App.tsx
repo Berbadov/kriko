@@ -63,6 +63,35 @@ function Shell() {
 
   const closeDrawer = useCallback(() => setDrawer(false), [])
 
+  /**
+   * The shortcuts a desktop window is expected to have.
+   *
+   * `App.tsx` registered exactly one key before this — the drawer event — so
+   * Ctrl+1..3 did nothing, Ctrl+K did nothing, and the only way back from a
+   * product page was its own Back control (`screens/Product.tsx`). Escape is
+   * left to whatever has focus: the drawer and the composer both handle it, and
+   * a global handler that swallowed it would break both.
+   */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return
+      const digit = ['1', '2', '3'].indexOf(event.key)
+      if (digit >= 0 && digit < ORDER.length) {
+        event.preventDefault()
+        go(ORDER[digit])
+        return
+      }
+      if (event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        if (screen !== 'chat') go('chat')
+        // After the page has swapped, so the field exists to be focused.
+        window.setTimeout(() => document.querySelector<HTMLTextAreaElement>('.composer-field')?.focus(), 0)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [go, screen])
+
   // A new chat and a saved chat both open on the Chat page.
   const { newChat, open: openChat } = chat
   const startChat = useCallback(() => {
