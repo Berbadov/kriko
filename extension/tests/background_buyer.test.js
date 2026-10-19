@@ -164,3 +164,44 @@ test("the extension asks for notifications only as an optional permission", () =
     "a required permission would have the browser switch the extension off at the next update");
   assert.deepEqual(manifest.optional_permissions, ["notifications"]);
 });
+
+const DUE = { due: [{ purchase_id: "p1", name: "Blender" }, { purchase_id: "p2", name: "Lamp" }] };
+
+function dueWorker(extra = {}) {
+  return loadBackground({
+    routes: { "/api/adapters": ADAPTERS, "/api/analyze": ANALYSIS, "/api/buyer/page": BUYER,
+      "/api/buyer/purchases": DUE, ...extra },
+    tabResponses: { GET_SCRAPE: { ok: true, payload: SCRAPE }, KRIKO_DUE_NUDGE: { ok: true } } });
+}
+const nudges = (h) => h.state.tabMessages.filter((m) => m.message.type === "KRIKO_DUE_NUDGE");
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test("a page Kriko reads is where a due purchase is asked about, one at a time and not twice in a day", async () => {
+  const h = dueWorker();
+  await h.sandbox.runAnalysisForTab(1, URL_, { auto: true });
+  await settle();
+  assert.equal(nudges(h).length, 1);
+  assert.equal(nudges(h)[0].message.purchase.purchase_id, "p1");
+  assert.equal(nudges(h)[0].message.count, 2);
+  await h.sandbox.runAnalysisForTab(1, URL_, { auto: true, fresh: true });
+  await settle();
+  assert.equal(nudges(h).length, 2, "the second purchase is asked about next, never the first again");
+  assert.equal(nudges(h)[1].message.purchase.purchase_id, "p2");
+  await h.sandbox.runAnalysisForTab(1, URL_, { auto: true, fresh: true });
+  await settle();
+  assert.equal(nudges(h).length, 2, "both were asked about today");
+});
+
+test("pressing the button on a page is the reader's own ask, and is not interrupted by a question", async () => {
+  const h = dueWorker();
+  await h.sandbox.runAnalysisForTab(1, URL_, { auto: false });
+  await settle();
+  assert.equal(nudges(h).length, 0);
+});
+
+test("with no purchase due, no question is asked", async () => {
+  const h = dueWorker({ "/api/buyer/purchases": { due: [] } });
+  await h.sandbox.runAnalysisForTab(1, URL_, { auto: true });
+  await settle();
+  assert.equal(nudges(h).length, 0);
+});

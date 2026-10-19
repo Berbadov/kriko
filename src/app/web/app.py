@@ -201,25 +201,28 @@ async def lifespan(app: FastAPI):
         except Exception:
             log.warning("could not start the weekly pack update", exc_info=True)
 
-    # Watched pages are re-read when the app opens, as a job, if any are due.
-    # Off under test with the pack update (KRIKO_NO_PACK_AUTOUPDATE): both reach
-    # the network, and a test that enters a lifespan must not.
+    # Watched pages are re-read when the app opens and then on the engine's own
+    # clock (`app/pricescheduler.py`), as jobs. Off under test with the pack
+    # update (KRIKO_NO_PACK_AUTOUPDATE): both reach the network, and a test that
+    # enters a lifespan must not.
+    stop_price_clock = None
     if not os.environ.get("KRIKO_NO_PACK_AUTOUPDATE"):
         try:
-            from app import pricewatch
+            from app import pricescheduler
 
-            sweep_conn = state.connect(app.state.settings.app_state_path)
-            try:
-                if pricewatch.due(sweep_conn):
-                    app.state.jobs.submit("price_sweep", {})
-            finally:
-                sweep_conn.close()
+            sweeper = pricescheduler.Sweeper(
+                app.state.settings.app_state_path,
+                lambda: app.state.jobs.submit("price_sweep", {}))
+            sweeper.tick()
+            stop_price_clock = pricescheduler.start(sweeper)
         except Exception:
             log.warning("could not start the watched-page check", exc_info=True)
 
     try:
         yield
     finally:
+        if stop_price_clock is not None:
+            stop_price_clock()
         app.state.jobs.shutdown()
         from app.providers import codex_profile, resident
         try:
