@@ -221,11 +221,11 @@ def test_snapshot_restores_committed_wal_data_and_drafts_without_provider_keys(t
     finally:
         restored.close()
     assert (tmp_path / "app.sqlite.before-restore").exists()
-    assert (tmp_path / "keys.env").read_text("utf-8") == "secret=not-for-export"
+    assert (tmp_path / "keys.env").read_text(encoding="utf-8") == "secret=not-for-export"
     assert not later.exists()
     assert draft.exists() == has_draft
     if has_draft:
-        assert draft.read_text("utf-8") == 'id="example"'
+        assert draft.read_text(encoding="utf-8") == 'id="example"'
 
 
 def test_a_snapshot_cannot_write_paths_outside_the_data_directory(tmp_path):
