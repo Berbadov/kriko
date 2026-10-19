@@ -1995,6 +1995,81 @@ QUICK_LOOK_TIMEOUT_SECONDS = 240
 CATEGORIZATION_BUDGET_USD = 0.05
 
 
+def _classification_provider(settings) -> str:
+    """Read the classifier choice, defaulting old installs to the agent path."""
+    from app import prefs
+
+    try:
+        conn = state.connect(settings.app_state_path)
+    except Exception:  # noqa: BLE001 - absent preferences mean the old default
+        return "agent"
+    try:
+        return prefs.classification_provider(conn)
+    finally:
+        conn.close()
+
+
+def _classify_catalog(settings, params: dict, progress: Progress, product: str,
+                      look: dict, profiles: list[dict]) -> dict:
+    """Classify with the selected usual agent, or the optional Jev provider.
+
+    Construct the completion lazily: a deterministic match starts no model.
+    Classification reads saved facts only and grants no web or shell tools.
+    An unavailable classifier leaves successful research available to file
+    manually rather than losing the completed product check.
+    """
+    from app import categorizer
+
+    provider = _classification_provider(settings)
+
+    def complete(prompt: str) -> str:
+        progress.check()
+        progress.log("matching the saved look to installed catalog definitions with the selected agent")
+        if _use_local_ask(settings, params):
+            completer = _local_structured_completer(settings, params, progress)
+            allowed = completer.prompt_chars_allowed()
+            if len(prompt.encode("utf-8")) > allowed:
+                raise categorizer.CatalogSetTooLarge(
+                    "The complete installed-catalog prompt exceeds this local model's "
+                    f"context budget ({allowed} bytes); no catalogs were omitted. "
+                    "Choose from the installed-catalog list instead.")
+            reply = completer.json(prompt, categorizer.OUTPUT_SCHEMA).strip()
+        else:
+            from app.providers import harness_researcher
+
+            researcher = harness_researcher(
+                preferred=str(params.get("harness") or ""),
+                app_state_path=settings.app_state_path,
+                timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
+                model=str(params.get("model") or ""),
+                effort=str(params.get("effort") or ""),
+                default_effort="low",
+            )
+            requested = float(params.get("budget_usd") or CATEGORIZATION_BUDGET_USD)
+            cap = requested if 0 < requested < CATEGORIZATION_BUDGET_USD else CATEGORIZATION_BUDGET_USD
+            _cap_agent(researcher, {"budget_usd": cap})
+            researcher.on_action = progress.log
+            researcher.check_cancelled = progress.check
+            reply = researcher.ask(prompt, allow_tools=False).strip()
+        progress.check()
+        return reply
+
+    try:
+        return categorizer.classify_configured(product, look, profiles, provider,
+                                               ask=complete)
+    except Cancelled:
+        raise
+    except Exception as error:  # noqa: BLE001 - labels must not discard completed research
+        progress.log(f"catalog classification unavailable ({type(error).__name__})")
+        return {
+            "status": "uncertain", "method": "jev" if provider == "typesafe" else "agent",
+            "pack_id": "", "confidence": "none", "basis": [],
+            "message": (str(error) if isinstance(error, categorizer.CatalogSetTooLarge)
+                        else "The selected classifier could not complete this decision. "
+                             "Retry classification or choose a catalog manually."),
+        }
+
+
 def _catalogue_block(product: str, page, profiles: list[dict], *,
                      pinned: str = "") -> tuple[str, str]:
     """The installed catalogs a Quick Look is shown, and what was left out.
@@ -2143,10 +2218,9 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
             f"{one.get('title') or 'a risk'} ({one.get('reason') or 'not carried'})"
             for one in verification["unsupported"] if isinstance(one, dict)))
 
-    # A saved category that names one installed definition clearly can be
-    # filed without another model call. A vague or conflicting answer stays
-    # visible as uncertain and can be sent to the categorizer explicitly.
-    assignment = categorizer.deterministic(product, found, profiles)
+    # Clear installed-category matches need no model. Otherwise the selected
+    # classifier checks saved facts; unsupported decisions stay uncertain.
+    assignment = _classify_catalog(settings, params, progress, product, found, profiles)
     if catalog_context_error and assignment["status"] != "assigned":
         assignment["message"] = (
             f"The saved category is uncertain. {catalog_context_error}"
@@ -2338,79 +2412,9 @@ def categorize_quick_look(settings, params: dict, progress: Progress) -> dict:
     result = look_job.get("result") or {}
     product = str(look_job["params"].get("product") or result.get("product") or "").strip()
     profiles = categorizer.installed_catalogs(settings.store_path)
-    assignment: dict[str, Any]
-    if not profiles:
-        assignment = {
-            "status": "uncertain", "method": "agent", "pack_id": "",
-            "confidence": "none", "basis": [],
-            "message": "No installed catalogs are available.",
-        }
-        progress.log(assignment["message"])
-    else:
-        try:
-            prompt = categorizer.brief(product, result, profiles)
-        except categorizer.CatalogSetTooLarge as error:
-            assignment = {
-                "status": "uncertain", "method": "agent", "pack_id": "",
-                "confidence": "none", "basis": [], "message": str(error),
-            }
-            progress.log(assignment["message"])
-        else:
-            local = _use_local_ask(settings, params)
-            if local:
-                completer = _local_structured_completer(settings, params, progress)
-                allowed = completer.prompt_chars_allowed()
-                reply: str | None
-                if len(prompt.encode("utf-8")) > allowed:
-                    assignment = {
-                        "status": "uncertain", "method": "agent", "pack_id": "",
-                        "confidence": "none", "basis": [],
-                        "message": (
-                            "The complete installed-catalog prompt exceeds this local model's "
-                            f"current context budget ({allowed} characters); no catalogs were omitted. "
-                            "Choose from the installed-catalog list instead."
-                        ),
-                    }
-                    progress.log(assignment["message"])
-                    reply = None
-                else:
-                    progress.set(0.2, "matching the saved look to installed catalog definitions")
-                    reply = completer.json(prompt, categorizer.OUTPUT_SCHEMA).strip()
-            else:
-                from app.providers import harness_researcher
-
-                researcher = harness_researcher(
-                    preferred=str(params.get("harness") or ""),
-                    app_state_path=settings.app_state_path,
-                    timeout=float(params.get("timeout_seconds") or QUICK_LOOK_TIMEOUT_SECONDS),
-                    model=str(params.get("model") or ""),
-                    effort=str(params.get("effort") or ""),
-                    default_effort="low",
-                )
-                _cap_agent(researcher, {**params, "budget_usd": CATEGORIZATION_BUDGET_USD})
-                researcher.on_action = progress.log
-                _wire_researcher_text(researcher, progress)
-                researcher.check_cancelled = progress.check
-                progress.set(0.2, "matching the saved look to installed catalog definitions")
-                from app.providers.harness import NoHarness
-
-                try:
-                    # Classification must not turn saved listing text into a
-                    # web query or grant the selected agent ambient tools.
-                    # Providers without a verified tool-less mode refuse this
-                    # call; the reader can still choose a catalog manually.
-                    reply = researcher.ask(prompt, allow_tools=False).strip()
-                except NoHarness as error:
-                    assignment = {
-                        "status": "uncertain", "method": "agent", "pack_id": "",
-                        "confidence": "none", "basis": [], "message": str(error),
-                    }
-                    progress.log(assignment["message"])
-                    reply = None
-            if reply is not None:
-                progress.check()
-                progress.log(reply[:2000] or "(the agent returned no category)")
-                assignment = categorizer.parse(reply, product, result, profiles)
+    progress.set(0.2, "matching the saved look to installed catalog definitions")
+    assignment = _classify_catalog(settings, params, progress, product, result, profiles)
+    progress.log(assignment["message"])
     app_state = state.connect(settings.app_state_path)
     try:
         state.save_quicklook_category(app_state, quick_job_id, assignment)
@@ -2761,15 +2765,20 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
                 done.append(look["job_id"])  # nothing to file is filed
                 continue
             assignment = state.quicklook_category(conn, look["job_id"])
-            fresh = categorizer.deterministic(product, quick, profiles)
             assignment_missing_target = bool(
                 assignment and assignment.get("status") == "assigned"
                 and assignment.get("pack_id") not in profile_by_id
             )
-            if (assignment is None or assignment_missing_target
-                    or (assignment.get("status") != "assigned"
-                        and fresh["status"] == "assigned")):
+            if assignment is None or assignment_missing_target:
+                fresh = _classify_catalog(settings, params, progress, product, quick, profiles)
                 assignment = state.save_quicklook_category(conn, look["job_id"], fresh)
+            elif assignment.get("status") != "assigned":
+                # Reuse an abstention instead of paying to repeat it on every
+                # harvest. New catalogs can still unlock a free exact match;
+                # the explicit categorization action retries the model.
+                fresh = categorizer.deterministic(product, quick, profiles)
+                if fresh["status"] == "assigned":
+                    assignment = state.save_quicklook_category(conn, look["job_id"], fresh)
             if assignment["status"] != "assigned":
                 needs_categorization.append({
                     "quick_job_id": look["job_id"], "product": product,

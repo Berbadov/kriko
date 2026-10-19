@@ -182,6 +182,52 @@ def list_packs() -> list[dict]:
 
 
 @tool()
+def list_catalogs() -> list[dict]:
+    """Catalog definitions available for product classification.
+
+    Includes the installed pack revision and its declared product kinds,
+    identity keys, attributes, and representative subjects. The result is
+    local store data; this operation does no research or network access.
+    """
+    from app import categorizer
+
+    return categorizer.catalogs(_store_path())
+
+
+@tool()
+def classify_product(product: str, saved_facts: dict, decision: dict | None = None) -> dict:
+    """Classify a saved product against installed catalogs with an audit trail.
+
+    Deterministic matches are checked first. With the default agent provider,
+    an uncertain result includes agent_request: evaluate that prompt and call
+    this tool again with its JSON output in decision. Supplied decisions are
+    validated locally; no additional model or TypeSafe key is needed. When no
+    decision is supplied, Jev is used only if explicitly selected in Settings.
+    Classification never searches the web.
+    `saved_facts` may contain category, specs, risks, and other saved Quick
+    Look fields; title scope and an unambiguous installed catalog are required.
+    """
+    from app import categorizer
+    from app import prefs
+    from app.web import state
+
+    profiles = categorizer.installed_catalogs(_store_path())
+    try:
+        conn = state.connect(_app_state_path())
+    except Exception:  # noqa: BLE001 - no preference means the old free path
+        provider = "agent"
+    else:
+        try:
+            provider = prefs.classification_provider(conn)
+        finally:
+            conn.close()
+    if decision is not None:
+        return categorizer.classify_configured(product, saved_facts or {}, profiles,
+                                              provider, decision=decision)
+    return categorizer.classify_configured(product, saved_facts or {}, profiles, provider)
+
+
+@tool()
 def store_status() -> dict:
     """Row counts across the installed store — the shape of what is known."""
     tables = (

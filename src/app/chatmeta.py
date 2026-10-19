@@ -33,7 +33,7 @@ def parse(reply: str) -> dict:
 
     title = plain(found.get("title"), 80)
     raw = found.get("followups")
-    questions = []
+    questions: list[str] = []
     for value in raw[:6] if isinstance(raw, list) else []:
         question = plain(value, 180)
         if question and question.casefold() not in {one.casefold() for one in questions}:
