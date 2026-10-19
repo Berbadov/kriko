@@ -130,7 +130,8 @@ def guard(conn: sqlite3.Connection, *, url: str, items: list[dict] | None = None
         currency = str(line.get("currency") or "").upper()
         clash = next((one for one in researched if variant_clash(name, one)), None)
         if clash and not any(pricewatch.same_product(name, one) for one in researched):
-            add("stop", "variant",
+            # A recent view is a guess at the cart, not the cart: ask, do not stop.
+            add("check" if from_views else "stop", "variant",
                 f"You researched “{clash}”, but this is “{name}”. Check the model before paying.", name)
         if price is None:
             continue

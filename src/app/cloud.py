@@ -298,11 +298,18 @@ def disconnect(conn: sqlite3.Connection, *, forget_remote: bool = True, http: Ht
 
 def note_deleted(conn: sqlite3.Connection, kind: str, key: str) -> None:
     """Remember a deletion, but only for a reader who has paired a device."""
-    if not configured(conn):
+    note_deleted_many(conn, kind, [key])
+
+
+def note_deleted_many(conn: sqlite3.Connection, kind: str, keys: list[str]) -> None:
+    """`note_deleted` for a whole table at once, in one write."""
+    if not keys or not configured(conn):
         return
     cutoff = _stamp(_now() - timedelta(days=TOMBSTONE_DAYS))
-    kept = [t for t in (state.all_settings(conn).get(TOMBS) or []) if t["at"] >= cutoff and (t["kind"], t["key"]) != (kind, key)]
-    kept.append({"kind": kind, "key": key, "at": _stamp()})
+    gone = {(kind, key) for key in keys}
+    kept = [t for t in (state.all_settings(conn).get(TOMBS) or []) if t["at"] >= cutoff and (t["kind"], t["key"]) not in gone]
+    at = _stamp()
+    kept += [{"kind": kind, "key": key, "at": at} for key in keys]
     state.put_settings(conn, {TOMBS: kept[-MAX_TOMBSTONES:]})
 
 
