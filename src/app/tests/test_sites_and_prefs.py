@@ -239,6 +239,48 @@ def test_nothing_chosen_behaves_exactly_as_before(client):
     assert body["chosen"] == UNCHOSEN
 
 
+def test_agent_availability_skips_model_and_local_server_discovery(
+    settings, monkeypatch,
+):
+    from app import localplane
+    from app import modeldiscovery
+    from app.providers import apiagent, harness
+    from app.web import state
+
+    conn = state.connect(settings.app_state_path)
+    try:
+        prefs.write(conn, {
+            prefs.HARNESS: prefs.LOCAL_PICK,
+            prefs.LOCAL_URL: "http://127.0.0.1:11434",
+            prefs.LOCAL_MODEL: "gemma4:e2b",
+        })
+    finally:
+        conn.close()
+
+    monkeypatch.setattr(harness, "available", lambda: [harness.KNOWN[0]])
+    monkeypatch.setattr(apiagent, "available", lambda: [apiagent.MISTRAL])
+    monkeypatch.setattr(harness, "_ask", lambda *a, **k: pytest.fail("CLI probe"))
+    monkeypatch.setattr(harness, "models_for_each", lambda *a, **k: pytest.fail("CLI model probe"))
+    monkeypatch.setattr(harness, "efforts_for_each", lambda *a, **k: pytest.fail("CLI help probe"))
+    monkeypatch.setattr(apiagent, "models_for", lambda *a, **k: pytest.fail("provider model probe"))
+    monkeypatch.setattr(modeldiscovery, "cached", lambda *a, **k: pytest.fail("provider model discovery"))
+    monkeypatch.setattr(modeldiscovery, "refresh", lambda *a, **k: pytest.fail("provider network probe"))
+    monkeypatch.setattr(localplane, "resolve", lambda *a, **k: pytest.fail("local server probe"))
+
+    from app.web.routers.prefs import agent_availability
+
+    conn = state.connect(settings.app_state_path)
+    try:
+        body = agent_availability(conn)
+    finally:
+        conn.close()
+
+    assert body["chosen"][prefs.HARNESS] == prefs.LOCAL_PICK
+    assert {row["id"] for row in body["harnesses"]} == {
+        harness.KNOWN[0].id, apiagent.MISTRAL.id, prefs.LOCAL_PICK,
+    }
+
+
 def test_a_choice_survives_being_made(client):
     client.put("/api/prefs", json={"llm_model": "qwen3.5-27b"})
     assert client.get("/api/prefs").json()["chosen"]["llm_model"] == "qwen3.5-27b"

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { get, inShell, type ApiHarness } from './api'
+import { AGENTS_CHANGED_EVENT, get, inShell, type ApiHarness } from './api'
 
 /** Whether a real engine answers. Without one the interface plays demo data,
  *  so design work never waits on the engine. `?demo` in the address forces it. */
@@ -17,6 +17,24 @@ const DEMO_AGENTS: Agent[] = [
   { id: 'coding', label: 'Coding agent', backend: 'harness' },
   { id: 'local', label: 'Local model', backend: 'local' },
 ]
+
+const LIVE_DEFAULT_AGENTS: Agent[] = [
+  { id: '', label: 'Default agent', backend: 'harness' },
+]
+
+type AgentAvailability = {
+  harnesses?: ApiHarness[]
+  chosen?: { preferred_harness?: string }
+}
+
+function agentRoster(rows: ApiHarness[] | undefined): Agent[] {
+  const found = (rows ?? []).map<Agent>((h) => ({
+    id: h.id,
+    label: h.label,
+    backend: h.local ? 'local' : 'harness',
+  }))
+  return found.length ? found : LIVE_DEFAULT_AGENTS
+}
 
 interface Engine {
   mode: Mode
@@ -64,14 +82,9 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     get<{ ok?: boolean }>('/api/health', 2500)
       .catch(() => (inShell() ? untilStarted(() => live) : Promise.reject(new Error('no engine'))))
       .then(async () => {
-        const prefs = await get<{ harnesses?: ApiHarness[]; chosen?: { preferred_harness?: string } }>('/api/prefs', 4000)
+        const prefs = await get<AgentAvailability>('/api/agent-availability', 4000)
         if (!live) return
-        const found = (prefs.harnesses ?? []).map<Agent>((h) => ({
-          id: h.id,
-          label: h.label,
-          backend: h.local ? 'local' : 'harness',
-        }))
-        if (found.length) setAgents(found)
+        setAgents(agentRoster(prefs.harnesses))
         setPreferred(prefs.chosen?.preferred_harness ?? '')
         setMode('live')
       })
@@ -84,6 +97,25 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       live = false
     }
   }, [attempt])
+
+  useEffect(() => {
+    if (mode !== 'live') return
+    let live = true
+    const refresh = () => {
+      void get<AgentAvailability>('/api/agent-availability', 4000)
+        .then((availability) => {
+          if (!live) return
+          setAgents(agentRoster(availability.harnesses))
+          setPreferred(availability.chosen?.preferred_harness ?? '')
+        })
+        .catch(() => undefined)
+    }
+    window.addEventListener(AGENTS_CHANGED_EVENT, refresh)
+    return () => {
+      live = false
+      window.removeEventListener(AGENTS_CHANGED_EVENT, refresh)
+    }
+  }, [mode])
 
   const retry = useCallback(() => {
     // In the packaged window the shell owns the engine, so it starts it again.
