@@ -24,6 +24,7 @@ import re
 import time
 import urllib.error
 import urllib.request
+from app import htmlscan
 from app.providers import egress, network
 from datetime import date, datetime, timezone
 
@@ -48,11 +49,8 @@ USER_AGENT = "Kriko/1.0 (+https://github.com/Berbadov/kriko)"
 #: exists, only this door is shut. Those are the ones worth one more rung.
 REFUSED = (403, 429, 503)
 
-_DROP = re.compile(
-    r"<(script|style|noscript|nav|header|footer|aside|svg|template|iframe"
-    r"|select|button|dialog|menu|object|canvas|picture|video|audio)(?![\w-])[^>]*>.*?</\1>",
-    re.IGNORECASE | re.DOTALL,
-)
+_DROP_NAMES = ("script", "style", "noscript", "nav", "header", "footer", "aside", "svg", "template",
+               "iframe", "select", "button", "dialog", "menu", "object", "canvas", "picture", "video", "audio")
 #: Markup that is never prose, and that `_TAG` alone would leave behind as
 #: text: comments (often whole commented-out blocks of markup), CDATA, the
 #: `<head>` (its `<title>` is kept separately), and a `<script>` or `<style>`
@@ -61,11 +59,7 @@ _COMMENT = re.compile(r"<!--.*?(-->|\Z)|<!\[CDATA\[.*?(\]\]>|\Z)", re.DOTALL)
 # `(?![\w-])` rather than `\b`: `\b` matches before a hyphen, so a custom
 # element (`<button-group>`, `<video-js>`) would be read as the tag it starts
 # with and scan the page for a closer it never has.
-_HEAD = re.compile(r"<head(?![\w-])[^>]*>.*?</head>", re.IGNORECASE | re.DOTALL)
-_TITLE = re.compile(r"<title(?![\w-])[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
 _UNCLOSED = re.compile(r"<(script|style)(?![\w-]).*\Z", re.IGNORECASE | re.DOTALL)
-_MAIN = re.compile(r"<main(?![\w-])[^>]*>(.*)</main>", re.IGNORECASE | re.DOTALL)
-_ANCHOR = re.compile(r"<a(?![\w-])[^>]*>(.*?)</a>", re.IGNORECASE | re.DOTALL)
 #: Around a link's text until `prose_lines` has read it: a menu is a run of
 #: links, and once the tags are gone this is the only trace of which lines
 #: were links. Control characters no page text carries.
@@ -73,7 +67,9 @@ LINK_OPEN, LINK_CLOSE = "\x01", "\x02"
 #: A `<main>` with less text than this is a shell around a page drawn by
 #: script, and the body is the better bet.
 _MAIN_MIN_CHARS = 500
-_TAG = re.compile(r"<[^>]+>")
+# `[^<>]`, not `[^>]`: with every `<` allowed inside, a page of `<nav` and no `>` made each
+# one scan to the end of the page. A `<` inside a tag starts the next tag.
+_TAG = re.compile(r"<[^<>]+>")
 _SPACE = re.compile(r"[ \t\r\f\v]+")
 _BLANK = re.compile(r"\n{3,}")
 
@@ -212,7 +208,8 @@ def _download(url: str, timeout: float, *, check_cancelled=None,
     plain_ends = time.monotonic() + timeout
     try:
         options = {"check": check_cancelled} if check_cancelled is not None else {}
-        with network.urlopen(request, timeout=timeout, **options) as response:
+        with network.urlopen(request, timeout=timeout, guard_redirects=not allow_private,
+                             **options) as response:
             kind = (response.headers.get_content_type() or "").lower()
             if kind and not (
                 kind.startswith("text/") or "html" in kind or "xml" in kind
@@ -331,15 +328,15 @@ def to_text(markup: str) -> str:
             return extracted.strip()
 
     body = _COMMENT.sub(" ", markup)
-    title = _TITLE.search(body)
-    body = _HEAD.sub(" ", body)
-    body = _UNCLOSED.sub(" ", _DROP.sub(" ", body))
-    main = _MAIN.search(body)
-    if main and len(_TAG.sub("", main.group(1)).strip()) >= _MAIN_MIN_CHARS:
-        body = main.group(1)
-    if title:
-        body = f"<p>{title.group(1)}</p>{body}"
-    body = _ANCHOR.sub(lambda m: LINK_OPEN + m.group(1) + LINK_CLOSE, body)
+    titles = htmlscan.inner_texts(body, ("title",), limit=1)
+    body = htmlscan.blocks(body, ("head",), lambda inner: " ")
+    body = _UNCLOSED.sub(" ", htmlscan.blocks(body, _DROP_NAMES, lambda inner: " "))
+    main = htmlscan.last_block(body, "main")
+    if main is not None and len(_TAG.sub("", main).strip()) >= _MAIN_MIN_CHARS:
+        body = main
+    if titles:
+        body = f"<p>{titles[0]}</p>{body}"
+    body = htmlscan.blocks(body, ("a",), lambda inner: LINK_OPEN + inner + LINK_CLOSE)
     body = re.sub(r"</(p|div|li|h[1-6]|tr|br)\s*>", "\n", body, flags=re.IGNORECASE)
     body = re.sub(r"<br\s*/?>", "\n", body, flags=re.IGNORECASE)
     body = _TAG.sub(" ", body)

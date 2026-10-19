@@ -29,6 +29,25 @@ def _copy_database(source: Path, destination: Path) -> None:
         copied.close()
 
 
+def _make_room(previous: Path) -> None:
+    """Before a new `.before-restore` is written, keep the one already there as `.prev`.
+
+    The safety copy must hold the state just before the restore now running. It
+    used to be written only when none existed, so a second restore left the
+    first one's copy in place and the work done between the two was in neither.
+    One older generation is kept, not every one: these are whole databases.
+    """
+    if not previous.exists():
+        return
+    older = previous.with_name(previous.name + ".prev")
+    if previous.is_dir():
+        if older.exists():
+            shutil.rmtree(older)
+    else:
+        older.unlink(missing_ok=True)
+    os.replace(previous, older)
+
+
 def _draft_member(name: str) -> bool:
     path = Path(name)
     return (not path.is_absolute() and len(path.parts) >= 3 and path.parts[0] == "drafts"
@@ -115,7 +134,8 @@ def apply_pending(settings) -> bool:
         destination = Path(destination)
         destination.parent.mkdir(parents=True, exist_ok=True)
         previous = destination.with_suffix(destination.suffix + ".before-restore")
-        if destination.exists() and not previous.exists():
+        if destination.exists():
+            _make_room(previous)
             _copy_database(destination, previous)
         replacement = destination.with_suffix(destination.suffix + ".restoring")
         shutil.copy2(source, replacement)
@@ -133,7 +153,8 @@ def apply_pending(settings) -> bool:
             shutil.copytree(folder / "drafts", replacement)
         else:
             replacement.mkdir(parents=True)
-        if target.exists() and not previous.exists():
+        if target.exists():
+            _make_room(previous)
             shutil.copytree(target, previous)
         if target.exists():
             shutil.rmtree(target)

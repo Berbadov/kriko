@@ -28,6 +28,9 @@ connection, which is a socket-level change this module does not make.
 
 import ipaddress
 import socket
+import urllib.error
+import urllib.parse
+import urllib.request
 from urllib.parse import urlsplit
 
 
@@ -44,10 +47,18 @@ def _addresses(host: str) -> list[str]:
     return sorted({str(info[4][0]) for info in infos})
 
 
+_SHARED_ADDRESS_SPACE = ipaddress.ip_network("100.64.0.0/10")
+
+
 def _is_public(address: str) -> bool:
     try:
         ip = ipaddress.ip_address(address.split("%", 1)[0])
     except ValueError:
+        return False
+    # 100.64.0.0/10 (carrier-grade NAT) is neither private nor global to `ipaddress`:
+    # it carries Tailscale addresses, the reader's own network, and Alibaba
+    # Cloud's metadata address, 100.100.100.200.
+    if isinstance(ip, ipaddress.IPv4Address) and ip in _SHARED_ADDRESS_SPACE:
         return False
     return not (ip.is_loopback or ip.is_private or ip.is_link_local
                 or ip.is_reserved or ip.is_multicast or ip.is_unspecified)
@@ -74,3 +85,23 @@ def reason_to_refuse(url: str, *, allow_private: bool = False) -> str | None:
                     f"the reader's own network; Kriko will not fetch it on "
                     f"someone else's behalf")
     return None
+
+
+class _RefuseUnsafeRedirects(urllib.request.HTTPRedirectHandler):
+    """A redirect is a second URL the reader never saw: check it like the first."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        refusal = reason_to_refuse(urllib.parse.urljoin(req.full_url, newurl))
+        if refusal:
+            raise urllib.error.URLError(refusal)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def guarded_opener() -> urllib.request.OpenerDirector:
+    """An opener that follows redirects only to hosts `reason_to_refuse` allows.
+
+    `reason_to_refuse` looks at the URL it is given. A public page that answers
+    `302 Location: http://127.0.0.1:8787/api/...` would otherwise be followed
+    straight to the sidecar's own API. Proxy and CA settings stay as urllib's.
+    """
+    return urllib.request.build_opener(_RefuseUnsafeRedirects)
