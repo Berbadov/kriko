@@ -180,6 +180,20 @@ def test_openai_success_counts_tokens(isolated, monkeypatch):
     assert body["llm"] != ""
 
 
+def test_openai_key_test_uses_saved_compatible_endpoint(isolated, monkeypatch):
+    with_key(monkeypatch, "openai")
+    requested = []
+    serve(monkeypatch, lambda request: (requested.append(request.full_url), openai_hit())[1])
+    client, _ = make_client(isolated)
+    saved = client.put("/api/prefs", json={"llm_base_url": "https://gateway.test/v1"})
+    assert saved.status_code == 200
+    body = client.post("/api/keys/test", json={"provider": "openai"}).json()
+    assert body["ok"] is True
+    assert requested == ["https://gateway.test/v1/chat/completions"]
+
+
+
+
 def test_anthropic_success_counts_tokens(isolated, monkeypatch):
     with_key(monkeypatch, "anthropic")
     serve(monkeypatch, lambda request: anthropic_hit())
