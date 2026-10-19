@@ -107,6 +107,9 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
     for key in (prefs.AGENT_TRANSPORT, prefs.CODEX_TRANSPORT):
         if key in written and written[key] not in {"", "auto", "exec", "persistent"}:
             raise HTTPException(422, detail=f"{key} must be auto, exec, or persistent")
+    if (prefs.CLASSIFICATION_PROVIDER in written
+            and written[prefs.CLASSIFICATION_PROVIDER] not in {"", "agent", "typesafe"}):
+        raise HTTPException(422, detail="classification_provider must be agent or typesafe")
     for key in (prefs.LOCAL_OUTPUT_LANGUAGE, prefs.LOCAL_SEARCH_LANGUAGE):
         if key not in written:
             continue

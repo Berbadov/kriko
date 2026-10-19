@@ -249,6 +249,9 @@ def test_quicklook_assignment_persists_in_app_state_only(tmp_path):
             "status": "assigned", "method": "reader", "pack_id": "gaming.mice",
             "pack_name": "Gaming mice", "confidence": "explicit", "basis": [],
             "message": "Chosen by the reader.",
+            "audit": {"schema": 1, "method": "reader-v1",
+                      "catalog": {"pack_id": "gaming.mice", "version": "2.0.0",
+                                  "content_digest": "abc123"}},
         })
         fetched = state.quicklook_category(conn, "quick-1")
     finally:
@@ -257,3 +260,21 @@ def test_quicklook_assignment_persists_in_app_state_only(tmp_path):
     assert stored["pack_id"] == fetched["pack_id"] == "gaming.mice"
     assert fetched["status"] == "assigned"
     assert fetched["basis"] == []
+    assert fetched["audit"]["catalog"]["content_digest"] == "abc123"
+
+
+def test_classification_audit_identifies_catalog_revision_and_reason():
+    profile = _profile("gaming.mice", "Gaming mice", kinds=("mouse",))
+    profile.update(version="2.0.0", content_digest="abc123")
+
+    result = categorizer.deterministic(
+        "Scyrox V8 Gaming Mouse", {"category": "Gaming Mouse"}, [profile],
+    )
+
+    assert result["status"] == "assigned"
+    assert result["audit"]["catalog"] == {
+        "pack_id": "gaming.mice", "name": "Gaming mice", "version": "2.0.0",
+        "content_digest": "abc123",
+    }
+    assert result["audit"]["rule"] == "unique_exact_or_clear_scope_lead"
+    assert result["audit"]["evidence"]["catalog_scope"] == "mouse"

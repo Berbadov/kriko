@@ -293,6 +293,17 @@ def test_a_choice_survives_being_made(client):
     }
 
 
+def test_jev_classifier_is_an_explicit_saved_preference(client):
+    saved = client.put("/api/prefs", json={"classification_provider": "typesafe"})
+    assert saved.status_code == 200
+    assert saved.json()["chosen"][prefs.CLASSIFICATION_PROVIDER] == "typesafe"
+    assert {row["id"] for row in saved.json()["classification_providers"]} == {
+        "agent", "typesafe",
+    }
+    refused = client.put("/api/prefs", json={"classification_provider": "jev"})
+    assert refused.status_code == 422
+
+
 def test_either_search_key_is_enough_for_the_paid_plane():
     """Requiring both would have made adding a provider a way to break an
     installation that was working."""

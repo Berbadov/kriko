@@ -64,7 +64,8 @@ class Provider:
 #: dictionary of environment variable names: an endpoint that let a caller
 #: write any `KEY=value` into a file the process later loads into its own
 #: environment would be an arbitrary-environment-variable write, reachable from
-#: a browser on localhost. Two named providers is the whole feature.
+#: a browser on localhost. Every writable name is declared below, beside its
+#: user-facing purpose and the adapter that consumes it.
 PROVIDERS = (
     Provider(
         id="exa",
@@ -110,6 +111,15 @@ PROVIDERS = (
         "product's name and what its listing says about it — and searches the "
         "web for it with Mistral's own search. Also a completion model for the "
         "paid plane. Never your browsing history. One key does both.",
+        optional=True,
+    ),
+    Provider(
+        id="typesafe",
+        label="TypeSafe (Jev)",
+        env="TYPESAFE_API_KEY",
+        purpose="Receives the product details needed for the selected TypeSafe "
+        "classifier to answer. Your key is sent in the Authorization header. "
+        "Never returned to the Settings screen.",
         optional=True,
     ),
 )
