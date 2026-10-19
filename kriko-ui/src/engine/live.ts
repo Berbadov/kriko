@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { EMPTY, runReducer, turnOf, type Product, type Row, type RunApi, type Turn } from '../activity/run'
-import { EngineError, get, post, seg, type ApiActivity, type ApiFeedEvent, type ApiJob, type ApiMessage, type ApiProduct, type ApiStep, type ApiTurn } from './api'
+import { EngineError, get, post, postQuestion, seg, type ApiActivity, type ApiFeedEvent, type ApiJob, type ApiMessage, type ApiProduct, type ApiStep, type ApiTurn } from './api'
 import { threadsChanged } from './threads'
 
 /** A real turn: ask the engine, then read the job every 700 ms until it ends.
@@ -29,6 +29,7 @@ function rowsFrom(steps: ApiStep[], seen: Map<string, number>, activity: ApiActi
   })
   const activityRows: Row[] = activity.length
     ? activity.map((item) => {
+        if (item.kind === 'verification') return {kind: 'event', id: `activity-${item.id}`, stage: 'Evidence review', text: item.text || 'Some references could not be verified.', level: 'warn'}
         if (item.kind === 'search') {
           return {
             kind: 'event',
@@ -191,7 +192,7 @@ export function useLiveRun(): RunApi {
             thread.current = (await post<{ thread_id: string }>('/api/chat/threads', { title: '' })).thread_id
             setThreadId(thread.current)
           }
-          const sent = await post<{ job_id: string }>(`/api/chat/threads/${seg(thread.current)}/messages`, {
+          const sent = await postQuestion<{ job_id: string }>(`/api/chat/threads/${seg(thread.current)}/messages`, {
             text: prompt,
             harness: agent.backend === 'local' ? '' : agent.id,
             backend: agent.backend,

@@ -2,24 +2,27 @@ import { useMemo, useState } from 'react'
 import { useCompare } from '../../compare'
 import { dayGroup, useHistory, type Past } from '../../engine/history'
 import { Icon } from '../Icon'
+import { useEngine } from '../../engine/Engine'
 
 const GROUPS = ['Today', 'Yesterday', 'This week', 'Earlier']
 
 /** Every saved check. Open one, put it in Compare, or delete it. */
 export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
-  const { items, problem, remove } = useHistory()
-  const { add } = useCompare()
   const [query, setQuery] = useState('')
+  const { items, problem, remove, hasMore, loadMore, retry } = useHistory(query)
+  const { mode } = useEngine()
+  const { add } = useCompare()
   const [asking, setAsking] = useState<string | null>(null)
   const [added, setAdded] = useState<Set<string>>(new Set())
 
   const shown = useMemo(() => {
+    if (mode === 'live') return items ?? []
     const needle = query.trim().toLowerCase()
     return (items ?? []).filter((row) => !needle || `${row.name} ${row.category}`.toLowerCase().includes(needle))
-  }, [items, query])
+  }, [items, query, mode])
 
-  if (!items) return <p className="panel-note">{problem || 'Reading the history…'}</p>
-  if (!items.length) return <p className="panel-note">No checks yet. Your checks are kept here.</p>
+  if (!items) return <p className="panel-note">{problem || 'Reading the history…'} {problem && <button className="btn" onClick={retry}>Try again</button>}</p>
+  if (!items.length && !query) return <p className="panel-note">No checks yet. Your checks are kept here.</p>
 
   return (
     <div className="panel-body">
@@ -27,7 +30,7 @@ export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
         <Icon name="search" size={15} />
         <input type="search" placeholder="Search your checks" aria-label="Search your checks" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
-      {problem && <p className="error-note">{problem}</p>}
+      {problem && <p className="error-note">{problem} <button className="btn" onClick={retry}>Try again</button></p>}
 
       {shown.length === 0 && <p className="panel-note">Nothing matches.</p>}
       {GROUPS.map((group) => {
@@ -60,6 +63,7 @@ export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
         )
       })}
       <p className="panel-note">{items.length} saved {items.length === 1 ? 'check' : 'checks'}.</p>
+      {hasMore && <button className="btn" onClick={loadMore}>Load more checks</button>}
     </div>
   )
 }
@@ -83,7 +87,7 @@ function PastRow({
   onKeep: () => void
   onDelete: () => void
 }) {
-  const meta = [row.category || 'Quick look', row.risks === 0 ? 'No risks' : `${row.risks} ${row.risks === 1 ? 'risk' : 'risks'}`, row.when].filter(Boolean).join(' · ')
+  const meta = [row.category || 'Quick look', row.risks === 0 ? 'No sourced problems recorded' : `${row.risks} ${row.risks === 1 ? 'risk' : 'risks'}`, row.when].filter(Boolean).join(' · ')
   return (
     <li className="past" data-asking={asking}>
       <button className="past-main" onClick={onOpen}>

@@ -58,10 +58,14 @@ const DEMO: Past[] = [
   { id: 'demo:Delta Unit 500', name: 'Delta Unit 500', category: '', source: 'app', risks: 2, at: Date.now() - 19 * 86400000, when: '19 days ago' },
 ]
 
-export function useHistory() {
+export function useHistory(query = '') {
   const { mode } = useEngine()
   const [items, setItems] = useState<Past[] | null>(null)
   const [problem, setProblem] = useState('')
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => { setOffset(0) }, [query])
 
   useEffect(() => {
     if (mode === 'checking') return
@@ -70,11 +74,10 @@ export function useHistory() {
       return
     }
     let live = true
-    get<{ items: ApiHistoryItem[] & { source?: string }[] }>('/api/history?limit=200', 20000)
+    get<{ items: ApiHistoryItem[] & { source?: string }[]; has_more?: boolean }>(`/api/history?limit=200&offset=${offset}&q=${encodeURIComponent(query)}`, 20000)
       .then((data) => {
         if (!live) return
-        setItems(
-          (data.items as (ApiHistoryItem & { source?: string })[]).map((row) => ({
+        const page = (data.items as (ApiHistoryItem & { source?: string })[]).map((row) => ({
             id: row.lookup_id,
             name: row.label,
             category: row.category,
@@ -82,14 +85,16 @@ export function useHistory() {
             risks: row.claim_count,
             at: new Date(row.created_at).getTime(),
             when: ago(row.created_at),
-          })),
-        )
+          }))
+        setItems((now) => offset ? [...(now ?? []), ...page.filter((row) => !(now ?? []).some((saved) => saved.id === row.id))] : page)
+        setHasMore(!!data.has_more)
+        setProblem('')
       })
       .catch((error: unknown) => live && setProblem(error instanceof Error ? error.message : 'Could not read the history.'))
     return () => {
       live = false
     }
-  }, [mode])
+  }, [mode, query, offset, attempt])
 
   /** Delete one check. The list drops it when the engine says it is gone. */
   const remove = useCallback(
@@ -109,5 +114,5 @@ export function useHistory() {
     [mode],
   )
 
-  return { items, problem, remove }
+  return { items, problem, remove, hasMore, loadMore: () => setOffset((n) => n + 200), retry: () => setAttempt((n) => n + 1) }
 }

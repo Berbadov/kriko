@@ -168,5 +168,5 @@ export function useCatalogs() {
     [act],
   )
 
-  return { catalogs, drafts, problem, busy, setEnabled, stepBack, install, discard }
+  return { catalogs, drafts, problem, busy, setEnabled, stepBack, install, discard, reload: load }
 }

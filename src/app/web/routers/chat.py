@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app import chatdata
+from app.agentledger import RequestConflict
 from app.web import livefeed, state
 from app.web.deps import get_app_state
 
@@ -45,7 +46,8 @@ class ThreadRequest(BaseModel):
 
 
 class MessageRequest(BaseModel):
-    text: str = Field(min_length=1, max_length=2000)
+    text: str = Field(min_length=1, max_length=16000)
+    client_request_id: str = Field(default="", max_length=200)
     harness: str = Field(default="", max_length=200)
     backend: Literal["harness", "local"] = "harness"
 
@@ -133,14 +135,22 @@ def post_message(
     text = body.text.strip()
     if not text:
         raise HTTPException(422, "a question needs words")
-    message = state.add_chat_message(conn, thread_id, role="reader", text=text)
+    payload = {"thread_id": thread_id, "text": text, "harness": body.harness, "backend": body.backend}
+    request_id = f"chat:{body.client_request_id}" if body.client_request_id else ""
+    try:
+        record_id = state.reserve_question(conn, request_id, payload)
+    except RequestConflict as error:
+        raise HTTPException(409, str(error)) from error
+    message = state.add_chat_message(conn, thread_id, role="reader", text=text, message_id=record_id)
     state.title_chat_thread(conn, thread_id, text)
     runner = request.app.state.jobs
-    job_id = runner.submit("chat_ask", {
+    params = {
         "thread_id": thread_id,
         "message_id": message["message_id"],
         "text": text,
         "harness": body.harness,
         "backend": body.backend,
-    })
+    }
+    job_id = (runner.submit("chat_ask", params, client_request_id=request_id)
+              if request_id else runner.submit("chat_ask", params))
     return {"message_id": message["message_id"], "job_id": job_id, "kind": "chat_ask"}
