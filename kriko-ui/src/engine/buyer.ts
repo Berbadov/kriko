@@ -240,3 +240,32 @@ export async function advise(mode: AdviceMode, lookupIds: string[], onWait: (mes
   if (ended.state !== 'succeeded') throw new EngineError(0, ended.message || 'The agent did not finish. Try again.')
   return (ended.result as { answer?: string } | null)?.answer ?? ''
 }
+
+/** How many things need the reader: a watched price that crossed, and purchases
+ *  whose "did it hold up?" has come round. Read every few minutes, so the rail
+ *  can say so without the For you panel being open. */
+export function useAttention(): number {
+  const { mode } = useEngine()
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    if (mode !== 'live') return
+    let live = true
+    const look = async () => {
+      try {
+        const [alerts, bought] = await Promise.all([get<{ items: unknown[] }>('/api/prices/alerts'), get<{ due: unknown[] }>('/api/buyer/purchases')])
+        if (live) setCount(alerts.items.length + bought.due.length)
+      } catch {
+        /* the engine is busy or gone; the next look tries again */
+      }
+    }
+    void look()
+    const timer = window.setInterval(() => void look(), 120000)
+    return () => {
+      live = false
+      window.clearInterval(timer)
+    }
+  }, [mode])
+
+  return count
+}

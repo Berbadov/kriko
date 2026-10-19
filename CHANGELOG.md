@@ -11,7 +11,9 @@ immutable; a correction is a newer version.
   gives that to your agent with every question, so the advice is for you and not
   for everyone. Nothing is added to a question until you say something.
 - **Kriko learns what you regret.** Press I bought this on a product page, or
-  add it under For you. A few weeks later Kriko asks if it held up. Your answers
+  add it under For you. A few weeks later Kriko asks if it held up, in a small
+  card on the next page it reads (once a day at most, one purchase at a time),
+  and a number on More in the app. You can answer or ignore it. Your answers
   go to your agent as lessons, so a brand that let you down is not recommended
   the same way twice.
 - **A price is judged against its own history.** Every product page you read
@@ -21,7 +23,9 @@ immutable; a correction is a newer version.
   sale at the normal price). It says it has too little history before it says
   anything it cannot support.
 - **Watch a price.** Press Watch this price and choose the figure. Kriko reads
-  the page again a few times a day and tells you when it falls: a mark on the
+  the page again a few times a day, on the engine's own clock (every half hour it
+  checks which watched pages are due, and a page is read at most every six
+  hours), whether or not a browser is open. It tells you when the price falls: a mark on the
   toolbar button, a card in the panel and, if you allow notifications on the
   extension's options page, a notification. A shop that draws its price with
   script cannot be read in the background, and the watch says so.
