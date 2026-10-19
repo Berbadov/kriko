@@ -169,7 +169,9 @@ def _event(event: dict, native: bool) -> tuple[str, str, dict | None]:
     """One streamed event as `(text, finish reason, usage)`, in either dialect."""
     if native:
         message = event.get("message")
-        text = str(message.get("content") or "") if isinstance(message, dict) else ""
+        # Ollama exposes deliberation separately on thinking models. It must
+        # never become user-visible text; only `content` is the answer.
+        text = _message_text(message) if isinstance(message, dict) else ""
         finish = str(event.get("done_reason") or "stop") if event.get("done") else ""
         counted = None
         if event.get("done") and ("prompt_eval_count" in event or "eval_count" in event):
@@ -179,9 +181,97 @@ def _event(event: dict, native: bool) -> tuple[str, str, dict | None]:
     choices = event.get("choices")
     choice = choices[0] if isinstance(choices, list) and choices and isinstance(choices[0], dict) else {}
     part = choice.get("delta") if isinstance(choice.get("delta"), dict) else choice.get("message")
-    text = str(part.get("content") or "") if isinstance(part, dict) else ""
+    # OpenAI-compatible servers often put chain-of-thought in a separate
+    # `reasoning_content` or `reasoning` field. Deliberately read only content.
+    text = (_message_text(part, allow_tool_call=part is choice.get("message"))
+            if isinstance(part, dict) else "")
     usage = event.get("usage")
     return text, str(choice.get("finish_reason") or ""), (usage if isinstance(usage, dict) else None)
+
+
+def _message_text(message: dict, *, allow_tool_call: bool = True) -> str:
+    content = message.get("content")
+    if isinstance(content, str) and content:
+        return content
+    if not allow_tool_call:
+        return ""
+    calls = message.get("tool_calls")
+    if not isinstance(calls, list):
+        return ""
+    # Preserve the request in a compact format that `chat.search_request` can
+    # decode. This keeps servers that return a native tool call from looking
+    # like an empty completion to the chat router.
+    for call in calls:
+        if not isinstance(call, dict):
+            continue
+        function = call.get("function")
+        if isinstance(function, dict) and function.get("name"):
+            return json.dumps({"name": function.get("name"),
+                               "arguments": function.get("arguments", {})},
+                              ensure_ascii=False)
+        if call.get("name"):
+            return json.dumps(call, ensure_ascii=False)
+    return ""
+
+
+_THINK_OPEN = "<think>"
+_THINK_CLOSE = "</think>"
+
+
+def _strip_reasoning(text: str) -> str:
+    """Drop inline `<think>…</think>` blocks used by local reasoning models."""
+    text = str(text or "")
+    out: list[str] = []
+    while text:
+        lowered = text.casefold()
+        if (start := lowered.find(_THINK_OPEN)) < 0:
+            out.append(text)
+            break
+        out.append(text[:start])
+        text = text[start + len(_THINK_OPEN):]
+        lowered = text.casefold()
+        if (end := lowered.find(_THINK_CLOSE)) < 0:
+            break  # an unfinished thought is never shown
+        text = text[end + len(_THINK_CLOSE):]
+    return "".join(out)
+
+
+class _ReasoningFilter:
+    """Incrementally pass answer text while withholding split `<think>` tags."""
+
+    def __init__(self):
+        self.pending = ""
+        self.thinking = False
+
+    def feed(self, text: str, *, final: bool = False) -> str:
+        text = self.pending + str(text or "")
+        self.pending = ""
+        out: list[str] = []
+        while text:
+            marker = _THINK_CLOSE if self.thinking else _THINK_OPEN
+            lowered = text.casefold()
+            at = lowered.find(marker)
+            if at >= 0:
+                if not self.thinking:
+                    out.append(text[:at])
+                text = text[at + len(marker):]
+                self.thinking = not self.thinking
+                continue
+            if final:
+                if not self.thinking:
+                    out.append(text)
+                break
+            # Keep a possible partial marker at the end until the next delta.
+            keep = min(len(marker) - 1, len(text))
+            while keep and not marker.startswith(text[-keep:].casefold()):
+                keep -= 1
+            if not self.thinking and keep:
+                out.append(text[:-keep])
+            elif not self.thinking:
+                out.append(text)
+            self.pending = text[-keep:] if keep else ""
+            break
+        return "".join(out)
 
 
 class _OwnerCancelled(BaseException):
@@ -539,7 +629,8 @@ class OpenAICompatSocket:
         self.last_finish_reason = finish
         if finish == "length":
             self.truncated += 1
-        text = str((message or {}).get("content") or "") if isinstance(message, dict) else ""
+        text = _message_text(message) if isinstance(message, dict) else ""
+        text = _strip_reasoning(text)
         if not text.strip():
             raise self._empty(finish)
         return text
@@ -572,13 +663,20 @@ class OpenAICompatSocket:
             body["max_tokens"] = self.max_tokens
         body["reasoning_effort"] = self.reasoning_effort or "none"
         pieces: list[str] = []
+        reasoning = _ReasoningFilter()
         finish, usage = "", None
         for piece, reason, counted in self._events(body):
             if piece:
-                pieces.append(piece)
-                on_text(piece)
+                answer = reasoning.feed(piece)
+                if answer:
+                    pieces.append(answer)
+                    on_text(answer)
             finish = reason or finish
             usage = counted or usage
+        tail = reasoning.feed("", final=True)
+        if tail:
+            pieces.append(tail)
+            on_text(tail)
         self.calls += 1
         _incomplete.pop(self.base_url.rstrip("/"), None)
         self._count({"usage": usage} if usage else {})
