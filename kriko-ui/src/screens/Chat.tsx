@@ -13,6 +13,7 @@ import { Icon } from '../ui/Icon'
 import { DitherSky } from '../ui/DitherSky'
 import { ProductCard } from '../ui/ProductCard'
 import { Markdown } from '../ui/Markdown'
+import { showDrawer } from '../ui/drawerEvents'
 
 /** Chat is the first page. Before a question it is a sky, a box and recent work.
  *  After a question the box drops to the bottom and the run fills the page. */
@@ -48,6 +49,7 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
               transition={m.tx.page}
             >
               <h1>What do you want to check?</h1>
+              <button className="btn" onClick={() => showDrawer('setup')}>Set up and verify Kriko</button>
             </motion.header>
           )}
           {thread && (
@@ -146,6 +148,12 @@ function AnswerActions({ text, onRetry }: { text: string; onRetry?: () => void }
   )
 }
 
+function TaskActions({ prompt }: { prompt: string }) {
+  if (/\b(?:create|author|make|file|save|import|update)\b.{0,60}\b(?:catalog|pack|research|quick look)/i.test(prompt)) return <div className="card-actions"><button className="btn" onClick={() => showDrawer('browse')}>Create or manage catalogs</button></div>
+  if (/\b(?:backup|restore|snapshot)\b/i.test(prompt)) return <button className="btn" onClick={() => showDrawer('backups')}>Backup and restore</button>
+  return null
+}
+
 function Thread({
   run,
   turns,
@@ -231,9 +239,11 @@ function Thread({
               )}
               <p className="you">{turn.prompt}</p>
             </div>
+            <TaskActions prompt={turn.prompt} />
             {!!turn.rows?.length && <Timeline historical run={{ ...run, status: turn.error ? 'failed' : 'done', rows: turn.rows, answer: turn.answer, prompt: turn.prompt }} />}
             {turn.answer && (
               <article className="answer">
+                {turn.rows?.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
                 <AnswerHead agent={turn.agent} />
                 <Markdown text={turn.answer} live={false} />
                 <AnswerActions text={turn.answer} onRetry={newest === turn ? () => onRetry(turn) : undefined} />
@@ -260,8 +270,10 @@ function Thread({
           </div>
         )}
         {run.status !== 'idle' && <Timeline run={run} />}
+        {run.status !== 'idle' && <TaskActions prompt={run.prompt} />}
         {run.answer && (
           <article className="answer rise">
+            {run.rows.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
             <AnswerHead agent={run.agent} />
             <Markdown text={run.answer} live={run.status === 'running'} />
             {run.status !== 'running' && (

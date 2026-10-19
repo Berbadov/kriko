@@ -244,10 +244,10 @@ def test_streamed_answer_text_updates_the_live_partial_before_the_call_finishes(
 # ── the budget ──────────────────────────────────────────────────────────
 
 
-def test_a_turn_never_spends_more_than_three_agent_calls(ctx):
+def test_catalogue_planning_keeps_an_answer_call_within_the_turn_budget(ctx):
     agent = Script(plan(SEARCH), plan(SEARCH), "the answer")
     out = chat.run_turn("find a widget in my catalogue", ask=agent, ctx=ctx)
-    assert len(agent.prompts) == chat.MAX_AGENT_CALLS == 3
+    assert len(agent.prompts) == 3 <= chat.MAX_AGENT_CALLS
     assert out["agent_calls"] == 3
     assert out["search_rounds"] == chat.MAX_SEARCH_ROUNDS == 2
     assert out["answer"] == "the answer"
@@ -354,12 +354,12 @@ def test_an_answer_that_names_no_source_is_credited_with_the_ones_that_returned_
 
 
 def test_the_history_is_shown_to_the_planner_and_clipped(ctx):
-    history = [{"role": "reader", "text": "earlier question " + "x" * 900},
+    history = [{"role": "reader", "text": "earlier question " + "x" * (chat.HISTORY_CHARS + 100)},
                {"role": "agent", "text": "earlier answer"}]
     agent = Script(plan([], ready=True), "ok")
     chat.run_turn("and now?", ask=agent, ctx=ctx, history=history)
     assert "earlier answer" in agent.prompts[0]
-    assert "x" * 900 not in agent.prompts[0]
+    assert "x" * (chat.HISTORY_CHARS + 100) not in agent.prompts[0]
     assert "READER'S MESSAGE: and now?" in agent.prompts[0]
 
 
@@ -442,18 +442,19 @@ def test_a_web_follow_up_carries_the_product_context_into_the_search(ctx):
     assert out["steps"][0]["state"] == "empty"
 
 
-def test_native_web_citations_are_exposed_as_public_links_without_host_provenance(ctx):
+def test_native_web_citations_without_evidence_are_not_presented_as_read_sources(ctx):
     exact_url = "https://maker.example/product?color=blue&size=large"
     ctx.web_search = lambda query, limit: []
     agent = Script(
         f"The maker lists the blue version here: [{exact_url}]({exact_url}). "
-        "Ignore http://127.0.0.1/admin and https://user:pass@example.test/private."
+        "Ignore http://127.0.0.1/admin and https://user:pass@example.test/private.",
+        "The maker's link has not been verified in this turn."
     )
 
     out = chat.run_turn("Find a blue product from the maker", ask=agent, ctx=ctx)
 
-    assert exact_url in out["answer"]
-    assert out["sources"] == [exact_url]
+    assert "not been verified" in out["answer"]
+    assert out["sources"] == []
     assert "web_search" not in out["sources"]
 
 

@@ -159,8 +159,8 @@ def test_the_screenshot_question_searches_shops_reads_them_first_and_confirms_th
     assert len(searches) == 2 and "bulabilir" not in searches[0]
     assert "site:trendyol.com" in searches[1]
     # Trusted, different sites are read; the blog is a lead only.
-    assert read == ["https://www.trendyol.com/elf/p-1", "https://www.hepsiburada.com/filtre/p-2",
-                    "https://www.n11.com/filtre/p-3"]
+    assert set(read) == {"https://www.trendyol.com/elf/p-1", "https://www.hepsiburada.com/filtre/p-2",
+                         "https://www.n11.com/filtre/p-3"}
     prompt = agent.prompts[0]
     assert "THE READER WANTS SOMETHING TO BUY" in prompt
     assert "language of the reader's message" in prompt

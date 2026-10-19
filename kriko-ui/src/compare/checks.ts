@@ -15,17 +15,22 @@ export interface Evidence {
 }
 
 export interface Risk {
+  key?: string
   title: string
   body: string
   level: Level
   disputed: boolean
   sources: Evidence[]
+  applicability?: string
+  advice?: string
 }
 
 export interface Spec {
+  key?: string
   label: string
   value: string
   source: string
+  quote?: string
 }
 
 export interface Check {
@@ -34,6 +39,12 @@ export interface Check {
   category: string
   specs: Spec[]
   risks: Risk[]
+  checkedAt?: string
+  assumed?: string
+  coverage?: Record<string, unknown>
+  diagnostic?: string
+  context?: Record<string, unknown>
+  contextUnits?: Record<string, string>
 }
 
 export type Loaded = { status: 'loading' } | { status: 'ready'; check: Check } | { status: 'error'; message: string }
@@ -58,10 +69,14 @@ const hostOf = (url: string) => {
 
 function riskFrom(claim: Record<string, unknown>): Risk {
   return {
+    key: text(claim.concept_id) || text(claim.problem_key),
     title: text(claim.title),
     body: text(claim.body),
     level: levelOf(text(claim.severity)),
     disputed: claim.disputed === true,
+    applicability: typeof claim.applicability === 'string' ? claim.applicability : claim.applicability && typeof claim.applicability === 'object'
+      ? [text((claim.applicability as Record<string, unknown>).status), text((claim.applicability as Record<string, unknown>).reason)].filter(Boolean).join(': ') : '',
+    advice: text(claim.advice),
     sources: list(claim.sources)
       .map((s) => {
         const url = text(s.url)
@@ -73,6 +88,7 @@ function riskFrom(claim: Record<string, unknown>): Risk {
 
 /** The product a check matched: the subject that owns the most claims. */
 function matchedSubject(response: Record<string, unknown>): string {
+  if (list(response.subjects).length > 1 || (Array.isArray(response.subjects) && response.subjects.length > 1)) return ''
   let best = ''
   let most = -1
   for (const s of Array.isArray(response.subjects) ? (response.subjects as unknown[]) : []) {
@@ -90,7 +106,10 @@ export async function loadCheck(lookupId: string): Promise<Check> {
   const stored = await get<Record<string, unknown>>(`/api/lookup/${seg(lookupId)}`)
   const response = (stored.response ?? {}) as Record<string, unknown>
   const risks = list(response.claims).map(riskFrom).filter((r) => r.title)
-  const specs: Spec[] = []
+  const specs: Spec[] = list(response.specs).map((s) => ({
+    key: text(s.key), label: text(s.name) || text(s.label), value: text(s.value),
+    source: text(s.url) || text(s.source_url), quote: text(s.quote),
+  })).filter((s) => s.label && s.value)
   const subject = matchedSubject(response)
   if (subject) {
     // A product that cannot be read leaves the column without specifications, never without its risks.
@@ -100,18 +119,24 @@ export async function loadCheck(lookupId: string): Promise<Check> {
         const value = text(a.value_text)
         if (a.is_identity === true || !value.trim()) continue
         const unit = text(a.unit)
-        specs.push({ label: text(a.label) || text(a.key), value: unit ? `${value} ${unit}` : value, source: text(a.source_url) })
+        const label = text(a.label) || text(a.key)
+        if (!specs.some((s) => s.label.toLowerCase() === label.toLowerCase())) specs.push({ key: text(a.key), label, value: unit ? `${value} ${unit}` : value, source: text(a.source_url) })
       }
     } catch {
       /* the risks are still here */
     }
   }
-  return { lookupId, name: text(stored.label) || 'Product', category: text(stored.category), specs, risks }
+  const diagnostic = response.diagnostic as Record<string, unknown> | undefined
+  return { lookupId, name: text(stored.label) || 'Product', category: text(stored.category) || text(response.category), specs, risks,
+    checkedAt: text(stored.created_at), assumed: text(response.assumed),
+    coverage: (response.coverage ?? {}) as Record<string, unknown>, diagnostic: text(diagnostic?.message),
+    context: (response.context ?? {}) as Record<string, unknown>, contextUnits: (response.context_units ?? {}) as Record<string, string> }
 }
 
 // ---- lining up ----
 
 export interface RiskRow {
+  key?: string
   title: string
   cells: (Risk | null)[]
   /** Not every column carries it, or they do not agree on it. */
@@ -126,16 +151,18 @@ export interface SpecRow {
 
 /** One row for each risk title that any column carries. */
 export function riskRows(columns: Check[]): RiskRow[] {
-  const titles: string[] = []
-  for (const c of columns) for (const r of c.risks) if (!titles.includes(r.title)) titles.push(r.title)
-  return titles.map((title) => {
-    const cells = columns.map((c) => c.risks.find((r) => r.title === title) ?? null)
+  const titles = new Map<string, string>()
+  for (const c of columns) for (const r of c.risks) if (!titles.has(riskKey(r))) titles.set(riskKey(r), r.title)
+  return [...titles].map(([key, title]) => {
+    const cells = columns.map((c) => c.risks.find((r) => riskKey(r) === key) ?? null)
     const found = cells.filter((c): c is Risk => c !== null)
     const differs =
-      found.length !== cells.length || found.some((r) => r.level !== found[0].level || r.disputed !== found[0].disputed)
-    return { title, cells, differs }
+      found.length !== cells.length || found.some((r) => r.level !== found[0].level || r.disputed !== found[0].disputed || r.applicability !== found[0].applicability || r.body !== found[0].body)
+    return { key, title, cells, differs }
   })
 }
+
+export const riskKey = (risk: Risk) => risk.key || risk.title.trim().toLowerCase().replace(/\s+/g, ' ')
 
 /** One row for each label that any column states. */
 export function specRows(columns: Check[]): SpecRow[] {
@@ -144,9 +171,18 @@ export function specRows(columns: Check[]): SpecRow[] {
   return labels.map((label) => {
     const cells = columns.map((c) => c.specs.find((s) => s.label === label) ?? null)
     const found = cells.filter((c): c is Spec => c !== null)
-    const differs = found.length !== cells.length || found.some((s) => s.value !== found[0].value)
+    const differs = found.length !== cells.length || found.some((s) => comparableValue(s.value) !== comparableValue(found[0].value))
     return { label, cells, differs }
   })
+}
+
+/** Normalize only known dimensions; ambiguous quantities keep their wording. */
+export function comparableValue(value: string): string {
+  const match = value.trim().match(/^(-?\d+(?:\.\d+)?)\s*(kg|g|mm|cm|m|wh|kwh|w|kw|ml|l)$/i)
+  if (!match) return value.trim().toLowerCase()
+  const units: Record<string, [string, number]> = { kg: ['mass', 1000], g: ['mass', 1], mm: ['length', 1], cm: ['length', 10], m: ['length', 1000], wh: ['energy', 1], kwh: ['energy', 1000], w: ['power', 1], kw: ['power', 1000], ml: ['volume', 1], l: ['volume', 1000] }
+  const [dimension, multiplier] = units[match[2].toLowerCase()]
+  return `${dimension}:${Number((Number(match[1]) * multiplier).toPrecision(12))}`
 }
 
 // ---- demo ----
