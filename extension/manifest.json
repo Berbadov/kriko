@@ -5,6 +5,7 @@
     "version": "0.4.3",
     "minimum_chrome_version": "102",
     "permissions": ["activeTab", "storage", "scripting", "alarms"],
+    "optional_permissions": ["notifications"],
     "optional_host_permissions": ["https://*/*"],
     "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
     "background": {

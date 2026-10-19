@@ -132,6 +132,16 @@ def reader(timeout: float = TIMEOUT):
     return fetch
 
 
+def markup(url: str, timeout: float = TIMEOUT, *, check_cancelled=None) -> str:
+    """The page's raw markup by the plain fetch alone, "" when it will not come.
+
+    No later rung: this is for a page Kriko re-reads in the background on the
+    reader's behalf (a price watch), and a background job must never start a
+    browser or ask a hosted reader to fetch a shop on their behalf.
+    """
+    return _download(url, timeout, check_cancelled=check_cancelled, allow_fallback=False)
+
+
 def published_at(markup: str) -> str:
     """When the page says it was published, or "" when it does not say.
 
