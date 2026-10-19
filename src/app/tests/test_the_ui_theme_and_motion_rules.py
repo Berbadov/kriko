@@ -76,11 +76,13 @@ def test_a_raw_colour_outside_the_theme_is_one_of_the_few_that_must_not_follow_i
     allowed_per_file = {
         "styles/tokens.css": None,  # the palette itself
         "ui/DitherSky.tsx": None,  # the sky's own colours, which no theme changes
+        "ui/AgentMark.tsx": 9,  # each agent's own brand tone, which no theme changes
         "styles/shell.css": 3,  # the switch knob and its shadow, the drawer scrim
         "styles/chat.css": 6,  # a mask, and white text and its shadow over the hero sky
         "styles/compare.css": 1,  # white on a critical fill
         "styles/activity.css": 1,  # ink on the green check
         "ui/Rail.tsx": 1,  # the logo's own white, swapped for the text colour
+        "ui/Starting.tsx": 1,  # the same logo white, swapped the same way
     }
     pattern = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
     seen: dict[str, int] = {}

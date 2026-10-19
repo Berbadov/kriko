@@ -23,12 +23,13 @@ ROUTES = (
 def test_a_delete_is_wired_after_the_question():
     assert RAIL.count("void remove(row.id)") == 1
     assert RAIL.index("Delete?") < RAIL.index("void remove(row.id)")
-    assert "onClick={() => setAsking(row.id)}" in RAIL
+    # The row's trash button only opens the question; the delete is the second press.
+    assert "setDoing({ id: row.id, what: 'delete' })" in RAIL
 
 
 def test_a_failed_delete_is_shown_not_swallowed():
     assert "setProblem(error instanceof Error" in THREADS
-    assert "{problem &&" in RAIL
+    assert "{(problem || note) &&" in RAIL
 
 
 def test_opening_a_chat_only_reads():
