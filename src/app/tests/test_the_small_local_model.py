@@ -155,6 +155,55 @@ def test_honest_text_is_left_alone():
     assert pagereader.unmangle(honest) == honest
 
 
+def test_inline_thinking_is_removed_from_the_final_reply():
+    one, _ = _socket()
+    one._post = lambda _body: {
+        "choices": [{"message": {"content": "Before <think>private reasoning</think> answer"},
+                     "finish_reason": "stop"}], "usage": {}}
+    assert one("prompt") == "Before  answer"
+
+
+def test_separate_reasoning_fields_are_not_read_as_answer_text():
+    event = {"choices": [{"delta": {"reasoning_content": "private thoughts"},
+                          "finish_reason": ""}]}
+    assert local_inference._event(event, native=False)[0] == ""
+
+
+def test_stream_hides_thinking_even_when_the_tags_cross_deltas():
+    one, _ = _socket()
+    events = iter([("start <thi", "", None),
+                   ("nk>private", "", None),
+                   (" reasoning</think>answer", "stop", None)])
+    one._events = lambda _body: events
+    seen = []
+    assert one.stream("prompt", seen.append) == "start answer"
+    assert "private" not in "".join(seen)
+
+
+def test_an_unclosed_thinking_tail_is_dropped_from_final_and_streamed_replies():
+    one, _ = _socket()
+    one._post = lambda _body: {
+        "choices": [{"message": {"content": "answer <think>unfinished thought"},
+                     "finish_reason": "length"}], "usage": {}}
+    assert one("prompt") == "answer "
+
+    one, _ = _socket()
+    one._events = lambda _body: iter([("answer <think>unfinished thought", "length", None)])
+    seen = []
+    assert one.stream("prompt", seen.append) == "answer "
+    assert "unfinished" not in "".join(seen)
+
+
+def test_tool_call_completion_is_decoded_for_the_chat_search_router():
+    one, _ = _socket()
+    one._post = lambda _body: {
+        "choices": [{"message": {"tool_calls": [{"function": {
+            "name": "web_search", "arguments": '{"query":"latest widget price"}'}}]},
+                     "finish_reason": "tool_calls"}], "usage": {}}
+    assert json.loads(one("prompt")) == {
+        "name": "web_search", "arguments": '{"query":"latest widget price"}'}
+
+
 def test_one_bad_line_does_not_cost_the_good_ones():
     text = "fine é\nÃA stays\ntriggerâ€”it"
     got = pagereader.unmangle(text).splitlines()
