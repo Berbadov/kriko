@@ -76,3 +76,22 @@ def test_budget_need_actually_reads_sources_before_answering():
     assert "The documented price is 800 euros" in prompts[0]
     assert out["sources"] == ["web_search", "https://maker.example/spec"]
     assert out["search_rounds"] == 1
+
+
+@pytest.mark.parametrize("message", [
+    "Megane 4 1.5 blue dci 2020 model icin yag ve filtre seti",
+    "Golf 7 1.6 tdi 2016 brake pads",
+    "iPhone 15 Pro case 6.1 inch",
+])
+def test_a_product_named_without_a_verb_is_a_buying_request(message):
+    assert chat.route_message(message) == "web"
+
+
+@pytest.mark.parametrize("message", [
+    "What is 2 + 2 in binary",
+    "Explain how TCP handshakes work in 3 steps",
+    "Write a python function that sums 3 numbers",
+    "Why did Rome fall in 476?",
+])
+def test_a_question_or_a_task_with_a_number_stays_chat(message):
+    assert chat.route_message(message) == "chat"

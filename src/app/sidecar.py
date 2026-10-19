@@ -179,6 +179,16 @@ def also_reserve(host: str, port: int):
         return None
 
 
+def _prune_engines() -> None:
+    try:
+        from app import engineupdate
+        from app.version import app_version
+
+        engineupdate.prune(app_version())
+    except Exception:  # noqa: BLE001 - housekeeping is never why the engine fails
+        pass
+
+
 def main(argv=None) -> int:
     import uvicorn
 
@@ -321,6 +331,9 @@ def main(argv=None) -> int:
     # Same route, same reason: a fact about this process's *supervision*, not
     # a configuration choice, so it travels the same way the port bind does.
     os.environ["KRIKO_SUPERVISED"] = "1" if args.supervised else "0"
+    # Engine folders an update left that can never be started again, removed off
+    # the start path. Best effort: a folder that will not go is tried next start.
+    threading.Thread(target=_prune_engines, name="prune-engines", daemon=True).start()
 
     # `sockets=[sock]`, not host/port and not `fd=`. Not host/port because
     # uvicorn must not rebind — the port we announced and the port it serves

@@ -126,6 +126,11 @@ jobs:
             - name: The frozen sidecar answers
               run: python packaging/smoke_sidecar.py "dist/kriko-engine/kriko-sidecar.exe"
 
+            # The engine on its own, for an installed Kriko to update itself
+            # with: no installer, and the old engine is never written to.
+            - name: Pack the engine for in-app updates
+              run: python packaging/make_engine_zip.py --engine dist/kriko-engine --out kriko-ui/builds --version "$VERSION"
+
             - name: Place the sidecar
               run: |
                   cp dist/kriko-engine/kriko-sidecar.exe kriko-ui/src-tauri/binaries/kriko-sidecar-x86_64-pc-windows-msvc.exe
@@ -174,7 +179,7 @@ jobs:
                       "$bin/OpenSERP.exe", "kriko-ui/src-tauri/binaries/_internal", `
                       "kriko-ui/src-tauri/third-party/OpenSERP-LICENSE.txt" `
                       -DestinationPath "kriko-ui/builds/kriko-$env:VERSION-win64-portable.zip" -Force
-                  $files = @("kriko-ui/builds/kriko-$env:VERSION-x86_64-setup.exe", "kriko-ui/builds/kriko-$env:VERSION-win64-portable.zip")
+                  $files = @("kriko-ui/builds/kriko-$env:VERSION-x86_64-setup.exe", "kriko-ui/builds/kriko-$env:VERSION-win64-portable.zip", "kriko-ui/builds/kriko-engine-$env:VERSION-win64.zip")
                   $lines = foreach ($file in $files) {
                       $item = Get-Item -LiteralPath $file
                       $digest = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -188,6 +193,7 @@ jobs:
                   path: |
                       kriko-ui/builds/*-setup.exe
                       kriko-ui/builds/*.zip
+                      kriko-ui/builds/engine.json
                       kriko-ui/builds/SHA256SUMS.txt
                   if-no-files-found: error
 
@@ -274,12 +280,16 @@ jobs:
                   mkdir -p release
                   cp "artifacts/kriko-windows/kriko-$VERSION-x86_64-setup.exe" release/
                   cp "artifacts/kriko-windows/kriko-$VERSION-win64-portable.zip" release/
+                  cp "artifacts/kriko-windows/kriko-engine-$VERSION-win64.zip" release/
+                  cp artifacts/kriko-windows/engine.json release/
                   cp artifacts/kriko-windows/SHA256SUMS.txt release/
                   cp artifacts/kriko-packs/packs.json release/
                   find artifacts/kriko-packs -maxdepth 1 -type f -name '*.kpack' -exec cp {} release/ \;
 
                   test -s "release/kriko-$VERSION-x86_64-setup.exe"
                   test -s "release/kriko-$VERSION-win64-portable.zip"
+                  test -s "release/kriko-engine-$VERSION-win64.zip"
+                  test -s release/engine.json
                   test -s release/packs.json
                   test -n "$(find release -maxdepth 1 -type f -name '*.kpack' -print -quit)"
                   (

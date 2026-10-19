@@ -1,6 +1,7 @@
 mod engine;
 mod shell;
 mod update;
+mod versions;
 
 use std::time::Duration;
 

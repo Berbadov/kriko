@@ -3,6 +3,94 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### Unreleased
+
+- **Kriko knows what you need.** Under More, For you, say what you buy and
+  use things for, your budget, what you must have, what you avoid and distrust,
+  and how much price, quality, lasting and repairability matter to you. Kriko
+  gives that to your agent with every question, so the advice is for you and not
+  for everyone. Nothing is added to a question until you say something.
+- **Kriko learns what you regret.** Press I bought this on a product page, or
+  add it under For you. A few weeks later Kriko asks if it held up, in a small
+  card on the next page it reads (once a day at most, one purchase at a time),
+  and a number on More in the app. You can answer or ignore it. Your answers
+  go to your agent as lessons, so a brand that let you down is not recommended
+  the same way twice.
+- **A price is judged against its own history.** Every product page you read
+  adds a price to a history kept on this computer. The panel says if this is the
+  lowest Kriko has seen, the usual price or a high one, draws the line, and says
+  when a discount does not hold up (an old price that was never charged, or a
+  sale at the normal price). It says it has too little history before it says
+  anything it cannot support.
+- **Watch a price.** Press Watch this price and choose the figure. Kriko reads
+  the page again a few times a day, on the engine's own clock (every half hour it
+  checks which watched pages are due, and a page is read at most every six
+  hours), whether or not a browser is open. It tells you when the price falls: a mark on the
+  toolbar button, a card in the panel and, if you allow notifications on the
+  extension's options page, a notification. A shop that draws its price with
+  script cannot be read in the background, and the watch says so.
+- **A listing is checked against itself.** The panel shows who sells it (a
+  marketplace listing with no named seller, a payment method scams use), how
+  the rating looks once few ratings are discounted, and which big words the page
+  does not back up (waterproof with no rating, original from a seller no one
+  vouches for, certified with no certificate).
+- **Kriko picks.** In Compare, Decide for me ranks your products for you from
+  their known risks, price history, seller, claims and what you told Kriko, and
+  names one, with what it costs you, what would change the pick and what to check
+  first. Your agent can then say it well, make a sceptic, a bargain hunter and a
+  durability fanatic argue it, work out the cost of owning each over three years,
+  or say if now is the time. The pick is the same whichever agent is connected.
+- **A look before you pay.** On a cart or payment page Kriko says if the item
+  is not the one you researched, the same product is cheaper at a shop it has
+  seen, the page asks for a payment method scams use, or shows no return terms.
+  It can be turned off on the extension's options page.
+- **Results pages show what breaks your needs.** Once you have told Kriko what
+  you need, products on a results page that mention what you avoid, or cost more
+  than your budget, carry a small mark. It can be turned off on the options page.
+- **A relay for your phone, and for watching while the computer is off.**
+  `server/` holds a small server you run yourself (a few dollars a month). Under
+  More, For you, Phone and relay, connect to it and pair a phone with a code. Your
+  profile, purchases and watches are kept on it as copies sealed on your devices
+  with a key it never receives, so a phone and this computer agree. For a watch
+  you turn on in the cloud, the relay reads the page itself and pushes an alert to
+  your phone through ntfy when the price crosses your target. One relay serves one
+  reader (the first device with the relay's setup word claims it). It has to be told
+  that page: hashing an address cannot hide it from whoever fetches it, so it is
+  per watch, kept encrypted at rest, and you can keep the product's name from it.
+  Nothing is sent to a relay you have not connected, and a watch you leave off
+  stays on this computer.
+- **See and forget what is kept.** For you lists everything Kriko remembers
+  about you as a buyer, where it is, and a button to forget each part.
+- **The engine updates without the installer.** Update now used to run the whole
+  installer over a running Kriko, and when that went wrong the cure was an
+  uninstall and a fresh install. A release now also carries the engine alone.
+  Kriko unpacks it into a folder of its own, checks it against the release's
+  checksums, and restarts only the engine. The window stays open, nothing is laid
+  over anything, and the installer is not run. If the new engine cannot start,
+  Kriko sets it aside and starts the engine that came with the app, so a bad
+  update costs a restart, not a reinstall. A portable copy gets engine updates
+  too. A release that needs a newer app than yours still offers the installer.
+- **Uninstall removes the staged engines too.** They live in
+  `%LOCALAPPDATA%\Kriko\engines`. An install keeps one that is newer than the
+  engine it carries.
+- **The local model starts Ollama for you.** Asking the Local model a question
+  while Ollama is installed and closed no longer fails with "Nothing answers at
+  127.0.0.1:11434". Kriko starts Ollama, waits for it, and runs the question.
+  Nothing is started for a reader who did not pick the Local model, and a server
+  you pointed Kriko at yourself is left alone.
+- **Agents advise.** Chat, the web answer, follow-up questions and Compare now
+  tell the agent to name specific products or part numbers with a caution,
+  and never to answer with only search terms, "check the specifications" or "I
+  cannot recommend a product". A bare product phrase such as
+  "Megane 4 1.5 blue dci 2020 yag ve filtre seti" is a buying request and goes
+  to the web, where before it was answered from memory.
+- **Learn this page is offered where a page cannot be read.** A page that
+  Kriko could not read on a site it has an adapter for used to show "Unable to
+  read this page" and nothing else. One refused selector in an adapter could
+  stop the whole read; each reader now fails alone and the rest still answer. The
+  panel shows what went wrong and a Learn this page button under it, and
+  re-reads the page when it has learned it.
+
 ### 0.2.5
 
 - **An update now says what version it is.** After 0.2.4 was installed over

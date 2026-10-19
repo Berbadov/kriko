@@ -40,7 +40,9 @@ from app.web.routers import (
     analyze,
     appupdate,
     bench,
+    buyer,
     chat,
+    cloud,
     compare,
     compareq,
     control,
@@ -58,6 +60,7 @@ from app.web.routers import (
     marks,
     operations,
     packs,
+    prices,
     products,
     queue,
     prefs as prefs_router,
@@ -247,9 +250,28 @@ async def lifespan(app: FastAPI):
         except Exception:
             log.warning("could not start the weekly pack update", exc_info=True)
 
+    # Watched pages are re-read when the app opens and then on the engine's own
+    # clock (`app/pricescheduler.py`), as jobs. Off under test with the pack
+    # update (KRIKO_NO_PACK_AUTOUPDATE): both reach the network, and a test that
+    # enters a lifespan must not.
+    stop_price_clock = None
+    if not os.environ.get("KRIKO_NO_PACK_AUTOUPDATE"):
+        try:
+            from app import pricescheduler
+
+            sweeper = pricescheduler.Sweeper(
+                app.state.settings.app_state_path,
+                lambda: app.state.jobs.submit("price_sweep", {}))
+            sweeper.tick()
+            stop_price_clock = pricescheduler.start(sweeper)
+        except Exception:
+            log.warning("could not start the watched-page check", exc_info=True)
+
     try:
         yield
     finally:
+        if stop_price_clock is not None:
+            stop_price_clock()
         app.state.jobs.shutdown()
         from app.providers import codex_profile, resident
         try:
@@ -328,13 +350,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         local_models.router,
         machine.router,
         bench.router,
+        buyer.router,
         chat.router,
+        cloud.router,
         compare.router,
         compareq.router,
         queue.router,
         products.router,
         marks.router,
         operations.router,
+        prices.router,
         sites.router,
         terminal.router,
     ):

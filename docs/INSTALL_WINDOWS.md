@@ -63,6 +63,14 @@ Use **Quit** in the system tray to stop the engine completely. Closing the windo
 can leave it running for the browser extension. Uninstalling keeps saved data;
 export a snapshot from **More → Backup and restore** before manually deleting it.
 
+> **An update fails.**
+> Kriko still runs. Most updates replace only the engine: Kriko unpacks it into
+> `%LOCALAPPDATA%\Kriko\engines`, restarts the engine and keeps the window open.
+> If the new engine cannot start, Kriko sets it aside and starts the engine that
+> came with the app. When a release changes the app itself, Update now runs the
+> installer instead. If that fails, select **Quit** in the tray menu and start the
+> installer again. You never need to uninstall first.
+
 ## Run from source
 
 Python 3.13+ is required. From a checkout, run `tools/setup.sh`, then:
