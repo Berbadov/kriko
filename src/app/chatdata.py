@@ -38,6 +38,7 @@ import threading
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from collections.abc import Callable
 from dataclasses import dataclass
+from threading import Lock
 from urllib.parse import urlsplit
 
 from app import exactfind
@@ -840,13 +841,15 @@ def _fit_web_results(rows: list[dict]) -> tuple[list[dict], bool]:
     return result, truncated
 
 
-def _read_web_page(ctx: Context, url: str) -> tuple[str, str]:
+def _read_web_page(ctx: Context, url: str, *, on_start: Callable[[], None] | None = None) -> tuple[str, str]:
     """Read one selected result; text remains untrusted evidence, not instructions."""
     checker = getattr(ctx.web_read, "check_cancelled", None)
     if callable(checker):
         checker()
     if ctx.web_read is None:
         return "", "no page reader is configured"
+    if on_start is not None:
+        on_start()
     try:
         fetched = ctx.web_read(url)
     except Exception as exc:  # noqa: BLE001 - one unreadable page need not drop its neighbours
@@ -959,6 +962,8 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
 
     indexes = list(range(min(WEB_PAGES_CAP, len(results))))
     reader_cancelled = threading.Event()
+    started_reads: set[int] = set()
+    started_lock = Lock()
 
     def check_reader_cancelled() -> None:
         if reader_cancelled.is_set():
@@ -974,7 +979,14 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
             pass
 
     def read_at(index: int) -> tuple[int, str, str]:
-        text, published_at = _read_web_page(ctx, results[index]["url"])
+        def mark_started() -> None:
+            with started_lock:
+                if reader_cancelled.is_set():
+                    raise RuntimeError("chat web page read cancelled")
+                started_reads.add(index)
+
+        text, published_at = _read_web_page(
+            ctx, results[index]["url"], on_start=mark_started)
         return index, text, published_at
 
     executor = ThreadPoolExecutor(max_workers=WEB_PAGES_CAP,
@@ -1037,8 +1049,19 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
             if on_page:
                 row["confirmed_codes"] = on_page
 
+    with started_lock:
+        attempted_indexes = set(started_reads)
+    for index, row in enumerate(results):
+        row["read_attempted"] = index in attempted_indexes
+    search_results = [
+        {"title": row["title"], "url": row["url"],
+         "page_read": bool(row["page_read"]),
+         "read_attempted": bool(row["read_attempted"])}
+        for row in results
+    ]
     results, context_truncated = _fit_web_results(results)
     read_count = sum(bool(row["page_read"]) for row in results)
+    pages_attempted = len(attempted_indexes)
     note = (f"{len(results)} web result(s); fetched {read_count} page(s). "
             "Search titles and snippets are leads, not verified page evidence.")
     trusted = exactfind.trusted_count(results)
@@ -1046,7 +1069,8 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
     if context_truncated:
         note += " Some leads or excerpts were shortened to fit the context limit."
     extra = {"identifiers": codes} if purchase else {}
-    return _result(results, note,
+    return _result(results, note, search_results=search_results,
+                   pages_attempted=pages_attempted, pages_read=read_count,
                    truncated=len(hits) > cap or context_truncated, **extra)
 
 
@@ -1209,6 +1233,15 @@ def run(name: str, ctx: Context, args: dict | None = None) -> dict:
     }
     if out.get("identifiers"):
         result["identifiers"] = _tidy(list(out["identifiers"]), flags)
+    if name == "web_search":
+        result["search_results"] = _tidy(list(out.get("search_results") or []), flags)
+        for count in ("pages_attempted", "pages_read"):
+            if count in out:
+                try:
+                    result[count] = max(0, int(out[count]))
+                except (TypeError, ValueError):
+                    pass
+        result["truncated"] = result["truncated"] or flags[0]
     return result
 
 

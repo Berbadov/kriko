@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app import chatdata
-from app.web import state
+from app.web import livefeed, state
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -101,7 +101,16 @@ def delete_thread(thread_id: str, conn=Depends(get_app_state)) -> dict:
 def list_messages(thread_id: str, conn=Depends(get_app_state)) -> dict:
     if state.get_chat_thread(conn, thread_id) is None:
         raise HTTPException(404, f"no conversation {thread_id}")
-    out: dict[str, object] = {"items": state.chat_messages(conn, thread_id)}
+    messages = state.chat_messages(conn, thread_id)
+    # Logs remain in the owning job. Derive events when a saved thread opens
+    # rather than duplicating a mutable transcript in each message row.
+    logs = {row["message_id"]: row["log"] for row in conn.execute(
+        "SELECT m.message_id, j.log FROM chat_messages m JOIN jobs j ON j.job_id = m.job_id"
+        " WHERE m.thread_id = ? AND m.role = 'agent'", (thread_id,))}
+    for message in messages:
+        if message["message_id"] in logs:
+            message["feed"] = livefeed.feed_of(logs[message["message_id"]] or "")
+    out: dict[str, object] = {"items": messages}
     active = _active_chat_job(conn, thread_id)
     if active:
         out["job_id"] = active
