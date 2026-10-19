@@ -61,9 +61,15 @@ def trust_lookup(conn, pack_ids) -> dict[str, float]:
     weights = dict(DEFAULT_TIER_TRUST)
     if pack_ids:
         marks = ",".join("?" * len(pack_ids))
+        # `local` rows are visited last so they overwrite a pack's weight, the
+        # same precedence `tier_lookup` states in its ORDER BY. Without this the
+        # winner was whichever row the planner happened to return last, while
+        # the module comment above promises "the reader's local rows win".
         for row in conn.execute(
                 f"SELECT tier, trust FROM tier_trust"
-                f" WHERE pack_id IN ({marks}) OR pack_id = 'local'", tuple(pack_ids)):
+                f" WHERE pack_id IN ({marks}) OR pack_id = 'local'"
+                f" ORDER BY CASE WHEN pack_id = 'local' THEN 1 ELSE 0 END",
+                tuple(pack_ids)):
             weights[row["tier"]] = float(row["trust"])
     return weights
 
@@ -179,7 +185,13 @@ def relevance(*, severity: str, condition_weight: float, detection: str,
         score *= author_confidence
     if detection == "visual":
         score *= VISUAL_DETECTION_FACTOR
-    score *= trust or 1.0
+    # Zero must stay zero. `score_sources` returns 0.0 when every cited row
+    # refutes the claim (`best` never leaves its initial 0.0) and 1.0 when a
+    # claim carries no sources at all, so `trust or 1.0` — the old spelling —
+    # collapsed "nothing supports this" into "trust unknown" and ranked a fully
+    # contradicted claim level with a corroborated one. Only a genuine None
+    # means unknown now.
+    score *= 1.0 if trust is None else trust
     if disputed:
         score *= DISPUTE_FACTOR
     return score * pack_weight

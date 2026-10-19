@@ -9,6 +9,7 @@ handled one hop at a time so a redirect cannot skip that check.
 from __future__ import annotations
 
 import ipaddress
+import io
 import socket
 import urllib.error
 import urllib.parse
@@ -110,6 +111,29 @@ def reader(timeout: float = 5.0, *, check_cancelled=None):
                         return Fetched("")
                     else:
                         content_type = (response.headers.get_content_type() or "").lower()
+                        if content_type == "application/pdf":
+                            from pypdf import PdfReader
+                            raw = response.read(MAX_BYTES + 1)
+                            if len(raw) > MAX_BYTES:
+                                return Fetched("")
+                            try:
+                                document = PdfReader(io.BytesIO(raw), strict=False)
+                                if document.is_encrypted:
+                                    return Fetched("")
+                                pages = []
+                                count = 0
+                                for number, page in enumerate(document.pages[:80], 1):
+                                    if checker is not None:
+                                        checker()
+                                    piece = (page.extract_text() or "")[:30000]
+                                    if piece.strip():
+                                        pages.append(f"Page {number}:\n{piece}")
+                                    count += len(piece)
+                                    if count >= 200000:
+                                        break
+                                return Fetched("\n\n".join(pages))
+                            except Exception:
+                                return Fetched("")
                         if content_type and not (
                             content_type.startswith("text/")
                             or "html" in content_type

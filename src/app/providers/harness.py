@@ -1964,7 +1964,9 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
 #: Appended to the pack's brief. The brief already says what to look for and
 #: what is worth keeping — it is written for an agent holding Kriko's MCP
 #: tools, so the only thing it needs replacing is the *reporting* step.
-CONTRACT = """
+from app.workcontract import WORK_CONTRACT
+
+CONTRACT = WORK_CONTRACT + """
 ## What you may use (this run)
 
 **Only the web search and web fetch tools.** Do not read files, list
@@ -2236,7 +2238,14 @@ def _why(envelope: dict, stdout: str, stderr: str) -> str:
     # Deduplicated in order: `subtype` and `errors[0]` are often the same
     # sentence twice, and a reader reading a defect report should not have to
     # wonder whether that means two things went wrong.
-    return " -- ".join(dict.fromkeys(parts))[:2000] or "no output"
+    #
+    # Redacted because this string is raised into the job's state and served to
+    # the panel, and a CLI's stderr is where an auth failure quotes the key back.
+    # `agentledger` owns the redactor and already applied it to what *it* stores;
+    # this is the same decision on the other side of the boundary.
+    from app.agentledger import redact
+
+    return redact(" -- ".join(dict.fromkeys(parts))[:2000], limit=2000) or "no output"
 
 
 # ── what the run is doing, while it does it ──────────────────────────────────
@@ -4210,6 +4219,13 @@ class HarnessResearcher(AgentResearcher):
         self._streamed_blocks = {}
         self._ready_ms = None
         command = unshim(command)
+        # A `.cmd` harness runs through `cmd.exe`, and this argv carries the
+        # reader's own model and effort strings. Checked here, once, rather than
+        # inline in the `shell=` expression: the guard is a statement about the
+        # command, and it must be impossible to read this call and miss it.
+        needs_shell = self._needs_shell(command)
+        if needs_shell:
+            self._refuse_shell_injection(command)
         # See `_new_job_object`: on Windows this is what lets a cancel reach
         # a descendant `taskkill /T` cannot, because its parent already
         # exited. `None` on POSIX, where `start_new_session`/`killpg` already
@@ -4237,7 +4253,7 @@ class HarnessResearcher(AgentResearcher):
                 bufsize=1,
                 env={**child_env(extra_dirs=(str(Path(command[0]).parent),) if os.path.isabs(command[0]) else ()), **CHILD_ENCODING_ENV, **self.harness.env, **self._run_env},
                 cwd=self._run_cwd or os.path.expanduser("~"),
-                shell=self._needs_shell(command),
+                shell=needs_shell,
                 startupinfo=hidden_startup(), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 # POSIX only (Windows accepts and ignores it — see
                 # `subprocess._execute_child`'s `unused_start_new_session`).
@@ -4638,6 +4654,47 @@ class HarnessResearcher(AgentResearcher):
             proc.kill()
         except Exception:  # noqa: BLE001
             pass
+
+    #: Characters `cmd.exe` reads as syntax when they reach it **unquoted**.
+    _SHELL_SYNTAX = frozenset("&|<>^\r\n")
+
+    #: A variable reference: the one expansion `cmd.exe` performs *inside*
+    #: double quotes too, so an argument that gets quoted is not safe from it.
+    #: A lone `%` — "50% of owners" in a brief — is not a reference and is left
+    #: alone; a pair is.
+    _SHELL_VARIABLE = re.compile(r"%[^%\s]{1,64}%")
+
+    @classmethod
+    def _refuse_shell_injection(cls, command: list[str]) -> None:
+        """Refuse a `.cmd` harness whose arguments would be read as syntax.
+
+        A `.cmd` harness can only start through `cmd.exe` (`_needs_shell`), and
+        `list2cmdline` — which Python uses to build that command line — quotes an
+        argument only when it contains whitespace or a quote. So the rule has to
+        follow the quoting rather than the character:
+
+        * an argument with **no** whitespace is handed to `cmd.exe` bare, and a
+          `&`, `|`, `<`, `>` or `^` in it is a separator — this is the reader's
+          own `prefs.llm_model`, and `x&calc` was a command;
+        * an argument that **is** quoted is inert except for `%NAME%`, which
+          `cmd.exe` expands inside double quotes too. The research brief is a
+          quoted argument and legitimately contains `&` and lone `%`, which is
+          why this cannot simply refuse the character set outright.
+
+        Refused rather than escaped: a model name containing `&` is a mistake or
+        an attack, and silently rewriting it would hide both.
+        """
+        for argument in command[1:]:
+            quoted = not argument or any(ch in argument for ch in ' \t"')
+            found = [] if quoted else sorted(cls._SHELL_SYNTAX.intersection(argument))
+            reference = cls._SHELL_VARIABLE.search(argument)
+            if found or reference:
+                named = "".join(found) or (reference.group(0) if reference else "")
+                raise RuntimeError(
+                    f"refusing to run {Path(command[0]).name!r} through the shell: "
+                    f"an argument contains {named!r}, which cmd.exe reads as "
+                    f"syntax. Remove it from the model or effort name and run again."
+                )
 
     @staticmethod
     def _needs_shell(command: list[str]) -> bool:

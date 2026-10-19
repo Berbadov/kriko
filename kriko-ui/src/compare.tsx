@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { demoCheck, loadCheck, type Loaded } from './compare/checks'
 import { useEngine, type Agent } from './engine/Engine'
-import { EngineError, get, post, put, seg, type ApiJob } from './engine/api'
+import { EngineError, get, post, postQuestion, put, seg, type ApiJob } from './engine/api'
 import { useQueue } from './queue'
 
 /** What the Compare screen holds: up to four saved checks as columns, kept as
@@ -29,6 +29,9 @@ interface Compare {
   ask: (text: string, agent: Agent) => void
   /** Read a column again after it failed. */
   retry: (lookupId: string) => void
+  stop: () => void
+  problem: string
+  saveAgain: () => void
 }
 
 const Ctx = createContext<Compare | null>(null)
@@ -60,10 +63,14 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   const [slots, setSlots] = useState<string[]>([])
   const [checks, setChecks] = useState<Record<string, Loaded>>({})
   const [questions, setQuestions] = useState<Question[]>([])
+  const [problem, setProblem] = useState('')
+  const jobOf = useRef(new Map<string, string>())
+  const stopRequested = useRef(false)
   const draft = useRef('')
   const saving = useRef(Promise.resolve())
   const alive = useRef(true)
   const loaded = useRef(false)
+  const unsaved = useRef(false)
 
   useEffect(() => {
     alive.current = true
@@ -82,6 +89,7 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   /** Follow the job that answers a question. The answer grows in the job's partial result. */
   const follow = useCallback(
     async (id: string, job: string) => {
+      jobOf.current.set(id, job)
       for (;;) {
         await new Promise((resolve) => window.setTimeout(resolve, POLL_MS))
         if (!alive.current) return
@@ -90,7 +98,8 @@ export function CompareProvider({ children }: { children: ReactNode }) {
           const answer = (reading.result as { answer?: string } | null | undefined)?.answer ?? ''
           if (reading.done || ['succeeded', 'failed', 'cancelled'].includes(reading.state)) {
             if (reading.state === 'succeeded') patchQuestion(id, { answer: answer || 'No answer came back.', state: 'done' })
-            else patchQuestion(id, { state: 'failed', note: reading.message || `The research ${reading.state}.` })
+            else patchQuestion(id, { answer, state: 'failed', note: reading.message || `The research ${reading.state}.` })
+            jobOf.current.delete(id)
             return
           }
           if (answer) patchQuestion(id, { answer })
@@ -119,8 +128,8 @@ export function CompareProvider({ children }: { children: ReactNode }) {
           })),
         )
         for (const q of reply.items) if (!q.answer && q.job_id) void follow(q.question_id, q.job_id)
-      } catch {
-        /* The board still works without its old questions. */
+      } catch (error) {
+        setProblem(`Could not load the saved questions. ${reasonOf(error)}`)
       }
     },
     [follow],
@@ -132,16 +141,19 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   const save = useCallback((ids: string[]) => {
     saving.current = saving.current.then(async () => {
       try {
+        setProblem('')
         const body = { name: 'Compare', lookup_ids: ids }
         const saved = draft.current
           ? await put<ApiDraft>(`/api/compare-drafts/${seg(draft.current)}`, body)
           : await post<ApiDraft>('/api/compare-drafts', body)
+        unsaved.current = false
         if (!draft.current) {
           draft.current = saved.draft_id
           void loadQuestions(saved.draft_id)
         }
-      } catch {
-        /* The columns stay on screen. The next change saves again. */
+      } catch (error) {
+        unsaved.current = true
+        setProblem(`The comparison is not saved. ${reasonOf(error)}`)
       }
     })
   }, [loadQuestions])
@@ -158,8 +170,8 @@ export function CompareProvider({ children }: { children: ReactNode }) {
         draft.current = first.draft_id
         setSlots(first.lookup_ids.slice(0, MAX_SLOTS))
         void loadQuestions(first.draft_id)
-      } catch {
-        /* An empty board is a fine start. */
+      } catch (error) {
+        setProblem(`Could not load the saved comparison. ${reasonOf(error)}`)
       }
     })()
   }, [live, loadQuestions])
@@ -238,7 +250,9 @@ export function CompareProvider({ children }: { children: ReactNode }) {
 
   const ask = useCallback(
     async (text: string, agent: Agent) => {
+      stopRequested.current = false
       const id = `local-${Date.now()}`
+      let activeId = id
       setQuestions((list) => [...list, { id, text, answer: '', state: 'running', note: '', agent: agent.label }])
 
       if (!live) {
@@ -255,27 +269,50 @@ export function CompareProvider({ children }: { children: ReactNode }) {
       try {
         // A question is stored beside its comparison, so there must be one.
         await saving.current
+        if (unsaved.current) {
+          save(slots)
+          await saving.current
+          if (unsaved.current) throw new EngineError(409, 'The comparison could not be saved, so research has not started. Retry saving before asking about these columns.')
+        }
         if (!draft.current) {
           const saved = await post<ApiDraft>('/api/compare-drafts', { name: 'Compare', lookup_ids: slots })
           draft.current = saved.draft_id
         }
-        const sent = await post<{ question_id: string; job_id: string }>(`/api/compare-drafts/${seg(draft.current)}/questions`, {
+        const sent = await postQuestion<{ question_id: string; job_id: string }>(`/api/compare-drafts/${seg(draft.current)}/questions`, {
           question: text,
           harness: agent.id,
           backend: agent.backend,
         })
+        activeId = sent.question_id
+        if (stopRequested.current) await post(`/api/jobs/${seg(sent.job_id)}/cancel`, {})
         setQuestions((list) => list.map((q) => (q.id === id ? { ...q, id: sent.question_id } : q)))
         await follow(sent.question_id, sent.job_id)
       } catch (error) {
-        patchQuestion(id, { state: 'failed', note: reasonOf(error) })
+        patchQuestion(activeId, { state: 'failed', note: reasonOf(error) })
       }
     },
-    [live, slots, follow, patchQuestion],
+    [live, slots, follow, patchQuestion, save],
   )
 
+  const stop = useCallback(() => {
+    stopRequested.current = true
+    for (const [id, job] of jobOf.current) void post(`/api/jobs/${seg(job)}/cancel`, {})
+      .then(() => patchQuestion(id, { note: 'Stopping…' }))
+      .catch((error) => setProblem(reasonOf(error)))
+  }, [patchQuestion])
+
   const value = useMemo<Compare>(
-    () => ({ slots, checks, questions, add, remove, ask: (t, a) => void ask(t, a), retry }),
-    [slots, checks, questions, add, remove, ask, retry],
+    () => ({ slots, checks, questions, add, remove, ask: (t, a) => void ask(t, a), retry, stop, problem,
+      saveAgain: () => {
+        if (problem.startsWith('Could not load')) {
+          void get<{items: ApiDraft[]}>('/api/compare-drafts').then((reply) => {
+            setProblem('')
+            const first = reply.items[0]
+            if (first) { draft.current = first.draft_id; setSlots(first.lookup_ids.slice(0, MAX_SLOTS)); void loadQuestions(first.draft_id) }
+          }).catch((error) => setProblem(`Could not load the saved comparison. ${reasonOf(error)}`))
+        } else save(slots)
+      } }),
+    [slots, checks, questions, add, remove, ask, retry, stop, problem, save, loadQuestions],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -18,6 +18,7 @@ is how a hobby project produces a bill someone remembers.
 """
 
 import json
+import time
 from collections.abc import Callable
 
 from kriko.extract.grounding import comparable as _grounding_form
@@ -33,7 +34,7 @@ from kriko.research.base import (
 
 
 class BudgetExceeded(RuntimeError):
-    """Raised the moment a task would spend past its ceiling."""
+    """Raised the moment a task would spend past its ceiling — money or time."""
 
 
 class ApiResearcher:
@@ -74,6 +75,9 @@ class ApiResearcher:
         #: What `gather` kept, so `extract` can assemble a batch out of the
         #: documents nobody has read yet.
         self._documents: list[Document] = []
+        #: When this run's clock started, set on the first check of a task with
+        #: a `seconds` ceiling. Reset by `gather`, which is a run's beginning.
+        self._started: float | None = None
 
     @property
     def tokens_used(self) -> int | None:
@@ -98,11 +102,32 @@ class ApiResearcher:
 
     def _charge(self, task: ResearchTask) -> None:
         self.check_cancelled()
+        self._check_clock(task)
         self.spent += self._price
         if task.budget_usd and self.spent > task.budget_usd:
             raise BudgetExceeded(
                 f"{task.subject_label}: spent ${self.spent:.4f} of "
                 f"${task.budget_usd:.4f} — stopping")
+
+    def _check_clock(self, task: ResearchTask) -> None:
+        """Stop when the run's own wall clock is up.
+
+        Checked on every charge and every page, so the stop lands between calls
+        rather than mid-request: a run that is *waiting* on a 45-second timeout
+        cannot be interrupted here, but the next one is not started. The money
+        ceiling could never catch this — a subscription plane spends nothing —
+        and the failure it prevents is a run that answers nothing after an hour.
+        """
+        if not task.seconds:
+            return
+        if self._started is None:
+            self._started = time.monotonic()
+            return
+        spent = time.monotonic() - self._started
+        if spent > task.seconds:
+            raise BudgetExceeded(
+                f"{task.subject_label}: this run has spent {spent:.0f}s of its "
+                f"{task.seconds:.0f}s limit — stopping and keeping what it read")
 
     def brief(self, task: ResearchTask) -> str:
         """Same brief as the agent plane; here it becomes the prompt."""
@@ -114,6 +139,8 @@ class ApiResearcher:
         documents: list[Document] = []
         self._batched = {}
         self._documents = documents
+        # A new run on this researcher starts its own clock.
+        self._started = None
         self.check_cancelled()
 
         for query in task.rendered_queries():
@@ -124,6 +151,10 @@ class ApiResearcher:
             self.check_cancelled()
             for hit in hits:
                 self.check_cancelled()
+                # Also inside the page loop: one query can return ten pages, and
+                # the ceiling is about the run's wall clock rather than about
+                # how many queries it got through.
+                self._check_clock(task)
                 url = hit.get("url", "")
                 if not url or url in seen:
                     continue

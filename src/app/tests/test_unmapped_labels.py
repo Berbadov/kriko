@@ -139,5 +139,8 @@ def test_clearing_history_does_not_erase_the_signal(conn):
         request={"url": "https://x/1"}, response={},
     )
     state.record_unmapped(conn, "a", ["Kimden"], url="https://x/1")
-    assert state.delete_lookup(conn, lookup_id) is True
+    # `delete_lookup` returns what it removed (so an interface can offer an
+    # undo) rather than a bool: `None` is "there was nothing to delete".
+    removed = state.delete_lookup(conn, lookup_id)
+    assert removed is not None and removed["lookup"]["lookup_id"] == lookup_id
     assert len(state.unmapped_labels(conn)) == 1

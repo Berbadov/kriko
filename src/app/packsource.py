@@ -27,6 +27,7 @@ import urllib.request
 from pathlib import Path
 from urllib.parse import urlparse
 
+from app.providers import egress
 from kriko.pack import updates
 
 #: Enough for an index, and small enough that a wrong URL fails fast.
@@ -44,19 +45,28 @@ def _require_http(url: str) -> None:
         raise ValueError(f"refusing a non-http(s) pack URL: {url!r}")
 
 
-def _open(url: str, timeout: int):
+def _open(url: str, timeout: int, *, allow_private: bool = False):
     _require_http(url)
+    # C1: `GET /api/packs/updates?index_url=…` takes this URL from the request,
+    # and a page can fire that request blind (`<img src>` sends no Origin, so
+    # the middleware's Origin check does not see it). Without a policy, a
+    # listing page could make the sidecar fetch `http://127.0.0.1:8787/...` —
+    # its own unauthenticated API — or the cloud metadata address.
+    refusal = egress.reason_to_refuse(url, allow_private=allow_private)
+    if refusal:
+        raise ValueError(refusal)
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     return urllib.request.urlopen(request, timeout=timeout)  # noqa: S310 — scheme checked
 
 
-def fetch_index(url: str) -> list[updates.Candidate]:
-    with _open(url, INDEX_TIMEOUT) as response:
+def fetch_index(url: str, *, allow_private: bool = False) -> list[updates.Candidate]:
+    with _open(url, INDEX_TIMEOUT, allow_private=allow_private) as response:
         text = response.read(4 * 1024 * 1024).decode("utf-8")
     return updates.parse_index(text)
 
 
-def download(candidate: updates.Candidate, into: Path, on_progress=None) -> Path:
+def download(candidate: updates.Candidate, into: Path, on_progress=None,
+             *, allow_private: bool = False) -> Path:
     """Fetch one pack file into `into`, verified. Returns the written path."""
     into.mkdir(parents=True, exist_ok=True)
     digest = hashlib.sha256()
@@ -66,7 +76,8 @@ def download(candidate: updates.Candidate, into: Path, on_progress=None) -> Path
     )
     temporary = Path(handle.name)
     try:
-        with handle, _open(candidate.url, DOWNLOAD_TIMEOUT) as response:
+        with handle, _open(candidate.url, DOWNLOAD_TIMEOUT,
+                           allow_private=allow_private) as response:
             while chunk := response.read(1 << 16):
                 read += len(chunk)
                 if read > MAX_PACK_BYTES:

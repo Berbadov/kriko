@@ -54,6 +54,7 @@ export interface Spent {
   runs: number
   tokens: number
   usd: number
+  unpriced_runs?: number
 }
 
 /** The key the engine stores a choice under, as `app/prefs.py` writes it. */

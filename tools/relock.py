@@ -5,8 +5,10 @@
 The closure is walked rather than taken from `pip freeze`: a freeze of a
 working checkout carries the pipeline extras, pytest, and whatever else got
 installed along the way, and none of that belongs in the file that says what a
-reader's sidecar contains. Walking from the five runtime roots in
-`pyproject.toml` gives exactly the closure PyInstaller freezes.
+reader's sidecar contains. Walking from the runtime roots in
+`pyproject.toml` (eight at the last count — the number is not restated here,
+because a comment that counts them goes stale the next time one is added and
+this one did) gives exactly the closure PyInstaller freezes.
 
 Extras are skipped — a dependency pulled in only by `package[extra]` is not
 part of the runtime install — and a member that is not installed here is
