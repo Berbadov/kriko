@@ -118,7 +118,11 @@ def hf_models(
     """Hugging Face repositories that Ollama can pull, found with the reader's filters.
 
     Read from the web only when the reader asks. Nothing is downloaded here.
+    `limit` is clamped: the value goes to a remote query, where `-1` means
+    "everything" to some APIs and is a free way to make the app ask for a list
+    nobody can render.
     """
+    limit = max(1, min(int(limit), 100))
     try:
         return {"items": hfstore.search(q, sort=sort, min_b=min_b, max_b=max_b, licence=licence, limit=limit)}
     except RuntimeError as error:

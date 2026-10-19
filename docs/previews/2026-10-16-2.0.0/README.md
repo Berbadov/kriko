@@ -1,5 +1,12 @@
 # Kriko 2.0.0 desktop review
 
+> **A working note, not a release page.** It is dated 2026-10-16 and it uses the
+> version numbering of that day: the tree was reset to `0.x` afterwards, so the
+> release this work shipped in is **0.2.0** in `CHANGELOG.md`. The test figures
+> below are the counts of that date, not of this tree. Nothing links here and
+> `tools/bump.py` does not touch this folder, which is why it is worth saying:
+> the numbers below go stale on their own.
+
 Request: “make design more sleek. not populated. and improve every page. lets ditch box content design. improve animations and then get a good local agent selection section”. The supplied Atomic Chat screenshots informed the list/detail layout and restrained controls. The user also asked to remove the sky and title banners and reported a laggy Live button.
 
 Done when: all desktop pages use the quieter layout, the model selector supports discovery and installed models, extension setup connects to agent selection, Live opens without animating column widths, and the main navigation and controls remain usable at 1280×860 and the supported 940×640 minimum.

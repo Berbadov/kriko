@@ -2,26 +2,32 @@
 
 Greedy single-pass in evidence-id order (stable, deterministic): an evidence
 row joins the first existing cluster in the same domain whose representative
-text has word-Jaccard >= 0.4 — the same duplicate-detection threshold a
-pack's own claim-dedup step uses, kept in sync by convention rather than a
-shared import — else it founds a new cluster. clusters/cluster_members are
-derived tables — rebuilt wholesale, never migrated."""
+text has word-Jaccard >= 0.4 — the same threshold *and now the same tokeniser*
+as the read-time dedup in `kriko.text.title_sim`, which this module imports
+rather than reimplements — else it founds a new cluster. clusters/cluster_members
+are derived tables — rebuilt wholesale, never migrated."""
 
-import re
+from kriko.text.title_sim import similarity
 
-CLUSTER_VERSION = 1
+#: Bumped with the tokeniser below: cluster membership changed, and the derived
+#: tables are rebuilt wholesale, while verdicts stay content-addressed by
+#: input_hash and so keep hitting their cache.
+CLUSTER_VERSION = 2
 _JACCARD_THRESHOLD = 0.4
 
 
-def _tokens(s: str) -> set[str]:
-    return set(re.findall(r"[^\W\d_]{3,}", (s or "").lower()))
-
-
 def jaccard(a: str, b: str) -> float:
-    ta, tb = _tokens(a), _tokens(b)
-    if not ta or not tb:
-        return 0.0
-    return len(ta & tb) / len(ta | tb)
+    """Token-set overlap, using the *read-time* tokeniser.
+
+    This module used to carry its own, which dropped every digit
+    (`[^\\W\\d_]{3,}`). "E90 timing chain" and "E91 timing chain" then tokenised
+    identically and merged, while the same two titles arriving through a lookup
+    — `kriko.text.title_sim` — stayed apart, because that tokeniser keeps digits
+    and its own docstring calls discarding a number "catastrophic". Two dedup
+    paths disagreeing about whether a part number matters is a worse defect than
+    either threshold, so there is one tokeniser now.
+    """
+    return similarity(a, b)
 
 
 def rebuild_clusters(conn) -> int:

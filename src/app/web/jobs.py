@@ -51,6 +51,7 @@ job is asked to stop, never made to.
 
 import hashlib
 import functools
+import logging
 import sqlite3
 import threading
 import time
@@ -62,10 +63,30 @@ from pathlib import Path
 from typing import Any
 
 from app import agentresources, operations, prefs
-from app.agentledger import Ledger
+from app.agentledger import Ledger, redact
 from app.version import app_version
 from kriko.store.db import connect
 from app.web import state
+
+log = logging.getLogger(__name__)
+
+
+def _failure_line(exc: BaseException) -> str:
+    """What a *reader* may see about a failed job: where it broke, redacted.
+
+    Not the traceback. This string is written into the job's log column, and
+    `GET /api/jobs/{id}/log` serves that column to any allowed origin — the
+    browser extension on any listing page among them. A traceback carries
+    absolute paths, parameter values and SQL. The full one goes to `app.log`
+    on the same machine, which is where an operator reads it.
+    """
+    frames = traceback.extract_tb(exc.__traceback__)
+    where = ""
+    if frames:
+        last = frames[-1]
+        name = str(last.filename).replace("\\", "/").rsplit("/", 1)[-1]
+        where = f" at {name}:{last.lineno}"
+    return redact(f"job failed{where}: {type(exc).__name__}: {exc}", limit=500)
 
 
 #: Kinds that never write the store or a pack directory, and are short enough
@@ -708,10 +729,14 @@ class JobRunner:
                 self.ledger.finish(run_id, state.CANCELLED,
                                    result={**kept, "partial": True} if kept else None)
         except Exception as exc:  # noqa: BLE001 — a failed job is data, not a crash
-            # The traceback goes in the log rather than to stderr: an operator
-            # reading the job in the app should not have to find the terminal that
-            # started the server.
-            state.update_job(conn, job_id, line=traceback.format_exc())
+            # The traceback goes to the app log, which lives on the reader's own
+            # machine. The job's *log line* gets a bounded, redacted summary
+            # instead, because `GET /api/jobs/{id}/log` serves that column to
+            # any allowed origin — the browser extension on any listing page
+            # included — and a traceback carries absolute paths, parameter
+            # values and SQL. An operator who needs the traceback has app.log.
+            log.exception("job %s (%s) failed", job_id, kind)
+            state.update_job(conn, job_id, line=_failure_line(exc))
             state.finish_job(
                 conn, job_id, state.FAILED, message=f"{type(exc).__name__}: {exc}"
             )

@@ -31,6 +31,12 @@ _STOPWORDS = frozenset({
 
 DEFAULT_THRESHOLD = 0.4
 
+#: An identifier: an optional letter prefix, a digit, then anything wordish —
+#: kept joined across `.`, `-` and `/` when a digit follows, so a model code
+#: stays one thing. `GBH 2-26` yields `2-26`, not `2` and `26`, which is what
+#: stops it matching `GBH 2-24` on the shared `2`. `1.6` stays `1.6`.
+_IDENTIFIER = re.compile(r"[a-z]*\d[\w]*(?:[.\-/]\d[\w]*)*")
+
 
 def title_tokens(title: str) -> set[str]:
     """Lowercase, strip punctuation, drop stopwords and single characters."""
@@ -49,9 +55,40 @@ def _tokens_of(title: str) -> frozenset[str]:
     return frozenset(title_tokens(title))
 
 
+@functools.lru_cache(maxsize=8192)
+def _identifiers_of(title: str) -> frozenset[str]:
+    """The identifiers in a title: part numbers, model codes, sizes, counts.
+
+    Matched straight off the raw title rather than filtered out of the word
+    tokens, because `title_tokens` drops single characters and a lone digit is
+    exactly what distinguishes "fails after 3 months" from "fails after 5
+    months" — two different claims that otherwise share every word. `e90`,
+    `60000`, `2` and `26` all count; the `-` in `2-26` separates rather than
+    joins, which is what makes `GBH 2-26` differ from `GBH 2-24`.
+    """
+    return frozenset(_IDENTIFIER.findall(title.lower()))
+
+
 def similarity(title_a: str, title_b: str) -> float:
+    """Word-set Jaccard, vetoed by a disagreement about an identifier.
+
+    Word overlap alone merges "E90 timing chain" with "E91 timing chain": the
+    shared nouns give them 0.5, comfortably over the 0.4 threshold, and the one
+    token that says they are *different parts* is outvoted by the two that say
+    they are the same kind of failure. So when both titles carry an identifier
+    and the two sets do not intersect, this is not the same claim, whatever the
+    rest of the words do.
+
+    The veto is deliberately narrow. It fires only when *both* titles have at
+    least one digit-bearing token, so "E90 timing chain fails at 60,000 miles"
+    still merges with "E90 timing chain failure" (they share `e90`), and a title
+    that merely omits a detail is not split off from the one that includes it.
+    """
     tokens_a, tokens_b = _tokens_of(title_a), _tokens_of(title_b)
     if not tokens_a or not tokens_b:
+        return 0.0
+    identifiers_a, identifiers_b = _identifiers_of(title_a), _identifiers_of(title_b)
+    if identifiers_a and identifiers_b and not (identifiers_a & identifiers_b):
         return 0.0
     return len(tokens_a & tokens_b) / len(tokens_a | tokens_b)
 
