@@ -1663,7 +1663,10 @@ def check_updates(settings, index_url: str = "", *, fresh: bool = False) -> dict
         return _updates_payload(url, rows, candidates, error, error_detail, checked_at)
 
     try:
-        candidates = packsource.fetch_index(url)
+        # A URL the reader configured in their own settings may point at their
+        # own machine (a local index server is a real thing to want); a URL that
+        # arrived in this request may not — see `providers/egress.py`.
+        candidates = packsource.fetch_index(url, allow_private=(url == settings.pack_index_url))
         error = None
         error_detail = None
     except Exception as exc:  # noqa: BLE001 — unreachable is an answer, not a crash
@@ -1712,9 +1715,14 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
     """
     only = params.get("pack_id") or ""
     index_url = params.get("index_url") or settings.pack_index_url
+    # The reader's own configured index may live on this machine (a local
+    # mirror is a real thing to want). A URL that arrived in this job's
+    # parameters may not, and must not become a way to make the engine fetch its
+    # own API or the cloud metadata address on a page's behalf.
+    from_reader = index_url == settings.pack_index_url
     progress.set(0.05, f"reading {index_url}")
     try:
-        candidates = packsource.fetch_index(index_url)
+        candidates = packsource.fetch_index(index_url, allow_private=from_reader)
     except Exception as exc:  # noqa: BLE001 — a sentence, not a protocol code
         if params.get("automatic"):
             return _automatic_pass_without_index(settings, index_url, exc, progress)
@@ -1769,6 +1777,7 @@ def pack_update(settings, params: dict, progress: Progress) -> dict:
                 0.1 + 0.8 * (share + (read / total if total else 0) / len(wanted)),
                 f"downloading {candidate.pack_id} {read // 1024} KiB",
             ),
+            allow_private=from_reader,
         )
         progress.check()
         progress.log(f"installing {path.name}")

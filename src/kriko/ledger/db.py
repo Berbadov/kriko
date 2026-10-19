@@ -8,10 +8,24 @@ database — the serving plane never reads it.
 
 import hashlib
 import sqlite3
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-LEDGER_PATH = Path(__file__).parent.parent / "ledger.db"
+#: The authoring ledger sits in the reader's own folder, beside the store and
+#: the history, exactly as `store/db.py` documents ("the authoring ledger lives
+#: beside it as `ledger.sqlite`"). It used to be written *inside the installed
+#: package* — `Path(__file__).parent.parent / "ledger.db"` — which in a wheel,
+#: a frozen sidecar or any read-only install either failed outright or wrote a
+#: durable, append-only ledger into a directory the next upgrade replaces.
+LEDGER_PATH = Path.home() / ".kriko" / "ledger.sqlite"
+
+#: Where the ledger used to be written, kept only so the first run after the
+#: move can name what it is leaving behind. A default path that moves silently
+#: orphans whatever the old one holds, which is the failure `store/db.py`
+#: warns about for the store; the ledger deserves the same sentence.
+_LEGACY_LEDGER_PATH = Path(__file__).parent.parent / "ledger.db"
+_legacy_ledger_noted = False
 # What answered, by name. The word this column used to carry is a word the
 # engine may not know, and it was spelled in halves to get past the gate that
 # says so -- which is the gate's own account of why it now folds them.
@@ -69,6 +83,21 @@ CREATE TABLE IF NOT EXISTS extraction_done (     -- cache: this chunk was extrac
     extractor_version INTEGER NOT NULL,
     PRIMARY KEY (text_hash, chunk_index, extractor_version)
 );
+CREATE TABLE IF NOT EXISTS extraction_failures ( -- what a chunk lost, and why, until it is given up on
+    text_hash TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    extractor_version INTEGER NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 1,
+    error TEXT NOT NULL DEFAULT '',
+    last_at TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (text_hash, chunk_index, extractor_version)
+);
+-- The identity a re-extraction must recognise as "already stored". Chunks
+-- overlap by design (400 of 4000 characters), so the same passage reaches the
+-- extractor twice, and a chunk that lost one claim is retried whole on the next
+-- pass. Without this lookup the same evidence row is written twice and the
+-- reader sees one failure as two.
+CREATE INDEX IF NOT EXISTS idx_evidence_identity ON evidence(doc_id, quote, title);
 CREATE TABLE IF NOT EXISTS resolutions (
     evidence_id INTEGER PRIMARY KEY REFERENCES evidence(id),
     component_id TEXT NOT NULL,         -- catalog component | 'foreign' | 'unresolved'
@@ -131,6 +160,14 @@ def text_hash(text: str) -> str:
 
 
 def connect(path: Path | str = LEDGER_PATH) -> sqlite3.Connection:
+    if str(path) != ":memory:":
+        destination = Path(path)
+        # A first run has no `~/.kriko` yet, and `sqlite3.connect` reports a
+        # missing parent directory as "unable to open database file" — the same
+        # message as a permission fault, with no hint that the fix is a mkdir.
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination == LEDGER_PATH:
+            _note_legacy_ledger()
     conn = sqlite3.connect(str(path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -139,6 +176,20 @@ def connect(path: Path | str = LEDGER_PATH) -> sqlite3.Connection:
     conn.executescript(_SCHEMA.format(MODEL_COLUMN=_STORAGE_COLUMN))
     conn.executescript(_TRIGGERS)
     return conn
+
+
+def _note_legacy_ledger() -> None:
+    """Say once, on stderr, that a ledger from before the move is not in use."""
+    global _legacy_ledger_noted
+    if _legacy_ledger_noted or not _LEGACY_LEDGER_PATH.is_file():
+        return
+    _legacy_ledger_noted = True
+    print(
+        f"note: {_LEGACY_LEDGER_PATH} is a ledger from an older build and is not "
+        f"being used. The ledger now lives at {LEDGER_PATH}. Move the old file "
+        f"there to keep its history.",
+        file=sys.stderr,
+    )
 
 
 def _rename_retired_column(conn) -> None:
@@ -224,6 +275,27 @@ def insert_evidence(
     span_end: int | None,
     extractor_version: int,
 ) -> int:
+    """Write one extracted claim, or return the row that is already there.
+
+    Idempotent on `(doc_id, quote, title)`, and it has to be: chunks overlap by
+    400 characters, and a chunk that lost a claim is retried whole on the next
+    pass (`extraction.extract_document`). Unconditional inserts made both of
+    those write the same evidence twice, so one failure surfaced as two risks
+    and a retry doubled every claim it had already stored.
+
+    The key is deliberately narrow. `(doc_id, quote)` alone would collapse two
+    genuinely different claims that happen to quote one sentence — the same
+    failure read for two components — which is the over-collapsing mistake
+    `evidence_id` was fixed for on the pack side.
+    """
+    quote = claim.get("quote") or ""
+    title = claim["title"]
+    existing = conn.execute(
+        "SELECT id FROM evidence WHERE doc_id=? AND quote=? AND title=?",
+        (doc_id, quote, title),
+    ).fetchone()
+    if existing is not None:
+        return int(existing["id"])
     cur = conn.execute(
         "INSERT INTO evidence (doc_id, span_start, span_end, quote, quote_grounded,"
         " title, domain, severity, rationale, inspection_advice, component_hint,"
@@ -232,9 +304,9 @@ def insert_evidence(
             doc_id,
             span_start,
             span_end,
-            claim.get("quote") or "",
+            quote,
             int(bool(claim.get("quote_grounded"))),
-            claim["title"],
+            title,
             claim["domain"],
             claim["severity"],
             claim.get("rationale") or "",

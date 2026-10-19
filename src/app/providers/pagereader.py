@@ -20,7 +20,7 @@ import json
 import re
 import urllib.error
 import urllib.request
-from app.providers import network
+from app.providers import egress, network
 from urllib.parse import urlsplit
 
 from app.providers.fetch import LINK_CLOSE, LINK_OPEN, prose_lines
@@ -198,7 +198,7 @@ def _asked(target: str, tool: str, url: str, *, timeout: float = TIMEOUT,
 
 
 def read(url: str, endpoint: str = "", *, timeout: float = TIMEOUT,
-         check_cancelled=None) -> str:
+         check_cancelled=None, allow_private: bool = False) -> str:
     """The page's text through the hosted readers, "" when none read it.
 
     One initialize and one call per page, so a kept session would be state
@@ -209,6 +209,11 @@ def read(url: str, endpoint: str = "", *, timeout: float = TIMEOUT,
     if not url.lower().startswith(("http://", "https://")):
         return ""
     if urlsplit(url).netloc == urlsplit(PARALLEL_ENDPOINT).netloc:
+        return ""
+    # The same egress rule the plain fetch applies. This rung exists to read a
+    # page this machine could not; it must not become a way to read *this
+    # machine* on a URL someone else supplied.
+    if egress.reason_to_refuse(url, allow_private=allow_private):
         return ""
     if check_cancelled is not None:
         check_cancelled()

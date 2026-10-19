@@ -120,6 +120,43 @@ def _watch_process(proc: "_ContainedPopen") -> None:
                      name=f"kriko-child-{proc.pid}", daemon=True).start()
 
 
+def listener_pid(port: int) -> int | None:
+    """The process listening on a local TCP port, or `None`.
+
+    Windows only, and by `netstat` rather than by trying to bind: this is a
+    *read* of who holds a port, and it exists because `agentinstall` wanted to
+    stop the Ollama it is about to replace and did it with
+    `taskkill /IM ollama.exe` — which kills every Ollama on the machine,
+    including another user's. A PID is something the caller can then end as a
+    tree, the way every other spawn in this tree is ended.
+    """
+    if os.name != "nt":
+        return None
+    try:
+        done = subprocess.run(
+            ["netstat", "-ano", "-p", "tcp"], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=15,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    wanted = str(port)
+    for line in done.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 5 or parts[0].upper() != "TCP":
+            continue
+        if parts[-2].upper() != "LISTENING":
+            continue
+        # Both `0.0.0.0:11434` and `[::]:11434` end in the port.
+        if parts[1].rsplit(":", 1)[-1] != wanted:
+            continue
+        try:
+            return int(parts[-1])
+        except ValueError:
+            continue
+    return None
+
+
 def create_job_object() -> int | None:
     """Create a Windows tree owner that kills descendants when closed."""
     if os.name != "nt":
@@ -261,6 +298,17 @@ def kill_tree(proc: subprocess.Popen[Any], job: int | None = None) -> None:
 def close_process(proc: subprocess.Popen[Any], job: int | None = None) -> None:
     """Close a process tree's lifetime, including already-orphaned descendants."""
     kill_tree(proc, job)
+    close_job(job)
+
+
+def close_job(job: int | None) -> None:
+    """Release a job handle that has no process left to kill.
+
+    A caller that creates the job before it spawns needs this on the path where
+    the spawn itself failed: leaking the handle keeps the job object alive for
+    the life of the process, and on Windows a job with no live member still
+    counts against the handle quota.
+    """
     if os.name == "nt" and job is not None:
         import ctypes as _ctypes
         ctypes: Any = _ctypes  # Windows-only attributes; the Linux type stubs lack them

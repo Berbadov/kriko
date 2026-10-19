@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from app import categorypack, packdraft
 from app.web.deps import get_store
+from app.web.settings import MAX_REQUEST_BYTES
 from kriko.store import packstore
 
 router = APIRouter(prefix="/api", tags=["packs"])
@@ -49,6 +50,14 @@ def install_pack(
     """
     if not body:
         raise HTTPException(400, "pack artifact is empty")
+    # The middleware refuses a declared oversize before this body is buffered;
+    # this is the assembled length, which is the guarantee (a chunked request
+    # declares no `Content-Length`).
+    if len(body) > MAX_REQUEST_BYTES:
+        raise HTTPException(
+            413,
+            f"This pack is larger than the {MAX_REQUEST_BYTES // (1024 * 1024)} MB limit.",
+        )
 
     supplied_name = filename or filename_header or "upload.kpack"
     if (
@@ -183,7 +192,11 @@ def coverage_gaps(pack_id: str, limit: int = 100, store=Depends(get_store)):
     A gap is not an error and stops nothing — that is the fail-open rule. But it
     has to be *findable* without a person noticing, or fail-open quietly becomes
     fail-silent.
+
+    `limit` is clamped, as it is everywhere else here: `-1` reached SQLite as
+    "no limit" and returned a whole catalog in one answer.
     """
+    limit = max(1, min(int(limit), 1000))
     # A subject is only a gap when nothing reaches it — including through the
     # parts it is built from. Counting direct claims alone would report every
     # car in the catalog as unresearched, because a car's claims live on its

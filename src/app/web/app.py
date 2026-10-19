@@ -15,6 +15,7 @@ endpoint to the network, so the default host is not a preference.
 
 import logging
 import os
+import sqlite3
 import sys
 import traceback
 from contextlib import asynccontextmanager
@@ -23,6 +24,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from app import agentconfig, agentskill, extension as ext, logs, packautoupdate
 from app import modelcatalogue
@@ -67,11 +69,57 @@ from app.web.routers import (
 )
 from app.web import state
 from app.version import app_version, installed_versions
-from app.web.settings import EXTENSION_PORT, Settings
+from app.web.settings import EXTENSION_PORT, MAX_REQUEST_BYTES, Settings
 from app.web.tasks import HANDLERS
 from kriko.store.db import SCHEMA_VERSION, connect
 
 log = logging.getLogger(__name__)
+
+#: How many extension origins this process remembers. One dict entry per
+#: origin the caller names; a native client can name as many as it likes.
+EXTENSION_SIGHTINGS_MAX = 16
+
+
+def _record_sighting(app_state_path, origin: str, version: str) -> None:
+    """Write one extension sighting. Blocking, so callers run it off the loop."""
+    conn = state.connect(app_state_path)
+    try:
+        state.record_extension(conn, origin, version)
+    finally:
+        conn.close()
+
+
+def _store_is_readable(path) -> bool:
+    """Can the engine's own store be opened and queried right now?
+
+    A boolean, not a message: `/api/health` is polled by the shell and by the
+    extension, and a health check that reports detail costs every poll for it.
+    "The file exists" is not the question — a locked or corrupt store exists and
+    cannot answer, which is the state a reader sees as "Kriko knows nothing".
+    """
+    try:
+        conn = connect(path)
+        try:
+            conn.execute("SELECT 1").fetchone()
+        finally:
+            conn.close()
+        return True
+    except Exception:  # noqa: BLE001 — a health answer, never a crash
+        return False
+
+
+def _job_capacity(runner) -> dict:
+    """How busy the job runner is, without leaking its internals.
+
+    The runner has answered this since the jobs screen needed it
+    (`JobRunner.concurrency`); the health endpoint is the other place a reader
+    and the shell's watchdog look, and it did not.
+    """
+    try:
+        return runner.concurrency()
+    except Exception:  # noqa: BLE001
+        return {"running": 0, "queued": 0, "concurrency": 0, "agent_slots": 0}
+
 
 def _shipped_extension_version() -> str:
     """What the app carries, or "" where it carries nothing.
@@ -296,8 +344,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # its own temporary app.sqlite.
     # Idle, it hands the local model's memory back to the host: a finished run
     # must not hold video memory while Kriko sits in the background.
-    app.state.jobs = JobRunner(app.state.settings, HANDLERS,
-                               on_idle=local_inference.release)
+    try:
+        app.state.jobs = JobRunner(app.state.settings, HANDLERS,
+                                   on_idle=local_inference.release)
+    except sqlite3.Error as error:
+        # `JobRunner` opens the reader's `app.sqlite` for the job ledger, and
+        # this is the first thing to touch it. An unopenable one — a home
+        # directory that is read-only, a file another process holds, a corrupt
+        # page — used to arrive as a bare `operationalerror: unable to open
+        # database file`, which names neither the file nor the thing to do, and
+        # it took the whole API down with it. Say both.
+        raise RuntimeError(
+            f"Kriko could not open its history file at "
+            f"{app.state.settings.app_state_path}: {error}. Check that this "
+            f"folder exists and is writable, then start Kriko again."
+        ) from error
     # What the open answers watch to know the knowledge moved (B152.4).
     app.state.knowledge_clock = KnowledgeClock(app.state.settings.store_path)
 
@@ -327,6 +388,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if origin.startswith(("chrome-extension://", "moz-extension://")):
             digest = request.headers.get(ext.DIGEST_HEADER, "")
             loaded = getattr(app.state, "extension_digests", {})
+            # Bounded. The key is an Origin the caller chooses, and while a web
+            # page cannot forge `chrome-extension://`, anything that can set a
+            # header can fill this dict one unique origin at a time, for the
+            # life of the process.
+            if len(loaded) >= EXTENSION_SIGHTINGS_MAX and origin not in loaded:
+                for stale in list(loaded)[: len(loaded) - EXTENSION_SIGHTINGS_MAX + 1]:
+                    loaded.pop(stale, None)
             loaded[origin] = {
                 "content_digest": digest if len(digest) == 64 and all(
                     char in "0123456789abcdef" for char in digest) else "",
@@ -334,15 +402,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             }
             app.state.extension_digests = loaded
             try:
-                conn = state.connect(app.state.settings.app_state_path)
-                try:
-                    state.record_extension(
-                        conn,
-                        origin,
-                        request.headers.get(ext.VERSION_HEADER, ""),
-                    )
-                finally:
-                    conn.close()
+                # In a worker thread: `state.connect` opens SQLite and
+                # `record_extension` writes. Both are blocking calls, and this
+                # middleware is `async` — so every extension request used to
+                # stop the event loop for the length of a SQLite open and a
+                # commit, which is exactly the loop every other request (and the
+                # reader's own lookup) is waiting on.
+                await run_in_threadpool(
+                    _record_sighting,
+                    app.state.settings.app_state_path, origin,
+                    request.headers.get(ext.VERSION_HEADER, ""),
+                )
             except Exception:
                 pass
         response = await call_next(request)
@@ -361,6 +431,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         response.headers["access-control-expose-headers"] = (
             f"{ext.MINIMUM_HEADER}, {ext.STAGED_HEADER}")
         return response
+
+    # ── how much will be read ────────────────────────────────────────────
+    #
+    # Registered *before* `only_from_here` below, so that one stays outermost
+    # (`add_middleware` inserts at the front, and `test_origins.py` asserts
+    # that position). It still runs before any router, and therefore before
+    # FastAPI hands a `bytes` body to `POST /api/packs/install`: that endpoint
+    # used to buffer the whole request into memory and only then ask how big
+    # it was, while the download path has had `MAX_PACK_BYTES` all along.
+    #
+    # `Content-Length` is the caller's own number, so this is a cheap refusal
+    # rather than a guarantee: a chunked request declares nothing. The endpoint
+    # checks the assembled length as well, which is where the guarantee lives.
+    @app.middleware("http")
+    async def not_too_large(request: Request, call_next):
+        declared = request.headers.get("content-length", "")
+        if declared.isdigit() and int(declared) > MAX_REQUEST_BYTES:
+            log.warning("refused %s %s: %s bytes declared",
+                        request.method, request.url.path, declared)
+            return JSONResponse(
+                {"detail": f"This request is larger than the "
+                           f"{MAX_REQUEST_BYTES // (1024 * 1024)} MB limit."},
+                status_code=413,
+            )
+        return await call_next(request)
 
     # ── who is allowed to ask ────────────────────────────────────────────
     #
@@ -487,6 +582,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "minimum_extension_version": ext.MINIMUM_VERSION,
             "extension_version": _shipped_extension_version(),
             "port_is_ours": bool(app.state.settings.extension_port_bound),
+            # ── E12: does it still *work* ────────────────────────────
+            #
+            # Everything above says what this process is, not whether it can
+            # answer. `ok` was a constant `True`: a health check that cannot be
+            # unhealthy. These two say what a reader (and the shell's own
+            # watchdog) actually need — the store opens and holds what it should,
+            # and the job runner is not saturated.
+            "store_readable": _store_is_readable(app.state.settings.store_path),
+            "jobs": _job_capacity(app.state.jobs),
         }
 
     return app
@@ -502,6 +606,24 @@ def main(argv=None) -> int:
     parser.add_argument("--port", type=int, default=EXTENSION_PORT)
     parser.add_argument("--store", default=None)
     args = parser.parse_args(argv)
+
+    # C3: this server has no accounts. Binding it anywhere but loopback hands
+    # pack install/uninstall, agent configuration and the terminal endpoint to
+    # the reader's whole network — and the module docstring above already says
+    # "the default host is not a preference". A native client sends no Origin,
+    # so the origin middleware would not object; only this check can.
+    if args.host not in ("127.0.0.1", "localhost", "::1"):
+        if os.environ.get("KRIKO_ALLOW_LAN") != "1":
+            parser.error(
+                f"refusing --host {args.host!r}: this API has no authentication, "
+                "so it answers on 127.0.0.1 only. Set KRIKO_ALLOW_LAN=1 if you "
+                "really mean to publish it to your network."
+            )
+        print(
+            f"warning: serving an unauthenticated API on {args.host}. Anyone who "
+            "can reach this port can install packs and change agent settings.",
+            file=sys.stderr,
+        )
 
     overrides = {"store_path": Path(args.store)} if args.store else {}
     # `KRIKO_EXTENSION_BOUND` is what /api/health's `extension_port_bound`

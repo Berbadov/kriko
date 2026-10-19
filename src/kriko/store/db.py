@@ -209,3 +209,15 @@ def _set_wal(conn: sqlite3.Connection) -> None:
 def table_names(conn: sqlite3.Connection) -> set[str]:
     return {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type = 'table'")}
+
+
+def like_escaped(text: str) -> str:
+    """`text` with LIKE's wildcards neutralised. Pair it with `ESCAPE '\\'`.
+
+    Everything that reaches a LIKE pattern here is data — a pack id, or the word
+    a reader typed — so `%` and `_` in it must match themselves. Unescaped, a
+    pack id of `org.kriko.x_y` uninstalled the revision rows of `org.kriko.xAy`
+    as well, and a search for `%` matched every subject in the store.
+    """
+    return (str(text).replace("\\", "\\\\")
+            .replace("%", "\\%").replace("_", "\\_"))

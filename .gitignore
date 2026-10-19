@@ -62,6 +62,23 @@ packs/*/pipeline/cache/
 logs/
 .cache/
 
+# pip's and pytest's own scratch directories, when they land in the working
+# directory instead of the system temp folder (which is what happens when TMPDIR
+# is unset or points somewhere unwritable). Ten of each were sitting untracked in
+# this checkout when the sweep was written, and `git status` was unusable
+# because of it.
+pip-build-tracker-*/
+pip-ephem-wheel-cache-*/
+pip-install-*/
+pip-uninstall-*/
+pytest-of-*/
+pytest-*/
+# And the same for a test that makes its own scratch directory through
+# `tempfile.mkdtemp()` when the system temp folder is unusable: two of these
+# (`tmp405ayqt4`, `tmpdeq23wol`, each with a real app.sqlite in it) were left in
+# the checkout by a suite run and showed up as untracked files.
+tmp?????????/
+
 # --- Secrets ---------------------------------------------------------------
 .env
 .env.*

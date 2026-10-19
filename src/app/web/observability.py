@@ -39,6 +39,16 @@ def log_analysis_jsonl(record: dict, path: Path | None = None) -> None:
         log.warning("Failed to write analyses.jsonl", exc_info=True)
 
 
+#: The last parse of a log file, keyed by path, with the (size, mtime) it was
+#: parsed at. One entry per file, which is one file in practice.
+#:
+#: `load_records` used to read and `json.loads` the whole JSONL on every call,
+#: and the demand miner reads it per agenda render — so the cost of a screen was
+#: the length of a log the reader can no longer see the start of. A JSONL is
+#: append-only, so (size, mtime) changing is the only way its records can.
+_PARSE_CACHE: dict[str, tuple[tuple[int, float], tuple[list[dict], int]]] = {}
+
+
 def load_records(path: Path) -> tuple[list[dict], int]:
     """Read a JSONL analyses log into ``(records, malformed_skipped)``.
 
@@ -49,7 +59,26 @@ def load_records(path: Path) -> tuple[list[dict], int]:
     dict records and would crash on ``rec.get(...)`` with ``AttributeError``, so
     a non-object line is as unusable as invalid JSON and is skipped and counted
     the same way. Blank lines are skipped but not counted. Never raises.
+
+    Memoised on ``(size, mtime)``: the file only ever grows by appending, so a
+    parse stays valid until either changes. Callers get the same list object
+    back, so a caller that mutates what it is handed is mutating the cache —
+    every caller here reads.
     """
+    try:
+        stamp = path.stat()
+        fingerprint = (stamp.st_size, stamp.st_mtime)
+    except OSError:
+        return [], 0
+    cached = _PARSE_CACHE.get(str(path))
+    if cached is not None and cached[0] == fingerprint:
+        return cached[1]
+    records, skipped = _parse_records(path)
+    _PARSE_CACHE[str(path)] = (fingerprint, (records, skipped))
+    return records, skipped
+
+
+def _parse_records(path: Path) -> tuple[list[dict], int]:
     records: list[dict] = []
     skipped = 0
     if not path.exists():

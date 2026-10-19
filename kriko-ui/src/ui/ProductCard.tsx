@@ -1,5 +1,4 @@
 import { motion } from 'motion/react'
-import { useState } from 'react'
 import type { Product } from '../activity/run'
 import { useProductActions } from '../engine/products'
 import { usePrefs } from '../prefs'
@@ -9,9 +8,11 @@ import { PixelGlyph } from './PixelGlyph'
 /** A product that an answer named, with what the reader can do next. */
 export function ProductCard({ product, onOpen }: { product: Product; onOpen: (lookupId: string) => void }) {
   const { motion: m } = usePrefs()
-  const { adding, reading, ensureCheck, addToCompare, readAgain } = useProductActions(product)
-  const [openProblem, setOpenProblem] = useState('')
-  const note = openProblem || (adding.step === 'failed' ? adding.note : reading.step === 'failed' ? reading.note : '')
+  const { adding, reading, opening, open, addToCompare, readAgain } = useProductActions(product)
+  const note = adding.step === 'failed' ? adding.note
+    : reading.step === 'failed' ? reading.note
+      : opening.step === 'failed' ? opening.note
+        : ''
 
   return (
     <motion.div
@@ -22,7 +23,7 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: (lo
     >
       <div>
         <strong>{product.name}</strong>
-        <span className="mono">{reading.step === 'busy' ? reading.note : product.note}</span>
+        <span className="mono">{reading.step === 'busy' ? reading.note : opening.step === 'busy' ? opening.note : product.note}</span>
         {note && (
           <span className="error-line" role="alert">
             {note}
@@ -30,8 +31,9 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: (lo
         )}
       </div>
       <div className="card-actions">
-        <button className="btn" onClick={() => { setOpenProblem(''); void ensureCheck().then(onOpen).catch((error: unknown) => setOpenProblem(error instanceof Error ? error.message : 'The product could not be opened. Try again.')) }}>
-          Open
+        <button className="btn" onClick={() => void open(onOpen)} disabled={opening.step === 'busy'}>
+          {opening.step === 'busy' ? <PixelGlyph size={14} active /> : null}
+          {opening.step === 'busy' ? 'Opens' : 'Open'}
         </button>
         <button className="btn" onClick={() => void addToCompare()} disabled={adding.step === 'busy' || adding.step === 'done'}>
           {adding.step === 'done' ? <Icon name="check" size={14} /> : adding.step === 'busy' ? <PixelGlyph size={14} active /> : <Icon name="plus" size={14} />}

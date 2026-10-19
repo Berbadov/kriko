@@ -50,7 +50,16 @@ export function CatalogsPanel() {
     finally { setWorking(false); if (input.current) input.current.value = '' }
   }
 
-  if (!catalogs) return <p className="panel-note">{problem || 'Reading the catalogs…'}</p>
+  // A failed read is not a wait. `{problem || 'Reading the catalogs…'}` rendered
+  // both in the muted note style, so a refusal looked like a slow screen.
+  if (!catalogs && problem) {
+    return (
+      <p className="error-note" role="alert">
+        Your catalogs could not be read. {problem}
+      </p>
+    )
+  }
+  if (!catalogs) return <p className="panel-note">Reading the catalogs…</p>
 
   const waiting = drafts.filter((row) => !row.installed)
 

@@ -119,7 +119,15 @@ print(f"ok: {installed}")
 CHECK
 
 say "refreshing generated research-agent prompts"
-"$PY" -m packs.cars.pipeline.agent.render
+# Every pack that renders one, not one pack by name: `docs/ARCHITECTURE.md`
+# states the rule this line was breaking ("a new category is never a change to
+# the engine"), and a setup script that has to be edited per category is the
+# same defect one directory over.
+for render in packs/*/pipeline/agent/render.py; do
+    [ -f "$render" ] || continue
+    module="$(printf '%s' "$render" | sed 's#/#.#g; s#\.py$##')"
+    "$PY" -m "$module"
+done
 
 # The check that matters, and the one the first version of this script did not
 # have: does the tree actually *import*?
