@@ -25,6 +25,7 @@ UNCHOSEN = dict.fromkeys(prefs.KEYS, "") | {
     prefs.LOCAL_CONTEXT: "4096",
     prefs.LOCAL_OUTPUT_LANGUAGE: "auto",
     prefs.LOCAL_SEARCH_LANGUAGE: "en",
+    prefs.MARKET_REGION: "auto",
 }
 
 

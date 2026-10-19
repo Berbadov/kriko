@@ -17,6 +17,12 @@ const PROFILES: { value: Profile; label: string }[] = [
 ]
 const PARALLEL = [1, 2, 3, 4].map((n) => ({ value: String(n), label: String(n) }))
 const SOURCE_COUNTS = [0, 5, 10, 20, 50]
+const LANGUAGES = [
+  ['en', 'English'], ['es', 'Spanish'], ['fr', 'French'], ['de', 'German'],
+  ['it', 'Italian'], ['pt', 'Portuguese'], ['nl', 'Dutch'], ['pl', 'Polish'],
+  ['tr', 'Turkish'], ['ru', 'Russian'], ['ja', 'Japanese'], ['ko', 'Korean'],
+  ['zh', 'Chinese'], ['ar', 'Arabic'],
+].map(([value, label]) => ({ value, label }))
 /** The engine's labels are sentences. The choices need a word. */
 const KIND_NAMES: Record<string, string> = {
   forums: 'Forums',
@@ -122,6 +128,53 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               value={doc.chosen.search_provider || ''}
               options={[{ value: '', label: 'Automatic' }, ...doc.search_providers.map((p) => ({ value: p.id, label: p.ready ? p.label : `${p.label} (no key)` }))]}
               onChange={(value) => void save({ search_provider: value })}
+            />
+          </div>
+          <div className="setting">
+            <span>
+              Response language
+              <small>Automatic follows the product request. Quotes stay in their source language.</small>
+            </span>
+            <Select
+              label="Response language"
+              value={doc.chosen.local_output_language || 'auto'}
+              options={[
+                { value: 'auto', label: 'Automatic' },
+                ...(doc.chosen.local_output_language && !LANGUAGES.some((one) => one.value === doc.chosen.local_output_language)
+                  ? [{ value: doc.chosen.local_output_language, label: doc.chosen.local_output_language }]
+                  : []),
+                ...LANGUAGES,
+              ]}
+              onChange={(value) => void save({ local_output_language: value })}
+            />
+          </div>
+          <div className="setting">
+            <span>
+              Research language
+              <small>Language used to phrase web searches.</small>
+            </span>
+            <Select
+              label="Research language"
+              value={doc.chosen.local_search_language || 'en'}
+              options={[
+                ...(doc.chosen.local_search_language && !LANGUAGES.some((one) => one.value === doc.chosen.local_search_language)
+                  ? [{ value: doc.chosen.local_search_language, label: doc.chosen.local_search_language }]
+                  : []),
+                ...LANGUAGES,
+              ]}
+              onChange={(value) => void save({ local_search_language: value })}
+            />
+          </div>
+          <div className="setting">
+            <span>
+              Market region
+              <small>Use this market when considering regional products and differences.</small>
+            </span>
+            <Select
+              label="Market region"
+              value={doc.chosen.market_region || 'auto'}
+              options={doc.market_regions.map((region) => ({ value: region.id, label: region.label }))}
+              onChange={(value) => void save({ market_region: value })}
             />
           </div>
           <div className="setting stack">

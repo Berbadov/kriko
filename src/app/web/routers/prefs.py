@@ -121,6 +121,8 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
                     "such as en or tr-TR"
                 ),
             )
+    if prefs.MARKET_REGION in written and written[prefs.MARKET_REGION] not in prefs.REGIONS:
+        raise HTTPException(422, detail="market_region must be a supported region code")
     if prefs.LLM_BASE_URL in written and written[prefs.LLM_BASE_URL]:
         endpoint = written[prefs.LLM_BASE_URL].rstrip("/")
         parsed = urlsplit(endpoint)

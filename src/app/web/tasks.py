@@ -851,6 +851,10 @@ def _research(settings, params: dict, progress: Progress, emit, provenance=None)
             # Every plane's brief carries it (`AgentResearcher.brief`).
             task = replace(task, guidance=_source_kinds_line(options["kinds"]))
             progress.log(f"sources first: {', '.join(options['kinds'])}")
+        from app.research_policy import market_guidance
+        market_context = market_guidance(_market_region(settings, params))
+        if market_context:
+            task = replace(task, guidance="\n".join(filter(None, [task.guidance, market_context])))
         progress.set(0.1, f"planning {task.subject_label}")
         # Recorded on the run, so a thin pack reads as "this was a Quick run"
         # rather than as a quality failure — which is the difference between a
@@ -2093,13 +2097,17 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
         profiles = []
         packs = ""
     progress.set(0.1, f"a quick look at {product}")
+    from app.research_policy import market_guidance
+    market_region = _market_region(settings, params)
+    market_context = market_guidance(market_region)
     try:
         if hasattr(researcher, "ask_quick"):
-            reply = researcher.ask_quick(product, principle=principle,
+            reply = researcher.ask_quick(product, principle="\n".join(filter(None, [principle, market_context])),
                                          page=params.get("page"), packs=packs, attributes=attributes)
         else:
             reply = researcher.ask(
-                quicklook.brief(product, principle, params.get("page"), packs, attributes)
+                quicklook.brief(product, principle, params.get("page"), packs, attributes,
+                                market_region=market_region)
                 + _source_ceiling(params, settings.app_state_path))
     except Exception as error:
         progress.partial({"product": product, "diagnostic": {
@@ -2496,7 +2504,8 @@ def quick_ask(settings, params: dict, progress: Progress) -> dict:
                                     category=str(found.get("category") or ""),
                                     evidence_pages=found.get("evidence_pages") or [],
                                     coverage=found.get("coverage")
-                                    if isinstance(found.get("coverage"), dict) else {})
+                                    if isinstance(found.get("coverage"), dict) else {},
+                                    market_region=_market_region(settings, params))
     answer, sources = _ask_about_checks(
         settings, params, progress, brief,
         timeout=QUICK_LOOK_TIMEOUT_SECONDS, effort="low", follow_up=True,
@@ -3818,7 +3827,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
             history.append(f"Agent reply: {earlier['answer'][:1000]}")
         context += "\n\n" + "\n".join(history)[:4000]
     brief = followup.web_brief(question, product=products, context=context,
-                               kind=followup.classify(question))
+                               kind=followup.classify(question),
+                               market_region=_market_region(settings, params))
     progress.log(f"comparison brief: {len(brief)} characters from {len(answers)} saved checks")
 
     def report_agent(identity: dict) -> None:
@@ -3829,7 +3839,8 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
         on_agent=report_agent, timeout=COMPARE_ASK_TIMEOUT_SECONDS,
         effort="low", follow_up=True, product=products, question=question,
         fallback_brief=followup.saved_brief(question, product=products, context=context,
-                                            kind=followup.classify(question)))
+                                            kind=followup.classify(question),
+                                            market_region=_market_region(settings, params)))
     if not answer:
         raise ValueError("The agent returned no answer. Try asking again.")
     progress.log(answer[:4000])
@@ -3894,7 +3905,8 @@ def lookup_ask(settings, params: dict, progress: Progress) -> dict:
 
     brief = followup.web_brief(question, product=str(stored.get("label") or ""),
                                context=context,
-                               kind=followup.classify(question))
+                               kind=followup.classify(question),
+                               market_region=_market_region(settings, params))
     reply, sources = _ask_about_checks(settings, params, progress, brief,
                                        on_agent=report_agent, follow_up=True,
                                        product=str(stored.get("label") or ""),
@@ -4022,6 +4034,20 @@ def _stream_chat_completion(completer, prompt: str, on_text: Callable[[str], Non
     return completer.stream(prompt, append)
 
 
+def _market_region(settings, params: dict | None = None) -> str:
+    """Read the run's explicit market, falling back to the saved preference."""
+    from app import prefs
+
+    explicit = str((params or {}).get(prefs.MARKET_REGION) or "").strip()
+    if explicit:
+        return explicit
+    conn = state.connect(settings.app_state_path)
+    try:
+        return prefs.read(conn).get(prefs.MARKET_REGION) or "auto"
+    finally:
+        conn.close()
+
+
 def chat_ask(settings, params: dict, progress: Progress) -> dict:
     """One turn of a conversation with the reader's own agent (app/chat.py).
 
@@ -4030,7 +4056,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
     agent message, with the steps that produced it. Nothing is written to the
     knowledge store: a chat answer is the reader's, never a claim.
     """
-    from app import chat, chatdata
+    from app import chat, chatdata, prefs, research_policy
 
     thread_id = str(params.get("thread_id") or "").strip()
     message_id = str(params.get("message_id") or "").strip()
@@ -4042,6 +4068,11 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         if state.get_chat_thread(app_state, thread_id) is None:
             raise ValueError(f"no conversation {thread_id}")
         history = state.chat_history(app_state, thread_id, before=message_id)
+        chosen = prefs.read(app_state)
+        language = chosen.get(prefs.LOCAL_OUTPUT_LANGUAGE) or "auto"
+        context = research_policy.market_guidance(_market_region(settings, params))
+        if language != "auto":
+            context += f"\nWrite the answer in this selected language: {language}."
         try:
             store = connect(settings.store_path, read_only=True)
         except (sqlite3.Error, OSError):
@@ -4093,8 +4124,23 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
 
             hooks = _TurnHooks(progress, {"thread_id": thread_id, "message_id": message_id},
                                agent)
-            result = chat.run_turn(text, ask=ask, ask_stream=ask_stream,
-                                   ask_quick=ask_quick, ctx=ctx,
+            # Apply market/language to every model call, including planning,
+            # while preserving the exact reader message and saved history.
+            original_ask, original_quick, original_stream = ask, ask_quick, ask_stream
+
+            def contextual_ask(prompt: str) -> str:
+                return original_ask(prompt + ("\n\n" + context if context else ""))
+
+            def contextual_quick(prompt: str) -> str:
+                return original_quick(prompt + ("\n\n" + context if context else ""))
+
+            def contextual_stream(prompt: str, on_text: Callable[[str], None]) -> str:
+                assert original_stream is not None
+                return original_stream(prompt + ("\n\n" + context if context else ""), on_text)
+
+            result = chat.run_turn(text, ask=contextual_ask,
+                                   ask_stream=contextual_stream if original_stream else None,
+                                   ask_quick=contextual_quick, ctx=ctx,
                                    history=history, hooks=hooks)
         finally:
             if store is not None:
