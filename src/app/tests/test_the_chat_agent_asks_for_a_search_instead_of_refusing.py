@@ -102,6 +102,11 @@ def test_an_agent_that_asks_for_a_search_gets_one_and_answers_from_it(ctx):
     assert out["agent_calls"] == 2
     assert out["steps"][0]["source"] == "web_search"
     assert out["steps"][0]["state"] == "done"
+    assert out["activity"][0]["search_results"] == ["https://maker.example/page"]
+    assert out["activity"][0]["pages_attempted"] == 1
+    assert out["activity"][0]["pages_read"] == 1
+    assert out["activity"][1]["kind"] == "read"
+    assert out["activity"][1]["state"] == "done"
     assert "Page text for https://maker.example/page" in agent.prompts[1]
     assert "tell the reader that you cannot search the web" in agent.prompts[1]
 

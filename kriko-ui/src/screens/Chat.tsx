@@ -227,6 +227,7 @@ function Thread({
               )}
               <p className="you">{turn.prompt}</p>
             </div>
+            {!!turn.rows?.length && <Timeline historical run={{ ...run, status: turn.error ? 'failed' : 'done', rows: turn.rows, answer: turn.answer, prompt: turn.prompt }} />}
             {turn.answer && (
               <article className="answer">
                 <AnswerHead agent={turn.agent} />
