@@ -3,6 +3,60 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.2.4
+
+- **Kriko starts agents when you need them.** Opening the app no longer
+  launches your coding agents or asks them for their model lists. The window
+  reads a short list of the agents you have, and the full discovery happens when
+  you open Settings. An agent that sits idle is now closed after 90 seconds
+  (20 on a machine with little memory), and Kriko keeps at most one warm. Closing
+  an idle agent no longer holds up the one you are using. The agent picker
+  refreshes when you change a setting or a key, without resetting a conversation.
+- **A local model no longer shows its thinking or a raw search request.** Some
+  local models printed their reasoning, or answered a request to search with a
+  block of structured text. Kriko now hides the reasoning, reads the common
+  shapes of a search request and runs the search. If a model's request cannot be
+  read, Kriko searches for your own words.
+- **Use any OpenAI-compatible API as an agent.** Add your key in Keys, and the
+  endpoint and the model ID in Settings, Research. The agent can use the Exa or
+  Tavily search you chose.
+  Your key is never shown again, and a reply that cannot be read is refused
+  instead of guessed.
+- **Choose the market and the language.** Settings, Research, has a language for
+  answers, a language for searches and a market (a country or the European
+  Union). Chat, quick looks, research and follow-up questions all use them. The
+  agent is also told to match the length of the answer to what is at stake, to
+  require exact fit for a part (a PC part or a vehicle part), and to report what a
+  forum alleges as an allegation, not as seller evidence.
+- **See what Kriko searched and read.** A run lists the exact addresses it
+  searched, how many pages it tried and how many it read. These are three
+  numbers, not one. A cancelled read is not counted as read. The log of a run
+  stays with the conversation when you open it again.
+- **A finished queue clears, and keeps its results.** When every research in a
+  batch is done, the queue empties. The saved checks stay in your history, and
+  anything waiting, paused, failed or added later stays in the queue.
+- **Chats get a title, and suggest what to ask next.** The agent names a new
+  conversation and offers up to three related questions. A click puts one in the
+  message box, where you can edit it before you send. Your answer is saved first,
+  and a title you chose yourself is kept.
+- **Kriko files a product under its catalog with your agent.** When a quick look
+  is saved, Kriko matches it to an installed catalog by what it already knows. If
+  that is not enough, the agent you picked reads the saved facts and the catalogs
+  and proposes one, with the exact words it relied on. Kriko accepts it only when
+  the catalog is installed, the confidence is high enough and the words are on the
+  page. Otherwise the product stays uncategorized, and you can retry or choose.
+  History keeps the method, the evidence and the catalog's version. An agent that
+  works through MCP can list the catalogs and submit its own decision.
+- **Optional: Jev from TypeSafe can do the filing instead.** Off by default. You
+  turn it on in Settings, Research, and add a TypeSafe key in Keys. When Kriko
+  cannot decide by itself, it sends the product title, the saved facts and the
+  list of your installed catalogs to TypeSafe. It does not search the web. It is a
+  paid service, and Kriko records the usage the service reports.
+
+Also in this release: a benchmark for part compatibility (`python -m app.compatbench`),
+which grades a model on five invented cases and checks every passage it cites.
+It measures nothing until you run it against a model.
+
 ### 0.2.3
 
 - **Kriko opens in a few seconds, not fifteen.** The engine was one file that
