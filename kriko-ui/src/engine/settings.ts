@@ -14,6 +14,9 @@ export interface AgentRow {
   llm: string
   llms: string[]
   llms_note?: string
+  llm_hint?: string
+  llm_selectable?: boolean
+  model_freeform?: boolean
   effort: string
   efforts: string[]
 }

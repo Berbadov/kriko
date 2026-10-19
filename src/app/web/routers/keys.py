@@ -177,7 +177,7 @@ def _search_base(provider_id: str) -> str:
     return (os.environ.get("EXA_BASE_URL") or exa_provider.DEFAULT_BASE_URL).rstrip("/")
 
 
-def _completion_base(provider_id: str) -> str:
+def _completion_base(provider_id: str, app_state_path=None) -> str:
     if provider_id == "anthropic":
         from app.providers import anthropic_llm as anthropic_provider
 
@@ -187,8 +187,17 @@ def _completion_base(provider_id: str) -> str:
 
         return mistral.base_url()
     from app.providers import llm as openai_provider
+    saved = ""
+    if app_state_path is not None:
+        from app import prefs
+        from app.web import state
 
-    return (os.environ.get("LLM_BASE_URL") or openai_provider.DEFAULT_BASE_URL).rstrip("/")
+        conn = state.connect(app_state_path)
+        try:
+            saved = prefs.read(conn).get(prefs.LLM_BASE_URL, "")
+        finally:
+            conn.close()
+    return (saved or os.environ.get("LLM_BASE_URL") or openai_provider.DEFAULT_BASE_URL).rstrip("/")
 
 
 def _test_search(provider_id: str, key: str) -> dict:
@@ -300,7 +309,7 @@ def _anthropic_verdict(provider_id: str, start: float, name: str, body: dict) ->
     return row
 
 
-def _test_completion(provider_id: str, key: str) -> dict:
+def _test_completion(provider_id: str, key: str, app_state_path=None) -> dict:
     start = time.monotonic()
     if provider_id == "anthropic":
         from app.providers.anthropic_llm import API_VERSION
@@ -308,7 +317,7 @@ def _test_completion(provider_id: str, key: str) -> dict:
         name = (os.environ.get("ANTHROPIC_MODEL") or "").strip()
         if not name:
             return _refused(provider_id, _timed_ms(start), "no_model", "no Anthropic LLM chosen")
-        url = _completion_base(provider_id) + "/messages"
+        url = _completion_base(provider_id, app_state_path) + "/messages"
         payload = {
             "model": name,
             "max_tokens": 8,
@@ -328,7 +337,7 @@ def _test_completion(provider_id: str, key: str) -> dict:
             name = mistral.DEFAULT_MODEL
         else:
             name = llm_provider.model_name()
-        url = _completion_base(provider_id) + "/chat/completions"
+        url = _completion_base(provider_id, app_state_path) + "/chat/completions"
         payload = {
             "model": name,
             "messages": [{"role": "user", "content": "Reply with the word ok."}],
@@ -351,7 +360,7 @@ def _test_completion(provider_id: str, key: str) -> dict:
     return _openai_verdict(provider_id, start, name, body)
 
 
-def _run_provider_test(provider_id: str) -> dict:
+def _run_provider_test(provider_id: str, app_state_path=None) -> dict:
     from app.providers import MissingKey
 
     try:
@@ -364,7 +373,7 @@ def _run_provider_test(provider_id: str) -> dict:
         if provider_id in ("exa", "tavily"):
             return _test_search(provider_id, key)
         if provider_id in keys.COMPLETION_PROVIDERS:
-            return _test_completion(provider_id, key)
+            return _test_completion(provider_id, key, app_state_path)
         return _refused(provider_id, 0, "unsupported", f"no self-test for {provider_id}")
     except Exception as exc:
         return _refused(provider_id, 0, "error", f"{type(exc).__name__}: {exc}")
@@ -377,7 +386,7 @@ def check(request: Request, body: KeyTest) -> dict:
         raise HTTPException(404, f"unknown provider {body.provider}")
     path = getattr(request.app.state.settings, "app_state_path")
     with operations.record(path, door="app", name="key_test", kind="read", arguments={"provider": provider_id}) as outcome:
-        result = _run_provider_test(provider_id)
+        result = _run_provider_test(provider_id, path)
         outcome["response"] = operations.summarise(result)
         tokens = result.get("tokens")
         if isinstance(tokens, int) and not isinstance(tokens, bool):
