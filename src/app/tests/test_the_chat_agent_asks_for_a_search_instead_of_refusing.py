@@ -9,6 +9,7 @@ and a web turn searches the words the agent wrote.
 
 # ruff: noqa: F811 — `ctx` is a fixture imported from test_chat_turn, so each test redefines it by name.
 
+import json
 import pytest
 
 from app import chat
@@ -47,6 +48,36 @@ def test_a_search_request_is_read_from_the_whole_reply(reply, words):
 ])
 def test_an_answer_that_mentions_searching_is_an_answer(reply):
     assert chat.search_request(reply) == ""
+
+
+def test_search_request_decodes_json_and_openai_tool_call_shapes():
+    assert chat.search_request(
+        '{"name":"web_search","arguments":{"query":"widget pump failures"}}') == \
+        "widget pump failures"
+    reply = json.dumps({"tool_calls": [{"function": {
+        "name": "web_search", "arguments": {"query": "widget pump failures"}}}]})
+    assert chat.search_request(reply) == "widget pump failures"
+
+
+def test_a_structured_search_request_is_not_streamed_as_an_answer(ctx):
+    searched = []
+    _web(ctx, searched)
+    agent = Script(
+        '{"name":"web_search","arguments":{"query":"widget pump failures"}}',
+        "The pump failed. [https://maker.example/page]")
+
+    def ask_stream(prompt, on_text):
+        reply = agent(prompt)
+        on_text(reply)
+        return reply
+
+    hooks = Hooks()
+    chat.run_turn("What do you think about this pump?", ask=agent,
+                  ask_stream=ask_stream, ctx=ctx, hooks=hooks)
+
+    assert searched == ["widget pump failures"]
+    assert hooks.partials
+    assert all(not (one["answer"].lstrip().startswith("{")) for one in hooks.partials)
 
 
 def test_the_ordinary_prompt_offers_the_search_and_never_the_refusal():
