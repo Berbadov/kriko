@@ -53,7 +53,8 @@ immutable; a correction is a newer version.
   profile, purchases and watches are kept on it as copies sealed on your devices
   with a key it never receives, so a phone and this computer agree. For a watch
   you turn on in the cloud, the relay reads the page itself and pushes an alert to
-  your phone through ntfy when the price crosses your target. It has to be told
+  your phone through ntfy when the price crosses your target. One relay serves one
+  reader (the first device with the relay's setup word claims it). It has to be told
   that page: hashing an address cannot hide it from whoever fetches it, so it is
   per watch, kept encrypted at rest, and you can keep the product's name from it.
   Nothing is sent to a relay you have not connected, and a watch you leave off

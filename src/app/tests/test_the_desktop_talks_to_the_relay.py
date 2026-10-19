@@ -12,6 +12,8 @@ from kriko_cloud import watcher
 from kriko_cloud.app import create_app
 from kriko_cloud.settings import Settings
 
+SETUP = "open-sesame"
+
 NOW = datetime(2026, 10, 19, 12, 0, tzinfo=UTC)
 SERVER = "http://127.0.0.1:8080"
 PAGE = ('<script type="application/ld+json">{"@type":"Product","offers":{"@type":"Offer","price":"%s",'
@@ -32,7 +34,7 @@ def resolver(monkeypatch):
 
 @pytest.fixture
 def relay(tmp_path):
-    app = create_app(Settings(db_path=tmp_path / "relay.sqlite", secret="s", registrations_per_hour=50))
+    app = create_app(Settings(db_path=tmp_path / "relay.sqlite", secret="s", setup=SETUP))
     with TestClient(app) as client:
         client.relay = app
         yield client
@@ -72,11 +74,11 @@ def test_everything_is_derived_from_the_one_key_and_never_equal_to_it():
     key = cloud.new_key()
     keys = cloud.Keys(key)
     again = cloud.Keys(key)
-    assert (keys.group, keys.token, keys.topic) == (again.group, again.token, again.topic)
-    assert len(keys.group) == 32 and keys.topic.startswith("kriko-") and len(keys.topic) == 6 + 32
-    assert key not in (keys.group, keys.token, keys.topic)
+    assert (keys.token, keys.topic) == (again.token, again.topic)
+    assert keys.topic.startswith("kriko-") and len(keys.topic) == 6 + 32
+    assert key not in (keys.token, keys.topic)
     other = cloud.Keys(cloud.new_key())
-    assert {other.group, other.token} & {keys.group, keys.token} == set()
+    assert other.token != keys.token and other.topic != keys.topic
 
 
 def test_a_sealed_blob_opens_only_with_its_key_and_its_name():
@@ -124,42 +126,58 @@ def test_https_and_a_loopback_relay_are_accepted():
 
 # ── connecting ──────────────────────────────────────────────────────────
 
-def test_connecting_makes_a_group_the_relay_knows_only_by_id(desk, web, relay):
+def test_connecting_claims_the_relay_and_it_knows_the_reader_only_by_a_hash_of_a_token(desk, web, relay):
     conn = desk("a")
     assert cloud.status(conn)["connected"] is False
-    got = cloud.connect(conn, SERVER, http=web)
-    assert got["connected"] is True and got["server"] == SERVER and len(got["group"]) == 8
+    got = cloud.connect(conn, SERVER, setup=SETUP, http=web)
+    assert got["connected"] is True and got["server"] == SERVER
     with relay.relay.state.db.connect() as db:
-        row = db.execute("SELECT group_id, topic FROM groups").fetchone()
-    code = cloud.code_for(conn)
-    key = cloud.parse_code(code)[1]
-    assert row["group_id"] == cloud.Keys(key).group and row["topic"] == got["topic"]
-    assert key not in repr(dict(row))
+        row = db.execute("SELECT token_hash, topic FROM owner").fetchone()
+    key = cloud.parse_code(cloud.code_for(conn))[1]
+    keys = cloud.Keys(key)
+    assert row["topic"] == got["topic"] == keys.topic
+    assert keys.token not in repr(dict(row)) and key not in repr(dict(row))
 
 
-def test_joining_with_a_code_lands_in_the_same_group(desk, web, relay):
-    a, b = desk("a"), desk("b")
-    cloud.connect(a, SERVER, http=web)
-    cloud.join(b, cloud.code_for(a), http=web)
-    assert cloud.status(a)["group"] == cloud.status(b)["group"]
-    with relay.relay.state.db.connect() as db:
-        assert db.execute("SELECT COUNT(*) FROM groups").fetchone()[0] == 1
-
-
-def test_disconnecting_forgets_the_group_there_and_the_key_here(desk, web, relay):
+def test_a_wrong_or_missing_setup_word_does_not_connect(desk, web):
     conn = desk("a")
-    cloud.connect(conn, SERVER, http=web)
+    for word in ("", "wrong"):
+        with pytest.raises(cloud.RelayError) as error:
+            cloud.connect(conn, SERVER, setup=word, http=web)
+        assert error.value.status == 403
+    assert cloud.status(conn)["connected"] is False
+
+
+def test_a_second_reader_cannot_take_a_claimed_relay(desk, web):
+    cloud.connect(desk("a"), SERVER, setup=SETUP, http=web)
+    with pytest.raises(cloud.RelayError, match="someone else"):
+        cloud.connect(desk("b"), SERVER, setup=SETUP, http=web)
+
+
+def test_joining_with_a_code_is_the_same_reader_on_another_device(desk, web, relay):
+    a, b = desk("a"), desk("b")
+    cloud.connect(a, SERVER, setup=SETUP, http=web)
+    cloud.join(b, cloud.code_for(a), http=web)
+    assert cloud.code_for(a) == cloud.code_for(b)
+    with relay.relay.state.db.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM owner").fetchone()[0] == 1
+
+
+def test_disconnecting_releases_the_relay_there_and_forgets_the_key_here(desk, web, relay):
+    conn = desk("a")
+    cloud.connect(conn, SERVER, setup=SETUP, http=web)
     cloud.disconnect(conn, http=web)
     assert cloud.status(conn)["connected"] is False
     with relay.relay.state.db.connect() as db:
-        assert db.execute("SELECT COUNT(*) FROM groups").fetchone()[0] == 0
+        assert db.execute("SELECT COUNT(*) FROM owner").fetchone()[0] == 0
+    cloud.connect(desk("b"), SERVER, setup=SETUP, http=web)  # free for the next reader
     with pytest.raises(ValueError):
         cloud.code_for(conn)
 
 
 def test_a_relay_that_does_not_answer_is_a_relay_error_and_a_quiet_no_op_for_a_clock(desk, web):
     conn = desk("a")
-    cloud.connect(conn, SERVER, http=web)
+    cloud.connect(conn, SERVER, setup=SETUP, http=web)
 
     def down(*_):
         raise cloud.RelayError("the relay does not answer")
@@ -174,7 +192,7 @@ def test_a_relay_that_does_not_answer_is_a_relay_error_and_a_quiet_no_op_for_a_c
 
 def paired(desk, web):
     a, b = desk("a"), desk("b")
-    cloud.connect(a, SERVER, http=web)
+    cloud.connect(a, SERVER, setup=SETUP, http=web)
     cloud.join(b, cloud.code_for(a), http=web)
     return a, b
 
@@ -265,7 +283,7 @@ def relay_watches(relay):
 
 def test_a_page_goes_to_the_relay_only_when_that_watch_is_turned_on(desk, web, relay):
     conn = desk("a")
-    cloud.connect(conn, SERVER, http=web)
+    cloud.connect(conn, SERVER, setup=SETUP, http=web)
     made = pricewatch.watch(conn, "https://shop.test/p/kettle", "Kettle", target=30)
     cloud.sync(conn, web)
     assert relay_watches(relay) == [], "a watch is private until the reader says otherwise"
@@ -280,7 +298,7 @@ def test_a_page_goes_to_the_relay_only_when_that_watch_is_turned_on(desk, web, r
 
 def test_private_labels_tell_the_relay_a_page_but_not_its_name(desk, web, relay):
     conn = desk("a")
-    cloud.connect(conn, SERVER, private_labels=True, http=web)
+    cloud.connect(conn, SERVER, setup=SETUP, private_labels=True, http=web)
     made = pricewatch.watch(conn, "https://shop.test/p/kettle", "My secret hobby kit", target=30, cloud=True)
     cloud.sync(conn, web)
     assert relay_watches(relay)[0]["label"] == cloud.GENERIC_LABEL
@@ -307,7 +325,7 @@ def sweep_relay(relay, price, at):
 
 def test_an_alert_raised_while_the_computer_was_off_arrives_as_an_ordinary_alert_once(desk, web, relay):
     conn = desk("a")
-    cloud.connect(conn, SERVER, private_labels=True, http=web)
+    cloud.connect(conn, SERVER, setup=SETUP, private_labels=True, http=web)
     pricewatch.watch(conn, "https://shop.test/p/kettle", "Kettle", target=50, currency="EUR", cloud=True)
     cloud.sync(conn, web)
     result, pushed = sweep_relay(relay, "42", NOW)
@@ -322,7 +340,7 @@ def test_an_alert_raised_while_the_computer_was_off_arrives_as_an_ordinary_alert
 
 def test_an_alert_for_a_watch_that_is_gone_is_dropped(desk, web, relay):
     conn = desk("a")
-    cloud.connect(conn, SERVER, http=web)
+    cloud.connect(conn, SERVER, setup=SETUP, http=web)
     made = pricewatch.watch(conn, "https://shop.test/p/kettle", "Kettle", target=50, cloud=True)
     cloud.sync(conn, web)
     sweep_relay(relay, "42", NOW)

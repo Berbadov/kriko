@@ -6,6 +6,7 @@ services:
     restart: unless-stopped
     environment:
       KRIKO_CLOUD_SECRET: ${KRIKO_CLOUD_SECRET:?set it in .env}
+      KRIKO_CLOUD_SETUP: ${KRIKO_CLOUD_SETUP:?set it in .env}
       KRIKO_CLOUD_NTFY: ${KRIKO_CLOUD_NTFY:-https://ntfy.sh}
     volumes:
       - relay-data:/data

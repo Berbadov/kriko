@@ -1,4 +1,4 @@
-"""The relay: ciphertext it cannot read, pages it hashes, watches it reads once, pushes without links."""
+"""The relay: one reader, ciphertext it cannot read, watches it reads, pushes without links."""
 
 import base64
 import secrets
@@ -15,6 +15,7 @@ from kriko_cloud.settings import Settings
 NOW = datetime(2026, 10, 19, 12, 0, tzinfo=UTC)
 PUBLIC = "93.184.216.34"
 HOSTS = {"shop.test": PUBLIC, "other.test": PUBLIC, "internal.test": "10.0.0.5", "local.test": "127.0.0.1"}
+SETUP = "open-sesame"
 
 
 @pytest.fixture(autouse=True)
@@ -29,110 +30,125 @@ def resolver(monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", fake)
 
 
-def credentials():
-    group = secrets.token_hex(16)
+def owner():
     token = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode().rstrip("=")
-    topic = "kriko-" + secrets.token_hex(16)
-    return group, {"Authorization": f"Bearer {token}"}, topic
+    return {"Authorization": f"Bearer {token}"}, "kriko-" + secrets.token_hex(16)
 
 
 @pytest.fixture
 def relay(tmp_path):
-    settings = Settings(db_path=tmp_path / "relay.sqlite", secret="test-secret", registrations_per_hour=5,
-                        max_watches_per_group=3, max_blob_bytes=1000)
-    app = create_app(settings)
+    app = create_app(Settings(db_path=tmp_path / "relay.sqlite", secret="test-secret", setup=SETUP,
+                              max_watches=3, max_blob_bytes=1000))
     with TestClient(app) as client:
         client.relay = app
         yield client
 
 
-def joined(relay):
-    group, headers, topic = credentials()
-    assert relay.put(f"/v1/g/{group}", json={"topic": topic}, headers=headers).json() == {"created": True}
-    return group, headers, topic
+def claimed(relay):
+    headers, topic = owner()
+    got = relay.put("/v1/owner", json={"topic": topic}, headers={**headers, "X-Kriko-Setup": SETUP})
+    assert got.json() == {"claimed": True}
+    return headers, topic
 
 
-# ── groups ──────────────────────────────────────────────────────────────
+# ── the owner ───────────────────────────────────────────────────────────
 
-def test_a_group_is_made_once_and_belongs_to_whoever_holds_its_token(relay):
-    group, headers, topic = credentials()
-    assert relay.put(f"/v1/g/{group}", json={"topic": topic}, headers=headers).json()["created"] is True
-    assert relay.put(f"/v1/g/{group}", json={}, headers=headers).json()["created"] is False
-    _, other, _ = credentials()
-    assert relay.put(f"/v1/g/{group}", json={}, headers=other).status_code == 403
+def test_the_first_device_with_the_setup_word_claims_the_relay_and_is_known_again_without_it(relay):
+    headers, topic = owner()
+    assert relay.put("/v1/owner", json={"topic": topic}, headers={**headers, "X-Kriko-Setup": SETUP}).json() == {
+        "claimed": True}
+    assert relay.put("/v1/owner", json={}, headers=headers).json() == {"claimed": False}
+
+
+def test_a_stranger_who_reaches_a_fresh_relay_first_cannot_claim_it(relay):
+    headers, topic = owner()
+    for extra in ({}, {"X-Kriko-Setup": "guess"}):
+        assert relay.put("/v1/owner", json={"topic": topic}, headers={**headers, **extra}).status_code == 403
+    with relay.relay.state.db.connect() as db:
+        assert db.execute("SELECT COUNT(*) FROM owner").fetchone()[0] == 0
+
+
+def test_a_relay_with_no_setup_word_cannot_be_claimed_at_all(tmp_path):
+    app = create_app(Settings(db_path=tmp_path / "r.sqlite", secret="s", setup=""))
+    with TestClient(app) as client:
+        headers, topic = owner()
+        got = client.put("/v1/owner", json={"topic": topic}, headers={**headers, "X-Kriko-Setup": ""})
+        assert got.status_code == 403 and "no setup word" in got.json()["detail"]
+
+
+def test_once_claimed_it_belongs_to_one_reader(relay):
+    claimed(relay)
+    other, topic = owner()
+    got = relay.put("/v1/owner", json={"topic": topic}, headers={**other, "X-Kriko-Setup": SETUP})
+    assert got.status_code == 403 and "someone else" in got.json()["detail"]
 
 
 @pytest.mark.parametrize("header", [None, "Bearer", "Bearer short", "Basic abc"])
 def test_a_request_without_a_real_token_is_refused(relay, header):
-    group = secrets.token_hex(16)
     headers = {"Authorization": header} if header else {}
-    assert relay.put(f"/v1/g/{group}", json={}, headers=headers).status_code == 401
+    assert relay.put("/v1/owner", json={}, headers=headers).status_code == 401
+    assert relay.get("/v1/watches", headers=headers).status_code == 401
 
 
-def test_a_group_id_that_is_not_one_is_not_found(relay):
-    _, headers, _ = credentials()
-    assert relay.put("/v1/g/not-a-group", json={}, headers=headers).status_code == 404
+def test_every_route_but_health_wants_the_owner(relay):
+    claimed(relay)
+    other, _ = owner()
+    for method, path in (("get", "/v1/watches"), ("get", "/v1/alerts"), ("get", "/v1/blob/profile"),
+                         ("delete", "/v1/owner")):
+        assert getattr(relay, method)(path, headers=other).status_code == 403, path
+    assert relay.get("/v1/health").json()["ok"] is True
 
 
 def test_a_topic_that_is_not_a_kriko_topic_is_refused(relay):
-    group, headers, _ = credentials()
-    assert relay.put(f"/v1/g/{group}", json={"topic": "someone-elses-topic"}, headers=headers).status_code == 422
+    headers, _ = owner()
+    got = relay.put("/v1/owner", json={"topic": "someone-elses"}, headers={**headers, "X-Kriko-Setup": SETUP})
+    assert got.status_code == 422
 
 
-def test_new_groups_from_one_address_are_limited(relay):
-    codes = []
-    for _ in range(7):
-        group, headers, _ = credentials()
-        codes.append(relay.put(f"/v1/g/{group}", json={}, headers=headers).status_code)
-    assert codes[:5] == [200] * 5 and codes[5:] == [429, 429]
-
-
-def test_a_group_can_forget_itself_and_all_it_watched(relay):
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/watch/w1", json={"url": "https://shop.test/p/1", "target": 5}, headers=headers)
-    relay.put(f"/v1/g/{group}/blob/profile", content=b"sealed", headers=headers)
-    assert relay.delete(f"/v1/g/{group}", headers=headers).json() == {"forgotten": True}
-    assert relay.get(f"/v1/g/{group}/blob/profile", headers=headers).status_code == 403
+def test_releasing_forgets_everything_and_frees_the_relay(relay):
+    headers, _ = claimed(relay)
+    relay.put("/v1/watch/w1", json={"url": "https://shop.test/p/1", "target": 5}, headers=headers)
+    relay.put("/v1/blob/profile", content=b"sealed", headers=headers)
+    assert relay.delete("/v1/owner", headers=headers).json() == {"released": True}
     with relay.relay.state.db.connect() as conn:
-        assert conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0] == 0
+        counts = [conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0] for t in ("owner", "watches", "blobs")]
+    assert counts == [0, 0, 0]
+    claimed(relay)  # free for the next owner
 
 
 # ── blobs: ciphertext, stored as bytes ───────────────────────────────────
 
 def test_a_blob_is_bytes_in_and_the_same_bytes_out_with_a_version(relay):
-    group, headers, _ = joined(relay)
+    headers, _ = claimed(relay)
     sealed = secrets.token_bytes(200)
-    assert relay.put(f"/v1/g/{group}/blob/profile", content=sealed, headers=headers).json() == {"version": 1}
-    got = relay.get(f"/v1/g/{group}/blob/profile", headers=headers)
+    assert relay.put("/v1/blob/profile", content=sealed, headers=headers).json() == {"version": 1}
+    got = relay.get("/v1/blob/profile", headers=headers)
     assert got.content == sealed and got.headers["X-Kriko-Version"] == "1"
-    assert relay.put(f"/v1/g/{group}/blob/profile", content=b"x", headers=headers).json() == {"version": 2}
+    assert relay.put("/v1/blob/profile", content=b"x", headers=headers).json() == {"version": 2}
 
 
 def test_a_write_that_did_not_see_the_latest_version_is_refused(relay):
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/blob/ledger", content=b"one", headers=headers)
-    relay.put(f"/v1/g/{group}/blob/ledger", content=b"two", headers={**headers, "X-Kriko-Expect": "1"})
-    stale = relay.put(f"/v1/g/{group}/blob/ledger", content=b"three", headers={**headers, "X-Kriko-Expect": "1"})
+    headers, _ = claimed(relay)
+    relay.put("/v1/blob/ledger", content=b"one", headers=headers)
+    relay.put("/v1/blob/ledger", content=b"two", headers={**headers, "X-Kriko-Expect": "1"})
+    stale = relay.put("/v1/blob/ledger", content=b"three", headers={**headers, "X-Kriko-Expect": "1"})
     assert stale.status_code == 409
-    assert relay.get(f"/v1/g/{group}/blob/ledger", headers=headers).content == b"two"
-    fresh = relay.put(f"/v1/g/{group}/blob/other", content=b"x", headers={**headers, "X-Kriko-Expect": "0"})
-    assert fresh.json() == {"version": 1}
+    assert relay.get("/v1/blob/ledger", headers=headers).content == b"two"
+    assert relay.put("/v1/blob/other", content=b"x", headers={**headers, "X-Kriko-Expect": "0"}).json() == {
+        "version": 1}
 
 
-def test_a_blob_is_bounded_and_named_plainly_and_not_shared_between_groups(relay):
-    group, headers, _ = joined(relay)
-    assert relay.put(f"/v1/g/{group}/blob/big", content=b"x" * 1001, headers=headers).status_code == 413
-    assert relay.put(f"/v1/g/{group}/blob/Bad..Name", content=b"x", headers=headers).status_code == 404
-    other, other_headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/blob/profile", content=b"mine", headers=headers)
-    assert relay.get(f"/v1/g/{group}/blob/profile", headers=other_headers).status_code == 403
-    assert relay.get(f"/v1/g/{other}/blob/profile", headers=other_headers).status_code == 404
+def test_a_blob_is_bounded_and_named_plainly(relay):
+    headers, _ = claimed(relay)
+    assert relay.put("/v1/blob/big", content=b"x" * 1001, headers=headers).status_code == 413
+    assert relay.put("/v1/blob/Bad..Name", content=b"x", headers=headers).status_code == 404
+    assert relay.get("/v1/blob/missing", headers=headers).status_code == 404
 
 
-def test_a_group_may_keep_only_a_few_blobs(relay):
-    group, headers, _ = joined(relay)
-    codes = [relay.put(f"/v1/g/{group}/blob/b{n}", content=b"x", headers=headers).status_code for n in range(10)]
-    assert codes.count(200) == storage.MAX_BLOBS_PER_GROUP and 507 in codes
+def test_only_a_few_blobs_may_be_kept(relay):
+    headers, _ = claimed(relay)
+    codes = [relay.put(f"/v1/blob/b{n}", content=b"x", headers=headers).status_code for n in range(10)]
+    assert codes.count(200) == storage.MAX_BLOBS and 507 in codes
 
 
 # ── watches: the one thing the relay must be told ────────────────────────
@@ -143,59 +159,50 @@ def test_a_group_may_keep_only_a_few_blobs(relay):
     "https://shop.test:8000/p", "https:///nohost", "http://10.0.0.1/",
 ])
 def test_the_relay_will_not_watch_an_address_that_is_not_on_the_public_web(relay, url):
-    group, headers, _ = joined(relay)
-    got = relay.put(f"/v1/g/{group}/watch/w1", json={"url": url}, headers=headers)
-    assert got.status_code == 422, url
+    headers, _ = claimed(relay)
+    assert relay.put("/v1/watch/w1", json={"url": url}, headers=headers).status_code == 422, url
 
 
 def test_an_address_is_sealed_at_rest_and_indexed_by_its_hash(relay):
-    group, headers, _ = joined(relay)
+    headers, _ = claimed(relay)
     url = "https://shop.test/p/secret-product?id=7&utm_source=ad"
-    got = relay.put(f"/v1/g/{group}/watch/w1", json={"url": url, "label": "Kettle", "target": 30}, headers=headers)
+    got = relay.put("/v1/watch/w1", json={"url": url, "label": "Kettle", "target": 30}, headers=headers)
     assert got.status_code == 200
-    page = got.json()["page"]
-    assert page == storage.url_hash("https://shop.test/p/secret-product?id=7")
+    assert got.json()["page"] == storage.url_hash("https://shop.test/p/secret-product?id=7")
     with relay.relay.state.db.connect() as conn:
         conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     raw = relay.relay.state.db.path.read_bytes()
-    assert len(raw) > 0
+    assert len(raw) > 0 and b"secret-product" not in raw
     with relay.relay.state.db.connect() as conn:
-        sealed = conn.execute("SELECT url_sealed FROM pages").fetchone()[0]
-    assert b"secret-product" not in bytes(sealed) and b"secret-product" not in raw
+        sealed = conn.execute("SELECT url_sealed FROM watches").fetchone()[0]
     assert relay.relay.state.db.unseal(sealed) == "https://shop.test/p/secret-product?id=7"
 
 
-def test_a_page_many_groups_watch_is_one_page_and_goes_when_the_last_stops(relay):
-    url = "https://shop.test/p/1"
-    mine, mine_h, _ = joined(relay)
-    yours, yours_h, _ = joined(relay)
-    relay.put(f"/v1/g/{mine}/watch/a", json={"url": url, "target": 10}, headers=mine_h)
-    relay.put(f"/v1/g/{yours}/watch/b", json={"url": url + "?utm_x=1", "target": 20}, headers=yours_h)
-    with relay.relay.state.db.connect() as conn:
-        assert conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0] == 1
-    relay.delete(f"/v1/g/{mine}/watch/a", headers=mine_h)
-    with relay.relay.state.db.connect() as conn:
-        assert conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0] == 1
-    relay.delete(f"/v1/g/{yours}/watch/b", headers=yours_h)
-    with relay.relay.state.db.connect() as conn:
-        assert conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0] == 0
-    assert relay.delete(f"/v1/g/{yours}/watch/b", headers=yours_h).status_code == 404
+def test_a_watch_can_be_changed_replaced_and_stopped(relay):
+    headers, _ = claimed(relay)
+    relay.put("/v1/watch/w1", json={"url": "https://shop.test/p/1", "target": 10}, headers=headers)
+    relay.put("/v1/watch/w1", json={"url": "https://shop.test/p/1", "target": 20}, headers=headers)
+    assert [w["target"] for w in relay.get("/v1/watches", headers=headers).json()["items"]] == [20]
+    relay.put("/v1/watch/w1", json={"url": "https://shop.test/p/2", "target": 5}, headers=headers)
+    items = relay.get("/v1/watches", headers=headers).json()["items"]
+    assert len(items) == 1 and items[0]["url_hash"] == storage.url_hash("https://shop.test/p/2")
+    assert relay.delete("/v1/watch/w1", headers=headers).status_code == 200
+    assert relay.delete("/v1/watch/w1", headers=headers).status_code == 404
 
 
-def test_a_group_may_watch_only_so_many_pages(relay):
-    group, headers, _ = joined(relay)
-    codes = [relay.put(f"/v1/g/{group}/watch/w{n}", json={"url": f"https://shop.test/p/{n}"}, headers=headers)
-             .status_code for n in range(5)]
+def test_only_so_many_pages_may_be_watched(relay):
+    headers, _ = claimed(relay)
+    codes = [relay.put(f"/v1/watch/w{n}", json={"url": f"https://shop.test/p/{n}"}, headers=headers).status_code
+             for n in range(5)]
     assert codes == [200, 200, 200, 507, 507]
-    # Changing one that exists is not a new one.
-    assert relay.put(f"/v1/g/{group}/watch/w1", json={"url": "https://shop.test/p/1", "target": 3},
-                     headers=headers).status_code == 200
+    assert relay.put("/v1/watch/w1", json={"url": "https://shop.test/p/1", "target": 3}, headers=headers
+                     ).status_code == 200
 
 
 def test_a_watch_listing_never_returns_an_address(relay):
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/watch/w1", json={"url": "https://shop.test/p/hidden", "label": "Kettle"}, headers=headers)
-    body = relay.get(f"/v1/g/{group}/watches", headers=headers).text
+    headers, _ = claimed(relay)
+    relay.put("/v1/watch/w1", json={"url": "https://shop.test/p/hidden", "label": "Kettle"}, headers=headers)
+    body = relay.get("/v1/watches", headers=headers).text
     assert "hidden" not in body and "Kettle" in body
 
 
@@ -224,26 +231,20 @@ def sweep(relay, world, at):
                          ntfy_base="https://ntfy.example")
 
 
-def test_a_shared_page_is_fetched_once_and_each_group_hears_by_its_own_terms(relay):
+def test_a_crossed_target_raises_one_alert_and_one_push_to_the_owners_topic(relay):
     url = "https://shop.test/p/kettle"
-    mine, mine_h, mine_topic = joined(relay)
-    yours, yours_h, yours_topic = joined(relay)
-    relay.put(f"/v1/g/{mine}/watch/a", json={"url": url, "label": "Kettle", "target": 50, "currency": "EUR"},
-              headers=mine_h)
-    relay.put(f"/v1/g/{yours}/watch/b", json={"url": url, "label": "My kettle", "target": 30, "currency": "EUR"},
-              headers=yours_h)
+    headers, topic = claimed(relay)
+    relay.put("/v1/watch/a", json={"url": url, "label": "Kettle", "target": 50, "currency": "EUR"}, headers=headers)
     world = World({url: "45.00"})
     assert sweep(relay, world, NOW) == {"read": 1, "failed": 0, "alerts": 1}
-    assert world.fetched == [url]
-    assert world.pushed == [("https://ntfy.example", mine_topic, "Price dropped", "Kettle: 45 EUR")]
-    assert relay.get(f"/v1/g/{mine}/alerts", headers=mine_h).json()["items"][0]["price"] == 45
-    assert relay.get(f"/v1/g/{yours}/alerts", headers=yours_h).json()["items"] == []
+    assert world.pushed == [("https://ntfy.example", topic, "Price dropped", "Kettle: 45 EUR")]
+    assert relay.get("/v1/alerts", headers=headers).json()["items"][0]["price"] == 45
 
 
 def test_a_push_carries_a_label_and_a_price_and_never_an_address(relay):
     url = "https://shop.test/p/kettle-with-a-telling-name"
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/watch/a", json={"url": url, "target": 50}, headers=headers)
+    headers, _ = claimed(relay)
+    relay.put("/v1/watch/a", json={"url": url, "target": 50}, headers=headers)
     world = World({url: "40"})
     sweep(relay, world, NOW)
     assert world.pushed and "telling-name" not in repr(world.pushed) and "shop.test" not in repr(world.pushed)
@@ -251,21 +252,21 @@ def test_a_push_carries_a_label_and_a_price_and_never_an_address(relay):
 
 def test_the_same_price_is_not_announced_twice_but_a_lower_one_is(relay):
     url = "https://shop.test/p/kettle"
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/watch/a", json={"url": url, "target": 50}, headers=headers)
+    headers, _ = claimed(relay)
+    relay.put("/v1/watch/a", json={"url": url, "target": 50}, headers=headers)
     world = World({url: "45"})
     sweep(relay, world, NOW)
     assert sweep(relay, world, NOW + timedelta(hours=7))["alerts"] == 0
     world.prices[url] = "40"
     assert sweep(relay, world, NOW + timedelta(hours=14))["alerts"] == 1
-    assert [a["price"] for a in relay.get(f"/v1/g/{group}/alerts", headers=headers).json()["items"]] == [45, 40]
-    assert relay.get(f"/v1/g/{group}/alerts?after=1", headers=headers).json()["items"][0]["price"] == 40
+    assert [a["price"] for a in relay.get("/v1/alerts", headers=headers).json()["items"]] == [45, 40]
+    assert relay.get("/v1/alerts?after=1", headers=headers).json()["items"][0]["price"] == 40
 
 
 def test_a_page_is_not_read_again_before_it_is_due_and_failures_back_off(relay):
     url = "https://shop.test/p/unreadable"
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/watch/a", json={"url": url, "target": 50}, headers=headers)
+    headers, _ = claimed(relay)
+    relay.put("/v1/watch/a", json={"url": url, "target": 50}, headers=headers)
     world = World({})
     assert sweep(relay, world, NOW)["failed"] == 1
     assert sweep(relay, world, NOW + timedelta(hours=1)) == {"read": 0, "failed": 0, "alerts": 0}
@@ -277,28 +278,17 @@ def test_a_page_is_not_read_again_before_it_is_due_and_failures_back_off(relay):
 
 def test_a_page_in_another_currency_is_not_compared_to_the_target(relay):
     url = "https://shop.test/p/kettle"
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/watch/a", json={"url": url, "target": 50, "currency": "TRY"}, headers=headers)
+    headers, _ = claimed(relay)
+    relay.put("/v1/watch/a", json={"url": url, "target": 50, "currency": "TRY"}, headers=headers)
     assert sweep(relay, World({url: "10"}), NOW)["alerts"] == 0
 
 
 def test_a_fall_from_the_starting_price_alerts_without_a_target(relay):
     url = "https://shop.test/p/kettle"
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/watch/a", json={"url": url, "drop_pct": 20, "started_price": 100}, headers=headers)
+    headers, _ = claimed(relay)
+    relay.put("/v1/watch/a", json={"url": url, "drop_pct": 20, "started_price": 100}, headers=headers)
     assert sweep(relay, World({url: "90"}), NOW)["alerts"] == 0
     assert sweep(relay, World({url: "75"}), NOW + timedelta(hours=7))["alerts"] == 1
-
-
-def test_a_group_nobody_has_touched_is_forgotten(relay):
-    group, headers, _ = joined(relay)
-    relay.put(f"/v1/g/{group}/watch/a", json={"url": "https://shop.test/p/1"}, headers=headers)
-    db = relay.relay.state.db
-    assert db.forget_idle(180) == 0
-    assert db.forget_idle(180, NOW + timedelta(days=400)) == 1
-    with db.connect() as conn:
-        assert conn.execute("SELECT COUNT(*) FROM groups").fetchone()[0] == 0
-        assert conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0] == 0
 
 
 # ── the fetcher ─────────────────────────────────────────────────────────

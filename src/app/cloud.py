@@ -5,11 +5,12 @@ keeps, and watches a price while the computer is off. This module is everything
 the desktop does with it, and the rule it keeps is the relay's: tell it as little
 as the job needs.
 
-* **One key, held by the devices.** Pairing makes 32 random bytes and keeps them in
-  this app's state. Everything else is derived from them: the group's id, the token
-  that proves membership, the key that seals what is stored, and the push topic.
-  The relay is never sent the key, so it stores ciphertext it cannot read, and a
-  phone joins by being handed the key (`pairing_code`), not by an account.
+* **One relay, one reader, one key held by the devices.** Pairing makes 32 random
+  bytes and keeps them in this app's state. Everything else is derived from them:
+  the token that proves you own the relay, the key that seals what is stored, and
+  the push topic. The relay is never sent the key, so it stores ciphertext it cannot
+  read, and a phone joins by being handed the key (`pairing_code`), not by an
+  account. The first device claims the relay with the operator's setup word.
 * **Sealed with AES-256-GCM**, the blob's name bound in as associated data so a
   profile cannot be swapped for a ledger.
 * **A cloud watch is the one thing the relay must be told.** A server that re-reads a
@@ -92,7 +93,6 @@ class Keys:
     def __init__(self, key: str):
         if len(_unb64(key)) != 32:
             raise ValueError("that is not a Kriko sync key")
-        self.group = _derive(key, b"group", 16).hex()
         self.token = _b64(_derive(key, b"token", 32))
         self.topic = "kriko-" + _derive(key, b"topic", 16).hex()
         self._aead = AESGCM(_derive(key, b"enc", 32))
@@ -174,7 +174,7 @@ class Relay:
             headers["Content-Type"] = "application/json"
         elif body is not None:
             headers["Content-Type"] = "application/octet-stream"
-        status, reply_headers, data = self.http(method, f"{self.server}/v1/g/{self.keys.group}{path}", body, headers)
+        status, reply_headers, data = self.http(method, f"{self.server}/v1{path}", body, headers)
         if status not in ok:
             detail = ""
             try:
@@ -184,9 +184,11 @@ class Relay:
             raise RelayError(detail or f"the relay answered {status}", status)
         return status, reply_headers, data
 
-    def register(self) -> bool:
-        _, _, data = self.call("PUT", "", json_body={"topic": self.keys.topic})
-        return bool(json.loads(data).get("created"))
+    def claim(self, setup: str = "") -> bool:
+        """Take the relay with the operator's setup word, or confirm it is already ours. `True` when taken now."""
+        _, _, data = self.call("PUT", "/owner", json_body={"topic": self.keys.topic},
+                               extra={"X-Kriko-Setup": setup} if setup else None)
+        return bool(json.loads(data).get("claimed"))
 
     def get_blob(self, name: str) -> tuple[int, object] | None:
         try:
@@ -216,7 +218,7 @@ class Relay:
         return json.loads(self.call("GET", f"/alerts?after={after}")[2])["items"]
 
     def forget(self) -> None:
-        self.call("DELETE", "", ok=(200, 403, 404))
+        self.call("DELETE", "/owner", ok=(200, 403, 404))
 
 
 # ── this app's side ──────────────────────────────────────────────────────
@@ -247,26 +249,26 @@ def status(conn: sqlite3.Connection) -> dict:
     if not found:
         return {"connected": False, "server": "", "watching": 0, "private_labels": False, "synced_at": ""}
     watching = conn.execute("SELECT COUNT(*) FROM watches WHERE cloud = 1").fetchone()[0]
-    return {"connected": True, "server": found[0], "group": Keys(found[1]).group[:8], "watching": watching,
+    return {"connected": True, "server": found[0], "watching": watching,
             "private_labels": bool(have.get(PRIVATE_LABELS)), "synced_at": have.get(SYNCED, ""),
             "topic": Keys(found[1]).topic}
 
 
-def connect(conn: sqlite3.Connection, server: str, *, private_labels: bool = False,
+def connect(conn: sqlite3.Connection, server: str, *, setup: str = "", private_labels: bool = False,
             http: Http | None = None) -> dict:
-    """Start a new group on this relay. Whatever was paired before is left."""
+    """Claim this relay for this reader with the operator's setup word. Whatever was paired before is left."""
     server = secure(server)
     key = new_key()
-    Relay(server, key, http).register()
+    Relay(server, key, http).claim(setup)
     state.put_settings(conn, {SERVER: server, KEY: key, PRIVATE_LABELS: private_labels, VERSIONS: {}, CURSOR: 0,
                               SYNCED: "", TOMBS: []})
     return status(conn)
 
 
 def join(conn: sqlite3.Connection, code: str, *, http: Http | None = None) -> dict:
-    """Join the group a code names, from a phone or another computer."""
+    """Join the relay a code names, from a phone or another computer."""
     server, key = parse_code(code)
-    Relay(server, key, http).register()
+    Relay(server, key, http).claim()
     state.put_settings(conn, {SERVER: server, KEY: key, VERSIONS: {}, CURSOR: 0, SYNCED: "", TOMBS: []})
     return status(conn)
 
@@ -447,7 +449,7 @@ def sync(conn: sqlite3.Connection, http: Http | None = None) -> dict:
     relay = relay_for(conn, http)
     if not relay:
         raise ValueError("not connected to a relay")
-    relay.register()
+    relay.claim()
     out: dict[str, object] = {"blobs": sync_blobs(conn, relay)}
     out["watches"] = sync_watches(conn, relay)
     out["alerts"] = pull_alerts(conn, relay)

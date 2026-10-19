@@ -1,16 +1,15 @@
-"""The relay's HTTP API. Every route is under one group, and a group is its token."""
+"""The relay's HTTP API. One relay serves one reader, and the reader is whoever holds the token."""
 
 from __future__ import annotations
 
 import base64
 import binascii
+import hmac
 import logging
 import re
 import threading
 import time
-from collections import defaultdict, deque
 from contextlib import asynccontextmanager
-from dataclasses import replace
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -22,29 +21,8 @@ from .settings import Settings
 
 log = logging.getLogger(__name__)
 
-GROUP = re.compile(r"^[0-9a-f]{32}$")
 NAME = re.compile(r"^[a-z][a-z0-9_-]{0,15}$")
 WATCH = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
-
-
-class Limiter:
-    """`allowed` is true for the first `count` calls per key per hour. In memory, on purpose."""
-
-    def __init__(self, count: int, window: float = 3600.0, clock=time.monotonic):
-        self.count, self.window, self.clock = count, window, clock
-        self.seen: dict[str, deque] = defaultdict(deque)
-        self.lock = threading.Lock()
-
-    def allowed(self, key: str) -> bool:
-        now = self.clock()
-        with self.lock:
-            hits = self.seen[key]
-            while hits and now - hits[0] > self.window:
-                hits.popleft()
-            if len(hits) >= self.count:
-                return False
-            hits.append(now)
-            return True
 
 
 def _token(authorization: str | None) -> str:
@@ -55,11 +33,11 @@ def _token(authorization: str | None) -> str:
         if len(base64.urlsafe_b64decode(token + "=" * (-len(token) % 4))) != 32:
             raise ValueError
     except (binascii.Error, ValueError) as error:
-        raise HTTPException(401, "that is not a group token") from error
+        raise HTTPException(401, "that is not an owner token") from error
     return token
 
 
-class Register(BaseModel):
+class Claim(BaseModel):
     topic: str = Field(default="", max_length=64)
 
 
@@ -76,14 +54,12 @@ def create_app(settings: Settings | None = None, *, fetch=safefetch.markup, push
                sweeper: bool = False) -> FastAPI:
     config = settings or Settings()
     db = storage.Store(config.db_path, config.secret)
-    limiter = Limiter(config.registrations_per_hour)
     stop = threading.Event()
 
     def run_sweeps() -> None:
         while not stop.wait(max(60, config.sweep_minutes * 60)):
             try:
                 watcher.sweep(db, fetch, push, ntfy_base=config.ntfy_base)
-                db.forget_idle(config.forget_after_days)
             except Exception:  # noqa: BLE001 - the clock must outlive one bad sweep
                 log.warning("a sweep failed", exc_info=True)
 
@@ -97,53 +73,67 @@ def create_app(settings: Settings | None = None, *, fetch=safefetch.markup, push
     app = FastAPI(title="Kriko relay", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.db, app.state.config = db, config
 
-    def member(group: str, authorization: str | None = Header(default=None)) -> str:
-        if not GROUP.match(group):
-            raise HTTPException(404, "no such group")
+    def owner(authorization: str | None = Header(default=None)) -> None:
         try:
-            db.check(group, _token(authorization))
+            db.check(_token(authorization))
         except storage.Denied as error:
-            raise HTTPException(403, "that token is not this group's") from error
-        return group
+            raise HTTPException(403, "that token is not this relay's owner") from error
 
     @app.get("/v1/health")
     def health() -> dict:
         return {"ok": True, "version": __version__}
 
-    @app.put("/v1/g/{group}")
-    def register(group: str, body: Register, request: Request, authorization: str | None = Header(default=None)):
-        """Create the group, or confirm it. The first call fixes the token; the group is nothing else."""
-        if not GROUP.match(group):
-            raise HTTPException(404, "no such group")
+    @app.put("/v1/owner")
+    def claim(body: Claim, authorization: str | None = Header(default=None),
+              setup: str | None = Header(default=None, alias="X-Kriko-Setup")):
+        """Take this relay, or confirm that you already have it.
+
+        The first call needs the operator's setup word, so a stranger who finds the
+        address first cannot take it. A device paired later presents the same token and
+        needs no word.
+        """
         token = _token(authorization)
         if body.topic and not pusher.TOPIC.match(body.topic):
             raise HTTPException(422, "that is not a Kriko topic")
-        host = request.client.host if request.client else "?"
-        known = False
         try:
-            with db.connect() as conn:
-                known = bool(conn.execute("SELECT 1 FROM groups WHERE group_id = ?", (group,)).fetchone())
-            if not known and not limiter.allowed(host):
-                raise HTTPException(429, "too many new groups from this address; try again later")
-            created = db.register(group, token, body.topic, max_groups=config.max_groups)
-        except storage.Denied as error:
-            raise HTTPException(403, "that token is not this group's") from error
-        except storage.Full as error:
-            raise HTTPException(507, str(error)) from error
-        return {"created": created}
+            db.check(token)
+        except storage.Denied:
+            pass
+        else:
+            db.claim(token, body.topic)  # the owner again: only the topic can change
+            return {"claimed": False}
+        with db.connect() as conn:
+            taken = bool(conn.execute("SELECT 1 FROM owner").fetchone())
+        if taken:
+            raise HTTPException(403, "this relay already belongs to someone else")
+        if not config.setup:
+            raise HTTPException(403, "this relay has no setup word, so it cannot be claimed")
+        if not setup or not hmac.compare_digest(setup.encode(), config.setup.encode()):
+            time.sleep(0.5)  # a guess costs something
+            raise HTTPException(403, "that is not this relay's setup word")
+        try:
+            return {"claimed": db.claim(token, body.topic)}
+        except storage.Claimed as error:
+            raise HTTPException(403, "this relay already belongs to someone else") from error
 
-    @app.get("/v1/g/{group}/blob/{name}")
-    def read_blob(name: str, group: str = Depends(member)):
+    @app.delete("/v1/owner", dependencies=[Depends(owner)])
+    def release() -> dict:
+        """Forget everything and free the relay for a new owner."""
+        db.reset()
+        return {"released": True}
+
+    @app.get("/v1/blob/{name}", dependencies=[Depends(owner)])
+    def read_blob(name: str):
         if not NAME.match(name):
             raise HTTPException(404, "no such blob")
-        row = db.read_blob(group, name)
+        row = db.read_blob(name)
         if not row:
             raise HTTPException(404, "nothing stored under that name")
         return Response(bytes(row["body"]), media_type="application/octet-stream",
                         headers={"X-Kriko-Version": str(row["version"])})
 
-    @app.put("/v1/g/{group}/blob/{name}")
-    async def write_blob(name: str, request: Request, group: str = Depends(member),
+    @app.put("/v1/blob/{name}", dependencies=[Depends(owner)])
+    async def write_blob(name: str, request: Request,
                          if_match: int | None = Header(default=None, alias="X-Kriko-Expect")):
         if not NAME.match(name):
             raise HTTPException(404, "no such blob")
@@ -151,53 +141,45 @@ def create_app(settings: Settings | None = None, *, fetch=safefetch.markup, push
         if len(body) > config.max_blob_bytes:
             raise HTTPException(413, "too large")
         try:
-            return {"version": db.write_blob(group, name, body, if_match)}
+            return {"version": db.write_blob(name, body, if_match)}
         except storage.Conflict as error:
             raise HTTPException(409, f"it moved: version {error.args[0]}") from error
         except storage.Full as error:
             raise HTTPException(507, str(error)) from error
 
-    @app.get("/v1/g/{group}/watches")
-    def watches(group: str = Depends(member)) -> dict:
-        return {"items": db.watches_of(group)}
+    @app.get("/v1/watches", dependencies=[Depends(owner)])
+    def watches() -> dict:
+        return {"items": db.watches()}
 
-    @app.put("/v1/g/{group}/watch/{watch_id}")
-    def put_watch(watch_id: str, body: WatchBody, group: str = Depends(member)) -> dict:
+    @app.put("/v1/watch/{watch_id}", dependencies=[Depends(owner)])
+    def put_watch(watch_id: str, body: WatchBody) -> dict:
         if not WATCH.match(watch_id):
             raise HTTPException(404, "no such watch")
         try:
             host = safefetch.check(body.url)
         except safefetch.Refused as error:
             raise HTTPException(422, f"this relay will not watch that address: {error}") from error
-        clean = pricewatch.strip_tracking(body.url)
         try:
-            hashed = db.put_watch(group, watch_id, clean, host, label=body.label, target=body.target,
-                                  drop_pct=body.drop_pct, started_price=body.started_price,
-                                  currency=body.currency.upper(), max_per_group=config.max_watches_per_group,
-                                  max_pages=config.max_pages)
+            hashed = db.put_watch(watch_id, pricewatch.strip_tracking(body.url), host, label=body.label,
+                                  target=body.target, drop_pct=body.drop_pct, started_price=body.started_price,
+                                  currency=body.currency.upper(), limit=config.max_watches)
         except storage.Full as error:
             raise HTTPException(507, str(error)) from error
         return {"watch_id": watch_id, "page": hashed}
 
-    @app.delete("/v1/g/{group}/watch/{watch_id}")
-    def drop_watch(watch_id: str, group: str = Depends(member)) -> dict:
-        if not db.drop_watch(group, watch_id):
+    @app.delete("/v1/watch/{watch_id}", dependencies=[Depends(owner)])
+    def drop_watch(watch_id: str) -> dict:
+        if not db.drop_watch(watch_id):
             raise HTTPException(404, "no such watch")
         return {"deleted": watch_id}
 
-    @app.get("/v1/g/{group}/alerts")
-    def alerts(after: int = 0, group: str = Depends(member)) -> dict:
-        return {"items": db.alerts_after(group, max(0, after))}
-
-    @app.delete("/v1/g/{group}")
-    def forget(group: str = Depends(member)) -> dict:
-        db.forget_group(group)
-        return {"forgotten": True}
+    @app.get("/v1/alerts", dependencies=[Depends(owner)])
+    def alerts(after: int = 0) -> dict:
+        return {"items": db.alerts_after(max(0, after))}
 
     return app
 
 
 def sweep_now(app: FastAPI, *, fetch=safefetch.markup, push=pusher.send, pause=time.sleep) -> dict:
     """One sweep, for tests and for an operator's cron."""
-    config = replace(app.state.config)
-    return watcher.sweep(app.state.db, fetch, push, pause=pause, ntfy_base=config.ntfy_base)
+    return watcher.sweep(app.state.db, fetch, push, pause=pause, ntfy_base=app.state.config.ntfy_base)
