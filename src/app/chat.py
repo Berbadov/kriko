@@ -38,6 +38,8 @@ ROUND_CHARS = 12000
 
 #: What an agent writes, alone on a line, to ask Kriko for a web search.
 SEARCH_PREFIX = "SEARCH:"
+_SEARCH_TOOL_PREFIX = re.compile(
+    r"^\s*(?:```(?:json)?\s*)?\{\s*\"(?:name|tool|function|tool_call|tool_calls)\"\s*:", re.I)
 #: A written search is a few words, never a paragraph.
 QUERY_CHARS = 200
 QUERY_WORDS = 14
@@ -741,13 +743,69 @@ def search_request(reply: str) -> str:
     Only a reply that is nothing but the request counts: an answer that happens
     to mention a search is an answer.
     """
-    lines = [line.strip() for line in str(reply or "").strip().splitlines() if line.strip()]
+    raw = str(reply or "").strip()
+    # Some local chat templates return a structured tool call even though the
+    # prompt asked for the compact SEARCH line. Decode common OpenAI/Ollama
+    # shapes here so a valid search request reaches the same bounded search.
+    candidate = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.I).strip()
+    try:
+        decoded = json.loads(candidate)
+    except (TypeError, ValueError):
+        decoded = None
+    query = _search_tool_query(decoded)
+    if query:
+        return _clean_query(query)
+
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
     if not lines or len(lines) > 2:
         return ""
     match = _SEARCH_LINE.match(lines[0])
     if match is None or (len(lines) == 2 and not lines[1].lower().startswith("sources")):
         return ""
     return _clean_query(match.group(1))
+
+
+def _search_tool_query(value) -> str:
+    """Read a search request from common JSON tool-call wrappers."""
+    if isinstance(value, list):
+        for item in value:
+            found = _search_tool_query(item)
+            if found:
+                return found
+        return ""
+    if not isinstance(value, dict):
+        return ""
+    name = str(value.get("name") or value.get("tool") or value.get("function") or "")
+    arguments = value.get("arguments", value.get("args", value.get("parameters", {})))
+    nested = value.get("tool_call", value.get("tool_calls"))
+    if nested is not None:
+        found = _search_tool_query(nested)
+        if found:
+            return found
+    if isinstance(arguments, str):
+        try:
+            arguments = json.loads(arguments)
+        except ValueError:
+            arguments = {}
+    if isinstance(arguments, dict):
+        # OpenAI tool calls wrap name and arguments in `function`.
+        function = value.get("function")
+        if isinstance(function, dict):
+            name = str(function.get("name") or name)
+            args = function.get("arguments", arguments)
+            if isinstance(args, str):
+                try:
+                    arguments = json.loads(args)
+                except ValueError:
+                    arguments = {}
+            elif isinstance(args, dict):
+                arguments = args
+        if name.casefold() in {"search", "web_search", "search_web", "internet_search"}:
+            for key in ("query", "search_query", "text", "q"):
+                query = arguments.get(key)
+                if isinstance(query, str) and query.strip():
+                    return query
+    return ""
 
 
 def _clean_query(text: str) -> str:
@@ -857,8 +915,13 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         # streamed Sources tail just as we do for the finished reply, so the
         # reader sees the answer rather than a half-written citation list.
         answer, _ = split_sources(text)
-        if answer.lstrip(" `*\"'").upper().startswith("SEARCH"):
+        candidate = answer.lstrip(" `*\"'")
+        upper = candidate.upper()
+        if upper.startswith("SEARCH") or (upper and "SEARCH:".startswith(upper)):
             return  # a request for a search, not words the reader should see
+        if (candidate.startswith("{") or candidate.casefold().startswith("json")
+                or _SEARCH_TOOL_PREFIX.match(answer)):
+            return  # structured tool requests are not the reader's answer
         now = time.monotonic()
         if answer and answer != last_streamed_answer and (
             not last_streamed_answer or now - last_streamed_at >= 0.25
@@ -971,6 +1034,11 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             # It asked for a search in words that cannot be one (a sentence of
             # explanation). The request is still not an answer: search with the
             # reader's own message.
+            wanted = search_words(_web_query(message, history))
+        if not wanted and _SEARCH_TOOL_PREFIX.match(text):
+            # A malformed structured request is still a tool request, not a
+            # final answer. Fall back to the reader's words through the usual
+            # bounded query path.
             wanted = search_words(_web_query(message, history))
         if wanted:
             # The agent asked for what it cannot know without the internet.
