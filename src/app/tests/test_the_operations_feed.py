@@ -207,7 +207,8 @@ def test_the_tools_are_still_registered_after_wrapping(tmp_path):
 
     tools = mcp_server.mcp._tool_manager.list_tools()
     names = {tool.name for tool in tools}
-    assert {"list_packs", "submit_findings", "lookup", "draft_pack"} <= names
+    assert {"list_packs", "submit_findings", "lookup", "draft_pack",
+            "list_catalogs", "classify_product"} <= names
     # And the description the agent reads is still the tool's own docstring,
     # not `functools.wraps`' idea of one.
     by_name = {tool.name: tool for tool in tools}

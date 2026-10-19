@@ -54,6 +54,7 @@ def isolated(monkeypatch, tmp_path):
         "LLM_MODEL",
         "ANTHROPIC_BASE_URL",
         "ANTHROPIC_MODEL",
+        "TYPESAFE_API_KEY",
     ):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(keys, "env_path", lambda home=None: tmp_path / "env")
@@ -86,6 +87,8 @@ def with_key(monkeypatch, provider):
     elif provider == "anthropic":
         monkeypatch.setenv("ANTHROPIC_API_KEY", SECRET)
         monkeypatch.setenv("ANTHROPIC_MODEL", "claude-test-1")
+    elif provider == "typesafe":
+        monkeypatch.setenv("TYPESAFE_API_KEY", SECRET)
 
 
 def search_hit():
@@ -192,6 +195,21 @@ def test_openai_key_test_uses_saved_compatible_endpoint(isolated, monkeypatch):
     assert requested == ["https://gateway.test/v1/chat/completions"]
 
 
+def test_typesafe_key_test_lists_models_without_returning_the_key(isolated, monkeypatch):
+    with_key(monkeypatch, "typesafe")
+    seen = []
+
+    def fake(request, timeout=None):
+        seen.append((request.full_url, request.method, request.get_header("Authorization")))
+        return Reply(json.dumps({"models": [{"name": "jev-latest"}]}).encode())
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake)
+    client, _ = make_client(isolated)
+    body = client.post("/api/keys/test", json={"provider": "typesafe"})
+    assert body.json()["ok"] is True
+    assert body.json()["results"] == 1
+    assert seen == [("https://api.typesafe.ai/v1/models", "GET", f"Bearer {SECRET}")]
+    assert SECRET not in body.text
 
 
 def test_anthropic_success_counts_tokens(isolated, monkeypatch):

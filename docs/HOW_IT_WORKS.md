@@ -40,6 +40,33 @@ A quick look is also raw material for a catalog. A quick look already carries
 its sources and its quotations. When its product is missing from the catalog,
 Kriko files the quick look and keeps the sources.
 
+When Kriko assigns a saved quick look to a catalog, its history keeps the
+decision method, the evidence used, and the selected catalog's version and
+content digest. An uncertain decision keeps the reason and the leading
+candidates, so a later reader can see why it abstained. The MCP operations
+`list_catalogs` and `classify_product` expose the same installed catalog
+definitions and configured classification path to an agent.
+
+Jev from TypeSafe is an optional classifier in **Settings → Research**. The
+deterministic checks run first; Jev is called only when those checks abstain
+and the reader explicitly selects it. The call sends the product title, saved
+Quick Look facts, and the complete installed catalog roster to TypeSafe. It
+does not search the web. The pinned model is `jev-1.14.0`; it returns a Choice
+and a probability for every option. Kriko abstains if the full roster exceeds
+the API's 255-option limit (including the uncertain option), if the response
+is malformed or below the configured probability and confidence thresholds,
+or if local title-scope and evidence checks fail. Those gates do not make a
+model decision infallible: the reader can inspect its evidence and catalog
+revision in the saved history.
+
+This is a paid API call when used. Only input tokens are charged by TypeSafe;
+the audit records token usage and an estimate when the response reports usage.
+The API key is stored in the local key file, and the request sends it as a
+Bearer token. See TypeSafe's [API reference](https://docs.typesafe.ai/api),
+[Choice guide](https://docs.typesafe.ai/primitives/choice),
+[model list](https://docs.typesafe.ai/models), and
+[confidence guide](https://docs.typesafe.ai/confidence).
+
 ## What a check does
 
 A check has four stages.

@@ -790,9 +790,10 @@ CREATE TABLE IF NOT EXISTS quicklook_categories (
   pack_id      TEXT NOT NULL DEFAULT '',
   pack_name    TEXT NOT NULL DEFAULT '',
   status       TEXT NOT NULL DEFAULT 'uncertain', -- assigned | uncertain
-  method       TEXT NOT NULL DEFAULT 'deterministic', -- deterministic | agent | reader
+  method       TEXT NOT NULL DEFAULT 'deterministic', -- deterministic | agent | Jev | reader
   confidence   TEXT NOT NULL DEFAULT 'none',
   basis_json   TEXT NOT NULL DEFAULT '[]',
+  audit_json   TEXT NOT NULL DEFAULT '{}',
   message      TEXT NOT NULL DEFAULT '',
   updated_at   TEXT NOT NULL DEFAULT ''
 );
@@ -2509,6 +2510,7 @@ def save_quicklook_category(conn: sqlite3.Connection, quick_job_id: str,
         status = "uncertain"
     pack_id = str(assignment.get("pack_id") or "") if status == "assigned" else ""
     basis = assignment.get("basis") if isinstance(assignment.get("basis"), list) else []
+    audit = assignment.get("audit") if isinstance(assignment.get("audit"), dict) else {}
     record = {
         "quick_job_id": str(quick_job_id),
         "pack_id": pack_id,
@@ -2517,20 +2519,22 @@ def save_quicklook_category(conn: sqlite3.Connection, quick_job_id: str,
         "method": str(assignment.get("method") or "deterministic"),
         "confidence": str(assignment.get("confidence") or "none"),
         "basis": basis,
+        "audit": audit,
         "message": str(assignment.get("message") or ""),
         "updated_at": _now(),
     }
     conn.execute(
         "INSERT INTO quicklook_categories"
         " (quick_job_id, pack_id, pack_name, status, method, confidence,"
-        "  basis_json, message, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        "  basis_json, audit_json, message, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
         " ON CONFLICT(quick_job_id) DO UPDATE SET"
         " pack_id=excluded.pack_id, pack_name=excluded.pack_name,"
         " status=excluded.status, method=excluded.method, confidence=excluded.confidence,"
-        " basis_json=excluded.basis_json, message=excluded.message, updated_at=excluded.updated_at",
+        " basis_json=excluded.basis_json, audit_json=excluded.audit_json,"
+        " message=excluded.message, updated_at=excluded.updated_at",
         (record["quick_job_id"], record["pack_id"], record["pack_name"], record["status"],
          record["method"], record["confidence"], json.dumps(basis, ensure_ascii=False),
-         record["message"], record["updated_at"]),
+         json.dumps(audit, ensure_ascii=False), record["message"], record["updated_at"]),
     )
     conn.commit()
     return record
@@ -2544,6 +2548,7 @@ def quicklook_category(conn: sqlite3.Connection, quick_job_id: str) -> dict | No
         return None
     out = dict(row)
     out["basis"] = json.loads(out.pop("basis_json") or "[]")
+    out["audit"] = json.loads(out.pop("audit_json", "{}") or "{}")
     return out
 
 

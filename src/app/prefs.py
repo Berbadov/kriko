@@ -31,6 +31,7 @@ LOCAL_PICK = "local"
 AGENT_ORDER = "agent_order"
 MODEL = "llm_model"
 SEARCH = "search_provider"
+CLASSIFICATION_PROVIDER = "classification_provider"
 #: How an agent is run: `auto` (a resident worker where the agent has a
 #: persistent protocol, else a process), `persistent` (require it) or `exec`.
 #: It applies to every agent. `codex_transport` is the name it had while only
@@ -228,7 +229,8 @@ def run_concurrency(conn) -> int:
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
         LLM_BASE_URL, *RESEARCH_KEYS,
-        RUN_CONCURRENCY, AGENT_TRANSPORT, CODEX_TRANSPORT)
+        RUN_CONCURRENCY, AGENT_TRANSPORT, CODEX_TRANSPORT,
+        CLASSIFICATION_PROVIDER)
 
 
 def for_role(conn, role: str, override: str = "") -> str:
@@ -259,6 +261,11 @@ def read(conn) -> dict:
     values[LOCAL_SEARCH_LANGUAGE] = values[LOCAL_SEARCH_LANGUAGE] or "en"
     values[MARKET_REGION] = values[MARKET_REGION] or "auto"
     return values
+
+
+def classification_provider(conn) -> str:
+    """The chosen Quick Look classifier; the old agent path remains default."""
+    return read(conn).get(CLASSIFICATION_PROVIDER) or "agent"
 
 
 def write(conn, values: dict) -> dict:
@@ -527,6 +534,12 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
                 "ready": one in keys.search_providers(),
             }
             for one in keys.SEARCH_PROVIDERS
+        ],
+        "classification_providers": [
+            {"id": "agent", "label": "Configured agent", "ready": True},
+            {"id": "typesafe", "label": "Jev (TypeSafe)",
+             "ready": any(one["id"] == "typesafe" and one["present"]
+                          for one in keys.status())},
         ],
         "models": {
             "current": chosen[MODEL] or llm.model_name(),

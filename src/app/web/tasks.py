@@ -1995,6 +1995,20 @@ QUICK_LOOK_TIMEOUT_SECONDS = 240
 CATEGORIZATION_BUDGET_USD = 0.05
 
 
+def _classification_provider(settings) -> str:
+    """Read the classifier choice, defaulting old installs to the agent path."""
+    from app import prefs
+
+    try:
+        conn = state.connect(settings.app_state_path)
+    except Exception:  # noqa: BLE001 - absent preferences mean the old default
+        return "agent"
+    try:
+        return prefs.classification_provider(conn)
+    finally:
+        conn.close()
+
+
 def _catalogue_block(product: str, page, profiles: list[dict], *,
                      pinned: str = "") -> tuple[str, str]:
     """The installed catalogs a Quick Look is shown, and what was left out.
@@ -2146,7 +2160,9 @@ def quick_look(settings, params: dict, progress: Progress) -> dict:
     # A saved category that names one installed definition clearly can be
     # filed without another model call. A vague or conflicting answer stays
     # visible as uncertain and can be sent to the categorizer explicitly.
-    assignment = categorizer.deterministic(product, found, profiles)
+    assignment = categorizer.classify_configured(
+        product, found, profiles, _classification_provider(settings),
+    )
     if catalog_context_error and assignment["status"] != "assigned":
         assignment["message"] = (
             f"The saved category is uncertain. {catalog_context_error}"
@@ -2339,7 +2355,12 @@ def categorize_quick_look(settings, params: dict, progress: Progress) -> dict:
     product = str(look_job["params"].get("product") or result.get("product") or "").strip()
     profiles = categorizer.installed_catalogs(settings.store_path)
     assignment: dict[str, Any]
-    if not profiles:
+    if _classification_provider(settings) == "typesafe":
+        assignment = categorizer.classify_configured(
+            product, result, profiles, "typesafe",
+        )
+        progress.log(assignment["message"])
+    elif not profiles:
         assignment = {
             "status": "uncertain", "method": "agent", "pack_id": "",
             "confidence": "none", "basis": [],
@@ -2761,7 +2782,9 @@ def pack_harvest(settings, params: dict, progress: Progress) -> dict:
                 done.append(look["job_id"])  # nothing to file is filed
                 continue
             assignment = state.quicklook_category(conn, look["job_id"])
-            fresh = categorizer.deterministic(product, quick, profiles)
+            fresh = categorizer.classify_configured(
+                product, quick, profiles, _classification_provider(settings),
+            )
             assignment_missing_target = bool(
                 assignment and assignment.get("status") == "assigned"
                 and assignment.get("pack_id") not in profile_by_id
