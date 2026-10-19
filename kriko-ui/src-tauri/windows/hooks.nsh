@@ -10,6 +10,16 @@
 ;   All three are tree kills (/T) because the frozen engine starts a second
 ;   process, and the one that holds the file is the child. "No such process" is
 ;   the normal answer, so none of these can fail the install.
+; * The engine's folder is replaced whole, never overlaid. An installer only
+;   writes the files it carries, so the previous engine's leftovers stayed
+;   beside the new one: `kriko-0.2.3.dist-info` survived the update to 0.2.4 and
+;   the engine read its version from the old copy ("the 0.2.4 installer shows
+;   0.2.3"). The uninstaller removes only what it carries as well, so those
+;   leftovers also kept the folder from going away. `_internal` is the one folder
+;   that is wholly the engine's own; nothing of the reader's lives in it (their
+;   catalogs and chats are in `.kriko` in their profile), so it is cleared with
+;   the program stopped, before an install and before an uninstall. The install
+;   folder itself is never removed this way.
 ; * A per-user install touches nothing of the machine: no PATH entry, nothing
 ;   under Program Files (installMode "currentUser" in tauri.conf.json).
 ; * "Kriko Console" is the operator console as something you double-click: the
@@ -26,8 +36,13 @@
   Sleep 500
 !macroend
 
+!macro KrikoClearEngineFolder
+  RMDir /r "$INSTDIR\_internal"
+!macroend
+
 !macro NSIS_HOOK_PREINSTALL
   !insertmacro KrikoStopEverything
+  !insertmacro KrikoClearEngineFolder
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
@@ -36,6 +51,7 @@
 
 !macro NSIS_HOOK_PREUNINSTALL
   !insertmacro KrikoStopEverything
+  !insertmacro KrikoClearEngineFolder
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
