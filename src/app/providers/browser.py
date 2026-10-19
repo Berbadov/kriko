@@ -25,6 +25,8 @@ import os
 import shutil
 import subprocess
 import time
+from app import processcontrol
+from app.providers import egress
 from app.winprocess import hidden_startup
 from pathlib import Path
 
@@ -109,14 +111,32 @@ def _switches(profile: str) -> list[str]:
     ]
 
 
-def read(url: str, *, timeout: float = TIMEOUT, check_cancelled=None) -> str:
+def read(url: str, *, timeout: float = TIMEOUT, check_cancelled=None,
+         allow_private: bool = False) -> str:
     """The page's DOM text through a real browser, "" when it cannot.
 
     "" on every failure, exactly as `fetch._download` and
     `pagereader.read`, so the ladder can fall through and the page is
     reported unread rather than half-read.
+
+    Two things in the cancellable path are load-bearing, and both were wrong:
+
+    * the DOM goes to a **file**, never a pipe. `--dump-dom` prints far more
+      than the ~64 KB a pipe buffers, so a poll loop that checked
+      `process.poll()` without draining `stdout` deadlocked Chrome on write:
+      `poll()` never returned, the entire budget burned, and the rung answered
+      "" for every real page — which is also its honest answer for an unreadable
+      one, so nothing could tell the two apart;
+    * the child is started through `processcontrol`, so the kill takes the
+      renderer and GPU processes with it. `kill()` on the direct child alone
+      left them behind, which is the orphan class `processcontrol` exists for
+      and every other spawn site in this tree already avoids.
     """
     if not url.lower().startswith(("http://", "https://")):
+        return ""
+    # A real browser would happily load `http://127.0.0.1:8787/...`; the rung is
+    # for a *remote* page, so the same egress rule as the plain fetch applies.
+    if egress.reason_to_refuse(url, allow_private=allow_private):
         return ""
     if check_cancelled is not None:
         check_cancelled()
@@ -126,6 +146,7 @@ def read(url: str, *, timeout: float = TIMEOUT, check_cancelled=None) -> str:
     import tempfile
 
     profile = tempfile.mkdtemp(prefix="kriko-browser-")
+    job = processcontrol.create_job_object()
     try:
         command = [browser, *_switches(profile), url]
         startup = hidden_startup()
@@ -136,27 +157,31 @@ def read(url: str, *, timeout: float = TIMEOUT, check_cancelled=None) -> str:
                 startupinfo=startup, creationflags=flags)
             stdout, returncode = done.stdout, done.returncode
         else:
-            process = subprocess.Popen(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                startupinfo=startup, creationflags=flags)
-            deadline = time.monotonic() + timeout
-            try:
-                while process.poll() is None:
-                    check_cancelled()
-                    if time.monotonic() >= deadline:
-                        process.kill()
-                        process.communicate()
-                        return ""
-                    time.sleep(0.05)
-                stdout, _stderr = process.communicate()
-                returncode = process.returncode
-            except BaseException:
-                process.kill()
-                process.communicate()
-                raise
+            with tempfile.TemporaryFile() as sink:
+                process = processcontrol.contained_popen(
+                    command, job=job, resource_kind=None,
+                    stdout=sink, stderr=subprocess.DEVNULL,
+                    startupinfo=startup, creationflags=flags)
+                try:
+                    deadline = time.monotonic() + timeout
+                    while process.poll() is None:
+                        check_cancelled()
+                        if time.monotonic() >= deadline:
+                            return ""
+                        time.sleep(0.05)
+                    returncode = process.returncode
+                    sink.seek(0)
+                    stdout = sink.read(MAX_BYTES + 1)
+                finally:
+                    processcontrol.close_process(process, job)
+                    job = None
     except (OSError, subprocess.TimeoutExpired):
         return ""
     finally:
+        # `close_process` above has already released the handle on the path
+        # that spawned; this covers the paths that did not (a cancel before the
+        # spawn, an OSError, the non-cancellable branch).
+        processcontrol.close_job(job)
         shutil.rmtree(profile, ignore_errors=True)
     dom = stdout[:MAX_BYTES].decode("utf-8", "replace")
     if not dom.strip() or returncode != 0:

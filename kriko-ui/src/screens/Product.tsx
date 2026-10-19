@@ -124,6 +124,28 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   const onBoard = slots.includes(lookupId)
   const asking = turns.some((t) => t.state === 'running')
 
+  /**
+   * Stop the questions that are running.
+   *
+   * The composer drew a stop button and was wired to `() => {}`: a reader who
+   * pressed it got nothing — no cancellation and no acknowledgement — while a
+   * run they are paying for kept going. Each running turn's id *is* its job id
+   * (`ask` renames the turn to `sent.job_id`), so this is the same cancel the
+   * queue and the local-plane panel already call.
+   */
+  const stopAsking = async () => {
+    const running = turns.filter((t) => t.state === 'running' && !t.id.startsWith('local-'))
+    if (running.length === 0) return
+    for (const turn of running) {
+      try {
+        await post(`/api/jobs/${seg(turn.id)}/cancel`)
+        patch(turn.id, { state: 'failed', note: 'Stopped.' })
+      } catch (error) {
+        patch(turn.id, { note: reasonOf(error) })
+      }
+    }
+  }
+
   return (
     <section className="product">
       <header className="page-head rise" style={{ '--i': 0 } as CSSProperties}>
@@ -212,7 +234,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
       </div>
 
       <div className="compare-dock">
-        <Composer onSubmit={(text) => void ask(text)} running={asking} onStop={() => {}} placeholder="Ask about this product" agents={false} autoFocus />
+        <Composer onSubmit={(text) => void ask(text)} running={asking} onStop={() => void stopAsking()} placeholder="Ask about this product" agents={false} autoFocus />
       </div>
     </section>
   )

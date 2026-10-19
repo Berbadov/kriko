@@ -25,25 +25,28 @@ A lookup in an installed catalog needs no network and no key. Research needs
 the internet and the agent or model that you select. A paid provider bills your
 own account.
 
-## What's new in 0.1.2
+## What's new in 0.2.0
 
-- **Chat answers are formatted.** A bold term is bold. A bullet list is a list.
-  A table is a table. A link opens the page it names. You can drag over an
-  answer and press Ctrl+C to take the words out.
-- **A product card under an answer.** When a turn reads your catalogs, the
-  answer carries a card for each product it found, with **Open**, **Add to
-  Compare** and **Read again**.
-- **Agents** is now the home for every way of answering a question: the coding
-  agents on this machine, the local model, and the paid APIs you hold a key
-  for. **Local LLM** left the rail and keeps its own screen.
-- **The model store is a list**, one full-width row for each model with one
-  primary action.
-- **The light theme is correct.** The hero band keeps its own colours in both
-  themes, and a new edge token separates two surfaces.
-- **The agents are faster.** The plane decision fell from 1114 ms to 264 ms on
-  a cold start, and a request on the loopback address from 17.19 ms to 1.43 ms.
-- **Kriko can work out how to read a new site** with the local model, from the
-  page data the extension already collects.
+- **The desktop app is new.** It is built on Tauri now, with a blue look, a
+  dither sky, and a dark and a light theme. Motion has three levels: Calm,
+  Standard and Vivid.
+- **Chat keeps your chats.** Press New chat to start one. Recent chats are in
+  the sidebar. Deleting a chat asks first.
+- **A tour on the first start.** It shows the box where you ask, the agent
+  pick, where Kriko looks, and the places in the sidebar. Take it again from
+  Settings.
+- **The extension panel has the same look and its own tour.** It shows once,
+  on the first product page. The options page can show it again.
+- **Local models.** The Local model panel shows your graphics memory and the
+  models Ollama holds. You can browse Hugging Face for GGUF models with
+  filters for size, licence and sort order. A filter can keep only the models
+  that fit your graphics card. A download starts only when you press Get.
+- **vLLM on CUDA 13.** Kriko reads the CUDA version of your driver and shows
+  the steps for the right build. It does not install anything. On Windows the
+  steps use WSL 2. Kriko finds the server when it runs.
+- **Catalogs and Sites panels.** Remove asks before it removes.
+- **The sidebar, Compare and Queue** use the new layout. The installer is
+  built from `kriko-ui/package.ps1`.
 
 [The changelog](CHANGELOG.md) holds the full list and the known limits.
 
@@ -64,8 +67,10 @@ start. Select **More info**, then **Run anyway**.
 
 ## Start
 
-1. Install Kriko. On Windows, use the MSI or the portable ZIP. On macOS, open
-   the disk image and move `Kriko.app` to **Applications**.
+1. Install Kriko. On Windows, use the installer (`kriko-<version>-x86_64-setup.exe`)
+   or the portable ZIP. **There is no macOS build yet**: the interface and the
+   engine run from source on macOS, but no `.dmg` is published, so there is
+   nothing to drag to **Applications**.
 2. Open Kriko. The first start shows a setup with four steps.
 3. Install a catalog. Open **Overview**, in the group **Knowledge**. The screen
    lists the catalogs of this release. Press **Install**.
@@ -132,10 +137,10 @@ Kriko read to the provider that you selected.
 To stop Kriko completely, select **Quit** in the tray menu. If you only close
 the window, the engine continues, because the browser extension needs it.
 
-Kriko looks for a newer version at each start and offers it on the **Home**
-screen. Press **Install and restart**. The app updates only the Windows x86_64
-MSI. For the portable ZIP and the macOS app, download the new file and replace
-the old one.
+Kriko looks for a newer version at each start and offers it in the corner of the
+window. Press **Install and restart**. The app updates only the Windows x86_64
+installer (`kriko-<version>-x86_64-setup.exe`). For the portable ZIP, download
+the new file and replace the old one.
 
 ## Help
 

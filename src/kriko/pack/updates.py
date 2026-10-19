@@ -23,6 +23,8 @@ byte-identical rebuild gets treated as new knowledge.
 import json
 from dataclasses import dataclass
 
+from kriko.pack.version import key as version_key
+
 #: What the decision was, most actionable first.
 AVAILABLE = "available"
 UP_TO_DATE = "up_to_date"
@@ -82,7 +84,7 @@ def parse_index(text: str) -> list[Candidate]:
                 url=str(row["url"]),
                 content_digest=str(row.get("content_digest", "")),
                 sha256=str(row.get("sha256", "")),
-                size=int(row.get("size") or 0),
+                size=_size_bytes(row.get("size")),
                 published_at=str(row.get("published_at", "")),
                 name=str(row.get("name", "")),
             )
@@ -91,17 +93,41 @@ def parse_index(text: str) -> list[Candidate]:
 
 
 def _parts(version: str) -> tuple:
-    """Sortable form of a version string.
+    """Sortable form of a version string. One implementation, in `pack/version`.
 
-    Numeric segments compare as numbers so 0.10.0 beats 0.9.0, and anything
-    non-numeric compares as text. Not a full semver implementation — this needs
-    to order two strings, not to adjudicate build metadata — but it must never
-    claim an ordering it cannot support, which is what `comparable` is for.
+    This module and `store/packstore.py` each grew their own, and they disagreed
+    about `"1.2.3a"` against `"1.2.30"` — the index and the installer could call
+    the same artifact newer and older in the same run. `version.key` is now the
+    only ordering, so `decide` and `install`'s downgrade guard cannot diverge.
     """
-    out = []
-    for chunk in version.replace("-", ".").split("."):
-        out.append((0, int(chunk), "") if chunk.isdigit() else (1, 0, chunk))
-    return tuple(out)
+    return version_key(version)
+
+
+def _size_bytes(value) -> int:
+    """A declared size in bytes, or 0 when it cannot be read.
+
+    `int(row.get("size") or 0)` used to raise on `"1.2 MB"` — a hand-written
+    index row — and one such row killed the whole index, which is the outcome
+    the loop above goes out of its way to avoid for a row that names no pack.
+    """
+    if isinstance(value, bool):
+        return 0
+    if isinstance(value, (int, float)):
+        return int(value)
+    text = str(value or "").strip().lower().replace(",", "")
+    if not text:
+        return 0
+    scale = 1
+    for suffix, factor in (("gib", 1024 ** 3), ("gb", 1000 ** 3),
+                           ("mib", 1024 ** 2), ("mb", 1000 ** 2),
+                           ("kib", 1024), ("kb", 1000), ("b", 1)):
+        if text.endswith(suffix):
+            text, scale = text[: -len(suffix)].strip(), factor
+            break
+    try:
+        return int(float(text) * scale)
+    except ValueError:
+        return 0
 
 
 def comparable(version: str) -> bool:
