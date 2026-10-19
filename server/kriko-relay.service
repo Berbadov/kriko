@@ -1,0 +1,37 @@
+# systemd unit for the relay. Copy to /etc/systemd/system/, edit the two paths and
+# the environment file, then:  systemctl enable --now kriko-relay
+[Unit]
+Description=Kriko relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=kriko-relay
+# A virtualenv with Kriko installed (see the README), and the folder holding server/.
+WorkingDirectory=/opt/kriko
+Environment=PYTHONPATH=/opt/kriko/server
+Environment=KRIKO_CLOUD_DB=/var/lib/kriko-relay/relay.sqlite
+Environment=HOST=127.0.0.1
+Environment=PORT=8080
+# KRIKO_CLOUD_SECRET and KRIKO_CLOUD_SETUP live here, mode 600, owned by root.
+EnvironmentFile=/etc/kriko-relay.env
+ExecStart=/opt/kriko/venv/bin/python -m kriko_cloud
+Restart=on-failure
+StateDirectory=kriko-relay
+
+# The relay fetches addresses it was handed, so give it as little as it needs.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# No route from the relay to your own network or a cloud host's metadata address.
+# Loopback stays open so the reverse proxy can reach it (the relay refuses private
+# and loopback addresses itself, too).
+IPAddressDeny=10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 100.64.0.0/10 fc00::/7 fe80::/10
+
+[Install]
+WantedBy=multi-user.target

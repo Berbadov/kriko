@@ -102,7 +102,7 @@ class Keys:
         data = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
         return b"K1" + nonce + self._aead.encrypt(nonce, data, name.encode("utf-8"))
 
-    def open(self, name: str, blob: bytes):
+    def unseal(self, name: str, blob: bytes):
         if not blob.startswith(b"K1") or len(blob) < 2 + 12 + 16:
             raise ValueError("not a sealed Kriko blob")
         try:
@@ -198,7 +198,7 @@ class Relay:
                 return None
             raise
         lowered = {k.lower(): v for k, v in headers.items()}
-        return int(lowered.get("x-kriko-version", "0")), self.keys.open(name, data)
+        return int(lowered.get("x-kriko-version", "0")), self.keys.unseal(name, data)
 
     def put_blob(self, name: str, value, expect: int) -> int:
         _, _, data = self.call("PUT", f"/blob/{name}", body=self.keys.seal(name, value),
