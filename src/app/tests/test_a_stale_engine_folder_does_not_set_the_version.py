@@ -59,3 +59,16 @@ def test_a_lone_distribution_is_still_the_version(tmp_path, monkeypatch, fresh):
 def test_no_metadata_at_all_is_unknown_not_a_crash(tmp_path, monkeypatch, fresh):
     monkeypatch.setattr(sys, "path", [str(tmp_path)])
     assert version.app_version() == version.UNKNOWN
+
+
+def test_the_frozen_engine_carries_the_metadata_the_version_is_read_from():
+    """0.2.5 was first built with the reader changed and the metadata dropped:
+    PyInstaller bundles a distribution's metadata on its own only when it sees a
+    literal `version("kriko")`, and the engine then reported "unknown". The spec
+    now names it, so how the version is read cannot take it out again."""
+    from pathlib import Path
+
+    spec = (Path(__file__).resolve().parents[3] / "packaging" / "kriko-sidecar.spec")
+    text = spec.read_text(encoding="utf-8")
+    assert "from PyInstaller.utils.hooks import copy_metadata" in text
+    assert '*copy_metadata("kriko")' in text.split("datas=[", 1)[1].split("],", 1)[0]
