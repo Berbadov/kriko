@@ -3,6 +3,23 @@
 Reader-visible changes for each release. Newest first. Published versions are
 immutable; a correction is a newer version.
 
+### 0.2.5
+
+- **An update now says what version it is.** After 0.2.4 was installed over
+  0.2.3, Kriko kept reporting 0.2.3 and kept offering 0.2.4 to itself, so Update
+  now reinstalled the same thing. The installer laid the new program over the
+  old one and left the old one's version record beside it, and Kriko read the
+  wrong one. Kriko now reads the newest version record it finds, and the
+  installer clears the engine's own folder before it installs.
+- **Uninstall removes the engine's folder.** The same leftover files were not on
+  the uninstaller's list, so the folder stayed behind and the uninstall could
+  fail. The uninstaller now clears that folder too, after it stops Kriko. Your
+  catalogs and chats are not in it: they stay in `.kriko` in your profile.
+
+If you are on 0.2.4 and it still shows 0.2.3 in Settings, About, quit Kriko from
+the tray and run the 0.2.5 installer once by hand. That install removes the old
+record.
+
 ### 0.2.4
 
 - **Kriko starts agents when you need them.** Opening the app no longer
