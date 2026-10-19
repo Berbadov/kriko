@@ -1964,7 +1964,9 @@ def command_for(one: Harness, *, model: str = "", effort: str = "",
 #: Appended to the pack's brief. The brief already says what to look for and
 #: what is worth keeping — it is written for an agent holding Kriko's MCP
 #: tools, so the only thing it needs replacing is the *reporting* step.
-CONTRACT = """
+from app.workcontract import WORK_CONTRACT
+
+CONTRACT = WORK_CONTRACT + """
 ## What you may use (this run)
 
 **Only the web search and web fetch tools.** Do not read files, list

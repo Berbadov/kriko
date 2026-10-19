@@ -4,7 +4,8 @@ from app.web.app import create_app
 from app.web.settings import Settings
 
 def test_root_identifies_the_native_app_and_api(tmp_path):
-    client = TestClient(create_app(Settings(store_path=tmp_path / "k.sqlite")))
+    client = TestClient(create_app(Settings(store_path=tmp_path / "k.sqlite",
+                                          app_state_path=tmp_path / "app.sqlite")))
     assert client.get("/").json() == {
         "app": "Kriko", "desktop": "Tauri", "service": "local API",
         "health": "/api/health", "docs": "/api/docs",

@@ -55,6 +55,7 @@ def client(tmp_path):
         create_app(
             Settings(
                 store_path=store_path,
+                app_state_path=tmp_path / "app.sqlite",
                 analysis_log_path=tmp_path / "analyses.jsonl",
             )
         )

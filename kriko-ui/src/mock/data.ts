@@ -37,6 +37,8 @@ export interface Drawer {
 }
 
 export const DRAWER: Drawer[] = [
+  { id: 'setup', icon: 'spark', title: 'Set up Kriko', note: 'Verify an agent and connect your browser' },
+  { id: 'backups', icon: 'clock', title: 'Backup and restore', note: 'Keep a copy of your saved work' },
   { id: 'agents', icon: 'spark', title: 'Agents', note: 'Choose who answers' },
   { id: 'local', icon: 'cpu', title: 'Local model', note: 'Run on this computer' },
   { id: 'history', icon: 'clock', title: 'History', note: 'Past research' },

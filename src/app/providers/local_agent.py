@@ -230,6 +230,9 @@ class LocalAsker:
             self.check_cancelled()
 
     def ask(self, prompt: str) -> str:
+        from app.workcontract import WORK_CONTRACT
+        if WORK_CONTRACT not in prompt:
+            prompt += "\n\n" + WORK_CONTRACT
         self.sources = {}
         self.relevant_sources = {}
         self.page_titles = {}

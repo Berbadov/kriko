@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import { useState } from 'react'
 import type { Product } from '../activity/run'
 import { useProductActions } from '../engine/products'
 import { usePrefs } from '../prefs'
@@ -9,7 +10,8 @@ import { PixelGlyph } from './PixelGlyph'
 export function ProductCard({ product, onOpen }: { product: Product; onOpen: (lookupId: string) => void }) {
   const { motion: m } = usePrefs()
   const { adding, reading, ensureCheck, addToCompare, readAgain } = useProductActions(product)
-  const note = adding.step === 'failed' ? adding.note : reading.step === 'failed' ? reading.note : ''
+  const [openProblem, setOpenProblem] = useState('')
+  const note = openProblem || (adding.step === 'failed' ? adding.note : reading.step === 'failed' ? reading.note : '')
 
   return (
     <motion.div
@@ -28,7 +30,7 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: (lo
         )}
       </div>
       <div className="card-actions">
-        <button className="btn" onClick={() => void ensureCheck().then(onOpen).catch(() => undefined)}>
+        <button className="btn" onClick={() => { setOpenProblem(''); void ensureCheck().then(onOpen).catch((error: unknown) => setOpenProblem(error instanceof Error ? error.message : 'The product could not be opened. Try again.')) }}>
           Open
         </button>
         <button className="btn" onClick={() => void addToCompare()} disabled={adding.step === 'busy' || adding.step === 'done'}>

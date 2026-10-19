@@ -925,3 +925,14 @@
   gap: 8px;
   margin-top: 4px;
 }
+.demo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 6px 16px;
+  background: var(--warn);
+  color: var(--ground);
+  text-align: center;
+}
