@@ -121,6 +121,9 @@ export function Page({
   return (
     <View style={styles.page}>
       <AppHeader actions={actions} />
+      <View accessibilityRole="summary" style={{ paddingHorizontal: PAGE_X, paddingVertical: 8, backgroundColor: color.ground }}>
+        <Txt variant="mono" tone="ink2">PROTOTYPE · Example research and simulated image reading. No live sources.</Txt>
+      </View>
       {scroll ? (
         <ScrollView
           style={styles.scroll}

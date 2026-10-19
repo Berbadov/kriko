@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import secrets
 import sqlite3
@@ -111,13 +112,36 @@ _SECRET_TEXT = re.compile(
     r"client[_-]?secret|password|secret)(\s*[:=]\s*)([^\s,;]+)"
 )
 _BEARER_TEXT = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+")
+#: A bare key by shape, for the vendor that echoes one with no name in front of
+#: it. Applied only to provider output and failure lines, never to knowledge,
+#: so a loose pattern costs nothing a reader would miss.
+_KEY_SHAPES = re.compile(r"\b(?:sk|pk|rk|xai|gsk|hf)[-_][A-Za-z0-9_-]{8,}\b")
 
 
 def _safe_text(value: Any, limit: int = 1000) -> str:
     text = str(value or "")
-    text = _SECRET_TEXT.sub(r"\1\2[redacted]", text)
+    # `Bearer sk-…` **first**: the named-secret pattern below matches
+    # `Authorization: Bearer` and replaces only that much, so running it first
+    # left the token itself in the clear — `Authorization: [redacted]
+    # sk-abcdef…`. Redacting the scheme before the name closes it.
     text = _BEARER_TEXT.sub("Bearer [redacted]", text)
+    text = _KEY_SHAPES.sub("[redacted]", text)
+    text = _SECRET_TEXT.sub(r"\1\2[redacted]", text)
     return text[:limit]
+
+
+def redact(value: Any, limit: int = 1000) -> str:
+    """`_safe_text` under a public name, for the other side of the boundary.
+
+    This module has redacted what it stores since it was written. What it could
+    not do is stop a *caller* from putting a child's raw stderr into a job's
+    error — `harness._why` did, and `web/jobs` stored a whole
+    `traceback.format_exc()` in a column `GET /api/jobs/{id}/log` serves to any
+    allowed origin, the browser extension included. A CLI that echoes a key in
+    an auth error therefore wrote it into persisted state and into the panel.
+    One redactor, used on both sides, is what makes that a single decision.
+    """
+    return _safe_text(value, limit)
 
 
 def _safe_diagnostic(value: Any, *, max_chars: int = 4000) -> str:
@@ -198,6 +222,8 @@ class Ledger:
         return request_hash(payload)
 
     def connect(self) -> sqlite3.Connection:
+        if self.db_path != ":memory:":
+            os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
         conn = sqlite3.connect(self.db_path, timeout=15, isolation_level="DEFERRED")
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON")

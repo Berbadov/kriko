@@ -1,25 +1,51 @@
 import { useMemo, useState } from 'react'
 import { useCompare } from '../../compare'
-import { dayGroup, useHistory, type Past } from '../../engine/history'
+import { dayGroup, useHistory, type Past, type Undoable } from '../../engine/history'
 import { Icon } from '../Icon'
+import { useEngine } from '../../engine/Engine'
 
 const GROUPS = ['Today', 'Yesterday', 'This week', 'Earlier']
 
 /** Every saved check. Open one, put it in Compare, or delete it. */
 export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
-  const { items, problem, remove } = useHistory()
-  const { add } = useCompare()
   const [query, setQuery] = useState('')
+  const { items, problem, remove, restore, hasMore, loadMore, retry } = useHistory(query)
+  const { mode } = useEngine()
+  const { add } = useCompare()
   const [asking, setAsking] = useState<string | null>(null)
   const [added, setAdded] = useState<Set<string>>(new Set())
+  /** What the last delete took, and the row it was, for the undo line. */
+  const [undone, setUndone] = useState<{ undo: Undoable; name: string } | null>(null)
+
+  const forget = async (row: Past) => {
+    const undo = await remove(row.id)
+    if (undo) setUndone({ undo, name: row.name })
+  }
+
+  const undoLast = async () => {
+    if (!undone) return
+    await restore(undone.undo)
+    setUndone(null)
+  }
 
   const shown = useMemo(() => {
+    if (mode === 'live') return items ?? []
     const needle = query.trim().toLowerCase()
     return (items ?? []).filter((row) => !needle || `${row.name} ${row.category}`.toLowerCase().includes(needle))
-  }, [items, query])
+  }, [items, query, mode])
 
-  if (!items) return <p className="panel-note">{problem || 'Reading the history…'}</p>
-  if (!items.length) return <p className="panel-note">No checks yet. Your checks are kept here.</p>
+  // A failed read and a read still in flight must not look the same. The
+  // combined `{problem || 'Reading the history…'}` put the failure in the same
+  // muted style as the wait, so "the engine refused" read as "still loading".
+  if (!items && problem) {
+    return (
+      <p className="error-note" role="alert">
+        Your checks could not be read. {problem} <button className="btn" onClick={retry}>Try again</button>
+      </p>
+    )
+  }
+  if (!items) return <p className="panel-note">Reading the history…</p>
+  if (!items.length && !query) return <p className="panel-note">No checks yet. Your checks are kept here.</p>
 
   return (
     <div className="panel-body">
@@ -27,7 +53,25 @@ export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
         <Icon name="search" size={15} />
         <input type="search" placeholder="Search your checks" aria-label="Search your checks" value={query} onChange={(event) => setQuery(event.target.value)} />
       </label>
-      {problem && <p className="error-note">{problem}</p>}
+      {problem && <p className="error-note">{problem} <button className="btn" onClick={retry}>Try again</button></p>}
+
+      {/* The undo, where the delete happened. A confirm dialog is the wrong
+          shape for this: the reader has already said yes, and what they need
+          is the next few seconds in which they can say "not that one". The
+          engine hands the deleted row back for exactly this (`DELETE
+          /api/history/{id}` returns `undo`), so nothing is kept in a trash
+          table nobody empties. */}
+      {undone && (
+        <div className="past-undo" role="status">
+          <span>
+            Deleted {undone.name}.{' '}
+            <button className="link" onClick={() => void undoLast()}>Undo</button>
+          </span>
+          <button className="icon-btn sm" onClick={() => setUndone(null)} aria-label="Dismiss">
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+      )}
 
       {shown.length === 0 && <p className="panel-note">Nothing matches.</p>}
       {GROUPS.map((group) => {
@@ -51,7 +95,7 @@ export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
                   onKeep={() => setAsking(null)}
                   onDelete={() => {
                     setAsking(null)
-                    void remove(row.id)
+                    void forget(row)
                   }}
                 />
               ))}
@@ -60,6 +104,7 @@ export function HistoryPanel({ onOpen }: { onOpen: (id: string) => void }) {
         )
       })}
       <p className="panel-note">{items.length} saved {items.length === 1 ? 'check' : 'checks'}.</p>
+      {hasMore && <button className="btn" onClick={loadMore}>Load more checks</button>}
     </div>
   )
 }
@@ -83,7 +128,7 @@ function PastRow({
   onKeep: () => void
   onDelete: () => void
 }) {
-  const meta = [row.category || 'Quick look', row.risks === 0 ? 'No risks' : `${row.risks} ${row.risks === 1 ? 'risk' : 'risks'}`, row.when].filter(Boolean).join(' · ')
+  const meta = [row.category || 'Quick look', row.risks === 0 ? 'No sourced problems recorded' : `${row.risks} ${row.risks === 1 ? 'risk' : 'risks'}`, row.when].filter(Boolean).join(' · ')
   return (
     <li className="past" data-asking={asking}>
       <button className="past-main" onClick={onOpen}>

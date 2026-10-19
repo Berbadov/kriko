@@ -47,6 +47,9 @@ STARTER_MODEL = RECOMMENDED_MODEL
 
 #: Where a freshly installed Ollama listens until the reader says otherwise.
 OLLAMA_URL = "http://127.0.0.1:11434"
+#: The port `OLLAMA_URL` names, as a number: `_stop_ollama` asks the kernel who
+#: is listening on it rather than killing every process called `ollama.exe`.
+OLLAMA_PORT = 11434
 
 #: Ollama's own installer, from its own site. Not winget: that waits on the
 #: Store sources, asks questions a hidden window cannot answer, and was the
@@ -322,16 +325,35 @@ class _BrokenRuntime(RuntimeError):
 
 
 def _stop_ollama() -> None:
-    """End a running Ollama so its files can be replaced."""
+    """End the Ollama this app installed, so its files can be replaced.
+
+    This used to be `taskkill /F /IM "ollama app.exe"` and the same for
+    `ollama.exe`: that kills **every** Ollama on the machine by image name —
+    another user's, another app's, one the reader started deliberately for
+    something else. What this needs is the process holding the port Kriko is
+    about to replace the files behind, so it asks for that one and kills its
+    tree (`processcontrol`, the same way every other spawn in this tree is
+    ended). If nothing is listening, there is nothing to stop.
+    """
     if os.name != "nt":
         return
-    for image in ("ollama app.exe", "ollama.exe"):
-        try:
-            subprocess.run(["taskkill", "/F", "/IM", image], capture_output=True, timeout=15,
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        except (OSError, subprocess.SubprocessError):
-            pass
-    time.sleep(1.5)
+    from app import processcontrol
+
+    pid = processcontrol.listener_pid(OLLAMA_PORT)
+    if not pid:
+        return
+    try:
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)],
+                       capture_output=True, timeout=15,
+                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except (OSError, subprocess.SubprocessError):
+        pass
+    # Wait for the port to actually go, rather than assuming a fixed sleep did
+    # it: the file replacement this precedes fails if the handle is still open.
+    for _ in range(60):
+        if not processcontrol.listener_pid(OLLAMA_PORT):
+            return
+        time.sleep(0.25)
 
 
 def _start_and_wait(base: str, progress) -> None:

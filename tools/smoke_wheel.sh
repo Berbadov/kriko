@@ -98,7 +98,10 @@ echo "  build/ and src/*.egg-info"
 
 say "building the wheel"
 if [ "$BUILDER" = uv ]; then
-    uv build --wheel --out-dir "$WORK/dist" >/dev/null
+    # `--no-build-isolation` for the reason lines 76-77 give: the smoke test is
+    # about *this* environment's setuptools producing the artifact, and an
+    # isolated build silently resolves its own.
+    uv build --wheel --no-build-isolation --out-dir "$WORK/dist" >/dev/null
 else
     "$PYTHON" -m pip wheel --no-deps --no-build-isolation \
         --wheel-dir "$WORK/dist" . >/dev/null
@@ -136,6 +139,12 @@ print("  kriko and app are both in it, with the store's DDL and the "
 PY
 
 say "installing it somewhere with nothing else on the path"
+# **This step needs an index.** The wheel's dependencies have to come from
+# somewhere, and installing them is the point: an artifact whose dependency
+# cannot be resolved is an artifact that does not import on the reader's
+# machine. So the gate's "no network" claim holds for the Python suite, the
+# node suite and the Rust checks, and *not* for this stage on a cold cache —
+# which `gate.sh` now says out loud rather than implying otherwise.
 if [ "$BUILDER" = uv ]; then
     uv venv --python "$("$PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" \
         "$WORK/venv" >/dev/null 2>&1

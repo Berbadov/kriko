@@ -740,7 +740,7 @@ def _emit_claim_evidence(
         )
         row_ids.append(source_id)
 
-        evidence_id = ids.evidence_id(source_id, quote)
+        evidence_id = ids.evidence_id(claim_id, source_id, quote)
         conn.execute(
             "INSERT OR IGNORE INTO evidence (evidence_id, pack_id,"
             " claim_id, source_id, quote, locator, stance, independent)"

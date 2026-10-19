@@ -11,7 +11,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from kriko.store.db import SCHEMA_VERSION
+from kriko.pack.version import key as version_key
+from kriko.store.db import SCHEMA_VERSION, like_escaped
 
 # Every table carrying a pack_id, in foreign-key-safe deletion order (children
 # before parents). The revision tables are local metadata, not pack contents.
@@ -179,15 +180,12 @@ def _event(conn, pack_id, action, row=None, *, details=None) -> None:
 def _version_tuple(version: str) -> tuple:
     """A dotted version as a comparable tuple, numeric where it can be.
 
-    Not a full semver parser — packs are not required to use semver — but
-    good enough to tell "0.1.1 is older than 0.1.2" from "these are two
-    unrelated strings", which is all a downgrade check needs.
+    Delegates to `kriko.pack.version.key`, which is the single ordering for the
+    whole tree. This function and `updates._parts` used to disagree about a
+    suffix (`"1.2.3a"` against `"1.2.30"`), so the index could offer an artifact
+    as an upgrade that this module's downgrade guard then refused.
     """
-    parts = []
-    for piece in str(version).split("."):
-        digits = "".join(ch for ch in piece if ch.isdigit())
-        parts.append((int(digits) if digits else 0, piece))
-    return tuple(parts)
+    return version_key(version)
 
 
 class DowngradeRefused(ValueError):
@@ -501,8 +499,13 @@ def uninstall(conn: sqlite3.Connection, pack_id: str) -> None:
         for table in PACK_TABLES:
             conn.execute(f"DELETE FROM {table} WHERE pack_id = ?", (pack_id,))
         conn.execute("DELETE FROM pack_trust WHERE pack_id = ?", (pack_id,))
+        # `_` and `%` are LIKE wildcards and a pack id may legally contain
+        # either, so uninstalling `org.kriko.x_y` used to delete the revision
+        # rows of `org.kriko.xAy` too. Escaped, so the pattern matches the one
+        # literal prefix it means.
         conn.execute(
-            "DELETE FROM pack_revision_rows WHERE revision_id LIKE ?", (pack_id + "@%",)
+            "DELETE FROM pack_revision_rows WHERE revision_id LIKE ? ESCAPE '\\'",
+            (like_escaped(pack_id) + "@%",),
         )
         conn.execute("DELETE FROM pack_revisions WHERE pack_id = ?", (pack_id,))
 

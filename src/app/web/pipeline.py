@@ -320,3 +320,56 @@ def mark_interrupted(conn: sqlite3.Connection) -> int:
     )
     conn.commit()
     return cursor.rowcount
+
+
+def recent_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
+    """The runs this installation recorded, newest first.
+
+    **Nothing read these rows.** This module's own docstring says so — "nothing
+    in the app reads them back yet, and the rows are written so that they could
+    be" — and the sweep found the same thing a year later: the tables were
+    pruned to 200 runs and marked `interrupted` at startup, and no route ever
+    selected a single row. So the pipeline's whole account of what a run did was
+    write-only, which is a strange kind of record: it survives a restart for the
+    benefit of nobody.
+
+    Totals are the denormalised columns, not an aggregate over events — the
+    schema says why ("the overview lists runs and must not aggregate thousands
+    of events to render a row"), and a run that kept 40 findings is one row.
+    """
+    return [
+        dict(row)
+        for row in conn.execute(
+            "SELECT * FROM pipeline_runs ORDER BY started_at DESC, rowid DESC LIMIT ?",
+            (max(1, min(int(limit), 200)),),
+        )
+    ]
+
+
+def run_detail(conn: sqlite3.Connection, run_id: str) -> dict | None:
+    """One run with its stages and its events, or `None`.
+
+    Stages come back in `STAGES` order even when one never opened: a stage that
+    was never reached is exactly the thing a reader wants to see, and it is
+    only visible if the reader knows the whole sequence.
+    """
+    row = conn.execute(
+        "SELECT * FROM pipeline_runs WHERE run_id = ?", (run_id,)).fetchone()
+    if row is None:
+        return None
+    run = dict(row)
+    stages = {one["stage"]: dict(one) for one in conn.execute(
+        "SELECT * FROM pipeline_stages WHERE run_id = ?", (run_id,))}
+    run["stages"] = [
+        stages.get(name, {
+            "run_id": run_id, "stage": name, "seq": order, "state": "absent",
+            "detail": "", "items": 0, "started_at": "", "ended_at": None,
+        })
+        for order, name in enumerate(STAGES)
+    ]
+    run["events"] = [
+        dict(one) for one in conn.execute(
+            "SELECT * FROM pipeline_events WHERE run_id = ? ORDER BY event_id",
+            (run_id,))
+    ]
+    return run

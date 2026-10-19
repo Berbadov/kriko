@@ -12,15 +12,23 @@
 # a release-artifact change.
 #
 # Used as `pip install -r requirements.lock -e "."` rather than with
-# `--no-deps`: two of the closure's members are platform-only (colorama on
-# Windows via click, pywin32 on Windows via mcp) and cannot be pinned from a
-# Linux resolve. pip fills those in; everything a Linux and a Windows build
-# share is fixed here.
+# `--no-deps`: three of the closure's members are platform-only and cannot be
+# pinned from a Linux resolve — colorama on Windows via click, pywin32 on
+# Windows via mcp, and **pywinpty**, which is the one that matters most here
+# because `app/web/routers/terminal.py` imports it directly and the frozen
+# sidecar carries it. All three are whatever pip holds on the day the Windows
+# artifact is built, which is the unreproducibility this file exists to remove,
+# admitted in the one place it cannot currently be removed. To close it, run
+# `tools/relock.py` on a Windows host (or add the resolved `pywinpty==x.y.z`
+# line here by hand, deliberately) — and note that `kriko-sidecar.spec` fails
+# the freeze with a sentence if the resolved pywinpty stops shipping the agent
+# file, so a silent shape change is not possible.
 #
 # Regenerate deliberately, never as a side effect — `python
 # tools/relock.py` prints this file from the current environment, and
 # `src/app/tests/test_dependencies_are_locked.py` fails if the two disagree.
 # resolved-on: linux
+pypdf==6.21.1
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.14.1

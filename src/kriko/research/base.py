@@ -220,6 +220,17 @@ class ResearchTask:
     #: reads; a template that declared none carries the pack's primary.
     query_languages: tuple[str, ...] = ()
     budget_usd: float = 0.0
+    #: How long this run may spend, in seconds; 0.0 means no ceiling.
+    #:
+    #: The money ceiling and the time ceiling are different failures. A run on a
+    #: subscription plane has no dollars to exceed and can still take an hour
+    #: learning nothing, because every provider is timing out one 45-second call
+    #: at a time — the shape the 2026-10-18 sweep found: ten queries against a
+    #: dead vendor is 7.5 minutes of a run that will end in an empty answer.
+    #: Generous on purpose: a working run must not be cut short, so this exists
+    #: for the *stuck* one, and it is a hard stop that keeps what it has, the
+    #: same way the money ceiling is (`BudgetExceeded`).
+    seconds: float = 0.0
     max_documents: int = 5
     #: The shortest explanation this pack will accept, in characters, from its
     #: own `min_rationale_chars` gate. Carried on the task rather than read at

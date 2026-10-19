@@ -54,6 +54,12 @@ def web_search(q: str = Query(min_length=2, max_length=500),
 #: Research once that screen exists, not here.
 EXTENSION_RESEARCH_BUDGET_USD = 0.20
 
+#: How many saved quick looks a panel open will consider. The query below used
+#: to read every succeeded quick look ever recorded, JSON-decoding and
+#: canonicalising each one, so opening the panel cost more every week the reader
+#: used the app. Newest-first, so the answer is the same one it always was.
+SAVED_QUICK_LOOK_SCAN = 200
+
 #: A sighting older than this stops counting as "connected". The extension
 #: polls on navigation rather than on a timer, so this is not a heartbeat
 #: interval — it is how long a reader is willing to believe a thing they last
@@ -486,9 +492,15 @@ def saved_quick_look(url: str, product: str = "", conn=Depends(get_app_state)) -
     if not wanted:
         return {"job": None}
     name = " ".join(product.casefold().split())
+    # Bounded. This scanned every succeeded quick look ever recorded — JSON
+    # decoding and canonicalising each one — on every panel open, so the cost of
+    # opening the panel grew with the reader's whole history. The newest 200 is
+    # more than a panel can show, and the `rowid DESC` tiebreak already makes
+    # "newest" unambiguous.
     for row in conn.execute(
         "SELECT * FROM jobs WHERE kind = 'quick_look' AND state = 'succeeded'"
-        " ORDER BY created_at DESC, rowid DESC"
+        " ORDER BY created_at DESC, rowid DESC LIMIT ?",
+        (SAVED_QUICK_LOOK_SCAN,),
     ):
         job = state._job(row)
         params = job["params"]
