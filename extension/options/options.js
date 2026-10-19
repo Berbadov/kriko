@@ -395,3 +395,40 @@ document.getElementById("tour").addEventListener("click", () => {
     note.textContent = "Could not reset the tour.";
   }
 });
+
+
+// ── buying help ─────────────────────────────────────────────────────────
+//
+// Two switches kept in local storage, and the one place the notifications
+// permission is asked for: this page is an extension page, so the click is a
+// gesture the browser accepts (a content script's is not).
+(function buyingHelp() {
+  const guard = document.getElementById("buyer-guard");
+  const marks = document.getElementById("buyer-marks");
+  const notify = document.getElementById("notify");
+  const note = document.getElementById("notify-status");
+  if (!guard || !marks || !notify) return;
+  const say = (text) => { note.textContent = text; };
+  chrome.storage?.local?.get?.(["buyerGuard", "buyerMarks"], (bag) => {
+    guard.checked = bag.buyerGuard !== false;
+    marks.checked = bag.buyerMarks !== false;
+  });
+  guard.addEventListener("change", () => chrome.storage.local.set({ buyerGuard: guard.checked }));
+  marks.addEventListener("change", () => chrome.storage.local.set({ buyerMarks: marks.checked }));
+  const showState = () => {
+    chrome.permissions?.contains?.({ permissions: ["notifications"] }, (yes) => {
+      void chrome.runtime.lastError;
+      notify.textContent = yes ? "Notifications are on" : "Tell me when a watched price drops";
+      notify.disabled = Boolean(yes);
+    });
+  };
+  notify.addEventListener("click", () => {
+    chrome.permissions.request({ permissions: ["notifications"] }, (granted) => {
+      void chrome.runtime.lastError;
+      say(granted ? "Kriko will show a notification when a page you watch crosses your price."
+        : "Without notifications, a drop still shows on the toolbar button and in the panel.");
+      showState();
+    });
+  });
+  showState();
+})();

@@ -3877,6 +3877,97 @@ def compare_ask(settings, params: dict, progress: Progress) -> dict:
     }
 
 
+def buyer_advice(settings, params: dict, progress: Progress) -> dict:
+    """Decide for the reader: Kriko's ranking, said well by their agent (`app/advice.py`).
+
+    `mode` is `pick`, `debate`, `tco` or `timing`. The ranking is computed in
+    code from the saved checks (`app/pick.py`), so the winner is the same on
+    every plane; the agent writes the words, checks the web, and may not move
+    the winner without naming the page that overturns it. Nothing here is
+    written to the knowledge store; a `pick` is kept in app state so the ledger
+    can later say whether it held up.
+    """
+    from app import advice, followup, pick as picker
+
+    mode = str(params.get("mode") or "pick")
+    if mode not in advice.MODES:
+        raise ValueError(f"mode is one of {', '.join(advice.MODES)}")
+    ids = [str(one) for one in params.get("lookup_ids") or [] if str(one).strip()][:8]
+    question = str(params.get("question") or "").strip()[:600]
+    needed = 2 if mode in ("pick", "debate") else 1
+    app_state = state.connect(settings.app_state_path)
+    try:
+        answers = [stored for stored in (state.saved_answer(app_state, one) for one in ids) if stored]
+        if len(answers) < needed:
+            raise ValueError(
+                f"{mode} needs {needed} saved check{'s' if needed > 1 else ''}; "
+                f"{len(answers)} could be read")
+        progress.set(0.05, "ranking the shortlist for this reader")
+        result = picker.rank(app_state, answers)
+    finally:
+        app_state.close()
+    for one in result["ranked"]:
+        progress.log(f"{one['name']}: score {one['score']:g}")
+    products = ", ".join(str(stored.get("label") or "")[:120] for stored in answers)[:1000]
+    context = _compare_brief(question or "Which should I buy?", answers, max_chars=9000)
+    brief = advice.brief(mode, question=question, products=products, result=result,
+                         context=context, history=advice.history_lines(result["ranked"]))
+    offline = (brief + "\n\nNo web search is available here. Answer from the records above "
+               "only, and mark every figure you cannot find as unknown.")
+    agent: dict = {}
+
+    def report_agent(identity: dict) -> None:
+        agent.update(identity)
+
+    progress.log(f"{mode} brief: {len(brief)} characters from {len(answers)} saved checks")
+    answer, sources = _ask_about_checks(
+        settings, {**params, "max_tokens": 900}, progress, brief,
+        on_agent=report_agent, timeout=COMPARE_ASK_TIMEOUT_SECONDS, effort="low",
+        follow_up=True, product=products, question=question or mode, fallback_brief=offline)
+    if not answer:
+        raise ValueError("The agent returned no answer. Try asking again.")
+    progress.set(0.95, "keeping the decision")
+    kept = None
+    if mode == "pick":
+        app_state = state.connect(settings.app_state_path)
+        try:
+            kept = picker.keep(app_state, result, reason=answer)
+        finally:
+            app_state.close()
+    progress.set(1.0, "decided")
+    return {"mode": mode, "answer": answer, "sources": sources, "agent": agent,
+            "ranking": result, "pick": kept, "model": str(agent.get("model", "")),
+            "words": len(followup.split(answer)[0].split())}
+
+
+def price_sweep(settings, params: dict, progress: Progress) -> dict:
+    """Re-read the pages the reader watches, for a price that crossed what they asked for.
+
+    One plain fetch per page, no browser, and a pause between pages
+    (`app/pricewatch.py`). A page that publishes its price only through script is
+    recorded on the watch and left to the reader's next visit.
+    """
+    import time as _time
+
+    from app import pricewatch
+    from app.providers import fetch
+
+    app_state = state.connect(settings.app_state_path)
+    try:
+        waiting = len(pricewatch.due(app_state))
+        progress.set(0.1, f"re-reading {waiting} watched page{'s' if waiting != 1 else ''}")
+
+        def read(url: str) -> str:
+            progress.check()
+            return fetch.markup(url, 15.0, check_cancelled=progress.check)
+
+        found = pricewatch.sweep(app_state, read, pause=lambda: _time.sleep(1.5))
+    finally:
+        app_state.close()
+    progress.set(1.0, f"{found['checked']} read, {found['alerts']} alert(s)")
+    return found
+
+
 def lookup_ask(settings, params: dict, progress: Progress) -> dict:
     """Answer inside the listing panel: a web search about the saved check, as a job.
 
@@ -4083,6 +4174,13 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         context = research_policy.market_guidance(_market_region(settings, params))
         if language != "auto":
             context += f"\nWrite the answer in this selected language: {language}."
+        # What the reader said about themselves goes on the planning and answering
+        # calls, the local model's included (it never passes through
+        # `_ask_about_checks`; the agent path finds it already there). Not on the
+        # one-line calls: a profile has nothing to say to "the words to search".
+        from app import buyer
+        about = buyer.brief(app_state)
+        about = f"\n\n{about}" if about else ""
         try:
             store = connect(settings.store_path, read_only=True)
         except (sqlite3.Error, OSError):
@@ -4151,14 +4249,15 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             original_ask, original_quick, original_stream = ask, ask_quick, ask_stream
 
             def contextual_ask(prompt: str) -> str:
-                return original_ask(prompt + ("\n\n" + context if context else ""))
+                return original_ask(prompt + ("\n\n" + context if context else "") + about)
 
             def contextual_quick(prompt: str) -> str:
                 return original_quick(prompt + ("\n\n" + context if context else ""))
 
             def contextual_stream(prompt: str, on_text: Callable[[str], None]) -> str:
                 assert original_stream is not None
-                return original_stream(prompt + ("\n\n" + context if context else ""), on_text)
+                return original_stream(prompt + ("\n\n" + context if context else "") + about,
+                                       on_text)
 
             result = chat.run_turn(text, ask=contextual_ask,
                                    ask_stream=contextual_stream if original_stream else None,
@@ -4239,6 +4338,30 @@ def _local_saved_answer(settings, params: dict, progress: Progress, brief: str,
     return answer, []
 
 
+def _with_profile(settings, text: str) -> str:
+    """The prompt with what the reader told Kriko about themselves, once.
+
+    Every question the reader's agent is asked goes through `_ask_about_checks`,
+    so this is the one place a profile reaches an answer. A reader who has said
+    nothing gets the prompt unchanged, and a store that cannot be read never
+    stops an answer.
+    """
+    from app import buyer
+
+    if not text:
+        return text
+    try:
+        conn = state.connect(settings.app_state_path)
+    except (sqlite3.Error, OSError):
+        return text
+    try:
+        return buyer.attach(text, conn)
+    except sqlite3.Error:
+        return text
+    finally:
+        conn.close()
+
+
 def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                       on_agent: Callable[[dict], None] | None = None,
                       on_text: Callable[[str], None] | None = None,
@@ -4258,6 +4381,8 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
     from app import followup
     from app.providers import agent_ready, harness_researcher
 
+    brief = _with_profile(settings, brief)
+    fallback_brief = _with_profile(settings, fallback_brief)
     local = _use_local_ask(settings, params)
     if local:
         try:
@@ -4855,4 +4980,6 @@ HANDLERS = {
     "model_pull": model_pull,
     "lookup_ask": lookup_ask,
     "chat_ask": chat_ask,
+    "buyer_advice": buyer_advice,
+    "price_sweep": price_sweep,
 }
