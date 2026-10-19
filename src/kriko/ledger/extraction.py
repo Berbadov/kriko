@@ -6,6 +6,7 @@ keeps category vocabulary and claim-selection taste outside the engine.
 """
 
 from collections.abc import Callable, Iterable
+from datetime import datetime, timezone
 
 from kriko.ledger import db
 from kriko.ledger.chunking import chunk_has_signal, chunk_text
@@ -14,6 +15,12 @@ from kriko.ledger.costs import Budget, estimate_cost
 EXTRACTOR_VERSION = 2
 EXTRACTION_MODEL = "deepseek-v4-flash"
 _OUT_TOKENS_PER_CHUNK = 350
+
+#: How many passes a chunk may lose a claim before the ledger stops buying it.
+#: A claim that cannot be written will not become writable by paying for the
+#: chunk again, and the failure row stays behind either way, so the record
+#: outlives the retries.
+MAX_CHUNK_ATTEMPTS = 3
 
 
 def estimate_chunk_tokens(text: str) -> tuple[int, int]:
@@ -29,6 +36,39 @@ def _chunk_done(conn, text_hash: str, chunk_index: int) -> bool:
         ).fetchone()
         is not None
     )
+
+
+def _note_failure(conn, text_hash: str, chunk_index: int, error: Exception) -> int:
+    """Record a claim that could not be written; return this chunk's attempts."""
+    conn.execute(
+        "INSERT INTO extraction_failures (text_hash, chunk_index, extractor_version,"
+        " attempts, error, last_at) VALUES (?,?,?,1,?,?)"
+        " ON CONFLICT(text_hash, chunk_index, extractor_version) DO UPDATE SET"
+        " attempts = attempts + 1, error = excluded.error, last_at = excluded.last_at",
+        (text_hash, chunk_index, EXTRACTOR_VERSION, str(error)[:400],
+         datetime.now(timezone.utc).isoformat(timespec="seconds")),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT attempts FROM extraction_failures WHERE text_hash=? AND chunk_index=?"
+        " AND extractor_version=?",
+        (text_hash, chunk_index, EXTRACTOR_VERSION),
+    ).fetchone()
+    return int(row["attempts"]) if row is not None else 1
+
+
+def failures(conn) -> list[dict]:
+    """Chunks that lost at least one claim, newest first.
+
+    The count of claims that could not be written used to exist only as a line
+    on stdout, which is the same as not existing: a run that dropped three of
+    forty claims reported forty. Everything that reports a run's yield reads
+    this now.
+    """
+    return [dict(row) for row in conn.execute(
+        "SELECT text_hash, chunk_index, attempts, error, last_at"
+        " FROM extraction_failures ORDER BY last_at DESC, chunk_index"
+    )]
 
 
 def extract_document(
@@ -56,6 +96,7 @@ def extract_document(
             continue
         tin, tout = estimate_chunk_tokens(chunk.text)
         budget.charge(EXTRACTION_MODEL, tin, tout)
+        worst_attempts = 0
         for claim in extractor(chunk.text):
             try:
                 quote = claim.get("quote") or ""
@@ -76,7 +117,18 @@ def extract_document(
                         db.flag_low_value(conn, ev_id, reason)
                 added += 1
             except Exception as exc:
-                print(f"  skipped malformed claim: {exc}")
+                # This used to print and carry on, and the chunk was marked
+                # done regardless — so the loss was both permanent and
+                # invisible, and nothing downstream could count it. It is
+                # recorded now, and the chunk stays pending so the next pass
+                # retries it whole (safe: `insert_evidence` is idempotent, so
+                # the claims that did land are not written twice).
+                worst_attempts = _note_failure(conn, h, chunk.index, exc)
+                print(f"  claim could not be written: {exc}")
+        if worst_attempts and worst_attempts < MAX_CHUNK_ATTEMPTS:
+            continue           # leave it pending; the next pass retries
+        if worst_attempts:
+            print(f"  chunk {chunk.index} given up after {worst_attempts} attempts")
         conn.execute(
             "INSERT INTO extraction_done VALUES (?,?,?)",
             (h, chunk.index, EXTRACTOR_VERSION),

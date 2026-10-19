@@ -106,12 +106,12 @@ def test_a_refused_page_the_readers_miss_is_read_by_the_browser(page, tmp_path,
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", "http://127.0.0.1:1/mcp")
     fake = FakeBrowser(tmp_path, dom="<html><body>browser words</body></html>")
     _wire(monkeypatch, fake)
-    assert "browser words" in fetch.reader()(page.url).text
+    assert "browser words" in fetch.reader()(page.url, allow_private=True).text
 
 
 def test_a_machine_with_no_browser_reads_exactly_as_before(page, monkeypatch):
     monkeypatch.setattr(browser, "locate", lambda: "")
-    assert fetch.reader()(page.url).text == ""
+    assert fetch.reader()(page.url, allow_private=True).text == ""
 
 
 def test_a_browser_that_fails_leaves_the_page_unread(page, tmp_path, monkeypatch):
@@ -119,7 +119,7 @@ def test_a_browser_that_fails_leaves_the_page_unread(page, tmp_path, monkeypatch
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", "http://127.0.0.1:1/mcp")
     fake = FakeBrowser(tmp_path, exit_code=1, dom="")
     _wire(monkeypatch, fake)
-    assert fetch.reader()(page.url).text == ""
+    assert fetch.reader()(page.url, allow_private=True).text == ""
 
 
 def test_locate_finds_a_named_browser_first(monkeypatch, tmp_path):

@@ -494,6 +494,29 @@
   font-size: 13px;
 }
 
+/* The undo line, right under the list it applies to. A quiet band rather than
+   a toast: it belongs to the panel, it stays until it is used or dismissed, and
+   nothing overlays the reader's list to say so. */
+.past-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.past-undo .link {
+  color: var(--accent-hi);
+  text-decoration: underline;
+  padding: 0;
+}
+
 .past-ask button {
   padding: 4px 9px;
   border-radius: 8px;

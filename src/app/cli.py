@@ -921,7 +921,14 @@ def main(argv=None) -> int:
     store = connect(args.store) if getattr(args, "needs_store", True) else None
     try:
         return args.fn(args, store)
-    except (KeyError, ValueError, FileNotFoundError) as exc:
+    except (KeyError, ValueError, OSError, RuntimeError, sqlite3.Error) as exc:
+        # The CLI is the door an agent uses, and a traceback is not an answer.
+        # Each type here is a real, expected failure rather than a bug: a pack
+        # id that names nothing (KeyError), a malformed argument (ValueError),
+        # a missing file or a full disk (OSError), a store the engine refuses
+        # (RuntimeError, e.g. `DowngradeRefused`), and a locked or corrupt
+        # database (sqlite3.Error). Anything else keeps its traceback, because
+        # hiding an unexpected failure is how a bug becomes a mystery.
         print(f"kriko: {exc}", file=sys.stderr)
         return 1
     finally:

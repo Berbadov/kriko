@@ -51,6 +51,7 @@ import os
 import socket
 import sys
 import threading
+import time
 
 from app.web.app import create_app
 from app.web.settings import EXTENSION_PORT, Settings
@@ -102,15 +103,23 @@ def reserve(host: str, port: int) -> tuple[socket.socket, int]:
 GRACE_SECONDS = 5.0
 
 
-def exit_when_parent_goes(server, stream=None, grace: float = GRACE_SECONDS):
+def exit_when_parent_goes(server, stream=None, grace: float = GRACE_SECONDS,
+                          done: threading.Event | None = None):
     """Stop `server` when our stdin closes.
 
     A daemon thread, so it can never itself be the reason the process lingers.
     The read is blocking and that is the point: it costs nothing until the pipe
     closes, and it needs no polling of a parent pid the OS may already have
     recycled.
-    """
 
+    `done` is set by the caller once `server.run` has returned. Without it the
+    watchdog slept its grace and then called `os._exit(0)` unconditionally —
+    whether or not uvicorn had finished draining — which cut in-flight SQLite
+    writes and a job's terminal state mid-transaction. The job then stayed
+    `running` in `app.sqlite` forever, and a job left `running` is the one state
+    the next start cannot repair. The hard exit stays as the belt for a request
+    that will never finish; a clean shutdown now wins the race.
+    """
     def watch() -> None:
         pipe = stream if stream is not None else getattr(sys.stdin, "buffer", sys.stdin)
         try:
@@ -121,7 +130,11 @@ def exit_when_parent_goes(server, stream=None, grace: float = GRACE_SECONDS):
         server.should_exit = True
         # Asked politely above, ended here. `os._exit` rather than `sys.exit`:
         # this is a daemon thread, and SystemExit raised in one exits nothing.
-        threading.Event().wait(grace)
+        deadline = time.monotonic() + grace
+        while time.monotonic() < deadline:
+            if done is not None and done.wait(0.05):
+                return          # uvicorn drained and returned; nothing to cut
+            time.sleep(0.05)
         os._exit(0)
 
     thread = threading.Thread(target=watch, name="parent-watchdog", daemon=True)
@@ -338,9 +351,15 @@ def main(argv=None) -> int:
         log_config=None,
     )
     server = uvicorn.Server(config)
+    finished = threading.Event()
     if args.exit_with_parent:
-        exit_when_parent_goes(server)
-    server.run(sockets=[s for s in (sock, extra) if s is not None])
+        exit_when_parent_goes(server, done=finished)
+    try:
+        server.run(sockets=[s for s in (sock, extra) if s is not None])
+    finally:
+        # Tells the watchdog that uvicorn drained and returned on its own, so it
+        # does not cut a graceful shutdown short.
+        finished.set()
     return 0
 
 

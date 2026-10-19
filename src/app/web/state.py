@@ -837,6 +837,19 @@ CREATE INDEX IF NOT EXISTS chat_messages_thread ON chat_messages (thread_id);
 #: happening" and "what just happened", and both questions have a short reach.
 OPERATIONS_KEPT = 2000
 
+#: How much of a job's running log a row keeps, in characters. A tail, not an
+#: archive: `/api/jobs/{id}/log` serves a cursor into it, and the full history is
+#: appended to the log file. Without this, `log = log || ?` grew with every
+#: phase of every run, in the reader's own app.sqlite, and nothing pruned it.
+JOB_LOG_CHARS = 64 * 1024
+
+#: The most finished jobs one installation keeps. A bound rather than a sweep by
+#: age, like `OPERATIONS_KEPT` and `DOCUMENTS_KEPT`: what makes the table safe is
+#: that it cannot grow without limit, and "the last N things that ran" is the set
+#: the Queue and History screens reach for. Enforced in `finish_job`, the only
+#: place a job becomes history.
+JOBS_KEPT = 5000
+
 
 #: The most documents one installation keeps, newest first. A bound rather
 #: than a sweep by age: what makes this table safe is that it cannot grow
@@ -1114,15 +1127,74 @@ def get_lookup(conn: sqlite3.Connection, lookup_id: str) -> dict | None:
     return _decode(row) if row else None
 
 
-def delete_lookup(conn: sqlite3.Connection, lookup_id: str) -> bool:
-    cursor = conn.execute("DELETE FROM lookups WHERE lookup_id = ?", (lookup_id,))
+def delete_lookup(conn: sqlite3.Connection, lookup_id: str) -> dict | None:
+    """Forget one saved check, returning what was removed so it can come back.
+
+    Returns `None` when there was nothing to delete, or a dict holding the row
+    and its triage. The caller keeps that for as long as the interface offers
+    the undo (`restore_lookup` puts it back verbatim).
+
+    "Are you sure?" is the wrong shape for this. A reader who deletes a check
+    they spent an agent's time on has already said yes to the dialog; what they
+    need is the ten seconds after it in which they can say "no, not that one".
+    The row is small and the triage is smaller, so keeping it costs nothing —
+    the alternative was a confirm dialog standing in for a reversible action.
+    """
+    row = conn.execute(
+        "SELECT * FROM lookups WHERE lookup_id = ?", (lookup_id,)).fetchone()
+    if row is None:
+        return None
+    checks = [dict(one) for one in conn.execute(
+        "SELECT * FROM claim_checks WHERE lookup_id = ?", (lookup_id,))]
+    notes = [dict(one) for one in conn.execute(
+        "SELECT * FROM claim_notes WHERE lookup_id = ?", (lookup_id,))]
+    conn.execute("DELETE FROM lookups WHERE lookup_id = ?", (lookup_id,))
     # Forgetting an answer forgets the triage on it too. Leaving the checks
     # behind would let a new lookup that happened to reuse the id inherit
     # someone else's checkmarks.
     conn.execute("DELETE FROM claim_checks WHERE lookup_id = ?", (lookup_id,))
     conn.execute("DELETE FROM claim_notes WHERE lookup_id = ?", (lookup_id,))
     conn.commit()
-    return cursor.rowcount > 0
+    return {"lookup": dict(row), "checks": checks, "notes": notes}
+
+
+def restore_lookup(conn: sqlite3.Connection, saved: dict) -> bool:
+    """Put a deleted check back, exactly as it was. False if the id is taken.
+
+    Not an upsert: if a lookup with this id exists again — the reader deleted it
+    and the same page was saved since — the newer one is the one they mean, and
+    overwriting it with an older answer would be the undo doing damage.
+    """
+    row = saved.get("lookup") or {}
+    lookup_id = row.get("lookup_id")
+    if not lookup_id:
+        return False
+    if conn.execute("SELECT 1 FROM lookups WHERE lookup_id = ?",
+                    (lookup_id,)).fetchone():
+        return False
+    columns = ("lookup_id", "created_at", "source", "label",
+               "request_json", "response_json")
+    conn.execute(
+        f"INSERT INTO lookups ({', '.join(columns)})"
+        f" VALUES ({', '.join('?' * len(columns))})",
+        tuple(row.get(name) for name in columns),
+    )
+    for one in saved.get("checks") or []:
+        keys = list(one)
+        conn.execute(
+            f"INSERT OR IGNORE INTO claim_checks ({', '.join(keys)})"
+            f" VALUES ({', '.join('?' * len(keys))})",
+            tuple(one[key] for key in keys),
+        )
+    for one in saved.get("notes") or []:
+        keys = list(one)
+        conn.execute(
+            f"INSERT OR IGNORE INTO claim_notes ({', '.join(keys)})"
+            f" VALUES ({', '.join('?' * len(keys))})",
+            tuple(one[key] for key in keys),
+        )
+    conn.commit()
+    return True
 
 
 # ── interface settings ───────────────────────────────────────────────────
@@ -2584,8 +2656,15 @@ def update_job(
         sets.append("message = CASE WHEN state = 'cancelling' THEN message ELSE ? END")
         args.append(message)
     if line is not None:
-        sets.append("log = log || ?")
+        # Appended, and then kept to the tail: `log = log || ?` grew without
+        # bound, and a long research run appends a line per phase — the UI caps
+        # how many events it *draws* (`livefeed.KEEP`), but the row it reads
+        # them from grew forever, in the reader's own app.sqlite, with no
+        # pruning anywhere. The tail is what anyone reads (`/log` serves a
+        # cursor into it); the whole history is in the log file on disk.
+        sets.append("log = substr(log || ?, -?)")
         args.append(f"{line}\n")
+        args.append(JOB_LOG_CHARS)
     if not sets:
         return
     args.append(job_id)
@@ -2625,6 +2704,23 @@ def finish_job(
                     job_id, SUCCEEDED,
                 ),
             )
+        # Pruned here rather than on a timer: every job passes through this
+        # function exactly once, and it is the only place a job becomes
+        # history. `jobs` is the one table a *panel open* writes to on a busy
+        # day — every analysis, quick look and question is a row — and nothing
+        # had ever deleted one, so the reader's `app.sqlite` grew for the life
+        # of the installation while `/api/jobs` paged 200 rows of it.
+        #
+        # Never the states that are still live: a queued or running job is
+        # work, not history, however old the row is. The subquery counts only
+        # history too — a `LIMIT` over every row would let three running jobs
+        # consume the whole retention budget and delete every finished one.
+        conn.execute(
+            "DELETE FROM jobs WHERE state NOT IN (?, ?, ?) AND job_id NOT IN ("
+            " SELECT job_id FROM jobs WHERE state NOT IN (?, ?, ?)"
+            " ORDER BY COALESCE(finished_at, created_at, '') DESC, rowid DESC LIMIT ?)",
+            (QUEUED, RUNNING, CANCELLING, QUEUED, RUNNING, CANCELLING, JOBS_KEPT),
+        )
 
 
 def request_cancel(conn: sqlite3.Connection, job_id: str) -> str | None:
@@ -3152,6 +3248,11 @@ def research_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
     `claims` and `removed` are counted here rather than stored on the run
     because an undo changes them: a denormalised total would be a number that
     silently stops being true the moment the feature it exists for is used.
+
+    `rowid` breaks the tie, which is not decoration: `started_at` is written to
+    the second, so two runs that begin in the same second ordered by SQLite's
+    own row order — and a list that reorders itself between two reads is a list
+    a reader cannot check.
     """
     return [
         _research_run(row)
@@ -3161,7 +3262,7 @@ def research_runs(conn: sqlite3.Connection, limit: int = 50) -> list[dict]:
             "   WHERE c.run_id = r.run_id AND c.removed_at IS NULL) AS claims,"
             " (SELECT COUNT(*) FROM research_run_claims c"
             "   WHERE c.run_id = r.run_id AND c.removed_at IS NOT NULL) AS removed"
-            " FROM research_runs r ORDER BY r.started_at DESC LIMIT ?",
+            " FROM research_runs r ORDER BY r.started_at DESC, r.rowid DESC LIMIT ?",
             (limit,),
         )
     ]

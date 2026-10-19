@@ -180,13 +180,24 @@ class PolitenessScheduler:
         return None
 
     def _soonest_ready(self) -> float:
-        ready = [entry.next_ready for entry in self._sources.values()
-                 if time.monotonic() < entry.hot_until + 0
-                 or entry.hot_until <= time.monotonic()]
-        candidates = [entry.next_ready for entry in self._sources.values()
-                      if entry.hot_until <= time.monotonic()]
-        return (min(candidates) - time.monotonic()) if candidates else (
-            min(ready) - time.monotonic() if ready else 1.0)
+        """Seconds until any source may be used again, never negative.
+
+        A source has two reasons to be unavailable — its own rate interval
+        (`next_ready`) and a provider's cooldown (`hot_until`) — so the answer
+        is the soonest `max` of the two across sources. The previous version
+        built its first list from a condition that is true for every source
+        (`now < hot_until or hot_until <= now`), and then, once every source was
+        hot, measured from `next_ready` alone: the cooldown was ignored and the
+        caller was handed a negative sleep, which `acquire` passes on as if it
+        were a wait.
+        """
+        now = time.monotonic()
+        soonest = min(
+            (max(entry.next_ready, entry.hot_until)
+             for entry in self._sources.values()),
+            default=now,
+        )
+        return max(0.0, soonest - now)
 
 
 def looks_blocked(status: int, body: str = "") -> bool:

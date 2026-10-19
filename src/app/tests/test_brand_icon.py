@@ -26,6 +26,22 @@ import pytest  # noqa: E402
 import render_icon  # noqa: E402
 
 
+def _pixels(blob: bytes):
+    """An image's size and pixels, whatever its compression produced.
+
+    The assertions here used to compare *bytes*, which is a comparison of PNG
+    streams rather than of pictures: two encoders that emit different (equally
+    valid) deflate output for the same image fail it. That is exactly what
+    happened — `pytest` on the machine this was written on reported three
+    failures whose images decode to identical pixels, so a red meant "your zlib
+    changed", which is the sort of red people learn to ignore. `render_icon`
+    already carries the decoder (written for this purpose, and without pulling
+    Pillow into the build), so the comparison is what the docstrings claim.
+    """
+    width, height, pixels = render_icon.decode(blob)
+    return width, height, pixels
+
+
 def test_the_committed_icon_is_what_the_mark_renders_to():
     """Edit the SVG without re-rendering and this fails, which is the point.
 
@@ -37,8 +53,11 @@ def test_the_committed_icon_is_what_the_mark_renders_to():
     units, shapes = render_icon.outlines(
         render_icon.LARGE_SOURCE.read_text(encoding="utf-8")
     )
-    assert render_icon.TARGET.read_bytes() == render_icon.smooth_png(
-        shapes, units, render_icon.MASTER
+    committed = _pixels(render_icon.TARGET.read_bytes())
+    rendered = _pixels(render_icon.smooth_png(shapes, units, render_icon.MASTER))
+    assert committed == rendered, (
+        f"{render_icon.TARGET.name} is not what the mark renders to; "
+        "run `python packaging/render_icon.py`"
     )
 
 
@@ -84,12 +103,14 @@ def test_offline_toolbar_icon_keeps_the_mark_but_mutes_it(size: int):
         render_icon.SOURCE.read_text(encoding="utf-8")
     )
     icon = render_icon.EXTENSION_DIR / f"icon-offline-{size}.png"
-    assert icon.read_bytes() == render_icon.png(
-        render_icon.offline_grid(pixels), size // side
+    assert _pixels(icon.read_bytes()) == _pixels(
+        render_icon.png(render_icon.offline_grid(pixels), size // side)
+    ), f"{icon.name} is not the muted mark; run `python packaging/render_icon.py`"
+    # And it is a *muted* variant rather than a copy: a "offline" icon that is
+    # the online one is a state the reader cannot see.
+    assert _pixels(icon.read_bytes()) != _pixels(
+        (render_icon.EXTENSION_DIR / f"icon-{size}.png").read_bytes()
     )
-    assert icon.read_bytes() != (
-        render_icon.EXTENSION_DIR / f"icon-{size}.png"
-    ).read_bytes()
 
 
 def test_the_manifest_asks_for_no_size_the_render_does_not_make():

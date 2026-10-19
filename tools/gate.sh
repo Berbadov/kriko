@@ -8,7 +8,13 @@
 # than no workflow: every commit since 2026-09-08 carried a red CI that was
 # never a test result, so the red stopped being information.
 #
-# So the jobs move here, verbatim. One command, no network, no runner, no bill.
+# So the jobs move here, verbatim. One command, no runner, no bill — and *no
+# network on a warm cache*, which is the honest version of what this line used
+# to claim flatly. `smoke_wheel.sh` installs the freshly built wheel into an
+# empty venv, and its dependencies have to come from an index: on a machine
+# with a populated pip cache that is no traffic at all, and on a cold one it is
+# the one stage that reaches out. Everything else — ruff, mypy, pytest, the
+# node suite, cargo — runs offline.
 # Run it before every push; `CLAUDE.md`'s app-first rule 1 already asked for
 # pytest, and this is the rest of what the branch used to be checked for.
 #
@@ -101,7 +107,10 @@ tmp_dir=""
 cleanup() {
     local rc=$?
     if [ -n "$tmp_dir" ]; then rm -rf "$tmp_dir"; fi
-    if [ "$rc" != 0 ] && [ -n "$current_stage" ]; then
+    # 3 is a skip, not a failure: the stage said which check it could not run.
+    if [ "$rc" = 3 ] && [ -n "$current_stage" ]; then
+        echo "gate SKIPPED in stage: $current_stage — nothing was verified there" >&2
+    elif [ "$rc" != 0 ] && [ -n "$current_stage" ]; then
         echo "gate FAILED in stage: $current_stage" >&2
     fi
 }
@@ -140,8 +149,14 @@ gate_py() {
     # B138: ruff before pytest, so a lint failure is cheap to see and does not
     # wait behind a ~80s test run. Config (the curated rule set, and every
     # per-file ignore with its reason) lives in pyproject.toml, not here.
-    step "ruff (src/kriko, src/app, packs)"
-    "$PYTHON" -m ruff check src packs
+    #
+    # `tools` and `packaging` are in scope too. They were never linted — the
+    # gate covered `src` and `packs`, and the scripts that build, freeze, sign
+    # and package the release were the only Python in the tree nothing checked.
+    # It found four unused imports the day it was turned on, two of them in
+    # files that had never been read by a linter at all.
+    step "ruff (src/kriko, src/app, packs, tools, packaging)"
+    "$PYTHON" -m ruff check src packs tools packaging
     # Three invocations, not one `mypy src packs`: `kriko/ledger/extraction.py`
     # and `packs/cars/pipeline/ledger/extraction.py` share a module-path
     # suffix, and mypy's module resolution conflates them into one "Module
@@ -214,6 +229,12 @@ gate_node() {
 
 gate_tauri() {
     CRATE="kriko-ui/src-tauri"
+    # Set by every path that could not run a real check. The stage then exits 3,
+    # and the summary prints *skipped* rather than *passed* — three distinct
+    # skips used to report as `passed` here (no cargo, a cold --offline
+    # registry, a missing cross target), so a green tick could mean "never ran",
+    # which is the one thing this file exists to prevent.
+    skipped=0
     CARGO="$(command -v cargo || true)"
     if [ -z "$CARGO" ]; then
         CARGO_BIN="${CARGO_HOME:-$HOME/.cargo}/bin/cargo"
@@ -223,6 +244,7 @@ gate_tauri() {
     if [ -z "$CARGO" ]; then
         step "cargo check (kriko-ui/src-tauri)"
         echo "no cargo on this machine — skipping. pytest's test_the_shell_is_valid_rust.py still reads the shell's sources above; a real compile needs a Rust toolchain (rustup.rs) or the Windows host that builds the installer."
+        skipped=1
     else
         export PATH="$(dirname "$CARGO"):$PATH"
         # Reuse the shipping cache on hosts with little disk space. Both
@@ -255,12 +277,14 @@ gate_tauri() {
         result=0
         _shell_cargo "the cargo check" check "${cargo_profile_args[@]}" || result=$?
         [ "$result" = 1 ] && exit 1
+        [ "$result" = 2 ] && skipped=1
 
         if [ "$result" = 0 ]; then
             step "cargo test (kriko-ui/src-tauri)"
             result=0
             _shell_cargo "the cargo tests" test "${cargo_profile_args[@]}" || result=$?
             [ "$result" = 1 ] && exit 1
+            [ "$result" = 2 ] && skipped=1
         fi
 
         # The Windows-only code (tray, single instance, window sizing, the
@@ -276,24 +300,37 @@ gate_tauri() {
                 [ "$result" = 1 ] && exit 1
             else
                 echo "not checked for Windows: the x86_64-pc-windows-gnu target is not installed (\`rustup target add x86_64-pc-windows-gnu\` adds it)"
+                skipped=1
             fi
         fi
     fi
+    [ "$skipped" = 1 ] && exit 3
+    return 0
 }
 
 summary() {
     local wall="$1" n
-    local -a failed=()
+    local -a failed=() skipped=()
     printf '\n\033[1m── gate summary\033[0m\n'
     for n in py wheel node tauri; do
         [ -n "${verdict_of[$n]:-}" ] || continue
         printf '  %-7s %-16s %s\n' "$n" "${verdict_of[$n]}" "$(fmt_ms "${took_ms[$n]}")"
-        if [ "${exit_of[$n]}" != 0 ]; then failed+=("$n"); fi
+        # 3 is "this stage could not run a real check" — reported, and never a
+        # green tick. See `gate_tauri`.
+        if [ "${exit_of[$n]}" = 3 ]; then
+            skipped+=("$n")
+        elif [ "${exit_of[$n]}" != 0 ]; then
+            failed+=("$n")
+        fi
     done
     printf '  %-7s %-16s %s\n' "wall" "" "$(fmt_ms "$wall")"
     if [ "${#failed[@]}" -gt 0 ]; then
         printf '\n\033[31mgate FAILED in: %s\033[0m\n' "${failed[*]}" >&2
         exit 1
+    fi
+    if [ "${#skipped[@]}" -gt 0 ]; then
+        printf '\n\033[33mgates passed, but SKIPPED in: %s — nothing was verified there\033[0m\n' "${skipped[*]}"
+        return 0
     fi
     printf '\n\033[32mall gates passed\033[0m\n'
 }
@@ -321,7 +358,9 @@ run_all_concurrently() {
         remaining=$((remaining - 1))
         took_ms[$n]=$(( $(now_ms) - ${started[$n]} ))
         exit_of[$n]=$rc
-        if [ "$rc" = 0 ]; then verdict=passed; else verdict="FAILED (exit $rc)"; fi
+        if [ "$rc" = 0 ]; then verdict=passed
+        elif [ "$rc" = 3 ]; then verdict=skipped
+        else verdict="FAILED (exit $rc)"; fi
         verdict_of[$n]=$verdict
         printf '\n\033[1m════ %s: %s after %s\033[0m\n' "$n" "$verdict" "$(fmt_ms "${took_ms[$n]}")"
         cat "$tmp_dir/$n.log"
@@ -332,15 +371,22 @@ run_all_concurrently() {
 # The stages one after another, output streamed as it is produced. This is the
 # order the gate always ran in, and it stops at the first failing stage.
 run_all_in_order() {
-    local n t0 s
+    local n t0 s rc
     t0=$(now_ms)
     for n in py wheel node tauri; do
         current_stage=$n
         s=$(now_ms)
-        "gate_$n"
+        # The exit code was being dropped here (`verdict_of[$n]=passed` whatever
+        # happened), which is how a skipped stage read as a pass in the order
+        # this gate ran in before the concurrent one existed.
+        rc=0
+        "gate_$n" || rc=$?
         took_ms[$n]=$(( $(now_ms) - s ))
-        verdict_of[$n]=passed
-        exit_of[$n]=0
+        exit_of[$n]=$rc
+        if [ "$rc" = 0 ]; then verdict_of[$n]=passed
+        elif [ "$rc" = 3 ]; then verdict_of[$n]=skipped
+        else verdict_of[$n]="FAILED (exit $rc)"; fi
+        [ "$rc" != 0 ] && [ "$rc" != 3 ] && exit "$rc"
     done
     current_stage=""
     summary $(( $(now_ms) - t0 ))
@@ -359,8 +405,15 @@ case "$only" in
         ;;
     *)
         current_stage=$only
-        "gate_$only"
+        rc=0
+        "gate_$only" || rc=$?
         current_stage=""
-        printf '\n\033[32mall gates passed\033[0m\n'
+        if [ "$rc" = 3 ]; then
+            printf '\n\033[33m%s was SKIPPED: nothing was verified\033[0m\n' "$only"
+        elif [ "$rc" != 0 ]; then
+            exit "$rc"
+        else
+            printf '\n\033[32mall gates passed\033[0m\n'
+        fi
         ;;
 esac

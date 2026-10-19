@@ -5,7 +5,7 @@ problem.
 
 | You have | Go to |
 |---|---|
-| `kriko-<version>-x86_64.msi` | Path A, steps 1 to 3 |
+| `kriko-<version>-x86_64-setup.exe` | Path A, steps 1 to 3 |
 | `kriko-<version>-win64-portable.zip` | Path A, step 1 (the portable ZIP), then step 2 |
 | Python 3.13 or newer, and no installer | Path B, steps 4 to 6 |
 
@@ -16,7 +16,7 @@ needs no network.
 
 ### 1. Install the app
 
-Double-click `kriko-<version>-x86_64.msi`.
+Double-click `kriko-<version>-x86_64-setup.exe`.
 
 The install puts the app in `%LOCALAPPDATA%\Programs\Kriko`. It does not ask
 for administrator rights. Two programs go there.
@@ -28,13 +28,13 @@ for administrator rights. Two programs go there.
 
 The last screen of the install has the checkbox **Open Kriko**. Keep the
 checkbox on and press **Finish**. The app opens. A silent install
-(`msiexec /qn`) opens nothing.
+(`/S`) opens nothing.
 
-A newer MSI replaces an older one and stops a running Kriko first. An older MSI
-refuses to install over a newer one.
+A newer installer replaces an older one and stops a running Kriko first. An older
+installer refuses to install over a newer one.
 
 > **The message "A newer version of Kriko is already installed."**
-> You started an older MSI. Keep the newer version, or uninstall the newer
+> You started an older installer. Keep the newer version, or uninstall the newer
 > version first (step 3).
 
 **The portable ZIP.** Extract `kriko-<version>-win64-portable.zip`. Keep
@@ -202,4 +202,4 @@ $HOME\kriko-env\Scripts\pip show -f kriko
 ```
 
 Also give `http://127.0.0.1:8787/api/health` if the app started. On Path A, say
-if you used the MSI or the portable ZIP.
+if you used the installer or the portable ZIP.

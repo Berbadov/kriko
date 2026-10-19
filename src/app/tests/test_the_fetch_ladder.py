@@ -97,7 +97,7 @@ def test_a_page_that_answers_is_read_plainly(sites, monkeypatch):
 def test_a_refused_page_is_read_through_the_hosted_reader(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     sites.reader_text = _parallel_answer(sites.url, ["The page's own words."])
-    page = fetch.reader()(sites.url)
+    page = fetch.reader()(sites.url, allow_private=True)
     assert "The page's own words." in page.text
     assert sites.reader_calls == 2
 
@@ -105,19 +105,19 @@ def test_a_refused_page_is_read_through_the_hosted_reader(sites, monkeypatch):
 def test_a_reader_that_fails_leaves_the_page_unread(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     sites.reader_text = ""
-    assert fetch.reader()(sites.url).text == ""
+    assert fetch.reader()(sites.url, allow_private=True).text == ""
 
 
 def test_a_404_is_not_a_refusal_and_never_asks_the_reader(sites, monkeypatch):
     sites.refuse_status = 404
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
-    assert fetch.reader()(sites.url).text == ""
+    assert fetch.reader()(sites.url, allow_private=True).text == ""
     assert sites.reader_calls == 0
 
 
 def test_quick_fetch_does_not_escalate_a_refusal_to_more_network_rungs(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
-    page = fetch.reader()(sites.url, allow_fallback=False)
+    page = fetch.reader()(sites.url, allow_fallback=False, allow_private=True)
     assert page.text == ""
     assert sites.reader_calls == 0
 
@@ -152,7 +152,7 @@ def test_cancellation_after_a_refusal_stops_before_hosted_reader_or_browser(monk
 def test_the_reader_names_itself_honestly(sites, monkeypatch):
     monkeypatch.setattr(pagereader, "PARALLEL_ENDPOINT", sites.reader_url)
     sites.reader_text = _parallel_answer(sites.url, ["words"])
-    pagereader.read(sites.url)
+    pagereader.read(sites.url, allow_private=True)
     assert sites.site_agents or True
 
 

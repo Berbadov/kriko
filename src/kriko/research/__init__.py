@@ -116,9 +116,20 @@ def _templates(raw, primary: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     return tuple(queries), tuple(langs)
 
 
+#: How long one research run may spend before it stops and keeps what it read.
+#:
+#: Generous on purpose. A working deep run on a slow connection is minutes, and
+#: cutting one short is worse than a slow one — so this is not a speed limit, it
+#: is the stop for a run that is *stuck*: every provider timing out one
+#: 45-second call at a time, which the money ceiling cannot see because a
+#: subscription plane spends nothing. Overridable per run (`ResearchTask.seconds`).
+RUN_SECONDS = 20 * 60.0
+
+
 def plan_task(conn, subject_id: str, pack_id: str, *,
               budget_usd: float = 0.0, max_documents: int = 5,
-              effort: str = "fast", prior_runs: tuple = ()) -> ResearchTask:
+              effort: str = "fast", prior_runs: tuple = (),
+              seconds: float = RUN_SECONDS) -> ResearchTask:
     """Assemble everything the pack knows about how to research this subject.
 
     Everything category-specific — query templates, the product principle —
@@ -172,6 +183,7 @@ def plan_task(conn, subject_id: str, pack_id: str, *,
         identification=pack_asset(conn, pack_id, "research/skill.md"),
         domains=tuple(domains),
         budget_usd=budget_usd,
+        seconds=seconds,
         max_documents=max_documents,
         min_rationale_chars=load_gates(conn, pack_id).min_rationale_chars,
         effort=effort if effort in ("fast", "deep") else "fast",
