@@ -16,7 +16,7 @@ test("a shop with no structured price still has its shown price read, with the s
     <span class="product-price">999,90 TL</span>`), "https://shop.example/p/kettle-x200");
   const scrape = s.buildScrape([], {});
   assert.equal(scrape.fields["shown:price"], "999,90");
-  assert.equal(scrape.fields["shown:currency"], "TL");
+  assert.equal(scrape.fields["shown:currency"], "TRY");
   assert.equal(scrape.fields["shown:was"], "1.299,00");
 });
 
@@ -50,7 +50,7 @@ test("a cart is read as lines with their prices, and the page's words ride along
     <p>Free returns within 30 days.</p></main></body></html>`, "https://shop.example/cart");
   const cart = s.readCart();
   assert.deepEqual(cart.items.map((one) => [one.name, one.price, one.currency]),
-    [["Kettle X200", "49,90", "€"], ["Filter pack", "7,50", "€"]]);
+    [["Kettle X200", "49,90", "EUR"], ["Filter pack", "7,50", "EUR"]]);
   assert.match(cart.text, /Free returns within 30 days/);
 });
 
@@ -65,7 +65,7 @@ test("six alike products with a link, an image and a price are a results page", 
   const read = s.readResultCard(cards[0]);
   assert.equal(read.name, "Phone 0 Acme");
   assert.equal(read.price, "100");
-  assert.equal(read.currency, "€");
+  assert.equal(read.currency, "EUR");
 });
 
 test("a product page with one price block is not a results page", () => {

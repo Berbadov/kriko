@@ -2088,8 +2088,8 @@
   // requires background to grant content scripts session access via
   // setAccessLevel(TRUSTED_AND_UNTRUSTED_CONTEXTS) — without it this listener
   // never fires (issue #28).
-  const STORAGE_KEY = "kriko_result_" + window.location.href;
-  const STAGE_KEY = "kriko_stage_" + window.location.href;
+  const storageKey = () => "kriko_result_" + window.location.href;
+  const stageKey = () => "kriko_stage_" + window.location.href;
   chrome.storage.onChanged.addListener((changes, area) => {
     // The motion profile is a `local` setting shared with the options page:
     // changing it there while this panel is open has to reach the panel too,
@@ -2103,19 +2103,19 @@
       return;
     }
     if (area !== "session") return;
-    if (BUYER_KEY in changes) {
-      const entry = changes[BUYER_KEY].newValue;
+    if (buyerKey() in changes) {
+      const entry = changes[buyerKey()].newValue;
       if (entry && entry.ok) { state.buyer = entry.buyer; renderBuyer(); }
     }
     // The stage first: it is written before the result it narrates, and a
     // change event carrying both should not paint the answer and then the
     // sentence that says the answer is still coming.
-    if (STAGE_KEY in changes && changes[STAGE_KEY].newValue) {
-      state.stage = changes[STAGE_KEY].newValue;
+    if (stageKey() in changes && changes[stageKey()].newValue) {
+      state.stage = changes[stageKey()].newValue;
       renderStatus();
     }
-    if (!(STORAGE_KEY in changes)) return;
-    const next = changes[STORAGE_KEY].newValue;
+    if (!(storageKey() in changes)) return;
+    const next = changes[storageKey()].newValue;
     if (!next) return;
     applyEntry(next);
   });
@@ -2751,7 +2751,7 @@
   // app; `buyer_card.js` only draws them, and every press here is forwarded as
   // the reader's own request to the app's own API.
   const BUYER = window.__KrikoBuyer || null;
-  const BUYER_KEY = "kriko_buyer_" + window.location.href;
+  const buyerKey = () => "kriko_buyer_" + window.location.href;
 
   function renderBuyer() {
     const slot = bodyEl?.querySelector(".lite-buyer-slot");
@@ -2789,9 +2789,9 @@
 
   function loadBuyer() {
     try {
-      chrome.storage.session.get(BUYER_KEY, (got) => {
+      chrome.storage.session.get(buyerKey(), (got) => {
         void chrome.runtime.lastError;
-        const entry = got && got[BUYER_KEY];
+        const entry = got && got[buyerKey()];
         if (entry && entry.ok) { state.buyer = entry.buyer; renderBuyer(); }
       });
     } catch (_) {

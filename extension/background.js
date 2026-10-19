@@ -396,7 +396,13 @@ function globToRegExp(pattern) {
     // bug; this is the side that was wrong.
     .replace(/:\/\/\\\*\\\./g, "://(?:[^/]+\\.)?")
     .replace(/\\\*/g, ".*");
-  return new RegExp("^" + body + "$", "i");
+  // A pack writes `*shop.example/urun/*`: the star stands for the scheme and an optional
+  // `www.`-style prefix, not for any text at all. As `.*` it matched `evilshop.example` and a
+  // search URL that merely carried the address in its query.
+  const leading = /^\\\*[a-z0-9]/i.test(escaped)
+    ? body.replace(/^\.\*/, "[a-z][a-z0-9+.-]*://(?:[^/]*\\.)?")
+    : body;
+  return new RegExp("^" + leading + "$", "i");
 }
 
 // Every adapter claiming this page, folded into one scrape request (B150).
@@ -2382,6 +2388,12 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     BUYER_UNWATCH: async (p) => {
       const response = await _fetchApp(
         `${await apiBase()}/api/prices/watches/${encodeURIComponent(p.watch_id)}`, { method: "DELETE" });
+      if (!response.ok) {
+        // A refused delete is not a stopped watch: the panel must not draw it as gone.
+        const refusal = new Error(`Kriko refused that (${response.status}).`);
+        refusal.status = response.status;
+        throw refusal;
+      }
       return response.json();
     },
     BUYER_BOUGHT: (p) => _postApp("/api/buyer/purchases", {

@@ -251,7 +251,10 @@ export function useLocal() {
     try {
       if (mode === 'live') {
         const started = await post<{ job_id: string }>('/api/local-models/start')
-        await followJob(started.job_id, () => undefined, () => alive.current)
+        const ended = await followJob(started.job_id, () => undefined, () => alive.current)
+        // The engine says why it could not start it ("Ollama is not installed"); the button used to
+        // go quiet and show nothing.
+        if (ended && ended.state !== 'succeeded') throw new Error(ended.message || 'Could not start it.')
       }
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not start it.')

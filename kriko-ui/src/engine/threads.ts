@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Turn } from '../activity/run'
 import { del, get, patch, seg } from './api'
 import { useEngine } from './Engine'
@@ -106,6 +106,8 @@ export function useThreads(query = '') {
   const { mode } = useEngine()
   const [threads, setThreads] = useState<ChatThread[]>([])
   const [problem, setProblem] = useState('')
+  // The newest request wins: typing in the rail's search sends one per key, and they can arrive out of order.
+  const latest = useRef(0)
 
   const load = useCallback(async () => {
     if (mode === 'checking') return
@@ -113,8 +115,10 @@ export function useThreads(query = '') {
       setThreads(demoThreads.find(query).map((row) => ({ id: row.id, title: row.title, at: row.at, when: ago(row.at), pinned: !!row.pinned })))
       return
     }
+    const mine = ++latest.current
     try {
       const data = await get<{ items: ApiThread[] }>(query.trim() ? `/api/chat/threads?q=${encodeURIComponent(query.trim())}` : '/api/chat/threads')
+      if (latest.current !== mine) return
       // A chat with no name has no question in it yet.
       setThreads(
         data.items

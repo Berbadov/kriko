@@ -9,6 +9,7 @@ import { useQueue } from './queue'
 
 export const MAX_SLOTS = 4
 const POLL_MS = 700
+const POLL_MISSES = 5
 
 export interface Question {
   id: string
@@ -90,11 +91,13 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   const follow = useCallback(
     async (id: string, job: string) => {
       jobOf.current.set(id, job)
+      let misses = 0
       for (;;) {
         await new Promise((resolve) => window.setTimeout(resolve, POLL_MS))
         if (!alive.current) return
         try {
           const reading = await get<ApiJob>(`/api/jobs/${seg(job)}`)
+          misses = 0
           const answer = (reading.result as { answer?: string } | null | undefined)?.answer ?? ''
           if (reading.done || ['succeeded', 'failed', 'cancelled'].includes(reading.state)) {
             if (reading.state === 'succeeded') patchQuestion(id, { answer: answer || 'No answer came back.', state: 'done' })
@@ -104,6 +107,9 @@ export function CompareProvider({ children }: { children: ReactNode }) {
           }
           if (answer) patchQuestion(id, { answer })
         } catch (error) {
+          // A busy engine can miss one read of a job that is still running.
+          misses += 1
+          if (misses < POLL_MISSES) continue
           patchQuestion(id, { state: 'failed', note: reasonOf(error) })
           return
         }

@@ -55,7 +55,12 @@ PROFILE_AT = "buyer_profile_at"
 PREFIX = "kriko-pair"
 MAX_RESPONSE = 1 << 20
 TOMBSTONE_DAYS = 90
-MAX_TOMBSTONES = 200
+MAX_TOMBSTONES = 1000
+#: The relay refuses a label longer than this (`kriko_cloud.store.MAX_LABEL`).
+MAX_LABEL = 120
+#: What one ledger blob may weigh before the oldest answered purchases stay off it. The
+#: relay's default cap is 256 KiB sealed; this leaves room for the seal and a smaller cap.
+MAX_LEDGER_BYTES = 160_000
 GENERIC_LABEL = "A page you watch"
 LOOPBACK = {"127.0.0.1", "localhost", "::1"}
 
@@ -187,7 +192,7 @@ class Relay:
     def claim(self, setup: str = "") -> bool:
         """Take the relay with the operator's setup word, or confirm it is already ours. `True` when taken now."""
         _, _, data = self.call("PUT", "/owner", json_body={"topic": self.keys.topic},
-                               extra={"X-Kriko-Setup": setup} if setup else None)
+                               extra={"X-Kriko-Setup": setup.encode("utf-8").decode("latin-1")} if setup else None)
         return bool(json.loads(data).get("claimed"))
 
     def get_blob(self, name: str) -> tuple[int, object] | None:
@@ -298,11 +303,18 @@ def disconnect(conn: sqlite3.Connection, *, forget_remote: bool = True, http: Ht
 
 def note_deleted(conn: sqlite3.Connection, kind: str, key: str) -> None:
     """Remember a deletion, but only for a reader who has paired a device."""
-    if not configured(conn):
+    note_deleted_many(conn, kind, [key])
+
+
+def note_deleted_many(conn: sqlite3.Connection, kind: str, keys: list[str]) -> None:
+    """`note_deleted` for a whole table at once, in one write."""
+    if not keys or not configured(conn):
         return
     cutoff = _stamp(_now() - timedelta(days=TOMBSTONE_DAYS))
-    kept = [t for t in (state.all_settings(conn).get(TOMBS) or []) if t["at"] >= cutoff and (t["kind"], t["key"]) != (kind, key)]
-    kept.append({"kind": kind, "key": key, "at": _stamp()})
+    gone = {(kind, key) for key in keys}
+    kept = [t for t in (state.all_settings(conn).get(TOMBS) or []) if t["at"] >= cutoff and (t["kind"], t["key"]) not in gone]
+    at = _stamp()
+    kept += [{"kind": kind, "key": key, "at": at} for key in keys]
     state.put_settings(conn, {TOMBS: kept[-MAX_TOMBSTONES:]})
 
 
@@ -332,8 +344,32 @@ def _ledger_local(conn) -> dict:
     return {"purchases": buyer.purchases(conn, 500), "deleted": [{"key": k, "at": a} for k, a in _tombs(conn, "purchase").items()]}
 
 
+def _newest(tombstones: list[dict]) -> dict[str, str]:
+    """One time per key: the latest. A stale tombstone from another device must not beat a newer one."""
+    gone: dict[str, str] = {}
+    for tomb in tombstones:
+        if tomb["key"] not in gone or tomb["at"] > gone[tomb["key"]]:
+            gone[tomb["key"]] = tomb["at"]
+    return gone
+
+
+def _fit_ledger(rows: list[dict]) -> list[dict]:
+    """The purchases that go on the blob: all of them while they fit, else the newest.
+
+    A reader with hundreds of long reasons outgrew the relay's cap, and every sync
+    after that failed on the ledger and never reached the watches or the alerts.
+    Whatever stays off the blob stays on this computer.
+    """
+    rows = sorted(rows, key=lambda r: r["purchase_id"])
+    while len(rows) > 1 and len(_canon(rows)) > MAX_LEDGER_BYTES:
+        answered = [r for r in rows if r["answered_at"]] or rows
+        oldest = min(answered, key=lambda r: (r["bought_at"], r["purchase_id"]))
+        rows = [r for r in rows if r is not oldest]
+    return rows
+
+
 def _ledger_merge(conn, local: dict, remote: dict | None) -> dict:
-    gone = {t["key"]: t["at"] for t in local["deleted"] + ((remote or {}).get("deleted") or [])}
+    gone = _newest(local["deleted"] + ((remote or {}).get("deleted") or []))
     rows = {r["purchase_id"]: r for r in (remote or {}).get("purchases", [])}
     for row in local["purchases"]:
         have = rows.get(row["purchase_id"])
@@ -345,7 +381,7 @@ def _ledger_merge(conn, local: dict, remote: dict | None) -> dict:
         buyer.forget_purchase(conn, pid, remember=False)
     for row in rows.values():
         buyer.adopt_purchase(conn, row)
-    return {"purchases": sorted(rows.values(), key=lambda r: r["purchase_id"]),
+    return {"purchases": _fit_ledger(list(rows.values())),
             "deleted": [{"key": k, "at": a} for k, a in sorted(gone.items())]}
 
 
@@ -358,7 +394,7 @@ def _watches_local(conn) -> dict:
 
 
 def _watches_merge(conn, local: dict, remote: dict | None) -> dict:
-    gone = {t["key"]: t["at"] for t in local["deleted"] + ((remote or {}).get("deleted") or [])}
+    gone = _newest(local["deleted"] + ((remote or {}).get("deleted") or []))
     rows = {r["product_key"]: r for r in (remote or {}).get("watches", [])}
     for row in local["watches"]:
         have = rows.get(row["product_key"])
@@ -414,13 +450,24 @@ def sync_watches(conn: sqlite3.Connection, relay: Relay) -> dict:
     private = bool(state.all_settings(conn).get(PRIVATE_LABELS))
     want = {cloud_id(w["product_key"]): w for w in pricewatch.watches(conn) if w["cloud"]}
     have = {w["watch_id"] for w in relay.watches()}
-    for wid, watch in want.items():
-        relay.put_watch(wid, url=watch["url"], label=GENERIC_LABEL if private else (watch["name"] or GENERIC_LABEL),
-                        target=watch["target"], drop_pct=watch["drop_pct"], started_price=watch["started_price"],
-                        currency=watch["currency"])
+    # Stopping first: a page the relay refuses must not keep a stopped watch alive.
     for wid in sorted(have - set(want)):
         relay.drop_watch(wid)
-    return {"watching": len(want), "stopped": len(have - set(want))}
+    refused: list[dict] = []
+    for wid, watch in want.items():
+        label = GENERIC_LABEL if private else (watch["name"] or GENERIC_LABEL)[:MAX_LABEL]
+        try:
+            relay.put_watch(wid, url=watch["url"], label=label, target=watch["target"],
+                            drop_pct=watch["drop_pct"], started_price=watch["started_price"],
+                            currency=watch["currency"])
+        except RelayError as error:
+            if not error.status:
+                raise  # the relay is not there: say so, do not call every page refused
+            refused.append({"watch_id": watch["watch_id"], "why": str(error)})
+    out: dict = {"watching": len(want) - len(refused), "stopped": len(have - set(want))}
+    if refused:
+        out["refused"] = refused
+    return out
 
 
 def pull_alerts(conn: sqlite3.Connection, relay: Relay) -> int:
@@ -450,9 +497,17 @@ def sync(conn: sqlite3.Connection, http: Http | None = None) -> dict:
     if not relay:
         raise ValueError("not connected to a relay")
     relay.claim()
-    out: dict[str, object] = {"blobs": sync_blobs(conn, relay)}
-    out["watches"] = sync_watches(conn, relay)
-    out["alerts"] = pull_alerts(conn, relay)
+    out: dict[str, object] = {}
+    problems: list[str] = []
+    for part, run in (("blobs", sync_blobs), ("watches", sync_watches), ("alerts", pull_alerts)):
+        try:
+            out[part] = run(conn, relay)
+        except RelayError as error:
+            if not error.status:
+                raise  # unreachable: nothing more will work this pass
+            problems.append(f"{part}: {error}")
+    if problems:
+        out["problems"] = problems
     state.put_settings(conn, {SYNCED: _stamp()})
     return out
 
