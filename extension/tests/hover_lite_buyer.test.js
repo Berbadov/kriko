@@ -180,3 +180,35 @@ test("the decide button waits for a page that was read, and is not drawn on an e
   idle.deliverEntry(READ);
   assert.ok(idle.shadow().querySelector('[data-act="decide"]'));
 });
+
+test("a due question on a page Kriko reads is a card of its own that can be answered or ignored", async () => {
+  const p = panel();
+  p.deliverMessage({ type: "KRIKO_DUE_NUDGE", purchase: { purchase_id: "p1", name: "Blender" }, count: 1 });
+  const host = p.dom.window.document.querySelector("kriko-due-host");
+  assert.ok(host);
+  assert.match(host.shadowRoot.textContent, /Did your Blender hold up\?/);
+  host.shadowRoot.querySelector('[data-act="answer"][data-verdict="glad"]').click();
+  await tick();
+  const sent = p.sent.find((m) => m.type === "BUYER_ANSWER");
+  assert.deepEqual(plain(sent.payload), { purchase_id: "p1", verdict: "glad", reason: "" });
+  assert.equal(p.dom.window.document.querySelector("kriko-due-host"), null);
+});
+
+test("regret on the card asks why, and not now just closes it", async () => {
+  const p = panel();
+  p.deliverMessage({ type: "KRIKO_DUE_NUDGE", purchase: { purchase_id: "p1", name: "Blender" }, count: 1 });
+  let host = p.dom.window.document.querySelector("kriko-due-host");
+  host.shadowRoot.querySelector('[data-act="regret"]').click();
+  const input = host.shadowRoot.querySelector('input[name="reason"]');
+  input.value = "motor died";
+  host.shadowRoot.querySelector('form[data-act="regret-save"]')
+    .dispatchEvent(new p.dom.window.Event("submit", { bubbles: true, cancelable: true }));
+  await tick();
+  const sent = p.sent.filter((m) => m.type === "BUYER_ANSWER").at(-1);
+  assert.deepEqual(plain(sent.payload), { purchase_id: "p1", verdict: "regret", reason: "motor died" });
+
+  p.deliverMessage({ type: "KRIKO_DUE_NUDGE", purchase: { purchase_id: "p2", name: "Lamp" }, count: 1 });
+  host = p.dom.window.document.querySelector("kriko-due-host");
+  host.shadowRoot.querySelector('[data-act="due-dismiss"]').click();
+  assert.equal(p.dom.window.document.querySelector("kriko-due-host"), null);
+});

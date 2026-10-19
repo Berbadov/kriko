@@ -2071,6 +2071,7 @@
       togglePanel();
     }
     if (request && request.type === "SHOW_GUARD") showGuard(request.result);
+    if (request && request.type === "KRIKO_DUE_NUDGE") showDueNudge(request.purchase);
     // A page the worker found worth learning, on a site nothing reads: the
     // panel comes up with the Learn card, once, instead of waiting for a
     // toolbar press the reader has no reason to make on a page they have not
@@ -2905,33 +2906,80 @@
   // speaks up on a cart page the reader has not asked anything of, so it must
   // be easy to dismiss, quiet in what it says, and never in the way of the pay
   // button (bottom left, away from where checkouts put theirs).
-  let guardHost = null;
+  const TOAST_STYLE = `<style>
+      .kriko-guard-card,.kriko-due-card{font:13px/1.45 system-ui,sans-serif;max-width:340px;padding:12px 14px;border-radius:10px;
+        background:#111522;color:#eef1f9;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 32px rgba(0,0,0,.45)}
+      .kriko-guard-card[data-verdict="stop"]{border-color:#ff6b7a}
+      .kriko-guard-card[data-verdict="check"]{border-color:#f5b84b}
+      .kriko-due-card{border-color:#3d6bff}
+      .kriko-guard-card ul{margin:6px 0 8px;padding-left:18px}
+      .kriko-guard-card li{margin:2px 0}
+      .kriko-due-card p{margin:0 0 6px}
+      .lite-buy-due{background:none;padding:0;margin:0;box-shadow:none}
+      .kriko-guard-actions,.lite-buy-actions,.lite-buy-form{display:flex;flex-wrap:wrap;gap:6px 8px}
+      .kriko-guard-actions button,.lite-buy-btn{font:600 12px system-ui,sans-serif;padding:4px 10px;border-radius:6px;cursor:pointer;
+        border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit}
+      .lite-buy-btn[data-primary="1"]{background:#3d6bff;border-color:#3d6bff;color:#fff}
+      .lite-buy-form input{flex:1;min-width:140px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.25);
+        background:#0b0e17;color:inherit;font:13px system-ui,sans-serif}
+      </style>`;
+  // A card on the page that is not the panel, in a shadow root of its own so the
+  // page's styles cannot reach it. One of each kind at a time.
+  const toasts = {};
+  function showToast(kind, html, onClick, onSubmit) {
+    if (toasts[kind]) toasts[kind].remove();
+    const host = document.createElement(`kriko-${kind}-host`);
+    host.style.cssText = "all:initial;position:fixed;left:16px;bottom:16px;z-index:2147483646;";
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML = TOAST_STYLE + html;
+    root.addEventListener("click", (event) => {
+      const act = event.target.closest && event.target.closest("[data-act]");
+      if (act) onClick(act, host, root);
+    });
+    if (onSubmit) root.addEventListener("submit", (event) => { event.preventDefault(); onSubmit(event.target, host, root); });
+    toasts[kind] = host;
+    document.documentElement.appendChild(host);
+    return host;
+  }
+  function closeToast(kind) {
+    if (toasts[kind]) { toasts[kind].remove(); toasts[kind] = null; }
+  }
+
   function showGuard(result) {
     if (!BUYER || !result) return;
     const html = BUYER.renderGuard(result);
     if (!html) return;
-    if (guardHost) guardHost.remove();
-    guardHost = document.createElement("kriko-guard-host");
-    guardHost.style.cssText = "all:initial;position:fixed;left:16px;bottom:16px;z-index:2147483646;";
-    const root = guardHost.attachShadow({ mode: "open" });
-    root.innerHTML = `<style>
-      .kriko-guard-card{font:13px/1.45 system-ui,sans-serif;max-width:340px;padding:12px 14px;border-radius:10px;
-        background:#111522;color:#eef1f9;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 32px rgba(0,0,0,.45)}
-      .kriko-guard-card[data-verdict="stop"]{border-color:#ff6b7a}
-      .kriko-guard-card[data-verdict="check"]{border-color:#f5b84b}
-      .kriko-guard-card ul{margin:6px 0 8px;padding-left:18px}
-      .kriko-guard-card li{margin:2px 0}
-      .kriko-guard-actions{display:flex;gap:8px}
-      .kriko-guard-actions button{font:600 12px system-ui,sans-serif;padding:4px 10px;border-radius:6px;cursor:pointer;
-        border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit}
-      </style>${html}`;
-    root.addEventListener("click", (event) => {
-      const act = event.target.closest && event.target.closest("[data-act]");
-      if (!act) return;
-      if (act.dataset.act === "guard-open") { guardHost.remove(); guardHost = null; openPanel(); }
-      if (act.dataset.act === "guard-dismiss") { guardHost.remove(); guardHost = null; }
+    showToast("guard", html, (act) => {
+      if (act.dataset.act === "guard-open") { closeToast("guard"); openPanel(); }
+      if (act.dataset.act === "guard-dismiss") closeToast("guard");
     });
-    document.documentElement.appendChild(guardHost);
+  }
+
+  // "Did it hold up?", asked on a page Kriko reads. The same four answers as in
+  // the panel, and a way to ignore it: a question, not a gate.
+  function showDueNudge(purchase) {
+    if (!BUYER || !purchase) return;
+    const ui = {};
+    const draw = (root) => {
+      root.innerHTML = TOAST_STYLE + `<div class="kriko-due-card">${BUYER.renderDue([purchase], ui)}
+        <div class="kriko-guard-actions"><button type="button" data-act="due-dismiss">Not now</button></div></div>`;
+    };
+    const finish = (verdict, reason) => askWorker("BUYER_ANSWER", {
+      purchase_id: purchase.purchase_id, verdict, reason: reason || "" }).then((reply) => {
+      if (reply.ok) { state.buyerDue = state.buyerDue.filter((one) => one.purchase_id !== purchase.purchase_id); renderBuyer(); }
+      closeToast("due");
+    });
+    const host = showToast("due", "", (act, _host, root) => {
+      const what = act.dataset.act;
+      if (what === "answer") void finish(act.dataset.verdict);
+      else if (what === "regret") { ui.regretFor = purchase.purchase_id; draw(root); }
+      else if (what === "snooze") askWorker("BUYER_SNOOZE", { purchase_id: purchase.purchase_id }).then(() => closeToast("due"));
+      else if (what === "due-dismiss") closeToast("due");
+    }, (form) => {
+      const field = form.querySelector('[name="reason"]');
+      void finish("regret", field ? field.value : "");
+    });
+    draw(host.shadowRoot);
   }
 
   function renderCriticalAlerts() {

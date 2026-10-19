@@ -29,6 +29,8 @@ const PRICE_ALARM = "kriko-prices";
 const PRICE_PERIOD_MINUTES = 30;
 const BUYER_KEY_PREFIX = "kriko_buyer_";
 const GUARD_KEY_PREFIX = "kriko_guard_";
+// A purchase is asked about at most this often, however many pages are opened.
+const DUE_NUDGE_QUIET_MS = 20 * 60 * 60 * 1000;
 // What a cart or payment page's address says. The same words as
 // `app/checkout.py`'s CHECKOUT_PATH, which a test holds equal.
 const CHECKOUT_PATH = /\/(?:cart|basket|bag|checkout|payment|pay|order|sepet|sepetim|odeme|siparis|warenkorb|kasse|panier|paiement|carrito|pagar|carrello|winkelwagen|zamowienie|koszyk)(?:\/|\.|$|\?)/i;
@@ -1594,6 +1596,7 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     // The page is a product: remember its price and judge the listing, beside
     // the analysis and not behind it.
     void _noteBuyer(url, scrape);
+    if (auto) void nudgeDue(tabId);
 
     const signature = _scrapeSignature(scrape, adapters);
     // extension-3 (B145 audit): "Refresh analysis" re-asked nothing — every
@@ -1751,6 +1754,27 @@ async function guardCheckout(tabId, url) {
     }
   } catch (error) {
     console.warn("[kriko] checkout look failed", error?.message || error);
+  }
+}
+
+// "Did it hold up?", put to the reader on a page Kriko reads, which is where they
+// are already looking at things to buy. One purchase per page load, and the same
+// one at most once a day, so a question is an invitation and not a nag.
+async function nudgeDue(tabId) {
+  try {
+    const bought = await _getApp("/api/buyer/purchases");
+    const due = bought.due || [];
+    if (!due.length) return;
+    const told = (await extensionApi.storage.local.get("krikoNudged")).krikoNudged || {};
+    const now = Date.now();
+    const one = due.find((row) => now - Number(told[row.purchase_id] || 0) > DUE_NUDGE_QUIET_MS);
+    if (!one) return;
+    told[one.purchase_id] = now;
+    for (const id of Object.keys(told)) if (now - told[id] > 30 * 24 * 60 * 60 * 1000) delete told[id];
+    await extensionApi.storage.local.set({ krikoNudged: told });
+    await extensionApi.tabs.sendMessage(tabId, { type: "KRIKO_DUE_NUDGE", purchase: one, count: due.length });
+  } catch (_) {
+    // No app, or no panel on this tab: the question is still there next time.
   }
 }
 

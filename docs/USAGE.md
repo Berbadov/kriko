@@ -147,14 +147,16 @@ On a product page the panel then shows **As a purchase**:
   line. A discount the history does not support is called out. With little
   history, Kriko says so and does not guess.
 - **Watch this price** keeps an eye on the page. Choose the price you want to be
-  told at. Kriko reads the page again a few times a day. A drop shows as a mark
+  told at. Kriko reads the page again a few times a day while it is running, with
+  or without a browser open. A drop shows as a mark
   on the toolbar button and a card in the panel. To get a notification too, open
   the extension's options and press **Tell me when a watched price drops**.
 - **How it fits you**, from what you said you need, and **Listing check**:
   the seller, the rating once few ratings are discounted, and which big words
   the page does not back up.
-- **I bought this** starts the ledger. A few weeks later the panel asks if it
-  held up, and your answer teaches Kriko what you regret.
+- **I bought this** starts the ledger. A few weeks later a small card on the next
+  page Kriko reads asks if it held up, and your answer teaches Kriko what you
+  regret.
 
 In **Compare**, **Decide for me** ranks the products for you and names one,
 with what it costs you and what would change the pick. The buttons under it ask
