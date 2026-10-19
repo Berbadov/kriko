@@ -2945,3 +2945,62 @@
 .lite-research label.lite-agent-row { display: flex; flex-direction: row; align-items: center; margin: 0 0 8px; }
 .lite-research .lite-agent-select { width: auto; min-width: 150px; }
 .lite-learn-row small:empty { display: none; }
+
+/* the reader as a buyer (buyer_card.js): the page as a purchase, a question
+   about something bought, and the shortlist's pick. Tokens only, so the light
+   theme is a value and not a second skin. */
+.lite-buy, .lite-pick, .lite-buy-due {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 1px var(--border-soft);
+  font: 13px/1.45 var(--font-body);
+  color: var(--fg-body);
+}
+.lite-buy-title { margin: 0 0 6px; font: 600 12px/1.2 var(--font-display); letter-spacing: .04em; text-transform: uppercase; color: var(--fg-muted); }
+.lite-buy-now { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; color: var(--fg); }
+.lite-buy-now strong { font: 650 17px/1.2 var(--font-display); }
+.lite-buy-chip {
+  display: inline-block; padding: 1px 8px; border-radius: 999px;
+  font: 600 11px/1.6 var(--font-body); color: var(--fg-muted); background: var(--glass-2);
+}
+.lite-buy-chip[data-tone="good"] { color: var(--ok-ink); background: var(--ok-surface); }
+.lite-buy-chip[data-tone="warn"] { color: var(--warn-ink); background: var(--warn-surface); }
+.lite-buy-chip[data-tone="bad"] { color: var(--high-ink); background: var(--high-surface); }
+.lite-buy-line { display: block; width: 100%; height: 26px; margin: 6px 0 2px; color: var(--ice); }
+.lite-buy-note { margin: 4px 0; font-size: 12px; color: var(--fg-muted); }
+.lite-buy-note[data-tone="bad"] { color: var(--high-ink); }
+.lite-buy-discount { margin: 4px 0; font-size: 12.5px; }
+.lite-buy-discount[data-tone="bad"] { color: var(--high-ink); }
+.lite-buy-discount[data-tone="warn"] { color: var(--warn-ink); }
+.lite-buy-discount[data-tone="good"] { color: var(--ok-ink); }
+.lite-buy-elsewhere, .lite-buy-fit ul, .lite-buy-audit ul, .lite-pick ul { margin: 4px 0; padding-left: 18px; }
+.lite-buy-elsewhere a { color: var(--ice); }
+.lite-buy-fit { margin-top: 8px; padding: 6px 8px; border-radius: 8px; background: var(--glass-1); }
+.lite-buy-fit[data-tone="bad"] { background: var(--high-surface); box-shadow: 0 0 0 1px var(--high-border); }
+.lite-buy-fit[data-tone="good"] { background: var(--ok-surface); box-shadow: 0 0 0 1px var(--ok-border); }
+.lite-buy-audit { margin-top: 8px; font-size: 12.5px; }
+.lite-buy-audit summary { cursor: pointer; color: var(--fg); }
+.lite-buy-meter { color: var(--fg-muted); font-size: 11.5px; margin-left: 6px; }
+.lite-buy-actions, .lite-buy-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px; }
+.lite-buy-form label { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.lite-buy-form input {
+  all: unset; box-sizing: border-box; min-width: 90px; height: 26px; padding: 0 8px; border-radius: 6px;
+  background: var(--well); box-shadow: 0 0 0 1px var(--border-control); color: var(--fg); font: 13px/1 var(--font-body);
+}
+.lite-buy-form input:focus-visible { outline: 2px solid var(--ice); outline-offset: 1px; }
+.lite-buy-btn {
+  all: unset; box-sizing: border-box; display: inline-flex; align-items: center; height: 26px; padding: 0 11px;
+  border-radius: 999px; cursor: pointer; font: 540 12.5px/1 var(--font-display);
+  color: var(--fg-body); background: var(--bg-item); box-shadow: 0 0 0 1px var(--bezel-edge);
+}
+.lite-buy-btn[data-primary="1"] { color: var(--on-brand); background: var(--brand); box-shadow: none; }
+.lite-buy-btn:hover:not(:disabled) { filter: brightness(1.12); }
+.lite-buy-btn:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.lite-buy-btn:disabled { cursor: default; opacity: .55; }
+.lite-buy-watching { font-size: 12.5px; color: var(--ice); }
+.lite-buy-due { box-shadow: 0 0 0 1px var(--warn-border); background: var(--warn-surface); }
+.lite-buy-due p { margin: 0; color: var(--fg); }
+.lite-pick-winner { margin: 2px 0 4px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; color: var(--fg); }
+.lite-pick-answer { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-soft); white-space: pre-wrap; }

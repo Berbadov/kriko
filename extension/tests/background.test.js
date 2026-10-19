@@ -139,13 +139,14 @@ async function analyse(opts = {}) {
 
 test("the analysis is POSTed to /api/analyze on the local app's port", async () => {
   const { state } = await analyse();
-  const post = state.requests.find((r) => r.method === "POST");
+  // The first POST to the *analysis*: the price memory is its own call beside it.
+  const post = state.requests.find((r) => r.method === "POST" && r.url.endsWith("/api/analyze"));
   assert.equal(post.url, "http://127.0.0.1:8787/api/analyze");
 });
 
 test("the request body is the raw scrape, with nothing interpreted", async () => {
   const { state } = await analyse();
-  const post = state.requests.find((r) => r.method === "POST");
+  const post = state.requests.find((r) => r.method === "POST" && r.url.endsWith("/api/analyze"));
 
   assert.deepEqual(post.body.fields, SCRAPE.fields);
   assert.equal(post.body.url, SCRAPE.url);
@@ -370,7 +371,7 @@ test("a failed analysis leaves an error entry the panel can show", async () => {
 
 test("the request says which door it came in by", async () => {
   const { state } = await analyse();
-  const post = state.requests.find((r) => r.method === "POST");
+  const post = state.requests.find((r) => r.method === "POST" && r.url.endsWith("/api/analyze"));
   // Without this every analysis looks in-app in the reader's history, and the
   // first question anyone asks about a surprising result — "where did this
   // come from?" — has no answer.
@@ -451,7 +452,7 @@ test("the toolbar icon becomes muted when the app stops answering", async () => 
 test("a restarted worker leaves a live alarm's clock alone", async () => {
   const first = loadBackground({});
   assert.deepEqual(first.state.alarmCreates.slice().sort(),
-    ["kriko-connection", "kriko-site-sync"]);
+    ["kriko-connection", "kriko-prices", "kriko-site-sync"]);
 
   const second = loadBackground({ alarms: first.state.alarms });
   await new Promise((resolve) => setImmediate(resolve));
@@ -461,7 +462,8 @@ test("a restarted worker leaves a live alarm's clock alone", async () => {
 
   // An alarm Chrome no longer holds is the one case that has to be recreated,
   // or a worker restarted after a browser update would go on syncing never.
-  const third = loadBackground({ alarms: { "kriko-connection": { periodInMinutes: 1 } } });
+  const third = loadBackground({ alarms: {
+    "kriko-connection": { periodInMinutes: 1 }, "kriko-prices": { periodInMinutes: 30 } } });
   await new Promise((resolve) => setImmediate(resolve));
   assert.deepEqual(third.state.alarmCreates, ["kriko-site-sync"]);
 });
@@ -772,17 +774,20 @@ test("a second Refresh reuses the cache, but a fresh one re-asks the engine", as
   // even a stopped engine never showed up in it.
   const h = loadBackground({ routes: routes(), tabResponses: withTab() });
   await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
-  const postsAfterFirst = h.state.requests.filter((r) => r.method === "POST").length;
+  // Only the analysis is counted: the price memory is asked for beside it.
+  const analyses = () => h.state.requests
+    .filter((r) => r.method === "POST" && r.url.endsWith("/api/analyze")).length;
+  const postsAfterFirst = analyses();
 
   await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
   assert.equal(
-    h.state.requests.filter((r) => r.method === "POST").length, postsAfterFirst,
+    analyses(), postsAfterFirst,
     "an ordinary re-run served the cache and asked nothing new"
   );
 
   await h.sandbox.runAnalysisForTab(1, SCRAPE.url, { fresh: true });
   assert.equal(
-    h.state.requests.filter((r) => r.method === "POST").length, postsAfterFirst + 1,
+    analyses(), postsAfterFirst + 1,
     "fresh:true skipped the cache and asked the engine again"
   );
 });
@@ -808,10 +813,11 @@ test("the durable cache is keyed by a digest, not by the page's address", async 
 
   // And the digest still finds the entry: the second run is served from it,
   // which is the property the address key had.
-  const posts = h.state.requests.filter((request) => request.method === "POST").length;
+  const analyses = () => h.state.requests.filter(
+    (request) => request.method === "POST" && request.url.endsWith("/api/analyze")).length;
+  const posts = analyses();
   await h.sandbox.runAnalysisForTab(1, SCRAPE.url);
-  assert.equal(h.state.requests.filter((request) => request.method === "POST").length,
-    posts, "the digest key missed an entry the address key used to find");
+  assert.equal(analyses(), posts, "the digest key missed an entry the address key used to find");
 });
 
 test("a pack update changes the cache signature even when the scrape has not", async () => {  // The signature used to hash only the scrape, so a pack shipping a new

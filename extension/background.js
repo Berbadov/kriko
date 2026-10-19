@@ -23,6 +23,15 @@ const DEFAULT_API_BASE = "http://127.0.0.1:8787";
 const LOADED_CONTENT_DIGEST = "";
 const CONNECTION_ALARM = "kriko-connection";
 const CONNECTION_PERIOD_MINUTES = 1;
+// A watched page is re-read by the app; this asks it to, and says so when a
+// price crossed what the reader asked for (see `checkBuyerAlerts`).
+const PRICE_ALARM = "kriko-prices";
+const PRICE_PERIOD_MINUTES = 30;
+const BUYER_KEY_PREFIX = "kriko_buyer_";
+const GUARD_KEY_PREFIX = "kriko_guard_";
+// What a cart or payment page's address says. The same words as
+// `app/checkout.py`'s CHECKOUT_PATH, which a test holds equal.
+const CHECKOUT_PATH = /\/(?:cart|basket|bag|checkout|payment|pay|order|sepet|sepetim|odeme|siparis|warenkorb|kasse|panier|paiement|carrito|pagar|carrello|winkelwagen|zamowienie|koszyk)(?:\/|\.|$|\?)/i;
 const ACTION_ICONS = {
   online: { 16: "assets/icons/icon-16.png", 32: "assets/icons/icon-32.png",
             48: "assets/icons/icon-48.png" },
@@ -724,12 +733,13 @@ const SITE_SYNC_PERIOD_MINUTES = 30;
 
 // The same files, in the same order, as `manifest.json`'s two static blocks.
 // A dynamic registration is one entry rather than two because order inside
-// the array is what matters: `icons.js` and `claim_card.js` define what
+// the array is what matters: `icons.js`, `claim_card.js` and `buyer_card.js` define what
 // `hover_lite.js` calls.
 const SITE_SCRIPTS = [
   "content.js",
   "hover_lite/icons.js",
   "hover_lite/claim_card.js",
+  "hover_lite/buyer_card.js",
   "hover_lite/hover_lite.js",
 ];
 
@@ -1076,16 +1086,46 @@ if (extensionApi.alarms) {
     periodInMinutes: CONNECTION_PERIOD_MINUTES,
     delayInMinutes: 1,
   });
+  _ensureAlarm(PRICE_ALARM, {
+    periodInMinutes: PRICE_PERIOD_MINUTES,
+    delayInMinutes: 2,
+  });
   extensionApi.alarms.onAlarm.addListener((alarm) => {
     if (alarm && alarm.name === SITE_SYNC_ALARM) void syncSites({ fresh: true });
     if (alarm && alarm.name === CONNECTION_ALARM) void refreshConnectionIcon();
+    if (alarm && alarm.name === PRICE_ALARM) void checkBuyerAlerts();
   });
 }
+// A price notification opens the page it is about and marks the alert read.
+// `notifications` is an optional permission, asked for on the options page when
+// the reader turns it on: a required one would have Chrome switch the extension
+// off at the next update until they approved it. Without it a drop still shows
+// as a mark on the toolbar button and a card in the panel.
+let _notificationsWired = false;
+function wireNotifications() {
+  if (_notificationsWired || !extensionApi.notifications || !extensionApi.notifications.onClicked) return;
+  _notificationsWired = true;
+  extensionApi.notifications.onClicked.addListener(async (id) => {
+    try {
+      if (String(id).startsWith("kriko-alert:")) {
+        const alertId = String(id).slice("kriko-alert:".length);
+        const { items } = await _getApp("/api/prices/alerts");
+        const one = (items || []).find((row) => row.alert_id === alertId);
+        if (one && /^https?:/i.test(one.url)) await extensionApi.tabs.create({ url: one.url });
+        await _postApp("/api/prices/alerts/read", { ids: [alertId] });
+      }
+      extensionApi.notifications.clear(id);
+    } catch (_) {
+      // The app is not running; the alert is still there next time.
+    }
+  });
+}
+wireNotifications();
 // A grant is the event the pending list was waiting for, and a revocation has
 // to take the injection with it — an extension still running on a site the
 // reader took back is the worst failure available here.
 if (extensionApi.permissions && extensionApi.permissions.onAdded) {
-  extensionApi.permissions.onAdded.addListener(() => { void syncSites(); });
+  extensionApi.permissions.onAdded.addListener(() => { wireNotifications(); void syncSites(); });
   extensionApi.permissions.onRemoved.addListener(() => { void syncSites(); });
 }
 
@@ -1551,6 +1591,9 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       // a named page is worth asking about.
       if (!product.name || (auto && !product.typed)) throw noAdapter();
     }
+    // The page is a product: remember its price and judge the listing, beside
+    // the analysis and not behind it.
+    void _noteBuyer(url, scrape);
 
     const signature = _scrapeSignature(scrape, adapters);
     // extension-3 (B145 audit): "Refresh analysis" re-asked nothing — every
@@ -1652,6 +1695,105 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
       await extensionApi.action.setBadgeBackgroundColor({ color: "#b5392f", tabId });
     }
     throw error;
+  }
+}
+
+
+// ── the reader as a buyer ───────────────────────────────────────────────
+//
+// Price memory, the audit of a listing, how it fits what the reader said they
+// need, and whether they already watch it. Asked of the app separately from the
+// analysis and stored under its own key: the analysis is cached for hours and a
+// price verdict, a profile or a watch must not be.
+
+async function _noteBuyer(url, scrape) {
+  const key = BUYER_KEY_PREFIX + url;
+  try {
+    const buyer = await _postApp("/api/buyer/page", {
+      url,
+      title: scrape.title || "",
+      description: scrape.description || "",
+      fields: scrape.fields || {},
+      product_name: String((scrape.product && scrape.product.name) || "").slice(0, 300),
+    });
+    await extensionApi.storage.session.set({ [key]: { ok: true, buyer, fetchedAt: Date.now() } });
+  } catch (error) {
+    // The app is not running or is older than this extension: no card, no noise.
+    await extensionApi.storage.session.set({ [key]: { ok: false, error: error.message, fetchedAt: Date.now() } });
+  }
+}
+
+async function _freshBuyer(url) {
+  const got = await extensionApi.storage.session.get(BUYER_KEY_PREFIX + url);
+  return got[BUYER_KEY_PREFIX + url] || null;
+}
+
+// The look before paying. Only on a page whose address says it is a cart or a
+// payment step, and only when the reader has not turned it off.
+async function guardCheckout(tabId, url) {
+  try {
+    // Absent means on: only an explicit "off" from the options page stops it.
+    const stored = await extensionApi.storage.local.get("buyerGuard");
+    if (stored.buyerGuard === false) return;
+    let cart = { items: [], text: "" };
+    try {
+      const reply = await extensionApi.tabs.sendMessage(tabId, { type: "GET_CART" });
+      if (reply && reply.ok) cart = reply;
+    } catch (_) {
+      // No content script here: the engine falls back to what the reader viewed.
+    }
+    const result = await _postApp("/api/prices/checkout", {
+      url, items: (cart.items || []).slice(0, 12), text: String(cart.text || "").slice(0, 20000),
+    });
+    await extensionApi.storage.session.set({ [GUARD_KEY_PREFIX + url]: { ok: true, result, fetchedAt: Date.now() } });
+    if (result && result.verdict !== "go") {
+      await extensionApi.tabs.sendMessage(tabId, { type: "SHOW_GUARD", result }).catch(() => {});
+    }
+  } catch (error) {
+    console.warn("[kriko] checkout look failed", error?.message || error);
+  }
+}
+
+// A price crossed what the reader asked for, or a purchase is due its question.
+// Asked on a timer: the app re-reads the pages that are due (it decides which),
+// then says what it found.
+async function checkBuyerAlerts() {
+  try {
+    await _postApp("/api/prices/sweep", {}).catch(() => null);
+    const [alerts, bought] = await Promise.all([
+      _getApp("/api/prices/alerts").catch(() => ({ items: [] })),
+      _getApp("/api/buyer/purchases").catch(() => ({ due: [] })),
+    ]);
+    const items = alerts.items || [];
+    const due = bought.due || [];
+    const count = items.length + due.length;
+    await extensionApi.action.setBadgeText({ text: count ? "↓" : "" });
+    if (count) await extensionApi.action.setBadgeBackgroundColor({ color: "#1f4fff" });
+    if (!extensionApi.notifications || !extensionApi.notifications.create) return;
+    const told = new Set((await extensionApi.storage.local.get("krikoToldAbout")).krikoToldAbout || []);
+    for (const one of items) {
+      if (told.has(one.alert_id)) continue;
+      told.add(one.alert_id);
+      const was = one.was_price ? ` (was ${one.was_price})` : "";
+      extensionApi.notifications.create(`kriko-alert:${one.alert_id}`, {
+        type: "basic", iconUrl: "assets/icons/icon-128.png",
+        title: "Price dropped",
+        message: `${one.name || "A page you watch"}: ${one.price} ${one.currency || ""}${was}`.trim(),
+      });
+    }
+    for (const one of due) {
+      const id = `due:${one.purchase_id}`;
+      if (told.has(id)) continue;
+      told.add(id);
+      extensionApi.notifications.create(`kriko-due:${one.purchase_id}`, {
+        type: "basic", iconUrl: "assets/icons/icon-128.png",
+        title: "Did it hold up?",
+        message: `How is your ${one.name}? Tell Kriko so it can learn what you regret.`,
+      });
+    }
+    await extensionApi.storage.local.set({ krikoToldAbout: [...told].slice(-200) });
+  } catch (error) {
+    console.warn("[kriko] alert check failed", error?.message || error);
   }
 }
 
@@ -1886,6 +2028,13 @@ async function _getApp(path) {
   return response.json();
 }
 
+// The last checkout look for a page, for the panel opened after the banner was dismissed.
+async function _getGuard(url) {
+  const got = await extensionApi.storage.session.get(GUARD_KEY_PREFIX + url);
+  const entry = got[GUARD_KEY_PREFIX + url];
+  return entry && entry.ok ? { result: entry.result } : { result: null };
+}
+
 /** Bring the desktop app to the front, on the given route.
  *
  * A page cannot raise a native window, so this posts the route and lets the
@@ -2012,6 +2161,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Every page reports in; whether it is worth analysing is the installed
     // packs' answer, resolved inside the run.
     runAnalysisForTab(tabId, url, { auto: true }).catch(() => {});
+    if (CHECKOUT_PATH.test(url)) void guardCheckout(tabId, url);
     sendResponse({ ok: true, message: "Analysis triggered" });
     return false;
   }
@@ -2197,6 +2347,40 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Queue mode: the listing's product joins the app's research queue, for an
   // agent to research in turn and the compare screen to line up. The page's
   // address keys it, so a second press answers "already queued".
+  // The reader as a buyer: each is the reader's own button, forwarded to the
+  // app's own API, and nothing here interprets a verdict.
+  const BUYER_CALLS = {
+    BUYER_FIT: (p) => _postApp("/api/buyer/fit", { items: Array.isArray(p.items) ? p.items.slice(0, 60) : [] }),
+    BUYER_WATCH: (p) => _postApp("/api/prices/watches", {
+      url: String(p.url || "").slice(0, 2000), name: String(p.name || "").slice(0, 300),
+      target: p.target ?? null, drop_pct: p.drop_pct ?? null, price: p.price ?? null,
+      currency: String(p.currency || "").slice(0, 8) }),
+    BUYER_UNWATCH: async (p) => {
+      const response = await _fetchApp(
+        `${await apiBase()}/api/prices/watches/${encodeURIComponent(p.watch_id)}`, { method: "DELETE" });
+      return response.json();
+    },
+    BUYER_BOUGHT: (p) => _postApp("/api/buyer/purchases", {
+      name: String(p.name || "").slice(0, 300), url: String(p.url || "").slice(0, 2000),
+      price: p.price ?? null, currency: String(p.currency || "").slice(0, 8) }),
+    BUYER_DUE: () => _getApp("/api/buyer/purchases"),
+    BUYER_ANSWER: (p) => _postApp(`/api/buyer/purchases/${encodeURIComponent(p.purchase_id)}/answer`, {
+      verdict: String(p.verdict || ""), reason: String(p.reason || "").slice(0, 600) }),
+    BUYER_SNOOZE: (p) => _postApp(`/api/buyer/purchases/${encodeURIComponent(p.purchase_id)}/snooze`, {}),
+    BUYER_PICK: () => _postApp("/api/buyer/pick", { queue: true }),
+    BUYER_ADVICE: (p) => _postApp("/api/buyer/advice", {
+      queue: true, mode: String(p.mode || "pick"), question: String(p.question || "").slice(0, 600) }),
+    BUYER_GUARD: (p) => _getGuard(String(p.url || "")),
+  };
+  if (Object.prototype.hasOwnProperty.call(BUYER_CALLS, request.type)) {
+    Promise.resolve()
+      .then(() => BUYER_CALLS[request.type](request.payload || {}))
+      .then((reply) => sendResponse({ ok: true, ...reply }))
+      .catch((error) => sendResponse({
+        ok: false, status: error.status, error: error.message }));
+    return true;
+  }
+
   if (request.type === "QUEUE_ADD") {
     const input = request.payload || {};
     const url = typeof input.url === "string" ? input.url.slice(0, 2000) : "";

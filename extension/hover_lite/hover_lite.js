@@ -75,6 +75,13 @@
     errorCode: null,
     listingMeta: null,         // derived from background metadata response
     queue: null,               // {url, phase, text}: this page's Add to queue press
+    // The reader as a buyer (`buyer_card.js`): what the app said about this page
+    // as a purchase, the questions about earlier purchases that have come due,
+    // the shortlist's pick, and which little forms are open.
+    buyer: null,
+    buyerDue: [],
+    buyerUi: {},
+    pick: null,
     queueHelpOpen: false,
     followups: new Map(),       // saved answer id -> its questions and draft
     // Typing the name. Panel-local: a search is a question the reader is
@@ -2063,6 +2070,7 @@
     if (request && request.type === "TOGGLE_HOVER_LITE") {
       togglePanel();
     }
+    if (request && request.type === "SHOW_GUARD") showGuard(request.result);
     // A page the worker found worth learning, on a site nothing reads: the
     // panel comes up with the Learn card, once, instead of waiting for a
     // toolbar press the reader has no reason to make on a page they have not
@@ -2094,6 +2102,10 @@
       return;
     }
     if (area !== "session") return;
+    if (BUYER_KEY in changes) {
+      const entry = changes[BUYER_KEY].newValue;
+      if (entry && entry.ok) { state.buyer = entry.buyer; renderBuyer(); }
+    }
     // The stage first: it is written before the result it narrates, and a
     // change event carrying both should not paint the answer and then the
     // sentence that says the answer is still coming.
@@ -2164,6 +2176,11 @@
     searchBtn   = panel.querySelector(".lite-btn-search");
     closeBtn    = panel.querySelector(".lite-btn-close");
     footerEl    = panel.querySelector(".lite-footer");
+    // The reader as a buyer: one listener each for every button and form in the
+    // two slots, and the questions about earlier purchases asked once per mount.
+    bodyEl.addEventListener("click", onBuyerClick);
+    bodyEl.addEventListener("submit", onBuyerSubmit);
+    loadBuyer();
 
     // Wire panel-level handlers. The ripple rides the same pointerdown the
     // drag does, and adds nothing when reduced motion is on.
@@ -2542,6 +2559,7 @@
       <div class="lite-body">
         <div class="lite-counts-slot"></div>
         <div class="lite-listing-slot"></div>
+        <div class="lite-buyer-slot"></div>
         <div class="lite-alerts-slot"></div>
         <div class="lite-cta-wrap">
           <button type="button" class="lite-cta">
@@ -2551,6 +2569,7 @@
           <p class="lite-status" role="status">${escapeHtml(IDLE_HINT)}</p>
         </div>
         <div class="lite-queue-slot"></div>
+        <div class="lite-decide-slot"></div>
         <div class="lite-product-actions">
           <button type="button" class="lite-find-product">Find in installed packs</button>
           <button type="button" class="lite-research-product" title="Research this product with your agent">Research</button>
@@ -2723,6 +2742,193 @@
       }
       renderQueue();
     });
+  }
+
+  // ─── The reader as a buyer ────────────────────────────────────────────
+  // What the app says about this page as a purchase, the questions about earlier
+  // purchases, and the shortlist's pick. The words and the numbers come from the
+  // app; `buyer_card.js` only draws them, and every press here is forwarded as
+  // the reader's own request to the app's own API.
+  const BUYER = window.__KrikoBuyer || null;
+  const BUYER_KEY = "kriko_buyer_" + window.location.href;
+
+  function renderBuyer() {
+    const slot = bodyEl?.querySelector(".lite-buyer-slot");
+    if (!slot || !BUYER) return;
+    slot.innerHTML = BUYER.renderDue(state.buyerDue, state.buyerUi)
+      + BUYER.renderBuyerCard(state.buyer, state.buyerUi);
+  }
+
+  function renderDecide() {
+    const slot = bodyEl?.querySelector(".lite-decide-slot");
+    if (!slot || !BUYER) return;
+    const busy = state.buyerUi.deciding;
+    slot.innerHTML = `<div class="lite-buy-actions"><button type="button" class="lite-buy-btn" data-act="decide"
+      ${busy ? "disabled" : ""} title="Rank the products in your queue for what you told Kriko you need">
+      ${busy ? "Deciding…" : "Decide between my shortlist"}</button></div>`
+      + (state.buyerUi.decideError ? `<p class="lite-buy-note" data-tone="bad">${BUYER.esc(state.buyerUi.decideError)}</p>` : "")
+      + BUYER.renderPick(state.pick, state.buyerUi);
+  }
+
+  // One request to the worker, resolved as a promise so the handlers read in order.
+  function askWorker(type, payload) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type, payload }, (response) => {
+        if (chrome.runtime.lastError || !response) {
+          resolve({ ok: false, error: "Kriko is not running. Open the Kriko app, then try again." });
+        } else {
+          resolve(response);
+        }
+      });
+    });
+  }
+
+  function loadBuyer() {
+    try {
+      chrome.storage.session.get(BUYER_KEY, (got) => {
+        void chrome.runtime.lastError;
+        const entry = got && got[BUYER_KEY];
+        if (entry && entry.ok) { state.buyer = entry.buyer; renderBuyer(); }
+      });
+    } catch (_) {
+      // No session storage here (an old browser): the card waits for a push.
+    }
+    askWorker("BUYER_DUE", {}).then((reply) => {
+      if (reply.ok) { state.buyerDue = reply.due || []; renderBuyer(); }
+    });
+  }
+
+  function pollAdvice(jobId) {
+    askWorker("JOB_STATUS", { job_id: jobId }).then((reply) => {
+      const advice = state.buyerUi.advice;
+      if (!advice || advice.jobId !== jobId) return;
+      const job = reply.job;
+      if (!reply.ok || !job) {
+        state.buyerUi.advice = { ...advice, state: "failed", error: "Cannot check the answer. Try again." };
+      } else if (job.state === "succeeded") {
+        state.buyerUi.advice = { ...advice, state: "done", answer: (job.result && job.result.answer) || "" };
+      } else if (["failed", "cancelled", "interrupted"].includes(job.state)) {
+        state.buyerUi.advice = { ...advice, state: "failed",
+          error: job.error || job.message || "The agent did not finish. Try again." };
+      } else {
+        setTimeout(() => pollAdvice(jobId), 1200);
+      }
+      renderDecide();
+    });
+  }
+
+  function onBuyerClick(event) {
+    const target = event.target.closest && event.target.closest("[data-act]");
+    if (!target || !bodyEl.contains(target) || !BUYER) return;
+    const act = target.dataset.act;
+    const ui = state.buyerUi;
+    const buyer = state.buyer || {};
+    if (act === "watch-open") { ui.watchForm = true; renderBuyer(); }
+    else if (act === "watch-cancel") { ui.watchForm = false; renderBuyer(); }
+    else if (act === "unwatch") {
+      askWorker("BUYER_UNWATCH", { watch_id: target.dataset.id }).then((reply) => {
+        if (reply.ok && state.buyer) state.buyer.watch = null;
+        renderBuyer();
+      });
+    } else if (act === "bought") {
+      const lm = state.listingMeta || {};
+      askWorker("BUYER_BOUGHT", {
+        name: buyer.name || lm.identity_line || lm.title || document.title, url: window.location.href,
+        price: buyer.price ? buyer.price.price : null, currency: buyer.price ? buyer.price.currency : "",
+      }).then((reply) => { ui.bought = reply.ok; ui.boughtError = reply.ok ? "" : reply.error; renderBuyer(); });
+    } else if (act === "answer") {
+      askWorker("BUYER_ANSWER", { purchase_id: target.dataset.id, verdict: target.dataset.verdict }).then((reply) => {
+        if (reply.ok) state.buyerDue = state.buyerDue.filter((one) => one.purchase_id !== target.dataset.id);
+        renderBuyer();
+      });
+    } else if (act === "regret") { ui.regretFor = target.dataset.id; renderBuyer(); }
+    else if (act === "snooze") {
+      askWorker("BUYER_SNOOZE", { purchase_id: target.dataset.id }).then((reply) => {
+        if (reply.ok) state.buyerDue = state.buyerDue.filter((one) => one.purchase_id !== target.dataset.id);
+        renderBuyer();
+      });
+    } else if (act === "decide") {
+      ui.deciding = true; ui.decideError = ""; renderDecide();
+      askWorker("BUYER_PICK", {}).then((reply) => {
+        ui.deciding = false;
+        if (reply.ok) { state.pick = reply; ui.advice = null; }
+        else ui.decideError = reply.error || "Could not rank the shortlist.";
+        renderDecide();
+      });
+    } else if (act === "advise") {
+      ui.advice = { mode: target.dataset.mode, state: "running" };
+      renderDecide();
+      askWorker("BUYER_ADVICE", { mode: target.dataset.mode }).then((reply) => {
+        if (reply.ok && reply.job_id) {
+          ui.advice = { mode: target.dataset.mode, state: "running", jobId: reply.job_id };
+          pollAdvice(reply.job_id);
+        } else {
+          ui.advice = { mode: target.dataset.mode, state: "failed",
+            error: reply.error || "Could not start your agent. Check Agents in Kriko." };
+        }
+        renderDecide();
+      });
+    }
+  }
+
+  function onBuyerSubmit(event) {
+    const form = event.target.closest && event.target.closest("form[data-act]");
+    if (!form || !bodyEl.contains(form) || !BUYER) return;
+    event.preventDefault();
+    const field = (name) => (form.querySelector(`[name="${name}"]`) || {}).value || "";
+    if (form.dataset.act === "watch-save") {
+      const buyer = state.buyer || {};
+      const lm = state.listingMeta || {};
+      askWorker("BUYER_WATCH", {
+        url: window.location.href, name: buyer.name || lm.identity_line || lm.title || document.title,
+        target: field("target").trim() || null,
+        price: buyer.price ? buyer.price.price : null, currency: buyer.price ? buyer.price.currency : "",
+      }).then((reply) => {
+        if (reply.ok && state.buyer) { state.buyer.watch = reply; state.buyerUi.watchForm = false; }
+        else state.buyerUi.watchError = reply.error || "Could not watch this page.";
+        renderBuyer();
+      });
+    } else if (form.dataset.act === "regret-save") {
+      askWorker("BUYER_ANSWER", { purchase_id: form.dataset.id, verdict: "regret", reason: field("reason") })
+        .then((reply) => {
+          if (reply.ok) { state.buyerDue = state.buyerDue.filter((one) => one.purchase_id !== form.dataset.id); }
+          state.buyerUi.regretFor = null;
+          renderBuyer();
+        });
+    }
+  }
+
+  // The look before paying is a small card of its own, not the panel: it
+  // speaks up on a cart page the reader has not asked anything of, so it must
+  // be easy to dismiss, quiet in what it says, and never in the way of the pay
+  // button (bottom left, away from where checkouts put theirs).
+  let guardHost = null;
+  function showGuard(result) {
+    if (!BUYER || !result) return;
+    const html = BUYER.renderGuard(result);
+    if (!html) return;
+    if (guardHost) guardHost.remove();
+    guardHost = document.createElement("kriko-guard-host");
+    guardHost.style.cssText = "all:initial;position:fixed;left:16px;bottom:16px;z-index:2147483646;";
+    const root = guardHost.attachShadow({ mode: "open" });
+    root.innerHTML = `<style>
+      .kriko-guard-card{font:13px/1.45 system-ui,sans-serif;max-width:340px;padding:12px 14px;border-radius:10px;
+        background:#111522;color:#eef1f9;border:1px solid rgba(255,255,255,.18);box-shadow:0 12px 32px rgba(0,0,0,.45)}
+      .kriko-guard-card[data-verdict="stop"]{border-color:#ff6b7a}
+      .kriko-guard-card[data-verdict="check"]{border-color:#f5b84b}
+      .kriko-guard-card ul{margin:6px 0 8px;padding-left:18px}
+      .kriko-guard-card li{margin:2px 0}
+      .kriko-guard-actions{display:flex;gap:8px}
+      .kriko-guard-actions button{font:600 12px system-ui,sans-serif;padding:4px 10px;border-radius:6px;cursor:pointer;
+        border:1px solid rgba(255,255,255,.25);background:transparent;color:inherit}
+      </style>${html}`;
+    root.addEventListener("click", (event) => {
+      const act = event.target.closest && event.target.closest("[data-act]");
+      if (!act) return;
+      if (act.dataset.act === "guard-open") { guardHost.remove(); guardHost = null; openPanel(); }
+      if (act.dataset.act === "guard-dismiss") { guardHost.remove(); guardHost = null; }
+    });
+    document.documentElement.appendChild(guardHost);
   }
 
   function renderCriticalAlerts() {
@@ -4183,7 +4389,9 @@
     const anchorTop = anchor?.getBoundingClientRect().top;
     const focused = shadow.activeElement;
     renderListingHeader();
+    renderBuyer();
     renderQueue();
+    renderDecide();
     renderCriticalAlerts();
     renderCta();
     renderStatus();
