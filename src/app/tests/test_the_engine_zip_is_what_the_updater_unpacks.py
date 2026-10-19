@@ -29,7 +29,7 @@ def packer():
 
 def _frozen(folder: Path) -> Path:
     (folder / "_internal" / "kriko-9.9.9.dist-info").mkdir(parents=True)
-    (folder / "_internal" / "kriko-9.9.9.dist-info" / "METADATA").write_text("Version: 9.9.9")
+    (folder / "_internal" / "kriko-9.9.9.dist-info" / "METADATA").write_text("Version: 9.9.9", encoding="utf-8")
     (folder / "_internal" / "python313.dll").write_bytes(b"dll")
     (folder / "kriko-sidecar.exe").write_bytes(b"engine")
     return folder
@@ -44,7 +44,7 @@ def test_the_zip_holds_the_manifest_the_program_and_the_folder(packer, tmp_path)
     assert {"engine.json", "kriko-sidecar.exe", "_internal/python313.dll",
             "_internal/kriko-9.9.9.dist-info/METADATA"} <= names
     assert manifest["version"] == "9.9.9" and manifest["asset"] == zip_path.name
-    assert json.loads((tmp_path / "out" / "engine.json").read_text()) == manifest
+    assert json.loads((tmp_path / "out" / "engine.json").read_text(encoding="utf-8")) == manifest
 
 
 def test_what_the_packer_writes_the_updater_stages(packer, tmp_path, monkeypatch):

@@ -447,7 +447,7 @@ def watches(conn: sqlite3.Connection) -> list[dict]:
 
 
 def watch(conn: sqlite3.Connection, url: str, name: str = "", *, target=None, drop_pct=None,
-          price=None, currency: str = "", now: datetime | None = None) -> dict:
+          price=None, currency: str = "", cloud: bool | None = None, now: datetime | None = None) -> dict:
     """Keep an eye on this page. A second call on the same page changes the terms."""
     if not str(url or "").startswith(("http://", "https://")):
         raise ValueError("a watch needs the page's address")
@@ -463,8 +463,10 @@ def watch(conn: sqlite3.Connection, url: str, name: str = "", *, target=None, dr
                             " ORDER BY seen_at DESC, point_id DESC LIMIT 1", (key,)).fetchone()
         start = last["price"] if last else None
     if existing:
-        conn.execute("UPDATE watches SET target = ?, drop_pct = ?, name = COALESCE(NULLIF(?, ''), name)"
-                     " WHERE watch_id = ?", (target, drop_pct, str(name)[:300], existing["watch_id"]))
+        conn.execute("UPDATE watches SET target = ?, drop_pct = ?, name = COALESCE(NULLIF(?, ''), name),"
+                     " updated_at = ?, cloud = COALESCE(?, cloud) WHERE watch_id = ?",
+                     (target, drop_pct, str(name)[:300], _stamp(now),
+                      None if cloud is None else int(cloud), existing["watch_id"]))
         watch_id = existing["watch_id"]
     else:
         count = conn.execute("SELECT COUNT(*) FROM watches").fetchone()[0]
@@ -473,17 +475,67 @@ def watch(conn: sqlite3.Connection, url: str, name: str = "", *, target=None, dr
         watch_id = secrets.token_hex(8)
         conn.execute(
             "INSERT INTO watches (watch_id, product_key, url, name, currency, target, drop_pct,"
-            " started_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            " started_price, created_at, cloud, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (watch_id, key, strip_tracking(url)[:2000], str(name or "")[:300], currency, target, drop_pct,
-             start, _stamp(now)))
+             start, _stamp(now), int(bool(cloud)), _stamp(now)))
     conn.commit()
     return _watch(conn.execute("SELECT * FROM watches WHERE watch_id = ?", (watch_id,)).fetchone())
 
 
-def unwatch(conn: sqlite3.Connection, watch_id: str) -> bool:
+def unwatch(conn: sqlite3.Connection, watch_id: str, *, remember: bool = True) -> bool:
+    row = conn.execute("SELECT product_key FROM watches WHERE watch_id = ?", (watch_id,)).fetchone()
     cursor = conn.execute("DELETE FROM watches WHERE watch_id = ?", (watch_id,))
     conn.commit()
+    if cursor.rowcount and row and remember:
+        from app import cloud  # noqa: PLC0415 - cloud reads this module
+
+        cloud.note_deleted(conn, "watch", row["product_key"])
     return bool(cursor.rowcount)
+
+
+def set_cloud(conn: sqlite3.Connection, watch_id: str, on: bool, *, now: datetime | None = None) -> dict | None:
+    """Turn the relay's watching of this page on or off. The relay learns the page only when this is on."""
+    cursor = conn.execute("UPDATE watches SET cloud = ?, updated_at = ? WHERE watch_id = ?",
+                          (int(on), _stamp(now or _now()), watch_id))
+    conn.commit()
+    if not cursor.rowcount:
+        return None
+    return _watch(conn.execute("SELECT * FROM watches WHERE watch_id = ?", (watch_id,)).fetchone())
+
+
+def adopt(conn: sqlite3.Connection, row: dict) -> None:
+    """Keep a watch that came from another device, keeping what it measured here (price, last read)."""
+    key = row["product_key"]
+    have = conn.execute("SELECT updated_at FROM watches WHERE product_key = ?", (key,)).fetchone()
+    if have and have["updated_at"] >= row["updated_at"]:
+        return
+    made = watch(conn, row["url"], row["name"], target=row["target"], drop_pct=row["drop_pct"],
+                 price=row["started_price"], currency=row["currency"] or "", cloud=bool(row["cloud"]))
+    conn.execute("UPDATE watches SET updated_at = ? WHERE watch_id = ?", (row["updated_at"], made["watch_id"]))
+    conn.commit()
+
+
+def crossed(price: float, *, target: float | None, drop_pct: float | None,
+            started_price: float | None) -> str:
+    """Whether `price` is what a watch asked to be told about: `target`, `drop`, or `""`.
+
+    One rule for every place a watch is read (the desktop, and the relay that
+    watches while the computer is off), so the two can never disagree about
+    what a reader asked for.
+    """
+    if target is not None and price <= target:
+        return "target"
+    if drop_pct and started_price and price <= started_price * (1 - drop_pct / 100):
+        return "drop"
+    return ""
+
+
+def worth_repeating(price: float, last_price: float | None, last_at: datetime | None,
+                    now: datetime) -> bool:
+    """Whether a second alert for the same watch is news: only a lower price, or a long wait."""
+    if last_price is None or last_at is None:
+        return True
+    return not (price >= last_price and now - last_at < REALERT_AFTER)
 
 
 def _alert(conn: sqlite3.Connection, row: sqlite3.Row, kind: str, offer: dict,
@@ -491,11 +543,9 @@ def _alert(conn: sqlite3.Connection, row: sqlite3.Row, kind: str, offer: dict,
     last = conn.execute(
         "SELECT price, created_at FROM watch_alerts WHERE watch_id = ? ORDER BY created_at DESC"
         " LIMIT 1", (row["watch_id"],)).fetchone()
-    if last:
-        when = _parse_stamp(last["created_at"])
-        if last["price"] is not None and offer["price"] >= last["price"] \
-                and when and now - when < REALERT_AFTER:
-            return False
+    if last and not worth_repeating(offer["price"], last["price"],
+                                    _parse_stamp(last["created_at"]), now):
+        return False
     conn.execute(
         "INSERT INTO watch_alerts (alert_id, watch_id, kind, name, url, price, was_price,"
         " currency, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -513,11 +563,10 @@ def _check_watch(conn: sqlite3.Connection, key: str, offer: dict, now: datetime)
     conn.execute("UPDATE watches SET last_checked = ?, last_price = ?, last_error = '',"
                  " currency = COALESCE(NULLIF(currency, ''), ?) WHERE watch_id = ?",
                  (_stamp(now), offer["price"], offer.get("currency") or "", row["watch_id"]))
-    if row["target"] is not None and offer["price"] <= row["target"]:
-        _alert(conn, row, "target", offer, now)
-    elif row["drop_pct"] and row["started_price"] \
-            and offer["price"] <= row["started_price"] * (1 - row["drop_pct"] / 100):
-        _alert(conn, row, "drop", offer, now)
+    kind = crossed(offer["price"], target=row["target"], drop_pct=row["drop_pct"],
+                   started_price=row["started_price"])
+    if kind:
+        _alert(conn, row, kind, offer, now)
 
 
 def alerts(conn: sqlite3.Connection, *, unread_only: bool = True, limit: int = 50) -> list[dict]:

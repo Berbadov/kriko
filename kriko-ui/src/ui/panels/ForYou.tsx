@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { PRIORITIES, useBuyerProfile, useHoldings, useLedger, useWatches, type BuyerProfile, type Priority } from '../../engine/buyer'
+import { useRelay } from '../../engine/cloud'
 import { ago } from '../../engine/history'
 
 const WORD: Record<Priority, string> = { price: 'Price', quality: 'Quality', durability: 'Lasting', repairability: 'Repairable', support: 'Support' }
@@ -19,6 +20,7 @@ export function ForYouPanel(_: { onOpen?: (lookupId: string) => void }) {
   const ledger = useLedger()
   const watching = useWatches()
   const kept = useHoldings()
+  const relay = useRelay()
 
   if (profile.checking) return <p className="panel-note">Looking for the engine…</p>
   if (!profile.live) return <p className="panel-note">This needs the engine, because it is kept on this computer. Start Kriko and open it again.</p>
@@ -28,7 +30,8 @@ export function ForYouPanel(_: { onOpen?: (lookupId: string) => void }) {
       <Due ledger={ledger} />
       <Need profile={profile} />
       <Bought ledger={ledger} />
-      <Watching watching={watching} />
+      <Watching watching={watching} relay={relay} />
+      <Relay relay={relay} />
       <Kept
         kept={kept}
         onForgot={() => {
@@ -215,7 +218,7 @@ function Bought({ ledger }: { ledger: ReturnType<typeof useLedger> }) {
   )
 }
 
-function Watching({ watching }: { watching: ReturnType<typeof useWatches> }) {
+function Watching({ watching, relay }: { watching: ReturnType<typeof useWatches>; relay: ReturnType<typeof useRelay> }) {
   return (
     <section className="panel-group">
       <h3>Watching</h3>
@@ -248,6 +251,17 @@ function Watching({ watching }: { watching: ReturnType<typeof useWatches> }) {
                   .filter(Boolean)
                   .join(' · ')}
               </small>
+              {relay.status?.connected && (
+                <button
+                  className="btn ghost"
+                  aria-pressed={one.cloud === 1}
+                  disabled={relay.busy}
+                  title={one.cloud ? 'The relay watches this page while this computer is off. Press to stop that.' : 'Let the relay watch this page while this computer is off. It will be told the page.'}
+                  onClick={() => void relay.toggleWatch(one.watch_id, !one.cloud).then(() => watching.reload())}
+                >
+                  {one.cloud ? 'Watched in the cloud' : 'Watch in the cloud'}
+                </button>
+              )}
               <button className="btn ghost" onClick={() => void watching.stop(one.watch_id)}>
                 Stop
               </button>
@@ -256,6 +270,90 @@ function Watching({ watching }: { watching: ReturnType<typeof useWatches> }) {
         </ul>
       )}
       {watching.problem && <p className="error-note">{watching.problem}</p>}
+    </section>
+  )
+}
+
+function Relay({ relay }: { relay: ReturnType<typeof useRelay> }) {
+  const [server, setServer] = useState('')
+  const [pairing, setPairing] = useState('')
+  const [privateLabels, setPrivateLabels] = useState(true)
+  const status = relay.status
+  useEffect(() => {
+    if (status?.suggested_server && !server) setServer(status.suggested_server)
+  }, [status?.suggested_server, server])
+  if (!status) return relay.problem ? <p className="error-note">{relay.problem}</p> : null
+  return (
+    <section className="panel-group">
+      <h3>Phone and relay</h3>
+      <p className="panel-note">
+        A relay is a small server of your own. It keeps sealed copies of your profile, purchases and watches that only your devices can open, so your phone and this computer agree, and
+        it can watch a price while this computer is off. Alerts reach a phone through ntfy.
+      </p>
+      {!status.connected ? (
+        <>
+          <form
+            className="key-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void relay.connect(server.trim(), privateLabels)
+            }}
+          >
+            <input value={server} onChange={(event) => setServer(event.target.value)} placeholder="https://relay.example" aria-label="The relay's address" />
+            <button className="btn" type="submit" disabled={relay.busy || !server.trim()}>
+              Connect
+            </button>
+          </form>
+          <label className="inline-switch">
+            <input type="checkbox" checked={privateLabels} onChange={(event) => setPrivateLabels(event.target.checked)} /> Do not tell the relay what a watched product is called
+          </label>
+          <form
+            className="key-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void relay.join(pairing.trim())
+            }}
+          >
+            <input value={pairing} onChange={(event) => setPairing(event.target.value)} placeholder="Or paste a pairing code" aria-label="A pairing code" />
+            <button className="btn" type="submit" disabled={relay.busy || !pairing.trim()}>
+              Join
+            </button>
+          </form>
+        </>
+      ) : (
+        <>
+          <p className="panel-note" data-ok="true">
+            Connected to {status.server}. {status.watching} {status.watching === 1 ? 'page is' : 'pages are'} watched in the cloud.{status.synced_at ? ` Synced ${ago(status.synced_at)}.` : ''}
+          </p>
+          <div className="buy-actions">
+            <button className="btn" disabled={relay.busy} onClick={() => void relay.sync()}>
+              Sync now
+            </button>
+            {relay.code ? (
+              <button className="btn ghost" onClick={relay.hide}>
+                Hide the code
+              </button>
+            ) : (
+              <button className="btn ghost" disabled={relay.busy} onClick={() => void relay.reveal()}>
+                Pair a phone
+              </button>
+            )}
+            <button className="btn ghost" disabled={relay.busy} onClick={() => void relay.disconnect()}>
+              Disconnect
+            </button>
+          </div>
+          {relay.code && (
+            <>
+              <p className="panel-note">This code is the key to your sealed copies. Give it only to your own devices.</p>
+              <p className="panel-path">{relay.code}</p>
+              <p className="panel-note">
+                For alerts on a phone today: install the ntfy app and subscribe to the topic <span className="mono">{status.topic}</span>.
+              </p>
+            </>
+          )}
+        </>
+      )}
+      {relay.problem && <p className="error-note">{relay.problem}</p>}
     </section>
   )
 }

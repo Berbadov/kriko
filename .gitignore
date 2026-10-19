@@ -105,3 +105,8 @@ _crop.png
 0�d
 release/
 dl/
+
+# --- The relay (server/) ----------------------------------------------------
+server/.env
+server/*.sqlite*
+server/*.key

@@ -883,7 +883,11 @@ CREATE TABLE IF NOT EXISTS watches (
   created_at    TEXT NOT NULL DEFAULT '',
   last_checked  TEXT NOT NULL DEFAULT '',
   last_price    REAL,
-  last_error    TEXT NOT NULL DEFAULT '');
+  last_error    TEXT NOT NULL DEFAULT '',
+  -- Watched by the relay too, while this computer is off (app/cloud.py). The
+  -- relay is told this page only when the reader turns that on, per watch.
+  cloud         INTEGER NOT NULL DEFAULT 0,
+  updated_at    TEXT NOT NULL DEFAULT '');
 CREATE UNIQUE INDEX IF NOT EXISTS watches_key ON watches (product_key);
 
 -- What a watch found worth saying. Read once by the panel or the app.

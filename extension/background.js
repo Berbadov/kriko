@@ -2378,7 +2378,7 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     BUYER_WATCH: (p) => _postApp("/api/prices/watches", {
       url: String(p.url || "").slice(0, 2000), name: String(p.name || "").slice(0, 300),
       target: p.target ?? null, drop_pct: p.drop_pct ?? null, price: p.price ?? null,
-      currency: String(p.currency || "").slice(0, 8) }),
+      currency: String(p.currency || "").slice(0, 8), cloud: p.cloud === true ? true : null }),
     BUYER_UNWATCH: async (p) => {
       const response = await _fetchApp(
         `${await apiBase()}/api/prices/watches/${encodeURIComponent(p.watch_id)}`, { method: "DELETE" });

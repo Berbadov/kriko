@@ -171,6 +171,20 @@ pages can be turned off on the extension's options page.
 Everything here is kept in a file on this computer. **For you** lists what is
 kept and has a button to forget each part.
 
+### A phone, and watching while the computer is off
+
+Kriko can watch a price when this computer is off if you run the relay in
+`server/` (see its README: a small machine and a domain). In **For you**, under
+**Phone and relay**, enter the relay's address and press **Connect**. Press **Pair
+a phone** to show the code that lets another device join, and subscribe to the
+topic beside it in the ntfy app to get alerts on a phone.
+
+The relay keeps sealed copies of your profile, purchases and watches. It cannot
+read them. It is told a page only for a watch you turn on in the cloud (the
+**Also watch while my computer is off** box in the panel, or **Watch in the
+cloud** in For you), because a server that reads a page has to know the page. You
+can keep the product's name from it.
+
 ## 6. Research in the app
 
 **Run** starts a deeper check for one product. Select the product and the

@@ -223,7 +223,7 @@ def prune(running: str, root: Path | None = None) -> list[str]:
     if not root.is_dir():
         return []
     gone = []
-    for entry in root.iterdir():
+    for entry in sorted(root.iterdir()):
         if not entry.is_dir() or entry.name == running:
             continue
         unfinished = entry.name.startswith("kriko-engine-") or not (entry / READY).exists()

@@ -158,3 +158,11 @@ test("only a web address is ever made into a link", () => {
   const hrefs = [...card.querySelectorAll("a")].map((a) => a.getAttribute("href"));
   assert.deepEqual(hrefs, ["https://ok.test/p"]);
 });
+
+test("the watch form offers the relay only to a reader who has one, and says it is told the page", () => {
+  const without = html(B.renderBuyerCard({ price: PRICE, watch: null, cloud: { connected: false } }, { watchForm: true }));
+  assert.equal(without.querySelector('input[name="cloud"]'), null);
+  const paired = html(B.renderBuyerCard({ price: PRICE, watch: null, cloud: { connected: true } }, { watchForm: true }));
+  assert.ok(paired.querySelector('input[name="cloud"]'));
+  assert.match(paired.querySelector(".lite-buy-check").title, /is told the page/);
+});

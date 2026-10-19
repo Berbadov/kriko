@@ -9,7 +9,7 @@ decision Kriko makes from it (`app/pick.py`, `app/advice.py`).
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from app import advice, audit, buyer, pick, pricewatch
+from app import advice, audit, buyer, cloud, pick, pricewatch
 from app.web import state
 from app.web.deps import get_app_state
 
@@ -202,7 +202,7 @@ def page_as_a_purchase(body: PageRequest, conn=Depends(get_app_state)) -> dict:
     """
     name = (body.product_name or body.title.split(" | ")[0]).strip()[:300]
     out: dict = {"price": None, "audit": None, "fit": None, "watch": None, "profile": False,
-                 "name": name}
+                 "name": name, "cloud": {"connected": cloud.configured(conn) is not None}}
     offer = pricewatch.observe(conn, body.url, name, body.fields)
     if offer:
         out["price"] = pricewatch.judge(conn, body.url, offer)
@@ -230,11 +230,15 @@ def page_as_a_purchase(body: PageRequest, conn=Depends(get_app_state)) -> dict:
 @router.get("/privacy")
 def what_is_kept(request: Request, conn=Depends(get_app_state)) -> dict:
     """What Kriko remembers about the reader as a buyer, where, and that none of it leaves this computer."""
+    relay = cloud.status(conn)
+    note = ("Kept in a file on this computer. Nothing here is sent anywhere. Your agent sees your "
+            "profile only when you ask it something, and only the part a question needs.")
+    if relay["connected"]:
+        note = ("Kept in a file on this computer, and as sealed copies on your relay that only your "
+                "own devices can open. The relay is told a page's address only for the watches you "
+                "turned on in the cloud. Your agent sees your profile only when you ask it something.")
     return {**buyer.holdings(conn), "where": str(request.app.state.settings.app_state_path),
-            "leaves_this_computer": False,
-            "note": "Kept in a file on this computer. Nothing here is sent anywhere. Your agent "
-                    "sees your profile only when you ask it something, and only the part a "
-                    "question needs."}
+            "leaves_this_computer": relay["connected"], "relay": relay["server"], "note": note}
 
 
 @router.delete("/privacy/{what}")

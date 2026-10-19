@@ -105,7 +105,7 @@ test("the panel's buttons are forwarded to the app's own routes, trimmed", async
   } });
   const watch = await send(h, { type: "BUYER_WATCH", payload: { url: URL_, name: "Kettle", target: "40", price: 49.9, currency: "EUR" } });
   assert.equal(watch.ok, true);
-  assert.deepEqual(h.state.requests.at(-1).body, { url: URL_, name: "Kettle", target: "40", drop_pct: null, price: 49.9, currency: "EUR" });
+  assert.deepEqual(h.state.requests.at(-1).body, { url: URL_, name: "Kettle", target: "40", drop_pct: null, price: 49.9, currency: "EUR", cloud: null });
   await send(h, { type: "BUYER_BOUGHT", payload: { name: "Kettle", url: URL_, price: 49.9, currency: "EUR" } });
   assert.deepEqual(h.state.requests.at(-1).body, { name: "Kettle", url: URL_, price: 49.9, currency: "EUR" });
   const answer = await send(h, { type: "BUYER_ANSWER", payload: { purchase_id: "p1", verdict: "regret", reason: "lid cracked" } });
