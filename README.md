@@ -10,11 +10,13 @@ model you select; a paid provider charges your own account.
 - Ask about a product, compare options, and continue the same conversation.
 - Inspect sourced problems, exact variants, specifications and coverage gaps.
 - Check a listing through the extension, then open the saved result in the app.
-- Keep catalogs, conversations and research history locally.
-- Get advice that is for you: say what you need and Kriko remembers prices it
-  saw, calls out a discount that is not real, watches a price, names one product
-  from your shortlist, and asks later if what you bought held up. It stays on
-  your computer.
+- Say what you need and get buying help: price history, a watched price, one
+  named pick from your shortlist, and a later check on whether it held up.
+- Keep catalogs, conversations and research history on your computer.
+
+Contents: [Install](#install-and-start) · [Agents](#working-with-agents) ·
+[Buying help](#buying-help) · [Catalogs](#catalogs-and-saved-work) ·
+[Your data](#your-data) · [Build and verify](#build-and-verify)
 
 ## Install and start
 
@@ -60,6 +62,26 @@ and reviews consequential claims against fetched excerpts, with a repair attempt
 or a visible warning when support is missing. Model review can still miss errors;
 inspect the underlying evidence before making a decision.
 
+## Buying help
+
+Open **More → For you** and say how you use what you buy, your budget, what you
+must have and what you distrust. Kriko gives this to your agent with every
+question; every part is optional, listed there and can be forgotten.
+
+On a product page the panel shows **As a purchase**: the price against what
+Kriko has seen on that page, a discount the history does not support, how the
+product fits you, and a listing check (seller, rating, claims the page does not
+back up). **Watch this price** rereads the page a few times a day while Kriko is
+running; a drop marks the toolbar button. **I bought this** starts a ledger, and
+a few weeks later Kriko asks whether it held up. In **Compare**, **Decide for me**
+ranks your shortlist and names one pick with its cost and what would change it.
+A cart or payment page is checked for a different item, a cheaper shop Kriko has
+seen, scam payment methods and missing return terms.
+
+Everything here stays in a file on this computer. To watch a price while the
+computer is off, you can run your own small relay (`server/`, see its README);
+it keeps sealed copies it cannot read. Setup is in [Usage](docs/USAGE.md).
+
 ## Catalogs and saved work
 
 **More → Catalogs** discovers release catalogs, imports artifacts, updates installed
@@ -103,6 +125,10 @@ tools/gate.sh
 The gate covers Python, the wheel, extension/site tests, desktop behavior and
 TypeScript/lint, and native checks. A missing native check is incomplete, not a
 passing release. Mobile changes additionally use `tools/gate.sh mobile`.
+
+To see what an agent search and a quick search each do, run them together:
+`python -m app.livesearch "Brand Model" --agent claude-code` writes a report of
+the queries, pages and sites per lane (see [Usage](docs/USAGE.md)).
 
 - [Windows installation](docs/INSTALL_WINDOWS.md)
 - [Usage](docs/USAGE.md)
