@@ -6,6 +6,7 @@ import math
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from app.compatbench import core
 
@@ -78,6 +79,7 @@ def _run(args) -> int:
     if not args.local_url and args.budget_usd is None:
         print("API runs require --budget-usd (use 0 to explicitly uncap)", file=sys.stderr)
         return 2
+    asker: Any
     try:
         if args.local_url:
             from app.providers.local_inference import OpenAICompatSocket

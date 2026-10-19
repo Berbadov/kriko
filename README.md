@@ -93,6 +93,12 @@ more questions. Kriko saves every quick look in your history.
 To make a quick look part of a catalog, open **Overview** and press **File
 quick looks**.
 
+Catalog assignments are saved with their evidence and the catalog revision used,
+so you can inspect why a quick look was filed or left uncertain. See
+[How Kriko works](docs/HOW_IT_WORKS.md) for details. Jev (TypeSafe) is an
+optional, paid classifier selected in **Settings → Research**; deterministic
+matches still run first.
+
 ## Research
 
 Research needs an agent or a model. Open **Agents**, in the group **System**,
@@ -103,6 +109,10 @@ install**. For a paid API, add its key in **Settings**.
 
 Kriko starts a paid API only after you select it. A run that names no provider
 uses the first provider that is ready, and the log of the run names it.
+
+See the [research improvements guide](docs/RESEARCH_IMPROVEMENTS.md) for language
+and market settings, compatible API setup, source logs, queue reset and the
+part-compatibility benchmark.
 
 ## Your data
 
