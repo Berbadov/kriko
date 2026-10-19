@@ -862,7 +862,31 @@ def _read_web_page(ctx: Context, url: str, *, on_start: Callable[[], None] | Non
     else:
         text = getattr(fetched, "text", fetched)
         published_at = getattr(fetched, "published_at", "")
-    return _clip(text, 12000), _clip(published_at, 40)
+    return str(text or "")[:200000], _clip(published_at, 40)
+
+
+def relevant_excerpt(text: str, query: str, limit: int = WEB_PAGE_EXCERPT_CAP) -> str:
+    """Select contiguous source passages, retaining surrounding qualifications.
+
+    Search the full bounded document before clipping. Selected windows stay in
+    document order and an ellipsis marks every omitted region.
+    """
+    if len(text) <= limit:
+        return text
+    words = set(re.findall(r"\w{3,}", query.casefold())) - {
+        "the", "and", "what", "which", "with", "that", "this", "please", "find"}
+    windows = [(i, text[i:i + 700]) for i in range(0, len(text), 600)]
+    ranked = sorted(windows, key=lambda item: -sum(
+        min(3, item[1].casefold().count(word)) for word in words))
+    selected = sorted(ranked[:3], key=lambda item: item[0])
+    spans: list[tuple[int, int]] = []
+    for start, _part in selected:
+        lo, hi = max(0, start - 180), min(len(text), start + 900)
+        if spans and lo <= spans[-1][1]:
+            spans[-1] = (spans[-1][0], max(spans[-1][1], hi))
+        else:
+            spans.append((lo, hi))
+    return _clip("\n…\n".join(text[lo:hi] for lo, hi in spans), limit)
 
 
 def _widen_for_buying(search, query: str, hits: list, cap: int) -> list:
@@ -907,14 +931,16 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
         ctx.check_cancelled()
     try:
         search = ctx.web_search
-        direct = re.search(r"(?:https?://|\bwww\.)[^\s<>\"']+", query, re.I)
+        direct = list(re.finditer(r"(?:https?://|\bwww\.)[^\s<>\"']+", query, re.I))
         if direct:
             # A reader-provided page is the question's subject. Open it directly
             # instead of hoping a search engine returns the same URL.
-            url = direct.group(0).rstrip(".,;:!?)]}")
-            if url.casefold().startswith("www."):
-                url = "https://" + url
-            hits = [{"url": url, "title": "Reader-provided page", "snippet": ""}]
+            hits = []
+            for match in direct[:WEB_RESULTS_CAP]:
+                url = match.group(0).rstrip(".,;:!?)]}")
+                if url.casefold().startswith("www."):
+                    url = "https://" + url
+                hits.append({"url": url, "title": "Reader-provided page", "snippet": ""})
         else:
             if search is None:
                 return _empty("web search is not configured on this machine")
@@ -960,7 +986,11 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
     if purchase:
         results = exactfind.rank(results)
 
-    indexes = list(range(min(WEB_PAGES_CAP, len(results))))
+    # Explicit links are all subjects of the question (at most five). Search
+    # leads have a successful-page ceiling; failures are replaced below.
+    target_pages = min(len(results), WEB_RESULTS_CAP if direct else WEB_PAGES_CAP)
+    indexes = list(range(min(target_pages, WEB_PAGES_CAP)))
+    next_index = len(indexes)
     reader_cancelled = threading.Event()
     started_reads: set[int] = set()
     started_lock = Lock()
@@ -1023,6 +1053,13 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
                         results[index]["published_at"] = published_at
                 else:
                     results[index]["read_error"] = "page returned no readable text"
+            successes = sum(bool(row["page_read"]) for row in results)
+            while (next_index < len(results) and len(pending) < WEB_PAGES_CAP
+                   and successes + len(pending) < target_pages):
+                future = executor.submit(read_at, next_index)
+                futures[future] = next_index
+                pending.add(future)
+                next_index += 1
         if pending:
             # A page reader may be partway through a redirect chain. Wake it
             # cooperatively before returning the partial results at deadline.
@@ -1059,6 +1096,9 @@ def _web_search(ctx: Context, query: str = "", buying: str = "") -> dict:
          "read_attempted": bool(row["read_attempted"])}
         for row in results
     ]
+    for row in results:
+        if row["page_read"]:
+            row["page_excerpt"] = relevant_excerpt(row["page_excerpt"], query)
     results, context_truncated = _fit_web_results(results)
     read_count = sum(bool(row["page_read"]) for row in results)
     pages_attempted = len(attempted_indexes)

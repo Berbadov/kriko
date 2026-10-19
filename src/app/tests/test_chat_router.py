@@ -107,7 +107,7 @@ def test_a_message_is_refused_before_anything_runs(http):
     assert http.post(f"/api/chat/threads/{tid}/messages",
                      json={"text": "   "}).status_code == 422
     assert http.post(f"/api/chat/threads/{tid}/messages",
-                     json={"text": "q" * 2001}).status_code == 422
+                     json={"text": "q" * 16001}).status_code == 422
     assert http.post(f"/api/chat/threads/{tid}/messages",
                      json={"text": "ok", "backend": "cloud"}).status_code == 422
     assert http.submitted == []
@@ -306,7 +306,7 @@ def test_an_empty_answer_fails_the_job_and_keeps_the_question(paths, monkeypatch
     state.add_chat_message(app_state, thread["thread_id"], role="reader", text="anything")
     job_id = state.create_job(app_state, "chat_ask", {})
     try:
-        with pytest.raises(ValueError, match="no answer"):
+        with pytest.raises(RuntimeError, match="did not complete"):
             tasks.chat_ask(paths, {"thread_id": thread["thread_id"], "message_id": "",
                                    "text": "anything", "backend": "local"},
                            Progress(job_id, app_state))

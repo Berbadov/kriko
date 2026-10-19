@@ -60,14 +60,15 @@ async function call<T>(method: string, path: string, body?: unknown, timeoutMs =
     }
     if (status < 200 || status >= 300) {
       const detail = (data as { detail?: unknown } | null)?.detail
-      throw new EngineError(status, typeof detail === 'string' ? detail : `The engine answered ${status}.`)
+      const structured = detail && typeof detail === 'object' ? (detail as { message?: string }).message : ''
+      throw new EngineError(status, typeof detail === 'string' ? detail : structured || (Array.isArray(detail) ? 'The request contains an invalid or oversized field. Please shorten it and try again.' : `The engine answered ${status}.`))
     }
     // A page that is not JSON is not the engine: a dev server's own index, or a proxy's error page.
     if (data === null && text.trim()) throw new EngineError(0, 'The engine does not answer.')
     return data as T
   } catch (error) {
     if (error instanceof EngineError) throw error
-    throw new EngineError(0, 'The engine does not answer.')
+    throw new EngineError(0, error instanceof Error && error.name === 'AbortError' ? 'The request timed out. Reconnect to check whether the work started before sending it again.' : 'Could not reach Kriko. Check the engine connection and try again.')
   }
 }
 
@@ -79,6 +80,33 @@ export const del = <T>(path: string) => call<T>('DELETE', path)
 
 /** A path segment from an id the engine gave us. */
 export const seg = (id: string) => encodeURIComponent(id)
+
+/** Retain the logical send ID after a lost response, including across reloads. */
+export async function postQuestion<T>(path: string, body: Record<string, unknown>): Promise<T> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(path + JSON.stringify(body)))
+  const key = `kriko.pending.${Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('')}`
+  let id: string = crypto.randomUUID()
+  try { id = sessionStorage.getItem(key) || id; sessionStorage.setItem(key, id) } catch { /* request still carries its identity */ }
+  try {
+    const result = await post<T>(path, { ...body, client_request_id: id })
+    try { sessionStorage.removeItem(key) } catch { /* no persisted identity */ }
+    return result
+  } catch (error) {
+    if (error instanceof EngineError && error.status !== 0) {
+      try { sessionStorage.removeItem(key) } catch { /* no persisted identity */ }
+    }
+    throw error
+  }
+}
+
+/** Small local artifacts cross the native JSON bridge as base64. */
+export async function uploadArtifact<T>(path: string, file: File): Promise<T> {
+  if (file.size > 32 * 1024 * 1024) throw new EngineError(413, 'Choose a file up to 32 MB.')
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  let binary = ''
+  for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192))
+  return post<T>(path, { filename: file.name, data: btoa(binary) }, 60000)
+}
 
 // ---- the shapes the interface reads. Fields it does not use are left out. ----
 

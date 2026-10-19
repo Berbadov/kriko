@@ -808,7 +808,8 @@ CREATE TABLE IF NOT EXISTS chat_threads (
   title      TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT '',
   updated_at TEXT NOT NULL DEFAULT '',
-  pinned     INTEGER NOT NULL DEFAULT 0);
+  pinned     INTEGER NOT NULL DEFAULT 0,
+  memory     TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS chat_messages (
   message_id   TEXT PRIMARY KEY,
   thread_id    TEXT NOT NULL DEFAULT '',
@@ -828,6 +829,11 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   -- before this column reads as `{}`, which is honest: it was never recorded.
   agent_json   TEXT NOT NULL DEFAULT '{}');
 CREATE INDEX IF NOT EXISTS chat_messages_thread ON chat_messages (thread_id);
+
+CREATE TABLE IF NOT EXISTS question_requests (
+  request_id TEXT PRIMARY KEY,
+  input_json TEXT NOT NULL DEFAULT '{}',
+  record_id TEXT NOT NULL DEFAULT '');
 
 """
 
@@ -1066,7 +1072,7 @@ def _decode(row: sqlite3.Row) -> dict:
     }
 
 
-def recent(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
+def recent(conn: sqlite3.Connection, limit: int = 20, *, query: str = "", offset: int = 0) -> list[dict]:
     """Newest first.
 
     `created_at` has second resolution, so two lookups a moment apart tie on
@@ -1078,8 +1084,9 @@ def recent(conn: sqlite3.Connection, limit: int = 20) -> list[dict]:
     """
     rows = conn.execute(
         "SELECT lookup_id, created_at, source, label, response_json FROM lookups"
-        " ORDER BY created_at DESC, rowid DESC LIMIT ?",
-        (max(0, limit),),
+        " WHERE (? = '' OR label LIKE ? ESCAPE '\\' OR response_json LIKE ? ESCAPE '\\')"
+        " ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?",
+        (query, _like(query), _like(query), max(0, limit), max(0, offset)),
     ).fetchall()
     out = []
     for row in rows:
@@ -1895,7 +1902,7 @@ def compare_questions(conn: sqlite3.Connection, draft_id: str) -> list[dict]:
 
 
 def record_compare_question(
-    conn: sqlite3.Connection, draft_id: str, question: str,
+    conn: sqlite3.Connection, draft_id: str, question: str, *, question_id: str = "",
 ) -> dict:
     """Store the question, answered by nothing yet (B193).
 
@@ -1907,9 +1914,9 @@ def record_compare_question(
     question = " ".join(question.split())[:2000]
     if not question:
         raise ValueError("a question needs words")
-    question_id = secrets.token_hex(8)
+    question_id = question_id or secrets.token_hex(8)
     conn.execute(
-        "INSERT INTO compare_questions"
+        "INSERT OR IGNORE INTO compare_questions"
         " (draft_id, question_id, question, answer, job_id, asked_at, answered_at)"
         " VALUES (?,?,?,?,?,?,?)",
         (draft_id, question_id, question, "", "", _now(), ""))
@@ -3325,7 +3332,8 @@ CHAT_MESSAGE_CHARS = 20000
 def _thread(row: sqlite3.Row) -> dict:
     return {"thread_id": row["thread_id"], "title": row["title"],
             "created_at": row["created_at"], "updated_at": row["updated_at"],
-            "pinned": bool(row["pinned"]) if "pinned" in row.keys() else False}
+            "pinned": bool(row["pinned"]) if "pinned" in row.keys() else False,
+            "memory": row["memory"] if "memory" in row.keys() else ""}
 
 
 def _chat_message(row: sqlite3.Row) -> dict:
@@ -3396,6 +3404,26 @@ def delete_chat_thread(conn: sqlite3.Connection, thread_id: str) -> bool:
     return cur.rowcount > 0
 
 
+def reserve_question(conn: sqlite3.Connection, request_id: str, payload: dict) -> str:
+    """Reserve a stable question identity before writing it or starting a job.
+
+    Both later steps are replayable after a crash. SQLite serializes concurrent
+    reservations; a conflicting payload never creates another message.
+    """
+    if not request_id:
+        return secrets.token_hex(8)
+    from app.agentledger import RequestConflict
+
+    encoded = json.dumps(payload, sort_keys=True, ensure_ascii=False)
+    with conn:
+        conn.execute("INSERT OR IGNORE INTO question_requests VALUES (?,?,?)",
+                     (request_id, encoded, secrets.token_hex(8)))
+        row = conn.execute("SELECT * FROM question_requests WHERE request_id=?", (request_id,)).fetchone()
+        if row["input_json"] != encoded:
+            raise RequestConflict("This request ID was already used for a different question.")
+    return str(row["record_id"])
+
+
 def chat_messages(conn: sqlite3.Connection, thread_id: str) -> list[dict]:
     """The conversation in the order it was said."""
     return [
@@ -3406,7 +3434,7 @@ def chat_messages(conn: sqlite3.Connection, thread_id: str) -> list[dict]:
 
 
 def chat_history(conn: sqlite3.Connection, thread_id: str, *,
-                 before: str = "", limit: int = 8) -> list[dict]:
+                 before: str = "", limit: int = 200) -> list[dict]:
     """The messages a turn is shown: those said before `before`, oldest first."""
     ceiling = 2**62
     if before:
@@ -3425,15 +3453,16 @@ def add_chat_message(
     steps: list | None = None, sources: list | None = None,
     products: list | None = None, activity: list | None = None, job_id: str = "", agent: dict | None = None,
     followups: list[str] | None = None,
+    message_id: str = "",
 ) -> dict:
     """Store one message and move its thread to the top of the list."""
     if role not in ("reader", "agent"):
         raise ValueError(f"no such chat role: {role}")
     text = str(text or "").strip()[:CHAT_MESSAGE_CHARS]
-    message_id = secrets.token_hex(8)
+    message_id = message_id or secrets.token_hex(8)
     now = _now()
     conn.execute(
-        "INSERT INTO chat_messages (message_id, thread_id, role, text, steps_json,"
+        "INSERT OR IGNORE INTO chat_messages (message_id, thread_id, role, text, steps_json,"
         " sources_json, products_json, activity_json, job_id, created_at, agent_json, followups_json)"
         " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         (message_id, thread_id, role, text, json.dumps(steps or [], default=str),

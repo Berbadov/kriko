@@ -4,7 +4,7 @@ import { AGENTS_CHANGED_EVENT, get, inShell, type ApiHarness } from './api'
 /** Whether a real engine answers. Without one the interface plays demo data,
  *  so design work never waits on the engine. `?demo` in the address forces it. */
 
-export type Mode = 'checking' | 'live' | 'demo'
+export type Mode = 'checking' | 'live' | 'demo' | 'offline'
 
 export interface Agent {
   id: string
@@ -91,7 +91,7 @@ export function EngineProvider({ children }: { children: ReactNode }) {
       .catch((error: unknown) => {
         if (!live) return
         setProblem(error instanceof Error && error.message !== 'no engine' ? error.message : '')
-        setMode('demo')
+        setMode('offline')
       })
     return () => {
       live = false

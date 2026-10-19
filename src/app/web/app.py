@@ -265,10 +265,15 @@ async def lifespan(app: FastAPI):
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
+    from app import backups
+    from app.web.routers import backups as backup_routes
+
+    settings = settings or Settings.from_env()
+    backups.apply_pending(settings)
     app = FastAPI(
         title="Kriko", docs_url="/api/docs", redoc_url=None, lifespan=lifespan
     )
-    app.state.settings = settings or Settings.from_env()
+    app.state.settings = settings
 
     # ── the log has to be somewhere this process can actually write ───────
     #
@@ -298,6 +303,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.analysis_log_problem = why
 
     for router in (
+        backup_routes.router,
         agenda.router,
         agent.router,
         agent_runtime.router,

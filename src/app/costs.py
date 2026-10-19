@@ -21,6 +21,7 @@ up, and the screen says so with a link rather than guessing.
 """
 
 from datetime import UTC, datetime, timedelta
+import json
 
 #: How far back "recently" reaches for the per-run estimate. Long enough to
 #: include a handful of runs, short enough that a price change six months ago
@@ -66,12 +67,30 @@ def spent(conn, *, days: int = WINDOW_DAYS) -> dict:
         " FROM research_runs WHERE started_at >= ?",
         (since,),
     ).fetchone()
+    chat_usd, chat_tokens, chat_count, chat_priced = 0.0, 0, 0, 0
+    for row in conn.execute("SELECT result_json FROM jobs WHERE kind='chat_ask' AND created_at>=?", (since,)):
+        chat_count += 1
+        try:
+            result = json.loads(row["result_json"] or "{}")
+        except (ValueError, TypeError):
+            result = {}
+        amount = result.get("spent_usd")
+        if isinstance(amount, (float, int)):
+            chat_usd += amount
+            chat_priced += 1
+        else:
+            chat_usd += float((result.get("usage") or {}).get("measured_usd") or 0)
+        chat_tokens += int(result.get("tokens") or (result.get("usage") or {}).get("measured_tokens") or 0)
+    if chat_count:
+        planes.append({"plane": "chat", "llm": "", "runs": chat_count, "priced": chat_priced,
+                       "usd": round(chat_usd, 6), "tokens": chat_tokens, "usd_per_run": None})
     return {
         "days": days,
         "planes": planes,
-        "usd": round(float(total["usd"] or 0), 4),
-        "tokens": int(total["tokens"] or 0),
-        "runs": int(total["runs"] or 0),
+        "usd": round(float(total["usd"] or 0) + chat_usd, 4),
+        "tokens": int(total["tokens"] or 0) + chat_tokens,
+        "runs": int(total["runs"] or 0) + chat_count,
+        "unpriced_runs": sum(one["runs"] - (one["priced"] or 0) for one in planes),
     }
 
 

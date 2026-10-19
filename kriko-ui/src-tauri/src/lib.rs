@@ -87,7 +87,11 @@ fn call_engine(base: &str, method: &str, path: &str, body: Option<String>, timeo
     .map_err(|e| e.to_string())?;
   let response = agent.run(request).map_err(|e| e.to_string())?;
   let status = response.status().as_u16();
-  let body = response.into_body().read_to_string().map_err(|e| e.to_string())?;
+  // A 32 MiB snapshot expands to about 43 MiB in the JSON transfer. Ordinary
+  // replies retain the reader's default 10 MiB cap; only snapshot exports need more.
+  let response_limit = if path == "/api/backups/export" { 48 * 1024 * 1024 } else { 10 * 1024 * 1024 };
+  let body = response.into_body().into_with_config().limit(response_limit)
+    .read_to_string().map_err(|e| e.to_string())?;
   Ok(Reply { status, body })
 }
 
@@ -197,7 +201,8 @@ mod tests {
   use std::net::TcpListener;
 
   /// A one-shot server: reads one request, answers, and hands the request text back.
-  fn serve(status_line: &'static str, reply: &'static str) -> (String, std::thread::JoinHandle<String>) {
+  fn serve(status_line: &'static str, reply: impl Into<String>) -> (String, std::thread::JoinHandle<String>) {
+    let reply = reply.into();
     let listener = TcpListener::bind("127.0.0.1:0").unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let handle = std::thread::spawn(move || {
@@ -251,5 +256,17 @@ mod tests {
     server.join().unwrap();
     assert_eq!(reply.status, 409);
     assert!(reply.body.contains("conflict"));
+  }
+
+  #[test]
+  fn a_snapshot_larger_than_the_default_body_limit_arrives_whole() {
+    let data = format!(r#"{{"filename":"snapshot.zip","data":"{}"}}"#, "a".repeat(12 * 1024 * 1024));
+    let expected = data.len();
+    let (base, server) = serve("200 OK", data);
+    let reply = call_engine(&base, "POST", "/api/backups/export", Some("{}".into()), Duration::from_secs(10)).unwrap();
+    server.join().unwrap();
+    assert_eq!(reply.status, 200);
+    assert_eq!(reply.body.len(), expected);
+    assert!(reply.body.ends_with("\"}"));
   }
 }

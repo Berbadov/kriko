@@ -18,13 +18,16 @@
 # Run it before every push; `CLAUDE.md`'s app-first rule 1 already asked for
 # pytest, and this is the rest of what the branch used to be checked for.
 #
-#     tools/gate.sh          # everything; the four stages run at once (below)
+#     tools/gate.sh          # all required desktop stages run concurrently
 #     tools/gate.sh py       # just the Python suite
 #     tools/gate.sh wheel    # just: does the artifact we ship actually import
 #     tools/gate.sh node     # just the JavaScript suites
+#     tools/gate.sh ui       # desktop build, lint and behavior scenarios
+#     tools/gate.sh site     # website tests
+#     tools/gate.sh mobile   # the separate mobile prototype's static checks
 #     tools/gate.sh tauri    # just the desktop shell: cargo check and cargo test, offline
 #
-# With no argument the stages are independent — python, wheel, node and tauri —
+# With no argument the stages are independent — py, wheel, node, ui, site and tauri —
 # so they run concurrently. Each writes to its own log, and a log is printed as
 # one block when its stage finishes, so output never interleaves. A failed stage
 # does not stop the others: the gate then exits non-zero and names every stage
@@ -80,8 +83,8 @@ export PYTHON
 
 only="${1:-all}"
 case "$only" in
-    all|py|wheel|node|tauri) ;;
-    *) echo "unknown gate: $only (expected: all, py, node, tauri, wheel)" >&2; exit 2 ;;
+    all|py|wheel|node|ui|site|mobile|tauri) ;;
+    *) echo "unknown gate: $only (expected: all, py, node, ui, site, mobile, tauri, wheel)" >&2; exit 2 ;;
 esac
 
 # pytest workers: `auto` is every core. GATE_JOBS=1 makes the whole gate serial.
@@ -227,6 +230,32 @@ gate_node() {
     fi
 }
 
+gate_ui() {
+    step "desktop interface build, behavior checks and lint"
+    (cd kriko-ui && npm run build && npm run lint)
+    local ui_out ui_status=0 ui_count
+    ui_out=$(cd kriko-ui && node --test --test-reporter=tap tests/*.test.mjs 2>&1) || ui_status=$?
+    printf '%s\n' "$ui_out"
+    [ "$ui_status" = 0 ] || return "$ui_status"
+    ui_count=$(printf '%s' "$ui_out" | sed -n 's/^# tests \([0-9][0-9]*\).*/\1/p' | tail -1)
+    if [ "${ui_count:-0}" -lt 4 ]; then
+        echo "desktop behavior checks are incomplete: expected at least 4 scenarios, got ${ui_count:-0}" >&2
+        return 1
+    fi
+}
+
+gate_site() {
+    step "website tests"
+    npm run test:site
+}
+
+# The mobile prototype is separate from the desktop release. Check it explicitly
+# when editing or distributing it; no skipped device build is called a pass.
+gate_mobile() {
+    step "mobile prototype typecheck and lint"
+    (cd kriko-mobile && npm run typecheck && CI=1 EXPO_NO_TELEMETRY=1 npm run lint)
+}
+
 gate_tauri() {
     CRATE="kriko-ui/src-tauri"
     # Set by every path that could not run a real check. The stage then exits 3,
@@ -312,7 +341,7 @@ summary() {
     local wall="$1" n
     local -a failed=() skipped=()
     printf '\n\033[1m── gate summary\033[0m\n'
-    for n in py wheel node tauri; do
+    for n in py wheel node ui site tauri; do
         [ -n "${verdict_of[$n]:-}" ] || continue
         printf '  %-7s %-16s %s\n' "$n" "${verdict_of[$n]}" "$(fmt_ms "${took_ms[$n]}")"
         # 3 is "this stage could not run a real check" — reported, and never a
@@ -338,7 +367,7 @@ summary() {
 # All four stages at once. Each runs in a background subshell with its own log;
 # whichever finishes first is printed first, as one block.
 run_all_concurrently() {
-    local -a stages=(py wheel node tauri)
+    local -a stages=(py wheel node ui site tauri)
     local -A name_of=() started=()
     local n rc done_pid remaining t0 verdict
     t0=$(now_ms)
@@ -373,7 +402,7 @@ run_all_concurrently() {
 run_all_in_order() {
     local n t0 s rc
     t0=$(now_ms)
-    for n in py wheel node tauri; do
+    for n in py wheel node ui site tauri; do
         current_stage=$n
         s=$(now_ms)
         # The exit code was being dropped here (`verdict_of[$n]=passed` whatever
