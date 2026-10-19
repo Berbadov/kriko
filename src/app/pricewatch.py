@@ -494,7 +494,7 @@ def watch(conn: sqlite3.Connection, url: str, name: str = "", *, target=None, dr
         conn.execute(
             "INSERT INTO watches (watch_id, product_key, url, name, currency, target, drop_pct,"
             " started_price, created_at, cloud, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (watch_id, key, strip_tracking(url)[:2000], str(name or "")[:300], currency, target, drop_pct,
+            (watch_id, key, strip_tracking(url)[:2000], str(name or "")[:300], _currency(currency), target, drop_pct,
              start, _stamp(now), int(bool(cloud)), _stamp(now)))
     conn.commit()
     return _watch(conn.execute("SELECT * FROM watches WHERE watch_id = ?", (watch_id,)).fetchone())
