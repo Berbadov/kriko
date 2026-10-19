@@ -21,11 +21,18 @@ from app.web.settings import EXTENSION_PORT
 
 @pytest.fixture(autouse=True)
 def _no_real_server(monkeypatch):
-    # main() ends in a blocking uvicorn.run() and starts real background
-    # probes — none of that is what this test is about.
+    # main() ends in a blocking uvicorn.run(). The entrypoint must also stay
+    # lazy: opening the app must not spawn catalog or CLI-help probes.
     monkeypatch.setattr(uvicorn, "run", lambda *a, **k: None)
-    monkeypatch.setattr("app.providers.harness.warm_models", lambda: None)
-    monkeypatch.setattr("app.modeldiscovery.cached", lambda: None)
+    monkeypatch.setattr(web_app, "create_app", lambda settings: object())
+    monkeypatch.setattr(
+        "app.providers.harness.warm_models",
+        lambda: pytest.fail("the app entrypoint started CLI probes"),
+    )
+    monkeypatch.setattr(
+        "app.modeldiscovery.cached",
+        lambda: pytest.fail("the app entrypoint started provider discovery"),
+    )
     yield
     os.environ.pop("KRIKO_EXTENSION_BOUND", None)
 

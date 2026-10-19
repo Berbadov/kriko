@@ -246,15 +246,15 @@ class ResidentTransport:
     def __init__(
         self,
         *,
-        idle_seconds: float = 900,
-        low_memory_idle_seconds: float = 120,
+        idle_seconds: float = 90,
+        low_memory_idle_seconds: float = 20,
         max_warm_workers: int | None = None,
         popen: Callable[..., subprocess.Popen[str]] = subprocess.Popen,
         wires: Mapping[str, Wire] | None = None,
     ) -> None:
         self.idle_seconds = idle_seconds
         self.low_memory_idle_seconds = low_memory_idle_seconds
-        self.max_warm_workers = max_warm_workers or (1 if _total_memory_gib() <= 8 else 4)
+        self.max_warm_workers = max_warm_workers or 1
         self._popen = popen
         self._wires = dict(wires) if wires is not None else {
             "claude": ClaudeWire(), "acp": AcpWire(),
@@ -536,7 +536,7 @@ class ResidentTransport:
             _fail(worker, f"{wire.name} worker exited")
 
     def _reap_loop(self) -> None:
-        while not self._reaper_stop.wait(15):
+        while not self._reaper_stop.wait(5):
             self._reap_once()
 
     def _reap_once(self) -> None:
@@ -549,9 +549,15 @@ class ResidentTransport:
             retained = [w for w in workers if w not in exited and w not in aged]
             excess = max(0, len(retained) - self.max_warm_workers)
             lru = sorted(retained, key=lambda w: w.last_used)
-            for worker in {id(w): w for w in exited + aged + lru[:excess]}.values():
-                self._discard_locked(worker)
+            evict = {id(w): w for w in exited + aged + lru[:excess]}
+            for worker in evict.values():
+                self._workers.remove(worker)
             self._available.notify_all()
+        # Termination can wait for a process tree to exit. Detach under the
+        # pool lock, then do that wait outside it so startup, cancellation and
+        # foreground requests never queue behind idle cleanup.
+        for worker in evict.values():
+            _release(worker)
 
     def _discard_locked(self, worker: _Worker) -> None:
         if worker in self._workers:

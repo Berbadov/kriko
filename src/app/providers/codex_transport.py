@@ -244,15 +244,15 @@ class CodexTransport:
         self,
         *,
         executable: str | None = None,
-        idle_seconds: float = 900,
-        low_memory_idle_seconds: float = 120,
+        idle_seconds: float = 90,
+        low_memory_idle_seconds: float = 20,
         max_warm_workers: int | None = None,
         popen: Callable[..., subprocess.Popen[str]] = subprocess.Popen,
     ) -> None:
         self.executable = executable
         self.idle_seconds = idle_seconds
         self.low_memory_idle_seconds = low_memory_idle_seconds
-        self.max_warm_workers = max_warm_workers or (1 if _total_memory_gib() <= 8 else 4)
+        self.max_warm_workers = max_warm_workers or 1
         self._popen = popen
         self._workers: list[_Worker] = []
         self._lock = threading.RLock()
@@ -748,7 +748,7 @@ class CodexTransport:
             _queue_failure(worker, "Codex app-server exited")
 
     def _reap_loop(self) -> None:
-        while not self._reaper_stop.wait(15):
+        while not self._reaper_stop.wait(5):
             self._reap_once()
 
     def _reap_once(self) -> None:
@@ -763,8 +763,16 @@ class CodexTransport:
             lru = sorted(retained, key=lambda w: w.last_used)
             evict = {id(worker): worker for worker in exited + aged + lru[:excess]}
             for worker in evict.values():
-                self._discard_locked(worker)
+                self._workers.remove(worker)
             self._available.notify_all()
+        # Termination can wait for a process tree to exit. Detach under the
+        # pool lock, then wait outside it so foreground requests can proceed.
+        for worker in evict.values():
+            _terminate(worker.process, worker.job)
+            worker.job = None
+            if worker.resource_guard is not None:
+                worker.resource_guard.__exit__(None, None, None)
+                worker.resource_guard = None
 
     def _discard_locked(self, worker: _Worker) -> None:
         if worker in self._workers:

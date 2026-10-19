@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { del, get, post, put } from './api'
+import { del, get, notifyAgentsChanged, post, put } from './api'
 import { useEngine } from './Engine'
 
 /** What the Settings and Agents panels read and write. Live, it is the engine's
@@ -107,6 +107,7 @@ export function usePrefsDoc() {
       setBusy(true)
       try {
         setDoc(await get<PrefsDoc>(fresh ? '/api/prefs?fresh=true' : '/api/prefs', fresh ? 30000 : 8000))
+        notifyAgentsChanged()
       } catch (error) {
         setProblem(error instanceof Error ? error.message : 'Could not read the settings.')
       } finally {
@@ -139,6 +140,7 @@ export function usePrefsDoc() {
       }
       try {
         setDoc(await put<PrefsDoc>('/api/prefs', patch))
+        notifyAgentsChanged()
       } catch (error) {
         setProblem(error instanceof Error ? error.message : 'Could not save.')
         void load()
@@ -180,6 +182,7 @@ export function useKeys() {
       }
       try {
         setDoc(await put<KeysDoc>('/api/keys', { values: { [id]: value } }))
+        notifyAgentsChanged()
       } catch (error) {
         setProblem(error instanceof Error ? error.message : 'Could not save the key.')
       }
@@ -199,6 +202,7 @@ export function useKeys() {
       }
       try {
         setDoc(await del<KeysDoc>(`/api/keys/${encodeURIComponent(id)}`))
+        notifyAgentsChanged()
       } catch (error) {
         setProblem(error instanceof Error ? error.message : 'Could not remove the key.')
       }
