@@ -809,33 +809,51 @@ const DESCRIPTION_SELECTORS = [
 // The page's own label/value shapes are collected on known sites too, so
 // agents receive new facts when a site changes. `explore` remains accepted
 // for older workers that still send it.
+//
+// Every reader below is tried on its own. An adapter an agent wrote can carry a
+// selector the browser refuses, and one refused selector used to take the whole
+// scrape down with it: the page was read by nothing, and the panel said "Unable
+// to read this page" on a page that was perfectly readable. What one reader
+// cannot do is noted in `problems`; the others still answer.
+function attempt(problems, name, read, fallback) {
+  try {
+    return read();
+  } catch (error) {
+    problems.push(`${name}: ${(error && error.message) || error}`);
+    return fallback;
+  }
+}
+
 function buildScrape(knownLabels, panel, explore) {
-  const infoList = extractInfoList(knownLabels);
-  const technical = extractTechnicalDetails();
+  const problems = [];
+  const infoList = attempt(problems, "labels", () => extractInfoList(knownLabels), {});
+  const technical = attempt(problems, "technical details", extractTechnicalDetails, {});
 
   // The info list wins a collision. Both tables label a row "Engine Capacity"
   // on the English page and they disagree; deciding which is believable is a
   // range question, and ranges are the adapter's.
   // The page's structured data rides beside its labels, never over them: a
   // label the pack declared is the better evidence where both speak (B149).
-  const structured = readStructuredProduct();
+  const structured = attempt(problems, "structured data", readStructuredProduct,
+    { fields: {}, name: "", typed: false, description: "", recognition: null });
   const fields = { ...structured.fields, ...technical, ...infoList };
   // Keep newly introduced labels on known sites too. Otherwise an agent
   // never sees the facts its previous adapter did not know to request.
-  for (const [label, value] of Object.entries(extractOwnLabels(knownLabels))) {
+  const own = attempt(problems, "page labels", () => extractOwnLabels(knownLabels), {});
+  for (const [label, value] of Object.entries(own)) {
     if (!fields[label]) fields[label] = value;
   }
 
   let description = null;
   for (const selector of DESCRIPTION_SELECTORS) {
-    description = textBySelector(selector);
+    description = attempt(problems, "description", () => textBySelector(selector), null);
     if (description) break;
   }
   description = description || structured.description || null;
 
   return {
     url: window.location.href,
-    title: textBySelector("h1.classifiedTitle") || textBySelector("h1")
+    title: attempt(problems, "title", () => textBySelector("h1.classifiedTitle") || textBySelector("h1"), "")
       || structured.name || cleanText(document.title),
     description,
     fields,
@@ -843,15 +861,16 @@ function buildScrape(knownLabels, panel, explore) {
     // recognises, and `typed` for the worker to leave a non-product page alone.
     product: { name: structured.name, typed: structured.typed,
                recognition: structured.recognition },
+    problems,
     listing: {
-      damage_info: extractDamageInfo(panel),
-      equipment: extractEquipment(panel),
+      damage_info: attempt(problems, "damage panel", () => extractDamageInfo(panel), null),
+      equipment: attempt(problems, "equipment panel", () => extractEquipment(panel), {}),
       // The titles, tones, hints and alert rules the panel prints for the two
       // blocks above. They ride with the data they describe, and `listing` is
       // the half of the scrape that never goes on the wire — so the pack's
       // presentation rules reach the renderer without reaching the engine,
       // which has no rule for any of this and should not acquire one.
-      panel: presentationOf(panel),
+      panel: attempt(problems, "panel rules", () => presentationOf(panel), {}),
     },
   };
 }
@@ -889,8 +908,14 @@ function presentationOf(panel) {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "GET_SCRAPE") {
-    sendResponse({ ok: true,
-      payload: buildScrape(request.labels, request.panel, request.explore === true) });
+    // Always an answer. A handler that throws sends nothing, and the worker
+    // could then only say it was unable to read the page, with no reason.
+    try {
+      sendResponse({ ok: true,
+        payload: buildScrape(request.labels, request.panel, request.explore === true) });
+    } catch (error) {
+      sendResponse({ ok: false, error: (error && error.message) || String(error) });
+    }
     return;
   }
 
