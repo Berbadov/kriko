@@ -55,12 +55,12 @@ def test_a_refused_page_climbs_the_rungs_inside_one_budget(monkeypatch):
     monkeypatch.setattr(fetch.network, "urlopen", refuse)
     given = {}
 
-    def hosted(url, endpoint="", timeout=pagereader.TIMEOUT):
+    def hosted(url, endpoint="", timeout=pagereader.TIMEOUT, **_kwargs):
         given["hosted"] = timeout
         time.sleep(0.2)
         return ""
 
-    def local_browser(url, timeout=browser.TIMEOUT):
+    def local_browser(url, timeout=browser.TIMEOUT, **_kwargs):
         given["browser"] = timeout
         return ""
 

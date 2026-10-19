@@ -442,12 +442,50 @@ def build(rows: list, *, title: str, when: str, machine: str = "",
         "title": title,
         "measured_at": when,
         "machine": machine,
+        # What each candidate *was*, as far as the run could tell. The document
+        # used to record `machine` and nothing else, while `MODEL_BENCHMARK.md`
+        # claimed "everything except the model is held identical" — a claim a
+        # reader could not check, because `local:qwen3.5:4b` is a mutable Ollama
+        # tag: a re-pull is a different model under the same name and the
+        # comparison silently stops being one. A digest, where a run can learn
+        # one, is what makes the claim checkable; where it cannot, `caveats`
+        # says so in the document rather than leaving the reader to assume.
+        "models": models(rows),
         "set": agg.summary(rows),
         "candidates": agg.by_candidate(rows),
         "by_dimension": agg.by_dimension(rows),
         "runs": agg.by_case(rows),
         "notes": list(notes if notes is not None else caveats(rows)),
     }
+
+
+def models(rows: list) -> list[dict]:
+    """One row per candidate: the name it ran under and its digest, if known.
+
+    Accepts both shapes `build` is called with — `Measurement` objects from a
+    live sweep and plain dicts after a re-render from stored rows — which is the
+    same tolerance `_string` gives the rest of the document.
+    """
+    def field(row, *names: str) -> str:
+        for name in names:
+            value = row.get(name) if isinstance(row, dict) else getattr(row, name, None)
+            if value:
+                return str(value)
+        return ""
+
+    seen: dict[str, dict] = {}
+    for row in rows:
+        candidate = field(row, "candidate", "candidate_id")
+        if not candidate or candidate in seen:
+            continue
+        seen[candidate] = {
+            "candidate": candidate,
+            "label": field(row, "candidate_label"),
+            "model": field(row, "model"),
+            "harness": field(row, "harness"),
+            "digest": field(row, "model_digest"),
+        }
+    return [seen[key] for key in sorted(seen)]
 
 
 def caveats(rows: list) -> list[str]:
@@ -491,6 +529,20 @@ def caveats(rows: list) -> list[str]:
         out.append(
             "Fewer than four cases were run, so every interval in this report is wide. "
             "Treat the ranking as a direction, not a decision."
+        )
+    # The comparability claim, stated where it can be checked. A model name is
+    # not an identity: `qwen3.5:4b` is a mutable tag, so a re-pull changes what
+    # the number beside it means. Saying which candidates lack a digest is the
+    # difference between a reproducible sweep and a table of numbers with a
+    # version string on top.
+    undigested = [one["candidate"] for one in models(rows) if not one["digest"]]
+    if undigested:
+        out.append(
+            "No model digest is recorded for: "
+            + ", ".join(f"`{one}`" for one in undigested)
+            + ". A sweep is only comparable to another one when the model itself is the "
+              "same bytes, and a tag can be re-pulled; treat a comparison against these "
+              "candidates as a comparison of names."
         )
     return out
 
