@@ -146,6 +146,7 @@ export function usePrefsDoc() {
   const save = useCallback(
     async (patch: Record<string, string>) => {
       setProblem('')
+      const was = doc?.chosen.preferred_harness
       setDoc((current) => (current ? { ...current, chosen: { ...current.chosen, ...patch } } : current))
       if ('preferred_harness' in patch) setPreferred(patch.preferred_harness)
       if (mode !== 'live') {
@@ -163,11 +164,15 @@ export function usePrefsDoc() {
         setDoc(await put<PrefsDoc>('/api/prefs', patch))
         notifyAgentsChanged()
       } catch (error) {
-        setProblem(error instanceof Error ? error.message : 'Could not save.')
-        void load()
+        const why = error instanceof Error ? error.message : 'Could not save.'
+        // Read the saved settings back first: `load` clears the problem as it starts, and the
+        // message was gone before it was drawn. The composer's agent goes back to the saved one too.
+        await load()
+        setProblem(why)
+        if ('preferred_harness' in patch && was) setPreferred(was)
       }
     },
-    [mode, load, setPreferred],
+    [mode, load, setPreferred, doc],
   )
 
   return { doc, problem, busy, save, reload: load }
