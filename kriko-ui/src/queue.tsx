@@ -118,6 +118,8 @@ function useDemoQueue(enabled: boolean): Queue {
 // ---- live ----
 
 const POLL_MS = 700
+/** Failed reads of a running job, in a row, before the queue stops believing it is still running. */
+const POLL_MISSES = 5
 const REFRESH_MS = 4000
 const NOT_IN_CATALOGS = 'not in your catalogs'
 
@@ -272,6 +274,7 @@ function useLiveQueue(enabled: boolean): Queue {
       // 4. Follow it.
       let state = ''
       let message = ''
+      let misses = 0
       for (;;) {
         await sleep(POLL_MS)
         if (!alive.current) return
@@ -283,6 +286,7 @@ function useLiveQueue(enabled: boolean): Queue {
         }
         try {
           const reading = await get<ApiJob>(`/api/jobs/${seg(job)}`)
+          misses = 0
           update(id, { progress: Math.min(0.97, reading.progress ?? 0), line: lineOf(reading) })
           if (reading.done || ['succeeded', 'failed', 'cancelled'].includes(reading.state)) {
             state = reading.state
@@ -290,8 +294,14 @@ function useLiveQueue(enabled: boolean): Queue {
             break
           }
         } catch (error) {
+          // One slow answer from a busy engine is not a failed job: the run goes on without us and
+          // would finish and save while the queue said "failed" and offered to start it again. Give
+          // up only after several in a row, and stop the job when giving up.
+          misses += 1
+          if (misses < POLL_MISSES) continue
           state = 'failed'
           message = reasonOf(error)
+          void post(`/api/jobs/${seg(job)}/cancel`, {}).catch(() => undefined)
           break
         }
       }
