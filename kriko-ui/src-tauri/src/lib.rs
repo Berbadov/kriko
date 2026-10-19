@@ -91,8 +91,51 @@ fn call_engine(base: &str, method: &str, path: &str, body: Option<String>, timeo
   Ok(Reply { status, body })
 }
 
+/// Write a crash to the reader's own folder before the process dies.
+///
+/// The log plugin is installed only in debug builds, so a *release* crash wrote
+/// nothing anywhere: on Windows a GUI app has no console, so the panic message
+/// went to a stderr nothing was reading, and the window simply vanished. This
+/// hook is dependency-free and always installed, and it says where the file is
+/// so the one person who sees it can find it.
+fn install_crash_log() {
+  let previous = std::panic::take_hook();
+  std::panic::set_hook(Box::new(move |info| {
+    if let Some(folder) = engine::data_dir() {
+      let logs = folder.join("logs");
+      let _ = std::fs::create_dir_all(&logs);
+      let line = format!(
+        "{}  Kriko {}  {:?}\n  {}  {}\n",
+        chrono_like_now(),
+        env!("CARGO_PKG_VERSION"),
+        std::thread::current().name().unwrap_or("main"),
+        info.location().map(|l| format!("{}:{}", l.file(), l.line())).unwrap_or_default(),
+        info.payload().downcast_ref::<&str>().map(|s| s.to_string())
+          .or_else(|| info.payload().downcast_ref::<String>().cloned())
+          .unwrap_or_default(),
+      );
+      if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true)
+        .open(logs.join("desktop-crash.log"))
+      {
+        use std::io::Write;
+        let _ = file.write_all(line.as_bytes());
+      }
+    }
+    previous(info);
+  }));
+}
+
+/// Seconds since the epoch, so the crash file needs no clock crate.
+fn chrono_like_now() -> u64 {
+  std::time::SystemTime::now()
+    .duration_since(std::time::UNIX_EPOCH)
+    .map(|d| d.as_secs())
+    .unwrap_or(0)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  install_crash_log();
   let mut builder = tauri::Builder::default();
   // One Kriko per machine: a second launch raises the first and ends, before it starts a second engine.
   // A smoke test sets KRIKO_VERIFY so it tests this build, not an app the reader has open.
@@ -128,6 +171,11 @@ pub fn run() {
       }
       if let Err(error) = shell::build_tray(app.handle()) {
         eprintln!("no tray, so closing the window quits: {error}");
+      }
+      // The window remembers its own shape (see `shell::restore_window`).
+      if let Some(window) = app.get_webview_window("main") {
+        shell::restore_window(&window);
+        shell::watch_window(&window);
       }
       engine::start(app.handle().clone());
       Ok(())

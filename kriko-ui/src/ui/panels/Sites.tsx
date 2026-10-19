@@ -22,7 +22,15 @@ export function SitesPanel() {
   const { sites, wanted, problem, turn, forget, learn } = useSites()
   const [asking, setAsking] = useState<string | null>(null)
 
-  if (!sites) return <p className="panel-note">{problem || 'Reading the sites…'}</p>
+  // A failed read is not a wait — see the same fix in Catalogs and History.
+  if (!sites && problem) {
+    return (
+      <p className="error-note" role="alert">
+        Your sites could not be read. {problem}
+      </p>
+    )
+  }
+  if (!sites) return <p className="panel-note">Reading the sites…</p>
 
   return (
     <div className="panel-body">

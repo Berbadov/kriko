@@ -9,6 +9,7 @@ response shape.
 import json
 import logging
 import threading
+import time
 import urllib.error
 import urllib.request
 from app.providers import network
@@ -19,6 +20,22 @@ log = logging.getLogger(__name__)
 #: cannot make a job look stuck forever. A research run has many of these; a
 #: 300-second default would let one dead host outlast the reader's patience.
 TIMEOUT = 45.0
+
+#: Statuses worth a second attempt: the vendor is busy, not wrong. A 4xx that is
+#: not 429 is the request's fault and repeating it only spends the reader's
+#: money twice.
+RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+#: One attempt plus two retries. `_MEANING` below tells the reader to "try
+#: again" for exactly these statuses, and until this existed nothing did: one
+#: 503 removed a document from a paid run and the reason was a log line.
+RETRY_ATTEMPTS = 3
+
+#: Seconds before the first retry, doubled each time. A Retry-After header wins
+#: when the vendor sends one, capped so a hostile or confused value cannot hold
+#: a job open.
+RETRY_BACKOFF = 0.5
+RETRY_AFTER_CAP = 10.0
 
 
 class StreamCancelled(Exception):
@@ -34,6 +51,10 @@ def post_json(url: str, payload: dict, headers: dict, timeout: float = TIMEOUT) 
     which are both already handled paths. The one thing that must not happen is
     the key reaching the log — so the error is reported by *type*, never by
     echoing the request.
+
+    Retryable failures (see `RETRY_STATUSES`) are attempted again before `{}` is
+    returned, because "the vendor is busy" and "this document says nothing" must
+    not arrive at the caller as the same answer.
     """
     return post_json_or_why(url, payload, headers, timeout)[0]
 
@@ -47,6 +68,36 @@ def post_json_or_why(url: str, payload: dict, headers: dict,
     down" into the same silent empty answer. The reason names the status and
     what it usually means, and never the request — the body of an error may
     quote the key back.
+
+    The last retry's reason is the one returned, so a run that ends in a 503
+    says 503 rather than the first transient blip.
+    """
+    reason = ""
+    for attempt in range(RETRY_ATTEMPTS):
+        payload_out, reason, wait = _post_once(url, payload, headers, timeout)
+        if not reason:
+            return payload_out, ""
+        if wait is None or attempt == RETRY_ATTEMPTS - 1:
+            break
+        # `wait == 0.0` means "retry, at our own pace"; a positive value is the
+        # vendor's Retry-After, honoured as given but never above the cap.
+        delay = wait or RETRY_BACKOFF * (2 ** attempt)
+        log.info("%s: retrying in %.1fs (attempt %d of %d)",
+                 _host(url), delay, attempt + 2, RETRY_ATTEMPTS)
+        time.sleep(min(delay, RETRY_AFTER_CAP))
+    return {}, reason
+
+
+def _post_once(url: str, payload: dict, headers: dict,
+               timeout: float) -> tuple[dict, str, float | None]:
+    """One attempt: the reply, the reason it failed, and how long to wait.
+
+    A `None` wait means do not retry; `0.0` means retry at the caller's own
+    backoff; a positive value is the vendor's own `Retry-After`. A **timeout**
+    is deliberately not retryable: the first attempt already spent the whole
+    budget, the provider is slow rather than busy, and repeating it doubles the
+    cost of learning nothing. A refused connection or a DNS failure does get a
+    retry — those fail in milliseconds and are usually transient.
     """
     request = urllib.request.Request(
         url,
@@ -56,17 +107,41 @@ def post_json_or_why(url: str, payload: dict, headers: dict,
     )
     try:
         with network.urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8", "replace")) or {}, ""
+            return json.loads(response.read().decode("utf-8", "replace")) or {}, "", None
     except urllib.error.HTTPError as error:
         # The status is diagnostic and safe; the body may quote the request.
         log.warning("%s answered HTTP %s", _host(url), error.code)
-        return {}, f"{_host(url)} answered HTTP {error.code}{_MEANING.get(error.code, '')}"
-    except (urllib.error.URLError, TimeoutError, OSError) as error:
+        reason = f"{_host(url)} answered HTTP {error.code}{_MEANING.get(error.code, '')}"
+        if error.code not in RETRY_STATUSES:
+            return {}, reason, None
+        return {}, reason, _retry_after(error) or 0.0
+    except TimeoutError:
+        log.warning("%s timed out", _host(url))
+        return {}, f"{_host(url)} did not answer within {timeout:.0f}s", None
+    except urllib.error.URLError as error:
+        if isinstance(error.reason, TimeoutError):
+            log.warning("%s timed out", _host(url))
+            return {}, f"{_host(url)} did not answer within {timeout:.0f}s", None
+        log.warning("%s unreachable: %s", _host(url), type(error.reason).__name__)
+        return {}, f"{_host(url)} unreachable ({type(error.reason).__name__})", 0.0
+    except OSError as error:
         log.warning("%s unreachable: %s", _host(url), type(error).__name__)
-        return {}, f"{_host(url)} unreachable ({type(error).__name__})"
+        return {}, f"{_host(url)} unreachable ({type(error).__name__})", None
     except (json.JSONDecodeError, ValueError):
         log.warning("%s answered something that is not JSON", _host(url))
-        return {}, f"{_host(url)} answered something that is not JSON"
+        return {}, f"{_host(url)} answered something that is not JSON", None
+
+
+def _retry_after(error: urllib.error.HTTPError) -> float | None:
+    """The vendor's own `Retry-After`, in seconds, when it sent a sane one."""
+    raw = ""
+    try:
+        raw = (error.headers.get("Retry-After") or "").strip()
+    except AttributeError:
+        return None
+    if not raw.isdigit():
+        return None
+    return float(raw)
 
 
 def post_sse_or_why(url: str, payload: dict, headers: dict, timeout: float,

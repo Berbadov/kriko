@@ -40,6 +40,13 @@ fn extension_port_path() -> Option<std::path::PathBuf> {
         .map(|home| std::path::PathBuf::from(home).join(".kriko").join("extension-port"))
 }
 
+/// The reader's own data folder, for the one file the shell writes itself.
+pub fn data_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(|home| std::path::PathBuf::from(home).join(".kriko"))
+}
+
 /// What OpenSERP is started with unless the reader has their own file.
 ///
 /// Two stock settings made a quick look's searches the slowest part of it
@@ -194,12 +201,24 @@ pub fn start(app: AppHandle) {
 }
 
 /// Starts again after a failure.
+///
+/// On a thread of its own: `stop` ends a process tree and waits for it — on
+/// Windows through `taskkill /T`, which blocks until the tree is gone — and this
+/// is called from a Tauri command, which runs on the async runtime. Stopping a
+/// hung engine there stalled every other command the page had in flight, which
+/// is the one moment the window most needs to stay responsive. The command
+/// returns immediately and the window shows Starting, as it does on first launch.
 pub fn restart() {
     let app = sup().lock().unwrap().app.clone();
-    stop();
-    if let Some(app) = app {
-        start(app);
-    }
+    std::thread::Builder::new()
+        .name("engine-restart".into())
+        .spawn(move || {
+            stop();
+            if let Some(app) = app {
+                start(app);
+            }
+        })
+        .ok();
 }
 
 /// Raise the window and tell the page which route the engine named.
@@ -271,12 +290,9 @@ fn sidecar_name() -> &'static str {
 fn attach(base: &str, generation: u64) {
     set_status(generation, Status::Starting(format!("Connecting to {base}…")));
     let deadline = Instant::now() + HEALTH_TIMEOUT;
-    loop {
+    let version = loop {
         match health(base) {
-            Ok(version) => {
-                set_status(generation, Status::Ready { base: base.to_string(), version });
-                return;
-            }
+            Ok(version) => break version,
             Err(e) if Instant::now() >= deadline => {
                 set_status(generation, Status::Failed {
                     title: "Kriko's engine never answered".into(),
@@ -285,6 +301,54 @@ fn attach(base: &str, generation: u64) {
                 return;
             }
             Err(_) => std::thread::sleep(Duration::from_millis(200)),
+        }
+    };
+    set_status(generation, Status::Ready { base: base.to_string(), version });
+    watch_liveness(base, generation);
+}
+
+/// How often a ready engine is asked whether it is still answering.
+const LIVENESS_EVERY: Duration = Duration::from_secs(5);
+
+/// How many consecutive silences mean the engine is gone, not busy.
+const LIVENESS_MISSES: u32 = 3;
+
+/// Keep asking a ready engine whether it is still there.
+///
+/// `Ready` used to be decided once and never revisited. An engine that *exits*
+/// was already caught — the stdout watcher sees EOF and reports the exit code —
+/// but one that stays alive and stops answering cannot be seen that way: a
+/// wedged worker, a deadlocked request. The window went on saying Ready while
+/// every `/api/...` call failed, with no sentence anywhere and no way to act.
+/// This is that case, and the sentence names the remedy.
+///
+/// Returns when the generation moves (a stop, a restart, or a replacement), so
+/// the thread ends with the engine it was watching rather than outliving it.
+fn watch_liveness(base: &str, generation: u64) {
+    let mut misses = 0u32;
+    loop {
+        std::thread::sleep(LIVENESS_EVERY);
+        {
+            let s = sup().lock().unwrap();
+            if !s.started || s.generation != generation {
+                return;
+            }
+        }
+        match health(base) {
+            Ok(_) => misses = 0,
+            Err(_) => {
+                misses += 1;
+                if misses >= LIVENESS_MISSES {
+                    set_status(generation, Status::Failed {
+                        title: "Kriko's engine stopped answering".into(),
+                        detail: format!(
+                            "{base}/api/health stopped answering. Choose Try again to \
+                             start it; your catalogs and history are untouched."
+                        ),
+                    });
+                    return;
+                }
+            }
         }
     }
 }

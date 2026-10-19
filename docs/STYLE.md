@@ -6,6 +6,19 @@ approved words. It is free from [asd-ste100.org](https://www.asd-ste100.org/).
 
 A rule below is a requirement. A page that breaks a rule is wrong.
 
+## Where these rules are checked
+
+One rule has a test, and it is the one a machine can judge: rule 12, the ban on
+an em dash, a semicolon and a contraction. `test_reader_words.py` reads the
+words a **reader sees in the interface** — `extension/**` and the app's own
+strings — and fails on them. The number of them only goes down.
+
+The rest of this page is about the documents in `docs/`, and there is no test
+for it. A reviewer reads those. Said plainly because the alternative was in
+place until now: a rule that claims to cover every page while a test covers one
+part of the tree is a rule two people can read two ways, and the last sweep
+found 37 em dashes in documents that claim to forbid them.
+
 ## The rules
 
 1. **Use an approved word only in its given part of speech and meaning.** One

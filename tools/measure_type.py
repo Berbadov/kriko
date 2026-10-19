@@ -14,7 +14,7 @@ from pathlib import Path
 
 from fontTools.ttLib import TTFont
 from fontTools.varLib.instancer import instantiateVariableFont
-from PIL import Image, ImageDraw, ImageFont
+from PIL import ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 NM = ROOT / "kriko-mobile" / "node_modules"

@@ -32,12 +32,15 @@ history, a screenshot or a support log, and there is no feature that needs it:
 replacing a key you cannot see costs one paste.
 """
 
+import logging
 import os
 import stat
 from dataclasses import dataclass
 from pathlib import Path
 
 from app.web.settings import KRIKO_HOME
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -148,11 +151,24 @@ def load(path: Path | None = None, environ: dict | None = None) -> list[str]:
     Never overwrites: see the module docstring on precedence. Returns the
     variable names it set, so a startup log can say *how many* keys were
     loaded without saying what any of them is.
+
+    Only a name this module knows is copied. `save` has always enforced
+    `PROVIDERS`; `load` did not, and the docstring above says why that matters
+    — a file that can name any variable is an arbitrary-environment write, and
+    `PYTHONPATH`, `LD_PRELOAD` or `NODE_OPTIONS` in `~/.kriko/env` would be
+    honoured by the next child process this app starts. The file is the
+    reader's own, which is why this is a boundary rather than an attack: it is
+    the boundary the module claims to have.
     """
     target = environ if environ is not None else os.environ
     file = path or env_path()
+    allowed = {provider.env for provider in PROVIDERS}
     set_now = []
     for name, value in parse(_read(file)).items():
+        if name not in allowed:
+            log.warning("%s names %s, which this app does not use; ignored",
+                        file.name, name)
+            continue
         if name not in target:
             target[name] = value
             set_now.append(name)

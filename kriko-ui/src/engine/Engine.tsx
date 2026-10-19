@@ -122,6 +122,30 @@ export function EngineProvider({ children }: { children: ReactNode }) {
     const again = inShell() ? import('@tauri-apps/api/core').then(({ invoke }) => invoke('engine_restart')) : Promise.resolve()
     void again.catch(() => undefined).then(() => setAttempt((n) => n + 1))
   }, [])
+
+  // And keep listening afterwards. Mode was resolved once, at startup, so an
+  // engine that failed *later* — the shell reports it now that it watches
+  // liveness (`engine.rs::watch_liveness`) — left this window on `live` while
+  // every call failed, which looks exactly like a store with nothing in it.
+  useEffect(() => {
+    if (mode !== 'live' || !inShell()) return
+    let live = true
+    const timer = window.setInterval(() => {
+      void import('@tauri-apps/api/core')
+        .then(({ invoke }) => invoke<{ state: string; title?: string; detail?: string }>('engine_status'))
+        .then((status) => {
+          if (!live || status.state !== 'failed') return
+          setProblem(`${status.title ?? 'The engine stopped'}. ${status.detail ?? ''}`.trim())
+          setMode('demo')
+        })
+        .catch(() => undefined)
+    }, 5000)
+    return () => {
+      live = false
+      window.clearInterval(timer)
+    }
+  }, [mode])
+
   const value = useMemo(() => ({ mode, problem, agents, preferred, setPreferred, retry }), [mode, problem, agents, preferred, retry])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

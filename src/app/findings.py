@@ -202,7 +202,7 @@ def accept_findings(
                 datetime.now(timezone.utc).isoformat(timespec="seconds"),
             ),
         )
-        evidence_id = ids.evidence_id(source_id, quote)
+        evidence_id = ids.evidence_id(claim_id, source_id, quote)
         had_evidence = conn.execute(
             "SELECT 1 FROM evidence WHERE evidence_id = ? AND pack_id = ?",
             (evidence_id, pack_id),
@@ -277,7 +277,7 @@ def accept_findings(
             " claim_id, source_id, quote, locator, stance, independent)"
             " VALUES (?,?,?,?,?,?,?,?)",
             (
-                ids.evidence_id(source_id, quote),
+                ids.evidence_id(claim_id, source_id, quote),
                 pack_id,
                 claim_id,
                 source_id,
