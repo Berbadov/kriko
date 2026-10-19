@@ -54,6 +54,35 @@ def test_the_brief_asks_a_question_first_and_for_a_short_sourced_answer():
     assert "'Sources:'" in brief
 
 
+def test_compatibility_followup_demands_exact_pc_and_vehicle_fitment_evidence():
+    for question in ("Will this CPU fit my motherboard?",
+                     "Does this part fit my 2019 Golf engine?"):
+        brief = followup.web_brief(question, product="Part X")
+        assert followup.classify(question) == "compatibility"
+        assert "exact item and every relevant constraint" in brief
+        assert "engine code" in brief
+        assert "socket, chipset and BIOS support" in brief
+        assert "compatibility is unconfirmed" in brief
+
+
+def test_seller_followup_searches_independent_forums_without_treating_claims_as_facts():
+    brief = followup.web_brief("Is this seller trustworthy?", product="Part X",
+                               seller="Example Motors")
+    assert followup.classify("Is this seller trustworthy?") == "seller"
+    assert "Seller: Example Motors" in brief
+    assert "independent reviews, consumer or owner forums" in brief
+    assert "distinguish an allegation from a verified finding" in brief
+    assert "Never infer fraud" in brief
+
+
+def test_market_region_guidance_is_validated_and_requires_source_applicability():
+    brief = followup.web_brief("Will this part fit?", market_region="EU")
+    assert "reader's preferred market is European Union (EU)" in brief
+    assert "do not transfer a claim from another market" in brief
+    assert "made-up prompt text" not in followup.web_brief(
+        "Will this part fit?", market_region="made-up prompt text")
+
+
 def test_the_sources_line_comes_off_the_answer_and_names_its_pages():
     assert followup.split("It is quiet.\nSources: https://a.test/x https://b.test/y.") == (
         "It is quiet.", ["https://a.test/x", "https://b.test/y"])

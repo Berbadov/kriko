@@ -21,6 +21,7 @@ minutes, but we can refuse a line that does not even claim a source.
 import re
 from urllib.parse import urlparse
 
+from app.research_policy import COMPATIBILITY_GUIDANCE, market_guidance
 from kriko.research.agent import REFUSED_PAGE
 
 #: Enough to be worth reading on a listing, few enough to be done in the time.
@@ -210,7 +211,8 @@ REPLY_SCHEMA: dict = {
 
 def brief(product: str, principle: str = "", page: dict | None = None,
           packs: str = "", attributes: str = "", *, compact: bool = False,
-          max_sources: int = 5, language: str = "auto") -> str:
+          max_sources: int = 5, language: str = "auto",
+          market_region: str = "auto") -> str:
     """The quick pass, as instructions. Fast on purpose: a few searches, no essay.
 
     `page` is what the listing itself says (`app.pagefacts`, B150): the
@@ -230,6 +232,8 @@ def brief(product: str, principle: str = "", page: dict | None = None,
     rule = language_rule(language)
     listing = pagefacts.block(page)
     offer = offer_block(page)
+    market = market_guidance(market_region)
+    market_block = f"\n## Reader's market\n\n{market}\n" if market else ""
     bar = (
         f"\n## What is worth saying\n\nThe installed pack's own bar, verbatim:\n\n"
         f"{principle.strip()}\n"
@@ -255,12 +259,13 @@ def brief(product: str, principle: str = "", page: dict | None = None,
         "and a verbatim quote. Never estimate, convert or average a price, and "
         "never carry one over from a similar product. "
     )
+    compatibility_rule = COMPATIBILITY_GUIDANCE
     if compact:
         return (
             f"# Quick look: what is known to go wrong with this one?\n\n{product}\n"
-            f"{listing}{offer}{bar}{belongs}{named}\n"
+            f"{listing}{offer}{market_block}{bar}{belongs}{named}\n"
             "Use only the fetched pages below. Be specific to this variant. "
-            f"{SHOP_RULE} {rule} "
+            f"{SHOP_RULE} {compatibility_rule} {rule} "
             f"Return one JSON object, with short fields and at most {MAX_RISKS} risks "
             f"and {MAX_SPECS} specifications. Every risk needs an exact URL and a "
             "verbatim quote from that page. Leave unsupported items out. "
@@ -280,7 +285,7 @@ def brief(product: str, principle: str = "", page: dict | None = None,
     return f"""# Quick look: what is known to go wrong with this one?
 
     {product}
-{listing}{offer}
+{listing}{offer}{market_block}
 Someone is looking at this exact product right now and wants to know what to
 worry about **before** they spend money on it. Answer the way a knowledgeable
 friend would in a chat: fast, specific, sourced.
@@ -290,6 +295,7 @@ friend would in a chat: fast, specific, sourced.
   that refuses you does not count toward the limit. Stop at that limit.
 * {REFUSED_PAGE}
 * Be specific to this exact variant. Skip anything true of every product like it.
+* {compatibility_rule}
 * Mileage, age, ordinary wear and hypothetical failures alone are not
   documented faults. Name the failing component or mechanism and establish
   the source's applicability to this variant.
@@ -323,6 +329,12 @@ price**, and never carry one over from a similar product. An unknown price is
 an empty `price` object, not a guess.
 
 ## Reply
+
+There is no target number of lines: choose a concise report length that
+fits the product's complexity and the strength of the evidence. Use fewer findings
+for a simple product or thin evidence, and explain the decisive constraints
+when a compatibility question has several independent dimensions. Do not add
+speculative or generic padding to make the report longer.
 
 At most {MAX_RISKS} risks, as one JSON object in a ```json fence, as the last
 thing you say. `category` is what kind of product this is, in two to four
@@ -672,7 +684,8 @@ def follow_up(question: str, product: str, assumed: str, risks: list[dict],
               specs: list[dict], *, page: dict | None = None,
               page_url: str = "", category: str = "",
               evidence_pages: list[dict] | None = None,
-              coverage: dict | None = None) -> str:
+              coverage: dict | None = None,
+              market_region: str = "auto") -> str:
     """A reader's follow-up on a quick look: the question, searched on the web.
 
     The panel's question box (#112). The quick look's own findings go beside
@@ -762,4 +775,5 @@ def follow_up(question: str, product: str, assumed: str, risks: list[dict],
         lines += ["What the quick look found so far (a starting point, not the limit):",
                   *findings]
     return followup.web_brief(question, product=product, context="\n".join(lines),
-                              kind=kind, seller=seller)
+                              kind=kind, seller=seller,
+                              market_region=market_region)

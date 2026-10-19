@@ -110,6 +110,7 @@ LOCAL_CONTEXT_TOKENS = LOCAL_CONTEXT
 LOCAL_GPU_LAYERS = "local_gpu_layers"
 LOCAL_OUTPUT_LANGUAGE = "local_output_language"
 LOCAL_SEARCH_LANGUAGE = "local_search_language"
+MARKET_REGION = "market_region"
 # Optional OpenAI-compatible API root. The key itself remains in `app/keys.py`.
 LLM_BASE_URL = "llm_base_url"
 # Names used by the local research provider's constructor.
@@ -118,6 +119,39 @@ SEARCH_LANGUAGE = LOCAL_SEARCH_LANGUAGE
 LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT,
               LOCAL_DEVICE, LOCAL_CONTEXT, LOCAL_GPU_LAYERS,
               LOCAL_OUTPUT_LANGUAGE, LOCAL_SEARCH_LANGUAGE)
+REGIONS = {
+    "auto": "Automatic",
+    "US": "United States",
+    "CA": "Canada",
+    "MX": "Mexico",
+    "BR": "Brazil",
+    "AR": "Argentina",
+    "GB": "United Kingdom",
+    "EU": "European Union",
+    "DE": "Germany",
+    "FR": "France",
+    "ES": "Spain",
+    "IT": "Italy",
+    "PT": "Portugal",
+    "NL": "Netherlands",
+    "PL": "Poland",
+    "SE": "Sweden",
+    "NO": "Norway",
+    "CH": "Switzerland",
+    "IE": "Ireland",
+    "AU": "Australia",
+    "NZ": "New Zealand",
+    "JP": "Japan",
+    "KR": "South Korea",
+    "CN": "China",
+    "IN": "India",
+    "SG": "Singapore",
+    "AE": "United Arab Emirates",
+    "SA": "Saudi Arabia",
+    "ZA": "South Africa",
+    "RU": "Russia",
+    "TR": "Türkiye",
+}
 
 #: What every agent run reads, set once on the Agents tab: how many sources
 #: at most (empty or 0 leaves it to the run), and which kinds of source to go
@@ -192,7 +226,8 @@ def run_concurrency(conn) -> int:
 
 
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
-        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, LLM_BASE_URL, *RESEARCH_KEYS,
+        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
+        LLM_BASE_URL, *RESEARCH_KEYS,
         RUN_CONCURRENCY, AGENT_TRANSPORT, CODEX_TRANSPORT)
 
 
@@ -222,6 +257,7 @@ def read(conn) -> dict:
     values[LOCAL_CONTEXT] = values[LOCAL_CONTEXT] or "4096"
     values[LOCAL_OUTPUT_LANGUAGE] = values[LOCAL_OUTPUT_LANGUAGE] or "auto"
     values[LOCAL_SEARCH_LANGUAGE] = values[LOCAL_SEARCH_LANGUAGE] or "en"
+    values[MARKET_REGION] = values[MARKET_REGION] or "auto"
     return values
 
 
@@ -481,6 +517,8 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
         "dirs_env": harness.DIRS_ENV,
         "source_kinds": [{"id": one, "label": label}
                          for one, label in SOURCE_KINDS.items()],
+        "market_regions": [{"id": code, "label": label}
+                           for code, label in REGIONS.items()],
         "research": research_options(conn),
         "search_providers": [
             {
