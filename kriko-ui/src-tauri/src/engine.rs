@@ -6,7 +6,9 @@
 //!
 //! 1. `KRIKO_URL` set: attach to that address, start nothing.
 //! 2. `kriko-sidecar[.exe]` beside this app executable (the installed layout,
-//!    with its `_internal` folder next to it): start it.
+//!    with its `_internal` folder next to it): start it, unless a newer engine
+//!    was staged by an update (`versions.rs`), which is started instead and is
+//!    set aside for the one beside this app if it cannot start.
 //! 3. An engine already answering on the extension port: attach to it.
 //! 4. A source checkout: `python -m app.sidecar` (`KRIKO_PYTHON` picks the
 //!    interpreter).
@@ -25,6 +27,8 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Emitter};
+
+use crate::versions;
 
 /// The sidecar prints this, then its port. Must equal `app.sidecar.PORT_LINE`.
 pub const PORT_LINE: &str = "KRIKO_PORT";
@@ -131,6 +135,9 @@ struct Supervisor {
     stderr: String,
     started: bool,
     generation: u64,
+    /// The staged engine folder this run was started from, when it was not the
+    /// one beside the app. Set aside if the run never becomes healthy.
+    staged: Option<std::path::PathBuf>,
 }
 
 fn sup() -> &'static Mutex<Supervisor> {
@@ -147,6 +154,7 @@ fn sup() -> &'static Mutex<Supervisor> {
             stderr: String::new(),
             started: false,
             generation: 0,
+            staged: None,
         })
     })
 }
@@ -202,6 +210,23 @@ pub fn restart() {
     }
 }
 
+/// A staged engine that never became healthy is set aside, and the engine is
+/// started again, which then picks the next one down, ending at the engine
+/// beside this app. True when it did so; false when this run was not a staged one.
+fn fall_back(generation: u64, why: &str) -> bool {
+    let dir = {
+        let mut s = sup().lock().unwrap();
+        if !s.started || s.generation != generation {
+            return false;
+        }
+        s.staged.take()
+    };
+    let Some(dir) = dir else { return false };
+    versions::mark_bad(&dir, why);
+    restart();
+    true
+}
+
 /// Raise the window and tell the page which route the engine named.
 fn focus(route: String) {
     let Some(app) = sup().lock().unwrap().app.clone() else { return };
@@ -230,7 +255,20 @@ fn supervise(generation: u64) {
         .and_then(|exe| exe.parent().map(|dir| dir.join(sidecar_name())))
         .filter(|path| path.is_file());
     let mut command = match beside {
-        Some(path) => Command::new(path),
+        Some(path) => {
+            // A newer engine staged by an update, else the one beside this app.
+            // The fallback is never in doubt: that engine is not written by an update.
+            let staged = versions::engines_root().and_then(|root| {
+                versions::pick(&root, env!("CARGO_PKG_VERSION"), env!("CARGO_PKG_VERSION"), sidecar_name())
+            });
+            match staged {
+                Some(engine) => {
+                    sup().lock().unwrap().staged = Some(engine.dir);
+                    Command::new(engine.program)
+                }
+                None => Command::new(path),
+            }
+        }
         None => {
             // no bundled engine: a running one is the next best thing
             let fixed = format!("http://127.0.0.1:{extension_port}");
@@ -249,6 +287,9 @@ fn supervise(generation: u64) {
         }
     };
     command.arg("--extension-port").arg(extension_port.to_string());
+    // What the engine cannot know: which app it is running under. It offers an
+    // engine update only to an app that can restart into one.
+    command.env("KRIKO_SHELL_VERSION", env!("CARGO_PKG_VERSION"));
     spawn(command, generation);
 }
 
@@ -277,6 +318,7 @@ fn attach(base: &str, generation: u64) {
                 set_status(generation, Status::Ready { base: base.to_string(), version });
                 return;
             }
+            Err(_) if Instant::now() >= deadline && fall_back(generation, "did not answer in time") => return,
             Err(e) if Instant::now() >= deadline => {
                 set_status(generation, Status::Failed {
                     title: "Kriko's engine never answered".into(),
@@ -304,6 +346,9 @@ fn spawn(mut command: Command, generation: u64) {
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(e) => {
+            if fall_back(generation, "could not be started") {
+                return;
+            }
             set_status(generation, Status::Failed {
                 title: "Kriko's engine could not be started".into(),
                 detail: format!("{:?}: {e}", command.get_program()),
@@ -373,6 +418,14 @@ fn spawn(mut command: Command, generation: u64) {
     if !s.started || s.generation != generation {
         return; // stopped on purpose
     }
+    // A staged engine that ended without ever answering is not an engine to keep.
+    if s.staged.is_some() && !matches!(s.status, Status::Ready { .. }) {
+        drop(s);
+        if fall_back(generation, "stopped before it answered") {
+            return;
+        }
+        s = sup().lock().unwrap();
+    }
     let said = s.stderr.trim().to_string();
     let detail = if said.is_empty() {
         format!(
@@ -399,6 +452,7 @@ pub fn stop() {
         let mut s = sup().lock().unwrap();
         s.started = false;
         s.generation += 1;
+        s.staged = None;
         (s.child.take(), s.stdin.take(), s.openserp_child.take())
     };
     drop(stdin); // the polite way: the sidecar watches this pipe

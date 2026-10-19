@@ -244,13 +244,15 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               <small>
                 {update.phase === 'downloading'
                   ? 'Downloading…'
-                  : update.phase === 'installing'
-                    ? 'Installing. Kriko opens again by itself.'
-                    : update.problem ||
-                      (update.release ? `Kriko ${update.release.version} is available.` : update.checked ? 'This is the newest version.' : 'Looked for on its own while Kriko is open.')}
+                  : update.phase === 'restarting'
+                    ? 'Starting the new engine…'
+                    : update.phase === 'installing'
+                      ? 'Installing. Kriko opens again by itself.'
+                      : update.problem ||
+                        (update.release ? `Kriko ${update.release.version} is available.` : update.checked ? 'This is the newest version.' : 'Looked for on its own while Kriko is open.')}
               </small>
             </span>
-            {update.release && update.canInstall ? (
+            {update.release && (update.canInstall || update.release.engine) ? (
               <button className="btn primary" onClick={() => void update.install()} disabled={update.phase !== 'idle'}>
                 Update now
               </button>
