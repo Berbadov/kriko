@@ -815,6 +815,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   text         TEXT NOT NULL DEFAULT '',
   steps_json   TEXT NOT NULL DEFAULT '[]',
   sources_json TEXT NOT NULL DEFAULT '[]',
+  activity_json TEXT NOT NULL DEFAULT '[]',
   -- The products the turn found, as the screen's cards. A card is drawn from
   -- this, never re-derived from the answer's prose, so the products a reader
   -- saw when a turn ran are the products they see when they open it again.
@@ -3210,6 +3211,7 @@ def _chat_message(row: sqlite3.Row) -> dict:
         "text": row["text"],
         "steps": json.loads(row["steps_json"] or "[]"),
         "sources": json.loads(row["sources_json"] or "[]"),
+        "activity": json.loads((row["activity_json"] if "activity_json" in row.keys() else "") or "[]"),
         # A message stored before this column existed reads as no products,
         # which is what it has: the card list was never recorded for it.
         "products": json.loads((row["products_json"] if "products_json" in row.keys() else "") or "[]"),
@@ -3295,7 +3297,7 @@ def chat_history(conn: sqlite3.Connection, thread_id: str, *,
 def add_chat_message(
     conn: sqlite3.Connection, thread_id: str, *, role: str, text: str,
     steps: list | None = None, sources: list | None = None,
-    products: list | None = None, job_id: str = "", agent: dict | None = None,
+    products: list | None = None, activity: list | None = None, job_id: str = "", agent: dict | None = None,
 ) -> dict:
     """Store one message and move its thread to the top of the list."""
     if role not in ("reader", "agent"):
@@ -3305,11 +3307,11 @@ def add_chat_message(
     now = _now()
     conn.execute(
         "INSERT INTO chat_messages (message_id, thread_id, role, text, steps_json,"
-        " sources_json, products_json, job_id, created_at, agent_json)"
-        " VALUES (?,?,?,?,?,?,?,?,?,?)",
+        " sources_json, products_json, activity_json, job_id, created_at, agent_json)"
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
         (message_id, thread_id, role, text, json.dumps(steps or [], default=str),
          json.dumps(sources or [], default=str),
-         json.dumps(products or [], default=str), job_id, now,
+         json.dumps(products or [], default=str), json.dumps(activity or [], default=str), job_id, now,
          json.dumps({k: str(v) for k, v in (agent or {}).items()
                      if k in ("id", "label", "model")})))
     conn.execute("UPDATE chat_threads SET updated_at = ? WHERE thread_id = ?",

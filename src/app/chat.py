@@ -907,11 +907,45 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
     # The product cards, as the trail grows: a reader sees the products a turn
     # found while it is still reading them, not only when the answer lands.
     live_products: list[dict] = []
+    activity: list[dict] = []
 
     def snapshot(answer: str = "", sources: Sequence[str] | None = None) -> dict:
         return {"steps": [dict(one) for one in steps], "answer": answer,
                 "sources": list(live_sources if sources is None else sources),
-                "products": [dict(one) for one in live_products]}
+                "products": [dict(one) for one in live_products],
+                "activity": [dict(one) for one in activity]}
+
+    def record_web_activity(query: str, out: dict) -> None:
+        """Keep the exact web leads and per-page read outcomes for the UI."""
+        results = [row for row in out.get("search_results", [])
+                   if isinstance(row, dict)]
+        attempted = out.get("pages_attempted", 0)
+        read_count = out.get("pages_read", 0)
+        attempted = (attempted if isinstance(attempted, int)
+                     and not isinstance(attempted, bool) else 0)
+        read_count = (read_count if isinstance(read_count, int)
+                      and not isinstance(read_count, bool) else 0)
+        search_id = f"web-{len(activity) + 1}"
+        activity.append({
+            "id": search_id, "kind": "search", "query": query,
+            "state": "failed" if out.get("error") else "done",
+            "search_results": [str(row.get("url") or "") for row in results
+                               if row.get("url")],
+            "pages_attempted": attempted,
+            "pages_read": read_count,
+        })
+        for index, row in enumerate(results):
+            url = str(row.get("url") or "")
+            if not url:
+                continue
+            was_attempted = bool(row.get("read_attempted"))
+            was_read = bool(row.get("page_read"))
+            activity.append({
+                "id": f"{search_id}-read-{index + 1}", "kind": "read",
+                "title": str(row.get("title") or ""), "url": url,
+                "state": "done" if was_read else "failed",
+                "attempted": was_attempted,
+            })
 
     hooks.set(0.1, "reading the question")
     last_streamed_answer = ""
@@ -966,6 +1000,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         started = time.monotonic()
         out = chatdata.run("web_search", ctx, web_call["args"])
         hooks.check()
+        record_web_activity(query, out)
         _finish(step, out, int((time.monotonic() - started) * 1000))
         hooks.log(f"{step['label']}" + (f": {step['detail']}" if step["detail"] else ""))
         trail.append({"calls": [web_call], "results": [out]})
@@ -979,6 +1014,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
             began = time.monotonic()
             out = chatdata.run("web_search", ctx, retry_call["args"])
             hooks.check()
+            record_web_activity(plain, out)
             _finish(retry_step, out, int((time.monotonic() - began) * 1000))
             hooks.log(f"{retry_step['label']}"
                       + (f": {retry_step['detail']}" if retry_step["detail"] else ""))
@@ -1029,6 +1065,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         return {
             "answer": answer, "sources": sources, "steps": steps,
             "products": products_from(trail),
+            "activity": [dict(one) for one in activity],
             "agent_calls": spent["calls"], "search_rounds": 1,
             "fallback": False, "need": {},
         }
@@ -1056,6 +1093,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         hooks.set(1.0, "answered" if answer else "the agent printed nothing")
         return {
             "answer": answer, "sources": [], "steps": [], "products": [],
+            "activity": [],
             "agent_calls": spent["calls"], "search_rounds": 0,
             "fallback": False, "need": {},
         }
@@ -1120,6 +1158,7 @@ def run_turn(message: str, *, ask: Ask, ctx: chatdata.Context,
         "sources": sources,
         "steps": steps,
         "products": products_from(trail, sources),
+        "activity": [dict(one) for one in activity],
         "agent_calls": spent["calls"],
         "search_rounds": rounds,
         "fallback": fallback,

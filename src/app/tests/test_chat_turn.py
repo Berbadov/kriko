@@ -573,6 +573,11 @@ def test_web_pages_are_gathered_in_bounded_parallel(ctx):
     assert len(out["rows"]) == chatdata.WEB_RESULTS_CAP
     assert sum(row["page_read"] for row in out["rows"]) == chatdata.WEB_PAGES_CAP
     assert all(row["page_read"] for row in out["rows"][:chatdata.WEB_PAGES_CAP])
+    assert out["pages_attempted"] == chatdata.WEB_PAGES_CAP
+    assert out["pages_read"] == chatdata.WEB_PAGES_CAP
+    assert len(out["search_results"]) == chatdata.WEB_RESULTS_CAP
+    assert all(row["read_attempted"] for row in out["rows"][:chatdata.WEB_PAGES_CAP])
+    assert not any(row["read_attempted"] for row in out["rows"][chatdata.WEB_PAGES_CAP:])
 
 
 def test_web_pages_keep_useful_excerpts_exact_urls_and_stay_bounded(ctx):
@@ -614,6 +619,9 @@ def test_page_read_deadline_signals_active_workers(ctx, monkeypatch):
 
     assert started.is_set()
     assert out["rows"][0]["page_read"] is False
+    assert out["pages_attempted"] == 1
+    assert out["pages_read"] == 0
+    assert out["search_results"][0]["read_attempted"] is True
     assert stopped.wait(1.0)
 
 

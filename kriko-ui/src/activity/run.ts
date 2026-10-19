@@ -8,7 +8,28 @@ export type StepState = 'todo' | 'active' | 'done'
 
 export type Row =
   | { kind: 'thought'; id: string; text: string; done: boolean }
-  | { kind: 'tool'; id: string; name: string; detail: string; startedAt: number; ms?: number; failed?: boolean }
+  | {
+      kind: 'tool'
+      id: string
+      name: string
+      detail: string
+      startedAt: number
+      ms?: number
+      failed?: boolean
+      /** Exact URL observed by the runner, when the runner reports one. */
+      url?: string
+      /** Counts reported by the search/read implementation, never inferred from other rows. */
+      counts?: { searchResults?: number; pagesAttempted?: number; pagesRead?: number }
+    }
+  | {
+      kind: 'event'
+      id: string
+      text: string
+      stage?: string
+      level?: 'info' | 'warn' | 'error'
+      sourceUrl?: string
+      counts?: { searchResults?: number; pagesAttempted?: number; pagesRead?: number }
+    }
   | { kind: 'plan'; id: string; steps: { label: string; state: StepState }[] }
 
 /** A product that a turn found in the reader's own catalogs. */
@@ -45,6 +66,7 @@ export interface Turn {
   prompt: string
   answer: string
   products: Product[]
+  rows?: Row[]
   /** Why the turn failed, when it did. */
   error?: string
   agent?: AgentRef
@@ -69,7 +91,7 @@ export interface RunApi {
 export const turnOf = (run: Run): Turn | null =>
   run.status === 'idle' || run.status === 'running' || !run.prompt
     ? null
-    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, error: run.error, agent: run.agent }
+    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, error: run.error, agent: run.agent }
 
 export type Action =
   | { type: 'start'; prompt: string; now: number }
