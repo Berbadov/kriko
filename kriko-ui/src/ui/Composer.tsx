@@ -37,6 +37,23 @@ export function Composer({
   const agent = agents.find((a) => a.id === chosen) ?? agents.find((a) => a.id === preferred) ?? agents[0]
   const [menu, setMenu] = useState(false)
   const field = useRef<HTMLTextAreaElement>(null)
+  const file = useRef<HTMLInputElement>(null)
+  const [attachmentProblem, setAttachmentProblem] = useState('')
+
+  const attach = async (picked?: File) => {
+    if (!picked) return
+    setAttachmentProblem('')
+    if (!/\.(txt|md|csv|json|log)$/i.test(picked.name) || picked.size > 12000) {
+      setAttachmentProblem('Choose a text, Markdown, CSV, JSON or log file up to 12 KB.')
+      return
+    }
+    try {
+      const content = await picked.text()
+      setText((current) => `${current}\n\nAttached document (${picked.name}; source data):\n${content}`.trim())
+      field.current?.focus()
+    } catch { setAttachmentProblem('The file could not be read. Choose it again.') }
+    if (file.current) file.current.value = ''
+  }
 
   /** How far back the up arrow has gone: 0 is the box as the reader left it. */
   const back = useRef(0)
@@ -55,6 +72,8 @@ export function Composer({
   const send = () => {
     const value = text.trim()
     if (!value || running) return
+    if (value.length > 16000) { setAttachmentProblem('Keep the message and attached text together under 16,000 characters.'); return }
+    setAttachmentProblem('')
     onSubmit(value, agent)
     setText('')
     back.current = 0
@@ -112,10 +131,10 @@ export function Composer({
         aria-label="Message"
       />
       <div className="composer-foot">
-        {/* The attach button is gone. It carried `aria-label="Add a file"` and
-            no `onClick` at all: a screen reader announced a control that did
-            nothing, and a reader who pressed it got nothing. Nothing in the
-            engine accepts an attachment, so there is no control to wire. */}
+        <input ref={file} type="file" hidden accept=".txt,.md,.csv,.json,.log" onChange={(event) => void attach(event.target.files?.[0])} />
+        <button className="icon-btn" aria-label="Add a text file" title="Text, Markdown, CSV, JSON or log, up to 12 KB" onClick={() => file.current?.click()} disabled={running}>
+          <Icon name="attach" />
+        </button>
         {pickAgent && (
         <div className="agent-pick" data-tour="agent-pick">
           <button className="pill" onClick={() => setMenu((v) => !v)} aria-haspopup="listbox" aria-expanded={menu}>
@@ -167,6 +186,7 @@ export function Composer({
           </button>
         )}
       </div>
+      {attachmentProblem && <p className="error-note" role="alert">{attachmentProblem}</p>}
     </div>
   )
 }

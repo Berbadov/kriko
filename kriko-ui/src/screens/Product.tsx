@@ -11,6 +11,7 @@ import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
 import { PixelGlyph } from '../ui/PixelGlyph'
+import { CheckContext, RiskEvidence } from '../ui/CheckContext'
 
 const LEVEL_WORD: Record<Level, string> = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low', unrated: 'Unrated' }
 const DEMO_ANSWER = 'The maker states a limit of **40 minutes** of full load.\n\n- Short jobs are fine.\n- For long jobs, add a fan or pick another unit.'
@@ -37,9 +38,11 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   const { add, slots } = useCompare()
   const [check, setCheck] = useState<Check | null>(null)
   const [problem, setProblem] = useState('')
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const [turns, setTurns] = useState<Turn[]>([])
   const alive = useRef(true)
   const end = useRef<HTMLDivElement>(null)
+  const stopRequested = useRef(false)
 
   useEffect(() => {
     alive.current = true
@@ -55,7 +58,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   const settle = useCallback(
     (id: string, job: ApiJob) => {
       if (job.state === 'succeeded') patch(id, { answer: answerOf(job) || 'No answer came back.', state: 'done' })
-      else patch(id, { state: 'failed', note: job.message || `The research ${job.state}.` })
+      else patch(id, { answer: answerOf(job), state: 'failed', note: job.message || `The research ${job.state}.` })
     },
     [patch],
   )
@@ -87,16 +90,16 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
         )
         for (const j of reply.items) {
           if (j.done) continue
-          followJob(j.job_id, () => undefined, () => live)
+          followJob(j.job_id, (reading) => patch(j.job_id, { answer: answerOf(reading), note: reading.message || 'Working' }), () => live)
             .then((ended) => ended && settle(j.job_id, ended))
             .catch((e) => patch(j.job_id, { state: 'failed', note: reasonOf(e) }))
         }
       })
-      .catch(() => undefined)
+      .catch((error: unknown) => live && setProblem(`Could not read saved questions. ${reasonOf(error)}`))
     return () => {
       live = false
     }
-  }, [lookupId, settle, patch])
+  }, [lookupId, settle, patch, loadAttempt])
 
   const lastSize = turns.length ? turns[turns.length - 1].answer.length : 0
   useEffect(() => {
@@ -104,7 +107,9 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
   }, [turns.length, lastSize, m.on])
 
   const ask = async (text: string) => {
+    stopRequested.current = false
     const id = `local-${Date.now()}`
+    let activeId = id
     setTurns((list) => [...list, { id, text, answer: '', state: 'running', note: '' }])
     if (mode !== 'live') {
       await new Promise((resolve) => window.setTimeout(resolve, 1200))
@@ -113,36 +118,22 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
     }
     try {
       const sent = await post<{ job_id: string }>(`/api/lookup/${seg(lookupId)}/questions`, { question: text })
+      activeId = sent.job_id
+      if (stopRequested.current) await post(`/api/jobs/${seg(sent.job_id)}/cancel`, {})
       setTurns((list) => list.map((t) => (t.id === id ? { ...t, id: sent.job_id } : t)))
-      const ended = await followJob(sent.job_id, () => undefined, () => alive.current)
+      const ended = await followJob(sent.job_id, (reading) => patch(sent.job_id, { answer: answerOf(reading), note: reading.message || 'Working' }), () => alive.current)
       if (ended) settle(sent.job_id, ended)
     } catch (error) {
-      patch(id, { state: 'failed', note: reasonOf(error) })
+      patch(activeId, { state: 'failed', note: reasonOf(error) })
     }
   }
 
   const onBoard = slots.includes(lookupId)
   const asking = turns.some((t) => t.state === 'running')
-
-  /**
-   * Stop the questions that are running.
-   *
-   * The composer drew a stop button and was wired to `() => {}`: a reader who
-   * pressed it got nothing — no cancellation and no acknowledgement — while a
-   * run they are paying for kept going. Each running turn's id *is* its job id
-   * (`ask` renames the turn to `sent.job_id`), so this is the same cancel the
-   * queue and the local-plane panel already call.
-   */
-  const stopAsking = async () => {
-    const running = turns.filter((t) => t.state === 'running' && !t.id.startsWith('local-'))
-    if (running.length === 0) return
-    for (const turn of running) {
-      try {
-        await post(`/api/jobs/${seg(turn.id)}/cancel`)
-        patch(turn.id, { state: 'failed', note: 'Stopped.' })
-      } catch (error) {
-        patch(turn.id, { note: reasonOf(error) })
-      }
+  const stop = () => {
+    stopRequested.current = true
+    for (const turn of turns.filter((t) => t.state === 'running')) {
+      if (mode === 'live' && !turn.id.startsWith('local-')) void post(`/api/jobs/${seg(turn.id)}/cancel`, {}).then(() => patch(turn.id, { note: 'Stopping…' })).catch((error) => patch(turn.id, { note: reasonOf(error) }))
     }
   }
 
@@ -155,6 +146,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
         <h1>{check?.name ?? 'Check'}</h1>
         {check && <span className="muted">{check.category || 'Quick look'}</span>}
         <div className="head-tools">
+          {check && <button className="btn" disabled={turns.some((turn) => turn.state === 'running')} onClick={() => void ask('Research this exact product again for current evidence, prices and availability. Keep the recorded variant and market assumptions explicit and cite the sources.')}>Ask for fresh evidence</button>}
           {onBoard ? (
             <button className="btn" onClick={onCompare}>
               Open Compare
@@ -171,6 +163,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
         {problem && (
           <p className="error-note" role="alert">
             {problem}
+            <button className="btn" onClick={() => setLoadAttempt((n) => n + 1)}>Read again</button>
           </p>
         )}
         {!check && !problem && (
@@ -179,6 +172,8 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
             Reads the check
           </span>
         )}
+        {check && <CheckContext check={check} />}
+        {check && check.specs.length > 0 && <details><summary>Specifications</summary><dl>{check.specs.map((spec) => <div key={spec.label}><dt>{spec.label}</dt><dd>{spec.value} {spec.source && <ExternalLink href={spec.source}>Source</ExternalLink>}{spec.quote && <blockquote>{spec.quote}</blockquote>}</dd></div>)}</dl></details>}
         {check && (
           <ul className="risk-list rise" style={{ '--i': 1 } as CSSProperties}>
             {check.risks.length === 0 && <li className="muted">No risk is on record.</li>}
@@ -190,6 +185,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
                 <div>
                   <strong>{risk.title}</strong>
                   {risk.body && <p>{risk.body}</p>}
+                  <RiskEvidence risk={risk} />
                   {risk.sources.length > 0 && (
                     <span className="srcs">
                       {risk.sources.slice(0, 3).map((s, i) => (
@@ -213,12 +209,12 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
                 {t.state === 'running' && (
                   <span className="work-line">
                     <PixelGlyph size={13} active />
-                    Searches the web
+                    {t.note || 'Starting research'}
                   </span>
                 )}
                 {t.answer && (
                   <article className="answer">
-                    <Markdown text={t.answer} live={false} />
+                    <Markdown text={t.answer} live={t.state === 'running'} />
                   </article>
                 )}
                 {t.state === 'failed' && (
@@ -234,7 +230,7 @@ export function ProductScreen({ lookupId, onBack, onCompare }: { lookupId: strin
       </div>
 
       <div className="compare-dock">
-        <Composer onSubmit={(text) => void ask(text)} running={asking} onStop={() => void stopAsking()} placeholder="Ask about this product" agents={false} autoFocus />
+        <Composer onSubmit={(text) => void ask(text)} running={asking} onStop={stop} placeholder="Ask about this product" agents={false} autoFocus />
       </div>
     </section>
   )

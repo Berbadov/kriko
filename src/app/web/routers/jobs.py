@@ -66,6 +66,22 @@ class UpdateRequest(BaseModel):
     index_url: str | None = None
 
 
+class CatalogDraftRequest(BaseModel):
+    category: str = Field(min_length=1, max_length=500)
+    harness: str = Field(default="", max_length=200)
+
+
+@router.post("/packs/author")
+def author_catalog(body: CatalogDraftRequest, runner=Depends(get_jobs)):
+    """Research a data-only draft. Installing it is a separate reader action."""
+    return _submit(runner, "pack_author", {"category": body.category.strip(), "harness": body.harness})
+
+
+@router.post("/agents/check")
+def check_agent(runner=Depends(get_jobs)):
+    return _submit(runner, "agent_check", {})
+
+
 def _submit(runner, kind: str, params: dict) -> dict:
     try:
         request_id = params.pop("client_request_id", "")

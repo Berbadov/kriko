@@ -10,9 +10,13 @@ import { HistoryPanel } from './panels/History'
 import { LocalPanel } from './panels/Local'
 import { SettingsPanel } from './panels/Settings'
 import { SitesPanel } from './panels/Sites'
+import { SetupPanel } from './panels/Setup'
+import { BackupsPanel } from './panels/Backups'
 
 /** The places that have a panel. The others are listed, and say they are not ready. */
 const PANELS: Record<string, ComponentType<{ onOpen: (lookupId: string) => void }>> = {
+  setup: SetupPanel,
+  backups: BackupsPanel,
   agents: AgentsPanel,
   browse: CatalogsPanel,
   history: HistoryPanel,

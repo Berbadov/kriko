@@ -67,10 +67,14 @@ export interface Undoable {
   demo?: Past
 }
 
-export function useHistory() {
+export function useHistory(query = '') {
   const { mode } = useEngine()
   const [items, setItems] = useState<Past[] | null>(null)
   const [problem, setProblem] = useState('')
+  const [offset, setOffset] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => { setOffset(0) }, [query])
 
   const load = useCallback(async () => {
     // `checking` is not `demo`: while the engine is still being asked, showing
@@ -81,11 +85,10 @@ export function useHistory() {
       return
     }
     let live = true
-    await get<{ items: ApiHistoryItem[] & { source?: string }[] }>('/api/history?limit=200', 20000)
+    await get<{ items: ApiHistoryItem[] & { source?: string }[]; has_more?: boolean }>(`/api/history?limit=200&offset=${offset}&q=${encodeURIComponent(query)}`, 20000)
       .then((data) => {
         if (!live) return
-        setItems(
-          (data.items as (ApiHistoryItem & { source?: string })[]).map((row) => ({
+        const page = (data.items as (ApiHistoryItem & { source?: string })[]).map((row) => ({
             id: row.lookup_id,
             name: row.label,
             category: row.category,
@@ -93,14 +96,16 @@ export function useHistory() {
             risks: row.claim_count,
             at: new Date(row.created_at).getTime(),
             when: ago(row.created_at),
-          })),
-        )
+          }))
+        setItems((now) => offset ? [...(now ?? []), ...page.filter((row) => !(now ?? []).some((saved) => saved.id === row.id))] : page)
+        setHasMore(!!data.has_more)
+        setProblem('')
       })
       .catch((error: unknown) => live && setProblem(error instanceof Error ? error.message : 'Could not read the history.'))
     return () => {
       live = false
     }
-  }, [mode])
+  }, [mode, query, offset, attempt])
 
   useEffect(() => {
     void load()
@@ -152,11 +157,13 @@ export function useHistory() {
       } else if (undo.demo) {
         setItems((now) => (now ? [...now, undo.demo as Past].sort((a, b) => b.at - a.at) : now))
       }
-      await load()
+      // A restored row belongs on the first page, so start the list again from it.
+      if (offset) setOffset(0)
+      else await load()
       window.dispatchEvent(new Event(HISTORY_CHANGED))
     },
-    [mode, load],
+    [mode, load, offset],
   )
 
-  return { items, problem, remove, restore }
+  return { items, problem, remove, restore, hasMore, loadMore: () => setOffset((n) => n + 200), retry: () => setAttempt((n) => n + 1) }
 }

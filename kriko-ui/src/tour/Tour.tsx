@@ -25,7 +25,7 @@ const STEPS: Step[] = [
   { target: 'nav-queue', title: 'Queue', text: 'Send products from your browser. Kriko checks them one by one, when you press Start.' },
   { target: 'source-kinds', panel: 'settings', title: 'Where to look', text: 'Choose the kinds of page Kriko reads for each product: forums, reviews, recalls and more. At least one stays on.' },
   { target: 'more', title: 'More', text: 'Settings, agents, local models, catalogs and sites are here. You can take this tour again from Settings.' },
-  { title: 'The browser extension', text: 'Add the extension to check a product on its own page. Its panel has a short tour of its own, on the first product page.' },
+  { title: 'Verify your setup', panel: 'setup', text: 'Check the selected agent, get a catalog, connect the extension, and complete a real sourced check.' },
 ]
 
 const KEY = 'kriko.tour'
