@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppUpdate } from '../../engine/appupdate'
 import { useAbout, useKeys, usePrefsDoc, useSpent, type KeyRow } from '../../engine/settings'
 import { usePrefs, type Profile, type ThemePref } from '../../prefs'
@@ -124,6 +124,20 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
               onChange={(value) => void save({ search_provider: value })}
             />
           </div>
+          <div className="setting stack">
+            <span>
+              OpenAI-compatible endpoint
+              <small>Optional API root for OpenAI-compatible services. Leave blank for OpenAI or the LLM_BASE_URL environment setting.</small>
+            </span>
+            <EndpointField value={doc.chosen.llm_base_url || ''} onSave={(value) => save({ llm_base_url: value })} />
+          </div>
+          <div className="setting stack">
+            <span>
+              Completion model
+              <small>Model ID accepted by this endpoint for paid research. Leave blank to use its default.</small>
+            </span>
+            <ModelField value={doc.chosen.llm_model || ''} onSave={(value) => save({ llm_model: value })} />
+          </div>
         </section>
       )}
 
@@ -185,6 +199,52 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
         </section>
       )}
     </div>
+  )
+}
+
+function EndpointField({ value, onSave }: { value: string; onSave: (value: string) => Promise<void> }) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+  return (
+    <input
+      type="url"
+      autoComplete="url"
+      spellCheck={false}
+      aria-label="OpenAI-compatible endpoint"
+      placeholder="https://api.openai.com/v1"
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        const next = draft.trim().replace(/\/$/, '')
+        if (next !== value) void onSave(next)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur()
+      }}
+    />
+  )
+}
+
+function ModelField({ value, onSave }: { value: string; onSave: (value: string) => Promise<void> }) {
+  const [draft, setDraft] = useState(value)
+  useEffect(() => setDraft(value), [value])
+  return (
+    <input
+      type="text"
+      autoComplete="off"
+      spellCheck={false}
+      aria-label="Completion model"
+      placeholder="gpt-4o-mini"
+      value={draft}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={() => {
+        const next = draft.trim()
+        if (next !== value) void onSave(next)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter') event.currentTarget.blur()
+      }}
+    />
   )
 }
 
