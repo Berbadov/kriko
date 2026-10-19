@@ -195,12 +195,15 @@ def list_catalogs() -> list[dict]:
 
 
 @tool()
-def classify_product(product: str, saved_facts: dict) -> dict:
+def classify_product(product: str, saved_facts: dict, decision: dict | None = None) -> dict:
     """Classify a saved product against installed catalogs with an audit trail.
 
-    This is the catalog pass used by Quick Look. Deterministic matches are
-    checked first. Jev is called only when TypeSafe is explicitly selected in
-    Settings and the deterministic pass abstains. It never searches the web.
+    Deterministic matches are checked first. With the default agent provider,
+    an uncertain result includes agent_request: evaluate that prompt and call
+    this tool again with its JSON output in decision. Supplied decisions are
+    validated locally; no additional model or TypeSafe key is needed. When no
+    decision is supplied, Jev is used only if explicitly selected in Settings.
+    Classification never searches the web.
     `saved_facts` may contain category, specs, risks, and other saved Quick
     Look fields; title scope and an unambiguous installed catalog are required.
     """
@@ -218,9 +221,10 @@ def classify_product(product: str, saved_facts: dict) -> dict:
             provider = prefs.classification_provider(conn)
         finally:
             conn.close()
-    return categorizer.classify_configured(
-        product, saved_facts or {}, profiles, provider,
-    )
+    if decision is not None:
+        return categorizer.classify_configured(product, saved_facts or {}, profiles,
+                                              provider, decision=decision)
+    return categorizer.classify_configured(product, saved_facts or {}, profiles, provider)
 
 
 @tool()

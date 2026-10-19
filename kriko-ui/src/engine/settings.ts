@@ -84,7 +84,7 @@ const DEMO_PREFS: PrefsDoc = {
     { id: 'tavily', label: 'Tavily', ready: true },
   ],
   classification_providers: [
-    { id: 'agent', label: 'Configured agent', ready: true },
+    { id: 'agent', label: 'Selected agent (default)', ready: true },
     { id: 'typesafe', label: 'Jev (TypeSafe)', ready: false },
   ],
   market_regions: [
