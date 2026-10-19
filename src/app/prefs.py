@@ -110,6 +110,8 @@ LOCAL_CONTEXT_TOKENS = LOCAL_CONTEXT
 LOCAL_GPU_LAYERS = "local_gpu_layers"
 LOCAL_OUTPUT_LANGUAGE = "local_output_language"
 LOCAL_SEARCH_LANGUAGE = "local_search_language"
+# Optional OpenAI-compatible API root. The key itself remains in `app/keys.py`.
+LLM_BASE_URL = "llm_base_url"
 # Names used by the local research provider's constructor.
 OUTPUT_LANGUAGE = LOCAL_OUTPUT_LANGUAGE
 SEARCH_LANGUAGE = LOCAL_SEARCH_LANGUAGE
@@ -190,7 +192,7 @@ def run_concurrency(conn) -> int:
 
 
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
-        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, *RESEARCH_KEYS,
+        *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, LLM_BASE_URL, *RESEARCH_KEYS,
         RUN_CONCURRENCY, AGENT_TRANSPORT, CODEX_TRANSPORT)
 
 
@@ -329,6 +331,9 @@ def api_agent_rows(conn) -> tuple[list[dict], list[dict]]:
 
     ready = apiagent.available()
     def bills(one) -> str:
+        if one.key == "openai":
+            return (f"your {keys.BY_ID[one.key].label} key per token; web search uses the "
+                    "selected Exa or Tavily service")
         return f"your {keys.BY_ID[one.key].label} key, per token and per search"
 
     rows = [
@@ -338,6 +343,7 @@ def api_agent_rows(conn) -> tuple[list[dict], list[dict]]:
             "llm": for_harness(conn, one.id),
             "llms": apiagent.models_for(one, KRIKO_HOME), "llms_note": "",
             "llm_hint": one.model_hint, "llm_selectable": True,
+            "model_freeform": one.key == "openai",
             "effort": "", "efforts": [], "effort_hint": "",
         }
         for one in ready
@@ -461,8 +467,7 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
         for one in harness.KNOWN
         if one.id not in have and not one.unusable
     ]
-    api_rows: list[dict] = []
-    api_missing: list[dict] = []
+    api_rows, api_missing = api_agent_rows(conn)
     local_ready, local_unusable, local_missing = local_agent_rows(conn)
     installed += local_ready
     unusable += local_unusable

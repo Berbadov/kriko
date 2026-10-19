@@ -107,9 +107,21 @@ MISTRAL = ApiAgent(
     key_url="https://console.mistral.ai/api-keys",
 )
 
+OPENAI_COMPATIBLE = ApiAgent(
+    id="openai-api",
+    label="OpenAI-compatible API",
+    key="openai",
+    default_model="gpt-4o-mini",
+    search_tool="web_search",
+    host="custom endpoint",
+    contract_note=NOTE,
+    model_hint="Uses the OpenAI-compatible endpoint and key configured in Settings.",
+    install_hint="Add an OpenAI or compatible API key in Settings → Keys.",
+)
+
 #: A closed roster, as `harness.KNOWN` is: each entry is an adapter somebody
 #: wrote, not data that grows with coverage.
-KNOWN: tuple[ApiAgent, ...] = (MISTRAL,)
+KNOWN: tuple[ApiAgent, ...] = (MISTRAL, OPENAI_COMPATIBLE)
 BY_ID = {one.id: one for one in KNOWN}
 
 
@@ -135,6 +147,167 @@ def models_for(agent: ApiAgent, home: Path | None = None) -> list[str]:
     return sorted(names, key=lambda name: (name != agent.default_model, name))
 
 
+def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float = 45.0,
+                               search: bool = True, app_state_path=None,
+                               cancel_event=None):
+    """Answer through an OpenAI-compatible endpoint, optionally using search.
+
+    Function calling is the common OpenAI wire shape. Search itself remains
+    this installation's selected Exa or Tavily provider, and every opened page
+    is returned as grounding text just as it is for the Mistral API agent.
+    """
+    import json
+    import os
+
+    from app import keys, prefs
+    from app.providers import fetch, llm
+    from app.providers._http import post_json_or_why
+    from app.web import state
+
+    api_key = keys.require("openai")
+    base_url = os.environ.get("LLM_BASE_URL") or llm.DEFAULT_BASE_URL
+    if app_state_path is not None:
+        conn = state.connect(app_state_path)
+        try:
+            base_url = prefs.read(conn).get(prefs.LLM_BASE_URL) or base_url
+            search_provider = prefs.read(conn).get(prefs.SEARCH)
+        finally:
+            conn.close()
+    else:
+        search_provider = ""
+    endpoint = base_url.rstrip("/") + "/chat/completions"
+    messages = [{"role": "user", "content": prompt}]
+    have_search = bool(keys.search_providers())
+    tools = [{
+        "type": "function",
+        "function": {
+            "name": "web_search",
+            "description": "Search the web and open a few result pages.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string"},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 5},
+                },
+                "required": ["query"],
+            },
+        },
+    }] if search and have_search else []
+    reply = mistral.Reply()
+    searcher = reader = None
+    if tools:
+        from app.providers import _searcher
+
+        searcher, search_provider = _searcher(app_state_path, search_provider)
+        reader = fetch.reader()
+    call_count = 0
+    for _round in range(5):
+        if cancel_event is not None and cancel_event.is_set():
+            raise StreamCancelled("provider request canceled")
+        payload = {
+            "model": model or OPENAI_COMPATIBLE.default_model,
+            "messages": messages,
+            "temperature": 0.0,
+            "max_tokens": 2048,
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = "auto"
+        body, why = post_json_or_why(
+            endpoint, payload, {"authorization": f"Bearer {api_key}"}, timeout=timeout)
+        if why:
+            reply.error = why
+            return reply
+        if not isinstance(body, dict):
+            reply.error = "OpenAI-compatible endpoint returned an invalid response"
+            return reply
+        usage = body.get("usage")
+        if isinstance(usage, dict):
+            prompt_tokens = usage.get("prompt_tokens")
+            if isinstance(prompt_tokens, int) and not isinstance(prompt_tokens, bool) and prompt_tokens >= 0:
+                reply.tokens_in = (reply.tokens_in or 0) + prompt_tokens
+            else:
+                reply.usage_complete = False
+            completion_tokens = usage.get("completion_tokens")
+            if isinstance(completion_tokens, int) and not isinstance(completion_tokens, bool) and completion_tokens >= 0:
+                reply.tokens_out = (reply.tokens_out or 0) + completion_tokens
+            else:
+                reply.usage_complete = False
+        else:
+            reply.usage_complete = False
+        choices = body.get("choices")
+        first = choices[0] if isinstance(choices, list) and choices else {}
+        message = first.get("message") if isinstance(first, dict) else {}
+        if not isinstance(message, dict):
+            reply.error = "OpenAI-compatible endpoint returned no message"
+            return reply
+        calls = message.get("tool_calls")
+        if not isinstance(calls, list) or not calls:
+            reply.text = str(message.get("content") or "").strip()
+            if not reply.text:
+                reply.error = "OpenAI-compatible endpoint returned no text"
+            return reply
+        call_count += len(calls)
+        if call_count > 8:
+            reply.error = "OpenAI-compatible endpoint exceeded the search call limit"
+            return reply
+        messages.append(message)
+        if searcher is None or reader is None:
+            reply.error = "Endpoint requested web search while tools were disabled"
+            return reply
+        for call in calls:
+            if cancel_event is not None and cancel_event.is_set():
+                raise StreamCancelled("provider request canceled")
+            function = call.get("function") if isinstance(call, dict) else None
+            name = str((function or {}).get("name") or "") if isinstance(function, dict) else ""
+            call_id = str(call.get("id") or "") if isinstance(call, dict) else ""
+            if name != "web_search":
+                messages.append({"role": "tool", "tool_call_id": call_id,
+                                 "content": json.dumps({"error": "unsupported tool"})})
+                continue
+            try:
+                args = json.loads((function or {}).get("arguments") or "{}")
+            except (TypeError, ValueError):
+                args = {}
+            query = str(args.get("query") or "").strip() if isinstance(args, dict) else ""
+            if not query:
+                result_rows = []
+            else:
+                reply.queries.append(query)
+                reply.tool_calls += 1
+                result_rows = []
+                try:
+                    hits = searcher(query, max(1, min(int(args.get("limit") or 3), 5)))
+                except Exception:  # noqa: BLE001 — the model can finish without search
+                    hits = []
+                for hit in hits:
+                    if cancel_event is not None and cancel_event.is_set():
+                        raise StreamCancelled("provider request canceled")
+                    url = str(hit.get("url") or "").strip()
+                    if not url:
+                        continue
+                    try:
+                        text = str(reader(url) or "")[:mistral.MAX_SOURCE_CHARS]
+                    except Exception:  # noqa: BLE001 — one bad page is a missed source
+                        text = ""
+                    if not text:
+                        continue
+                    title = str(hit.get("title") or "").strip()
+                    previous = reply.sources.setdefault(url, {"title": title, "text": text})
+                    result_rows.append({"url": url, "title": previous["title"], "content": previous["text"]})
+            messages.append({
+                "role": "tool",
+                "tool_call_id": call_id,
+                "content": json.dumps(
+                    {"error": "query is required", "results": []}
+                    if not query else {"results": result_rows},
+                    ensure_ascii=False,
+                ),
+            })
+    reply.error = "OpenAI-compatible endpoint exceeded the search tool-call limit"
+    return reply
+
+
 class ApiAgentResearcher(harness.HarnessResearcher):
     """The harness plane's contract, answered over HTTP and grounded on what
     the search actually returned."""
@@ -143,7 +316,7 @@ class ApiAgentResearcher(harness.HarnessResearcher):
 
     def __init__(self, agent: ApiAgent, *, model: str = "",
                  timeout: float = mistral.TIMEOUT_SECONDS, converse=None,
-                 home: Path | None = None):
+                 home: Path | None = None, app_state_path=None):
         # An `ApiAgent` where a `Harness` is annotated: the parent reads only
         # `id`, `label` and `contract_note` off it on the paths this class
         # keeps, and `_run` — the one that spawns — is overridden.
@@ -153,10 +326,17 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         #: harness here because it cannot know the model; this plane can.
         self.model = model.strip() or agent.default_model
         self.search_provider = agent.label
-        self._converse = converse or mistral.converse
+        if converse is not None:
+            self._converse = converse
+        elif agent.key == "openai":
+            self._converse = lambda prompt, **kw: openai_compatible_converse(
+                prompt, **kw, app_state_path=app_state_path)
+        else:
+            self._converse = mistral.converse
         # Injected test/tool adapters keep their established complete-reply
         # shape. The built-in Mistral adapter has a verified SSE endpoint.
-        self._stream_converse = mistral.converse_stream if converse is None else None
+        self._stream_converse = (mistral.converse_stream
+                                 if converse is None and agent.key == "mistral" else None)
         self._home = home
         #: What the provider billed, in dollars. `None` once any call could
         #: not be priced: an under-count reported as a total is the invented
@@ -167,6 +347,7 @@ class ApiAgentResearcher(harness.HarnessResearcher):
         self._unpriced = False
         self.tokens_in: int | None = None
         self.tokens_out: int | None = None
+        self.usage_complete = True
         self.tool_calls = 0
         #: url -> the text the search tool returned for it, across every call
         #: this researcher made. The grounding source.
@@ -281,11 +462,13 @@ class ApiAgentResearcher(harness.HarnessResearcher):
                 else:
                     if search:
                         box["reply"] = self._converse(
-                            prompt, model=self.model, timeout=self.timeout)
+                            prompt, model=self.model, timeout=self.timeout,
+                            **({"cancel_event": stop_deltas} if self.agent.key == "openai" else {}))
                     else:
                         box["reply"] = self._converse(
                             prompt, model=self.model, timeout=self.timeout,
-                            search=False)
+                            search=False,
+                            **({"cancel_event": stop_deltas} if self.agent.key == "openai" else {}))
             except Exception as error:  # noqa: BLE001 — re-raised below
                 box["error"] = error
 
@@ -343,6 +526,9 @@ class ApiAgentResearcher(harness.HarnessResearcher):
 
     def _account(self, reply) -> None:
         from app import modelcatalogue
+
+        if not getattr(reply, "usage_complete", True):
+            self.usage_complete = False
 
         for name in ("tokens_in", "tokens_out"):
             value = getattr(reply, name)

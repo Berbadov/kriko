@@ -9,6 +9,7 @@ happens.
 """
 
 import re
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
@@ -120,6 +121,13 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
                     "such as en or tr-TR"
                 ),
             )
+    if prefs.LLM_BASE_URL in written and written[prefs.LLM_BASE_URL]:
+        endpoint = written[prefs.LLM_BASE_URL].rstrip("/")
+        parsed = urlsplit(endpoint)
+        if (parsed.scheme not in {"http", "https"} or not parsed.netloc
+                or parsed.username or parsed.password or parsed.query or parsed.fragment):
+            raise HTTPException(422, detail="llm_base_url must be an http(s) endpoint without credentials or query parameters")
+        written[prefs.LLM_BASE_URL] = endpoint
     if prefs.LOCAL_CONTEXT in written and written[prefs.LOCAL_CONTEXT].strip():
         try:
             context_tokens = int(written[prefs.LOCAL_CONTEXT])

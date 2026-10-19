@@ -29,7 +29,8 @@ cost". These functions make one request and return its result.
 from app.providers import exa, fetch, harness, llm
 
 
-def completer_for(model: str, *, max_tokens: int | None = None):
+def completer_for(model: str, *, max_tokens: int | None = None,
+                 base_url: str = ""):
     """The adapter that speaks to whoever serves this model.
 
     Routed on the *model name* rather than on a provider setting, because the
@@ -62,7 +63,7 @@ def completer_for(model: str, *, max_tokens: int | None = None):
         from app.providers import anthropic_llm
 
         return anthropic_llm.completer(model=model, **options)
-    return llm.completer(model=model, **options)
+    return llm.completer(model=model, base_url=base_url, **options)
 
 
 __all__ = [
@@ -143,6 +144,16 @@ def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=No
     from kriko.research import ApiResearcher
 
     model = llm.model_name(model or _preferred_model(app_state_path))
+    base_url = ""
+    if app_state_path is not None:
+        from app import prefs
+        from app.web import state
+
+        conn = state.connect(app_state_path)
+        try:
+            base_url = prefs.read(conn).get(prefs.LLM_BASE_URL, "")
+        finally:
+            conn.close()
     if spend is None:
         from app import protocols
 
@@ -155,7 +166,8 @@ def api_researcher(*, price_per_call: float = 0.0, app_state_path=None, spend=No
     researcher = ApiResearcher(
         found,
         fetch.reader(),
-        completer_for(model),
+        (completer_for(model, base_url=base_url) if base_url
+         else completer_for(model)),
         price_per_call=price_per_call,
         spend=spend,
     )
@@ -368,7 +380,7 @@ def _api_hint(api: bool) -> str:
     if ready:
         return (f"; {ready[0].label} has a key but bills per token, so it runs "
                 "only when picked — choose it under Settings → Agents")
-    return ", and no Mistral key for the API agent" if api else ""
+    return ", and no API-provider key for the API agent" if api else ""
 
 
 def agent_ready(app_state_path=None, preferred: str = "") -> bool:
@@ -453,6 +465,7 @@ def _api_agent(agent, *, timeout: float, model: str, app_state_path):
     return apiagent.ApiAgentResearcher(
         agent, model=model.strip(), home=KRIKO_HOME,
         timeout=timeout or mistral.TIMEOUT_SECONDS,
+        app_state_path=app_state_path,
     )
 
 
