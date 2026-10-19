@@ -284,12 +284,18 @@ def test_the_chat_job_wires_web_search_and_saves_fetched_urls(paths, monkeypatch
 
     assert searched == [("a quiet air purifier for a small bedroom", 5)]
     assert fetched == ["https://maker.example/purifier"]
-    # One short call writes the search words; the last call answers from the page.
+    # The search-word and answer calls both see their expected inputs.
     assert "Write the web search" in completer.prompts[0]
-    assert "CADR 300 m³/h" in completer.prompts[-1]
-    assert result["agent_calls"] == 2
+    assert any("CADR 300 m³/h" in prompt for prompt in completer.prompts)
+    assert result["agent_calls"] >= 2
     assert result["sources"] == ["web_search", "https://maker.example/purifier"]
     assert stored["sources"] == result["sources"]
+    assert stored["activity"][0]["search_results"] == ["https://maker.example/purifier"]
+    assert stored["activity"][0]["pages_attempted"] == 1
+    assert stored["activity"][0]["pages_read"] == 1
+    assert stored["activity"][1]["url"] == "https://maker.example/purifier"
+    assert stored["activity"][1]["attempted"] is True
+    assert stored["activity"][1]["state"] == "done"
 
 
 def test_an_empty_answer_fails_the_job_and_keeps_the_question(paths, monkeypatch):

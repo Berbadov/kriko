@@ -15,6 +15,10 @@ import time
 from collections.abc import Callable
 from urllib.parse import urlparse
 
+from app.research_policy import (
+    COMPATIBILITY_GUIDANCE, SELLER_GUIDANCE, market_guidance,
+)
+
 #: The longest answer the panel is asked for, in words. A card, not an essay:
 #: a reader who wants more asks the next question.
 MAX_WORDS = 70
@@ -59,15 +63,8 @@ SAVED_RULES = (
 #: this panel has: telling a reader a seller is untrustworthy — or trustworthy —
 #: from a page that only ever described the product. So the seller rules name
 #: what to search, what to keep apart, and what silence means.
-SELLER_RULES = (
-    "This question is about the SELLER, not the product. Identify the seller by "
-    "its own trading name and the platform it sells on, and keep the platform "
-    "apart from the individual seller. Search that exact name with reviews, "
-    "complaints and company records. Report only what a page states; if no page "
-    "supports an answer, say the seller could not be verified. Never infer fraud, "
-    "safety or dishonesty from silence, from a missing review, or from a low "
-    "review count."
-)
+SELLER_RULES = SELLER_GUIDANCE
+COMPATIBILITY_RULES = COMPATIBILITY_GUIDANCE
 
 #: Price and stock questions have the same trap as the seller's: the answer is
 #: a number with a date and a source, or it is nothing.
@@ -86,6 +83,11 @@ AVAILABILITY_RULES = (
 
 #: Language intents, not product vocabularies — a new category needs no edit.
 _KINDS = (
+    ("compatibility", re.compile(
+        r"\b(?:compatible|compatibility|fitment|fit|fits|fitting|will it work|"
+        r"work with|supported|socket|motherboard|cpu|processor|ram|memory module|"
+        r"transmission|engine code|part number|oem|oe number|vin|uyumlu|uyumluluk|"
+        r"sığar|sagar|uyar mı|parça numarası|motor kodu)\b", re.I)),
     ("seller", re.compile(
         r"\b(?:seller|vendor|shop|store|dealer|company|business|merchant|"
         r"satıcı|satici|mağaza|magaza|firma|esnaf|trustworthy|trust|legit|"
@@ -119,6 +121,7 @@ def classify(question: str) -> str:
 def rules_for(kind: str) -> str:
     """The extra rules one kind of question carries, or `""`."""
     return {
+        "compatibility": COMPATIBILITY_RULES,
         "seller": SELLER_RULES,
         "price": PRICE_RULES,
         "availability": AVAILABILITY_RULES,
@@ -126,7 +129,8 @@ def rules_for(kind: str) -> str:
 
 
 def _brief(question: str, rules: str, *, product: str, context: str,
-           seller: str = "", kind: str = "general") -> str:
+           seller: str = "", kind: str = "general",
+           market_region: str = "auto") -> str:
     head = f"Product: {product.strip()}\n" if product.strip() else ""
     if seller.strip():
         head += f"Seller: {seller.strip()}\n"
@@ -137,11 +141,15 @@ def _brief(question: str, rules: str, *, product: str, context: str,
     extra = rules_for(kind)
     if extra:
         lines += ["", extra]
+    market = market_guidance(market_region)
+    if market:
+        lines += ["", market]
     return "\n".join(lines)
 
 
 def web_brief(question: str, *, product: str = "", context: str = "",
-              kind: str = "auto", seller: str = "") -> str:
+              kind: str = "auto", seller: str = "",
+              market_region: str = "auto") -> str:
     """The prompt for one follow-up: the question first, then context, then the rules.
 
     The question leads because a local planner reads only the head of a prompt
@@ -151,14 +159,15 @@ def web_brief(question: str, *, product: str = "", context: str = "",
     """
     chosen = classify(question) if kind in ("", "auto") else kind
     return _brief(question, RULES, product=product, context=context,
-                  seller=seller, kind=chosen)
+                  seller=seller, kind=chosen, market_region=market_region)
 
 
 def saved_brief(question: str, *, product: str = "", context: str = "",
-                kind: str = "auto") -> str:
+                kind: str = "auto", market_region: str = "auto") -> str:
     """The same follow-up for a model that cannot search: the saved checks only."""
     chosen = classify(question) if kind in ("", "auto") else kind
-    return _brief(question, SAVED_RULES, product=product, context=context, kind=chosen)
+    return _brief(question, SAVED_RULES, product=product, context=context,
+                  kind=chosen, market_region=market_region)
 
 
 def split(reply: str) -> tuple[str, list[str]]:
