@@ -5,10 +5,11 @@ App state in `app.sqlite`, never knowledge (`app/pricewatch.py`,
 looked, or a day a watch re-read the page; nothing is converted or invented.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from app import checkout, pricewatch
+from app import checkout, cloud, pricewatch
+from app.web import state
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api/prices", tags=["prices"])
@@ -33,6 +34,19 @@ class WatchRequest(BaseModel):
     drop_pct: float | str | None = None
     price: float | str | None = None
     currency: str = Field(default="", max_length=8)
+    #: Also let the relay watch it while this computer is off. Only honoured when paired.
+    cloud: bool | None = None
+
+
+def _resync(request: Request):
+    """A watch changed: tell the relay soon, off the request, and never fail the reader for it."""
+    def run() -> None:
+        conn = state.connect(request.app.state.settings.app_state_path)
+        try:
+            cloud.sync_quietly(conn)
+        finally:
+            conn.close()
+    return run
 
 
 @router.get("/watches")
@@ -42,11 +56,17 @@ def list_watches(conn=Depends(get_app_state)) -> dict:
 
 
 @router.post("/watches")
-def add_watch(body: WatchRequest, conn=Depends(get_app_state)) -> dict:
+def add_watch(body: WatchRequest, request: Request, background: BackgroundTasks,
+              conn=Depends(get_app_state)) -> dict:
     """Keep an eye on a page. Asking again for the same page changes its terms."""
+    if body.cloud and not cloud.configured(conn):
+        raise HTTPException(422, "connect to a relay first")
     try:
-        return pricewatch.watch(conn, body.url, body.name, target=body.target,
-                                drop_pct=body.drop_pct, price=body.price, currency=body.currency)
+        made = pricewatch.watch(conn, body.url, body.name, target=body.target, drop_pct=body.drop_pct,
+                                price=body.price, currency=body.currency, cloud=body.cloud)
+        if cloud.configured(conn):
+            background.add_task(_resync(request))
+        return made
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
     except OverflowError as error:
@@ -54,9 +74,12 @@ def add_watch(body: WatchRequest, conn=Depends(get_app_state)) -> dict:
 
 
 @router.delete("/watches/{watch_id}")
-def stop_watch(watch_id: str, conn=Depends(get_app_state)) -> dict:
+def stop_watch(watch_id: str, request: Request, background: BackgroundTasks,
+               conn=Depends(get_app_state)) -> dict:
     if not pricewatch.unwatch(conn, watch_id):
         raise HTTPException(404, f"no watch {watch_id}")
+    if cloud.configured(conn):
+        background.add_task(_resync(request))
     return {"deleted": watch_id}
 
 

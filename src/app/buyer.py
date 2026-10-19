@@ -133,9 +133,14 @@ def read(conn: sqlite3.Connection) -> dict:
     return clean(stored if isinstance(stored, dict) else {})
 
 
-def save(conn: sqlite3.Connection, raw: dict) -> dict:
+#: When the profile was last edited, so two devices keep the later edit (`app/cloud.py`).
+EDITED = "buyer_profile_at"
+
+
+def save(conn: sqlite3.Connection, raw: dict, *, at: str | None = None) -> dict:
+    """Keep the profile. `at` is for one that arrived from another device with its own edit time."""
     profile = clean(raw)
-    state.put_settings(conn, {KEY: profile})
+    state.put_settings(conn, {KEY: profile, EDITED: at or _now().isoformat()})
     return profile
 
 
@@ -221,10 +226,28 @@ def snooze(conn: sqlite3.Connection, purchase_id: str, *, now: datetime | None =
     return bool(cursor.rowcount)
 
 
-def forget_purchase(conn: sqlite3.Connection, purchase_id: str) -> bool:
+def forget_purchase(conn: sqlite3.Connection, purchase_id: str, *, remember: bool = True) -> bool:
     cursor = conn.execute("DELETE FROM purchases WHERE purchase_id = ?", (purchase_id,))
     conn.commit()
+    if cursor.rowcount and remember:
+        from app import cloud  # noqa: PLC0415 - cloud reads this module
+
+        cloud.note_deleted(conn, "purchase", purchase_id)
     return bool(cursor.rowcount)
+
+
+def adopt_purchase(conn: sqlite3.Connection, row: dict) -> None:
+    """Keep a purchase that came from another device, whole, replacing any older copy."""
+    conn.execute(
+        "INSERT INTO purchases (purchase_id, name, url, price, currency, bought_at, ask_after, verdict, reason,"
+        " answered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(purchase_id) DO UPDATE SET"
+        " name = excluded.name, url = excluded.url, price = excluded.price, currency = excluded.currency,"
+        " verdict = excluded.verdict, reason = excluded.reason, answered_at = excluded.answered_at",
+        (row["purchase_id"], _words(row["name"], 300), str(row.get("url") or "")[:2000], _number(row.get("price")),
+         _words(row.get("currency"), 8).upper(), row["bought_at"], row.get("ask_after") or row["bought_at"],
+         row.get("verdict") if row.get("verdict") in VERDICTS else "", _words(row.get("reason"), 600),
+         row.get("answered_at") or ""))
+    conn.commit()
 
 
 def lessons(conn: sqlite3.Connection, limit: int = LESSONS_IN_BRIEF) -> list[dict]:
@@ -412,6 +435,8 @@ def forget(conn: sqlite3.Connection, what: str) -> int:
         had = 0 if is_empty(read(conn)) else 1
         conn.execute("DELETE FROM settings WHERE key = ?", (KEY,))
         conn.commit()
+        # Forgetting is an edit: a paired device must not hand the old profile back.
+        state.put_settings(conn, {EDITED: _now().isoformat()})
         return had
     if what not in tables:
         raise ValueError(f"what is one of {', '.join(HOLDINGS)}, everything")

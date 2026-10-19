@@ -2886,6 +2886,7 @@
       askWorker("BUYER_WATCH", {
         url: window.location.href, name: buyer.name || lm.identity_line || lm.title || document.title,
         target: field("target").trim() || null,
+        cloud: Boolean((form.querySelector('[name="cloud"]') || {}).checked),
         price: buyer.price ? buyer.price.price : null, currency: buyer.price ? buyer.price.currency : "",
       }).then((reply) => {
         if (reply.ok && state.buyer) { state.buyer.watch = reply; state.buyerUi.watchForm = false; }

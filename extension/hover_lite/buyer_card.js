@@ -134,6 +134,9 @@
       return `<form class="lite-buy-form" data-act="watch-save">
         <label>Tell me at or below
           <input name="target" inputmode="decimal" value="${esc(suggested)}" aria-label="Price to be told at"/></label>
+        ${buyer.cloud && buyer.cloud.connected
+          ? `<label class="lite-buy-check" title="Your relay reads this page while your computer is off, so it is told the page.">
+              <input type="checkbox" name="cloud"/> Also watch while my computer is off</label>` : ""}
         <button type="submit" class="lite-buy-btn" data-primary="1">Watch</button>
         <button type="button" class="lite-buy-btn" data-act="watch-cancel">Cancel</button></form>`;
     }
