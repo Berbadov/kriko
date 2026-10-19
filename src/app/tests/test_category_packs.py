@@ -754,6 +754,37 @@ def test_pages_that_cannot_be_read_leave_the_look_for_the_next_harvest(world, mo
     assert online["result"]["claims_added"] == 1
 
 
+def test_quick_look_uses_the_usual_agent_and_harvest_reuses_its_assignment(world):
+    from app.web import state
+
+    _script_v8(world.script)
+    _check(world, "Scyrox V8 Gaming Mouse")
+    title = "Scyrox V7 Gaming Mouse"
+    world.script.quick[title] = {
+        "assumed": "the V7", "category": "wireless pointer", "pack": "",
+        "risks": [_risk("Cable fraying", CABLE_PAGE, CABLE_QUOTE)],
+    }
+    world.script.categorize[title] = {
+        "decision": "assigned", "pack_id": "gaming.mice", "confidence": "high",
+        "basis": [{"saved_text": title, "catalog_text": "Gaming mice"}],
+    }
+    quick = _look(world, title)
+    assignment = quick["result"]["categorization"]
+    assert assignment["status"] == "assigned"
+    assert assignment["method"] == "agent"
+    assert assignment["pack_id"] == "gaming.mice"
+    assert world.script.ask_options[-1] == {"allow_tools": False}
+    conn = state.connect(world.settings.app_state_path)
+    try:
+        assert state.quicklook_category(conn, quick["job_id"])["audit"] == assignment["audit"]
+    finally:
+        conn.close()
+    count = len(world.script.asked("# Categorise this saved product check"))
+    harvested = _wait(world, world.post("/api/packs/harvest").json()["job_id"])
+    assert harvested["state"] == "succeeded", harvested["message"]
+    assert len(world.script.asked("# Categorise this saved product check")) == count
+
+
 def test_saved_quick_look_categorization_is_explicit_persistent_and_stale_targets_clear(world):
     from app.web import state
 

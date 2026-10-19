@@ -11,6 +11,7 @@ import json
 import math
 import re
 import unicodedata
+from collections.abc import Callable
 from typing import Any
 from kriko.store.db import connect
 
@@ -887,12 +888,33 @@ def classify_with_jev(product: str, look: dict, profiles: list[dict], *,
 
 def classify_configured(product: str, look: dict, profiles: list[dict],
                         provider: str = "agent", *,
-                        api_key: str | None = None) -> dict:
+                        api_key: str | None = None,
+                        ask: Callable[[str], str] | None = None,
+                        decision: dict | None = None) -> dict:
     """Use deterministic assignment first and the selected classifier on abstention."""
     result = deterministic(product, look, profiles)
-    if result["status"] == "assigned" or provider != "typesafe":
+    if result["status"] == "assigned" or not profiles:
         return result
-    return classify_with_jev(product, look, profiles, api_key=api_key)
+    # An MCP caller can supply its own decision without starting another model
+    # or requiring a service-specific key. The same evidence checks apply.
+    if decision is not None:
+        return parse(json.dumps(decision, ensure_ascii=False), product, look, profiles)
+    if provider == "typesafe":
+        return classify_with_jev(product, look, profiles, api_key=api_key)
+    try:
+        prompt = brief(product, look, profiles)
+    except CatalogSetTooLarge as error:
+        return {**result, "message": str(error)}
+    if ask is not None:
+        return parse(ask(prompt), product, look, profiles)
+    # The usual MCP agent is already running. Give it the bounded task and
+    # accept its decision on a second call instead of nesting an agent run.
+    return {
+        **result,
+        "needs_agent_decision": True,
+        "agent_request": {"prompt": prompt, "schema": OUTPUT_SCHEMA},
+        "message": "Evaluate agent_request and call classify_product again with your decision.",
+    }
 
 
 def _jev_uncertain(reason: str, **audit) -> dict:

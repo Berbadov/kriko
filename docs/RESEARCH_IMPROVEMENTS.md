@@ -47,8 +47,16 @@ tools on the compatible API agent use the selected Exa or Tavily provider;
 ordinary conversation can work with just the completion key. Provider charges
 remain the user's own account charges.
 
-Jev is an optional TypeSafe classification provider, configured separately
-from the conversation model. Its typed catalog decisions are constrained to
+Catalog classification uses the usual selected agent by default: local,
+coding or API. After deterministic checks abstain, it classifies saved facts
+without web or shell tools, and its proposed category must pass the local
+evidence checks. Quick Looks, explicit recategorization and bulk filing use
+this path. MCP agents can receive the classification task and submit their
+own decision to the same validator. No TypeSafe key is needed for agent-based
+classification.
+
+Jev is an optional alternative TypeSafe classification provider. Its typed
+catalog decisions are constrained to
 installed catalog candidates, with an explicit uncertain option and local
 evidence validation. Its confidence is not proof that a product belongs in a
 catalog or that parts are compatible. See [How Kriko works](HOW_IT_WORKS.md)

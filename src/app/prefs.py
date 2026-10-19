@@ -536,7 +536,7 @@ def choices(conn, app_state_path=None, *, fresh: bool = False) -> dict:
             for one in keys.SEARCH_PROVIDERS
         ],
         "classification_providers": [
-            {"id": "agent", "label": "Configured agent", "ready": True},
+            {"id": "agent", "label": "Selected agent (default)", "ready": True},
             {"id": "typesafe", "label": "Jev (TypeSafe)",
              "ready": any(one["id"] == "typesafe" and one["present"]
                           for one in keys.status())},
