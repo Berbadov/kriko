@@ -276,6 +276,7 @@ function Watching({ watching, relay }: { watching: ReturnType<typeof useWatches>
 
 function Relay({ relay }: { relay: ReturnType<typeof useRelay> }) {
   const [server, setServer] = useState('')
+  const [setup, setSetup] = useState('')
   const [pairing, setPairing] = useState('')
   const [privateLabels, setPrivateLabels] = useState(true)
   const status = relay.status
@@ -287,7 +288,7 @@ function Relay({ relay }: { relay: ReturnType<typeof useRelay> }) {
     <section className="panel-group">
       <h3>Phone and relay</h3>
       <p className="panel-note">
-        A relay is a small server of your own. It keeps sealed copies of your profile, purchases and watches that only your devices can open, so your phone and this computer agree, and
+        A relay is a small server of your own, for you alone. It keeps sealed copies of your profile, purchases and watches that only your devices can open, so your phone and this computer agree, and
         it can watch a price while this computer is off. Alerts reach a phone through ntfy.
       </p>
       {!status.connected ? (
@@ -296,11 +297,12 @@ function Relay({ relay }: { relay: ReturnType<typeof useRelay> }) {
             className="key-form"
             onSubmit={(event) => {
               event.preventDefault()
-              void relay.connect(server.trim(), privateLabels)
+              void relay.connect(server.trim(), setup.trim(), privateLabels)
             }}
           >
             <input value={server} onChange={(event) => setServer(event.target.value)} placeholder="https://relay.example" aria-label="The relay's address" />
-            <button className="btn" type="submit" disabled={relay.busy || !server.trim()}>
+            <input type="password" value={setup} onChange={(event) => setSetup(event.target.value)} placeholder="Setup word" aria-label="The relay's setup word" autoComplete="off" style={{ maxWidth: 130 }} />
+            <button className="btn" type="submit" disabled={relay.busy || !server.trim() || !setup.trim()}>
               Connect
             </button>
           </form>
