@@ -160,6 +160,7 @@ function useLiveQueue(enabled: boolean): Queue {
   /** The address each row was queued from. The list view does not carry it. */
   const urls = useRef(new Map<string, string>())
   const alive = useRef(true)
+  const completing = useRef(new Set<string>())
 
   useEffect(() => {
     alive.current = true
@@ -340,6 +341,23 @@ function useLiveQueue(enabled: boolean): Queue {
     // Nothing is left to start and nothing runs: the work is done.
     if (!next.length && !workers.current.size) {
       setRunning(false)
+      // Archive this batch's completed rows. Failed/paused rows and products
+      // another window has requeued must remain available for a retry.
+      const done = items.filter((i) => i.state === 'done' && !completing.current.has(i.id)).map((i) => i.id)
+      if (done.length) {
+        done.forEach((id) => completing.current.add(id))
+        void post<{ removed: string[] }>('/api/queue/complete', { queue_ids: done })
+          .then(({ removed }) => {
+            const cleared = new Set(removed)
+            if (alive.current) setItems((list) => list.filter((i) => !cleared.has(i.id)))
+            for (const id of removed) {
+              urls.current.delete(id)
+              held.current.delete(id)
+            }
+          })
+          .catch(() => undefined)
+          .finally(() => done.forEach((id) => completing.current.delete(id)))
+      }
       return
     }
     for (const item of next) {
