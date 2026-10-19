@@ -174,8 +174,9 @@ kept and has a button to forget each part.
 ### A phone, and watching while the computer is off
 
 Kriko can watch a price when this computer is off if you run the relay in
-`server/` (see its README: a small machine and a domain). In **For you**, under
-**Phone and relay**, enter the relay's address and press **Connect**. Press **Pair
+`server/` (see its README: a small machine and a domain, for you alone). In **For
+you**, under **Phone and relay**, enter the relay's address and its setup word and
+press **Connect**. Press **Pair
 a phone** to show the code that lets another device join, and subscribe to the
 topic beside it in the ntfy app to get alerts on a phone.
 

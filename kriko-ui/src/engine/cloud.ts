@@ -10,7 +10,6 @@ import { useEngine } from './Engine'
 export interface RelayStatus {
   connected: boolean
   server: string
-  group?: string
   watching: number
   private_labels: boolean
   synced_at: string
@@ -56,7 +55,8 @@ export function useRelay() {
     [reload],
   )
 
-  const connect = (server: string, privateLabels: boolean) => run(() => post('/api/cloud/connect', { server_url: server, private_labels: privateLabels }), 'Could not connect.')
+  const connect = (server: string, setup: string, privateLabels: boolean) =>
+    run(() => post('/api/cloud/connect', { server_url: server, setup_code: setup, private_labels: privateLabels }), 'Could not connect.')
   const join = (pairing: string) => run(() => post('/api/cloud/join', { code: pairing }), 'Could not join.')
   const sync = () => run(() => post('/api/cloud/sync'), 'Could not sync.')
   const disconnect = () =>

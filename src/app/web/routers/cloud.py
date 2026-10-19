@@ -27,6 +27,8 @@ def status(conn=Depends(get_app_state)) -> dict:
 
 class ConnectRequest(BaseModel):
     server_url: str = Field(max_length=300)
+    #: The word in the relay's own settings (`KRIKO_CLOUD_SETUP`) that lets the first device claim it.
+    setup_code: str = Field(default="", max_length=200)
     #: Tell the relay a watched page's address and price, never what the product is called.
     private_labels: bool = False
 
@@ -34,7 +36,7 @@ class ConnectRequest(BaseModel):
 @router.post("/connect")
 def connect(body: ConnectRequest, conn=Depends(get_app_state)) -> dict:
     try:
-        return cloud.connect(conn, body.server_url, private_labels=body.private_labels)
+        return cloud.connect(conn, body.server_url, setup=body.setup_code, private_labels=body.private_labels)
     except (ValueError, cloud.RelayError) as error:
         raise _refuse(error) from error
 

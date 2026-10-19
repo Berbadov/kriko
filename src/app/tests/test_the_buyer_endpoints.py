@@ -185,7 +185,7 @@ def relay_http(tmp_path, monkeypatch):
     monkeypatch.setattr(socket, "getaddrinfo", lambda host, port, *a, **k: [
         (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))] if host.endswith(".test")
         else real(host, port, *a, **k))
-    app = create_relay(RelaySettings(db_path=tmp_path / "relay.sqlite", secret="s", registrations_per_hour=50))
+    app = create_relay(RelaySettings(db_path=tmp_path / "relay.sqlite", secret="s", setup="open-sesame"))
     with TestClient(app) as relay:
         def http(method, url, data, headers):
             path = "/" + url.split("//", 1)[1].split("/", 1)[1]
@@ -208,7 +208,9 @@ def test_not_paired_is_the_ordinary_state_and_says_nothing_leaves(client):
 def test_connecting_pairing_a_phone_and_watching_in_the_cloud(client, relay_http):
     bad = client.post("/api/cloud/connect", json={"server_url": "http://relay.example"})
     assert bad.status_code == 422 and "https" in bad.json()["detail"]
-    got = client.post("/api/cloud/connect", json={"server_url": "http://127.0.0.1:8080", "private_labels": True}).json()
+    wrong = client.post("/api/cloud/connect", json={"server_url": "http://127.0.0.1:8080", "setup_code": "nope"})
+    assert wrong.status_code == 502 and "setup word" in wrong.json()["detail"]
+    got = client.post("/api/cloud/connect", json={"server_url": "http://127.0.0.1:8080", "setup_code": "open-sesame", "private_labels": True}).json()
     assert got["connected"] is True and got["private_labels"] is True
     assert "code" not in got and "key" not in got, "the key is only ever returned on request"
     pairing = client.get("/api/cloud/pairing").json()
@@ -239,12 +241,12 @@ def test_a_cloud_watch_needs_a_relay_and_a_relay_that_is_down_is_a_bad_gateway(c
         raise cloud.RelayError("the relay does not answer")
 
     monkeypatch.setattr(cloud, "_urllib", down)
-    got = client.post("/api/cloud/connect", json={"server_url": "https://relay.example"})
+    got = client.post("/api/cloud/connect", json={"server_url": "https://relay.example", "setup_code": "x"})
     assert got.status_code == 502 and "does not answer" in got.json()["detail"]
 
 
 def test_the_page_block_says_whether_a_relay_is_connected(client, relay_http):
     scrape = {"url": "https://shop.test/p/x", "title": "Thing", "fields": {}, "origin": "extension"}
     assert client.post("/api/buyer/page", json=scrape).json()["cloud"] == {"connected": False}
-    client.post("/api/cloud/connect", json={"server_url": "http://127.0.0.1:8080"})
+    client.post("/api/cloud/connect", json={"server_url": "http://127.0.0.1:8080", "setup_code": "open-sesame"})
     assert client.post("/api/buyer/page", json=scrape).json()["cloud"] == {"connected": True}
