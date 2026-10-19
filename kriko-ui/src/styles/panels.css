@@ -817,3 +817,173 @@
 .hf-quant span {
   display: grid;
 }
+
+/* ---- for you: what you need, what you bought, what is kept ---- */
+
+.need-field {
+  display: grid;
+  gap: 4px;
+  padding: 8px 0 0;
+}
+
+.need-field > span {
+  display: grid;
+  gap: 1px;
+  font-weight: 520;
+}
+
+.need-field > span small {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.need-field input,
+.need-field textarea {
+  min-width: 0;
+  padding: 7px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: 12px;
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.need-field input:focus-visible,
+.need-field textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.need-row {
+  display: grid;
+  grid-template-columns: 1fr 90px;
+  gap: 8px;
+}
+
+.need-priorities {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0;
+}
+
+.need-weight {
+  display: grid;
+  grid-template-columns: 96px 1fr 18px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.buy-row,
+.buy-due {
+  display: grid;
+  gap: 2px;
+  padding: 8px 0;
+  border-top: 1px solid var(--edge);
+}
+
+.buy-row small,
+.buy-due small {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.buy-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.watch-alerts {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  background: var(--accent-soft);
+}
+
+.watch-alerts p {
+  margin: 0 0 4px;
+}
+
+/* ---- decide, on the compare screen ---- */
+
+.decide {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 16px;
+  background: var(--panel);
+}
+
+.decide header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.decide h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.decide h3 {
+  margin: 10px 0 2px;
+  color: var(--ink-3);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.decide-winner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 10px 0 4px;
+  font-size: 16px;
+}
+
+.decide-chip {
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.decide-chip[data-tone='good'] {
+  background: var(--accent-soft);
+  color: var(--ok);
+}
+
+.decide-chip[data-tone='warn'] {
+  color: var(--warn, var(--ink));
+}
+
+.decide-list {
+  margin: 2px 0;
+  padding-left: 18px;
+}
+
+.decide-rank {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.decide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
+.decide-answer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--edge);
+}

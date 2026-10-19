@@ -46,12 +46,18 @@ DISCOUNT_SPAN_DAYS = 14
 #: A watch is re-read this often, at most.
 SWEEP_EVERY = timedelta(hours=6)
 MAX_WATCHES = 60
+#: Sightings kept for one page. A year of daily visits is 365; this is a bound, not a target.
+MAX_POINTS_PER_PAGE = 300
 #: One alert per watch per price: a lower price speaks again, the same one does not.
 REALERT_AFTER = timedelta(days=14)
 
 #: Query parameters that name the product rather than the visit.
 _IDENTITY_PARAMS = {"id", "sku", "pid", "product", "productid", "product_id", "item",
                     "itemid", "variant", "v", "p", "asin", "model", "mpn", "gtin", "ean"}
+
+#: Query parameters that follow the reader around rather than name the page.
+_TRACKING = re.compile(r"^(?:utm_.*|gclid|fbclid|msclkid|yclid|dclid|mc_cid|mc_eid|igshid|"
+                       r"ref|ref_.*|_hsenc|_hsmi|spm|scid|cmpid|campaign.*)$", re.I)
 
 _CURRENCY_SIGNS = {"₺": "TRY", "tl": "TRY", "€": "EUR", "$": "USD", "£": "GBP", "¥": "JPY",
                    "₹": "INR", "₽": "RUB", "zł": "PLN", "kr": "SEK"}
@@ -85,6 +91,15 @@ def product_key(url: str) -> str:
                    if key.lower() in _IDENTITY_PARAMS)
     tail = "?" + "&".join(f"{key}={value}" for key, value in query) if query else ""
     return f"{host}{path}{tail}"[:400]
+
+
+def strip_tracking(url: str) -> str:
+    """The address without what a campaign or an ad click added to it."""
+    parts = urlsplit(str(url or "").strip())
+    kept = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True)
+            if not _TRACKING.match(key)]
+    query = "&".join(f"{key}={value}" if value else key for key, value in kept)
+    return parts._replace(query=query, fragment="").geturl()
 
 
 def host_of(url: str) -> str:
@@ -243,12 +258,17 @@ def record(conn: sqlite3.Connection, url: str, name: str, offer: dict, *,
         conn.execute(
             "INSERT INTO price_points (product_key, url, host, name, seller, price, was_price,"
             " currency, in_stock, seen_at, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (key, str(url)[:2000], host_of(url), str(name or "")[:300], offer.get("seller", ""),
+            (key, strip_tracking(url)[:2000], host_of(url), str(name or "")[:300], offer.get("seller", ""),
              offer["price"], offer.get("was_price"), offer.get("currency") or "",
              None if offer.get("in_stock") is None else int(offer["in_stock"]),
              _stamp(now), source))
         conn.execute("DELETE FROM price_points WHERE seen_at < ?",
                      (_stamp(now - timedelta(days=KEEP_DAYS)),))
+        # A page that changes its price on every load must not fill the file.
+        conn.execute(
+            "DELETE FROM price_points WHERE product_key = ? AND point_id NOT IN ("
+            "SELECT point_id FROM price_points WHERE product_key = ? ORDER BY seen_at DESC,"
+            " point_id DESC LIMIT ?)", (key, key, MAX_POINTS_PER_PAGE))
     # Even an unchanged price is a check: the watch records when it last looked.
     _check_watch(conn, key, offer, now)
     conn.commit()
@@ -398,7 +418,7 @@ def elsewhere(conn: sqlite3.Connection, name: str, url: str, currency: str, *,
     seen: dict[str, dict] = {}
     for row in conn.execute(
             "SELECT product_key, url, host, name, seller, price, currency, seen_at, in_stock"
-            " FROM price_points WHERE seen_at >= ? AND product_key != ? ORDER BY seen_at DESC",
+            " FROM price_points WHERE seen_at >= ? AND product_key != ? ORDER BY seen_at DESC LIMIT 2000",
             (since, key)):
         if row["product_key"] in seen or row["host"] == own_host:
             continue
@@ -454,7 +474,7 @@ def watch(conn: sqlite3.Connection, url: str, name: str = "", *, target=None, dr
         conn.execute(
             "INSERT INTO watches (watch_id, product_key, url, name, currency, target, drop_pct,"
             " started_price, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (watch_id, key, str(url)[:2000], str(name or "")[:300], currency, target, drop_pct,
+            (watch_id, key, strip_tracking(url)[:2000], str(name or "")[:300], currency, target, drop_pct,
              start, _stamp(now)))
     conn.commit()
     return _watch(conn.execute("SELECT * FROM watches WHERE watch_id = ?", (watch_id,)).fetchone())

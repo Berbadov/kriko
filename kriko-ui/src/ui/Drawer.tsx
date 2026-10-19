@@ -6,6 +6,7 @@ import { usePrefs } from '../prefs'
 import { Icon } from './Icon'
 import { AgentsPanel } from './panels/Agents'
 import { CatalogsPanel } from './panels/Catalogs'
+import { ForYouPanel } from './panels/ForYou'
 import { HistoryPanel } from './panels/History'
 import { LocalPanel } from './panels/Local'
 import { SettingsPanel } from './panels/Settings'
@@ -13,6 +14,7 @@ import { SitesPanel } from './panels/Sites'
 
 /** The places that have a panel. The others are listed, and say they are not ready. */
 const PANELS: Record<string, ComponentType<{ onOpen: (lookupId: string) => void }>> = {
+  foryou: ForYouPanel,
   agents: AgentsPanel,
   browse: CatalogsPanel,
   history: HistoryPanel,
