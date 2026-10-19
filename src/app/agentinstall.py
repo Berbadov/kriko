@@ -475,6 +475,37 @@ def install(settings, params: dict, progress) -> dict:
     return {"id": agent_id, "installed": True, "path": path}
 
 
+_WAKE_LOCK = threading.Lock()
+
+
+def wake_local(base: str = OLLAMA_URL, progress=None, seconds: int = 30) -> bool:
+    """Start an installed Ollama that nobody is running, and wait until it answers.
+
+    Asking a question of the Local model is the reader saying they want it, so
+    a closed Ollama is started for them rather than reported. False means it
+    could not be (not installed, or it did not answer in `seconds`); the run
+    then fails with its own reason. Runs are concurrent, so one starts it and
+    the rest wait on the same answer.
+    """
+    with _WAKE_LOCK:
+        if _answers(base):
+            return True
+        if not _ollama_exe():
+            return False
+        if progress is not None:
+            progress.log("Ollama is installed but not running; starting it.")
+        _start_ollama()
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            if _answers(base):
+                forget_discovery()
+                return True
+            if progress is not None:
+                progress.check()
+            time.sleep(0.5)
+    return False
+
+
 def start_local(progress) -> dict:
     """Start an existing Ollama without installing or downloading anything."""
     if _answers(OLLAMA_URL):

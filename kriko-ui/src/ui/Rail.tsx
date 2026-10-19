@@ -28,6 +28,7 @@ export function Rail({
   onNewChat,
   onOpenChat,
   queueCount,
+  attention = 0,
 }: {
   screen: Screen
   onNavigate: (s: Screen) => void
@@ -37,6 +38,8 @@ export function Rail({
   onNewChat: () => void
   onOpenChat: (threadId: string) => void
   queueCount: number
+  /** Things that need the reader: a price that fell, a purchase to answer for. */
+  attention?: number
 }) {
   const { motion: m } = usePrefs()
   return (
@@ -90,6 +93,7 @@ export function Rail({
         <button className="rail-item" data-tour="more" onClick={onMore} title={collapsed ? 'More' : undefined}>
           <Icon name="more" size={19} />
           <span className="rail-label">More</span>
+          {attention > 0 && <span className="badge mono" aria-label={`${attention} waiting in For you`}>{attention}</span>}
         </button>
       </div>
     </motion.aside>

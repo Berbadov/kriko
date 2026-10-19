@@ -748,6 +748,11 @@ function readStructuredProduct() {
     setField("ld:offerCount", offer.offerCount);
     setField("ld:lowPrice", offer.lowPrice);
     setField("ld:highPrice", offer.highPrice);
+    // The seller's own "was" price, where the markup labels one: it is the
+    // seller's claim, and the engine judges it against what the page said before.
+    const specs = [].concat(offer.priceSpecification || []).map(resolve).filter(Boolean);
+    const listed = specs.find((one) => /list|strike|msrp|original/i.test(_ldText(one.priceType)));
+    if (listed) setField("ld:listPrice", listed.price);
     const seller = resolve(offer.seller);
     setField("ld:seller", seller ? (seller.name ?? seller) : offer.seller);
     // `InStock` rather than the whole `https://schema.org/InStock`: the URL is
@@ -792,6 +797,191 @@ function readStructuredProduct() {
       signals: chosen.length ? first.signals : [], candidates: products.length } };
 }
 
+// ── what the page shows as a price ──────────────────────────────────────
+//
+// Structured data is the page's own statement of its price. A shop that
+// publishes none still prints one beside the title, and the price memory is
+// worth having there too. Read conservatively and only on a page that says it
+// is a product: a price-shaped string on an article is not a price.
+
+const PRICE_TEXT = /^\D{0,3}(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(TL|₺|€|\$|£|EUR|USD|GBP|TRY)?$|^(TL|₺|€|\$|£|EUR|USD|GBP|TRY)\s*(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)$/i;
+const PRICE_HINT = /price|fiyat|prix|preis|precio|prezzo|cost|amount/i;
+const WAS_HINT = /old|was|strike|eski|list|instead|before|regular|msrp|former|crossed|indirimsiz/i;
+
+function _priceParts(text) {
+  const clean = cleanText(text);
+  if (!clean || clean.length > 40) return null;
+  const hit = clean.match(PRICE_TEXT);
+  if (!hit) return null;
+  return { amount: hit[1] || hit[4], sign: (hit[2] || hit[3] || "").toUpperCase() };
+}
+
+function _visible(node) {
+  if (!node || !node.isConnected) return false;
+  // By style rather than by layout, so a page's hidden duplicate (the mobile
+  // price, the one in a closed tab) is not read as the price.
+  if (node.closest("[hidden], [aria-hidden='true']")) return false;
+  try {
+    const style = window.getComputedStyle(node);
+    return style.display !== "none" && style.visibility !== "hidden";
+  } catch (_) {
+    return true;
+  }
+}
+
+function readShownPrice() {
+  const heading = document.querySelector("h1");
+  const candidates = [...document.querySelectorAll(
+    "[itemprop='price'], [data-price], [class*='price' i], [id*='price' i], [class*='fiyat' i]")]
+    .filter((node) => node.children.length <= 2 && _visible(node));
+  let now = null;
+  let nowNode = null;
+  for (const node of candidates) {
+    const attr = node.getAttribute("content") || node.getAttribute("data-price");
+    const own = _priceParts(attr || node.textContent);
+    if (!own) continue;
+    const tag = `${node.className || ""} ${node.id || ""}`;
+    if (WAS_HINT.test(tag) || node.closest("del, s, strike")) continue;
+    if (!PRICE_HINT.test(tag) && !node.hasAttribute("itemprop") && !node.hasAttribute("data-price")) continue;
+    now = own;
+    nowNode = node;
+    break;
+  }
+  if (!now) return {};
+  const out = { "shown:price": now.amount };
+  if (now.sign) out["shown:currency"] = now.sign;
+  // The struck-through price in the same block, if there is one.
+  let block = nowNode.parentElement;
+  for (let up = 0; block && up < 4; up += 1, block = block.parentElement) {
+    if (heading && block.contains(heading) && up > 0) break;
+    const struck = [...block.querySelectorAll("del, s, strike, [class*='old' i], [class*='was' i], [class*='strike' i], [class*='eski' i]")]
+      .map((node) => _priceParts(node.textContent)).find(Boolean);
+    if (struck) { out["shown:was"] = struck.amount; break; }
+  }
+  return out;
+}
+
+// ── a cart or checkout page ─────────────────────────────────────────────
+//
+// What the reader is about to pay for, as the page lists it, and the page's
+// words for the engine to look for return terms and payment methods in. Best
+// effort by design: when no line is found the engine falls back to the
+// products the reader looked at on this shop in the last day and a half.
+
+const CART_LINES = "[class*='cart-item' i], [class*='cartitem' i], [class*='basket-item' i], [class*='line-item' i], [class*='lineitem' i], [class*='sepet' i] li, [data-cart-item], [class*='order-item' i], [class*='product-line' i]";
+
+function readCart() {
+  const items = [];
+  for (const node of document.querySelectorAll(CART_LINES)) {
+    if (items.length >= 12) break;
+    const nameNode = node.querySelector("a, h2, h3, h4, [class*='name' i], [class*='title' i]");
+    const name = cleanText(nameNode && nameNode.textContent);
+    if (!name || name.length < 3 || name.length > 300) continue;
+    let price = null;
+    for (const one of node.querySelectorAll("[class*='price' i], [class*='total' i], [class*='fiyat' i]")) {
+      if (WAS_HINT.test(`${one.className}`) || one.closest("del, s, strike")) continue;
+      price = _priceParts(one.textContent);
+      if (price) break;
+    }
+    const link = node.querySelector("a[href]");
+    items.push({ name, price: price ? price.amount : null, currency: price ? price.sign : "",
+      url: link ? link.href : "" });
+  }
+  const main = document.querySelector("main") || document.body;
+  return { items, text: cleanText(main ? main.innerText || main.textContent : "").slice(0, 8000) };
+}
+
+// ── prices on a results page ────────────────────────────────────────────
+//
+// A reader who told Kriko what they need sees how each product on a results
+// page sits against it, in the page itself: a small mark beside each price.
+// Cards are found by shape (a link, an image and a price in one block, six or
+// more alike), not by any site's markup, and the verdict comes from the engine
+// from the words and the price alone, with no model and no network.
+
+const FIT_MARK = "data-kriko-fit";
+
+function findResultCards() {
+  // Start from the prices, not from every link: a results page has a few dozen,
+  // and a long page has thousands of links to climb from.
+  const priced = [...document.querySelectorAll("[class*='price' i], [class*='fiyat' i], [itemprop='price']")]
+    .filter((node) => _priceParts(node.textContent));
+  if (priced.length < 6 || priced.length > 800) return [];
+  const groups = new Map();
+  const seen = new Set();
+  for (const node of priced) {
+    let card = node.parentElement;
+    for (let up = 0; card && up < 5; up += 1, card = card.parentElement) {
+      if (card.querySelector("a[href]") && card.querySelector("img, picture")) break;
+    }
+    if (!card || card === document.body || seen.has(card) || !card.querySelector("img, picture")) continue;
+    seen.add(card);
+    const key = `${card.tagName}.${(card.className || "").toString().split(/\s+/).sort().join(".")}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(card);
+  }
+  const best = [...groups.values()].sort((a, b) => b.length - a.length)[0];
+  // A product page has one price block; a results page has many alike.
+  return best && best.length >= 6 ? best.slice(0, 60) : [];
+}
+
+function readResultCard(card) {
+  const heading = card.querySelector("h2, h3, h4, [class*='name' i], [class*='title' i]") || card.querySelector("a[title]") || card.querySelector("a");
+  const name = cleanText((heading && (heading.getAttribute("title") || heading.textContent)) || "");
+  const priceNode = [...card.querySelectorAll("[class*='price' i], [class*='fiyat' i], [itemprop='price']")]
+    .filter((n) => !WAS_HINT.test(`${n.className}`) && !n.closest("del, s, strike"))
+    .find((n) => _priceParts(n.textContent));
+  const price = priceNode ? _priceParts(priceNode.textContent) : null;
+  return { name: (name || "").slice(0, 400), price: price ? price.amount : null,
+    currency: price ? price.sign : "", text: cleanText(card.textContent || "").slice(0, 600), priceNode };
+}
+
+function markResultCard(card, read, fit) {
+  const old = card.querySelector(`[${FIT_MARK}]`);
+  if (old) old.remove();
+  if (!fit || (!fit.reasons.length && fit.score === 50)) return;
+  const broken = fit.breaks.length > 0;
+  const good = !broken && fit.score >= 60;
+  if (!broken && !good) return;
+  const mark = document.createElement("span");
+  mark.setAttribute(FIT_MARK, broken ? "breaks" : "fits");
+  mark.textContent = broken ? `Not for you: ${fit.breaks[0]}` : "Fits you";
+  mark.title = fit.reasons.map((one) => one.message).join("\n");
+  mark.style.cssText = `display:inline-block;margin:2px 6px;padding:1px 7px;border-radius:9px;font:600 11px/1.5 system-ui,sans-serif;color:#fff;background:${broken ? "#b5392f" : "#2d7b41"};vertical-align:middle;`;
+  (read.priceNode || card).insertAdjacentElement("afterend", mark);
+}
+
+let _annotateTimer = null;
+function annotateResults() {
+  clearTimeout(_annotateTimer);
+  _annotateTimer = setTimeout(async () => {
+    try {
+      // The reader can switch the marks off on the options page.
+      const choice = await new Promise((resolve) => {
+        try {
+          chrome.storage.local.get("buyerMarks", (bag) => resolve(bag || {}));
+        } catch (_) {
+          resolve({});
+        }
+      });
+      if (choice.buyerMarks === false) return;
+      const cards = findResultCards();
+      if (!cards.length) return;
+      const reads = cards.map((card) => ({ card, read: readResultCard(card) }))
+        .filter((one) => one.read.name);
+      if (!reads.length) return;
+      chrome.runtime.sendMessage({ type: "BUYER_FIT", payload: { items: reads.map(({ read }) => ({
+        name: read.name, text: read.text, price: read.price, currency: read.currency })) } },
+      (reply) => {
+        if (chrome.runtime.lastError || !reply || !reply.ok || !reply.profile) return;
+        reads.forEach(({ card, read }, index) => markResultCard(card, read, reply.items[index]));
+      });
+    } catch (_) {
+      // Decoration must never break the page or the scrape.
+    }
+  }, 1200);
+}
+
 // ── the scrape ──────────────────────────────────────────────────────────
 
 const DESCRIPTION_SELECTORS = [
@@ -809,33 +999,55 @@ const DESCRIPTION_SELECTORS = [
 // The page's own label/value shapes are collected on known sites too, so
 // agents receive new facts when a site changes. `explore` remains accepted
 // for older workers that still send it.
+//
+// Every reader below is tried on its own. An adapter an agent wrote can carry a
+// selector the browser refuses, and one refused selector used to take the whole
+// scrape down with it: the page was read by nothing, and the panel said "Unable
+// to read this page" on a page that was perfectly readable. What one reader
+// cannot do is noted in `problems`; the others still answer.
+function attempt(problems, name, read, fallback) {
+  try {
+    return read();
+  } catch (error) {
+    problems.push(`${name}: ${(error && error.message) || error}`);
+    return fallback;
+  }
+}
+
 function buildScrape(knownLabels, panel, explore) {
-  const infoList = extractInfoList(knownLabels);
-  const technical = extractTechnicalDetails();
+  const problems = [];
+  const infoList = attempt(problems, "labels", () => extractInfoList(knownLabels), {});
+  const technical = attempt(problems, "technical details", extractTechnicalDetails, {});
 
   // The info list wins a collision. Both tables label a row "Engine Capacity"
   // on the English page and they disagree; deciding which is believable is a
   // range question, and ranges are the adapter's.
   // The page's structured data rides beside its labels, never over them: a
   // label the pack declared is the better evidence where both speak (B149).
-  const structured = readStructuredProduct();
+  const structured = attempt(problems, "structured data", readStructuredProduct,
+    { fields: {}, name: "", typed: false, description: "", recognition: null });
   const fields = { ...structured.fields, ...technical, ...infoList };
+  // A shop that publishes no price in its structured data still shows one.
+  if (!fields["ld:price"] && !fields["ld:lowPrice"] && structured.typed) {
+    Object.assign(fields, attempt(problems, "shown price", readShownPrice, {}));
+  }
   // Keep newly introduced labels on known sites too. Otherwise an agent
   // never sees the facts its previous adapter did not know to request.
-  for (const [label, value] of Object.entries(extractOwnLabels(knownLabels))) {
+  const own = attempt(problems, "page labels", () => extractOwnLabels(knownLabels), {});
+  for (const [label, value] of Object.entries(own)) {
     if (!fields[label]) fields[label] = value;
   }
 
   let description = null;
   for (const selector of DESCRIPTION_SELECTORS) {
-    description = textBySelector(selector);
+    description = attempt(problems, "description", () => textBySelector(selector), null);
     if (description) break;
   }
   description = description || structured.description || null;
 
   return {
     url: window.location.href,
-    title: textBySelector("h1.classifiedTitle") || textBySelector("h1")
+    title: attempt(problems, "title", () => textBySelector("h1.classifiedTitle") || textBySelector("h1"), "")
       || structured.name || cleanText(document.title),
     description,
     fields,
@@ -843,15 +1055,16 @@ function buildScrape(knownLabels, panel, explore) {
     // recognises, and `typed` for the worker to leave a non-product page alone.
     product: { name: structured.name, typed: structured.typed,
                recognition: structured.recognition },
+    problems,
     listing: {
-      damage_info: extractDamageInfo(panel),
-      equipment: extractEquipment(panel),
+      damage_info: attempt(problems, "damage panel", () => extractDamageInfo(panel), null),
+      equipment: attempt(problems, "equipment panel", () => extractEquipment(panel), {}),
       // The titles, tones, hints and alert rules the panel prints for the two
       // blocks above. They ride with the data they describe, and `listing` is
       // the half of the scrape that never goes on the wire — so the pack's
       // presentation rules reach the renderer without reaching the engine,
       // which has no rule for any of this and should not acquire one.
-      panel: presentationOf(panel),
+      panel: attempt(problems, "panel rules", () => presentationOf(panel), {}),
     },
   };
 }
@@ -889,8 +1102,23 @@ function presentationOf(panel) {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === "GET_SCRAPE") {
-    sendResponse({ ok: true,
-      payload: buildScrape(request.labels, request.panel, request.explore === true) });
+    // Always an answer. A handler that throws sends nothing, and the worker
+    // could then only say it was unable to read the page, with no reason.
+    try {
+      sendResponse({ ok: true,
+        payload: buildScrape(request.labels, request.panel, request.explore === true) });
+    } catch (error) {
+      sendResponse({ ok: false, error: (error && error.message) || String(error) });
+    }
+    return;
+  }
+
+  if (request.type === "GET_CART") {
+    try {
+      sendResponse({ ok: true, ...readCart() });
+    } catch (error) {
+      sendResponse({ ok: false, error: (error && error.message) || String(error) });
+    }
     return;
   }
 
@@ -919,5 +1147,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       type: "PAGE_LOADED",
       payload: { url: window.location.href, host: window.location.hostname },
     });
+    annotateResults();
   }, 150);
 })();

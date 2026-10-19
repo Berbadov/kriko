@@ -20,6 +20,11 @@
 ;   catalogs and chats are in `.kriko` in their profile), so it is cleared with
 ;   the program stopped, before an install and before an uninstall. The install
 ;   folder itself is never removed this way.
+; * Engines an in-app update staged live in `%LOCALAPPDATA%\Kriko\engines`, one
+;   folder each, and belong to the program, so an uninstall removes them too.
+;   An install does not: an engine newer than the one this installer carries is
+;   the reader's update, and one that is not newer is never chosen and is removed
+;   by the engine itself.
 ; * A per-user install touches nothing of the machine: no PATH entry, nothing
 ;   under Program Files (installMode "currentUser" in tauri.conf.json).
 ; * "Kriko Console" is the operator console as something you double-click: the
@@ -49,9 +54,14 @@
   CreateShortcut "$SMPROGRAMS\Kriko Console.lnk" "$INSTDIR\kriko-sidecar.exe" "--tui" "$INSTDIR\kriko.exe" 0
 !macroend
 
+!macro KrikoClearStagedEngines
+  RMDir /r "$LOCALAPPDATA\Kriko\engines"
+!macroend
+
 !macro NSIS_HOOK_PREUNINSTALL
   !insertmacro KrikoStopEverything
   !insertmacro KrikoClearEngineFolder
+  !insertmacro KrikoClearStagedEngines
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL

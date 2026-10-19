@@ -830,6 +830,93 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   agent_json   TEXT NOT NULL DEFAULT '{}');
 CREATE INDEX IF NOT EXISTS chat_messages_thread ON chat_messages (thread_id);
 
+-- The reader as a buyer (app/buyer.py, app/pricewatch.py, app/pick.py). All
+-- reader-owned: a pack update must not erase them and they never move a
+-- pack's content_digest.
+--
+-- "I bought this", and how it turned out. `ask_after` is when Kriko asks;
+-- `verdict` is glad | fine | regret once the reader has answered.
+CREATE TABLE IF NOT EXISTS purchases (
+  purchase_id   TEXT PRIMARY KEY,
+  name          TEXT NOT NULL DEFAULT '',
+  url           TEXT NOT NULL DEFAULT '',
+  price         REAL,
+  currency      TEXT NOT NULL DEFAULT '',
+  bought_at     TEXT NOT NULL DEFAULT '',
+  ask_after     TEXT NOT NULL DEFAULT '',
+  verdict       TEXT NOT NULL DEFAULT '',
+  reason        TEXT NOT NULL DEFAULT '',
+  answered_at   TEXT NOT NULL DEFAULT '',
+  snoozed_until TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS purchases_bought ON purchases (bought_at DESC);
+
+-- Every price Kriko saw on a page the reader opened, or fetched for a watch.
+-- Memory is the point: a price is only "cheap" or "a fake discount" against
+-- what it used to be, and nobody else has seen the page the reader sees.
+CREATE TABLE IF NOT EXISTS price_points (
+  point_id    INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_key TEXT NOT NULL DEFAULT '',
+  url         TEXT NOT NULL DEFAULT '',
+  host        TEXT NOT NULL DEFAULT '',
+  name        TEXT NOT NULL DEFAULT '',
+  seller      TEXT NOT NULL DEFAULT '',
+  price       REAL NOT NULL DEFAULT 0,
+  was_price   REAL,
+  currency    TEXT NOT NULL DEFAULT '',
+  in_stock    INTEGER,
+  seen_at     TEXT NOT NULL DEFAULT '',
+  source      TEXT NOT NULL DEFAULT 'visit');
+CREATE INDEX IF NOT EXISTS price_points_key ON price_points (product_key, seen_at DESC);
+CREATE INDEX IF NOT EXISTS price_points_seen ON price_points (seen_at DESC);
+
+-- A page the reader asked Kriko to keep an eye on. `target` is "tell me at or
+-- below this"; `drop_pct` is "tell me when it falls this far from where it
+-- was". One watch per page.
+CREATE TABLE IF NOT EXISTS watches (
+  watch_id      TEXT PRIMARY KEY,
+  product_key   TEXT NOT NULL DEFAULT '',
+  url           TEXT NOT NULL DEFAULT '',
+  name          TEXT NOT NULL DEFAULT '',
+  currency      TEXT NOT NULL DEFAULT '',
+  target        REAL,
+  drop_pct      REAL,
+  started_price REAL,
+  created_at    TEXT NOT NULL DEFAULT '',
+  last_checked  TEXT NOT NULL DEFAULT '',
+  last_price    REAL,
+  last_error    TEXT NOT NULL DEFAULT '',
+  -- Watched by the relay too, while this computer is off (app/cloud.py). The
+  -- relay is told this page only when the reader turns that on, per watch.
+  cloud         INTEGER NOT NULL DEFAULT 0,
+  updated_at    TEXT NOT NULL DEFAULT '');
+CREATE UNIQUE INDEX IF NOT EXISTS watches_key ON watches (product_key);
+
+-- What a watch found worth saying. Read once by the panel or the app.
+CREATE TABLE IF NOT EXISTS watch_alerts (
+  alert_id   TEXT PRIMARY KEY,
+  watch_id   TEXT NOT NULL DEFAULT '',
+  kind       TEXT NOT NULL DEFAULT '',
+  name       TEXT NOT NULL DEFAULT '',
+  url        TEXT NOT NULL DEFAULT '',
+  price      REAL,
+  was_price  REAL,
+  currency   TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT '',
+  read_at    TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS watch_alerts_unread ON watch_alerts (read_at, created_at DESC);
+
+-- A decision Kriko committed to, kept so it can be judged later. `dissent` is
+-- what the pick overruled; a pick that cannot say what it gave up is not a
+-- pick.
+CREATE TABLE IF NOT EXISTS picks (
+  pick_id     TEXT PRIMARY KEY,
+  created_at  TEXT NOT NULL DEFAULT '',
+  winner_name TEXT NOT NULL DEFAULT '',
+  winner_url  TEXT NOT NULL DEFAULT '',
+  reason      TEXT NOT NULL DEFAULT '',
+  pick_json   TEXT NOT NULL DEFAULT '{}');
+CREATE INDEX IF NOT EXISTS picks_created ON picks (created_at DESC);
+
 CREATE TABLE IF NOT EXISTS question_requests (
   request_id TEXT PRIMARY KEY,
   input_json TEXT NOT NULL DEFAULT '{}',

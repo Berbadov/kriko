@@ -6,31 +6,40 @@ import { openLink } from './ExternalLink'
 export function UpdateNotice() {
   const { release, phase, problem, canInstall, dismissed, install, dismiss } = useAppUpdate()
   if (!release || (dismissed && phase === 'idle' && !problem)) return null
-  const working = phase === 'downloading' || phase === 'installing'
+  const working = phase === 'downloading' || phase === 'installing' || phase === 'restarting'
   return (
     <aside className="update-notice" role="status" aria-live="polite">
       <strong>Kriko {release.version} is ready</strong>
       <p>
         {phase === 'downloading'
           ? 'Downloading the update…'
-          : phase === 'installing'
-            ? 'Installing. Kriko closes and opens again by itself.'
-            : canInstall
-              ? 'Kriko closes, updates and opens again. Your chats and catalogs stay.'
-              : 'This copy was not set up by the installer, so the new version is downloaded by hand.'}
+          : phase === 'restarting'
+            ? 'Starting the new engine…'
+            : phase === 'installing'
+              ? 'Installing. Kriko closes and opens again by itself.'
+              : release.engine
+                ? 'The engine restarts and the window stays open. A run in progress stops. Your chats and catalogs stay.'
+                : canInstall
+                  ? 'Kriko closes, updates and opens again. Your chats and catalogs stay.'
+                  : 'This copy was not set up by the installer, so the new version is downloaded by hand.'}
       </p>
       {problem && <p className="error-note">{problem}</p>}
       {working ? (
         <span className="starting-bar" aria-hidden="true" />
       ) : (
         <div className="update-actions">
-          {canInstall ? (
+          {canInstall || release.engine ? (
             <button className="btn primary" onClick={() => void install()}>
               Update now
             </button>
           ) : (
             <button className="btn primary" onClick={() => void openLink(release.page)} disabled={!release.page}>
               Open the download page
+            </button>
+          )}
+          {release.engine && canInstall && problem && (
+            <button className="btn ghost" onClick={() => void install(true)}>
+              Use the installer
             </button>
           )}
           <button className="btn ghost" onClick={dismiss}>

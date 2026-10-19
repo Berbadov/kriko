@@ -24,6 +24,31 @@ def response_length_guidance(question: str = "", *, detailed: bool = False) -> s
         return _RESPONSE_LENGTH + " The reader asked for brevity; lead with the answer."
     return _RESPONSE_LENGTH
 
+#: Kriko is not a general chat, and what sets it apart is that its agents take
+#: a position. A reader who names a product or a need is asking to be advised;
+#: "search for this on the internet" and "I cannot recommend a product" both
+#: hand the work back. Caution is how an agent advises when evidence is thin,
+#: never a reason not to.
+ADVISE_RULE = (
+    "Advise, do not deflect. When the reader names a product, a part or a need, "
+    "name specific candidates they can act on: brand, model or part number, size "
+    "or capacity, and the approval or fitment it must meet, ranked, with a line "
+    "on why. Never answer with only search terms, with \"check the specifications\", "
+    "or with \"I cannot recommend a product\". Caution replaces refusal: say which "
+    "facts are verified and which are not, which variant you assumed and which "
+    "label or document settles it, and what to check before paying. When evidence "
+    "is thin, still give your best candidates from general knowledge, marked as not "
+    "verified, and the one or two facts that would confirm them."
+)
+
+#: The same promise for a panel that allows a few sentences, not a list.
+ADVISE_SHORT = (
+    "If the reader asks what to buy, pick or use, name one or two concrete "
+    "products or part numbers in the answer, with the one caution that matters. "
+    "Do not answer a request for advice by pointing at a specification or a "
+    "search."
+)
+
 COMPATIBILITY_GUIDANCE = (
     "Compatibility is separate from whether a product has a fault. For fitment "
     "or compatibility claims, give a positive fit answer "

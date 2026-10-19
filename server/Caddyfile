@@ -1,0 +1,4 @@
+# Caddy gets and renews the certificate. Replace the name with your own.
+relay.example.com {
+	reverse_proxy 127.0.0.1:8080
+}

@@ -3,6 +3,7 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import { usePrefs } from './prefs'
 import { ChatProvider, useChat } from './chat'
 import { CompareProvider, useCompare } from './compare'
+import { useAttention } from './engine/buyer'
 import { useHandoff, type Landing } from './handoff'
 import { QueueProvider, useQueue } from './queue'
 import { ChatScreen } from './screens/Chat'
@@ -18,6 +19,7 @@ function Shell() {
   const { motion: m } = usePrefs()
   const { active } = useQueue()
   const { add } = useCompare()
+  const attention = useAttention()
   const chat = useChat()
   const [{ screen, direction, product }, setNav] = useState<{ screen: Screen; direction: number; product: string | null }>({ screen: 'chat', direction: 1, product: null })
   const [collapsed, setCollapsed] = useState(false)
@@ -109,7 +111,7 @@ function Shell() {
   return (
     <MotionConfig reducedMotion={m.on ? 'never' : 'always'}>
       <div className="app">
-        <Rail screen={screen} onNavigate={go} collapsed={collapsed} onCollapse={() => setCollapsed((v) => !v)} onMore={() => setDrawer(true)} onNewChat={startChat} onOpenChat={showChat} queueCount={active} />
+        <Rail screen={screen} onNavigate={go} collapsed={collapsed} onCollapse={() => setCollapsed((v) => !v)} onMore={() => setDrawer(true)} onNewChat={startChat} onOpenChat={showChat} queueCount={active} attention={attention} />
         <main className="stage">
           <AnimatePresence mode="popLayout" initial={false} custom={direction}>
             <motion.div

@@ -158,8 +158,8 @@ gate_py() {
     # and package the release were the only Python in the tree nothing checked.
     # It found four unused imports the day it was turned on, two of them in
     # files that had never been read by a linter at all.
-    step "ruff (src/kriko, src/app, packs, tools, packaging)"
-    "$PYTHON" -m ruff check src packs tools packaging
+    step "ruff (src/kriko, src/app, packs, server, tools, packaging)"
+    "$PYTHON" -m ruff check src packs server tools packaging
     # Three invocations, not one `mypy src packs`: `kriko/ledger/extraction.py`
     # and `packs/cars/pipeline/ledger/extraction.py` share a module-path
     # suffix, and mypy's module resolution conflates them into one "Module
@@ -173,6 +173,8 @@ gate_py() {
     "$PYTHON" -m mypy src/app
     step "mypy (packs)"
     "$PYTHON" -m mypy packs
+    step "mypy (server)"
+    MYPYPATH=server "$PYTHON" -m mypy -p kriko_cloud
     # No arguments: pytest.ini pins testpaths. Naming directories by hand is how
     # the suite silently shrank to 576 of 761 tests once app/pipeline/ existed.
     # test_repo_invariants.py enforces the layering rules and the testpaths
