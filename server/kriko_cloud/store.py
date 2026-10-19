@@ -96,10 +96,10 @@ class Store:
         if secret:
             material = hashlib.sha256(secret.encode("utf-8")).digest()
         elif key_file.exists():
-            material = base64.urlsafe_b64decode(key_file.read_text().strip())
+            material = base64.urlsafe_b64decode(key_file.read_text(encoding="utf-8").strip())
         else:
             material = secrets.token_bytes(32)
-            key_file.write_text(base64.urlsafe_b64encode(material).decode())
+            key_file.write_text(base64.urlsafe_b64encode(material).decode(), encoding="utf-8")
             key_file.chmod(0o600)
         self._fernet = Fernet(base64.urlsafe_b64encode(material))
         with self.connect() as conn:

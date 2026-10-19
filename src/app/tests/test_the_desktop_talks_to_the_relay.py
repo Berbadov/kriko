@@ -85,15 +85,15 @@ def test_a_sealed_blob_opens_only_with_its_key_and_its_name():
     keys = cloud.Keys(cloud.new_key())
     sealed = keys.seal("profile", {"about": "secret words"})
     assert b"secret words" not in sealed
-    assert keys.open("profile", sealed) == {"about": "secret words"}
+    assert keys.unseal("profile", sealed) == {"about": "secret words"}
     with pytest.raises(ValueError):
-        keys.open("ledger", sealed)
+        keys.unseal("ledger", sealed)
     with pytest.raises(ValueError):
-        cloud.Keys(cloud.new_key()).open("profile", sealed)
+        cloud.Keys(cloud.new_key()).unseal("profile", sealed)
     with pytest.raises(ValueError):
-        keys.open("profile", sealed[:-1] + bytes([sealed[-1] ^ 1]))
+        keys.unseal("profile", sealed[:-1] + bytes([sealed[-1] ^ 1]))
     with pytest.raises(ValueError):
-        keys.open("profile", b"not sealed")
+        keys.unseal("profile", b"not sealed")
     assert keys.seal("profile", {"a": 1}) != keys.seal("profile", {"a": 1}), "a fresh nonce each time"
 
 
