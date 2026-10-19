@@ -327,7 +327,9 @@ def start_research_plane(
         # picked no agent, and the only door for one who has none at all.
         from app import localplane
 
-        local = localplane.resolve(
+        picked_local = requested == prefs.LOCAL_PICK or (not requested and stored == prefs.LOCAL_PICK)
+        # A reader who picked the Local model and has Ollama closed gets it started.
+        local = (localplane.resolve_awake if picked_local else localplane.resolve)(
             getattr(request.app.state.settings, "app_state_path", None),
             with_search=False)
         # "local" is a pick of its own (the Agents tab's Local model row), not

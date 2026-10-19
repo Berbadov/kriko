@@ -183,7 +183,7 @@ class LocalNotReady(RuntimeError):
     what to do. A failed job with that text, never a run of "0 claims"."""
 
 
-def _local_plan(params: dict, *, with_search: bool = True) -> dict:
+def _local_plan(params: dict, *, with_search: bool = True, progress: Progress | None = None) -> dict:
     """What a local run uses, resolved off the running server (B171).
 
     The run's own `model` counts only when the server lists it: the Run screen
@@ -192,11 +192,12 @@ def _local_plan(params: dict, *, with_search: bool = True) -> dict:
     """
     from app import localplane
 
-    plan = localplane.resolve(
+    plan = localplane.resolve_awake(
         params.get("app_state_path"),
         url=str(params.get("llm_base_url") or ""),
         search_url=str(params.get("search_base_url") or ""),
         with_search=with_search,
+        progress=progress,
     )
     if not plan["ready"]:
         raise LocalNotReady(plan["reason"])
@@ -235,7 +236,7 @@ def _local_asker(settings, params: dict, progress: Progress):
     """The local model as the job's researcher, wired like a harness one."""
     from app.providers import local_agent, local_asker
 
-    plan = _local_plan({**params, "app_state_path": settings.app_state_path})
+    plan = _local_plan({**params, "app_state_path": settings.app_state_path}, progress=progress)
     researcher = local_asker(
         base_url=plan["url"], serving_name=plan["model"],
         search_base_url=plan["search_url"], search_kind=plan["search_kind"],
@@ -301,7 +302,7 @@ def _local_structured_completer(settings, params: dict, progress: Progress):
     from app.providers.local_inference import OpenAICompatSocket
 
     plan = _local_plan({**params, "app_state_path": settings.app_state_path},
-                       with_search=False)
+                       with_search=False, progress=progress)
     progress.log(f"local structured completion: {plan['line']}")
     return OpenAICompatSocket(
         plan["url"], plan["model"], timeout=plan["timeout"],
@@ -4387,7 +4388,9 @@ def _compare_brief(question: str, answers: list[dict], *,
         "so plainly rather than guessing. Do not invent risks. A product "
         "with no recorded risk is not proven risk-free. Name the product and "
         "recorded risk behind each conclusion, and cite the recorded source "
-        "(its page and quote) that supports it.",
+        "(its page and quote) that supports it. If the reader is choosing "
+        "between these products, say which one you would pick and why, and "
+        "what would change your mind; do not hand the choice back.",
         "",
     ]
     if max_chars is not None:
