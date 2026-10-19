@@ -89,6 +89,29 @@ def test_the_stop_runs_before_files_are_replaced_and_before_they_are_removed(hoo
         )
 
 
+def test_the_engine_folder_is_replaced_whole_and_cleared_on_uninstall(hooks):
+    """An overlay left `kriko-0.2.3.dist-info` beside 0.2.4 and the engine read
+    its version from the old one; the same leftovers kept the folder from being
+    removed. The folder is cleared after the stop, never before it."""
+    clear = _macro(hooks, "KrikoClearEngineFolder")
+    assert re.findall(r"RMDir /r (\S+)", clear) == ['"$INSTDIR\\_internal"'], (
+        "only the engine's own folder may be removed recursively, and never "
+        "the install folder itself"
+    )
+    for name in ("NSIS_HOOK_PREINSTALL", "NSIS_HOOK_PREUNINSTALL"):
+        body = _macro(hooks, name)
+        assert "KrikoClearEngineFolder" in body, name
+        assert body.index("KrikoStopEverything") < body.index("KrikoClearEngineFolder"), (
+            f"{name} clears the folder before it stops the engine that maps it"
+        )
+    assert "RMDir /r" not in hooks.replace(clear, ""), (
+        "no other hook may remove anything recursively"
+    )
+    # The folder it clears is the one the bundle puts the engine in.
+    bundle = _config("tauri.bundle.conf.json")["bundle"]
+    assert "_internal" in bundle["resources"].values()
+
+
 def test_the_names_it_stops_are_the_names_it_ships(hooks):
     bundle = _config("tauri.bundle.conf.json")["bundle"]
     shipped = {Path(name).name + ".exe" for name in bundle["externalBin"]}
