@@ -525,7 +525,7 @@ def deterministic(product: str, look: dict, profiles: list[dict]) -> dict:
                 "message": "The saved category does not identify one installed catalog clearly."}
     basis = [saved_category] if saved_category else []
     selected = next(row for row in ranked if row[3] is top)
-    scope_values = []
+    scope_values: list[str] = []
     for kind in (top.get("definition") or {}).get("kinds") or []:
         if isinstance(kind, dict):
             scope_values.extend((str(kind.get("id") or ""), str(kind.get("label") or "")))
@@ -809,11 +809,12 @@ def parse_jev(reply: dict, product: str, look: dict,
                               response_model=response_model)
     top_option, probability = ranked[0]
     margin = probability - ranked[1][1]
-    usage = reply.get("usage") if isinstance(reply.get("usage"), dict) else {}
+    raw_usage = reply.get("usage")
+    usage = raw_usage if isinstance(raw_usage, dict) else {}
     usage_summary = {
-        key: usage.get(key) for key in ("input_tokens", "output_tokens")
-        if (isinstance(usage.get(key), int) and not isinstance(usage.get(key), bool)
-            and 0 <= usage.get(key) <= 2**31 - 1)
+        key: value for key in ("input_tokens", "output_tokens")
+        if (isinstance(value := usage.get(key), int) and not isinstance(value, bool)
+            and 0 <= value <= 2**31 - 1)
     }
     input_tokens = usage_summary.get("input_tokens")
     estimated_spend = (round(input_tokens * 0.042 / 1_000_000, 8)

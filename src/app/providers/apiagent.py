@@ -117,6 +117,7 @@ OPENAI_COMPATIBLE = ApiAgent(
     contract_note=NOTE,
     model_hint="Uses the OpenAI-compatible endpoint and key configured in Settings.",
     install_hint="Add an OpenAI or compatible API key in Settings → Keys.",
+    key_url="https://platform.openai.com/api-keys",
 )
 
 #: A closed roster, as `harness.KNOWN` is: each entry is an adapter somebody
@@ -198,7 +199,7 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
     if tools:
         from app.providers import _searcher
 
-        searcher, search_provider = _searcher(app_state_path, search_provider)
+        searcher, search_provider = _searcher(app_state_path, search_provider or "")
         reader = fetch.reader()
     call_count = 0
     for _round in range(5):
@@ -270,12 +271,12 @@ def openai_compatible_converse(prompt: str, *, model: str = "", timeout: float =
             except (TypeError, ValueError):
                 args = {}
             query = str(args.get("query") or "").strip() if isinstance(args, dict) else ""
+            result_rows: list[dict] = []
             if not query:
-                result_rows = []
+                pass
             else:
                 reply.queries.append(query)
                 reply.tool_calls += 1
-                result_rows = []
                 try:
                     hits = searcher(query, max(1, min(int(args.get("limit") or 3), 5)))
                 except Exception:  # noqa: BLE001 — the model can finish without search
