@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { RECENTS } from '../mock/data'
-import { del, get, seg, type ApiHistoryItem } from './api'
+import { del, get, post, seg, type ApiHistoryItem } from './api'
 import { useEngine } from './Engine'
 
 /** Every saved check, for the History panel. The welcome page shows only the latest few. */
@@ -58,6 +58,15 @@ const DEMO: Past[] = [
   { id: 'demo:Delta Unit 500', name: 'Delta Unit 500', category: '', source: 'app', risks: 2, at: Date.now() - 19 * 86400000, when: '19 days ago' },
 ]
 
+/** What `DELETE /api/history/{id}` hands back, kept so the delete can be undone.
+ *  `demo` is the window's own stand-in for a demo row, which has no engine. */
+export interface Undoable {
+  lookup?: Record<string, unknown>
+  checks?: Record<string, unknown>[]
+  notes?: Record<string, unknown>[]
+  demo?: Past
+}
+
 export function useHistory(query = '') {
   const { mode } = useEngine()
   const [items, setItems] = useState<Past[] | null>(null)
@@ -67,14 +76,16 @@ export function useHistory(query = '') {
   const [attempt, setAttempt] = useState(0)
   useEffect(() => { setOffset(0) }, [query])
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    // `checking` is not `demo`: while the engine is still being asked, showing
+    // the window's stand-in list would claim there are no saved checks.
     if (mode === 'checking') return
     if (mode !== 'live') {
       setItems(DEMO)
       return
     }
     let live = true
-    get<{ items: ApiHistoryItem[] & { source?: string }[]; has_more?: boolean }>(`/api/history?limit=200&offset=${offset}&q=${encodeURIComponent(query)}`, 20000)
+    await get<{ items: ApiHistoryItem[] & { source?: string }[]; has_more?: boolean }>(`/api/history?limit=200&offset=${offset}&q=${encodeURIComponent(query)}`, 20000)
       .then((data) => {
         if (!live) return
         const page = (data.items as (ApiHistoryItem & { source?: string })[]).map((row) => ({
@@ -96,23 +107,63 @@ export function useHistory(query = '') {
     }
   }, [mode, query, offset, attempt])
 
-  /** Delete one check. The list drops it when the engine says it is gone. */
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  /**
+   * Delete one check, and keep what it takes so the reader can change their mind.
+   *
+   * `undo` is the reply's `undo` field: the row and its triage, as the engine
+   * handed it back. Holding it here rather than in a "trash" table means the
+   * undo lasts exactly as long as this panel does, which is the honest lifetime
+   * for an action the reader just confirmed — and it is why the engine's delete
+   * returns the data instead of storing it.
+   */
   const remove = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<Undoable | null> => {
       setProblem('')
+      let undo: Undoable | null = null
       if (mode === 'live') {
         try {
-          await del(`/api/history/${seg(id)}`)
+          const reply = await del<{ undo?: Undoable }>(`/api/history/${seg(id)}`)
+          undo = reply?.undo ?? null
         } catch (error) {
           setProblem(error instanceof Error ? error.message : 'Could not delete it.')
-          return
+          return null
         }
+      } else {
+        const row = items?.find((one) => one.id === id)
+        undo = row ? { demo: row } : null
       }
       setItems((now) => (now ? now.filter((row) => row.id !== id) : now))
       window.dispatchEvent(new Event(HISTORY_CHANGED))
+      return undo
     },
-    [mode],
+    [mode, items],
   )
 
-  return { items, problem, remove, hasMore, loadMore: () => setOffset((n) => n + 200), retry: () => setAttempt((n) => n + 1) }
+  /** Put it back. A demo row goes back into the window's own list. */
+  const restore = useCallback(
+    async (undo: Undoable) => {
+      setProblem('')
+      if (mode === 'live') {
+        try {
+          await post('/api/history/restore', undo)
+        } catch (error) {
+          setProblem(error instanceof Error ? error.message : 'Could not put it back.')
+          return
+        }
+      } else if (undo.demo) {
+        setItems((now) => (now ? [...now, undo.demo as Past].sort((a, b) => b.at - a.at) : now))
+      }
+      // A restored row belongs on the first page, so start the list again from it.
+      if (offset) setOffset(0)
+      else await load()
+      window.dispatchEvent(new Event(HISTORY_CHANGED))
+    },
+    [mode, load, offset],
+  )
+
+  return { items, problem, remove, restore, hasMore, loadMore: () => setOffset((n) => n + 200), retry: () => setAttempt((n) => n + 1) }
 }

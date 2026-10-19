@@ -15,6 +15,7 @@ export function useProductActions(product: { id: string; name: string }) {
   const { add } = useCompare()
   const [adding, setAdding] = useState<{ step: Step; note: string }>({ step: 'idle', note: '' })
   const [reading, setReading] = useState<{ step: Step; note: string }>({ step: 'idle', note: '' })
+  const [opening, setOpening] = useState<{ step: Step; note: string }>({ step: 'idle', note: '' })
   const lookup = useRef('')
   const alive = useRef(true)
 
@@ -33,6 +34,26 @@ export function useProductActions(product: { id: string; name: string }) {
     if (!saved.lookup_id) throw new EngineError(0, 'The answer was not saved.')
     return (lookup.current = saved.lookup_id)
   }, [mode, product.id, product.name])
+
+  /**
+   * Save the check, then open it.
+   *
+   * Separate from `ensureCheck` because saving is a request that can fail, and
+   * the card used to call `void ensureCheck().then(onOpen).catch(() => {})`:
+   * pressing **Open** on an engine that refused did nothing at all — no
+   * spinner, no error, no navigation — which reads as a dead button.
+   */
+  const open = useCallback(async (onOpen: (lookupId: string) => void) => {
+    setOpening({ step: 'busy', note: 'Saves' })
+    try {
+      const id = await ensureCheck()
+      if (!alive.current) return
+      setOpening({ step: 'done', note: '' })
+      onOpen(id)
+    } catch (error) {
+      if (alive.current) setOpening({ step: 'failed', note: reasonOf(error) })
+    }
+  }, [ensureCheck])
 
   const addToCompare = useCallback(async () => {
     setAdding({ step: 'busy', note: '' })
@@ -69,5 +90,5 @@ export function useProductActions(product: { id: string; name: string }) {
     }
   }, [mode, preferred, product.id, ensureCheck])
 
-  return { adding, reading, ensureCheck, addToCompare, readAgain }
+  return { adding, reading, opening, ensureCheck, open, addToCompare, readAgain }
 }

@@ -23,7 +23,8 @@ class LookupRequest(BaseModel):
     #: What this one has BEEN THROUGH — mileage, hours, cycles, age, ad text.
     context: dict = Field(default_factory=dict)
     lang: str = "en"
-    limit: int = 8
+    #: Bounded here rather than at the SQL, for the same reason as analyze's.
+    limit: int = Field(default=8, ge=1, le=50)
 
 
 def answer(store, body: LookupRequest):

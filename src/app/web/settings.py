@@ -27,6 +27,13 @@ from kriko.store.db import DEFAULT_STORE
 #: test_the_extension_and_the_server_agree_on_a_port keeps honest.
 EXTENSION_PORT = 8787
 
+#: The largest request body this API will read, and the largest pack it will
+#: install. A pack is a SQLite file and the *download* path has always capped
+#: one at `packsource.MAX_PACK_BYTES`; the upload path buffered whatever arrived
+#: into memory and only then looked at it. Lives here rather than in `app.py`
+#: because a router needs it too, and a router importing the app is a cycle.
+MAX_REQUEST_BYTES = 512 * 1024 * 1024
+
 #: Everything this process is allowed to write, under one root.
 #:
 #: `~/.kriko` already holds both SQLite files, so it is not a new concept —
