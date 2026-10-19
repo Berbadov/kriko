@@ -14,22 +14,25 @@ function useOpen(auto: boolean) {
   return [chosen ?? auto, () => setChosen(!(chosen ?? auto))] as const
 }
 
-export function Timeline({ run }: { run: Run }) {
+export function Timeline({ run, historical = false }: { run: Run; historical?: boolean }) {
   const running = run.status === 'running'
   const [open, toggle] = useOpen(running)
   const label = running ? 'Research' : run.status === 'done' ? 'Done' : run.status === 'failed' ? 'Failed' : 'Stopped'
   const total = (run.endedAt ?? run.startedAt) - run.startedAt
+  const measured = run.rows.flatMap((row) => (row.kind === 'event' || row.kind === 'tool') && row.counts?.pagesRead !== undefined ? [row.counts] : [])
+  const pageReads = measured.reduce((count, item) => count + (item.pagesRead ?? 0), 0)
 
   return (
     <section className="timeline" aria-label="Research activity">
       <button className="tl-head" onClick={toggle} aria-expanded={open}>
         <PixelGlyph size={16} active={running} />
         <span className="tl-label">
-          <Shimmer active={running}>{label}</Shimmer>
+          <Shimmer active={running}>{historical ? 'Run details' : label}</Shimmer>
         </span>
-        <span className="tl-time">
+        {measured.length > 0 && <span className="mono muted">{pageReads} page {pageReads === 1 ? 'read' : 'reads'}</span>}
+        {!historical && <span className="tl-time">
           <Elapsed since={run.startedAt} running={running} final={total} />
-        </span>
+        </span>}
         <span className="tl-chev" data-open={open}>
           <Icon name="chevron" size={16} />
         </span>
@@ -58,6 +61,7 @@ function RowView({ row }: { row: Row }) {
     >
       {row.kind === 'thought' && <Thought row={row} />}
       {row.kind === 'tool' && <Tool row={row} />}
+      {row.kind === 'event' && <Event row={row} />}
       {row.kind === 'plan' && <Plan row={row} />}
     </motion.div>
   )
@@ -85,16 +89,53 @@ function Thought({ row }: { row: Extract<Row, { kind: 'thought' }> }) {
 
 function Tool({ row }: { row: Extract<Row, { kind: 'tool' }> }) {
   const running = row.ms === undefined
+  const counts = [
+    row.counts?.searchResults === undefined ? '' : `${row.counts.searchResults} search results`,
+    row.counts?.pagesAttempted === undefined ? '' : `${row.counts.pagesAttempted} pages attempted`,
+    row.counts?.pagesRead === undefined ? '' : `${row.counts.pagesRead} pages read`,
+  ].filter(Boolean)
+  const source = safeHttpUrl(row.url)
   return (
     <div className="tool">
       <span className="tool-dot" data-running={running} data-failed={row.failed}>
         {running ? <PixelGlyph size={14} /> : <Icon name={row.failed ? 'x' : 'check'} size={14} />}
       </span>
       <span className="tool-name">{row.name}</span>
-      <span className="tool-detail">{row.detail}</span>
+      <span className="tool-detail">
+        <span>{row.detail}</span>
+        {source && <a className="tool-url" href={source} target="_blank" rel="noreferrer">{row.url}</a>}
+        {counts.length > 0 && <span className="tool-counts">{counts.join(' · ')}</span>}
+      </span>
       <span className="tool-time mono">
         {running ? <Elapsed since={row.startedAt} running /> : formatSeconds((row.ms ?? 0) / 1000)}
       </span>
+    </div>
+  )
+}
+
+function safeHttpUrl(value?: string) {
+  if (!value) return undefined
+  try {
+    const url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function Event({ row }: { row: Extract<Row, { kind: 'event' }> }) {
+  const source = safeHttpUrl(row.sourceUrl)
+  const counts = [
+    row.counts?.searchResults === undefined ? '' : `${row.counts.searchResults} search results`,
+    row.counts?.pagesAttempted === undefined ? '' : `${row.counts.pagesAttempted} pages attempted`,
+    row.counts?.pagesRead === undefined ? '' : `${row.counts.pagesRead} pages read`,
+  ].filter(Boolean)
+  return (
+    <div className="run-event" data-level={row.level ?? 'info'}>
+      {row.stage && <span className="run-event-stage">{row.stage}</span>}
+      <span>{row.text}</span>
+      {source && <a className="run-event-url" href={source} target="_blank" rel="noreferrer">{row.sourceUrl}</a>}
+      {counts.length > 0 && <span className="tool-counts">{counts.join(' · ')}</span>}
     </div>
   )
 }
