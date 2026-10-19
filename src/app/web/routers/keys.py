@@ -107,6 +107,12 @@ def _post_raw(url: str, payload: dict, headers: dict, timeout: float = TEST_TIME
         return response.read()
 
 
+def _get_raw(url: str, headers: dict, timeout: float = TEST_TIMEOUT) -> bytes:
+    request = urllib.request.Request(url, headers=headers, method="GET")
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read()
+
+
 def _timed_ms(start: float) -> int:
     return int((time.monotonic() - start) * 1000)
 
@@ -360,6 +366,28 @@ def _test_completion(provider_id: str, key: str, app_state_path=None) -> dict:
     return _openai_verdict(provider_id, start, name, body)
 
 
+def _test_typesafe(key: str) -> dict:
+    """Validate Jev credentials with TypeSafe's documented model-list route."""
+    start = time.monotonic()
+    try:
+        raw = _get_raw(
+            "https://api.typesafe.ai/v1/models",
+            {"authorization": f"Bearer {key}"},
+        )
+    except Exception as exc:
+        return _transport_refused("typesafe", start, exc)
+    try:
+        body = json.loads(raw.decode("utf-8", "replace"))
+    except ValueError:
+        return _refused("typesafe", _timed_ms(start), "malformed", "provider answered something that is not JSON")
+    models = body.get("models") if isinstance(body, dict) else None
+    if not isinstance(models, list):
+        return _refused("typesafe", _timed_ms(start), "malformed", "provider answered without a model list")
+    row = _row("typesafe")
+    row.update({"ok": True, "latency_ms": _timed_ms(start), "results": len(models)})
+    return row
+
+
 def _run_provider_test(provider_id: str, app_state_path=None) -> dict:
     from app.providers import MissingKey
 
@@ -374,6 +402,8 @@ def _run_provider_test(provider_id: str, app_state_path=None) -> dict:
             return _test_search(provider_id, key)
         if provider_id in keys.COMPLETION_PROVIDERS:
             return _test_completion(provider_id, key, app_state_path)
+        if provider_id == "typesafe":
+            return _test_typesafe(key)
         return _refused(provider_id, 0, "unsupported", f"no self-test for {provider_id}")
     except Exception as exc:
         return _refused(provider_id, 0, "error", f"{type(exc).__name__}: {exc}")

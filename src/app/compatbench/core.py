@@ -123,6 +123,11 @@ def payload(reply: str) -> dict:
     return found if isinstance(found, dict) else {}
 
 
+def _rows(value: object) -> list:
+    """A reply's list field, or an empty list when it is anything else."""
+    return value if isinstance(value, list) else []
+
+
 def _fold(value: str) -> str:
     return " ".join(str(value or "").casefold().split())
 
@@ -141,7 +146,7 @@ def grade(case: dict, reply: str) -> dict:
     """Compare a proposed decision to constraints derived from fixture facts."""
     raw = payload(reply)
     expected_checks = constraint_results(case)
-    got_rows = raw.get("checks") if isinstance(raw.get("checks"), list) else []
+    got_rows = _rows(raw.get("checks"))
     got = {str(row.get("id") or ""): row for row in got_rows if isinstance(row, dict)}
     pages = documents(case)
     errors = []
@@ -151,7 +156,7 @@ def grade(case: dict, reply: str) -> dict:
     for row in got_rows:
         if not isinstance(row, dict):
             continue
-        refs = row.get("evidence") if isinstance(row.get("evidence"), list) else []
+        refs = _rows(row.get("evidence"))
         for ref in refs:
             if not isinstance(ref, dict):
                 errors.append("constraint evidence: malformed citation")
@@ -166,7 +171,7 @@ def grade(case: dict, reply: str) -> dict:
             continue
         if row.get("status") != expected["status"]:
             errors.append(f"{expected['id']}: expected {expected['status']}, got {row.get('status')!r}")
-        citations = row.get("evidence") if isinstance(row.get("evidence"), list) else []
+        citations = _rows(row.get("evidence"))
         if expected["status"] == "unknown" and not str(row.get("reason") or "").strip():
             errors.append(f"{expected['id']}: unknown needs a reason naming the missing evidence")
         for fact in expected["known_facts"]:
@@ -188,7 +193,7 @@ def grade(case: dict, reply: str) -> dict:
     if seller_expected and raw.get("seller_assessment") != expected_seller:
         errors.append(f"seller assessment: expected {expected_seller}, got {raw.get('seller_assessment')!r}")
     if case.get("seller_evidence"):
-        supplied = raw.get("seller_evidence") if isinstance(raw.get("seller_evidence"), list) else []
+        supplied = _rows(raw.get("seller_evidence"))
         for expected in case.get("seller_evidence") or []:
             status = "verified" if expected.get("verified") else "reported"
             specificity = ("exact_item" if expected.get("exact_item") else
@@ -204,8 +209,7 @@ def grade(case: dict, reply: str) -> dict:
         if len(supplied) != len(case.get("seller_evidence") or []):
             errors.append("seller evidence: unexpected or missing report")
     if case.get("authenticity_evidence"):
-        supplied = (raw.get("authenticity_evidence")
-                    if isinstance(raw.get("authenticity_evidence"), list) else [])
+        supplied = _rows(raw.get("authenticity_evidence"))
         for expected in case.get("authenticity_evidence") or []:
             assessment = ("verified" if expected.get("verified")
                           and expected.get("exact_item")

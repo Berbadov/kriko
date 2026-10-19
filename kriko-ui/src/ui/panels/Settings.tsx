@@ -132,6 +132,21 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
           </div>
           <div className="setting">
             <span>
+              Product classification
+              <small>After deterministic checks, use your selected local, coding or API agent by default. Jev is an optional alternative that uses a separate TypeSafe key.</small>
+            </span>
+            <Select
+              label="Product classification"
+              value={doc.chosen.classification_provider || 'agent'}
+              options={doc.classification_providers.map((provider) => ({
+                value: provider.id,
+                label: provider.ready ? provider.label : `${provider.label} (no key)`,
+              }))}
+              onChange={(value) => void save({ classification_provider: value })}
+            />
+          </div>
+          <div className="setting">
+            <span>
               Response language
               <small>Automatic follows the product request. Quotes stay in their source language.</small>
             </span>

@@ -125,6 +125,56 @@ def test_list_packs_reports_state(store):
     assert pack["enabled"] is True
 
 
+def test_list_catalogs_exposes_definition_and_revision(store):
+    (catalog,) = mcp_server.list_catalogs()
+
+    assert catalog["pack_id"] == "tools"
+    assert catalog["version"] == "0.1.0"
+    assert catalog["content_digest"]
+    assert catalog["definition"]["kinds"]
+
+
+def test_classify_product_returns_audited_decision(store, monkeypatch):
+    from app import categorizer
+
+    profile = {
+        "pack_id": "gaming.mice", "name": "Gaming mice", "version": "2.0.0",
+        "content_digest": "abc123", "enabled": True,
+        "definition": {"kinds": [{"id": "mouse", "label": "mouse"}],
+                       "identity_keys": [], "attributes": [], "examples": []},
+        "terms": ["Gaming mice", "mouse"],
+    }
+    monkeypatch.setattr(categorizer, "installed_catalogs", lambda _path: [profile])
+
+    result = mcp_server.classify_product(
+        "Scyrox V8 Gaming Mouse", {"category": "Gaming Mouse"},
+    )
+
+    assert result["status"] == "assigned"
+    assert result["audit"]["catalog"]["content_digest"] == "abc123"
+
+
+def test_mcp_classifier_uses_configured_provider_only_by_preference(store, monkeypatch):
+    from app import categorizer, prefs
+
+    seen = []
+    monkeypatch.setattr(prefs, "classification_provider", lambda _conn: "typesafe")
+    monkeypatch.setattr(categorizer, "installed_catalogs", lambda _path: [
+        {"pack_id": "one", "name": "One"},
+    ])
+    monkeypatch.setattr(
+        categorizer, "classify_configured",
+        lambda product, facts, profiles, provider: seen.append(provider) or {
+            "status": "uncertain", "method": "jev",
+        },
+    )
+
+    result = mcp_server.classify_product("Some product", {})
+
+    assert result["method"] == "jev"
+    assert seen == ["typesafe"]
+
+
 def test_store_status_counts_rows(store):
     status = mcp_server.store_status()
     assert status["subjects"] == 2

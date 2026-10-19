@@ -213,6 +213,18 @@ def test_saving_a_key_makes_it_present_with_a_hint(tmp_path):
     assert body["ready"] is False  # openai still missing
 
 
+def test_typesafe_key_is_stored_and_never_echoed(tmp_path):
+    client = _client(tmp_path)
+    response = client.put("/api/keys", json={"values": {"typesafe": FIXTURE}})
+    assert response.status_code == 200
+    assert FIXTURE not in response.text
+    body = client.get("/api/keys").json()
+    row = next(item for item in body["providers"] if item["id"] == "typesafe")
+    assert row["present"] is True
+    assert row["source"] == "file"
+    assert FIXTURE not in client.get("/api/keys").text
+
+
 def test_tavily_alone_is_equal_footing_with_exa_for_readiness(tmp_path, monkeypatch):
     """`ready` used to be `all(item["present"] ...)`, which required *every*
     provider present — including the optional second search provider. Setting

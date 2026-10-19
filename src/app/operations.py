@@ -83,6 +83,8 @@ KINDS = {
     "pack_build": "author",
     "pack_update": "write",
     "submit_findings": "research",
+    "classify_product": "read",
+    "list_catalogs": "read",
     "research_brief": "research",
     "research_agenda": "agenda",
     "draft_pack": "author",
