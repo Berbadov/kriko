@@ -33,6 +33,8 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qsl, unquote_plus, urlsplit
 
+from app import htmlscan
+
 #: A product page is remembered once per this long unless the price moved.
 SAME_PRICE_WINDOW = timedelta(hours=6)
 #: Price points older than this are of no use to a judgement and are dropped.
@@ -181,29 +183,31 @@ def extract(fields: dict | None) -> dict:
     }
 
 
-_LD_BLOCK = re.compile(
-    r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>", re.I | re.S)
+_LD_TYPE = re.compile(r"<script[^>]+type=[\"']application/ld\+json[\"']", re.I)
 _META = re.compile(r"<meta\b[^>]*>", re.I)
 _ATTR = re.compile(r"([\w:-]+)\s*=\s*(?:\"([^\"]*)\"|'([^']*)')")
 
 
-def _walk(node):
-    if isinstance(node, dict):
-        yield node
-        for value in node.values():
-            yield from _walk(value)
-    elif isinstance(node, list):
-        for value in node:
-            yield from _walk(value)
+def _walk(root):
+    """Every object in a JSON document, without recursion: a page chooses how deep it nests."""
+    todo = [root]
+    while todo:
+        node = todo.pop()
+        if isinstance(node, dict):
+            yield node
+            todo.extend(node.values())
+        elif isinstance(node, list):
+            todo.extend(node)
 
 
 def read_markup(markup: str) -> dict:
     """The offer a fetched page publishes for search engines, as `extract` reads a scrape."""
     fields: dict[str, str] = {}
-    for block in _LD_BLOCK.findall(markup or ""):
+    for block in htmlscan.inner_texts(markup or "", ("script",), want=lambda tag: bool(_LD_TYPE.match(tag))):
         try:
             data = json.loads(block.strip())
-        except ValueError:
+        except (ValueError, RecursionError):
+            # One page's hostile JSON must not end the sweep: it fails alone.
             continue
         for node in _walk(data):
             kind = node.get("@type")
