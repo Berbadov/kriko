@@ -5,6 +5,33 @@ immutable; a correction is a newer version.
 
 ### Unreleased
 
+- Nothing yet.
+
+### 0.2.6
+
+- **Fixes from a bug hunt over everything below.** A price with two numbers in
+  it ("from 10 to 30", "-50% 199,90 TL") is no longer read as one glued price,
+  and a budget or a review count written the way a shop prints it ("15.000",
+  "1,234") is read as the number it is. A watched page keeps its address as it
+  was written. Forgetting all your purchases or watches stays forgotten on a
+  paired device. A cart page's lines are counted once, the price beside a
+  product's name is the one it reads and not a price in the header, and a shop
+  that changes page without loading is read again.
+- **Safer fetching.** A page that redirects to this computer or to your own
+  network is refused, as is the shared address range used by Tailscale and some
+  clouds. A page built to stall the reader (a hundred thousand unclosed tags)
+  no longer takes minutes to read. One page's broken data fails alone, in the
+  app and on the relay.
+- **The relay and sync.** The relay refuses a large body before reading it. A
+  long product name, a large purchase history or one page the relay will not
+  watch no longer stops the rest of a sync, and a stopped watch is stopped
+  first.
+- **The app.** The lists and the budget in For you keep what you type. A second
+  restore keeps the state just before it. Saved checks are found by words with
+  letters such as ü and ı. A failed settings save keeps its message. Start Ollama
+  says why it could not. The queue and Compare no longer call a job failed
+  because one read of it was slow.
+
 - **Kriko knows what you need.** Under More, For you, say what you buy and
   use things for, your budget, what you must have, what you avoid and distrust,
   and how much price, quality, lasting and repairability matter to you. Kriko

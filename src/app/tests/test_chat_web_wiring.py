@@ -244,7 +244,7 @@ def test_chat_native_tools_follow_web_intent_without_slowing_direct_or_local_tur
     assert tasks._chat_native_tools("What is in my saved checks?", []) is None
 
 
-def test_unset_chat_tool_policy_respects_each_harness_capability(monkeypatch):
+def test_unset_chat_tool_policy_respects_each_harness_capability(monkeypatch, tmp_path):
     class Progress:
         def __init__(self):
             self.logs = []
@@ -285,7 +285,7 @@ def test_unset_chat_tool_policy_respects_each_harness_capability(monkeypatch):
         monkeypatch.setattr("app.providers.harness_researcher",
                             lambda **_kwargs: researcher)
         answer, _ = tasks._ask_about_checks(
-            SimpleNamespace(app_state_path="state.sqlite"),
+            SimpleNamespace(app_state_path=tmp_path / "state.sqlite"),
             {"backend": "harness", "harness": "chosen"}, progress, "brief",
             allow_tools=allow_tools, on_agent=identities.append)
         return (answer, researcher.allow_tools, identities, researcher.transport_seen,

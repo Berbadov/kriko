@@ -113,8 +113,10 @@ pub fn configured_extension_port() -> u16 {
         .unwrap_or(EXTENSION_PORT)
 }
 
-/// How long the engine gets to answer `/api/health` after it names a port.
-const HEALTH_TIMEOUT: Duration = Duration::from_secs(45);
+/// How long the engine gets to answer `/api/health` after it names a port. An engine unpacked a
+/// moment ago starts slowly on its first run (the antivirus reads every new file), and one that
+/// misses this is set aside and its folder deleted, so the wait errs long.
+const HEALTH_TIMEOUT: Duration = Duration::from_secs(90);
 /// The most stderr kept for the failure screen (the tail is what matters).
 const STDERR_KEEP: usize = 24 * 1024;
 

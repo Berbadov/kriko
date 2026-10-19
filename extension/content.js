@@ -354,12 +354,13 @@ function _readMeasures(panel) {
       .map((t) => foldTerm(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s*"))
       .join("|");
     if (!terms || !symbols) continue;
-    const pattern = new RegExp(`(?:${terms})[\\s:]*([\\d.,]+)\\s*(${symbols})`, "i");
+    // One word may sit between the term and the amount ("Tramer kaydı: 12.500 TL").
+    const pattern = new RegExp(`(?:${terms})[\\s:]*(?:[^\\d\\s:]{1,12}[\\s:]+)?([\\d.,]+)\\s*(${symbols})`, "i");
     for (const text of sources) {
       if (!text) continue;
       const hit = foldTerm(text).match(pattern);
       if (!hit) continue;
-      out[measure.key] = Number(hit[1].replace(/[.,]/g, ""));
+      out[measure.key] = parseAmount(hit[1], true);
       if (measure.currency_key) {
         out[measure.currency_key] =
           currencies[hit[2].toLowerCase()] || measure.default_currency || null;
@@ -804,16 +805,52 @@ function readStructuredProduct() {
 // worth having there too. Read conservatively and only on a page that says it
 // is a product: a price-shaped string on an article is not a price.
 
-const PRICE_TEXT = /^\D{0,3}(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)\s*(TL|₺|€|\$|£|EUR|USD|GBP|TRY)?$|^(TL|₺|€|\$|£|EUR|USD|GBP|TRY)\s*(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)$/i;
+// A sign before the amount ("₺ 2.450.000", "€ 120.000") or after it ("2.450.000 TL"). The
+// old pattern let `\D{0,3}` swallow a leading sign, so a prefix sign was lost and the card
+// was read as having no currency.
+const PRICE_SIGN = "TL|₺|€|\\$|£|EUR|USD|GBP|TRY";
+const PRICE_AMOUNT = "\\d{1,3}(?:[.,\\s]\\d{3})*(?:[.,]\\d{1,2})?|\\d+(?:[.,]\\d{1,2})?";
+const PRICE_TEXT = new RegExp(`^(?:(${PRICE_SIGN})\\s*)?\\D{0,2}(${PRICE_AMOUNT})\\s*(${PRICE_SIGN})?$`, "i");
+// What the app compares a budget with is the ISO code, not the sign the shop printed.
+const CURRENCY_ISO = { "TL": "TRY", "₺": "TRY", "€": "EUR", "$": "USD", "£": "GBP" };
 const PRICE_HINT = /price|fiyat|prix|preis|precio|prezzo|cost|amount/i;
-const WAS_HINT = /old|was|strike|eski|list|instead|before|regular|msrp|former|crossed|indirimsiz/i;
+// Whole words of a class name: "old-price" and "oldPrice" are the struck price, "bold", "holder",
+// "gold" and "playlist" are not.
+const WAS_WORDS = new Set(["old", "was", "strike", "striked", "strikethrough", "eski", "list", "instead",
+  "before", "regular", "msrp", "former", "crossed", "indirimsiz"]);
+const WAS_HINT = {
+  test(text) {
+    return String(text).replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase().split(/[^a-z0-9]+/)
+      .some((word) => WAS_WORDS.has(word));
+  },
+};
+
+// The number in an amount as a page prints it: "5.240,00" is 5240, "5.240" is 5240, "12,5" is 12.5.
+// The engine reads prices the same way (`pricewatch.parse_amount`).
+function parseAmount(text, allowZero) {
+  let clean = String(text).replace(/[^\d.,]/g, "").replace(/^[.,]+|[.,]+$/g, "");
+  if (!/\d/.test(clean)) return null;
+  if (clean.includes(",") && clean.includes(".")) {
+    const decimal = clean.lastIndexOf(",") > clean.lastIndexOf(".") ? "," : ".";
+    const thousands = decimal === "," ? "." : ",";
+    clean = clean.split(thousands).join("").replace(decimal, ".");
+  } else if (clean.includes(",") || clean.includes(".")) {
+    const sign = clean.includes(",") ? "," : ".";
+    const pieces = clean.split(sign);
+    const grouped = pieces.length > 2 || (pieces[pieces.length - 1].length === 3 && pieces[0].length > 0 && pieces[0].length <= 3);
+    clean = grouped ? pieces.join("") : pieces.join(".");
+  }
+  const value = Number(clean);
+  return Number.isFinite(value) && (allowZero ? value >= 0 : value > 0) && value < 1e10 ? value : null;
+}
 
 function _priceParts(text) {
   const clean = cleanText(text);
   if (!clean || clean.length > 40) return null;
   const hit = clean.match(PRICE_TEXT);
   if (!hit) return null;
-  return { amount: hit[1] || hit[4], sign: (hit[2] || hit[3] || "").toUpperCase() };
+  const sign = (hit[1] || hit[3] || "").toUpperCase();
+  return { amount: hit[2], sign: CURRENCY_ISO[sign] || sign };
 }
 
 function _visible(node) {
@@ -833,7 +870,15 @@ function readShownPrice() {
   const heading = document.querySelector("h1");
   const candidates = [...document.querySelectorAll(
     "[itemprop='price'], [data-price], [class*='price' i], [id*='price' i], [class*='fiyat' i]")]
-    .filter((node) => node.children.length <= 2 && _visible(node));
+    .filter((node) => node.children.length <= 2 && _visible(node)
+      // A header's mini-cart total is not the product's price.
+      && !node.closest("header, nav, footer, aside, [class*='mini-cart' i], [class*='minicart' i], [id*='minicart' i]"));
+  // The price that follows the product's own heading is the product's; a price before it
+  // belongs to something else on the page. Without a heading the first one stands.
+  if (heading) {
+    const after = candidates.filter((node) => heading.compareDocumentPosition(node) & 4 /* DOCUMENT_POSITION_FOLLOWING */);
+    if (after.length) candidates.splice(0, candidates.length, ...after);
+  }
   let now = null;
   let nowNode = null;
   for (const node of candidates) {
@@ -855,6 +900,7 @@ function readShownPrice() {
   for (let up = 0; block && up < 4; up += 1, block = block.parentElement) {
     if (heading && block.contains(heading) && up > 0) break;
     const struck = [...block.querySelectorAll("del, s, strike, [class*='old' i], [class*='was' i], [class*='strike' i], [class*='eski' i]")]
+      .filter((node) => node.matches("del, s, strike") || WAS_HINT.test(`${node.className || ""}`))
       .map((node) => _priceParts(node.textContent)).find(Boolean);
     if (struck) { out["shown:was"] = struck.amount; break; }
   }
@@ -870,9 +916,28 @@ function readShownPrice() {
 
 const CART_LINES = "[class*='cart-item' i], [class*='cartitem' i], [class*='basket-item' i], [class*='line-item' i], [class*='lineitem' i], [class*='sepet' i] li, [data-cart-item], [class*='order-item' i], [class*='product-line' i]";
 
+// A class-name selector also matches the list that holds the lines and the parts inside a line
+// (`cart-items`, `cart-item__name`): one product then came out two, three or four times.
+// A line is a matched block that has a name and a price of its own; a block holding such lines
+// is their wrapper, and a part inside a line is not a line.
+function _cartName(node) {
+  return node.querySelector("a, h2, h3, h4, [class*='name' i], [class*='title' i]");
+}
+function _cartLike(node) {
+  return !!_cartName(node) && !!node.querySelector("[class*='price' i], [class*='total' i], [class*='fiyat' i]");
+}
+function cartLineNodes(root, all) {
+  const inner = all.filter((one) => one !== root && root.contains(one) && _cartLike(one));
+  const lines = inner.filter((one) => !inner.some((other) => other !== one && other.contains(one)));
+  return lines.length ? lines.flatMap((one) => cartLineNodes(one, all)) : [root];
+}
+
 function readCart() {
   const items = [];
-  for (const node of document.querySelectorAll(CART_LINES)) {
+  const matched = [...document.querySelectorAll(CART_LINES)];
+  const outer = matched.filter((one) => !matched.some((other) => other !== one && other.contains(one)));
+  const nodes = [...new Set(outer.flatMap((one) => cartLineNodes(one, matched)))];
+  for (const node of nodes) {
     if (items.length >= 12) break;
     const nameNode = node.querySelector("a, h2, h3, h4, [class*='name' i], [class*='title' i]");
     const name = cleanText(nameNode && nameNode.textContent);
@@ -1136,6 +1201,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Which sites are worth scraping is the installed packs' answer, not this
 // file's. The background worker holds the adapter list; here we only report
 // that a page finished loading and let it decide.
+// A shop that changes page with the History API loads nothing: the address changes and the
+// panel stayed on the first product. The Navigation API tells this isolated world about it
+// (a patched `pushState` would not: the page's calls never reach this copy).
+(function followNavigation() {
+  let last = window.location.href;
+  let pending = 0;
+  const changed = () => {
+    if (window.location.href === last) return;
+    last = window.location.href;
+    clearTimeout(pending);
+    // The page's own router is still drawing the new product: let it finish.
+    pending = setTimeout(() => {
+      chrome.runtime.sendMessage({
+        type: "PAGE_LOADED",
+        payload: { url: window.location.href, host: window.location.hostname },
+      });
+      annotateResults();
+    }, 600);
+  };
+  if (window.navigation && window.navigation.addEventListener) {
+    window.navigation.addEventListener("navigatesuccess", changed);
+  }
+  window.addEventListener("popstate", changed);
+  window.addEventListener("hashchange", changed);
+})();
+
 (function autoTrigger() {
   // extension-13 (B145 audit): this file only runs at document_idle, so the
   // page is already settled by the time we get here — the 1.5s wait on top

@@ -59,7 +59,10 @@ def sweep(db: storage.Store, fetch: Callable[[str], str], push: Callable[..., bo
             gap = HOST_PAUSE_S - (time.monotonic() - last_host_at[host])
             if gap > 0:
                 pause(gap)
-        offer = pricewatch.read_markup(fetch(url)) if url else {}
+        try:
+            offer = pricewatch.read_markup(fetch(url)) if url else {}
+        except Exception:  # noqa: BLE001 - one page's failure is that page's, not every watch's
+            offer = {}
         last_host_at[host] = time.monotonic()
         if not offer:
             failed += 1

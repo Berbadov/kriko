@@ -1171,9 +1171,13 @@ def recent(conn: sqlite3.Connection, limit: int = 20, *, query: str = "", offset
     """
     rows = conn.execute(
         "SELECT lookup_id, created_at, source, label, response_json FROM lookups"
-        " WHERE (? = '' OR label LIKE ? ESCAPE '\\' OR response_json LIKE ? ESCAPE '\\')"
+        " WHERE (? = '' OR label LIKE ? ESCAPE '\\' OR response_json LIKE ? ESCAPE '\\'"
+        " OR response_json LIKE ? ESCAPE '\\')"
         " ORDER BY created_at DESC, rowid DESC LIMIT ? OFFSET ?",
-        (query, _like(query), _like(query), max(0, limit), max(0, offset)),
+        # `response_json` is stored as JSON, which writes "ü" as \u00fc and a quote as \":
+        # the words a reader typed are looked for in that form as well as their own.
+        (query, _like(query), _like(query), _like(json.dumps(query)[1:-1]),
+         max(0, limit), max(0, offset)),
     ).fetchall()
     out = []
     for row in rows:

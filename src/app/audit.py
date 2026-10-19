@@ -68,8 +68,9 @@ def reviews(fields: dict | None) -> dict:
     stars = rating / best * 5
     if not 0 < stars <= 5.0001:
         return {}
-    raw_count = _float(re.sub(r"[^\d.,]", "", str(fields.get("ld:reviewCount") or "")) or "x")
-    count = int(raw_count) if raw_count is not None and raw_count >= 0 else None
+    # A count is whole: "1,234" and "1.234" are both one thousand two hundred and thirty-four.
+    digits = re.sub(r"\D", "", str(fields.get("ld:reviewCount") or ""))
+    count = int(digits) if digits else None
     notes: list[str] = []
     adjusted = stars
     if count is None:
