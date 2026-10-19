@@ -385,7 +385,7 @@ def _emit_claim_evidence(conn, pack_id, claim_id, entry, row_ids: list[str]) -> 
         )
         row_ids.append(source_id)
 
-        evidence_id = ids.evidence_id(source_id, ev.get("quote", ""))
+        evidence_id = ids.evidence_id(claim_id, source_id, ev.get("quote", ""))
         conn.execute(
             "INSERT OR IGNORE INTO evidence (evidence_id, pack_id,"
             " claim_id, source_id, quote, locator, stance, independent)"

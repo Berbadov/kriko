@@ -228,9 +228,37 @@ def ask_lookup(lookup_id: str, body: FollowupRequest,
 
 @router.delete("/history/{lookup_id}")
 def forget(lookup_id: str, app_state=Depends(get_app_state)):
-    if not state.delete_lookup(app_state, lookup_id):
+    """Forget a saved check, and hand back what it took.
+
+    The reply carries the row and its triage so the interface can offer an undo
+    without a second request — and so the undo is not a "trash" table nobody
+    empties. The reader's confirm dialog already asked; this is the ten seconds
+    after it.
+    """
+    removed = state.delete_lookup(app_state, lookup_id)
+    if removed is None:
         raise HTTPException(404, f"no such lookup: {lookup_id}")
-    return {"deleted": True, "lookup_id": lookup_id}
+    return {"deleted": True, "lookup_id": lookup_id, "undo": removed}
+
+
+class RestoreRequest(BaseModel):
+    """What `DELETE /history/{id}` handed back, sent straight back."""
+
+    lookup: dict
+    checks: list[dict] = Field(default_factory=list)
+    notes: list[dict] = Field(default_factory=list)
+
+
+@router.post("/history/restore")
+def restore(body: RestoreRequest, app_state=Depends(get_app_state)):
+    """Put a deleted check back. 409 when the id has been reused since."""
+    if not state.restore_lookup(app_state, body.model_dump()):
+        raise HTTPException(
+            409,
+            "That check cannot come back: its id is in use again, or the "
+            "record is not one this app wrote.",
+        )
+    return {"restored": True, "lookup_id": body.lookup.get("lookup_id", "")}
 
 
 class SettingsPatch(BaseModel):

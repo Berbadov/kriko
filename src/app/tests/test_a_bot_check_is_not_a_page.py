@@ -45,21 +45,22 @@ def site():
 def rungs(monkeypatch):
     called = []
     monkeypatch.setattr(pagereader, "read",
-                        lambda url, endpoint="", timeout=0: called.append("hosted") or "")
+                        lambda url, endpoint="", timeout=0, **_: called.append("hosted") or "")
     monkeypatch.setattr(browser, "read",
-                        lambda url, timeout=0: called.append("browser") or "")
+                        lambda url, timeout=0, **_: called.append("browser") or "")
     return called
 
 
 def test_a_bot_check_answered_200_climbs_the_ladder_and_is_not_kept(site, rungs):
     site["/check"] = CHECK
-    assert fetch.reader(timeout=10.0)(site["base"] + "/check").text == ""
+    assert fetch.reader(timeout=10.0)(site["base"] + "/check", allow_private=True).text == ""
     assert rungs[0] == "hosted"
 
 
 def test_a_quick_look_drops_a_bot_check_without_starting_fallbacks(site, rungs):
     site["/check"] = CHECK
-    page = fetch.reader(timeout=10.0)(site["base"] + "/check", allow_fallback=False)
+    page = fetch.reader(timeout=10.0)(site["base"] + "/check", allow_fallback=False,
+                                      allow_private=True)
     assert page.text == ""
     assert rungs == []
 
@@ -69,20 +70,21 @@ def test_a_bot_check_hidden_in_a_large_page_is_still_a_bot_check(site, rungs):
     site["/big"] = ("<html><head><script>" + "x=1;" * 30000
                     + "</script></head><body><p>Verifying your connection.</p>"
                     "<p>Drag the handle to the target</p></body></html>")
-    assert fetch.reader(timeout=10.0)(site["base"] + "/big").text == ""
+    assert fetch.reader(timeout=10.0)(site["base"] + "/big", allow_private=True).text == ""
     assert rungs[0] == "hosted"
 
 
 def test_a_rung_that_reads_the_page_replaces_the_bot_check(site, monkeypatch):
     site["/check"] = CHECK
     monkeypatch.setattr(pagereader, "read",
-                        lambda url, endpoint="", timeout=0: "the real thread text")
-    assert fetch.reader(timeout=10.0)(site["base"] + "/check").text == "the real thread text"
+                        lambda url, endpoint="", timeout=0, **_: "the real thread text")
+    assert fetch.reader(timeout=10.0)(site["base"] + "/check", allow_private=True).text == "the real thread text"
 
 
 def test_an_ordinary_page_is_read_plainly_and_climbs_nothing(site, rungs):
     site["/a"] = ARTICLE
-    assert "failed after four months" in fetch.reader(timeout=10.0)(site["base"] + "/a").text
+    assert "failed after four months" in fetch.reader(timeout=10.0)(
+        site["base"] + "/a", allow_private=True).text
     assert rungs == []
 
 

@@ -61,8 +61,12 @@ def test_delete_reports_whether_it_deleted_anything(tmp_path):
     lookup_id = state.record_lookup(
         conn, source="ask", label="x", request={}, response={"claims": []}
     )
-    assert state.delete_lookup(conn, lookup_id) is True
-    assert state.delete_lookup(conn, lookup_id) is False
+    # It hands back what it removed rather than `True`, so the interface can
+    # offer an undo without a second request; `None` is "there was nothing".
+    removed = state.delete_lookup(conn, lookup_id)
+    assert removed is not None
+    assert removed["lookup"]["lookup_id"] == lookup_id
+    assert state.delete_lookup(conn, lookup_id) is None
 
 
 def test_settings_keeps_ui_state_beside_the_store_but_separate(tmp_path):

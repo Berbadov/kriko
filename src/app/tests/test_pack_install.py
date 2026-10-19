@@ -55,6 +55,9 @@ def client(tmp_path):
         create_app(
             Settings(
                 store_path=store_path,
+                # Isolated, for the same reason the store is: `create_app`
+                # builds the job runner, which opens the job ledger, and the
+                # default is the reader's own `~/.kriko/app.sqlite`.
                 app_state_path=tmp_path / "app.sqlite",
                 analysis_log_path=tmp_path / "analyses.jsonl",
             )
