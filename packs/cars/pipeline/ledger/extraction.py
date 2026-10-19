@@ -101,3 +101,14 @@ def extract_pending(conn, budget: Budget) -> int:
 
 def pending_extraction_estimate(conn) -> tuple[int, float]:
     return _engine.pending_extraction_estimate(conn, signal_detector=chunk_has_signal)
+
+
+def failures(conn) -> list[dict]:
+    """Chunks that lost a claim. Re-exported so `ledger_run` can report them.
+
+    This wrapper is the pack's whole surface for extraction, so anything
+    `app/pipeline/ledger_run.py` needs has to be here. It was not, and the
+    extract command raised `AttributeError` the first time it tried to name the
+    claims a run had dropped.
+    """
+    return _engine.failures(conn)

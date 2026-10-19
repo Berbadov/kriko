@@ -95,7 +95,14 @@ def publish(published, base, artifact, version, digest_override=None):
 
 
 @pytest.fixture
-def client(tmp_path):
+def client(tmp_path, serve):
+    """A client whose *configured* index is the local test server.
+
+    That is the shape the egress rule exempts (`providers/egress.py`): a URL the
+    reader wrote into their own settings may point at their own machine, because
+    a local mirror is a real thing to want. A URL that arrives in a request may
+    not — see `test_a_request_supplied_index_cannot_reach_this_machine`.
+    """
     store_path = tmp_path / "store.sqlite"
     installed = build.build(write_pack(tmp_path / "v1", "0.2.0"), tmp_path / "v1.kpack")
     conn = connect(store_path)
@@ -104,7 +111,8 @@ def client(tmp_path):
     conn.close()
     tc = TestClient(
         create_app(
-            Settings(store_path=store_path, app_state_path=tmp_path / "app.sqlite")
+            Settings(store_path=store_path, app_state_path=tmp_path / "app.sqlite",
+                     pack_index_url=f"{serve[1]}/packs.json")
         )
     )
     tc.store_path = store_path
@@ -222,7 +230,10 @@ def test_a_pack_that_is_not_installed_yet_is_offered(tmp_path, serve):
     connect(store_path).close()
     client = TestClient(
         create_app(
-            Settings(store_path=store_path, app_state_path=tmp_path / "app2.sqlite")
+            Settings(store_path=store_path, app_state_path=tmp_path / "app2.sqlite",
+                     # the reader's own index, on this machine — the case the
+                     # egress rule exempts (`providers/egress.py`)
+                     pack_index_url=index)
         )
     )
     client.store_path = store_path
@@ -332,8 +343,10 @@ def test_an_index_with_nothing_published_is_a_quiet_week(client, serve):
 
 
 def test_a_pressed_update_still_says_the_index_is_missing(client, serve):
-    _, base = serve
+    # No `index_url`: the configured one is used, and nothing has published
+    # `packs.json` in this test's directory — which is exactly the reader's
+    # "pressed Check and nothing is there" case.
     with client:
-        job = run(client, index_url=f"{base}/nothing-here.json")
+        job = run(client)
     assert job["state"] == "failed"
     assert job["message"].endswith("The pack index has nothing published yet.")

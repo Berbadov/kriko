@@ -78,6 +78,15 @@ def test_budget_abort_leaves_ledger_resumable(conn, monkeypatch):
 
 
 def test_malformed_claims_do_not_break_chunk_cache(conn, monkeypatch):
+    """A lost claim is recorded, and the chunk stays pending so it is retried.
+
+    This used to assert the opposite — that the chunk was marked done anyway —
+    which was the defect: the loss was permanent *and* invisible, because
+    `extract_document` returns a success count and the run's screen said the
+    same thing whether it kept forty of forty or forty of forty-three. The
+    assertion moved to the new intent (`CLAUDE.md`: "a test that asserts retired
+    behaviour is rewritten to assert the new intent").
+    """
     calls = []
     def fake_extract(text):
         calls.append(text)
@@ -102,16 +111,31 @@ def test_malformed_claims_do_not_break_chunk_cache(conn, monkeypatch):
     assert added == 1  # only valid claim inserted
     assert len(calls) >= 1  # extract_grounded called at least once
 
-    # verify chunk is marked as done
-    from packs.cars.pipeline.ledger.chunking import chunk_text
-    n_chunks = len(list(chunk_text(text)))
+    # The chunk is *not* settled: it lost a claim, so the next pass retries it.
     done_count = conn.execute("SELECT COUNT(*) FROM extraction_done").fetchone()[0]
-    assert done_count == n_chunks  # all chunks settled
+    assert done_count == 0
+    lost = extraction.failures(conn)
+    assert [one["attempts"] for one in lost] == [1]
+    # The first missing field the insert reached. `domain` before `severity`
+    # because that is the column order in the statement, and the point of the
+    # assertion is that the *reason* is recorded at all.
+    assert "domain" in lost[0]["error"]
 
-    # second run: fully cached, zero LLM calls, zero new evidence
+    # The valid claim is not written twice by the retry: `insert_evidence` is
+    # idempotent on (doc_id, quote, title), which is what makes the retry safe.
     added = extraction.extract_document(conn, doc_id, budget)
-    assert added == 0
-    assert len(calls) == 1  # no new calls (same as before, cached)
+    assert added == 1
+    stored = conn.execute(
+        "SELECT COUNT(*) FROM evidence WHERE title = 'DQ200 accumulator failure'"
+    ).fetchone()[0]
+    assert stored == 1
+    assert extraction.failures(conn)[0]["attempts"] == 2
+
+    # And after the cap it is settled, so a claim that can never be written
+    # stops being bought from the provider — with the reason still on record.
+    extraction.extract_document(conn, doc_id, budget)
+    assert conn.execute("SELECT COUNT(*) FROM extraction_done").fetchone()[0] == 1
+    assert extraction.failures(conn)[0]["attempts"] == 3
 
 
 def test_low_value_reason_comes_from_pack_rows_not_python_constants():

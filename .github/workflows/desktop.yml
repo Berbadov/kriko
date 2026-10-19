@@ -97,6 +97,15 @@ jobs:
                   # rather than part of the closure, so it is not locked.
                   pip install -r requirements.lock -e "." pyinstaller
 
+            - name: Verify the Python and browser behavior before packaging
+              run: |
+                  pip install -r requirements.lock -e ".[dev,pipeline]" setuptools wheel
+                  PYTHON="$(which python)" GATE_JOBS=4 tools/gate.sh py
+                  PYTHON="$(which python)" tools/gate.sh wheel
+                  npm ci --no-audit --no-fund
+                  npm test
+                  npm run test:site
+
             # Tauri takes the two other programs as external binaries, named
             # with the target triple. They land beside kriko.exe.
             - name: Fetch the pinned OpenSERP release
@@ -131,6 +140,10 @@ jobs:
               run: npm ci
               working-directory: kriko-ui
 
+            - name: Verify the desktop interface
+              run: npm run build && npm test && npm run lint
+              working-directory: kriko-ui
+
             # The web build, `cargo build --release --locked` and the per-user
             # NSIS installer, in one command. The bundle config is separate
             # because it names files that only exist after the steps above.
@@ -141,6 +154,10 @@ jobs:
                   mkdir -p builds
                   cp "src-tauri/target/release/bundle/nsis/Kriko_${VERSION}_x64-setup.exe" "builds/kriko-$VERSION-x86_64-setup.exe"
                   ls -l builds
+
+            - name: Verify the native bridge and shell
+              working-directory: kriko-ui/src-tauri
+              run: cargo test --release --locked
 
             # The installer building is not the app starting. v0.2.4 built
             # green and then panicked before its first window, a failure with
@@ -251,6 +268,9 @@ jobs:
             - uses: actions/download-artifact@v4
               with:
                   path: artifacts
+
+            - name: Verify the observed user journeys for this source
+              run: python tools/release_readiness.py --evidence "docs/releases/${VERSION}.json"
 
             # Keep the Windows checksum file at the release root: the in-app
             # updater uses it to verify the installer. A separate aggregate covers

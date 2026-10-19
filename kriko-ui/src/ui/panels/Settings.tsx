@@ -225,9 +225,10 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
             </div>
             <div>
               <strong>${spent.usd.toFixed(2)}</strong>
-              <small>billed</small>
+              <small>measured spend</small>
             </div>
           </div>
+          {!!spent.unpriced_runs && <p className="panel-note">{spent.unpriced_runs} runs have incomplete pricing. The amount shown is the measured portion.</p>}
         </section>
       )}
 

@@ -20,6 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.web import state
+from app.agentledger import RequestConflict
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api/compare-drafts", tags=["compare"])
@@ -29,6 +30,7 @@ class QuestionRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
     harness: str = Field(default="", max_length=200)
     backend: Literal["harness", "local"] = "harness"
+    client_request_id: str = Field(default="", max_length=200)
 
 
 @router.get("/{draft_id}/questions")
@@ -50,20 +52,28 @@ def ask_question(
     """
     if not state.get_compare_draft(conn, draft_id):
         raise HTTPException(404, f"no draft {draft_id}")
+    request_id = f"compare:{body.client_request_id}" if body.client_request_id else ""
     try:
+        record_id = state.reserve_question(conn, request_id, {
+            "draft_id": draft_id, "question": body.question.strip(),
+            "harness": body.harness, "backend": body.backend})
         question = state.record_compare_question(
-            conn, draft_id, body.question.strip())
+            conn, draft_id, body.question.strip(), question_id=record_id)
+    except RequestConflict as error:
+        raise HTTPException(409, str(error)) from error
     except ValueError as error:
         raise HTTPException(422, str(error)) from error
     runner = request.app.state.jobs
     try:
-        job_id = runner.submit("compare_ask", {
+        params = {
             "draft_id": draft_id,
             "question_id": question["question_id"],
             "question": question["question"],
             "harness": body.harness,
             "backend": body.backend,
-        })
+        }
+        job_id = (runner.submit("compare_ask", params, client_request_id=request_id)
+                  if request_id else runner.submit("compare_ask", params))
     except KeyError as exc:  # pragma: no cover - the handler is registered
         raise HTTPException(400, str(exc)) from exc
     state.set_compare_question_job(

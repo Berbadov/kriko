@@ -28,6 +28,19 @@ def _pack_weights(conn) -> dict[str, float]:
             for r in conn.execute("SELECT pack_id, weight FROM pack_trust")}
 
 
+def _order(claim) -> tuple:
+    """Best first, and total: a replay must return the same bytes.
+
+    `(-relevance, severity, title)` was not total. A claim whose text is missing
+    for the query's language carries `title = ""` (`:177`), so two such claims
+    tie on every term and their order falls back to whatever the SQL returned —
+    which the module's own docstring promises will not happen. `claim_id` and
+    `pack_id` close the ordering, the same way `lookup/tree.py` appends them.
+    """
+    return (-claim.relevance, claim.severity, claim.title,
+            claim.claim_id, claim.pack_id)
+
+
 def _conditions_for(conn, claim_id, pack_id) -> list[Condition]:
     return [
         Condition(key=r["key"], op=r["op"], value_num=r["value_num"],
@@ -232,7 +245,7 @@ def lookup(conn, query: Query) -> LookupResult:
     # Sort by relevance, then severity, then title so the order is total and a
     # replay produces byte-identical output. Ties that resolve at random make
     # parity testing impossible.
-    claims.sort(key=lambda c: (-c.relevance, c.severity, c.title))
+    claims.sort(key=_order)
 
     # Then collapse near-duplicates. This is where the reader's experience of
     # "no authority" is made bearable: several packs, and several passes of one
@@ -243,7 +256,7 @@ def lookup(conn, query: Query) -> LookupResult:
     clusters = cluster(claims, key=lambda c: c.title,
                        group=lambda c: c.domain)
     deduped = [_merge_cluster(group) for group in clusters]
-    deduped.sort(key=lambda c: (-c.relevance, c.severity, c.title))
+    deduped.sort(key=_order)
     capped = tuple(deduped[:query.limit])
     coverage = "RISKS_FOUND" if capped else "MATCHED_NO_DATA"
     # A scored match is served, and served *labelled*. Withholding the claims

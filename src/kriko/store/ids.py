@@ -68,6 +68,20 @@ def _norm_title(text: str) -> str:
     return _WS.sub(" ", re.sub(r"[^\w\s]", " ", folded)).strip()
 
 
+def same_value(one, other) -> bool:
+    """Are these two values the same fact, written differently?
+
+    The identity layer's own answer, exposed so that matching cannot disagree
+    with it. `_norm` is what makes `"1,395"`, `"1 395"` and `1395` a single
+    value for hashing; the candidate scorer compared a bare `casefold`, so a
+    page that wrote a number the way the pack wrote it *differently* was scored
+    a conflict — and a conflict carries `CONFLICT_PENALTY`, the weight this
+    engine reserves for a real contradiction. Two spellings of one value must
+    not read as a disagreement.
+    """
+    return _norm(one) == _norm(other)
+
+
 def normalize_url(url: str) -> str:
     """Drop the parts of a URL that are not identity.
 
@@ -150,9 +164,24 @@ def source_id(url: str = "", text: str = "") -> str:
     raise ValueError("source_id needs either a url or the source text")
 
 
-def evidence_id(source_id: str, quote: str) -> str:
-    """Hash a quote within a source, so the same quote from two packs collapses."""
-    return _hash("evidence", {"src": source_id, "q": _norm(quote)})
+def evidence_id(claim_id: str, source_id: str, quote: str) -> str:
+    """Hash a quotation by the claim it supports, its source, and its words.
+
+    All three parts are load-bearing, and `claim_id` is the one that used to be
+    missing. The evidence table's primary key is `(evidence_id, pack_id)` and
+    every insert is `INSERT OR IGNORE`, so while the id was `(source, quote)`
+    alone, two different claims in one pack citing the same quotation — routine
+    when a manufacturer bulletin is the source for two failures — produced a
+    single row. The second claim was left with no evidence, and the serving path
+    drops a claim that has none (`lookup/__init__.py`: "a claim with nothing
+    behind it is a gap, not an answer"), so it disappeared from every answer
+    with nothing written down anywhere.
+
+    Keeping the two packs that quote the same source in agreement is not lost by
+    this: `claim_id` is content-derived (`claim_id` above), so the same claim in
+    two packs still hashes the same evidence id.
+    """
+    return _hash("evidence", {"src": source_id, "q": _norm(quote), "c": claim_id})
 
 
 def claim_id(subject_id: str, kind: str, domain: str, title: str, lang: str = "en") -> str:

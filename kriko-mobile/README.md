@@ -1,5 +1,9 @@
 # Kriko for mobile
 
+**Prototype only.** This app is outside the desktop stable-release scope. Its
+research, reader download, screenshot extraction and catalogs use fixtures.
+Every screen displays this status. Do not use its example claims for a purchase.
+
 The Kriko reader, on the phone. A screenshot is read on the device; a search
 sends a product name and a model number and nothing else.
 

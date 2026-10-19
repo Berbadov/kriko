@@ -41,7 +41,10 @@ agree pays nothing for it.
 
 import re
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from difflib import SequenceMatcher
+
+from kriko.store.ids import same_value
 
 #: Used where the pack declares nothing. A candidate must agree on most of what
 #: was supplied to be called a match, and on a fair slice of it to be worth
@@ -248,15 +251,46 @@ def _held_values(conn, pack_id: str, kind: str) -> dict[str, dict[str, str]]:
     millions, and this runs only where the exact path already failed — so the
     cost is paid on the page that was about to show nothing, never on the ones
     that work.
+
+    A key can legitimately hold several rows at once: `attribute_id` includes
+    the validity window, so "150 hp held 2014-2016" and "180 hp held 2017-2020"
+    are two facts a pack may carry together and neither clobbers the other. This
+    used to keep whichever row the planner happened to return *last*, which made
+    a match depend on scan order and let a superseded figure from a closed
+    window score exactly like the one in force. Two rules decide now, and both
+    are statable to a reader: a value **in force today** beats one that is not,
+    and among values that are not, the one recorded **latest** wins — a window
+    that has not opened yet is more recent knowledge than one that closed in
+    2008. The attribute id breaks what is left, so a replay returns the same
+    answer.
     """
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    def better(candidate: tuple, current: tuple) -> bool:
+        rank, start, attribute_id = candidate
+        held_rank, held_start, held_id = current
+        if rank != held_rank:
+            return rank < held_rank
+        if start != held_start:
+            return start > held_start
+        return attribute_id > held_id
+
     out: dict[str, dict[str, str]] = {}
+    chosen: dict[tuple[str, str], tuple] = {}
     for row in conn.execute(
-        "SELECT a.subject_id, a.key, a.value_text FROM attributes a"
+        "SELECT a.attribute_id, a.subject_id, a.key, a.value_text,"
+        " a.valid_from, a.valid_to FROM attributes a"
         " JOIN subjects s USING (subject_id, pack_id)"
         " WHERE a.pack_id = ? AND s.kind = ? AND a.is_identity = 1",
         (pack_id, kind),
     ):
-        out.setdefault(row["subject_id"], {})[row["key"]] = row["value_text"]
+        start, end = row["valid_from"], row["valid_to"]
+        in_force = (not start or start <= today) and (not end or end >= today)
+        key = (row["subject_id"], row["key"])
+        order = (0 if in_force else 1, start, row["attribute_id"])
+        if key not in chosen or better(order, chosen[key]):
+            chosen[key] = order
+            out.setdefault(row["subject_id"], {})[row["key"]] = row["value_text"]
     return out
 
 
@@ -280,7 +314,10 @@ def _one_key(key: str, supplied, held: str | None, weight: float) -> KeyScore:
     text = str(supplied).strip()
     if held is None:
         return KeyScore(key, text, "", 0.0, weight, "absent")
-    if text.casefold() == held.strip().casefold():
+    # The identity layer's own equality, not a bare casefold: "1,395" and
+    # "1395" are one value everywhere else in this engine, and calling them a
+    # conflict here charged the page the contradiction penalty for a comma.
+    if same_value(text, held):
         return KeyScore(key, text, held, 1.0, weight, "exact")
     close = _closeness(text, held)
     if close >= SIMILAR_ENOUGH:

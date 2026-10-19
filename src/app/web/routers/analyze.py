@@ -46,7 +46,10 @@ class ScrapeRequest(BaseModel):
     title: str = ""
     description: str = ""
     lang: str = "en"
-    limit: int = 8
+    #: How many claims come back. Bounded by the model, not by the router, so a
+    #: caller cannot ask for a whole catalog — or, with a negative value, for
+    #: "no limit" in the SQL that follows.
+    limit: int = Field(default=8, ge=1, le=50)
     #: The product's own name as the page states it (structured data, then the
     #: heading, then the title), read by the extension on any site (B149). It
     #: is what a page with no adapter is recognised by, and what the panel

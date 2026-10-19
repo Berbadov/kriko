@@ -33,6 +33,8 @@ you they want to see what there is.
 import re
 import unicodedata
 
+from kriko.store.db import like_escaped
+
 #: How many subjects one query may return. Enough that a broad word is still
 #: useful, small enough that the panel is a list rather than a catalogue.
 LIMIT = 20
@@ -95,23 +97,32 @@ def search(conn, text: str, *, pack_ids=None, kind: str = "",
         row["score"] += WEIGHT[where]
 
     for word in words:
-        like = f"%{word}%"
+        # Escaped: this word is whatever the reader typed. Unescaped, a `%`
+        # matched every subject in the store and a `_` matched any one
+        # character — the search then reported a match the catalog does not
+        # contain, at full score.
+        #
+        # `LOWER()` is SQLite's, and it folds ASCII only: a word whose case
+        # differs in a non-ASCII letter will miss. The real fix is a folded
+        # shadow column written with `ids.same_value`'s normaliser, which is a
+        # schema change and belongs with the migration work, not here.
+        like = "%" + like_escaped(word) + "%"
         for row in _rows(conn,
                 f"SELECT s.subject_id, s.pack_id, s.label FROM subjects s"
                 f" WHERE s.pack_id IN ({marks}){kind_clause}"
-                f"   AND LOWER(s.label) LIKE ?", (*packs, *kind_args, like)):
+                f"   AND LOWER(s.label) LIKE ? ESCAPE '\\'", (*packs, *kind_args, like)):
             note(row["subject_id"], row["pack_id"], "label", word, row["label"])
         for row in _rows(conn,
                 f"SELECT a.subject_id, a.pack_id, a.alias FROM subject_aliases a"
                 f" JOIN subjects s USING (subject_id, pack_id)"
                 f" WHERE a.pack_id IN ({marks}){kind_clause}"
-                f"   AND LOWER(a.alias) LIKE ?", (*packs, *kind_args, like)):
+                f"   AND LOWER(a.alias) LIKE ? ESCAPE '\\'", (*packs, *kind_args, like)):
             note(row["subject_id"], row["pack_id"], "alias", word, row["alias"])
         for row in _rows(conn,
                 f"SELECT a.subject_id, a.pack_id, a.key, a.value_text"
                 f" FROM attributes a JOIN subjects s USING (subject_id, pack_id)"
                 f" WHERE a.pack_id IN ({marks}){kind_clause}"
-                f"   AND a.is_identity = 1 AND LOWER(a.value_text) LIKE ?",
+                f"   AND a.is_identity = 1 AND LOWER(a.value_text) LIKE ? ESCAPE '\\'",
                 (*packs, *kind_args, like)):
             note(row["subject_id"], row["pack_id"], "identity", word,
                  f"{row['key']}={row['value_text']}")

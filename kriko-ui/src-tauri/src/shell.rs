@@ -42,6 +42,83 @@ pub fn quit(app: &AppHandle) {
   app.exit(0);
 }
 
+/// Where the window's size and place are remembered.
+///
+/// `tauri.conf.json` declares 1360×860 and nothing else ever recorded anything,
+/// so a reader who resizes Kriko, moves it to their second screen and maximises
+/// it got 1360×860 in the same place on the primary screen at every launch.
+/// This is a small JSON file in the reader's own folder rather than a plugin:
+/// one boolean and four numbers do not need a dependency, and a dependency here
+/// would be fetched (and re-resolved) by every build.
+fn window_state_path() -> Option<std::path::PathBuf> {
+  engine::data_dir().map(|dir| dir.join("window.json"))
+}
+
+fn read_window_state() -> Option<(f64, f64, f64, f64, bool)> {
+  let text = std::fs::read_to_string(window_state_path()?).ok()?;
+  let number = |key: &str| -> Option<f64> {
+    let at = text.find(&format!("\"{key}\""))?;
+    let rest = &text[at + key.len() + 2..];
+    let colon = rest.find(':')? + 1;
+    let tail = rest[colon..].trim_start();
+    let end = tail.find(|c: char| c == ',' || c == '}').unwrap_or(tail.len());
+    tail[..end].trim().parse::<f64>().ok()
+  };
+  let maximized = text.contains("\"maximized\":true") || text.contains("\"maximized\": true");
+  Some((number("x")?, number("y")?, number("width")?, number("height")?, maximized))
+}
+
+fn write_window_state(window: &tauri::WebviewWindow) {
+  let Some(path) = window_state_path() else { return };
+  if let Some(parent) = path.parent() {
+    let _ = std::fs::create_dir_all(parent);
+  }
+  let maximized = window.is_maximized().unwrap_or(false);
+  // Position and size are recorded even while maximised: unmaximising should
+  // return the window to the shape the reader chose, not to the default.
+  let (x, y) = match window.outer_position() {
+    Ok(at) => (at.x, at.y),
+    Err(_) => (0, 0),
+  };
+  let size = window.inner_size().unwrap_or(tauri::PhysicalSize::new(1360, 860));
+  let body = format!(
+    "{{\"x\":{x},\"y\":{y},\"width\":{},\"height\":{},\"maximized\":{maximized}}}\n",
+    size.width, size.height,
+  );
+  let _ = std::fs::write(path, body);
+}
+
+/// Apply what was remembered, once, before the window is shown.
+pub fn restore_window(window: &tauri::WebviewWindow) {
+  let Some((x, y, width, height, maximized)) = read_window_state() else { return };
+  if width >= 320.0 && height >= 240.0 {
+    let _ = window.set_size(tauri::LogicalSize::new(width, height));
+  }
+  // A screen that is gone is a real case (a laptop undocked from a second
+  // monitor). Asking the window's own monitor list keeps the window reachable.
+  let on_screen = match (window.current_monitor(), window.primary_monitor()) {
+    (Ok(Some(current)), _) => (x, y).0 >= current.position().x as f64 - 4000.0
+      && (x, y).1 >= current.position().y as f64 - 4000.0,
+    _ => true,
+  };
+  if on_screen {
+    let _ = window.set_position(tauri::LogicalPosition::new(x, y));
+  }
+  if maximized {
+    let _ = window.maximize();
+  }
+}
+
+/// Remember the window's shape as it changes, and once more on the way out.
+pub fn watch_window(window: &tauri::WebviewWindow) {
+  let handle = window.clone();
+  window.on_window_event(move |event| match event {
+    tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_) => write_window_state(&handle),
+    tauri::WindowEvent::CloseRequested { .. } => write_window_state(&handle),
+    _ => {}
+  });
+}
+
 pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
   let open = MenuItem::with_id(app, "open", "Open Kriko", true, None::<&str>)?;
   let quit_item = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;

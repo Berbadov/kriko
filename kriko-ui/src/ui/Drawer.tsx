@@ -11,10 +11,14 @@ import { HistoryPanel } from './panels/History'
 import { LocalPanel } from './panels/Local'
 import { SettingsPanel } from './panels/Settings'
 import { SitesPanel } from './panels/Sites'
+import { SetupPanel } from './panels/Setup'
+import { BackupsPanel } from './panels/Backups'
 
 /** The places that have a panel. The others are listed, and say they are not ready. */
 const PANELS: Record<string, ComponentType<{ onOpen: (lookupId: string) => void }>> = {
   foryou: ForYouPanel,
+  setup: SetupPanel,
+  backups: BackupsPanel,
   agents: AgentsPanel,
   browse: CatalogsPanel,
   history: HistoryPanel,
@@ -38,6 +42,10 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
 
   useEffect(() => {
     if (!open) return
+    // Where the focus was, so closing can put it back. Without this a keyboard
+    // user closes the drawer and lands at the top of the document, with no way
+    // to tell where they are — the control that opened it is the answer.
+    const cameFrom = document.activeElement as HTMLElement | null
     panel.current?.focus()
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
@@ -45,7 +53,10 @@ export function Drawer({ open, panel: asked, onClose, offset, onOpen }: { open: 
       else onClose()
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      if (cameFrom && document.contains(cameFrom)) cameFrom.focus()
+    }
   }, [open, onClose, inside])
 
   const item = DRAWER.find((entry) => entry.id === inside)

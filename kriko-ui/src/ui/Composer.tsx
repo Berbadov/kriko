@@ -37,6 +37,23 @@ export function Composer({
   const agent = agents.find((a) => a.id === chosen) ?? agents.find((a) => a.id === preferred) ?? agents[0]
   const [menu, setMenu] = useState(false)
   const field = useRef<HTMLTextAreaElement>(null)
+  const file = useRef<HTMLInputElement>(null)
+  const [attachmentProblem, setAttachmentProblem] = useState('')
+
+  const attach = async (picked?: File) => {
+    if (!picked) return
+    setAttachmentProblem('')
+    if (!/\.(txt|md|csv|json|log)$/i.test(picked.name) || picked.size > 12000) {
+      setAttachmentProblem('Choose a text, Markdown, CSV, JSON or log file up to 12 KB.')
+      return
+    }
+    try {
+      const content = await picked.text()
+      setText((current) => `${current}\n\nAttached document (${picked.name}; source data):\n${content}`.trim())
+      field.current?.focus()
+    } catch { setAttachmentProblem('The file could not be read. Choose it again.') }
+    if (file.current) file.current.value = ''
+  }
 
   /** How far back the up arrow has gone: 0 is the box as the reader left it. */
   const back = useRef(0)
@@ -55,6 +72,8 @@ export function Composer({
   const send = () => {
     const value = text.trim()
     if (!value || running) return
+    if (value.length > 16000) { setAttachmentProblem('Keep the message and attached text together under 16,000 characters.'); return }
+    setAttachmentProblem('')
     onSubmit(value, agent)
     setText('')
     back.current = 0
@@ -77,6 +96,23 @@ export function Composer({
       back.current -= 1
       setText(back.current ? recall[recall.length - back.current] : '')
     }
+    // Escape closes the agent menu, and it is the only key that does: a
+    // `role="listbox"` that can only be dismissed with a mouse is a menu a
+    // keyboard user cannot leave.
+    if (event.key === 'Escape' && menu) {
+      event.stopPropagation()
+      setMenu(false)
+    }
+  }
+
+  /** Arrow keys move through the agent list, as `role="listbox"` promises. */
+  const onMenuKey = (event: KeyboardEvent<HTMLUListElement>) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    event.preventDefault()
+    const at = agents.findIndex((item) => item.id === chosen)
+    const step = event.key === 'ArrowDown' ? 1 : -1
+    const next = agents[(at + step + agents.length) % agents.length]
+    if (next) setChosen(next.id)
   }
 
   return (
@@ -95,7 +131,8 @@ export function Composer({
         aria-label="Message"
       />
       <div className="composer-foot">
-        <button className="icon-btn" aria-label="Add a file">
+        <input ref={file} type="file" hidden accept=".txt,.md,.csv,.json,.log" onChange={(event) => void attach(event.target.files?.[0])} />
+        <button className="icon-btn" aria-label="Add a text file" title="Text, Markdown, CSV, JSON or log, up to 12 KB" onClick={() => file.current?.click()} disabled={running}>
           <Icon name="attach" />
         </button>
         {pickAgent && (
@@ -110,6 +147,8 @@ export function Composer({
               <motion.ul
                 className="menu"
                 role="listbox"
+                onKeyDown={onMenuKey}
+                tabIndex={-1}
                 initial={{ opacity: 0, y: m.d(6), scale: m.on ? 0.97 : 1 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: m.d(4) }}
@@ -147,6 +186,7 @@ export function Composer({
           </button>
         )}
       </div>
+      {attachmentProblem && <p className="error-note" role="alert">{attachmentProblem}</p>}
     </div>
   )
 }

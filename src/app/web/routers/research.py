@@ -14,10 +14,11 @@ landed before the loop that needs it, and both live here rather than in
 `routers/jobs.py` because they are one story.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app import prefs
-from app.web.deps import get_app_state
+from app.web import state
+from app.web.deps import get_app_state, get_jobs
 
 router = APIRouter(prefix="/api", tags=["research"])
 
@@ -75,6 +76,106 @@ def local_plane(request: Request) -> dict:
 
     path = getattr(request.app.state.settings, "app_state_path", None)
     return {**local_endpoints(path), "stored": localplane.stored(path)}
+
+
+@router.get("/research-runs")
+def list_research_runs(
+    limit: int = Query(default=50, ge=1, le=200),
+    conn=Depends(get_app_state),
+) -> dict:
+    """What each research run cost and what it added.
+
+    This is the endpoint the module docstring has promised since it was written,
+    and it did not exist: `state.research_runs` was read only by the chat
+    context builder, so a reader whose runs spend their own money could see a
+    run's cost in a chat answer and nowhere else. `claims` and `removed` are
+    counted at read time (`state.research_runs` says why).
+    """
+    runs = state.research_runs(conn, limit)
+    return {"runs": runs, "total": len(runs), "limit": limit}
+
+
+@router.get("/usage")
+def usage(conn=Depends(get_app_state)) -> dict:
+    """The sums no per-run row can answer.
+
+    Spent, tokens, runs and claims, over every run this installation recorded —
+    plus `metered`, which names the columns that *can* carry a number and the
+    sentence for why a given one is empty. A plane that cannot count is a
+    different answer from a plane that spent nothing, and the two used to be
+    the same blank cell.
+    """
+    runs = state.research_runs(conn, 10_000)
+    spent = [run["spent_usd"] for run in runs if run.get("spent_usd") is not None]
+    tokens = [run["tokens_used"] for run in runs if run.get("tokens_used") is not None]
+    return {
+        "runs": len(runs),
+        "claims": sum(int(run.get("claims") or 0) for run in runs),
+        "removed": sum(int(run.get("removed") or 0) for run in runs),
+        "spent_usd": round(sum(float(one) for one in spent), 6) if spent else None,
+        "tokens_used": sum(int(one) for one in tokens) if tokens else None,
+        "runs_counted_in_usd": len(spent),
+        "runs_counted_in_tokens": len(tokens),
+        # What a blank column means, from the module that knows.
+        "metered": {
+            "spent_usd": "only a plane that bills per token can report a cost",
+            "tokens_used": "a coding agent reports usage; a subscription run does not",
+        },
+    }
+
+
+@router.delete("/research-runs/{run_id}", status_code=202)
+def undo_research_run(run_id: str, runner=Depends(get_jobs),
+                      conn=Depends(get_app_state)) -> dict:
+    """Take one run's claims back out of the catalogs it wrote them to.
+
+    A job, not a request: the work is one store write per claim and the runner
+    is what holds the "as many at once as Settings says, never two on one pack"
+    rule. The handler (`tasks.research_undo`) has existed, tested, since the
+    undo was written — and **nothing submitted it**, because this route was the
+    only thing that would have and the route was missing. A run's claims could
+    be seen in a chat answer and could not be reversed by any client.
+
+    The run is looked up first so a wrong id is a 404 rather than a job that
+    fails a moment later: an undo that says "accepted" and then does nothing is
+    worse than one that says no.
+    """
+    if state.get_research_run(conn, run_id) is None:
+        raise HTTPException(404, f"no research run {run_id}")
+    job_id = runner.submit("research_undo", {"run_id": run_id})
+    return {"job_id": job_id, "run_id": run_id}
+
+
+@router.get("/pipeline-runs")
+def list_pipeline_runs(
+    limit: int = Query(default=50, ge=1, le=200),
+    conn=Depends(get_app_state),
+) -> dict:
+    """What each pipeline run did, stage by stage — E10.
+
+    `web/pipeline.py` writes three tables and prunes them to 200 runs, and its
+    own docstring says "nothing in the app reads them back yet". A record that
+    nothing can read survives a restart for its own sake: the pipeline's account
+    of discovery, extraction, ingestion and ledgering was write-only, and
+    `mark_interrupted` existed to keep those rows honest at startup for a reader
+    who could never arrive.
+    """
+    from app.web import pipeline
+
+    runs = pipeline.recent_runs(conn, limit)
+    return {"runs": runs, "total": len(runs), "limit": limit,
+            "stages": list(pipeline.STAGES)}
+
+
+@router.get("/pipeline-runs/{run_id}")
+def pipeline_run(run_id: str, conn=Depends(get_app_state)) -> dict:
+    """One run, its stages in order, and every event it wrote."""
+    from app.web import pipeline
+
+    found = pipeline.run_detail(conn, run_id)
+    if found is None:
+        raise HTTPException(404, f"no pipeline run {run_id}")
+    return found
 
 
 @router.get("/research-planes")

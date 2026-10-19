@@ -24,7 +24,7 @@ import re
 import time
 import urllib.error
 import urllib.request
-from app.providers import network
+from app.providers import egress, network
 from datetime import date, datetime, timezone
 
 from kriko.research import Fetched
@@ -95,7 +95,7 @@ def reader(timeout: float = TIMEOUT):
     timeout_default = timeout
 
     def fetch(url: str, *, timeout: float | None = None, check_cancelled=None,
-              allow_fallback: bool = True) -> Fetched:
+              allow_fallback: bool = True, allow_private: bool = False) -> Fetched:
         request_timeout = (min(timeout, timeout_default)
                            if timeout is not None else timeout_default)
         if request_timeout <= 0:
@@ -103,7 +103,8 @@ def reader(timeout: float = TIMEOUT):
         began = time.monotonic()
         ladder_ends = began + 2 * request_timeout
         raw = _download(url, request_timeout, check_cancelled=check_cancelled,
-                        allow_fallback=allow_fallback, ladder_ends=ladder_ends)
+                        allow_fallback=allow_fallback, ladder_ends=ladder_ends,
+                        allow_private=allow_private)
         if not raw:
             return Fetched("")
         text = to_text(raw)
@@ -117,7 +118,8 @@ def reader(timeout: float = TIMEOUT):
                 return Fetched("")
             if check_cancelled is not None:
                 check_cancelled()
-            raw = _climb(url, ladder_ends, check_cancelled=check_cancelled)
+            raw = _climb(url, ladder_ends, check_cancelled=check_cancelled,
+                         allow_private=allow_private)
             if not raw:
                 return Fetched("")
             text = to_text(raw)
@@ -183,11 +185,20 @@ class FetchCancelled(Exception):
 
 
 def _download(url: str, timeout: float, *, check_cancelled=None,
-              allow_fallback: bool = True, ladder_ends: float | None = None) -> str:
+              allow_fallback: bool = True, ladder_ends: float | None = None,
+              allow_private: bool = False) -> str:
     # http(s) only. `fetch` is handed URLs a search provider returned, and a
     # `file:` URL among them would read this machine's disk — urllib is happy
     # to do that, which makes the scheme check a boundary rather than a nicety.
     if not url.lower().startswith(("http://", "https://")):
+        return ""
+    # C2: this URL came from a search result or a source a model named. A host
+    # that is this machine or the reader's own network is refused — the sidecar's
+    # own unauthenticated API and the cloud metadata address are both one
+    # search-result away. See `providers/egress.py` for the limits of the check.
+    refusal = egress.reason_to_refuse(url, allow_private=allow_private)
+    if refusal:
+        log.warning("refused a page fetch: %s", refusal)
         return ""
     if check_cancelled is not None:
         check_cancelled()
@@ -217,7 +228,8 @@ def _download(url: str, timeout: float, *, check_cancelled=None,
         if error.code in REFUSED and allow_fallback:
             if check_cancelled is not None:
                 check_cancelled()
-            page = _climb(url, ladder_ends, check_cancelled=check_cancelled)
+            page = _climb(url, ladder_ends, check_cancelled=check_cancelled,
+                          allow_private=allow_private)
             if page:
                 return page
         log.info("could not read a source: HTTP %s", error.code)
@@ -256,7 +268,8 @@ def _body(response, timeout: float, *, check_cancelled=None) -> bytes:
     return b"".join(chunks)
 
 
-def _climb(url: str, ladder_ends: float, *, check_cancelled=None) -> str:
+def _climb(url: str, ladder_ends: float, *, check_cancelled=None,
+           allow_private: bool = False) -> str:
     """The page through the later rungs, within what is left of its time.
 
     The site answered, and its answer was a refusal aimed at this app's own
@@ -270,17 +283,19 @@ def _climb(url: str, ladder_ends: float, *, check_cancelled=None) -> str:
     left = ladder_ends - time.monotonic()
     if left > 1.0:
         if check_cancelled is not None:
-            page = pagereader.read(url, timeout=left, check_cancelled=check_cancelled)
+            page = pagereader.read(url, timeout=left, check_cancelled=check_cancelled,
+                                   allow_private=allow_private)
         else:
-            page = pagereader.read(url, timeout=left)
+            page = pagereader.read(url, timeout=left, allow_private=allow_private)
     else:
         page = ""
     left = ladder_ends - time.monotonic()
     if not page and left >= BROWSER_MIN_SECONDS:
         if check_cancelled is not None:
-            page = browser.read(url, timeout=left, check_cancelled=check_cancelled)
+            page = browser.read(url, timeout=left, check_cancelled=check_cancelled,
+                                allow_private=allow_private)
         else:
-            page = browser.read(url, timeout=left)
+            page = browser.read(url, timeout=left, allow_private=allow_private)
     if page:
         log.info("a source refused the plain fetch and a later rung read it")
     return page
