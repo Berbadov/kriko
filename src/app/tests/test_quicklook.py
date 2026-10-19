@@ -75,6 +75,31 @@ def test_the_brief_carries_the_product_and_the_packs_bar():
     assert "Where it belongs" not in text
 
 
+def test_compatibility_guidance_requires_exact_constraints_for_pc_and_vehicle_parts():
+    text = quicklook.brief("A motherboard and a replacement engine sensor")
+    folded = text.casefold()
+    for term in ("socket", "chipset", "bios", "memory generation", "form factor",
+                 "power connectors", "clearance", "model year", "market",
+                 "engine code", "transmission", "part number"):
+        assert term in folded
+    assert "compatibility is unconfirmed" in folded
+    assert "broad fitment list is not enough" in folded
+
+
+def test_quicklook_report_does_not_set_a_target_finding_count():
+    text = quicklook.brief("A product with varying complexity")
+    assert "There is no target number of lines" in text
+    assert "fits the product's complexity and the strength of the evidence" in text
+
+
+def test_market_region_guidance_is_optional_and_applies_to_quicklook():
+    automatic = quicklook.brief("A product")
+    regional = quicklook.brief("A product", market_region="TR")
+    assert "preferred market" not in automatic
+    assert "reader's preferred market is Türkiye (TR)" in regional
+    assert "market applicability" in regional
+
+
 def test_the_brief_lists_the_installed_packs_when_there_are_some():
     text = quicklook.brief("Scyrox V6", "", None,
                            "* `gaming.mice`, Gaming mice (holds Scyrox V8): mice")

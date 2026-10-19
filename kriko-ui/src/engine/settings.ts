@@ -30,6 +30,7 @@ export interface PrefsDoc {
   source_kinds: { id: string; label: string }[]
   research: { sources: number; kinds: string[] }
   search_providers: { id: string; label: string; ready: boolean }[]
+  market_regions: { id: string; label: string }[]
 }
 
 export interface KeyRow {
@@ -80,6 +81,16 @@ const DEMO_PREFS: PrefsDoc = {
   search_providers: [
     { id: 'exa', label: 'Exa', ready: false },
     { id: 'tavily', label: 'Tavily', ready: true },
+  ],
+  market_regions: [
+    { id: 'auto', label: 'Automatic' },
+    { id: 'US', label: 'United States' },
+    { id: 'CA', label: 'Canada' },
+    { id: 'GB', label: 'United Kingdom' },
+    { id: 'EU', label: 'European Union' },
+    { id: 'AU', label: 'Australia' },
+    { id: 'JP', label: 'Japan' },
+    { id: 'TR', label: 'Türkiye' },
   ],
 }
 
