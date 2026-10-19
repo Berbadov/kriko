@@ -71,8 +71,8 @@ def main() -> int:
     if args.evidence is None:
         parser.error("Provide --evidence or request --fingerprint.")
     try:
-        evidence = json.loads(args.evidence.read_text("utf-8"))
-        version = tomllib.loads((ROOT / "pyproject.toml").read_text("utf-8"))["project"]["version"]
+        evidence = json.loads(args.evidence.read_text(encoding="utf-8"))
+        version = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
         errors = problems(evidence, version, current)
     except (OSError, ValueError, TypeError) as error:
         errors = [f"Release evidence is unavailable: {error}"]

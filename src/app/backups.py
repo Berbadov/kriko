@@ -81,7 +81,7 @@ def stage(settings, raw: bytes) -> dict:
                 target = checked / entry.filename
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes(archive.read(entry))
-        metadata = json.loads((checked / "snapshot.json").read_text("utf-8"))
+        metadata = json.loads((checked / "snapshot.json").read_text(encoding="utf-8"))
         if not isinstance(metadata, dict) or metadata.get("format") != 1:
             raise ValueError("This snapshot uses an unsupported format.")
         for name in ("app.sqlite", "knowledge.sqlite"):
@@ -122,7 +122,7 @@ def apply_pending(settings) -> bool:
         for suffix in ("-wal", "-shm"):
             Path(str(destination) + suffix).unlink(missing_ok=True)
         os.replace(replacement, destination)
-    metadata = json.loads((folder / "snapshot.json").read_text("utf-8"))
+    metadata = json.loads((folder / "snapshot.json").read_text(encoding="utf-8"))
     if metadata.get("drafts_included") or (folder / "drafts").exists():
         target = Path(settings.store_path).parent / "drafts"
         previous = target.with_name("drafts.before-restore")
