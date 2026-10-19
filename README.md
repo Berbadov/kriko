@@ -11,6 +11,10 @@ model you select; a paid provider charges your own account.
 - Inspect sourced problems, exact variants, specifications and coverage gaps.
 - Check a listing through the extension, then open the saved result in the app.
 - Keep catalogs, conversations and research history locally.
+- Get advice that is for you: say what you need and Kriko remembers prices it
+  saw, calls out a discount that is not real, watches a price, names one product
+  from your shortlist, and asks later if what you bought held up. It stays on
+  your computer.
 
 ## Install and start
 

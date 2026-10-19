@@ -9,6 +9,7 @@ const { JSDOM } = require("jsdom");
 
 const PANEL_JS = path.join(__dirname, "..", "hover_lite", "hover_lite.js");
 const CARD_JS = path.join(__dirname, "..", "hover_lite", "claim_card.js");
+const BUYER_JS = path.join(__dirname, "..", "hover_lite", "buyer_card.js");
 
 function loadPanel({
   url = "https://www.listing.example/ilan/vasita-otomobil-volkswagen-golf-123456/detay",
@@ -118,6 +119,7 @@ function loadPanel({
   // the verdict buttons — are in this markup, so a stub returning a bare
   // <div> would let the panel's wiring pass while shipping nothing clickable.
   vm.runInContext(fs.readFileSync(CARD_JS, "utf8"), sandbox, { filename: "claim_card.js" });
+  vm.runInContext(fs.readFileSync(BUYER_JS, "utf8"), sandbox, { filename: "buyer_card.js" });
   vm.runInContext(fs.readFileSync(PANEL_JS, "utf8"), sandbox, { filename: "hover_lite.js" });
 
   function openPanel() {
@@ -137,6 +139,12 @@ function loadPanel({
   // Mirror of background.js writing the result to chrome.storage.session.
   function deliverEntry(entry) {
     const key = "kriko_result_" + dom.window.location.href;
+    for (const fn of storageListeners) fn({ [key]: { newValue: entry } }, "session");
+  }
+
+  // Mirror of background.js writing the price memory for this page.
+  function deliverBuyer(entry) {
+    const key = "kriko_buyer_" + dom.window.location.href;
     for (const fn of storageListeners) fn({ [key]: { newValue: entry } }, "session");
   }
 
@@ -261,7 +269,7 @@ function loadPanel({
     return el;
   }
 
-  return { dom, openPanel, deliverMessage, deliverEntry, deliverStage, deliverFirefoxUpdate, footer, listing, claims,
+  return { dom, openPanel, deliverMessage, deliverEntry, deliverBuyer, deliverStage, deliverFirefoxUpdate, footer, listing, claims,
            click, type, press, shadow, sent, errorText, pipeline, flushTimers, flushFrames,
            statusText, liveRows, setLocal, local: localBag };
 }

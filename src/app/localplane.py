@@ -300,6 +300,44 @@ def resolve(
     return out
 
 
+def ollama_asleep(plan: dict, url: str = "") -> bool:
+    """Whether the plan failed only because Ollama is not running.
+
+    True when the address in question is Ollama's own (the one the reader set
+    or the default) and nothing answers there. A reader who pointed Kriko at
+    another server, or whose server is up but has no model, is not helped by
+    starting Ollama, so those stay what they are: a reason to read.
+    """
+    from app.providers.local_discovery import CANDIDATES
+
+    if plan.get("ready"):
+        return False
+    rows = plan.get("servers") or []
+    if any(row.get("busy") for row in rows):
+        return False
+    ollama = dict(CANDIDATES)["Ollama"]
+    wanted = discovery.base_of(url)
+    if wanted and wanted != ollama:
+        return False
+    return not any(row.get("up") for row in rows if row.get("url") == ollama or wanted == row.get("url"))
+
+
+def resolve_awake(app_state_path=None, *, progress=None, **asked) -> dict:
+    """`resolve`, after starting an installed Ollama that is only closed.
+
+    For the doors that were told to use the local model: asking it a question
+    is the request to have it running. Nothing is started for a reader who has
+    not asked, so the screens that merely report state keep using `resolve`.
+    """
+    plan = resolve(app_state_path, **asked)
+    if ollama_asleep(plan, asked.get("url") or stored(app_state_path)[prefs.LOCAL_URL]):
+        from app import agentinstall
+
+        if agentinstall.wake_local(progress=progress):
+            plan = resolve(app_state_path, **asked)
+    return plan
+
+
 def is_ready(app_state_path=None) -> bool:
     try:
         return bool(resolve(app_state_path, with_search=False)["ready"])

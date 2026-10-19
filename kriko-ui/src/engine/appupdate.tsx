@@ -8,9 +8,11 @@ export interface Release {
   notes: string
   /** The release's page, for a copy that cannot install it itself. */
   page: string
+  /** The engine alone can be replaced: no installer, and the window stays open. */
+  engine: boolean
 }
 
-type Phase = 'idle' | 'checking' | 'downloading' | 'installing'
+type Phase = 'idle' | 'checking' | 'downloading' | 'installing' | 'restarting'
 
 interface AppUpdate {
   phase: Phase
@@ -24,7 +26,8 @@ interface AppUpdate {
   /** The reader said "later" to this version. */
   dismissed: boolean
   check: () => Promise<void>
-  install: () => Promise<void>
+  /** Update. The engine alone when the release allows it, else the installer; `full` insists on the installer. */
+  install: (full?: boolean) => Promise<void>
   dismiss: () => void
 }
 
@@ -34,6 +37,7 @@ interface ApiUpdate {
   version?: string
   notes?: string
   page?: string
+  engine?: { version?: string }
 }
 
 const Ctx = createContext<AppUpdate | null>(null)
@@ -52,7 +56,7 @@ const later = () => {
 }
 
 export function UpdateProvider({ children }: { children: ReactNode }) {
-  const { mode } = useEngine()
+  const { mode, retry } = useEngine()
   const [phase, setPhase] = useState<Phase>('idle')
   const [release, setRelease] = useState<Release | null>(null)
   const [problem, setProblem] = useState('')
@@ -74,7 +78,11 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     try {
       const found = await get<ApiUpdate>('/api/app-update', 20000)
       if (found.error) setProblem(found.error)
-      setRelease(found.newer && found.version ? { version: found.version, notes: found.notes ?? '', page: found.page ?? '' } : null)
+      setRelease(
+        found.newer && found.version
+          ? { version: found.version, notes: found.notes ?? '', page: found.page ?? '', engine: Boolean(found.engine?.version) }
+          : null,
+      )
       setChecked(!found.error)
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'Could not look for an update.')
@@ -95,24 +103,36 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     }
   }, [mode, check])
 
-  const install = useCallback(async () => {
-    if (!release || busy.current) return
-    busy.current = true
-    setProblem('')
-    setPhase('downloading')
-    try {
-      const got = await post<{ path: string }>('/api/app-update/download', {}, 600000)
-      setPhase('installing')
-      const { invoke } = await import('@tauri-apps/api/core')
-      // The shell starts the installer and closes this window; an answer only comes back when it could not.
-      await invoke('app_install_update', { path: got.path })
-    } catch (error) {
-      const text = typeof error === 'string' ? error : error instanceof EngineError || error instanceof Error ? error.message : ''
-      setProblem(text || 'The update could not be installed.')
-      setPhase('idle')
-      busy.current = false
-    }
-  }, [release])
+  const install = useCallback(
+    async (full = false) => {
+      if (!release || busy.current) return
+      busy.current = true
+      setProblem('')
+      setPhase('downloading')
+      try {
+        if (release.engine && !full) {
+          // The engine arrives whole in a folder of its own and the shell starts it. If it cannot
+          // start, the shell sets it aside and starts the engine that came with the app.
+          await post('/api/app-update/engine', {}, 900000)
+          setPhase('restarting')
+          busy.current = false
+          retry()
+          return
+        }
+        const got = await post<{ path: string }>('/api/app-update/download', {}, 600000)
+        setPhase('installing')
+        const { invoke } = await import('@tauri-apps/api/core')
+        // The shell starts the installer and closes this window; an answer only comes back when it could not.
+        await invoke('app_install_update', { path: got.path })
+      } catch (error) {
+        const text = typeof error === 'string' ? error : error instanceof EngineError || error instanceof Error ? error.message : ''
+        setProblem(text || 'The update could not be installed.')
+        setPhase('idle')
+        busy.current = false
+      }
+    },
+    [release, retry],
+  )
 
   const dismiss = useCallback(() => {
     if (!release) return
