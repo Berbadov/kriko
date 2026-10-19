@@ -124,7 +124,7 @@ def test_an_empty_reply_is_an_error_not_a_kept_pick(settings, monkeypatch):
     wire(monkeypatch, Researcher(""))
     a = seed(settings, "Kettle A", "https://a.test/p/1", 60)
     b = seed(settings, "Kettle B", "https://b.test/p/1", 66)
-    with pytest.raises(ValueError, match="returned no answer"):
+    with pytest.raises(ValueError, match="did not complete the follow-up"):
         tasks.buyer_advice(settings, {"mode": "pick", "lookup_ids": [a, b]}, _Progress())
     assert state.connect(settings.app_state_path).execute("SELECT COUNT(*) FROM picks").fetchone()[0] == 0
 
