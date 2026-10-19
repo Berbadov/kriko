@@ -31,12 +31,13 @@ export const COMPARE: CompareProduct[] = [
 
 export interface Drawer {
   id: string
-  icon: 'cpu' | 'clock' | 'globe' | 'book' | 'gear' | 'spark'
+  icon: 'cpu' | 'clock' | 'globe' | 'book' | 'gear' | 'spark' | 'check'
   title: string
   note: string
 }
 
 export const DRAWER: Drawer[] = [
+  { id: 'foryou', icon: 'check', title: 'For you', note: 'What you need, what you bought' },
   { id: 'agents', icon: 'spark', title: 'Agents', note: 'Choose who answers' },
   { id: 'local', icon: 'cpu', title: 'Local model', note: 'Run on this computer' },
   { id: 'history', icon: 'clock', title: 'History', note: 'Past research' },

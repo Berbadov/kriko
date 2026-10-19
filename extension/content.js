@@ -902,20 +902,27 @@ function readCart() {
 const FIT_MARK = "data-kriko-fit";
 
 function findResultCards() {
+  // Start from the prices, not from every link: a results page has a few dozen,
+  // and a long page has thousands of links to climb from.
+  const priced = [...document.querySelectorAll("[class*='price' i], [class*='fiyat' i], [itemprop='price']")]
+    .filter((node) => _priceParts(node.textContent));
+  if (priced.length < 6 || priced.length > 800) return [];
   const groups = new Map();
-  for (const anchor of document.querySelectorAll("a[href]")) {
-    let card = anchor;
+  const seen = new Set();
+  for (const node of priced) {
+    let card = node.parentElement;
     for (let up = 0; card && up < 5; up += 1, card = card.parentElement) {
-      if (card.querySelector("img, picture") && [...card.querySelectorAll("[class*='price' i], [class*='fiyat' i], [itemprop='price']")].some((n) => _priceParts(n.textContent))) break;
+      if (card.querySelector("a[href]") && card.querySelector("img, picture")) break;
     }
-    if (!card || card === document.body || !card.querySelector("img, picture")) continue;
+    if (!card || card === document.body || seen.has(card) || !card.querySelector("img, picture")) continue;
+    seen.add(card);
     const key = `${card.tagName}.${(card.className || "").toString().split(/\s+/).sort().join(".")}`;
-    if (!groups.has(key)) groups.set(key, new Set());
-    groups.get(key).add(card);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(card);
   }
-  const best = [...groups.values()].sort((a, b) => b.size - a.size)[0];
+  const best = [...groups.values()].sort((a, b) => b.length - a.length)[0];
   // A product page has one price block; a results page has many alike.
-  return best && best.size >= 6 ? [...best].slice(0, 60) : [];
+  return best && best.length >= 6 ? best.slice(0, 60) : [];
 }
 
 function readResultCard(card) {

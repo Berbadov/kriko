@@ -71,7 +71,11 @@
       discount = `<p class="lite-buy-discount" data-tone="${esc(DISCOUNT_TONE[price.discount] || "muted")}">
         ${esc(price.discount_summary || DISCOUNT_WORD[price.discount] || "")}</p>`;
     }
-    const elsewhere = (price.elsewhere || []).filter((one) => one.price < price.price * 0.97)
+    // Only a web address becomes a link: the app keeps pages the reader opened,
+    // but a link is the one place a stored string is followed, so it is checked here too.
+    const elsewhere = (price.elsewhere || [])
+      .filter((one) => /^https?:\/\//i.test(String(one.url || "")))
+      .filter((one) => one.price < price.price * 0.97)
       .slice(0, 2).map((one) => `<li><a href="${esc(one.url)}" target="_blank" rel="noopener noreferrer">
         ${esc(one.host)}</a> ${esc(money(one.price, one.currency))}</li>`).join("");
     return `<div class="lite-buy-price">
