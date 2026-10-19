@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import { EMPTY, runReducer, turnOf, type Product, type Row, type RunApi, type Turn } from '../activity/run'
-import { EngineError, get, post, seg, type ApiJob, type ApiMessage, type ApiProduct, type ApiStep, type ApiTurn } from './api'
+import { EngineError, get, post, seg, type ApiActivity, type ApiFeedEvent, type ApiJob, type ApiMessage, type ApiProduct, type ApiStep, type ApiTurn } from './api'
 import { threadsChanged } from './threads'
 
 /** A real turn: ask the engine, then read the job every 700 ms until it ends.
@@ -12,8 +12,8 @@ const ACTIVE = new Set(['queued', 'running', 'cancelling'])
 
 const words = (text: string) => text.replace(/[_-]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
 
-function rowsFrom(steps: ApiStep[], seen: Map<string, number>): Row[] {
-  return steps.map((step) => {
+function rowsFrom(steps: ApiStep[], seen: Map<string, number>, activity: ApiActivity[] = [], sources: string[] = [], feed: ApiFeedEvent[] = []): Row[] {
+  const toolRows: Row[] = steps.map((step) => {
     if (!seen.has(step.id)) seen.set(step.id, Date.now())
     const running = step.state === 'running'
     return {
@@ -24,8 +24,58 @@ function rowsFrom(steps: ApiStep[], seen: Map<string, number>): Row[] {
       startedAt: seen.get(step.id) ?? Date.now(),
       ms: running ? undefined : step.ms,
       failed: step.state === 'error',
+      counts: !running && !activity.length && step.source === 'web_search' ? { searchResults: step.rows } : undefined,
     }
   })
+  const activityRows: Row[] = activity.length
+    ? activity.map((item) => {
+        if (item.kind === 'search') {
+          return {
+            kind: 'event',
+            id: `activity-${item.id}`,
+            stage: 'Search',
+            text: item.query || 'Web search',
+            level: item.state === 'failed' ? 'error' : 'info',
+            counts: {
+              searchResults: item.search_results?.length,
+              pagesAttempted: item.pages_attempted,
+              pagesRead: item.pages_read,
+            },
+          }
+        }
+        const attempted = item.attempted !== false
+        const read = item.state === 'done'
+        return {
+          kind: 'event',
+          id: `activity-${item.id}`,
+          stage: read ? 'Page read' : attempted ? 'Read failed' : 'Not attempted',
+          text: item.title || item.text || item.url || 'Web page',
+          level: attempted && !read ? 'warn' : 'info',
+          sourceUrl: item.url,
+        }
+      })
+    : sources.filter((source) => /^https?:\/\//i.test(source)).map((source, index) => ({
+        kind: 'event' as const,
+        id: `source-${index}`,
+        stage: 'Source listed',
+        text: source,
+        sourceUrl: source,
+      }))
+  const known = new Set([
+    ...toolRows.flatMap((row) => row.kind === 'tool' ? [row.detail, row.name] : []),
+    ...activityRows.flatMap((row) => row.kind === 'event' ? [row.text, row.sourceUrl ?? ''] : []),
+  ])
+  const feedRows: Row[] = feed
+    .filter((item) => item.text.trim() && !known.has(item.text.trim()))
+    .map((item, index) => ({
+      kind: 'event',
+      id: `feed-${index}-${item.kind}`,
+      stage: item.kind === 'note' ? 'Log' : words(item.kind),
+      text: item.text,
+      sourceUrl: item.kind === 'source' ? item.text.match(/https?:\/\/[^\s<>"']+/i)?.[0] : undefined,
+      level: item.kind === 'problem' ? 'warn' : 'info',
+    }))
+  return [...toolRows, ...activityRows, ...feedRows]
 }
 
 function productsFrom(list: ApiProduct[] | undefined): Product[] {
@@ -83,7 +133,7 @@ export function useLiveRun(): RunApi {
         if (ACTIVE.has(current.state)) {
           dispatch({
             type: 'replace',
-            patch: { rows: rowsFrom(turn.steps ?? [], seen.current), answer: turn.answer ?? '', products: productsFrom(turn.products) },
+            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer: turn.answer ?? '', products: productsFrom(turn.products) },
           })
           timer.current = window.setTimeout(() => void poll(jobId, threadId), POLL_MS)
           return
@@ -96,7 +146,7 @@ export function useLiveRun(): RunApi {
           dispatch({
             type: 'replace',
             patch: {
-              rows: rowsFrom(finished.steps ?? [], seen.current),
+              rows: rowsFrom(finished.steps ?? [], seen.current, finished.activity, finished.sources, last?.feed ?? current.feed),
               answer: last?.text ?? finished.answer ?? '',
               products: productsFrom(finished.products),
               // What actually answered. A reader who left the agent on the default is told which one it was.
@@ -111,7 +161,7 @@ export function useLiveRun(): RunApi {
           dispatch({ type: 'end', status: 'stopped', now: Date.now() })
           return
         }
-        dispatch({ type: 'replace', patch: { rows: rowsFrom(turn.steps ?? [], seen.current) } })
+        dispatch({ type: 'replace', patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources) } })
         fail(new EngineError(0, current.message || 'The turn did not finish.'))
       } catch (error) {
         // A lost answer is not a lost turn: try again a few times before giving up.
@@ -197,6 +247,7 @@ export function useLiveRun(): RunApi {
             turn.answer = message.text
             turn.products = productsFrom(message.products)
             if (message.agent?.id) turn.agent = { id: message.agent.id, label: message.agent.label || message.agent.id }
+            turn.rows = rowsFrom(message.steps ?? [], seen.current, message.activity, message.sources, message.feed)
           }
         }
         const waiting = data.job_id && found.length && !found[found.length - 1].answer ? found.pop() : undefined

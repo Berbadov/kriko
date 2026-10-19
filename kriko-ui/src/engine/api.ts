@@ -125,6 +125,25 @@ export interface ApiStep {
   ms: number
 }
 
+export interface ApiActivity {
+  id: string
+  kind: 'search' | 'read' | string
+  query?: string
+  title?: string
+  url?: string
+  state?: 'done' | 'failed' | string
+  search_results?: string[]
+  pages_attempted?: number
+  pages_read?: number
+  attempted?: boolean
+  text?: string
+}
+
+export interface ApiFeedEvent {
+  kind: string
+  text: string
+}
+
 export interface ApiProduct {
   subject_id: string
   label: string
@@ -134,6 +153,8 @@ export interface ApiProduct {
 
 export interface ApiTurn {
   steps?: ApiStep[]
+  activity?: ApiActivity[]
+  sources?: string[]
   answer?: string
   products?: ApiProduct[]
 }
@@ -146,11 +167,12 @@ export interface ApiJob {
   /** 0 to 1. */
   progress?: number
   /** The newest thing the agent did, last. */
-  feed?: { kind: string; text: string }[]
+  feed?: ApiFeedEvent[]
   result?: ApiTurn | null
 }
 
 export interface ApiMessage extends ApiTurn {
+  feed?: ApiFeedEvent[]
   message_id: string
   role: 'reader' | 'agent'
   text: string
