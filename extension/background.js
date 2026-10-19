@@ -1532,7 +1532,15 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     timings.scrape_ms = _elapsed(scrapeStartedAt);
     if (!reply || !reply.ok) {
       if (!adapter) throw noAdapter();
-      throw new Error("Unable to read this page.");
+      // A site Kriko has an adapter for, and a page it cannot read: the adapter
+      // is out of date for it, or the page is not what it was written for. That
+      // is exactly what Learn this page is for, so it is offered, with the
+      // reason the page gave instead of a bare sentence.
+      const failed = new Error(
+        "Kriko could not read this page" + (reply && reply.error ? ` (${reply.error})` : "."));
+      failed.code = "SCRAPE_FAILED";
+      failed.learnable = true;
+      throw failed;
     }
     scrape = reply.payload;
     await _keepPageFacts(url, scrape);
@@ -1628,6 +1636,11 @@ async function _runAnalysisForTab(tabId, url, storageKey, { fresh = false, auto 
     if (error.code === "NO_ADAPTER") {
       await extensionApi.action.setBadgeText({ text: "", tabId });
       if (auto && error.learnable) await _nudgeToLearn(tabId, url);
+    } else if (error.code === "SCRAPE_FAILED") {
+      // This page, not Kriko, is what went wrong, and the panel offers the
+      // way out. A red "!" would say the extension is broken.
+      await extensionApi.action.setBadgeText({ text: "?", tabId });
+      await extensionApi.action.setBadgeBackgroundColor({ color: "#5b6472", tabId });
     } else if (error.code === "UNKNOWN_PRODUCT") {
       // Not a failure either: a product nothing installed covers yet, one
       // click from being researched. A question, not an alarm.

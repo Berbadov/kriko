@@ -1026,9 +1026,16 @@
     root.querySelector(".lite-agent-select")?.addEventListener("change", (event) => {
       state.agentPick = event.target.value;
       try { chrome.storage?.local?.set?.({ [AGENT_KEY]: state.agentPick }, () => void chrome.runtime.lastError); } catch (_) {}
-      renderResearch();
-      renderVerdict();
+      renderLearnSurfaces();
     });
+  }
+
+  /* Every place a learn card can be on screen. The card of an unreadable page
+   * lives in the claims list, with the error it answers. */
+  function renderLearnSurfaces() {
+    renderResearch();
+    renderVerdict();
+    if (state.pipeline === "error") renderClaimsList();
   }
 
   /* Learn this page. The app's local model answers at once; another agent is a
@@ -1041,8 +1048,7 @@
     state.learnMessage = "Reading this page…";
     state.learnStartedAt = Date.now();
     requestAgents();
-    renderResearch();
-    renderVerdict();
+    renderLearnSurfaces();
     chrome.runtime.sendMessage({ type: "LEARN_PAGE", payload: { agent: currentAgent() } }, (response) => {
       if (chrome.runtime.lastError || !response?.ok) {
         finishLearn({ learned: false, reason: response?.error || "Could not reach Kriko. Open the app and try again." });
@@ -1051,8 +1057,7 @@
       const lesson = response.lesson || {};
       if (lesson.mode === "agent" && lesson.job_id) {
         state.learnMessage = "Your agent is reading the page…";
-        renderResearch();
-        renderVerdict();
+        renderLearnSurfaces();
         pollLearnJob(lesson);
         return;
       }
@@ -1065,8 +1070,7 @@
       if (!state.learning) return;
       if (chrome.runtime.lastError || !response?.ok || !response.job) {
         state.learnMessage = "Cannot check progress. Open the app to follow it.";
-        renderResearch();
-        renderVerdict();
+        renderLearnSurfaces();
         setTimeout(() => pollLearnJob(lesson), 3000);
         return;
       }
@@ -1103,17 +1107,18 @@
           || held.startsWith(name.toLowerCase()))) {
       state.researchName = name;
     }
-    renderResearch();
-    renderVerdict();
+    renderLearnSurfaces();
     if (!lesson.learned) return;
     // A page that is readable now may have a product Kriko knows.
-    if ((state.noAdapter || state.unknownProduct) && state.pipeline !== "result") {
+    const unread = state.errorCode === "SCRAPE_FAILED";
+    if ((state.noAdapter || state.unknownProduct || unread) && state.pipeline !== "result") {
       // The page was one nothing read, and now something does. The worker
       // takes the new reading in before the page is asked about again, or it
       // would be told "no adapter" from the list it already holds.
       chrome.runtime.sendMessage({ type: "KRIKO_SYNC_SITES" }, () => {
         void chrome.runtime.lastError;
         state.noAdapter = false;
+        state.errorCode = null;
         state.learnable = false;
         triggerAnalyze(true);
       });
@@ -3654,6 +3659,17 @@
         err.append(" ", button);
       }
       claimsListEl.appendChild(err);
+      // A page the panel could not read is the page to learn: the reader is
+      // already on it, and an agent can work out what to take from it.
+      if (state.errorCode === "SCRAPE_FAILED" && state.learnable) {
+        requestAgents();
+        const learn = document.createElement("div");
+        learn.className = "lite-error-learn";
+        learn.innerHTML = `${agentRowMarkup(false)}${learnMarkup()}`;
+        wireLearn(learn);
+        paintLearn(learn);
+        claimsListEl.appendChild(learn);
+      }
       return;
     }
 
