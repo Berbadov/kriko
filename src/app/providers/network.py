@@ -180,14 +180,15 @@ class _PermitResponse:
 
 def urlopen(url: Any, data: Any = None, timeout: float | None = None,
             *, check=None, opener=None, kind: str = "outbound",
-            pace_interval: float = 0.0):
+            pace_interval: float = 0.0, guard_redirects: bool = False):
     """Open a URL under a global+per-host quota.
 
     Loopback requests use an opener with proxy handling disabled, so hostile
     HTTP_PROXY settings cannot divert local model or test traffic. Remote
     requests use urllib's environment-aware opener, retaining proxy and CA
     configuration. `opener` supports deterministic tests and callers that
-    already provide an explicit transport.
+    already provide an explicit transport. `guard_redirects` makes a redirect to a
+    host `egress` refuses an error instead of a hop (the fetch ladder sets it).
     """
     request = url if isinstance(url, urllib.request.Request) else None
     address = request.full_url if request is not None else str(url)
@@ -206,6 +207,10 @@ def urlopen(url: Any, data: Any = None, timeout: float | None = None,
                         else opener(url, data=data, timeout=timeout))
         elif _loopback(address) and urllib.request.urlopen is _DEFAULT_URLOPEN:
             response = _no_proxy_opener().open(url, data=data, timeout=timeout)
+        elif guard_redirects and urllib.request.urlopen is _DEFAULT_URLOPEN:
+            from app.providers import egress  # noqa: PLC0415 - egress is the policy, this is the plumbing
+
+            response = egress.guarded_opener().open(url, data=data, timeout=timeout)
         else:
             response = (urllib.request.urlopen(url, timeout=timeout) if data is None
                         else urllib.request.urlopen(url, data=data, timeout=timeout))

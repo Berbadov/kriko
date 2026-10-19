@@ -851,7 +851,9 @@ def _search_tool_query(value) -> str:
             arguments = json.loads(arguments)
         except ValueError:
             arguments = {}
-    if isinstance(arguments, dict):
+    if isinstance(arguments, dict) or isinstance(value.get("function"), dict):
+        if not isinstance(arguments, dict):
+            arguments = {}
         # OpenAI tool calls wrap name and arguments in `function`.
         function = value.get("function")
         if isinstance(function, dict):
@@ -859,11 +861,11 @@ def _search_tool_query(value) -> str:
             args = function.get("arguments", arguments)
             if isinstance(args, str):
                 try:
-                    arguments = json.loads(args)
+                    args = json.loads(args)
                 except ValueError:
-                    arguments = {}
-            elif isinstance(args, dict):
-                arguments = args
+                    args = {}
+            # Arguments that decode to a list, a number or null are not a request.
+            arguments = args if isinstance(args, dict) else {}
         if name.casefold() in {"search", "web_search", "search_web", "internet_search"}:
             for key in ("query", "search_query", "text", "q"):
                 query = arguments.get(key)

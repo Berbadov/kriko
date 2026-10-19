@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { RECENTS } from '../mock/data'
 import { del, get, post, seg, type ApiHistoryItem } from './api'
 import { useEngine } from './Engine'
@@ -73,8 +73,11 @@ export function useHistory(query = '') {
   const [problem, setProblem] = useState('')
   const [offset, setOffset] = useState(0)
   const [hasMore, setHasMore] = useState(false)
-  const [attempt, setAttempt] = useState(0)
   useEffect(() => { setOffset(0) }, [query])
+
+  // The newest request. An answer to an older one (the search for "kett" arriving after the one
+  // for "kettle") is dropped: the list always shows the query in the box.
+  const latest = useRef(0)
 
   const load = useCallback(async () => {
     // `checking` is not `demo`: while the engine is still being asked, showing
@@ -84,10 +87,11 @@ export function useHistory(query = '') {
       setItems(DEMO)
       return
     }
-    let live = true
+    const mine = ++latest.current
+    const live = () => latest.current === mine
     await get<{ items: ApiHistoryItem[] & { source?: string }[]; has_more?: boolean }>(`/api/history?limit=200&offset=${offset}&q=${encodeURIComponent(query)}`, 20000)
       .then((data) => {
-        if (!live) return
+        if (!live()) return
         const page = (data.items as (ApiHistoryItem & { source?: string })[]).map((row) => ({
             id: row.lookup_id,
             name: row.label,
@@ -101,11 +105,8 @@ export function useHistory(query = '') {
         setHasMore(!!data.has_more)
         setProblem('')
       })
-      .catch((error: unknown) => live && setProblem(error instanceof Error ? error.message : 'Could not read the history.'))
-    return () => {
-      live = false
-    }
-  }, [mode, query, offset, attempt])
+      .catch((error: unknown) => live() && setProblem(error instanceof Error ? error.message : 'Could not read the history.'))
+  }, [mode, query, offset])
 
   useEffect(() => {
     void load()
@@ -165,5 +166,5 @@ export function useHistory(query = '') {
     [mode, load, offset],
   )
 
-  return { items, problem, remove, restore, hasMore, loadMore: () => setOffset((n) => n + 200), retry: () => setAttempt((n) => n + 1) }
+  return { items, problem, remove, restore, hasMore, loadMore: () => setOffset((n) => n + 200), retry: () => void load() }
 }

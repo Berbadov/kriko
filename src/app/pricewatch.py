@@ -31,7 +31,9 @@ import sqlite3
 import statistics
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, unquote_plus, urlsplit
+
+from app import htmlscan
 
 #: A product page is remembered once per this long unless the price moved.
 SAME_PRICE_WINDOW = timedelta(hours=6)
@@ -96,10 +98,12 @@ def product_key(url: str) -> str:
 def strip_tracking(url: str) -> str:
     """The address without what a campaign or an ad click added to it."""
     parts = urlsplit(str(url or "").strip())
-    kept = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True)
-            if not _TRACKING.match(key)]
-    query = "&".join(f"{key}={value}" if value else key for key, value in kept)
-    return parts._replace(query=query, fragment="").geturl()
+    # The query is kept as written: decoding and rejoining turns `%26` into a
+    # second parameter, `%23` into a fragment and `+` into a space, and the stored
+    # address is the one a watch reads again.
+    kept = [piece for piece in parts.query.split("&")
+            if piece and not _TRACKING.match(unquote_plus(piece.partition("=")[0]))]
+    return parts._replace(query="&".join(kept), fragment="").geturl()
 
 
 def host_of(url: str) -> str:
@@ -115,8 +119,14 @@ def parse_amount(text) -> float | None:
         return None
     if isinstance(text, (int, float)):
         return float(text) if text > 0 else None
-    cleaned = re.sub(r"[^\d.,]", "", str(text))
-    cleaned = cleaned.strip(".,")
+    # One number, or nothing. Gluing the digits of "from 10 to 30" into 1030, or of
+    # "-50% 199,90 TL" into 50199.9, reports a price the page never showed; a
+    # percentage is a discount, not a price, and two amounts are a range.
+    shown = re.sub(r"\d[\d.,]*\s*%|%\s*\d[\d.,]*", " ", str(text))
+    numbers = re.findall(r"\d{1,3}(?:[ \u00a0\u202f]\d{3})+(?:[.,]\d{1,2})?(?!\d)|\d[\d.,]*", shown)
+    if len(numbers) != 1:
+        return None
+    cleaned = re.sub(r"[^\d.,]", "", numbers[0]).strip(".,")
     if not cleaned or not re.search(r"\d", cleaned):
         return None
     if "," in cleaned and "." in cleaned:
@@ -173,29 +183,31 @@ def extract(fields: dict | None) -> dict:
     }
 
 
-_LD_BLOCK = re.compile(
-    r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>", re.I | re.S)
+_LD_TYPE = re.compile(r"<script[^>]+type=[\"']application/ld\+json[\"']", re.I)
 _META = re.compile(r"<meta\b[^>]*>", re.I)
 _ATTR = re.compile(r"([\w:-]+)\s*=\s*(?:\"([^\"]*)\"|'([^']*)')")
 
 
-def _walk(node):
-    if isinstance(node, dict):
-        yield node
-        for value in node.values():
-            yield from _walk(value)
-    elif isinstance(node, list):
-        for value in node:
-            yield from _walk(value)
+def _walk(root):
+    """Every object in a JSON document, without recursion: a page chooses how deep it nests."""
+    todo = [root]
+    while todo:
+        node = todo.pop()
+        if isinstance(node, dict):
+            yield node
+            todo.extend(node.values())
+        elif isinstance(node, list):
+            todo.extend(node)
 
 
 def read_markup(markup: str) -> dict:
     """The offer a fetched page publishes for search engines, as `extract` reads a scrape."""
     fields: dict[str, str] = {}
-    for block in _LD_BLOCK.findall(markup or ""):
+    for block in htmlscan.inner_texts(markup or "", ("script",), want=lambda tag: bool(_LD_TYPE.match(tag))):
         try:
             data = json.loads(block.strip())
-        except ValueError:
+        except (ValueError, RecursionError):
+            # One page's hostile JSON must not end the sweep: it fails alone.
             continue
         for node in _walk(data):
             kind = node.get("@type")
@@ -369,9 +381,13 @@ def judge(conn: sqlite3.Connection, url: str, offer: dict, *, now: datetime | No
     now = now or _now()
     key = product_key(url)
     rows = history(conn, key, currency=offer.get("currency") or "", now=now)
-    # The sighting just recorded is the page's current price, not its past.
+    # The sighting recorded a moment ago is the page's current price, not its past.
+    # An equal price from earlier is a past sighting: `record` skips a repeat inside
+    # a few hours, so the newest row is not always this visit.
     if rows and abs(rows[-1]["price"] - offer["price"]) < 0.005:
-        rows = rows[:-1]
+        taken = _parse_stamp(rows[-1]["seen_at"])
+        if taken and now - taken < timedelta(minutes=1):
+            rows = rows[:-1]
     result = assess(rows, offer["price"], was_price=offer.get("was_price"), now=now)
     result.update(price=offer["price"], was_price=offer.get("was_price"),
                   currency=offer.get("currency") or "", product_key=key)
@@ -412,6 +428,8 @@ def same_product(a: str, b: str) -> bool:
 def elsewhere(conn: sqlite3.Connection, name: str, url: str, currency: str, *,
               now: datetime | None = None, days: int = 30) -> list[dict]:
     """Other pages Kriko saw this product on, newest sighting each, cheapest first."""
+    if not currency:
+        return []  # a price with no currency cannot be set against one that has it
     key = product_key(url)
     own_host = host_of(url)
     since = _stamp((now or _now()) - timedelta(days=days))
@@ -476,7 +494,7 @@ def watch(conn: sqlite3.Connection, url: str, name: str = "", *, target=None, dr
         conn.execute(
             "INSERT INTO watches (watch_id, product_key, url, name, currency, target, drop_pct,"
             " started_price, created_at, cloud, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (watch_id, key, strip_tracking(url)[:2000], str(name or "")[:300], currency, target, drop_pct,
+            (watch_id, key, strip_tracking(url)[:2000], str(name or "")[:300], _currency(currency), target, drop_pct,
              start, _stamp(now), int(bool(cloud)), _stamp(now)))
     conn.commit()
     return _watch(conn.execute("SELECT * FROM watches WHERE watch_id = ?", (watch_id,)).fetchone())
@@ -598,6 +616,14 @@ def due(conn: sqlite3.Connection, now: datetime | None = None) -> list[dict]:
     return [_watch(row) for row in rows]
 
 
+def _read_or_nothing(markup: str) -> dict:
+    """`read_markup`, where whatever a page did to it is that page's failure and nobody else's."""
+    try:
+        return read_markup(markup) if markup else {}
+    except Exception:  # noqa: BLE001 - one bad page must not stop the rest
+        return {}
+
+
 def sweep(conn: sqlite3.Connection, fetch: Callable[[str], str], *,
           now: datetime | None = None, pause: Callable[[], None] | None = None) -> dict:
     """Re-read every watch that is due. `fetch(url)` returns the page's markup, or "".
@@ -617,7 +643,7 @@ def sweep(conn: sqlite3.Connection, fetch: Callable[[str], str], *,
             markup, why = "", f"could not be fetched ({type(error).__name__})"
         else:
             why = "could not be fetched" if not markup else ""
-        offer = read_markup(markup) if markup else {}
+        offer = _read_or_nothing(markup)
         if not offer and not why:
             why = "the page does not publish its price in a way Kriko can read without a browser"
         if why:
