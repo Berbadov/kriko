@@ -30,12 +30,39 @@ def app_version() -> str:
     about 1.8 ms per call measured, most of a health answer. The version a process
     reports is the one it was started with, which is the claim the endpoint makes.
     """
-    from importlib.metadata import PackageNotFoundError, version
+    from importlib.metadata import distributions
 
-    try:
-        return version("kriko")
-    except PackageNotFoundError:
+    # The newest of every copy found, not the first: an update lays the new
+    # engine folder over the old one, and the old `kriko-<n>.dist-info` stays
+    # beside the new one. `importlib.metadata.version` answers with whichever
+    # comes first on the path, which made 0.2.4 report itself as 0.2.3 and offer
+    # itself as an update to itself.
+    found = {d.version for d in distributions(name="kriko") if d.version}
+    if not found:
         return UNKNOWN
+    return max(found, key=_order)
+
+
+def _order(number: str) -> tuple[int, ...]:
+    """A version as numbers, so "0.10.0" sorts after "0.2.3".
+
+    Only the leading dotted digits count; a release suffix sorts as its base.
+    That is enough to tell this app's own releases apart, and it keeps the
+    packaging library out of the frozen engine.
+    """
+    parts: list[int] = []
+    for piece in number.split("."):
+        digits = ""
+        for char in piece:
+            if not char.isdigit():
+                break
+            digits += char
+        if not digits:
+            break
+        parts.append(int(digits))
+        if len(digits) != len(piece):
+            break
+    return tuple(parts)
 
 
 def installed_versions(store_path: Path) -> list[dict]:
