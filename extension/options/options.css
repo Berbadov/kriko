@@ -465,6 +465,7 @@ h2 {
 form,
 .sites,
 .appearance,
+.evidence,
 .buying,
 .tour,
 .version,
@@ -513,7 +514,8 @@ label.check {
   color: var(--fg-body);
   cursor: pointer;
 }
-input[type="checkbox"] {
+input[type="checkbox"],
+input[type="radio"] {
   flex: 0 0 auto;
   width: 20px;
   height: 20px;

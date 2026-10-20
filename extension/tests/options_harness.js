@@ -9,7 +9,9 @@ const { JSDOM } = require("jsdom");
 
 const DIR = path.join(__dirname, "..", "options");
 
-function loadOptions({ local = {}, hash = "", sites = [], light = false } = {}) {
+// `answer` is asked first about each message the page sends the worker; when it
+// returns nothing the stock answers below stand.
+function loadOptions({ local = {}, hash = "", sites = [], light = false, answer = null } = {}) {
   const html = fs.readFileSync(path.join(DIR, "options.html"), "utf8")
     .replace(/<script src="options.js"><\/script>/, "");
   const dom = new JSDOM(html, {
@@ -38,12 +40,13 @@ function loadOptions({ local = {}, hash = "", sites = [], light = false } = {}) 
       lastError: null,
       getManifest: () => ({ version: "0.0.0" }),
       sendMessage(message, callback) {
-        const reply = {
+        const custom = answer ? answer(message) : undefined;
+        const reply = custom !== undefined ? custom : ({
           GET_API_BASE: { ok: true, default: "http://127.0.0.1:8787", stored: null },
           KRIKO_SITE_STATUS: { ok: true, status: { sites } },
           KRIKO_SYNC_SITES: { ok: true, status: { sites } },
           KRIKO_COMPAT: { ok: true, compat: null },
-        }[message.type] || { ok: true };
+        }[message.type] || { ok: true });
         if (callback) callback(reply);
       },
     },

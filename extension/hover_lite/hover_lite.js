@@ -19,6 +19,7 @@
   const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
   const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard, renderRichText } =
     window.__KrikoPanelClaimCard;
+  const { filterByEvidence, normaliseSensitivity, hiddenWords } = window.__KrikoPanelClaimCard;
   const { describeRun, coverageSummary } = window.__KrikoRunProgress;
 
   const HOST_TAG = "kriko-panel-host";
@@ -185,6 +186,12 @@
     motion: "",
     /* "glass" or "solid"; `""` until storage has answered, which is glass. */
     glass: "",
+    /* How much doubt the reader wants to see, from the app's own setting
+     * (`info_sensitivity`: all | hide_thin | strict). `all` until the app has
+     * answered, so an unreachable app never hides evidence. `revealThin` is
+     * this answer only: the reader pressed Show on what the setting hid. */
+    sensitivity: "all",
+    revealThin: false,
     /* A run that kept nothing has a card of its own. null means none; the
      * object is `{ title, note, coverage, evidence_pages, outcome }`. */
     researchEmpty: null,
@@ -606,12 +613,21 @@
     return alerts;
   }
 
+  /* The claims the reader's setting lets through, and the ones it holds back.
+   * The one place the setting is applied: everything drawn reads this, and
+   * nothing is removed from `state.result`, so the stored answer, its
+   * digest and Show-them never depend on what is on screen. */
+  function claimsView() {
+    return filterByEvidence(state.result && state.result.claims, state.sensitivity, state.revealThin);
+  }
+
   function counts() {
     if (!state.result || !Array.isArray(state.result.claims)) {
       return { high: 0, medium: 0, low: 0, total: 0 };
     }
-    const out = { high: 0, medium: 0, low: 0, total: state.result.claims.length };
-    for (const r of state.result.claims) {
+    const { shown } = claimsView();
+    const out = { high: 0, medium: 0, low: 0, total: shown.length };
+    for (const r of shown) {
       if (r.severity === "high") out.high += 1;
       else if (r.severity === "medium") out.medium += 1;
       else if (r.severity === "low") out.low += 1;
@@ -671,6 +687,7 @@
       } else {
         state.freshKeys = new Set();
         state.openIds = new Set();
+        state.revealThin = false;
         // A different saved answer gets its own card tree.
         if (claimsListEl) claimsListEl.replaceChildren();
       }
@@ -681,6 +698,8 @@
       state.result = entry.result;
       state.errorMsg = null;
       setPipeline("result");
+      // The setting may have moved in the app since the last answer.
+      requestSensitivity();
     } else if (entry.ok === false) {
       // extension-5/extension-8 (B145 audit): the stored-result path (a page
       // reloaded onto a cached entry, or the panel reopened) used to ignore
@@ -2060,6 +2079,7 @@
     readTheme();
     readMotion();
     readGlass();
+    wireEvidenceTips();
     scheduleTour();
     panel.querySelector(".lite-find-product").addEventListener("click", () => {
       const product = (state.result?.subjects || []).find((one) => one.kind === "product");
@@ -3674,10 +3694,12 @@
       claimsHeadEl.innerHTML = "";
       return;
     }
-    const total = state.result.claims.length;
+    const view = claimsView();
+    const total = view.shown.length;
+    renderThinNote();
     // Nothing to expand, collapse or count: the row would be three zeroes and
     // two controls that do nothing.
-    if (!total) { claimsHeadEl.innerHTML = ""; return; }
+    if (!total) { claimsHeadEl.querySelector(".lite-claims-head")?.remove(); return; }
     const allOpen  = state.openIds.size === total && total > 0;
     const allClose = state.openIds.size === 0;
 
@@ -3685,7 +3707,7 @@
     // animation does not retrigger.
     let head = claimsHeadEl.querySelector(".lite-claims-head");
     if (!head) {
-      claimsHeadEl.innerHTML = `
+      claimsHeadEl.insertAdjacentHTML("afterbegin", `
         <div class="lite-claims-head">
           <div class="lite-claims-label">Risks · ${total}</div>
           <div class="lite-chip-group">
@@ -3697,7 +3719,7 @@
             </button>
           </div>
         </div>
-      `;
+      `);
       claimsHeadEl.querySelector(".lite-chip-expand").addEventListener("click", expandAll);
       claimsHeadEl.querySelector(".lite-chip-collapse").addEventListener("click", collapseAll);
       return;
@@ -3710,6 +3732,95 @@
     const collapseBtn = head.querySelector(".lite-chip-collapse");
     if (expandBtn)   expandBtn.dataset.on   = allOpen  ? "1" : "0";
     if (collapseBtn) collapseBtn.dataset.on = allClose ? "1" : "0";
+  }
+
+  /* ─── Why a card is marked thin ────────────────────────────────────────
+   *
+   * One tip for the whole panel, placed from the mark under the pointer or
+   * the keyboard. A tip inside each card would be clipped by the card, and the
+   * reason is the point of the mark. It reads the mark's own accessible label,
+   * so what a screen reader says and what a pointer shows cannot differ. */
+  function showEvidenceTip(mark) {
+    if (!panel || !mark) return;
+    let tip = panel.querySelector(".lite-ev-tip");
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.className = "lite-ev-tip";
+      tip.setAttribute("aria-hidden", "true");
+      panel.appendChild(tip);
+    }
+    tip.textContent = mark.getAttribute("aria-label") || "";
+    tip.hidden = false;
+    const box = panel.getBoundingClientRect();
+    const at = mark.getBoundingClientRect();
+    const width = tip.offsetWidth;
+    const left = Math.max(8, Math.min(at.left - box.left, box.width - width - 8));
+    const below = at.bottom - box.top + 6;
+    const top = below + tip.offsetHeight > box.height - 8 ? at.top - box.top - tip.offsetHeight - 6 : below;
+    tip.style.left = `${left}px`;
+    tip.style.top = `${Math.max(8, top)}px`;
+  }
+  function hideEvidenceTip() {
+    const tip = panel?.querySelector(".lite-ev-tip");
+    if (tip) tip.hidden = true;
+  }
+  function wireEvidenceTips() {
+    const markOf = (event) => (event.target.closest ? event.target.closest(".lite-rc-ev") : null);
+    panel.addEventListener("mouseover", (event) => { const m = markOf(event); if (m) showEvidenceTip(m); });
+    panel.addEventListener("mouseout", (event) => { if (markOf(event)) hideEvidenceTip(); });
+    panel.addEventListener("focusin", (event) => { const m = markOf(event); if (m) showEvidenceTip(m); });
+    panel.addEventListener("focusout", (event) => { if (markOf(event)) hideEvidenceTip(); });
+    panel.addEventListener("keydown", (event) => { if (event.key === "Escape") hideEvidenceTip(); });
+  }
+
+  /* What the reader's setting is holding back, said plainly and undoable:
+   * "3 thin findings hidden" with a button to see them. Counted from the whole
+   * answer, so it stays after they are revealed ("3 thin findings shown"). */
+  function renderThinNote() {
+    const held = filterByEvidence(state.result && state.result.claims, state.sensitivity, false)
+      .hidden.length;
+    let note = claimsHeadEl.querySelector(".lite-thin-note");
+    if (!held) { note?.remove(); return; }
+    if (!note) {
+      note = document.createElement("div");
+      note.className = "lite-thin-note";
+      note.setAttribute("role", "status");
+      note.innerHTML = `<span class="lite-thin-text"></span>
+        <button type="button" class="lite-chip lite-thin-toggle" aria-pressed="false"></button>
+        <button type="button" class="lite-chip lite-thin-change">Change setting</button>`;
+      note.querySelector(".lite-thin-toggle").addEventListener("click", () => {
+        state.revealThin = !state.revealThin;
+        renderBody();
+        renderCounts();
+      });
+      note.querySelector(".lite-thin-change").addEventListener("click", () =>
+        chrome.runtime.sendMessage({ type: "OPEN_OPTIONS" }, () => { void chrome.runtime.lastError; }));
+      claimsHeadEl.appendChild(note);
+    }
+    note.querySelector(".lite-thin-text").textContent =
+      hiddenWords(held, state.sensitivity, state.revealThin);
+    const toggle = note.querySelector(".lite-thin-toggle");
+    toggle.textContent = state.revealThin ? "Hide again" : "Show them";
+    toggle.setAttribute("aria-pressed", state.revealThin ? "true" : "false");
+  }
+
+  /* The setting lives in the app (`info_sensitivity`), so the app's Settings
+   * and this panel can never disagree, and it only changes which cards are
+   * drawn: what is stored, ranked and digested is untouched. Asked again with
+   * each answer, so a change made in the app reaches an open panel. */
+  function requestSensitivity() {
+    try {
+      chrome.runtime.sendMessage({ type: "INFO_SENSITIVITY" }, (response) => {
+        if (chrome.runtime.lastError) return;
+        const next = normaliseSensitivity(response && response.ok ? response.sensitivity : "all");
+        if (next === state.sensitivity) return;
+        state.sensitivity = next;
+        state.revealThin = false;
+        if (state.mounted && state.pipeline === "result") { renderBody(); renderCounts(); }
+      });
+    } catch (_) {
+      // No worker to ask: everything stays shown, which is the safe default.
+    }
   }
 
   function renderClaimsList() {
@@ -3822,7 +3933,7 @@
     let groups;
     {
       const byDomain = {};
-      state.result.claims.forEach((claim, i) => {
+      claimsView().shown.forEach((claim, i) => {
         const d = (claim.domain || "other").toLowerCase().trim();
         if (!byDomain[d]) byDomain[d] = [];
         byDomain[d].push({ claim, idx: i });
@@ -3904,6 +4015,7 @@
             card.innerHTML = next.innerHTML;
             card.dataset.sev = next.dataset.sev;
             card.dataset.strength = next.dataset.strength;
+            card.dataset.evidence = next.dataset.evidence;
           } else {
             card = next;
             wrap.appendChild(card);
@@ -4121,7 +4233,7 @@
   function setAllOpen(open) {
     if (!state.result) return;
     state.openIds = open
-      ? new Set(state.result.claims.map(claimKeyOf))
+      ? new Set(claimsView().shown.map(claimKeyOf))
       : new Set();
     // Mutate cards in place so each one runs its own expand/collapse animation
     // — re-rendering the list would retrigger the entrance animation.
