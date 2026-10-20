@@ -1,5 +1,9 @@
 # Benchmark reports
 
+The [20 October product search screen](searchbench-2026-10-20.md) compares full
+web research workflows across easy, heavy and missing-identity questions.
+It includes a compact CSV and a screenshot of the plain results table.
+
 Measured results from `kriko model-bench` / `python -m app.modelbench`. What the
 columns mean, and the rules behind the arithmetic, are in
 [docs/MODEL_BENCHMARK.md](../docs/MODEL_BENCHMARK.md).
