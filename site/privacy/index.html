@@ -1,36 +1,24 @@
-<!DOCTYPE html><html lang="en"><head>
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#090d18">
+  <meta name="color-scheme" content="light dark">
   <title>Kriko privacy policy</title>
   <meta name="description" content="Kriko keeps what it reads on your computer. No account, no analytics, no data sent to Kriko. What leaves your machine, and only when you start it.">
   <link rel="icon" href="../assets/icon-32.png">
+  <link rel="stylesheet" href="../styles.css?v=b4becf5de0be">
   <link rel="canonical" href="https://kriko.cc/privacy/">
-  <style>
-    :root { color-scheme: dark; --ground: #090d18; --ink: #f5f7fc; --muted: #c3cee1; --ice: #bdccff; --line: #ffffff24; --blue: #315cfa; }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--ground); color: var(--ink); font: 400 17px/1.7 'DM Sans', 'Segoe UI', system-ui, sans-serif; }
-    a { color: var(--ice); }
-    header, main, footer { width: 100%; max-width: 760px; margin-inline: auto; padding-inline: 22px; }
-    header { padding-block: 26px; }
-    header a { display: inline-block; }
-    header img { height: 30px; width: auto; }
-    main { padding-bottom: 56px; }
-    h1 { font: 600 clamp(40px, 7vw, 58px)/1.05 'Barlow Condensed', 'Arial Narrow', sans-serif; margin: 12px 0 6px; letter-spacing: -.01em; }
-    h2 { font: 600 28px/1.15 'Barlow Condensed', 'Arial Narrow', sans-serif; margin: 44px 0 8px; }
-    p, li { color: var(--muted); }
-    ul { padding-left: 1.2em; }
-    li { margin: 6px 0; }
-    strong { color: var(--ink); font-weight: 600; }
-    .updated { font: 13px/1.6 'JetBrains Mono', Consolas, monospace; color: var(--muted); }
-    .short { margin: 26px 0 0; padding: 18px 20px; border: 1px solid var(--line); border-left: 3px solid var(--blue); border-radius: 8px; background: #111827; }
-    .short p { margin: 0; color: var(--ink); }
-    footer { padding-block: 26px 48px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
-  </style>
 </head>
 <body>
-  <header><a href="/" aria-label="Kriko home"><img src="../assets/kriko-wordmark-white.svg" alt="Kriko" width="91" height="30"></a></header>
-  <main id="main">
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="/" aria-label="Kriko home"><picture><source srcset="../assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="../assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
+      <a class="back-link" href="/">Back to the home page</a>
+    </div>
+  </header>
+  <main id="main" class="policy">
+    <div class="wrap narrow">
     <h1>Privacy policy</h1>
     <p class="updated">Last updated 20 October 2026 · Covers the Kriko desktop app, the Kriko browser extension and kriko.cc</p>
 
@@ -61,7 +49,7 @@
     <p>Nothing. Kriko has no account system, no usage analytics, no crash reporting that leaves your machine, and no advertising identifiers. We do not sell, rent or share personal data, because we do not hold any.</p>
 
     <h2>This website (kriko.cc)</h2>
-    <p>The site is static pages hosted by Cloudflare Pages. Cloudflare, like any host, keeps standard server logs such as IP address and requested page. The site itself sets no cookies, has no forms and runs no analytics. The home page loads its typefaces from Google Fonts, so Google receives your IP address when you open it. This page loads nothing from third parties.</p>
+    <p>The site is static pages hosted by Cloudflare Pages. Cloudflare, like any host, keeps standard server logs such as IP address and requested page. The site itself sets no cookies, has no forms and runs no analytics. Its pages load nothing from third parties: the typeface is served from kriko.cc itself, so no one but Cloudflare sees that you visited.</p>
 
     <h2>Your control</h2>
     <ul>
@@ -81,6 +69,13 @@
 
     <h2>Contact</h2>
     <p>Questions or requests: open an issue at <a href="https://github.com/Berbadov/kriko/issues">github.com/Berbadov/kriko/issues</a>.</p>
+      </div>
   </main>
-  <footer><a href="/">kriko.cc</a> · Free software under the <a href="https://github.com/Berbadov/kriko/blob/main/LICENSE">MIT license</a></footer>
-</body></html>
+  <footer class="footer">
+    <div class="wrap footer-grid">
+      <p>Free software under the <a href="https://github.com/Berbadov/kriko/blob/main/LICENSE">MIT license</a>.</p>
+      <nav aria-label="Footer"><a href="/">kriko.cc</a><a href="https://github.com/Berbadov/kriko/issues">Help and feedback</a></nav>
+    </div>
+  </footer>
+</body>
+</html>
