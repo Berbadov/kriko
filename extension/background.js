@@ -2346,34 +2346,6 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // async
   }
 
-  // #112: a follow-up question about a finished quick look, asked here and
-  // answered from the look's own findings (POST /api/extension/quick-look/{id}/ask).
-  if (request.type === "QUICK_ASK") {
-    const jobId = String(request.payload?.job_id || "").trim();
-    const q = String(request.payload?.q || "").trim();
-    if (!jobId || !q) {
-      sendResponse({ ok: false, error: "Missing job_id or question" });
-      return false;
-    }
-    _postIdempotent(`/api/extension/quick-look/${encodeURIComponent(jobId)}/ask`, { q })
-      .then((job) => sendResponse({ ok: true, job }))
-      .catch((error) => sendResponse({
-        ok: false, status: error.status, code: error.code, error: error.message }));
-    return true; // async
-  }
-  // The follow-up exchange of one quick look, oldest first, read on panel open.
-  if (request.type === "QUICK_ASKS") {
-    const jobId = String(request.payload?.job_id || "").trim();
-    if (!jobId) {
-      sendResponse({ ok: false, error: "Missing job_id" });
-      return false;
-    }
-    _getApp(`/api/extension/quick-look/${encodeURIComponent(jobId)}/asks`)
-      .then((reply) => sendResponse({ ok: true, asks: reply.asks || [] }))
-      .catch((error) => sendResponse({
-        ok: false, status: error.status, code: error.code, error: error.message }));
-    return true; // async
-  }
   // Queue mode: the listing's product joins the app's research queue, for an
   // agent to research in turn and the compare screen to line up. The page's
   // address keys it, so a second press answers "already queued".
@@ -2494,26 +2466,6 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // async
   }
 
-  // What plane this installation is configured for, and what it costs — read
-  // before RESEARCH_SUBJECT is ever sent, so the panel can name the cost
-  // before it spends it (agent: nothing; api: the enforced cap). Never a key:
-  // `/api/extension/research-plane` answers with the same discipline as
-  // `/api/keys` — a plane name and a number, nothing that could be replayed
-  // as a credential.
-  if (request.type === "LOOKUP_ASK" || request.type === "LOOKUP_QUESTIONS") {
-    const lookupId = String(request.payload?.lookup_id || "");
-    const question = String(request.payload?.question || "").trim();
-    if (!lookupId || (request.type === "LOOKUP_ASK" && (!question || question.length > 2000))) {
-      sendResponse({ ok: false, error: "Choose a saved check and write a question (up to 2000 characters)." });
-      return false;
-    }
-    const path = `/api/lookup/${encodeURIComponent(lookupId)}/questions`;
-    const call = request.type === "LOOKUP_ASK" ? _postApp(path, { question }) : _getApp(path);
-    call.then((reply) => sendResponse({ ok: true, ...reply }))
-      .catch((error) => sendResponse({ ok: false, code: error.code, error: error.message }));
-    return true;
-  }
-
   if (request.type === "SAVED_QUICK_LOOK") {
     const url = String(request.payload?.url || "").slice(0, 2000);
     _getApp(`/api/extension/quick-looks?url=${encodeURIComponent(url)}`)
@@ -2522,6 +2474,12 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // What plane this installation is configured for, and what it costs — read
+  // before RESEARCH_SUBJECT is ever sent, so the panel can name the cost
+  // before it spends it (agent: nothing; api: the enforced cap). Never a key:
+  // `/api/extension/research-plane` answers with the same discipline as
+  // `/api/keys` — a plane name and a number, nothing that could be replayed
+  // as a credential.
   if (request.type === "RESEARCH_PLANE") {
     _getApp("/api/extension/research-plane")
       .then((plane) => sendResponse({ ok: true, plane }))

@@ -83,7 +83,6 @@
     buyerUi: {},
     pick: null,
     queueHelpOpen: false,
-    followups: new Map(),       // saved answer id -> its questions and draft
     // Typing the name. Panel-local: a search is a question the reader is
     // asking right now, not something the next analysis should remember.
     searchOpen: false,
@@ -151,13 +150,6 @@
     researchProgress: 0,
     // The saved quick look the "Add to a pack" button would file, or null.
     researchQuickJob: null,
-    researchSavedAt: "",
-    // #112: the follow-up exchange on that quick look, and whether one is
-    // being answered right now. Durable rows in the engine; cached here so
-    // a reload puts the conversation back.
-    researchAsks: null,
-    researchAsking: false,
-    researchFollowQ: "",
     taskLogs: new Map(),
     quickSourcesOpen: false,
     // When the followed run started, for the elapsed time beside its stage.
@@ -295,16 +287,6 @@
   // Nothing below names a car attribute. The identity keys, the context keys
   // and the units are all whatever the answering pack declared, so a pack for
   // a category nobody has written yet renders here without an edit.
-  /* ── Follow-up answers, as they are written ─────────────────────────────
-   * Both follow-ups (a saved check's question, a quick look's question) show
-   * their reply the way a chat does: three dots while nothing is written yet,
-   * then the words typed out at an even pace, with a caret while the agent is
-   * still writing. `replies` remembers how much of each reply is on screen, so
-   * a rebuilt panel resumes where it was. A plane that cannot stream (a coding
-   * agent's CLI) writes its whole reply at the end; that reply is typed out the
-   * same way, so the reader sees one behaviour on every plane. */
-  const replies = new Map();   // job_id -> { target, done, error, sources, shown }
-  let revealPending = false;
 
   function reduceMotion() {
     return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -409,81 +391,6 @@
     dot.style.top = (event.clientY - rect.top) + "px";
     panel.appendChild(dot);
     dot.addEventListener("animationend", () => dot.remove());
-  }
-
-  /* What a job has said so far. `job` is a job row (its `result` holds the
-   * reply) or a quick-look ask (the reply is on the object itself). A reply
-   * first seen already finished is shown whole; one watched while it is being
-   * written is typed out as it grows. */
-  function observeReply(job) {
-    const id = String(job?.job_id || "");
-    if (!id) return;
-    const source = job.result ?? job;
-    const answer = String(source.answer || "");
-    const done = Boolean(job.done);
-    let reply = replies.get(id);
-    if (!reply) {
-      const whole = done || reduceMotion();
-      reply = { target: "", done, error: "", sources: [], shown: whole ? answer.length : 0 };
-      replies.set(id, reply);
-    }
-    reply.target = answer;
-    reply.done = done;
-    reply.error = done && !answer ? String(job.error || job.message || "No answer was returned.") : "";
-    if (Array.isArray(source.sources)) reply.sources = source.sources;
-    if (reduceMotion()) reply.shown = answer.length;
-  }
-
-  function loadingMarkup() {
-    return `<span class="lite-answer-loading" role="status" aria-label="Answering"><i></i><i></i><i></i></span>`;
-  }
-
-  function sourcesMarkup(sources) {
-    const links = (sources || [])
-      .filter(src => /^https?:\/\//i.test(String(src?.url || "")))
-      .slice(0, 8)
-      .map(src => `<a href="${escapeHtml(src.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(src.domain || src.url)}</a>`);
-    return links.length ? `<p class="lite-answer-sources">Sources: ${links.join(" · ")}</p>` : "";
-  }
-
-  /* Paints every answer slot under `root` from what is known of its reply. The
-   * text is plain while it is written and rendered (bold, code, sources) once it
-   * is whole, so the finished card reads as it always did. Then it arms the
-   * ticker while any reply is still behind what it has said. */
-  function paintReplies(root) {
-    if (!root) return;
-    for (const el of root.querySelectorAll("[data-answer]")) {
-      const reply = replies.get(el.dataset.answer)
-        || { target: "", done: false, error: "", sources: [], shown: 0 };
-      const text = reply.target.slice(0, reply.shown);
-      const whole = reply.done && reply.shown >= reply.target.length;
-      let phase;
-      let html;
-      if (whole && reply.error) { phase = "failed"; html = escapeHtml(reply.error); }
-      else if (whole) { phase = "done"; html = renderRichText(reply.target || "No answer.") + sourcesMarkup(reply.sources); }
-      else if (!text) { phase = "waiting"; html = loadingMarkup(); }
-      else { phase = "streaming"; html = escapeHtml(text); }
-      if (el.dataset.phase === phase && el._painted === html) continue;
-      el.dataset.phase = phase;
-      el._painted = html;
-      el.innerHTML = html;
-    }
-    if (!revealPending && [...replies.values()].some(reply => reply.shown < reply.target.length)) {
-      revealPending = true;
-      requestAnimationFrame(revealTick);
-    }
-  }
-
-  /* One frame of typing: a larger share of the gap when far behind, never
-   * slower than two characters a frame, so a reply that arrives whole still
-   * reads as being written, and one that arrives in pieces keeps pace with it. */
-  function revealTick() {
-    revealPending = false;
-    for (const reply of replies.values()) {
-      const gap = reply.target.length - reply.shown;
-      if (gap > 0) reply.shown += Math.min(gap, Math.max(2, Math.min(14, Math.ceil(gap / 6))));
-    }
-    paintReplies(bodyEl);
   }
 
   function deriveListingMeta(entry) {
@@ -923,11 +830,6 @@
       state.researchPlane = response.plane || null;
       state.researchPlaneError = "";
       renderResearch();
-      // The follow-up tooltips carry the cap too, and the slot may already be
-      // drawn: the answer that opened it can land before this answer does,
-      // because both are a round trip and neither waits for the other. This
-      // only rewrites the two titles, so it costs a comparison.
-      refreshFollowupCap();
       // Skip the redraw while a run is in flight: renderGaps rebuilds the gap
       // card from scratch, and rebuilding out from under an active poll would
       // orphan the button pollResearchJob is updating by direct reference.
@@ -1134,18 +1036,6 @@
     knowledgeMoved();
   }
 
-  /* Write the cap onto a follow-up slot that is already on screen. */
-  function refreshFollowupCap() {
-    const slot = bodyEl?.querySelector(".lite-followup-slot");
-    const input = slot?.querySelector(".lite-followup-input");
-    if (!slot || !input) return;
-    const send = slot.querySelector(".lite-followup-send");
-    const cap = paidCapLine();
-    input.title = "Your agent answers from this listing's risks and evidence."
-      + (cap ? ` ${cap}` : "");
-    if (send) send.title = cap;
-  }
-
   // The sentence a reader sees before the button does anything at all. Named
   // *before* the click, not after: the whole point of asking the plane first
   // is that "this spends money" cannot be information the reader gets from
@@ -1154,8 +1044,8 @@
     const plane = state.researchPlane;
     if (!plane) return "";
     const picked = pickedAgent();
-    if (picked?.kind === "local") return "Free; runs on this computer.";
-    if (picked?.kind === "cli") return "Free; runs through your coding agent.";
+    if (picked?.kind === "local") return "Free · on this computer";
+    if (picked?.kind === "cli") return "Free · your coding agent";
     if (picked?.kind === "api") {
       const cap = Number(plane.budget_usd || 0);
       return cap > 0 ? `Capped at $${cap.toFixed(2)} of your API keys.` : "Billed to your API keys.";
@@ -1167,9 +1057,9 @@
         : "Billed to your API keys.";
     }
     if (plane.backend === "local") {
-      return "Free; runs on this computer.";
+      return "Free · on this computer";
     }
-    return "Free; runs through your coding agent.";
+    return "Free · your coding agent";
   }
 
   // Nothing known about a subject the packs *do* recognise. That is the one
@@ -1189,10 +1079,6 @@
     if (nextName !== state.researchName) {
       state.researchQuick = null;
       state.researchQuickJob = null;
-      state.researchSavedAt = "";
-      state.researchAsks = null;
-      state.researchAsking = false;
-      state.researchFollowQ = "";
     }
     state.researchName = nextName;
     state.researchContext = "";
@@ -1218,7 +1104,6 @@
     if (state.researchQuick && String(state.researchQuick.product || "").trim() !== q) {
       state.researchQuick = null;
       state.researchQuickJob = null;
-      state.researchSavedAt = "";
     }
     const cap = Number(state.researchPlane.budget_usd);
     state.researching = subject_id || q;
@@ -1263,11 +1148,8 @@
       renderResearch();
       return;
     }
-    state.researchSavedAt = job.finished_at || job.created_at || "";
     state.researchEmpty = null;
     state.researchQuick = {
-      // The saved row's id, so the empty card's follow-up can ask about it
-      // even while the deeper run has taken `researchJob` for itself.
       job_id: job.job_id || state.researchJob?.job_id || "",
       product: result.product || state.researchName,
       assumed: result.assumed || "",
@@ -1282,8 +1164,8 @@
     const deepen = result.deepen_job_id || state.researchJob?.deepen_job_id;
     const found = state.researchQuick.risks.length;
     const said = found
-      ? `${found} thing${found === 1 ? "" : "s"} to know, from a quick look. Saved in Kriko.`
-      : (result.diagnostic?.message || "Nothing sourced was kept.") + " Saved in Kriko.";
+      ? `${found} thing${found === 1 ? "" : "s"} to know.`
+      : "Nothing sourced found.";
     if (!deepen) {
       // A quick look is not a pack: it is saved as it is, and joins a pack
       // only when the reader presses "Add to a pack".
@@ -1291,8 +1173,6 @@
       state.researchQuickJob = job.job_id || state.researchJob?.job_id || null;
       state.researchMessage = said;
       renderResearch();
-      renderFollowups();
-      loadQuickAsks();
       return;
     }
     state.researchJob = { job_id: deepen, kind: "pack_author" };
@@ -1400,17 +1280,13 @@
         return `<li><b>${escapeHtml(n)}</b> ${escapeHtml(rest.join(" "))}</li>`;
       }).join("")}</ul>`
       : "";
-    const asks = (state.researchAsks || []).map((a) => `<div class="lite-follow-a">
-        <p class="lite-follow-q">${escapeHtml(a.q)}</p>
-        <div class="lite-follow-answer lite-answer" data-answer="${escapeHtml(a.job_id || "")}"></div>
-      </div>`).join("");
     return `<section class="lite-noissue" data-empty="${escapeHtml(empty.kind || "quick")}">
       <div class="lite-noissue-head">
         <span class="lite-noissue-icon">${iconSvg("searchOff", { size: 18 })}</span>
         <div>
           <h3 class="lite-noissue-title">${escapeHtml(empty.title || "No sourced issues found")}</h3>
           <p class="lite-noissue-note">${escapeHtml(empty.note
-            || "Absence of evidence in the pages read; not proof that there is no issue.")}</p>
+            || "Nothing found in the pages read. Not proof there is no issue.")}</p>
         </div>
       </div>
       ${statChips}
@@ -1419,16 +1295,6 @@
         <summary>Pages read</summary>
         <div class="lite-quick-source-list"></div>
       </details>
-      ${empty.jobId ? `<div class="lite-follow">
-        ${asks}
-        <div class="lite-follow-row">
-          <input class="lite-follow-input" maxlength="500" placeholder="Ask about this product"
-            aria-label="Ask about this product" title="Your agent can search the web"
-            ${state.researchAsking ? "disabled" : ""} />
-          <button type="button" class="lite-follow-ask" title="Your agent can search the web"
-            aria-label="Ask about this product" ${state.researchAsking ? "disabled" : ""}>${state.researchAsking ? "Asking…" : "Ask"}</button>
-        </div>
-      </div>` : ""}
     </section>`;
   }
 
@@ -1436,10 +1302,8 @@
     const slot = bodyEl?.querySelector(".lite-research-slot");
     if (!slot) return;
     if (!state.researchOpen) { slot.innerHTML = ""; slot._researchMarkup = null; slot._shown = false; return; }
-    for (const ask of state.researchAsks || []) observeReply(ask);
     const busy = Boolean(state.researching);
     const target = state.researchTarget;
-    const draft = state.researchJob?.kind === "pack_author";
     const cost = costLine();
     const asked = (state.researchJob?.attention?.questions
       || state.researchJob?.result?.questions || []).filter((q) => q && q.id);
@@ -1459,14 +1323,13 @@
         .join(", ")
       : "";
     // A quick look that kept nothing and a deep run that kept nothing show the
-    // same card. `jobId` is what lets the quick-look follow-up appear in it.
+    // same card.
     const emptyCard = quickIsEmpty
       ? {
         kind: "quick",
         title: "No sourced issues kept",
-        note: "Absence of evidence in the pages read; not proof that there is no issue.",
+        note: "Nothing found in the pages read. Not proof there is no issue.",
         coverage: quickCoverage,
-        jobId: state.researchQuickJob || state.researchQuick?.job_id || "",
         outcome: state.researchQuick?.diagnostic?.message || "",
       }
       : state.researchEmpty;
@@ -1484,7 +1347,6 @@
           </div></div>
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
-        ${state.researchSavedAt ? `<p class="lite-saved-result">Saved · ${escapeHtml(state.researchSavedAt)}</p>` : ""}
         ${quickCoverage && !quickIsEmpty ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
           `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} cited`
           + (rejectionSummary ? ` · reasons: ${rejectionSummary}` : ""))}</p>` : ""}
@@ -1497,19 +1359,6 @@
           <details class="lite-quick-sources" ${state.quickSourcesOpen ? "open" : ""}>
             <summary>Sources</summary><div class="lite-quick-source-list"></div>
           </details>
-        </div>` : ""}
-        ${state.researchQuick && state.researchQuickJob && !quickIsEmpty ? `<div class="lite-follow">
-          ${(state.researchAsks || []).map((a) => `<div class="lite-follow-a">
-            <p class="lite-follow-q">${escapeHtml(a.q)}</p>
-            <div class="lite-follow-answer lite-answer" data-answer="${escapeHtml(a.job_id || "")}"></div>
-          </div>`).join("")}
-          <div class="lite-follow-row">
-            <input class="lite-follow-input" maxlength="500" placeholder="Ask about this product"
-              aria-label="Ask about this product" title="Your agent can search the web"
-              ${state.researchAsking ? "disabled" : ""} />
-            <button type="button" class="lite-follow-ask" title="Your agent can search the web"
-              aria-label="Ask about this product" ${state.researchAsking ? "disabled" : ""}>${state.researchAsking ? "Asking\u2026" : "Ask"}</button>
-          </div>
         </div>` : ""}
         ${asked.length ? `<div class="lite-asked" aria-live="polite">
           <p class="lite-asked-lede"><span class="lite-asked-mark" aria-hidden="true">?</span>${busy
@@ -1530,10 +1379,10 @@
         </div>` : ""}
         ${learnMarkup()}
         <div class="lite-research-actions">
-          ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Refresh Quick Look" : "Research this product"}</button>` : ""}
+          ${!busy ? `<button type="button" class="lite-research-start" ${!state.researchPlane ? "disabled" : ""}>${state.researchJob ? "Run again" : "Research this product"}</button>` : ""}
           ${!busy && state.researchQuickJob ? `<button type="button" class="lite-research-pack">Add to a pack</button>` : ""}
           ${busy && state.researchJob ? `<button type="button" class="lite-research-cancel" ${state.cancelling ? "disabled" : ""}>${state.cancelling ? "Cancelling…" : "Cancel"}</button>` : ""}
-          ${state.researchJob ? `<button type="button" class="lite-research-output">${draft ? "Open exact draft output" : "Open research job"}</button>` : ""}
+          ${state.researchJob ? `<button type="button" class="lite-research-output">Open in Kriko</button>` : ""}
           ${state.researchPlaneError ? `<button type="button" class="lite-research-cost-retry">Retry cost check</button>` : ""}
         </div>
         <div class="lite-task-log-slot"></div>
@@ -1556,12 +1405,10 @@
         const value = state.researchDraftAnswers[input.dataset.id] || "";
         if (input.value !== value) input.value = value;
       });
-      paintReplies(slot);
       return;
     }
     slot._researchMarkup = signature;
     slot.innerHTML = markup;
-    paintReplies(slot);
     // The card drops in once, when it is opened, and not again each time a
     // poll rebuilds it. Context stays folded until it is asked for (or has
     // words in it already); the fold eases open rather than snapping.
@@ -1598,15 +1445,6 @@
     }
     slot.querySelector(".lite-research-start")?.addEventListener("click", () => startResearch());
     slot.querySelector(".lite-research-pack")?.addEventListener("click", addQuickToPack);
-    const followInput = slot.querySelector(".lite-follow-input");
-    if (followInput) {
-      followInput.value = state.researchFollowQ;
-      followInput.addEventListener("input", () => { state.researchFollowQ = followInput.value; });
-      followInput.addEventListener("keydown", (event) => {
-        if (event.key === "Enter") askQuick(followInput.value.trim());
-      });
-      slot.querySelector(".lite-follow-ask")?.addEventListener("click", () => askQuick(followInput.value.trim()));
-    }
     const quickCards = slot.querySelector(".lite-quick-cards");
     const sourceList = slot.querySelector(".lite-quick-source-list");
     const sources = new Map();
@@ -1835,64 +1673,6 @@
     });
   }
 
-  /* #112: the follow-up exchange on a quick look. The asks are durable rows
-   * in the engine (one job each); the panel reads them back so a reload puts
-   * the conversation back while the engine is asked again for the truth. */
-  function loadQuickAsks() {
-    const jobId = state.researchQuickJob;
-    if (!jobId) return;
-    chrome.runtime.sendMessage({ type: "QUICK_ASKS", payload: { job_id: jobId } }, (response) => {
-      if (chrome.runtime.lastError || !response?.ok) return;
-      state.researchAsks = response.asks || [];
-      for (const ask of state.researchAsks) observeReply(ask);
-      if (!state.researchAsking) renderResearch();
-    });
-  }
-
-  function askQuick(question) {
-    const jobId = state.researchQuickJob || state.researchQuick?.job_id;
-    if (!question || !jobId || state.researchAsking) return;
-    state.researchAsking = true;
-    // The question shows at once, with the dots, before the engine has
-    // answered; its job id arrives with the reply to the send.
-    const ask = { q: question, job_id: "", answer: "", done: false };
-    state.researchAsks = [...(state.researchAsks || []), ask];
-    renderResearch();
-    chrome.runtime.sendMessage({ type: "QUICK_ASK", payload: { job_id: jobId, q: question } }, (response) => {
-      state.researchAsking = false;
-      if (chrome.runtime.lastError || !response?.ok || !response.job?.job_id) {
-        state.researchAsks = state.researchAsks.filter((one) => one !== ask);
-        state.researchMessage = response?.error || "Could not ask. Open Kriko and retry.";
-        renderResearch();
-        return;
-      }
-      ask.job_id = response.job.job_id;
-      state.researchFollowQ = "";
-      renderResearch();
-      loadQuickAsks();
-      pollAskJob(response.job.job_id);
-    });
-  }
-
-  /* The answer as the engine writes it: a partial reply is read from the job's
-   * result on every poll, and the panel types it out as it grows. Polled every
-   * 400 ms, so a reply that lands in pieces keeps pace with the reveal. */
-  function pollAskJob(jobId) {
-    chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, (response) => {
-      // A closed panel stops asking. Opening it again reads the asks back.
-      if (chrome.runtime.lastError || !response?.ok) { loadQuickAsks(); return; }
-      const job = response.job;
-      const done = !job || Boolean(job.done)
-        || ["succeeded", "failed", "cancelled", "interrupted"].includes(job.state);
-      if (job) {
-        observeReply({ ...job, job_id: jobId, done });
-        paintReplies(bodyEl);
-      }
-      if (done) { loadQuickAsks(); return; }
-      if (state.visible) setTimeout(() => pollAskJob(jobId), 400);
-    });
-  }
-
   /* A finished research run that kept nothing. The panel used to say "Research
    * completed. Open the research job for findings." and stop there, so a run
    * that read sources and found nothing looked like one that produced cards.
@@ -1951,7 +1731,7 @@
       state.researchEmpty = emptied ? {
         kind: "deep",
         title: "No sourced issues kept",
-        note: "Absence of evidence in the sources read; not proof that there is no issue.",
+        note: "Nothing found in the pages read. Not proof there is no issue.",
         coverage: job.result?.coverage || job.result?.telemetry?.coverage || null,
         evidence_pages: Array.isArray(job.result?.evidence_pages)
           ? job.result.evidence_pages
@@ -2572,8 +2352,8 @@
         <div class="lite-queue-slot"></div>
         <div class="lite-decide-slot"></div>
         <div class="lite-product-actions">
-          <button type="button" class="lite-find-product">Find in installed packs</button>
-          <button type="button" class="lite-research-product" title="Research this product with your agent">Research</button>
+          <button type="button" class="lite-find-product">Search packs</button>
+          <button type="button" class="lite-research-product" >Research</button>
         </div>
         <div class="lite-live-slot"></div>
         <div class="lite-search-slot"></div>
@@ -2581,7 +2361,6 @@
         <div class="lite-verdict-slot"></div>
         <div class="lite-claims-head-slot"></div>
         <section class="lite-claims"></section>
-        <div class="lite-followup-slot"></div>
         <div class="lite-details-slot"></div>
       </div>
 
@@ -3325,7 +3104,6 @@
   // coming back into view asks again at once instead of waiting for Analyze.
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && state.visible && !state.liveTimer) pollLive();
-    if (!document.hidden && state.visible) renderFollowups();
   });
 
   function renderStatus() {
@@ -4197,9 +3975,9 @@
       return;
     }
     const packs = Array.isArray(state.result.packs) ? state.result.packs : [];
-    footerEl.textContent = packs.length
-      ? packs.map((p) => `${p.pack_id} · ${p.version}`).join("  |  ")
-      : "unknown";
+    footerEl.textContent = packs.map((p) => `${p.pack_id} · ${p.version}`).join("  |  ");
+    // A separator only when something stands before the button.
+    const join = () => { if (footerEl.textContent) footerEl.append(" · "); };
 
     // The app stored this same answer and can show the whole of it. Offered
     // only when the app said so: a link to a report that was never written is
@@ -4218,217 +3996,30 @@
       button.textContent = "Open in Kriko";
       button.addEventListener("click", () =>
         openInApp(state.result.app_route || "check", state.result.app_url));
-      footerEl.append(" · ", button);
+      join();
+      footerEl.append(button);
     }
 
-    // The panel's job ends at "here is what to worry about"; these two are
-    // what a reader does with that. Both were app-only screens, so a reader
-    // who had just read the claims had to go and find the same listing again
-    // by hand — the answer is already stored under an id, and the id is right
-    // here.
-    //
-    // Offered only when the app handed back a route for them: a stored answer
-    // is what makes either screen possible, and a button that opens an empty
-    // question sheet teaches the reader that the button does not work.
-    for (const [key, label] of [
-      ["questions", "Ask the seller"],
-      ["compare", "Compare"],
-    ]) {
-      if (!routes[key]) continue;
+    // What a reader does with the answer once read: line it up against
+    // another. Offered only when the app handed back a route for it, because a
+    // button that opens an empty screen teaches the reader the button is broken.
+    if (routes.compare) {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "lite-open-app";
-      button.textContent = label;
-      button.addEventListener("click", () => openInApp(routes[key], urls[key]));
-      footerEl.append(" · ", button);
+      button.textContent = "Compare";
+      button.addEventListener("click", () => openInApp(routes.compare, urls.compare));
+      join();
+      footerEl.append(button);
     }
     footerEl.hidden = false;
-  }
-
-  function followupHere() {
-    // A quick look that kept nothing shows its own follow-up inside the
-    // no-issue card, with the same pipe. The generic block would be the same
-    // control twice, so in that one case it stands down.
-    const emptyQuick = state.researchOpen && state.researchQuick
-      && (state.researchQuickJob || state.researchQuick.job_id)
-      && !state.researchQuick.risks?.length && !state.researchQuick.specs?.length;
-    const id = (state.researchOpen && state.researchQuickJob && !emptyQuick)
-      || (state.pipeline === "result" && state.result?.lookup_id);
-    if (!id) return null;
-    if (!state.followups.has(id)) state.followups.set(id, {
-      id, query: "", status: "", starting: false, jobs: [], loaded: false,
-      polling: new Set(), paused: new Set(),
-    });
-    return state.followups.get(id);
-  }
-
-  /* The cap a paid follow-up runs under, in the reader's words, read from the
-   * engine rather than written here. A literal "$0.20" was true when it was
-   * typed and stops being true the moment the engine's budget changes — and a
-   * number that has silently stopped being true is worse than no number, on
-   * the one prompt whose whole job is to say the cost before the click. The
-   * engine enforces this cap itself (`EXTENSION_RESEARCH_BUDGET_USD`); this
-   * only repeats it. */
-  function paidCapLine() {
-    const cap = Number(state.researchPlane?.budget_usd);
-    if (!Number.isFinite(cap) || cap <= 0) return "";
-    return `Paid agents are capped at $${cap.toFixed(2)} per question.`;
-  }
-
-  function renderFollowups() {
-    const slot = bodyEl?.querySelector(".lite-followup-slot");
-    if (!slot) return;
-    const row = followupHere();
-    if (!row) { slot.replaceChildren(); delete slot.dataset.lookupId; return; }
-    if (slot.dataset.lookupId !== row.id) {
-      slot.dataset.lookupId = row.id;
-      // The cap comes from the engine, and this slot is the other place a
-      // paid run starts. Asking here too costs one cached request: the answer
-      // is kept for the session, and the request is a no-op after the first.
-      requestResearchPlane();
-      slot.innerHTML = `
-        <section class="lite-followup">
-          <div class="lite-followup-history" aria-live="polite"></div>
-          <form class="lite-followup-form">
-            <textarea id="lite-followup-input" class="lite-followup-input" maxlength="2000"
-              placeholder="Ask about this product" aria-label="Ask about this product"
-              title="Your agent answers from this listing's risks and evidence."
-              rows="1"></textarea>
-            <button type="submit" class="lite-followup-send"
-              aria-label="Ask about this product">Ask</button>
-          </form>
-          <p class="lite-followup-status" role="status"></p>
-        </section>`;
-      // The cap is said only when there is one to say: an agent on this
-      // machine or a local model costs nothing per question, and the engine
-      // reports 0 for both.
-      refreshFollowupCap();
-      const input = slot.querySelector(".lite-followup-input");
-      input.value = row.query;
-      input.addEventListener("input", () => { row.query = input.value; });
-      slot.querySelector("form").addEventListener("submit", event => {
-        event.preventDefault();
-        askFollowup(row);
-      });
-    }
-    const pending = row.starting || row.jobs.some(job => !job.done);
-    const send = slot.querySelector(".lite-followup-send");
-    send.disabled = pending;
-    send.textContent = pending ? "Asking…" : "Ask";
-    const status = slot.querySelector(".lite-followup-status");
-    status.textContent = row.status;
-    if (row.paused.size) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "lite-followup-retry lite-open-app";
-      button.textContent = "Retry progress";
-      button.addEventListener("click", () => {
-        const ids = [...row.paused];
-        row.paused.clear();
-        for (const id of ids) pollFollowup(row, id);
-      });
-      status.append(" ", button);
-    }
-    const history = slot.querySelector(".lite-followup-history");
-    for (const job of row.jobs) observeReply(job);
-    // The signature leaves the answer out: the text is typed out by paintReplies,
-    // so a changed answer must not rebuild the history under the reader.
-    const signature = JSON.stringify(row.jobs.map(job => ({ ...job, result: { agent: job.result?.agent } })));
-    if (history._signature !== signature) {
-      history._signature = signature;
-      history.innerHTML = row.jobs.map(job => {
-        const agent = job.result?.agent;
-        const phase = job.done
-          ? (job.state === "succeeded" ? "Answered"
-            : job.state === "cancelled" ? "Cancelled"
-              : job.state === "interrupted" ? "Interrupted" : "Failed")
-          : job.state === "running" ? "Answering…" : "Queued…";
-        return `
-        <article class="lite-followup-exchange">
-          <div class="lite-followup-message lite-followup-user">
-            <div class="lite-followup-user-label">You · Question</div>
-            <div class="lite-followup-question">${escapeHtml(job.params?.question || job.question || "")}</div>
-          </div>
-          <div class="lite-followup-message lite-followup-agent" aria-busy="${!job.done}">
-            <div class="lite-followup-reply-head">
-              <span class="lite-followup-agent-label">${escapeHtml(agent?.label || "Agent")} · Answer</span>
-              <span class="lite-followup-job-status" data-active="${!job.done}">${phase}</span>
-            </div>
-            ${agent?.model ? `<div class="lite-followup-model">${escapeHtml(agent.model)}</div>` : ""}
-            <div class="lite-followup-answer lite-answer" data-answer="${escapeHtml(job.job_id)}"></div>
-          </div>
-        </article>`;
-      }).join("");
-    }
-    paintReplies(history);
-    if (!row.loaded) {
-      row.loaded = true;
-      chrome.runtime.sendMessage({ type: "LOOKUP_QUESTIONS", payload: { lookup_id: row.id } }, response => {
-        if (!chrome.runtime.lastError && response?.ok && Array.isArray(response.items)) {
-          const existing = new Set(row.jobs.map(job => job.job_id));
-          row.jobs = [...response.items.filter(job => !existing.has(job.job_id)), ...row.jobs];
-        }
-        if (followupHere() === row) renderFollowups();
-      });
-    }
-    for (const job of row.jobs) if (!job.done && !row.polling.has(job.job_id)
-      && !row.paused.has(job.job_id)) pollFollowup(row, job.job_id);
-  }
-
-  function askFollowup(row) {
-    const question = row.query.trim();
-    if (!question || row.starting || row.jobs.some(job => !job.done)) return;
-    row.starting = true;
-    row.status = "Starting your question…";
-    renderFollowups();
-    chrome.runtime.sendMessage({ type: "LOOKUP_ASK", payload: { lookup_id: row.id, question } }, response => {
-      row.starting = false;
-      if (chrome.runtime.lastError || !response?.ok || !response.job_id) {
-        row.status = response?.error || "Could not ask. Open Kriko and try again.";
-      } else {
-        row.status = "";
-        if (row.query.trim() === question) row.query = "";
-        row.jobs.push({ job_id: response.job_id, question, done: false });
-        const input = followupHere() === row && bodyEl?.querySelector(".lite-followup-input");
-        if (input) input.value = row.query;
-      }
-      if (followupHere() === row) renderFollowups();
-    });
-  }
-
-  function pollFollowup(row, jobId) {
-    if (!state.visible || document.hidden || followupHere() !== row) {
-      row.polling.delete(jobId);
-      return;
-    }
-    row.polling.add(jobId);
-    chrome.runtime.sendMessage({ type: "JOB_STATUS", payload: { job_id: jobId } }, response => {
-      if (chrome.runtime.lastError || !response?.ok || !response.job) {
-        row.status = "Cannot check the answer. Retry below.";
-        row.polling.delete(jobId);
-        row.paused.add(jobId);
-        if (followupHere() === row) renderFollowups();
-        return;
-      }
-      const index = row.jobs.findIndex(job => job.job_id === jobId);
-      if (index < 0) return;
-      const job = response.job;
-      const done = job.done || ["succeeded", "failed", "cancelled", "interrupted"].includes(job.state);
-      row.jobs[index] = { ...row.jobs[index], ...job, done };
-      observeReply(row.jobs[index]);
-      row.status = done && job.state !== "succeeded"
-        ? job.error || job.message || "The question did not finish. Try asking again." : "";
-      if (done) row.polling.delete(jobId);
-      if (followupHere() === row) renderFollowups();
-      if (!done) setTimeout(() => pollFollowup(row, jobId), 1000);
-    });
   }
 
   function renderProductActions() {
     const knownProduct = (state.result?.subjects || []).some((one) => one.kind === "product");
     const find = bodyEl?.querySelector(".lite-find-product");
     const research = bodyEl?.querySelector(".lite-research-product");
-    if (find) find.textContent = knownProduct ? "Search this product again" : "Find in installed packs";
+    if (find) find.textContent = knownProduct ? "Search again" : "Search packs";
     if (research) research.hidden = knownProduct;
   }
 
@@ -4454,7 +4045,6 @@
     renderVerdict();
     renderClaimsHeader();
     renderClaimsList();
-    renderFollowups();
     renderListingDetails();
     renderFooter();
     // New cards above the one being read should not push it out of view.
