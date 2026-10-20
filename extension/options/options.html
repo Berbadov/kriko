@@ -76,6 +76,20 @@
           Make the panel opaque.</label>
       </section>
 
+      <section class="evidence">
+        <h2>How much doubt to show</h2>
+        <p class="hint">Every finding carries a mark for how much it stands on. This decides which ones are drawn; nothing is deleted, and hidden ones are counted with a way to show them. The app's Settings has the same choice.</p>
+        <div class="choices" role="radiogroup" aria-label="How much doubt to show">
+          <label class="check"><input type="radio" name="sensitivity" value="all" checked />
+            <span>Show everything</span></label>
+          <label class="check"><input type="radio" name="sensitivity" value="hide_thin" />
+            <span>Hide thin evidence</span></label>
+          <label class="check"><input type="radio" name="sensitivity" value="strict" />
+            <span>Strict: only solid evidence</span></label>
+        </div>
+        <p id="sensitivity-status" class="status" role="status" aria-live="polite"></p>
+      </section>
+
       <section class="buying">
         <h2>Buying help</h2>
         <p class="hint">What Kriko says on shopping pages once you have told it what you need.</p>

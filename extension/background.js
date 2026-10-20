@@ -85,6 +85,14 @@ const VERSION_HEADER = "X-Kriko-Extension";
 const MINIMUM_HEADER = "X-Kriko-Minimum-Extension";
 const COMPAT_KEY = "krikoCompat";
 
+// The three steps of the information-sensitivity setting, as the app names
+// them: show everything, hide thin evidence, show only what is solid.
+const INFO_SENSITIVITIES = ["all", "hide_thin", "strict"];
+function _sensitivityOf(settings) {
+  const value = settings && settings.info_sensitivity;
+  return INFO_SENSITIVITIES.includes(value) ? value : "all";
+}
+
 // Tiers whose word stands on its own. Anything else is corroboration: worth
 // showing, worth counting, not worth presenting as settled.
 const CONFIRMING_TIERS = new Set(["authoritative", "manufacturer"]);
@@ -2780,6 +2788,35 @@ extensionApi.runtime.onMessage.addListener((request, sender, sendResponse) => {
     readCompat()
       .then((record) => sendResponse({ ok: true, compat: record }))
       .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true; // async
+  }
+
+  /* How much doubt the reader wants to see (#263): the app's own setting,
+   * `info_sensitivity`, read and written through the one settings route the
+   * app's Settings screen uses, so the two can never disagree. The worker is
+   * the only caller, as for every other request: a content script has no
+   * permission to reach the app.
+   *
+   * A value this does not know is `all`, on the way in and on the way out:
+   * a setting that cannot be read must never hide evidence. */
+  if (request.type === "INFO_SENSITIVITY") {
+    _getApp("/api/settings")
+      .then((settings) => sendResponse({ ok: true, sensitivity: _sensitivityOf(settings) }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message, sensitivity: "all" }));
+    return true; // async
+  }
+
+  if (request.type === "SET_INFO_SENSITIVITY") {
+    const wanted = String(request.payload?.sensitivity || "");
+    if (!INFO_SENSITIVITIES.includes(wanted)) {
+      sendResponse({ ok: false, error: "That is not one of the three settings." });
+      return false;
+    }
+    _postApp("/api/settings", { values: { info_sensitivity: wanted } })
+      .then((settings) => sendResponse({ ok: true, sensitivity: _sensitivityOf(settings) }))
+      .catch((error) => sendResponse({
+        ok: false, code: error.code, error: error.message }));
     return true; // async
   }
 
