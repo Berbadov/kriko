@@ -236,7 +236,7 @@ test('all local assets, anchors, icon references and ARIA relationships resolve'
     const value = element.getAttribute('href') || element.getAttribute('src');
     if (value === '/' || value === '/tr/' || element.rel === 'alternate') continue;
     if (value.startsWith('#')) assert.ok(p.document.getElementById(value.slice(1)), `missing target ${value}`);
-    else if (!/^https?:/.test(value)) assert.ok(fs.existsSync(path.join(root, value)), `missing asset ${value}`);
+    else if (!/^https?:/.test(value)) assert.ok(fs.existsSync(path.join(root, value.split('?')[0])), `missing asset ${value}`);
   }
   for (const element of p.all('[aria-controls], [aria-labelledby]')) {
     const value = element.getAttribute('aria-controls') || element.getAttribute('aria-labelledby');
@@ -270,7 +270,7 @@ test('stylesheet parses and provides breakpoints, motion preferences and hidden-
 
 test('without JavaScript, every walkthrough panel and navigation link remains readable', () => {
   // Inject the stylesheet at its original position, before the noscript override.
-  const dom = new JSDOM(html.replace('<link rel="stylesheet" href="styles.css">', `<style>${css}</style>`));
+  const dom = new JSDOM(html.replace(/<link rel="stylesheet" href="styles\.css[^"]*">/, `<style>${css}</style>`));
   const { window } = dom;
   for (const panel of window.document.querySelectorAll('.tour-panel')) {
     const computed = window.getComputedStyle(panel);
@@ -442,6 +442,20 @@ test('Turkish page works without JavaScript and its assets resolve from /tr/', (
   assert.match(document.querySelector('.tour-disclaimer').textContent, /kurgusal/);
   for (const el of document.querySelectorAll('[src], link[rel="stylesheet"], link[rel="icon"]')) {
     const value = el.getAttribute('src') || el.getAttribute('href');
-    if (!/^https?:/.test(value)) assert.ok(fs.existsSync(path.resolve(root, 'tr', value)), value);
+    if (!/^https?:/.test(value)) assert.ok(fs.existsSync(path.resolve(root, 'tr', value.split('?')[0])), value);
+  }
+});
+
+test('both languages request matching content-versioned scripts and styles after updates', () => {
+  const crypto = require('node:crypto');
+  for (const file of ['index.html', 'tr/index.html']) {
+    const d = new JSDOM(fs.readFileSync(path.join(root, file), 'utf8')).window.document;
+    for (const el of d.querySelectorAll('script[src], link[rel="stylesheet"]')) {
+      const value = el.getAttribute('src') || el.getAttribute('href');
+      if (/^https?:/.test(value)) continue;
+      const [asset, query] = value.split('?');
+      const bytes = fs.readFileSync(path.resolve(root, path.dirname(file), asset));
+      assert.equal(new URLSearchParams(query).get('v'), crypto.createHash('sha256').update(bytes).digest('hex').slice(0, 12));
+    }
   }
 });
