@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type UIEvent } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { StepPill, Timeline } from '../activity/Timeline'
-import type { AgentRef, Run, Turn } from '../activity/run'
+import type { AgentRef, Question, Run, Turn } from '../activity/run'
 import { useChat } from '../chat'
 import { useEngine, type Agent } from '../engine/Engine'
 import { useRecents } from '../engine/recents'
@@ -24,12 +24,15 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
   const recents = useRecents()
   const thread = run.status !== 'idle' || turns.length > 0
   const running = run.status === 'running'
+  /** The one detail the agent asked for, while it waits for the answer. */
+  const asking = run.status !== 'idle' ? run.questions?.[0] : undefined
   /** A question taken back into the box to be changed. `at` makes the same words count twice. */
   const [draft, setDraft] = useState<{ text: string; at: number } | null>(null)
   /** What was asked in this chat, oldest first, for the up arrow. */
   const asked = [...turns.map((turn) => turn.prompt), ...(run.prompt ? [run.prompt] : [])]
   const agentOf = (ref?: AgentRef): Agent =>
     engine.agents.find((a) => a.id === ref?.id) ?? engine.agents.find((a) => a.id === engine.preferred) ?? engine.agents[0]
+  const focusComposer = () => document.querySelector<HTMLTextAreaElement>('.composer-field')?.focus()
 
   return (
     <section className="chat" data-thread={thread}>
@@ -49,7 +52,10 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
               transition={m.tx.page}
             >
               <h1>What do you want to check?</h1>
-              <button className="btn" onClick={() => showDrawer('setup')}>Set up and verify Kriko</button>
+              <div className="hello-actions">
+                <button className="btn" onClick={() => showDrawer('setup')}>Set up and verify Kriko</button>
+                <button className="btn ghost" onClick={() => showDrawer('chat')}>Chat settings</button>
+              </div>
             </motion.header>
           )}
           {thread && (
@@ -67,6 +73,8 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
                 onRetry={(turn) => start(turn.prompt, agentOf(turn.agent))}
                 onEdit={(text) => setDraft({ text, at: Date.now() })}
                 onSuggest={(text) => setDraft({ text, at: Date.now() })}
+                onAnswer={(text, agent) => start(text, agentOf(agent))}
+                onOwn={focusComposer}
               />
             </motion.div>
           )}
@@ -79,7 +87,7 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
             running={running}
             onStop={stop}
             autoFocus
-            placeholder={thread ? 'Ask a follow-up' : 'Ask about a product'}
+            placeholder={asking ? 'Answer the question, or ask something else' : thread ? 'Ask a follow-up' : 'Ask about a product'}
             draft={draft}
             recall={asked}
           />
@@ -148,6 +156,41 @@ function AnswerActions({ text, onRetry }: { text: string; onRetry?: () => void }
   )
 }
 
+/** The one detail the agent could not settle, as buttons the reader presses.
+ *  Pressing one asks it as their next message, so the thread keeps the answer
+ *  and the agent sees it as something the reader said. */
+function AskCard({
+  question,
+  agent,
+  busy,
+  onAnswer,
+  onOwn,
+}: {
+  question: Question
+  agent?: AgentRef
+  busy: boolean
+  onAnswer: (text: string) => void
+  onOwn: () => void
+}) {
+  return (
+    <article className="answer ask-card rise">
+      <AnswerHead agent={agent} />
+      <p className="ask-question">{question.ask}</p>
+      <div className="ask-options" role="group" aria-label="Answers you can press">
+        {question.options.map((option) => (
+          <button key={option} className="ask-option" disabled={busy} onClick={() => onAnswer(option)}>
+            {option}
+          </button>
+        ))}
+        <button className="ask-option is-own" disabled={busy} onClick={onOwn}>
+          Something else…
+        </button>
+      </div>
+      {question.why && <p className="ask-why">{question.why}</p>}
+    </article>
+  )
+}
+
 function TaskActions({ prompt }: { prompt: string }) {
   if (/\b(?:create|author|make|file|save|import|update)\b.{0,60}\b(?:catalog|pack|research|quick look)/i.test(prompt)) return <div className="card-actions"><button className="btn" onClick={() => showDrawer('browse')}>Create or manage catalogs</button></div>
   if (/\b(?:backup|restore|snapshot)\b/i.test(prompt)) return <button className="btn" onClick={() => showDrawer('backups')}>Backup and restore</button>
@@ -161,6 +204,8 @@ function Thread({
   onRetry,
   onEdit,
   onSuggest,
+  onAnswer,
+  onOwn,
 }: {
   run: Run
   turns: Turn[]
@@ -168,6 +213,8 @@ function Thread({
   onRetry: (turn: Turn) => void
   onEdit: (text: string) => void
   onSuggest: (text: string) => void
+  onAnswer: (text: string, agent?: AgentRef) => void
+  onOwn: () => void
 }) {
   const { motion: m } = usePrefs()
   const scroller = useRef<HTMLDivElement>(null)
@@ -176,6 +223,9 @@ function Thread({
   const done = run.status === 'done'
   const followups = done ? run.followups : run.status === 'idle' ? turns.at(-1)?.followups : []
   const idle = run.status === 'idle'
+  /** The answer is complete even if the turn is still naming its follow-ups. */
+  const settled = run.status !== 'running' || run.answerFinal === true
+  const questions = run.status !== 'idle' ? run.questions ?? [] : []
   const [away, setAway] = useState(false)
 
   // Follow the newest line, unless the reader scrolled up to read. The reader's
@@ -241,7 +291,9 @@ function Thread({
             </div>
             <TaskActions prompt={turn.prompt} />
             {!!turn.rows?.length && <Timeline historical run={{ ...run, status: turn.error ? 'failed' : 'done', rows: turn.rows, answer: turn.answer, prompt: turn.prompt }} />}
-            {turn.answer && (
+            {turn.questions?.length ? (
+              <AskCard question={turn.questions[0]} agent={turn.agent} busy={newest !== turn} onAnswer={(text) => onAnswer(text, turn.agent)} onOwn={onOwn} />
+            ) : turn.answer && (
               <article className="answer">
                 {turn.rows?.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
                 <AnswerHead agent={turn.agent} />
@@ -269,20 +321,27 @@ function Thread({
             <p className="you">{run.prompt}</p>
           </div>
         )}
-        {run.status !== 'idle' && <Timeline run={run} />}
+        {run.status !== 'idle' && !questions.length && <Timeline run={run} />}
         {run.status !== 'idle' && <TaskActions prompt={run.prompt} />}
-        {run.answer && (
-          <article className="answer rise">
-            {run.rows.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
-            <AnswerHead agent={run.agent} />
-            <Markdown text={run.answer} live={run.status === 'running'} />
-            {run.status !== 'running' && (
-              <AnswerActions
-                text={run.answer}
-                onRetry={() => onRetry({ id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, agent: run.agent })}
-              />
-            )}
-          </article>
+        {!!questions.length ? (
+          <AskCard question={questions[0]} agent={run.agent} busy={run.status === 'running'} onAnswer={(text) => onAnswer(text, run.agent)} onOwn={onOwn} />
+        ) : (
+          run.status !== 'idle' && (
+            // Kept mounted for the whole turn, and re-keyed only when a new one
+            // starts: unmounting it between polls reset the word counter and the
+            // whole answer rose out of the blur again, once per poll.
+            <article key={run.startedAt} className="answer rise">
+              {run.rows.some((row) => row.id === 'activity-citation-warning' || row.id === 'activity-evidence-warning') && <p className="error-note" role="alert">Some claims or references could not be verified against the supplied evidence. Check the sources before relying on this answer.</p>}
+              <AnswerHead agent={run.agent} />
+              {run.answer && <Markdown text={run.answer} live={!settled} />}
+              {run.answer && settled && (
+                <AnswerActions
+                  text={run.answer}
+                  onRetry={() => onRetry({ id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, agent: run.agent })}
+                />
+              )}
+            </article>
+          )
         )}
         {run.status === 'failed' && (
           <p className="error-note" role="alert">

@@ -5,7 +5,22 @@ immutable; a correction is a newer version.
 
 ### Unreleased
 
-- Nothing yet.
+- **Chat asks before it answers.** When one detail would change the answer — a
+  tyre size, a model year, an engine, the market you buy in — Chat asks for it
+  first, with choices you press, on whichever agent you chose. A second
+  question can follow the first; the same one is never asked twice, and a
+  detail written in Chat settings is not asked at all.
+- **Chat settings.** Under More, Chat, write what Kriko should remember about
+  you — your car and the size on it, the shops you trust, a budget — and turn
+  on product-only answers: a short list of products with links and at most two
+  warnings, instead of a long answer.
+- **Links in a buying answer.** A request for something to buy searches the web
+  whichever words it uses, and the answer carries the pages Kriko read as
+  links even when the agent left them out — the local model included.
+- **An answer stops looking unfinished.** Once the text is complete its last
+  words stop fading and Copy and Retry appear at once, instead of waiting for
+  the conversation's follow-up suggestions. The activity list no longer
+  redraws its lines on every poll.
 
 ### 0.2.6
 
