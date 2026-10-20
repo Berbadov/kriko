@@ -113,6 +113,40 @@
           },
         };
       }
+      // ?research=found: a quick look that kept two findings, each with the
+      // page it came from and the words it quotes.
+      if (params.get("research") === "found") {
+        return {
+          job_id: "preview-research", kind: "quick_look", state: "succeeded", done: true,
+          created_at: new Date(Date.now() - 52000).toISOString(),
+          finished_at: new Date().toISOString(),
+          message: "2 findings kept.",
+          result: {
+            assumed: "the 2020 model, petrol",
+            specs: [{ name: "Capacity", value: "1.6 L" }],
+            risks: [
+              { title: "Timing chain rattles at cold start", body: "The tensioner wears and the chain slaps the cover for the first seconds after a cold start.",
+                severity: "high", domain: "engine", strength: "reported", source_count: 2,
+                sources: [
+                  { url: "https://example.org/forum/thread-1", domain: "example.org", quote: "Mine rattles for two seconds every cold morning, dealer said the tensioner.", tier: "community" },
+                  { url: "https://example.net/review", domain: "example.net", quote: "Chain noise at start-up is the common complaint.", tier: "community" }] },
+              { title: "Infotainment reboots on long drives", body: "The head unit restarts without warning after about an hour.",
+                severity: "medium", domain: "electrics", strength: "reported", source_count: 1,
+                sources: [{ url: "https://example.org/forum/thread-9", domain: "example.org", quote: "It restarts after an hour or so, every time.", tier: "community" }] }],
+            coverage: { pages_read: 5, pages_unreadable: 1, pages_relevant: 3, pages_extracted: 3, publishers_read: 2, sources_cited: 3 },
+            evidence_pages: [{ url: "https://example.org/forum/thread-1", domain: "example.org", excerpt: "Owner thread" }],
+            agent: { label: "local", model: "Model not reported" },
+          },
+        };
+      }
+      // ?research=running&stage=page | search | read | check: where the run is,
+      // told only by the lines its log would hold at that point.
+      const at = params.get("stage") || "read";
+      const lines = [];
+      if (at !== "page") lines.push("search language: en; queries: gearbox judder; clutch problems");
+      if (at !== "page") lines.push("searching: gearbox judder known problems");
+      if (at === "read" || at === "check") lines.push("found 6 page(s); reading up to 6", "read: https://example.org/forum/thread-1", "read: https://example.org/review-2", "could not read: https://example.net/blocked", "read: https://example.org/review-3", "read: https://example.org/datasheet");
+      if (at === "check") lines.push("extracting source 2/4: https://example.org/review-2");
       return {
         job_id: "preview-research", kind: "quick_look", state: failed ? "failed" : "running", done: failed,
         created_at: new Date(Date.now() - 15000).toISOString(),
@@ -121,7 +155,7 @@
         error: failed ? "The local model is not ready. No local model server is running." : "",
         log: failed
           ? "search: adidas grand court base 2.0 known problems\nfail: LocalInferenceError: http://127.0.0.1:11434 answered HTTP 500: error starting llama-server\nfail: giving up after 1 attempt"
-          : "search: adidas grand court base 2.0 known problems\nread: example.org/forum/thread-1\nread: example.org/review-2",
+          : lines.join("\n"),
         result: { agent: { label: "local", model: "Model not reported" } },
       };
     }
@@ -219,6 +253,7 @@
   <script src="../../hover_lite/icons.js"></script>
   <script src="../../hover_lite/claim_card.js"></script>
   <script src="../../hover_lite/buyer_card.js"></script>
+  <script src="../../hover_lite/run_progress.js"></script>
   <script src="../../hover_lite/hover_lite.js"></script>
   <script>
     for (const fn of runtimeListeners) fn({ type: "TOGGLE_HOVER_LITE" });

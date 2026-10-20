@@ -164,6 +164,7 @@ test("only the worker stamps the header, because a content script cannot", async
   // `host_permissions`; the content scripts are not, and must not fetch.
   for (const name of ["content.js", "hover_lite/hover_lite.js",
                       "hover_lite/claim_card.js", "hover_lite/buyer_card.js",
+                      "hover_lite/run_progress.js",
                       "hover_lite/icons.js"]) {
     const source = fs.readFileSync(path.join(__dirname, "..", name), "utf8");
     assert.ok(

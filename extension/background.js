@@ -741,13 +741,14 @@ const SITE_SYNC_PERIOD_MINUTES = 30;
 
 // The same files, in the same order, as `manifest.json`'s two static blocks.
 // A dynamic registration is one entry rather than two because order inside
-// the array is what matters: `icons.js`, `claim_card.js` and `buyer_card.js` define what
+// the array is what matters: `icons.js`, `claim_card.js`, `buyer_card.js` and `run_progress.js` define what
 // `hover_lite.js` calls.
 const SITE_SCRIPTS = [
   "content.js",
   "hover_lite/icons.js",
   "hover_lite/claim_card.js",
   "hover_lite/buyer_card.js",
+  "hover_lite/run_progress.js",
   "hover_lite/hover_lite.js",
 ];
 
