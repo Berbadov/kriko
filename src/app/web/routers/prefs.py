@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from app import costs, prefs
+from app.providers import websearch
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["prefs"])
@@ -104,6 +105,16 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
         for key, value in body.model_dump().items()
         if value is not None and key in prefs.KEYS
     }
+    if prefs.SEARCH in written and written[prefs.SEARCH] not in {"", *websearch.KNOWN}:
+        raise HTTPException(422, detail="search_provider must be one of: " + ", ".join(websearch.KNOWN))
+    if prefs.SEARCH_FALLBACK in written:
+        value = written[prefs.SEARCH_FALLBACK].strip().casefold()
+        names = [] if value in {"", websearch.NONE} else [one.strip() for one in value.split(",")]
+        if any(one not in websearch.KNOWN for one in names):
+            raise HTTPException(
+                422, detail="search_fallback must be empty, 'none' or a comma-separated list of: "
+                + ", ".join(websearch.KNOWN))
+        written[prefs.SEARCH_FALLBACK] = ",".join(dict.fromkeys(names)) if names else value
     for key in (prefs.AGENT_TRANSPORT, prefs.CODEX_TRANSPORT):
         if key in written and written[key] not in {"", "auto", "exec", "persistent"}:
             raise HTTPException(422, detail=f"{key} must be auto, exec, or persistent")
