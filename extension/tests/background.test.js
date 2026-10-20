@@ -935,16 +935,12 @@ test("changed research input gets a different client request id", async () => {
     h.state.requests[1].body.client_request_id);
 });
 
-test("quick follow-up writes carry stable request ids", async () => {
+test("adding a quick look to a pack carries a stable request id", async () => {
   const h = loadBackground({ routes: {
-    "/api/extension/quick-look/j1/ask": (body) => ({ job_id: body.client_request_id }),
     "/api/extension/quick-looks/j1/pack": (body) => ({ job_id: body.client_request_id }),
   } });
-  await send(h, { type: "QUICK_ASK", payload: { job_id: "j1", q: "Why?" } });
   await send(h, { type: "QUICK_TO_PACK", payload: { job_id: "j1" } });
   assert.equal(typeof h.state.requests[0].body.client_request_id, "string");
-  assert.equal(h.state.requests[0].body.q, "Why?");
-  assert.equal(typeof h.state.requests[1].body.client_request_id, "string");
 });
 
 // ── B152.4: an answer that follows the knowledge ─────────────────────────

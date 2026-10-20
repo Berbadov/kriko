@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { EngineProvider } from './engine/Engine'
 import { Gate } from './Gate'
+import { TitleBar } from './ui/TitleBar'
 import { PrefsProvider } from './prefs'
 import './styles/base.css'
 import './styles/shell.css'
@@ -15,6 +16,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <PrefsProvider>
       <EngineProvider>
+        <TitleBar />
         <Gate />
       </EngineProvider>
     </PrefsProvider>
