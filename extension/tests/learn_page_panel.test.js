@@ -77,7 +77,7 @@ test("pressing Learn this page shows what was taken, and swaps the title for the
     }),
   }));
   assert.equal(p.shadow().querySelector(".lite-learn-btn").textContent, "Learn this page");
-  assert.match(p.shadow().querySelector(".lite-gap-cost").textContent, /Free; runs on this computer/);
+  assert.match(p.shadow().querySelector(".lite-gap-cost").textContent, /Free · on this computer/);
 
   p.click(".lite-learn-btn");
 
