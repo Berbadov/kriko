@@ -1,0 +1,8 @@
+[
+  {"id":"search-api","question":"Compare DeepSeek Search and Fetch API pricing, rate limits and query operators using official docs.","answer_terms":[["0.75"],["5 QPS","5 requests","5 queries"],["site:"]]},
+  {"id":"mercury-generations","question":"Compare Mercury 3 and Mercury 2.5 context, pricing, reasoning modes and tool calling from original sources.","answer_terms":[["1M","1 million","1,000,000"],["260K","260,000"],["instant"]]},
+  {"id":"retrieval-tradeoffs","question":"Compare Exa Lite and Tavily ultra-fast freshness, latency modes and billing using official documentation.","answer_terms":[["cached","cache"],["credit"],["lite"]]},
+  {"id":"multihop-history","question":"Which mission first landed a probe on Titan, who built the probe, and how long did its descent take?", "answer_terms":[["Cassini"],["Huygens"],["ESA","European Space Agency"],["2 hours","two hours","2.5","two and a half"]]},
+  {"id":"turkish-sources","question":"Türkiye'de e-Devlet üzerinden araç geri çağırma sorgusu nasıl yapılır? Resmî kaynakları ve kısıtları araştır."},
+  {"id":"abstention","question":"Find the official release date and specifications of the fictional Northstar QX-9000 Quantum Toaster."}
+]
