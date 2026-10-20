@@ -44,6 +44,7 @@ for (const el of english.window.document.querySelectorAll('script[src], link[rel
   const version = createHash('sha256').update(fs.readFileSync(path.join(root, asset))).digest('hex').slice(0, 12);
   el.setAttribute(attr, `${asset}?v=${version}`);
 }
+english.window.document.title = 'Kriko';
 populate(english.window.document, 'en');
 fs.writeFileSync(path.join(root, 'index.html'), english.serialize());
 const turkish = new JSDOM(english.serialize());
@@ -73,7 +74,7 @@ context.window.KRIKO_EXAMPLES.en.laptop.specs.forEach(x => dynamic.add(x));
 walk(d.body);
 populate(d, 'tr');
 d.documentElement.lang = 'tr';
-d.title = 'Kriko — Satın almadan önce neye bakacağını bil.';
+d.title = 'Kriko';
 const description = 'Sıfır veya ikinci el ürünlerde gözden kaçan ayrıntıları keşfet. Kriko, kullanıcı deneyimlerini ve onarım bulgularını kaynaklarıyla birlikte araştırır.';
 d.querySelector('meta[name="description"]').content = description;
 d.querySelector('meta[property="og:title"]').content = 'Kriko — İlan, hikâyenin yarısını anlatır.';
