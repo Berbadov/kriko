@@ -130,6 +130,16 @@ test('no text is set smaller than 15px, and body text is at least 18px', () => {
   assert.ok(body && Number(body[1]) * 16 >= 18, 'body text is under 18px');
 });
 
+test('every file the stylesheet names exists, and no font comes from another site', () => {
+  const urls = [...css.matchAll(/url\(["']?([^"')]+)["']?\)/g)].map((m) => m[1]);
+  assert.ok(urls.length >= 8, 'the stylesheet names its typefaces and the sky pictures');
+  for (const value of urls) {
+    assert.ok(!/^(https?:)?\/\//.test(value), `${value} comes from another site`);
+    assert.ok(fs.existsSync(path.join(root, value)), `styles.css names a missing file: ${value}`);
+  }
+  assert.ok(!/@import/.test(css), 'the stylesheet imports nothing');
+});
+
 test('the menu opens and closes on a narrow screen, and the pages work without it', () => {
   const page = PAGES[0];
   const dom = new JSDOM(read(page.file), { url: page.url, runScripts: 'outside-only' });
@@ -162,6 +172,6 @@ test('every invented product has its pictures in both themes, and the pages say 
   for (const page of PAGES.slice(0, 2)) {
     const d = load(page);
     assert.ok(d.querySelector('#examples .section-lead').textContent.length > 60, page.file);
-    assert.ok(d.querySelector('.hero-shot figcaption'), `${page.file}: the first picture says nothing about being an example`);
+    assert.ok(d.querySelector('.stage figcaption'), `${page.file}: the first picture says nothing about being an example`);
   }
 });
