@@ -1,6 +1,7 @@
 """Explicit candidates and dated prices; unknown cost stays unknown."""
 
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -58,7 +59,7 @@ def load_keys(path: Path) -> None:
     from app.keys import parse
 
     allowed = {m.key_env for m in MODELS.values()} | {s[1] for s in SEARCHES.values()}
-    if os.name == "nt":
+    if sys.platform == "win32":
         # Desktop processes may predate a setx or Settings environment change.
         import winreg
 
