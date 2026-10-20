@@ -146,7 +146,8 @@ def classify_reply(reply: str, pages: dict[str, str]) -> list[dict]:
     findings: list[dict] = []
     for item in _items(payload):
         title = str(item.get("title") or item.get("name") or "")[:120]
-        refs = item.get("sources") if isinstance(item.get("sources"), list) else [item]
+        listed = item.get("sources")
+        refs: list = listed if isinstance(listed, list) else [item]
         for ref in refs:
             if not isinstance(ref, dict):
                 continue
