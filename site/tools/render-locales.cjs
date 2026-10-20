@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { createHash } = require('node:crypto');
 const { JSDOM } = require('jsdom');
 const root = path.resolve(__dirname, '..');
 const context = { window: {} };
@@ -34,6 +35,15 @@ function populate(document, lang) {
 }
 
 const english = new JSDOM(fs.readFileSync(path.join(root, 'index.html'), 'utf8'));
+// Same-origin visitors may have cached the previous script. Content versions
+// keep English and Turkish pages on matching assets after every publication.
+for (const el of english.window.document.querySelectorAll('script[src], link[rel="stylesheet"]')) {
+  const attr = el.hasAttribute('src') ? 'src' : 'href';
+  const asset = el.getAttribute(attr).split('?')[0];
+  if (/^https?:/.test(asset)) continue;
+  const version = createHash('sha256').update(fs.readFileSync(path.join(root, asset))).digest('hex').slice(0, 12);
+  el.setAttribute(attr, `${asset}?v=${version}`);
+}
 populate(english.window.document, 'en');
 fs.writeFileSync(path.join(root, 'index.html'), english.serialize());
 const turkish = new JSDOM(english.serialize());
