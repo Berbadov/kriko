@@ -7,13 +7,14 @@ const { JSDOM, VirtualConsole } = require('jsdom');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const script = fs.readFileSync(path.join(root, 'script.js'), 'utf8');
+const examplesScript = fs.readFileSync(path.join(root, 'examples.js'), 'utf8');
 const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
 
-function page({ reducedMotion = false, mobile = false, compact = mobile, observer = true } = {}) {
+function page({ reducedMotion = false, mobile = false, compact = mobile, observer = true, lang = 'en' } = {}) {
   const errors = [];
   const virtualConsole = new VirtualConsole();
   virtualConsole.on('jsdomError', error => errors.push(error));
-  const dom = new JSDOM(html, { url: 'https://kriko.example/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole });
+  const dom = new JSDOM(lang === 'tr' ? fs.readFileSync(path.join(root, 'tr/index.html'), 'utf8') : html, { url: `https://kriko.example/${lang === 'tr' ? 'tr/' : ''}`, runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole });
   const { window } = dom;
   const media = new Map();
   window.matchMedia = query => {
@@ -40,6 +41,7 @@ function page({ reducedMotion = false, mobile = false, compact = mobile, observe
       trigger(element, isIntersecting) { this.callback([{ target: element, isIntersecting }]); }
     };
   }
+  window.eval(examplesScript);
   window.eval(script);
   const document = window.document;
   const select = selector => document.querySelector(selector);
@@ -58,7 +60,7 @@ function page({ reducedMotion = false, mobile = false, compact = mobile, observe
 test('walkthrough starts with a new-product example, one selected tab and one visible panel', () => {
   const p = page();
   assert.equal(p.active(), 0);
-  assert.equal(p.select('.listing-heading h2').textContent, 'MacBook Air M2');
+  assert.equal(p.select('.listing-heading h2').textContent, 'Laptop A · 256 GB');
   assert.match(p.select('.listing-specs').textContent, /Buying new/);
   assert.equal(p.all('.tour-panel:not([hidden])').length, 1);
   assert.equal(p.all('.tour-tab[tabindex="0"]').length, 1);
@@ -232,6 +234,7 @@ test('all local assets, anchors, icon references and ARIA relationships resolve'
   assert.equal(ids.length, new Set(ids).size, 'no duplicate IDs');
   for (const element of p.all('[href], [src]')) {
     const value = element.getAttribute('href') || element.getAttribute('src');
+    if (value === '/' || value === '/tr/' || element.rel === 'alternate') continue;
     if (value.startsWith('#')) assert.ok(p.document.getElementById(value.slice(1)), `missing target ${value}`);
     else if (!/^https?:/.test(value)) assert.ok(fs.existsSync(path.join(root, value)), `missing asset ${value}`);
   }
@@ -279,7 +282,7 @@ test('without JavaScript, every walkthrough panel and navigation link remains re
   assert.equal(window.getComputedStyle(window.document.querySelector('.main-nav')).display, 'flex');
   assert.equal(window.getComputedStyle(window.document.querySelector('.product-picker')).display, 'none');
   for (const key of ['laptop', 'headphones', 'coffee']) {
-    assert.match(window.document.querySelector(`.product-example[data-product="${key}"]`).href, /^https:\/\//);
+    assert.equal(window.document.querySelector(`.product-example[data-product="${key}"]`).getAttribute('href'), '#how');
   }
   dom.window.close();
 });
@@ -287,11 +290,11 @@ test('without JavaScript, every walkthrough panel and navigation link remains re
 test('every product selector updates the illustration, listing and complete walkthrough', () => {
   const p = page();
   const examples = [
-    ['laptop', 'MacBook Air M2', 'nand', ['www.ifixit.com', 'support.apple.com']],
-    ['headphones', 'Sony WH-1000XM5', 'hinge', ['www.reddit.com', 'www.sony.com']],
-    ['coffee', 'Breville Barista Express', 'noise', ['www.reddit.com', 'www.reddit.com']],
+    ['laptop', 'Laptop A · 256 GB', '256 gb'],
+    ['headphones', 'Headphones B · Wireless', 'hinge'],
+    ['coffee', 'Espresso machine C', 'noise'],
   ];
-  for (const [key, name, topic, domain] of examples) {
+  for (const [key, name, topic] of examples) {
     p.select(`.product-option[data-product="${key}"]`).click();
     assert.equal(p.select('.listing-heading h2').textContent, name);
     assert.equal(p.select('#tour-panel-0 h3').textContent, name);
@@ -299,8 +302,9 @@ test('every product selector updates the illustration, listing and complete walk
     assert.equal(p.select('.hero-product-art:not([hidden])').dataset.art, key);
     assert.equal(p.all('.hero-product-art:not([hidden])').length, 1);
     assert.match(p.select('#tour-panel-1').textContent.toLowerCase(), new RegExp(topic));
-    assert.deepEqual(p.all('.evidence-source').map(source => new URL(source.href).hostname), domain);
-    assert.equal(p.select('#tour-panel-0 .demo-tag').textContent, 'Quick look example');
+    assert.equal(p.all('.evidence-source a, a.evidence-source').length, 0);
+    assert.ok(p.all('.source-excerpt').every(note => note.textContent.length > 30));
+    assert.equal(p.select('#tour-panel-0 .demo-tag').textContent, 'Illustrative example');
     assert.match(p.select('.tour-disclaimer').textContent, /no live research/);
     assert.match(p.select('#product-status').textContent, new RegExp(name));
     assert.equal(p.all('.product-option[aria-pressed="true"]').length, 1);
@@ -310,19 +314,19 @@ test('every product selector updates the illustration, listing and complete walk
   p.close();
 });
 
-test('returning to Cars restores the real finding, specs and original source links', () => {
+test('returning to Cars restores the fictional scenario, specs and evidence notes', () => {
   const p = page();
   p.select('.product-option[data-product="cars"]').click();
   const originalSources = p.all('.evidence-source').map(link => link.href);
   const originalFinding = p.select('#tour-panel-1 h3').textContent;
   p.select('.product-option[data-product="coffee"]').click();
   p.select('.product-option[data-product="cars"]').click();
-  assert.equal(p.select('.listing-heading h2').textContent, 'Volkswagen Golf 7');
+  assert.equal(p.select('.listing-heading h2').textContent, 'Hatchback D · 2017');
   assert.equal(p.select('#tour-panel-1 h3').textContent, originalFinding);
   assert.deepEqual(p.all('.evidence-source').map(link => link.href), originalSources);
-  assert.deepEqual(p.all('.listing-specs span').map(span => span.textContent), ['2015', 'Petrol', 'Manual', 'Hatchback']);
+  assert.deepEqual(p.all('.listing-specs span').map(span => span.textContent), ['2017', 'Petrol', 'Manual', 'Buying used']);
   assert.equal(p.select('.hero-product-art:not([hidden])').dataset.art, 'cars');
-  assert.equal(p.select('#tour-panel-0 .demo-tag').textContent, 'Cars catalog');
+  assert.equal(p.select('#tour-panel-0 .demo-tag').textContent, 'Illustrative example');
   p.close();
 });
 
@@ -335,7 +339,7 @@ test('switching products stops playback and resets the walkthrough to its first 
   assert.equal(p.timers.size, 0);
   assert.equal(p.select('#play-tour').getAttribute('aria-pressed'), 'false');
   p.select('#play-tour').click(); p.tick();
-  assert.match(p.select('#tour-panel-1 h3').textContent, /Hinge reports/);
+  assert.match(p.select('#tour-panel-1 h3').textContent, /hinge account/);
   p.close();
 });
 
@@ -344,7 +348,7 @@ test('product cards open the matching walkthrough and move keyboard focus to it'
   let scrollOptions;
   p.select('#how').scrollIntoView = options => { scrollOptions = options; };
   p.select('.product-example[data-product="laptop"]').click();
-  assert.equal(p.select('#tour-panel-0 h3').textContent, 'MacBook Air M2');
+  assert.equal(p.select('#tour-panel-0 h3').textContent, 'Laptop A · 256 GB');
   assert.equal(p.document.activeElement.id, 'tour-tab-0');
   assert.equal(scrollOptions.behavior, 'smooth');
   p.close();
@@ -361,16 +365,16 @@ test('product switching respects reduced motion and never starts autoplay', () =
   p.close();
 });
 
-test('new and used purchase paths open different checks with the correct sources', () => {
+test('new and used purchase paths open different checks with the matching sample evidence', () => {
   const p = page();
   let scrollCount = 0;
   p.select('#how').scrollIntoView = () => { scrollCount++; };
   p.select('.purchase-path[data-product="cars"]').click();
-  assert.equal(p.select('.listing-heading h2').textContent, 'Volkswagen Golf 7');
-  assert.match(p.select('#tour-panel-1 h3').textContent, /Rear seals/);
+  assert.equal(p.select('.listing-heading h2').textContent, 'Hatchback D · 2017');
+  assert.match(p.select('#tour-panel-1 h3').textContent, /water mark/);
   p.select('.purchase-path[data-product="laptop"]').click();
-  assert.match(p.select('#tour-panel-1 h3').textContent, /base model/);
-  assert.equal(new URL(p.select('.evidence-source').href).hostname, 'www.ifixit.com');
+  assert.match(p.select('#tour-panel-1 h3').textContent, /256 GB/);
+  assert.match(p.select('.source-excerpt').textContent, /256 GB/);
   assert.equal(scrollCount, 2);
   assert.equal(p.document.activeElement.id, 'tour-tab-0');
   p.close();
@@ -388,22 +392,56 @@ test('new-product examples investigate overlooked concerns rather than prior wea
   p.close();
 });
 
-test('each research lead separates sourced evidence, uncertainty and the next investigation', () => {
+test('each fictional scenario separates sample evidence, uncertainty and the next investigation', () => {
   const p = page();
   const evidence = {
-    laptop: [/NAND chip/, /exact configuration/, /storage configuration/],
-    headphones: [/Owner accounts/, /failure rate/, /independent reports/],
-    coffee: [/different timing/, /do not diagnose/, /pressure change/],
+    laptop: [/1 TB/, /256 GB/, /256 GB configuration/],
+    headphones: [/right swivel/, /failure rate/, /same revision/],
+    coffee: [/different timing/, /do not diagnose/, /pressure stable/],
   };
   for (const [key, [supported, unresolved, question]] of Object.entries(evidence)) {
     p.select(`.product-option[data-product="${key}"]`).click();
     assert.match(p.select('.evidence-supported').textContent, supported);
     assert.match(p.select('.evidence-gap').textContent, unresolved);
     assert.match(p.select('.inspection-note strong').textContent, question);
-    assert.match(p.select('#product-status').textContent, /Research lead with evidence and an open question/);
+    assert.match(p.select('#product-status').textContent, /Fictional demonstration with sample evidence and an open question/);
   }
   p.select('.product-option[data-product="cars"]').click();
-  assert.match(p.select('.evidence-supported').textContent, /leak paths/);
-  assert.match(p.select('.evidence-gap').textContent, /particular vehicle/);
+  assert.match(p.select('.evidence-supported').textContent, /moisture/);
+  assert.match(p.select('.evidence-gap').textContent, /entry point/);
   p.close();
+});
+
+for (const lang of ['en', 'tr']) {
+  test(`${lang}: each product switches the entire example without exposing brand-specific sources`, () => {
+    const p = page({ lang });
+    assert.equal(p.document.documentElement.lang, lang);
+    for (const key of ['cars', 'laptop', 'headphones', 'coffee']) {
+      p.select(`.product-option[data-product="${key}"]`).click();
+      const product = p.window.KRIKO_EXAMPLES[lang][key];
+      assert.equal(p.select('#tour-panel-1 h3').textContent, product.fields.finding);
+      assert.equal(p.select('.source-excerpt').textContent, product.sources[0].excerpt);
+      assert.equal(p.select('.evidence-gap').textContent, product.fields.unresolved);
+      assert.match(p.select('.tour-disclaimer').textContent, lang === 'tr' ? /kurgusal/ : /Fictional/);
+    }
+    p.select('.motion-toggle').click();
+    assert.equal(p.select('.motion-toggle span').textContent, lang === 'tr' ? 'Hareketi sürdür' : 'Resume motion');
+    p.select('.menu-toggle').click();
+    assert.equal(p.select('.menu-toggle').getAttribute('aria-label'), lang === 'tr' ? 'Menüyü kapat' : 'Close navigation');
+    assert.equal(p.select('.language-switch [aria-current="page"]').lang, lang);
+    assert.equal(p.select('.language-switch a[lang="tr"]').getAttribute('href'), '/tr/');
+    assert.equal(p.errors.length, 0);
+    p.close();
+  });
+}
+
+test('Turkish page works without JavaScript and its assets resolve from /tr/', () => {
+  const document = new JSDOM(fs.readFileSync(path.join(root, 'tr/index.html'), 'utf8'), {url: 'https://kriko.cc/tr/'}).window.document;
+  assert.match(document.querySelector('h1').textContent, /İlan/);
+  assert.match(document.querySelector('#tour-panel-1').textContent, /256 GB/);
+  assert.match(document.querySelector('.tour-disclaimer').textContent, /kurgusal/);
+  for (const el of document.querySelectorAll('[src], link[rel="stylesheet"], link[rel="icon"]')) {
+    const value = el.getAttribute('src') || el.getAttribute('href');
+    if (!/^https?:/.test(value)) assert.ok(fs.existsSync(path.resolve(root, 'tr', value)), value);
+  }
 });
