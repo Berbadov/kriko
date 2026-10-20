@@ -106,6 +106,10 @@ HARNESS_EFFORT_KEYS = tuple(harness_effort_key(one) for one in _harness_ids())
 #: should use, the search service's address, and how long one completion may
 #: take, in seconds. All optional: empty means "discover it" (`app/localplane.py`).
 LOCAL_URL = "local_url"
+#: Which program serves the local model, as the reader named it in Settings
+#: (`providers/local_runtimes.py` lists them). Empty is automatic. It is only a
+#: label beside `LOCAL_URL`: every one of them is reached the same way.
+LOCAL_RUNTIME = "local_runtime"
 LOCAL_MODEL = "local_model"
 LOCAL_SEARCH_URL = "local_search_url"
 LOCAL_TIMEOUT = "local_timeout"
@@ -121,7 +125,7 @@ LLM_BASE_URL = "llm_base_url"
 # Names used by the local research provider's constructor.
 OUTPUT_LANGUAGE = LOCAL_OUTPUT_LANGUAGE
 SEARCH_LANGUAGE = LOCAL_SEARCH_LANGUAGE
-LOCAL_KEYS = (LOCAL_URL, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT,
+LOCAL_KEYS = (LOCAL_URL, LOCAL_RUNTIME, LOCAL_MODEL, LOCAL_SEARCH_URL, LOCAL_TIMEOUT,
               LOCAL_DEVICE, LOCAL_CONTEXT, LOCAL_GPU_LAYERS,
               LOCAL_OUTPUT_LANGUAGE, LOCAL_SEARCH_LANGUAGE)
 REGIONS = {
