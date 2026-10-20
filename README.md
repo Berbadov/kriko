@@ -130,6 +130,9 @@ To see what an agent search and a quick search each do, run them together:
 `python -m app.livesearch "Brand Model" --agent claude-code` writes a report of
 the queries, pages and sites per lane (see [Usage](docs/USAGE.md)).
 
+For separate web research experiments, use the [product search benchmark](docs/PRODUCT_SEARCH_BENCHMARK.md).
+It compares answer quality, latency, tokens and cost, with plain sortable tables and expandable request logs.
+
 - [Windows installation](docs/INSTALL_WINDOWS.md)
 - [Usage](docs/USAGE.md)
 - [Architecture and development](docs/ARCHITECTURE.md)
