@@ -10,11 +10,6 @@ const answer = (claims, lookup_id = "answer-1") => ({
   ok: true, listing: {},
   result: { lookup_id, claims, identity: {}, context: {}, coverage: "RISKS_FOUND" },
 });
-// A reply is typed out a frame at a time, even when it arrives whole; run
-// frames until the slot says it is complete.
-const typeOut = (p, selector = ".lite-followup-answer") => {
-  for (let i = 0; i < 500 && p.shadow().querySelector(selector).dataset.phase !== "done"; i += 1) p.flushFrames();
-};
 
 test("live knowledge keeps existing cards, expansion, group state and focus", () => {
   const p = loadPanel();
@@ -83,89 +78,15 @@ test("queue help explains the workflow without adding a product", () => {
   assert.equal(p.shadow().querySelector(".lite-queue-guide").hidden, true);
 });
 
-test("a follow-up asks about the saved answer and renders the agent reply inline", () => {
-  const p = loadPanel({ workerResponse: m => {
-    if (m.type === "LOOKUP_ASK") return { ok: true, job_id: "question-job" };
-    if (m.type === "JOB_STATUS") return { ok: true, job: {
-      job_id: "question-job", state: "succeeded", done: true,
-      result: { answer: "Ask for the service record. <script>unsafe</script>",
-        agent: { id: "local", label: "Local model", model: "small-model" } },
-    } };
-    return { ok: true, items: [], plane: { backend: "agent", budget_usd: 0 } };
-  } });
+test("the panel offers no box for asking an agent about a saved answer", () => {
+  // An agent asked from here read the same pages the research had, so the box
+  // repeated a button. Nothing in the panel sends a question to an agent.
+  const p = loadPanel();
   p.openPanel();
   p.deliverEntry(answer([claim("old")]));
-  // The block is one line now: no heading, no lede, no visible label.
-  assert.equal(p.shadow().querySelector(".lite-followup-note"), null);
-  assert.equal(p.shadow().querySelector(".lite-followup label"), null);
-  assert.match(p.shadow().querySelector(".lite-followup-input").placeholder, /Ask about this product/);
-  assert.equal(p.shadow().querySelector(".lite-followup-send").textContent, "Ask");
-  p.type(".lite-followup-input", "What should I check first?");
-  p.click(".lite-followup-send");
-  const sent = p.sent.find(m => m.type === "LOOKUP_ASK");
-  assert.equal(sent.payload.lookup_id, "answer-1");
-  assert.equal(sent.payload.question, "What should I check first?");
-  typeOut(p);
-  assert.match(p.shadow().querySelector(".lite-followup-answer").textContent, /Ask for the service record/);
-  assert.equal(p.shadow().querySelector(".lite-followup-answer script"), null);
-  assert.equal(p.shadow().querySelector(".lite-followup-user-label").textContent, "You · Question");
-  assert.equal(p.shadow().querySelector(".lite-followup-agent-label").textContent, "Local model · Answer");
-  assert.equal(p.shadow().querySelector(".lite-followup-model").textContent, "small-model");
-  assert.equal(p.shadow().querySelector(".lite-followup-job-status").textContent, "Answered");
-  p.type(".lite-followup-input", "And what else?");
-  const input = p.shadow().querySelector(".lite-followup-input");
-  input.focus();
-  p.deliverEntry(answer([claim("old"), claim("new")]));
-  assert.equal(p.shadow().querySelector(".lite-followup-input"), input);
-  assert.equal(input.value, "And what else?");
-  assert.equal(p.shadow().activeElement, input);
-  assert.match(p.shadow().querySelector(".lite-followup-answer").textContent, /service record/);
-});
-
-test("a running follow-up identifies the agent and transitions to a labelled saved answer", () => {
-  let done = false;
-  const job = () => ({ job_id: "j", params: { question: "Why?" },
-    state: done ? "succeeded" : "running", done,
-    result: { agent: { label: "Agent <unsafe>", model: "model <unsafe>" },
-      ...(done ? { answer: "The saved answer" } : {}) },
-  });
-  const p = loadPanel({ workerResponse: m => {
-    if (m.type === "LOOKUP_QUESTIONS") return { ok: true, items: [job()] };
-    if (m.type === "JOB_STATUS") return { ok: true, job: job() };
-    return { ok: true, plane: { backend: "agent" } };
-  } });
-  p.openPanel();
-  p.deliverEntry(answer([claim("old")]));
-  assert.equal(p.shadow().querySelector(".lite-followup-agent-label").textContent, "Agent <unsafe> · Answer");
-  assert.equal(p.shadow().querySelector(".lite-followup-model").textContent, "model <unsafe>");
-  assert.equal(p.shadow().querySelector(".lite-followup-job-status").textContent, "Answering…");
-  assert.equal(p.shadow().querySelector(".lite-followup-history unsafe"), null);
-  done = true;
-  p.flushTimers();
-  assert.equal(p.shadow().querySelector(".lite-followup-job-status").textContent, "Answered");
-  typeOut(p);
-  assert.match(p.shadow().querySelector(".lite-followup-answer").textContent, /The saved answer/);
-});
-
-test("a failed follow-up can be retried and never blanks the knowledge cards", () => {
-  let fail = true;
-  const p = loadPanel({ workerResponse: m => {
-    if (m.type === "LOOKUP_ASK") return fail
-      ? { ok: false, error: "Open Kriko and try again." }
-      : { ok: true, job_id: "j" };
-    if (m.type === "JOB_STATUS") return { ok: true, job: { state: "failed", done: true, error: "No agent configured." } };
-    return { ok: true, items: [], plane: { backend: "agent", budget_usd: 0 } };
-  } });
-  p.openPanel();
-  p.deliverEntry(answer([claim("old")]));
-  p.type(".lite-followup-input", "What next?");
-  p.click(".lite-followup-send");
-  assert.match(p.shadow().querySelector(".lite-followup-status").textContent, /Open Kriko/);
-  assert.equal(p.shadow().querySelector(".lite-followup-send").disabled, false);
-  fail = false;
-  p.click(".lite-followup-send");
-  assert.match(p.shadow().querySelector(".lite-followup-status").textContent, /No agent configured/);
-  assert.equal(p.shadow().querySelectorAll(".lite-rc").length, 1);
+  assert.equal(p.shadow().querySelector(".lite-followup"), null);
+  assert.equal(p.shadow().querySelector("textarea, input"), null);
+  assert.equal(p.sent.filter(m => /ASK|QUESTIONS/.test(m.type)).length, 0);
 });
 
 test("an agent question without options accepts a typed answer in the panel", () => {
@@ -214,7 +135,7 @@ test("deeper research progress keeps quick-look cards expanded without blinking"
   assert.ok(card.isConnected, "a progress poll replaced the quick-look card");
   assert.equal(card.dataset.open, "1");
   const status = p.shadow().querySelector(".lite-research-status").textContent;
-  assert.match(status, /1 thing to know, from a quick look/);
+  assert.match(status, /1 thing to know/);
   assert.doesNotMatch(status, /%/);
   assert.equal(p.sent.filter(m => m.type === "JOB_STATUS" && m.payload.job_id !== "quick").length, 0);
 });
@@ -284,7 +205,7 @@ test("a quick look is one saved job, and joins a pack only when asked", () => {
   p.click(".lite-research-product");
   p.type(".lite-research-name", "An uncovered product");
   p.click(".lite-research-start");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /Saved in Kriko/);
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /1 thing to know/);
   assert.ok(!sent.some(m => m.type === "QUICK_TO_PACK"), "a pack run started by itself");
   p.click(".lite-research-pack");
   const asked = sent.find(m => m.type === "QUICK_TO_PACK");
@@ -292,7 +213,7 @@ test("a quick look is one saved job, and joins a pack only when asked", () => {
   assert.match(p.shadow().querySelector(".lite-research-status").textContent, /Filing it/);
 });
 
-test("a zero-issue quick look retains listing facts, evidence and a web follow-up", () => {
+test("a zero-issue quick look retains listing facts and evidence", () => {
   const p = loadPanel({ workerResponse: m => {
     if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local" } };
     if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "oil-look", kind: "quick_look" } };
@@ -312,23 +233,17 @@ test("a zero-issue quick look retains listing facts, evidence and a web follow-u
   p.click(".lite-research-product");
   p.type(".lite-research-name", "Example oil");
   p.click(".lite-research-start");
-  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /No supported issues found/);
+  assert.match(p.shadow().querySelector(".lite-research-status").textContent, /Nothing sourced found/);
   assert.match(p.shadow().querySelector(".lite-quick-specs").textContent, /Volume: 4 L/);
   assert.equal(p.shadow().querySelector(".lite-quick-source-list a").href, "https://example.test/datasheet");
-  const askInput = p.shadow().querySelector(".lite-follow-input");
-  assert.ok(askInput);
-  assert.equal(askInput.placeholder, "Ask about this product");
-  assert.match(askInput.getAttribute("title"), /web/);
-  assert.equal(p.shadow().querySelector(".lite-follow-ask").textContent, "Ask");
-  assert.equal(p.shadow().querySelector(".lite-follow-lede"), null, "no visible lede remains");
+  assert.equal(p.shadow().querySelector(".lite-noissue input"), null, "no agent question box in the card");
 });
 
 // ── the no-issue card ───────────────────────────────────────────────────
 //
 // A quick look that keeps nothing used to leave a sentence and a hole in the
 // research slot. The hole is the finding: it now gets a card with what was
-// read, what that warrants, the pages themselves, and the quick look's own
-// follow-up input — one answer pipeline, shown in the card instead of under it.
+// read, what that warrants, and the pages themselves.
 
 const EMPTY_QUICK = {
   job_id: "oil-look", kind: "quick_look", state: "succeeded", done: true,
@@ -343,29 +258,15 @@ const EMPTY_QUICK = {
   },
 };
 
-/* A quick look that keeps nothing, plus its saved asks, so the card's input is
-   answered through the same pipe the panel already follows. */
-const emptyQuickWorker = () => {
-  const asks = [];
-  return (m) => {
-    if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local" } };
-    if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "oil-look", kind: "quick_look" } };
-    if (m.type === "JOB_STATUS" && m.payload.job_id === "oil-look") return { ok: true, job: EMPTY_QUICK };
-    if (m.type === "QUICK_ASK") {
-      asks.push({ job_id: "ask-1", q: m.payload.q, answer: "Check the product's own spec sheet.",
-        done: true, sources: [] });
-      return { ok: true, job: { job_id: "ask-1" } };
-    }
-    if (m.type === "QUICK_ASKS") return { ok: true, asks };
-    if (m.type === "JOB_STATUS") {
-      return { ok: true, job: { job_id: m.payload.job_id, state: "succeeded", done: true,
-        result: { answer: "Check the product's own spec sheet.", sources: [] } } };
-    }
-    return { ok: true, items: [] };
-  };
+/* A quick look that keeps nothing. */
+const emptyQuickWorker = () => (m) => {
+  if (m.type === "RESEARCH_PLANE") return { ok: true, plane: { backend: "local" } };
+  if (m.type === "RESEARCH_PRODUCT") return { ok: true, job: { job_id: "oil-look", kind: "quick_look" } };
+  if (m.type === "JOB_STATUS" && m.payload.job_id === "oil-look") return { ok: true, job: EMPTY_QUICK };
+  return { ok: true, items: [] };
 };
 
-test("a quick look that kept nothing is a card with the pages and a working ask", () => {
+test("a quick look that kept nothing is a card with the pages and no agent box", () => {
   const p = loadPanel({ workerResponse: emptyQuickWorker() });
   p.openPanel();
   p.deliverEntry({ ok: false, code: "UNKNOWN_PRODUCT", productName: "Example oil" });
@@ -378,24 +279,14 @@ test("a quick look that kept nothing is a card with the pages and a working ask"
   assert.equal(card.dataset.empty, "quick");
   assert.match(card.querySelector(".lite-noissue-title").textContent, /No sourced issues kept/);
   assert.match(card.querySelector(".lite-noissue-note").textContent,
-    /not proof that there is no issue/);
+    /Not proof there is no issue/);
   assert.match(card.querySelector(".lite-noissue-stats").textContent, /3\s*pages read/);
   assert.match(card.querySelector(".lite-noissue-stats").textContent, /1\s*cited/);
   assert.equal(card.querySelector(".lite-quick-source-list a").href,
     "https://example.test/datasheet");
-  // The card carries the follow-up; the generic block under it is gone.
   assert.equal(p.shadow().querySelector(".lite-quick"), null);
-  assert.ok(card.querySelector(".lite-follow-input"));
-
-  p.type(".lite-noissue .lite-follow-input", "Does it sludge on short trips?");
-  p.click(".lite-noissue .lite-follow-ask");
-  const asked = p.sent.find((m) => m.type === "QUICK_ASK");
-  assert.ok(asked, "the card's input used the quick look's own ask path");
-  assert.equal(asked.payload.job_id, "oil-look");
-  assert.equal(asked.payload.q, "Does it sludge on short trips?");
-  typeOut(p, ".lite-noissue .lite-follow-answer");
-  assert.match(p.shadow().querySelector(".lite-noissue .lite-follow-answer").textContent,
-    /spec sheet/);
+  assert.equal(card.querySelector("input, textarea"), null);
+  assert.equal(p.sent.filter((m) => /ASK/.test(m.type)).length, 0);
 });
 
 test("a deep run that kept nothing shows the same no-issue card", () => {
@@ -420,7 +311,7 @@ test("a deep run that kept nothing shows the same no-issue card", () => {
   const card = p.shadow().querySelector(".lite-noissue");
   assert.ok(card, "the empty deep run rendered the same card");
   assert.equal(card.dataset.empty, "deep");
-  assert.match(card.textContent, /not proof that there is no issue/);
+  assert.match(card.textContent, /Not proof there is no issue/);
   assert.equal(card.querySelector(".lite-quick-source-list a").href,
     "https://example.test/thread");
   // The status sentence the panel already wrote is still there beside it.

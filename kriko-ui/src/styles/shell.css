@@ -7,6 +7,71 @@
   gap: 10px;
 }
 
+/* The window's own bar, where the system one is not drawn (see ui/TitleBar.tsx).
+   It has the page's ground, so the rail and the stage sit on one surface with
+   the controls and nothing reads as a bar. The page below gives up its height. */
+:root {
+  --titlebar-h: 34px;
+}
+
+.titlebar {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 2000;
+  height: var(--titlebar-h);
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+  background: var(--ground);
+  user-select: none;
+}
+
+.titlebar-controls {
+  display: flex;
+  align-items: stretch;
+}
+
+.titlebar-btn {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: default;
+  transition:
+    background-color calc(120ms * var(--tm)),
+    color calc(120ms * var(--tm));
+}
+
+.titlebar-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: square;
+}
+
+.titlebar-btn:hover {
+  background: var(--panel-2);
+  color: var(--ink);
+}
+
+.titlebar-btn.close:hover {
+  background: var(--risk);
+  color: var(--accent-ink);
+}
+
+.titlebar-btn:focus-visible {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: -2px;
+}
+
+:root[data-titlebar] #root {
+  box-sizing: border-box;
+  padding-top: var(--titlebar-h);
+}
+
 .rail {
   flex: none;
   display: flex;

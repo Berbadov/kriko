@@ -1,0 +1,16 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "Kriko",
+        "width": 1360,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 640,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false
+      }
+    ]
+  }
+}

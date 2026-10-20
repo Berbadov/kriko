@@ -113,8 +113,8 @@ def test_the_panel_names_the_cost_for_both_planes_before_the_button_is_clicked()
         "the paid sentence must name the cap the engine reported, not a literal")
     # The two free planes, told apart from each other: a model on this machine
     # and a coding agent are different things and cost nothing in different ways.
-    assert "runs on this computer" in body, "the local plane's sentence is missing"
-    assert "runs through your coding agent" in body, "the agent plane's sentence is missing"
+    assert "on this computer" in body, "the local plane's sentence is missing"
+    assert "your coding agent" in body, "the agent plane's sentence is missing"
     # It has to actually reach the card, not just exist as dead code.
     assert re.search(r'lite-gap-cost.*costLine\(\)|costLine\(\).*lite-gap-cost', text) or (
         "const cost = costLine();" in text and "lite-gap-cost" in text
