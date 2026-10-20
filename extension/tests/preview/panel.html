@@ -21,6 +21,14 @@
     .page h1 { font-size: 26px; margin: 0 0 8px; }
     .page .price { font-size: 22px; color: #b34700; font-weight: 600; }
     .page .photo { height: 340px; background: #c9c3b8; border-radius: 6px; margin: 20px 0; }
+    /* ?page=white | dark | busy: what the panel sits over. A panel that lets
+       the page show through has to be looked at over the worst of them. */
+    body[data-page="white"] { background: #fff; }
+    body[data-page="dark"] { background: #0a0c10; color: #e8e8e8; }
+    body[data-page="dark"] .page .photo { background: #1c2230; }
+    body[data-page="busy"] { background: repeating-linear-gradient(135deg, #f1d68a 0 22px, #28407d 22px 44px); }
+    body[data-page="busy"] .page { max-width: none; color: #111; }
+    body[data-page="busy"] .page .photo { background: repeating-linear-gradient(0deg, #fff 0 14px, #111 14px 28px); }
   </style>
 </head>
 <body>
@@ -32,6 +40,7 @@
   </div>
   <script>
     const params = new URLSearchParams(location.search);
+    if (params.get("page")) document.body.dataset.page = params.get("page");
     const lookupId = params.get("lookup");
     const state = params.get("state") || "risks";
     const runtimeListeners = [];
@@ -187,7 +196,12 @@
         // The durable bag, kept for as long as the tab is open. `?seen` marks the
         // panel tour as already shown, to look at the panel without it.
         local: (() => {
-          const bag = new URLSearchParams(location.search).has("seen") ? { "kriko.panelTour": "done" } : {};
+          const q = new URLSearchParams(location.search);
+          const bag = q.has("seen") ? { "kriko.panelTour": "done" } : {};
+          // ?glass=solid and ?theme=light | dark: the two stored choices.
+          if (q.get("glass")) bag["kriko.glass"] = q.get("glass");
+          if (q.get("theme")) bag["kriko.theme"] = q.get("theme");
+          if (q.get("sensitivity")) bag["kriko.sensitivity"] = q.get("sensitivity");
           return {
             get(keys, done) { const out = {}; for (const k of [].concat(keys)) if (k in bag) out[k] = bag[k]; done && done(out); },
             set(items, done) { Object.assign(bag, items); done && done(); },
