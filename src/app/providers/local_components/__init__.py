@@ -29,6 +29,11 @@ spent its context on:
    answer's *shape* repaired once: a reply with no JSON object in it (the
    small model's prose answer, real risks and all) is asked for the shape
    again, the same repair the planner does for queries.
+   Then the **quote repair** (`repair.repair`): the claims whose quote the
+   page they cite does not carry get one bounded question, *which numbered
+   sentence of the page says this?*, and the page's own characters for the
+   chosen number become the quote. Grounding is not weakened: the same gate
+   re-checks it, and a claim nothing matches stays refused.
 6. **Self-check** (`verify.check`) — the model reads its own answer against
    the pages it cites; the verdict is kept on `verification`, beside the
    answer, not enforced here.
@@ -49,7 +54,7 @@ from collections.abc import Callable
 
 from app.providers.local_inference import LocalInferenceError
 
-from . import evidence, identity, plan, search, triage, verify
+from . import evidence, identity, plan, repair, search, triage, verify
 
 #: Queries proposed, hits taken per query and pages kept in all. Small on
 #: purpose: each page costs a model call's worth of context on a CPU.
@@ -141,6 +146,9 @@ class LocalAsker:
         #: The self-check's verdict on the last answer (`verify.check`):
         #: `unsupported` names the risks its own pages do not carry.
         self.verification: dict | None = None
+        #: What the quote repair did on the last answer (`repair.repair`):
+        #: claims asked about, claims now carried, claims nothing matched.
+        self.quote_repair: dict = {}
         self.on_action: Callable[[str], None] | None = None
         self.check_cancelled: Callable[[], None] | None = None
         self.replies = None
@@ -203,6 +211,7 @@ class LocalAsker:
     def ask(self, prompt: str) -> str:
         self.sources = {}
         self.verification = None
+        self.quote_repair = {}
         self.metrics = []
         self._check()
         self._say(f"asking {self.model} at {self.url or 'this machine'}; "
@@ -303,6 +312,7 @@ class LocalAsker:
             else:
                 self._say("the second reply carried no JSON object either; "
                           "keeping the first")
+        answer = self._repair_quotes(answer)
         self.last_finish_reason = getattr(self._complete, "last_finish_reason", "")
         self._check()
         self.verification = self._measured("verify", self._complete, lambda:
@@ -311,6 +321,20 @@ class LocalAsker:
             self.metrics[-1]["failed"] = True
             self.metrics[-1]["error"] = self.verification["error"]
         return answer
+
+    def _repair_quotes(self, answer: str) -> str:
+        """Give each claim whose quote its page does not carry one more
+        chance to point at the page's own sentence (`repair`); the answer
+        unchanged when there is nothing to repair or nothing could be."""
+        from app.packauthor import read_payload
+
+        payload = read_payload(answer)[0]
+        if not isinstance(payload, dict) or not repair.not_carried(payload, self.sources):
+            return answer
+        fixed, self.quote_repair = self._measured(
+            "quote_repair", self._complete,
+            lambda: repair.repair(self._complete, payload, self.sources, say=self._say))
+        return repair.reserialise(fixed) if self.quote_repair["repaired"] else answer
 
     @staticmethod
     def _quick_payload(payload) -> bool:
