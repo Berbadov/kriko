@@ -36,6 +36,10 @@ SEARCH = "search_provider"
 #: `none` is nothing behind the first choice (`providers/websearch.py`).
 SEARCH_FALLBACK = "search_fallback"
 CLASSIFICATION_PROVIDER = "classification_provider"
+#: Rotating proxies for pages that block Kriko's reads (`providers/proxypool.py`):
+#: off unless "1", and the pool as addresses without credentials, one per line.
+PROXY_ENABLED = "proxy_enabled"
+PROXY_POOL = "proxy_pool"
 #: How an agent is run: `auto` (a resident worker where the agent has a
 #: persistent protocol, else a process), `persistent` (require it) or `exec`.
 #: It applies to every agent. `codex_transport` is the name it had while only
@@ -242,7 +246,7 @@ KEYS = (HARNESS, MODEL, SEARCH, SEARCH_FALLBACK, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
         LLM_BASE_URL, *RESEARCH_KEYS,
         RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, AGENT_TRANSPORT, CODEX_TRANSPORT,
-        CLASSIFICATION_PROVIDER)
+        CLASSIFICATION_PROVIDER, PROXY_ENABLED, PROXY_POOL)
 
 
 def chat_product_only(conn) -> bool:
