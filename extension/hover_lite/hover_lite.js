@@ -1542,22 +1542,8 @@
       const card = renderClaimCard(risk, { open: false, compact: state.compact });
       card.querySelector(".lite-rc-toggle")?.addEventListener("click", () =>
         updateClaimCard(card, { open: card.dataset.open !== "1" }));
-      // Where the line came from, in its own words: a quick look is not a
-      // stored claim, so the page and its quote are the only warrant it has.
-      const body = card.querySelector(".lite-rc-body");
-      for (const src of risk.sources || []) {
-        if (!src?.url || !body) continue;
-        const cite = document.createElement("blockquote");
-        cite.className = "lite-quick-src";
-        cite.textContent = `\u201c${src.quote}\u201d `;
-        const link = document.createElement("a");
-        link.href = src.url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.textContent = src.domain || src.url;
-        cite.appendChild(link);
-        body.appendChild(cite);
-      }
+      // The page and quote a quick look stands on are drawn by the card itself:
+      // a quick look is not a stored claim, so they are the only warrant it has.
       wrap.appendChild(card);
       quickCards.appendChild(wrap);
     });
