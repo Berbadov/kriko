@@ -59,6 +59,8 @@ html[lang="tr"] .main-nav { gap: 20px; }
 html[lang="tr"] .nav-wrap { gap: 25px; }
 @media (max-width: 560px) {
   .nav-actions { gap: 10px; }
+  .nav-actions .button-small { white-space: nowrap; }
+  .nav-actions .button-small .icon { display: none; }
   .language-switch a { padding: 7px 6px; font-size: 10px; }
   html[lang="tr"] .nav-wrap { gap: 12px; }
   .example-notice { font-size: 10px; }
