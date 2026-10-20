@@ -84,6 +84,11 @@ class Claim:
     via: str                       # how this claim reached the queried subject
     why: tuple[str, ...]           # every reason the score is what it is
     sources: tuple[Source, ...]
+    #: The reasons of the conditions the listing did not state, for a claim the
+    #: engine served anyway (an unmet condition withdraws it instead). `why`
+    #: carries the same words inside prose; this keeps them countable, so an
+    #: interface can say a claim rests on a detail nobody gave.
+    open_conditions: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
