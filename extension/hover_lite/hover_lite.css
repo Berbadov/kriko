@@ -1766,6 +1766,45 @@
 @media (prefers-reduced-motion: reduce) {
   .lite-progress-fill { animation: none; transition: none; background: var(--accent); }
 }
+/* The run in flight, as its real stages (`run_progress.js`): one segment per
+   stage, filled as the run's own log reaches it, and the facts the run has
+   written beneath. No width here is a share of anything. The current segment
+   breathes so a long stage reads as alive without claiming to be moving. */
+.lite-run { margin: 8px 0 2px; }
+.lite-run[hidden] { display: none; }
+.lite-run-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  height: 6px;
+}
+.lite-run-seg {
+  border-radius: 3px;
+  background: var(--led-off);
+  transition: background var(--dur-med) var(--ease-out);
+}
+.lite-run-seg[data-state="done"] { background: var(--accent); }
+.lite-run-seg[data-state="now"] {
+  background: var(--accent);
+  animation: lite-asked-breathe 1.4s ease-in-out infinite;
+}
+.lite-run-seg[data-state="stopped"] { background: var(--warn-ink); }
+.lite-run-facts {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--fg-muted);
+}
+.lite-run-facts:empty { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .lite-run-seg[data-state="now"] { animation: none; opacity: 0.6; }
+}
+.lite-research[data-state="running"] .lite-research-status,
+.lite-research[data-state="queued"] .lite-research-status,
+.lite-research[data-state="starting"] .lite-research-status {
+  color: var(--fg);
+  font-weight: 600;
+}
 .lite-research[data-state="failed"] .lite-research-status { color: var(--high-ink); }
 .lite-research[data-state="cancelled"] .lite-research-status { color: var(--fg-muted); }
 .lite-research button { margin: 4px 4px 0 0; }

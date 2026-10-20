@@ -19,6 +19,7 @@
   const { iconSvg, domainIconSvg } = window.__KrikoPanelIcons;
   const { renderClaimCard, updateClaimCard, markClaimCard, factClaimCard, renderRichText } =
     window.__KrikoPanelClaimCard;
+  const { describeRun, coverageSummary } = window.__KrikoRunProgress;
 
   const HOST_TAG = "kriko-panel-host";
 
@@ -150,8 +151,9 @@
     // B148: the quick look's answer, kept while the deeper run goes on.
     // `{ assumed, risks, dropped }` or null.
     researchQuick: null,
-    // The followed job's share of its work, for the progress bar.
-    researchProgress: 0,
+    // What the followed run is doing, from its own log (`run_progress.js`):
+    // the stage it has reached and the pages it has read, never a percentage.
+    researchRun: null,
     // The saved quick look the "Add to a pack" button would file, or null.
     researchQuickJob: null,
     taskLogs: new Map(),
@@ -1143,7 +1145,7 @@
     state.researchDraftAnswers = {};
     // Retain the last successful cards while refreshing, including failure.
     state.researchStartedAt = Date.now();
-    state.researchProgress = 0;
+    state.researchRun = null;
     renderResearch();
     chrome.runtime.sendMessage({ type: "RESEARCH_PRODUCT", payload: {
       ...(subject_id ? { subject_id } : { q, allow_draft: true, url: location.href }),
@@ -1159,7 +1161,11 @@
       }
       state.researchJob = response.job;
       state.researchState = "queued";
-      state.researchMessage = response.job.kind === "quick_look" ? "Looking it up…" : "Queued";
+      // A quick look is a run with stages from its first moment; anything
+      // else says its own word until its log gives it some.
+      state.researchRun = describeRun(response.job);
+      state.researchMessage = response.job.kind === "quick_look"
+        ? `${state.researchRun.headline}\u2026` : "Queued";
       renderResearch();
       pollResearchJob(response.job.job_id);
     });
@@ -1238,7 +1244,7 @@
     state.researchState = "starting";
     state.researchMessage = "Running again with your answer...";
     state.researchStartedAt = Date.now();
-    state.researchProgress = 0;
+    state.researchRun = null;
     renderResearch();
     chrome.runtime.sendMessage({ type: "JOB_RETRY", payload: { job_id: job.job_id, answers } },
       (response) => {
@@ -1291,13 +1297,10 @@
    * the product instead of leaving for the app. */
   function coverageWords(coverage) {
     if (!coverage) return "";
-    return [
-      `${coverage.pages_read || 0} pages read`,
-      `${coverage.pages_relevant || 0} matched`,
-      `${coverage.pages_extracted || 0} evidence checks`,
-      `${coverage.publishers_read || 0} publishers`,
-      `${coverage.sources_cited || 0} cited`,
-    ].join(" · ");
+    // The run's own tally, as `run_progress.js` words it: pages read out of
+    // pages tried first, then what came of them.
+    const { pages, rest } = coverageSummary(coverage);
+    return [pages, ...rest].join(" \u00b7 ");
   }
 
   function noIssueCardMarkup(empty) {
@@ -1376,9 +1379,14 @@
           <button type="button" class="lite-more lite-context-toggle" aria-expanded="false">Add context</button>`}
         <p class="lite-research-status" role="status"></p>
         ${quickCoverage && !quickIsEmpty ? `<p class="lite-quick-coverage" role="status">${escapeHtml(
-          `${quickCoverage.pages_read || 0} pages read · ${quickCoverage.pages_relevant || 0} matched · ${quickCoverage.pages_extracted || 0} evidence checks · ${quickCoverage.publishers_read || 0} publishers · ${quickCoverage.sources_cited || 0} cited`
+          coverageWords(quickCoverage)
           + (rejectionSummary ? ` · reasons: ${rejectionSummary}` : ""))}</p>` : ""}
-        <div class="lite-progress" role="progressbar" aria-label="Research progress" hidden><div class="lite-progress-fill"></div></div>
+        <div class="lite-run" hidden>
+          <div class="lite-run-bar" role="progressbar" aria-label="Research progress" aria-valuemin="1" aria-valuemax="4">
+            <span class="lite-run-seg"></span><span class="lite-run-seg"></span><span class="lite-run-seg"></span><span class="lite-run-seg"></span>
+          </div>
+          <p class="lite-run-facts"></p>
+        </div>
         ${emptyCard ? noIssueCardMarkup(emptyCard) : ""}
         ${state.researchQuick && !quickIsEmpty ? `<div class="lite-quick">
           ${state.researchQuick.assumed ? `<p class="lite-quick-assumed">Taken as: ${renderRichText(state.researchQuick.assumed)}</p>` : ""}
@@ -1424,7 +1432,7 @@
       renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
       slot.querySelector(".lite-research").dataset.state = state.researchState;
       slot.querySelector(".lite-research-status").textContent = state.researchMessage;
-      showProgress(slot.querySelector(".lite-progress"), state.researching ? state.researchProgress : null);
+      paintRun(slot);
       const name = slot.querySelector(".lite-research-name");
       if (name && name.value !== state.researchName) name.value = state.researchName;
       const context = slot.querySelector(".lite-research-context");
@@ -1460,7 +1468,7 @@
     renderTaskLog(slot.querySelector(".lite-task-log-slot"), state.researchJob);
     slot.querySelector(".lite-research").dataset.state = state.researchState;
     slot.querySelector(".lite-research-status").textContent = state.researchMessage;
-    showProgress(slot.querySelector(".lite-progress"), state.researching ? state.researchProgress : null);
+    paintRun(slot);
     const name = slot.querySelector(".lite-research-name");
     if (name) {
       name.value = state.researchName;
@@ -1585,6 +1593,32 @@
     });
   }
 
+  /* The run in flight, as steps and counts (`run_progress.js`).
+   *
+   * Four segments, one per real stage, filled as the run's own log shows it
+   * got there; the sentence beneath says what is happening now and, once a
+   * page has been tried, how many were read out of how many. Nothing here is
+   * a share of anything: a bar that fills smoothly while an agent sits on one
+   * stage is the invention this replaces. */
+  function paintRun(slot) {
+    const box = slot?.querySelector(".lite-run");
+    if (!box) return;
+    const run = state.researching ? state.researchRun : null;
+    if (!run || !run.staged || run.finished) { box.hidden = true; return; }
+    box.hidden = false;
+    const bar = box.querySelector(".lite-run-bar");
+    bar.setAttribute("aria-valuenow", String(run.step));
+    bar.setAttribute("aria-valuetext", run.spoken);
+    const segs = bar.querySelectorAll(".lite-run-seg");
+    run.stages.forEach((stage, i) => {
+      if (!segs[i]) return;
+      segs[i].dataset.state = stage.state;
+      segs[i].title = stage.label;
+    });
+    box.querySelector(".lite-run-facts").textContent =
+      [`Step ${run.step} of ${run.total}`, run.detail, run.pages].filter(Boolean).join(" \u00b7 ");
+  }
+
   // Progress shown in the gap card itself — the panel stays put, and the
   // reader watches the run land without ever leaving the listing they were
   // reading. Polled rather than pushed: the panel has no open connection to
@@ -1682,7 +1716,7 @@
     if (!jobId || state.researching) return;
     state.researching = "pack";
     state.researchStartedAt = Date.now();
-    state.researchProgress = 0;
+    state.researchRun = null;
     state.researchState = "queued";
     state.researchMessage = "Adding the quick look to a pack…";
     renderResearch();
@@ -1739,8 +1773,9 @@
       if (!done) {
         // The stage in words and how long it has run, never a percentage: an
         // agent job jumps from a tenth to done, so a number read as a stall.
-        state.researchMessage = `${job.message || job.state || "Researching"} · ${elapsedWords(state.researchStartedAt)}`;
-        state.researchProgress = job.progress || 0;
+        // The stage is the furthest one the run's own log has reached.
+        state.researchRun = describeRun(job);
+        state.researchMessage = `${state.researchRun.headline} \u00b7 ${elapsedWords(state.researchStartedAt)}`;
         renderResearch();
         setTimeout(() => pollResearchJob(jobId), 1000);
         return;
@@ -1750,6 +1785,7 @@
         return;
       }
       state.researching = null;
+      state.researchRun = null;
       state.cancelling = false;
       // The same card the quick look shows when it kept nothing: the run read
       // sources and kept no finding, and that absence is the finding.
