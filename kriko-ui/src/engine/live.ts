@@ -66,17 +66,35 @@ function rowsFrom(steps: ApiStep[], seen: Map<string, number>, activity: ApiActi
     ...toolRows.flatMap((row) => row.kind === 'tool' ? [row.detail, row.name] : []),
     ...activityRows.flatMap((row) => row.kind === 'event' ? [row.text, row.sourceUrl ?? ''] : []),
   ])
+  // A log line's id comes from its own words, not its place in the list: the
+  // feed grows at the end and the filter drops lines that later steps repeat,
+  // so an index-based id re-keys every row on most polls and each one replays
+  // its entrance. The occurrence number keeps a line said twice two rows.
+  const said = new Map<string, number>()
   const feedRows: Row[] = feed
     .filter((item) => item.text.trim() && !known.has(item.text.trim()))
-    .map((item, index) => ({
-      kind: 'event',
-      id: `feed-${index}-${item.kind}`,
-      stage: item.kind === 'note' ? 'Log' : words(item.kind),
-      text: item.text,
-      sourceUrl: item.kind === 'source' ? item.text.match(/https?:\/\/[^\s<>"']+/i)?.[0] : undefined,
-      level: item.kind === 'problem' ? 'warn' : 'info',
-    }))
+    .map((item) => {
+      const text = item.text.trim()
+      const key = `${item.kind}\u0000${text}`
+      const times = (said.get(key) ?? 0) + 1
+      said.set(key, times)
+      return {
+        kind: 'event',
+        id: `feed-${hash(key)}-${times}`,
+        stage: item.kind === 'note' ? 'Log' : words(item.kind),
+        text: item.text,
+        sourceUrl: item.kind === 'source' ? item.text.match(/https?:\/\/[^\s<>"']+/i)?.[0] : undefined,
+        level: item.kind === 'problem' ? 'warn' : 'info',
+      }
+    })
   return [...toolRows, ...activityRows, ...feedRows]
+}
+
+/** A short, stable digest of a row's words, for its React key. */
+function hash(text: string): string {
+  let value = 5381
+  for (let index = 0; index < text.length; index += 1) value = ((value << 5) + value + text.charCodeAt(index)) | 0
+  return (value >>> 0).toString(36)
 }
 
 function productsFrom(list: ApiProduct[] | undefined): Product[] {
@@ -130,11 +148,13 @@ export function useLiveRun(): RunApi {
       if (!live.current || job.current !== jobId) return
       try {
         const current = await get<ApiJob>(`/api/jobs/${seg(jobId)}`)
+        // A slow read for the last question must never land on the new one.
+        if (!live.current || job.current !== jobId) return
         const turn: ApiTurn = current.result ?? {}
         if (ACTIVE.has(current.state)) {
           dispatch({
             type: 'replace',
-            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer: turn.answer ?? '', products: productsFrom(turn.products), followups: turn.followups ?? [] },
+            patch: { rows: rowsFrom(turn.steps ?? [], seen.current, turn.activity, turn.sources, current.feed), answer: turn.answer ?? '', products: productsFrom(turn.products), followups: turn.followups ?? [], questions: turn.questions ?? [], answerFinal: turn.answer_final === true },
           })
           timer.current = window.setTimeout(() => void poll(jobId, threadId), POLL_MS)
           return
@@ -142,6 +162,7 @@ export function useLiveRun(): RunApi {
         if (current.state === 'succeeded') {
           // The thread holds the finished turn, with its answer and products.
           const messages = await get<{ items: ApiMessage[] }>(`/api/chat/threads/${seg(threadId)}/messages`)
+          if (!live.current || job.current !== jobId) return
           const last = [...messages.items].reverse().find((m) => m.role === 'agent')
           const finished: ApiTurn = last ?? turn
           dispatch({
@@ -153,6 +174,8 @@ export function useLiveRun(): RunApi {
               // What actually answered. A reader who left the agent on the default is told which one it was.
               ...(last?.agent?.id ? { agent: { id: last.agent.id, label: last.agent.label || last.agent.id } } : {}),
               followups: finished.followups ?? [],
+              questions: last?.questions ?? finished.questions ?? [],
+              answerFinal: true,
             },
           })
           dispatch({ type: 'end', status: 'done', now: Date.now() })
@@ -183,7 +206,9 @@ export function useLiveRun(): RunApi {
       seen.current = new Map()
       job.current = ''
       const last = turnOf(latest.current)
-      if (last) setTurns((now) => [...now, last])
+      // Asking twice before a commit (a double press, or two option buttons)
+      // must not put the same turn in the thread twice.
+      if (last) setTurns((now) => (now.at(-1)?.id === last.id ? now : [...now, last]))
       dispatch({ type: 'start', prompt, now: Date.now() })
       dispatch({ type: 'replace', patch: { agent: { id: agent.id, label: agent.label ?? agent.id } } })
       void (async () => {
@@ -251,6 +276,7 @@ export function useLiveRun(): RunApi {
             if (message.agent?.id) turn.agent = { id: message.agent.id, label: message.agent.label || message.agent.id }
             turn.rows = rowsFrom(message.steps ?? [], seen.current, message.activity, message.sources, message.feed)
             turn.followups = message.followups ?? []
+            turn.questions = message.questions ?? []
           }
         }
         const waiting = data.job_id && found.length && !found[found.length - 1].answer ? found.pop() : undefined

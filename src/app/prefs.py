@@ -202,6 +202,10 @@ def research_options(conn, *, sources: int = 0, kinds: list[str] | None = None) 
 #: reader's words: "concurrent agent runs, with options in settings". Unset
 #: means one, which is how every run went before the choice existed.
 RUN_CONCURRENCY = "run_concurrency"
+#: Chat's product-only mode: the agent answers a buying question with a short
+#: list of products and their links, then at most a couple of warnings. Stored
+#: as "1"/"0" because every preference is a string on the way in and out.
+CHAT_PRODUCT_ONLY = "chat_product_only"
 #: The ceiling Settings offers. Each run is a CLI process or a model's
 #: attention plus its own fetches; past four the machine, the provider's rate
 #: limit and the reader's bill all say no before this number would.
@@ -229,8 +233,18 @@ def run_concurrency(conn) -> int:
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
         LLM_BASE_URL, *RESEARCH_KEYS,
-        RUN_CONCURRENCY, AGENT_TRANSPORT, CODEX_TRANSPORT,
+        RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, AGENT_TRANSPORT, CODEX_TRANSPORT,
         CLASSIFICATION_PROVIDER)
+
+
+def chat_product_only(conn) -> bool:
+    """Whether Chat answers a buying question as a linked product list.
+
+    Anything but an explicit yes is off, so a machine that never opened Chat
+    settings keeps the answer it had.
+    """
+    return str(read(conn).get(CHAT_PRODUCT_ONLY) or "").strip() in {
+        "1", "true", "yes", "on"}
 
 
 def for_role(conn, role: str, override: str = "") -> str:
