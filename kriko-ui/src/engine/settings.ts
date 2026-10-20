@@ -62,7 +62,7 @@ export const modelKey = (agent: AgentRow) => (agent.local ? 'local_model' : `har
 export const effortKey = (agent: AgentRow) => `harness_effort_${agent.id}`.replace(/-/g, '_')
 
 const DEMO_PREFS: PrefsDoc = {
-  chosen: { preferred_harness: 'coding', run_concurrency: '2', research_sources: '0', research_source_kinds: 'forums,reviews', search_provider: '' },
+  chosen: { preferred_harness: 'coding', run_concurrency: '2', research_sources: '0', research_source_kinds: 'forums,reviews', search_provider: '', chat_product_only: '0' },
   effective: { ready: true, reason: '', harness: 'coding', harness_ready: true, harness_note: '' },
   harnesses: [
     { id: 'coding', label: 'Coding agent', path: 'demo', llm: 'sonnet', llms: ['haiku', 'sonnet', 'opus'], effort: 'low', efforts: ['low', 'medium', 'high'] },

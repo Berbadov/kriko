@@ -4183,6 +4183,9 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         history = state.chat_history(app_state, thread_id, before=message_id)
         chosen = prefs.read(app_state)
         language = chosen.get(prefs.LOCAL_OUTPUT_LANGUAGE) or "auto"
+        # Chat settings: a product list instead of an essay. It changes the
+        # answer's shape only; the evidence rules and the links stay.
+        product_only = prefs.chat_product_only(app_state)
         context = research_policy.market_guidance(_market_region(settings, params))
         remembered = (state.get_chat_thread(app_state, thread_id) or {}).get("memory", "")
         if remembered:
@@ -4322,10 +4325,40 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             result = chat.run_turn(text, ask=contextual_ask,
                                    ask_stream=contextual_stream if original_stream else None,
                                    ask_quick=contextual_quick, ctx=ctx,
+                                   # The one question before a product search, on
+                                   # the agent the reader chose, and the reader's
+                                   # own words so a saved detail is not asked again.
+                                   clarify=contextual_quick,
+                                   preferences=about,
+                                   product_only=product_only,
                                    history=history, hooks=hooks, verify_answer=verify_answer)
         finally:
             if store is not None:
                 store.close()
+        questions = result.get("questions") or []
+        if questions:
+            # A question is the turn. Its answer is the reader's next message,
+            # so it is history rather than a resumption: the thread holds what
+            # was asked, with the options the screen draws as buttons.
+            progress.check()
+            stored = state.add_chat_message(
+                app_state, thread_id, role="agent", text=questions[0]["ask"],
+                questions=questions, job_id=progress.job_id, agent=dict(agent))
+            progress.partial({
+                "thread_id": thread_id, "message_id": stored["message_id"],
+                "agent": dict(agent), "answer": "", "questions": questions,
+                "steps": [], "sources": [], "products": [], "followups": [],
+                "activity": [], "answer_final": True,
+            })
+            progress.set(1.0, "asked one question")
+            return {
+                "thread_id": thread_id, "message_id": stored["message_id"],
+                "reader_message_id": message_id, "answer": "",
+                "questions": questions, "steps": [], "sources": [],
+                "products": [], "activity": [], "followups": [], "agent": agent,
+                "answer_final": True, "agent_calls": result.get("agent_calls", 0),
+                "search_rounds": 0, "fallback": False, **meter.snapshot(),
+            }
         if not result["answer"]:
             raise ValueError("The agent returned no answer. Try asking again.")
         progress.check()
@@ -4334,6 +4367,18 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             steps=result["steps"], sources=result["sources"],
             products=result.get("products") or [], activity=result.get("activity") or [],
             job_id=progress.job_id, agent=dict(agent))
+        # The answer is complete even though the job goes on to name the topic
+        # and suggest follow-ups. Say so now, so the screen stops drawing the
+        # answer as still being written: its last words stop fading, and its
+        # actions become available, seconds before the turn's row ends.
+        progress.partial({
+            "thread_id": thread_id, "message_id": stored["message_id"],
+            "agent": dict(agent), "answer": result["answer"],
+            "steps": result["steps"], "sources": result["sources"],
+            "products": result.get("products") or [],
+            "activity": result.get("activity") or [],
+            "followups": [], "questions": [], "answer_final": True,
+        })
         # One bounded, tool-free call names the topic and suggests relevant
         # follow-ups. Optional labels must never discard a successful answer.
         progress.set(0.98, "naming the conversation and suggesting follow-ups")
@@ -4371,7 +4416,8 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                       "answer": result["answer"], "sources": result["sources"],
                       "products": result.get("products") or [],
                       "followups": result.get("followups") or [],
-                      "activity": result.get("activity") or []})
+                      "activity": result.get("activity") or [],
+                      "questions": [], "answer_final": True})
     progress.set(1.0, "answered")
     return {
         "thread_id": thread_id, "message_id": stored["message_id"],
@@ -4380,6 +4426,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         "products": result.get("products") or [], "agent": agent,
         "activity": result.get("activity") or [],
         "followups": result.get("followups") or [],
+        "questions": [], "answer_final": True,
         "agent_calls": result["agent_calls"], "search_rounds": result["search_rounds"],
         "fallback": result["fallback"],
         **meter.snapshot(),
