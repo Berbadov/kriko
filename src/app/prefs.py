@@ -31,6 +31,10 @@ LOCAL_PICK = "local"
 AGENT_ORDER = "agent_order"
 MODEL = "llm_model"
 SEARCH = "search_provider"
+#: The providers asked when the first choice fails or finds nothing, in order,
+#: as comma-separated ids. Empty is automatic (DeepSeek, once it has a key) and
+#: `none` is nothing behind the first choice (`providers/websearch.py`).
+SEARCH_FALLBACK = "search_fallback"
 CLASSIFICATION_PROVIDER = "classification_provider"
 #: How an agent is run: `auto` (a resident worker where the agent has a
 #: persistent protocol, else a process), `persistent` (require it) or `exec`.
@@ -230,7 +234,7 @@ def run_concurrency(conn) -> int:
     return max(1, min(wanted, MAX_RUN_CONCURRENCY))
 
 
-KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
+KEYS = (HARNESS, MODEL, SEARCH, SEARCH_FALLBACK, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
         LLM_BASE_URL, *RESEARCH_KEYS,
         RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, AGENT_TRANSPORT, CODEX_TRANSPORT,
@@ -327,13 +331,16 @@ def effective(conn, *, model: str = "", search: str = "", harness: str = "") -> 
     provider = modelcatalogue.provider_for(name, KRIKO_HOME)
     ready = {one["id"] for one in keys.status() if one["present"]}
     searchers = keys.search_providers()
-    search = search.strip() or stored[SEARCH] or next(iter(searchers), "")
+    search = search.strip() or stored[SEARCH]
+    if search == "openserp":  # the free local search is Chat's, not the paid plane's
+        search = ""
+    search = search or next(iter(searchers), "")
     reasons = []
     unavailable = modelcatalogue._usable(provider, ready)
     if unavailable:
         reasons.append(unavailable)
     if not search:
-        reasons.append("no search key — add Exa or Tavily in Settings")
+        reasons.append("no search key — add Exa, Tavily or DeepSeek in Settings")
     elif search not in searchers:
         reasons.append(f"selected search provider {search!r} is unavailable — add its key or change the selection")
     wanted = harness.strip() or stored[HARNESS]
