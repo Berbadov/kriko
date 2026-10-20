@@ -24,6 +24,21 @@ from app.web.deps import get_app_state
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 
+#: The result fields `app/turnusage.py` documents, and nothing else of the result.
+USAGE_FIELDS = ("spent_usd", "tokens", "tokens_in", "tokens_out", "usage", "context")
+
+
+def usage_of_result(raw) -> dict:
+    """The usage fields of a finished chat job's result, or `{}`."""
+    try:
+        result = json.loads(raw or "{}")
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(result, dict):
+        return {}
+    return {key: result[key] for key in USAGE_FIELDS if key in result}
+
+
 def _active_chat_job(conn, thread_id: str) -> str:
     """Latest queued or running chat turn for one conversation, if any."""
     rows = conn.execute(
@@ -106,12 +121,18 @@ def list_messages(thread_id: str, conn=Depends(get_app_state)) -> dict:
     messages = state.chat_messages(conn, thread_id)
     # Logs remain in the owning job. Derive events when a saved thread opens
     # rather than duplicating a mutable transcript in each message row.
-    logs = {row["message_id"]: row["log"] for row in conn.execute(
-        "SELECT m.message_id, j.log FROM chat_messages m JOIN jobs j ON j.job_id = m.job_id"
+    jobs = {row["message_id"]: row for row in conn.execute(
+        "SELECT m.message_id, j.log, j.result_json FROM chat_messages m JOIN jobs j ON j.job_id = m.job_id"
         " WHERE m.thread_id = ? AND m.role = 'agent'", (thread_id,))}
     for message in messages:
-        if message["message_id"] in logs:
-            message["feed"] = livefeed.feed_of(logs[message["message_id"]] or "")
+        job = jobs.get(message["message_id"])
+        if job is not None:
+            message["feed"] = livefeed.feed_of(job["log"] or "")
+            # What the turn spent, as its own job recorded it: read back, not
+            # kept a second time, so a chat that is reopened shows its bars.
+            usage = usage_of_result(job["result_json"])
+            if usage:
+                message["usage"] = usage
     out: dict[str, object] = {"items": messages}
     active = _active_chat_job(conn, thread_id)
     if active:
