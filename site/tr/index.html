@@ -1,191 +1,241 @@
 <!DOCTYPE html><html lang="tr"><head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#090d18">
+  <meta name="color-scheme" content="light dark">
   <title>Kriko</title>
-  <meta name="description" content="Sıfır veya ikinci el ürünlerde gözden kaçan ayrıntıları keşfet. Kriko, kullanıcı deneyimlerini ve onarım bulgularını kaynaklarıyla birlikte araştırır.">
-  <meta property="og:title" content="Kriko — İlan, hikâyenin yarısını anlatır.">
-  <meta property="og:description" content="Sıfır veya ikinci el ürünlerde gözden kaçan ayrıntıları keşfet. Kriko, kullanıcı deneyimlerini ve onarım bulgularını kaynaklarıyla birlikte araştırır.">
+  <meta name="description" content="Kriko, baktığın ürünün tam olarak neyinin sorunlu olduğunu bilinenlerle gösterir; her bulgunun yanında kaynağı vardır. Bilgisayarında çalışır ve her ilan sitesinde işe yarar.">
+  <meta property="og:title" content="Kriko: İlan, hikâyenin yarısını anlatır">
+  <meta property="og:description" content="Bu ürünün tam olarak nesinin sorunlu olduğu, ilanın yanında, kontrol edebileceğin kaynaklarla.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://kriko.cc/assets/icon-128.png">
   <link rel="icon" href="../assets/icon-32.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../styles.css?v=3bf3dac42d0c">
-  <script src="../examples.js?v=412f1dafef1d" defer=""></script><script src="../script.js?v=c720ba9db06a" defer=""></script>
-  <noscript><style>.tour-tabs,.tour-playback,.demo-next,.menu-toggle,.motion-toggle{display:none}.tour-panels{display:block}.tour-panel[hidden]{display:block!important;visibility:visible}.tour-panel+.tour-panel{border-top:1px solid #ffffff24}.nav-wrap{flex-wrap:wrap;gap:12px}.main-nav{display:flex;position:static;flex-direction:row;flex-wrap:wrap;order:4;width:100%;padding:0 0 12px;margin:0;border:0;gap:20px}.main-nav a{font-size:11px;border:0}.mobile-source{display:none}</style></noscript>
-<noscript><style>.product-picker,.purchase-paths,.example-gallery-note:not(.no-script-note){display:none}</style></noscript>
-<link rel="canonical" href="https://kriko.cc/tr/"><link rel="alternate" href="https://kriko.cc/" hreflang="en"><link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr"><link rel="alternate" href="https://kriko.cc/" hreflang="x-default"></head>
+  <link rel="stylesheet" href="../styles.css?v=b4becf5de0be">
+  <script src="../script.js?v=bf129bb57352" defer=""></script>
+  <link rel="canonical" href="https://kriko.cc/tr/">
+  <link rel="alternate" href="https://kriko.cc/" hreflang="en">
+  <link rel="alternate" href="https://kriko.cc/tr/" hreflang="tr">
+  <link rel="alternate" href="https://kriko.cc/" hreflang="x-default">
+</head>
 <body>
   <a class="skip-link" href="#main">İçeriğe geç</a>
-  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"></path></symbol>
-    <symbol id="download-icon" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5"></path></symbol>
-    <symbol id="check-icon" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"></path></symbol>
-    <symbol id="source-icon" viewBox="0 0 24 24"><path d="M14 3h7v7m0-7L10 14m-1-9H3v16h16v-6"></path></symbol>
-    <symbol id="windows-icon" viewBox="0 0 24 24"><path d="m3 5 8-1v8H3Zm10-1 8-1v9h-8ZM3 14h8v8l-8-1Zm10 0h8v9l-8-1Z" fill="currentColor" stroke="none"></path></symbol>
-    <symbol id="play-icon" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z" fill="currentColor" stroke="none"></path></symbol>
-    <symbol id="pause-icon" viewBox="0 0 24 24"><path d="M7 5v14M17 5v14" stroke-width="4"></path></symbol>
-    <symbol id="book-icon" viewBox="0 0 24 24"><path d="M12 5C9 3 5 3 2 4v15c4-1 7-1 10 1m0-15c3-2 7-2 10-1v15c-4-1-7-1-10 1V5Z"></path></symbol>
-    <symbol id="computer-icon" viewBox="0 0 24 24"><path d="M3 4h18v13H3Zm5 17h8m-4-4v4"></path></symbol>
-    <symbol id="code-icon" viewBox="0 0 24 24"><path d="m7 6-6 6 6 6m10-12 6 6-6 6M14 3l-4 18"></path></symbol>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0">
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"></path></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"></path></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"></path></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"></path></symbol>
   </svg>
-  <header class="topbar">
-    <div class="wrap nav-wrap">
-      <a class="brand" href="#top" aria-label="Kriko ana sayfa"><img src="../assets/kriko-wordmark-white.svg" alt="Kriko" width="91" height="30"></a>
-      <button class="menu-toggle" type="button" aria-label="Menüyü aç" aria-expanded="false" aria-controls="main-nav"><span></span><span></span></button>
-      <nav class="main-nav" id="main-nav" aria-label="Ana menü">
-        <a href="#how">Nasıl çalışır?</a><a href="#catalogs">Neleri araştırabilirsin?</a><a href="#questions">Bilmen gerekenler</a><a class="mobile-source" href="https://github.com/Berbadov/kriko">GitHub ↗</a>
-      </nav>
-      <div class="nav-actions"><nav class="language-switch" aria-label="Dil"><a href="/" lang="en" hreflang="en">EN</a><a href="/tr/" lang="tr" hreflang="tr" aria-current="page">TR</a></nav><a class="source-link" href="https://github.com/Berbadov/kriko">Açık kaynak ↗</a><a class="button button-small" href="#download">Kriko’yu indir <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></a></div>
-    </div>
-    <div class="scroll-progress" aria-hidden="true"></div>
-  </header>
-  <main id="main">
-    <section class="hero" id="top" aria-labelledby="hero-title">
-      <div class="hero-grid wrap">
-        <div class="hero-copy">
-          <p class="eyebrow hero-intro"><span class="status-dot" aria-hidden="true"></span> Sormak aklına gelmeyeni keşfet.</p>
-          <h1 id="hero-title">İlan, hikâyenin<br><span>yarısını anlatır.</span></h1>
-          <p class="hero-description">Sıfır ya da ikinci el; önemli bir sorun, aramak aklına gelmeyen bir ayrıntıda saklı olabilir. Kriko, dağınık kullanıcı bildirimlerini, onarım bulgularını ve gözden kaçan ayrıntıları araştırır. Neye, neden daha yakından bakman gerektiğini gösterir.</p>
-          <div class="hero-actions"><a class="button" href="#download"><svg class="icon" aria-hidden="true"><use href="#download-icon"></use></svg> Kriko’yu ücretsiz indir <svg class="icon end-arrow" aria-hidden="true"><use href="#arrow"></use></svg></a><a class="watch-link" href="#how" data-start-tour=""><span class="play-circle"><svg class="icon" aria-hidden="true"><use href="#play-icon"></use></svg></span> Nasıl çalıştığını gör</a></div>
-          <p class="hero-footnote">Windows · Hesap gerekmez · Kontrol sende</p>
-          <p class="example-notice">Kurgusal ürünler. Somut kontroller. Bu örnekler işleyişi anlatır; gerçek markaları değerlendirmez.</p><div class="product-picker" role="group" aria-label="Bir ürün örneği seç">
-            <span class="product-picker-label">Sıfır ya da ikinci el. Görünenin ötesine bak.</span>
-            <div class="product-options">
-              <button type="button" class="product-option" data-product="cars" aria-pressed="false">Otomobiller</button>
-              <button type="button" class="product-option" data-product="laptop" aria-pressed="true">Dizüstü bilgisayarlar</button>
-              <button type="button" class="product-option" data-product="headphones" aria-pressed="false">Kulaklıklar</button>
-              <button type="button" class="product-option" data-product="coffee" aria-pressed="false">Kahve makineleri</button>
-            </div>
-          </div>
-          <span class="sr-only" id="product-status" role="status" aria-live="polite"></span>
-        </div>
-        <div class="hero-visual" aria-label="Dizüstü A için temsili Kriko önizlemesi">
-          <div class="visual-grid" aria-hidden="true"></div><div class="orbit orbit-one" aria-hidden="true"></div><div class="orbit orbit-two" aria-hidden="true"></div>
-          <span class="stage-coordinate" aria-hidden="true">DAHA YAKINDAN / 001</span>
-          <div class="listing-window">
-            <div class="browser-bar"><span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="address-bar"><svg class="icon" aria-hidden="true"><use href="#check-icon"></use></svg><span class="address-text">ornek-ilan / dizustu-a-256</span></span></div>
-            <div class="listing-content">
-              <div class="listing-breadcrumb">Bilgisayar / Marka gizli / Dizüstü A</div>
-              <div class="car-scene"><span class="photo-count">01 / 06</span>
-                <svg class="car hero-product-art" data-art="cars" viewBox="0 0 560 260" role="img" aria-label="Gümüş renkli hatchback çizimi" hidden="">
-                  <defs><linearGradient id="body" x1="0" x2=".3" y1="0" y2="1"><stop stop-color="#e8edf2"></stop><stop offset=".5" stop-color="#adb8c8"></stop><stop offset="1" stop-color="#78879d"></stop></linearGradient><linearGradient id="glass" x2="0" y2="1"><stop stop-color="#29364a"></stop><stop offset="1" stop-color="#50647b"></stop></linearGradient><radialGradient id="tire"><stop stop-color="#a6afbc"></stop><stop offset=".22" stop-color="#4b586a"></stop><stop offset=".3" stop-color="#c0c9d4"></stop><stop offset=".64" stop-color="#8694a7"></stop><stop offset=".68" stop-color="#202733"></stop><stop offset="1" stop-color="#101620"></stop></radialGradient></defs>
-                  <ellipse cx="286" cy="215" rx="217" ry="15" fill="#12223c" opacity=".22"></ellipse>
-                  <path d="m57 157 30-30 92-17 59-55q8-7 26-7h115q28 1 43 18l48 62 34 17 5 44-18 13H62l-12-15Z" fill="url(#body)" stroke="#7d8a9c" stroke-width="2"></path>
-                  <path d="m190 110 55-49h48v49Zm114-49h73q18 0 28 14l26 35H304Z" fill="url(#glass)" stroke="#d1d8e0" stroke-width="3"></path>
-                  <path d="M303 117v75m136-72 10 72M88 133l72-9m5 2 263-4M63 174h427" fill="none" stroke="#7f8da0" stroke-width="2"></path>
-                  <path d="M181 125v64m12-52h18m107 0h18" fill="none" stroke="#67778c" stroke-width="3"></path>
-                  <path d="m62 152 42-9-8 17-41 6m418-28 23 9 3 18-18-5Z" fill="#ecf5ff"></path><path d="m474 139 23 8 2 10-19-4Z" fill="#a85354"></path>
-                  <path d="M116 201a47 47 0 0 1 94 0m177 0a47 47 0 0 1 94 0" fill="#253145"></path><circle cx="163" cy="198" r="37" fill="url(#tire)"></circle><circle cx="434" cy="198" r="37" fill="url(#tire)"></circle>
-                  <path d="m158 177 10 42m-26-26 42 10m-35 10 28-30m236 0 10 42m-26-26 42 10m-35 10 28-30" stroke="#cbd3de" stroke-width="3"></path><path d="m282 108 15-9 15 3v12h-30Z" fill="#8a9aaf"></path><path d="M229 54h151" stroke="#f1f4f7" stroke-width="3"></path>
-                </svg>
-                <img class="hero-product-art" data-art="laptop" src="../assets/laptop.svg" alt="Mavi ekranlı, gümüş renkli dizüstü bilgisayar çizimi" width="560" height="260">
-                <img class="hero-product-art" data-art="headphones" src="../assets/headphones.svg" alt="Krem renkli kulak çevreleyen kulaklık çizimi" width="560" height="260" hidden="">
-                <img class="hero-product-art" data-art="coffee" src="../assets/espresso.svg" alt="Paslanmaz çelik espresso makinesi çizimi" width="560" height="260" hidden="">
-              </div>
-              <div class="listing-heading"><div><span class="listing-label">Sıradaki seçeneğin</span><h2>Dizüstü A · 256 GB</h2></div><span class="listing-save" aria-hidden="true">♡</span></div>
-              <div class="listing-specs"><span>14 inç</span><span>16 GB RAM</span><span>256 GB SSD</span><span>Sıfır ürün</span></div>
-              <div class="seller-note"><span class="seller-avatar" aria-hidden="true">S</span><div><strong>“3.000 MB/sn’ye kadar depolama hızı.”</strong><span>Temsili ilan. Marka ve model kurgusaldır.</span></div></div>
-            </div>
-          </div>
-          <div class="floating-finding"><div class="floating-heading"><span class="kriko-monogram" aria-hidden="true">k</span><span>İşte diğer yarısı.</span><svg class="icon" aria-hidden="true"><use href="#check-icon"></use></svg></div><div class="finding-label">Depolama sürümü · İnceleme farkı</div><h3>Aynı bilgisayar. Farklı SSD?</h3><p>İnceleme 1 TB sürümü test ediyor. Sepetinde ise 256 GB var. Hız iddiasına güvenmeden tam sürümü kontrol et.</p><div class="floating-bottom"><span><svg class="icon" aria-hidden="true"><use href="#book-icon"></use></svg> Örnek kanıtlar dahil</span><a href="#how" aria-label="Bu örnek bulguyu incele"><svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></a></div></div>
-          <div class="visual-caption"><span class="crosshair" aria-hidden="true">+</span> Daha az tahmin. Daha çok dayanak.</div><span class="example-label">Kurgusal ürün · Yalnızca tanıtım amaçlı</span>
-        </div>
-      </div>
-      <div class="hero-bottom wrap"><span class="scroll-cue"><span aria-hidden="true">↓</span> Biraz araştırma, çok şey değiştirir.</span><button class="motion-toggle text-button" type="button" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#pause-icon"></use></svg><span>Hareketi duraklat</span></button></div>
-    </section>
-    <div class="principles-bar"><div class="wrap principles"><span><svg class="icon" aria-hidden="true"><use href="#book-icon"></use></svg> Her zaman özgün kaynaklar</span><span><svg class="icon" aria-hidden="true"><use href="#computer-icon"></use></svg> Araştırman sende kalır</span><span><svg class="icon" aria-hidden="true"><use href="#code-icon"></use></svg> Ücretsiz ve açık kaynak</span></div></div>
 
-    <section class="section walkthrough" id="how" aria-labelledby="how-title">
-      <div class="wrap">
-        <div class="section-heading reveal"><div><p class="eyebrow"><span class="section-number">01 /</span> Daha yakından bak</p><h2 id="how-title">Aklına gelmeyen<br><span class="muted-heading">soruyu keşfet.</span></h2></div><p>Bir söküm ayrıntısı. Tekrarlanan bir şikâyet. Çelişen iki bildirim. Bir ipucunu takip et; kararında neyi değiştirdiğini gör.</p></div>
-        <div class="walkthrough-layout reveal">
-          <div class="tour-controls">
-            <div class="tour-tabs" role="tablist" aria-label="Ürün inceleme örneği" aria-orientation="vertical">
-              <button class="tour-tab" type="button" role="tab" id="tour-tab-0" aria-selected="true" aria-controls="tour-panel-0" tabindex="0" data-step="0"><span class="step-number">01</span><span><strong>Gözden kaçanı bul</strong><span>Ürün sayfasının ötesine bak.</span></span><svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></button>
-              <button class="tour-tab" type="button" role="tab" id="tour-tab-1" aria-selected="false" aria-controls="tour-panel-1" tabindex="-1" data-step="1"><span class="step-number">02</span><span><strong>Neyin önemli olduğunu anla</strong><span>Kanıtı, henüz yanıtlanmamış sorudan ayır.</span></span><svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></button>
-              <button class="tour-tab" type="button" role="tab" id="tour-tab-2" aria-selected="false" aria-controls="tour-panel-2" tabindex="-1" data-step="2"><span class="step-number">03</span><span><strong>Kanıtın izini sür</strong><span>Kaynağı oku. Eksik kalanları araştır.</span></span><svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></button>
-            </div>
-            <div class="tour-playback"><button class="text-button" id="play-tour" type="button" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="#play-icon"></use></svg><span>Örneği oynat</span></button><span class="tour-counter" aria-live="polite">01 / 03</span></div>
-            <p class="tour-disclaimer">Bu akış, kurgusal ürünler ve örnek kanıtlarla anlatılır. Gerçek bir marka değerlendirilmez; canlı araştırma yapılmaz.</p>
+  <header class="topbar">
+    <div class="wrap bar">
+      <a class="brand" href="/tr/" aria-label="Kriko ana sayfa"><picture><source srcset="../assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="../assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">Menü</button>
+      <nav class="main-nav" id="main-nav" aria-label="Ana gezinme">
+        <a href="#how">Nasıl çalışır</a>
+        <a href="#examples">Örnekler</a>
+        <a href="#get">Başlangıç</a>
+        <a href="#data">Verilerin</a>
+        <span class="language-switch" role="group" aria-label="Dil"><a href="/" lang="en" hreflang="en">EN</a><a href="/tr/" lang="tr" hreflang="tr" aria-current="page">TR</a></span>
+        <a class="button small" href="#get">Kriko'yu indir</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Kendi bilgisayarında ürün araştırması</p>
+          <h1>İlan, hikâyenin yarısını anlatır.</h1>
+          <p class="lead">Kriko, baktığın ürünün tam olarak nesinin sorunlu olduğunu, her bulgunun yanında kaynağıyla gösterir. Her ilan sitesinde çalışır ve araştırmasını senin bilgisayarında tutar.</p>
+          <div class="actions">
+            <a class="button" href="https://github.com/Berbadov/kriko/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Kriko'yu Windows için indir</span></a>
+            <a class="button ghost" href="#how">Nasıl çalıştığına bak</a>
           </div>
-          <div class="tour-stage">
-            <div class="tour-stage-bar"><span><span class="status-dot" aria-hidden="true"></span> KRIKO’NUN BAKIŞI</span><span>Dizüstü A · 256 GB</span></div>
-            <div class="tour-panels">
-            <div class="tour-panel" id="tour-panel-0" role="tabpanel" aria-labelledby="tour-tab-0" tabindex="0">
-              <div class="demo-topline"><span class="demo-tag">Temsili örnek</span><span class="demo-tag subtle">Kurgusal ürün</span></div>
-              <span class="demo-kicker">Baktığın ürün</span><h3>Dizüstü A · 256 GB</h3><p class="demo-lead">İlandaki ürünün tam sürümünü belirle. Ayrıntıları bulgularla karşılaştır; ardından kararını değiştirebilecek soruyu sor.</p>
-              <div class="match-row"><span class="match-symbol"><svg class="icon" aria-hidden="true"><use href="#check-icon"></use></svg></span><div><strong>Araştırılacak somut bir ayrıntı</strong><span>Bir gözlem, açık bir soru ve uygulanabilir bir sonraki adım.</span></div><span class="match-check">Örnek</span></div>
-              <div class="demo-note"><svg class="icon" aria-hidden="true"><use href="#book-icon"></use></svg><p>Bu ürün için katalog yok mu? <strong>Quick look</strong> seçtiğin ajandan araştırmasını ister.</p></div>
-              <button class="demo-next text-button" type="button" data-next="1">Neyi kontrol edeceğimi göster <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></button>
+          <p class="fine">Ücretsiz ve açık kaynak · Hesap yok · Windows</p>
+        </div>
+        <figure class="hero-shot">
+          <picture>
+            <source srcset="../assets/examples/hero-dark.webp" media="(prefers-color-scheme: dark)">
+            <img src="../assets/examples/hero-light.webp" width="760" height="800" alt="Bir dizüstü ilanının yanında açık Kriko paneli. Ciddi bir depolama uyuşmazlığından küçük bir pil notuna kadar kontrol edilecek dört şeyi listeliyor.">
+          </picture>
+          <figcaption>Kurgusal bir örnek. Ürün, ilan ve bulgular uydurmadır; panel ise gerçek uzantıdır.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="trust" aria-label="Kriko'nun sözleri">
+      <ul class="wrap trust-list">
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Her bulgunun yanında bir kaynak</span></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Araştırman bilgisayarında kalır</span></li>
+        <li><svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg><span>Ücretsiz ve açık kaynak</span></li>
+      </ul>
+    </section>
+
+    <section class="section" id="how">
+      <div class="wrap">
+        <p class="eyebrow">Nasıl çalışır</p>
+        <h2>Zaten okuduğun sayfada üç adım.</h2>
+
+        <ol class="steps">
+          <li class="step">
+            <div class="step-copy">
+              <span class="step-number">1</span>
+              <h3>Bir ürün sayfası aç.</h3>
+              <p>Kriko ilanı bilgisayarında okur ve tam olarak o ürünü kurduğun kataloglarda arar. Sayfayla ilgili hiçbir şey Kriko'ya gönderilmez.</p>
             </div>
-            <div class="tour-panel" id="tour-panel-1" role="tabpanel" aria-labelledby="tour-tab-1" tabindex="0" hidden="">
-              <div class="demo-topline"><span class="demo-tag">Yapılandırma farkları</span><span class="demo-tag subtle">Temsili senaryo</span></div>
-              <span class="demo-kicker">Yakından bakmaya değer bir ipucu</span><h3>1 TB sürümün test sonucu, 256 GB sürümün hızını kanıtlamaz.</h3><p class="demo-lead">Kurgusal ilanda “3.000 MB/sn’ye kadar” yazıyor. Bağlantı verilen inceleme 1 TB sürümü ölçüyor; seçili ürün ise 256 GB. Ürün adının aynı olması, sonucu tüm kapasitelere genellemek için yeterli değil.</p>
-              <div class="evidence-context" aria-label="Kanıtlar ve açık sorular">
-                <div><span>Kanıt ne söylüyor?</span><p class="evidence-supported">Örnek incelemede 1 TB, örnek sepette ise 256 GB belirtiliyor.</p></div>
-                <div><span>Henüz yanıtlanmadı</span><p class="evidence-gap">256 GB sürümün uzun süreli hızı, depolama düzeni ve disk doluyken davranışı burada ölçülmedi.</p></div>
-              </div>
-              <div class="inspection-note"><span class="inspection-icon" aria-hidden="true">?</span><div><span class="demo-kicker">Sırada ne araştırılmalı?</span><strong>“256 GB sürümün testi nerede?”</strong><p>Kapasiteyi ve parça numarasını karşılaştır. Aynı yapılandırmada yapılmış uzun dosya kopyalama testini; sıcaklık ve boş alan koşullarıyla birlikte ara.</p></div></div>
-              <button class="demo-next text-button" type="button" data-next="2">Bu bilgi nereden geliyor? <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></button>
+            <picture class="panel-shot">
+              <source srcset="../assets/examples/laptop-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/examples/laptop-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir dizüstü için Kriko paneli. Dört bulgu parçaya göre gruplanmış: depolama, soğutma, güç ve pil.">
+            </picture>
+          </li>
+          <li class="step">
+            <div class="step-copy">
+              <span class="step-number">2</span>
+              <h3>Nelerin ters gittiği bilinenleri gör.</h3>
+              <p>Her bulgu ne kadar ciddi olduğunu, ne kadar desteklendiğini ve neyi sormanın ya da kontrol etmenin gerektiğini söyler. Geldiği kaynağı okumak için birini aç.</p>
             </div>
-            <div class="tour-panel" id="tour-panel-2" role="tabpanel" aria-labelledby="tour-tab-2" tabindex="0" hidden="">
-              <div class="demo-topline"><span class="demo-tag">Örnek kanıtlar</span><span class="demo-tag subtle">2 kurgusal kanıt notu</span></div><h3>Ayrıntıyı gör.<br>Sonraki soruyu sor.</h3><p class="demo-lead">Bu kurgusal notlar, bir ilan ile ikinci bir kaynağın soruyu nasıl değiştirebildiğini gösterir. Kriko, gerçek araştırmalarda özgün kaynak bağlantılarını bulguların yanında tutar.</p>
-              <div class="evidence-source"><span class="source-initial" aria-hidden="true">1</span><span><strong>Örnek ilan görüntüsü</strong><span>Kurgusal ilan · Seçili yapılandırma</span><q class="source-excerpt">“14 inç · 16 GB RAM · 256 GB SSD. Depolama hızı: 3.000 MB/sn’ye kadar.”</q></span></div>
-              <div class="evidence-source"><span class="source-initial" aria-hidden="true">2</span><span><strong>Örnek inceleme test notu</strong><span>Kurgusal test · Farklı kapasite</span><q class="source-excerpt">“Test edilen cihaz: 1 TB SSD. 256 GB yapılandırma test edilmedi.”</q></span></div>
-              <p class="evidence-footnote">Bu notlar kurgusal eğitim içeriğidir; gerçek kullanıcı bildirimi, test sonucu veya bir üretici hakkında iddia değildir. Kriko, gerçek araştırmalarda özgün kaynaklara bağlantı verir.</p><button class="demo-next text-button" type="button" data-next="0">Ürüne dön <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></button>
+            <picture class="panel-shot">
+              <source srcset="../assets/examples/claim-open-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/examples/claim-open-light.webp" width="400" height="768" loading="lazy" alt="Açılmış bir bulgu. İncelemenin farklı bir depolama boyutunu test ettiğini açıklıyor ve satıcıya ne sorulacağını öneriyor.">
+            </picture>
+          </li>
+          <li class="step">
+            <div class="step-copy">
+              <span class="step-number">3</span>
+              <h3>Henüz kimsenin yazmadığını araştır.</h3>
+              <p>Hiçbir katalog ürünü tanımıyorsa kendi yapay zekâ ajanın onu araştırır ve sonuç kaynaklarıyla birlikte kaydedilir. Hiçbir şey bulunamazsa Kriko bulunamadığını söyler. Ürünün sorunsuz olduğunu asla söylemez.</p>
             </div>
-            </div>
-            <div class="tour-stage-bottom"><span>KARAR SENİN. DAHA FAZLA BİLGİYLE.</span><span class="demo-dots" aria-hidden="true"><i class="active"></i><i></i><i></i></span></div>
+            <picture class="panel-shot">
+              <source srcset="../assets/examples/research-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/examples/research-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir kulaklık için araştırma kartı. Hızlı bakış, okunan sayfa sayısıyla birlikte bilinmesi gereken üç şey buldu.">
+            </picture>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section soft" id="examples">
+      <div class="wrap">
+        <p class="eyebrow">Örnekler</p>
+        <h2>Dört kurgusal ürün, gerçek panelde.</h2>
+        <p class="section-lead">Sıfır ya da ikinci el, panel aynı görünür. Bu ürünlerle ilgili her şey uydurmadır; bu yüzden hiçbir gerçek markayı değerlendirmez. Gerçek bulgular gerçek bir kaynağa bağlanır.</p>
+        <ul class="gallery">
+          <li>
+            <picture class="panel-shot">
+              <source srcset="../assets/examples/hatchback-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/examples/hatchback-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir ikinci el hatchback için Kriko paneli. Bulgular arasında arka ayak boşluğunda su ve zamanı geçmiş olabilecek bir triger kayışı var.">
+            </picture>
+            <h3>Hatchback D, 2017</h3>
+            <p>İkinci el. Nemli bir halı ve sorulmaya değer bir bakım aralığı.</p>
+          </li>
+          <li>
+            <picture class="panel-shot">
+              <source srcset="../assets/examples/laptop-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/examples/laptop-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir dizüstü için Kriko paneli. Dört bulgu parçaya göre gruplanmış: depolama, soğutma, güç ve pil.">
+            </picture>
+            <h3>Dizüstü A, 256 GB</h3>
+            <p>Sıfır. İnceleme, sepettekinden daha büyük bir diski test etmiş.</p>
+          </li>
+          <li>
+            <picture class="panel-shot">
+              <source srcset="../assets/examples/headphones-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/examples/headphones-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal kablosuz kulaklık için Kriko paneli. Bulgular arasında çatlayan bir menteşe ve dökülen kulak pedleri var.">
+            </picture>
+            <h3>Kulaklık B</h3>
+            <p>Sıfır. Menteşenin yanında bir çatlak ve sorun olmadan önce nelere bakılacağı.</p>
+          </li>
+          <li>
+            <picture class="panel-shot">
+              <source srcset="../assets/examples/espresso-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="../assets/examples/espresso-light.webp" width="400" height="768" loading="lazy" alt="Kurgusal bir espresso makinesi için Kriko paneli. Bulgular arasında bir yıl sonra zayıflayan bir pompa ve sert suda kireçlenme var.">
+            </picture>
+            <h3>Espresso makinesi C</h3>
+            <p>Sıfır. Zamanla yorulan bir pompa ve kireçlenen bir kazan.</p>
+          </li>
+        </ul>
+        <p class="note">Panel şimdilik İngilizce. Türkçe site onu Türkçe anlatır.</p>
+      </div>
+    </section>
+
+    <section class="section" id="catalogs">
+      <div class="wrap two">
+        <div>
+          <p class="eyebrow">Kataloglar</p>
+          <h2>Test sürüşünden önce modeli tanı.</h2>
+          <p>Katalog, kaynaklarıyla birlikte yazılmış tek bir ürün kategorisidir. Araba kataloğu motorları, şanzımanları, elektriği ve kaportayı kapsar; İngilizce ve Türkçedir. Uygulamada <strong>Catalogs</strong> bölümünden kur; aramalar çevrimdışı çalışır.</p>
+        </div>
+        <div>
+          <p class="eyebrow">Katalogda yok mu?</p>
+          <h2>Kendi ajanına baktır.</h2>
+          <p><strong>Hızlı bakış</strong>, seçtiğin ajanı hiçbir katalogda olmayan bir ürünü araştırmaya gönderir ve kaynakları saklar. İnternet bağlantısı gerekir. Ajanın ücretsizse ücretsizdir; ücretli bir sağlayıcı kendi hesabına yansır.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section soft" id="get">
+      <div class="wrap">
+        <p class="eyebrow">Başlangıç</p>
+        <h2>Bir kez kur, sonra sadece gez.</h2>
+        <div class="get-grid">
+          <ol class="setup">
+            <li><h3>Uygulamayı kur.</h3><p>Windows yükleyicisini indir ve Kriko'yu aç. Yönetici yetkisi gerekmez. İlk açılışta kurulum gerisini adım adım gösterir. Uygulamanın menüleri şimdilik İngilizce.</p></li>
+            <li><h3>Bilgi ekle.</h3><p><strong>Catalogs</strong>'u aç, <strong>Find release catalogs</strong>'u seç ve birini kur. Katalog olmadan da araştırabilirsin.</p></li>
+            <li><h3>Kriko'yu tarayıcına ekle.</h3><p><strong>More</strong>'u, ardından <strong>Set up Kriko</strong>'yu aç ve <strong>Prepare browser extension</strong>'a bas. Chrome, Edge ya da Brave için adımları izle.</p></li>
+            <li><h3>Bir ilan aç.</h3><p>Kriko açık dursun, bir ürün sayfası aç ve <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> tuşlarına ya da araç çubuğu düğmesine bas. Bulguları oku, kaynakları izle.</p></li>
+          </ol>
+          <div class="download-card">
+            <h3>Windows için Kriko</h3>
+            <p>64 bit Windows. Masaüstü uygulaması ve tarayıcı uzantısı.</p>
+            <a class="button" href="https://github.com/Berbadov/kriko/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg><span>Windows yükleyicisini indir</span></a>
+            <p class="fine">Son sürüm sayfasında kurulum .exe dosyasını seç. Yükleyici henüz kod imzalı değil; bu yüzden Windows bir SmartScreen uyarısı gösterebilir.</p>
+            <p class="fine"><a href="https://github.com/Berbadov/kriko/releases/latest">Taşınabilir sürümü mü tercih ediyorsun? .zip dosyasını seç.</a></p>
+            <p class="fine">macOS ya da Linux mu kullanıyorsun? <a href="https://github.com/Berbadov/kriko#build-from-source">Kaynaktan derleme seçeneklerine bak.</a></p>
           </div>
         </div>
       </div>
     </section>
-    <section class="section catalogs" id="catalogs" aria-labelledby="catalog-title"><div class="wrap">
-      <div class="section-heading reveal"><div><p class="eyebrow"><span class="section-number">02 /</span> Merakına yer aç</p><h2 id="catalog-title">Büyük bir alışveriş mi?<br><span class="muted-heading">Küçük bir ayrıntı mı? Araştır.</span></h2></div><p>Sıfır veya ikinci el: ilanın anlatmadıklarını araştır. Sürüme özgü farklar, dağınık arıza bildirimleri ve daha fazla kanıt gerektiren sorular.</p></div>
-      <div class="purchase-paths" aria-label="Sıfır ve ikinci el alışveriş örnekleri">
-        <a class="purchase-path" data-product="laptop" data-open-tour="" href="#how"><span class="eyebrow">Sıfır ürün</span><h3>Teknik özelliklerin ötesine bak.</h3><p>Görünmeyen ödünleri, ilk kullanıcı deneyimlerini ve tanıtım incelemelerinden sonra ortaya çıkan sorunları araştır.</p><span class="inline-link">Sıfır ürün örneğini incele <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></span></a>
-        <a class="purchase-path" data-product="cars" data-open-tour="" href="#how"><span class="eyebrow">İkinci el</span><h3>Neye yakından bakacağını bil.</h3><p>Modele özgü arıza bildirimlerini bu ürünün geçmişiyle karşılaştır. İncelemeyi anlamlı kılan soruları bul.</p><span class="inline-link">İkinci el örneğini incele <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></span></a>
+
+    <section class="section" id="data">
+      <div class="wrap narrow">
+        <p class="eyebrow">Verilerin</p>
+        <h2>Bilmen gerekenler.</h2>
+        <div class="faq">
+          <details open="">
+            <summary>Araştırmam nerede duruyor?</summary>
+            <p>Bilgisayarında. Kataloglar, geçmiş ve ayarlar sende kalır; açılacak bir hesap yoktur. Çevrimiçi araştırma, sorunu ve okuduğu sayfaları seçtiğin sağlayıcıya gönderir. Tüm durumlar için <a href="/privacy/">gizlilik politikasını</a> oku.</p>
+          </details>
+          <details>
+            <summary>Tuzağı ne?</summary>
+            <p>Kriko, MIT lisansıyla ücretsiz ve açık kaynaktır. Katalog aramaları anahtar gerektirmez. Araştırma için ücretli bir yapay zekâ sağlayıcısı seçersen kullanım, o sağlayıcıdaki hesabına yansır.</p>
+          </details>
+          <details>
+            <summary>Sıfır ürünleri de kontrol edebilir miyim?</summary>
+            <p>Evet. Sıfır ve ikinci el ürünlerin ikisinde de gözden kaçması kolay sorunlar vardır: kullanıcı deneyimleri, onarım bulguları ve yalnızca tek bir versiyonu ilgilendiren endişeler. Hızlı bakış, seçtiğin ajanla kurduğun kataloglarının ötesinde araştırma yapar.</p>
+          </details>
+          <details>
+            <summary>Bir endişe doğrulanmamışsa?</summary>
+            <p>Bir rapor, kusuru kanıtlamadan kontrol etmeye değer bir şeye işaret edebilir. Arkasındaki sayfaları izle, açıklamaları karşılaştır ve neyin hâlâ yanıtsız olduğuna bak. Kanıtın satın alman için ne anlama geldiğine sen karar verirsin.</p>
+          </details>
+        </div>
       </div>
-      <div class="example-gallery" aria-label="Ürün örneklerini incele">
-        <a class="product-example" data-product="cars" href="#how"><div class="product-example-top"><span>İkinci el · Araç başında</span><span aria-hidden="true">01</span></div><div class="product-example-art"><svg viewBox="0 0 500 220" role="img" aria-label="Hatchback ana hat çizimi"><g fill="none" stroke="currentColor" stroke-width="2"><path d="m35 144 44-24 91-12 54-45h119l52 54 66 17 10 40H33Z M176 109h211M229 70l-41 38h58V70m10 0v38h119l-36-38Z"></path><circle cx="126" cy="173" r="26"></circle><circle cx="386" cy="173" r="26"></circle></g></svg></div><h3>Hatchback D · 2017</h3><p>Halı kuru. Altında ise su izi var.</p><div class="product-example-bottom"><span>Kurgusal örnek</span><svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></div></a>
-        <a class="product-example is-selected" data-product="laptop" href="#how"><div class="product-example-top"><span>Sıfır · Masanda</span><span aria-hidden="true">02</span></div><div class="product-example-art"><img src="../assets/laptop.svg" alt="Gümüş renkli dizüstü bilgisayar çizimi" width="560" height="260" loading="lazy"></div><h3>Dizüstü A · 256 GB</h3><p>İnceleme 1 TB sürümü test ediyor. Sepetinde 256 GB var.</p><div class="product-example-bottom"><span>Kurgusal örnek</span><svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></div></a>
-        <a class="product-example" data-product="headphones" href="#how"><div class="product-example-top"><span>Sıfır · Yolda</span><span aria-hidden="true">03</span></div><div class="product-example-art"><img src="../assets/headphones.svg" alt="Krem renkli kulaklık çizimi" width="560" height="260" loading="lazy"></div><h3>Kulaklık B · Kablosuz</h3><p>Döner bağlantının yanında çatlak. Neyi kontrol ederdin?</p><div class="product-example-bottom"><span>Kurgusal örnek</span><svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></div></a>
-        <a class="product-example" data-product="coffee" href="#how"><div class="product-example-top"><span>Sıfır · Mutfağında</span><span aria-hidden="true">04</span></div><div class="product-example-art"><img src="../assets/espresso.svg" alt="Paslanmaz çelik espresso makinesi çizimi" width="560" height="260" loading="lazy"></div><h3>Espresso makinesi C</h3><p>Su durunca vızıltı da kesiliyor mu?</p><div class="product-example-bottom"><span>Kurgusal örnek</span><svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></div></a>
-      </div>
-      <p class="example-gallery-note">Somut bir gözlemi, bilinmeyenleri ve sonraki kontrolü incelemek için kurgusal bir ürün seç. Ürün adları, ilan ayrıntıları ve kanıt notları uydurmadır.</p>
-      <noscript><p class="example-gallery-note no-script-note">Dizüstü bilgisayar örneği JavaScript olmadan da okunabilir. Dört kurgusal senaryo arasında geçiş yapmak için JavaScript’i etkinleştir.</p></noscript>
-      <div class="catalog-grid">
-        <article class="catalog-card cars-card reveal"><div class="catalog-card-top"><span class="demo-tag">Mevcut katalog</span><span class="catalog-code" aria-hidden="true">C / 01</span></div><div class="car-blueprint" aria-hidden="true"><svg viewBox="0 0 500 180"><path d="m35 114 44-24 91-12 54-45h119l52 54 66 17 10 40H33Z M176 79h211M229 40l-41 38h58V40m10 0v38h119l-36-38Z M96 144a30 30 0 0 1 60 0m200 0a30 30 0 0 1 60 0"></path><circle cx="126" cy="143" r="26"></circle><circle cx="386" cy="143" r="26"></circle><path d="M246 86v52m138-52v27M35 103h39l-8 18H35m395-20h25M197 96h19m51 0h19"></path></svg><span class="blueprint-axis axis-x"></span><span class="blueprint-axis axis-y"></span></div><div class="catalog-copy"><h3>Modeli tanı.<br>Test sürüşünden önce.</h3><p>Motor, şanzıman, elektrik ve kaporta. Araç seçmeden önce modelin belgelenmiş sorunlarını incele. Aracın mevcut durumu, kararın yalnızca bir parçasıdır.</p><a class="inline-link" href="#download">Otomobil kataloğuyla başla <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></a></div><div class="catalog-card-bottom"><span>EN + TR</span><span>Uygulamada Kataloglar’dan yükle</span></div></article>
-        <article class="catalog-card research-card reveal"><div class="catalog-card-top"><span class="demo-tag subtle">Sıradaki keşfin</span><span class="catalog-code" aria-hidden="true">Q / ∞</span></div><div class="research-visual" aria-hidden="true"><div class="research-query"><span class="query-symbol">↗</span><span>Neyi kontrol etmeliyim?</span><span class="query-caret"></span></div><span class="research-line line-one"></span><span class="research-line line-two"></span><span class="research-line line-three"></span><span class="research-chip chip-one">Oku</span><span class="research-chip chip-two">Kontrol et</span><span class="research-chip chip-three">Sakla</span></div><div class="catalog-copy"><h3>Katalogda yok mu?<br>Biraz daha derine bak.</h3><p>Ajanını araştırmaya gönder. Beklenmedik bir ipucunu takip et, başka nelerin önemli olabileceğini sor ve kaynakları sakla. Her soru yeni bir araştırmanın önünü açabilir.</p><a class="inline-link" href="https://github.com/Berbadov/kriko/blob/main/docs/USAGE.md">Quick look’u keşfet <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></a></div><div class="catalog-card-bottom"><span>AJANIN. SEÇİMİN.</span><span>Araştırma için internet gerekir</span></div></article>
-      </div>
-    </div></section>
-    <section class="section setup" id="setup" aria-labelledby="setup-title"><div class="wrap setup-layout">
-      <div class="setup-heading reveal"><p class="eyebrow"><span class="section-number">03 /</span> İndirmeden keşfe</p><h2 id="setup-title">Bir kez kur.<br><span class="muted-heading">Sonra gezinmeye devam et.</span></h2><p>Alışveriş alışkanlıklarını değiştirmen gerekmez. Kriko, zaten kullandığın tarayıcıda sana eşlik eder.</p><a class="inline-link" href="https://github.com/Berbadov/kriko/blob/main/docs/INSTALL_WINDOWS.md">Kurulum kılavuzunu oku <svg class="icon" aria-hidden="true"><use href="#source-icon"></use></svg></a></div>
-      <ol class="setup-steps">
-        <li class="reveal"><span class="setup-number">1</span><div><h3>İlk adımı at.</h3><p>Windows için Kriko’yu indir ve uygulamayı aç. İlk kurulum, temel adımlarda sana yol gösterir.</p><span class="step-detail">Yönetici izni gerekmez</span></div></li>
-        <li class="reveal"><span class="setup-number">2</span><div><h3>Bilgiyi yanına al.</h3><p>Uygulamada <strong>More → Catalogs (Kataloglar)</strong> bölümünü aç ve otomobil kataloğunu yükle. Kataloglar; ürünleri, bulguları ve kaynakları getirir.</p><span class="step-detail">Katalog sorguları çevrimdışı çalışır</span></div></li>
-        <li class="reveal"><span class="setup-number">3</span><div><h3>Kriko’yu tarayıcına ekle.</h3><p>Uygulamada <strong>More → Set up Kriko (Kurulum)</strong>bölümünü aç, <strong>Prepare browser extension (Eklentiyi hazırla)</strong>düğmesine bas. Ardından eklentiyi klasöründen yüklemek için yönergeleri izle.</p><span class="step-detail">Chrome, Edge veya Brave · Uygulamadan kurulur</span></div></li>
-        <li class="reveal"><span class="setup-number">4</span><div><h3>İncelemeye değer bir şey bul.</h3><p>Kriko açıkken bir ilana git ve Kriko panelini aç. Bulguları oku. Kaynakları takip et. Daha iyi sorular sor.</p><a class="inline-link" href="#how">Önizlemeyi tekrar dene <svg class="icon" aria-hidden="true"><use href="#arrow"></use></svg></a></div></li>
-      </ol>
-    </div></section>
-    <section class="section questions" id="questions" aria-labelledby="questions-title"><div class="wrap">
-      <div class="section-heading reveal"><div><p class="eyebrow"><span class="section-number">04 /</span> Aklında soru kalmasın</p><h2 id="questions-title">Bilmen gerekenler.</h2></div><a class="inline-link" href="https://github.com/Berbadov/kriko/issues">Başka sorun mu var? Bize sor <svg class="icon" aria-hidden="true"><use href="#source-icon"></use></svg></a></div>
-      <div class="question-grid">
-        <article class="question reveal"><svg class="icon" aria-hidden="true"><use href="#computer-icon"></use></svg><h3>Araştırmalarım nerede saklanır?</h3><p>Bilgisayarında. Katalogların, geçmişin ve ayarların sende kalır. Hesap açman gerekmez. Çevrimiçi araştırmada sorun ve okunan sayfalar, seçtiğin sağlayıcıya gönderilir.</p></article>
-        <article class="question reveal"><span class="question-glyph" aria-hidden="true">€</span><h3>Ücret var mı?</h3><p>Kriko, MIT lisansıyla ücretsiz ve açık kaynaklıdır. Katalog sorguları anahtar gerektirmez. Araştırma için ücretli bir yapay zekâ sağlayıcısı seçersen kullanım, o sağlayıcıdaki hesabına yansır.</p></article>
-        <article class="question reveal"><svg class="icon" aria-hidden="true"><use href="#book-icon"></use></svg><h3>Sıfır ürünleri de araştırabilir miyim?</h3><p>Evet. Hem sıfır hem ikinci el ürünlerde gözden kaçabilecek sorunlar olabilir. Kullanıcı deneyimlerini, onarım bulgularını ve sürüme özgü ayrıntıları araştır. Quick look, seçtiğin ajan ve internet bağlantısıyla yüklü katalogların ötesine bakar.</p></article>
-        <article class="question reveal"><span class="question-glyph" aria-hidden="true">↔</span><h3>Bir şüphe doğrulanmadıysa?</h3><p>Bir bildirim, arızayı kanıtlamadan da araştırmaya değer bir ipucu verebilir. Kaynakları takip et, açıklamaları karşılaştır ve yanıtlanmayan soruları gör. Kanıtın alışverişin için ne anlama geldiğine sen karar verirsin.</p></article>
-      </div>
-    </div></section>
-    <section class="download-section" id="download" aria-labelledby="download-title"><div class="wrap download-layout">
-      <div class="download-copy reveal"><p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Bir sonraki alışverişine daha bilgili başla</p><h2 id="download-title">Bir adım daha at.<br>Hikâyenin <span>diğer yarısını gör.</span></h2><p>Biraz daha bilgi. Çok daha fazla güven.</p><div class="download-trust"><span><svg class="icon" aria-hidden="true"><use href="#check-icon"></use></svg> Kullanımı ücretsiz</span><span><svg class="icon" aria-hidden="true"><use href="#check-icon"></use></svg> Hesap gerekmez</span><span><svg class="icon" aria-hidden="true"><use href="#check-icon"></use></svg> Açık kaynak</span></div></div>
-      <div class="download-card reveal"><div class="download-card-heading"><svg class="icon platform-icon" aria-hidden="true"><use href="#windows-icon"></use></svg><div><h3>Windows için Kriko</h3><span>64 bit Windows · Masaüstü uygulaması + tarayıcı eklentisi</span></div></div><p>Kurulum dosyasıyla başla. Kriko’nun çalışması için gereken her şey içinde.</p><a class="button download-primary" href="https://github.com/Berbadov/kriko/releases/latest"><svg class="icon" aria-hidden="true"><use href="#download-icon"></use></svg> Windows kurulum dosyasını indir <svg class="icon end-arrow" aria-hidden="true"><use href="#arrow"></use></svg></a><span class="download-caption">Son sürüm sayfasından Windows kurulum .exe dosyasını seç.</span><a class="portable-link" href="https://github.com/Berbadov/kriko/releases/latest">Taşınabilir sürüm mü istersin? Windows .zip dosyasını seç <span aria-hidden="true">↗</span></a><div class="download-note"><strong>Kurulumdan sonra</strong><span>Bir katalog ekle, ardından uygulamada tarayıcı eklentisini hazırla. <a href="#setup">Adımları gör ↑</a></span></div><div class="other-platforms"><span>macOS veya Linux mu kullanıyorsun?</span><a href="https://github.com/Berbadov/kriko#build-from-source">Kaynak koddan derleme seçenekleri ↗</a></div></div>
-    </div><span class="download-watermark" aria-hidden="true">YAKINDAN BAK.</span></section>
+    </section>
   </main>
-  <footer><div class="wrap footer-main"><a class="brand" href="#top" aria-label="Kriko ana sayfasına dön"><img src="../assets/kriko-wordmark-white.svg" alt="Kriko" width="91" height="30"></a><p>Biraz araştırma, çok şey değiştirir.</p><nav aria-label="Alt menü"><a href="https://github.com/Berbadov/kriko">GitHub ↗</a><a href="https://github.com/Berbadov/kriko/releases">Sürümler ↗</a><a href="https://github.com/Berbadov/kriko/issues">Yardım ve geri bildirim ↗</a></nav></div><div class="wrap footer-bottom"><span>Özgür yazılım. Bağımsız kararlar.</span><div><a href="#questions">Verilerin</a><a href="/privacy/">Gizlilik</a><a href="https://github.com/Berbadov/kriko/blob/main/LICENSE">MIT lisansı</a><span>Katalogların kendi lisansları vardır.</span></div></div></footer>
+
+  <footer class="footer">
+    <div class="wrap footer-grid">
+      <div>
+        <a class="brand" href="/tr/" aria-label="Kriko ana sayfa"><picture><source srcset="../assets/kriko-wordmark-white.svg" media="(prefers-color-scheme: dark)"><img src="../assets/kriko-wordmark.svg" alt="Kriko" width="96" height="32"></picture></a>
+        <p>Biraz araştırma çok yol aldırır.</p>
+      </div>
+      <nav aria-label="Alt bilgi">
+        <a href="https://github.com/Berbadov/kriko"><span>GitHub</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="https://github.com/Berbadov/kriko/releases"><span>Sürümler</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="https://github.com/Berbadov/kriko/issues"><span>Yardım ve geri bildirim</span><svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg></a>
+        <a href="/privacy/">Gizlilik</a>
+        <a href="https://github.com/Berbadov/kriko/blob/main/LICENSE">MIT lisansı</a>
+      </nav>
+    </div>
+  </footer>
 
 
 </body></html>
