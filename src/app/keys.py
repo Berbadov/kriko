@@ -89,6 +89,16 @@ PROVIDERS = (
         optional=True,
     ),
     Provider(
+        id="deepseek",
+        label="DeepSeek",
+        env="DEEPSEEK_API_KEY",
+        purpose="A search provider that stands behind OpenSERP when it fails or "
+        "finds nothing. Receives the same queries Exa would — words built from "
+        "a subject's own attributes — and only after the local search service "
+        "has not answered. Never a page you visited and never a listing URL.",
+        optional=True,
+    ),
+    Provider(
         id="openai",
         label="OpenAI (or any OpenAI-compatible endpoint)",
         env="OPENAI_API_KEY",
@@ -132,7 +142,7 @@ BY_ID = {provider.id: provider for provider in PROVIDERS}
 #: The providers that answer "search the web", in the order preferred when the
 #: reader has not chosen. A closed engineering vocabulary — these are integrations
 #: this app has code for, not data that grows with pack coverage.
-SEARCH_PROVIDERS = ("exa", "tavily")
+SEARCH_PROVIDERS = ("exa", "tavily", "deepseek")
 
 #: The providers that answer "read this text and tell me what it supports".
 #: Same shape as SEARCH_PROVIDERS and for the same reason: once there are two,

@@ -174,6 +174,10 @@ def _priced(name: str, tokens_in: int | None, tokens_out: int | None) -> float |
 
 
 def _search_base(provider_id: str) -> str:
+    if provider_id == "deepseek":
+        from app.providers import deepseek as deepseek_provider
+
+        return (os.environ.get("DEEPSEEK_BASE_URL") or deepseek_provider.DEFAULT_BASE_URL).rstrip("/")
     if provider_id == "tavily":
         from app.providers import tavily as tavily_provider
 
@@ -208,8 +212,11 @@ def _completion_base(provider_id: str, app_state_path=None) -> str:
 
 def _test_search(provider_id: str, key: str) -> dict:
     start = time.monotonic()
-    url = _search_base(provider_id) + "/search"
-    if provider_id == "tavily":
+    url = _search_base(provider_id) + ("/v1/tools/search" if provider_id == "deepseek" else "/search")
+    if provider_id == "deepseek":
+        payload = {"query": "test", "count": 1, "need_content": False}
+        headers = {"Authorization": f"Bearer {key}", "content-type": "application/json"}
+    elif provider_id == "tavily":
         payload = {
             "api_key": key,
             "query": "test",
@@ -398,7 +405,7 @@ def _run_provider_test(provider_id: str, app_state_path=None) -> dict:
     except Exception as exc:
         return _refused(provider_id, 0, "error", f"{type(exc).__name__}: {exc}")
     try:
-        if provider_id in ("exa", "tavily"):
+        if provider_id in ("exa", "tavily", "deepseek"):
             return _test_search(provider_id, key)
         if provider_id in keys.COMPLETION_PROVIDERS:
             return _test_completion(provider_id, key, app_state_path)
