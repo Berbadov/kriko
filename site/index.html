@@ -11,7 +11,7 @@
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://kriko.cc/assets/icon-128.png">
   <link rel="icon" href="assets/icon-32.png">
-  <link rel="stylesheet" href="styles.css?v=b4becf5de0be">
+  <link rel="stylesheet" href="styles.css?v=e3d9df9c418b">
   <script src="script.js?v=bf129bb57352" defer></script>
   <link rel="canonical" href="https://kriko.cc/">
   <link rel="alternate" href="https://kriko.cc/" hreflang="en">
@@ -21,9 +21,7 @@
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" width="0" height="0">
-    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></symbol>
-    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
     <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6m0-6L10 14M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
   </svg>
 
@@ -34,8 +32,8 @@
       <nav class="main-nav" id="main-nav" aria-label="Main navigation">
         <a href="#how">How it works</a>
         <a href="#examples">Examples</a>
-        <a href="#get">Get started</a>
-        <a href="#data">Your data</a>
+        <a href="#get">Install</a>
+        <a href="#data">Questions</a>
         <span class="language-switch" role="group" aria-label="Language"><a href="/" lang="en" hreflang="en" aria-current="page">EN</a><a href="/tr/" lang="tr" hreflang="tr">TR</a></span>
         <a class="button small" href="#get">Get Kriko</a>
       </nav>
@@ -46,68 +44,70 @@
     <section class="hero" id="top">
       <div class="wrap hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow">Product research on your own computer</p>
-          <h1>The listing tells half the story.</h1>
-          <p class="lead">Kriko shows what is known to go wrong with the exact product you are looking at, with the source beside every finding. It works on any listing site and keeps its research on your machine.</p>
+          <p class="label">Find what you did not know to ask</p>
+          <h1>The listing tells <span>half the story.</span></h1>
+          <p class="lead">Kriko shows what is known to go wrong with the exact product on the page you are reading. Every finding keeps the source it came from.</p>
           <div class="actions">
             <a class="button" href="https://github.com/Berbadov/kriko/releases/latest"><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg><span>Get Kriko for Windows</span></a>
             <a class="button ghost" href="#how">See how it works</a>
           </div>
-          <p class="fine">Free and open source · No account · Windows</p>
+          <p class="fine">Free · Open source · No account</p>
         </div>
-        <figure class="hero-shot">
-          <picture>
-            <source srcset="assets/examples/hero-dark.webp" media="(prefers-color-scheme: dark)">
-            <img src="assets/examples/hero-light.webp" width="760" height="800" alt="The Kriko panel open beside a laptop listing. It lists four things to check, from a serious storage mismatch down to a minor battery note.">
-          </picture>
-          <figcaption>An invented example. The product, listing and findings are made up; the panel is the real extension.</figcaption>
+        <figure class="stage">
+          <div class="stage-sky">
+            <picture>
+              <source srcset="assets/examples/laptop-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="assets/examples/laptop-light.webp" width="400" height="768" alt="The Kriko panel for an invented laptop. It lists four things to check, from a serious storage mismatch down to a minor battery note.">
+            </picture>
+          </div>
+          <figcaption>An invented laptop in the real panel.</figcaption>
         </figure>
       </div>
     </section>
 
-    <section class="trust" aria-label="What Kriko promises">
-      <ul class="wrap trust-list">
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>A source beside every finding</span></li>
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Your research stays on your computer</span></li>
-        <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg><span>Free and open source</span></li>
+    <section class="promises" aria-label="What Kriko promises">
+      <ul class="wrap promise-list">
+        <li>A source beside every finding</li>
+        <li>Your research stays on your computer</li>
+        <li>Free and open source</li>
       </ul>
     </section>
 
     <section class="section" id="how">
       <div class="wrap">
-        <p class="eyebrow">How it works</p>
-        <h2>Three steps, on the page you are already reading.</h2>
+        <p class="label"><span class="index">01</span>How it works</p>
+        <h2>What happens when you open a listing.</h2>
 
         <ol class="steps">
           <li class="step">
             <div class="step-copy">
-              <span class="step-number">1</span>
-              <h3>Open a product page.</h3>
-              <p>Kriko reads the listing on your computer and looks the exact product up in the catalogs you have installed. Nothing about the page is sent to Kriko.</p>
+              <span class="step-number">01</span>
+              <h3>You open a product page.</h3>
+              <p>Kriko reads the listing on your computer and looks that exact product up in the catalogs you installed. Nothing about the page is sent to Kriko.</p>
             </div>
-            <picture class="panel-shot">
-              <source srcset="assets/examples/laptop-dark.webp" media="(prefers-color-scheme: dark)">
-              <img src="assets/examples/laptop-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented laptop. Four findings are grouped by part: storage, cooling, power and battery.">
+            <picture class="shot wide">
+              <source srcset="assets/examples/hero-dark.webp" media="(prefers-color-scheme: dark)">
+              <img src="assets/examples/hero-light.webp" width="760" height="800" loading="lazy" alt="The Kriko panel open beside an invented laptop listing, listing four things to check.">
             </picture>
           </li>
           <li class="step">
             <div class="step-copy">
-              <span class="step-number">2</span>
-              <h3>See what is known to go wrong.</h3>
+              <span class="step-number">02</span>
+              <h3>It shows what is known to go wrong.</h3>
               <p>Each finding says how serious it is, how well it is supported and what to ask or check. Open one to read the source it came from.</p>
             </div>
-            <picture class="panel-shot">
+            <picture class="shot">
               <source srcset="assets/examples/claim-open-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/claim-open-light.webp" width="400" height="768" loading="lazy" alt="One finding opened. It explains that the review tested a different storage size, and suggests what to ask the seller.">
             </picture>
           </li>
           <li class="step">
             <div class="step-copy">
-              <span class="step-number">3</span>
-              <h3>Research what nobody has written down yet.</h3>
-              <p>If no catalog knows the product, your own AI agent researches it and the result is saved with its sources. When it finds nothing, Kriko says it found nothing. It never says the product is fine.</p>
+              <span class="step-number">03</span>
+              <h3>If nobody has written it down, your agent looks.</h3>
+              <p>When no catalog knows the product, your own AI agent researches it and the result is saved with its sources. If it finds nothing, Kriko says it found nothing. It never says the product is fine.</p>
             </div>
-            <picture class="panel-shot">
+            <picture class="shot">
               <source srcset="assets/examples/research-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/research-light.webp" width="400" height="768" loading="lazy" alt="The research card for an invented pair of headphones. A quick look found three things to know, with the number of pages read.">
             </picture>
@@ -118,41 +118,45 @@
 
     <section class="section soft" id="examples">
       <div class="wrap">
-        <p class="eyebrow">Examples</p>
+        <p class="label"><span class="index">02</span>Examples</p>
         <h2>Four invented products, in the real panel.</h2>
-        <p class="section-lead">New or used, the panel looks the same. Everything about these products is made up, so it assesses no real brand. Real findings link to a real source.</p>
+        <p class="section-lead">Nothing here is real, not the products and not the findings. They only show how the panel reads, new or used. Real findings link to a real source.</p>
         <ul class="gallery">
           <li>
-            <picture class="panel-shot">
+            <p class="tag">Used · Hatchback</p>
+            <picture class="shot">
               <source srcset="assets/examples/hatchback-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/hatchback-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented used hatchback. Findings include water in the rear footwell and a timing belt that may be overdue.">
             </picture>
             <h3>Hatchback D, 2017</h3>
-            <p>Used. A damp carpet and a service interval worth asking about.</p>
+            <p>A damp carpet and a service interval worth asking about.</p>
           </li>
           <li>
-            <picture class="panel-shot">
+            <p class="tag">New · Laptop</p>
+            <picture class="shot">
               <source srcset="assets/examples/laptop-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/laptop-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented laptop. Four findings are grouped by part: storage, cooling, power and battery.">
             </picture>
             <h3>Laptop A, 256 GB</h3>
-            <p>New. The review tested a bigger drive than the one in the basket.</p>
+            <p>The review tested a bigger drive than the one in the basket.</p>
           </li>
           <li>
-            <picture class="panel-shot">
+            <p class="tag">New · Headphones</p>
+            <picture class="shot">
               <source srcset="assets/examples/headphones-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/headphones-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for invented wireless headphones. Findings include a cracking hinge and flaking ear pads.">
             </picture>
             <h3>Headphones B</h3>
-            <p>New. A crack near the swivel, and what to check before it matters.</p>
+            <p>A crack near the swivel, and what to check before it matters.</p>
           </li>
           <li>
-            <picture class="panel-shot">
+            <p class="tag">New · Coffee machine</p>
+            <picture class="shot">
               <source srcset="assets/examples/espresso-dark.webp" media="(prefers-color-scheme: dark)">
               <img src="assets/examples/espresso-light.webp" width="400" height="768" loading="lazy" alt="The Kriko panel for an invented espresso machine. Findings include a pump that weakens after a year and scale in hard water.">
             </picture>
             <h3>Espresso machine C</h3>
-            <p>New. A pump that tires and a boiler that scales.</p>
+            <p>A pump that tires and a boiler that scales.</p>
           </li>
         </ul>
         <p class="note">The panel is in English for now. The Turkish site describes it in Turkish.</p>
@@ -162,28 +166,30 @@
     <section class="section" id="catalogs">
       <div class="wrap two">
         <div>
-          <p class="eyebrow">Catalogs</p>
+          <p class="label"><span class="index">03</span>Known models</p>
           <h2>Know the model before the test drive.</h2>
           <p>A catalog is one product category, written down with its sources. The Cars catalog covers engines, gearboxes, electrics and bodywork, in English and Turkish. Install it from <strong>Catalogs</strong> in the app and lookups work offline.</p>
         </div>
         <div>
-          <p class="eyebrow">Not in a catalog?</p>
+          <p class="label"><span class="index">04</span>Everything else</p>
           <h2>Ask your own agent to look.</h2>
           <p><strong>Quick look</strong> sends the agent you chose to research a product no catalog covers, and keeps the sources. It needs an internet connection. Free if your agent is free; a paid provider bills your own account.</p>
         </div>
       </div>
     </section>
 
-    <section class="section soft" id="get">
+    <div class="band" role="presentation"></div>
+
+    <section class="section" id="get">
       <div class="wrap">
-        <p class="eyebrow">Get started</p>
-        <h2>Set up once, then just browse.</h2>
+        <p class="label"><span class="index">05</span>Install</p>
+        <h2>Four steps, once.</h2>
         <div class="get-grid">
           <ol class="setup">
-            <li><h3>Install the app.</h3><p>Download the Windows installer and open Kriko. It needs no administrator rights. The first-start setup walks you through the rest.</p></li>
-            <li><h3>Add knowledge.</h3><p>Open <strong>Catalogs</strong>, choose <strong>Find release catalogs</strong> and install one. You can also research without one.</p></li>
-            <li><h3>Add Kriko to your browser.</h3><p>Open <strong>More</strong>, then <strong>Set up Kriko</strong>, and press <strong>Prepare browser extension</strong>. Follow the steps for Chrome, Edge or Brave.</p></li>
-            <li><h3>Open a listing.</h3><p>Keep Kriko running, open a product page and press <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> or the toolbar button. Read the findings and follow the sources.</p></li>
+            <li><span class="step-number">01</span><div><h3>Install the app.</h3><p>Download the Windows installer and open Kriko. It needs no administrator rights. The first-start setup walks you through the rest.</p></div></li>
+            <li><span class="step-number">02</span><div><h3>Add knowledge.</h3><p>Open <strong>Catalogs</strong>, choose <strong>Find release catalogs</strong> and install one. You can also research without one.</p></div></li>
+            <li><span class="step-number">03</span><div><h3>Add Kriko to your browser.</h3><p>Open <strong>More</strong>, then <strong>Set up Kriko</strong>, and press <strong>Prepare browser extension</strong>. Follow the steps for Chrome, Edge or Brave.</p></div></li>
+            <li><span class="step-number">04</span><div><h3>Open a listing.</h3><p>Keep Kriko running, open a product page and press <span class="keys"><kbd>Alt</kbd> + <kbd>K</kbd></span> or the toolbar button. Read the findings and follow the sources.</p></div></li>
           </ol>
           <div class="download-card">
             <h3>Kriko for Windows</h3>
@@ -197,10 +203,10 @@
       </div>
     </section>
 
-    <section class="section" id="data">
+    <section class="section soft" id="data">
       <div class="wrap narrow">
-        <p class="eyebrow">Your data</p>
-        <h2>Good to know.</h2>
+        <p class="label"><span class="index">06</span>Questions</p>
+        <h2>Your data, the cost and the limits.</h2>
         <div class="faq">
           <details open>
             <summary>Where does my research live?</summary>

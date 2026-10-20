@@ -12,8 +12,17 @@ npm run test:site
 
 The page is white by default and follows the visitor's system for dark. Every
 colour is a token at the top of `styles.css`; the dark theme is one block. The
-type is Geist, served from `assets/fonts/` (OFL), so no page loads anything from
-another site.
+look is Kriko's own and is kept on purpose, not left to defaults:
+
+- **Headings** are Barlow Condensed, which is the wordmark's own proportion.
+- **Body text** is Atkinson Hyperlegible Next, a face drawn for reading.
+- **The sky** is the app's dithered pixel sky, drawn by `tools/dither_sky.py` with
+  the app's own method and palette, in a light and a dark version.
+- **The paper** is a warm white, with the product's blue used only for actions,
+  numbers and links.
+
+Both typefaces are served from `assets/fonts/` (OFL), so no page loads anything
+from another site.
 
 ## Editing
 
@@ -54,7 +63,8 @@ python3 site/tools/optimise_images.py
 ```
 
 Playwright and Pillow are only needed for this step; the site itself needs
-neither. Commit the new pictures in `assets/examples/`.
+neither. Commit the new pictures in `assets/examples/`. The sky pictures are made
+the same way (`python3 site/tools/dither_sky.py`) and live in `assets/sky/`.
 
 ## Readability
 
