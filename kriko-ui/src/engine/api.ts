@@ -179,6 +179,14 @@ export interface ApiProduct {
   identity?: Record<string, unknown>
 }
 
+export interface ApiQuestion {
+  id: string
+  ask: string
+  options: string[]
+  key?: string
+  why?: string
+}
+
 export interface ApiTurn {
   steps?: ApiStep[]
   activity?: ApiActivity[]
@@ -186,6 +194,10 @@ export interface ApiTurn {
   answer?: string
   products?: ApiProduct[]
   followups?: string[]
+  /** The one question a turn asked instead of answering. */
+  questions?: ApiQuestion[]
+  /** The answer is final although the job may still be naming follow-ups. */
+  answer_final?: boolean
 }
 
 export interface ApiJob {

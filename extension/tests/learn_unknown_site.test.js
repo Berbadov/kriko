@@ -87,13 +87,13 @@ test("an unknown product on a site nothing reads offers the site to be learned t
 test("the worker's nudge brings the panel up, and does not close one that is open", () => {
   const p = loadPanel({ analyzeResponse: noAdapter(), workerResponse: worker() });
   assert.equal(p.shadow(), null);
-  p.deliverMessage({ type: "KRIKO_LEARN_NUDGE" });
+  p.deliverMessage({ type: "KRIKO_SHOW_PANEL" });
   assert.ok(p.shadow(), "the panel is on screen");
-  p.deliverMessage({ type: "KRIKO_LEARN_NUDGE" });
+  p.deliverMessage({ type: "KRIKO_SHOW_PANEL" });
   assert.ok(p.shadow(), "a second nudge is not a toggle");
 });
 
-// ── the worker's side: which pages are worth a nudge ────────────────────
+// ── the worker's side: which pages may open the panel by itself ─────────
 
 const ELSEWHERE = "https://elsewhere.invalid/p/1";
 const page = (product, fields = {}) => ({
@@ -101,56 +101,80 @@ const page = (product, fields = {}) => ({
 });
 const tab = (scrape) => ({
   GET_SCRAPE: { ok: true, payload: scrape },
-  KRIKO_LEARN_NUDGE: { ok: true },
+  KRIKO_SHOW_PANEL: { ok: true },
 });
 const routes = (analysis = { readable: false, reason: "unreadable" }) => ({
   "/api/adapters": [], "/api/analyze": analysis,
 });
-const nudges = (h) => h.state.tabMessages.filter((m) => m.message.type === "KRIKO_LEARN_NUDGE");
+const shown = (h) => h.state.tabMessages.filter((m) => m.message.type === "KRIKO_SHOW_PANEL");
 
-test("a product page on an unread site is nudged once, however many of its pages are opened", async () => {
+const READ_ADAPTER = [{
+  id: "x", site: "elsewhere.invalid", match: ["*elsewhere.invalid/ilan/*"], labels: [],
+}];
+const READABLE = { adapter: "x", identity: {}, context: {}, coverage: "NO_CLAIMS",
+  method: "narrowed", flags: [], verdict: "recognised", score: 1, claims: [], packs: [] };
+
+test("an unread site is never opened by itself, however product-like its page", async () => {
   const h = loadBackground({
     routes: routes(), tabResponses: tab(page({ name: "Acme Roadster", typed: true }, { "ld:@type": "product" })),
   });
-  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }), (e) => e.code === "UNKNOWN_PRODUCT" || e.code === "NO_ADAPTER");
-  assert.equal(nudges(h).length, 1);
-  assert.equal(nudges(h)[0].tabId, 1);
+  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }),
+    (e) => e.code === "UNKNOWN_PRODUCT" || e.code === "NO_ADAPTER");
+  assert.equal(shown(h).length, 0, "the reader opens this one from the toolbar");
   const entry = Object.values(h.state.session).find((one) => one && one.code);
-  assert.equal(entry.learnable, true, "the panel is told, so the card it opens can offer Learn");
-
-  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE + "2", { auto: true }));
-  assert.equal(nudges(h).length, 1, "the same site is not asked about again this session");
+  assert.equal(entry.learnable, true, "the card still offers Learn once the reader opens the panel");
 });
 
-test("an unknown product on an unread site is nudged the same way", async () => {
+test("an unknown product on an unread site is not opened by itself either", async () => {
   const h = loadBackground({
     routes: routes({ readable: false, reason: "unknown_product", product: { name: "Acme Roadster" } }),
     tabResponses: tab(page({ name: "Acme Roadster", typed: true })),
   });
-  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }), (e) => e.code === "UNKNOWN_PRODUCT");
-  assert.equal(nudges(h).length, 1);
+  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }),
+    (e) => e.code === "UNKNOWN_PRODUCT");
+  assert.equal(shown(h).length, 0);
 });
 
-test("an ordinary page on an unread site is left alone", async () => {
-  const h = loadBackground({ routes: routes(), tabResponses: tab(page({ name: "Home", typed: false })) });
-  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }));
-  assert.equal(nudges(h).length, 0);
-});
-
-test("pressing the toolbar is the reader asking, so nothing is nudged", async () => {
+test("a site Kriko reads opens its own panel once, however many pages are opened", async () => {
   const h = loadBackground({
-    routes: routes(), tabResponses: tab(page({ name: "Acme Roadster", typed: true }, { "ld:@type": "product" })),
-  });
-  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, {}));
-  assert.equal(nudges(h).length, 0);
-});
-
-test("a site Kriko already reads is never nudged to be learned", async () => {
-  const h = loadBackground({
-    routes: { "/api/adapters": [{ id: "x", site: "elsewhere.invalid", match: ["*elsewhere.invalid/ilan/*"], labels: [] }],
-      "/api/analyze": { readable: false } },
+    routes: { "/api/adapters": READ_ADAPTER, "/api/analyze": READABLE },
     tabResponses: tab(page({ name: "Acme Roadster", typed: true })),
   });
+  await h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true });
+  assert.equal(shown(h).length, 1);
+  assert.equal(shown(h)[0].tabId, 1);
+
+  await h.sandbox.runAnalysisForTab(1, ELSEWHERE + "2", { auto: true });
+  assert.equal(shown(h).length, 1, "the same site is not opened again this session");
+});
+
+test("an unknown product on a site Kriko reads opens the panel to be researched", async () => {
+  const h = loadBackground({
+    routes: {
+      "/api/adapters": READ_ADAPTER,
+      "/api/analyze": { readable: false, reason: "unknown_product", product: { name: "Acme Roadster" } },
+    },
+    tabResponses: tab(page({ name: "Acme Roadster", typed: true })),
+  });
+  await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }),
+    (e) => e.code === "UNKNOWN_PRODUCT");
+  assert.equal(shown(h).length, 1);
+});
+
+test("an ordinary page on a site Kriko reads is not opened", async () => {
+  const h = loadBackground({
+    routes: { "/api/adapters": READ_ADAPTER, "/api/analyze": READABLE },
+    tabResponses: tab(page({ name: "Home", typed: false })),
+  });
   await assert.rejects(() => h.sandbox.runAnalysisForTab(1, ELSEWHERE, { auto: true }));
-  assert.equal(nudges(h).length, 0);
+  assert.equal(shown(h).length, 0, "there is no product here to show");
+});
+
+test("pressing the toolbar is the reader asking, so nothing is opened for them", async () => {
+  const h = loadBackground({
+    routes: { "/api/adapters": READ_ADAPTER, "/api/analyze": READABLE },
+    tabResponses: tab(page({ name: "Acme Roadster", typed: true })),
+  });
+  await h.sandbox.runAnalysisForTab(1, ELSEWHERE, {});
+  assert.equal(shown(h).length, 0);
 });
