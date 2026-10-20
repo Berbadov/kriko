@@ -4,6 +4,7 @@ import { useAbout, useKeys, usePrefsDoc, useSpent, type KeyRow } from '../../eng
 import { usePrefs, type Profile, type ThemePref } from '../../prefs'
 import { startTour } from '../../tour/Tour'
 import { Chip, Segmented, Select, Switch } from '../controls'
+import { McpClientsGroup } from './McpClients'
 
 const THEMES: { value: ThemePref; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -210,6 +211,8 @@ export function SettingsPanel(_: { onOpen?: (lookupId: string) => void }) {
       )}
 
       <KeysGroup />
+
+      <McpClientsGroup />
 
       {spent && (
         <section className="panel-group">
