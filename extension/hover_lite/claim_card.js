@@ -39,6 +39,56 @@
       .replace(/`([^`\n]+?)`/g, "<code>$1</code>");
   }
 
+  /* ─── The sources a claim stands on ────────────────────────────────────
+   *
+   * A finding reads claim first, then where it came from and the words it
+   * quotes (#262). One reader of a source row for every card, so a stored
+   * claim and a quick look's finding show their evidence the same way.
+   * Only an http(s) address becomes a link; anything else is shown as text,
+   * because a source row is data a pack or an agent wrote. */
+  function hostOf(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ""); } catch (_) { return ""; }
+  }
+
+  function readSources(claim) {
+    const rows = Array.isArray(claim && claim.sources) ? claim.sources : [];
+    return rows
+      .filter((row) => row && typeof row === "object" && (row.quote || row.url))
+      .map((row) => {
+        const url = /^https?:\/\//i.test(String(row.url || "")) ? String(row.url) : "";
+        return {
+          url,
+          domain: String(row.domain || hostOf(url) || row.url || ""),
+          quote: String(row.quote || "").replace(/\s+/g, " ").trim(),
+          disputes: row.stance === "refutes",
+        };
+      });
+  }
+
+  function sourceMarkup(source) {
+    const link = source.url
+      ? `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.domain)}</a>`
+      : `<span>${escapeHtml(source.domain)}</span>`;
+    return `<figure class="lite-rc-src"${source.disputes ? ' data-stance="refutes"' : ""}>
+      ${source.quote ? `<blockquote>\u201c${escapeHtml(source.quote)}\u201d</blockquote>` : ""}
+      <figcaption>${link}${source.disputes ? ' <span class="lite-rc-src-note">disputes this</span>' : ""}</figcaption>
+    </figure>`;
+  }
+
+  /* The first two are shown; the rest fold away, so a claim with six sources
+   * is not a card six quotes tall. */
+  const SOURCES_SHOWN = 2;
+  function sourcesMarkup(sources) {
+    if (!sources.length) return "";
+    const shown = sources.slice(0, SOURCES_SHOWN).map(sourceMarkup).join("");
+    const rest = sources.slice(SOURCES_SHOWN);
+    return `<div class="lite-rc-sources">
+      <div class="lite-rc-label">${sources.length === 1 ? "Source" : `Sources \u00b7 ${sources.length}`}</div>
+      ${shown}
+      ${rest.length ? `<details class="lite-rc-more"><summary>${rest.length} more source${rest.length === 1 ? "" : "s"}</summary>${rest.map(sourceMarkup).join("")}</details>` : ""}
+    </div>`;
+  }
+
   /** Whether this claim can be re-checked: an identity the app can look up,
    * and a page to re-read. */
   function canCheck(claim) {
@@ -82,6 +132,12 @@
       (w) => !/ severity$/.test(w) && !/^from pack:/.test(w)
     );
 
+    const sources = readSources(claim);
+    // The first quote, ahead of opening the card: the claim is the headline
+    // and its evidence is the line under it, so a collapsed card already says
+    // what it rests on.
+    const peekSource = sources.find((one) => one.quote);
+
     const article = document.createElement("article");
     article.className = "lite-rc";
     article.dataset.sev = sev;
@@ -101,6 +157,7 @@
             <span class="sep" aria-hidden="true"> · </span><span>${escapeHtml(claim.domain || "")}</span>
             ${confText ? `<span class="sep" aria-hidden="true"> · </span><span>conf ${confText}</span>` : ""}
           </div>
+          ${peekSource ? `<div class="lite-rc-peek"><span class="lite-rc-peek-src">${escapeHtml(peekSource.domain)}</span> \u201c${escapeHtml(peekSource.quote)}\u201d</div>` : ""}
         </div>
         <button type="button" class="lite-rc-toggle"
                 aria-expanded="${open ? "true" : "false"}"
@@ -113,6 +170,7 @@
         <div class="lite-rc-bodyclip">
           <div class="lite-rc-body">
             <p class="lite-rc-text">${renderRichText(claim.body || "")}</p>
+            ${sourcesMarkup(sources)}
             ${shownWhy.length ? `
               <div class="lite-rc-why">
                 ${shownWhy.map((w) => `<span class="lite-rc-why-chip">${escapeHtml(w)}</span>`).join("")}
@@ -215,6 +273,7 @@
     factClaimCard,
     canCheck,
     renderRichText,
+    readSources,
     FACT_WORD,
   };
 })();

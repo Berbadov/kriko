@@ -1949,11 +1949,6 @@
 .lite-quick { display: grid; gap: 8px; margin: 10px 0; }
 .lite-quick-assumed { margin: 0; color: var(--fg-muted); font-size: 12px; }
 .lite-quick-cards { display: grid; gap: 8px; }
-.lite-quick-src {
-  margin: 8px 0 0; padding: 6px 10px; border-left: 2px solid var(--accent);
-  color: var(--fg-body); font-size: 12px; font-style: italic;
-}
-.lite-quick-src a { color: var(--accent); font-style: normal; }
 
 /* ═════════════════════════════════════════════
    The Kriko design system, worn by the panel
@@ -2214,6 +2209,49 @@
 .lite-rc-body { border-top-color: var(--border-soft); }
 .lite-rc-text { font-size: 13px; color: var(--fg-body); }
 
+/* A finding reads claim first, then the words it rests on and where they came
+   from (#262). Collapsed, the card shows its first quote under the claim;
+   opened, the claim's own text and then every source, quote above address. */
+.lite-rc-peek {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-style: italic;
+  color: var(--fg-muted);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.lite-rc-peek-src { font-style: normal; font-size: 11px; font-weight: 600; color: var(--fg-muted); }
+.lite-rc-peek-src::after { content: ":"; }
+.lite-rc[data-open="1"] .lite-rc-peek,
+.lite-rc[data-compact="1"] .lite-rc-peek { display: none; }
+.lite-rc-label {
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--fg-muted);
+}
+.lite-rc-sources { display: flex; flex-direction: column; gap: 2px; }
+.lite-rc-src { margin: 6px 0 0; padding: 0 0 0 10px; border-left: 2px solid var(--accent); }
+.lite-rc-src[data-stance="refutes"] { border-left-color: var(--med-ink); }
+.lite-rc-src blockquote {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--fg-body);
+  overflow-wrap: anywhere;
+}
+.lite-rc-src figcaption { margin-top: 3px; font-size: 11.5px; color: var(--fg-muted); overflow-wrap: anywhere; }
+.lite-rc-src figcaption a { color: var(--accent); text-underline-offset: 2px; }
+.lite-rc-src-note { color: var(--med-ink); font-weight: 600; }
+.lite-rc-more { margin-top: 6px; font-size: 11.5px; color: var(--fg-muted); }
+.lite-rc-more summary { cursor: pointer; }
+.lite-rc-more summary:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 4px; }
+
 /* the footer: the pack that answered, and the way into the app as a key */
 .lite-footer {
   padding: 10px 14px;
@@ -2346,7 +2384,7 @@
 .lite-research { overflow-wrap: anywhere; }
 .lite-research input, .lite-research textarea { width: 100%; min-width: 0; max-width: 100%; }
 .lite-rc-titlebox { flex: 1 1 0; }
-.lite-rc-title, .lite-rc-meta, .lite-quick-assumed, .lite-quick-src,
+.lite-rc-title, .lite-rc-meta, .lite-quick-assumed, .lite-rc-src,
 .lite-listing-title, .lite-unknown-name { overflow-wrap: anywhere; }
 .lite-research .lite-rc-toggle { flex: 0 0 30px; padding: 0; margin: 0 10px 0 0; }
 .lite-question-form { flex-wrap: wrap; }

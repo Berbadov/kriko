@@ -47,9 +47,15 @@
     const storageListeners = [];
     const CLAIMS = [
       { claim_id: "c1", pack_id: "org.kriko.cars", subject_id: "s1", title: "Timing chain tensioner wear", severity: "high", strength: "reported", domain: "engine",
-        body: "The tensioner on this engine family loosens with mileage; a rattle at cold start is the first sign.", sources: [{ url: "https://example.org/a", title: "Owner forum thread" }] },
+        body: "The tensioner on this engine family loosens with mileage; a rattle at cold start is the first sign.",
+        sources: [
+          { url: "https://example.org/a", domain: "example.org", tier: "community", stance: "supports", quote: "Mine rattles for two seconds on every cold start, the dealer said the tensioner had stretched." },
+          { url: "https://example.net/b", domain: "example.net", tier: "community", stance: "supports", quote: "Tensioner wear is the usual cause of start-up chain noise on this engine." },
+          { url: "https://example.com/c", domain: "example.com", tier: "community", stance: "supports", quote: "Replaced at 120,000 km." }] },
       { claim_id: "c2", pack_id: "org.kriko.cars", subject_id: "s1", title: "EGR valve clogging on short trips", severity: "medium", strength: "documented", domain: "emissions",
-        body: "Soot builds up in the EGR valve when the car rarely reaches temperature.", sources: [{ url: "https://example.org/b", title: "Service bulletin" }] },
+        body: "Soot builds up in the EGR valve when the car rarely reaches temperature.",
+        sources: [{ url: "https://example.org/bulletin", domain: "example.org", tier: "manufacturer", stance: "supports", quote: "Short journeys do not bring the valve to temperature, and soot accumulates until it sticks." },
+          { url: "https://example.net/egr", domain: "example.net", tier: "authoritative", stance: "supports", quote: "EGR sticking is documented on this family." }] },
       { claim_id: "c3", pack_id: "org.kriko.cars", subject_id: "s1", title: "Dual-mass flywheel judder", severity: "medium", strength: "reported", domain: "transmission",
         body: "A shudder when pulling away in first gear; the flywheel is due around 180,000 km.", sources: [] },
       { claim_id: "c4", pack_id: "org.kriko.cars", subject_id: "s1", title: "Window regulator clips", severity: "low", strength: "reported", domain: "body",
