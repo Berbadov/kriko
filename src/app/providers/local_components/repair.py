@@ -103,7 +103,8 @@ def _candidates(item: dict, sources: dict[str, str]) -> tuple[str, list[str]]:
     wanted = _words(_claim_text(item))
     url = str(item.get("url") or "").strip()
     pages = [url] if url in sources else list(sources)
-    best_url, best = "", []
+    best_url: str = ""
+    best: list[str] = []
     for one in pages:
         scored = sorted(((len(wanted & _words(sentence)), sentence)
                          for sentence in _sentences(sources[one])), key=lambda pair: -pair[0])
