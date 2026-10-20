@@ -6,6 +6,7 @@ import yaml
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
+from app import evidence
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.analyze import _context_units
@@ -54,7 +55,7 @@ def answer(store, body: LookupRequest):
         "context": body.context,
         "context_units": _context_units(store, body.context),
         "subjects": list(result.resolution.subject_ids),
-        "claims": [
+        "claims": evidence.annotate([
             {
                 "claim_id": c.claim_id,
                 "pack_id": c.pack_id,
@@ -81,12 +82,14 @@ def answer(store, body: LookupRequest):
                         "quote": s.quote,
                         "stance": s.stance,
                         "tier": s.tier,
+                        "trust": round(s.trust, 3),
                     }
                     for s in c.sources
                 ],
+                "open_conditions": list(c.open_conditions),
             }
             for c in result.claims
-        ],
+        ]),
     }
     return payload, result
 

@@ -86,6 +86,10 @@ class Outcome:
     served: bool      # may this claim still be shown?
     weight: float     # rank multiplier to apply
     reason: str       # human-readable, so why_shown can explain the downrank
+    #: False when an unstated value does not matter to this claim (`ignore`),
+    #: so an interface can tell "rests on a detail nobody gave" from "asks
+    #: nothing of the listing".
+    matters: bool = True
 
 
 OPERATORS = frozenset({
@@ -133,7 +137,8 @@ def _missing(cond: Condition) -> Outcome:
         return Outcome("unknown", False, 1.0,
                        f"{cond.key} not stated, and this claim requires it")
     if cond.on_missing == "ignore":
-        return Outcome("unknown", True, 1.0, f"{cond.key} not stated (not required)")
+        return Outcome("unknown", True, 1.0, f"{cond.key} not stated (not required)",
+                       matters=False)
     return Outcome("unknown", True, cond.weight,
                    f"{cond.key} not stated in the listing — shown, ranked lower")
 
