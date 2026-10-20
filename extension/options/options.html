@@ -29,7 +29,7 @@
         reading.
       </p>
 
-      <form id="form" novalidate>
+      <form id="form" data-step="address" novalidate>
         <label for="base">The app's address and port</label>
         <input
           id="base"
@@ -56,7 +56,7 @@
 
       <p id="status" class="status" role="status" aria-live="polite"></p>
 
-      <section class="sites">
+      <section class="sites" id="sites-section" data-step="sites">
         <h2>Sites Kriko reads</h2>
         <p class="hint">
           The packs decide what to read; this page asks permission.
