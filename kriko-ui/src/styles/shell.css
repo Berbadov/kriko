@@ -59,7 +59,7 @@
 
 .titlebar-btn.close:hover {
   background: var(--risk);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 .titlebar-btn:focus-visible {
