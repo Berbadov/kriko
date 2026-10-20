@@ -1,0 +1,108 @@
+[
+  {
+    "id":"shoe-easy-eva", "category":"shoe", "complexity":"easy", "deadline_s":20,
+    "question":"Birkenstock Arizona Essentials EVA: verify its footbed material, upper/sole construction, and waterproof claim.",
+    "primary_domains":["birkenstock.com"], "primary_min":1,
+    "references":["https://www.birkenstock.com/us/arizona-eva/arizonaeva-eva-eva-0-eva-u_856.html"],
+    "criteria":[
+      {"id":"material","fact":"The Essentials EVA footbed is EVA, not the classic cork-latex footbed.","critical":true},
+      {"id":"construction","fact":"Upper, lining and sole are one-piece molded EVA."},
+      {"id":"waterproof","fact":"Birkenstock describes the EVA variant as waterproof."}
+    ]
+  },
+  {
+    "id":"shoe-heavy-gtx", "category":"shoe", "complexity":"heavy", "deadline_s":45,
+    "question":"US Salomon Speedcross 6 GTX: check waterproofness, cleaning/drying, and whether wet-feet reviews prove a model-wide defect.",
+    "primary_domains":["salomon.com"], "primary_min":2,
+    "references":["https://www.salomon.com/en-us/product/speedcross-6-gore-tex-lg9214/L49226000", "https://www.salomon.com/en-gb/b/care", "https://www.salomon.com/en-us/sg/a/how-to-clean-your-running-shoes"],
+    "criteria":[
+      {"id":"variant","fact":"The GTX/GORE-TEX variant has a waterproof, breathable membrane; do not transfer that claim to the ordinary Speedcross 6.","critical":true},
+      {"id":"clean","fact":"Clean dirt and mud with water and a soft wet brush."},
+      {"id":"machine","fact":"Salomon says not to machine-wash the shoes.","critical":true},
+      {"id":"dry","fact":"Dry at room temperature without direct sun or an external heat source."},
+      {"id":"prevalence","fact":"Individual reviews cannot establish a model-wide defect or a numerical failure rate without representative evidence.","critical":true},
+      {"id":"uncertainty","fact":"Wet-feet reports alone do not identify the entry route or prove that this individual pair has a defective membrane."}
+    ]
+  },
+  {
+    "id":"shoe-identity", "category":"shoe", "complexity":"identity", "deadline_s":12,
+    "question":"Listing says only Birkenstock Arizona, no material or photos. Can I soak them? Ask for what you need before a definite answer.",
+    "primary_domains":["birkenstock.com"], "primary_min":0, "expected_action":"clarify",
+    "references":["https://www.birkenstock.com/us/arizona-eva/arizonaeva-eva-eva-0-eva-u_856.html"],
+    "criteria":[
+      {"id":"ask","fact":"Ask for the material/variant or identifying photos/model details before deciding whether soaking is appropriate.","critical":true},
+      {"id":"separate","fact":"Do not assume every Arizona is EVA or transfer the EVA waterproof specification to a cork-latex model.","critical":true},
+      {"id":"calibrate","fact":"Give no unconditional instruction to soak an unidentified pair. Conditional explanations are acceptable."}
+    ]
+  },
+  {
+    "id":"computer-easy-m2", "category":"computer", "complexity":"easy", "deadline_s":20,
+    "question":"Apple MacBook Air M2 2022: verify native external-display count/resolution and Thunderbolt/USB4 port count.",
+    "primary_domains":["apple.com"], "primary_min":1,
+    "references":["https://support.apple.com/en-us/111867"],
+    "criteria":[
+      {"id":"display-count","fact":"Native support is one external display, not the M3/M4 display configuration.","critical":true},
+      {"id":"display-mode","fact":"The supported external display is up to 6K at 60 Hz."},
+      {"id":"ports","fact":"There are two Thunderbolt / USB 4 ports."}
+    ]
+  },
+  {
+    "id":"computer-heavy-9310", "category":"computer", "complexity":"heavy", "deadline_s":45,
+    "question":"Dell XPS 13 9310 clamshell 16GB: assess RAM/SSD upgrades and safe action for a swollen battery; avoid 2-in-1 specs.",
+    "primary_domains":["dell.com"], "primary_min":2,
+    "references":["https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-setup-and-specifications/memory?guid=guid-ba7ad7a6-eb2f-4019-8f8d-b26333a636fe&lang=en-us", "https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-service-manual/m.2-2230-solid-state-drive?guid=guid-2431c5a5-82bf-487a-b03b-2c5eb40a1539&lang=en-us", "https://www.dell.com/support/kbdoc/en-us/000128491/swollen-battery-information-and-guidance"],
+    "criteria":[
+      {"id":"ram","fact":"RAM is integrated on the system board with no memory slots; a factory 32GB option does not make this 16GB unit socket-upgradeable.","critical":true},
+      {"id":"ssd","fact":"The clamshell has a removable/serviceable M.2 SSD; do not confuse it with the 9310 2-in-1's soldered SSD.","critical":true},
+      {"id":"form-factor","fact":"Dell documents M.2 2230 or 2280 SSD configurations; check the installed configuration before selecting a replacement."},
+      {"id":"stop","fact":"For a swollen battery, stop use, power off and disconnect AC; do not continue charging it.","critical":true},
+      {"id":"service","fact":"Contact Dell/qualified service; do not puncture, crush, pry or pressure the swollen battery.","critical":true}
+    ]
+  },
+  {
+    "id":"computer-identity", "category":"computer", "complexity":"identity", "deadline_s":12,
+    "question":"A used Dell XPS 13 listing says 16GB/512GB only. Can I upgrade both? Ask for the missing identity before claiming yes or no.",
+    "primary_domains":["dell.com"], "primary_min":0, "expected_action":"clarify",
+    "references":["https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-service-manual/removing-and-installing-components?guid=guid-7fbb11d7-9820-47bb-afaa-48fa912314d9", "https://www.dell.com/support/manuals/en-ed/xps-13-9310-2-in-1-laptop/xps-13-9310-2-in-1-service-manual/removing-the-system-board?guid=guid-732ef30e-4cce-4695-ac05-adbcfa613b34&lang=en-us"],
+    "criteria":[
+      {"id":"ask","fact":"Ask for the exact model/generation or service tag and clamshell versus 2-in-1 form factor.","critical":true},
+      {"id":"no-guess","fact":"Do not infer RAM or SSD replaceability from the XPS 13 family name and capacity alone.","critical":true},
+      {"id":"conditional","fact":"Conditional explanation of model differences is acceptable, but a definite upgrade claim must await identification."}
+    ]
+  },
+  {
+    "id":"car-easy-recall", "category":"car", "complexity":"easy", "deadline_s":20,
+    "question":"For US Ford recall 24V444 / 24S37, identify the affected model year/transmission and the defect. Use official documents.",
+    "primary_domains":["nhtsa.gov","ford.com"], "primary_min":1,
+    "references":["https://static.nhtsa.gov/odi/rcl/2024/RMISC-24V444-9540.pdf", "https://static.nhtsa.gov/odi/rcl/2024/RCMN-24V444-8849.pdf"],
+    "criteria":[
+      {"id":"vehicle","fact":"The campaign concerns certain 2014 Ford F-150 vehicles.","critical":true},
+      {"id":"transmission","fact":"The affected transmission is the 6R80 six-speed automatic, not a ten-speed.","critical":true},
+      {"id":"defect","fact":"Unexpected downshifting is related to loss/interruption of the transmission output-shaft speed signal."}
+    ]
+  },
+  {
+    "id":"car-heavy-transfer", "category":"car", "complexity":"heavy", "deadline_s":45,
+    "question":"US 2021 F-150 3.5 EcoBoost ten-speed, VIN unknown: a seller cites 24V444. Check applicability, remedy and what is unconfirmed.",
+    "primary_domains":["nhtsa.gov","ford.com"], "primary_min":2,
+    "references":["https://static.nhtsa.gov/odi/rcl/2024/RMISC-24V444-9540.pdf", "https://static.nhtsa.gov/odi/rcl/2024/RCMN-24V444-8849.pdf", "https://www.nhtsa.gov/recalls"],
+    "criteria":[
+      {"id":"scope","fact":"24V444 concerns certain 2014 F-150 six-speed 6R80 vehicles, not the described 2021 ten-speed.","critical":true},
+      {"id":"no-transfer","fact":"Do not transfer that campaign's defect or repair instructions to this different model year/transmission.","critical":true},
+      {"id":"remedy","fact":"The cited 2014 campaign's technical instructions involve PCM programming and may require further diagnostics/parts for specified DTCs; do not declare that this 2021 vehicle needs that repair."},
+      {"id":"vin","fact":"Use the vehicle's VIN with NHTSA/Ford or a dealer to establish its own open recalls and completion status.","critical":true},
+      {"id":"unknown","fact":"Rejecting this particular campaign does not prove the 2021 vehicle has no other recalls, defects or transmission problems.","critical":true}
+    ]
+  },
+  {
+    "id":"car-identity", "category":"car", "complexity":"identity", "deadline_s":12,
+    "question":"A VW Golf automatic listing omits year, engine, market and VIN. Is its DSG dry-clutch, and which recalls apply? Ask first.",
+    "primary_domains":["volkswagen.com","volkswagen-newsroom.com","nhtsa.gov"], "primary_min":0, "expected_action":"clarify",
+    "references":["https://www.nhtsa.gov/recalls"],
+    "criteria":[
+      {"id":"powertrain","fact":"Ask for model/build year, engine and gearbox/trim details before identifying the transmission/clutch type.","critical":true},
+      {"id":"market-vin","fact":"Ask for market and VIN or recommend a VIN-based official recall check before claiming applicability.","critical":true},
+      {"id":"no-universal","fact":"Do not assert that every automatic Golf uses a particular DSG or that all DSG gearboxes are dry-clutch.","critical":true}
+    ]
+  }
+]
