@@ -459,3 +459,18 @@ test('both languages request matching content-versioned scripts and styles after
     }
   }
 });
+
+test('the privacy policy is its own page, loads nothing from third parties, and both home pages link to it', () => {
+  const policy = new JSDOM(fs.readFileSync(path.join(root, 'privacy/index.html'), 'utf8'), {url: 'https://kriko.cc/privacy/'}).window.document;
+  assert.equal(policy.querySelector('link[rel="canonical"]').href, 'https://kriko.cc/privacy/');
+  assert.equal(policy.querySelectorAll('script').length, 0);
+  for (const el of policy.querySelectorAll('[src], link[rel="stylesheet"], link[rel="icon"]')) {
+    const value = el.getAttribute('src') || el.getAttribute('href');
+    assert.ok(!/^https?:/.test(value), `${value} is a third-party load`);
+    assert.ok(fs.existsSync(path.resolve(root, 'privacy', value.split('?')[0])), value);
+  }
+  for (const file of ['index.html', 'tr/index.html']) {
+    const d = new JSDOM(fs.readFileSync(path.join(root, file), 'utf8')).window.document;
+    assert.ok(d.querySelector('footer a[href="/privacy/"]'), `${file} has no link to the privacy policy`);
+  }
+});
