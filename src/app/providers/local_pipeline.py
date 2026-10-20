@@ -153,6 +153,31 @@ PAIR_SCHEMA = {
 }
 
 
+#: Re-asks one run may spend on replies that were not JSON. Each is one more
+#: model call on a CPU, so the allowance is small and a failed re-ask ends it.
+REASKS_PER_RUN = 4
+
+REASK = (
+    "\n\n## Your last reply was not valid JSON\n\n{last}\n\nReply again with "
+    "ONLY the JSON object the task asks for: its first character is {{ and its "
+    "last is }}. No prose and no code fence."
+)
+
+
+def read_object(raw: str) -> dict | None:
+    """The JSON object inside a reply that wraps it in a fence or a sentence.
+
+    The reader every other door uses (`packauthor.read_payload`): a fenced
+    object first, else the last whole object, else one closed at its last
+    finished item. `None` when there is no object to read, which is a reply
+    in prose, not a reply of the wrong shape.
+    """
+    from app.packauthor import read_payload
+
+    found = read_payload(raw or "")[0]
+    return found if isinstance(found, dict) and found else None
+
+
 def clip(text: str, size: int) -> str:
     """Byte budget, conservatively safe for multilingual context."""
     return text.encode("utf-8")[:max(0, size)].decode("utf-8", "ignore")
@@ -320,12 +345,62 @@ class QuickLookPipeline:
             "rejection_reasons": {},
             "errors": [], "status": "searching",
         }
+        self.coverage["json_repair"] = {"read_tolerantly": 0, "asked_again": 0, "recovered": 0}
+        self._reasks_left = REASKS_PER_RUN
         self.identity = None
         self._source_kinds: dict[tuple[str, ...], str] = {}
         self._verification_reason = ""
         self.agent.coverage = self.coverage
 
     def _call(self, prompt: str, schema: dict) -> dict:
+        """One structured stage: the reply read as the JSON object it is.
+
+        A runtime that constrains decoding returns clean JSON and costs
+        nothing here. One that refuses the constraint (`structured_output`
+        says `unconstrained`) lets a small model fence its object, write a
+        sentence around it, or answer in prose once. The first two are read
+        around; the third is asked again, once, quoting the reply back. The
+        run's whole re-ask allowance is `REASKS_PER_RUN`, and the first
+        re-ask that fails ends it: a model that could not hold the shape
+        when told will not hold it on the next stage either.
+        """
+        raw = self._raw(prompt, schema)
+        try:
+            found = json.loads(raw.strip())
+        except (ValueError, TypeError):
+            found = None
+            repairs = self.coverage["json_repair"]
+            payload = read_object(raw)
+            if payload is not None:
+                repairs["read_tolerantly"] += 1
+                return payload
+            if self._reasks_left > 0 and self._fits_reask(prompt, raw):
+                self._reasks_left -= 1
+                repairs["asked_again"] += 1
+                self.agent._say("the reply was not JSON; asking once more")
+                again = self._raw(prompt + REASK.format(last=raw[:400]), schema)
+                try:
+                    found = json.loads(again.strip())
+                except (ValueError, TypeError):
+                    found = read_object(again)
+                if isinstance(found, dict):
+                    repairs["recovered"] += 1
+                    return found
+                self._reasks_left = 0
+            raise LocalInferenceError("Model returned invalid structured evidence.") from None
+        if not isinstance(found, dict):
+            raise LocalInferenceError("Model returned the wrong evidence shape.")
+        return found
+
+    def _fits_reask(self, prompt: str, raw: str) -> bool:
+        """The re-ask is the same prompt plus the bad reply; it must still fit."""
+        allowed = getattr(self.agent._complete, "prompt_bytes_allowed", None)
+        if not callable(allowed):
+            return True
+        extra = len((REASK.format(last=raw[:400])).encode("utf-8"))
+        return len(prompt.encode("utf-8")) + extra <= allowed()
+
+    def _raw(self, prompt: str, schema: dict) -> str:
         self.agent._check()
         socket = self.agent._complete
         previous = getattr(socket, "max_tokens", None)
@@ -348,13 +423,7 @@ class QuickLookPipeline:
         self.agent._check()
         if getattr(socket, "last_finish_reason", "") == "length":
             raise LocalInferenceError("Model reply was truncated; this stage is incomplete.")
-        try:
-            payload = json.loads(raw.strip())
-        except (ValueError, TypeError) as error:
-            raise LocalInferenceError("Model returned invalid structured evidence.") from error
-        if not isinstance(payload, dict):
-            raise LocalInferenceError("Model returned the wrong evidence shape.")
-        return payload
+        return raw
 
     def _error(self, stage: str, error: Exception) -> None:
         self.coverage["errors"].append({"stage": stage, "reason": str(error)[:250]})
