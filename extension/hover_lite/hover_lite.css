@@ -55,6 +55,17 @@
   --well:        #0f121a;
   --border-control: rgba(255,255,255,0.16);
 
+  /* The panel lets the page show through (#260). The colour is kept as bare
+     channels so one alpha can sit over it; the alpha and the backdrop are
+     tuned per theme so the three text levels stay at or above 4.5:1 over the
+     worst page there is (a white one under the dark panel, a black one under
+     the light one; a test computes it from these very values). `brightness` on the dark backdrop is what pays for that:
+     it is a pane of smoked glass, not a clear one. Settings can make it
+     opaque (`data-glass="solid"`), and so does the system's own request. */
+  --bg-panel-rgb: 9, 11, 17;
+  --glass-panel-alpha: 0.72;
+  --glass-backdrop: blur(16px) saturate(1.6) brightness(0.6);
+
   /* Accent, resolved from the panel's alias */
   --accent:      #7b98ff;
 
@@ -121,6 +132,9 @@
   --light-glass-3:      rgba(16, 20, 40, 0.10);
   --light-well:         #f2f3f7;
   --light-border-control: rgba(12,18,40,0.17);
+  --light-bg-panel-rgb: 242, 243, 247;
+  --light-glass-panel-alpha: 0.88;
+  --light-glass-backdrop: blur(16px) saturate(1.6);
   --light-accent:       #2448d6;
 
   --light-hover-face:  #e9ecf4;
@@ -280,6 +294,9 @@
     --glass-3: var(--light-glass-3);
     --well: var(--light-well);
     --border-control: var(--light-border-control);
+    --bg-panel-rgb: var(--light-bg-panel-rgb);
+    --glass-panel-alpha: var(--light-glass-panel-alpha);
+    --glass-backdrop: var(--light-glass-backdrop);
     --accent: var(--light-accent);
     --hover-face: var(--light-hover-face);
     --hover-edge: var(--light-hover-edge);
@@ -340,6 +357,9 @@
   --glass-3: var(--light-glass-3);
   --well: var(--light-well);
   --border-control: var(--light-border-control);
+  --bg-panel-rgb: var(--light-bg-panel-rgb);
+  --glass-panel-alpha: var(--light-glass-panel-alpha);
+  --glass-backdrop: var(--light-glass-backdrop);
   --accent: var(--light-accent);
   --hover-face: var(--light-hover-face);
   --hover-edge: var(--light-hover-edge);
@@ -362,6 +382,20 @@
   --shadow-card: var(--light-shadow-card);
   --well-shadow: var(--light-well-shadow);
   color-scheme: light;
+}
+
+/* Opaque, for a reader who finds the glass hard to read: the Settings choice
+   (`data-glass="solid"` on the host) or the system's own request for less
+   transparency. After both light mappings so it wins over either. */
+:host([data-glass="solid"]) {
+  --glass-panel-alpha: 1;
+  --glass-backdrop: none;
+}
+@media (prefers-reduced-transparency: reduce) {
+  :host, :host([data-theme]), :host:not([data-theme="dark"]) {
+    --glass-panel-alpha: 1;
+    --glass-backdrop: none;
+  }
 }
 
 /* Motion profiles. Standard is what the tokens above already hold; Calm and
@@ -447,7 +481,8 @@
   z-index: 2147483000;
   font-family: var(--font-body);
   color: var(--fg);
-  background: var(--bg-panel);
+  -webkit-backdrop-filter: var(--glass-backdrop);
+  backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--border);
   overflow: hidden;
   display: flex;
@@ -1895,7 +1930,7 @@
 .lite-panel {
   background:
     radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%),
-    var(--bg-base);
+    rgba(var(--bg-panel-rgb), var(--glass-panel-alpha));
   border: 1px solid var(--border);
   border-radius: 22px;
   box-shadow:
@@ -2924,3 +2959,9 @@
 .lite-pick-answer { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-soft); white-space: pre-wrap; }
 
 .lite-buy-check { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-muted); }
+
+/* A browser that cannot blur what is behind the panel gets the opaque one:
+   text over an unblurred page is the thing the blur exists to prevent. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lite-panel { background: radial-gradient(120% 60% at 100% 0%, rgba(44,83,224,0.10), transparent 60%), var(--bg-base); }
+}

@@ -464,6 +464,9 @@ h2 {
 /* each section is a glass card */
 form,
 .sites,
+.appearance,
+.buying,
+.tour,
 .version,
 .about {
   margin: 0 0 1.25rem;
@@ -499,6 +502,25 @@ input {
   font: 13px var(--font-mono);
 }
 input::placeholder { color: var(--fg-muted); }
+/* A tick box is a line of words with a box beside it, not a 46px field: the
+   field rule above would stretch it across the card. */
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0 0 0.6rem;
+  font: 14px/1.4 var(--font-body);
+  color: var(--fg-body);
+  cursor: pointer;
+}
+input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--brand);
+}
 /* A colour change on a hairline border is a state, not an indicator: at 1px
    and this little contrast it is easy to miss on a bright screen, and a
    keyboard user who cannot see where they are has lost the field. The ring

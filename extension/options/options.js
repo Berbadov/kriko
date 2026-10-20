@@ -485,3 +485,27 @@ try {
     }
   });
 } catch (_) { /* a fresh load reads it anyway */ }
+
+
+// ── the panel's glass, kept beside the theme ────────────────────────────
+//
+// One key, `kriko.glass`, shared with the panel: "solid" turns the see-through
+// panel opaque and anything else leaves it as it is. The panel follows a
+// change while it is open, so this page needs nothing but the write.
+
+const GLASS_KEY = "kriko.glass";
+(function panelGlass() {
+  const box = document.getElementById("panel-solid");
+  if (!box) return;
+  try {
+    chrome.storage?.local?.get?.([GLASS_KEY], (bag) => {
+      box.checked = bag?.[GLASS_KEY] === "solid";
+    });
+  } catch (_) { /* unchecked, as the panel would be */ }
+  box.addEventListener("change", () => {
+    try {
+      chrome.storage?.local?.set?.({ [GLASS_KEY]: box.checked ? "solid" : "glass" },
+        () => { void chrome.runtime.lastError; });
+    } catch (_) { /* a browser without local storage keeps the choice for this tab only */ }
+  });
+})();

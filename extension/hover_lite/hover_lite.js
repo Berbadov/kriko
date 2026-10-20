@@ -43,6 +43,10 @@
    * desktop app's own setting. Standard is the default. */
   const MOTION_KEY = "kriko.motion";
   const MOTION_PROFILES = ["calm", "standard", "vivid"];
+  /* How see-through the panel is, shared with the options page: "glass"
+   * (the default; the page shows through, blurred) or "solid" for a reader who
+   * finds that hard to read. Anything else is the default. */
+  const GLASS_KEY = "kriko.glass";
 
   /* The engine's verdict, as a word the panel shows. Three of the four are
    * worth a banner; `recognised` is the ordinary case and gets none. */
@@ -177,6 +181,8 @@
     /* The motion profile, `""` until storage has answered, in which case
      * Standard is what the stylesheet already holds. */
     motion: "",
+    /* "glass" or "solid"; `""` until storage has answered, which is glass. */
+    glass: "",
     /* A run that kept nothing has a card of its own. null means none; the
      * object is `{ title, note, coverage, evidence_pages, outcome }`. */
     researchEmpty: null,
@@ -375,6 +381,28 @@
     } catch (_) {
       // A storage that will not answer leaves Standard in place.
       paintMotion();
+    }
+  }
+
+  /* ─── Glass or solid ───────────────────────────────────────────────────
+   *
+   * The stylesheet does the work, as with the motion profile: the host's
+   * `data-glass` selects an opaque set of the two tokens the panel's
+   * background reads. Absent, the panel is glass. */
+  function paintGlass() {
+    if (hostEl) hostEl.dataset.glass = state.glass === "solid" ? "solid" : "glass";
+  }
+
+  function readGlass() {
+    try {
+      chrome.storage?.local?.get?.([GLASS_KEY], (bag) => {
+        void chrome.runtime.lastError;
+        state.glass = bag?.[GLASS_KEY] === "solid" ? "solid" : "";
+        paintGlass();
+      });
+    } catch (_) {
+      // A storage that will not answer leaves the glass in place.
+      paintGlass();
     }
   }
 
@@ -1880,6 +1908,10 @@
         state.motion = MOTION_PROFILES.includes(saved) ? saved : "";
         paintMotion();
       }
+      if (GLASS_KEY in changes) {
+        state.glass = changes[GLASS_KEY].newValue === "solid" ? "solid" : "";
+        paintGlass();
+      }
       return;
     }
     if (area !== "session") return;
@@ -2005,6 +2037,7 @@
     paintTheme();
     readTheme();
     readMotion();
+    readGlass();
     scheduleTour();
     panel.querySelector(".lite-find-product").addEventListener("click", () => {
       const product = (state.result?.subjects || []).find((one) => one.kind === "product");
