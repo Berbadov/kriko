@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from app import costs, prefs
-from app.providers import websearch
+from app.providers import local_runtimes, websearch
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["prefs"])
@@ -115,6 +115,16 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
                 422, detail="search_fallback must be empty, 'none' or a comma-separated list of: "
                 + ", ".join(websearch.KNOWN))
         written[prefs.SEARCH_FALLBACK] = ",".join(dict.fromkeys(names)) if names else value
+    if prefs.LOCAL_RUNTIME in written:
+        known = {one["id"] for one in local_runtimes.runtimes()}
+        if written[prefs.LOCAL_RUNTIME] not in {"", *known}:
+            raise HTTPException(422, detail="local_runtime must be one of: " + ", ".join(sorted(known)))
+    if prefs.LOCAL_URL in written and written[prefs.LOCAL_URL]:
+        address = local_runtimes.valid_address(written[prefs.LOCAL_URL])
+        if not address:
+            raise HTTPException(
+                422, detail="local_url must be an http(s) address without credentials or query parameters")
+        written[prefs.LOCAL_URL] = address
     for key in (prefs.AGENT_TRANSPORT, prefs.CODEX_TRANSPORT):
         if key in written and written[key] not in {"", "auto", "exec", "persistent"}:
             raise HTTPException(422, detail=f"{key} must be auto, exec, or persistent")
