@@ -411,6 +411,9 @@ def _run_provider_test(provider_id: str, app_state_path=None) -> dict:
             return _test_completion(provider_id, key, app_state_path)
         if provider_id == "typesafe":
             return _test_typesafe(key)
+        if provider_id == "proxy":
+            return _refused(provider_id, 0, "unsupported",
+                            "the login is tried by Check in the Proxies section of Settings")
         return _refused(provider_id, 0, "unsupported", f"no self-test for {provider_id}")
     except Exception as exc:
         return _refused(provider_id, 0, "error", f"{type(exc).__name__}: {exc}")

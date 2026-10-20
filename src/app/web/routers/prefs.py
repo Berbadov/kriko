@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
 from app import costs, prefs
-from app.providers import local_runtimes, websearch
+from app.providers import local_runtimes, proxypool, websearch
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["prefs"])
@@ -24,6 +24,8 @@ router = APIRouter(prefix="/api", tags=["prefs"])
 #: The longest a stored preference may be. One bound for all of them: every
 #: value here is a short name — a harness id, a model id, an effort level.
 VALUE_MAX = 200
+#: The proxy pool is a list of addresses, so it cannot be a "short name".
+POOL_MAX = 6000
 
 
 class PrefsWrite(BaseModel):
@@ -101,7 +103,7 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
     since there is no per-field `max_length` left to carry it.
     """
     written = {
-        key: str(value)[:VALUE_MAX]
+        key: str(value)[:POOL_MAX if key == prefs.PROXY_POOL else VALUE_MAX]
         for key, value in body.model_dump().items()
         if value is not None and key in prefs.KEYS
     }
@@ -125,6 +127,18 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
             raise HTTPException(
                 422, detail="local_url must be an http(s) address without credentials or query parameters")
         written[prefs.LOCAL_URL] = address
+    if prefs.PROXY_ENABLED in written:
+        if written[prefs.PROXY_ENABLED] not in {"", "0", "1"}:
+            raise HTTPException(422, detail="proxy_enabled must be 0 or 1")
+        written[prefs.PROXY_ENABLED] = "1" if written[prefs.PROXY_ENABLED] == "1" else "0"
+    if prefs.PROXY_POOL in written:
+        lines = [one for one in written[prefs.PROXY_POOL].replace(",", "\n").split() if one]
+        pool = proxypool.parse_pool(written[prefs.PROXY_POOL])
+        if len(pool) != len(dict.fromkeys(lines)):
+            raise HTTPException(
+                422, detail="proxy_pool takes one http(s) address per line, like http://host:8080, "
+                "with no login in it: save the login under Keys")
+        written[prefs.PROXY_POOL] = "\n".join(pool)
     for key in (prefs.AGENT_TRANSPORT, prefs.CODEX_TRANSPORT):
         if key in written and written[key] not in {"", "auto", "exec", "persistent"}:
             raise HTTPException(422, detail=f"{key} must be auto, exec, or persistent")
@@ -169,6 +183,8 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
             )
         written[prefs.LOCAL_CONTEXT] = str(context_tokens)
     prefs.write(conn, written)
+    if prefs.PROXY_ENABLED in written or prefs.PROXY_POOL in written:
+        proxypool.forget()
     return prefs.choices(conn)
 
 

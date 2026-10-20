@@ -127,6 +127,15 @@ PROVIDERS = (
         optional=True,
     ),
     Provider(
+        id="proxy",
+        label="Proxy login",
+        env="KRIKO_PROXY_AUTH",
+        purpose="The user:password your proxy pool asks for, if it asks. Sent "
+        "only to the proxies you list in Settings, and only while the proxy "
+        "switch is on. Never a search provider's key and never shown again.",
+        optional=True,
+    ),
+    Provider(
         id="typesafe",
         label="TypeSafe (Jev)",
         env="TYPESAFE_API_KEY",

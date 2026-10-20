@@ -4092,16 +4092,21 @@ def _chat_web_searcher(app_state, app_state_path, progress: Progress):
 def _chat_web_sources(app_state, app_state_path, progress: Progress):
     """Compatibility pair for callers that need both host web callables."""
     from app import chatweb
+    from app.providers import proxypool
 
     return (_chat_web_searcher(app_state, app_state_path, progress),
-            chatweb.reader(timeout=5.0))
+            chatweb.reader(timeout=5.0, **proxypool.reader_options(getattr(progress, "log", None))))
 
 
 def _chat_web_accessors(app_state, app_state_path, progress: Progress):
     """Build the page reader on the owner thread and reuse one lazy searcher."""
     from app import chatweb
+    from app.providers import proxypool
 
-    page_reader = chatweb.reader(timeout=5.0)
+    # `{}` unless the reader turned the proxy pool on (off by default), so the
+    # reader is built exactly as it was for everyone else.
+    page_reader = chatweb.reader(
+        timeout=5.0, **proxypool.reader_options(getattr(progress, "log", None)))
     searcher = None
 
     def search(query: str, limit: int = 5):
