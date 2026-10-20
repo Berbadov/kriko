@@ -83,7 +83,8 @@ export function ChatScreen({ onOpen }: { onOpen: (lookupId: string) => void }) {
         <motion.div layout="position" className="dock" data-tour="composer" transition={m.tx.spring}>
           <StepPill run={run} />
           <Composer
-            onSubmit={(text, a) => start(text, a)}
+            onSubmit={(text, a, mode) => start(text, a, mode)}
+            modes
             running={running}
             onStop={stop}
             autoFocus

@@ -50,6 +50,9 @@ class MessageRequest(BaseModel):
     client_request_id: str = Field(default="", max_length=200)
     harness: str = Field(default="", max_length=200)
     backend: Literal["harness", "local"] = "harness"
+    # The chip the reader pressed: what to do with the product. Empty lets the
+    # words of the message decide (`chat.detect_mode`).
+    mode: Literal["", "alternatives", "cheapest", "merchants"] = ""
 
 
 @router.get("/sources")
@@ -135,7 +138,8 @@ def post_message(
     text = body.text.strip()
     if not text:
         raise HTTPException(422, "a question needs words")
-    payload = {"thread_id": thread_id, "text": text, "harness": body.harness, "backend": body.backend}
+    payload = {"thread_id": thread_id, "text": text, "harness": body.harness,
+               "backend": body.backend, "mode": body.mode}
     request_id = f"chat:{body.client_request_id}" if body.client_request_id else ""
     try:
         record_id = state.reserve_question(conn, request_id, payload)
@@ -150,6 +154,7 @@ def post_message(
         "text": text,
         "harness": body.harness,
         "backend": body.backend,
+        "mode": body.mode,
     }
     job_id = (runner.submit("chat_ask", params, client_request_id=request_id)
               if request_id else runner.submit("chat_ask", params))

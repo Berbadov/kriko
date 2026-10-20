@@ -201,7 +201,7 @@ export function useLiveRun(): RunApi {
   )
 
   const start = useCallback<RunApi['start']>(
-    (prompt, agent) => {
+    (prompt, agent, mode) => {
       clear()
       seen.current = new Map()
       job.current = ''
@@ -221,6 +221,7 @@ export function useLiveRun(): RunApi {
             text: prompt,
             harness: agent.backend === 'local' ? '' : agent.id,
             backend: agent.backend,
+            ...(mode ? { mode } : {}),
           })
           job.current = sent.job_id
           threadsChanged()

@@ -80,6 +80,23 @@
   border-color: var(--accent-hi);
 }
 
+.composer-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* A pressed chip is the reader's choice, so it carries the accent, not just a border. */
+.mode-chip[aria-pressed='true'] {
+  border-color: var(--accent-hi);
+  background: var(--panel-2);
+  color: var(--ink);
+}
+
+.mode-chip:disabled {
+  opacity: 0.5;
+}
+
 .composer-field {
   width: 100%;
   min-height: 28px;

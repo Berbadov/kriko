@@ -145,3 +145,11 @@ It compares answer quality, latency, tokens and cost, with plain sortable tables
 ## License
 
 [MIT](LICENSE).
+
+## Milestones
+
+Not in order.
+
+- Releasing our own inference service
+- Fine-tuning a model for Kriko
+- Statistical knowledge extraction from forums

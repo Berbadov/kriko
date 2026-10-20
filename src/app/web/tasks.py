@@ -4331,6 +4331,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                                    clarify=contextual_quick,
                                    preferences=about,
                                    product_only=product_only,
+                                   mode=str(params.get("mode") or ""),
                                    history=history, hooks=hooks, verify_answer=verify_answer)
         finally:
             if store is not None:

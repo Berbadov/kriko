@@ -89,6 +89,9 @@ export interface Turn {
   agent?: AgentRef
 }
 
+/** What the reader can ask Chat to do with a product. The engine knows the same three by name. */
+export type ChatMode = 'alternatives' | 'cheapest' | 'merchants'
+
 /** What the screens hold: the chat so far, the run now, and what the reader can do. */
 export interface RunApi {
   run: Run
@@ -96,7 +99,7 @@ export interface RunApi {
   turns: Turn[]
   /** The chat that the run belongs to. Empty before the first question. */
   threadId: string
-  start: (prompt: string, agent: { id: string; label?: string; backend: 'harness' | 'local' }) => void
+  start: (prompt: string, agent: { id: string; label?: string; backend: 'harness' | 'local' }, mode?: ChatMode) => void
   stop: () => void
   /** Leave this chat and start a new, empty one. */
   newChat: () => void
