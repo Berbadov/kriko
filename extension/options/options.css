@@ -473,6 +473,13 @@ form,
   background: var(--glass-1);
 }
 
+/* The step Kriko opened this page for (the worker names it). A ring, not a
+   fill: the page keeps its palette, and the section simply says "here". */
+[data-step][data-focus="1"] {
+  border-color: var(--ice);
+  box-shadow: 0 0 0 3px var(--glass-3);
+}
+
 label {
   display: block;
   margin-bottom: 0.5rem;
