@@ -1852,11 +1852,11 @@
     }
     if (request && request.type === "SHOW_GUARD") showGuard(request.result);
     if (request && request.type === "KRIKO_DUE_NUDGE") showDueNudge(request.purchase);
-    // A page the worker found worth learning, on a site nothing reads: the
-    // panel comes up with the Learn card, once, instead of waiting for a
-    // toolbar press the reader has no reason to make on a page they have not
-    // been told anything about. Never closes a panel that is already open.
-    if (request && request.type === "KRIKO_LEARN_NUDGE" && !state.mounted) {
+    // The worker opens the panel by itself only on a site Kriko already reads,
+    // once per site per session, when it has an answer or a product to offer
+    // to research. An unknown site is opened from the toolbar instead: a
+    // panel over every shop the reader visits is what this replaced.
+    if (request && request.type === "KRIKO_SHOW_PANEL" && !state.mounted) {
       openPanel();
     }
   });

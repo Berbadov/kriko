@@ -45,6 +45,16 @@ export interface AgentRef {
   label: string
 }
 
+/** A question the agent asked instead of answering, with what a reader can press.
+ *  One detail it could not settle itself: a size, a model year, an engine. */
+export interface Question {
+  id: string
+  ask: string
+  options: string[]
+  key?: string
+  why?: string
+}
+
 export interface Run {
   status: 'idle' | 'running' | 'done' | 'stopped' | 'failed'
   startedAt: number
@@ -54,6 +64,10 @@ export interface Run {
   answer: string
   products: Product[]
   followups?: string[]
+  /** The one question this turn asked, when it asked instead of answering. */
+  questions?: Question[]
+  /** The answer is complete, even if the turn is still naming its follow-ups. */
+  answerFinal?: boolean
   /** Why the run failed, in the engine's words. */
   error?: string
   agent?: AgentRef
@@ -69,6 +83,7 @@ export interface Turn {
   products: Product[]
   rows?: Row[]
   followups?: string[]
+  questions?: Question[]
   /** Why the turn failed, when it did. */
   error?: string
   agent?: AgentRef
@@ -93,7 +108,7 @@ export interface RunApi {
 export const turnOf = (run: Run): Turn | null =>
   run.status === 'idle' || run.status === 'running' || !run.prompt
     ? null
-    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, error: run.error, agent: run.agent }
+    : { id: String(run.startedAt), prompt: run.prompt, answer: run.answer, products: run.products, rows: run.rows, followups: run.followups, questions: run.questions, error: run.error, agent: run.agent }
 
 export type Action =
   | { type: 'start'; prompt: string; now: number }

@@ -460,6 +460,74 @@
   margin-top: 10px;
 }
 
+/* ---- the one question, with what can be pressed ---- */
+
+.ask-card {
+  padding: 16px 18px;
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  background: var(--panel);
+}
+
+.answer .ask-question {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.ask-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ask-option {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--edge-strong);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--panel-2);
+  font-size: 13.5px;
+  transition:
+    background-color calc(140ms * var(--tm)),
+    border-color calc(140ms * var(--tm)),
+    transform calc(140ms * var(--tm));
+}
+
+.ask-option:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.ask-option:active:not(:disabled) {
+  transform: translateY(calc(1px * var(--dm)));
+}
+
+.ask-option:disabled {
+  opacity: 0.5;
+}
+
+.ask-option.is-own {
+  border-style: dashed;
+  color: var(--ink-2);
+  background: transparent;
+}
+
+.answer .ask-why {
+  margin: 12px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+.hello-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
 .act {
   display: inline-flex;
   align-items: center;
