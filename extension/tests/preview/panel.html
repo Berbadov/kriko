@@ -57,7 +57,8 @@
         sources: [{ url: "https://example.org/bulletin", domain: "example.org", tier: "manufacturer", stance: "supports", quote: "Short journeys do not bring the valve to temperature, and soot accumulates until it sticks." },
           { url: "https://example.net/egr", domain: "example.net", tier: "authoritative", stance: "supports", quote: "EGR sticking is documented on this family." }] },
       { claim_id: "c3", pack_id: "org.kriko.cars", subject_id: "s1", title: "Dual-mass flywheel judder", severity: "medium", strength: "reported", domain: "transmission",
-        body: "A shudder when pulling away in first gear; the flywheel is due around 180,000 km.", sources: [] },
+        body: "A shudder when pulling away in first gear; the flywheel is due around 180,000 km.",
+        sources: [{ url: "https://example.org/clutch", domain: "example.org", tier: "manufacturer", stance: "supports", quote: "The dual-mass flywheel is a wear item and is typically replaced with the clutch." }] },
       { claim_id: "c4", pack_id: "org.kriko.cars", subject_id: "s1", title: "Window regulator clips", severity: "low", strength: "reported", domain: "body",
         body: "Plastic clips in the door regulators break; a cheap fix.", sources: [] },
     ];
@@ -212,6 +213,8 @@
           if (research && message.type === "JOB_STATUS" && message.payload.job_id === "preview-research") {
             return callback({ ok: true, job: previewJob() });
           }
+          // ?sensitivity=hide_thin | strict: what the app's setting would say.
+          if (message.type === "INFO_SENSITIVITY") return callback({ ok: true, sensitivity: params.get("sensitivity") || "all" });
           if (message.type === "LOOKUP_QUESTIONS") return callback({ ok: true, items: [] });
           if (message.type === "LOOKUP_ASK") return setTimeout(() => callback({ ok: true, job_id: "preview-question" }), 300);
           if (message.type === "JOB_STATUS") return callback({ ok: true, job: {
@@ -241,7 +244,6 @@
           // ?glass=solid and ?theme=light | dark: the two stored choices.
           if (q.get("glass")) bag["kriko.glass"] = q.get("glass");
           if (q.get("theme")) bag["kriko.theme"] = q.get("theme");
-          if (q.get("sensitivity")) bag["kriko.sensitivity"] = q.get("sensitivity");
           return {
             get(keys, done) { const out = {}; for (const k of [].concat(keys)) if (k in bag) out[k] = bag[k]; done && done(out); },
             set(items, done) { Object.assign(bag, items); done && done(); },

@@ -509,3 +509,44 @@ const GLASS_KEY = "kriko.glass";
     } catch (_) { /* a browser without local storage keeps the choice for this tab only */ }
   });
 })();
+
+
+// ── how much doubt to show ──────────────────────────────────────────────
+//
+// The setting belongs to the app (`info_sensitivity`), so this page reads and
+// writes it through the worker and keeps no copy: the app's Settings screen
+// and this one are the same value. With the app closed the choice cannot be
+// read or kept, and the page says so rather than showing a default as if it
+// were the reader's.
+
+(function evidenceSensitivity() {
+  const radios = [...document.querySelectorAll('input[name="sensitivity"]')];
+  const note = document.getElementById("sensitivity-status");
+  if (!radios.length || !note) return;
+  const say = (text, state) => {
+    note.textContent = text;
+    if (state) note.dataset.state = state; else delete note.dataset.state;
+  };
+  const show = (value) => {
+    for (const radio of radios) radio.checked = radio.value === value;
+  };
+  const closed = "Kriko is not running, so this cannot be read or changed. Start it, then reload this page.";
+  ask({ type: "INFO_SENSITIVITY" }).then((reply) => {
+    if (!reply.ok) {
+      for (const radio of radios) radio.disabled = true;
+      say(closed, "warn");
+      return;
+    }
+    show(reply.sensitivity || "all");
+  });
+  for (const radio of radios) {
+    radio.addEventListener("change", () => {
+      if (!radio.checked) return;
+      ask({ type: "SET_INFO_SENSITIVITY", payload: { sensitivity: radio.value } }).then((reply) => {
+        if (!reply.ok) { say(reply.error || closed, "error"); return; }
+        show(reply.sensitivity);
+        say("Saved.", "ok");
+      });
+    });
+  }
+})();
