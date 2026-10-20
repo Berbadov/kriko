@@ -1,53 +1,57 @@
 # Kriko website
 
-The public landing page is static HTML, CSS and JavaScript. There is no build
-step and no client-side framework. Serve the entire `site/` directory so its
-stylesheet, script and assets are included.
-
-From the repository root:
-
-```sh
-npm run serve:site
-```
-
-Open `http://127.0.0.1:4173`. Alternatively, open `site/index.html` directly.
-Google Fonts is optional; system fonts are the fallback.
-
-The interactive walkthrough includes a Golf 7 finding from the Cars catalog,
-plus MacBook Air M2, Sony WH-1000XM5 and Breville Barista Express examples.
-Product buttons update the hero illustration, listing, checks and source links
-together. The product cards also select an example and open its walkthrough.
-Without JavaScript, the additional product cards open the original sources.
-The page presents investigative research for both new and used purchases.
-Its default laptop example follows a teardown detail into a question about
-configuration-specific tests. The headphones example connects owner hinge
-reports with repair information. The espresso example compares conflicting
-noise reports without assigning a cause. Each example distinguishes evidence,
-an unresolved question and the next research step.
-These are static research examples. They do not claim that these categories
-have published catalogs or that a live research run occurred.
-The car example shows an inspection of a used vehicle. The two purchase paths
-open these examples without filtering the app to either buying situation.
-All listings are illustrative. The preview does not query the desktop
-app, send product data, run research, or require an account. Source links open
-the original pages. Download links use GitHub's latest release page so their
-labels do not get stuck on a particular version.
-
-Motion includes entrance transitions, scroll reveals, a floating finding,
-an orbital illustration, button feedback and an optional timed walkthrough.
-The page respects reduced-motion preferences, includes a pause control, and
-pauses the hero animation outside the viewport. The walkthrough runs once
-when requested, pauses in background tabs and stops when it leaves the screen.
-Tabs support arrow keys, Home and End. With JavaScript disabled, all three
-walkthrough panels appear in order.
-
-Run the interaction checks after installing the root development dependencies:
+Static HTML, CSS and JavaScript. Cloudflare Pages publishes `site/` from `main`
+without a build step. Serve the entire directory, including assets and `/tr/`.
 
 ```sh
 npm ci
+npm run serve:site
 npm run test:site
 ```
 
-These checks use jsdom, not a rendering browser. Check the layout in a browser
-at phone, tablet and desktop widths before publishing. Publish the contents
-of `site/` with the existing hosting process.
+The English page is `/`; the complete Turkish page is `/tr/`. The header has
+explicit EN/TR links. Each page has its own language, metadata, canonical URL
+and alternate-language links. Both remain readable without JavaScript. The
+shared interaction script localizes product switching, motion controls, menu
+labels and announcements using the page's language.
+
+## Editing
+
+- `index.html`: English page and structure.
+- `examples.js`: English and Turkish fictional scenarios and sample evidence.
+- `locales/tr.json`: Turkish translations of static page text and labels.
+- `script.js`: shared interactions and localized control labels.
+- `styles.css`: shared responsive layout.
+
+After editing the English page, examples or translations, regenerate both static
+fallbacks and the Turkish page, then run the tests:
+
+```sh
+node site/tools/render-locales.cjs
+npm run test:site
+```
+
+The renderer reports missing translations. Commit `tr/index.html` with its
+source changes; Cloudflare serves the generated page directly.
+
+## Examples
+
+All four public demonstrations use fictional products, listings and evidence
+notes, visibly labeled as such. They assess no real manufacturer or model and
+link to no brand-specific failure reports. The illustrations are generic.
+
+- Laptop A: a 256 GB basket compared with a review of the 1 TB configuration.
+- Headphones B: a sample crack report, an unknown failure rate and repair checks.
+- Espresso machine C: two noise observations with different timing and pressure.
+- Hatchback D: dry upper carpet and a water mark in the spare-wheel well.
+
+Each includes an observation, uncertainty and a concrete next check. Sample
+notes are displayed in the walkthrough itself. They are not presented as actual
+research results, owner reports or catalog findings. Real Kriko research keeps
+links to its original sources; this landing page does not run live research.
+
+Product selectors update the illustration, listing, findings and evidence notes
+together. Tabs support arrow keys, Home and End. Motion respects reduced-motion
+preferences; timed walkthrough playback is opt-in and pauses off-screen or in
+background tabs. Tests use jsdom; check the deployed preview visually on desktop
+and phone widths as well.
