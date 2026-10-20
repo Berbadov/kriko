@@ -21,6 +21,10 @@ immutable; a correction is a newer version.
   words stop fading and Copy and Retry appear at once, instead of waiting for
   the conversation's follow-up suggestions. The activity list no longer
   redraws its lines on every poll.
+- **The panel opens where Kriko knows the site.** It used to come up by itself
+  on any product-like page of a site nothing read, and stay quiet on the sites
+  Kriko does read. A known site now opens its own answer once per session; an
+  unknown site is opened from the toolbar, where Learn this page waits.
 
 ### 0.2.6
 
