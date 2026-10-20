@@ -55,14 +55,11 @@ test("two packs answering are both named", () => {
   assert.match(p.footer().textContent, /org\.kriko\.cars.*com\.example\.tuning/);
 });
 
-test("an answer no pack claims renders as unknown rather than blank", () => {
-  // The B15 incident shape: something answered and would not say what. The
-  // word "unknown" is itself the tell; an empty footer is not.
+test("an answer no pack claims says no pack name rather than a placeholder word", () => {
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ok: true, result: { claims: [] } });
-  assert.equal(p.footer().hidden, false);
-  assert.equal(p.footer().textContent, "unknown");
+  assert.equal(p.footer().textContent, "");
 });
 
 test("footer hides again when the analysis fails", () => {
@@ -263,12 +260,11 @@ test("an answer the app never stored offers no way in", () => {
   assert.equal(p.footer().querySelector(".lite-open-app"), null);
 });
 
-test("the panel hands the reader on to the two screens they act from", () => {
-  // Reading the claims is half of it. The other half — the questions to take
-  // to the seller, and holding this listing against the others — lived only
-  // in the app, so a reader finishing the panel had to find the same listing
-  // again by hand. The answer is already saved under an id, and the routes
-  // arrive with it.
+test("the panel hands the reader on to the screens they act from", () => {
+  // Reading the claims is half of it. The other half, holding this listing
+  // against the others, lived only in the app, so a reader finishing the panel
+  // had to find the same listing again by hand. The answer is already saved
+  // under an id, and the routes arrive with it.
   const p = loadPanel();
   p.openPanel();
   p.deliverEntry({ ...ENTRY, result: {
@@ -289,14 +285,14 @@ test("the panel hands the reader on to the two screens they act from", () => {
 
   const labels = [...p.footer().querySelectorAll(".lite-open-app")]
     .map((b) => b.textContent);
-  assert.deepEqual(labels, ["Open in Kriko", "Ask the seller", "Compare"]);
+  assert.deepEqual(labels, ["Open in Kriko", "Compare"]);
 
   p.footer().querySelectorAll(".lite-open-app")[1].dispatchEvent(
     new p.dom.window.MouseEvent("click", { bubbles: true }));
-  const ask = p.sent.filter((m) => m.type === "OPEN_IN_APP").pop();
-  assert.equal(ask.payload.route, "questions/abc123");
-  assert.equal(ask.payload.fallbackUrl,
-               "http://127.0.0.1:8787/#/questions?id=abc123");
+  const compare = p.sent.filter((m) => m.type === "OPEN_IN_APP").pop();
+  assert.equal(compare.payload.route, "compare/abc123");
+  assert.equal(compare.payload.fallbackUrl,
+               "http://127.0.0.1:8787/#/compare?left=abc123");
 });
 
 test("an app that gave no routes offers no buttons for them", () => {
@@ -872,7 +868,7 @@ test("a product already in the catalogs searches that product again instead of r
     subjects: [{ kind: "product", subject_id: "product-1", label: "Golf VII" }] } });
 
   assert.equal(p.shadow().querySelector(".lite-find-product").textContent,
-    "Search this product again");
+    "Search again");
   assert.equal(p.shadow().querySelector(".lite-research-product").hidden, true);
   p.click(".lite-find-product");
   assert.equal(p.shadow().querySelector(".lite-search-field").value, "Golf VII");
