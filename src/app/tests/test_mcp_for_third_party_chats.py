@@ -264,7 +264,7 @@ def _checkout(tmp_path, venv=True):
     if venv:
         python = root / ".venv" / "bin" / "python"
         python.parent.mkdir(parents=True)
-        python.write_text("")
+        python.write_text("", encoding="utf-8")
     return root
 
 
@@ -287,7 +287,7 @@ def test_a_worktree_finds_the_main_checkouts_venv(tmp_path):
     (main / ".git" / "worktrees" / "w").mkdir(parents=True)
     tree = tmp_path / "worktree"
     (tree / "src" / "app").mkdir(parents=True)
-    (tree / ".git").write_text(f"gitdir: {main}/.git/worktrees/w\n")
+    (tree / ".git").write_text(f"gitdir: {main}/.git/worktrees/w\n", encoding="utf-8")
     argv, _env, how = _find(launcher, tree, lambda py, src: True)
     assert argv[0] == str(main / ".venv/bin/python")
     assert "main checkout" in how
@@ -332,23 +332,43 @@ def test_the_repos_mcp_json_names_the_launcher_not_a_venv():
 
 
 def test_the_launcher_really_starts_a_server_that_lists_the_chat_tool(tmp_path):
-    """Run the file `.mcp.json` names, as a client would, and ask it for its tools."""
+    """Run the file `.mcp.json` names, as a client would, and ask it for its tools.
+
+    The pipe stays open until the answer arrives, as a real client's does: a
+    server that sees end-of-input is entitled to stop before replying.
+    """
+    import os
     import subprocess
+    import threading
 
     server = json.loads((REPO / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["kriko"]
-    request = "\n".join(json.dumps(m) for m in (
-        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
-            "protocolVersion": "2025-03-26", "capabilities": {},
-            "clientInfo": {"name": "t", "version": "0"}}},
-        {"jsonrpc": "2.0", "method": "notifications/initialized"},
-        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
-    )) + "\n"
-    done = subprocess.run(
+    process = subprocess.Popen(
         [sys.executable, server["args"][0], "--store", str(tmp_path / "k.sqlite")],
-        input=request, capture_output=True, text=True, cwd=REPO, timeout=120,
-        env={**__import__("os").environ, "KRIKO_PYTHON": sys.executable})
-    replies = [json.loads(line) for line in done.stdout.splitlines() if line.startswith("{")]
-    listed = next(r for r in replies if r.get("id") == 2)["result"]["tools"]
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        text=True, cwd=REPO, env={**os.environ, "KRIKO_PYTHON": sys.executable})
+    watchdog = threading.Timer(120, process.kill)
+    watchdog.start()
+    try:
+        for message in (
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+                "protocolVersion": "2025-03-26", "capabilities": {},
+                "clientInfo": {"name": "t", "version": "0"}}},
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        ):
+            process.stdin.write(json.dumps(message) + "\n")
+            process.stdin.flush()
+        listed = None
+        for line in process.stdout:
+            reply = json.loads(line)
+            if reply.get("id") == 2:
+                listed = reply["result"]["tools"]
+                break
+    finally:
+        watchdog.cancel()
+        process.kill()
+        process.wait()
+    assert listed is not None, "the server never answered tools/list"
     assert "chat_turn" in {t["name"] for t in listed}
 
 
@@ -387,12 +407,12 @@ def test_writing_a_client_merges_one_key_and_keeps_the_readers_other_servers(tmp
     client, home = _client(tmp_path, monkeypatch)
     config = home / ".cursor" / "mcp.json"
     config.parent.mkdir(parents=True)
-    config.write_text(json.dumps({"mcpServers": {"other": {"command": "x"}}, "theme": "dark"}))
+    config.write_text(json.dumps({"mcpServers": {"other": {"command": "x"}}, "theme": "dark"}), encoding="utf-8")
 
     done = client.post("/api/mcp-clients/ide/write").json()
 
     assert done["state"] == "connected" and done["id"] == "ide"
-    written = json.loads(config.read_text())
+    written = json.loads(config.read_text(encoding="utf-8"))
     assert written["mcpServers"]["other"] == {"command": "x"} and written["theme"] == "dark"
     assert written["mcpServers"]["kriko"] == json.loads(
         {c["id"]: c for c in client.get("/api/mcp-clients").json()["clients"]}["ide"]["snippet"]
@@ -403,7 +423,7 @@ def test_the_editor_chat_is_written_under_servers_not_mcpservers(tmp_path, monke
     client, _home = _client(tmp_path, monkeypatch)
     row = {c["id"]: c for c in client.get("/api/mcp-clients").json()["clients"]}["vscode"]
     assert client.post("/api/mcp-clients/vscode/write").json()["state"] == "connected"
-    assert "kriko" in json.loads(Path(row["path"]).read_text())["servers"]
+    assert "kriko" in json.loads(Path(row["path"]).read_text(encoding="utf-8"))["servers"]
 
 
 def test_a_shown_only_shape_has_nowhere_to_be_written(tmp_path, monkeypatch):
@@ -416,9 +436,9 @@ def test_a_config_the_reader_broke_is_refused_and_left_alone(tmp_path, monkeypat
     client, home = _client(tmp_path, monkeypatch)
     config = home / ".cursor" / "mcp.json"
     config.parent.mkdir(parents=True)
-    config.write_text("{ not json")
+    config.write_text("{ not json", encoding="utf-8")
 
     assert client.post("/api/mcp-clients/ide/write").status_code == 409
-    assert config.read_text() == "{ not json"
+    assert config.read_text(encoding="utf-8") == "{ not json"
     row = {c["id"]: c for c in client.get("/api/mcp-clients").json()["clients"]}["ide"]
     assert row["state"] == "unreadable" and row["writable"] is False
