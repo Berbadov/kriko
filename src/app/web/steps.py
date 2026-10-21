@@ -121,7 +121,12 @@ def _plain(url: str) -> str:
 def _urls(text: str) -> list[str]:
     seen: dict[str, None] = {}
     for found in _URL.findall(text):
-        seen[_plain(found)] = None
+        try:
+            seen[_plain(found)] = None
+        except ValueError:
+            # Model output and failed-read messages can contain broken URLs.
+            # Keep the log line even when its address cannot be classified.
+            continue
     return list(seen)
 
 

@@ -91,7 +91,29 @@ def packet(case: dict, answer_text: str, pages: list[dict]) -> dict:
 
 
 def prompt_for(case: dict, answer_text: str, pages: list[dict]) -> str:
-    return GRADER_SYSTEM + "\n\n" + json.dumps(packet(case, answer_text, pages), ensure_ascii=False)
+    # The answerer's text is scrubbed by the caller, but the question and the
+    # freshly fetched pages can echo the reader's credentials too. Scrub only
+    # the grader's copy: the original packet remains intact for fetching and
+    # for the deterministic quote checks below.
+    from app.tuning.scrub import scrub_obj
+
+    return GRADER_SYSTEM + "\n\n" + json.dumps(
+        scrub_obj(packet(case, answer_text, pages)), ensure_ascii=False)
+
+
+def _restore_urls(value, aliases: dict[str, str]):
+    """Map scrubbed page URLs in a grader verdict back to the fetched URLs.
+
+    The grader sees credential-free URLs, while `judge` must compare its
+    citations against the original page records. Only URL-valued fields are
+    restored; free text from the grader stays scrubbed.
+    """
+    if isinstance(value, dict):
+        return {key: (aliases.get(item, item) if key == "url" and isinstance(item, str)
+                      else _restore_urls(item, aliases)) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_restore_urls(item, aliases) for item in value]
+    return value
 
 
 def _carried(pages: list[dict], url: str, quote: str) -> bool:
@@ -206,6 +228,17 @@ class Grader:
                     "links": links, "failed_because": ["no answer was returned"], "summary": "",
                     "rubric_scored": bool(case.get("criteria"))}
         prompt = prompt_for(case, answer.text, pages)
+        from app.tuning.scrub import scrub
+
+        url_aliases: dict[str, str] = {}
+        for page in pages:
+            original = str(page["url"])
+            alias = scrub(original)
+            # Distinct addresses can become identical after redaction. Such
+            # a citation cannot identify its page, so it must match no URL.
+            url_aliases[alias] = (original if alias not in url_aliases
+                                  or url_aliases[alias] == original
+                                  else "[ambiguous source]")
         last = ""
         for attempt in range(2):
             try:
@@ -217,6 +250,7 @@ class Grader:
             last = raw
             reply = read_payload(raw)[0]
             if isinstance(reply, dict) and reply:
+                reply = _restore_urls(reply, url_aliases)
                 try:
                     return {**judge(case, answer, pages, links, reply), "raw_reply": raw[:6000]}
                 except ValueError as error:

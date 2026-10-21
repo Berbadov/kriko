@@ -343,8 +343,9 @@ def shared() -> Router | None:
         previous = cached[2] if cached is not None and cached[1] == path else None
         router = from_settings({key: stored.get(key) for key in (SETTING_ENABLED, SETTING_POOL)})
         # Keep what was learned while the same pool stays configured.
-        if router is not None and previous is not None and [p.address for p in previous.proxies] == [
-                p.address for p in router.proxies]:
+        if (router is not None and previous is not None
+                and [p.address for p in previous.proxies] == [p.address for p in router.proxies]
+                and previous._login == router._login):
             router = previous
     except Exception:  # noqa: BLE001 - a read never fails because of a proxy setting
         router = None
