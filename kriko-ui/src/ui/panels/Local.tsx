@@ -4,6 +4,7 @@ import { useLocal, type Library, type Model, type VllmPlan, type VllmServer } fr
 import { Icon } from '../Icon'
 import { PixelBar, Select } from '../controls'
 import { HfStore } from './HfStore'
+import { LocalRuntimeGroup } from './LocalRuntime'
 
 const gb = (bytes: number) => `${(bytes / 1e9).toFixed(1)} GB`
 const mb = (value: number) => `${(value / 1024).toFixed(value >= 10240 ? 0 : 1)} GB`
@@ -61,6 +62,8 @@ export function LocalPanel(_: { onOpen?: (lookupId: string) => void }) {
           </button>
         )}
       </section>
+
+      <LocalRuntimeGroup stepsBelow={Boolean(machine?.vllm)} />
 
       {machine?.vllm && <VllmCard plan={machine.vllm} server={local.vllm} checking={local.checking} onCheck={() => void local.recheck()} />}
 
