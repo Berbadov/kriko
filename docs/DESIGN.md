@@ -255,6 +255,20 @@ The palette keeps the brand blue and adds four companions for data: violet,
 teal, mint and sky. Cards carry a wash of the brand violet in their top-left
 corner and a lit top edge.
 
+## Agent marks
+
+An answer, the agent picker and the usage card show which agent is speaking by the
+maker's own logo on a quiet tile: Claude Code and Claude, Codex, Antigravity, Cursor
+and Mistral. The logos are the makers' trademarks, shown only to say which agent
+answered, and `assets/agents/NOTICE.md` says where the files come from. The local
+model and any agent without a logo keep Kriko's own drawing.
+
+Status moves the tile, not the logo. While the agent works a ring runs round the tile
+and the logo breathes. Waiting dims the logo and breathes it slowly, paused greys it
+inside an amber ring, done flashes the tile mint once, and failed shakes it once inside
+a red ring. Idle is still. The answer header's mark follows the turn, and the animation
+stops with the app's motion setting.
+
 ## Compare
 
 A slot is one product column. The board is a rail of slot cards.

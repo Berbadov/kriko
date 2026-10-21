@@ -452,13 +452,111 @@
 /* ---- who answered, and what can be done with an answer ---- */
 
 .agent-mark {
+  position: relative;
   display: inline-grid;
   flex: none;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 9px;
   color: var(--tone);
-  background: color-mix(in srgb, var(--tone) 16%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 30%, transparent);
+  background: radial-gradient(90% 90% at 50% 0%, color-mix(in srgb, var(--tone) 16%, transparent), transparent 80%), var(--inset);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 24%, var(--edge));
+}
+
+.agent-logo {
+  display: grid;
+  place-items: center;
+}
+
+.agent-logo svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* A ring that runs round the tile while the agent works. */
+.agent-mark::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--agent-a), transparent 0 62%, var(--accent-hi) 94%, transparent 100%);
+  -webkit-mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(black 0 0) content-box exclude, linear-gradient(black 0 0);
+  padding: 1.5px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.agent-mark[data-state='working']::before {
+  opacity: 1;
+  animation: agent-orbit calc(1.6s * var(--tm)) linear infinite;
+}
+
+.agent-mark[data-state='working'] .agent-logo {
+  animation: agent-breathe calc(1.8s * var(--tm)) ease-in-out infinite;
+}
+
+.agent-mark[data-state='waiting'] .agent-logo {
+  animation: agent-breathe calc(2.6s * var(--tm)) ease-in-out infinite;
+  opacity: 0.6;
+}
+
+.agent-mark[data-state='paused'] {
+  box-shadow: inset 0 0 0 1.5px var(--warn);
+}
+
+.agent-mark[data-state='paused'] .agent-logo {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
+.agent-mark[data-state='done'] {
+  animation: agent-done calc(0.9s * var(--tm)) var(--ease-out) 1;
+}
+
+.agent-mark[data-state='failed'] {
+  box-shadow: inset 0 0 0 1.5px var(--risk);
+  animation: agent-shake calc(0.5s * var(--tm)) var(--ease-out) 1;
+}
+
+/* The angle is animated, not the tile, so the ring turns round a tile that stays put. */
+@property --agent-a {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes agent-orbit {
+  to {
+    --agent-a: 360deg;
+  }
+}
+
+@keyframes agent-breathe {
+  50% {
+    transform: scale(1.07);
+    opacity: 0.82;
+  }
+}
+
+@keyframes agent-done {
+  0% {
+    box-shadow: inset 0 0 0 1.5px var(--mint), 0 0 0 0 color-mix(in srgb, var(--mint) 60%, transparent);
+  }
+  100% {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 24%, var(--edge)), 0 0 0 9px transparent;
+  }
+}
+
+@keyframes agent-shake {
+  20%,
+  60% {
+    transform: translateX(calc(-2px * var(--dm)));
+  }
+  40%,
+  80% {
+    transform: translateX(calc(2px * var(--dm)));
+  }
 }
 
 .answer-head {
