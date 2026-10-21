@@ -2237,18 +2237,24 @@
 .lite-rc-sources { display: flex; flex-direction: column; gap: 2px; }
 .lite-rc-chips { display: flex; flex-wrap: wrap; gap: 5px; }
 
-/* A source as a chip: the mark for where it stands, and its site. Filled, half
-   and ring are the app's shapes (kriko-ui/src/styles/rail.css, .claim-chip), so
-   the two surfaces read the same and colour is never the only cue. */
+/* A source as a chip: a small lens for where it stands, and its site. Filled,
+   half and ring are the app's shapes, lit, glossed and glowing the same way
+   (kriko-ui/src/styles/rail.css, .claim-chip), so the two surfaces read alike
+   and colour is never the only cue. */
+.lite-chip { --tone: var(--fg-muted); }
+.lite-chip[data-standing="trusted"] { --tone: var(--low-ink); }
+.lite-chip[data-standing="neutral"] { --tone: var(--fg-muted); }
+.lite-chip[data-standing="low"] { --tone: var(--med-ink); }
 .lite-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   max-width: 100%;
-  padding: 4px 9px 4px 7px;
-  background: var(--bg-item);
+  padding: 4px 10px 4px 7px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fg) 7%, var(--bg-item)), var(--bg-item));
   border: 1px solid var(--border);
   border-radius: 999px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 9%, transparent);
   color: var(--fg-muted);
   cursor: pointer;
   font: inherit;
@@ -2256,24 +2262,42 @@
   font-weight: 500;
   line-height: 1;
 }
-.lite-chip:hover, .lite-chip[aria-expanded="true"] { border-color: var(--border-control); color: var(--fg); }
+.lite-chip:hover, .lite-chip[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--tone) 50%, var(--border-control));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 9%, transparent), 0 0 0 3px color-mix(in srgb, var(--tone) 12%, transparent);
+  color: var(--fg);
+}
 .lite-chip:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
 .lite-chip[data-stance="refutes"] { border-style: dashed; }
 .lite-chip-site { overflow: hidden; max-width: 18ch; text-overflow: ellipsis; white-space: nowrap; }
 .lite-chip-glyph {
   box-sizing: border-box;
+  position: relative;
   flex: none;
-  width: 10px;
-  height: 10px;
-  border: 1.5px solid var(--low-ink);
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  background: var(--low-ink);
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--tone) 100%, white 12%), color-mix(in srgb, var(--tone) 78%, black));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone) 70%, black), 0 0 7px color-mix(in srgb, var(--tone) 55%, transparent);
+}
+.lite-chip-glyph::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 52%);
+  pointer-events: none;
 }
 .lite-chip[data-standing="neutral"] .lite-chip-glyph {
-  border-color: var(--fg-muted);
-  background: linear-gradient(90deg, var(--fg-muted) 50%, transparent 50%);
+  background:
+    linear-gradient(90deg, transparent 50%, color-mix(in srgb, var(--fg) 14%, var(--bg-item)) 50%),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--tone) 100%, white 18%), color-mix(in srgb, var(--tone) 72%, black));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone) 60%, black), 0 0 6px color-mix(in srgb, var(--tone) 28%, transparent);
 }
-.lite-chip[data-standing="low"] .lite-chip-glyph { border-color: var(--med-ink); background: transparent; }
+.lite-chip[data-standing="low"] .lite-chip-glyph {
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--bg-item) 88%, black) 0 34%, color-mix(in srgb, var(--tone) 100%, white 10%) 40%, color-mix(in srgb, var(--tone) 80%, black) 100%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tone) 65%, black), 0 0 6px color-mix(in srgb, var(--tone) 38%, transparent);
+}
 
 .lite-rc-src { margin: 8px 0 0; padding: 0 0 0 10px; border-left: 2px solid var(--border-control); }
 .lite-rc-src[hidden] { display: none; }
