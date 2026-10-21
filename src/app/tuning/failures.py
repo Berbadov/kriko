@@ -196,6 +196,48 @@ def classify_trial(trial: dict) -> list[str]:
     return order(classes)
 
 
+def classify_row(error: str, answer_text: str, grading: dict, *,
+                 asked_question: bool = False, expected_action: str = "") -> list[str]:
+    """The classes behind a tuning row that was not accepted.
+
+    Built from the run's error, the grader's findings (already checked against
+    the fetched evidence) and the deterministic link results. An accepted row
+    has none. A row the grader could not grade has no answer-quality class: it
+    is a grader failure, counted separately.
+    """
+    if grading.get("accepted") is not False and not error:
+        return []
+    classes: list[str] = []
+    failed = classify_error(error)
+    if failed:
+        classes.append(failed)
+    if not str(answer_text or "").strip() and not failed:
+        classes.append("no_answer")
+    if grading.get("status") != "scored":
+        return order(classes)
+    links = grading.get("links") or {}
+    if links.get("invented"):
+        classes.append("invented_link")
+    if any(url not in links.get("broken", []) for url in links.get("unread", [])):
+        classes.append("unread_link")
+    for fact in grading.get("facts") or []:
+        if fact["status"] == "contradicted":
+            classes.append("wrong_fact")
+        elif fact["status"] in ("missing", "partial"):
+            classes.append("missed_fact")
+    claims = grading.get("claims") or []
+    if claims and grading.get("claims_supported", 0) / len(claims) < 0.8:
+        classes.append("unsupported_claim")
+    if (grading.get("identity") or {}).get("matches") is False:
+        classes.append("wrong_identity")
+    if grading.get("requirements_ignored"):
+        classes.append("ignored_requirement")
+    asked = bool(grading.get("asked_for_clarification")) or asked_question
+    if (expected_action == "clarify") != asked and answer_text.strip():
+        classes.append("clarification_mismatch")
+    return order(classes)
+
+
 def order(classes: list[str]) -> list[str]:
     """Classes in the vocabulary's own order, without repeats."""
     return [name for name in CLASSES if name in set(classes)]
