@@ -1263,40 +1263,48 @@
   text-align: center;
 }
 
-/* ---- the pixel icon ----
-   Twelve by twelve square cells, drawn the way the logo is: heavy strokes, mitred
-   corners, and a signature square where the scan line ends. Empty cells are not
-   drawn at all; they only show for a moment when the scan passes. */
+/* ---- the agent mark ----
+   Sixteen by sixteen small square cells. Lit cells draw the shape, the signature
+   cell is the brand's teal, and every empty cell stays as a faint dot, so the mark
+   reads as a display without being a row of round LEDs. */
 
 .pix {
   --s: 24px;
   --tone: currentColor;
   --sig: var(--teal);
+  --off: color-mix(in srgb, var(--ink) 16%, transparent);
   display: inline-grid;
   flex: none;
-  grid-template-columns: repeat(12, 1fr);
-  gap: calc(var(--s) / 72);
+  grid-template-columns: repeat(var(--n, 16), 1fr);
+  gap: calc(var(--s) / 120);
   width: var(--s);
   height: var(--s);
   vertical-align: middle;
 }
 
 .pix i {
-  background: transparent;
-  border-radius: 8%;
+  background: var(--off);
+  border-radius: 12%;
+  transform: scale(0.3);
+}
+
+.pix i[data-c] {
+  transform: none;
 }
 
 .pix i[data-c='#'] {
-  background: var(--tone);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+  box-shadow: 0 0 calc(var(--s) * 0.1) color-mix(in srgb, var(--tone) 40%, transparent);
 }
 
 .pix i[data-c='o'] {
   background: var(--sig);
+  box-shadow: 0 0 calc(var(--s) * 0.12) color-mix(in srgb, var(--sig) 55%, transparent);
 }
 
 .pix[data-state='working'] i {
-  animation: pix-scan calc(1.7s * var(--tm)) steps(12, end) infinite;
-  animation-delay: calc(var(--y) * 0.142s * var(--tm));
+  animation: pix-scan calc(1.8s * var(--tm)) steps(18, end) infinite;
+  animation-delay: calc((var(--x) + var(--y)) * 0.05s * var(--tm));
 }
 
 .pix[data-state='working'] i:not([data-c]),
@@ -1309,8 +1317,8 @@
 }
 
 .pix[data-state='done'] i {
-  animation: pix-scan calc(0.9s * var(--tm)) steps(12, end) 1;
-  animation-delay: calc(var(--y) * 0.075s * var(--tm));
+  animation: pix-scan calc(1s * var(--tm)) steps(18, end) 1;
+  animation-delay: calc((var(--x) + var(--y)) * 0.03s * var(--tm));
 }
 
 .pix[data-state='waiting'] i[data-c='o'] {
@@ -1347,15 +1355,16 @@
   }
 }
 
-/* The empty cells of the row the scan is on, shown for a moment. */
+/* The empty cells under the wave, lit and grown for a moment. */
 @keyframes pix-trace {
   0%,
-  16%,
+  22%,
   100% {
-    background-color: transparent;
+    transform: scale(0.3);
   }
-  6% {
-    background-color: color-mix(in srgb, var(--tone) 30%, transparent);
+  8% {
+    background-color: color-mix(in srgb, var(--tone) 70%, var(--off));
+    transform: scale(0.85);
   }
 }
 
