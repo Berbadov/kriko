@@ -6,13 +6,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-let directory, checks, api, thinness, view
+let directory, checks, api, thinness, view, steps
 const memory = new Map()
 before(async () => {
   globalThis.window = { setTimeout, clearTimeout }
   globalThis.sessionStorage = { getItem: (key) => memory.get(key), setItem: (key, value) => memory.set(key, value), removeItem: (key) => memory.delete(key) }
   directory = await mkdtemp(join(tmpdir(), 'kriko-ui-tests-'))
-  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs']]) {
+  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs'], ['src/engine/steps.ts','steps.mjs']]) {
     const code = await readFile(source, 'utf8')
     const built = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
     await writeFile(join(directory, target), built.replaceAll('import.meta.env', '({})').replace("'../engine/api'", "'./api.mjs'").replace("'../engine/thinness'", "'./thinness.mjs'"))
@@ -21,6 +21,7 @@ before(async () => {
   api = await import(pathToFileURL(join(directory, 'api.mjs')))
   thinness = await import(pathToFileURL(join(directory, 'thinness.mjs')))
   view = await import(pathToFileURL(join(directory, 'view.mjs')))
+  steps = await import(pathToFileURL(join(directory, 'steps.mjs')))
 })
 after(async () => { if (directory) await rm(directory, {recursive:true, force:true}) })
 
@@ -119,4 +120,14 @@ test('a claim source keeps where the engine stands it, and one it could not plac
   assert.deepEqual([first.standing, first.tier], ['trusted', 'manufacturer'])
   assert.equal(second.standing, 'low')
   assert.equal(third.standing, undefined, 'a word the engine does not use is no mark')
+})
+
+test('the agent stepper reads its step from the reported progress, in quarters', () => {
+  assert.deepEqual(steps.stepOf(0, 'waiting', 4), { at: -1, within: 0 }, 'a waiting run has no current step')
+  assert.deepEqual(steps.stepOf(0.1, 'researching', 4), { at: 0, within: 0.4 })
+  assert.equal(steps.stepOf(0.5, 'researching', 4).at, 2)
+  assert.equal(steps.stepOf(0.99, 'paused', 4).at, 3, 'a paused run keeps its step')
+  assert.deepEqual(steps.stepOf(0.3, 'done', 4), { at: 4, within: 1 }, 'a finished run is every step done')
+  assert.equal(steps.stepOf(Number.NaN, 'researching', 4).at, 0, 'a progress the engine did not give is the first step')
+  assert.equal(steps.stepOf(7, 'researching', 4).at, 3, 'progress past the end stays on the last step')
 })

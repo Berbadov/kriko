@@ -119,23 +119,26 @@ prose of the answer.
 
 ## Navigation and icons
 
-Chat is the first item in the rail. Chat is also the screen that opens at
-start.
+Navigation is a bar across the top, so the window below has the whole width.
+On the left are the logo, a slash and a pill with the agent that does the
+research; pressing the pill opens the agents panel. In the middle, a recessed
+pill holds the places: Chat, Compare, Queue and History, then New chat, which
+carries a brand glow because it is the one tab that starts something. The
+active place has a raised surface that slides to the next one. History opens a
+searchable list of chats under the bar. On the right are the queue's state, as a
+pixel glyph and a count, and More, which opens the drawer.
 
-The rail has four groups: Check, Knowledge, System, and This install. Its expanded
-width is 216px; the icon rail remains 68px with 44px navigation targets.
+Chat is the first place. Chat is also the screen that opens at start. Below
+1000px the tabs keep their icons and lose their words, and below 760px the agent
+pill and the queue state fold away.
 
 Working page heads share a 104px sky band. The breadcrumb sits above a compact
 title and a single-line description, below the window controls. A short fade at
 the bottom preserves readable sky ink in both themes.
 
-The active row has a brand wash and a lit left edge. The glyph sits in its own
-well and lights with the row. The count and the badge are pills. A row lifts by
-one pixel on hover.
+The count and the badge are pills.
 
-The collapsed rail shows the icon wells only. A tooltip gives the label.
-
-The rail uses fourteen glyph files. Each glyph uses a 24-unit box, a 1.7-unit
+The interface uses fourteen glyph files. Each glyph uses a 24-unit box, a 1.7-unit
 stroke, round ends, and the current text colour. The file names did not change,
 because other screens use the same names.
 
@@ -191,8 +194,11 @@ kind of site, and a link to the page. The card holds the quote the engine
 checked, never a rewrite of it. A source with no quote says so.
 
 The mark says where the engine stands the source (`standing` on each source
-row, from `app/evidence.py`): a filled circle for trusted, a half circle for
-neutral, a ring for low. The screen holds no list of sites and no threshold. A
+row, from `app/evidence.py`): a tier meter of three bars that rise like a
+signal, lit three for trusted, two for neutral and one for low. The evidence
+mark beside a finding is the same meter. No mark in the interface is a circle:
+a glossy or coloured ball reads as an emoji. The screen holds no list of sites
+and no threshold. A
 source the engine could not place draws no mark, never a guess. A source that
 disputes the claim has a dashed chip and says so on its card.
 
@@ -201,6 +207,30 @@ The app (`kriko-ui/src/ui/ClaimChip.tsx`) and the browser extension
 names, so a reader who learns it in one place reads it in the other. The app
 opens a floating card, on hover too. The extension panel is narrow and clips a
 floating card, so it opens the quote under the row, on press only.
+
+## Progress
+
+An agent's run is a stepper: four numbered pixel tiles, Find, Search, Read and
+Check, joined by a dashed line made of square cells. A done tile is lit in its
+own tone along the brand gradient, from violet through the blue and sky to teal.
+The current tile carries a pixel caret and a glow, and the line after it fills
+with the part of the step already done. A waiting run shows every tile unlit, a
+paused run turns the current tile amber, and a finished run turns every tile
+mint. A narrow place (a Compare slot, a mini card) draws the tiles without
+their labels.
+
+In the app the step comes from the progress the engine reports, in equal
+quarters; it does not claim a stage the engine did not name. The browser
+extension reads its stage from the run's own log, so its stepper shows only
+which stages were reached and never a share.
+
+Work with no steps, such as a download, is a bar of pixel cells under the brand
+gradient with the percent on a small pill at the end of the fill. While work
+runs, the lit part pulses in steps: the one repeating motion a bar has.
+
+The palette keeps the brand blue and adds four companions for data: violet,
+teal, mint and sky. Cards carry a wash of the brand violet in their top-left
+corner and a lit top edge.
 
 ## Compare
 
