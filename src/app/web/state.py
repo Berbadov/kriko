@@ -3358,18 +3358,6 @@ def close_research_run(
         (outcome, spent_usd, tokens_used, _now(), run_id),
     )
     conn.commit()
-    # The same run, filed under what it used, so the meters can add it up by
-    # resource and by window. A run nobody counted still files: one call.
-    try:
-        from app import usage
-
-        row = conn.execute("SELECT plane, model, search_provider FROM research_runs WHERE run_id = ?",
-                           (run_id,)).fetchone()
-        if row is not None:
-            usage.record_on(conn, usage.resource_of(plane=row["plane"] or ""), source=row["plane"] or "",
-                            model=row["model"] or "", tokens=tokens_used, usd=spent_usd)
-    except Exception:  # noqa: BLE001 - a meter never fails a run
-        pass
 
 
 def record_run_claims(
