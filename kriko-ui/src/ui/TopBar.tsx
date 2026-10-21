@@ -5,7 +5,8 @@ import { useEngine } from '../engine/Engine'
 import { usePrefs } from '../prefs'
 import { useQueue } from '../queue'
 import { showDrawer } from './drawerEvents'
-import { Icon, type IconName } from './Icon'
+import { Icon } from './Icon'
+import { PixIcon } from './PixIcon'
 import { PixelGlyph } from './PixelGlyph'
 import { RailChats } from './RailChats'
 import { UsagePill } from './UsagePill'
@@ -16,7 +17,7 @@ const ink = (svg: string) => svg.replaceAll('#ffffff', 'currentColor')
 export type Screen = 'chat' | 'compare' | 'queue'
 export const ORDER: Screen[] = ['chat', 'compare', 'queue']
 
-const ITEMS: { id: Screen; label: string; icon: IconName }[] = [
+const ITEMS: { id: Screen; label: string; icon: string }[] = [
   { id: 'chat', label: 'Chat', icon: 'chat' },
   { id: 'compare', label: 'Compare', icon: 'compare' },
   { id: 'queue', label: 'Queue', icon: 'queue' },
@@ -89,7 +90,7 @@ export function TopBar({
           return (
             <button key={item.id} className="topbar-tab" data-tour={`nav-${item.id}`} data-on={on} onClick={() => onNavigate(item.id)} aria-current={on ? 'page' : undefined}>
               {on && <motion.span layoutId="topbar-active" className="topbar-active" transition={m.tx.spring} />}
-              <Icon name={item.icon} size={17} />
+              <PixIcon name={item.icon} size={24} state={item.id === 'queue' && busy ? 'working' : 'idle'} />
               <span className="topbar-label">{item.label}</span>
               {item.id === 'queue' && queueCount > 0 && <span className="badge mono">{queueCount}</span>}
             </button>
@@ -97,7 +98,7 @@ export function TopBar({
         })}
         <div className="topbar-history" ref={box}>
           <button className="topbar-tab" data-on={history || undefined} onClick={() => setHistory((v) => !v)} aria-expanded={history} aria-haspopup="dialog" data-tour="history">
-            <Icon name="clock" size={17} />
+            <PixIcon name="history" size={24} />
             <span className="topbar-label">History</span>
           </button>
           {history && (
@@ -112,7 +113,7 @@ export function TopBar({
           )}
         </div>
         <button className="topbar-tab topbar-new" data-tour="new-chat" onClick={onNewChat}>
-          <PixelGlyph size={15} active={false} />
+          <PixIcon name="plus" size={22} />
           <span className="topbar-label">New chat</span>
         </button>
       </nav>
@@ -128,7 +129,7 @@ export function TopBar({
           </button>
         )}
         <button className="icon-btn" data-tour="more" onClick={onMore} aria-label="More" title="More">
-          <Icon name="more" size={19} />
+          <PixIcon name="more" size={24} />
           {attention > 0 && (
             <span className="topbar-dot mono" aria-label={`${attention} waiting in For you`}>
               {attention}
