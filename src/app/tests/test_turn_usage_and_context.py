@@ -249,10 +249,10 @@ def test_a_reopened_chat_carries_each_turns_usage_without_a_second_copy(paths, m
         conn.close()
     assert not any("usage" in column or "token" in column for column in columns)
     items = TestClient(create_app(paths)).get(f"/api/chat/threads/{thread_id}/messages").json()["items"]
-    answered = next(one for one in items if one["role"] == "agent" and one.get("usage"))
-    assert answered["usage"]["tokens_in"] == result["tokens_in"]
-    assert answered["usage"]["context"]["window"] == 4096
-    assert set(answered["usage"]) <= {"spent_usd", "tokens", "tokens_in", "tokens_out", "usage", "context"}
+    answered = next(one for one in items if one["role"] == "agent" and one.get("spend"))
+    assert answered["spend"]["tokens_in"] == result["tokens_in"]
+    assert answered["spend"]["context"]["window"] == 4096
+    assert set(answered["spend"]) <= {"spent_usd", "tokens", "tokens_in", "tokens_out", "usage", "context"}
 
 
 def test_a_job_that_is_polled_carries_the_usage_while_it_runs(paths, monkeypatch):
@@ -293,6 +293,7 @@ def test_each_page_read_carries_the_kind_of_site_the_engine_classifies(paths, mo
                                       text="Find a quiet air purifier for a small bedroom")
     read = next(row for row in result["activity"] if row.get("kind") == "read")
     assert read["trust"]["tier"] == "retailer" and read["trust"]["domain"] == retailer
+    assert read["trust"]["standing"] == "trusted"
     stored = TestClient(create_app(paths)).get(f"/api/chat/threads/{thread_id}/messages").json()["items"]
     again = next(row for one in stored for row in one["activity"] if row.get("kind") == "read")
     assert again["trust"] == read["trust"], "a saved chat reopens with the same tier"
@@ -305,4 +306,5 @@ def test_tiering_changes_nothing_but_adds_trust_to_reads():
     out = evidence.tier_pages(rows)
     assert out[0] == rows[0] and out[2] == rows[2]
     assert out[1]["trust"]["tier"] and {k: v for k, v in out[1].items() if k != "trust"} == rows[1]
+    assert out[1]["trust"]["standing"] in {"trusted", "neutral", "low"}
     assert json.dumps(out)  # plain data

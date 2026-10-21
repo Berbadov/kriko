@@ -132,7 +132,7 @@ def list_messages(thread_id: str, conn=Depends(get_app_state)) -> dict:
             # kept a second time, so a chat that is reopened shows its bars.
             usage = usage_of_result(job["result_json"])
             if usage:
-                message["usage"] = usage
+                message["spend"] = usage
     out: dict[str, object] = {"items": messages}
     active = _active_chat_job(conn, thread_id)
     if active:
