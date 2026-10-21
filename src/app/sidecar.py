@@ -142,7 +142,7 @@ def exit_when_parent_goes(server, stream=None, grace: float = GRACE_SECONDS,
     return thread
 
 
-def serve_mcp(store=None) -> int:
+def serve_mcp(store=None, http_port: int | None = None) -> int:
     """Hand stdin/stdout to the MCP server and get out of the way.
 
     No port, no handshake, no parent watchdog: stdin *is* the transport here, so
@@ -153,6 +153,12 @@ def serve_mcp(store=None) -> int:
 
     if store is not None:
         mcp_server.STORE_PATH = store
+    if http_port is not None:
+        # The same tools on a URL, for a client that cannot start us. Loopback
+        # only; see `app/mcphttp.py` for why there is no host option.
+        from app import mcphttp
+
+        return mcphttp.serve(mcp_server.mcp, http_port)
     mcp_server.mcp.run()
     return 0
 
@@ -205,6 +211,17 @@ def main(argv=None) -> int:
         "--mcp",
         action="store_true",
         help="run the MCP stdio server instead of the HTTP one, on the same store",
+    )
+    parser.add_argument(
+        "--mcp-http",
+        action="store_true",
+        help="with --mcp: serve over http://127.0.0.1 (this machine only) instead of stdio",
+    )
+    parser.add_argument(
+        "--mcp-port",
+        type=int,
+        default=None,
+        help="with --mcp-http: the port (default app.mcphttp.PORT)",
     )
     # The operator console, out of the binary the installer already ships.
     #
@@ -296,8 +313,15 @@ def main(argv=None) -> int:
 
     # Before anything binds: the MCP mode owns stdio and must print nothing of
     # its own on it. A stray handshake line here would be a protocol error.
+    if args.mcp_http and not args.mcp:
+        parser.error("--mcp-http needs --mcp")
     if args.mcp:
-        return serve_mcp(store)
+        http_port = None
+        if args.mcp_http:
+            from app import mcphttp
+
+            http_port = args.mcp_port if args.mcp_port is not None else mcphttp.PORT
+        return serve_mcp(store, http_port)
 
     # And the console owns the *terminal*, which is the same rule one layer up:
     # it attaches to a running app on EXTENSION_PORT if there is one — sharing
