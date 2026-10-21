@@ -206,6 +206,12 @@ RUN_CONCURRENCY = "run_concurrency"
 #: list of products and their links, then at most a couple of warnings. Stored
 #: as "1"/"0" because every preference is a string on the way in and out.
 CHAT_PRODUCT_ONLY = "chat_product_only"
+#: How much doubt the reader wants to see: `all` (the default), `hide_thin` or
+#: `strict`. It decides which findings an interface draws and nothing else; no
+#: setting changes what is stored or a pack's `content_digest`. What *thin*
+#: means is `app/evidence.py`, and the extension reads this key from
+#: `GET /api/settings`.
+INFO_SENSITIVITY = "info_sensitivity"
 #: The ceiling Settings offers. Each run is a CLI process or a model's
 #: attention plus its own fetches; past four the machine, the provider's rate
 #: limit and the reader's bill all say no before this number would.
@@ -233,8 +239,8 @@ def run_concurrency(conn) -> int:
 KEYS = (HARNESS, MODEL, SEARCH, AGENT_ORDER, *ROLE_KEYS,
         *HARNESS_MODEL_KEYS, *HARNESS_EFFORT_KEYS, *LOCAL_KEYS, MARKET_REGION,
         LLM_BASE_URL, *RESEARCH_KEYS,
-        RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, AGENT_TRANSPORT, CODEX_TRANSPORT,
-        CLASSIFICATION_PROVIDER)
+        RUN_CONCURRENCY, CHAT_PRODUCT_ONLY, INFO_SENSITIVITY, AGENT_TRANSPORT,
+        CODEX_TRANSPORT, CLASSIFICATION_PROVIDER)
 
 
 def chat_product_only(conn) -> bool:
@@ -245,6 +251,13 @@ def chat_product_only(conn) -> bool:
     """
     return str(read(conn).get(CHAT_PRODUCT_ONLY) or "").strip() in {
         "1", "true", "yes", "on"}
+
+
+def info_sensitivity(conn) -> str:
+    """`all`, `hide_thin` or `strict`; anything else, or nothing, is `all`."""
+    from app import evidence
+
+    return evidence.normalise(read(conn).get(INFO_SENSITIVITY))
 
 
 def for_role(conn, role: str, override: str = "") -> str:

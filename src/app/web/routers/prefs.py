@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict
 
-from app import costs, prefs
+from app import costs, evidence, prefs
 from app.web.deps import get_app_state
 
 router = APIRouter(prefix="/api", tags=["prefs"])
@@ -124,6 +124,10 @@ def write_prefs(body: PrefsWrite, conn=Depends(get_app_state)) -> dict:
                     "such as en or tr-TR"
                 ),
             )
+    if (prefs.INFO_SENSITIVITY in written
+            and written[prefs.INFO_SENSITIVITY] not in {"", *evidence.SENSITIVITIES}):
+        raise HTTPException(
+            422, detail="info_sensitivity must be all, hide_thin, or strict")
     if prefs.MARKET_REGION in written and written[prefs.MARKET_REGION] not in prefs.REGIONS:
         raise HTTPException(422, detail="market_region must be a supported region code")
     if prefs.LLM_BASE_URL in written and written[prefs.LLM_BASE_URL]:

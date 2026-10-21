@@ -25,7 +25,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from app import packautoupdate, packsource
+from app import evidence, packautoupdate, packsource
 
 from app.findings import accept_findings, log_submission, retract_claim
 from app.web import pipeline, state
@@ -4070,10 +4070,13 @@ class _TurnHooks:
     """What a chat turn reports through: every snapshot names its thread,
     its messages and the agent that is answering."""
 
-    def __init__(self, progress: Progress, ids: dict, agent: dict):
+    def __init__(self, progress: Progress, ids: dict, agent: dict, *,
+                 question: str = "", usage: Callable[[], dict] | None = None):
         self._progress = progress
         self._ids = ids
         self._agent = agent
+        self._question = question
+        self._usage = usage
 
     def set(self, progress: float, message: str = "") -> None:
         self._progress.set(progress, message)
@@ -4085,7 +4088,12 @@ class _TurnHooks:
         self._progress.check()
 
     def partial(self, snapshot: dict) -> None:
-        self._progress.partial({**self._ids, "agent": dict(self._agent), **snapshot})
+        # The kind of site behind each page read, and what the turn has spent
+        # so far, ride on the same snapshot the screen already polls.
+        if snapshot.get("activity"):
+            snapshot = {**snapshot, "activity": evidence.tier_pages(snapshot["activity"], self._question)}
+        self._progress.partial({**self._ids, "agent": dict(self._agent), **snapshot,
+                                **(self._usage() if self._usage else {})})
 
 
 def _chat_web_searcher(app_state, app_state_path, progress: Progress):
@@ -4231,19 +4239,39 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         ask_stream: chat.StreamAsk | None = None
         native_tools = _chat_native_tools(text, history)
         local_chat = _use_local_ask(settings, params)
+
+        def usage_fields() -> dict:
+            """What the turn has spent so far and how full the model's window is,
+            for the bars: the same fields in every snapshot and in the result."""
+            from app.web.settings import KRIKO_HOME
+
+            try:
+                window = int(chosen.get(prefs.LOCAL_CONTEXT) or 0) if local_chat else 0
+            except ValueError:
+                window = 0
+            return {**meter.snapshot(),
+                    "context": meter.context(str(agent.get("model") or ""), history=history,
+                                             home=KRIKO_HOME, local_window=window or None)}
         try:
             if local_chat:
                 completer = _local_structured_completer(settings, params, progress)
-                last_local_tokens = 0
+                last_local = {"tokens_used": 0, "tokens_in": 0, "tokens_out": 0}
 
                 def record_local_usage() -> None:
-                    nonlocal last_local_tokens
-                    cumulative = getattr(completer, "tokens_used", None)
-                    delta = (max(0, cumulative - last_local_tokens)
-                             if isinstance(cumulative, int) and getattr(completer, "usage_complete", True) else None)
-                    if isinstance(cumulative, int):
-                        last_local_tokens = cumulative
-                    meter.record({"usd": 0.0, "tokens": delta})
+                    # The socket counts for its whole life; one call's share is
+                    # the growth since the last call, and only while it has
+                    # counted every call (`usage_complete`).
+                    counted = getattr(completer, "usage_complete", True)
+                    delta = {}
+                    for name in last_local:
+                        cumulative = getattr(completer, name, None)
+                        delta[name] = (max(0, cumulative - last_local[name])
+                                       if isinstance(cumulative, int) and counted else None)
+                        if isinstance(cumulative, int):
+                            last_local[name] = cumulative
+                    meter.record({"usd": 0.0, "tokens": delta["tokens_used"],
+                                  "tokens_in": delta["tokens_in"],
+                                  "tokens_out": delta["tokens_out"]})
                 agent.update(id="local", label="Local model",
                              model=str(getattr(completer, "model", "")))
                 ask = completer
@@ -4296,7 +4324,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 ask_stream = stream_harness
 
             hooks = _TurnHooks(progress, {"thread_id": thread_id, "message_id": message_id},
-                               agent)
+                               agent, question=text, usage=usage_fields)
             # Apply market/language to every model call, including planning,
             # while preserving the exact reader message and saved history.
             original_ask, original_quick, original_stream = ask, ask_quick, ask_stream
@@ -4350,6 +4378,9 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         finally:
             if store is not None:
                 store.close()
+        # The kind of site behind each page read is kept with the turn, so a
+        # saved chat reopens with the same tiers and the screen holds no list.
+        result["activity"] = evidence.tier_pages(result.get("activity"), text)
         questions = result.get("questions") or []
         if questions:
             # A question is the turn. Its answer is the reader's next message,
@@ -4372,7 +4403,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                 "questions": questions, "steps": [], "sources": [],
                 "products": [], "activity": [], "followups": [], "agent": agent,
                 "answer_final": True, "agent_calls": result.get("agent_calls", 0),
-                "search_rounds": 0, "fallback": False, **meter.snapshot(),
+                "search_rounds": 0, "fallback": False, **usage_fields(),
             }
         if not result["answer"]:
             raise ValueError("The agent returned no answer. Try asking again.")
@@ -4393,6 +4424,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
             "products": result.get("products") or [],
             "activity": result.get("activity") or [],
             "followups": [], "questions": [], "answer_final": True,
+            **usage_fields(),
         })
         # One bounded, tool-free call names the topic and suggests relevant
         # follow-ups. Optional labels must never discard a successful answer.
@@ -4432,7 +4464,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
                       "products": result.get("products") or [],
                       "followups": result.get("followups") or [],
                       "activity": result.get("activity") or [],
-                      "questions": [], "answer_final": True})
+                      "questions": [], "answer_final": True, **usage_fields()})
     progress.set(1.0, "answered")
     return {
         "thread_id": thread_id, "message_id": stored["message_id"],
@@ -4444,7 +4476,7 @@ def chat_ask(settings, params: dict, progress: Progress) -> dict:
         "questions": [], "answer_final": True,
         "agent_calls": result["agent_calls"], "search_rounds": result["search_rounds"],
         "fallback": result["fallback"],
-        **meter.snapshot(),
+        **usage_fields(),
     }
 
 
@@ -4614,8 +4646,9 @@ def _ask_about_checks(settings, params: dict, progress: Progress, brief: str, *,
                 researcher.transport_mode = restore_transport
     progress.check()
     if on_usage is not None:
-        on_usage({"usd": getattr(researcher, "spent", getattr(researcher, "cost_usd", None)),
-                  "tokens": getattr(researcher, "tokens_used", None)})
+        from app.turnusage import usage_of
+
+        on_usage(usage_of(researcher))
     if follow_up:
         from app.workcontract import empty_offer, repair_prompt
         if empty_offer(reply):

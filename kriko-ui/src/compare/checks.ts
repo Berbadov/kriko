@@ -1,4 +1,5 @@
 import { get, seg } from '../engine/api'
+import { evidenceOf, type Evidence as Thinness } from '../engine/thinness'
 
 /** A saved check, read for the table. The table is the engine's answers lined
  *  up and nothing else: a check's own claims, and the specifications of the
@@ -23,6 +24,8 @@ export interface Risk {
   sources: Evidence[]
   applicability?: string
   advice?: string
+  /** How thin the evidence is, as the engine derived it from the claim. Absent when the row had none. */
+  evidence?: Thinness
 }
 
 export interface Spec {
@@ -77,6 +80,7 @@ function riskFrom(claim: Record<string, unknown>): Risk {
     applicability: typeof claim.applicability === 'string' ? claim.applicability : claim.applicability && typeof claim.applicability === 'object'
       ? [text((claim.applicability as Record<string, unknown>).status), text((claim.applicability as Record<string, unknown>).reason)].filter(Boolean).join(': ') : '',
     advice: text(claim.advice),
+    evidence: evidenceOf(claim.evidence),
     sources: list(claim.sources)
       .map((s) => {
         const url = text(s.url)
@@ -198,11 +202,19 @@ export function demoCheck(lookupId: string, name: string): Check {
   DEMO_TITLES.forEach((title, i) => {
     const level = DEMO_LEVELS[(seed + i * 3) % DEMO_LEVELS.length]
     if (!level) return
+    // Every third demo finding stands on one forum post, and every fourth on a single page.
+    const lone = (seed + i) % 3 === 0
+    const single = (seed + i) % 4 === 0
     risks.push({
       title,
       level,
       disputed: (seed + i) % 7 === 0,
       body: `${name} has a report about ${title.toLowerCase()}. Read the sources before you buy.`,
+      evidence: lone
+        ? { level: 'thin', reasons: [{ code: 'single_source', text: 'Only one site says this. Nothing else confirms it yet.' }, { code: 'low_trust', text: 'The best source for this is a low-trust kind of site, such as a forum or an ad-driven blog.' }] }
+        : single
+          ? { level: 'partial', reasons: [{ code: 'single_source', text: 'Only one site says this. Nothing else confirms it yet.' }] }
+          : { level: 'solid', reasons: [] },
       sources: [{ host: 'maker.example.test', url: 'https://maker.example.test', quote: `A reader reports a ${title.toLowerCase()} problem.`, stance: 'supports' }],
     })
   })
