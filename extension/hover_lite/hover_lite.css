@@ -2235,7 +2235,48 @@
   color: var(--fg-muted);
 }
 .lite-rc-sources { display: flex; flex-direction: column; gap: 2px; }
-.lite-rc-src { margin: 6px 0 0; padding: 0 0 0 10px; border-left: 2px solid var(--accent); }
+.lite-rc-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* A source as a chip: the mark for where it stands, and its site. Filled, half
+   and ring are the app's shapes (kriko-ui/src/styles/rail.css, .claim-chip), so
+   the two surfaces read the same and colour is never the only cue. */
+.lite-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 9px 4px 7px;
+  background: var(--bg-item);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+.lite-chip:hover, .lite-chip[aria-expanded="true"] { border-color: var(--border-control); color: var(--fg); }
+.lite-chip:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; }
+.lite-chip[data-stance="refutes"] { border-style: dashed; }
+.lite-chip-site { overflow: hidden; max-width: 18ch; text-overflow: ellipsis; white-space: nowrap; }
+.lite-chip-glyph {
+  box-sizing: border-box;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--low-ink);
+  border-radius: 50%;
+  background: var(--low-ink);
+}
+.lite-chip[data-standing="neutral"] .lite-chip-glyph {
+  border-color: var(--fg-muted);
+  background: linear-gradient(90deg, var(--fg-muted) 50%, transparent 50%);
+}
+.lite-chip[data-standing="low"] .lite-chip-glyph { border-color: var(--med-ink); background: transparent; }
+
+.lite-rc-src { margin: 8px 0 0; padding: 0 0 0 10px; border-left: 2px solid var(--border-control); }
+.lite-rc-src[hidden] { display: none; }
 .lite-rc-src[data-stance="refutes"] { border-left-color: var(--med-ink); }
 .lite-rc-src blockquote {
   margin: 0;
@@ -2245,12 +2286,11 @@
   color: var(--fg-body);
   overflow-wrap: anywhere;
 }
+.lite-rc-src-none { font-size: 12px; color: var(--fg-muted); }
 .lite-rc-src figcaption { margin-top: 3px; font-size: 11.5px; color: var(--fg-muted); overflow-wrap: anywhere; }
 .lite-rc-src figcaption a { color: var(--accent); text-underline-offset: 2px; }
+.lite-rc-src-kind { margin-left: 4px; text-transform: capitalize; }
 .lite-rc-src-note { color: var(--med-ink); font-weight: 600; }
-.lite-rc-more { margin-top: 6px; font-size: 11.5px; color: var(--fg-muted); }
-.lite-rc-more summary { cursor: pointer; }
-.lite-rc-more summary:focus-visible { outline: 2px solid var(--ice); outline-offset: 2px; border-radius: 4px; }
 
 /* How much a finding stands on (#263): three rising bars, one, two or three
    lit, and a word beside the two that are not solid. Shape and word carry the
