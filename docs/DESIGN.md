@@ -183,6 +183,25 @@ host. The reader sees a mark either way.
 The trust mark has three states. A check means the source backs the statement.
 A bang means the source disputes it. A queue means there is no record.
 
+## The claim chip
+
+A finding carries its sources as chips. A chip is one mark and one site name.
+Pressing, focusing or hovering a chip opens a card with the exact quote, the
+kind of site, and a link to the page. The card holds the quote the engine
+checked, never a rewrite of it. A source with no quote says so.
+
+The mark says where the engine stands the source (`standing` on each source
+row, from `app/evidence.py`): a filled circle for trusted, a half circle for
+neutral, a ring for low. The screen holds no list of sites and no threshold. A
+source the engine could not place draws no mark, never a guess. A source that
+disputes the claim has a dashed chip and says so on its card.
+
+The app (`kriko-ui/src/ui/ClaimChip.tsx`) and the browser extension
+(`extension/hover_lite/claim_card.js`) draw the same chip from the same palette
+names, so a reader who learns it in one place reads it in the other. The app
+opens a floating card, on hover too. The extension panel is narrow and clips a
+floating card, so it opens the quote under the row, on press only.
+
 ## Compare
 
 A slot is one product column. The board is a rail of slot cards.
@@ -196,8 +215,9 @@ shows its value and its trust mark. A pinned row carries a small light.
 
 The Differences only switch hides a row when all slots agree.
 
-Every source is an inline row that opens its page. The reader does not open a
-second panel to find a source.
+Every source is a chip under its finding. The quote opens from the chip, and
+the page opens from the quote's card. The reader does not open a second panel to
+find a source.
 
 The reader can scroll the table rows. The head row stays above the rows. The
 attribute column stays at the left edge. The table has no sideways scroll. When

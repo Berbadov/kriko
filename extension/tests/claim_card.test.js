@@ -47,13 +47,45 @@ test("opened, the claim's own words come first and each source shows its quote a
   assert.equal(body.querySelector(".lite-rc-label").textContent, "Sources · 2");
 });
 
-test("a single source says Source, and more than two fold away behind a count", () => {
+test("a single source says Source, and each source is one chip with its quote kept closed", () => {
   assert.equal(renderClaimCard(claim({ sources: [src(1)] })).querySelector(".lite-rc-label").textContent, "Source");
   const card = renderClaimCard(claim({ sources: [src(1), src(2), src(3), src(4)] }));
-  assert.equal(card.querySelectorAll(".lite-rc-sources > .lite-rc-src").length, 2);
-  const more = card.querySelector(".lite-rc-more");
-  assert.equal(more.querySelector("summary").textContent, "2 more sources");
-  assert.equal(more.querySelectorAll(".lite-rc-src").length, 2);
+  const chips = card.querySelectorAll(".lite-rc-chips > .lite-chip");
+  assert.equal(chips.length, 4, "every source is a chip; none folds away");
+  assert.equal(chips[0].querySelector(".lite-chip-site").textContent, "s1.example");
+  assert.ok([...card.querySelectorAll(".lite-rc-src")].every((figure) => figure.hidden), "no quote is open until a chip is pressed");
+});
+
+test("a chip opens its own quote, one at a time, and Escape closes it", () => {
+  const card = renderClaimCard(claim({ sources: [src(1), src(2)] }), { open: true });
+  const [one, two] = card.querySelectorAll(".lite-chip");
+  const figure = (chip) => card.querySelector("#" + chip.getAttribute("aria-controls"));
+  one.click();
+  assert.equal(one.getAttribute("aria-expanded"), "true");
+  assert.equal(figure(one).hidden, false);
+  assert.match(figure(one).textContent, /Quote number 1\./);
+  two.click();
+  assert.equal(figure(one).hidden, true, "the first closes when the second opens");
+  assert.equal(figure(two).hidden, false);
+  two.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  assert.equal(figure(two).hidden, true);
+  assert.equal(two.getAttribute("aria-expanded"), "false");
+  one.click(); one.click();
+  assert.equal(figure(one).hidden, true, "a second press on the same chip closes it");
+});
+
+test("a chip draws the mark for where the engine stands the source, and none when it could not", () => {
+  const card = renderClaimCard(claim({ sources: [
+    src(1, { standing: "trusted", tier: "manufacturer" }),
+    src(2, { standing: "low", tier: "forum_ugc" }),
+    src(3),
+    src(4, { standing: "constructor" }),
+  ] }));
+  const chips = [...card.querySelectorAll(".lite-chip")];
+  assert.deepEqual(chips.map((chip) => chip.dataset.standing), ["trusted", "low", undefined, undefined]);
+  assert.equal(chips[2].querySelector(".lite-chip-glyph"), null, "no standing, no mark");
+  assert.match(chips[0].getAttribute("aria-label"), /trusted/);
+  assert.match(card.querySelectorAll(".lite-rc-src")[1].textContent, /Low · forum ugc/);
 });
 
 test("a source that is not a web address is shown as text and never becomes a link", () => {
