@@ -1262,3 +1262,117 @@
   color: var(--ground);
   text-align: center;
 }
+
+/* ---- the pixel icon ----
+   Twelve by twelve square cells, drawn the way the logo is: heavy strokes, mitred
+   corners, and a signature square where the scan line ends. Empty cells are not
+   drawn at all; they only show for a moment when the scan passes. */
+
+.pix {
+  --s: 24px;
+  --tone: currentColor;
+  --sig: var(--teal);
+  display: inline-grid;
+  flex: none;
+  grid-template-columns: repeat(12, 1fr);
+  gap: calc(var(--s) / 72);
+  width: var(--s);
+  height: var(--s);
+  vertical-align: middle;
+}
+
+.pix i {
+  background: transparent;
+  border-radius: 8%;
+}
+
+.pix i[data-c='#'] {
+  background: var(--tone);
+}
+
+.pix i[data-c='o'] {
+  background: var(--sig);
+}
+
+.pix[data-state='working'] i {
+  animation: pix-scan calc(1.7s * var(--tm)) steps(12, end) infinite;
+  animation-delay: calc(var(--y) * 0.142s * var(--tm));
+}
+
+.pix[data-state='working'] i:not([data-c]),
+.pix[data-state='done'] i:not([data-c]) {
+  animation-name: pix-trace;
+}
+
+.pix[data-state='done'] {
+  --sig: var(--mint);
+}
+
+.pix[data-state='done'] i {
+  animation: pix-scan calc(0.9s * var(--tm)) steps(12, end) 1;
+  animation-delay: calc(var(--y) * 0.075s * var(--tm));
+}
+
+.pix[data-state='waiting'] i[data-c='o'] {
+  animation: pix-blink calc(1.2s * var(--tm)) steps(2, end) infinite;
+}
+
+.pix[data-state='waiting'] i[data-c='#'] {
+  opacity: 0.55;
+}
+
+.pix[data-state='paused'] {
+  --tone: var(--warn);
+  --sig: var(--warn);
+}
+
+.pix[data-state='failed'] {
+  --tone: var(--risk);
+  --sig: var(--risk);
+}
+
+.pix[data-state='failed'] i[data-c] {
+  animation: pix-break calc(1.4s * var(--tm)) steps(1, end) infinite;
+  animation-delay: calc((var(--x) * 37ms + var(--y) * 91ms) * var(--tm));
+}
+
+@keyframes pix-scan {
+  0%,
+  16%,
+  100% {
+    filter: none;
+  }
+  6% {
+    filter: brightness(1.9);
+  }
+}
+
+/* The empty cells of the row the scan is on, shown for a moment. */
+@keyframes pix-trace {
+  0%,
+  16%,
+  100% {
+    background-color: transparent;
+  }
+  6% {
+    background-color: color-mix(in srgb, var(--tone) 30%, transparent);
+  }
+}
+
+@keyframes pix-blink {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+@keyframes pix-break {
+  0%,
+  72%,
+  100% {
+    opacity: 1;
+  }
+  76%,
+  90% {
+    opacity: 0.12;
+  }
+}

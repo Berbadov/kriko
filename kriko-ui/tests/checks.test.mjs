@@ -6,13 +6,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-let directory, checks, api, thinness, view, steps, meters
+let directory, checks, api, thinness, view, steps, meters, pix
 const memory = new Map()
 before(async () => {
   globalThis.window = { setTimeout, clearTimeout }
   globalThis.sessionStorage = { getItem: (key) => memory.get(key), setItem: (key, value) => memory.set(key, value), removeItem: (key) => memory.delete(key) }
   directory = await mkdtemp(join(tmpdir(), 'kriko-ui-tests-'))
-  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs'], ['src/engine/steps.ts','steps.mjs'], ['src/engine/usagemeters.ts','usagemeters.mjs']]) {
+  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs'], ['src/engine/steps.ts','steps.mjs'], ['src/engine/usagemeters.ts','usagemeters.mjs'], ['src/engine/pixicons.ts','pixicons.mjs']]) {
     const code = await readFile(source, 'utf8')
     const built = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
     await writeFile(join(directory, target), built.replaceAll('import.meta.env', '({})').replace("'../engine/api'", "'./api.mjs'").replace("'../engine/thinness'", "'./thinness.mjs'"))
@@ -23,6 +23,7 @@ before(async () => {
   view = await import(pathToFileURL(join(directory, 'view.mjs')))
   steps = await import(pathToFileURL(join(directory, 'steps.mjs')))
   meters = await import(pathToFileURL(join(directory, 'usagemeters.mjs')))
+  pix = await import(pathToFileURL(join(directory, 'pixicons.mjs')))
 })
 after(async () => { if (directory) await rm(directory, {recursive:true, force:true}) })
 
@@ -185,4 +186,20 @@ test('the pill says the tightest window left and what the last day cost, and not
   bare.resources.web_search.windows['24h'].calls = 0
   assert.deepEqual(meters.pillParts(bare), { fill: null, text: '' })
   assert.deepEqual(meters.pillParts(null), { fill: null, text: '' })
+})
+
+test('every pixel icon is twelve by twelve, lit with the two cell kinds, and carries its signature square', () => {
+  assert.ok(pix.PIX_NAMES.length >= 13)
+  for (const name of pix.PIX_NAMES) {
+    const rows = pix.draw(name)
+    assert.equal(rows.length, 12, `${name} has twelve rows`)
+    for (const row of rows) {
+      assert.equal(row.length, 12, `${name} has twelve cells in every row`)
+      assert.match(row, /^[ #o]+$/, `${name} uses only empty, lit and signature cells`)
+    }
+    const lit = rows.join('').replaceAll(' ', '')
+    assert.ok(lit.includes('o'), `${name} has a signature cell, as the logo has its square`)
+    assert.ok(lit.length >= 12, `${name} draws something`)
+  }
+  assert.deepEqual(pix.draw('no-such-icon'), pix.draw('spark'), 'an unknown name draws the fallback, never nothing')
 })
