@@ -111,7 +111,7 @@ def test_staging_twice_replaces_the_folder_instead_of_overlaying_it(monkeypatch,
     (_zip(min_shell="9.0.0"), None, "installer"),
     (_zip(extra={"../escape.txt": "x"}), None, "unsafe"),
     (_zip(extra={"/abs.txt": "x"}), None, "unsafe"),
-])
+], ids=["checksum", "wrong-version", "needs-newer-installer", "path-escape", "absolute-path"])
 def test_a_download_that_is_wrong_leaves_the_engines_as_they_were(monkeypatch, tmp_path, body, digest, why):
     _serve(monkeypatch, body, digest=digest)
     with pytest.raises(ValueError, match=why):
