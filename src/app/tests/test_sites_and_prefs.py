@@ -397,7 +397,7 @@ def test_no_search_key_at_all_says_so(settings, monkeypatch):
     monkeypatch.setattr(keys, "search_providers", lambda: [])
     with pytest.raises(providers.MissingKey) as raised:
         providers._searcher(settings.app_state_path)
-    assert "Exa or Tavily" in str(raised.value)
+    assert "Exa, Tavily or DeepSeek" in str(raised.value)
 
 
 # ── what it costs ───────────────────────────────────────────────────────────

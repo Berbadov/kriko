@@ -23,9 +23,10 @@ import logging
 import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from app import htmlscan
-from app.providers import egress, network
+from app.providers import egress, network, proxypool
 from datetime import date, datetime, timezone
 
 from kriko.research import Fetched
@@ -110,6 +111,9 @@ def reader(timeout: float = TIMEOUT):
             # 145 and 89 characters of "Drag the handle to the target" and
             # "Checking your browser", counted as read). Climb from here,
             # inside what is left of the page's time.
+            router = proxypool.shared()
+            if router is not None:
+                router.note_blocked(urllib.parse.urlsplit(url).hostname or "")
             if not allow_fallback:
                 return Fetched("")
             if check_cancelled is not None:
@@ -206,6 +210,18 @@ def _download(url: str, timeout: float, *, check_cancelled=None,
     if ladder_ends is None:
         ladder_ends = time.monotonic() + 2 * timeout
     plain_ends = time.monotonic() + timeout
+    router = proxypool.shared()
+    host = urllib.parse.urlsplit(url).hostname or ""
+    if router is not None and router.should_route(host):
+        # A direct read of this host was measured as refused a while ago: the
+        # pool is asked first, and the plain fetch is not repeated against it.
+        page = _via_pool(router, url, timeout, check_cancelled=check_cancelled,
+                         allow_private=allow_private)
+        if page is not None:
+            if page or not allow_fallback:
+                return page
+            return _climb(url, ladder_ends, check_cancelled=check_cancelled,
+                          allow_private=allow_private)
     try:
         options = {"check": check_cancelled} if check_cancelled is not None else {}
         with network.urlopen(request, timeout=timeout, guard_redirects=not allow_private,
@@ -222,6 +238,12 @@ def _download(url: str, timeout: float, *, check_cancelled=None,
             check_cancelled()
         return raw.decode(charset, "replace")
     except urllib.error.HTTPError as error:
+        if router is not None and error.code in proxypool.BLOCK_STATUSES:
+            router.note_blocked(host)
+            page = _via_pool(router, url, timeout, check_cancelled=check_cancelled,
+                             allow_private=allow_private)
+            if page:
+                return page
         if error.code in REFUSED and allow_fallback:
             if check_cancelled is not None:
                 check_cancelled()
@@ -240,6 +262,60 @@ def _download(url: str, timeout: float, *, check_cancelled=None,
     ) as error:
         log.info("could not read a source: %s", type(error).__name__)
         return ""
+
+
+def _via_pool(router, url: str, timeout: float, *, check_cancelled=None,
+              allow_private: bool = False) -> str | None:
+    """The page through the proxy pool, "" when it stays blocked, None when the pool cannot be used.
+
+    At most `proxypool.MAX_TRIES` different proxies, each once. A proxy that
+    fails is retired; a page that is refused through all of them is "could not
+    be read" and is not tried again. `None` means there was no healthy proxy
+    (or no permission to use one) and the caller carries on as it would have.
+    """
+    host = urllib.parse.urlsplit(url).hostname or ""
+    if not router.robots_allow(url):
+        router.say(f"{host}: robots.txt asks not to be read, so it was not retried through a proxy")
+        router.note("unreadable")
+        return ""
+    tried = router.candidates()
+    if not tried:
+        router.say(f"{host}: no healthy proxy is left; reading directly")
+        router.note("direct_fallbacks")
+        return None
+    request = urllib.request.Request(url, headers={"user-agent": USER_AGENT})
+    for proxy in tried:
+        if check_cancelled is not None:
+            check_cancelled()
+        guards = () if allow_private else (egress._RefuseUnsafeRedirects(),)
+        opener = router.opener(proxy, *guards)
+        began = time.monotonic()
+        try:
+            with network.urlopen(
+                    request, timeout=timeout,
+                    opener=lambda target, timeout=None, _o=opener: _o.open(target, timeout=timeout),
+                    **({"check": check_cancelled} if check_cancelled is not None else {})) as response:
+                kind = (response.headers.get_content_type() or "").lower()
+                if kind and not (kind.startswith("text/") or "html" in kind or "xml" in kind):
+                    return ""
+                charset = response.headers.get_content_charset() or "utf-8"
+                raw = _body(response, max(0.0, timeout - (time.monotonic() - began)),
+                            check_cancelled=check_cancelled)
+        except urllib.error.HTTPError as error:
+            if error.code in proxypool.PROXY_FAILURES:
+                router.retire(proxy, f"HTTP {error.code}")
+            elif error.code not in proxypool.BLOCK_STATUSES:
+                return ""  # an ordinary error page: the proxy is fine, the page is not there
+            continue
+        except (urllib.error.URLError, TimeoutError, OSError) as error:
+            router.retire(proxy, type(getattr(error, "reason", error)).__name__)
+            continue
+        router.say(f"{host}: read through {router.label(proxy)}")
+        router.note("proxied_reads")
+        return raw.decode(charset, "replace")
+    router.say(f"{host}: could not be read, still blocked after {len(tried)} proxies")
+    router.note("unreadable")
+    return ""
 
 
 def _body(response, timeout: float, *, check_cancelled=None) -> bytes:

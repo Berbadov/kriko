@@ -4097,37 +4097,38 @@ class _TurnHooks:
 
 
 def _chat_web_searcher(app_state, app_state_path, progress: Progress):
-    """Build the selected host search on the turn's owner thread."""
+    """Build the selected host search on the turn's owner thread.
+
+    The reader's first choice with the providers behind it
+    (`providers/websearch.py`): a failure or an empty answer from the first is
+    written to the job log and handed to the next, and stopping the job is
+    never mistaken for a failure.
+    """
     from app import prefs
-    from app.providers import openserp
+    from app.providers import websearch
 
-    chosen = prefs.read(app_state)
-    if chosen.get(prefs.SEARCH):
-        from app.providers import _searcher
-
-        search, _provider = _searcher(app_state_path, chosen[prefs.SEARCH])
-    else:
-        search = openserp.searcher(
-            chosen.get(prefs.LOCAL_SEARCH_URL, ""), engine="duckduckgo,bing,google",
-            language=chosen.get(prefs.LOCAL_SEARCH_LANGUAGE) or "en", timeout=8.0,
-            mode="any")
-    search.check_cancelled = progress.check
-    return search
+    return websearch.build(prefs.read(app_state), app_state_path,
+                           log=getattr(progress, "log", None), check=progress.check)
 
 
 def _chat_web_sources(app_state, app_state_path, progress: Progress):
     """Compatibility pair for callers that need both host web callables."""
     from app import chatweb
+    from app.providers import proxypool
 
     return (_chat_web_searcher(app_state, app_state_path, progress),
-            chatweb.reader(timeout=5.0))
+            chatweb.reader(timeout=5.0, **proxypool.reader_options(getattr(progress, "log", None))))
 
 
 def _chat_web_accessors(app_state, app_state_path, progress: Progress):
     """Build the page reader on the owner thread and reuse one lazy searcher."""
     from app import chatweb
+    from app.providers import proxypool
 
-    page_reader = chatweb.reader(timeout=5.0)
+    # `{}` unless the reader turned the proxy pool on (off by default), so the
+    # reader is built exactly as it was for everyone else.
+    page_reader = chatweb.reader(
+        timeout=5.0, **proxypool.reader_options(getattr(progress, "log", None)))
     searcher = None
 
     def search(query: str, limit: int = 5):
