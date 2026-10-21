@@ -346,8 +346,9 @@ def _spent(researcher) -> tuple[int | None, float | None]:
     usd = getattr(researcher, "cost_usd", None)
     if usd is None:
         usd = getattr(researcher, "spent", None)
+    priced = _number(usd)
     return (tokens if isinstance(_number(tokens), int) else None,
-            float(usd) if _number(usd) is not None else None)
+            float(priced) if priced is not None else None)
 
 
 def _request_of(name: str, args: tuple, kwargs: dict) -> str:
@@ -447,9 +448,13 @@ def watch_calls(researcher, db_path: str, job_id: str) -> bool:
                 except BaseException as error:
                     calls.pop()
                     why = f"{type(error).__name__}: {error}" if str(error) else type(error).__name__
-                    failed_before[(depth, name)] = redaction.redact_text(why, limit=200)
+                    # The reader pressing stop is not a failure to retry.
+                    stopped = bool(getattr(error, "cancelled", False))
+                    if not stopped:
+                        failed_before[(depth, name)] = redaction.redact_text(why, limit=200)
                     _finish(conn, row_id, started, researcher, before_tokens, before_usd,
-                            who, name, depth, attempt, request, "", why, failed=True)
+                            who, name, depth, attempt, request, "", why, failed=True,
+                            stopped=stopped)
                     raise
                 calls.pop()
                 _finish(conn, row_id, started, researcher, before_tokens, before_usd,
@@ -489,7 +494,8 @@ def _call_title(name: str, who: dict) -> str:
 
 
 def _finish(conn, row_id, started, researcher, before_tokens, before_usd,
-            who, name, depth, attempt, request, reply, error, *, failed) -> None:
+            who, name, depth, attempt, request, reply, error, *, failed,
+            stopped: bool = False) -> None:
     if conn is None or row_id is None:
         return
     try:
@@ -506,10 +512,12 @@ def _finish(conn, row_id, started, researcher, before_tokens, before_usd,
         conn.execute(
             "UPDATE job_steps SET state = ?, level = ?, ms = ?, tokens = ?, usd = ?,"
             " detail_json = ?, response = ?, title = ? WHERE step_id = ?",
-            ("failed" if failed else "done", "error" if failed else "info", ms, tokens, usd,
+            ("failed" if failed else "done",
+             ("warn" if stopped else "error") if failed else "info", ms, tokens, usd,
              _clean_detail(detail, private),
              _clip(error if failed else text, private, BODY_CHARS),
-             _clip(_call_title(name, who) + (f" failed: {error}" if failed else ""),
+             _clip(_call_title(name, who) + ((" stopped" if stopped else f" failed: {error}")
+                                              if failed else ""),
                    private, TITLE_CHARS),
              row_id))
         conn.commit()
@@ -559,7 +567,7 @@ _JOB_AGG = (
     "SELECT s.job_id AS job_id, COUNT(*) AS steps,"
     " SUM(s.level = 'error') AS errors, SUM(s.level = 'warn') AS warnings,"
     " SUM(s.source = 'search') AS searches, SUM(s.source = 'page') AS pages,"
-    " SUM(s.source = 'retry') AS retries,"
+    " SUM(s.source = 'retry') AS retries, MIN(s.at) AS first_at, MAX(s.at) AS last_at,"
     " SUM(s.source = 'agent' AND NOT EXISTS"
     "     (SELECT 1 FROM job_steps c WHERE c.parent_id = s.step_id)) AS calls,"
     " SUM(CASE WHEN s.source = 'agent' AND NOT EXISTS"
@@ -573,10 +581,21 @@ _JOB_AGG = (
 )
 
 
+def _zero(job: dict, agg: dict | None) -> float | None:
+    """When a job's clock starts: its first step, which has milliseconds,
+    rather than the job row's start, which is whole seconds."""
+    return _ts((agg or {}).get("first_at")) or _ts(job.get("started_at") or job.get("created_at"))
+
+
 def _summary(job: dict, agg: dict | None) -> dict:
     started = _ts(job.get("started_at") or job.get("created_at"))
     ended = _ts(job.get("finished_at"))
     agg = agg or {}
+    # The job row keeps whole seconds; its first and last step keep milliseconds,
+    # so a job that took a fraction of a second says so.
+    first, last = _ts(agg.get("first_at")), _ts(agg.get("last_at"))
+    if job.get("done") and first is not None and last is not None:
+        started, ended = first, last
     return {
         "job_id": job["job_id"], "kind": job["kind"], "label": label_of(job.get("params")),
         "state": job["state"], "done": bool(job.get("done")), "message": job.get("message") or "",
@@ -682,7 +701,7 @@ def list_steps(conn: sqlite3.Connection, *, job_id: str = "", level: str = "",
         aggs = {r["job_id"]: dict(r) for r in conn.execute(_JOB_AGG.format(marks=marks), job_ids)}
         for job in found:
             jobs[job["job_id"]] = _summary(job, aggs.get(job["job_id"]))
-            started[job["job_id"]] = _ts(job.get("started_at") or job.get("created_at"))
+            started[job["job_id"]] = _zero(job, aggs.get(job["job_id"]))
     steps = [_step(row, started) for row in rows]
     by_id = {one["step_id"]: one for one in steps}
     last: dict[str, dict] = {}
@@ -705,9 +724,9 @@ def step_detail(conn: sqlite3.Connection, step_id: int) -> dict | None:
         " FROM job_steps s WHERE s.step_id = ?", (int(step_id),)).fetchone()
     if row is None:
         return None
-    job = conn.execute("SELECT started_at, created_at FROM jobs WHERE job_id = ?",
-                       (row["job_id"],)).fetchone()
-    zero = {row["job_id"]: _ts((job["started_at"] or job["created_at"]) if job else None)}
+    first = conn.execute("SELECT MIN(at) FROM job_steps WHERE job_id = ?",
+                         (row["job_id"],)).fetchone()[0]
+    zero = {row["job_id"]: _ts(first)}
     out = _step(row, zero)
     private = private_strings(conn)
     out["request"] = redaction.redact_text(row["request"], private=private)

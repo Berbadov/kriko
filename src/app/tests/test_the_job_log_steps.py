@@ -110,6 +110,7 @@ def test_every_line_a_handler_logs_becomes_a_timed_classified_step(client, setti
     # Each row is timed from the job's start, in order.
     offsets = [one["offset_ms"] for one in data["items"]]
     assert offsets == sorted(offsets) and all(isinstance(value, int) for value in offsets)
+    assert offsets[0] == 0, "the clock starts at the first step, not at the job row's whole second"
     assert data["jobs"][job_id]["errors"] == 1
 
 
@@ -189,6 +190,26 @@ def test_a_failed_call_then_a_second_one_is_a_retry_that_says_why(client, settin
     assert "rate limit" in retry["title"] and retry["detail"]["attempt"] == 2
     assert calls[1]["detail"]["attempt"] == 2
     assert client.get("/api/logs/jobs").json()["items"][0]["retries"] == 1
+
+
+def test_the_reader_stopping_a_call_is_a_warning_and_never_a_retry(client, settings):
+    from app.web.jobs import Cancelled
+
+    agent = FakeAgent([Cancelled(), "after"])
+
+    def handler(settings_, params, progress):
+        progress.watch(agent)
+        with pytest.raises(Cancelled):
+            agent.ask("first")
+        agent.ask("second")
+
+    job_id = run_job(settings, handler)
+    rows = steps_of(client, job_id)["items"]
+    calls = [one for one in rows if one["source"] == "agent"]
+
+    assert [(one["state"], one["level"]) for one in calls] == [("failed", "warn"), ("done", "info")]
+    assert calls[0]["title"].endswith("stopped")
+    assert not [one for one in rows if one["source"] == "retry"]
 
 
 def test_a_nested_call_is_one_call_and_its_totals_are_counted_once(client, settings):
@@ -331,6 +352,8 @@ def test_the_shared_redactor_is_what_the_benchmark_traces_use(monkeypatch):
     monkeypatch.setenv("MERCURY_API_KEY", "mercury-secret-value")
     assert "mercury-secret-value" not in redact({"header": "Bearer mercury-secret-value"})
     assert redaction.redact_json({"k": "plain"}, ["MERCURY_API_KEY"]) == '{"k": "plain"}'
+    # A substitution longer than what it replaced must not cut the end off.
+    assert redaction.redact_text("exited 1 (Authorization: Bearer abc.def.ghi)").endswith(")")
     assert "the-value-8" not in redaction.redact_text(
         "x the-value-8 y", env={"SOME_TOKEN": "the-value-8"})
 
