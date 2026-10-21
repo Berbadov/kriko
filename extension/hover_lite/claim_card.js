@@ -74,6 +74,7 @@
    * chip (`kriko-ui/src/ui/ClaimChip.tsx`); the shapes are filled, half and
    * ring, so colour is never the only cue. */
   const STANDING_WORD = { trusted: "Trusted", neutral: "Neutral", low: "Low" };
+  const STANDING_LIT = { trusted: 3, neutral: 2, low: 1 };
   let sourceSerial = 0;
 
   function sourceMarkup(source, id) {
@@ -93,7 +94,7 @@
     const label = `Source ${source.domain}${word ? `, ${word.toLowerCase()}` : ""}${source.disputes ? ", disputes this" : ""}`;
     return `<button type="button" class="lite-chip"${source.standing ? ` data-standing="${source.standing}"` : ""}${source.disputes ? ' data-stance="refutes"' : ""}
         aria-expanded="false" aria-controls="${id}" aria-label="${escapeHtml(label)}">
-      ${source.standing ? '<span class="lite-chip-glyph" aria-hidden="true"></span>' : ""}<span class="lite-chip-site">${escapeHtml(source.domain)}</span>
+      ${source.standing ? `<span class="lite-chip-meter" data-lit="${STANDING_LIT[source.standing]}" aria-hidden="true"><i></i><i></i><i></i></span>` : ""}<span class="lite-chip-site">${escapeHtml(source.domain)}</span>
     </button>`;
   }
 

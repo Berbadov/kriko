@@ -13,7 +13,7 @@ import { QueueScreen } from './screens/Queue'
 import { Tour } from './tour/Tour'
 import { Drawer } from './ui/Drawer'
 import { DRAWER_EVENT } from './ui/drawerEvents'
-import { ORDER, Rail, type Screen } from './ui/Rail'
+import { ORDER, TopBar, type Screen } from './ui/TopBar'
 
 function Shell() {
   const { motion: m } = usePrefs()
@@ -22,7 +22,6 @@ function Shell() {
   const attention = useAttention()
   const chat = useChat()
   const [{ screen, direction, product }, setNav] = useState<{ screen: Screen; direction: number; product: string | null }>({ screen: 'chat', direction: 1, product: null })
-  const [collapsed, setCollapsed] = useState(false)
   const [drawer, setDrawer] = useState(false)
   /** A panel the drawer should open on, asked for by the tour. */
   const [drawerPanel, setDrawerPanel] = useState<string | null>(null)
@@ -111,7 +110,7 @@ function Shell() {
   return (
     <MotionConfig reducedMotion={m.on ? 'never' : 'always'}>
       <div className="app">
-        <Rail screen={screen} onNavigate={go} collapsed={collapsed} onCollapse={() => setCollapsed((v) => !v)} onMore={() => setDrawer(true)} onNewChat={startChat} onOpenChat={showChat} queueCount={active} attention={attention} />
+        <TopBar screen={screen} onNavigate={go} onMore={() => setDrawer(true)} onNewChat={startChat} onOpenChat={showChat} queueCount={active} attention={attention} />
         <main className="stage">
           <AnimatePresence mode="popLayout" initial={false} custom={direction}>
             <motion.div
@@ -135,7 +134,7 @@ function Shell() {
             </motion.div>
           </AnimatePresence>
         </main>
-        <Drawer open={drawer} panel={drawerPanel} onClose={closeDrawer} offset={collapsed ? 68 : 244} onOpen={openProduct} />
+        <Drawer open={drawer} panel={drawerPanel} onClose={closeDrawer} offset={0} onOpen={openProduct} />
         <Tour onStart={() => go('chat')} />
       </div>
     </MotionConfig>

@@ -2,6 +2,7 @@
 
 .app {
   display: flex;
+  flex-direction: column;
   height: 100%;
   padding: 10px;
   gap: 10px;
@@ -72,34 +73,6 @@
   padding-top: var(--titlebar-h);
 }
 
-.rail {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  padding: 12px;
-  background: var(--panel);
-  border: 1px solid var(--edge);
-  border-radius: var(--r-xl);
-  overflow: hidden;
-}
-
-.rail-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 44px;
-  padding-left: 8px;
-  margin-bottom: 14px;
-  gap: 8px;
-}
-
-.rail[data-collapsed='true'] .rail-top {
-  flex-direction: column-reverse;
-  height: auto;
-  padding-left: 0;
-  gap: 14px;
-}
-
 .brand {
   display: flex;
   align-items: center;
@@ -112,22 +85,87 @@
   height: 26px;
 }
 
-.rail-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
+/* ---- the top bar ----
+   The logo and the agent on the left, the places in a pill in the middle, the
+   queue and More on the right. The window below takes the whole width. */
+
+.topbar {
+  position: relative;
+  z-index: 30;
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 6px 0 8px;
 }
 
-.rail-item {
-  position: relative;
+.topbar-left,
+.topbar-right {
   display: flex;
   align-items: center;
-  gap: 13px;
-  height: 44px;
-  padding: 0 13px;
+  gap: 10px;
+  min-width: 0;
+}
+
+.topbar-right {
+  justify-content: flex-end;
+}
+
+.topbar-slash {
+  color: var(--ink-3);
+  font-size: 18px;
+  font-weight: 300;
+}
+
+.topbar-agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 220px;
+  padding: 5px 8px 5px 12px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel-2));
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 520;
+}
+
+.topbar-agent:hover {
+  border-color: var(--edge-strong);
+}
+
+.topbar-agent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 2px var(--sunk);
+}
+
+.topbar-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
   border-radius: 14px;
   color: var(--ink-2);
+  font-size: 13.5px;
+  font-weight: 520;
   white-space: nowrap;
   transition:
     color calc(140ms * var(--tm)),
@@ -135,41 +173,133 @@
     transform calc(120ms * var(--tm));
 }
 
-.rail-item:hover {
+.topbar-tab:hover {
   color: var(--ink);
-  background: var(--panel-2);
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
 }
 
-.rail-item:active {
+.topbar-tab:active {
   transform: scale(0.97);
 }
 
-.rail-item[data-on='true'] {
+.topbar-tab[data-on='true'] {
   color: var(--ink);
-  background: transparent;
 }
 
-.rail-active {
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent-hi) 28%, transparent);
-}
-
-.rail-item > :not(.rail-active) {
+.topbar-tab > :not(.topbar-active) {
   position: relative;
 }
 
-.rail-label {
-  transition: opacity calc(160ms * var(--tm));
-  font-weight: 520;
+.topbar-active {
+  position: absolute;
+  inset: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--edge-strong);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 8%, transparent), var(--shadow-1);
 }
 
-.rail[data-collapsed='true'] .rail-label,
-.rail[data-collapsed='true'] .badge {
-  opacity: 0;
-  pointer-events: none;
+/* The one tab that starts something. It carries a glow of the brand, the way the
+   pixel signature does. */
+.topbar-new {
+  margin-left: 4px;
+  color: var(--ink);
+  background: radial-gradient(90% 120% at 50% 0%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 70%), color-mix(in srgb, var(--accent) 14%, var(--panel-2));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent-hi) 45%, transparent),
+    0 0 18px -4px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.topbar-new:hover {
+  background: radial-gradient(90% 120% at 50% 0%, color-mix(in srgb, var(--accent) 50%, transparent), transparent 70%), color-mix(in srgb, var(--accent) 20%, var(--panel-2));
+}
+
+.topbar-history {
+  position: relative;
+}
+
+.topbar-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  width: 340px;
+  max-height: min(62vh, 520px);
+  padding: 12px;
+  overflow: auto;
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--r-l);
+  box-shadow: var(--shadow-2);
+  transform: translateX(-50%);
+}
+
+.topbar-pop .rail-chats {
+  margin-top: 0;
+}
+
+.topbar-queue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.topbar-queue:hover {
+  border-color: var(--edge-strong);
+  color: var(--ink);
+}
+
+.topbar-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 16px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.topbar .icon-btn {
+  position: relative;
+}
+
+@media (max-width: 1000px) {
+  .topbar-label {
+    display: none;
+  }
+
+  .topbar-tab {
+    padding: 0 12px;
+  }
+
+  .topbar-new .topbar-label {
+    display: inline;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .topbar-slash,
+  .topbar-agent,
+  .topbar-queue {
+    display: none;
+  }
 }
 
 .badge {
@@ -416,32 +546,217 @@
   }
 }
 
-.pixel-bar {
+/* ---- pixel progress ----
+   Two bars share one idea: square cells cut by a mask, so the line is made of
+   pixels, with the brand gradient showing through the lit ones. */
+
+/* The agent stepper: numbered pixel tiles joined by a dashed pixel line. */
+.pstep {
+  --cell: 4px;
+  --gap: 2px;
+  display: flex;
+  align-items: flex-start;
+  padding: 20px 12px 0;
+  width: 100%;
+}
+
+.pstep[data-labels] {
+  padding-bottom: 22px;
+}
+
+.pstep-item {
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.pstep-item:first-child {
+  flex: 0 0 auto;
+}
+
+.pstep-node {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(var(--cells), 1fr);
-  gap: 2px;
-  height: 6px;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
 }
 
-.pixel-bar i {
+.pstep-box {
+  --notch: 3px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
   background: var(--edge-strong);
-  border-radius: 1px;
-  transition: background-color calc(200ms * var(--tm));
+  clip-path: polygon(var(--notch) 0, calc(100% - var(--notch)) 0, 100% var(--notch), 100% calc(100% - var(--notch)), calc(100% - var(--notch)) 100%, var(--notch) 100%, 0 calc(100% - var(--notch)), 0 var(--notch));
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
 }
 
-.pixel-bar i[data-on] {
-  background: var(--accent);
+/* The hollow tile: its inner face is the surface, so the edge reads as a pixel outline. */
+.pstep-box::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: var(--panel);
+  clip-path: inherit;
+  z-index: -1;
 }
 
-.pixel-bar i[data-edge] {
-  background: var(--accent-hi);
-  animation: blink calc(0.9s * var(--tm)) steps(2, end) infinite;
+.pstep-item[data-mode='done'] .pstep-box,
+.pstep-item[data-mode='now'] .pstep-box {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tone) 78%, white), var(--tone));
+  color: var(--on-fill);
 }
 
-@keyframes blink {
+.pstep-item[data-mode='done'] .pstep-box::before,
+.pstep-item[data-mode='now'] .pstep-box::before {
+  display: none;
+}
+
+.pstep-item[data-mode='now'] .pstep-node {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--tone) 70%, transparent));
+}
+
+.pstep[data-state='paused'] .pstep-item[data-mode='now'] {
+  --tone: var(--warn);
+}
+
+.pstep[data-state='done'] .pstep-item {
+  --tone: var(--mint) !important;
+}
+
+/* The caret over the current tile: a V drawn in 2px pixels. */
+.pstep-caret {
+  position: absolute;
+  top: -13px;
+  left: calc(50% - 6px);
+  width: 3px;
+  height: 3px;
+  background: var(--ink-2);
+  box-shadow:
+    9px 0 0 var(--ink-2),
+    3px 3px 0 var(--ink-2),
+    6px 3px 0 var(--ink-2);
+}
+
+.pstep-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 500;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.pstep-item[data-mode='now'] .pstep-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.pstep-item[data-mode='done'] .pstep-label {
+  color: var(--ink-2);
+}
+
+/* The dashed pixel line before a tile. The mask cuts it into square cells; the
+   inner bar is the part of the step already done. */
+.pstep-link {
+  position: relative;
+  flex: 1 1 0;
+  align-self: flex-start;
+  height: 4px;
+  margin: 9px 5px 0;
+  background: var(--edge-strong);
+  -webkit-mask: repeating-linear-gradient(90deg, black 0 var(--cell), transparent var(--cell) calc(var(--cell) + var(--gap)));
+  mask: repeating-linear-gradient(90deg, black 0 var(--cell), transparent var(--cell) calc(var(--cell) + var(--gap)));
+}
+
+.pstep-link i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, var(--step-0), var(--step-1) 45%, var(--step-3));
+  background-size: 200px 100%;
+  transition: width calc(420ms * var(--tm)) var(--ease-out);
+}
+
+.pstep[data-state='done'] .pstep-link i {
+  background: var(--bar-done);
+}
+
+.pstep-link[data-now] i {
+  animation: pixel-run calc(1.2s * var(--tm)) steps(6, end) infinite;
+}
+
+@keyframes pixel-run {
   50% {
-    opacity: 0.2;
+    opacity: 0.55;
   }
+}
+
+/* The bar for work with no steps: pixel cells under the brand gradient. */
+.pbar {
+  --h: 14px;
+  position: relative;
+  display: block;
+  width: 100%;
+  height: var(--h);
+}
+
+.pbar[data-size='sm'] {
+  --h: 6px;
+}
+
+.pbar-cells {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 11%, transparent);
+  -webkit-mask: repeating-linear-gradient(90deg, black 0 6px, transparent 6px 8px);
+  mask: repeating-linear-gradient(90deg, black 0 6px, transparent 6px 8px);
+}
+
+.pbar[data-size='sm'] .pbar-cells {
+  -webkit-mask: repeating-linear-gradient(90deg, black 0 4px, transparent 4px 6px);
+  mask: repeating-linear-gradient(90deg, black 0 4px, transparent 4px 6px);
+}
+
+.pbar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--p);
+  background: var(--bar);
+  transition: width calc(420ms * var(--tm)) var(--ease-out);
+}
+
+.pbar[data-done] .pbar-fill {
+  background: var(--bar-done);
+}
+
+.pbar[data-active] .pbar-fill {
+  animation: pixel-run calc(1.2s * var(--tm)) steps(6, end) infinite;
+}
+
+.pbar-pill {
+  position: absolute;
+  top: 50%;
+  left: max(var(--p), 38px);
+  padding: 2px 7px;
+  background: var(--pill-bg);
+  border: 1px solid var(--pill-edge);
+  color: var(--on-fill);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  line-height: 1.2;
+  transform: translate(calc(-100% - 4px), -50%);
+  transition: left calc(420ms * var(--tm)) var(--ease-out);
 }
 
 /* ---- drawer ---- */
@@ -553,30 +868,6 @@
 
 /* ---- queue card ---- */
 
-.rail-bottom {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.qc-mini {
-  align-self: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-}
-
-.queue-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 8px;
-  padding: 8px 8px 10px;
-  background: var(--panel-2);
-  border: 1px solid var(--edge);
-  border-radius: 16px;
-}
-
 .qc-head {
   display: flex;
   align-items: center;
@@ -677,45 +968,6 @@
 }
 
 /* ---- new chat and recent chats ---- */
-
-.rail-new {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 42px;
-  margin: 0 0 10px;
-  padding: 0 12px;
-  background: var(--accent-soft);
-  border: 1px solid var(--edge);
-  border-radius: 14px;
-  color: var(--ink);
-  font-weight: 540;
-  transition: background-color calc(140ms * var(--tm)), border-color calc(140ms * var(--tm));
-}
-
-.rail-new:hover {
-  border-color: var(--edge-strong);
-}
-
-.rail-new:active {
-  transform: scale(0.985);
-}
-
-/* The label is invisible when the rail is folded but still takes room, so
-   centring the row pushes its icon left. Each icon is placed on the rail's own
-   centre instead: the content box is 42px, so the centre is 21px in, which is
-   the icon's half width back from the left padding (the button has a 1px edge). */
-.rail[data-collapsed='true'] .rail-item {
-  padding-left: 12px;
-}
-
-.rail[data-collapsed='true'] .rail-new {
-  padding-left: 11px;
-}
-
-.rail-nav {
-  flex: none;
-}
 
 .rail-chats {
   display: flex;

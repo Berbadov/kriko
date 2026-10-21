@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Evidence } from '../compare/checks'
+import type { Evidence, Standing } from '../compare/checks'
 import { ExternalLink } from './ExternalLink'
 
 /** The sources behind a claim, as chips: the mark for where the source stands,
@@ -10,6 +10,19 @@ import { ExternalLink } from './ExternalLink'
  *  The extension panel draws the same chip (`extension/hover_lite`). */
 
 const STANDING_WORD = { trusted: 'Trusted', neutral: 'Neutral', low: 'Low' } as const
+
+const LIT = { trusted: 3, neutral: 2, low: 1 } as const
+
+/** Three bars that rise like a signal, lit by where the source stands. */
+function TierMeter({ standing }: { standing: Standing }) {
+  return (
+    <span className="claim-meter" data-lit={LIT[standing]} aria-hidden="true">
+      <i />
+      <i />
+      <i />
+    </span>
+  )
+}
 
 /** One card is open at a time, wherever the chips are. */
 let closeOpen: (() => void) | null = null
@@ -101,7 +114,7 @@ export function ClaimChip({ source, compact = false }: { source: Evidence; compa
         onMouseEnter={hover ? show : undefined}
         onMouseLeave={hover ? later : undefined}
       >
-        {source.standing && <span className="claim-glyph" aria-hidden="true" />}
+        {source.standing && <TierMeter standing={source.standing} />}
         {!compact && <span className="claim-site">{site}</span>}
       </button>
       {open &&
@@ -118,7 +131,7 @@ export function ClaimChip({ source, compact = false }: { source: Evidence; compa
             onMouseLeave={hover ? later : undefined}
           >
             <div className="claim-card-head" data-standing={source.standing}>
-              {source.standing && <span className="claim-glyph" aria-hidden="true" />}
+              {source.standing && <TierMeter standing={source.standing} />}
               <strong>{site}</strong>
               {word && <span className="mono claim-card-word">{word}</span>}
             </div>
