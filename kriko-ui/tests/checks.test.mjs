@@ -6,19 +6,21 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-let directory, checks, api
+let directory, checks, api, thinness, view
 const memory = new Map()
 before(async () => {
   globalThis.window = { setTimeout, clearTimeout }
   globalThis.sessionStorage = { getItem: (key) => memory.get(key), setItem: (key, value) => memory.set(key, value), removeItem: (key) => memory.delete(key) }
   directory = await mkdtemp(join(tmpdir(), 'kriko-ui-tests-'))
-  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/compare/checks.ts','checks.mjs']]) {
+  for (const [source, target] of [['src/engine/api.ts','api.mjs'], ['src/engine/thinness.ts','thinness.mjs'], ['src/chat/view.ts','view.mjs'], ['src/compare/checks.ts','checks.mjs']]) {
     const code = await readFile(source, 'utf8')
     const built = ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText
-    await writeFile(join(directory, target), built.replaceAll('import.meta.env', '({})').replace("'../engine/api'", "'./api.mjs'"))
+    await writeFile(join(directory, target), built.replaceAll('import.meta.env', '({})').replace("'../engine/api'", "'./api.mjs'").replace("'../engine/thinness'", "'./thinness.mjs'"))
   }
   checks = await import(pathToFileURL(join(directory, 'checks.mjs')))
   api = await import(pathToFileURL(join(directory, 'api.mjs')))
+  thinness = await import(pathToFileURL(join(directory, 'thinness.mjs')))
+  view = await import(pathToFileURL(join(directory, 'view.mjs')))
 })
 after(async () => { if (directory) await rm(directory, {recursive:true, force:true}) })
 
@@ -68,4 +70,39 @@ test('a lost send response reuses its request identity, while a completed intent
   await api.postQuestion(path, {text:'Find this product'})
   assert.equal(ids[0], ids[1])
   assert.notEqual(ids[1], ids[2])
+})
+
+test('the sensitivity setting hides by level, counts what it hides, and never hides a claim that carries no doubt', () => {
+  const levels = ['solid', 'partial', 'thin', undefined]
+  const visible = (setting) => levels.filter((level) => thinness.shown(level, setting))
+  assert.deepEqual(visible('all'), levels)
+  assert.deepEqual(visible('hide_thin'), ['solid', 'partial', undefined])
+  assert.deepEqual(visible('strict'), ['solid', undefined])
+  assert.equal(thinness.hiddenCount(levels, 'hide_thin'), 1)
+  assert.equal(thinness.hiddenCount(levels, 'strict'), 2)
+  assert.equal(thinness.normalise('Hide-thin'), 'hide_thin')
+  assert.equal(thinness.normalise('nonsense'), 'all')
+  assert.equal(thinness.evidenceOf({ level: 'weird' }), undefined)
+  assert.deepEqual(thinness.evidenceOf({ level: 'thin', reasons: [{ code: 'one_site', text: 'One site.' }, 7] }).reasons, [{ code: 'one_site', text: 'One site.' }])
+})
+
+test('the right column lists each page once in the order it was touched, and a lead nobody opened is not a source', () => {
+  const activity = [
+    { kind: 'search', url: 'https://lead.example/x', state: 'done' },
+    { kind: 'read', url: 'https://a.example/p', state: 'failed' },
+    { kind: 'read', url: 'https://b.example/q', state: 'done', trust: { label: 'Maker', domain: 'b.example', standing: 'trusted' } },
+    { kind: 'read', url: 'https://a.example/p', state: 'done' },
+  ]
+  const pages = view.pagesFrom(activity, ['https://c.example/named'])
+  assert.deepEqual(pages.map((page) => [page.host, page.read]), [['a.example', 'read'], ['b.example', 'read'], ['c.example', 'listed']])
+  assert.equal(pages[1].standing, 'trusted')
+})
+
+test('the context bar warns from 70% and 90%, and a turn with no report says so instead of guessing', () => {
+  assert.deepEqual([null, 0.5, 0.7, 0.89, 0.9].map(view.toneOf), ['ok', 'ok', 'amber', 'amber', 'red'])
+  assert.equal(view.usageFrom(undefined), undefined)
+  const usage = view.usageFrom({ tokens: 900, context: { state: 'not_reported', window: 4096 } })
+  assert.equal(usage.tokensIn, null)
+  assert.equal(view.turnLine(usage), '900 tokens (split not reported) · cost not reported')
+  assert.equal(view.formatTokens(18400), '18.4K')
 })
