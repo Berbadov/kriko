@@ -29,6 +29,10 @@ The result fields (names are stable, the screens read them):
                                       and `history`: `messages`, `sent`,
                                       `trimmed`, `dropped_replies`,
                                       `omitted_requests`
+
+A job's snapshots and result carry all of these. A saved chat's agent
+messages carry the same fields under `spend`, read back from the job that
+answered, so nothing is stored twice.
 """
 
 from collections.abc import Sequence
