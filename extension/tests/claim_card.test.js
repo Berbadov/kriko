@@ -83,7 +83,8 @@ test("a chip draws the mark for where the engine stands the source, and none whe
   ] }));
   const chips = [...card.querySelectorAll(".lite-chip")];
   assert.deepEqual(chips.map((chip) => chip.dataset.standing), ["trusted", "low", undefined, undefined]);
-  assert.equal(chips[2].querySelector(".lite-chip-glyph"), null, "no standing, no mark");
+  assert.equal(chips[2].querySelector(".lite-chip-meter"), null, "no standing, no mark");
+  assert.deepEqual([0, 1].map((at) => chips[at].querySelector(".lite-chip-meter").dataset.lit), ["3", "1"], "trusted lights three bars, low one");
   assert.match(chips[0].getAttribute("aria-label"), /trusted/);
   assert.match(card.querySelectorAll(".lite-rc-src")[1].textContent, /Low · forum ugc/);
 });

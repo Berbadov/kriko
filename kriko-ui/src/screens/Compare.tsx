@@ -12,7 +12,7 @@ import { Composer } from '../ui/Composer'
 import { Decide } from '../ui/Decide'
 import { ClaimSources } from '../ui/ClaimChip'
 import { EvidenceMark } from '../ui/EvidenceMark'
-import { PixelBar, Switch } from '../ui/controls'
+import { AgentSteps, Switch } from '../ui/controls'
 import { ExternalLink } from '../ui/ExternalLink'
 import { Icon } from '../ui/Icon'
 import { Markdown } from '../ui/Markdown'
@@ -161,7 +161,7 @@ export function CompareScreen() {
                         <PixelGlyph size={13} active={item.state === 'researching'} />
                         {item.line}
                       </span>
-                      <PixelBar value={item.progress} active={item.state === 'researching'} cells={18} />
+                      <AgentSteps value={item.progress} state={item.state} labels={false} />
                     </div>
                     <div className="mx-risks">
                       {[0, 1, 2].map((n) => (
