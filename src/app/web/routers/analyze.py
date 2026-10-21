@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
-from app import matching, operations, productscope, siteinfer, sites
+from app import evidence, matching, operations, productscope, siteinfer, sites
 from app.web import state
 from app.web.deps import get_app_state, get_store
 from app.web.routers.history import label_for
@@ -367,7 +367,7 @@ def answer(store, app_state, body: ScrapeRequest, app_state_path=None):
         # with no claim to carry it. It is what lets a caller offer "research
         # this" on a gap instead of only "here is what we know".
         "subjects": _resolved(store, result.resolution.subject_ids),
-        "claims": [
+        "claims": evidence.annotate([
             {
                 # The claim's own identity, so a caller can refer back to it —
                 # mark it, ask for it again, link to it. Without this the
@@ -391,12 +391,14 @@ def answer(store, app_state, body: ScrapeRequest, app_state_path=None):
                         "quote": s.quote,
                         "stance": s.stance,
                         "tier": s.tier,
+                        "trust": round(s.trust, 3),
                     }
                     for s in c.sources
                 ],
+                "open_conditions": list(c.open_conditions),
             }
             for c in result.claims
-        ],
+        ]),
     }
     return payload, mapped, result
 
