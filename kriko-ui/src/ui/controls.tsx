@@ -62,13 +62,14 @@ export function AgentSteps({
 /** A progress bar for work with no steps (a download): pixel cells filled with
  *  the brand gradient, the percent on a small pill at the end of the fill.
  *  `sm` is the same bar without the pill, for a row with no room. */
-export function ProgressBar({ value, active = false, size = 'md' }: { value: number; active?: boolean; size?: 'sm' | 'md' }) {
+export function ProgressBar({ value, active = false, size = 'md', tone }: { value: number; active?: boolean; size?: 'sm' | 'md'; tone?: 'warn' | 'out' }) {
   const fraction = Math.max(0, Math.min(1, value))
   const percent = Math.round(fraction * 100)
   return (
     <span
       className="pbar"
       data-size={size}
+      data-tone={tone}
       data-active={active || undefined}
       data-done={percent >= 100 || undefined}
       role="progressbar"
