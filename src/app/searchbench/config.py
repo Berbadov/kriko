@@ -17,11 +17,26 @@ class Model:
     effort: str = ""
 
 
-# USD / million tokens, verified 2026-10-20. Mercury 3 includes launch discount.
-# DeepSeek has time-dependent pricing: retain usage rather than guess a rate.
+# USD / million tokens, checked 2026-10-21. Use public pay-as-you-go prices,
+# including public launch/sale prices when the provider labels them current.
+# Mercury 2.5 cached input is charged at the non-cached promo input rate because
+# a separate cache rate was not published. DeepSeek model-token cost is unknown.
+PRICE_DATE = "2026-10-21"
+PRICE_BASIS = "Published PAYG rates, including active public promotions; cached input uses the uncached rate when its price is not published. Account credits/contract rates are not included."
+PRICE_SOURCES = {
+    "mercury-3": "https://www.inceptionlabs.ai/blog/introducing-mercury-3",
+    "mercury-2.5": "https://www.inceptionlabs.ai/blog/introducing-mercury-2-5",
+    "ministral-14b": "https://docs.mistral.ai/inference/pricing",
+    "ministral-8b": "https://docs.mistral.ai/inference/pricing",
+    "mistral-large-4": "https://docs.mistral.ai/inference/pricing",
+    "deepseek-search": "https://api-docs.deepseek.com/guides/search/",
+    "exa-lite": "https://exa.ai/pricing",
+    "tavily": "https://www.tavily.com/pricing",
+}
+
 MODELS = {
     "mercury-3": Model("mercury", "MERCURY_API_KEY", "https://api.inceptionlabs.ai/v1", "mercury-3", .10, .01, .35, "instant"),
-    "mercury-2.5": Model("mercury", "MERCURY_API_KEY", "https://api.inceptionlabs.ai/v1", "mercury-2.5", .20, .02, .75, "low"),
+    "mercury-2.5": Model("mercury", "MERCURY_API_KEY", "https://api.inceptionlabs.ai/v1", "mercury-2.5", .04, .04, .15, "low"),
     "ministral-14b": Model("mistral", "MISTRAL_AGENT_API_KEY", "https://api.mistral.ai/v1", "ministral-14b-2512", .20, .02, .20),
     "ministral-8b": Model("mistral", "MISTRAL_AGENT_API_KEY", "https://api.mistral.ai/v1", "ministral-8b-2512", .15, .015, .15),
     "mistral-large-4": Model("mistral", "MISTRAL_AGENT_API_KEY", "https://api.mistral.ai/v1", "mistral-large-4", .68, .07, 2.09, "none"),

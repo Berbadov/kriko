@@ -1,4 +1,4 @@
-"""Product benchmark stages: run, judge, report. Resume grading without rerunning research."""
+"""Product benchmark stages: run or resume trials, judge, and report."""
 
 import argparse
 import asyncio
@@ -9,6 +9,7 @@ import os
 import platform
 import random
 import sys
+import time
 import zipfile
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -19,7 +20,7 @@ import httpx
 from app.searchbench.__main__ import redact, retrieval_run
 from app.searchbench.accuracy import JUDGE_SYSTEM, assess, consensus, grade_result
 from app.searchbench.agent import research
-from app.searchbench.config import MODELS, SEARCHES, load_keys
+from app.searchbench.config import MODELS, PRICE_BASIS, PRICE_DATE, PRICE_SOURCES, SEARCHES, load_keys
 from app.searchbench.federated import FederatedRetrieval
 from app.searchbench.retrieval import Retrieval
 from app.searchbench.transport import Wire
@@ -43,7 +44,51 @@ PROFILES = {
 def save(document, folder):
     temporary = folder / "results.next.json"
     temporary.write_text(redact(document), encoding="utf-8")
-    temporary.replace(folder / "results.json")
+    for attempt in range(6):
+        try:
+            temporary.replace(folder / "results.json")
+            return
+        except PermissionError:
+            if attempt == 5:
+                raise
+            time.sleep(.1 * (attempt + 1))
+
+
+def load_product_corpus(path):
+    """Read a legacy case list or validate the versioned product corpus."""
+    raw = json.loads(path.read_text(encoding="utf-8-sig"))
+    if isinstance(raw, list):
+        dataset, cases = None, raw
+    elif isinstance(raw, dict):
+        dataset, cases = raw.get("dataset"), raw.get("cases")
+        if not isinstance(dataset, dict) or not isinstance(cases, list):
+            raise ValueError("Versioned corpus requires dataset metadata and a cases list")
+    else:
+        raise ValueError("Case file must be a case list or versioned corpus object")
+    if not cases or len({case.get("id") for case in cases}) != len(cases):
+        raise ValueError("Cases must be nonempty and have unique IDs")
+    if dataset and dataset.get("split") == "fresh-holdout":
+        categories = dataset.get("categories", [])
+        complexities = dataset.get("complexities", [])
+        expected = {(category, complexity): 2 for category in categories for complexity in complexities}
+        observed = {}
+        for case in cases:
+            key = (case.get("category"), case.get("complexity"))
+            observed[key] = observed.get(key, 0) + 1
+            criteria = {item.get("id") for item in case.get("criteria", [])}
+            fact_sources = case.get("ground_truth", {}).get("fact_sources", {})
+            sources = case.get("sources", [])
+            source_ids = [source.get("id") for source in sources]
+            source_urls = [source.get("url") for source in sources]
+            if set(fact_sources) != criteria or not criteria:
+                raise ValueError(f"Ground-truth map must cover every criterion in {case.get('id')}")
+            if len(source_ids) != len(set(source_ids)) or set(case.get("references", [])) != set(source_urls):
+                raise ValueError(f"Source ledger and reference URLs do not match in {case.get('id')}")
+            if any(not ids or not set(ids) <= set(source_ids) for ids in fact_sources.values()):
+                raise ValueError(f"Ground-truth map has an unknown source in {case.get('id')}")
+        if observed != expected:
+            raise ValueError(f"Fresh holdout must have two cases in every category/job cell: {observed}")
+    return cases, dataset
 
 
 async def run_profile(wire, name, case, results, page_chars):
@@ -75,12 +120,11 @@ async def run_profile(wire, name, case, results, page_chars):
 
 
 async def run_experiment(args):
-    cases = json.loads(Path(args.cases).read_text(encoding="utf-8"))
+    case_path = Path(args.cases)
+    cases, dataset = load_product_corpus(case_path)
     profiles = list(PROFILES) if args.profiles == "all" else args.profiles.split(",")
     if not set(profiles) <= PROFILES.keys() or not profiles:
         raise ValueError("Unknown profile")
-    if len({c["id"] for c in cases}) != len(cases):
-        raise ValueError("Duplicate case ID")
     needed = {MODELS[PROFILES[p][0]].key_env for p in profiles}
     for name in profiles:
         search, verifier = PROFILES[name][1], PROFILES[name][3]
@@ -92,24 +136,60 @@ async def run_experiment(args):
     missing = [key for key in needed if not os.environ.get(key)]
     if missing:
         raise ValueError("Missing " + ", ".join(sorted(missing)))
-    folder = Path(args.out) / datetime.now(timezone.utc).strftime("mega-%Y%m%d-%H%M%S")
-    folder.mkdir(parents=True, exist_ok=False)
-    sources = sorted(Path(__file__).parent.glob("*.py"))
-    digest = hashlib.sha256()
-    with zipfile.ZipFile(folder / "source.zip", "x", compression=zipfile.ZIP_DEFLATED) as snapshot:
-        for source in sources:
-            digest.update(source.name.encode())
-            digest.update(source.read_bytes())
-            snapshot.write(source, "app/searchbench/" + source.name)
-        for source in sorted(Path(__file__).parent.glob("*.json")):
-            snapshot.write(source, "app/searchbench/" + source.name)
-    document = {"schema_version": 2, "created_at": datetime.now(timezone.utc).isoformat(),
-                "config": vars(args), "cases": cases, "profiles": {p: PROFILES[p] for p in profiles},
-                "models": {n: asdict(m) for n, m in MODELS.items()}, "price_date": "2026-10-20",
-                "tavily_comparison_usd_per_credit": args.tavily_credit_usd,
-                "source_sha256": digest.hexdigest(), "case_sha256": hashlib.sha256(Path(args.cases).read_bytes()).hexdigest(),
-                "python": sys.version, "platform": platform.platform(), "retrieval_runs": [], "runs": [], "phase": "retrieval"}
-    save(document, folder)
+    case_sha256 = hashlib.sha256(case_path.read_bytes()).hexdigest()
+    if args.resume:
+        folder = Path(args.resume)
+        result_path, pending_path = folder / "results.json", folder / "results.next.json"
+        loaded = []
+        for path in (result_path, pending_path):
+            try:
+                loaded.append((path, json.loads(path.read_text(encoding="utf-8"))))
+            except (OSError, ValueError):
+                continue
+        if not loaded:
+            raise ValueError(f"No readable results.json or results.next.json in {folder}")
+        def progress(item):
+            return len(item[1].get("retrieval_runs", [])) + len(item[1].get("runs", []))
+        chosen_path, document = max(loaded, key=lambda item: (progress(item), item[0] == pending_path))
+        if document.get("phase") not in ("retrieval", "research"):
+            raise ValueError("Only interrupted retrieval or research runs can be resumed")
+        if document.get("case_sha256") != case_sha256 or document.get("dataset") != dataset:
+            raise ValueError("Resume corpus does not match the saved corpus hash and metadata")
+        if set(document.get("profiles", {})) != set(profiles):
+            raise ValueError("Resume profile selection must match the saved run")
+        if any(tuple(document["profiles"][profile]) != tuple(PROFILES[profile]) for profile in profiles):
+            raise ValueError("Resume profile definitions must match the saved run")
+        old_config = document.get("config", {})
+        for setting in ("reps", "retrieval_reps", "workers", "results", "page_chars", "seed", "tavily_credit_usd", "skip_retrieval"):
+            if old_config.get(setting) != getattr(args, setting):
+                raise ValueError(f"Resume setting {setting} must match the saved run")
+        if chosen_path == pending_path:
+            document.setdefault("resume_recoveries", []).append("Recovered the most recent complete checkpoint from results.next.json after a replace interruption.")
+        document.setdefault("resume_history", []).append({"at": datetime.now(timezone.utc).isoformat(),
+                                                             "code_sha256": hashlib.sha256(b"".join(source.read_bytes() for source in sorted(Path(__file__).parent.glob("*.py")))).hexdigest(),
+                                                             "checkpoint": chosen_path.name})
+        save(document, folder)
+        print(f"RESUMED {folder}; recovered {len(document.get('retrieval_runs', []))} retrieval rows and {len(document.get('runs', []))} research rows", flush=True)
+    else:
+        folder = Path(args.out) / datetime.now(timezone.utc).strftime("mega-%Y%m%d-%H%M%S")
+        folder.mkdir(parents=True, exist_ok=False)
+        sources = sorted(Path(__file__).parent.glob("*.py"))
+        digest = hashlib.sha256()
+        with zipfile.ZipFile(folder / "source.zip", "x", compression=zipfile.ZIP_DEFLATED) as snapshot:
+            for source in sources:
+                digest.update(source.name.encode())
+                digest.update(source.read_bytes())
+                snapshot.write(source, "app/searchbench/" + source.name)
+            for source in sorted(Path(__file__).parent.glob("*.json")):
+                snapshot.write(source, "app/searchbench/" + source.name)
+        document = {"schema_version": 2, "created_at": datetime.now(timezone.utc).isoformat(),
+                    "config": vars(args), "dataset": dataset, "cases": cases, "profiles": {p: PROFILES[p] for p in profiles},
+                    "models": {n: asdict(m) for n, m in MODELS.items()}, "price_date": PRICE_DATE, "price_basis": PRICE_BASIS,
+                    "retrieval_query_policy": "Search-only trials use identical, deterministic, stopword-compacted queries capped at 128 characters across providers. Agent queries pass through unchanged unless DeepSeek's 128-character limit requires the same compaction; transformations are logged per attempt.",
+                    "tavily_comparison_usd_per_credit": args.tavily_credit_usd,
+                    "source_sha256": digest.hexdigest(), "case_sha256": case_sha256,
+                    "python": sys.version, "platform": platform.platform(), "retrieval_runs": [], "runs": [], "phase": "retrieval"}
+        save(document, folder)
     print(f"RESULTS {folder}", flush=True)
     locks, next_at = {}, {}
     def wire_for(client):
@@ -118,23 +198,30 @@ async def run_experiment(args):
         return wire
     async with httpx.AsyncClient(http2=True, timeout=httpx.Timeout(25, connect=5),
                                  limits=httpx.Limits(max_connections=24, max_keepalive_connections=24)) as client:
-        if not args.skip_retrieval:
+        if not args.skip_retrieval and document["phase"] == "retrieval":
             jobs = list(itertools.product(SEARCHES, cases, range(args.retrieval_reps)))
             random.Random(args.seed).shuffle(jobs)
+            existing = {(row["search"], row["case"], row["repetition"]) for row in document["retrieval_runs"]}
+            remaining = [job for job in jobs if (job[0], job[1]["id"], job[2]) not in existing]
+            completed = len(existing)
             # Serial retrieval sampling avoids competing with another retrieval
             # trial. The research stage's worker count is a separate recorded load.
-            for index, (search, case, repetition) in enumerate(jobs, 1):
+            for search, case, repetition in remaining:
                 row = await retrieval_run(wire_for(client), search, case, 15, args.results, args.page_chars)
                 row.update(repetition=repetition, category=case["category"], complexity=case["complexity"])
                 document["retrieval_runs"].append(row)
                 save(document, folder)
-                print(f"retrieval {index}/{len(jobs)} {search} {case['id']} {row['status']} {row['total_s']:.2f}s", flush=True)
+                completed += 1
+                print(f"retrieval {completed}/{len(jobs)} {search} {case['id']} {row['status']} {row['total_s']:.2f}s", flush=True)
         document["phase"] = "research"
+        save(document, folder)
         jobs = list(itertools.product(profiles, cases, range(args.reps)))
         random.Random(args.seed).shuffle(jobs)
         queue = asyncio.Queue()
+        existing = {(row["profile"], row["case"], row["repetition"]) for row in document["runs"]}
         for index, job in enumerate(jobs):
-            queue.put_nowait((index, job))
+            if (job[0], job[1]["id"], job[2]) not in existing:
+                queue.put_nowait((index, job))
         async def worker():
             while not queue.empty():
                 index, (name, case, repetition) = queue.get_nowait()
@@ -156,6 +243,9 @@ async def judge_experiment(args):
     if document.get("phase") not in ("research_complete", "judging", "judged"):
         raise ValueError("Finish research before grading this folder")
     case_map = {case["id"]: case for case in document["cases"]}
+    document["grading_code_sha256"] = hashlib.sha256(Path(__file__).with_name("accuracy.py").read_bytes()).hexdigest()
+    document["grading_metric"] = "Rubric fact F1 per judge: criterion credits are true positives, uncredited required criteria are false negatives, and judge-confirmed false answer claims among up to 12 audited material claims are false positives. Citation support and scope remain separate acceptance gates."
+    document["price_sources"] = PRICE_SOURCES
     queue = asyncio.Queue()
     for row in document["runs"]:
         for model in ("mistral-large-4", "mercury-3"):
@@ -255,17 +345,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run")
-    run.add_argument("--cases", default=str(Path(__file__).with_name("products.json")))
+    run.add_argument("--cases", default=str(Path(__file__).with_name("products-v2.json")))
     run.add_argument("--profiles", default="all")
-    run.add_argument("--reps", type=int, default=1)
+    run.add_argument("--reps", type=int, default=2)
     run.add_argument("--retrieval-reps", type=int, default=2)
-    run.add_argument("--workers", type=int, default=2)
+    run.add_argument("--workers", type=int, default=1)
     run.add_argument("--results", type=int, default=3)
     run.add_argument("--page-chars", type=int, default=3500)
     run.add_argument("--tavily-credit-usd", type=float, default=.008)
-    run.add_argument("--seed", type=int, default=73)
+    run.add_argument("--seed", type=int, default=73021)
     run.add_argument("--out", default=".local-evaluation/searchbench")
     run.add_argument("--skip-retrieval", action="store_true")
+    run.add_argument("--resume", help="resume an interrupted experiment folder without repeating completed trials")
     judge = sub.add_parser("judge")
     judge.add_argument("folder")
     judge.add_argument("--workers", type=int, default=2)

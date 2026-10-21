@@ -22,6 +22,10 @@ class FederatedRetrieval:
     def cache_hits(self):
         return sum(b.cache_hits for b in self.backends)
 
+    @property
+    def query_transformations(self):
+        return [entry for backend in self.backends for entry in backend.query_transformations]
+
     def remember(self, source, owner):
         url = canonical(source["url"])
         saved = self.sources.setdefault(url, {**source, "id": f"S{len(self.sources) + 1}"})

@@ -87,6 +87,10 @@ def grade_result(result, case, row):
     recall = sum(credits.values()) / len(credits)
     critical_ok = all(credits[c["id"]] == 1 for c in case["criteria"] if c.get("critical"))
     false_claims = sum(c["correct"] is False for c in claims)
+    true_positives = sum(credits.values())
+    false_negatives = len(credits) - true_positives
+    fact_f1 = (2 * true_positives) / (2 * true_positives + false_claims + false_negatives) if 2 * true_positives + false_claims + false_negatives else 0
+    fact_precision = true_positives / (true_positives + false_claims) if true_positives + false_claims else 0
     supported = sum(c["support"] == "supported" for c in claims)
     grounding = supported / len(claims) if claims else None
     primaries = primary_citations(row["answer"], row.get("sources", []), case.get("primary_domains", []))
@@ -96,7 +100,8 @@ def grade_result(result, case, row):
                 and not result["scope_violations"] and not invented_citations
                 and len(primaries) >= case.get("primary_min", 1)
                 and (not claims and not needs_sources or grounding is not None and grounding >= .8))
-    return {"status": "scored", "fact_recall": recall, "critical_ok": critical_ok,
+    return {"status": "scored", "fact_recall": recall, "fact_f1": fact_f1, "fact_precision": fact_precision,
+            "true_positives": true_positives, "false_negatives": false_negatives,
             "false_claims": false_claims, "claims_assessed": len(claims),
             "citation_support_rate": grounding, "primary_citations": len(primaries),
             "unknown_citations": invented_citations, "accepted": accepted, "detail": result, "normalizations": normalizations}
@@ -104,7 +109,9 @@ def grade_result(result, case, row):
 
 async def assess(wire, model, row, case, *, timeout=45):
     if row["status"] != "ok" or not row.get("answer"):
-        return {"status": "no_answer", "accepted": False, "fact_recall": 0, "critical_ok": False}
+        return {"status": "no_answer", "accepted": False, "fact_recall": 0, "fact_f1": 0,
+                "fact_precision": 0, "true_positives": 0, "false_negatives": len(case["criteria"]),
+                "false_claims": 0, "critical_ok": False}
     # Include only evidence actually supplied to the researcher. Its text was
     # already bounded by that trial's evidence budget; no hidden full-page text.
     cited = citation_ids(row["answer"])
@@ -133,4 +140,5 @@ def consensus(audits):
     return {"complete": complete, "accepted": all(a["accepted"] for a in scored) if complete else None,
             "judge_agreement": len({a["accepted"] for a in scored}) <= 1 if complete else None,
             "fact_recall": sum(a["fact_recall"] for a in scored) / len(scored) if complete else None,
+            "fact_f1": sum(a["fact_f1"] for a in scored) / len(scored) if complete and all(a.get("fact_f1") is not None for a in scored) else None,
             "scope_violation": any(bool(a.get("detail", {}).get("scope_violations")) for a in scored)}

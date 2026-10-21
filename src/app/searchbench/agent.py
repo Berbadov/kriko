@@ -119,6 +119,7 @@ async def research(wire, model, variant, case, *, strategy="parallel", rounds=4,
     except Exception as error:
         row["error"] = type(error).__name__
     row.update(total_s=wire.now(), first_result_s=retrieval.first_result_s, cache_hits=retrieval.cache_hits,
-               sources=list(retrieval.sources.values()), messages=messages, events=wire.events)
+               sources=list(retrieval.sources.values()), messages=messages, events=wire.events,
+               query_transformations=retrieval.query_transformations)
     row["quality"] = evidence_metrics(row["answer"], row["sources"], case)
     return ledger(row)

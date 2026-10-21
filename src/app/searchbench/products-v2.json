@@ -1,0 +1,419 @@
+{
+  "dataset": {
+    "name": "Kriko Product Research Benchmark",
+    "version": "2.0",
+    "split": "fresh-holdout",
+    "created_on": "2026-10-21",
+    "design": "Thirty newly written, source-backed product research questions: five product categories, two questions per category and job type, and two repetitions per profile. The earlier nine-question corpus remains a development/history block and is not pooled into this holdout.",
+    "ground_truth_policy": "Each case has an answer key, criterion-to-source map, and direct primary-source ledger. Candidates receive only the question. Two blinded model judges receive the rubric and only evidence actually supplied to the candidate.",
+    "originality": "Question wording and answer keys were written for this benchmark. Public benchmark papers informed the separation of simple fact lookup, multi-source reasoning, ambiguity handling, and independently checkable answers; their question sets were not copied.",
+    "checked_on": "2026-10-21",
+    "categories": ["shoe", "computer", "car", "phone", "appliance"],
+    "complexities": ["easy", "heavy", "identity"],
+    "design_references": [
+      "https://openai.com/index/browsecomp/",
+      "https://cdn.openai.com/papers/simpleqa.pdf",
+      "https://arxiv.org/abs/2409.12941"
+    ]
+  },
+  "cases": [
+    {
+      "id": "v2-shoe-easy-moab-wp", "category": "shoe", "complexity": "easy", "deadline_s": 20,
+      "question": "For the men's Merrell Moab 3 Mid Waterproof, verify the waterproof construction and the upper materials from Merrell's own specification.",
+      "primary_domains": ["merrell.com"], "primary_min": 1,
+      "references": ["https://www.merrell.com/US/en/moab-3-mid-waterproof/52470M.html?dwvar_52470M_color=J00003598"],
+      "criteria": [
+        {"id": "membrane", "fact": "Merrell specifies a waterproof membrane that seals out water while allowing moisture to escape.", "critical": true},
+        {"id": "upper", "fact": "The upper is pig suede leather and breathable mesh."}
+      ],
+      "ground_truth": {"expected_answer": "The men's Moab 3 Mid Waterproof uses a waterproof, breathable membrane and a pig-suede-leather/breathable-mesh upper.", "fact_sources": {"membrane": ["S1"], "upper": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Merrell", "url": "https://www.merrell.com/US/en/moab-3-mid-waterproof/52470M.html?dwvar_52470M_color=J00003598"}]
+    },
+    {
+      "id": "v2-shoe-easy-speedcross-gtx", "category": "shoe", "complexity": "easy", "deadline_s": 20,
+      "question": "For Salomon SPEEDCROSS 6 GORE-TEX, verify the membrane claim, drop and lug depth from the exact product page.",
+      "primary_domains": ["salomon.com"], "primary_min": 1,
+      "references": ["https://www.salomon.com/en-us/product/speedcross-6-gore-tex-lg9214/L49226000"],
+      "criteria": [
+        {"id": "membrane", "fact": "This GORE-TEX variant has a waterproof, breathable GORE-TEX membrane.", "critical": true},
+        {"id": "drop", "fact": "The listed drop is 10 mm."},
+        {"id": "lug", "fact": "The listed lug depth is 5 mm."}
+      ],
+      "ground_truth": {"expected_answer": "The exact SPEEDCROSS 6 GORE-TEX page lists a waterproof/breathable GORE-TEX membrane, 10 mm drop and 5 mm lugs.", "fact_sources": {"membrane": ["S1"], "drop": ["S1"], "lug": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Salomon", "url": "https://www.salomon.com/en-us/product/speedcross-6-gore-tex-lg9214/L49226000"}]
+    },
+    {
+      "id": "v2-shoe-heavy-moab-variants", "category": "shoe", "complexity": "heavy", "deadline_s": 45,
+      "question": "A listing says only Moab 3 Mid. Compare Merrell's non-waterproof and Waterproof versions and tell me whether the family name alone proves this pair will keep water out.",
+      "primary_domains": ["merrell.com"], "primary_min": 2,
+      "references": ["https://www.merrell.com/US/en/moab-3-mid-waterproof/52470M.html?dwvar_52470M_color=J00003598", "https://www.merrell.com/US/en/mens-hiking-boots/?prefn1=collection&prefn2=refinementColor&prefn3=surface&prefn4=technologyCollection&prefv1=Moab&prefv2=grey&prefv3=Moderate&prefv4=Vibram%C2%AE%7CNon-Waterproof&start=0&sz=48"],
+      "criteria": [
+        {"id": "variant", "fact": "Merrell lists Moab 3 Mid and Moab 3 Mid Waterproof as distinct variants; the unqualified family name does not establish waterproof construction.", "critical": true},
+        {"id": "wp", "fact": "The Waterproof product has a waterproof membrane."},
+        {"id": "identify", "fact": "Ask for the complete style name, SKU or product label before making a definite claim about the listed pair.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Merrell lists a Moab 3 Mid as non-waterproof and a separate Moab 3 Mid Waterproof. The seller's abbreviated name is insufficient; ask for the full style/SKU or label.", "fact_sources": {"variant": ["S1", "S2"], "wp": ["S1"], "identify": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Merrell", "url": "https://www.merrell.com/US/en/moab-3-mid-waterproof/52470M.html?dwvar_52470M_color=J00003598"}, {"id": "S2", "publisher": "Merrell", "url": "https://www.merrell.com/US/en/mens-hiking-boots/?prefn1=collection&prefn2=refinementColor&prefn3=surface&prefn4=technologyCollection&prefv1=Moab&prefv2=grey&prefv3=Moderate&prefv4=Vibram%C2%AE%7CNon-Waterproof&start=0&sz=48"}]
+    },
+    {
+      "id": "v2-shoe-heavy-speedcross-care", "category": "shoe", "complexity": "heavy", "deadline_s": 45,
+      "question": "My SPEEDCROSS 6 GORE-TEX got muddy and now lets water in. Give Salomon's cleaning and drying instructions, and say what this observation does and does not prove about a defect.",
+      "primary_domains": ["salomon.com"], "primary_min": 2,
+      "references": ["https://www.salomon.com/en-us/product/speedcross-6-gore-tex-lg9214/L49226000", "https://www.salomon.com/en-us/sg/a/how-to-clean-your-running-shoes", "https://www.salomon.com/en-gb/b/care"],
+      "criteria": [
+        {"id": "variant", "fact": "The named GORE-TEX variant is specified as waterproof and breathable; this does not diagnose this particular pair.", "critical": true},
+        {"id": "clean", "fact": "Salomon advises removing dirt/mud with water and a soft wet brush."},
+        {"id": "machine", "fact": "Salomon says not to machine-wash the shoes.", "critical": true},
+        {"id": "dry", "fact": "Dry at room temperature away from direct sun and external heat."},
+        {"id": "diagnosis", "fact": "One wet-use report cannot establish the cause or a model-wide defect rate; the individual pair needs inspection/appropriate support.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "The GTX page specifies a waterproof/breathable membrane. Clean with water and a soft wet brush, do not machine-wash, and dry at room temperature away from sun and heat. A single report cannot identify the leak path or establish prevalence; contact Salomon for the individual pair.", "fact_sources": {"variant": ["S1"], "clean": ["S2"], "machine": ["S2", "S3"], "dry": ["S2", "S3"], "diagnosis": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Salomon", "url": "https://www.salomon.com/en-us/product/speedcross-6-gore-tex-lg9214/L49226000"}, {"id": "S2", "publisher": "Salomon", "url": "https://www.salomon.com/en-us/sg/a/how-to-clean-your-running-shoes"}, {"id": "S3", "publisher": "Salomon", "url": "https://www.salomon.com/en-gb/b/care"}]
+    },
+    {
+      "id": "v2-shoe-identity-merrell", "category": "shoe", "complexity": "identity", "deadline_s": 12,
+      "question": "A used listing says only Merrell Moab 3 Mid. Can I count on it for wet hikes? Ask for the missing identifying detail before deciding.",
+      "primary_domains": ["merrell.com"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://www.merrell.com/US/en/moab-3-mid-waterproof/52470M.html?dwvar_52470M_color=J00003598", "https://www.merrell.com/US/en/mens-hiking-boots/?prefn1=collection&prefn2=refinementColor&prefn3=surface&prefn4=technologyCollection&prefv1=Moab&prefv2=grey&prefv3=Moderate&prefv4=Vibram%C2%AE%7CNon-Waterproof&start=0&sz=48"],
+      "criteria": [
+        {"id": "ask", "fact": "Ask for the full product name/SKU or a clear photo of the tongue/box label to distinguish the waterproof version.", "critical": true},
+        {"id": "no-guess", "fact": "Do not infer waterproofness from the Moab 3 family name alone.", "critical": true},
+        {"id": "conditional", "fact": "Conditional advice is acceptable, but a definite answer waits for identification."}
+      ],
+      "ground_truth": {"expected_answer": "Ask for the complete model/SKU or label photo; Merrell sells both non-waterproof and waterproof Moab 3 Mid variants, so the family name alone is insufficient.", "fact_sources": {"ask": ["S1", "S2"], "no-guess": ["S1", "S2"], "conditional": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Merrell", "url": "https://www.merrell.com/US/en/moab-3-mid-waterproof/52470M.html?dwvar_52470M_color=J00003598"}, {"id": "S2", "publisher": "Merrell", "url": "https://www.merrell.com/US/en/mens-hiking-boots/?prefn1=collection&prefn2=refinementColor&prefn3=surface&prefn4=technologyCollection&prefv1=Moab&prefv2=grey&prefv3=Moderate&prefv4=Vibram%C2%AE%7CNon-Waterproof&start=0&sz=48"}]
+    },
+    {
+      "id": "v2-shoe-identity-salomon", "category": "shoe", "complexity": "identity", "deadline_s": 12,
+      "question": "Someone gave me Salomon Speedcross 6 shoes with no box. Are they waterproof, and can I machine-wash them? Ask what you need before giving a definite instruction.",
+      "primary_domains": ["salomon.com"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://www.salomon.com/en-us/product/speedcross-6-gore-tex-lg9214/L49226000", "https://www.salomon.com/en-us/sg/a/how-to-clean-your-running-shoes"],
+      "criteria": [
+        {"id": "ask", "fact": "Ask whether the shoe is the GORE-TEX version or request the article/SKU/label photo.", "critical": true},
+        {"id": "no-variant-transfer", "fact": "Do not transfer the GTX waterproof claim to every Speedcross 6 variant.", "critical": true},
+        {"id": "no-care-guess", "fact": "Do not give a definite care instruction until the shoe is identified; Salomon's guidance says not to machine-wash." , "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Ask for the full article number/label and whether the pair is the GORE-TEX variant. The GTX waterproof claim is variant-specific; Salomon's shoe-care page advises against machine washing.", "fact_sources": {"ask": ["S1"], "no-variant-transfer": ["S1"], "no-care-guess": ["S2"]}},
+      "sources": [{"id": "S1", "publisher": "Salomon", "url": "https://www.salomon.com/en-us/product/speedcross-6-gore-tex-lg9214/L49226000"}, {"id": "S2", "publisher": "Salomon", "url": "https://www.salomon.com/en-us/sg/a/how-to-clean-your-running-shoes"}]
+    },
+
+    {
+      "id": "v2-computer-easy-air-m1", "category": "computer", "complexity": "easy", "deadline_s": 20,
+      "question": "For the MacBook Air (M1, 2020), verify how many external displays it natively supports and the maximum listed resolution/refresh rate.",
+      "primary_domains": ["apple.com"], "primary_min": 1,
+      "references": ["https://support.apple.com/en-us/111883"],
+      "criteria": [
+        {"id": "count", "fact": "The MacBook Air (M1, 2020) supports one external display.", "critical": true},
+        {"id": "resolution", "fact": "The listed maximum is up to 6K resolution at 60 Hz."}
+      ],
+      "ground_truth": {"expected_answer": "The 2020 M1 MacBook Air supports one external display up to 6K at 60 Hz.", "fact_sources": {"count": ["S1"], "resolution": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/111883"}]
+    },
+    {
+      "id": "v2-computer-easy-pro-m3", "category": "computer", "complexity": "easy", "deadline_s": 20,
+      "question": "For the 14-inch MacBook Pro with base M3 (November 2023), what is the supported external-display count with the lid open, and what one-display resolutions are listed for Thunderbolt and HDMI?",
+      "primary_domains": ["apple.com"], "primary_min": 1,
+      "references": ["https://support.apple.com/en-us/117735"],
+      "criteria": [
+        {"id": "open-count", "fact": "With the built-in display in use, base M3 supports one external display up to 6K at 60 Hz over Thunderbolt.", "critical": true},
+        {"id": "hdmi", "fact": "The HDMI port supports one display up to 4K at 120 Hz on the base M3 model."}
+      ],
+      "ground_truth": {"expected_answer": "With the lid open, the November 2023 14-inch base-M3 model supports one external display up to 6K/60 Hz over Thunderbolt; HDMI supports one display up to 4K/120 Hz.", "fact_sources": {"open-count": ["S1"], "hdmi": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/117735"}]
+    },
+    {
+      "id": "v2-computer-heavy-m3-dual", "category": "computer", "complexity": "heavy", "deadline_s": 45,
+      "question": "A 14-inch MacBook Pro has the base M3 chip. Can I run two external monitors? Explain the lid-open versus lid-closed configurations, required macOS versions, and why the M3 Pro spec should not be substituted.",
+      "primary_domains": ["apple.com"], "primary_min": 2,
+      "references": ["https://support.apple.com/en-us/117735", "https://support.apple.com/en-us/101571", "https://support.apple.com/en-gb/117373"],
+      "criteria": [
+        {"id": "open", "fact": "With the built-in screen active, base M3 supports one external display.", "critical": true},
+        {"id": "closed", "fact": "Base M3 can support two external displays with the laptop lid closed, in the supported configurations described by Apple.", "critical": true},
+        {"id": "requirements", "fact": "Apple lists macOS Sonoma 14.6 or later for the MacBook Pro M3 closed-lid dual-display feature, plus power and an external keyboard/mouse or trackpad."},
+        {"id": "chip-scope", "fact": "M3 Pro has a different two-display support envelope and must not be used as the base-M3 specification.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Open lid: one external display. Closed lid: two in Apple's supported pairings (up to 6K/60 Thunderbolt plus 5K/60 Thunderbolt, or 6K/60 Thunderbolt plus 4K/100 HDMI). MacBook Pro M3 requires macOS Sonoma 14.6+, external power, and an external keyboard/mouse or trackpad. M3 Pro is a different configuration and is not the answer for base M3.", "fact_sources": {"open": ["S1", "S2"], "closed": ["S2", "S3"], "requirements": ["S3"], "chip-scope": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/117735"}, {"id": "S2", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/101571"}, {"id": "S3", "publisher": "Apple Support", "url": "https://support.apple.com/en-gb/117373"}]
+    },
+    {
+      "id": "v2-computer-heavy-xps9310", "category": "computer", "complexity": "heavy", "deadline_s": 45,
+      "question": "A Dell XPS 13 9310 clamshell has 16 GB RAM and a swollen battery. Verify whether RAM and SSD are replaceable, which SSD sizes Dell documents, and the safe immediate battery action. Do not use 2-in-1 instructions.",
+      "primary_domains": ["dell.com"], "primary_min": 2,
+      "references": ["https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-setup-and-specifications/memory?guid=guid-ba7ad7a6-eb2f-4019-8f8d-b26333a636fe&lang=en-us", "https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-service-manual/m.2-2230-solid-state-drive?guid=guid-2431c5a5-82bf-487a-b03b-2c5eb40a1539&lang=en-us", "https://www.dell.com/support/kbdoc/en-us/000128491/swollen-battery-information-and-guidance"],
+      "criteria": [
+        {"id": "ram", "fact": "RAM is integrated on the system board; it is not a user-replaceable memory module.", "critical": true},
+        {"id": "ssd", "fact": "The clamshell's M.2 SSD is serviceable/removable; the 9310 2-in-1 must not be conflated with it.", "critical": true},
+        {"id": "sizes", "fact": "Dell documents M.2 2230 and M.2 2280 SSD configurations; check the installed configuration before buying."},
+        {"id": "stop", "fact": "For a swollen battery, stop using the computer, power it off and disconnect AC; do not keep operating or charging it.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "The 16 GB RAM is integrated and cannot be upgraded. The clamshell SSD is serviceable; Dell documents 2230 or 2280 configurations, so inspect the installed drive. For the swollen battery, stop use, power off and disconnect AC; arrange qualified service and do not keep using or charging it.", "fact_sources": {"ram": ["S1"], "ssd": ["S2"], "sizes": ["S2"], "stop": ["S3"]}},
+      "sources": [{"id": "S1", "publisher": "Dell Support", "url": "https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-setup-and-specifications/memory?guid=guid-ba7ad7a6-eb2f-4019-8f8d-b26333a636fe&lang=en-us"}, {"id": "S2", "publisher": "Dell Support", "url": "https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-service-manual/m.2-2230-solid-state-drive?guid=guid-2431c5a5-82bf-487a-b03b-2c5eb40a1539&lang=en-us"}, {"id": "S3", "publisher": "Dell Support", "url": "https://www.dell.com/support/kbdoc/en-us/000128491/swollen-battery-information-and-guidance"}]
+    },
+    {
+      "id": "v2-computer-identity-display", "category": "computer", "complexity": "identity", "deadline_s": 12,
+      "question": "A used 14-inch MacBook Pro listing says M3 and promises two monitors. Before saying yes or no, ask for the information that changes the answer.",
+      "primary_domains": ["apple.com"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://support.apple.com/en-us/117735", "https://support.apple.com/en-us/101571", "https://support.apple.com/en-gb/117373"],
+      "criteria": [
+        {"id": "ask-chip", "fact": "Confirm exact chip (base M3 versus M3 Pro) and MacBook Pro model/year.", "critical": true},
+        {"id": "ask-setup", "fact": "Ask whether the user will close the lid and which macOS version is installed; base M3 dual-display support depends on setup and OS.", "critical": true},
+        {"id": "no-guess", "fact": "Do not make a definite two-display promise from the family name alone.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Ask the exact chip/model and macOS version, and whether the user will use the laptop with its lid closed. Do not infer support from 'MacBook Pro' alone.", "fact_sources": {"ask-chip": ["S1", "S2"], "ask-setup": ["S2", "S3"], "no-guess": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/117735"}, {"id": "S2", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/101571"}, {"id": "S3", "publisher": "Apple Support", "url": "https://support.apple.com/en-gb/117373"}]
+    },
+    {
+      "id": "v2-computer-identity-xps", "category": "computer", "complexity": "identity", "deadline_s": 12,
+      "question": "A listing says Dell XPS 13, 16 GB RAM, 512 GB SSD. Can I upgrade the memory and drive? Ask what is needed to avoid mixing generations or the 2-in-1.",
+      "primary_domains": ["dell.com"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-service-manual/removing-and-installing-components?guid=guid-7fbb11d7-9820-47bb-afaa-48fa912314d9", "https://www.dell.com/support/manuals/en-ed/xps-13-9310-2-in-1-laptop/xps-13-9310-2-in-1-service-manual/removing-the-system-board?guid=guid-732ef30e-4cce-4695-ac05-adbcfa613b34&lang=en-us"],
+      "criteria": [
+        {"id": "ask-model", "fact": "Ask for exact XPS model/generation or service tag, and whether it is a clamshell or 2-in-1.", "critical": true},
+        {"id": "no-assume", "fact": "Do not infer RAM or SSD upgradeability from the XPS 13 family name and capacity alone.", "critical": true},
+        {"id": "conditional", "fact": "Conditional explanation is allowed, but a definite upgrade claim must wait for identification."}
+      ],
+      "ground_truth": {"expected_answer": "Ask for the exact model/generation or service tag and confirm clamshell versus 2-in-1. The XPS 13 name and installed capacity do not settle RAM/SSD replaceability.", "fact_sources": {"ask-model": ["S1", "S2"], "no-assume": ["S1", "S2"], "conditional": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Dell Support", "url": "https://www.dell.com/support/manuals/en-us/xps-13-9310-laptop/xps-13-9310-service-manual/removing-and-installing-components?guid=guid-7fbb11d7-9820-47bb-afaa-48fa912314d9"}, {"id": "S2", "publisher": "Dell Support", "url": "https://www.dell.com/support/manuals/en-ed/xps-13-9310-2-in-1-laptop/xps-13-9310-2-in-1-service-manual/removing-the-system-board?guid=guid-732ef30e-4cce-4695-ac05-adbcfa613b34&lang=en-us"}]
+    },
+
+    {
+      "id": "v2-car-easy-prius-recall", "category": "car", "complexity": "easy", "deadline_s": 20,
+      "question": "For Toyota recall 20V-369 / 20TA10, identify the affected Prius model years and the hybrid-system defect/remedy from Toyota's NHTSA filing.",
+      "primary_domains": ["static.nhtsa.gov"], "primary_min": 1,
+      "references": ["https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V369-2203.pdf"],
+      "criteria": [
+        {"id": "scope", "fact": "The recall covers certain 2013–2015 Prius and 2014–2017 Prius V vehicles.", "critical": true},
+        {"id": "defect", "fact": "In rare circumstances the hybrid system may not enter failsafe mode as intended, potentially causing loss of power/stall."},
+        {"id": "remedy", "fact": "The remedy is a hybrid-system software update; vehicles with specified inverter failures may need inverter repair/replacement.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "20V-369 applies to certain 2013–2015 Prius and 2014–2017 Prius V. A rare hybrid-system fault can prevent failsafe mode, causing loss of power/stall. Toyota's remedy is a software update; specified related inverter failures may require repair/replacement.", "fact_sources": {"scope": ["S1"], "defect": ["S1"], "remedy": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Toyota / NHTSA", "url": "https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V369-2203.pdf"}]
+    },
+    {
+      "id": "v2-car-easy-rav4-recall", "category": "car", "complexity": "easy", "deadline_s": 20,
+      "question": "For Toyota recall 20V-286, verify the affected RAV4 model years, the defect and the stated remedy.",
+      "primary_domains": ["static.nhtsa.gov"], "primary_min": 1,
+      "references": ["https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V286-4079.pdf"],
+      "criteria": [
+        {"id": "scope", "fact": "The notice concerns certain 2019–2020 RAV4 and RAV4 Hybrid vehicles; not every vehicle in those years is necessarily included.", "critical": true},
+        {"id": "defect", "fact": "Front lower suspension arms may separate from the front wheel assembly under certain conditions, risking loss of control." , "critical": true},
+        {"id": "remedy", "fact": "Toyota instructs owners of affected vehicles to contact a dealer for parts replacement, free of charge."}
+      ],
+      "ground_truth": {"expected_answer": "20V-286 covers certain 2019–2020 RAV4 and RAV4 Hybrid units. The front lower suspension arm may separate and cause loss of control; affected owners should arrange the free parts replacement through Toyota.", "fact_sources": {"scope": ["S1"], "defect": ["S1"], "remedy": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Toyota / NHTSA", "url": "https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V286-4079.pdf"}]
+    },
+    {
+      "id": "v2-car-heavy-campaigns", "category": "car", "complexity": "heavy", "deadline_s": 45,
+      "question": "A 2020 RAV4 Hybrid owner found Toyota notices 20V-012 and 20V-286. Are these the same defect? Compare scope, failure mode, and what the owner should do for this specific VIN.",
+      "primary_domains": ["static.nhtsa.gov", "nhtsa.gov"], "primary_min": 2,
+      "references": ["https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V012-8511.pdf", "https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V286-4079.pdf", "https://www.nhtsa.gov/recalls"],
+      "criteria": [
+        {"id": "separate", "fact": "The campaigns are distinct: 20V-012 concerns a low-pressure fuel pump that may stop operating; 20V-286 concerns front lower suspension arms that may separate.", "critical": true},
+        {"id": "scope", "fact": "The filings list certain 2019–2020 RAV4-family vehicles in both campaign populations; model/year alone does not prove this VIN is included or unrepaired.", "critical": true},
+        {"id": "remedy", "fact": "The 20V-012 remedy is replacement of the low-pressure fuel pump; 20V-286 requires dealer parts replacement for affected vehicles."},
+        {"id": "vin", "fact": "Use the 17-character VIN in NHTSA/Toyota's lookup to determine open recall status for this vehicle.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "They are separate campaigns: 20V-012 is the low-pressure fuel-pump failure/stall recall; 20V-286 is the front lower suspension-arm separation/loss-of-control recall. Certain RAV4/RAV4 Hybrid year ranges appear in each filing, but only a VIN lookup establishes whether this specific vehicle has an unrepaired campaign. Remedies differ: fuel-pump replacement versus suspension-part replacement.", "fact_sources": {"separate": ["S1", "S2"], "scope": ["S1", "S2"], "remedy": ["S1", "S2"], "vin": ["S3"]}},
+      "sources": [{"id": "S1", "publisher": "Toyota / NHTSA", "url": "https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V012-8511.pdf"}, {"id": "S2", "publisher": "Toyota / NHTSA", "url": "https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V286-4079.pdf"}, {"id": "S3", "publisher": "NHTSA", "url": "https://www.nhtsa.gov/recalls"}]
+    },
+    {
+      "id": "v2-car-heavy-prius-transfer", "category": "car", "complexity": "heavy", "deadline_s": 45,
+      "question": "A seller says a 2016 Toyota Prius needs the 20V-369 hybrid update. Check whether the campaign's model-year scope supports that claim, distinguish it from Prius V coverage, and explain how to verify this vehicle's own recalls.",
+      "primary_domains": ["static.nhtsa.gov", "nhtsa.gov"], "primary_min": 2,
+      "references": ["https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V369-2203.pdf", "https://www.nhtsa.gov/recalls"],
+      "criteria": [
+        {"id": "scope", "fact": "20V-369 lists certain 2013–2015 Prius and 2014–2017 Prius V; the listed model-year range does not include a 2016 standard Prius.", "critical": true},
+        {"id": "separate", "fact": "Prius V is a distinct model name; its 2014–2017 years must not be transferred to a 2016 standard Prius.", "critical": true},
+        {"id": "vin", "fact": "Use the specific VIN to check the vehicle's open recalls and completion status; campaign-model-year mismatch does not clear other recalls." , "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "The filing lists 2013–2015 Prius and 2014–2017 Prius V; it does not list a 2016 standard Prius. Do not transfer Prius V coverage. Check the actual VIN for this vehicle's own open recall status; the scope of one campaign does not rule out other recalls.", "fact_sources": {"scope": ["S1"], "separate": ["S1"], "vin": ["S2"]}},
+      "sources": [{"id": "S1", "publisher": "Toyota / NHTSA", "url": "https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V369-2203.pdf"}, {"id": "S2", "publisher": "NHTSA", "url": "https://www.nhtsa.gov/recalls"}]
+    },
+    {
+      "id": "v2-car-identity-vin", "category": "car", "complexity": "identity", "deadline_s": 12,
+      "question": "The seller says a used 2019 RAV4 has an open recall, but gives no VIN or repair history. Ask what is needed before saying whether this exact vehicle needs a repair.",
+      "primary_domains": ["nhtsa.gov"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://www.nhtsa.gov/recalls"],
+      "criteria": [
+        {"id": "ask-vin", "fact": "Ask for the full 17-character VIN or direct the user to enter it in NHTSA/Toyota's lookup.", "critical": true},
+        {"id": "no-instance-claim", "fact": "Do not assert that this individual vehicle has or lacks an unrepaired recall from model/year alone.", "critical": true},
+        {"id": "scope", "fact": "Explain that year/make/model searches show general campaigns, while VIN lookup is needed for vehicle-specific unrepaired status."}
+      ],
+      "ground_truth": {"expected_answer": "Ask for the 17-character VIN or have the owner use NHTSA/Toyota's VIN lookup. Model-year recall lists are general; they do not establish this vehicle's open/completed status.", "fact_sources": {"ask-vin": ["S1"], "no-instance-claim": ["S1"], "scope": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "NHTSA", "url": "https://www.nhtsa.gov/recalls"}]
+    },
+    {
+      "id": "v2-car-identity-prius", "category": "car", "complexity": "identity", "deadline_s": 12,
+      "question": "A family member says, 'My Prius has the hybrid-system recall.' They did not give the model year, Prius variant, VIN, or whether it was repaired. Ask first; don't assume the campaign applies.",
+      "primary_domains": ["static.nhtsa.gov", "nhtsa.gov"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V369-2203.pdf", "https://www.nhtsa.gov/recalls"],
+      "criteria": [
+        {"id": "ask-identity", "fact": "Ask for model year and whether it is Prius or Prius V, plus the VIN for vehicle-specific status.", "critical": true},
+        {"id": "ask-status", "fact": "Ask or explain that repair completion/open status requires VIN lookup or dealer confirmation.", "critical": true},
+        {"id": "no-assume", "fact": "Do not state that the recall applies or remains open based only on 'Prius'.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Ask the model year, Prius versus Prius V, and full VIN; confirm completion/open status through NHTSA/Toyota. Do not decide based on the family name alone.", "fact_sources": {"ask-identity": ["S1"], "ask-status": ["S2"], "no-assume": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Toyota / NHTSA", "url": "https://static.nhtsa.gov/odi/rcl/2020/RCMN-20V369-2203.pdf"}, {"id": "S2", "publisher": "NHTSA", "url": "https://www.nhtsa.gov/recalls"}]
+    },
+
+    {
+      "id": "v2-phone-easy-iphone15", "category": "phone", "complexity": "easy", "deadline_s": 20,
+      "question": "On the standard iPhone 15 (not Pro), what USB data rate is specified, and can its USB-C port output video to an external display?",
+      "primary_domains": ["apple.com"], "primary_min": 1,
+      "references": ["https://support.apple.com/en-us/111831"],
+      "criteria": [
+        {"id": "usb-speed", "fact": "Standard iPhone 15 supports USB 2 data rates up to 480 Mb/s, not USB 3's 10 Gb/s rate.", "critical": true},
+        {"id": "video", "fact": "Its USB-C connector supports DisplayPort video output."}
+      ],
+      "ground_truth": {"expected_answer": "The standard iPhone 15 supports USB 2 up to 480 Mb/s and DisplayPort video output over USB-C.", "fact_sources": {"usb-speed": ["S1"], "video": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/111831"}]
+    },
+    {
+      "id": "v2-phone-easy-pixel8", "category": "phone", "complexity": "easy", "deadline_s": 20,
+      "question": "For Google Pixel 8, report display size and weight, and explain exactly what Google's IP68 wording does and does not promise.",
+      "primary_domains": ["google.com"], "primary_min": 1,
+      "references": ["https://support.google.com/pixelphone/answer/7158570?hl=en", "https://support.google.com/pixelphone/answer/13662136?hl=en"],
+      "criteria": [
+        {"id": "display", "fact": "Pixel 8 has a 6.2-inch display."},
+        {"id": "weight", "fact": "Pixel 8 weighs 187 g."},
+        {"id": "water", "fact": "Google says it is designed to meet IP68 under IEC 60529 when it leaves the factory, but it is not waterproof; resistance can diminish and liquid damage voids warranty.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Pixel 8: 6.2-inch display and 187 g. Google describes IP68 as a factory-state rating, but explicitly says the device is not waterproof and resistance can diminish; liquid damage voids warranty.", "fact_sources": {"display": ["S1"], "weight": ["S1"], "water": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Google Pixel Help", "url": "https://support.google.com/pixelphone/answer/7158570?hl=en"}, {"id": "S2", "publisher": "Google Pixel Help", "url": "https://support.google.com/pixelphone/answer/13662136?hl=en"}]
+    },
+    {
+      "id": "v2-phone-heavy-usb-variants", "category": "phone", "complexity": "heavy", "deadline_s": 45,
+      "question": "Compare data transfer over USB-C on standard iPhone 15 and iPhone 15 Pro. The seller says every iPhone 15 USB-C port is 10 Gb/s; check the exact variants and any cable caveat.",
+      "primary_domains": ["apple.com"], "primary_min": 2,
+      "references": ["https://support.apple.com/en-us/111831", "https://support.apple.com/en-us/111829", "https://www.apple.com/newsroom/2023/09/apple-unveils-iphone-15-pro-and-iphone-15-pro-max/"],
+      "criteria": [
+        {"id": "base", "fact": "Standard iPhone 15 is USB 2 up to 480 Mb/s.", "critical": true},
+        {"id": "pro", "fact": "iPhone 15 Pro supports USB 3 up to 10 Gb/s.", "critical": true},
+        {"id": "not-familywide", "fact": "The Pro speed must not be attributed to the standard iPhone 15.", "critical": true},
+        {"id": "cable", "fact": "To reach USB 3 speeds, a USB 3-capable cable is required; the included charge cable is USB 2."}
+      ],
+      "ground_truth": {"expected_answer": "Standard iPhone 15 is USB 2 up to 480 Mb/s. iPhone 15 Pro supports USB 3 up to 10 Gb/s, and reaching that speed requires a USB 3 cable; the included cable is USB 2.", "fact_sources": {"base": ["S1"], "pro": ["S2", "S3"], "not-familywide": ["S1", "S2"], "cable": ["S2"]}},
+      "sources": [{"id": "S1", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/111831"}, {"id": "S2", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/111829"}, {"id": "S3", "publisher": "Apple Newsroom", "url": "https://www.apple.com/newsroom/2023/09/apple-unveils-iphone-15-pro-and-iphone-15-pro-max/"}]
+    },
+    {
+      "id": "v2-phone-heavy-pixel-water", "category": "phone", "complexity": "heavy", "deadline_s": 45,
+      "question": "A Pixel 8 owner says IP68 means it is safe for swimming and water damage is covered. Verify Google's rating caveats, how durability can change, and the warranty statement.",
+      "primary_domains": ["google.com"], "primary_min": 2,
+      "references": ["https://support.google.com/pixelphone/answer/7158570?hl=en", "https://support.google.com/pixelphone/answer/13662136?hl=en"],
+      "criteria": [
+        {"id": "rating", "fact": "The IP68 rating is a design rating under IEC 60529 when the device leaves the factory; it is not a guarantee that the phone is waterproof.", "critical": true},
+        {"id": "degradation", "fact": "Water/dust resistance is not permanent and can diminish through wear, damage, repair or disassembly."},
+        {"id": "warranty", "fact": "Google says liquid damage voids the warranty; do not promise swimming safety or warranty coverage.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "IP68 is a factory-state design rating, not a claim that the Pixel 8 is waterproof or safe for swimming. Resistance can diminish through wear, damage, repair or disassembly; Google says liquid damage voids the warranty.", "fact_sources": {"rating": ["S1", "S2"], "degradation": ["S1", "S2"], "warranty": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Google Pixel Help", "url": "https://support.google.com/pixelphone/answer/7158570?hl=en"}, {"id": "S2", "publisher": "Google Pixel Help", "url": "https://support.google.com/pixelphone/answer/13662136?hl=en"}]
+    },
+    {
+      "id": "v2-phone-identity-iphone-sim", "category": "phone", "complexity": "identity", "deadline_s": 12,
+      "question": "A buyer's listing says iPhone 15, but they need to know whether it has a physical SIM tray. Ask what detail is needed before answering.",
+      "primary_domains": ["apple.com"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://support.apple.com/en-us/111831", "https://support.apple.com/en-gb/111831"],
+      "criteria": [
+        {"id": "ask-region", "fact": "Ask where the phone was purchased/its market or for the exact model number.", "critical": true},
+        {"id": "regional", "fact": "Apple's specs say a SIM tray is available on models purchased outside the U.S.; region matters.", "critical": true},
+        {"id": "no-guess", "fact": "Do not give a universal yes/no for all iPhone 15 units." , "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Ask for the country/market of purchase or exact model number. Apple says the SIM tray is present on iPhone 15 models purchased outside the U.S.; do not assume all markets match.", "fact_sources": {"ask-region": ["S1", "S2"], "regional": ["S1", "S2"], "no-guess": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Apple Support", "url": "https://support.apple.com/en-us/111831"}, {"id": "S2", "publisher": "Apple Support", "url": "https://support.apple.com/en-gb/111831"}]
+    },
+    {
+      "id": "v2-phone-identity-pixel", "category": "phone", "complexity": "identity", "deadline_s": 12,
+      "question": "A listing says Google Pixel 8, but the buyer wants a replacement battery and the seller doesn't know which version it is. Ask what is needed before recommending a part.",
+      "primary_domains": ["google.com"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://support.google.com/pixelphone/answer/7158570?hl=en", "https://support.google.com/pixelphone/answer/13662136?hl=en"],
+      "criteria": [
+        {"id": "ask-device", "fact": "Ask for the exact Pixel model/model number and region or the device identifiers visible in Settings/box before identifying a replacement part.", "critical": true},
+        {"id": "no-family-claim", "fact": "Do not infer part compatibility from the Pixel 8 family label alone.", "critical": true},
+        {"id": "safe-next", "fact": "Direct the buyer to Google-authorized repair/parts support after identification rather than inventing a battery part number."}
+      ],
+      "ground_truth": {"expected_answer": "Ask for the exact model number and market (or the device information from Settings/box), then confirm the part through Google-authorized repair support. Do not make up a battery part number from the family name.", "fact_sources": {"ask-device": ["S1"], "no-family-claim": ["S1"], "safe-next": ["S2"]}},
+      "sources": [{"id": "S1", "publisher": "Google Pixel Help", "url": "https://support.google.com/pixelphone/answer/7158570?hl=en"}, {"id": "S2", "publisher": "Google Pixel Help", "url": "https://support.google.com/pixelphone/answer/13662136?hl=en"}]
+    },
+
+    {
+      "id": "v2-appliance-easy-samsung-filter", "category": "appliance", "complexity": "easy", "deadline_s": 20,
+      "question": "For Samsung refrigerators generally, how often does Samsung recommend changing the water filter, and what must I identify before buying a cartridge?",
+      "primary_domains": ["samsung.com"], "primary_min": 1,
+      "references": ["https://www.samsung.com/us/support/answer/ANS10005090/"],
+      "criteria": [
+        {"id": "interval", "fact": "Samsung recommends water-filter replacement every six months for optimal performance."},
+        {"id": "model", "fact": "The compatible cartridge depends on the refrigerator model; identify the fridge model number or current cartridge before purchase.", "critical": true},
+        {"id": "types", "fact": "Samsung's guide names HAF-CIN, HAF-QIN and HAFCU1 as filter types; they are not interchangeable by family name alone."}
+      ],
+      "ground_truth": {"expected_answer": "Samsung recommends changing the refrigerator water filter every six months. Filter fit depends on the fridge model; check its model code or the installed filter. The guide identifies HAF-CIN, HAF-QIN and HAFCU1 types.", "fact_sources": {"interval": ["S1"], "model": ["S1"], "types": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Samsung Support", "url": "https://www.samsung.com/us/support/answer/ANS10005090/"}]
+    },
+    {
+      "id": "v2-appliance-easy-dyson-filter", "category": "appliance", "complexity": "easy", "deadline_s": 20,
+      "question": "For Dyson V15 Detect, summarize how often Dyson says to wash the filter and the minimum drying instruction before putting it back.",
+      "primary_domains": ["dyson.com"], "primary_min": 1,
+      "references": ["https://www.dyson.com/support/vacuum-cleaners/cordless/v15-detect"],
+      "criteria": [
+        {"id": "interval", "fact": "Dyson says to wash the V15 Detect filter once per month (more often may be needed in some use conditions)."},
+        {"id": "dry", "fact": "After washing, dry for at least 24 hours with good airflow and ensure the filter is completely dry before reinsertion.", "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Dyson recommends washing the V15 Detect filter once a month, more often for some use. Let it dry for at least 24 hours with good airflow and reinstall only when fully dry.", "fact_sources": {"interval": ["S1"], "dry": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Dyson Support", "url": "https://www.dyson.com/support/vacuum-cleaners/cordless/v15-detect"}]
+    },
+    {
+      "id": "v2-appliance-heavy-samsung-install", "category": "appliance", "complexity": "heavy", "deadline_s": 45,
+      "question": "I have a Samsung refrigerator and want to replace its water filter. Give the correct identification steps, safe installation outline, flush/reset steps, and warn me where model differences matter.",
+      "primary_domains": ["samsung.com"], "primary_min": 2,
+      "references": ["https://www.samsung.com/us/support/answer/ANS10005090/", "https://www.samsung.com/ca/refrigerators/accessories/water-filter-finder/"],
+      "criteria": [
+        {"id": "identify", "fact": "Find the refrigerator model number or read the existing cartridge; Samsung uses different filter models and replacement steps vary by fridge.", "critical": true},
+        {"id": "turnoff", "fact": "For the described filter replacement, turn off water supply before removing the filter."},
+        {"id": "install", "fact": "Match the cartridge-specific lock/twist orientation; do not give one universal insertion method for every model."},
+        {"id": "flush", "fact": "After installation, dispense several gallons of water to clear impurities/air and reset the indicator using the fridge's model-specific controls."}
+      ],
+      "ground_truth": {"expected_answer": "First identify the fridge model or existing cartridge because Samsung uses several filter types and steps differ. Turn off water, remove/install using that cartridge's specified lock/twist direction, dispense several gallons after installation, then reset the filter light using the model's controls.", "fact_sources": {"identify": ["S1", "S2"], "turnoff": ["S1"], "install": ["S1"], "flush": ["S1"]}},
+      "sources": [{"id": "S1", "publisher": "Samsung Support", "url": "https://www.samsung.com/us/support/answer/ANS10005090/"}, {"id": "S2", "publisher": "Samsung Canada", "url": "https://www.samsung.com/ca/refrigerators/accessories/water-filter-finder/"}]
+    },
+    {
+      "id": "v2-appliance-heavy-dyson-battery", "category": "appliance", "complexity": "heavy", "deadline_s": 45,
+      "question": "My Dyson V15 Detect pulses, loses suction and runs out of battery quickly. Use Dyson's support steps to separate likely filter/power-mode checks from a confirmed battery failure; don't diagnose from symptoms alone.",
+      "primary_domains": ["dyson.com"], "primary_min": 2,
+      "references": ["https://www.dyson.com/support/vacuum-cleaners/cordless/v15-detect", "https://www.dyson.com/support/vacuum-cleaners/cordless/battery-care", "https://www.dyson.com/content/dam/dyson/maintenance/user-guides/en_US/vacuumcleaners/cordlessstickvacuums/sv22/368340-01.pdf"],
+      "criteria": [
+        {"id": "filter", "fact": "Dyson lists a dirty filter/blockage among possible causes of pulsing or poor performance and recommends regular filter washing."},
+        {"id": "dry", "fact": "The filter must be completely dry before reinstallation; the manual specifies at least 24 hours drying." , "critical": true},
+        {"id": "mode", "fact": "Boost/Max use reduces runtime and is intended for short intensive tasks; use an appropriate normal/auto mode for routine cleaning."},
+        {"id": "battery", "fact": "Battery runtime decline can have multiple causes and battery life is not a fixed number of years; contact Dyson/use genuine replacement support if checks point to the battery."},
+        {"id": "no-diagnosis", "fact": "Do not claim the battery is definitively failed from these symptoms alone." , "critical": true}
+      ],
+      "ground_truth": {"expected_answer": "Check for blockages and clean the filter first; Dyson says a dirty filter can cause pulsing/poor performance. Dry it fully for at least 24 hours before reinstalling. Avoid continuous Boost/Max, which reduces runtime. Battery wear is variable and symptoms alone do not prove failure; follow Dyson's battery troubleshooting and genuine replacement/service route.", "fact_sources": {"filter": ["S1"], "dry": ["S1", "S3"], "mode": ["S2"], "battery": ["S2"], "no-diagnosis": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Dyson Support", "url": "https://www.dyson.com/support/vacuum-cleaners/cordless/v15-detect"}, {"id": "S2", "publisher": "Dyson Support", "url": "https://www.dyson.com/support/vacuum-cleaners/cordless/battery-care"}, {"id": "S3", "publisher": "Dyson User Manual", "url": "https://www.dyson.com/content/dam/dyson/maintenance/user-guides/en_US/vacuumcleaners/cordlessstickvacuums/sv22/368340-01.pdf"}]
+    },
+    {
+      "id": "v2-appliance-identity-samsung", "category": "appliance", "complexity": "identity", "deadline_s": 12,
+      "question": "I need a Samsung fridge water filter but I only know it is a French-door model. Ask what you need before recommending a cartridge.",
+      "primary_domains": ["samsung.com"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://www.samsung.com/us/support/answer/ANS10005090/", "https://www.samsung.com/ca/refrigerators/accessories/water-filter-finder/"],
+      "criteria": [
+        {"id": "ask", "fact": "Ask for the full refrigerator model code from its label or the model number printed on the existing filter.", "critical": true},
+        {"id": "no-guess", "fact": "Do not choose a cartridge based only on the Samsung brand or French-door design.", "critical": true},
+        {"id": "next", "fact": "Point to Samsung's model-based compatibility finder/manual after obtaining the identifier."}
+      ],
+      "ground_truth": {"expected_answer": "Ask for the refrigerator's full model code or the installed cartridge number/photo. Samsung models use different cartridges; use the model-based finder or manual once identified.", "fact_sources": {"ask": ["S1", "S2"], "no-guess": ["S1", "S2"], "next": ["S2"]}},
+      "sources": [{"id": "S1", "publisher": "Samsung Support", "url": "https://www.samsung.com/us/support/answer/ANS10005090/"}, {"id": "S2", "publisher": "Samsung Canada", "url": "https://www.samsung.com/ca/refrigerators/accessories/water-filter-finder/"}]
+    },
+    {
+      "id": "v2-appliance-identity-dyson", "category": "appliance", "complexity": "identity", "deadline_s": 12,
+      "question": "A seller says this is a Dyson V15 but doesn't know whether it is Detect or V15s Submarine. The buyer needs a replacement filter and battery. Ask for the identifier needed before giving compatibility advice.",
+      "primary_domains": ["dyson.com"], "primary_min": 0, "expected_action": "clarify",
+      "references": ["https://www.dyson.com/support/vacuum-cleaners/cordless/v15-detect", "https://www.dyson.com/support/vacuum-cleaners/cordless"],
+      "criteria": [
+        {"id": "ask", "fact": "Ask for the exact machine name/model code or serial number so Dyson can identify the machine and market.", "critical": true},
+        {"id": "variant", "fact": "Dyson support distinguishes V15 Detect SV22 and V15s Detect Submarine SV47 variants.", "critical": true},
+        {"id": "no-part-guess", "fact": "Do not assert battery/filter compatibility from the V15 family name alone."}
+      ],
+      "ground_truth": {"expected_answer": "Ask for the machine model code or serial number (and country if relevant); Dyson lists distinct V15 Detect SV22 and V15s Detect Submarine SV47 machines. Confirm parts in the matching support page before purchase.", "fact_sources": {"ask": ["S1", "S2"], "variant": ["S2"], "no-part-guess": ["S1", "S2"]}},
+      "sources": [{"id": "S1", "publisher": "Dyson Support", "url": "https://www.dyson.com/support/vacuum-cleaners/cordless/v15-detect"}, {"id": "S2", "publisher": "Dyson Support", "url": "https://www.dyson.com/support/vacuum-cleaners/cordless"}]
+    }
+  ]
+}

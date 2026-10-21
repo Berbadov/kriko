@@ -16,9 +16,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.searchbench.agent import research, evidence_metrics
-from app.searchbench.config import MODELS, SEARCHES, load_keys
+from app.searchbench.config import MODELS, PRICE_BASIS, PRICE_DATE, SEARCHES, load_keys
 from app.searchbench.report import aggregate, write_report, write_csvs
-from app.searchbench.retrieval import Retrieval
+from app.searchbench.retrieval import Retrieval, compact_query
 from app.searchbench.transport import Wire
 from app.searchbench.metrics import ledger, paired_comparisons
 
@@ -44,17 +44,20 @@ def redact(value):
 
 async def retrieval_run(wire, variant, case, timeout, results=5, page_chars=6000):
     retrieval = Retrieval(wire, variant, count=results, page_chars=page_chars)
-    row = {"case": case["id"], "question": case["question"], "search": variant, "strategy": "retrieval", "status": "error"}
+    query = compact_query(case["question"], 128)
+    row = {"case": case["id"], "question": case["question"], "search_query": query,
+           "query_chars": len(query), "query_compacted": query != case["question"],
+           "search": variant, "strategy": "retrieval", "status": "error"}
     try:
         async with asyncio.timeout(timeout):
-            hits = await retrieval.search(case["question"])
+            hits = await retrieval.search(query)
             row["status"] = "ok" if hits else "empty"
     except TimeoutError:
         row["status"] = "timeout"
     except Exception as error:
         row["error"] = type(error).__name__
     row.update(total_s=wire.now(), first_result_s=retrieval.first_result_s, sources=list(retrieval.sources.values()),
-               events=wire.events, http_requests=len(wire.events))
+               events=wire.events, http_requests=len(wire.events), query_transformations=retrieval.query_transformations)
     row["quality"] = evidence_metrics("", row["sources"], case)
     return ledger(row)
 
@@ -96,7 +99,7 @@ async def sweep(args):
     document = {"schema_version": 1, "created_at": now.isoformat(), "python": sys.version, "platform": platform.platform(),
                 "config": vars(args), "case_sha256": hashlib.sha256(case_path.read_bytes()).hexdigest(),
                 "models": {m: asdict(MODELS[m]) for m in models if m}, "searches": {s: SEARCHES[s] for s in searches},
-                "price_date": "2026-10-20", "source_sha256": code_hash.hexdigest(),
+                "price_date": PRICE_DATE, "price_basis": PRICE_BASIS, "source_sha256": code_hash.hexdigest(),
                 "httpx_version": httpx.__version__, "baseline": baseline, "source_snapshot": stem.with_suffix(".source.zip").name, "runs": []}
     print(f"{len(jobs)} runs; report {stem}.md", flush=True)
     async with httpx.AsyncClient(http2=args.http2, timeout=httpx.Timeout(20, connect=5), limits=httpx.Limits(max_connections=12, max_keepalive_connections=12)) as client:

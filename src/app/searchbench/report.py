@@ -79,7 +79,7 @@ def write_report(document, path: Path):
         lines.extend(["", "Experiment settings: " + "; ".join(f"`{key}={settings[key]}`" for key in ("reps", "rounds", "calls", "timeout", "max_tokens", "results", "page_chars", "http2", "seed") if key in settings) + ".",
                       "", "Harness source SHA-256: `" + document.get("source_sha256", "unrecorded") + "`."])
     if document.get("models"):
-        lines.extend(["", "## Price assumptions", "", "USD per million tokens; estimated, not an invoice. Price date: " + document.get("price_date", "unknown") + ". Mercury 3 and Large 4 include the documented launch discount.", "",
+        lines.extend(["", "## Price assumptions", "", "USD per million tokens; estimated, not an invoice. Price date: " + document.get("price_date", "unknown") + ". " + document.get("price_basis", "No price basis recorded."), "",
                       "| Model | Input | Cached input | Output | Reasoning effort |", "|---|---:|---:|---:|---|"])
         for model in document["models"].values():
             rates = ["—" if model[key] is None else f"{model[key]:g}" for key in ("input_usd", "cached_usd", "output_usd")]
