@@ -457,8 +457,8 @@
   place-items: center;
   border-radius: 8px;
   color: var(--tone);
-  background: radial-gradient(90% 90% at 50% 0%, color-mix(in srgb, var(--tone) 20%, transparent), transparent 80%), var(--inset);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 28%, transparent);
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 30%, transparent);
 }
 
 .answer-head {

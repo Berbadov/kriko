@@ -255,29 +255,6 @@ The palette keeps the brand blue and adds four companions for data: violet,
 teal, mint and sky. Cards carry a wash of the brand violet in their top-left
 corner and a lit top edge.
 
-## Pixel icons
-
-Two sets share one idea: square cells and one small teal signature square where
-the logo's scan line ends (`kriko-ui/src/engine/pixicons.ts`).
-
-The navigation icons (Chat, Compare, Queue, History, New chat, More) are solid,
-twelve by twelve. They follow the logo: strokes two cells thick, corners cut one
-step at a time. They are drawn by rule, so a stroke cannot come out one cell thick
-by accident, and no empty cell is drawn.
-
-The agent marks are nine by nine dot displays, in each agent's own colour and
-never a maker's logo. Lit cells are small squares with a soft glow, and every empty
-cell stays as a faint dot, so the mark reads as a display without being a row of
-round LEDs.
-
-Status moves the cells. Working sends a row of light down a navigation icon and a
-diagonal wave across an agent mark, lighting the dots under it for a moment. Done
-does it once and the signature turns mint. Waiting blinks the signature. Paused
-holds in amber, failed breaks up in red, and idle is still. The answer header's
-agent mark follows the turn, and the Queue tab moves while research runs. Draw
-them from 24 px up for the navigation and 18 px up for the agents. The other
-icons in the interface are still line icons.
-
 ## Compare
 
 A slot is one product column. The board is a rail of slot cards.
